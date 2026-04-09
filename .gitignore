@@ -27,6 +27,10 @@ mobile/.env.*
 # Sub-Apps Vite
 web/match-pitch/.env
 web/match-pitch/.env.*
+!web/match-pitch/.env.example
+
+# Espelho opcional / checkout local de outro repo — não versionar (evita gitlink quebrado)
+legacy/
 
 # Supabase CLI (estado local / branches)
 supabase/.temp

@@ -1,100 +1,118 @@
-# OLEFOOT — jogo (Vite) + pitch WebView (Expo)
+# Olefoot
 
-## Monorepo
+Plataforma **sports legacy**: gestão de clube, simulação de partidas, onboarding (Sports Data), integração com visual 3D (Babylon) e app móvel (Expo). O núcleo do jogo e da UI do manager vive na **app web** (Vite + React) na raiz do repositório.
 
-| Pasta | Descrição |
-|-------|-----------|
-| Raiz (`/`) | App web do manager: React + Vite (`npm run dev`, porta **3000**). |
-| `web/match-pitch/` | Viewer Babylon do gramado (Vite, porta **5174**). Build estático para CDN/HTTPS. |
-| `mobile/` | App Expo: abas (Home, Time, Cidade, Carteira, Mercado, Loja, **Missões**, Ao vivo), progressão EXP (`src/progression/`, Zustand + persist) e `MatchPitchWebView`. |
-
-## Jogo web (raiz)
-
-```bash
-npm install
-npm run dev
-```
-
-Abre em `http://localhost:5173` (ou a porta que o Vite indicar no terminal).
-
-## Pitch viewer (WebView)
-
-```bash
-cd web/match-pitch
-npm install
-npm run dev
-```
-
-- Local: `http://localhost:5174`
-- Build: `npm run build` → artefatos em `web/match-pitch/dist/` para deploy HTTPS.
-
-## App Expo (partida ao vivo com WebView)
-
-```bash
-cd mobile
-npm install
-npm run dev:pitch
-```
-
-Em **outro terminal**, na pasta `mobile`:
-
-```bash
-npm start
-```
-
-Depois abra iOS Simulator ou Android Emulator (ou dispositivo físico).
-
-### URLs do WebView (dev)
-
-- **iOS Simulator:** `http://localhost:5174`
-- **Android Emulator:** `http://10.0.2.2:5174`
-- **Dispositivo físico na mesma rede:** defina no `.env` do Expo:
-
-```bash
-EXPO_PUBLIC_PITCH_URL=http://192.168.x.x:5174
-```
-
-(Substitua pelo IP da máquina que roda o viewer.)
-
-### Produção
-
-1. Faça `npm run build` em `web/match-pitch` e publique `dist/` em HTTPS.
-2. Configure `EXPO_PUBLIC_PITCH_URL=https://seu-dominio/olefoot-pitch/` no app Expo.
-
-### HTTP em Android (dev)
-
-`mobile/app.json` inclui `android.usesCleartextTraffic: true` para desenvolvimento. Não use cleartext em produção; veja [`docs/EXPO_MATCH_PITCH.md`](docs/EXPO_MATCH_PITCH.md).
-
-### Progressão (Expo)
-
-- **Ranking:** só `exp_balance` (gastar reduz saldo).
-- **Nível 1–25:** `exp_lifetime_earned` (monotônico).
-- **Resgate de missão:** soma `rewardExp` em **ambos** os saldos.
-- Código: `mobile/src/progression/` (`useProgressionStore`, `MISSION_CATALOG`, resets diário/semanal).
-- Persistência: AsyncStorage via `zustand/middleware/persist`.
-
-### Ponte `MatchTruthSnapshot`
-
-- O WebView carrega o viewer; o React Native pode enviar JSON com `injectJavaScript` chamando `window.__RN_MATCH_PITCH(snapshot)`.
-- Tipos: `mobile/src/types/matchTruth.ts` e `web/match-pitch/src/matchTruthTypes.ts` (alinhados ao bridge do jogo web).
-
-## Scripts úteis
-
-| Comando | Onde |
-|---------|------|
-| `npm run dev` | Raiz — jogo manager |
-| `npm run dev` | `web/match-pitch` — viewer |
-| `npm run dev:pitch` | `mobile` — atalho para subir o viewer a partir do Expo |
-| `npm run lint` | Raiz — TypeScript do jogo web |
-| `npm run lint` | `mobile` — TypeScript do Expo (`src/`, alias `@/*`) |
-
-## Repositório público (GitHub)
-
-- **Não versionar** `.env`, `.env.local`, nem cópias com chaves reais. O `.gitignore` cobre `.env*`, com exceção dos ficheiros `*.example` na raiz, `server/` e `mobile/`.
-- **Nunca** colocar no remoto: `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `API_FOOTBALL_KEY` com valor, passwords de base de dados, nem exports de saves com dados pessoais. **Não colocar project refs reais** em `supabase/config.toml` nem em documentação commitada — usa `supabase link` localmente.
-- Copia `.env.example` → `.env`, `server/.env.example` → `server/.env`, `mobile/.env.example` → `mobile/.env` **só na tua máquina** ou em CI privado com secrets do GitHub Actions.
-- **Não partilhes chaves** em issues, chats ou PRs; se algo vazar, regera o token no respetivo dashboard.
+**Repositório público de código:** desenvolvimento e contribuições concentram-se aqui. Documentação de produto de alto nível pode existir noutro repositório da organização.
 
 ---
 
-Documentação adicional: economia em `docs/ECONOMY_OLEFOOT.md`, Admin/tático em `docs/ADMIN_TACTICAL_BRO.md`.
+## Estrutura do projeto
+
+| Caminho | Função |
+|---------|--------|
+| **`/`** (raiz) | App web principal: manager, estado do jogo (`src/game`), Admin, wallet UI, motor de partida e GameSpirit ligados à UI. |
+| **`web/match-pitch/`** | Viewer do gramado (Vite + Babylon), pensado para WebView e deploy estático. |
+| **`mobile/`** | App Expo: navegação, progressão, carteira, WebView para o pitch. |
+| **`server/`** | API HTTP (Hono): Supabase (service role), partidas, Game Spirit (OpenAI) no servidor. |
+| **`supabase/`** | Migrations e `config.toml` (CLI). O `project.id` local é preenchido com `supabase link`. |
+| **`docs/`** | Documentação técnica (economia, match, Expo, backend). |
+| **`.agents/`** | Skills e recursos para Cursor (ferramenta de desenvolvimento, não runtime da app). |
+
+A pasta **`legacy/`** não é versionada (`.gitignore`). Se precisares do repositório público separado da organização, clona-o à parte ou para `legacy/` localmente — **não há submódulo Git** neste monorepo, para evitar clones quebrados sem `.gitmodules`.
+
+---
+
+## Como correr (desenvolvimento)
+
+### 1. App web (manager)
+
+```bash
+npm install
+npm run dev
+```
+
+- URL típica: **http://localhost:5173** (Vite; se a porta estiver ocupada, o Vite sugere outra — `strictPort: false`).
+
+### 2. API local (opcional)
+
+```bash
+npm run dev:server
+# ou: cd server && npm install && npm run dev
+```
+
+- Por defeito: **http://localhost:4000** (`PORT` em `server/.env`).
+
+### 3. Viewer do pitch (opcional)
+
+```bash
+cd web/match-pitch && npm install && npm run dev
+```
+
+- **http://localhost:5174** (host `0.0.0.0` para dispositivos na LAN).
+
+### 4. App mobile (opcional)
+
+```bash
+cd mobile && npm install && npm run dev:pitch
+```
+
+Noutro terminal: `cd mobile && npm start`. Ver [`docs/EXPO_MATCH_PITCH.md`](docs/EXPO_MATCH_PITCH.md) e `mobile/.env.example` para `EXPO_PUBLIC_PITCH_URL` / `EXPO_PUBLIC_OLEFOOT_WEB_URL`.
+
+### Portas de referência
+
+| Serviço | Porta padrão |
+|---------|----------------|
+| Web manager (Vite) | 5173 |
+| Pitch viewer | 5174 |
+| API (`server`) | 4000 |
+| Vite preview (build local) | 4173 |
+
+Mais detalhes: [`scripts/README.md`](scripts/README.md).
+
+---
+
+## Variáveis de ambiente
+
+| Ficheiro | Uso |
+|----------|-----|
+| [`.env.example`](.env.example) | Raiz — Vite, Supabase client, Gemini, API-Football (proxy dev), URLs. |
+| [`server/.env.example`](server/.env.example) | Servidor — Supabase service role, OpenAI, CORS. |
+| [`mobile/.env.example`](mobile/.env.example) | Expo — URLs públicas do pitch / web. |
+| [`web/match-pitch/.env.example`](web/match-pitch/.env.example) | Opcional — overrides do viewer. |
+
+Copiar cada um para `.env` na pasta correspondente **apenas localmente**. Nunca commitar `.env`.
+
+---
+
+## Segurança
+
+- Tudo com prefixo **`VITE_`** ou **`EXPO_PUBLIC_`** acaba **exposto no browser / bundle** — não coloques service role nem segredos aí.
+- **`GEMINI_API_KEY`** na raiz é injetada no build Vite; em produção o ideal é proxy no servidor ou chamadas só no backend.
+- **`API_FOOTBALL_KEY`** em dev usa o proxy do Vite (chave no processo Node, não no fetch do cliente quando o proxy está ativo).
+- Não commits de `supabase/config.toml` com **project ref real** em forks públicos; usa `supabase link` local.
+- Ver também a secção histórica em commits anteriores: não vazar tokens em issues ou PRs.
+
+---
+
+## Scripts úteis (raiz)
+
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | App web manager |
+| `npm run dev:server` | API Hono |
+| `npm run dev:pitch` | Viewer em `web/match-pitch` |
+| `npm run build` / `preview` | Build e preview da app web |
+| `npm run lint` | Typecheck raiz + `web/match-pitch` |
+
+---
+
+## Documentação adicional
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — visão em camadas do repositório.
+- Economia: `docs/ECONOMY_OLEFOOT.md` · Backend: `docs/BACKEND.md` · Admin/tático: `docs/ADMIN_TACTICAL_BRO.md`.
+
+---
+
+## Licença
+
+Ver ficheiro `LICENSE` na raiz (se existir no teu fork).
