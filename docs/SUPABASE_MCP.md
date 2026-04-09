@@ -4,15 +4,16 @@ Liga o assistente ao teu projeto Supabase (SQL, migrations, logs, tipos). O fich
 
 ## 1. Cursor (recomendado neste repo)
 
-1. Copia `mcp.supabase.cursor.example.json` para `.cursor/mcp.json` (ou mantém o que já criámos localmente).
-2. Substitui `YOUR_PROJECT_REF` pelo ref do dashboard (Settings → General → Reference ID), se usares o exemplo.
-3. URL final (com projeto fixo):
+1. O ficheiro tem de se chamar **`.cursor/mcp.json`** (na raiz do projeto), **não** `.cursor/mcp/json` nem outra pasta — o Cursor só lê o nome certo.
+2. Copia `mcp.supabase.cursor.example.json` para `.cursor/mcp.json` (ou mantém o que já criámos localmente).
+3. Substitui `YOUR_PROJECT_REF` pelo ref do dashboard (Settings → General → Reference ID), se usares o exemplo.
+4. URL final (com projeto fixo):
 
    `https://mcp.supabase.com/mcp?project_ref=<teu_ref>`
 
    Parâmetros opcionais: [`read_only=true`](https://supabase.com/docs/guides/getting-started/mcp), `features=database,docs`, etc.
 
-4. Reinicia o Cursor. Abre **Settings → Cursor Settings → Tools & MCP**, confirma o servidor **supabase** e **Authenticate** (fluxo OAuth no browser).
+5. Reinicia o Cursor. Abre **Settings → Cursor Settings → Tools & MCP**, confirma o servidor **supabase** e **Authenticate** (fluxo OAuth no browser).
 
 ## 2. Claude Code (CLI)
 
