@@ -1,0 +1,24 @@
+**/node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+
+# Ambientes e segredos (Admin, APIs, Supabase service role, senhas locais)
+.env
+.env.*
+!.env.example
+!server/.env.example
+.env.local
+.env.*.local
+*.pem
+secrets/
+
+# Cursor — MCP local pode expor project_ref Supabase; recria em Settings → MCP
+.cursor/mcp.json
+
+# Ferramentas / caches
+.turbo
+.vercel
+*.tsbuildinfo

@@ -1,0 +1,9 @@
+# Modelo ADMIN / Leagues (Supabase)
+
+Este documento complementa o comentário no topo de `supabase/migrations/00002_admin_leagues_competitions.sql`.
+
+**Temporada e divisões:** cada `seasons` tem até cinco linhas em `season_divisions` (`tier` 1–5 = Série A–E). Os clubes da época ficam em `season_division_memberships` (uma linha por clube por divisão). `promotion_count` e `relegation_count` na temporada fixam a regra nominal 5↑5↓ entre tiers consecutivos; a Série A não promove para cima e a E não rebaixa para baixo — isso implementa-se na aplicação ao calcular movimentos. A capacidade máxima por divisão é `max_clubs` (típico 100; teto 500 no CHECK).
+
+**Três formatos de competição:** em `competitions`, `kind = league` com `league_subtype = round_robin` define liga só por pontos: cria-se uma fase `phase_kind = league` em `competition_phases` e a tabela `competition_standings` por `(competition_id, phase_id, club_id)`. Com `league_subtype = premium`, obrigatório `knockout_advance_count` ∈ {8,16,32,64,128}: primeira fase `league`, segunda `knockout`, com `fixtures` na fase mata-mata. Com `kind = cup`, `league_subtype` fica `NULL`: apenas fases `knockout`; cada confronto pode ter `leg` 1 ou 2, agregado em `aggregate_home_goals` / `aggregate_away_goals`; em empate no agregado, usar `tie_break_home_exp` e `tie_break_away_exp` como snapshot de EXP na resolução do jogo (ou `exp_snapshot` em `competition_participants` para contexto global da equipa).
+
+**Ligação ao motor:** `fixtures.match_id` aponta para `public.matches` quando a partida é gerada; em `matches`, `competition_id` e `fixture_id` são opcionais e não alteram políticas RLS existentes. Escrita de competições/fixtures deve usar **service_role** ou backend; o cliente público só lê via políticas `SELECT` para `authenticated`.

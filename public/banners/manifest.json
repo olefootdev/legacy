@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "presets": [
+    { "file": "abstract-neon.svg", "label": "Neon (estádio)" },
+    { "file": "abstract-green.svg", "label": "Relvado" },
+    { "file": "abstract-crimson.svg", "label": "Energia" },
+    { "file": "abstract-blue.svg", "label": "Noite azul" },
+    { "file": "abstract-violet.svg", "label": "Roxo arena" },
+    { "file": "abstract-amber.svg", "label": "Ouro / BRO" },
+    { "file": "abstract-midnight.svg", "label": "Meia-noite" },
+    { "file": "abstract-grid.svg", "label": "Grelha técnica" }
+  ]
+}

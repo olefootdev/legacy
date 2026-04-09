@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "OLEFOOT",
+    "slug": "olefoot",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0c10"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.olefoot.app"
+    },
+    "android": {
+      "package": "com.olefoot.app",
+      "usesCleartextTraffic": true
+    },
+    "plugins": []
+  }
+}
