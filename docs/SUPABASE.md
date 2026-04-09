@@ -20,6 +20,23 @@ Configuração do servidor MCP Supabase (HTTP + `project_ref`): [SUPABASE_MCP.md
 
 Copiar `.env.example` para `.env` e preencher.
 
+## Connection string (PostgreSQL)
+
+Para **psql**, **Drizzle/Prisma**, ou ferramentas que falem **TCP direto** com o Postgres (não confundir com a URL da API REST nem com `VITE_SUPABASE_URL`):
+
+1. Dashboard Supabase → **Project Settings** → **Database**.
+2. Em **Connection string**, escolhe o modo **URI** e copia o modelo com `postgresql://postgres:[YOUR-PASSWORD]@db.<project_ref>.supabase.co:5432/postgres`.
+3. Define a password da base em **Database password** (se ainda não tiveres, redefine lá).
+4. Guarda só em **`server/.env`** (ou CI secreto) como `DATABASE_URL=...`. **Nunca** no `.env` da raiz do Vite nem no repositório.
+
+**IPv4:** Se o painel avisar que o host **direct** (porta `5432`) **não é compatível com IPv4**, usa a secção **Pooler** → **Session pooler** (ou Transaction pooler) e copia o host/porta/utilizador que o dashboard mostrar — costuma ser o caminho certo em redes residenciais só IPv4. Alternativa: add-on IPv4 pago, conforme o teu plano.
+
+A app web Olefoot em geral **não precisa** de `DATABASE_URL`: basta `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` e, no servidor Node, `SUPABASE_SERVICE_ROLE_KEY` para operações privilegiadas.
+
+## Agent Skills (opcional)
+
+Para skills oficiais Supabase no Cursor/Claude: `npx skills add supabase/agent-skills` (o repo já pode ter `.agents/skills/supabase/`). Ver [SUPABASE_MCP.md](./SUPABASE_MCP.md).
+
 ## Schema (migrations)
 
 ```
