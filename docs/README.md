@@ -10,6 +10,7 @@ Entrada para conteúdo **fora** do README principal. O README na raiz resume exe
 | [INTEGRACAO_MATCH_PITCH_EXPO.md](./INTEGRACAO_MATCH_PITCH_EXPO.md) | Fluxo WebView + pitch. |
 | [BACKEND.md](./BACKEND.md) | API `server/`, variáveis, exemplos `curl`. |
 | [SUPABASE.md](./SUPABASE.md) | Projeto Supabase, RLS, notas de uso. |
+| [SUPABASE_MCP.md](./SUPABASE_MCP.md) | MCP Supabase no Cursor / Claude CLI. |
 | [ADMIN_DATABASE.md](./ADMIN_DATABASE.md) | Schema Admin / onboarding / Game Spirit / saves (migration 00003). |
 
 ## Arquitetura e evolução do repo

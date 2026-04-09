@@ -5,6 +5,10 @@
 O Supabase persiste estado de jogo relevante: utilizadores, clubes, plantéis, partidas e eventos de partida.  
 A persistência é **opcional no MVP** — sem `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, o jogo funciona normalmente com localStorage.
 
+## MCP (Cursor / IDE)
+
+Configuração do servidor MCP Supabase (HTTP + `project_ref`): [SUPABASE_MCP.md](./SUPABASE_MCP.md).
+
 ## Variáveis de ambiente
 
 | Variável | Onde | Descrição |
