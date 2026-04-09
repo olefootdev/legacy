@@ -28,3 +28,7 @@ Este documento descreve **como o código está organizado hoje**, sem impor uma 
 ## O que não está isolado (ainda)
 
 O “game engine” não é um pacote npm separado: partilha módulos com a UI. Extrair para `packages/game-core` seria um projeto de várias PRs, quando as fronteiras estiverem estáveis.
+
+## Evolução da árvore de pastas
+
+Um alvo em `apps/` / `services/` / `infra/` e fases de migração segura estão em [REPO_REORGANIZATION_PLAN.md](./REPO_REORGANIZATION_PLAN.md).

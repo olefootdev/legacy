@@ -1,6 +1,6 @@
 # Scripts e operações comuns
 
-Não é obrigatório usar scripts shell aqui — os comandos vivem sobretudo no `package.json` da raiz e das subpastas. Este ficheiro centraliza **portas** e **ordem sugerida** para desenvolvimento full-stack.
+Os comandos vivem no `package.json` da raiz e das subpastas. Este ficheiro resume **portas** e **ordem sugerida** (alinhado com o [README](../README.md) na raiz).
 
 ## Ordem típica (tudo local)
 

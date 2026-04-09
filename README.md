@@ -1,73 +1,99 @@
-# Olefoot
+# Olefoot Legacy
 
-Plataforma **sports legacy**: gestão de clube, simulação de partidas, onboarding (Sports Data), integração com visual 3D (Babylon) e app móvel (Expo). O núcleo do jogo e da UI do manager vive na **app web** (Vite + React) na raiz do repositório.
-
-**Repositório público de código:** desenvolvimento e contribuições concentram-se aqui. Documentação de produto de alto nível pode existir noutro repositório da organização.
+**Olefoot** é uma plataforma de gestão desportiva com simulação de partidas, progressão de clube, wallet, Admin (incl. Sports Data para onboarding) e visualização 3D do campo (Babylon), com cliente web (Vite + React) e app móvel (Expo). Este repositório concentra o código de desenvolvimento; a árvore atual é um **monorepo pragmático** (app principal na raiz + pacotes em subpastas).
 
 ---
 
-## Estrutura do projeto
+## O que é o Olefoot
+
+- **Web (manager):** estado do jogo, UI de carreira, partidas, carteira, integrações Supabase no cliente (anon + RLS).
+- **Viewer:** `web/match-pitch` — gramado 3D para WebView ou deploy estático.
+- **Mobile:** Expo — navegação, progressão e WebView para o pitch.
+- **API:** `server/` — Hono, operações privilegiadas (ex. service role), Game Spirit no servidor quando aplicável.
+
+Documentação técnica completa: **[docs/README.md](docs/README.md)** · Plano de reorganização futura: **[docs/REPO_REORGANIZATION_PLAN.md](docs/REPO_REORGANIZATION_PLAN.md)** · Contribuição: **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+---
+
+## Estrutura do projeto (estado atual)
+
+```
+.
+├── src/                 # App web principal (React + lógica de jogo acoplada à UI)
+├── public/
+├── index.html
+├── vite.config.ts
+├── package.json
+├── web/match-pitch/     # Viewer Vite + Babylon (porta 5174)
+├── mobile/              # Expo
+├── server/              # API Hono (porta 4000)
+├── supabase/            # Migrations + config CLI
+├── docs/                # Documentação técnica (índice em docs/README.md)
+├── scripts/             # Notas de desenvolvimento (scripts/README.md)
+└── legacy/              # Não versionada — clone local opcional de outro repo (.gitignore)
+```
 
 | Caminho | Função |
 |---------|--------|
-| **`/`** (raiz) | App web principal: manager, estado do jogo (`src/game`), Admin, wallet UI, motor de partida e GameSpirit ligados à UI. |
-| **`web/match-pitch/`** | Viewer do gramado (Vite + Babylon), pensado para WebView e deploy estático. |
-| **`mobile/`** | App Expo: navegação, progressão, carteira, WebView para o pitch. |
-| **`server/`** | API HTTP (Hono): Supabase (service role), partidas, Game Spirit (OpenAI) no servidor. |
-| **`supabase/`** | Migrations e `config.toml` (CLI). O `project.id` local é preenchido com `supabase link`. |
-| **`docs/`** | Documentação técnica (economia, match, Expo, backend). |
-| **`.agents/`** | Skills e recursos para Cursor (ferramenta de desenvolvimento, não runtime da app). |
-
-A pasta **`legacy/`** não é versionada (`.gitignore`). Se precisares do repositório público separado da organização, clona-o à parte ou para `legacy/` localmente — **não há submódulo Git** neste monorepo, para evitar clones quebrados sem `.gitmodules`.
+| Raiz (`src/`, Vite) | Manager + motor/simulação partilhados com a UI (histórico do projeto). |
+| `web/match-pitch/` | Viewer do campo. |
+| `mobile/` | App Expo. |
+| `server/` | API HTTP. |
+| `supabase/` | Schema e ferramentas Supabase. |
 
 ---
 
 ## Como correr (desenvolvimento)
 
-### 1. App web (manager)
+### Web manager
 
 ```bash
 npm install
 npm run dev
 ```
 
-- URL típica: **http://localhost:5173** (Vite; se a porta estiver ocupada, o Vite sugere outra — `strictPort: false`).
+**URL:** `http://localhost:5173` (porta padrão no `vite.config.ts`; se estiver ocupada, o Vite tenta a seguinte).
 
-### 2. API local (opcional)
+### API (opcional)
 
 ```bash
 npm run dev:server
-# ou: cd server && npm install && npm run dev
 ```
 
-- Por defeito: **http://localhost:4000** (`PORT` em `server/.env`).
+**URL:** `http://localhost:4000` · Ver `server/.env.example`.
 
-### 3. Viewer do pitch (opcional)
+### Viewer do pitch (opcional)
+
+Na raiz:
 
 ```bash
-cd web/match-pitch && npm install && npm run dev
+npm run dev:pitch
 ```
 
-- **http://localhost:5174** (host `0.0.0.0` para dispositivos na LAN).
+Primeira vez no viewer: `cd web/match-pitch && npm install`. Depois podes usar na raiz `npm run dev:pitch` ou `cd web/match-pitch && npm run dev`.  
+**URL:** `http://localhost:5174` (`0.0.0.0` para LAN).
 
-### 4. App mobile (opcional)
+### Mobile (opcional)
 
-```bash
-cd mobile && npm install && npm run dev:pitch
-```
+1. Garante o pitch acessível (acima) se usares WebView com URL local.  
+2. `cd mobile && npm install && npm start`  
+3. Variáveis: `mobile/.env.example` · Fluxo detalhado: [docs/EXPO_MATCH_PITCH.md](docs/EXPO_MATCH_PITCH.md).
 
-Noutro terminal: `cd mobile && npm start`. Ver [`docs/EXPO_MATCH_PITCH.md`](docs/EXPO_MATCH_PITCH.md) e `mobile/.env.example` para `EXPO_PUBLIC_PITCH_URL` / `EXPO_PUBLIC_OLEFOOT_WEB_URL`.
+### Portas (referência única)
 
-### Portas de referência
+| Serviço | Porta |
+|---------|--------|
+| Web manager | **5173** |
+| Viewer | **5174** |
+| API | **4000** |
+| Preview Vite (raiz) | **4173** |
 
-| Serviço | Porta padrão |
-|---------|----------------|
-| Web manager (Vite) | 5173 |
-| Pitch viewer | 5174 |
-| API (`server`) | 4000 |
-| Vite preview (build local) | 4173 |
+### Outros comandos (raiz)
 
-Mais detalhes: [`scripts/README.md`](scripts/README.md).
+| Comando | Descrição |
+|---------|-----------|
+| `npm run build` / `npm run preview` | Build e preview da web |
+| `npm run lint` | Typecheck raiz + `web/match-pitch` |
 
 ---
 
@@ -75,44 +101,24 @@ Mais detalhes: [`scripts/README.md`](scripts/README.md).
 
 | Ficheiro | Uso |
 |----------|-----|
-| [`.env.example`](.env.example) | Raiz — Vite, Supabase client, Gemini, API-Football (proxy dev), URLs. |
-| [`server/.env.example`](server/.env.example) | Servidor — Supabase service role, OpenAI, CORS. |
-| [`mobile/.env.example`](mobile/.env.example) | Expo — URLs públicas do pitch / web. |
-| [`web/match-pitch/.env.example`](web/match-pitch/.env.example) | Opcional — overrides do viewer. |
+| [`.env.example`](.env.example) | Web — Supabase anon, Gemini, API-Football (proxy dev), URL da API. |
+| [`server/.env.example`](server/.env.example) | Service role, OpenAI, CORS, `PORT`. |
+| [`mobile/.env.example`](mobile/.env.example) | URLs públicas Expo. |
+| [`web/match-pitch/.env.example`](web/match-pitch/.env.example) | Overrides opcionais do viewer. |
 
-Copiar cada um para `.env` na pasta correspondente **apenas localmente**. Nunca commitar `.env`.
-
----
-
-## Segurança
-
-- Tudo com prefixo **`VITE_`** ou **`EXPO_PUBLIC_`** acaba **exposto no browser / bundle** — não coloques service role nem segredos aí.
-- **`GEMINI_API_KEY`** na raiz é injetada no build Vite; em produção o ideal é proxy no servidor ou chamadas só no backend.
-- **`API_FOOTBALL_KEY`** em dev usa o proxy do Vite (chave no processo Node, não no fetch do cliente quando o proxy está ativo).
-- Não commits de `supabase/config.toml` com **project ref real** em forks públicos; usa `supabase link` local.
-- Ver também a secção histórica em commits anteriores: não vazar tokens em issues ou PRs.
+Copiar para `.env` **só localmente**. Nunca commitar `.env`.
 
 ---
 
-## Scripts úteis (raiz)
+## Notas de segurança
 
-| Comando | Descrição |
-|---------|-----------|
-| `npm run dev` | App web manager |
-| `npm run dev:server` | API Hono |
-| `npm run dev:pitch` | Viewer em `web/match-pitch` |
-| `npm run build` / `preview` | Build e preview da app web |
-| `npm run lint` | Typecheck raiz + `web/match-pitch` |
-
----
-
-## Documentação adicional
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — visão em camadas do repositório.
-- Economia: `docs/ECONOMY_OLEFOOT.md` · Backend: `docs/BACKEND.md` · Admin/tático: `docs/ADMIN_TACTICAL_BRO.md`.
+- `VITE_*` e `EXPO_PUBLIC_*` são **públicos** no bundle — sem service role nem segredos.
+- Preferir chamadas sensíveis no `server/` em produção (ex. Gemini).  
+- `supabase/config.toml`: `project.id` placeholder no repo; projeto real via `supabase link` local.  
+- Checklist para PRs: [docs/SECURITY.md](docs/SECURITY.md).
 
 ---
 
 ## Licença
 
-Ver ficheiro `LICENSE` na raiz (se existir no teu fork).
+Define um ficheiro `LICENSE` na raiz do fork quando a equipa fixar a licença.
