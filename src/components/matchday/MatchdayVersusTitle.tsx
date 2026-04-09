@@ -15,8 +15,8 @@ const crestSize = {
   sm: 'h-8 w-8 min-h-8 min-w-8 max-h-8 max-w-8 object-contain shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]',
   /** Partida rápida / live ribbon */
   md: 'h-10 w-10 min-h-10 min-w-10 sm:h-11 sm:w-11 sm:min-h-11 sm:min-w-11 object-contain shrink-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]',
-  /** Banner matchday — ~35% menor que a versão anterior (mobile). Brasão pode ser horizontal. */
-  lg: 'h-[1.95rem] w-auto max-h-[2.28rem] sm:h-[2.28rem] sm:max-h-[2.44rem] max-w-[min(7.15rem,28vw)] object-contain object-left shrink-0 drop-shadow-[0_3px_10px_rgba(0,0,0,0.6)]',
+  /** Banner matchday — compacto para caber nomes completos na mesma linha (brasão largo limitado). */
+  lg: 'h-[1.3rem] w-auto max-h-[1.45rem] max-w-[min(2.85rem,14vw)] object-contain object-left shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:h-[1.5rem] sm:max-h-[1.65rem] sm:max-w-[min(3.35rem,16vw)] md:h-[1.7rem] md:max-h-[1.9rem] md:max-w-[min(4rem,14vw)] lg:h-[1.85rem] lg:max-h-[2.05rem] lg:max-w-[min(4.75rem,11vw)]',
 } as const;
 
 /** Brasão sintético do adversário (IA). */
@@ -35,7 +35,7 @@ export function AwayCrestBadge({
     size === 'sm'
       ? 'h-8 w-8 min-w-8 text-[11px]'
       : size === 'lg'
-        ? 'h-[1.79rem] w-[1.79rem] min-w-[1.79rem] text-[11px] sm:h-[2.11rem] sm:w-[2.11rem] sm:min-w-[2.11rem] sm:text-xs'
+        ? 'h-[1.2rem] w-[1.2rem] min-w-[1.2rem] text-[9px] sm:h-[1.4rem] sm:w-[1.4rem] sm:min-w-[1.4rem] sm:text-[10px] md:h-[1.55rem] md:w-[1.55rem] md:min-w-[1.55rem] md:text-[11px] lg:h-[1.7rem] lg:w-[1.7rem] lg:min-w-[1.7rem] lg:text-xs'
         : 'h-10 w-10 min-w-10 text-xs sm:h-11 sm:w-11 sm:min-w-11';
   return (
     <span
@@ -55,7 +55,7 @@ export function AwayCrestBadge({
 }
 
 /**
- * Título central tipo: [brasão] CASA vs FORA [badge] — nomes completos, quebra de linha, sem truncar.
+ * Duelo no banner: nomes completos (sem truncar). Itálico evitado nos nomes para o espaço não “colar” (ex.: OLE FC).
  */
 export function MatchdayVersusTitle({
   homeName,
@@ -74,29 +74,38 @@ export function MatchdayVersusTitle({
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
   const seed = awaySeed ?? fallbackAway;
 
+  const nameText =
+    'min-w-0 max-w-full whitespace-normal break-words text-pretty not-italic text-white [word-spacing:normal]';
+
   return (
     <h2
       className={cn(
-        'font-display font-black italic uppercase leading-tight tracking-tight text-balance',
+        'font-display font-black uppercase leading-snug tracking-normal',
         className,
       )}
     >
-      <span className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-6 sm:gap-y-3">
-        <span className="flex min-w-0 flex-col items-center gap-2 sm:max-w-[min(100%,22rem)] sm:flex-1 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-          {crest ? <img src={crest} alt="" className={crestSize.lg} /> : null}
-          <span className="text-center text-white sm:text-right sm:leading-[1.05]">{homeName}</span>
+      <span className="flex w-full min-w-0 items-center justify-center gap-1 px-0.5 sm:gap-1.5 sm:px-1 md:gap-3">
+        {/* Metade esquerda: bloco [brasão + nome] junto ao “vs”, sem esticar o nome e isolar o brasão */}
+        <span className="flex min-w-0 min-h-0 flex-1 justify-end">
+          <span className="flex max-w-full min-w-0 items-center justify-end gap-1 sm:gap-1.5 md:gap-2">
+            {crest ? <img src={crest} alt="" className={cn(crestSize.lg, 'shrink-0')} /> : null}
+            <span className={cn(nameText, 'text-end')}>{homeName}</span>
+          </span>
         </span>
         <span
           className={cn(
-            'text-center font-black not-italic text-neon-yellow sm:shrink-0 sm:self-center',
+            'shrink-0 font-black italic text-neon-yellow',
             vsClassName,
           )}
         >
           vs
         </span>
-        <span className="flex min-w-0 flex-col items-center gap-2 sm:max-w-[min(100%,22rem)] sm:flex-1 sm:flex-row-reverse sm:items-center sm:justify-end sm:gap-3">
-          <AwayCrestBadge seed={seed} size="lg" />
-          <span className="text-center text-white sm:text-left sm:leading-[1.05]">{awayName}</span>
+        {/* Metade direita: bloco [nome + brasão] colado ao “vs” */}
+        <span className="flex min-w-0 min-h-0 flex-1 justify-start">
+          <span className="flex max-w-full min-w-0 items-center justify-start gap-1 sm:gap-1.5 md:gap-2">
+            <span className={cn(nameText, 'text-start')}>{awayName}</span>
+            <AwayCrestBadge seed={seed} size="lg" className="shrink-0" />
+          </span>
         </span>
       </span>
     </h2>

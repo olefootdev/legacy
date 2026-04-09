@@ -30,12 +30,14 @@ import { AdminCreatePlayerPanel } from './panels/AdminCreatePlayerPanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminBannersPanel } from './panels/AdminBannersPanel';
 import { AdminSaveHubPanel } from './panels/AdminSaveHubPanel';
+import { AdminSportsDataPanel } from './panels/AdminSportsDataPanel';
 
 type TabId =
   | 'overview'
   | 'financeiro'
   | 'usuarios'
   | 'leagues'
+  | 'sportsData'
   | 'user'
   | 'createPlayer'
   | 'gameSpirit'
@@ -51,6 +53,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'gameSpirit', label: 'Game Spirit', icon: Brain },
   { id: 'createPlayer', label: 'Create player', icon: Sparkles },
   { id: 'leagues', label: 'Ligas', icon: Trophy },
+  { id: 'sportsData', label: 'Sports Data', icon: Database },
   { id: 'user', label: 'Sessão local', icon: UserCog },
 ];
 
@@ -58,6 +61,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
 const HASH_TO_TAB: Record<string, TabId> = {
   'create-player': 'createPlayer',
   'game-spirit': 'gameSpirit',
+  'sports-data': 'sportsData',
   save: 'saveData',
 };
 
@@ -86,6 +90,7 @@ export function AdminDashboard() {
   const setHashTab = (id: TabId) => {
     if (id === 'createPlayer') window.location.hash = 'create-player';
     else if (id === 'gameSpirit') window.location.hash = 'game-spirit';
+    else if (id === 'sportsData') window.location.hash = 'sports-data';
     else if (id === 'saveData') window.location.hash = 'save';
     else window.location.hash = id;
     setTab(id);
@@ -151,6 +156,7 @@ export function AdminDashboard() {
                   <code className="ml-1.5 text-white/25">#financeiro</code>
                   <code className="ml-1.5 text-white/25">#usuarios</code>
                   <code className="ml-1.5 text-white/25">#leagues</code>
+                  <code className="ml-1.5 text-white/25">#sports-data</code>
                   <code className="ml-1.5 text-white/25">#banners</code>
                   <code className="ml-1.5 text-white/25">#save</code>
                   <code className="ml-1.5 text-white/25">#user</code>
@@ -173,6 +179,7 @@ export function AdminDashboard() {
               {tab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
               {tab === 'usuarios' ? <AdminUsuariosPanel /> : null}
               {tab === 'leagues' ? <AdminLeaguesPanel /> : null}
+              {tab === 'sportsData' ? <AdminSportsDataPanel /> : null}
               {tab === 'user' ? <AdminUserPanel /> : null}
               {tab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
               {tab === 'banners' ? <AdminBannersPanel /> : null}

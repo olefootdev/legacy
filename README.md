@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Abre em `http://localhost:3000`.
+Abre em `http://localhost:5173` (ou a porta que o Vite indicar no terminal).
 
 ## Pitch viewer (WebView)
 
@@ -90,9 +90,10 @@ EXPO_PUBLIC_PITCH_URL=http://192.168.x.x:5174
 
 ## Repositório público (GitHub)
 
-- **Não versionar** `.env`, `.env.local`, nem cópias com chaves reais. O `.gitignore` já ignora `.env*` exceto `.env.example` e `server/.env.example`.
-- **Nunca** colocar no remoto: `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `API_FOOTBALL_KEY` com valor, passwords de base de dados, nem exports de saves com dados pessoais.
-- Copia `.env.example` → `.env` e `server/.env.example` → `server/.env` **só na tua máquina** ou em CI privado com secrets do GitHub Actions.
+- **Não versionar** `.env`, `.env.local`, nem cópias com chaves reais. O `.gitignore` cobre `.env*`, com exceção dos ficheiros `*.example` na raiz, `server/` e `mobile/`.
+- **Nunca** colocar no remoto: `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `API_FOOTBALL_KEY` com valor, passwords de base de dados, nem exports de saves com dados pessoais. **Não colocar project refs reais** em `supabase/config.toml` nem em documentação commitada — usa `supabase link` localmente.
+- Copia `.env.example` → `.env`, `server/.env.example` → `server/.env`, `mobile/.env.example` → `mobile/.env` **só na tua máquina** ou em CI privado com secrets do GitHub Actions.
+- **Não partilhes chaves** em issues, chats ou PRs; se algo vazar, regera o token no respetivo dashboard.
 
 ---
 

@@ -2,6 +2,16 @@ import type { ApiFootballEnvelope } from './types';
 
 const HOST = 'https://v3.football.api-sports.io';
 
+/**
+ * Pedidos relativos a `/api-football`: o servidor (Vite dev/preview com proxy) injeta `x-apisports-key`.
+ * Em `npm run build` + `vite preview`, `DEV` é false — sem isto o browser ia ao domínio da API sem chave (403).
+ */
+function useFootballApiProxy(): boolean {
+  if (import.meta.env.DEV) return true;
+  const v = import.meta.env.VITE_API_FOOTBALL_PROXY;
+  return v === 'true' || v === '1';
+}
+
 function buildUrl(path: string, params?: Record<string, string | number | undefined>): string {
   const p = path.startsWith('/') ? path : `/${path}`;
   const q = new URLSearchParams();
@@ -12,7 +22,7 @@ function buildUrl(path: string, params?: Record<string, string | number | undefi
     }
   }
   const qs = q.toString();
-  if (import.meta.env.DEV) {
+  if (useFootballApiProxy()) {
     return `/api-football${p}${qs ? `?${qs}` : ''}`;
   }
   return `${HOST}${p}${qs ? `?${qs}` : ''}`;
@@ -20,16 +30,20 @@ function buildUrl(path: string, params?: Record<string, string | number | undefi
 
 function headers(): HeadersInit {
   const h: HeadersInit = {};
-  if (!import.meta.env.DEV) {
-    const key = import.meta.env.VITE_API_FOOTBALL_KEY as string | undefined;
+  /** Com proxy relativo, a chave não vai no browser — o proxy adiciona. */
+  if (!useFootballApiProxy()) {
+    const key = (import.meta.env.VITE_API_FOOTBALL_KEY as string | undefined)?.trim();
     if (key) h['x-apisports-key'] = key;
   }
   return h;
 }
 
 export function hasApiFootballClientConfig(): boolean {
-  if (import.meta.env.DEV) return true;
-  return Boolean(import.meta.env.VITE_API_FOOTBALL_KEY);
+  const viteKey = (import.meta.env.VITE_API_FOOTBALL_KEY as string | undefined)?.trim();
+  if (viteKey) return true;
+  /** Proxy local + `API_FOOTBALL_KEY` no `.env` (injectada pelo Vite no proxy). */
+  if (useFootballApiProxy() && __OLEFOOT_API_FOOTBALL_KEY_SET__) return true;
+  return false;
 }
 
 export async function apiFootballGet<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {

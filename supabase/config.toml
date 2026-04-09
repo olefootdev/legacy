@@ -1,5 +1,7 @@
+# Substitui o id após `npx supabase link --project-ref <teu-ref>` (local).
+# Não commitar aqui um project ref real se o repositório for público/partilhado.
 [project]
-id = "toyyjdfabddcxaxysmun"
+id = "aaaaaaaaaaaaaaaaaaaa"
 
 [api]
 port = 54321

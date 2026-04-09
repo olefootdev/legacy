@@ -18,7 +18,7 @@ server/
         └── matches.ts     # POST /matches, POST /matches/:id/events
 
 supabase/
-├── config.toml            # projeto toyyjdfabddcxaxysmun
+├── config.toml            # `project.id` preenchido localmente após `supabase link`
 └── migrations/
     └── 00001_initial_schema.sql   # profiles, clubs, players, matches, match_events + RLS
 ```
@@ -47,7 +47,7 @@ cp server/.env.example server/.env
 
 ```bash
 # Linkar ao projecto (precisa de login prévio: npx supabase login)
-npx supabase link --project-ref toyyjdfabddcxaxysmun
+npx supabase link --project-ref YOUR_PROJECT_REF
 
 # Aplicar migrations ao Supabase remoto
 npx supabase db push
@@ -121,4 +121,4 @@ RLS habilitado em todas. Políticas usam `public.my_club_id()` para filtrar por 
 | `SUPABASE_SERVICE_ROLE_KEY` | `server/.env` | Sim |
 | `DATABASE_URL` | `server/.env` | Não (futuro) |
 | `PORT` | `server/.env` | Não (default 4000) |
-| `CORS_ORIGIN` | `server/.env` | Não (default `http://localhost:3000`) |
+| `CORS_ORIGIN` | `server/.env` | Não (default típico `http://localhost:5173` para Vite) |

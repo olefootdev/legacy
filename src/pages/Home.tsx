@@ -259,13 +259,20 @@ export function Home() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden bg-[#111] border border-white/10"
+        className="relative isolate overflow-hidden bg-[#111] border border-white/10"
       >
         <div
-          className="absolute inset-0 opacity-[0.18] pointer-events-none"
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(180deg, rgba(9,9,9,0.5) 0%, rgba(9,9,9,0.68) 50%, rgba(9,9,9,0.78) 100%), url(/banners/presets/fundo-div-home.jpg)',
+          }}
+        />
+        <div
+          className="absolute inset-0 z-[1] opacity-[0.18] pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(#fff 1.5px, transparent 1.5px)', backgroundSize: '14px 14px' }}
         />
-        <div className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/25 blur-[80px] rounded-full pointer-events-none" />
+        <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/25 blur-[80px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-6 md:px-10 md:py-8 flex flex-col gap-5 lg:gap-6">
           {/* Cabeçalho: matchday + horário + duelo (nomes completos + brasões) */}
@@ -282,7 +289,7 @@ export function Home() {
               homeName={club.name}
               awayName={fixture.opponent.name}
               awaySeed={fixture.opponent.id}
-              className="text-[1.125rem] sm:text-[1.65rem] md:text-[2rem] lg:text-[2.35rem]"
+              className="text-[clamp(0.75rem,2.85vw+0.35rem,1.125rem)] sm:text-[clamp(1.05rem,2.4vw+0.5rem,1.65rem)] md:text-[2rem] lg:text-[2.35rem]"
               vsClassName="text-[0.9em] sm:text-[0.95em] md:text-[1em]"
             />
             <p className="text-gray-400 text-sm font-medium tracking-wide">
@@ -433,44 +440,28 @@ export function Home() {
           <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-4">Status: {crowd.moodLabel}</p>
         </motion.div>
 
-        {/* Últimos resultados — placares com tratamento visual forte (identidade OLEFOOT) */}
+        {/* Últimos resultados — alinhado ao bloco industrial da grelha (Torcidômetro / Amistoso) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="sports-panel p-0 overflow-hidden flex flex-col min-h-[300px] border border-white/12 bg-gradient-to-b from-neon-yellow/[0.07] via-black/40 to-black/80 shadow-[0_0_40px_-12px_rgba(234,255,0,0.12)]"
+          className="sports-panel panel-accent p-0 overflow-hidden flex flex-col min-h-[300px]"
         >
-          <div className="relative px-4 sm:px-5 py-4 border-b border-white/10 bg-black/55">
-            <div
-              className="pointer-events-none absolute inset-0 opacity-90"
-              style={{
-                backgroundImage:
-                  'radial-gradient(ellipse 120% 80% at 100% 0%, rgba(234,255,0,0.12), transparent 50%), radial-gradient(ellipse 80% 60% at 0% 100%, rgba(255,255,255,0.04), transparent 45%)',
-              }}
-            />
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
-                <span className="shrink-0 mt-0.5 font-display font-black text-[10px] tracking-[0.18em] text-black bg-neon-yellow px-2.5 py-1.5 -skew-x-6 shadow-[0_0_20px_rgba(234,255,0,0.35)]">
-                  <span className="inline-block skew-x-6">FT</span>
-                </span>
-                <div className="min-w-0 pt-0.5">
-                  <h3 className="font-display font-black text-lg sm:text-xl uppercase tracking-wide text-white leading-tight">
-                    Últimos resultados
-                  </h3>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                    {results.length > 0
-                      ? `${Math.min(5, results.length)} últimos · o teu percurso`
-                      : 'Histórico vazio'}
-                  </p>
-                </div>
-              </div>
-              <Trophy className="w-8 h-8 text-neon-yellow/45 shrink-0 drop-shadow-[0_0_12px_rgba(234,255,0,0.25)]" />
+          <div className="flex justify-between items-end gap-3 px-6 pt-6 pb-4 border-b border-white/10">
+            <div className="min-w-0">
+              <h3 className="font-display font-bold text-xl text-gray-400 uppercase tracking-wider">Últimos resultados</h3>
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">
+                {results.length > 0
+                  ? `${Math.min(5, results.length)} últimos · o teu percurso`
+                  : 'Histórico vazio'}
+              </p>
             </div>
+            <Trophy className="w-8 h-8 text-neon-yellow opacity-50 shrink-0 mb-0.5" />
           </div>
 
-          <div className="p-3 flex-1 flex flex-col gap-2">
+          <div className="px-6 py-4 flex-1 flex flex-col gap-2">
             {results.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-10 px-4 text-center rounded-lg border border-dashed border-white/10 bg-black/25">
+              <div className="flex-1 flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-white/10 bg-dark-gray/40">
                 <p className="text-sm font-display font-bold text-gray-300 uppercase tracking-wider">Sem jogos ainda</p>
                 <p className="text-[11px] text-gray-600 mt-2 max-w-[220px] leading-relaxed">
                   Entra em campo — os placares aparecem aqui com estilo de painel desportivo.
@@ -488,10 +479,8 @@ export function Home() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.06 + i * 0.05, type: 'spring', stiffness: 380, damping: 28 }}
                     className={cn(
-                      'group relative flex rounded-xl overflow-hidden border border-white/10',
-                      'bg-gradient-to-r from-black/70 via-black/50 to-black/40',
-                      'hover:border-neon-yellow/40 hover:shadow-[0_0_28px_-6px_rgba(234,255,0,0.28)]',
-                      'transition-[border-color,box-shadow] duration-300',
+                      'group relative flex overflow-hidden border border-white/10 bg-dark-gray',
+                      'hover:border-neon-yellow/30 transition-colors duration-200',
                     )}
                   >
                     <div className={cn('w-1 shrink-0', meta.bar)} aria-hidden />
@@ -511,7 +500,7 @@ export function Home() {
                           </span>
                         ) : null}
                       </div>
-                      <div className="shrink-0 flex flex-col items-center justify-center px-2 sm:px-3 border-x border-white/[0.08] bg-black/35">
+                      <div className="shrink-0 flex flex-col items-center justify-center px-2 sm:px-3 border-x border-white/10 bg-black/40">
                         <div className="flex items-center gap-1.5 font-display font-black tabular-nums leading-none">
                           <span className="text-lg sm:text-xl text-white">{match.scoreHome}</span>
                           <span className="text-neon-yellow text-sm sm:text-base pb-0.5">:</span>
@@ -539,7 +528,7 @@ export function Home() {
                     </div>
                     <div
                       className={cn(
-                        'shrink-0 w-[3.25rem] sm:w-14 flex flex-col items-center justify-center border-l border-white/[0.08]',
+                        'shrink-0 w-[3.25rem] sm:w-14 flex flex-col items-center justify-center border-l border-white/10',
                         meta.side,
                       )}
                     >
@@ -556,11 +545,11 @@ export function Home() {
             )}
           </div>
 
-          <div className="px-3 pb-3 pt-0">
+          <div className="px-6 pb-6 pt-2">
             <button
               type="button"
               onClick={scrollToNotificacoes}
-              className="w-full py-2.5 rounded-lg border border-white/10 bg-white/[0.04] text-[10px] font-display font-bold uppercase tracking-widest text-gray-400 hover:text-neon-yellow hover:border-neon-yellow/30 hover:bg-neon-yellow/[0.06] transition-all"
+              className="w-full py-2.5 border border-white/10 bg-dark-gray text-[10px] font-display font-bold uppercase tracking-widest text-gray-400 hover:text-neon-yellow hover:border-neon-yellow/25 transition-colors"
             >
               Ver notificações ↓
             </button>

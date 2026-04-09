@@ -11,7 +11,6 @@ import { createDefaultAdminLeagues } from '@/match/adminLeagues';
 import { createInitialStaffState } from '@/systems/staff';
 import { createInitialSocialState } from '@/social/types';
 import { pickHomeCaptainPlayerId } from '@/match/impactRules';
-import { createHomeInboxSeedExamples } from './homeInboxSeedExamples';
 
 export function createInitialGameState(): OlefootGameState {
   const players = createInitialSquad();
@@ -22,26 +21,21 @@ export function createInitialGameState(): OlefootGameState {
     players,
     lineup: {},
     finance: {
-      ole: 1250,
-      broCents: 4550,
+      ole: 0,
+      broCents: 0,
       expLifetimeEarned: 0,
       expHistory: [],
       companyTreasuryBroCents: 0,
       friendlyChallengeEscrowBroCents: 0,
       wallet: createInitialWalletState(),
     },
-    crowd: { supportPercent: 85, moodLabel: 'Confiante' },
-    form: ['W', 'W', 'D', 'L', 'W'],
-    results: [
-      { home: 'OLE FC', away: 'TITANS', scoreHome: 2, scoreAway: 1, status: 'FT', result: 'win' },
-      { home: 'SPARTANS', away: 'OLE FC', scoreHome: 0, scoreAway: 2, status: 'FT', result: 'win' },
-      { home: 'OLE FC', away: 'DRAGONS', scoreHome: 1, scoreAway: 1, status: 'FT', result: 'draw' },
-      { home: 'WOLVES', away: 'OLE FC', scoreHome: 3, scoreAway: 2, status: 'FT', result: 'loss' },
-    ],
+    crowd: { supportPercent: 0, moodLabel: 'Desconhecido' },
+    form: [],
+    results: [],
     leagueSeason: createInitialLeagueSeason(),
     adminLeagues: createDefaultAdminLeagues(),
     adminPrimaryLeagueId: 'lg_ole_serie_a',
-    inbox: createHomeInboxSeedExamples(),
+    inbox: [],
     nextFixture: defaultFixture(),
     liveMatch: null,
     manager: {

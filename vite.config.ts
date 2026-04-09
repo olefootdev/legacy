@@ -1,10 +1,33 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import dotenv from 'dotenv';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
+/** Raiz do projeto (vite.config na raiz) — evita `loadEnv(mode, '.')` quando o cwd não é a raiz. */
+const rootDir = path.resolve(__dirname);
+
+/** Aspas em `.env` (`KEY="abc"`) entram no valor; a API rejeita o header. */
+function normalizeApiFootballKey(raw: string | undefined): string {
+  if (raw === undefined || raw === null) return '';
+  let t = String(raw).trim();
+  if (t.length >= 2 && ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))) {
+    t = t.slice(1, -1).trim();
+  }
+  return t;
+}
+
 export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
+  dotenv.config({ path: path.join(rootDir, '.env') });
+  dotenv.config({ path: path.join(rootDir, '.env.local'), override: true });
+  const env = loadEnv(mode, rootDir, '');
+  const apiFootballKeyLive =
+    normalizeApiFootballKey(process.env.API_FOOTBALL_KEY) ||
+    normalizeApiFootballKey(process.env.VITE_API_FOOTBALL_KEY) ||
+    normalizeApiFootballKey(env.API_FOOTBALL_KEY) ||
+    normalizeApiFootballKey(env.VITE_API_FOOTBALL_KEY) ||
+    '';
+  const apiFootballKeyConfigured = Boolean(apiFootballKeyLive);
   /** Proxy API-Football (api-sports): chave só no servidor de dev, não no bundle. */
   const apiFootballProxy: import('vite').ProxyOptions = {
     target: 'https://v3.football.api-sports.io',
@@ -12,8 +35,7 @@ export default defineConfig(({mode}) => {
     rewrite: (p) => p.replace(/^\/api-football/, ''),
     configure(proxy) {
       proxy.on('proxyReq', (proxyReq) => {
-        const key = env.API_FOOTBALL_KEY || env.VITE_API_FOOTBALL_KEY;
-        if (key) proxyReq.setHeader('x-apisports-key', key);
+        if (apiFootballKeyLive) proxyReq.setHeader('x-apisports-key', apiFootballKeyLive);
       });
     },
   };
@@ -21,10 +43,14 @@ export default defineConfig(({mode}) => {
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      /** Sincronizado com .env em build/dev — o browser não vê a chave, só se existe (para UI/proxy). */
+      __OLEFOOT_API_FOOTBALL_KEY_SET__: JSON.stringify(apiFootballKeyConfigured),
     },
+    root: rootDir,
+    envDir: rootDir,
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.join(rootDir, 'src'),
       },
     },
     server: {

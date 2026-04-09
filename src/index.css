@@ -15,12 +15,6 @@
   .sports-panel {
     @apply bg-panel border border-white/5 relative overflow-hidden;
   }
-  .sports-panel::after {
-    content: '';
-    @apply absolute inset-0 opacity-[0.03] pointer-events-none;
-    background-image: radial-gradient(#fff 1px, transparent 1px);
-    background-size: 12px 12px;
-  }
   .panel-accent {
     @apply border-l-4 border-l-neon-yellow;
   }

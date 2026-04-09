@@ -10,10 +10,33 @@ coverage/
 .env.*
 !.env.example
 !server/.env.example
+!mobile/.env.example
 .env.local
 .env.*.local
 *.pem
 secrets/
+
+# NPM — ficheiros .npmrc podem conter token de registry
+.npmrc
+
+# Mobile / Expo
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+
+# Sub-Apps Vite
+web/match-pitch/.env
+web/match-pitch/.env.*
+
+# Supabase CLI (estado local / branches)
+supabase/.temp
+supabase/.branches
+
+# Android / Firebase (credenciais de projeto)
+google-services.json
+GoogleService-Info.plist
+*.jks
+*.keystore
 
 # Cursor — MCP local pode expor project_ref Supabase; recria em Settings → MCP
 .cursor/mcp.json
