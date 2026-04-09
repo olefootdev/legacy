@@ -45,6 +45,9 @@ GoogleService-Info.plist
 # Cursor — MCP local pode expor project_ref Supabase; recria em Settings → MCP
 .cursor/mcp.json
 
+# Claude Code — symlinks/cópia local das skills (fonte versionada em .agents/skills)
+.claude/
+
 # Ferramentas / caches
 .turbo
 .vercel
