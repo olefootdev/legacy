@@ -1,14 +1,40 @@
-# Substitui o id após `npx supabase link --project-ref <teu-ref>` (local).
-# Não commitar aqui um project ref real se o repositório for público/partilhado.
-[project]
-id = "aaaaaaaaaaaaaaaaaaaa"
+# ID local para `supabase start` (containers). Não é o project ref remoto.
+# Liga ao projeto: `npx supabase login` → `npx supabase link --project-ref <REF>`
+# Ref: https://supabase.com/docs/guides/local-development/cli/config
+project_id = "olefootv11"
 
 [api]
+enabled = true
 port = 54321
-schemas = ["public"]
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[api.tls]
+enabled = false
 
 [db]
 port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+sql_paths = []
 
 [studio]
+enabled = true
 port = 54323
+api_url = "http://127.0.0.1"
+openai_api_key = "env(OPENAI_API_KEY)"

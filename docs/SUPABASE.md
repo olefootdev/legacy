@@ -58,17 +58,25 @@ supabase/migrations/00003_admin_platform_schema.sql    — catálogo sports, onb
 
 RLS habilitado; políticas variam por tabela (catálogo sports e banners activos legíveis por `anon`/`authenticated` onde indicado na migration).
 
-## Aplicar migrations
+## Aplicar migrations (“subir o banco”)
+
+Na **raiz do repo**, com a conta Supabase que **é dona** do projeto:
 
 ```bash
-# Instalar CLI (se necessário)
 npx supabase login
 npx supabase link --project-ref YOUR_PROJECT_REF
-
-# Aplicar
 npx supabase db push
+```
 
-# Gerar tipos (substitui database.types.ts)
+- **`YOUR_PROJECT_REF`:** Settings → General → Reference ID (ex. `xtuveikgwlgbcleloxia`).
+- Se `link` der erro de **privilégios**, confirma que fizeste login com o utilizador certo (`npx supabase projects list`).
+- O ficheiro **`supabase/config.toml`** usa `project_id` (local) no formato atual da CLI; não uses o bloco antigo `[project]` com `id`.
+
+**Sem CLI:** Dashboard → **SQL** → colar e executar, **por ordem**, `00001`, `00002`, `00003` em `supabase/migrations/`.
+
+Depois do `db push`, tipos TypeScript (opcional):
+
+```bash
 npx supabase gen types typescript --linked > src/supabase/database.types.ts
 ```
 
