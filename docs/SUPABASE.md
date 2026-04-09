@@ -19,18 +19,23 @@ Copiar `.env.example` para `.env` e preencher.
 ## Schema (migrations)
 
 ```
-supabase/migrations/00001_initial_schema.sql
+supabase/migrations/00001_initial_schema.sql   — perfil, clube de jogo, plantel, partidas
+supabase/migrations/00002_admin_leagues_competitions.sql — épocas, competições, fixtures
+supabase/migrations/00003_admin_platform_schema.sql    — catálogo sports, onboarding, blueprints, spirit, saves, banners, ledger
 ```
 
-Tabelas:
+**00001 — núcleo jogo**
 
-- **`profiles`** — FK `auth.users`, `club_id`
-- **`clubs`** — `short_name`, `name`, `city`, `stadium`
-- **`players`** — `club_id`, atributos em JSONB com `schema_version`
-- **`matches`** — `home_club_id`, `away_name`, `mode`, `status`, `score_home`, `score_away`, timestamps
-- **`match_events`** — append-only: `match_id`, `minute`, `kind`, `payload` JSONB
+- **`profiles`** — FK `auth.users`, `club_id` (clube de jogo); a partir de 00003 também `onboarding_status`, `sports_club_id`, `display_name`
+- **`clubs`** — clube gerido no jogo
+- **`players`** — plantel: `club_id`, atributos em JSONB, `schema_version`
+- **`matches`**, **`match_events`** — partidas e eventos append-only
 
-RLS habilitado em todas as tabelas. Políticas por `auth.uid()` → `club_id`.
+**00002** — temporadas, divisões, competições, classificações, fixtures (sempre referenciando **`clubs` de jogo**).
+
+**00003** — Admin / onboarding: **`sports_leagues`**, **`sports_clubs`**, **`user_settings`**, **`platform_accounts`**, **`player_blueprints`**, Game Spirit, **`game_saves`**, **`admin_banners`**, **`finance_ledger_entries`**. Ver [ADMIN_DATABASE.md](./ADMIN_DATABASE.md).
+
+RLS habilitado; políticas variam por tabela (catálogo sports e banners activos legíveis por `anon`/`authenticated` onde indicado na migration).
 
 ## Aplicar migrations
 
