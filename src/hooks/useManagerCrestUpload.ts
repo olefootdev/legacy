@@ -18,7 +18,7 @@ export function useManagerCrestUpload() {
       if (!file) return;
       setError(null);
       const r = await fileToManagerCrestPngDataUrl(file);
-      if (r.ok) {
+      if (r.ok === true) {
         dispatch({
           type: 'SET_USER_SETTINGS',
           partial: { managerCrestPngDataUrl: r.dataUrl },

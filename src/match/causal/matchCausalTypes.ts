@@ -89,6 +89,20 @@ export type CausalMatchEvent =
         card: 'yellow' | 'red';
         reason?: string;
       };
+    }
+  /**
+   * Motor tático: reorganização forçada (log causal — não narrativa de UI).
+   * Disparado quando o árbitro lógico deteta confusão no log ou ajuntamento espacial.
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'referee_shape_reset';
+      payload: {
+        minute: number;
+        reason: 'causal_whirlwind' | 'spatial_swarm';
+        awardedSide: PossessionSide;
+      };
     };
 
 export interface CausalLogState {

@@ -2,6 +2,8 @@ import type { MatchTruthPhase } from '@/bridge/matchTruthSchema';
 
 /** Tunable: walk to formation after goal (ou remate para fora) antes da bola voltar ao vivo. */
 export const GOAL_RESTART_REPOSITION_SEC = 3;
+/** Após o intervalo: segundos com equipas já trocadas de lado e bola parada no centro antes do pontapé de saída. */
+export const SECOND_HALF_KICKOFF_WAIT_SEC = 3;
 /** Tunable: brief kickoff phase after ball is given before returning to live play. */
 export const KICKOFF_TO_LIVE_SEC = 0.5;
 /** Tunable: auto-resume from classic set pieces if user does not press “bola viva”. */

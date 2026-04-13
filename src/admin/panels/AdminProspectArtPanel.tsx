@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Brush, CheckCircle2, ClipboardCopy, ExternalLink } from 'lucide-react';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
@@ -277,7 +277,9 @@ export function AdminProspectArtPanel() {
       ) : (
         <ul className="space-y-4">
           {rows.map((r) => (
-            <ArtQueueRow key={r.id} r={r} pl={players[r.playerId]} />
+            <Fragment key={r.id}>
+              <ArtQueueRow r={r} pl={players[r.playerId]} />
+            </Fragment>
           ))}
         </ul>
       )}

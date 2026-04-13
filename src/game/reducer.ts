@@ -2,7 +2,7 @@ import { pitchPlayersFromLineup } from '@/engine/pitchFromLineup';
 import { runMatchMinute } from '@/engine/runMatchMinute';
 import { advanceMatchToPostgame, runMatchMinuteBulk } from '@/engine/matchBulk';
 import { applySubstitution } from '@/engine/substitution';
-import type { GameAction, OlefootGameState } from './types';
+import type { GameAction, ManagerProspectArtRequest, OlefootGameState } from './types';
 import { createInitialGameState, defaultLiveMatchShell } from './initialState';
 import { rehydrateGameState } from './persistence';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
@@ -16,6 +16,7 @@ import {
   MANAGER_PROSPECT_CREATE_MAX_OVR,
   MANAGER_PROSPECT_EVOLVED_MAX_OVR,
   scaleAttrsToMaxOvr,
+  type ManagerProspectHeritageBrief,
 } from '@/entities/managerProspect';
 import {
   applyMatchPerformanceEvolution,
@@ -87,7 +88,7 @@ import {
   appendTeamGoalScoredHome,
 } from '@/match/impactLedger';
 import type { FormationSchemeId } from '@/match-engine/types';
-import { insertMatch, queueMatchEvents, finalizeMatch, persistPlayers } from '@/supabase/matchPersistence';
+import { queueMatchEvents, finalizeMatch, persistPlayers } from '@/supabase/matchPersistence';
 import type { SocialState } from '@/social/types';
 import { discoverableById } from '@/social/catalog';
 import { makeInboxItem } from './inboxItem';
@@ -227,11 +228,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return { ...state, lineup };
     }
     case 'START_LIVE_MATCH': {
-      const squadCheck = evaluateOfficialSquad(state.lineup, state.players);
+      let st = state;
+      if (st.liveMatch?.phase === 'postgame') {
+        st = gameReducer(st, { type: 'FINALIZE_MATCH' });
+      }
+      const squadCheck = evaluateOfficialSquad(st.lineup, st.players);
       const skipSquadGateForQuickTest =
         (action.mode === 'quick' || action.mode === 'test2d') && isOfficialSquadGateRelaxedForTests();
       if (!squadCheck.ok && !skipSquadGateForQuickTest) {
-        const inboxWithoutDup = state.inbox.filter((i) => i.id !== 'lineup-requirement-live-match');
+        const inboxWithoutDup = st.inbox.filter((i) => i.id !== 'lineup-requirement-live-match');
         const lineupNote = makeInboxItem(
           'lineup-requirement-live-match',
           'LINEUP_ISSUE',
@@ -242,36 +247,36 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             deepLink: '/team',
           },
         );
-        return { ...state, inbox: [lineupNote, ...inboxWithoutDup].slice(0, 24) };
+        return { ...st, inbox: [lineupNote, ...inboxWithoutDup].slice(0, 24) };
       }
-      const lu = mergeLineupWithDefaults(state.lineup, state.players);
-      const travelKm = tripKmForFixture(state.nextFixture);
-      let players = applyTravelFatigueToSquad(state.players, travelKm);
-      const fs = state.manager.formationScheme;
+      const lu = mergeLineupWithDefaults(st.lineup, st.players);
+      const travelKm = tripKmForFixture(st.nextFixture);
+      let players = applyTravelFatigueToSquad(st.players, travelKm);
+      const fs = st.manager.formationScheme;
       const homePlayers = pitchPlayersFromLineup(lu, players, fs);
       let liveMatch = defaultLiveMatchShell(
-        state.club.shortName,
-        state.nextFixture.opponent.shortName,
+        st.club.shortName,
+        st.nextFixture.opponent.shortName,
         homePlayers,
         lu,
         travelKm,
         fs,
-        { homeName: state.club.name, awayName: state.nextFixture.opponent.name },
+        { homeName: st.club.name, awayName: st.nextFixture.opponent.name },
       );
       liveMatch = { ...liveMatch, mode: action.mode };
 
       if (action.mode === 'auto') {
         liveMatch = { ...liveMatch, phase: 'playing' };
-        const roster = homeRosterFromLineup({ ...state, players });
+        const roster = homeRosterFromLineup({ ...st, players });
         const { snapshot, updatedPlayers } = advanceMatchToPostgame({
           snapshot: liveMatch,
           homeRoster: roster,
           allPlayers: players,
-          crowdSupport: state.crowd.supportPercent,
-          tacticalMentality: state.manager.tacticalMentality,
-          tacticalStyle: state.manager.tacticalStyle,
-          opponentStrength: state.nextFixture.opponent.strength,
-          awayShort: state.nextFixture.opponent.shortName,
+          crowdSupport: st.crowd.supportPercent,
+          tacticalMentality: st.manager.tacticalMentality,
+          tacticalStyle: st.manager.tacticalStyle,
+          opponentStrength: st.nextFixture.opponent.strength,
+          awayShort: st.nextFixture.opponent.shortName,
         });
         players = { ...players, ...updatedPlayers };
         liveMatch = snapshot;
@@ -280,10 +285,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         const kick: MatchEventEntry = {
           id: uid(),
           minute: 0,
-          text: `0' — ${state.club.shortName} x ${state.nextFixture.opponent.shortName} ${kickLabel}.`,
+          text: `0' — ${st.club.shortName} x ${st.nextFixture.opponent.shortName} ${kickLabel}.`,
           kind: 'whistle',
         };
-        const opp = state.nextFixture.opponent;
+        const opp = st.nextFixture.opponent;
         const awaySlots: { pos: string; num: number }[] = [
           { pos: 'GOL', num: 1 }, { pos: 'ZAG', num: 4 }, { pos: 'ZAG', num: 5 },
           { pos: 'LE', num: 3 }, { pos: 'LD', num: 2 }, { pos: 'VOL', num: 8 },
@@ -313,20 +318,23 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         };
       }
 
-      void insertMatch({
-        homeClubId: state.club.id,
-        awayName: state.nextFixture.opponent.shortName,
-        mode: action.mode,
-        simulationSeed: liveMatch.simulationSeed,
-      }).then((sbId) => {
-        if (sbId) liveMatch.supabaseMatchId = sbId;
-      });
+      const matchClientNonce = Date.now() + Math.floor(Math.random() * 1_000_000);
+      liveMatch = { ...liveMatch, matchClientNonce };
 
       return {
-        ...state,
+        ...st,
         players,
         liveMatch,
         clubLogistics: { lastTripKm: travelKm },
+      };
+    }
+    case 'SET_LIVE_MATCH_SUPABASE_ID': {
+      const lm = state.liveMatch;
+      if (!lm || lm.supabaseMatchId) return state;
+      if (lm.matchClientNonce !== action.matchClientNonce) return state;
+      return {
+        ...state,
+        liveMatch: { ...lm, supabaseMatchId: action.matchId },
       };
     }
     case 'BEGIN_PLAY_FROM_PREGAME': {
@@ -775,30 +783,28 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players[pid] = next;
       }
 
+      const playerPersistPayload = Object.values(players).map((p) => ({
+        id: p.id,
+        name: p.name,
+        num: p.num,
+        pos: p.pos,
+        archetype: p.archetype,
+        zone: p.zone,
+        behavior: p.behavior,
+        attributes: p.attrs as unknown as Record<string, number>,
+        fatigue: p.fatigue,
+        injuryRisk: p.injuryRisk,
+        evolutionXp: p.evolutionXp,
+        outForMatches: p.outForMatches,
+      }));
       if (lm.supabaseMatchId) {
         const postData: Record<string, unknown> = {
           homeStats: lm.homeStats,
           events: lm.events.slice(0, 60).map((e) => ({ minute: e.minute, kind: e.kind, text: e.text })),
         };
         void finalizeMatch(lm.supabaseMatchId, lm.homeScore, lm.awayScore, postData);
-        void persistPlayers(
-          state.club.id,
-          Object.values(players).map((p) => ({
-            id: p.id,
-            name: p.name,
-            num: p.num,
-            pos: p.pos,
-            archetype: p.archetype,
-            zone: p.zone,
-            behavior: p.behavior,
-            attributes: p.attrs as unknown as Record<string, number>,
-            fatigue: p.fatigue,
-            injuryRisk: p.injuryRisk,
-            evolutionXp: p.evolutionXp,
-            outForMatches: p.outForMatches,
-          })),
-        );
       }
+      void persistPlayers(state.club.id, playerPersistPayload);
 
       const leagueSeason = applyResultToLeagueSeason(state.leagueSeason, lastRow);
 
@@ -856,27 +862,28 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       });
       const requestId = `art_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
       const createdAtIso = new Date().toISOString();
-      const queueEntry = {
+      const heritageBrief: ManagerProspectHeritageBrief = heritage
+        ? {
+            portraitStyleRegion: heritage.portraitStyleRegion,
+            originTags: [...(heritage.originTags ?? [])],
+            originText: heritage.originText.trim(),
+          }
+        : {
+            portraitStyleRegion: 'americas_sul',
+            originTags: [],
+            originText:
+              'Registo interno sem bloco de origem do fluxo Academia — completar nota no painel Player Creation.',
+          };
+      const queueEntry: ManagerProspectArtRequest = {
         id: requestId,
         playerId: built.id,
         createdAtIso,
-        playerCreationStep: 'awaiting_photo' as const,
+        playerCreationStep: 'awaiting_photo',
         adminArtPrompt,
         attributesSnapshot: { ...built.attrs },
         visualBrief: action.payload.visualBrief,
-        heritage: heritage
-          ? {
-              portraitStyleRegion: heritage.portraitStyleRegion,
-              originTags: [...(heritage.originTags ?? [])],
-              originText: heritage.originText.trim(),
-            }
-          : {
-              portraitStyleRegion: 'americas_sul',
-              originTags: [],
-              originText:
-                'Registo interno sem bloco de origem do fluxo Academia — completar nota no painel Player Creation.',
-            },
-        draftPortraitUrl: undefined as string | null | undefined,
+        heritage: heritageBrief,
+        draftPortraitUrl: undefined,
       };
       const prevQueue = state.managerProspectArtQueue ?? [];
       const managerProspectArtQueue = [queueEntry, ...prevQueue].slice(0, 200);

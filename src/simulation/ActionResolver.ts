@@ -2,7 +2,7 @@
  * Resolução crítica pós-decisão: acerto/erro com RNG determinístico (seed + tick + jogador + ação).
  */
 
-import { FIELD_LENGTH, FIELD_WIDTH } from './field';
+import { FIELD_LENGTH, FIELD_WIDTH, GOAL_INNER_WIDTH_M, GOAL_MOUTH_HALF_WIDTH_M } from './field';
 import {
   evaluateShot,
   nearestOpponentPressure01,
@@ -448,10 +448,16 @@ export function resolveShotForPossession(
 
   const rollOnTarget = rng.nextUnit();
   const goalX = attackDir === 1 ? FIELD_LENGTH : 0;
-  const goalZ =
-    FIELD_WIDTH / 2
-    + (rng.nextUnit() - 0.5)
-      * (strikeProfile === 'power' ? 6.8 : strikeProfile === 'weak' ? 4.1 : 5.2);
+  /** Boca real IFAB (7,32 m em Z); o desvio do perfil nunca aponta para fora dos postes no plano 2D. */
+  const goalZCenter = FIELD_WIDTH / 2;
+  const lateralSpreadFull =
+    strikeProfile === 'power' ? 6.8 : strikeProfile === 'weak' ? 4.1 : 5.2;
+  const lateralSpread = Math.min(lateralSpreadFull, GOAL_INNER_WIDTH_M * 0.96);
+  const postMargin = 0.08;
+  const zLo = goalZCenter - GOAL_MOUTH_HALF_WIDTH_M + postMargin;
+  const zHi = goalZCenter + GOAL_MOUTH_HALF_WIDTH_M - postMargin;
+  const rawGoalZ = goalZCenter + (rng.nextUnit() - 0.5) * lateralSpread;
+  const goalZ = Math.min(zHi, Math.max(zLo, rawGoalZ));
 
   if (rollOnTarget >= pOnTarget) {
     const missTag =

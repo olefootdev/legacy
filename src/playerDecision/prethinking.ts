@@ -24,6 +24,16 @@ const BASE_REFRESH: Record<PrethinkingSpeed, number> = {
   slow: 0.36,
 };
 
+/** Distância ao adversário mais próximo (m). */
+function nearestOpponentDist(ctx: DecisionContext): number {
+  let min = Infinity;
+  for (const o of ctx.opponents) {
+    const d = Math.hypot(o.x - ctx.self.x, o.z - ctx.self.z);
+    if (d < min) min = d;
+  }
+  return Number.isFinite(min) ? min : 22;
+}
+
 /** 0–1: quão “no lance” o jogador está → atualiza intenção mais vezes. */
 export function prethinkingAttention01(ctx: DecisionContext): number {
   const d = Math.hypot(ctx.ballX - ctx.self.x, ctx.ballZ - ctx.self.z);
@@ -39,6 +49,19 @@ export function prethinkingAttention01(ctx: DecisionContext): number {
   const zone = identifyFieldZone(ctx.self.x, ctx.attackDir);
   if (zone === 'opp_box' || zone === 'own_box') a += 0.14;
   if (zone === 'att_third' || zone === 'def_third') a += 0.08;
+
+  const nd = nearestOpponentDist(ctx);
+  if (nd < 7) a += 0.12;
+  else if (nd < 11) a += 0.06;
+
+  if (ctx.threatTrend === 'rising' && d > 10 && d < 28) a += 0.08;
+
+  if (ctx.ballFlightProgress > 0.12 && ctx.ballFlightProgress < 0.88) a += 0.06;
+
+  const dSlot = Math.hypot(ctx.slotX - ctx.self.x, ctx.slotZ - ctx.self.z);
+  const ballNearSlot = Math.hypot(ctx.ballX - ctx.slotX, ctx.ballZ - ctx.slotZ);
+  if (dSlot < 14 && ballNearSlot < 22) a += 0.1;
+  else if (dSlot < 20 && ballNearSlot < 30) a += 0.05;
 
   return clamp(a, 0, 1);
 }
@@ -92,19 +115,45 @@ export function invalidatePrethinking(state: PrethinkingState, ctx: DecisionCont
   if (simTime > state.validUntil) return true;
   if (ctx.possession !== state.possessionSide) return true;
   if (ctx.carrierId !== state.carrierId) return true;
+  if (ctx.isReceiver !== state.snapIsReceiver || ctx.isCarrier !== state.snapIsCarrier) return true;
+
+  if (Math.abs(ctx.threatLevel - state.threatLevel01) > 0.2) return true;
 
   const drift = Math.hypot(ctx.self.x - state.anchorX, ctx.self.z - state.anchorZ);
   if (drift > 15) return true;
 
+  const att = prethinkingAttention01(ctx);
   const ballMove = Math.hypot(ctx.ballX - state.ballX, ctx.ballZ - state.ballZ);
-  if (ballMove > 6) return true;
+  const ballThresh = att > 0.55 ? 4.2 : att > 0.32 ? 5.2 : 6;
+  if (ballMove > ballThresh) return true;
 
   const pr = scanPressure(ctx.self, ctx.opponents);
   if (pr.intensity !== state.pressureIntensity) return true;
 
+  const nd = nearestOpponentDist(ctx);
+  if (Math.abs(nd - state.nearestOppDist) > 3.2) return true;
+
   return false;
 }
 
+function applySpiritIntentNudge(
+  ctx: DecisionContext,
+  intent: PrethinkingIntent,
+  teamHasBall: boolean,
+): PrethinkingIntent {
+  const m = ctx.gameSpiritHomeMomentum01;
+  if (m == null || intent !== 'encaixe') return intent;
+  const c = clamp(m, 0.02, 0.98);
+  if (ctx.self.side === 'home' && teamHasBall && !ctx.isCarrier && c > 0.68 && pick01ForDecision(ctx) < 0.22) {
+    return 'atacar_espaco';
+  }
+  if (ctx.self.side === 'away' && !teamHasBall && c > 0.68 && pick01ForDecision(ctx) < 0.18) {
+    return 'cobertura_defensiva';
+  }
+  return intent;
+}
+
+/** Escolhe intenção a partir da leitura (bola, colegas, adversários, espaço via `buildContextReading`). */
 function pickPrethinkingIntent(ctx: DecisionContext): PrethinkingIntent {
   const teamHasBall = ctx.possession === ctx.self.side;
   const reading = buildContextReading(ctx);
@@ -180,15 +229,34 @@ function pickPrethinkingIntent(ctx: DecisionContext): PrethinkingIntent {
   return 'encaixe';
 }
 
+function softenRepeatedIntent(
+  ctx: DecisionContext,
+  intent: PrethinkingIntent,
+  previousIntent: PrethinkingIntent | null,
+): PrethinkingIntent {
+  if (!previousIntent || intent !== previousIntent || ctx.isReceiver) return intent;
+  const att = prethinkingAttention01(ctx);
+  if (att >= 0.38 || pick01ForDecision(ctx) <= 0.57) return intent;
+  if (intent === 'proteger_bola' || intent === 'passe_rapido' || intent === 'pressionar_portador' || intent === 'matar_jogada') {
+    return intent;
+  }
+  return 'encaixe';
+}
+
 export function buildPrethinkingState(
   ctx: DecisionContext,
   simTime: number,
   speed: PrethinkingSpeed,
+  previousIntent: PrethinkingIntent | null,
 ): PrethinkingState | null {
   if (ctx.self.role === 'gk') return null;
 
   const pr = scanPressure(ctx.self, ctx.opponents);
-  const intent = pickPrethinkingIntent(ctx);
+  const teamHasBall = ctx.possession === ctx.self.side;
+  let intent = pickPrethinkingIntent(ctx);
+  intent = applySpiritIntentNudge(ctx, intent, teamHasBall);
+  intent = softenRepeatedIntent(ctx, intent, previousIntent);
+
   const conviction01 = clamp(
     (ctx.self.mentalidade ?? 70) / 100 * 0.38
       + (ctx.profile.composure ?? 0.7) * 0.32
@@ -208,7 +276,11 @@ export function buildPrethinkingState(
     ballX: ctx.ballX,
     ballZ: ctx.ballZ,
     pressureIntensity: pr.intensity,
+    nearestOppDist: nearestOpponentDist(ctx),
     conviction01,
+    snapIsReceiver: ctx.isReceiver,
+    snapIsCarrier: ctx.isCarrier,
+    threatLevel01: ctx.threatLevel,
   };
 }
 
@@ -240,6 +312,9 @@ export function prethinkingDeliberationFactor(ctx: DecisionContext): number {
     case 'tabela':
       f *= 1 - c * 0.1;
       break;
+    case 'finalizar_rapido':
+      f *= 1 - c * 0.11;
+      break;
     default:
       break;
   }
@@ -257,6 +332,7 @@ export function prethinkingScanDelayFactor(ctx: DecisionContext): number {
     s.prethinkingIntent === 'atacar_espaco'
     || s.prethinkingIntent === 'finalizar_rapido'
     || s.prethinkingIntent === 'passe_rapido'
+    || s.prethinkingIntent === 'tabela'
   ) {
     f *= 1 - c * 0.11;
   }
@@ -312,6 +388,20 @@ export function prethinkingMacroTilt(ctx: DecisionContext): Partial<Record<Decis
         carry: c * 0.16,
         pass_long: c * 0.08,
         pass_safe: -c * 0.1,
+      };
+    case 'disputar_rebote':
+      return {
+        carry: c * 0.2,
+        dribble_risk: c * 0.12,
+        pass_progressive: c * 0.1,
+        pass_safe: -c * 0.08,
+      };
+    case 'cobertura_defensiva':
+    case 'interceptar_linha':
+      return {
+        pass_safe: c * 0.14,
+        carry: -c * 0.06,
+        shoot: -c * 0.1,
       };
     default:
       return {};

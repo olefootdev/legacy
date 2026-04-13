@@ -273,8 +273,8 @@ export function Calendar() {
                       </div>
                       <div className="flex flex-wrap gap-3 text-[10px] font-bold">
                         {mine && fx.status === 'scheduled' ? (
-                          <Link to="/match/live" className="text-neon-yellow hover:underline">
-                            Entrar no jogo →
+                          <Link to="/match/quick" className="text-neon-yellow hover:underline">
+                            Partida rápida (oficial) →
                           </Link>
                         ) : null}
                         <Link to="/team/treino" className="text-gray-400 hover:text-neon-yellow hover:underline">
@@ -362,8 +362,8 @@ export function Calendar() {
           <p className="text-sm text-gray-400">
             {formatDayLabel(nextUser.dateIso)} · {nextUser.kickoffHHmm}
           </p>
-          <Link to="/match/live" className="mt-3 inline-flex text-xs font-bold text-neon-yellow hover:underline">
-            Entrar no estádio →
+          <Link to="/match/quick" className="mt-3 inline-flex text-xs font-bold text-neon-yellow hover:underline">
+            Partida rápida (oficial) →
           </Link>
         </div>
       )}
@@ -400,8 +400,8 @@ export function Calendar() {
                     {fx.homeName} <span className="text-gray-500">×</span> {fx.awayName}
                   </p>
                   {mine && fx.status === 'scheduled' ? (
-                    <Link to="/match/live" className="mt-2 block text-[10px] font-bold text-neon-yellow hover:underline">
-                      Entrar no jogo →
+                    <Link to="/match/quick" className="mt-2 block text-[10px] font-bold text-neon-yellow hover:underline">
+                      Partida rápida (oficial) →
                     </Link>
                   ) : null}
                 </li>

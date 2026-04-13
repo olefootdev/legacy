@@ -117,6 +117,9 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     return { snapshot: s, updatedPlayers: {} };
   }
 
+  /** Partida automática: corta cartões/lesões sintéticos por minuto (GameSpirit mantém-se). */
+  const autoSimSlim = s.mode === 'auto';
+
   /** Partida ao vivo 2D: feed sem narrativa minuto-a-minuto; desfechos ancorados ao causal antes do texto. */
   const live2dSilentSpiritFeed = s.mode === 'test2d';
   const live2dPitchEarly = isLive2dPitchMode(s.mode);
@@ -475,7 +478,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       const preOut = plEnt.outForMatches;
       let next = applyMatchMinuteFatigue(plEnt, shouldTick ? 1.1 : 0.75);
       const injuryIntensity = shouldTick ? 1.1 : 0.6;
-      if (shouldTick && next.fatigue > 72 && Math.random() < 0.06 * autoSimBoost) {
+      if (!autoSimSlim && shouldTick && next.fatigue > 72 && Math.random() < 0.06 * autoSimBoost) {
         next = rollMatchInjury(next, injuryIntensity);
       }
       if (next.outForMatches > preOut) {
@@ -551,7 +554,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   // Away card: ~2.5% per tick → ~1.4 amarelos/90'
   const CARD_PROB_AWAY = 0.025;
 
-  if (shouldTick && Math.random() < CARD_PROB_HOME * autoSimBoost && homePlayers.length > 0) {
+  if (!autoSimSlim && shouldTick && Math.random() < CARD_PROB_HOME * autoSimBoost && homePlayers.length > 0) {
     const hp = homePlayers[Math.floor(Math.random() * homePlayers.length)]!;
     const basePl = updatedPlayers[hp.playerId] ?? input.homeRoster.find((p) => p.id === hp.playerId);
     if (basePl && basePl.outForMatches <= 0) {
@@ -620,7 +623,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     }
   }
 
-  if (shouldTick && Math.random() < CARD_PROB_AWAY * autoSimBoost && awayRoster && awayRoster.length > 0) {
+  if (!autoSimSlim && shouldTick && Math.random() < CARD_PROB_AWAY * autoSimBoost && awayRoster && awayRoster.length > 0) {
     const roster = awayRoster;
     const pick = roster[Math.floor(Math.random() * roster.length)]!;
     const isRed = Math.random() < 0.06;

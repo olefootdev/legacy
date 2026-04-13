@@ -3,7 +3,7 @@ import { FOOTBALL_TOTAL_SECONDS } from '@/engine/types';
 import type { MatchTruthPhase, MatchTruthPlayer, CameraCue } from '@/bridge/matchTruthSchema';
 import { Vehicle } from 'yuka';
 import { MatchTruthWorld } from './MatchTruthWorld';
-import { MatchPlayFsm } from '@/matchState/matchPlayFsm';
+import { MatchPlayFsm, SECOND_HALF_KICKOFF_WAIT_SEC } from '@/matchState/matchPlayFsm';
 import { MatchEngine } from '@/match-engine/MatchEngine';
 import { slotsForScheme } from '@/match-engine/formations/catalog';
 import { kickoffWorldXZ } from '@/engine/kickoffFormationLayout';
@@ -26,7 +26,19 @@ import {
   type AgentMode,
 } from '@/agents/yukaAgents';
 import { FIELD_SCHEMA_VERSION } from '@/field-schema/constants';
-import { clampToPitch, FIELD_LENGTH, FIELD_WIDTH, uiPercentToWorld, worldToUiPercent } from './field';
+import {
+  clampToPitch,
+  FIELD_LENGTH,
+  FIELD_WIDTH,
+  GOAL_MOUTH_HALF_WIDTH_M,
+  uiPercentToWorld,
+  worldToUiPercent,
+} from './field';
+import {
+  buildRefereeDispositionMaps,
+  scanCausalLogConfusion,
+  scanSpatialSwarmConfusion,
+} from '@/simulation/matchConfusionReferee';
 import { MatchSimulationEventBus } from '@/match/events/matchSimulationEventBus';
 import {
   emitCausalMatchEvent,
@@ -165,6 +177,11 @@ import { computeGoalThreat, type GoalThreat, type ThreatTrend } from '@/playerDe
 import { buildGoalContext } from '@/match/goalContext';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 const FIXED_DT = 1 / 60;
+/**
+ * Tempo mínimo com bola nas mãos do GR antes do pontapé (s).
+ * Valores ~FIXED_DT*3 (~50 ms) faziam `gkHeldWait` quase invisível e a pressão voltava logo.
+ */
+const GK_RESTART_KICK_DELAY_SEC = 0.58;
 const DECISION_DEBUG = (globalThis as { __OF_DECISION_DEBUG__?: boolean }).__OF_DECISION_DEBUG__ === true;
 
 function invertLineup(matchLineup: Record<string, string>): Map<string, string> {
@@ -294,6 +311,17 @@ export class TacticalSimLoop {
   private shotPending: ShotPendingResolution | null = null;
   /** Após bola com o GR (saída de baliza): avanço curto + pontapé (passe livre / meio / chutão) fora da área. */
   private gkRestart: { gkId: string; kickAt: number } | null = null;
+  /** Após saída do GR: não puxar `directPlayersToChaseBall` até este instante (evita colapso na área). */
+  private gkReleaseChaseSuppressionUntil = -1e9;
+  /** 2.º tempo: após troca de campo, instante em que o atacante executa o pontapé de saída (bola ainda ao centro). */
+  private secondHalfKickoffAt: number | null = null;
+  /** Cooldown do árbitro lógico (confusão causal / ajuntamento espacial). */
+  private lastConfusionRefereeWorldTime = -1e9;
+  // #region agent log
+  private _dbgGkSteerLogSimTime = -1e9;
+  private _dbgIntegrateTick = 0;
+  private _dbgSnapTick = 0;
+  // #endregion
 
   constructor() {
     this.ballVehicle.boundingRadius = 0.42;
@@ -378,6 +406,8 @@ export class TacticalSimLoop {
       this.skipKickoffBallAssign = false;
       this.shotPending = null;
       this.gkRestart = null;
+      this.gkReleaseChaseSuppressionUntil = -1e9;
+      this.secondHalfKickoffAt = null;
       this.lastShotAttemptSimTime = { home: -1e9, away: -1e9 };
       this.lastShotBudgetCoolSimTime = { home: -1e9, away: -1e9 };
       this.shotBudgetArmed = { home: false, away: false };
@@ -426,9 +456,116 @@ export class TacticalSimLoop {
     }
   }
 
+  /** Pontapé de saída do 2.º tempo: prioriza atacante (slot `ata` ou `role === 'attack'`). */
+  private assignBallToSecondHalfKickoffTaker(): AgentEx | null {
+    const kickTeam = this.simState.possession === 'home' ? this.homeAgents : this.awayAgents;
+    const taker =
+      kickTeam.find((a) => a.role === 'attack')
+      ?? kickTeam.find((a) => a.slotId === 'ata')
+      ?? kickTeam.find((a) => a.role === 'mid')
+      ?? kickTeam[0];
+    if (!taker) return null;
+    const cx = FIELD_LENGTH / 2;
+    const cz = FIELD_WIDTH / 2;
+    taker.vehicle.position.x = cx;
+    taker.vehicle.position.z = cz;
+    taker.vehicle.velocity.set(0, 0, 0);
+    this.ballSys.giveTo(taker.id, cx, cz);
+    this.simState.carrierId = taker.id;
+    return taker;
+  }
+
+  /**
+   * Após `SECOND_HALF_KICKOFF_WAIT_SEC` com bola morta no centro: atacante (ou fallback) inicia com passe.
+   */
+  private executeSecondHalfOpeningPass(L: ReturnType<typeof createCausalBatch>): void {
+    const carrier = this.assignBallToSecondHalfKickoffTaker();
+    if (!carrier) {
+      this.fsm.resumeLive();
+      return;
+    }
+
+    const selfSnap = this.toAgentSnapshot(carrier);
+    const teamSnaps =
+      carrier.side === 'home'
+        ? this.homeAgents.map((a) => this.toAgentSnapshot(a))
+        : this.awayAgents.map((a) => this.toAgentSnapshot(a));
+    const oppSnaps =
+      carrier.side === 'home'
+        ? this.awayAgents.map((a) => this.toAgentSnapshot(a))
+        : this.homeAgents.map((a) => this.toAgentSnapshot(a));
+    const attackDir = getSideAttackDir(carrier.side, this.matchClock.state.half);
+    const teammates = teamSnaps.filter((t) => t.id !== carrier.id && t.role !== 'gk');
+    const baseSeed = this.simState.simulationSeed;
+    const tickK = Math.floor(this.world.simTime * 60);
+    const press01 = nearestOpponentPressure01(selfSnap, oppSnaps);
+    const disorg01 = this.tacticalDisorgFacingCarrier(carrier.side);
+    const passOpts = findPassOptions(selfSnap, teammates, oppSnaps, attackDir);
+    const ranked = [...passOpts]
+      .filter((p) => p.successProb >= 0.44)
+      .sort(
+        (a, b) =>
+          b.progressionGain - a.progressionGain
+          || b.spaceAtTarget - a.spaceAtTarget
+          || b.successProb - a.successProb,
+      );
+    const opt = ranked[0] ?? passOpts[0];
+
+    const cx = FIELD_LENGTH / 2;
+    const cz = FIELD_WIDTH / 2;
+    const str = selfSnap.fisico / 100;
+    const speed = Math.max(14, Math.min(42, 17 + selfSnap.passeCurto * 0.11 + str * 0.9));
+
+    if (opt) {
+      const stats = getOrCreateStats(this.simState, carrier.id);
+      stats.passesAttempt++;
+      const passRes = resolvePassForPossession(baseSeed, tickK, selfSnap, opt, press01, oppSnaps, disorg01);
+      if (passRes.completed) stats.passesOk++;
+      if (passRes.interceptPlayerId) {
+        const intr = this.findAgent(passRes.interceptPlayerId);
+        if (intr) {
+          L.push({ type: 'possession_change', payload: { to: intr.side, reason: 'second_half_kickoff_intercept' } });
+          this.simState.possession = intr.side;
+          this.ballSys.giveTo(intr.id, intr.vehicle.position.x, intr.vehicle.position.z);
+          this.simState.carrierId = intr.id;
+          pushLastAction(intr.matchRuntime, 'intercept');
+          pushLastAction(carrier.matchRuntime, 'pass_intercepted');
+          pushSimEvent(this.simState, `${this.simState.minute}' — Interceptação no reinício do 2.º tempo.`);
+        }
+      } else if (passRes.completed) {
+        this.ballSys.startFlight(
+          { x: selfSnap.x, z: selfSnap.z },
+          { x: passRes.x, z: passRes.z },
+          speed,
+          'pass',
+          opt.targetId,
+        );
+        this.simState.carrierId = null;
+        pushLastAction(carrier.matchRuntime, 'short_pass_safety');
+        pushSimEvent(this.simState, `${this.simState.minute}' — 2.º tempo: saída com passe ao meio-campo.`);
+      } else {
+        this.ballSys.setLoose(passRes.x, passRes.z);
+        this.simState.carrierId = null;
+        pushSimEvent(this.simState, `${this.simState.minute}' — 2.º tempo: toque de saída — segunda bola.`);
+      }
+    } else {
+      const r = rngFromSeed(baseSeed, `2h-kick:${carrier.id}:${tickK}`).nextUnit();
+      const toX = Math.min(FIELD_LENGTH - 4, Math.max(4, cx + attackDir * (16 + r * 10)));
+      const toZ = Math.min(FIELD_WIDTH - 4, Math.max(4, cz + (r - 0.5) * 18));
+      const c = clampToPitch(toX, toZ, 0.55);
+      this.ballSys.startFlight({ x: cx, z: cz }, { x: c.x, z: c.z }, speed, 'pass');
+      this.simState.carrierId = null;
+      pushSimEvent(this.simState, `${this.simState.minute}' — 2.º tempo: pontapé de saída à frente.`);
+    }
+
+    this.gkReleaseChaseSuppressionUntil = this.world.simTime + 0.32;
+    this.fsm.resumeLive();
+  }
+
   /**
    * IFAB: troca de campo no intervalo — espelha posições em X antes do apito do 2.º tempo.
-   * Posse para a equipa que não iniciou o 1.º tempo; bola ao centro.
+   * Posse para a equipa que não iniciou o 1.º tempo; bola morta no centro durante
+   * {@link SECOND_HALF_KICKOFF_WAIT_SEC}s, depois o atacante inicia com passe.
    */
   private applySecondHalfSideSwapAndKickoff() {
     const L = FIELD_LENGTH;
@@ -450,7 +587,8 @@ export class TacticalSimLoop {
 
     const first = this.firstKickoffPossessionSide;
     this.simState.possession = first === 'home' ? 'away' : 'home';
-    this.assignBallToRestartTeam();
+    this.secondHalfKickoffAt = this.world.simTime + SECOND_HALF_KICKOFF_WAIT_SEC;
+    this.fsm.state = { phase: 'kickoff', goalSequenceTimer: 0 };
   }
 
   /** Alvo de movimento; GR em `live` fica ancorado à sua baliza. */
@@ -502,6 +640,158 @@ export class TacticalSimLoop {
   private syncBallVehicleFromWorld() {
     this.ballVehicle.position.set(this.world.ball.x, 0, this.world.ball.z);
     this.ballVehicle.velocity.set(this.world.ballVel.x, 0, this.world.ballVel.z);
+  }
+
+  /**
+   * Lê o log causal recente e a densidade espacial perto da bola; se houver confusão,
+   * fixa posse (quando o log está incoerente), reatribui portador se necessário e
+   * teletransporta suavemente o bloco para formação deslocada pela bola (sem linha na UI).
+   */
+  private tryConfusionRefereeIntegrateEnd(fsmPhaseAfter: MatchTruthPhase, ballStoppedRestart: boolean): void {
+    const REF_COOLDOWN_SEC = 3.2;
+    if (fsmPhaseAfter !== 'live' || ballStoppedRestart) return;
+    if (this.shotPending) return;
+
+    const gkHoldingRestart =
+      this.gkRestart !== null
+      && this.ballSys.state.mode === 'held'
+      && this.simState.carrierId === this.gkRestart.gkId;
+    /** Estado incoerente (ex.: posse roubada sem limpar `gkRestart`) destrava o árbitro em vez de abortar o frame. */
+    if (this.gkRestart && !gkHoldingRestart) {
+      // #region agent log
+      fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+        body: JSON.stringify({
+          sessionId: 'e8aa67',
+          hypothesisId: 'C',
+          location: 'TacticalSimLoop.ts:tryConfusion_clear_gkRestart',
+          message: 'cleared gkRestart (incoherent vs holding)',
+          data: {
+            simT: this.world.simTime,
+            carrierId: this.simState.carrierId,
+            gkIdWas: this.gkRestart.gkId,
+            ballMode: this.ballSys.state.mode,
+            gkHoldingRestart,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      this.gkRestart = null;
+    }
+
+    if (this.world.simTime - this.lastConfusionRefereeWorldTime < REF_COOLDOWN_SEC) return;
+    if (this.ballSys.state.mode === 'flight') return;
+
+    const ballX = this.ballSys.state.x;
+    const ballZ = this.ballSys.state.z;
+
+    let causalVerdict = scanCausalLogConfusion(this.simState.causalLog.entries);
+    if (gkHoldingRestart) causalVerdict = null;
+    const allPos = [
+      ...this.homeAgents.map((a) => ({
+        x: a.vehicle.position.x,
+        z: a.vehicle.position.z,
+        slotId: a.slotId,
+        role: a.role,
+      })),
+      ...this.awayAgents.map((a) => ({
+        x: a.vehicle.position.x,
+        z: a.vehicle.position.z,
+        slotId: a.slotId,
+        role: a.role,
+      })),
+    ];
+    let verdict = causalVerdict;
+    if (!verdict && this.ballSys.state.mode !== 'dead') {
+      verdict = scanSpatialSwarmConfusion(allPos, ballX, ballZ, this.simState.possession);
+    }
+    if (!verdict) return;
+
+    const homeScheme = this.liveRef?.homeFormationScheme ?? '4-3-3';
+    const awayScheme: FormationSchemeId = '4-3-3';
+    const half = this.matchClock.state.half;
+    const maps = buildRefereeDispositionMaps(homeScheme, awayScheme, ballX, ballZ, half);
+
+    if (verdict.reason === 'causal_whirlwind') {
+      this.simState.possession = verdict.awardedSide;
+      const car = this.simState.carrierId ? this.findAgent(this.simState.carrierId) : null;
+      if (!car || car.side !== verdict.awardedSide) {
+        const pool = verdict.awardedSide === 'home' ? this.homeAgents : this.awayAgents;
+        const hasOutfield = pool.some((o) => o.role !== 'gk' && o.slotId !== 'gol');
+        let best: AgentEx | null = null;
+        let bestD = Infinity;
+        for (const ag of pool) {
+          if (hasOutfield && (ag.role === 'gk' || ag.slotId === 'gol')) continue;
+          const d = Math.hypot(ag.vehicle.position.x - ballX, ag.vehicle.position.z - ballZ);
+          if (d < bestD) {
+            bestD = d;
+            best = ag;
+          }
+        }
+        if (best) {
+          this.simState.carrierId = best.id;
+          this.ballSys.giveTo(best.id, ballX, ballZ);
+        }
+      }
+    }
+
+    const snap = (ag: AgentEx, m: Map<string, { x: number; z: number }>) => {
+      const held = this.ballSys.state.mode === 'held' && this.simState.carrierId === ag.id;
+      if (held) {
+        const bx = this.ballSys.state.x;
+        const bz = this.ballSys.state.z;
+        ag.vehicle.position.set(bx, 0, bz);
+        ag.vehicle.velocity.set(0, 0, 0);
+        setArriveTarget(ag, bx, bz, 'reforming');
+        return;
+      }
+      const t = m.get(ag.slotId) ?? clampToPitch(ag.vehicle.position.x, ag.vehicle.position.z);
+      ag.vehicle.position.set(t.x, 0, t.z);
+      ag.vehicle.velocity.set(0, 0, 0);
+      setArriveTarget(ag, t.x, t.z, 'reforming');
+    };
+
+    for (const ag of this.homeAgents) snap(ag, maps.home);
+    for (const ag of this.awayAgents) snap(ag, maps.away);
+
+    appendSimCausal(this.simState, [
+      {
+        seq: this.simState.causalLog.nextSeq,
+        simTime: this.simState.minute + 0.997,
+        type: 'referee_shape_reset',
+        payload: {
+          minute: this.simState.minute,
+          reason: verdict.reason,
+          awardedSide: verdict.awardedSide,
+        },
+      },
+    ]);
+
+    // #region agent log
+    if (gkHoldingRestart && verdict.reason === 'spatial_swarm') {
+      fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+        body: JSON.stringify({
+          sessionId: 'e8aa67',
+          hypothesisId: 'C2',
+          location: 'TacticalSimLoop.ts:tryConfusionRefereeIntegrateEnd',
+          message: 'referee_spatial_applied_during_gk_hold',
+          data: { minute: this.simState.minute, simTime: this.world.simTime },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
+
+    this.lastConfusionRefereeWorldTime = this.world.simTime;
+    rebuildNeighbors(this.homeAgents);
+    rebuildNeighbors(this.awayAgents);
+    this.world.ball.x = this.ballSys.state.x;
+    this.world.ball.z = this.ballSys.state.z;
+    this.syncBallVehicleFromWorld();
   }
 
   private allVehicles(): Vehicle[] {
@@ -689,6 +979,30 @@ export class TacticalSimLoop {
     const live = this.liveRef;
     if (!live || live.phase !== 'playing' || !this.initialized) return;
 
+    // #region agent log
+    this._dbgIntegrateTick += 1;
+    if (this._dbgIntegrateTick % 40 === 0) {
+      fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+        body: JSON.stringify({
+          sessionId: 'e8aa67',
+          hypothesisId: 'P0',
+          location: 'TacticalSimLoop.ts:integrateFixed_heartbeat',
+          message: 'integrateFixed running',
+          data: {
+            tick: this._dbgIntegrateTick,
+            simT: this.world.simTime,
+            ballMode: this.ballSys.state.mode,
+            carrierId: this.simState.carrierId,
+            gkRestart: this.gkRestart?.gkId ?? null,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
+
     for (const [pid, v] of [...this.turnoverPassBlock.entries()]) {
       if (this.world.simTime >= v.until) this.turnoverPassBlock.delete(pid);
     }
@@ -727,7 +1041,6 @@ export class TacticalSimLoop {
       this.applySecondHalfSideSwapAndKickoff();
       pushSimEvent(this.simState, `45' — Início do 2.º tempo (troca de campo).`, 'whistle');
       this.matchEngine.reset();
-      this.fsm.resumeLive();
       this.prevClockPeriod = 'second_half';
     } else if (period === 'first_half' || period === 'second_half') {
       this.prevClockPeriod = period;
@@ -738,7 +1051,11 @@ export class TacticalSimLoop {
     this.structuralSys.update(fixedDt);
 
     const fsmPhaseBefore = this.fsm.state.phase;
-    this.fsm.tick(fixedDt);
+    const freezeFsmForSecondHalfKickoffHold =
+      this.secondHalfKickoffAt !== null && this.world.simTime < this.secondHalfKickoffAt;
+    if (!freezeFsmForSecondHalfKickoffHold) {
+      this.fsm.tick(fixedDt);
+    }
     const fsmPhaseAfter = this.fsm.state.phase;
 
     if (fsmPhaseBefore === 'goal_restart' && fsmPhaseAfter === 'kickoff') {
@@ -758,6 +1075,22 @@ export class TacticalSimLoop {
       this.simState.phase = 'kickoff';
     } else {
       this.simState.phase = 'stopped';
+    }
+
+    if (this.secondHalfKickoffAt !== null && this.world.simTime >= this.secondHalfKickoffAt) {
+      this.secondHalfKickoffAt = null;
+      const LOpen = createCausalBatch(this.simState.minute, this.simState.causalLog.nextSeq);
+      this.executeSecondHalfOpeningPass(LOpen);
+      if (LOpen.events.length > 0) {
+        appendSimCausal(this.simState, [...LOpen.events]);
+        this.notePossessionEvents(LOpen.events);
+        for (const ev of LOpen.events) {
+          emitCausalMatchEvent(this.eventBus, ev, this.world.simTime);
+        }
+      }
+      if (this.fsm.state.phase === 'live') {
+        this.simState.phase = 'live';
+      }
     }
 
     const ballX = this.ballSys.state.x;
@@ -819,19 +1152,26 @@ export class TacticalSimLoop {
     }
     this.transitionCompaction = Math.max(0, this.transitionCompaction - fixedDt / TRANSITION_COMPACTION_DECAY_SEC);
 
+    /** Com bola nas mãos do GR na saída de baliza: não puxar slots dinâmicos para a grande área. */
+    /** Bola às mãos do GR em reposição (qualquer variante): não puxar o bloco para a bola nem espalhar slots. */
+    const gkBallInHandRestart =
+      this.gkRestart !== null
+      && this.ballSys.state.mode === 'held'
+      && this.simState.carrierId === this.gkRestart.gkId;
+    const ballCentricStrength = gkBallInHandRestart ? 0 : 0.04;
     applyBallCentricShiftToSlotMap(dynamicHomeForAgents, {
       ballX,
       ballZ,
       side: 'home',
       half,
-      strength: 0.04,
+      strength: ballCentricStrength,
     });
     applyBallCentricShiftToSlotMap(dynamicAwayForAgents, {
       ballX,
       ballZ,
       side: 'away',
       half,
-      strength: 0.04,
+      strength: ballCentricStrength,
     });
 
     const phase = this.truthPhase(live);
@@ -857,6 +1197,19 @@ export class TacticalSimLoop {
       : !awayHasBall && manager.tacticalMentality > 78
         ? 'pressing'
         : 'in_play';
+
+    /** GR com bola em saída de baliza: adversários sem press/pursuit à bola (até soltar / voo). */
+    const gkHeldWait =
+      this.gkRestart !== null
+      && this.ballSys.state.mode === 'held'
+      && this.simState.carrierId === this.gkRestart.gkId;
+    let modeHomeEffective: AgentMode = modeHome;
+    let modeAwayEffective: AgentMode = modeAway;
+    /** Com o GR a segurar na reposição, todo o campo em modo “reformação” até soltar (evita atacante em cima do GR). */
+    if (gkHeldWait) {
+      modeHomeEffective = 'reforming';
+      modeAwayEffective = 'reforming';
+    }
 
     // -- Compute goal threat for both teams BEFORE decisions --
     const homeCarrier = (this.simState.carrierId && this.findAgent(this.simState.carrierId)?.side === 'home')
@@ -888,7 +1241,10 @@ export class TacticalSimLoop {
     const L = createCausalBatch(this.simState.minute, this.simState.causalLog.nextSeq);
 
     let structuralByPlayer: StructuralTargetMap | null = null;
-    if (phase === 'goal_restart' && this.structuralSys.hasGoalRestart()) {
+    const goalRestartStructural =
+      this.structuralSys.hasGoalRestart()
+      && (phase === 'goal_restart' || (phase === 'kickoff' && this.structuralSys.isGoalKickWideRestart()));
+    if (goalRestartStructural) {
       structuralByPlayer = this.structuralSys.getGoalRestartPlayerTargets(
         this.homeAgents,
         this.awayAgents,
@@ -941,6 +1297,72 @@ export class TacticalSimLoop {
 
     this.turnoverCtx = { manager, slotTargetFor };
 
+    const carrierForBallSync = this.findAgent(this.simState.carrierId);
+    if (this.ballSys.state.mode === 'held' && carrierForBallSync) {
+      this.ballSys.syncHeldToCarrier(carrierForBallSync.vehicle.position.x, carrierForBallSync.vehicle.position.z);
+    }
+    if (this.gkRestart && this.ballSys.state.mode === 'held' && this.simState.carrierId !== this.gkRestart.gkId) {
+      // #region agent log
+      fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+        body: JSON.stringify({
+          sessionId: 'e8aa67',
+          hypothesisId: 'C',
+          location: 'TacticalSimLoop.ts:gkRestart_sanitize_pre_decisions',
+          message: 'cleared gkRestart (held but carrier not gk)',
+          data: {
+            simT: this.world.simTime,
+            carrierId: this.simState.carrierId,
+            gkId: this.gkRestart.gkId,
+            ballMode: this.ballSys.state.mode,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      this.gkRestart = null;
+    }
+
+    // #region agent log
+    {
+      const c = this.findAgent(this.simState.carrierId);
+      const held = this.ballSys.state.mode === 'held';
+      const wantLog = this.gkRestart !== null || (held && !!c);
+      if (wantLog && c) {
+        const d = Math.hypot(this.ballSys.state.x - c.vehicle.position.x, this.ballSys.state.z - c.vehicle.position.z);
+        const sampleHeld = held && this._dbgIntegrateTick % 24 === 0;
+        if (d > 0.08 || this.gkRestart || sampleHeld) {
+          fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+            body: JSON.stringify({
+              sessionId: 'e8aa67',
+              hypothesisId: 'A',
+              location: 'TacticalSimLoop.ts:after_sync_pre_decisions',
+              message: 'ball vs carrier after syncHeld',
+              data: {
+                simT: this.world.simTime,
+                d,
+                ballMode: this.ballSys.state.mode,
+                carrierId: this.simState.carrierId,
+                role: c.role,
+                slotId: c.slotId,
+                bx: this.ballSys.state.x,
+                bz: this.ballSys.state.z,
+                px: c.vehicle.position.x,
+                pz: c.vehicle.position.z,
+                gkRestart: this.gkRestart?.gkId ?? null,
+                sampleHeld,
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+        }
+      }
+    }
+    // #endregion
+
     const hHalf = this.matchClock.state.half;
     for (const s of ['home', 'away'] as const) {
       if (
@@ -970,12 +1392,12 @@ export class TacticalSimLoop {
 
     this.runAgentDecisions(
       this.homeAgents, homeSnaps, awaySnaps, dynamicHomeForAgents, presetHome, structuralByPlayer,
-      modeHome, attackDirHome, manager, tactx, L, fixedDt, this.homeThreat, this.awayThreat,
+      modeHomeEffective, attackDirHome, manager, tactx, L, fixedDt, this.homeThreat, this.awayThreat,
     );
     this.runAgentDecisions(
       this.awayAgents, awaySnaps, homeSnaps, dynamicAwayForAgents,
       presetHome ? mirrorPresetToAway(presetHome) : null, structuralByPlayer,
-      modeAway, attackDirAway, manager, tactx, L, fixedDt, this.awayThreat, this.homeThreat,
+      modeAwayEffective, attackDirAway, manager, tactx, L, fixedDt, this.awayThreat, this.homeThreat,
     );
 
     const ballStoppedRestart = this.ballSys.state.mode === 'dead'
@@ -1038,27 +1460,83 @@ export class TacticalSimLoop {
       this.tickAgentPhysiology(ag, fixedDt, near < 16 || ag.id === cid);
     }
 
+    const gkWideFreeze = this.isGkRestartBallInHandFreeze();
     for (const ag of this.homeAgents) {
+      if (gkWideFreeze && this.gkRestart && ag.id !== this.gkRestart.gkId) {
+        ag.vehicle.velocity.set(0, 0, 0);
+        continue;
+      }
       const dx = ag.vehicle.position.x - ballX;
       const dz = ag.vehicle.position.z - ballZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       const others = allV.filter((v) => v !== ag.vehicle);
-      applySteeringForPhase(ag, this.ballVehicle, others, modeHome, dist, homeHasBall);
+      applySteeringForPhase(ag, this.ballVehicle, others, modeHomeEffective, dist, homeHasBall);
     }
     for (const ag of this.awayAgents) {
+      if (gkWideFreeze && this.gkRestart && ag.id !== this.gkRestart.gkId) {
+        ag.vehicle.velocity.set(0, 0, 0);
+        continue;
+      }
       const dx = ag.vehicle.position.x - ballX;
       const dz = ag.vehicle.position.z - ballZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       const others = allV.filter((v) => v !== ag.vehicle);
-      applySteeringForPhase(ag, this.ballVehicle, others, modeAway, dist, awayHasBall);
+      applySteeringForPhase(ag, this.ballVehicle, others, modeAwayEffective, dist, awayHasBall);
     }
 
+    // #region agent log
+    if (
+      this.gkRestart
+      && this.ballSys.state.mode === 'held'
+      && this.simState.carrierId === this.gkRestart.gkId
+    ) {
+      const wst = this.world.simTime;
+      if (wst - this._dbgGkSteerLogSimTime > 0.32) {
+        this._dbgGkSteerLogSimTime = wst;
+        const gk = this.findAgent(this.gkRestart.gkId);
+        const gkSide = gk?.side;
+        const opp = gkSide === 'home' ? this.awayAgents : this.homeAgents;
+        const sample = opp.find((a) => a.slotId !== 'gol' && a.role !== 'gk');
+        const oppMode = gkSide === 'home' ? modeAwayEffective : modeHomeEffective;
+        const oppHasBall = gkSide === 'home' ? awayHasBall : homeHasBall;
+        let pursuitW = 0;
+        let distS = 0;
+        if (sample) {
+          pursuitW = sample.pursuit.weight;
+          distS = Math.hypot(sample.vehicle.position.x - ballX, sample.vehicle.position.z - ballZ);
+        }
+        fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+          body: JSON.stringify({
+            sessionId: 'e8aa67',
+            hypothesisId: 'H2',
+            location: 'TacticalSimLoop.ts:after_applySteeringForPhase',
+            message: 'gk_restart_held_steering_sample',
+            data: {
+              gkSide,
+              oppMode,
+              oppHasBall,
+              sampleId: sample?.id,
+              pursuitW,
+              distSampleToBall: Math.round(distS * 100) / 100,
+              mentality: manager.tacticalMentality,
+              untilKick: this.gkRestart ? Math.round((this.gkRestart.kickAt - wst) * 1000) / 1000 : null,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+      }
+    }
+    // #endregion
+
     for (const ag of this.homeAgents) {
+      if (gkWideFreeze && this.gkRestart && ag.id !== this.gkRestart.gkId) continue;
       const dx = ag.vehicle.position.x - ballX;
       const dz = ag.vehicle.position.z - ballZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       this.applyVehicleSpeedFromAttrs(ag, fixedDt, {
-        mode: modeHome,
+        mode: modeHomeEffective,
         pursuitWeight: ag.pursuit.weight,
         arriveWeight: ag.arrive.weight,
         distToBall: dist,
@@ -1070,11 +1548,12 @@ export class TacticalSimLoop {
       });
     }
     for (const ag of this.awayAgents) {
+      if (gkWideFreeze && this.gkRestart && ag.id !== this.gkRestart.gkId) continue;
       const dx = ag.vehicle.position.x - ballX;
       const dz = ag.vehicle.position.z - ballZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       this.applyVehicleSpeedFromAttrs(ag, fixedDt, {
-        mode: modeAway,
+        mode: modeAwayEffective,
         pursuitWeight: ag.pursuit.weight,
         arriveWeight: ag.arrive.weight,
         distToBall: dist,
@@ -1109,13 +1588,56 @@ export class TacticalSimLoop {
       a.vehicle.position.z += (t.z - a.vehicle.position.z) * k;
     };
     for (const a of this.homeAgents) {
+      if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
       stepVehicle(a, fixedDt);
       nudgeTowardOperative18(a);
     }
     for (const a of this.awayAgents) {
+      if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
       stepVehicle(a, fixedDt);
       nudgeTowardOperative18(a);
     }
+
+    this.tryConfusionRefereeIntegrateEnd(fsmPhaseAfter, ballStoppedRestart);
+
+    // #region agent log
+    {
+      const c = this.findAgent(this.simState.carrierId);
+      const held = this.ballSys.state.mode === 'held';
+      const wantLog = this.gkRestart !== null || (held && !!c);
+      if (wantLog && c) {
+        const d = Math.hypot(this.ballSys.state.x - c.vehicle.position.x, this.ballSys.state.z - c.vehicle.position.z);
+        const sampleHeld = held && this._dbgIntegrateTick % 24 === 3;
+        if (d > 0.08 || this.gkRestart || sampleHeld) {
+          fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+            body: JSON.stringify({
+              sessionId: 'e8aa67',
+              hypothesisId: 'B',
+              location: 'TacticalSimLoop.ts:pre_world_ball_copy',
+              message: 'ball vs carrier before world.ball sync',
+              data: {
+                simT: this.world.simTime,
+                d,
+                ballMode: this.ballSys.state.mode,
+                carrierId: this.simState.carrierId,
+                role: c.role,
+                slotId: c.slotId,
+                bx: this.ballSys.state.x,
+                bz: this.ballSys.state.z,
+                px: c.vehicle.position.x,
+                pz: c.vehicle.position.z,
+                gkRestart: this.gkRestart?.gkId ?? null,
+                sampleHeld,
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+        }
+      }
+    }
+    // #endregion
 
     this.world.ball.x = this.ballSys.state.x;
     this.world.ball.z = this.ballSys.state.z;
@@ -1156,6 +1678,12 @@ export class TacticalSimLoop {
     const ballSector = computeBallSector(this.ballSys.state.z);
 
     for (const ag of agents) {
+      if (this.isGkRestartBallInHandFreeze() && this.gkRestart && ag.id !== this.gkRestart.gkId) {
+        const px = ag.vehicle.position.x;
+        const pz = ag.vehicle.position.z;
+        this.safeArrive(ag, px, pz, 'reforming');
+        continue;
+      }
       let slotTarget: { x: number; z: number };
       if (structuralByPlayer?.has(ag.id)) {
         slotTarget = structuralByPlayer.get(ag.id)!;
@@ -1181,6 +1709,18 @@ export class TacticalSimLoop {
           this.safeArrive(ag, sx, sz, mode);
           continue;
         }
+      }
+
+      // GR com bola à espera de repor: todo o campo (exceto o GR) sai da grande área.
+      if (
+        this.gkRestart
+        && this.ballSys.state.mode === 'held'
+        && this.simState.carrierId === this.gkRestart.gkId
+        && !(ag.id === this.gkRestart.gkId && (ag.role === 'gk' || ag.slotId === 'gol'))
+      ) {
+        const out = clampWorldOutsideBothPenaltyAreas(clamped.x, clamped.z);
+        this.safeArrive(ag, out.x, out.z, mode);
+        continue;
       }
 
       const isCarrier = this.simState.carrierId === ag.id;
@@ -1838,8 +2378,8 @@ export class TacticalSimLoop {
   }
 
   /**
-   * Saída de baliza: após ~0,5s a avançar com a bola, escolhe passe ao mais desmarcado,
-   * lançamento ao meio-campo (fora das grandes áreas) ou chutão — sempre com voo contínuo.
+   * Saída de baliza: após um breve tick de encosto, escolhe passe (só com espaço real),
+   * lançamento ou chutão — sempre com voo contínuo.
    */
   private executeGkRestartDistribution(
     gk: AgentEx,
@@ -1850,6 +2390,9 @@ export class TacticalSimLoop {
     L: ReturnType<typeof createCausalBatch>,
     _manager: TacticalManagerParams,
   ): void {
+    const suppressChaseAfterGkBallLeaves = () => {
+      this.gkReleaseChaseSuppressionUntil = this.world.simTime + 0.34;
+    };
     const half = this.matchClock.state.half;
     const ctx = { team: gk.side, half };
     const tickK = Math.floor(this.world.simTime * 60);
@@ -1876,8 +2419,17 @@ export class TacticalSimLoop {
           || b.spaceAtTarget - a.spaceAtTarget,
       );
 
+    let closestOppToGk = 999;
+    for (const o of oppSnaps) {
+      closestOppToGk = Math.min(closestOppToGk, Math.hypot(o.x - selfSnap.x, o.z - selfSnap.z));
+    }
+
     const r = rng.nextUnit();
-    if (r < 0.36 && openPass.length > 0) {
+    const passSafeEnough =
+      openPass.length > 0
+      && closestOppToGk >= 4.1
+      && press01 < 0.32;
+    if (r < 0.36 && passSafeEnough) {
       const opt = openPass[0]!;
       const passRes = resolvePassForPossession(baseSeed, tickK, selfSnap, opt, press01, oppSnaps, disorg01);
       const stats = getOrCreateStats(this.simState, gk.id);
@@ -1928,6 +2480,7 @@ export class TacticalSimLoop {
         this.ballSys.setLoose(passRes.x, passRes.z);
       }
       this.simState.carrierId = null;
+      suppressChaseAfterGkBallLeaves();
       pushLastAction(gk.matchRuntime, 'gk_distribution_pass');
       pushSimEvent(this.simState, `${this.simState.minute}' — Saída do guarda-redes: passe ao colega livre.`);
       return;
@@ -1953,6 +2506,7 @@ export class TacticalSimLoop {
     const spd = isLong ? Math.min(48, 28 + str * 2.4 + rng.nextUnit() * 6) : Math.min(52, 36 + str * 2.9);
     this.ballSys.startFlight({ x: selfSnap.x, z: selfSnap.z }, { x: toX, z: toZ }, spd, 'clearance');
     this.simState.carrierId = null;
+    suppressChaseAfterGkBallLeaves();
     pushLastAction(gk.matchRuntime, isLong ? 'gk_distribution_long' : 'gk_distribution_clear');
     pushSimEvent(
       this.simState,
@@ -1967,6 +2521,18 @@ export class TacticalSimLoop {
     return team.find((a) => a.slotId === 'gol' || a.role === 'gk') ?? team[0];
   }
 
+  /**
+   * Bola às mãos do GR durante `gkRestart` (fora, defesa, etc.): campo parado até passe/chuto.
+   * Não depende só de `goal_kick_wide` — o mesmo bug ocorria após defesa com atacante a pressionar.
+   */
+  private isGkRestartBallInHandFreeze(): boolean {
+    return (
+      this.gkRestart !== null
+      && this.ballSys.state.mode === 'held'
+      && this.simState.carrierId === this.gkRestart.gkId
+    );
+  }
+
   private assignBallToDefendingGoalkeeper(
     defendingSide: PossessionSide,
     shooterSide: PossessionSide,
@@ -1977,7 +2543,7 @@ export class TacticalSimLoop {
     if (gk) {
       this.ballSys.giveTo(gk.id, gk.vehicle.position.x, gk.vehicle.position.z);
       this.simState.carrierId = gk.id;
-      this.gkRestart = { gkId: gk.id, kickAt: this.world.simTime + 0.48 };
+      this.gkRestart = { gkId: gk.id, kickAt: this.world.simTime + GK_RESTART_KICK_DELAY_SEC };
       if (this.simState.possession !== defendingSide) {
         this.simState.possession = defendingSide;
         L.push({ type: 'possession_change', payload: { to: defendingSide, reason } });
@@ -2296,7 +2862,10 @@ export class TacticalSimLoop {
     const gz = shotRes.goalZ;
     const margin = 1.15;
     const goalMouthX = attackDir === 1 ? FIELD_LENGTH - margin : margin;
-    const goalMouthZ = Math.min(FIELD_WIDTH - margin, Math.max(margin, gz));
+    const zc = FIELD_WIDTH / 2;
+    const zLo = zc - GOAL_MOUTH_HALF_WIDTH_M + 0.05;
+    const zHi = zc + GOAL_MOUTH_HALF_WIDTH_M - 0.05;
+    const goalMouthZ = Math.min(FIELD_WIDTH - margin, Math.max(margin, Math.min(zHi, Math.max(zLo, gz))));
     const dist = Math.hypot(gx - selfSnap.x, gz - selfSnap.z);
     let speed =
       strike === 'power' ? 36 + dist * 0.07 : strike === 'weak' ? 20 + dist * 0.05 : 28 + dist * 0.06;
@@ -2472,6 +3041,16 @@ export class TacticalSimLoop {
     if (!carrier) return;
     if (defenders[0]?.side === carrier.side) return;
 
+    // Bola nas mãos do GR na saída: não há desarme “na pequena área” até soltar.
+    if (
+      this.gkRestart
+      && this.ballSys.state.mode === 'held'
+      && carrier.id === this.gkRestart.gkId
+      && (carrier.role === 'gk' || carrier.slotId === 'gol')
+    ) {
+      return;
+    }
+
     const carrierSnap = this.toAgentSnapshot(carrier);
     const stealX = carrier.vehicle.position.x;
     const stealZ = carrier.vehicle.position.z;
@@ -2613,6 +3192,42 @@ export class TacticalSimLoop {
     manager: TacticalManagerParams,
     slotTargetFor: (a: AgentEx) => { x: number; z: number },
   ) {
+    /** `gkRestart` com bola solta = estado quebrado — devolver ao GR e sair antes de qualquer recuperação. */
+    if (this.gkRestart) {
+      // #region agent log
+      fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+        body: JSON.stringify({
+          sessionId: 'e8aa67',
+          hypothesisId: 'D',
+          location: 'TacticalSimLoop.ts:pickUpLooseBall_gk_heal',
+          message: 'gkRestart heal path (loose ball while restart pending)',
+          data: {
+            simT: this.world.simTime,
+            gkId: this.gkRestart.gkId,
+            carrierId: this.simState.carrierId,
+            ballMode: this.ballSys.state.mode,
+            bx: this.ballSys.state.x,
+            bz: this.ballSys.state.z,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      const gkHeal = this.findAgent(this.gkRestart.gkId);
+      if (gkHeal) {
+        this.ballSys.giveTo(gkHeal.id, gkHeal.vehicle.position.x, gkHeal.vehicle.position.z);
+        this.simState.carrierId = gkHeal.id;
+        if (this.simState.possession !== gkHeal.side) {
+          this.simState.possession = gkHeal.side;
+          L.push({ type: 'possession_change', payload: { to: gkHeal.side, reason: 'gk_restart_heal_loose' } });
+        }
+      }
+      this.gkRestart = null;
+      return;
+    }
+
     let best: AgentEx | null = null;
     let bestDist = 6;
 
@@ -2648,6 +3263,7 @@ export class TacticalSimLoop {
    * Bola solta ou em voo: poucos jogadores por equipa perseguem; o resto permanece ancorado ao bloco.
    */
   private directPlayersToChaseBall(slotTargetFor: (a: AgentEx) => { x: number; z: number }) {
+    if (this.world.simTime < this.gkReleaseChaseSuppressionUntil) return;
     const targetX = this.ballSys.state.flight
       ? this.ballSys.state.flight.toX
       : this.ballSys.state.x;
@@ -2834,6 +3450,51 @@ export class TacticalSimLoop {
       vx: this.world.ballVel.x,
       vz: this.world.ballVel.z,
     };
+    // #region agent log
+    {
+      const cid = this.simState.carrierId;
+      const held = this.ballSys.state.mode === 'held';
+      if (cid && (this.gkRestart !== null || held)) {
+        const ag = [...this.homeAgents, ...this.awayAgents].find((a) => a.id === cid);
+        if (ag) {
+          this._dbgSnapTick += 1;
+          const prev = this.frameStartPlayers.get(ag.id);
+          const pxL = prev ? this.lerp(prev.x, ag.vehicle.position.x, rb) : ag.vehicle.position.x;
+          const pzL = prev ? this.lerp(prev.z, ag.vehicle.position.z, rb) : ag.vehicle.position.z;
+          const dSnap = Math.hypot(bx - pxL, bz - pzL);
+          const sampleSnap = held && this._dbgSnapTick % 10 === 0;
+          if (dSnap > 0.12 || this.gkRestart || sampleSnap) {
+            fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e8aa67' },
+              body: JSON.stringify({
+                sessionId: 'e8aa67',
+                hypothesisId: 'E',
+                location: 'TacticalSimLoop.ts:getSnapshot_ball_carrier_lerp',
+                message: 'lerped ball vs lerped carrier in truth snapshot',
+                data: {
+                  simT: this.world.simTime,
+                  dSnap,
+                  rb,
+                  bx,
+                  bz,
+                  pxL,
+                  pzL,
+                  carrierId: cid,
+                  role: ag.role,
+                  slotId: ag.slotId,
+                  ballMode: this.ballSys.state.mode,
+                  gkRestart: this.gkRestart?.gkId ?? null,
+                  sampleSnap,
+                },
+                timestamp: Date.now(),
+              }),
+            }).catch(() => {});
+          }
+        }
+      }
+    }
+    // #endregion
     snap.kits = {
       home: { primaryColor: '#E6DC23', secondaryColor: '#235E23', accent: '#F2F2F2' },
       away: { primaryColor: '#3358C7', secondaryColor: '#6B707A', accent: '#F24038' },

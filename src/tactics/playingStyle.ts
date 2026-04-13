@@ -193,8 +193,8 @@ export function redistributeStylePoints(style: TeamTacticalStyle, key: StyleAxis
   const next: TeamTacticalStyle = { ...cur, [key]: v };
 
   if (targetOther <= 0) {
-    for (const k of others) (next as Record<string, number>)[k] = 0;
-    (next as Record<string, number>)[key] = 100;
+    for (const k of others) next[k] = 0;
+    next[key] = 100;
     return next;
   }
 
@@ -204,7 +204,7 @@ export function redistributeStylePoints(style: TeamTacticalStyle, key: StyleAxis
     for (const k of others) {
       let add = each + (rem > 0 ? 1 : 0);
       if (rem > 0) rem--;
-      (next as Record<string, number>)[k] = add;
+      next[k] = add;
     }
     return next;
   }
@@ -215,10 +215,10 @@ export function redistributeStylePoints(style: TeamTacticalStyle, key: StyleAxis
     const prev = Math.max(0, Math.round(Number(cur[k]) || 0));
     const share = Math.round((prev / oldOtherSum) * targetOther);
     const assign = Math.min(targetOther - allocated, Math.max(0, share));
-    (next as Record<string, number>)[k] = assign;
+    next[k] = assign;
     allocated += assign;
   }
-  (next as Record<string, number>)[others[others.length - 1]!] = targetOther - allocated;
+  next[others[others.length - 1]!] = targetOther - allocated;
   return next;
 }
 

@@ -1,3 +1,4 @@
+import { OUTSIDE_WEST_PENALTY_MIN_X_M } from '@/match/fieldZones';
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import type { MatchTruthPhase } from '@/bridge/matchTruthSchema';
 import type { PossessionSide } from '@/engine/types';
@@ -52,13 +53,15 @@ function presetGoalKickHome(): PresetMap {
   const gkx = 3.5;
   const gkz = FIELD_WIDTH / 2;
   m.set('gol', { x: gkx, z: gkz });
-  // Short triangle around GK channel
-  m.set('zag1', { x: 12, z: FIELD_WIDTH * 0.28 });
-  m.set('zag2', { x: 12, z: FIELD_WIDTH * 0.72 });
-  m.set('vol', { x: 16, z: gkz });
-  // Lateral escape hatches
-  m.set('le', { x: 20, z: 9 });
-  m.set('ld', { x: 20, z: FIELD_WIDTH - 9 });
+  /** Jogadores de campo fora da grande área (GR repõe com organização). */
+  const out = OUTSIDE_WEST_PENALTY_MIN_X_M;
+  // Segunda linha encostada à linha da grande área (triângulo curto fora da área)
+  m.set('zag1', { x: out + 0.35, z: FIELD_WIDTH * 0.28 });
+  m.set('zag2', { x: out + 0.35, z: FIELD_WIDTH * 0.72 });
+  m.set('vol', { x: out + 4.5, z: gkz });
+  // Laterais um pouco mais à frente
+  m.set('le', { x: out + 7.5, z: 9 });
+  m.set('ld', { x: out + 7.5, z: FIELD_WIDTH - 9 });
   // Midfield split for second line
   m.set('mc1', { x: 32, z: FIELD_WIDTH * 0.38 });
   m.set('mc2', { x: 32, z: FIELD_WIDTH * 0.62 });

@@ -334,8 +334,15 @@ export interface PrethinkingState {
   ballX: number;
   ballZ: number;
   pressureIntensity: PressureReading['intensity'];
+  /** Distância ao adversário mais próximo no momento do snapshot (invalidação se mudar muito). */
+  nearestOppDist: number;
   /** 0–1: força do compromisso com a intenção (ajuste fino na execução). */
   conviction01: number;
+  /** Evita intenção “travada” ao mudar o papel no lance (ex.: passa a ser alvo de passe). */
+  snapIsReceiver: boolean;
+  snapIsCarrier: boolean;
+  /** Ameaça percebida no snapshot — jogada que acelera ou esfria força re-leitura. */
+  threatLevel01: number;
 }
 
 // ---------------------------------------------------------------------------

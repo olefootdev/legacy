@@ -79,7 +79,7 @@ export function worldPositionToGrid12CodeForTeam(
   half: MatchHalf,
 ): Grid12SectorCode {
   const L = FIELD_LENGTH;
-  const depth = depthFromOwnGoal(xm, { team, half });
+  const depth = depthFromOwnGoal(xm, team, half);
   const col = Math.min(3, Math.max(0, Math.floor((depth / L) * 4)));
   const W = FIELD_WIDTH;
   const row = zm < W / 3 ? 0 : zm < (2 * W) / 3 ? 1 : 2;

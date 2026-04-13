@@ -106,8 +106,9 @@ export function applySteeringForPhase(
   if (binding.role === 'gk' || binding.slotId === 'gol') {
     binding.pursuit.weight = 0;
     binding.wander.weight = 0;
-    binding.arrive.weight = mode === 'reforming' ? 1.35 : 1;
-    binding.separation.weight = mode === 'reforming' ? 0.4 : 0.95;
+    // `mode` já exclui `reforming` (ramo acima devolve cedo).
+    binding.arrive.weight = 1;
+    binding.separation.weight = 0.95;
     return;
   }
 

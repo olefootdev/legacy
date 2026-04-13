@@ -216,7 +216,7 @@ export function AdminSaveHubPanel() {
   const applyLineup = () => {
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(slotPicks)) {
-      if (v) out[k] = v;
+      if (typeof v === 'string' && v) out[k] = v;
     }
     dispatch({ type: 'SET_LINEUP', lineup: out, formationScheme: formScheme });
   };

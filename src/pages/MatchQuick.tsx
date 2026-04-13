@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, LogOut, Plus, Trophy, RotateCcw } from 'lucide-react';
@@ -96,6 +96,22 @@ function pushBadge(m: Map<string, QuickEventBadge[]>, id: string, b: QuickEventB
   const cur = m.get(id) ?? [];
   cur.push(b);
   m.set(id, cur);
+}
+
+/** Cartão vermelho visível na lista (expulsos). */
+function RedCardIcon({ className }: { className?: string }) {
+  return (
+    <span
+      role="img"
+      aria-label="Cartão vermelho"
+      title="Expulso"
+      className={cn(
+        'inline-block shrink-0 rounded-[2px] bg-red-600 ring-1 ring-red-950/50 shadow-[0_0_10px_rgba(220,38,38,0.5)]',
+        'w-[11px] h-[14px] sm:w-3 sm:h-4',
+        className,
+      )}
+    />
+  );
 }
 
 function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
@@ -582,6 +598,31 @@ export function MatchQuick() {
       .filter((x): x is { player: PitchPlayerState; impact: number } => Boolean(x));
   }, [pitch, homeStats, eventsChronological, live?.awayScore, live?.phase, live?.homeImpactLedger, live]);
 
+  /** Expulsos em partida rápida saem do `pitch` — mostrar no fim da lista com cartão vermelho. */
+  const homeSentOffRows = useMemo(() => {
+    const ids = live?.sentOffPlayerIds ?? [];
+    const seen = new Set(homeRanked.map((r) => r.player.playerId));
+    const out: { playerId: string; num: number; name: string; pos: string }[] = [];
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      const ent = playersById[id];
+      if (!ent) continue;
+      seen.add(id);
+      out.push({ playerId: id, num: ent.num, name: ent.name, pos: ent.pos });
+    }
+    return out;
+  }, [live?.sentOffPlayerIds, homeRanked, playersById]);
+
+  const fullAwayRosterRef = useMemo(
+    () => buildAwayQuickRoster(fixture.opponent, session),
+    [fixture.opponent, session],
+  );
+
+  const awaySentOffRows = useMemo(() => {
+    const currentIds = new Set(awayRoster.map((p) => p.id));
+    return fullAwayRosterRef.filter((p) => !currentIds.has(p.id));
+  }, [fullAwayRosterRef, awayRoster]);
+
   const feedHomeNames = useMemo(() => pitch.map((p) => p.name).filter(Boolean), [pitch]);
   const feedAwayNames = useMemo(() => awayRoster.map((p) => p.name).filter(Boolean), [awayRoster]);
 
@@ -743,13 +784,14 @@ export function MatchQuick() {
 
       <AnimatePresence mode="wait">
         {halfTimeUi ? (
-          <MatchInterruptOverlay
-            key="match-halftime"
-            kind="halftime"
-            title="Intervalo"
-            lines={['2.º tempo a seguir…']}
-            countdown={halfTimeTick}
-          />
+          <Fragment key="match-halftime">
+            <MatchInterruptOverlay
+              kind="halftime"
+              title="Intervalo"
+              lines={['2.º tempo a seguir…']}
+              countdown={halfTimeTick}
+            />
+          </Fragment>
         ) : live?.spiritOverlay?.kind === 'goal' &&
           !preGoalActive &&
           goalScorerOverlayProps &&
@@ -759,12 +801,13 @@ export function MatchQuick() {
             {...goalScorerOverlayProps}
           />
         ) : live?.spiritOverlay && !preGoalActive ? (
-          <MatchInterruptOverlay
-            key={`spirit-${live.spiritOverlay.startedAtMs}-${live.spiritOverlay.kind}`}
-            kind={live.spiritOverlay.kind}
-            title={live.spiritOverlay.title}
-            lines={live.spiritOverlay.lines}
-          />
+          <Fragment key={`spirit-${live.spiritOverlay.startedAtMs}-${live.spiritOverlay.kind}`}>
+            <MatchInterruptOverlay
+              kind={live.spiritOverlay.kind}
+              title={live.spiritOverlay.title}
+              lines={live.spiritOverlay.lines}
+            />
+          </Fragment>
         ) : null}
       </AnimatePresence>
 
@@ -1002,6 +1045,32 @@ export function MatchQuick() {
                     </motion.button>
                   );
                 })}
+                {homeSentOffRows.map((row) => (
+                  <motion.div
+                    key={`sent-off-${row.playerId}`}
+                    layout="position"
+                    initial={false}
+                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    className="w-full glass-panel p-2.5 sm:p-3 border border-red-500/35 bg-red-950/20 flex items-center justify-between gap-2 rounded-lg opacity-90"
+                  >
+                    <span className="text-[10px] font-display font-black text-red-400/80 w-5 shrink-0 text-center">—</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-xs sm:text-sm text-red-100/95 truncate flex items-center gap-2 min-w-0">
+                        <span className="truncate">
+                          {row.num} {row.name}
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-red-400 shrink-0">Expulso</span>
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] text-red-300/70">{row.pos}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <RedCardIcon />
+                      <span className="text-[10px] sm:text-xs font-display font-bold text-red-300/90 tabular-nums w-8 text-right">
+                        —
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </div>
 
@@ -1063,6 +1132,32 @@ export function MatchQuick() {
                     </motion.div>
                   );
                 })}
+                {awaySentOffRows.map((row) => (
+                  <motion.div
+                    key={`away-sent-off-${row.id}`}
+                    layout="position"
+                    initial={false}
+                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    className="w-full glass-panel p-2.5 sm:p-3 border border-red-500/35 bg-red-950/20 flex items-center justify-between gap-2 rounded-lg opacity-90"
+                  >
+                    <span className="text-[10px] font-display font-black text-red-400/80 w-5 shrink-0 text-center">—</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-xs sm:text-sm text-red-100/95 truncate flex items-center gap-2 min-w-0">
+                        <span className="truncate">
+                          {row.num} {row.name}
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-red-400 shrink-0">Expulso</span>
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] text-red-300/70">{row.pos}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <RedCardIcon />
+                      <span className="text-[10px] sm:text-xs font-display font-bold text-red-300/90 tabular-nums w-8 text-right">
+                        —
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </div>
           </div>

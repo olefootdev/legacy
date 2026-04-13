@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
 import { Image as ImageIcon, RotateCcw, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -56,7 +56,7 @@ export function AdminBannersPanel() {
   };
 
   const onFile = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const f = e.target.files?.[0];
       e.target.value = '';
       if (!f || !f.type.startsWith('image/')) {

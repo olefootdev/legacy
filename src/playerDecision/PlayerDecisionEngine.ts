@@ -21,7 +21,7 @@ import {
   DELIBERATION_MIN_SEC,
   DELIBERATION_MAX_SEC,
 } from '@/match/matchSimulationTuning';
-import type { PrethinkingState } from './types';
+import type { PrethinkingIntent, PrethinkingState } from './types';
 import {
   buildPrethinkingState,
   computePrethinkingSpeed,
@@ -63,6 +63,7 @@ export class PlayerDecisionEngine {
   /** Intenção antecipada + velocidade cognitiva; invalidada quando o lance muda. */
   private prethinking: PrethinkingState | null = null;
   private lastPrethinkingSimTime = -1e9;
+  private lastPrethinkingIntent: PrethinkingIntent | null = null;
 
   /** Very short cooldown — off-ball players re-evaluate frequently */
   private static readonly OFF_BALL_COOLDOWN = 0.14;
@@ -81,6 +82,7 @@ export class PlayerDecisionEngine {
    */
   syncAfterTurnoverImmediateAction(action: OnBallAction, simTime: number) {
     this.prethinking = null;
+    this.lastPrethinkingIntent = null;
     this.scanCarryAction = null;
     this.phase = 'executing';
     this.phaseTimer = 0;
@@ -177,8 +179,9 @@ export class PlayerDecisionEngine {
     if (!stale && simTime - this.lastPrethinkingSimTime < interval) {
       return;
     }
-    this.prethinking = buildPrethinkingState(ctx, simTime, speedNow);
+    this.prethinking = buildPrethinkingState(ctx, simTime, speedNow, this.lastPrethinkingIntent);
     this.lastPrethinkingSimTime = simTime;
+    this.lastPrethinkingIntent = this.prethinking?.prethinkingIntent ?? null;
   }
 
   private withPrethinkingCtx(ctx: DecisionContext): DecisionContext {

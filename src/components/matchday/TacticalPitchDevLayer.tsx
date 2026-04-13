@@ -429,8 +429,11 @@ export function TacticalPitchDevLayer({
         const py = (p.y >= 0 && p.y <= 1 ? p.y * 100 : p.y) + nudge.dy;
         const len = 5.5;
         const x2 = px + dir * len;
+        const shortLabel = `${p.slotId ?? '?'} · ${showZoneView ? z18 : g12}`;
+        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]}`;
         return (
           <g key={`h-${p.playerId}`}>
+            <title>{detailLabel}</title>
             <line
               x1={px}
               y1={py}
@@ -442,17 +445,17 @@ export function TacticalPitchDevLayer({
             />
             <text
               x={px}
-              y={py + 4.2}
+              y={py + 3.35}
               textAnchor="middle"
               fill="rgba(255,255,255,0.92)"
-              fontSize={1.55}
+              fontSize={1.12}
               fontWeight={700}
               stroke="rgba(0,0,0,0.65)"
-              strokeWidth={0.12}
+              strokeWidth={0.1}
               paintOrder="stroke"
               style={{ fontFamily: 'system-ui, sans-serif' }}
             >
-              {p.slotId ?? '?'} · {showZoneView ? z18 : g12} · {p.role} · {THIRD_LABEL[third]} · {LANE_LABEL[lane]}
+              {shortLabel}
             </text>
           </g>
         );
@@ -470,8 +473,11 @@ export function TacticalPitchDevLayer({
         const py = (p.y >= 0 && p.y <= 1 ? p.y * 100 : p.y) + nudge.dy;
         const len = 5.5;
         const x2 = px + dir * len;
+        const shortLabel = `${p.slotId ?? '?'} · ${showZoneView ? z18 : g12}`;
+        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]}`;
         return (
           <g key={`a-${p.playerId}`}>
+            <title>{detailLabel}</title>
             <line
               x1={px}
               y1={py}
@@ -483,17 +489,17 @@ export function TacticalPitchDevLayer({
             />
             <text
               x={px}
-              y={py - 3.5}
+              y={py - 2.85}
               textAnchor="middle"
               fill="rgba(254,226,226,0.95)"
-              fontSize={1.55}
+              fontSize={1.12}
               fontWeight={700}
               stroke="rgba(0,0,0,0.65)"
-              strokeWidth={0.12}
+              strokeWidth={0.1}
               paintOrder="stroke"
               style={{ fontFamily: 'system-ui, sans-serif' }}
             >
-              {p.slotId ?? '?'} · {showZoneView ? z18 : g12} · {p.role} · {THIRD_LABEL[third]} · {LANE_LABEL[lane]}
+              {shortLabel}
             </text>
           </g>
         );

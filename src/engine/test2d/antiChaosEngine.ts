@@ -15,7 +15,7 @@ export interface AntiChaosOptions {
   minSeparation?: number;
   /** Passos de relaxação par-a-par. */
   iterations?: number;
-  /** Teto de desvio em relação à posição verdadeira (%). */
+  /** Teto base de desvio (%); em zonas densas o motor aumenta por jogador até ~42%. */
   maxOffset?: number;
   /** Bola em coords de pitch (mesma escala que os agentes). */
   ball?: { x: number; y: number };
@@ -36,6 +36,46 @@ function clampOffset(dx: number, dy: number, max: number): { dx: number; dy: num
   return { dx: dx * s, dy: dy * s };
 }
 
+/** Raio (% do campo) para contar vizinhos e subir o teto de desvio só onde há amontoado. */
+const DENSITY_NEIGHBOR_RADIUS = 9.25;
+
+/**
+ * Tetos de desvio por agente: zonas densas (muitos vizinhos na posição real) precisam de mais margem
+ * para o mesmo `minSeparation` — o teto global único deixava tokens sobrepostos no meio-campo.
+ */
+function perAgentMaxOffsets(
+  n: number,
+  baseX: Float64Array,
+  baseY: Float64Array,
+  baseMax: number,
+): Float64Array {
+  const maxPer = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let neighbors = 0;
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const d = Math.hypot(baseX[i]! - baseX[j]!, baseY[i]! - baseY[j]!);
+      if (d < DENSITY_NEIGHBOR_RADIUS) neighbors++;
+    }
+    maxPer[i] = Math.min(42, baseMax + neighbors * 1.95);
+  }
+  return maxPer;
+}
+
+function clampAgentOffsetToMax(
+  i: number,
+  offX: Float64Array,
+  offY: Float64Array,
+  maxPer: Float64Array,
+): void {
+  const max = maxPer[i]!;
+  const len = Math.hypot(offX[i]!, offY[i]!);
+  if (len <= max || len < 1e-9) return;
+  const s = max / len;
+  offX[i] = offX[i]! * s;
+  offY[i] = offY[i]! * s;
+}
+
 /**
  * Calcula deslocamentos `{ dx, dy }` em pontos percentuais para somar a `left`/`top` dos tokens.
  */
@@ -46,13 +86,13 @@ export function computePitchTokenSeparation(
   const out = new Map<string, { dx: number; dy: number }>();
   if (!agents.length) return out;
 
-  const minSep = opts.minSeparation ?? 3.35;
-  const iterations = opts.iterations ?? 14;
-  const maxOffset = opts.maxOffset ?? 12;
+  const minSep = opts.minSeparation ?? 4.05;
+  const n = agents.length;
+  const iterations = opts.iterations ?? (n > 16 ? 24 : 18);
+  const baseMaxOffset = opts.maxOffset ?? 14;
   const minFromBall = opts.minFromBall ?? 2.9;
   const eps = 1e-4;
 
-  const n = agents.length;
   const baseX = new Float64Array(n);
   const baseY = new Float64Array(n);
   const offX = new Float64Array(n);
@@ -62,6 +102,8 @@ export function computePitchTokenSeparation(
     baseX[i] = toPlanePercent(agents[i]!.x);
     baseY[i] = toPlanePercent(agents[i]!.y);
   }
+
+  const maxPerAgent = perAgentMaxOffsets(n, baseX, baseY, baseMaxOffset);
 
   let ballPx = 50;
   let ballPy = 50;
@@ -103,6 +145,9 @@ export function computePitchTokenSeparation(
         separatePair(i, j, minSep);
       }
     }
+    for (let i = 0; i < n; i++) {
+      clampAgentOffsetToMax(i, offX, offY, maxPerAgent);
+    }
   }
 
   if (ballActive) {
@@ -138,8 +183,20 @@ export function computePitchTokenSeparation(
     }
   }
 
+  const polishPasses = 10;
+  for (let pass = 0; pass < polishPasses; pass++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        separatePair(i, j, minSep);
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      clampAgentOffsetToMax(i, offX, offY, maxPerAgent);
+    }
+  }
+
   for (let i = 0; i < n; i++) {
-    const c = clampOffset(offX[i]!, offY[i]!, maxOffset);
+    const c = clampOffset(offX[i]!, offY[i]!, maxPerAgent[i]!);
     out.set(agents[i]!.id, { dx: c.dx, dy: c.dy });
   }
 

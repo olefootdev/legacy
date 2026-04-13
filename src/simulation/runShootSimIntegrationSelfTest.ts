@@ -7,6 +7,7 @@
  * npx tsx src/simulation/runShootSimIntegrationSelfTest.ts
  */
 import type { LiveMatchSnapshot, PitchPlayerState } from '@/engine/types';
+import { normalizeMatchAttributes } from '@/match/playerInMatch';
 import { defaultSlotOrder } from '@/formation/layout433';
 import { SHOT_ATTEMPTS_MIN_PER_90MIN_SIM } from '@/match/shootDecisionTuning';
 import type { BallSystem } from '@/simulation/BallSystem';
@@ -48,9 +49,11 @@ function minimalLive(): LiveMatchSnapshot {
       fatigue: 14,
       role,
       cognitiveArchetype: wingOrStriker ? 'finalizador' : 'criador',
-      attributes: wingOrStriker
-        ? { finalizacao: 86, mentalidade: 82, confianca: 84, drible: 72, passeCurto: 70 }
-        : { finalizacao: 68, passeCurto: 78, mentalidade: 76 },
+      attributes: normalizeMatchAttributes(
+        wingOrStriker
+          ? { finalizacao: 86, mentalidade: 82, confianca: 84, drible: 72, passeCurto: 70 }
+          : { finalizacao: 68, passeCurto: 78, mentalidade: 76 },
+      ),
     };
   });
 

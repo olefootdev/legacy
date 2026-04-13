@@ -46,15 +46,15 @@ export function LiveMatchScreen() {
           <View style={styles.row}>
             <Pressable
               style={styles.btn}
-              onPress={() => Linking.openURL(`${OLEFOOT_WEB.replace(/\/$/, '')}/match/auto`)}
+              onPress={() => Linking.openURL(`${OLEFOOT_WEB.replace(/\/$/, '')}/match/quick`)}
             >
-              <Text style={styles.btnText}>Automática (web)</Text>
+              <Text style={styles.btnText}>Rápida — oficial (web)</Text>
             </Pressable>
             <Pressable
               style={styles.btn}
-              onPress={() => Linking.openURL(`${OLEFOOT_WEB.replace(/\/$/, '')}/match/quick`)}
+              onPress={() => Linking.openURL(`${OLEFOOT_WEB.replace(/\/$/, '')}/match/live`)}
             >
-              <Text style={styles.btnText}>Rápida (web)</Text>
+              <Text style={styles.btnText}>Ao vivo (web)</Text>
             </Pressable>
           </View>
         ) : (

@@ -23,7 +23,8 @@ interface MatchSummary {
 /**
  * Partida automática (`/match/auto`): sem estádio.
  * Fluxo: `START_LIVE_MATCH` modo `auto` → `advanceMatchToPostgame` → `runMatchMinute` ×90 →
- * **GameSpirit** (`buildSpiritContext` + `gameSpiritTick`) nos minutos com tick, como na partida rápida.
+ * **GameSpirit** (`buildSpiritContext` + `gameSpiritTick`) nos minutos com tick.
+ * Alvo: resultado em **≤ ~10s** (simulação `auto` em batch + menos cartões/lesão por minuto; GameSpirit intacto).
  * A Partida ao vivo (`test2d` / `SIM_SYNC`) é que usa o motor tático contínuo em paralelo.
  * Finaliza já com `FINALIZE_MATCH` para liga / elenco.
  */
@@ -155,7 +156,7 @@ export function MatchAuto() {
     .filter((x): x is NonNullable<typeof x> => Boolean(x))
     .sort((a, b) => b.ovr - a.ovr);
 
-  const topStats = summary?.homeStats ?? {};
+  const topStats: MatchSummary['homeStats'] = summary?.homeStats ?? {};
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-6 px-4 py-6">
@@ -239,7 +240,7 @@ export function MatchAuto() {
             Analisando elenco e adversário…
           </p>
           <p className="text-xs text-gray-500 text-center max-w-sm">
-            O GameSpirit corre os minutos de jogo de uma vez; costuma levar poucos segundos (sem o relógio ao vivo da Partida Rápida).
+            O GameSpirit resolve os 90 minutos de uma vez — alvo &lt; 10 segundos (sem relógio ao vivo da Partida Rápida).
           </p>
         </motion.div>
       )}

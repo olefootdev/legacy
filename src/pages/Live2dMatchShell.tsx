@@ -253,7 +253,7 @@ function Test2dBallToken({
         : BALL_SPRING;
   return (
     <motion.div
-      className="pointer-events-none absolute z-[4] h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/95 bg-gradient-to-br from-white via-white to-zinc-200 shadow-[0_0_16px_rgba(255,255,255,0.95),0_6px_14px_rgba(0,0,0,0.45)]"
+      className="pointer-events-none absolute z-[4] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/90 bg-gradient-to-br from-white via-white to-zinc-200 shadow-[0_0_12px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.42)]"
       style={{ position: 'absolute' }}
       initial={false}
       animate={{ left: `${left}%`, top: `${top}%` }}

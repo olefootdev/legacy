@@ -107,7 +107,10 @@ export function isInsideOppPenaltyArea(pos: PitchPosition, ctx: TeamPitchContext
 }
 
 /** Margem extra para ficar claramente fora da grande área (reinícios). */
-const PENALTY_AREA_EXIT_MARGIN_M = 1.2;
+export const PENALTY_AREA_EXIT_MARGIN_M = 1.2;
+
+/** Limiar de X (lado oeste) para jogadores de campo na saída de baliza — fora da grande área. */
+export const OUTSIDE_WEST_PENALTY_MIN_X_M = PENALTY_AREA_DEPTH_M + PENALTY_AREA_EXIT_MARGIN_M;
 
 /**
  * Empurra (x,z) para fora das duas grandes áreas (ambas as balizas), com pequena margem.

@@ -258,6 +258,8 @@ export type GameAction =
   /** Desistência em partida rápida/automática: 0–5 para o visitante e fase pós-jogo. */
   | { type: 'FORFEIT_MATCH'; mode: 'quick' | 'auto' | 'test2d' }
   | { type: 'FINALIZE_MATCH' }
+  /** Quando `insertMatch` resolve — actualiza o snapshot em curso (evita mutar objecto já descartado). */
+  | { type: 'SET_LIVE_MATCH_SUPABASE_ID'; matchId: string; matchClientNonce: number }
   | { type: 'MERGE_PLAYERS'; players: Record<string, PlayerEntity> }
   | { type: 'UPSERT_CARD_COLLECTION'; collection: CardCollection }
   | { type: 'SET_MANAGER_SLIDERS'; partial: Partial<OlefootGameState['manager']> }
@@ -305,7 +307,7 @@ export type GameAction =
       type: 'START_FRIENDLY_CHALLENGE';
       opponentName: string;
       opponentId: string;
-      mode: 'auto' | 'quick';
+      mode: 'live' | 'quick';
       currency: 'BRO' | 'EXP';
       /** BRO: valor em unidades BRO (ex.: 10.5). EXP: valor inteiro de EXP. */
       prizeAmount: number;

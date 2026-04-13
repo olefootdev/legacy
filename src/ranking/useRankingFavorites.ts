@@ -23,11 +23,11 @@ function saveFavorites(next: Set<string>) {
 }
 
 export function useRankingFavorites() {
-  const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
+  const [favorites, setFavorites] = useState<Set<string>>(() => loadFavorites());
 
   const toggleFavorite = useCallback((team: string) => {
     setFavorites((prev) => {
-      const n = new Set(prev);
+      const n = new Set<string>(prev);
       if (n.has(team)) n.delete(team);
       else n.add(team);
       saveFavorites(n);

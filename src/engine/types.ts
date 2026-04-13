@@ -139,6 +139,8 @@ export interface LiveMatchSnapshot {
   lastCoachCommands?: CoachCommand[];
   /** ID da partida no Supabase (quando configurado). */
   supabaseMatchId?: string;
+  /** Alinha a resposta assíncrona de `insertMatch` ao snapshot correcto. */
+  matchClientNonce?: number;
 
   /** Ledger de fatores de impacto (casa), append-only por evento. */
   homeImpactLedger?: ImpactLedgerEntry[];

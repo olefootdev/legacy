@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Bot, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GameSpiritKnowledgeRoot, PitchZoneTag } from '@/gamespirit/admin/gameSpiritKnowledgeStore';
-import { newId, nowIso } from '@/gamespirit/admin/gameSpiritKnowledgeStore';
+import { emptyBlockNotes, newId, nowIso } from '@/gamespirit/admin/gameSpiritKnowledgeStore';
 import type { TeachKind } from '@/gamespirit/admin/gameSpiritTeachClient';
 import { requestGameSpiritTeach } from '@/gamespirit/admin/gameSpiritTeachClient';
 
@@ -100,7 +100,7 @@ export function TeachSection({
         0,
       );
       const r = await requestGameSpiritTeach({ kind, userMessage: message, contextJson: ctx });
-      if (!r.ok) {
+      if (r.ok === false) {
         setErr(r.error);
         return;
       }
@@ -168,6 +168,7 @@ export function TeachSection({
           zone: p.zone,
           x01: p.x01,
           y01: p.y01,
+          blockNotes: emptyBlockNotes(),
           mainActivities: p.mainActivities,
           coachingNotes: p.coachingNotes,
           updatedAt: nowIso(),

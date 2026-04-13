@@ -112,6 +112,11 @@ export class StructuralReorganizationSystem {
     return this.goalRestart !== null;
   }
 
+  /** Saída de baliza após remate para fora: manter geometria IFAB até `live`. */
+  isGoalKickWideRestart(): boolean {
+    return this.goalRestart !== null && this.goalRestart.variant === 'goal_kick_wide';
+  }
+
   /** True while set-piece structural blend is driving targets (first ~3s). */
   hasSetPieceStructural(): boolean {
     return this.setPiece !== null;
@@ -191,6 +196,22 @@ export class StructuralReorganizationSystem {
     const m = new Map<string, { x: number; z: number }>();
     for (const [id, pos] of mapSlotsToPlayerIds(homeAgents, homeMap)) m.set(id, pos);
     for (const [id, pos] of mapSlotsToPlayerIds(awayAgents, awayMap)) m.set(id, pos);
+
+    if (phase === 'goal_kick') {
+      for (const ag of homeAgents) {
+        const pos = m.get(ag.id);
+        if (!pos) continue;
+        if (ag.slotId === 'gol') continue;
+        m.set(ag.id, clampWorldOutsideBothPenaltyAreas(pos.x, pos.z));
+      }
+      for (const ag of awayAgents) {
+        const pos = m.get(ag.id);
+        if (!pos) continue;
+        if (ag.slotId === 'gol') continue;
+        m.set(ag.id, clampWorldOutsideBothPenaltyAreas(pos.x, pos.z));
+      }
+    }
+
     return m;
   }
 }

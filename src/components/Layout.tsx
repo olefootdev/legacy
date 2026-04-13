@@ -53,12 +53,12 @@ export function Layout({ children }: { children: ReactNode }) {
       case '/':
         return (
           <Link
-            to="/match/live"
+            to="/match/quick"
             className="btn-primary flex max-w-[min(100%,10.5rem)] shrink-0 items-center gap-1 px-3 py-2 text-[10px] sm:max-w-none sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
           >
             <span className="btn-primary-inner truncate px-1 sm:px-2">
               <Play className="h-3 w-3 shrink-0 fill-black" />{' '}
-              <span className="hidden min-[360px]:inline">PARTIDA</span>
+              <span className="hidden min-[360px]:inline">RÁPIDA</span>
               <span className="min-[360px]:hidden">JOGO</span>
             </span>
           </Link>
@@ -136,7 +136,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
-          <Link to="/match/live" className="btn-primary w-full flex justify-center">
+          <Link to="/match/quick" className="btn-primary w-full flex justify-center">
             <span className="btn-primary-inner">
               <Play className="w-5 h-5 fill-black" />
               DIA DE JOGO
@@ -253,7 +253,7 @@ export function Layout({ children }: { children: ReactNode }) {
               </nav>
 
               <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
-                <Link to="/match/live" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary w-full flex justify-center">
+                <Link to="/match/quick" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary w-full flex justify-center">
                   <span className="btn-primary-inner">
                     <Play className="w-5 h-5 fill-black" />
                     DIA DE JOGO

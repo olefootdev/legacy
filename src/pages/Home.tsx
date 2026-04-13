@@ -145,7 +145,7 @@ export function Home() {
   const [amistosoOpen, setAmistosoOpen] = useState(false);
   const [opponentName, setOpponentName] = useState('');
   const [opponentId, setOpponentId] = useState('');
-  const [friendlyMode, setFriendlyMode] = useState<'auto' | 'quick'>('quick');
+  const [friendlyMode, setFriendlyMode] = useState<'live' | 'quick'>('quick');
   const [betCurrency, setBetCurrency] = useState<'BRO' | 'EXP'>('BRO');
   const [betInput, setBetInput] = useState('10');
   const [notifTab, setNotifTab] = useState<HomeNotifTab>('ALL');
@@ -227,7 +227,7 @@ export function Home() {
       });
     }
     setAmistosoOpen(false);
-    navigate(friendlyMode === 'auto' ? '/match/auto' : '/match/quick');
+    navigate(friendlyMode === 'live' ? '/match/live' : '/match/quick');
   };
 
   const fullSorted = useMemo(
@@ -390,28 +390,28 @@ export function Home() {
           {/* Ações */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pt-2 border-t border-white/10">
             <div className="flex flex-col gap-3 w-full lg:max-w-md">
-              <Link to="/match/live" className="w-full">
+              <Link to="/match/quick" className="w-full">
                 <button type="button" className="btn-primary w-full text-lg sm:text-xl py-3.5 sm:py-4">
                   <span className="btn-primary-inner">
                     <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-black shrink-0" />
-                    IR PARA O JOGO
+                    Partida rápida
                   </span>
                 </button>
               </Link>
-              <div className="flex items-center justify-center lg:justify-start gap-2">
-                <Link
-                  to="/match/quick"
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-center text-xs font-display font-bold uppercase tracking-wider text-gray-300 hover:border-white/20 hover:text-white transition-colors"
+              <p className="text-center lg:text-left text-[10px] font-bold uppercase tracking-wider text-neon-yellow/80 -mt-1">
+                Conta para a liga e histórico oficial
+              </p>
+              <Link to="/match/live" className="w-full">
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-white/15 bg-white/[0.06] py-3 sm:py-3.5 text-sm sm:text-base font-display font-bold uppercase tracking-wider text-white hover:border-neon-yellow/35 hover:bg-white/[0.09] transition-colors"
                 >
-                  Partida Rápida
-                </Link>
-                <Link
-                  to="/match/auto"
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-center text-xs font-display font-bold uppercase tracking-wider text-gray-300 hover:border-white/20 hover:text-white transition-colors"
-                >
-                  Automático
-                </Link>
-              </div>
+                  Partida ao vivo
+                </button>
+              </Link>
+              <p className="text-center lg:text-left text-[10px] text-gray-500 leading-snug -mt-1 max-w-md">
+             
+              </p>
             </div>
             <Link to="/team/tatica" className="w-full lg:w-auto lg:min-w-[200px]">
               <button type="button" className="btn-secondary w-full py-3">
@@ -624,25 +624,28 @@ export function Home() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setFriendlyMode('auto')}
-                      className={cn(
-                        'py-2.5 rounded text-xs font-display font-bold uppercase border',
-                        friendlyMode === 'auto' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
-                      )}
-                    >
-                      Partida Automática
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setFriendlyMode('quick')}
                       className={cn(
                         'py-2.5 rounded text-xs font-display font-bold uppercase border',
                         friendlyMode === 'quick' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
                       )}
                     >
-                      Partida Rápida
+                      Partida rápida
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFriendlyMode('live')}
+                      className={cn(
+                        'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                        friendlyMode === 'live' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
+                      )}
+                    >
+                      Partida ao vivo
                     </button>
                   </div>
+                  <p className="mt-2 text-[10px] text-gray-500 leading-snug">
+                    Desafio amistoso: a partida rápida segue as mesmas regras oficiais da liga. A ao vivo é experimental.
+                  </p>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">

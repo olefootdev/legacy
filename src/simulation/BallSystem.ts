@@ -65,6 +65,13 @@ export class BallSystem {
     this.state.flight = null;
   }
 
+  /** Mantém a bola colada ao portador antes de decisões físicas (evita “furar” o GR no mesmo tick). */
+  syncHeldToCarrier(x: number, z: number): void {
+    if (this.state.mode !== 'held') return;
+    this.state.x = x;
+    this.state.z = z;
+  }
+
   setLoose(x: number, z: number) {
     this.state.mode = 'loose';
     this.state.carrierId = null;

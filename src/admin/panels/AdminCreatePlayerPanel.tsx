@@ -546,7 +546,7 @@ export function AdminCreatePlayerPanel() {
         requestedSupply: mint,
         excludePlayerId: excl,
       });
-      if (!chk.ok) {
+      if (chk.ok === false) {
         setError(chk.reason);
         return;
       }
@@ -565,7 +565,7 @@ export function AdminCreatePlayerPanel() {
         requestedSupply: mint,
         excludePlayerId: excl,
       });
-      if (!chk.ok) {
+      if (chk.ok === false) {
         setError(chk.reason);
         return;
       }
