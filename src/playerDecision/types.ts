@@ -1,6 +1,7 @@
 import type { AgentSnapshot, PassOption } from '@/simulation/InteractionResolver';
 import type { GoalContext } from '@/match/goalContext';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
+import type { MatchCognitiveArchetype } from '@/match/playerInMatch';
 
 // ---------------------------------------------------------------------------
 // Player Profile — defines personality and tendencies
@@ -72,6 +73,8 @@ export interface TeammateOption {
   angle: number;
   isForward: boolean;
   isOpen: boolean;
+  /** Distância do adversário mais próximo a este colega — maior = mais “livre”. */
+  closestOppDist: number;
   quality: number;
 }
 
@@ -86,6 +89,12 @@ export interface SpaceReading {
 export type TeamPhase = 'buildup' | 'progression' | 'attack' | 'transition_def' | 'transition_att';
 
 export type FieldZone = 'own_box' | 'def_third' | 'def_mid' | 'mid' | 'att_mid' | 'att_third' | 'opp_box';
+
+/** Pressão coerente com o pedido: passiva → pressão crítica. */
+export type PressureBand = 'passive' | 'moderate' | 'high' | 'critical';
+
+/** Zona espacial macro para decisão (perigo / construção / seguro). */
+export type SpatialBand = 'danger' | 'construction' | 'safe';
 
 export interface ContextReading {
   pressure: PressureReading;
@@ -109,6 +118,8 @@ export interface ContextReading {
   threatLevel: number;
   /** Is the play maturing, being neutralized, or stable? */
   threatTrend: 'rising' | 'stable' | 'falling';
+  pressureBand: PressureBand;
+  spatialBand: SpatialBand;
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +301,44 @@ export type PlayIntention =
 export type BallSector = 'left' | 'center' | 'right';
 
 // ---------------------------------------------------------------------------
+// Prethinking — intenção antecipada curta (leitura → prethinking → execução)
+// ---------------------------------------------------------------------------
+
+/** Intenção que o jogador mantém antes do evento; atualizada com o contexto. */
+export type PrethinkingIntent =
+  | 'receber_e_girar'
+  | 'passe_rapido'
+  | 'proteger_bola'
+  | 'atacar_espaco'
+  | 'finalizar_rapido'
+  | 'tabela'
+  | 'cobertura_defensiva'
+  | 'pressionar_portador'
+  | 'interceptar_linha'
+  | 'matar_jogada'
+  | 'disputar_rebote'
+  /** Sem intenção tática forte — mantém encaixe coletivo. */
+  | 'encaixe';
+
+/** Rapidez com que a intenção é revista e traduzida em execução após o gatilho. */
+export type PrethinkingSpeed = 'fast' | 'normal' | 'slow';
+
+export interface PrethinkingState {
+  prethinkingIntent: PrethinkingIntent;
+  speed: PrethinkingSpeed;
+  validUntil: number;
+  possessionSide: 'home' | 'away' | null;
+  carrierId: string | null;
+  anchorX: number;
+  anchorZ: number;
+  ballX: number;
+  ballZ: number;
+  pressureIntensity: PressureReading['intensity'];
+  /** 0–1: força do compromisso com a intenção (ajuste fino na execução). */
+  conviction01: number;
+}
+
+// ---------------------------------------------------------------------------
 // Decision context (superset of old BrainContext)
 // ---------------------------------------------------------------------------
 
@@ -343,6 +392,30 @@ export interface DecisionContext {
    * Filled by the sim loop for a short window after a tackle.
    */
   passBlocklist?: string[];
+  /**
+   * Acabou de soltar um passe ao portador atual (ou bola a caminho dele) — “troca de setor” /
+   * continuidade ofensiva (não ficar no mesmo corredor; terceiro homem).
+   */
+  offensivePassMobility?: { forward: boolean };
   /** Spatial orientation toward the attacked goal (derived from side + half). */
   goalContext?: GoalContext;
+  /**
+   * Cada chamada devolve o próximo [0,1) da cadeia determinística do tick (seed + tempo + jogador).
+   * Usado em vez de `Math.random` nas decisões táticas para alinhar ao `ActionResolver`.
+   */
+  roll01?: () => number;
+  /**
+   * 0–1: após execução excecional (ex.: passe crítico a receber) — decisão ligeiramente mais rápida.
+   */
+  decisionExecutionBoost01?: number;
+  /** Perfil cognitivo em jogo (opcional; away pode omitir). */
+  cognitiveArchetype?: MatchCognitiveArchetype;
+  /**
+   * Estado de prethinking do jogador (intenção + velocidade cognitiva), preenchido pelo engine.
+   */
+  prethinking?: PrethinkingState | null;
+  /**
+   * GameSpirit: `spiritMomentumClamp01` do live match (0–1). Só enviesa tendências de intenção, não decide ações.
+   */
+  gameSpiritHomeMomentum01?: number | null;
 }

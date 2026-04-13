@@ -21,8 +21,11 @@ interface MatchSummary {
 }
 
 /**
- * Partida automática: sem estádio; mesmo motor (`advanceMatchToPostgame` via START_LIVE_MATCH auto).
- * Finaliza na hora para persistir liga / elenco (lesões, cartões).
+ * Partida automática (`/match/auto`): sem estádio.
+ * Fluxo: `START_LIVE_MATCH` modo `auto` → `advanceMatchToPostgame` → `runMatchMinute` ×90 →
+ * **GameSpirit** (`buildSpiritContext` + `gameSpiritTick`) nos minutos com tick, como na partida rápida.
+ * A Partida ao vivo (`test2d` / `SIM_SYNC`) é que usa o motor tático contínuo em paralelo.
+ * Finaliza já com `FINALIZE_MATCH` para liga / elenco.
  */
 export function MatchAuto() {
   const navigate = useNavigate();
@@ -33,40 +36,77 @@ export function MatchAuto() {
 
   const [phase, setPhase] = useState<UiPhase>('analyzing');
   const [summary, setSummary] = useState<MatchSummary | null>(null);
+  /** Partida não arrancou (plantel) ou exceção no motor — evita ecrã em branco. */
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [forfeitOpen, setForfeitOpen] = useState(false);
 
   const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aliveRef = useRef(true);
+
+  /** Mínimo de tempo no ecrã “a analisar” para não piscar; a simulação corre logo a seguir ao 1.º paint. */
+  const MIN_ANALYZING_MS = 750;
 
   const runAnalysis = useCallback(() => {
     setPhase('analyzing');
     setSummary(null);
+    setBlockedReason(null);
     if (analysisTimeoutRef.current) {
       clearTimeout(analysisTimeoutRef.current);
       analysisTimeoutRef.current = null;
     }
+    const startedAt = performance.now();
     analysisTimeoutRef.current = window.setTimeout(() => {
       analysisTimeoutRef.current = null;
-      dispatch({ type: 'START_LIVE_MATCH', mode: 'auto' });
-      const lm = getGameState().liveMatch;
-      if (lm) {
-        setSummary({
-          homeShort: lm.homeShort,
-          awayShort: lm.awayShort,
-          homeName: lm.homeName,
-          awayName: lm.awayName,
-          homeScore: lm.homeScore,
-          awayScore: lm.awayScore,
-          events: lm.events.map((e) => ({ id: e.id, text: e.text })),
-          homeStats: { ...lm.homeStats },
-        });
+      if (!aliveRef.current) return;
+
+      let lm: ReturnType<typeof getGameState>['liveMatch'];
+      let simError: string | null = null;
+      try {
+        dispatch({ type: 'START_LIVE_MATCH', mode: 'auto' });
+        lm = getGameState().liveMatch;
+        if (lm) {
+          setSummary({
+            homeShort: lm.homeShort,
+            awayShort: lm.awayShort,
+            homeName: lm.homeName,
+            awayName: lm.awayName,
+            homeScore: lm.homeScore,
+            awayScore: lm.awayScore,
+            events: lm.events.map((e) => ({ id: e.id, text: e.text })),
+            homeStats: { ...lm.homeStats },
+          });
+        }
+        dispatch({ type: 'FINALIZE_MATCH' });
+      } catch (e) {
+        console.error('[MatchAuto] START_LIVE_MATCH / simulação', e);
+        simError =
+          e instanceof Error
+            ? e.message
+            : 'Falha ao simular a partida. Tenta de novo ou ajusta a equipa.';
       }
-      dispatch({ type: 'FINALIZE_MATCH' });
-      setPhase('result');
-    }, 5000);
+
+      if (!lm && !simError) {
+        setBlockedReason(
+          'Não foi possível jogar: plantel incompleto ou jogadores indisponíveis (lesão / suspensão). Titulares e banco cumprem os requisitos em Equipa.',
+        );
+      } else if (simError) {
+        setBlockedReason(simError);
+      }
+
+      const elapsed = performance.now() - startedAt;
+      const remainder = Math.max(0, MIN_ANALYZING_MS - elapsed);
+      analysisTimeoutRef.current = window.setTimeout(() => {
+        analysisTimeoutRef.current = null;
+        if (!aliveRef.current) return;
+        setPhase('result');
+      }, remainder);
+    }, 0);
   }, [dispatch]);
 
   useEffect(() => {
+    aliveRef.current = true;
     return () => {
+      aliveRef.current = false;
       if (analysisTimeoutRef.current) {
         clearTimeout(analysisTimeoutRef.current);
         analysisTimeoutRef.current = null;
@@ -95,6 +135,7 @@ export function MatchAuto() {
     }
     dispatch({ type: 'FINALIZE_MATCH' });
     setForfeitOpen(false);
+    setBlockedReason(null);
     setPhase('result');
   };
 
@@ -117,7 +158,7 @@ export function MatchAuto() {
   const topStats = summary?.homeStats ?? {};
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 py-6 px-4">
+    <div className="mx-auto min-w-0 max-w-3xl space-y-6 px-4 py-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <Link
           to="/"
@@ -146,7 +187,7 @@ export function MatchAuto() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="forfeit-auto-title"
@@ -156,7 +197,7 @@ export function MatchAuto() {
               initial={{ scale: 0.96, y: 8 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 8 }}
-              className="glass-panel w-full max-w-md p-6 border border-red-500/40 shadow-[0_0_40px_rgba(239,68,68,0.12)]"
+              className="glass-panel my-auto w-full max-w-md border border-red-500/40 p-6 shadow-[0_0_40px_rgba(239,68,68,0.12)] max-h-[min(88dvh,calc(100dvh-5rem))] overflow-y-auto sm:max-h-none"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="forfeit-auto-title" className="font-display font-black text-xl text-white text-center uppercase tracking-wide">
@@ -198,8 +239,33 @@ export function MatchAuto() {
             Analisando elenco e adversário…
           </p>
           <p className="text-xs text-gray-500 text-center max-w-sm">
-            Casa vs fora, minuto a minuto no motor GameSpirit (sem visual de estádio).
+            O GameSpirit corre os minutos de jogo de uma vez; costuma levar poucos segundos (sem o relógio ao vivo da Partida Rápida).
           </p>
+        </motion.div>
+      )}
+
+      {phase === 'result' && blockedReason && !summary && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <div className="glass-panel p-6 border border-amber-500/30 text-center">
+            <p className="text-[10px] text-amber-400/90 font-bold uppercase tracking-widest mb-2">Partida automática</p>
+            <p className="text-sm text-gray-200 leading-relaxed">{blockedReason}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              className="btn-primary flex-1 flex justify-center"
+              onClick={() => navigate('/team')}
+            >
+              <span className="btn-primary-inner">Ir para Equipa</span>
+            </button>
+            <button
+              type="button"
+              className="flex-1 py-3 rounded-xl border border-white/20 font-bold text-sm hover:bg-white/10 transition-colors"
+              onClick={() => navigate('/')}
+            >
+              Home
+            </button>
+          </div>
         </motion.div>
       )}
 

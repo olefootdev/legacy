@@ -6,6 +6,8 @@ import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { accrueOlexpDaily } from '@/wallet/olexp';
 import { accrueGatDaily } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
+import { processLeagueScheduleDue } from '@/match/processLeagueSchedule';
+import { mergeWalletIntoFinance } from './financeWalletSync';
 
 function recoverOffMatch(player: PlayerEntity, gameMinutes: number): PlayerEntity {
   const g = Math.min(gameMinutes, 360);
@@ -45,7 +47,12 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
     players[id] = recoverOffMatch(p, gm);
   }
 
-  if (liveMatch && liveMatch.phase === 'playing' && liveMatch.minute < 90) {
+  if (
+    liveMatch &&
+    liveMatch.phase === 'playing' &&
+    liveMatch.minute < 90 &&
+    liveMatch.mode !== 'test2d'
+  ) {
     let roster = homeRosterFromLineupState({ ...state, players });
     const maxSim = Math.min(40, Math.floor(gm), 90 - liveMatch.minute);
     for (let i = 0; i < maxSim; i++) {
@@ -93,8 +100,9 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
   wallet = accrueOlexpDaily(wallet, todayStr);
   wallet = accrueGatDaily(wallet, todayStr);
 
-  const broAdjust = wallet.spotBroCents - state.finance.broCents;
-  const finance = { ...state.finance, broCents: state.finance.broCents + broAdjust, wallet };
+  const finance = mergeWalletIntoFinance(state.finance, wallet);
 
-  return { ...state, players, liveMatch, crowd, finance, lastWorldRealMs: nowMs };
+  let next: OlefootGameState = { ...state, players, liveMatch, crowd, finance, lastWorldRealMs: nowMs };
+  next = processLeagueScheduleDue(next, nowMs);
+  return next;
 }

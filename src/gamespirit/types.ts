@@ -4,6 +4,7 @@ import type { CrowdSpiritPressure } from '@/systems/crowdSpirit';
 import type { CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import type { PenaltyState, SpiritOverlay, SpiritPhase } from '@/gamespirit/spiritSnapshotTypes';
+import type { MotorTelemetryRecord } from '@/match/motorActionOutcome';
 
 export type ProposedAction =
   | 'recycle'
@@ -41,6 +42,25 @@ export interface SpiritContext {
   homePlayers?: PitchPlayerState[];
   /** Roster sintético visitante — usado para atribuir golo/cartão a jogador real. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
+
+  /**
+   * TESTE 2D: in/out de posse (casa) — modula probabilidades no `pickAction` / condução.
+   */
+  test2dTickModifiers?: {
+    homeInPossession: boolean;
+    progressLossMult: number;
+    shotInAttThirdBias: number;
+    awayPressMult: number;
+  };
+
+  /** live2d: ticks de estagnação (recycle em cadeia) — força condução/passe. */
+  live2dStagnationTicks?: number;
+
+  /**
+   * Opcional: últimos outcomes do motor tático (ex.: `SimMatchState.motorOutcomeLog`),
+   * para narração reativa sem o Spirit “decidir” o resultado antes da simulação.
+   */
+  motorTelemetryTail?: readonly MotorTelemetryRecord[];
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */

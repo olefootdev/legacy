@@ -133,7 +133,7 @@ export function AdminUsuariosPanel() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="ole-scroll-x rounded-xl border border-white/10">
         <table className="w-full min-w-[960px] text-left text-xs">
           <thead>
             <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/40">

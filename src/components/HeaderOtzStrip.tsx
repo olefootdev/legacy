@@ -23,30 +23,37 @@ export function HeaderOtzStrip() {
   const d = new Date(now);
   const stats = syntheticOnlineStats(now);
 
+  const statsTitle = `~${formatOnlineCompact(stats.online)} online · ${formatOnlineCompact(stats.inMatch)} em jogo · ${formatOnlineCompact(stats.scouting)} scouting`;
+
   return (
     <div
-      className="text-right leading-tight select-none"
+      className="w-auto max-w-[min(100%,13rem)] min-w-0 select-none text-right leading-tight sm:max-w-none sm:w-auto"
       title="Tempo oficial Olefoot (UTC). O estado do jogo sincroniza ao focar a app ou em segundo plano (definições)."
     >
-      <div className="flex items-center justify-end gap-1.5 text-neon-yellow">
-        <Clock className="w-3.5 h-3.5 shrink-0 opacity-90" aria-hidden />
-        <span className="text-[9px] font-display font-black uppercase tracking-widest text-gray-500">
+      <div className="flex items-center justify-end gap-1 text-neon-yellow sm:gap-1.5">
+        <Clock className="h-3 w-3 shrink-0 opacity-90 sm:h-3.5 sm:w-3.5" aria-hidden />
+        <span className="hidden font-display text-[9px] font-black uppercase tracking-widest text-gray-500 sm:inline">
           {OTZ_SHORT_LABEL}
         </span>
-        <span className="text-xs md:text-sm font-display font-black tabular-nums tracking-tight text-white">
+        <span className="font-display text-[11px] font-black tabular-nums tracking-tight text-white sm:text-xs md:text-sm">
           {formatOtzTime(d)}
         </span>
       </div>
-      <div className="text-[9px] text-gray-500 font-medium mt-0.5 tabular-nums">{formatOtzDate(d)} · UTC</div>
-      <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-gray-400 font-medium">
-        <Users className="w-3 h-3 shrink-0 text-neon-yellow/80" aria-hidden />
-        <span>
-          ~{formatOnlineCompact(stats.online)} online
-          <span className="text-gray-600 mx-1">·</span>
-          {formatOnlineCompact(stats.inMatch)} em jogo
-          <span className="text-gray-600 mx-1">·</span>
-          {formatOnlineCompact(stats.scouting)} scouting
-        </span>
+      <div className="mt-0.5 text-[8px] font-medium tabular-nums text-gray-500 sm:text-[9px]">
+        {formatOtzDate(d)} · UTC
+      </div>
+      {/* Mobile: linhas curtas (sem ellipsis). Desktop: uma linha. */}
+      <div
+        className="mt-1 flex flex-col items-end gap-0 text-[7px] font-medium leading-snug text-gray-400 sm:hidden"
+        aria-label={statsTitle}
+      >
+        <span className="tabular-nums">~{formatOnlineCompact(stats.online)} online</span>
+        <span className="tabular-nums">{formatOnlineCompact(stats.inMatch)} em jogo</span>
+        <span className="tabular-nums">{formatOnlineCompact(stats.scouting)} scouting</span>
+      </div>
+      <div className="mt-1 hidden items-center justify-end gap-1 text-[9px] font-medium text-gray-400 sm:flex" title={statsTitle}>
+        <Users className="h-3 w-3 shrink-0 text-neon-yellow/80" aria-hidden />
+        <span className="max-w-[min(100%,20rem)] text-right leading-snug">{statsTitle}</span>
       </div>
     </div>
   );

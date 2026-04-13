@@ -28,6 +28,9 @@ const NEUTRAL_PRESSURE: PressureReading = {
   intensity: 0,
 };
 
+/** Reduz empurrões de slot vindos da macro-história (PlayStoryTracker); contexto de bola/terço mantém peso pleno. */
+const MACRO_STORY_SLOT_NUDGE = 0.42;
+
 function derivePossessionContext(
   side: PossessionSide,
   ballX: number,
@@ -63,12 +66,24 @@ function shiftAttackingSlot(
   let nz2 = nz;
 
   if (context === 'transition_attack') {
-    nx2 += 0.032;
+    nx2 += 0.032 * MACRO_STORY_SLOT_NUDGE;
   }
-  if (context === 'attack' || storyBeat === 'chance_creation' || storyBeat === 'finishing') {
-    if (line === 'att') nx2 += 0.022;
+  if (context === 'attack') {
+    if (line === 'att') nx2 += 0.036;
+    if (slot === 'ata' || slot === 'pe' || slot === 'pd') {
+      nx2 += 0.024;
+    }
     if (slot === 'pe' || slot === 'pd') {
       nz2 = Math.min(0.94, Math.max(0.06, nz + (nz - 0.5) * 0.14));
+    }
+  } else if (storyBeat === 'chance_creation' || storyBeat === 'finishing') {
+    const w = MACRO_STORY_SLOT_NUDGE;
+    if (line === 'att') nx2 += 0.036 * w;
+    if (slot === 'ata' || slot === 'pe' || slot === 'pd') {
+      nx2 += 0.024 * w;
+    }
+    if (slot === 'pe' || slot === 'pd') {
+      nz2 = Math.min(0.94, Math.max(0.06, nz + (nz - 0.5) * 0.14 * w));
     }
   }
   if (pressure.intensity > 0.62 && line === 'def') {
@@ -77,9 +92,13 @@ function shiftAttackingSlot(
   const tempoBoost = (manager.tempo - 50) / 250;
   nx2 += tempoBoost * 0.04;
 
+  const nzTrackBall =
+    slot === 'mc1' || slot === 'mc2' ? 1
+    : slot === 'ata' || slot === 'pe' || slot === 'pd' ? 0.26
+      : 0.35;
   return {
     nx: Math.min(0.93, Math.max(0.05, nx2)),
-    nz: Math.min(0.94, Math.max(0.06, nz2 + (bz - 0.5) * 0.04 * (slot === 'mc1' || slot === 'mc2' ? 1 : 0.35))),
+    nz: Math.min(0.94, Math.max(0.06, nz2 + (bz - 0.5) * 0.04 * nzTrackBall)),
   };
 }
 
@@ -98,11 +117,13 @@ function shiftDefendingSlot(
   const bz = ballZ / FIELD_WIDTH;
   const pressHigh = manager.tacticalMentality > 76;
 
-  let nx2 = nx - defL * 0.09 + (bx - 0.5) * (pressHigh ? 0.09 : 0.055) * (1 + press);
-  let nz2 = nz + (bz - 0.5) * 0.05;
+  const forwardLine = slot === 'ata' || slot === 'pe' || slot === 'pd';
+  const bxPull = (bx - 0.5) * (pressHigh ? 0.09 : 0.055) * (1 + press) * (forwardLine ? 0.48 : 1);
+  let nx2 = nx - defL * 0.09 + bxPull;
+  let nz2 = nz + (bz - 0.5) * 0.05 * (forwardLine ? 0.55 : 1);
 
   if (storyBeat === 'recovery' || storyBeat === 'organization') {
-    nx2 -= pressHigh ? 0.02 : 0.04;
+    nx2 -= (pressHigh ? 0.02 : 0.04) * MACRO_STORY_SLOT_NUDGE;
   }
 
   if (slot === 'pe' || slot === 'pd') {

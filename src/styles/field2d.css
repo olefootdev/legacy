@@ -1,0 +1,497 @@
+/**
+ * Olefoot — Campo 2D (modo test2d)
+ * Escala: 1050×680 lógico = 105m×68m → 10px/m
+ * Importar em páginas de teste: import '@/styles/field2d.css';
+ */
+
+/* =============================================================================
+   VARIÁVEIS (referência métrica; valores em % derivados de 1050×680)
+   ============================================================================= */
+.field {
+  --line: rgba(255, 255, 255, 0.92);
+  --line-soft: rgba(255, 255, 255, 0.78);
+  --line-w-field: 2px;
+  --line-w-strong: 3px;
+  --grass-a: #2f6b32;
+  --grass-b: #276528;
+  --grass-highlight: #3a7f3e;
+}
+
+/* =============================================================================
+   CONTAINER
+   ============================================================================= */
+.field-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  padding: clamp(0.5rem, 2vw, 1.25rem);
+  box-sizing: border-box;
+  background: radial-gradient(ellipse 85% 70% at 50% 40%, #1c2230 0%, #0a0c10 72%, #050608 100%);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+/* =============================================================================
+   CAMPO JOGÁVEL — 1050 × 680 (proporção fixa, responsivo)
+   ============================================================================= */
+.field {
+  position: relative;
+  width: 100%;
+  max-width: 1050px;
+  aspect-ratio: 1050 / 680;
+  height: auto;
+  overflow: visible;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border-radius: 3px;
+  /* Linha de baliza completa (perímetro) */
+  outline: var(--line-w-strong) solid var(--line);
+  outline-offset: calc(var(--line-w-strong) * -0.5);
+  box-shadow:
+    inset 0 0 100px rgba(0, 0, 0, 0.38),
+    inset 0 0 28px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+/* Gramado: listras verticais + micro-textura + centro mais vivo */
+.field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 2px;
+  background-color: var(--grass-a);
+  background-image:
+    radial-gradient(ellipse 55% 48% at 50% 50%, rgba(58, 127, 62, 0.45) 0%, transparent 62%),
+    repeating-linear-gradient(
+      90deg,
+      var(--grass-a) 0%,
+      var(--grass-a) calc(100% * 52.5 / 1050),
+      var(--grass-b) calc(100% * 52.5 / 1050),
+      var(--grass-b) calc(100% * 105 / 1050)
+    ),
+    repeating-linear-gradient(
+      105deg,
+      transparent 0,
+      transparent 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 3px
+    );
+}
+
+.field::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px;
+  background: radial-gradient(ellipse 100% 100% at 50% 50%, transparent 42%, rgba(5, 8, 12, 0.28) 100%);
+}
+
+/* =============================================================================
+   OVERLAY — linhas e marcações (z acima do gramado)
+   ============================================================================= */
+.pitch-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Meio-campo: x = 525px = 50% */
+.pitch-overlay .half-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: var(--line-w-field);
+  height: 100%;
+  margin-left: calc(var(--line-w-field) * -0.5);
+  background: var(--line);
+  opacity: 0.95;
+  z-index: 2;
+}
+
+/* Círculo central r = 91.5px → Ø 183px */
+.pitch-overlay .center-circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% * 183 / 1050);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: var(--line-w-field) solid var(--line);
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: transparent;
+  opacity: 0.95;
+  z-index: 2;
+}
+
+/* Marca central ~8px */
+.pitch-overlay .center-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% * 8 / 1050);
+  max-width: 10px;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: var(--line);
+  border-radius: 50%;
+  opacity: 0.95;
+  z-index: 3;
+}
+
+/* Grande área: 165 × 403 (16,5m × 40,3m) */
+.pitch-overlay .penalty-area {
+  position: absolute;
+  top: calc(100% * (680 - 403) / 2 / 680);
+  width: calc(100% * 165 / 1050);
+  height: calc(100% * 403 / 680);
+  box-sizing: border-box;
+  border: var(--line-w-field) solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  opacity: 0.95;
+  z-index: 2;
+}
+
+.pitch-overlay .penalty-area.left {
+  left: 0;
+  border-left: none;
+}
+
+.pitch-overlay .penalty-area.right {
+  right: 0;
+  border-right: none;
+}
+
+/* Pequena área: 55 × 183 */
+.pitch-overlay .goal-area {
+  position: absolute;
+  top: calc(100% * (680 - 183) / 2 / 680);
+  width: calc(100% * 55 / 1050);
+  height: calc(100% * 183 / 680);
+  box-sizing: border-box;
+  border: var(--line-w-field) solid var(--line);
+  background: transparent;
+  opacity: 0.95;
+  z-index: 3;
+}
+
+.pitch-overlay .goal-area.left {
+  left: 0;
+  border-left: none;
+}
+
+.pitch-overlay .goal-area.right {
+  right: 0;
+  border-right: none;
+}
+
+/* Arco do perímetro: r = 91,5m centrado na marca de penálti; clip à parte exterior à grande área */
+.pitch-overlay .penalty-arc {
+  position: absolute;
+  width: calc(100% * 183 / 1050);
+  aspect-ratio: 1;
+  border: var(--line-w-field) solid var(--line);
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: transparent;
+  opacity: 0.95;
+  z-index: 4;
+}
+
+.pitch-overlay .penalty-arc.left {
+  left: calc(100% * (110 - 91.5) / 1050);
+  top: calc(100% * (340 - 91.5) / 680);
+  clip-path: inset(0 0 0 80.054%);
+}
+
+.pitch-overlay .penalty-arc.right {
+  right: calc(100% * (110 - 91.5) / 1050);
+  top: calc(100% * (340 - 91.5) / 680);
+  clip-path: inset(0 80.054% 0 0);
+}
+
+/* Marca de penálti: 11m = 110px da linha de fundo */
+.pitch-overlay .penalty-spot {
+  position: absolute;
+  top: 50%;
+  width: calc(100% * 8 / 1050);
+  max-width: 9px;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: var(--line);
+  border-radius: 50%;
+  opacity: 0.95;
+  z-index: 5;
+}
+
+.pitch-overlay .penalty-spot.left {
+  left: calc(100% * 110 / 1050);
+}
+
+.pitch-overlay .penalty-spot.right {
+  left: calc(100% * (1050 - 110) / 1050);
+}
+
+/* Escanteios: r = 1m = 10px, quarto de círculo para dentro do campo */
+.pitch-overlay .corner {
+  position: absolute;
+  width: calc(100% * 20 / 1050);
+  height: calc(100% * 20 / 680);
+  box-sizing: border-box;
+  z-index: 4;
+  border-color: var(--line);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.95;
+}
+
+.pitch-overlay .corner.top-left {
+  top: 0;
+  left: 0;
+  border-bottom-width: var(--line-w-field);
+  border-right-width: var(--line-w-field);
+  border-bottom-right-radius: 100%;
+}
+
+.pitch-overlay .corner.top-right {
+  top: 0;
+  right: 0;
+  border-bottom-width: var(--line-w-field);
+  border-left-width: var(--line-w-field);
+  border-bottom-left-radius: 100%;
+}
+
+.pitch-overlay .corner.bottom-left {
+  bottom: 0;
+  left: 0;
+  border-top-width: var(--line-w-field);
+  border-right-width: var(--line-w-field);
+  border-top-right-radius: 100%;
+}
+
+.pitch-overlay .corner.bottom-right {
+  bottom: 0;
+  right: 0;
+  border-top-width: var(--line-w-field);
+  border-left-width: var(--line-w-field);
+  border-top-left-radius: 100%;
+}
+
+/* =============================================================================
+   GOLS — fora do retângulo jogável; boca 7,32m ≈ 73px altura
+   ============================================================================= */
+.pitch-overlay .goal {
+  position: absolute;
+  top: calc(100% * (680 - 73) / 2 / 680);
+  height: calc(100% * 73 / 680);
+  width: calc(100% * 24 / 1050);
+  z-index: 8;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+/* Postes e travessão */
+.pitch-overlay .goal.left {
+  left: calc(100% * -24 / 1050);
+  border: var(--line-w-strong) solid var(--line);
+  border-right: none;
+  border-radius: 2px 0 0 2px;
+  background: linear-gradient(90deg, rgba(18, 20, 26, 0.5) 0%, rgba(18, 20, 26, 0.12) 100%);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.35);
+}
+
+.pitch-overlay .goal.right {
+  right: calc(100% * -24 / 1050);
+  border: var(--line-w-strong) solid var(--line);
+  border-left: none;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(270deg, rgba(18, 20, 26, 0.5) 0%, rgba(18, 20, 26, 0.12) 100%);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Rede: malha + perspetiva lateral, presa ao caixote */
+.pitch-overlay .goal-net {
+  position: absolute;
+  inset: 5px 4px 5px 6px;
+  opacity: 0.42;
+  box-sizing: border-box;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.22) 0 1px,
+      transparent 1px calc(100% * 6 / 24)
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.18) 0 1px,
+      transparent 1px calc(100% * 5 / 73)
+    );
+  background-size: 100% 100%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pitch-overlay .goal.left .goal-net {
+  transform: perspective(48px) rotateY(18deg);
+  transform-origin: 100% 50%;
+  margin-right: 2px;
+}
+
+.pitch-overlay .goal.right .goal-net {
+  transform: perspective(48px) rotateY(-18deg);
+  transform-origin: 0% 50%;
+  margin-left: 2px;
+}
+
+/* =============================================================================
+   CAMADA DE TOKENS (jogadores, bola) — acima das linhas
+   ============================================================================= */
+.field-tokens-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   ZONAS TÁTICAS — invisíveis; ativar com .field.show-zones .zone-* { opacity: 0.12; }
+   ============================================================================= */
+.pitch-overlay .zone-attack-left,
+.pitch-overlay .zone-attack-right,
+.pitch-overlay .zone-defense-left,
+.pitch-overlay .zone-defense-right,
+.pitch-overlay .zone-midfield,
+.pitch-overlay .zone-box-left,
+.pitch-overlay .zone-box-right {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+  z-index: 1;
+  transition: opacity 0.2s ease;
+}
+
+/* Terços no eixo X (casa ataca para +x); canais para sobrepor só uma zona no debug */
+.pitch-overlay .zone-defense-left {
+  left: 0;
+  top: 0;
+  width: calc(100% * 350 / 1050);
+  height: 100%;
+  background: rgba(59, 130, 246, 0.35);
+}
+
+.pitch-overlay .zone-midfield {
+  left: calc(100% * 350 / 1050);
+  top: 0;
+  width: calc(100% * 350 / 1050);
+  height: 100%;
+  background: rgba(234, 255, 0, 0.2);
+}
+
+.pitch-overlay .zone-attack-right {
+  left: calc(100% * 700 / 1050);
+  top: 0;
+  width: calc(100% * 350 / 1050);
+  height: 100%;
+  background: rgba(34, 197, 94, 0.28);
+}
+
+/* Corredor ofensivo esquerdo (dentro do terço de ataque) */
+.pitch-overlay .zone-attack-left {
+  left: calc(100% * 700 / 1050);
+  top: 0;
+  width: calc(100% * 175 / 1050);
+  height: 100%;
+  background: rgba(52, 211, 153, 0.22);
+}
+
+/* Corredor defensivo direito (último terço, lado direito) */
+.pitch-overlay .zone-defense-right {
+  left: calc(100% * 875 / 1050);
+  top: 0;
+  width: calc(100% * 175 / 1050);
+  height: 100%;
+  background: rgba(248, 113, 113, 0.22);
+}
+
+.pitch-overlay .zone-box-left {
+  left: 0;
+  top: calc(100% * (680 - 403) / 2 / 680);
+  width: calc(100% * 165 / 1050);
+  height: calc(100% * 403 / 680);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+.pitch-overlay .zone-box-right {
+  right: 0;
+  top: calc(100% * (680 - 403) / 2 / 680);
+  width: calc(100% * 165 / 1050);
+  height: calc(100% * 403 / 680);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+.field.show-zones .pitch-overlay .zone-attack-left,
+.field.show-zones .pitch-overlay .zone-attack-right,
+.field.show-zones .pitch-overlay .zone-defense-left,
+.field.show-zones .pitch-overlay .zone-defense-right,
+.field.show-zones .pitch-overlay .zone-midfield,
+.field.show-zones .pitch-overlay .zone-box-left,
+.field.show-zones .pitch-overlay .zone-box-right {
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+/*
+ * =============================================================================
+ * GRID TÉCNICO (debug) — NÃO ATIVO
+ * Descomentar no .field para ver grelha 10px (1m) em escala cheia:
+ *
+ * .field { position: relative; }
+ * .field::after { ... desativar vinheta ou fundir }
+ *
+ * Adicionar elemento:
+ * <div class="field-debug-grid" aria-hidden="true"></div> como filho de .field
+ *
+ * .field-debug-grid {
+ *   position: absolute;
+ *   inset: 0;
+ *   z-index: 20;
+ *   pointer-events: none;
+ *   opacity: 0.25;
+ *   background-image:
+ *     linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px),
+ *     linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px);
+ *   background-size: calc(100% / 105) calc(100% / 68);
+ * }
+ * =============================================================================
+ */
+
+/*
+ * =============================================================================
+ * MAPA MÉTRICO RESUMIDO (1050×680 px = 105m×68m, 10 px/m)
+ * -----------------------------------------------------------------------------
+ * Centro do campo:     (525, 340) px
+ * Linha meio-campo:    x = 525
+ * Círculo central:     raio 91,5 px (Ø 183)
+ * Marca central:       Ø ~8 px
+ * Grande área:         profundidade 165 px (16,5 m) × altura 403 px (40,3 m)
+ * Pequena área:        55 px × 183 px (5,5 m × 18,3 m)
+ * Marca de penálti:    110 px (11 m) das linhas de fundo, y = 340
+ * Arco da área:        r = 91,5 px, centrado na marca de penálti
+ * Escanteio:           r = 10 px (1 m)
+ * Gol (boca):          ~73 px altura (7,32 m), profundidade visual ~24 px (~2,4 m)
+ * Listras verticais:   ciclo ~105 px (10,5 m) alternadas
+ * =============================================================================
+ */

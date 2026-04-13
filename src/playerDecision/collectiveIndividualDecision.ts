@@ -98,8 +98,8 @@ const ARCHETYPE_BIAS: Record<CognitiveArchetype, Partial<Record<DecisionActionId
   executor: { pass_safe: 0.22, hold_position: 0.2, cover: 0.1, dribble_risk: -0.22, shoot: -0.06, cross: -0.06 },
   criador: { pass_progressive: 0.26, cross: 0.12, carry: 0.1, dribble_risk: 0.08, pass_safe: -0.08 },
   destruidor: { press: 0.22, cover: 0.2, clearance: 0.12, pass_progressive: -0.1, dribble_risk: -0.2, cross: -0.15 },
-  construtor: { pass_safe: 0.2, pass_progressive: 0.14, hold_position: 0.1, shoot: -0.1, cross: 0.04 },
-  finalizador: { shoot: 0.26, carry: 0.08, pass_progressive: 0.06, cross: 0.1, hold_position: -0.08 },
+  construtor: { pass_safe: 0.05, pass_progressive: 0.2, hold_position: 0.08, shoot: -0.02, cross: 0.08 },
+  finalizador: { shoot: 0.34, carry: 0.1, pass_progressive: 0.08, cross: 0.12, dribble_risk: 0.06, hold_position: -0.1 },
 };
 
 function clamp01(v: number): number {
@@ -193,6 +193,17 @@ export function buildPlayerState(ctx: DecisionContext, pressure01: number): Play
   };
 }
 
+/** Peso do deslocamento “ideal” vs âncora de slot (forma dinâmica) — reduz colapso na bola. */
+const COLLECTIVE_ANCHOR_BLEND: Record<TacticalRole, number> = {
+  zagueiro: 0.84,
+  lateral: 0.9,
+  volante: 0.74,
+  meia: 0.58,
+  ponta: 0.48,
+  atacante: 0.52,
+  goleiro: 1,
+};
+
 export function getCollectiveTarget(player: AgentSnapshot, ctx: DecisionContext): CollectiveTarget {
   const role = mapRole(player);
   const ballX = ctx.ballX;
@@ -201,8 +212,11 @@ export function getCollectiveTarget(player: AgentSnapshot, ctx: DecisionContext)
   const half = ctx.clockHalf ?? 1;
   const ownGoalX = getDefendingGoalX(side, half);
   const ad = ctx.attackDir;
-  const target = { x: ctx.slotX, z: ctx.slotZ };
+  const anchorX = ctx.slotX;
+  const anchorZ = ctx.slotZ;
+  const target = { x: anchorX, z: anchorZ };
   const priorities: string[] = [];
+  let priorityCollapse = false;
 
   if (
     isInsideOwnPenaltyArea({ x: ballX, z: ballZ }, { team: side, half })
@@ -211,6 +225,7 @@ export function getCollectiveTarget(player: AgentSnapshot, ctx: DecisionContext)
     target.x = ownGoalX + ad * 6;
     target.z = FIELD_WIDTH / 2 + (ballZ - FIELD_WIDTH / 2) * 0.42;
     priorities.push('colapso_area', 'cobertura_gol');
+    priorityCollapse = true;
   }
 
   switch (role) {
@@ -254,6 +269,12 @@ export function getCollectiveTarget(player: AgentSnapshot, ctx: DecisionContext)
       break;
   }
 
+  if (!priorityCollapse) {
+    const w = COLLECTIVE_ANCHOR_BLEND[role];
+    target.x = anchorX + (target.x - anchorX) * w;
+    target.z = anchorZ + (target.z - anchorZ) * w;
+  }
+
   const clamped = clampToPitch(target.x, target.z, 2);
   return { targetX: clamped.x, targetZ: clamped.z, prioritySet: priorities };
 }
@@ -266,7 +287,17 @@ export function chooseAction(
   pstate: PlayerState,
   options: ActionOption[],
   debug = false,
-  zoneOpts?: { tags: readonly string[]; shootFloorEligible?: boolean; shootBudgetForce?: boolean },
+  zoneOpts?: {
+    tags: readonly string[];
+    shootFloorEligible?: boolean;
+    shootBudgetForce?: boolean;
+    /** 0–1: perto da baliza / último terço → favorece ações ofensivas explícitas. */
+    attackUrgency01?: number;
+    /** 0 = linha de remate tapada, 1 = clara — favorece drible/condução para abrir ângulo. */
+    lineOfSight01?: number;
+    /** Inclinação da camada macro (cérebro do portador) antes do score coletivo. */
+    macroTilt?: Partial<Record<DecisionActionId, number>>;
+  },
 ): DecisionPick {
   const scored: ScoredAction[] = [];
   let best = options[0]!;
@@ -284,6 +315,39 @@ export function chooseAction(
     const zb = zoneOpts?.tags ? scoreActionZoneBias(zoneOpts.tags, option.id) : 0;
     const zp = zoneOpts?.tags ? roleZonePenalty(role, option.id, zoneOpts.tags) : 0;
     const styleBias = mapStyleBias(option.id, tctx.style, zoneOpts?.tags);
+    const los = zoneOpts?.lineOfSight01;
+    let losMoveBonus = 0;
+    if (los != null && los < 0.92) {
+      const blind = 1 - los;
+      if (option.id === 'dribble_risk') losMoveBonus = blind * 0.34;
+      else if (option.id === 'carry') losMoveBonus = blind * 0.14;
+    }
+    const u = zoneOpts?.attackUrgency01;
+    const macroNudge = zoneOpts?.macroTilt?.[option.id] ?? 0;
+    let attackPush = 0;
+    if (u != null && u > 0) {
+      if (option.id === 'shoot') {
+        attackPush = u * 0.52;
+        if (zoneOpts?.tags?.includes('opp_box')) attackPush += 0.24;
+        else if (zoneOpts?.tags?.includes('attacking_third')) attackPush += 0.1;
+      } else if (
+        option.id === 'pass_progressive'
+        || option.id === 'pass_long'
+        || option.id === 'cross'
+        || option.id === 'dribble_risk'
+      ) {
+        attackPush = u * 0.36;
+      } else if (option.id === 'carry') {
+        attackPush = u * 0.18;
+      } else if (option.id === 'clearance') {
+        const pr = pstate.pressureReceived;
+        const boxish =
+          zoneOpts?.tags?.includes('opp_box') || zoneOpts?.tags?.includes('attacking_third');
+        if (boxish && pr > 0.44) {
+          attackPush = pr * 0.42 + (zoneOpts?.tags?.includes('opp_box') ? 0.2 : 0.06) + u * 0.08;
+        }
+      }
+    }
     const score =
       tacticalFit * 0.38
       + capability * 0.34
@@ -291,8 +355,11 @@ export function chooseAction(
       - riskPenalty * 0.25
       + zb * 0.2
       - zp * 0.38
-      + styleBias * 0.28;
-    const reason = `${option.id}: fit=${tacticalFit.toFixed(2)} cap=${capability.toFixed(2)} bias=${bias.toFixed(2)} risk=${riskPenalty.toFixed(2)} zone=${zb.toFixed(2)}/${zp.toFixed(2)} style=${styleBias.toFixed(2)}`;
+      + styleBias * 0.28
+      + attackPush
+      + losMoveBonus
+      + macroNudge * 0.34;
+    const reason = `${option.id}: fit=${tacticalFit.toFixed(2)} cap=${capability.toFixed(2)} bias=${bias.toFixed(2)} risk=${riskPenalty.toFixed(2)} zone=${zb.toFixed(2)}/${zp.toFixed(2)} style=${styleBias.toFixed(2)} macro=${macroNudge.toFixed(2)}`;
     scored.push({ id: option.id, score, reason });
     if (score > bestScore) {
       bestScore = score;
@@ -315,7 +382,7 @@ export function chooseAction(
       shootEntry.reason += `|floor=${floor.toFixed(3)}`;
     }
     if (zoneOpts.shootBudgetForce) {
-      shootEntry.score = Math.max(shootEntry.score, passSafeEntry.score + 0.14);
+      shootEntry.score = Math.max(shootEntry.score, passSafeEntry.score + 0.2);
       shootEntry.reason += '|budget_force';
     }
     best = options[0]!;

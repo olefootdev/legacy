@@ -5,6 +5,13 @@ export interface CountryDialOption {
   dial: string;
 }
 
+export function isoToFlag(iso2: string): string {
+  if (iso2 === 'OTHER' || iso2.length !== 2) return '';
+  return String.fromCodePoint(
+    ...iso2.toUpperCase().split('').map((c) => 0x1F1E6 + c.charCodeAt(0) - 65),
+  );
+}
+
 export const COUNTRY_DIAL_OPTIONS: CountryDialOption[] = [
   { iso2: 'BR', name: 'Brasil', dial: '+55' },
   { iso2: 'PT', name: 'Portugal', dial: '+351' },

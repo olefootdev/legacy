@@ -8,6 +8,8 @@ import type {
   TeamPhase,
   ContextReading,
   DecisionContext,
+  PressureBand,
+  SpatialBand,
 } from './types';
 import { computeProgressToGoal, computeLineOfSight } from '@/match/goalContext';
 import type { TeamSide, MatchHalf } from '@/match/fieldZones';
@@ -140,15 +142,17 @@ export function scanTeammates(
       closestOppToTarget = Math.min(closestOppToTarget, Math.hypot(o.x - t.x, o.z - t.z));
     }
     const isOpen = closestOppToTarget > 4;
+    const closestOppDist = closestOppToTarget === Infinity ? 20 : closestOppToTarget;
+    const freedom01 = Math.min(closestOppDist / 12, 1);
 
-    let quality = 0.5;
-    if (isOpen) quality += 0.2;
-    if (isForward) quality += 0.15;
-    if (dist < 15) quality += 0.1;
-    if (dist > 35) quality -= 0.1;
+    let quality = 0.35 + freedom01 * 0.28;
+    if (isOpen) quality += 0.12;
+    if (isForward) quality += 0.12;
+    if (dist < 15) quality += 0.08;
+    if (dist > 35) quality -= 0.08;
     quality = Math.max(0, Math.min(1, quality));
 
-    result.push({ snapshot: t, distance: dist, angle, isForward, isOpen, quality });
+    result.push({ snapshot: t, distance: dist, angle, isForward, isOpen, closestOppDist, quality });
   }
 
   return result.sort((a, b) => b.quality - a.quality);
@@ -157,6 +161,35 @@ export function scanTeammates(
 // ---------------------------------------------------------------------------
 // Field zone
 // ---------------------------------------------------------------------------
+
+export function pressureReadingToBand(p: PressureReading): PressureBand {
+  if (p.intensity === 'extreme' || p.nearestOpponentDist < 2.2) return 'critical';
+  if (p.intensity === 'high' || p.nearestOpponentDist < 4.3) return 'high';
+  if (p.intensity === 'medium' || p.intensity === 'low') return 'moderate';
+  return 'passive';
+}
+
+export function spatialBandFromContext(
+  fieldZone: FieldZone,
+  distToGoal: number,
+  threatLevel: number,
+): SpatialBand {
+  if (
+    fieldZone === 'opp_box'
+    || fieldZone === 'att_third'
+    || (fieldZone === 'att_mid' && distToGoal < 28)
+  ) {
+    return 'danger';
+  }
+  if (
+    fieldZone === 'own_box'
+    || fieldZone === 'def_third'
+    || (fieldZone === 'def_mid' && threatLevel < 0.28)
+  ) {
+    return 'safe';
+  }
+  return 'construction';
+}
 
 export function identifyFieldZone(x: number, attackDir: 1 | -1): FieldZone {
   const nx = attackDir === 1 ? x / FIELD_LENGTH : 1 - x / FIELD_LENGTH;
@@ -197,6 +230,23 @@ export function detectTeamPhase(
 // Full context scan
 // ---------------------------------------------------------------------------
 
+/**
+ * Jogador avançado com a bola vindo da frente do jogo (costas ao golo adversário):
+ * bola atrás no eixo de ataque ou pressão marcadamente vinda desse lado.
+ */
+export function isReceivingBackToGoalShaped(ctx: DecisionContext, reading: ContextReading): boolean {
+  if (
+    reading.fieldZone !== 'att_mid'
+    && reading.fieldZone !== 'att_third'
+    && reading.fieldZone !== 'opp_box'
+  ) {
+    return false;
+  }
+  const ballBehind = (ctx.ballX - ctx.self.x) * ctx.attackDir < -2.5;
+  const pressFromBehind = -reading.pressure.pressureDirection.x * ctx.attackDir > 0.14;
+  return ballBehind || pressFromBehind;
+}
+
 export function buildContextReading(ctx: DecisionContext): ContextReading {
   const pressure = scanPressure(ctx.self, ctx.opponents);
   const space = scanSpace(ctx.self, ctx.opponents, ctx.attackDir);
@@ -232,5 +282,7 @@ export function buildContextReading(ctx: DecisionContext): ContextReading {
     mentality: ctx.mentality,
     threatLevel: ctx.threatLevel,
     threatTrend: ctx.threatTrend,
+    pressureBand: pressureReadingToBand(pressure),
+    spatialBand: spatialBandFromContext(fieldZone, distToGoal, ctx.threatLevel),
   };
 }

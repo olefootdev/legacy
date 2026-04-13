@@ -4,6 +4,7 @@
  */
 import { resolvePassForPossession } from '@/simulation/ActionResolver';
 import type { AgentSnapshot, PassOption } from '@/simulation/InteractionResolver';
+import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 
 function assert(c: boolean, m: string) {
   if (!c) throw new Error(m);
@@ -21,6 +22,9 @@ function main() {
     progressionGain: 0.3,
     spaceAtTarget: 4,
     linesBroken: 0,
+    threatDepth01: 72 / FIELD_LENGTH,
+    distToOppGoal: Math.hypot(FIELD_LENGTH - 72, FIELD_WIDTH / 2 - 34),
+    sectorVacancy01: 0.5,
   };
   const carrier: AgentSnapshot = {
     id: 'c1',

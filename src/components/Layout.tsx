@@ -1,6 +1,21 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Building2, ArrowRightLeft, Wallet, Target, Trophy, User, Settings, Play, Menu, X } from 'lucide-react';
+import {
+  Home,
+  Users,
+  Building2,
+  ArrowRightLeft,
+  Wallet,
+  Target,
+  Trophy,
+  User,
+  Settings,
+  Play,
+  Menu,
+  X,
+  Calendar,
+  ShoppingBag,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { HeaderOtzStrip } from '@/components/HeaderOtzStrip';
@@ -17,6 +32,8 @@ const mainNavItems = [
 const drawerNavItems = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Target, label: 'MISSÕES', path: '/missions' },
+  { icon: Calendar, label: 'CALENDÁRIO', path: '/calendar' },
+  { icon: ShoppingBag, label: 'LOJA', path: '/store' },
   { icon: Trophy, label: 'LIGAS', path: '/leagues' },
   { icon: User, label: 'PROFILE', path: '/profile' },
   { icon: Settings, label: 'CONFIG', path: '/config' },
@@ -27,23 +44,34 @@ export function Layout({ children }: { children: ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isQuickMatchRoute = location.pathname === '/match/quick';
   const hideMobileBottomNav =
-    location.pathname === '/match' || location.pathname === '/match/quick';
+    location.pathname === '/match' ||
+    location.pathname === '/match/live' ||
+    location.pathname === '/match/quick';
 
   const getPageAction = (pathname: string) => {
     switch (pathname) {
       case '/':
         return (
-          <Link to="/match" className="btn-primary text-xs py-2 px-4 flex items-center gap-2">
-            <span className="btn-primary-inner px-2">
-              <Play className="w-3 h-3 fill-black" /> Próximo Jogo
+          <Link
+            to="/match/live"
+            className="btn-primary flex max-w-[min(100%,10.5rem)] shrink-0 items-center gap-1 px-3 py-2 text-[10px] sm:max-w-none sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
+          >
+            <span className="btn-primary-inner truncate px-1 sm:px-2">
+              <Play className="h-3 w-3 shrink-0 fill-black" />{' '}
+              <span className="hidden min-[360px]:inline">PARTIDA</span>
+              <span className="min-[360px]:hidden">JOGO</span>
             </span>
           </Link>
         );
       case '/match':
+      case '/match/live':
         return (
-          <button className="btn-primary text-xs py-2 px-4 flex items-center gap-2">
-            <span className="btn-primary-inner px-2">
-              <Settings className="w-3 h-3" /> Tática
+          <button
+            type="button"
+            className="btn-primary flex max-w-[min(100%,9rem)] shrink-0 items-center gap-1 px-3 py-2 text-[10px] sm:max-w-none sm:gap-2 sm:px-4 sm:py-2 sm:text-xs"
+          >
+            <span className="btn-primary-inner truncate px-1 sm:px-2">
+              <Settings className="h-3 w-3 shrink-0" /> Tática
             </span>
           </button>
         );
@@ -53,7 +81,7 @@ export function Layout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-deep-black flex flex-col md:flex-row font-sans">
+    <div className="flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans md:flex-row">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
         <div className="flex items-center gap-3 mb-12 p-6 pb-0">
@@ -108,7 +136,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
-          <Link to="/match" className="btn-primary w-full flex justify-center">
+          <Link to="/match/live" className="btn-primary w-full flex justify-center">
             <span className="btn-primary-inner">
               <Play className="w-5 h-5 fill-black" />
               DIA DE JOGO
@@ -120,47 +148,51 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main
         className={cn(
-          'flex flex-1 flex-col md:ml-64',
+          'flex w-full min-w-0 flex-1 flex-col md:ml-64',
           isQuickMatchRoute
             ? 'h-[100dvh] min-h-0 md:h-auto md:min-h-screen'
-            : 'min-h-screen',
+            : 'min-h-0 min-h-screen',
         )}
       >
         {/* Top Menu */}
         <header
           className={cn(
-            'sticky top-0 z-40 shrink-0 flex h-16 items-center justify-between border-b border-white/10 bg-deep-black/90 px-4 backdrop-blur-md md:px-8',
+            'sticky top-0 z-40 flex min-h-12 shrink-0 flex-row items-start justify-between gap-2 border-b border-white/10 bg-deep-black/90 px-3 py-2 backdrop-blur-md supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top,0px))] sm:min-h-16 sm:gap-3 sm:px-4 md:px-8',
             isQuickMatchRoute && 'hidden md:flex',
           )}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-4">
             <button 
-              className="md:hidden text-white hover:text-neon-yellow transition-colors"
+              className="shrink-0 text-white transition-colors hover:text-neon-yellow md:hidden"
               onClick={() => setIsMobileMenuOpen(true)}
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="h-6 w-6" />
             </button>
             <TrainerAvatarHeaderControl />
-            <div className="flex min-w-0 flex-col">
-              <span className="text-[10px] text-neon-yellow font-bold uppercase tracking-widest">Bem-vindo</span>
-              <span className="text-sm font-display font-bold text-white tracking-wider">Olá, Treinador</span>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-neon-yellow sm:text-[10px]">
+                Bem-vindo
+              </span>
+              <span className="truncate font-display text-xs font-bold tracking-wider text-white sm:text-sm">
+                Olá, Treinador
+              </span>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
+
+          <div className="flex min-w-0 shrink-0 items-start justify-end">
             {getPageAction(location.pathname)}
           </div>
         </header>
 
         <div
           className={cn(
-            'flex flex-1 flex-col',
-            isQuickMatchRoute && 'min-h-0 overflow-hidden md:min-h-0 md:overflow-visible',
-            location.pathname === '/match'
+            'flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-x-hidden',
+            isQuickMatchRoute && 'min-h-0 overflow-y-auto overflow-x-hidden md:min-h-0 md:overflow-visible',
+            location.pathname === '/match' || location.pathname === '/match/live'
               ? ''
               : isQuickMatchRoute
                 ? 'md:p-8 md:pb-8'
-                : 'p-4 pb-24 md:p-8 md:pb-8',
+                : 'p-3 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 md:p-8 md:pb-8',
           )}
         >
           {children}
@@ -221,7 +253,7 @@ export function Layout({ children }: { children: ReactNode }) {
               </nav>
 
               <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
-                <Link to="/match" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary w-full flex justify-center">
+                <Link to="/match/live" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary w-full flex justify-center">
                   <span className="btn-primary-inner">
                     <Play className="w-5 h-5 fill-black" />
                     DIA DE JOGO
@@ -235,7 +267,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Mobile Bottom Nav */}
       {!hideMobileBottomNav && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/10 p-2 pb-safe z-50 flex justify-around items-center">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around border-t border-white/10 bg-[#0a0a0a] p-2 pb-safe">
           {mainNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -243,13 +275,15 @@ export function Layout({ children }: { children: ReactNode }) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-2 transition-all relative",
-                  isActive ? "text-neon-yellow" : "text-gray-500"
+                  'relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 py-1 transition-all [-webkit-tap-highlight-color:transparent]',
+                  isActive ? 'text-neon-yellow' : 'text-gray-500',
                 )}
               >
-                {isActive && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-neon-yellow rounded-full" />}
-                <item.icon className="w-6 h-6" />
-                <span className="text-[9px] font-display font-bold tracking-wider">{item.label}</span>
+                {isActive && <div className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-neon-yellow" />}
+                <item.icon className="h-6 w-6 shrink-0" />
+                <span className="max-w-full truncate text-center text-[8px] font-display font-bold leading-tight tracking-wider min-[360px]:text-[9px]">
+                  {item.label}
+                </span>
               </Link>
             );
           })}

@@ -38,7 +38,7 @@ export function applyRedCardAutoSub(input: {
   if (!slot || !outPs) return { snapshot, events: [] };
 
   /** Partida rápida: sem substituição automática — o gajo sai e o jogo segue com menos um. */
-  if (snapshot.mode === 'quick') {
+  if (snapshot.mode === 'quick' || snapshot.mode === 'test2d') {
     const ev: MatchEventEntry = {
       id: uid(),
       minute,

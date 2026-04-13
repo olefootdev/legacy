@@ -8,10 +8,12 @@ import {
   ArrowLeft,
   Banknote,
   Brain,
+  Brush,
   LayoutDashboard,
   Shield,
   Sparkles,
   Trophy,
+  TrendingUp,
   UserCog,
   Users,
   Image,
@@ -31,6 +33,8 @@ import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminBannersPanel } from './panels/AdminBannersPanel';
 import { AdminSaveHubPanel } from './panels/AdminSaveHubPanel';
 import { AdminSportsDataPanel } from './panels/AdminSportsDataPanel';
+import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
+import { AdminPlayerEvolutionPanel } from './panels/AdminPlayerEvolutionPanel';
 
 type TabId =
   | 'overview'
@@ -40,6 +44,8 @@ type TabId =
   | 'sportsData'
   | 'user'
   | 'createPlayer'
+  | 'prospectArt'
+  | 'playerEvolution'
   | 'gameSpirit'
   | 'banners'
   | 'saveData';
@@ -52,6 +58,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'banners', label: 'Banners', icon: Image },
   { id: 'gameSpirit', label: 'Game Spirit', icon: Brain },
   { id: 'createPlayer', label: 'Create player', icon: Sparkles },
+  { id: 'prospectArt', label: 'Player creation', icon: Brush },
+  { id: 'playerEvolution', label: 'Evolução', icon: TrendingUp },
   { id: 'leagues', label: 'Ligas', icon: Trophy },
   { id: 'sportsData', label: 'Sports Data', icon: Database },
   { id: 'user', label: 'Sessão local', icon: UserCog },
@@ -60,9 +68,11 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
 /** Hash na URL pode usar alias (ex.: #create-player). */
 const HASH_TO_TAB: Record<string, TabId> = {
   'create-player': 'createPlayer',
+  'academia-art': 'prospectArt',
   'game-spirit': 'gameSpirit',
   'sports-data': 'sportsData',
   save: 'saveData',
+  evolution: 'playerEvolution',
 };
 
 function readHashTab(): TabId {
@@ -89,9 +99,11 @@ export function AdminDashboard() {
 
   const setHashTab = (id: TabId) => {
     if (id === 'createPlayer') window.location.hash = 'create-player';
+    else if (id === 'prospectArt') window.location.hash = 'academia-art';
     else if (id === 'gameSpirit') window.location.hash = 'game-spirit';
     else if (id === 'sportsData') window.location.hash = 'sports-data';
     else if (id === 'saveData') window.location.hash = 'save';
+    else if (id === 'playerEvolution') window.location.hash = 'evolution';
     else window.location.hash = id;
     setTab(id);
   };
@@ -107,7 +119,7 @@ export function AdminDashboard() {
               <div className="text-[9px] uppercase tracking-widest text-white/35">OLEFOOT</div>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:px-3 md:pb-4">
+          <nav className="ole-scroll-x flex gap-1 px-2 pb-2 md:flex-col md:overflow-x-visible md:overflow-y-auto md:px-3 md:pb-4">
             {TABS.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -140,7 +152,7 @@ export function AdminDashboard() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="border-b border-white/10 bg-black/30 px-4 py-4 md:px-8">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3">
+            <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-wrap items-end justify-between gap-3">
               <div>
                 <h1 className="font-display text-2xl font-black tracking-tight md:text-3xl">Dashboard</h1>
                 <p className="mt-1 text-sm text-white/45">
@@ -162,6 +174,8 @@ export function AdminDashboard() {
                   <code className="ml-1.5 text-white/25">#user</code>
                   <code className="ml-1.5 text-white/25">#game-spirit</code>
                   <code className="ml-1.5 text-white/25">#create-player</code>
+                  <code className="ml-1.5 text-white/25">#academia-art</code>
+                  <code className="ml-1.5 text-white/25">#evolution</code>
                 </p>
               </div>
               <Link
@@ -173,8 +187,8 @@ export function AdminDashboard() {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
-            <div className="mx-auto max-w-6xl">
+          <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:px-8">
+            <div className="mx-auto min-w-0 w-full max-w-6xl">
               {tab === 'overview' ? <AdminOverviewPanel /> : null}
               {tab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
               {tab === 'usuarios' ? <AdminUsuariosPanel /> : null}
@@ -185,6 +199,8 @@ export function AdminDashboard() {
               {tab === 'banners' ? <AdminBannersPanel /> : null}
               {tab === 'saveData' ? <AdminSaveHubPanel /> : null}
               {tab === 'createPlayer' ? <AdminCreatePlayerPanel /> : null}
+              {tab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
+              {tab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
             </div>
           </main>
         </div>

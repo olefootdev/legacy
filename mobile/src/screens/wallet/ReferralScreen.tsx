@@ -8,7 +8,8 @@ interface Props {
 export function ReferralScreen({ onBack }: Props) {
   const [sponsorInput, setSponsorInput] = useState('');
   const [sponsorSet, setSponsorSet] = useState(false);
-  const myCode = 'OLEFOOT-USER-SELF';
+  /** Na app web o código é gerado na Carteira → Indicações (5 caracteres). */
+  const myCode = '— web —';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -18,7 +19,7 @@ export function ReferralScreen({ onBack }: Props) {
 
       <Text style={styles.title}>Indicações</Text>
       <Text style={styles.desc}>
-        3 níveis, 5% sobre ganho elegível. Sem pirâmide sobre referral, yield ou bônus.
+        3 níveis, 5% sobre ganho elegível. Código de indicação (3–5 caracteres) e vínculo de patrocinador na versão web; uma vez vinculado, não altera.
       </Text>
 
       {/* My code */}
@@ -67,7 +68,7 @@ export function ReferralScreen({ onBack }: Props) {
       )}
 
       {/* Network levels */}
-      <Text style={styles.sectionTitle}>Rede — 3 Níveis</Text>
+      <Text style={styles.sectionTitle}>Seus amigos no game</Text>
       <View style={styles.levelsRow}>
         {[1, 2, 3].map((level) => (
           <View key={level} style={styles.levelCard}>

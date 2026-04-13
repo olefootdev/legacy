@@ -42,6 +42,21 @@ export function getAttackingGoalX(team: TeamSide, half: MatchHalf): number {
   return FIELD_LENGTH - getDefendingGoalX(team, half);
 }
 
+/** Profundidade máxima (m) a que o GR pode afastar-se da linha de baliza defendida — evita atravessar o campo. */
+export const GOALKEEPER_MAX_DEPTH_FROM_GOAL_M = 28;
+
+/**
+ * Mantém o alvo X do guarda-redes junto à baliza que defende neste tempo.
+ */
+export function clampGoalkeeperTargetX(team: TeamSide, half: MatchHalf, x: number): number {
+  const dg = getDefendingGoalX(team, half);
+  const m = GOALKEEPER_MAX_DEPTH_FROM_GOAL_M;
+  if (dg <= FIELD_LENGTH * 0.5) {
+    return Math.max(0.8, Math.min(m, x));
+  }
+  return Math.max(FIELD_LENGTH - m, Math.min(FIELD_LENGTH - 0.8, x));
+}
+
 /**
  * Lado do campo em termos de gol: onde está o gol defendido vs o atacado.
  * Útil para presets narrativos / debug.
@@ -89,6 +104,43 @@ export function isInsideOwnPenaltyArea(pos: PitchPosition, ctx: TeamPitchContext
 export function isInsideOppPenaltyArea(pos: PitchPosition, ctx: TeamPitchContext): boolean {
   const end: PitchEnd = getAttackingGoalX(ctx.team, ctx.half) < MID_X ? 'west' : 'east';
   return isInsidePenaltyAreaAtEnd(pos, end);
+}
+
+/** Margem extra para ficar claramente fora da grande área (reinícios). */
+const PENALTY_AREA_EXIT_MARGIN_M = 1.2;
+
+/**
+ * Empurra (x,z) para fora das duas grandes áreas (ambas as balizas), com pequena margem.
+ * Usado na saída de baliza após remate para fora: todos os jogadores de campo devem sair da área.
+ */
+export function clampWorldOutsideBothPenaltyAreas(x: number, z: number): { x: number; z: number } {
+  let nx = x;
+  const nz = z;
+  const m = PENALTY_AREA_EXIT_MARGIN_M;
+  for (let i = 0; i < 6; i++) {
+    let moved = false;
+    if (isInsidePenaltyAreaAtEnd({ x: nx, z: nz }, 'west')) {
+      nx = PENALTY_AREA_DEPTH_M + m;
+      moved = true;
+    }
+    if (isInsidePenaltyAreaAtEnd({ x: nx, z: nz }, 'east')) {
+      nx = FIELD_LENGTH - PENALTY_AREA_DEPTH_M - m;
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  return {
+    x: Math.min(FIELD_LENGTH - 1.2, Math.max(1.2, nx)),
+    z: Math.min(FIELD_WIDTH - 1.2, Math.max(1.2, nz)),
+  };
+}
+
+/** Posição do GR que coloca a bola em jogo após remate para fora (junto à baliza defendida). */
+export function goalKickRestartGoalkeeperWorldPos(team: TeamSide, half: MatchHalf): { x: number; z: number } {
+  const dg = getDefendingGoalX(team, half);
+  const inset = 2.35;
+  const x = dg < MID_X ? inset : FIELD_LENGTH - inset;
+  return { x, z: FIELD_WIDTH / 2 };
 }
 
 export function isInsideOwnHalf(pos: PitchPosition, ctx: TeamPitchContext): boolean {

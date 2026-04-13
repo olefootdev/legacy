@@ -7,7 +7,7 @@
 export const POSSESSION_LOCK_SEC = 0.5;
 
 /** Intervalo mínimo entre replanejamentos completos de decisão (≈ 11 Hz) */
-export const DECISION_TICK_MS = 90;
+export const DECISION_TICK_MS = 80;
 
 /** Peso 0–1: quanto fair play baixo aumenta “agressividade” em disputas (efeito marginal no desarme) */
 export const FAIRPLAY_FOUL_BIAS = 0.12;
@@ -30,6 +30,9 @@ export const LAST_ACTIONS_MAX = 5;
 
 /** Debug: log de top-3 scores (ativar via globalThis.__OF_DECISION_DEBUG__) */
 export const DECISION_DEBUG_TOP_N = 3;
+
+/** Throttle mínimo entre `SIM_SYNC` só por mudança de feed (evita 60 dispatch/s; mantém remates/faltas visíveis). */
+export const LIVE_SIM_SYNC_THROTTLE_MS = 72;
 
 // ---------------------------------------------------------------------------
 // Deliberation after ball reception

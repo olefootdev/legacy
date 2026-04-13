@@ -23,6 +23,7 @@ import type {
   PlayerStrongFoot,
 } from '@/entities/types';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
+import { countryCodeToFlagEmoji } from '@/lib/flagEmoji';
 import { cn } from '@/lib/utils';
 import {
   buildPlayerEntityFromDraft,
@@ -1124,7 +1125,13 @@ export function AdminCreatePlayerPanel() {
                 <div className="min-w-0 flex-1 text-sm">
                   <p className="font-display text-xl font-black text-white">{previewEntity.name}</p>
                   <p className="text-white/50">
-                    {previewEntity.pos} · {previewEntity.country ?? '—'} ·{' '}
+                    {previewEntity.pos} ·{' '}
+                    {(() => {
+                      const c = previewEntity.country?.trim();
+                      if (!c) return '—';
+                      return countryCodeToFlagEmoji(c) || '🌍';
+                    })()}{' '}
+                    ·{' '}
                     {previewEntity.creatorType
                       ? CREATOR_TYPE_LABELS[previewEntity.creatorType]
                       : '—'}{' '}

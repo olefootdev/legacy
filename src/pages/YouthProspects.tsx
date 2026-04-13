@@ -24,13 +24,18 @@ export function YouthProspects() {
   const selected = prospects.find((p) => p.id === selectedId) ?? null;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-display font-black italic uppercase tracking-wider">Categoria de Base</h2>
-          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">Buscar Promessas</p>
+    <div className="mx-auto min-w-0 max-w-6xl space-y-6 pb-10">
+      <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-display font-black italic uppercase tracking-wider min-[390px]:text-3xl">
+            Categoria de Base
+          </h2>
+          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-gray-500">Buscar Promessas</p>
         </div>
-        <Link to="/city" className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded text-sm font-bold flex items-center gap-2">
+        <Link
+          to="/city"
+          className="flex shrink-0 items-center justify-center gap-2 self-start rounded bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20 min-[420px]:self-auto"
+        >
           <ArrowLeft className="w-4 h-4" />
           Cidade
         </Link>
@@ -91,12 +96,12 @@ export function YouthProspects() {
 
       <AnimatePresence>
         {selected && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 14 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 14 }}
-              className="sports-panel w-full max-w-4xl p-0 overflow-hidden border-neon-yellow/40"
+              className="my-auto w-full max-w-4xl overflow-hidden border-neon-yellow/40 sports-panel p-0 max-h-[min(92dvh,calc(100dvh-5rem))] sm:max-h-[min(92dvh,880px)]"
             >
               <button
                 type="button"

@@ -12,11 +12,12 @@ import type { PenaltyState, SpiritOverlay, SpiritPhase } from '@/gamespirit/spir
 
 export type { PenaltyState, SpiritOverlay, SpiritPhase } from '@/gamespirit/spiritSnapshotTypes';
 
-export type MatchMode = 'live' | 'quick' | 'auto';
+/** `test2d` = partida ao vivo MVP (campo 2D + motor tático + coreografia causal). */
+export type MatchMode = 'quick' | 'auto' | 'test2d';
 
 export type MatchPhase = 'pregame' | 'playing' | 'postgame';
 
-/** Relógio da partida ao vivo (simulação contínua / Babylon). */
+/** Relógio da partida (incl. interpolação do relógio em campo 2D). */
 export type LiveMatchClockPeriod = 'first_half' | 'halftime' | 'second_half';
 
 export type PossessionSide = 'home' | 'away';
@@ -158,4 +159,56 @@ export interface LiveMatchSnapshot {
   preGoalHint?: PreGoalHint | null;
   /** Roster visitante sintético (partida rápida) — cartões/golos com playerId concreto. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
+
+  /* ── Partida ao vivo 2D (`test2d`) ─────────────────────────────────── */
+
+  /** Jogadores visitantes simulados com posicionamento tático. */
+  awayPitchPlayers?: PitchPlayerState[];
+  /** Tipo da última ação Spirit (progress, shot, recycle…) — para posicionamento tático. */
+  spiritActionKind?: string;
+  /** Trajeto da bola para interpolação visual contínua entre ticks. */
+  ballTrajectory?: {
+    from: PitchPoint;
+    to: PitchPoint;
+    kind: string;
+    progress01: number;
+  };
+
+  /**
+   * Legado: coreografia simples (só persistência antiga). O MVP usa `ultralive2dStagedPlay`.
+   */
+  test2dVisualBeat?: {
+    causalSeqAnchor: number;
+    kind: string;
+    ballFrom: PitchPoint;
+    ballTo: PitchPoint;
+    durationMs: number;
+    deferredFeedEvent: MatchEventEntry;
+  };
+
+  /** Fase tática simples (casa): com bola vs sem — espelho in/out of possession. */
+  test2dHomePossessionPhase?: 'in_possession' | 'out_of_possession';
+
+  /**
+   * Campo 2D: minutos seguidos em que a casa manteve posse com ação só `recycle`.
+   */
+  live2dDecisionStagnationTicks?: number;
+
+  /**
+   * Legado: coreografia diferida; no MVP o feed entra logo em `runMatchMinute` (campo 2D segue o truth).
+   */
+  ultralive2dStagedPlay?: Ultralive2dStagedPlay;
+}
+
+/** Payload de coreografia no snapshot (motor → viewer → reducer). */
+export interface Ultralive2dStagedPlay {
+  causalSeqAnchor: number;
+  kind: string;
+  ballFrom: PitchPoint;
+  ballTo: PitchPoint;
+  durationMs: number;
+  substeps: number;
+  deferredFeedEvent: MatchEventEntry;
+  heroPlayerIds: string[];
+  heroBurstOffsets: { playerId: string; ox: number; oy: number }[];
 }

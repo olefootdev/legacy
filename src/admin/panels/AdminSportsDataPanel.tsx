@@ -202,7 +202,7 @@ function LeagueCard({
 
       {expanded && (
         <div className="space-y-3 border-t border-white/10 p-4">
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+          <div className="ole-scroll-x rounded-lg border border-white/10">
             <table className="w-full min-w-[400px] text-left text-xs">
               <thead>
                 <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">

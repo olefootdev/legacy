@@ -23,7 +23,7 @@ export function applySubstitution(input: {
 }): { snapshot: LiveMatchSnapshot; error?: string } {
   const { snapshot, players, outPlayerId, inPlayerId, minute } = input;
   if (snapshot.phase !== 'playing') return { snapshot, error: 'Fora de jogo.' };
-  const maxSubs = snapshot.mode === 'live' ? 3 : 5;
+  const maxSubs = snapshot.mode === 'quick' ? 5 : 3;
   if (snapshot.substitutionsUsed >= maxSubs) {
     return { snapshot, error: `Limite de substituições (${maxSubs}).` };
   }

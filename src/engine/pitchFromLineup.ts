@@ -7,6 +7,7 @@ import {
   loadGameSpiritPositionOverrideMap,
   normalizePositionCode,
 } from '@/gamespirit/positionOverridesFromKnowledge';
+import { kickoffEngineXPercent, outfieldCatalogNxBounds } from '@/engine/kickoffFormationLayout';
 
 export function roleFromPos(pos: string): PitchPlayerState['role'] {
   const p = pos.toUpperCase();
@@ -59,18 +60,22 @@ export function pitchPlayersFromLineup(
   scheme: FormationSchemeId = '4-3-3',
 ): PitchPlayerState[] {
   const gsMap = loadGameSpiritPositionOverrideMap();
+  const nxBounds = outfieldCatalogNxBounds(scheme);
   const out: PitchPlayerState[] = [];
   for (const [slotId, pid] of Object.entries(lineup)) {
     const p = players[pid];
     if (!p) continue;
     const base = coordsForPlayerOnPitch(scheme, slotId, p.pos, gsMap);
+    const slotBase = FORMATION_BASES[scheme]?.[slotId];
+    const catalogNx = slotBase?.nx ?? base.x / 100;
+    const kickX = kickoffEngineXPercent('home', catalogNx, nxBounds.nxMin, nxBounds.nxMax, slotId === 'gol');
     out.push({
       playerId: p.id,
       slotId,
       name: p.name,
       num: p.num,
       pos: p.pos,
-      x: base.x + (p.num % 3) - 1,
+      x: kickX + (p.num % 3) - 1,
       y: base.y + (p.id.length % 3) - 1,
       fatigue: Math.round(p.fatigue),
       role: roleFromPos(p.pos),

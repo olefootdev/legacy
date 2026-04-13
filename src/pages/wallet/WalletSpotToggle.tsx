@@ -2,14 +2,14 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const tabClass =
-  'flex-1 py-2.5 px-3 text-center text-[11px] font-display font-bold uppercase tracking-widest transition-all rounded-lg border border-transparent';
+  'min-w-0 flex-1 rounded-lg border border-transparent px-2 py-2.5 text-center text-[10px] font-display font-bold uppercase tracking-widest transition-all min-[380px]:px-3 min-[380px]:text-[11px]';
 
 export function WalletSpotToggle() {
   return (
     <div
-      className="flex gap-1 p-1 rounded-2xl bg-black/50 border border-white/10 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+      className="flex min-w-0 w-full gap-1 rounded-2xl border border-white/10 bg-black/50 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
       role="tablist"
-      aria-label="Conta SPOT ou OLEXP"
+      aria-label="Conta SPOT, OLEXP ou GAT"
     >
       <NavLink
         to="/wallet"
@@ -37,6 +37,19 @@ export function WalletSpotToggle() {
         }
       >
         OLEXP
+      </NavLink>
+      <NavLink
+        to="/wallet/gat"
+        className={({ isActive }) =>
+          cn(
+            tabClass,
+            isActive
+              ? 'bg-amber-500/25 text-amber-100 border-amber-400/45 shadow-[0_0_20px_rgba(245,158,11,0.18)]'
+              : 'text-gray-500 hover:text-white hover:bg-white/5',
+          )
+        }
+      >
+        GAT
       </NavLink>
     </div>
   );

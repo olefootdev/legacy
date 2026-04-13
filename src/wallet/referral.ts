@@ -14,30 +14,45 @@ import type {
 } from './types';
 import { REFERRAL_RATE, REFERRAL_MAX_LEVELS, REFERRAL_ELIGIBLE_SOURCES } from './constants';
 import { appendLedger } from './ledger';
+import { normalizeReferralCode } from './referralCode';
 
 /**
- * Registra o patrocinador (sponsor) do usuário.
+ * Registra o patrocinador (sponsor) do usuário pelo código de indicação (imutável depois de gravado).
  */
 export function registerSponsor(
   state: WalletState,
-  sponsorId: string,
+  sponsorCodeInput: string,
   selfUserId: string = 'self',
 ): WalletResult {
   if (state.sponsorId) {
     return { ok: false, error: 'Patrocinador já definido.', code: 'REFERRAL_ALREADY_SET' };
   }
-  if (sponsorId === selfUserId) {
-    return { ok: false, error: 'Não pode ser seu próprio patrocinador.', code: 'REFERRAL_SELF' };
+  const sponsorCode = normalizeReferralCode(sponsorCodeInput);
+  if (!sponsorCode) {
+    return {
+      ok: false,
+      error: 'Código de indicação inválido (3–5 letras ou números, sem caracteres especiais).',
+      code: 'REFERRAL_INVALID_CODE',
+    };
+  }
+  const myCode = state.myReferralCode ? normalizeReferralCode(state.myReferralCode) : null;
+  if (myCode && sponsorCode === myCode) {
+    return { ok: false, error: 'Não podes usar o teu próprio código de indicação.', code: 'REFERRAL_SELF' };
   }
 
   return {
     ok: true,
     state: {
       ...state,
-      sponsorId,
+      sponsorId: sponsorCode,
       referralTree: [
         ...state.referralTree,
-        { userId: selfUserId, sponsorId, level: 1, createdAt: new Date().toISOString() },
+        {
+          userId: selfUserId,
+          sponsorId: sponsorCode,
+          level: 1,
+          createdAt: new Date().toISOString(),
+        },
       ],
     },
   };
@@ -133,12 +148,30 @@ export function applyReferralCredits(
 export function referralSummary(state: WalletState) {
   let oleGameTotal = 0;
   let nftTotal = 0;
+  let gatExpTotal = 0;
   let oleGameCount = 0;
   let nftCount = 0;
-  const byLevel: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+  let gatCount = 0;
+  /** Comissões OLE/NFT em centavos BRO, por nível */
+  const byLevelBroCents: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+  /** Referral GAT em EXP inteiro, por nível (quando o destinatário é o teu código) */
+  const gatByLevelExp: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+
+  const myCode = state.myReferralCode ? normalizeReferralCode(state.myReferralCode) : null;
 
   for (const c of state.referralCommissions) {
     if (c.status !== 'confirmed') continue;
+
+    if (c.sourceType === 'gat') {
+      const toNorm = normalizeReferralCode(String(c.toUserId)) || String(c.toUserId);
+      if (myCode && toNorm === myCode) {
+        gatExpTotal += c.commissionAmount;
+        gatCount++;
+        gatByLevelExp[c.level] = (gatByLevelExp[c.level] ?? 0) + c.commissionAmount;
+      }
+      continue;
+    }
+
     if (c.toUserId !== 'self') continue;
 
     if (c.sourceType === 'ole_game') {
@@ -148,10 +181,20 @@ export function referralSummary(state: WalletState) {
       nftTotal += c.commissionAmount;
       nftCount++;
     }
-    byLevel[c.level] = (byLevel[c.level] ?? 0) + c.commissionAmount;
+    byLevelBroCents[c.level] = (byLevelBroCents[c.level] ?? 0) + c.commissionAmount;
   }
 
   const directReferrals = state.referralTree.filter((n) => n.sponsorId === 'self').length;
 
-  return { oleGameTotal, nftTotal, oleGameCount, nftCount, byLevel, directReferrals };
+  return {
+    oleGameTotal,
+    nftTotal,
+    gatExpTotal,
+    oleGameCount,
+    nftCount,
+    gatCount,
+    byLevelBroCents,
+    gatByLevelExp,
+    directReferrals,
+  };
 }

@@ -1,11 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { COUNTRY_DIAL_OPTIONS, type CountryDialOption } from '@/lib/countryDialCodes';
+import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { useSportsDataStore, type SportsClub, type SportsLeague } from '@/admin/sportsDataStore';
+import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 import { Search } from 'lucide-react';
+import {
+  clearPendingReferrerCode,
+  readPendingReferrerCode,
+  normalizeReferralCode,
+} from '@/wallet/referralCode';
+
+const FORMATION_STYLE_LABELS: Record<string, string> = {
+  balanced: 'Equilibrado',
+  tiki_positional: 'Posse de bola / Posicional',
+  vertical_transition: 'Transição vertical',
+  wide_crossing: 'Jogo aberto / Cruzamentos',
+  low_block_counter: 'Bloco baixo / Contra-ataque',
+  direct_long_ball: 'Jogo direto / Bola longa',
+};
 
 const FORMATION_OPTIONS: FormationSchemeId[] = [
   '4-3-3',
@@ -50,6 +65,7 @@ export function Cadastro() {
   const [customDialDigits, setCustomDialDigits] = useState('');
   const [ddd, setDdd] = useState('');
   const [localPhone, setLocalPhone] = useState('');
+  const [referrerCode, setReferrerCode] = useState('');
 
   const [clubName, setClubName] = useState('');
   const [initials, setInitials] = useState('');
@@ -61,6 +77,11 @@ export function Cadastro() {
   const [searchQ, setSearchQ] = useState('');
 
   const hasData = leagues.length > 0;
+
+  useEffect(() => {
+    const p = readPendingReferrerCode();
+    if (p) setReferrerCode(p);
+  }, []);
 
   const selectedLeague = useMemo(
     () => leagues.find((l) => l.id === selectedLeagueId) ?? null,
@@ -124,21 +145,36 @@ export function Cadastro() {
           : {}),
       },
     });
+    clearPendingReferrerCode();
+    const refNorm = normalizeReferralCode(referrerCode);
+    if (refNorm) {
+      dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: refNorm });
+    }
     dispatch({
       type: 'ADMIN_PATCH_CLUB',
       partial: { name: clubName.trim(), shortName: sn },
     });
-    dispatch({ type: 'SET_MANAGER_SLIDERS', partial: { formationScheme } });
+    const tacticalDefaults = FORMATION_TACTICAL_DEFAULTS[formationScheme];
+    dispatch({
+      type: 'SET_MANAGER_SLIDERS',
+      partial: {
+        formationScheme,
+        tacticalMentality: tacticalDefaults.tacticalMentality,
+        defensiveLine: tacticalDefaults.defensiveLine,
+        tempo: tacticalDefaults.tempo,
+        tacticalStyle: tacticalDefaults.style,
+      },
+    });
     dispatch({ type: 'SET_LINEUP', lineup: { ...lineup }, formationScheme });
     navigate('/');
   };
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-deep-black px-4 py-10 sm:px-6">
-      <div className="sports-panel w-full max-w-lg rounded-xl p-6 sm:p-8">
+    <div className="flex min-h-svh w-full min-w-0 flex-col items-center justify-center bg-deep-black px-4 py-10 sm:px-6">
+      <div className="sports-panel w-full min-w-0 max-w-lg rounded-xl p-6 sm:p-8">
         <h1 className="font-display text-center text-2xl font-bold uppercase tracking-wide text-white">Cadastro</h1>
         <p className="mt-2 text-center font-sans text-xs text-white/55">
-          Três passos — os dados ficam no teu save local (e nas definições de utilizador).
+          Agora vamos escolher o seu time do coração.
         </p>
 
         <div className="mt-6 flex justify-center gap-2" aria-hidden>
@@ -187,6 +223,22 @@ export function Cadastro() {
                 autoComplete="email"
               />
             </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-white/65">
+                Código de indicação <span className="text-white/35">(opcional)</span>
+              </span>
+              <input
+                className={inputClass}
+                value={referrerCode}
+                onChange={(e) => setReferrerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5))}
+                placeholder="ex. A3XY2"
+                maxLength={5}
+                autoComplete="off"
+              />
+              <p className="mt-1 text-[10px] text-white/35">
+                Se tiveres um link de convite, o código já vem preenchido. Não podes alterar depois de concluíres o cadastro.
+              </p>
+            </label>
             <div>
               <span className="mb-1 block text-xs font-medium text-white/65">Telefone</span>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
@@ -200,7 +252,7 @@ export function Cadastro() {
                 >
                   {COUNTRY_DIAL_OPTIONS.map((c) => (
                     <option key={c.iso2} value={c.iso2}>
-                      {c.name} ({c.dial})
+                      {isoToFlag(c.iso2)} {c.name} ({c.dial})
                     </option>
                   ))}
                 </select>
@@ -230,7 +282,7 @@ export function Cadastro() {
                 />
               </div>
               {phoneE164 ? (
-                <p className="mt-1 font-mono text-[10px] text-white/40">Formato: {phoneE164}</p>
+                <p className="mt-1 font-mono text-[10px] text-white/40">Seu telefone é {phoneE164}</p>
               ) : null}
             </div>
           </div>
@@ -239,7 +291,7 @@ export function Cadastro() {
         {step === 2 && (
           <div className="mt-8 space-y-4">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">Nome do clube</span>
+              <span className="mb-1 block text-xs font-medium text-white/65">Crie um nome para o seu clube</span>
               <input
                 className={inputClass}
                 value={clubName}
@@ -268,6 +320,12 @@ export function Cadastro() {
                   </option>
                 ))}
               </select>
+              <p className="mt-1 text-[10px] text-white/40">
+                Estilo tático:{' '}
+                <span className="text-neon-yellow/70">
+                  {FORMATION_STYLE_LABELS[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
+                </span>
+              </p>
             </label>
           </div>
         )}

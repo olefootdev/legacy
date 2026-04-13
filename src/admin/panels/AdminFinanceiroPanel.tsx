@@ -72,7 +72,8 @@ const LEDGER_FILTER_OPTS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: 'SWAP_OLEXP_TO_SPOT', label: '← OLEXP (saída)' },
   { value: 'OLEXP_PRINCIPAL', label: 'OLEXP principal' },
   { value: 'OLEXP_YIELD', label: 'OLEXP yield' },
-  { value: 'GAT_REWARD', label: 'GAT reward' },
+  { value: 'GAT_REWARD', label: 'GAT reward (EXP)' },
+  { value: 'REFERRAL_GAT_EXP', label: 'Referral GAT (EXP)' },
   { value: 'TRANSFER', label: 'Transferência' },
 ];
 
@@ -887,7 +888,7 @@ export function AdminFinanceiroPanel() {
             {maturityBuckets.length === 0 ? (
               <p className="text-sm text-white/35">Sem vencimentos futuros na lista actual.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="ole-scroll-x">
                 <table className="w-full min-w-[400px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
@@ -919,7 +920,7 @@ export function AdminFinanceiroPanel() {
               Cada linha é uma custódia na visão plataforma. <strong className="text-white/70">Aguarda activação</strong> não entra no
               saldo trancado até confirmares. Importar sessão local sincroniza o utilizador <code className="text-neon-yellow/80">save-local</code>.
             </p>
-            <div className="overflow-x-auto">
+            <div className="ole-scroll-x">
               <table className="w-full min-w-[960px] text-left text-[11px]">
                 <thead>
                   <tr className="border-b border-white/10 text-[9px] uppercase text-white/40">
@@ -1068,7 +1069,7 @@ export function AdminFinanceiroPanel() {
             <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-widest text-violet-200">
               Resumo por utilizador
             </h3>
-            <div className="overflow-x-auto">
+            <div className="ole-scroll-x">
               <table className="w-full min-w-[640px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
@@ -1154,7 +1155,7 @@ export function AdminFinanceiroPanel() {
               </span>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-white/10">
+            <div className="ole-scroll-x rounded-lg border border-white/10">
               <table className="w-full min-w-[640px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">

@@ -89,7 +89,7 @@ export interface Database {
           home_club_id: string;
           away_club_id: string | null;
           away_name: string | null;
-          mode: 'live' | 'quick' | 'auto';
+          mode: 'quick' | 'auto' | 'test2d';
           status: 'scheduled' | 'live' | 'finished' | 'abandoned';
           score_home: number;
           score_away: number;
@@ -107,7 +107,7 @@ export interface Database {
           home_club_id: string;
           away_club_id?: string | null;
           away_name?: string | null;
-          mode?: 'live' | 'quick' | 'auto';
+          mode?: 'quick' | 'auto' | 'test2d';
           status?: 'scheduled' | 'live' | 'finished' | 'abandoned';
           score_home?: number;
           score_away?: number;

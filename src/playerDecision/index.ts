@@ -1,6 +1,13 @@
 export { PlayerDecisionEngine } from './PlayerDecisionEngine';
 export { profileForSlot, profileForRole, buildProfile } from './PlayerProfile';
-export { buildContextReading, scanPressure, scanSpace, scanTeammates } from './ContextScanner';
+export {
+  buildContextReading,
+  scanPressure,
+  scanSpace,
+  scanTeammates,
+  pressureReadingToBand,
+  spatialBandFromContext,
+} from './ContextScanner';
 export { resolvePreReception } from './PreReception';
 export { resolveReception } from './Reception';
 export { decideOnBall, computeDecisionSpeed, decisionDelaySec, carryScanAction } from './OnBallDecision';
@@ -17,6 +24,11 @@ export {
   buildTeamTacticalContext,
   buildPlayerState,
 } from './collectiveIndividualDecision';
+export {
+  resolveCarrierMacroDecision,
+  transitionOutcomeFromSteal,
+} from './carrierMacroBrain';
+export { offBallMovementProfile } from './offBallMovementProfile';
 
 export type {
   PlayerProfile,
@@ -34,6 +46,8 @@ export type {
   TeammateOption,
   FieldZone,
   TeamPhase,
+  PressureBand,
+  SpatialBand,
   PreReceptionIntent,
   PreReceptionResult,
   ReceptionType,
@@ -42,7 +56,17 @@ export type {
   DecisionTiming,
   DecisionOutcome,
   DecisionResult,
+  PrethinkingIntent,
+  PrethinkingSpeed,
+  PrethinkingState,
 } from './types';
+
+export type {
+  IdealStrategicKind,
+  StrategicDecisionTier,
+  CarrierMacroDecision,
+} from './carrierMacroBrain';
+export type { OffBallMovementProfile } from './offBallMovementProfile';
 
 export type {
   GoalThreat,

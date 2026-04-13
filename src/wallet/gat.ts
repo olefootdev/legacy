@@ -1,11 +1,19 @@
 /**
- * Game Assets Treasury (GAT) — reward diário sobre BRO gasto em categorias elegíveis.
- * 0,275%/dia, todos os dias, 24 meses.
+ * Game Assets Treasury (GAT) — reward diário em EXP sobre BRO gasto (base elegível),
+ * por faixas; + referral 1%/nível (até 3) em EXP sobre a mesma base.
  */
 
-import type { WalletState, GatPosition, GatCategory, WalletResult } from './types';
-import { GAT_DAILY_RATE, GAT_DURATION_MONTHS, GAT_ELIGIBLE_CATEGORIES } from './constants';
+import type {
+  WalletState,
+  GatPosition,
+  GatCategory,
+  WalletResult,
+  ReferralCommission,
+  ReferralLevel,
+} from './types';
+import { GAT_DURATION_MONTHS, GAT_ELIGIBLE_CATEGORIES, GAT_REFERRAL_LEVEL_RATE } from './constants';
 import { appendLedger } from './ledger';
+import { normalizeReferralCode } from './referralCode';
 
 function addMonths(iso: string, months: number): string {
   const d = new Date(iso);
@@ -15,6 +23,88 @@ function addMonths(iso: string, months: number): string {
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/** Taxa diária em EXP como fração da base em centavos de BRO (ex.: 0,015 = 1,5%). */
+export function gatDailyExpRateForBaseBroCents(baseEligibleCents: number): number {
+  const bro = baseEligibleCents / 100;
+  if (bro <= 0) return 0;
+  if (bro <= 100) return 0.015;
+  if (bro <= 300) return 0.025;
+  if (bro <= 999) return 0.035;
+  return 0.055;
+}
+
+function gatReferralExpPerLevel(baseEligibleCents: number): number {
+  return Math.max(0, Math.round(baseEligibleCents * GAT_REFERRAL_LEVEL_RATE));
+}
+
+/**
+ * Percorre até 3 níveis na árvore (`userId` → `sponsorId`).
+ * Cada nível recebe `round(base * 1%)` EXP em ledger; se o patrocinador for o teu código,
+ * o valor entra também em `spotExpBalance` (útil quando o estado agrega vários atores).
+ */
+function applyGatReferralChain(
+  state: WalletState,
+  baseEligibleCents: number,
+  positionId: string,
+  dateStr: string,
+): WalletState {
+  const perLevel = gatReferralExpPerLevel(baseEligibleCents);
+  if (perLevel <= 0) return state;
+
+  const createdAt = `${dateStr}T23:59:00.000Z`;
+  const myCode = state.myReferralCode ? normalizeReferralCode(state.myReferralCode) : null;
+
+  let next = state;
+  let currentUserId: string = 'self';
+
+  for (let level = 1; level <= 3; level++) {
+    const node = next.referralTree.find((n) => n.userId === currentUserId);
+    if (!node) break;
+
+    const sponsorRaw = String(node.sponsorId ?? '').trim();
+    const sponsorId = normalizeReferralCode(sponsorRaw) || sponsorRaw;
+    if (!sponsorId) break;
+
+    const commEntry: ReferralCommission = {
+      id: `gatref-${positionId}-L${level}-${dateStr}`,
+      fromUserId: 'self',
+      toUserId: sponsorId,
+      level: level as ReferralLevel,
+      sourceType: 'gat',
+      sourceAmount: baseEligibleCents,
+      commissionAmount: perLevel,
+      currency: 'EXP',
+      status: 'confirmed',
+      createdAt,
+    };
+
+    next = {
+      ...next,
+      referralCommissions: [...next.referralCommissions, commEntry],
+    };
+
+    next = appendLedger(next, {
+      userId: sponsorId,
+      type: 'REFERRAL_GAT_EXP',
+      currency: 'EXP',
+      amount: perLevel,
+      status: 'confirmed',
+      source: `gat_referral_l${level}`,
+      refId: `${positionId}:${dateStr}:gatref:L${level}`,
+      createdAt,
+      metadata: { fromUser: 'self', level, positionId, baseEligibleCents },
+    });
+
+    if (myCode && normalizeReferralCode(sponsorId) === myCode) {
+      next = { ...next, spotExpBalance: next.spotExpBalance + perLevel };
+    }
+
+    currentUserId = sponsorId;
+  }
+
+  return next;
 }
 
 export type RegisterGatBaseOptions = {
@@ -38,12 +128,13 @@ export function registerGatBase(
 
   const startDate = now.slice(0, 10);
   const endDate = addMonths(startDate, GAT_DURATION_MONTHS);
+  const dailyRate = gatDailyExpRateForBaseBroCents(amountCents);
 
   const position: GatPosition = {
     id: `gat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     userId: 'self',
     baseEligibleCents: amountCents,
-    dailyRate: GAT_DAILY_RATE,
+    dailyRate,
     startDate,
     endDate,
     accruedCents: 0,
@@ -77,7 +168,7 @@ export function registerGatBase(
 }
 
 /**
- * Accrual diário para todas as posições GAT ativas.
+ * Accrual diário para todas as posições GAT ativas — crédito em EXP + referral em EXP.
  * Idempotente por data + positionId. Todos os dias (não só úteis).
  */
 export function accrueGatDaily(state: WalletState, currentDate: string): WalletState {
@@ -88,27 +179,36 @@ export function accrueGatDaily(state: WalletState, currentDate: string): WalletS
     if (pos.lastAccrualDate >= dateStr) return pos;
     if (dateStr >= pos.endDate) return pos;
 
-    const dailyReward = Math.round(pos.baseEligibleCents * pos.dailyRate);
-    if (dailyReward <= 0) return pos;
+    const rate = gatDailyExpRateForBaseBroCents(pos.baseEligibleCents);
+    const dailyExp = Math.max(0, Math.round(pos.baseEligibleCents * rate));
+    if (dailyExp <= 0) return pos;
 
-    next = { ...next, spotBroCents: next.spotBroCents + dailyReward };
+    next = { ...next, spotExpBalance: next.spotExpBalance + dailyExp };
 
     next = appendLedger(next, {
       userId: 'self',
       type: 'GAT_REWARD',
-      currency: 'BRO',
-      amount: dailyReward,
+      currency: 'EXP',
+      amount: dailyExp,
       status: 'confirmed',
       source: 'gat_daily_reward',
       refId: `${pos.id}:${dateStr}`,
-      createdAt: `${dateStr}T23:59:00Z`,
-      metadata: { positionId: pos.id, category: pos.sourceCategory },
+      createdAt: `${dateStr}T23:59:00.000Z`,
+      metadata: {
+        positionId: pos.id,
+        category: pos.sourceCategory,
+        dailyRate: rate,
+        baseEligibleCents: pos.baseEligibleCents,
+      },
     });
+
+    next = applyGatReferralChain(next, pos.baseEligibleCents, pos.id, dateStr);
 
     return {
       ...pos,
-      accruedCents: pos.accruedCents + dailyReward,
-      paidCents: pos.paidCents + dailyReward,
+      dailyRate: rate,
+      accruedCents: pos.accruedCents + dailyExp,
+      paidCents: pos.paidCents + dailyExp,
       lastAccrualDate: dateStr,
     };
   });

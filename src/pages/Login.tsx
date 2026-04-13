@@ -34,7 +34,7 @@ export function Login() {
         role="banner"
         className="relative z-[100] w-full shrink-0 bg-transparent px-4 pb-2 pt-5 sm:px-6 sm:pb-3 sm:pt-6 md:px-8"
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+        <div className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-3">
           <Link
             to="/"
             className="flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"

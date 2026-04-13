@@ -35,7 +35,7 @@ async function flushEvents() {
 export async function insertMatch(input: {
   homeClubId: string;
   awayName: string;
-  mode: 'live' | 'quick' | 'auto';
+  mode: 'quick' | 'auto' | 'test2d';
   simulationSeed?: number;
 }): Promise<string | null> {
   const sb = getSupabase();

@@ -333,7 +333,7 @@ export function AdminLeaguesPanel() {
                           + Linha
                         </button>
                       </div>
-                      <div className="overflow-x-auto rounded-lg border border-white/10">
+                      <div className="ole-scroll-x rounded-lg border border-white/10">
                         <table className="w-full min-w-[520px] text-left text-xs">
                           <thead>
                             <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
@@ -415,7 +415,7 @@ export function AdminLeaguesPanel() {
                       <h4 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
                         Chaves (pré-visualização)
                       </h4>
-                      <div className="flex gap-3 overflow-x-auto pb-1">
+                      <div className="ole-scroll-x flex gap-3 pb-1">
                         {d.knockoutRounds.map((round) => (
                           <div key={round.name} className="min-w-[160px] shrink-0 space-y-2">
                             <p className="text-[9px] font-bold uppercase text-white/35">{round.name}</p>

@@ -5,6 +5,11 @@ import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import {
+  clampWorldOutsideBothPenaltyAreas,
+  goalKickRestartGoalkeeperWorldPos,
+  type MatchHalf,
+} from '@/match/fieldZones';
+import {
   DEFAULT_GOAL_RESTART_REPOSITION_SEC,
   DEFAULT_SET_PIECE_REPOSITION_SEC,
   type StructuralEventState,
@@ -47,8 +52,14 @@ function mapSlotsToPlayerIds(
  * Structural reorganisation: formation locks for goal restart and blended set-piece targets.
  * Does not move agents directly — TacticalSimLoop feeds targets into setArriveTarget.
  */
+export type GoalRestartVariant = 'kickoff_after_goal' | 'goal_kick_wide';
+
 export class StructuralReorganizationSystem {
-  private goalRestart: { restartingSide: PossessionSide; elapsed: number } | null = null;
+  private goalRestart: {
+    restartingSide: PossessionSide;
+    elapsed: number;
+    variant: GoalRestartVariant;
+  } | null = null;
   private setPiece: {
     phase: Extract<MatchTruthPhase, 'throw_in' | 'corner_kick' | 'goal_kick'>;
     restartingSide: PossessionSide;
@@ -57,9 +68,15 @@ export class StructuralReorganizationSystem {
     elapsed: number;
   } | null = null;
 
-  /** Call when a goal is scored — players walk to kickoff formation until FSM leaves goal_restart. */
-  beginGoalRestart(restartingSide: PossessionSide): void {
-    this.goalRestart = { restartingSide, elapsed: 0 };
+  /**
+   * Reinício estrutural: golo (formações para pontapé de saída no meio-campo) ou
+   * remate para fora (`goal_kick_wide` — todos fora das grandes áreas exceto o GR que sai).
+   */
+  beginGoalRestart(
+    restartingSide: PossessionSide,
+    variant: GoalRestartVariant = 'kickoff_after_goal',
+  ): void {
+    this.goalRestart = { restartingSide, elapsed: 0, variant };
   }
 
   /** Call when UI triggers a set-piece preset — merged home/away maps for reposition window. */
@@ -116,16 +133,41 @@ export class StructuralReorganizationSystem {
 
   /**
    * Full per-player targets for goal restart: both teams to catalogue formation on own half.
+   * Em `goal_kick_wide`, empurra todos para fora das duas grandes áreas; só o GR da equipa
+   * que defende a saída de baliza fica junto à sua baliza.
    */
   getGoalRestartPlayerTargets(
-    homeAgents: { id: string; slotId: string }[],
-    awayAgents: { id: string; slotId: string }[],
+    homeAgents: { id: string; slotId: string; side: PossessionSide; role: string }[],
+    awayAgents: { id: string; slotId: string; side: PossessionSide; role: string }[],
+    half: MatchHalf,
   ): StructuralTargetMap {
     const homeSlots = formationAnchorsForSide('home');
     const awaySlots = formationAnchorsForSide('away');
     const m = new Map<string, { x: number; z: number }>();
     for (const [id, pos] of mapSlotsToPlayerIds(homeAgents, homeSlots)) m.set(id, pos);
     for (const [id, pos] of mapSlotsToPlayerIds(awayAgents, awaySlots)) m.set(id, pos);
+
+    if (!this.goalRestart || this.goalRestart.variant !== 'goal_kick_wide') {
+      return m;
+    }
+
+    const restartingSide = this.goalRestart.restartingSide;
+    const all = [...homeAgents, ...awayAgents];
+
+    for (const ag of all) {
+      const pos = m.get(ag.id);
+      if (!pos) continue;
+
+      const isRestartingGk =
+        ag.side === restartingSide && (ag.role === 'gk' || ag.slotId === 'gol');
+
+      if (isRestartingGk) {
+        m.set(ag.id, goalKickRestartGoalkeeperWorldPos(ag.side, half));
+      } else {
+        m.set(ag.id, clampWorldOutsideBothPenaltyAreas(pos.x, pos.z));
+      }
+    }
+
     return m;
   }
 

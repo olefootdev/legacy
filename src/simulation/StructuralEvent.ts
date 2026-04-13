@@ -29,7 +29,7 @@ export interface StructuralEventState {
   repositionDuration: number;
 }
 
-export const DEFAULT_GOAL_RESTART_REPOSITION_SEC = 2;
+export const DEFAULT_GOAL_RESTART_REPOSITION_SEC = 3;
 export const DEFAULT_SET_PIECE_REPOSITION_SEC = 3;
 export const MIN_DIST_GOAL_KICK_M = 9.15;
 export const MIN_DIST_CORNER_THROW_M = 9.15;

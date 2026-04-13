@@ -48,6 +48,15 @@ export class BallSystem {
     this.state.flight = null;
   }
 
+  /** Bola parada (ex.: golo — rede) sem teletransporte para o centro até ao reinício. */
+  setDeadAt(x: number, z: number) {
+    this.state.mode = 'dead';
+    this.state.x = x;
+    this.state.z = z;
+    this.state.carrierId = null;
+    this.state.flight = null;
+  }
+
   giveTo(playerId: string, x: number, z: number) {
     this.state.mode = 'held';
     this.state.carrierId = playerId;

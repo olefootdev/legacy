@@ -16,6 +16,7 @@ export type WalletLedgerType =
   | 'SWAP_OLEXP_TO_SPOT'
   | 'REFERRAL_OLE_GAME'
   | 'REFERRAL_NFT'
+  | 'REFERRAL_GAT_EXP'
   | 'GAT_REWARD'
   | 'GAT_BASE_DEBIT'
   | 'TRANSFER'
@@ -92,7 +93,7 @@ export interface OlexpPosition {
 // ---------------------------------------------------------------------------
 
 export type ReferralLevel = 1 | 2 | 3;
-export type ReferralSourceType = 'ole_game' | 'nft_primary';
+export type ReferralSourceType = 'ole_game' | 'nft_primary' | 'gat';
 
 export interface ReferralNode {
   userId: string;
@@ -136,9 +137,9 @@ export interface GatPosition {
   startDate: string;
   /** Data de fim (24 meses após startDate) */
   endDate: string;
-  /** Reward acumulado mas não sacado (centavos BRO) */
+  /** Reward acumulado em EXP (inteiro). Campo legado `accruedCents` em saves antigos podia refletir BRO. */
   accruedCents: number;
-  /** Reward já creditado ao SPOT (centavos BRO) */
+  /** Reward já creditado ao saldo EXP (inteiro). */
   paidCents: number;
   lastAccrualDate: string;
   sourceCategory: GatCategory;
@@ -181,6 +182,10 @@ export interface WalletState {
   kycProfile?: WalletKycProfile;
   /** ID do patrocinador (referral) */
   sponsorId: string | null;
+  /**
+   * Código público de indicação deste utilizador (3–5 alfanuméricos), imutável após criado.
+   */
+  myReferralCode: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -203,5 +208,6 @@ export type WalletErrorCode =
   | 'OLEXP_NOT_ACTIVE'
   | 'REFERRAL_SELF'
   | 'REFERRAL_ALREADY_SET'
+  | 'REFERRAL_INVALID_CODE'
   | 'REFERRAL_SPONSOR_NOT_FOUND'
   | 'GAT_INVALID_CATEGORY';

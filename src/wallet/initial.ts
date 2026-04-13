@@ -1,16 +1,18 @@
 import type { WalletState } from './types';
+import { generateRandomReferralCode, isValidReferralCode, normalizeReferralCode } from './referralCode';
 
 export function createInitialWalletState(): WalletState {
   return {
     spotBroCents: 0,
     spotExpBalance: 0,
     olexpPositions: [],
-    referralTree: [],
     referralCommissions: [],
     gatPositions: [],
     ledger: [],
     kycOlexpDone: false,
     sponsorId: null,
+    myReferralCode: generateRandomReferralCode(),
+    referralTree: [],
   };
 }
 
@@ -18,6 +20,13 @@ export function createInitialWalletState(): WalletState {
 export function normalizeWalletState(input: Partial<WalletState> | null | undefined): WalletState {
   const base = createInitialWalletState();
   if (!input || typeof input !== 'object') return base;
+  let myReferralCode =
+    typeof input.myReferralCode === 'string' && isValidReferralCode(input.myReferralCode)
+      ? normalizeReferralCode(input.myReferralCode)!
+      : null;
+  if (!myReferralCode) {
+    myReferralCode = generateRandomReferralCode();
+  }
   return {
     ...base,
     ...input,
@@ -28,5 +37,6 @@ export function normalizeWalletState(input: Partial<WalletState> | null | undefi
       : base.referralCommissions,
     gatPositions: Array.isArray(input.gatPositions) ? input.gatPositions : base.gatPositions,
     ledger: Array.isArray(input.ledger) ? input.ledger : base.ledger,
+    myReferralCode,
   };
 }

@@ -99,6 +99,14 @@ export interface PlayerEntity {
   bio?: string;
   /** Listado no mercado (Admin “Lançar no Mercado”) */
   listedOnMarket?: boolean;
+  /** Prospect criado pelo manager no fluxo Academia OLE (OVR criação / evolução limitados). */
+  managerCreated?: boolean;
+  /** Idade exibida / narrativa (plantel criado pelo manager). */
+  age?: number;
+  /** OVR na criação do cartão (Admin: tecto de crescimento = mint + 15). */
+  mintOverall?: number;
+  /** Multiplicador de ganho/perda de evolução (treino, jogo); 1 = normal. */
+  evolutionRate?: number;
 }
 
 export interface OpponentStub {
@@ -108,6 +116,8 @@ export interface OpponentStub {
   strength: number;
   /** Jogador destaque para UI (banner, pré-jogo); se omitido, o banner usa `strength` como OVR. */
   highlightPlayer?: { name: string; ovr: number };
+  /** Escudo “do coração” do clube adversário (ex.: demo TITANS FC → Real Madrid) no matchday / partida rápida. */
+  supporterCrestUrl?: string | null;
 }
 
 export interface Fixture {

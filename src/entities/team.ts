@@ -1,5 +1,6 @@
 import { createPlayer } from './player';
 import type { ClubEntity, Fixture, OpponentStub, PlayerAttributes, PlayerEntity } from './types';
+import { DEMO_REAL_MADRID_LOGO } from '@/settings/demoSupporterCrests';
 
 export const DEFAULT_CLUB: ClubEntity = {
   id: 'ole-fc',
@@ -11,10 +12,11 @@ export const DEFAULT_CLUB: ClubEntity = {
 
 export const DEFAULT_OPPONENT: OpponentStub = {
   id: 'titans',
-  name: 'Titans FC',
+  name: 'TITANS FC',
   shortName: 'TITANS',
   strength: 78,
   highlightPlayer: { name: 'MOREIRA', ovr: 79 },
+  supporterCrestUrl: DEMO_REAL_MADRID_LOGO,
 };
 
 export function defaultFixture(): Fixture {
@@ -25,8 +27,35 @@ export function defaultFixture(): Fixture {
     competition: 'Liga Principal',
     homeName: DEFAULT_CLUB.name,
     awayName: DEFAULT_OPPONENT.name,
-    opponent: DEFAULT_OPPONENT,
+    opponent: { ...DEFAULT_OPPONENT },
     isHome: true,
+  };
+}
+
+/**
+ * Garante `supporterCrestUrl` para TITANS FC (id `titans`, `t1` na liga, ou nome com “TITANS”).
+ * Não mistura outros campos do adversário padrão — só completa o escudo de visualização.
+ */
+export function normalizeOpponentStub(o: OpponentStub | undefined | null): OpponentStub {
+  if (!o || typeof o !== 'object' || !o.id) {
+    return { ...DEFAULT_OPPONENT };
+  }
+  const nameU = o.name.trim().toUpperCase();
+  const titansLike = o.id === 'titans' || o.id === 't1' || nameU.includes('TITANS');
+  if (titansLike && !o.supporterCrestUrl?.trim()) {
+    return { ...o, supporterCrestUrl: DEMO_REAL_MADRID_LOGO };
+  }
+  return { ...o };
+}
+
+export function normalizeFixture(f: Partial<Fixture> | null | undefined): Fixture {
+  const base = defaultFixture();
+  if (!f || typeof f !== 'object') return base;
+  const fx = f as Fixture;
+  return {
+    ...base,
+    ...fx,
+    opponent: normalizeOpponentStub(fx.opponent),
   };
 }
 
@@ -45,6 +74,11 @@ export function createInitialSquad(): Record<string, PlayerEntity> {
     { id: 'p10', num: 2, name: 'RAMOS', pos: 'LD', attrs: { velocidade: 85, passe: 72, marcacao: 73 } },
     { id: 'p11', num: 1, name: 'GOMES', pos: 'GOL', attrs: { mentalidade: 88, confianca: 86, tatico: 84 } },
     { id: 'p12', num: 17, name: 'MARTINS', pos: 'ATA', attrs: { finalizacao: 78, velocidade: 82 } },
+    { id: 'p13', num: 18, name: 'NUNES', pos: 'MC', attrs: { passe: 76, tatico: 74 } },
+    { id: 'p14', num: 19, name: 'RIBEIRO', pos: 'ZAG', attrs: { marcacao: 75, fisico: 78 } },
+    { id: 'p15', num: 20, name: 'CARVALHO', pos: 'LE', attrs: { velocidade: 80, passe: 70 } },
+    { id: 'p16', num: 21, name: 'MENDES', pos: 'VOL', attrs: { marcacao: 77, passe: 72 } },
+    { id: 'p17', num: 22, name: 'BARBOSA', pos: 'ATA', attrs: { finalizacao: 76, velocidade: 79 } },
   ];
   const out: Record<string, PlayerEntity> = {};
   for (const r of rows) {

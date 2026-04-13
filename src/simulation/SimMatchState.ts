@@ -1,6 +1,12 @@
 import type { PossessionSide, MatchEventEntry, LiveMatchClockPeriod } from '@/engine/types';
 import type { CausalLogState, CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import { appendCausalEntries, scoreDeltaFromEvents } from '@/match/causal/matchCausalTypes';
+import {
+  pushMotorTelemetryRecord,
+  type MotorTelemetryRecord,
+} from '@/match/motorActionOutcome';
+
+export type { MotorTelemetryRecord } from '@/match/motorActionOutcome';
 
 export interface SimMatchStats {
   passesOk: number;
@@ -58,6 +64,8 @@ export interface SimMatchState {
   shotTelemetry: ShotMatchTelemetry;
   /** Últimas ações do portador (debug). */
   carrierDebugLog: CarrierDebugLogEntry[];
+  /** Últimos outcomes do motor (remate, defesa, desarme, passe, interceptação) — debug / narração. */
+  motorOutcomeLog: MotorTelemetryRecord[];
 }
 
 function uid(): string {
@@ -99,7 +107,13 @@ export function createSimMatchState(): SimMatchState {
     possessionChangesTotal: 0,
     shotTelemetry: defaultShotTelemetry(),
     carrierDebugLog: [],
+    motorOutcomeLog: [],
   };
+}
+
+/** Anexa um registo ao anel de telemetria do motor (cap em MOTOR_TELEMETRY_LOG_MAX). */
+export function pushMotorTelemetry(state: SimMatchState, rec: MotorTelemetryRecord): void {
+  pushMotorTelemetryRecord(state.motorOutcomeLog, rec);
 }
 
 export function pushSimEvent(state: SimMatchState, text: string, kind: MatchEventEntry['kind'] = 'narrative') {

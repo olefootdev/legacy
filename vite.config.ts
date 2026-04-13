@@ -1,3 +1,4 @@
+import {cloudflare} from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import dotenv from 'dotenv';
@@ -40,7 +41,7 @@ export default defineConfig(({mode}) => {
     },
   };
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [cloudflare(), react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       /** Sincronizado com .env em build/dev — o browser não vê a chave, só se existe (para UI/proxy). */
@@ -77,7 +78,6 @@ export default defineConfig(({mode}) => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
-            if (id.includes('@babylonjs')) return 'babylon';
             if (id.includes('yuka')) return 'yuka';
             if (id.includes('motion')) return 'motion';
             if (id.includes('lucide-react')) return 'lucide';

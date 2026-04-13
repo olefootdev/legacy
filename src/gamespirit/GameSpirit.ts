@@ -19,7 +19,7 @@ import * as T from './narrativeTemplates';
 import { pickLine } from './narrationSeed';
 import type { PlayerEntity } from '@/entities/types';
 import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
-import { createCausalBatch } from '@/match/causal/matchCausalTypes';
+import { createCausalBatch, type CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import { normalizeStyle } from '@/tactics/playingStyle';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
@@ -32,6 +32,14 @@ function zoneFromBallX(x: number): BallZone {
   if (x < 38) return 'def';
   if (x < 68) return 'mid';
   return 'att';
+}
+
+/** Remate com desfecho pleno (golo/defesa/bloqueio): só com bola na zona final (≥68 m no eixo 0–100). */
+function homeMayRegisterShot(ctx: SpiritContext): boolean {
+  if (ctx.possession !== 'home' || !ctx.onBall) return false;
+  if (ctx.ballZone !== 'att') return false;
+  const r = ctx.onBall.role;
+  return r === 'attack' || r === 'mid';
 }
 
 function nearestTeammateDistance(onBall: PitchPlayerState | undefined, mates: PitchPlayerState[]): number {
@@ -60,17 +68,35 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   const deepDefense = ctx.ballZone === 'def';
   const isolated = ctx.nearestTeammateDist > 22;
   const crowded = ctx.homeDensityNearBall >= 3;
+  const m = ctx.test2dTickModifiers;
+  const st = ctx.live2dStagnationTicks ?? 0;
 
-  if (ctx.possession === 'away' && deepDefense && highPress) return 'press';
-  if (ctx.possession === 'home' && ctx.ballZone === 'att' && ctx.onBall?.role === 'attack') {
+  /** live2d: após N recycles seguidos, obrigar avanço (condução/passe longo). */
+  if (ctx.possession === 'home' && st >= 2) {
+    return 'progress';
+  }
+  if (ctx.possession === 'home' && st >= 1 && ctx.onBall?.role === 'def' && ctx.ballZone === 'def') {
+    return Math.random() < 0.88 ? 'progress' : 'recycle';
+  }
+
+  if (ctx.possession === 'away' && deepDefense && highPress) {
+    if (!m) return 'press';
+    if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult)) return 'press';
+  }
+  if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
-    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18;
+    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18 + (m?.shotInAttThirdBias ?? 0);
     return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
   }
   if (ctx.possession === 'home' && style.buildUp > 0.72 && Math.random() < 0.22) return 'clear';
   if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < 0.24) return 'progress';
   if (ctx.possession === 'home' && style.verticality < 0.28 && Math.random() < 0.28) return 'recycle';
-  if (ctx.possession === 'home' && losingHome && ctx.minute > 70) return crowded ? 'shot' : 'progress';
+  /** Sem remate “milagre” do meio-campo: em desespero só remata quem já chegou à zona final. */
+  if (ctx.possession === 'home' && losingHome && ctx.minute > 70) {
+    return crowded && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')
+      ? 'shot'
+      : 'progress';
+  }
   if (ctx.possession === 'away' && ctx.ballZone === 'def') return 'clear';
   if (ctx.possession === 'home' && ctx.ballZone === 'mid' && Math.random() > 0.65) return 'progress';
   if (Math.random() > 0.72) return 'progress';
@@ -155,6 +181,9 @@ export function buildSpiritContext(input: {
   homeShort?: string;
   recentFeedLines?: string[];
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
+  test2dTickModifiers?: SpiritContext['test2dTickModifiers'];
+  live2dStagnationTicks?: number;
+  motorTelemetryTail?: SpiritContext['motorTelemetryTail'];
 }): SpiritContext {
   const avg =
     input.homeRoster.length === 0
@@ -192,6 +221,9 @@ export function buildSpiritContext(input: {
     homeShort: input.homeShort,
     homePlayers: input.homePlayers,
     awayRoster: input.awayRoster,
+    test2dTickModifiers: input.test2dTickModifiers,
+    live2dStagnationTicks: input.live2dStagnationTicks,
+    motorTelemetryTail: input.motorTelemetryTail,
   };
 }
 
@@ -225,7 +257,7 @@ function postGoalRestart(L: ReturnType<typeof createCausalBatch>, ball: PitchPoi
 function detectCounter(
   possessionAtTickStart: PossessionSide,
   scorerSide: PossessionSide,
-  recentCausal: { type: string; payload?: { reason?: string; to?: PossessionSide } }[],
+  recentCausal: readonly CausalMatchEvent[],
 ): boolean {
   if (possessionAtTickStart !== scorerSide) return true;
   const last4 = recentCausal.slice(-4);
@@ -408,7 +440,10 @@ export function gameSpiritTick(
     };
   }
 
-  const action = pickAction(ctx);
+  let action = pickAction(ctx);
+  if (action === 'shot' && ctx.possession === 'home' && !homeMayRegisterShot(ctx)) {
+    action = 'progress';
+  }
   const name = ctx.possession === 'home' ? ctx.onBall?.name ?? ctx.homeShort ?? 'Casa' : awayShort;
   let narrative = narrativeFor(action, name, ctx.minute, ctx.crowdPressure, ctx.homeShort ?? 'Casa', ctx.ballZone, ctx);
   let next: PossessionSide = ctx.possession;
@@ -463,7 +498,11 @@ export function gameSpiritTick(
       const homeNumericRatio = Math.max(0.55, homeOnPitch / 11);
       weights.goal *= homeNumericRatio;
       weights.post_in *= homeNumericRatio;
-      const logical = rollHomeShotLogicalOutcome(Math.random(), weights);
+      let logical = rollHomeShotLogicalOutcome(Math.random(), weights);
+      /** Rede de segurança: golo só com bola na zona final (coerente com buildup / 2D). */
+      if ((logical === 'goal' || logical === 'post_in') && ctx.ballZone !== 'att') {
+        logical = 'wide';
+      }
       const causalOut = causalOutcomeFromHomeShot(logical);
       L.push({
         type: 'shot_result',
@@ -547,9 +586,18 @@ export function gameSpiritTick(
     } else if (action === 'progress') {
       homeStat!.passesOk += 1;
       homeStat!.passesAttempt += 1;
-      const lossChance = 0.14 + errorTax * 0.45 + (ctx.crowdPressure.longPassStress - 1) * 0.08;
+      let lossChance = 0.14 + errorTax * 0.45 + (ctx.crowdPressure.longPassStress - 1) * 0.08;
+      if (ctx.test2dTickModifiers && ctx.possession === 'home') {
+        lossChance *= ctx.test2dTickModifiers.progressLossMult;
+      }
+      const pushX =
+        ctx.ballZone === 'mid'
+          ? 8 + Math.random() * 14
+          : ctx.ballZone === 'def'
+            ? 6 + Math.random() * 12
+            : 4 + Math.random() * 10;
       ball = {
-        x: Math.min(90, ctx.ball.x + 5 + Math.random() * 12),
+        x: Math.min(90, ctx.ball.x + pushX),
         y: Math.min(82, Math.max(18, ctx.ball.y + (Math.random() * 12 - 6))),
       };
       L.push({
@@ -594,9 +642,12 @@ export function gameSpiritTick(
       const rShot = Math.random();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
-      const pGoalAway = (0.1 + ctx.opponentStrength / 850 + errorTax * 0.15) * awayNumericRatio;
+      const pGoalAway =
+        awayZone === 'att'
+          ? (0.1 + ctx.opponentStrength / 850 + errorTax * 0.15) * awayNumericRatio
+          : 0;
       const pWideAway = 0.12;
-      if (rShot < pGoalAway) {
+      if (awayZone === 'att' && rShot < pGoalAway) {
         L.push({
           type: 'shot_attempt',
           payload: {
@@ -632,7 +683,7 @@ export function gameSpiritTick(
         spiritMeta = gol.spiritMeta;
         goalBuildUp = gol.goalBuildUp;
         threatBar01 = gol.threatBar01;
-      } else if (rShot < pGoalAway + pWideAway) {
+      } else if (awayZone === 'att' && rShot < pGoalAway + pWideAway) {
         L.push({
           type: 'shot_attempt',
           payload: {
@@ -663,10 +714,18 @@ export function gameSpiritTick(
           spiritBuildupGkTicksRemaining: patch.spiritBuildupGkTicksRemaining,
         };
       } else {
-        ball = {
-          x: 25 + Math.random() * 40,
-          y: 20 + Math.random() * 60,
-        };
+        if (awayZone !== 'att') {
+          const pushLeft = awayZone === 'mid' ? 7 + Math.random() * 14 : 5 + Math.random() * 11;
+          ball = {
+            x: Math.max(14, ctx.ball.x - pushLeft),
+            y: Math.min(82, Math.max(18, ctx.ball.y + (Math.random() * 14 - 7))),
+          };
+        } else {
+          ball = {
+            x: 25 + Math.random() * 40,
+            y: 20 + Math.random() * 60,
+          };
+        }
         L.push({
           type: 'ball_state',
           payload: { ...ball, reason: 'away_build' },

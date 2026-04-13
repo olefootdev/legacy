@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
-import { NavBalanceStrip } from '@/components/NavBalanceStrip';
+
 import { WalletSpotToggle } from './WalletSpotToggle';
 import { TradingViewEmbed } from './TradingViewEmbed';
 import { WalletFaq } from './WalletFaq';
 
-export type WalletShellAccount = 'spot' | 'olexp';
+export type WalletShellAccount = 'spot' | 'olexp' | 'gat';
 
 export function WalletShell({
   account,
@@ -19,12 +19,10 @@ export function WalletShell({
   children: ReactNode;
 }) {
   return (
-    <div className="max-w-3xl mx-auto pb-28 md:pb-12 space-y-8">
+    <div className="mx-auto min-w-0 w-full max-w-3xl space-y-8 pb-28 md:pb-12">
       <WalletSpotToggle />
 
-      <NavBalanceStrip />
-
-      <header className="relative overflow-hidden rounded-2xl border border-white/10 px-4 py-4">
+      <header className="relative min-w-0 overflow-x-hidden overflow-y-visible rounded-2xl border border-white/10 px-4 py-4">
         <GameBannerBackdrop slot="wallet_spot" imageOpacity={0.32} />
         <div className="relative z-10 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.22em] text-neon-yellow/90 font-display font-bold">

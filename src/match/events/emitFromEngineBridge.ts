@@ -61,7 +61,9 @@ export function emitFromMatchEventEntry(
       });
       break;
     case 'yellow_home':
+    case 'yellow_away':
     case 'red_home':
+    case 'red_away':
     case 'injury_home':
       bus.emit({
         kind: 'EngineNarrativeLine',
@@ -126,6 +128,27 @@ export function emitCausalMatchEvent(
       bus.emit({
         kind: 'PossessionChanged',
         side: ev.payload.to,
+        at: simTime,
+      });
+      break;
+    case 'foul_committed':
+      bus.emit({
+        kind: 'EngineNarrativeLine',
+        text: ev.payload.dangerous
+          ? `${ev.payload.minute}' — Falta dura (${ev.payload.kind}) — tensão no lance.`
+          : `${ev.payload.minute}' — Falta (${ev.payload.kind}) — jogo parado.`,
+        minute: ev.payload.minute,
+        at: simTime,
+      });
+      break;
+    case 'card_shown':
+      bus.emit({
+        kind: 'EngineNarrativeLine',
+        text:
+          ev.payload.card === 'red'
+            ? `${ev.payload.minute}' — Cartão vermelho.`
+            : `${ev.payload.minute}' — Cartão amarelo.`,
+        minute: ev.payload.minute,
         at: simTime,
       });
       break;

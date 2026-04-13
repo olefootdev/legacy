@@ -3,6 +3,7 @@ import { Trophy, TrendingUp, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { useMemo } from 'react';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import type { AdminLeagueConfig, KnockoutRound } from '@/match/adminLeagues';
 import {
@@ -59,7 +60,7 @@ function KnockoutBracketSection({ rounds }: { rounds: KnockoutRound[] | undefine
     );
   }
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <div className="ole-scroll-x flex gap-4 pb-2">
       {rounds.map((round) => (
         <div key={round.name} className="min-w-[200px] shrink-0 space-y-2">
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{round.name}</h4>
@@ -88,9 +89,11 @@ function StandingsBlock({
   clubName: string;
   clubShort: string;
 }) {
+  const supporterCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
+
   return (
-    <div className="overflow-hidden border border-white/10 bg-[#111]">
-      <div className="grid grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem] gap-2 border-b border-white/10 px-4 py-2 text-[9px] font-bold uppercase tracking-wider text-gray-500">
+    <div className="ole-scroll-x rounded border border-white/10 bg-[#111]">
+      <div className="grid min-w-[260px] grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem] gap-2 border-b border-white/10 px-4 py-2 text-[9px] font-bold uppercase tracking-wider text-gray-500">
         <span>#</span>
         <span>Equipe</span>
         <span className="text-center">J</span>
@@ -108,17 +111,28 @@ function StandingsBlock({
           <div
             key={row.teamId}
             className={cn(
-              'grid grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem] gap-2 border-b border-white/5 px-4 py-3 items-center',
+              'grid min-w-[260px] grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem] items-center gap-2 border-b border-white/5 px-4 py-3',
               isOle && 'bg-neon-yellow/5',
             )}
           >
             <span className={cn('font-display text-sm font-bold', isOle ? 'text-neon-yellow' : 'text-gray-500')}>
               {idx + 1}
             </span>
-            <div className="flex items-center gap-2">
-              <Shield className={cn('h-4 w-4', isOle ? 'text-neon-yellow' : 'text-gray-600')} />
+            <div className="flex min-w-0 items-center gap-2">
+              {isOle && supporterCrestUrl ? (
+                <img
+                  src={supporterCrestUrl}
+                  alt=""
+                  className="h-7 w-7 min-h-7 min-w-7 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+                />
+              ) : (
+                <Shield className={cn('h-4 w-4 shrink-0', isOle ? 'text-neon-yellow' : 'text-gray-600')} />
+              )}
               <span
-                className={cn('font-display text-sm font-bold tracking-wider', isOle ? 'text-white' : 'text-gray-400')}
+                className={cn(
+                  'min-w-0 truncate font-display text-sm font-bold tracking-wider',
+                  isOle ? 'text-white' : 'text-gray-400',
+                )}
               >
                 {row.name}
               </span>
@@ -152,7 +166,7 @@ export function Leagues() {
 
   if (adminLeagues.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto min-w-0 max-w-4xl space-y-6">
         <div className="relative overflow-hidden rounded-xl border border-white/10 px-4 py-5">
           <GameBannerBackdrop slot="leagues_header" imageOpacity={0.32} />
           <div className="relative z-10">
@@ -168,7 +182,7 @@ export function Leagues() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-10">
+    <div className="mx-auto min-w-0 max-w-4xl space-y-10">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}

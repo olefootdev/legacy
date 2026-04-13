@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { GAT_DAILY_RATE, GAT_DURATION_MONTHS } from '../../../../src/wallet/constants';
+import { GAT_DURATION_MONTHS, GAT_TIER_SUMMARY_PT } from '../../../../src/wallet/constants';
 
 interface Props {
   onBack: () => void;
@@ -14,8 +14,8 @@ export function GatScreen({ onBack }: Props) {
 
       <Text style={styles.title}>Game Assets Treasury</Text>
       <Text style={styles.desc}>
-        Reward diário de {(GAT_DAILY_RATE * 100).toFixed(3)}% sobre BRO gasto em categorias
-        elegíveis, por {GAT_DURATION_MONTHS} meses.
+        Recompensa diária automática em EXP por faixa sobre a base em BRO; referral GAT 1%/nível em EXP.{' '}
+        {GAT_DURATION_MONTHS} meses por posição. {GAT_TIER_SUMMARY_PT}
       </Text>
 
       {/* Disclaimer */}
@@ -36,8 +36,8 @@ export function GatScreen({ onBack }: Props) {
         </View>
         <View style={styles.summaryCol}>
           <Text style={styles.summaryLabel}>Reward Acum.</Text>
-          <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>+0.00</Text>
-          <Text style={styles.summaryUnit}>BRO</Text>
+          <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>+0</Text>
+          <Text style={styles.summaryUnit}>EXP</Text>
         </View>
         <View style={styles.summaryCol}>
           <Text style={styles.summaryLabel}>Posições</Text>

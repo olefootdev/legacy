@@ -7,7 +7,7 @@ import type { AgentSnapshot, PassOption } from './InteractionResolver';
 import { findPassOptions, evaluateShot } from './InteractionResolver';
 import { FIELD_LENGTH, clampToPitch } from './field';
 
-export type TurnoverReason = 'tackle' | 'loose_ball_recovery';
+export type TurnoverReason = 'tackle' | 'loose_ball_recovery' | 'intercept' | 'dribble_fail';
 
 export interface TurnoverPickContext {
   /** Seeded PRNG in [0, 1) for deterministic tests */
@@ -71,9 +71,9 @@ export function inFinishingZone(
   shot: { distance: number; angle: number },
   pressure: number,
 ): boolean {
-  if (shot.distance > 19) return false;
-  if (shot.angle > Math.PI * 0.4) return false;
-  if (pressure > 0.52) return false;
+  if (shot.distance > 20) return false;
+  if (shot.angle > Math.PI * 0.42) return false;
+  if (pressure > 0.58) return false;
   const inAttThird = attackDir === 1 ? carrier.x > FIELD_LENGTH * 0.58 : carrier.x < FIELD_LENGTH * 0.42;
   return inAttThird;
 }
@@ -85,21 +85,24 @@ function shotTierScore(
   rng: () => number,
 ): number {
   return (
-    shot.xG * 4.2
-    + (1 - pressure) * 1.1
-    + (mentality / 100) * 0.18
+    shot.xG * 5.1
+    + (1 - pressure) * 1.15
+    + (mentality / 100) * 0.22
     + (rng() - 0.5) * 0.035
   );
 }
 
-const SHOOT_TIER_MIN = 0.62;
+const SHOOT_TIER_MIN = 0.54;
 
 function progressiveUtility(opt: PassOption, mentality: number, risk: number, rng: () => number): number {
   const safety = opt.successProb * 0.55 + Math.min(opt.spaceAtTarget, 14) / 14 * 0.45;
+  const towardGoal01 = 1 - Math.min(opt.distToOppGoal / 52, 1);
   const progression =
     opt.progressionGain * 0.95
     + (opt.linesBroken > 0 ? 0.22 : 0)
-    + (opt.isForward ? 0.18 : -0.04);
+    + (opt.isForward ? 0.18 : -0.04)
+    + opt.threatDepth01 * 1.18
+    + towardGoal01 * 0.42;
   const coherence = (mentality / 100) * risk * (opt.isForward ? 0.35 : 0.08);
   return safety * W_SAFETY + progression * W_PROGRESS + coherence * W_COHERENCE + (rng() - 0.5) * 0.028;
 }

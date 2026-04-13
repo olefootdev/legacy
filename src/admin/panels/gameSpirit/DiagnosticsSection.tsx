@@ -98,7 +98,7 @@ export function DiagnosticsSection() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="ole-scroll-x rounded-xl border border-white/10">
         <table className="w-full min-w-[640px] text-left text-xs">
           <thead className="border-b border-white/10 bg-white/[0.04] text-[10px] font-bold uppercase tracking-wider text-white/45">
             <tr>

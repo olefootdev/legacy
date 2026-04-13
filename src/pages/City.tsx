@@ -312,9 +312,11 @@ export function City() {
             : 'Abre o olheiro da categoria de base.';
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h2 className="text-4xl font-display font-black italic uppercase tracking-wider">Cidade do Clube</h2>
+    <div className="mx-auto min-w-0 max-w-6xl space-y-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-display text-2xl font-black italic uppercase tracking-wider sm:text-3xl md:text-4xl">
+          Cidade do Clube
+        </h2>
         <div className="text-right space-y-1">
           <div className="text-neon-yellow font-display font-black text-xl">{formatExp(finance.ole)} EXP</div>
           <div className="text-sm text-white font-display font-bold">{formatBroFromCents(finance.broCents)}</div>
@@ -322,7 +324,7 @@ export function City() {
         </div>
       </div>
 
-      <div className="sports-panel p-8 relative overflow-hidden bg-black/80">
+      <div className="sports-panel relative overflow-hidden bg-black/80 p-4 sm:p-6 md:p-8">
         <div
           className="absolute inset-0 opacity-10 pointer-events-none"
           style={{
@@ -332,7 +334,7 @@ export function City() {
           }}
         />
 
-        <div className="relative z-10 grid grid-cols-3 grid-rows-3 gap-4 md:gap-8 w-full max-w-4xl mx-auto aspect-square md:aspect-[16/9]">
+        <div className="relative z-10 mx-auto grid aspect-square w-full min-w-0 max-w-4xl grid-cols-3 grid-rows-3 gap-2 sm:gap-4 md:aspect-[16/9] md:gap-8">
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ strokeDasharray: '8 8' }}>
             <line x1="50%" y1="50%" x2="16.6%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
             <line x1="50%" y1="50%" x2="83.3%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
@@ -365,9 +367,17 @@ export function City() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={cn('sports-panel p-0 overflow-hidden border-2 transition-colors duration-500', selected.border)}
+            className={cn(
+              'sports-panel max-h-[min(88dvh,calc(100dvh-9rem))] overflow-x-hidden overflow-y-auto border-2 p-0 transition-colors duration-500 sm:max-h-none sm:overflow-y-visible',
+              selected.border,
+            )}
           >
-            <div className={cn('p-6 border-b border-white/10 flex justify-between items-center relative overflow-hidden', selected.bg)}>
+            <div
+              className={cn(
+                'relative flex items-center justify-between overflow-hidden border-b border-white/10 p-4 sm:p-6',
+                selected.bg,
+              )}
+            >
               <GameBannerBackdrop slot={STRUCTURE_TO_BANNER_SLOT[selected.structureId]} className="z-0" />
               <div
                 className="pointer-events-none absolute inset-0 z-[1] opacity-30 mix-blend-overlay"
@@ -385,7 +395,7 @@ export function City() {
               <selected.icon className={cn('w-20 h-20 opacity-20 absolute right-6 -bottom-4 rotate-12', selected.color)} />
             </div>
 
-            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-dark-gray">
+            <div className="grid grid-cols-1 gap-4 bg-dark-gray p-4 sm:gap-6 sm:p-6 md:grid-cols-3">
               <div className="space-y-4">
                 <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
                   <Activity className="w-4 h-4" /> Status atual
@@ -475,7 +485,7 @@ export function City() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
             onClick={() => setQuickPendingId(null)}
             role="presentation"
           >
@@ -484,41 +494,41 @@ export function City() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-dark-gray border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col"
+              className="my-auto flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-5rem))] sm:max-h-[min(92dvh,720px)]"
               role="dialog"
               aria-modal="true"
               aria-labelledby="city-quick-confirm-title"
             >
-              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
+              <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-black/40 p-4">
                 <h3
                   id="city-quick-confirm-title"
-                  className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white pr-2"
+                  className="pr-2 font-display text-sm font-black uppercase tracking-wider text-white md:text-base"
                 >
                   Confirmar ação rápida
                 </h3>
                 <button
                   type="button"
                   onClick={() => setQuickPendingId(null)}
-                  className="text-gray-400 hover:text-white transition-colors p-1 shrink-0"
+                  className="shrink-0 p-1 text-gray-400 transition-colors hover:text-white"
                   aria-label="Fechar"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-5 space-y-4">
-                <p className="font-display font-bold text-lg text-white leading-snug">{quickConfirmCopy.title}</p>
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-5">
+                <p className="font-display text-lg font-bold leading-snug text-white">{quickConfirmCopy.title}</p>
                 {quickConfirmCopy.costExpLine && (
-                  <p className="text-neon-yellow font-display font-black text-xl tracking-tight">
+                  <p className="font-display text-xl font-black tracking-tight text-neon-yellow">
                     {quickConfirmCopy.costExpLine}
                   </p>
                 )}
-                <ul className="text-sm text-gray-300 space-y-2 list-disc pl-4">
+                <ul className="list-disc space-y-2 pl-4 text-sm leading-relaxed text-gray-300">
                   {quickConfirmCopy.lines.map((line, i) => (
                     <li key={i}>{line}</li>
                   ))}
                 </ul>
               </div>
-              <div className="p-4 border-t border-white/10 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end bg-black/30">
+              <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-white/10 bg-black/30 p-4 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setQuickPendingId(null)}
@@ -570,8 +580,8 @@ function StructureNode({
       type="button"
       onClick={() => onSelect(struct)}
       className={cn(
-        'relative group flex flex-col items-center gap-3 transition-all duration-300',
-        isSelected ? 'scale-110 z-20' : 'hover:scale-105 opacity-60 hover:opacity-100 z-10',
+        'relative z-10 flex flex-col items-center gap-2 transition-all duration-300 sm:gap-3',
+        isSelected ? 'z-20 scale-105 sm:scale-110' : 'opacity-60 hover:z-20 hover:scale-[1.03] hover:opacity-100 sm:hover:scale-105',
       )}
     >
       {isSelected && (

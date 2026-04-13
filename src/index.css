@@ -12,8 +12,11 @@
 }
 
 @layer utilities {
+  /* Sem overflow-y: hidden — cortava botões com -skew, hovers e texto longo em painéis estreitos. */
   .sports-panel {
-    @apply bg-panel border border-white/5 relative overflow-hidden;
+    @apply bg-panel border border-white/5 relative;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
   .panel-accent {
     @apply border-l-4 border-l-neon-yellow;
@@ -40,6 +43,14 @@
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  /** Tabelas / carris largos: scroll horizontal contido (não empurra o layout). */
+  .ole-scroll-x {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .momentum-bar-goal-flash {
     animation: momentum-goal-flash 2s ease-in-out;
@@ -72,9 +83,31 @@
   }
 }
 
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+#root {
+  min-height: 100dvh;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   @apply bg-deep-black text-white font-sans antialiased overflow-x-hidden;
   background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #090909 70%);
+}
+
+/* Evita que media e gráficos estourem o eixo X em qualquer página */
+@layer base {
+  img,
+  video,
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 /* Preferência “reduzir movimento” (Config ou sistema) */

@@ -162,6 +162,18 @@ function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
+/**
+ * 0–1: quanto o estilo normalizado favorece circulação e retenção (triangulação, menos vertical direto).
+ * Usa os eixos já persistidos pelo manager: `buildUp` alto = jogo mais direto/long; `compactness` alto = bloco curto.
+ */
+export function possessionAffinity01(style: NormalizedTacticalStyle): number {
+  const antiDirect = 1 - style.buildUp;
+  const tight = style.compactness;
+  const patient = 1 - style.velocidade;
+  const recycle = 1 - style.verticality * 0.65;
+  return clamp01(antiDirect * 0.36 + tight * 0.3 + patient * 0.18 + recycle * 0.16);
+}
+
 export function totalStylePoints(style: Partial<TeamTacticalStyle> | undefined): number {
   if (!style) return 0;
   return STYLE_AXIS_KEYS.reduce((acc, k) => acc + Math.max(0, Math.round(Number(style[k]) || 0)), 0);
@@ -314,37 +326,69 @@ export function styleActionBias(
   zoneTags?: readonly string[],
 ): number {
   const style = normalizeStyle(styleInput as TeamTacticalStyle);
+  const posAff = possessionAffinity01(style);
   const wingZone = !!zoneTags?.some((z) => z.includes('wing') || z.includes('wide') || z.includes('lateral'));
   const boxZone = !!zoneTags?.some((z) => z.includes('box') || z.includes('area'));
   const ownBox = !!zoneTags?.some((z) => z === 'own_box');
   const middle = !!zoneTags?.some((z) => z.includes('middle') || z === 'middle_third');
+  const attThird = !!zoneTags?.some((z) => z.includes('attacking_third') || z === 'att_third');
 
   switch (action) {
     case 'pass_safe':
-      return (1 - style.buildUp) * 0.32 + (1 - style.verticality) * 0.24 + (1 - style.riskTaking) * 0.2;
+      return (
+        (1 - style.buildUp) * 0.32
+        + (1 - style.verticality) * 0.24
+        + (1 - style.riskTaking) * 0.2
+        + style.compactness * 0.14
+        + (1 - style.velocidade) * 0.08
+        + posAff * 0.22
+      );
     case 'pass_progressive':
       return (
         style.verticality * 0.3 +
         style.riskTaking * 0.22 +
         (1 - style.buildUp) * 0.08 +
         style.velocidade * 0.18
+        - posAff * (attThird || boxZone ? 0.04 : 0.14)
       );
     case 'pass_long':
-      return style.buildUp * 0.38 + style.verticality * 0.18 + style.riskTaking * 0.14 + style.velocidade * 0.12;
+      return (
+        style.buildUp * 0.38
+        + style.verticality * 0.18
+        + style.riskTaking * 0.14
+        + style.velocidade * 0.12
+        - posAff * 0.26
+      );
     case 'cross':
       if (!wingZone) return -0.22;
-      return style.chanceCreation * 0.46 + style.width * 0.3;
+      return style.chanceCreation * 0.46 + style.width * 0.3 - posAff * 0.08;
     case 'dribble':
-      return style.verticality * 0.16 + style.riskTaking * 0.26 + style.velocidade * 0.22;
+      return (
+        style.verticality * 0.16
+        + style.riskTaking * 0.26
+        + style.velocidade * 0.22
+        - posAff * (boxZone ? 0.05 : 0.12)
+      );
     case 'shoot': {
       const insideBoxPriority = 1 - style.shootingProfile;
       if (!boxZone && insideBoxPriority > 0.55 && !middle) return -0.24;
-      return style.shootingProfile * 0.24 + style.riskTaking * 0.2 + (boxZone ? insideBoxPriority * 0.14 : 0);
+      return (
+        style.shootingProfile * 0.24
+        + style.riskTaking * 0.2
+        + (boxZone ? insideBoxPriority * 0.14 : 0)
+        - (!boxZone ? posAff * 0.1 : 0)
+      );
     }
     case 'clearance':
-      return ownBox ? 0.42 : style.buildUp * 0.22;
+      return (ownBox ? 0.42 : style.buildUp * 0.22) - (!ownBox ? posAff * 0.14 : 0);
     case 'hold':
-      return (1 - style.verticality) * 0.24 + (1 - style.riskTaking) * 0.18 + (1 - style.velocidade) * 0.12;
+      return (
+        (1 - style.verticality) * 0.24
+        + (1 - style.riskTaking) * 0.18
+        + (1 - style.velocidade) * 0.12
+        + style.compactness * 0.1
+        + posAff * 0.16
+      );
     default:
       return 0;
   }

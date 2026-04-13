@@ -257,9 +257,9 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
   },
   {
     id: 'pipeline',
-    title: 'Integração causal & 3D',
+    title: 'Integração causal & partida ao vivo',
     lead:
-      'Eventos append-only em match/causal; MatchBabylonLayer documenta fusão SIM_SYNC + roteiro. Modo Supabase live pode não usar GameSpirit para placar — ver SUPABASE.md.',
+      'Eventos append-only em match/causal; partida ao vivo MVP em `Live2dMatchShell` (test2d + SIM_SYNC + coreografia). Modo Supabase pode não usar GameSpirit para placar — ver SUPABASE.md.',
     modules: [
       {
         file: 'src/match/causal/matchCausalTypes.ts',
@@ -267,9 +267,9 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
         blurb: 'Importa BallZone do GameSpirit.',
       },
       {
-        file: 'src/components/MatchBabylonLayer.tsx',
-        title: 'Babylon',
-        blurb: 'Camada 3D alimentada por beats / estado sincronizado.',
+        file: 'src/pages/Live2dMatchShell.tsx',
+        title: 'Partida ao vivo 2D',
+        blurb: 'Campo 2D, TacticalSimLoop e commits de coreografia causal.',
       },
       {
         file: 'docs/SUPABASE.md',

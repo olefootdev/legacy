@@ -43,10 +43,15 @@ export const REFERRAL_ELIGIBLE_SOURCES: readonly string[] = [
 // GameAssetsTreasury (GAT)
 // ---------------------------------------------------------------------------
 
-export const GAT_DAILY_RATE = 0.00275;
+/** 1% da base (BRO em centavos) por nível de referral, pago em EXP / dia (níveis 1–3). */
+export const GAT_REFERRAL_LEVEL_RATE = 0.01;
 
 /** Duração do reward em meses */
 export const GAT_DURATION_MONTHS = 24;
+
+/** Texto das faixas de taxa diária em EXP (% sobre a base em BRO). */
+export const GAT_TIER_SUMMARY_PT =
+  '1–100 BRO: 1,5%/dia · 101–300: 2,5% · 301–999: 3,5% · ≥1000 BRO: 5,5% (tudo em EXP). Referral GAT: 1%/nível (até 3) em EXP.';
 
 /** Categorias de gasto que geram base elegível para GAT */
 export const GAT_ELIGIBLE_CATEGORIES: readonly GatCategory[] = [

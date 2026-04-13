@@ -38,6 +38,28 @@ function seedState(): SportsDataState {
   return { version: 1, leagues: seedData.leagues as SportsLeague[] };
 }
 
+function enrichWithSeedLogos(stored: SportsDataState): SportsDataState {
+  const seed = seedState();
+  const seedLogoMap = new Map<string, string>();
+  for (const league of seed.leagues) {
+    for (const club of league.clubs) {
+      if (club.logo_url) seedLogoMap.set(club.id, club.logo_url);
+    }
+  }
+  if (seedLogoMap.size === 0) return stored;
+  let patched = false;
+  const leagues = stored.leagues.map((league) => {
+    const clubs = league.clubs.map((club) => {
+      const seedLogo = seedLogoMap.get(club.id);
+      if (!seedLogo || club.logo_url === seedLogo) return club;
+      patched = true;
+      return { ...club, logo_url: seedLogo };
+    });
+    return clubs === league.clubs ? league : { ...league, clubs };
+  });
+  return patched ? { ...stored, leagues } : stored;
+}
+
 function loadState(): SportsDataState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -52,7 +74,9 @@ function loadState(): SportsDataState {
       saveState(seeded);
       return seeded;
     }
-    return parsed;
+    const enriched = enrichWithSeedLogos(parsed);
+    if (enriched !== parsed) saveState(enriched);
+    return enriched;
   } catch {
     return seedState();
   }

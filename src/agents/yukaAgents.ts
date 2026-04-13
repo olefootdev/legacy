@@ -102,6 +102,15 @@ export function applySteeringForPhase(
 
   binding.obstacle.weight = 0.32;
 
+  // Guarda-redes: sem perseguição à bola através do campo — só chega com arrive ao alvo seguro.
+  if (binding.role === 'gk' || binding.slotId === 'gol') {
+    binding.pursuit.weight = 0;
+    binding.wander.weight = 0;
+    binding.arrive.weight = mode === 'reforming' ? 1.35 : 1;
+    binding.separation.weight = mode === 'reforming' ? 0.4 : 0.95;
+    return;
+  }
+
   // ATTACKING: team with ball — ZERO pursuit, strong separation to maintain shape
   if (teamHasBall) {
     binding.pursuit.weight = 0;
@@ -111,26 +120,40 @@ export function applySteeringForPhase(
     return;
   }
 
-  // DEFENDING: team without ball — pursuit the ball carrier to press
-  if (mode === 'pressing' && distToBall < 24) {
-    binding.pursuit.weight = 0.48;
-    binding.wander.weight = 0;
-    binding.arrive.weight = 0.72;
-    binding.separation.weight = 0.95;
-    return;
+  const forwardLine = binding.slotId === 'ata' || binding.slotId === 'pe' || binding.slotId === 'pd';
+
+  // DEFENDING: pressing — rampa por distância para não pôr meia-equipa em pursuit forte à volta da bola.
+  if (mode === 'pressing' && distToBall < 22) {
+    let press01 = 1;
+    if (distToBall > 12) {
+      press01 = Math.max(0, 1 - (distToBall - 12) / 10);
+    }
+    if (press01 >= 0.04) {
+      let pw = 0.46 * press01;
+      let aw = 0.74 + (1 - press01) * 0.16;
+      if (forwardLine) {
+        pw *= 0.52;
+        aw = Math.min(0.95, aw + 0.1);
+      }
+      binding.pursuit.weight = pw;
+      binding.wander.weight = 0;
+      binding.arrive.weight = aw;
+      binding.separation.weight = forwardLine ? 1.06 : 1.02;
+      return;
+    }
   }
 
   if (distToBall < 13) {
-    binding.pursuit.weight = 0.28;
+    binding.pursuit.weight = forwardLine ? 0.11 : 0.28;
   } else if (distToBall < 22) {
-    binding.pursuit.weight = 0.12;
+    binding.pursuit.weight = forwardLine ? 0.05 : 0.12;
   } else {
     binding.pursuit.weight = 0;
   }
 
   binding.wander.weight = distToBall > 26 ? 0.05 : 0.025;
-  binding.arrive.weight = 1;
-  binding.separation.weight = 0.88;
+  binding.arrive.weight = forwardLine ? 1.06 : 1;
+  binding.separation.weight = forwardLine ? 0.94 : 0.88;
 }
 
 export function rebuildNeighbors(team: AgentBinding[]) {

@@ -8,6 +8,7 @@ import type {
   PlayerStrongFoot,
   TacticalZone,
 } from './types';
+import { countryCodeToFlagEmoji } from '@/lib/flagEmoji';
 
 function clamp(n: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, n));
@@ -48,6 +49,10 @@ export function defaultArchetypeForSeed(name: string): PlayerArchetype {
 /** Converte entidade → props que a UI de cards já espera (PAC/SHO/PAS + estilo visual) */
 export function playerToCardView(p: PlayerEntity, highlightOvr?: number) {
   const ovr = overallFromAttributes(p.attrs);
+  const countryRaw = p.country?.trim() ?? '';
+  const countryFlagEmoji = countryRaw
+    ? countryCodeToFlagEmoji(countryRaw) || '🌍'
+    : '';
   return {
     id: p.id,
     num: p.num,
@@ -61,6 +66,7 @@ export function playerToCardView(p: PlayerEntity, highlightOvr?: number) {
     fatigue: Math.round(p.fatigue),
     portraitUrl: p.portraitUrl,
     country: p.country,
+    countryFlagEmoji,
     strongFoot: p.strongFoot,
     creatorType: p.creatorType,
     rarity: p.rarity,
@@ -94,6 +100,10 @@ export function createPlayer(partial: {
   bio?: string;
   /** `false` = não listado; `true` = no mercado; omitir = legado sem flag */
   listedOnMarket?: boolean;
+  managerCreated?: boolean;
+  age?: number;
+  mintOverall?: number;
+  evolutionRate?: number;
 }): PlayerEntity {
   const base: PlayerAttributes = {
     passe: 72,
@@ -110,6 +120,11 @@ export function createPlayer(partial: {
   };
   const archetype = partial.archetype ?? defaultArchetypeForSeed(partial.name);
   const behavior: PlayerBehavior = partial.behavior ?? 'equilibrado';
+  const mintOvr = overallFromAttributes(base);
+  const evolutionRate =
+    partial.evolutionRate != null && Number.isFinite(partial.evolutionRate)
+      ? Math.min(3, Math.max(0.25, partial.evolutionRate))
+      : 1;
   const core: PlayerEntity = {
     id: partial.id,
     num: partial.num,
@@ -123,6 +138,8 @@ export function createPlayer(partial: {
     injuryRisk: partial.injuryRisk ?? 5,
     evolutionXp: partial.evolutionXp ?? 0,
     outForMatches: partial.outForMatches ?? 0,
+    mintOverall: partial.mintOverall != null && Number.isFinite(partial.mintOverall) ? Math.round(partial.mintOverall) : mintOvr,
+    evolutionRate,
   };
   return {
     ...core,
@@ -145,5 +162,9 @@ export function createPlayer(partial: {
       : {}),
     ...(partial.bio?.trim() ? { bio: partial.bio.trim() } : {}),
     ...(partial.listedOnMarket !== undefined ? { listedOnMarket: partial.listedOnMarket } : {}),
+    ...(partial.managerCreated ? { managerCreated: true } : {}),
+    ...(partial.age != null && Number.isFinite(partial.age)
+      ? { age: Math.max(16, Math.min(40, Math.round(partial.age))) }
+      : {}),
   };
 }

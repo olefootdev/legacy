@@ -18,8 +18,8 @@ matchRoutes.post('/matches', async (c) => {
   }>();
 
   const mode = body.mode;
-  if (!mode || !['live', 'quick', 'auto'].includes(mode)) {
-    return c.json({ error: 'mode must be live | quick | auto' }, 400);
+  if (!mode || !['quick', 'auto', 'test2d'].includes(mode)) {
+    return c.json({ error: 'mode must be quick | auto | test2d' }, 400);
   }
   if (!body.home_club_id) {
     return c.json({ error: 'home_club_id is required' }, 400);

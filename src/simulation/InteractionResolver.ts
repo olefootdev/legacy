@@ -48,6 +48,18 @@ export interface PassOption {
   spaceAtTarget: number;
   /** Approximate number of opponent lines this pass bypasses */
   linesBroken: number;
+  /**
+   * 0 = na linha do próprio golo (eixo X), 1 = na linha do golo adversário.
+   * Usado para priorizar passes que colocam o colega mais perto da finalização.
+   */
+  threatDepth01: number;
+  /** Distância (m) do alvo ao centro da baliza adversária */
+  distToOppGoal: number;
+  /**
+   * 0 = muitos colegas perto do alvo, 1 = setor mais desocupado.
+   * Reflete treino de “passe para espaços vazios” (organização ofensiva).
+   */
+  sectorVacancy01: number;
 }
 
 export interface ShotChance {
@@ -68,6 +80,42 @@ export function nearestOpponentPressure01(self: AgentSnapshot, opponents: AgentS
   return Math.max(0, Math.min(1, (4.8 - minD) / 4.8));
 }
 
+/** Profundidade no eixo de ataque: 0 na própria linha de fundo, 1 na linha adversária. */
+export function passTargetThreatDepth01(targetX: number, attackDir: 1 | -1): number {
+  const along = attackDir === 1 ? targetX : FIELD_LENGTH - targetX;
+  return Math.max(0, Math.min(1, along / FIELD_LENGTH));
+}
+
+/**
+ * Prioriza passes que mantêm segurança mínima mas favorecem colegas mais perto do golo adversário.
+ * Usado em `findPassOptions` e nas camadas de decisão (progressivo / instinct).
+ */
+export function passOptionAttackBuildUpScore(o: PassOption): number {
+  const safetyPenalty =
+    o.successProb < 0.32 ? -0.55
+    : o.successProb < 0.4 ? -0.18
+      : 0;
+  const vacancy = o.sectorVacancy01 ?? 0.5;
+  /** Penetração: linha ultrapassada + profundidade — “correr às costas” (E. Barros). */
+  const penetrationBonus =
+    o.linesBroken >= 1 && o.threatDepth01 > 0.52 ? 0.055 + Math.min(o.linesBroken, 3) * 0.012
+    : o.linesBroken >= 1 ? 0.028
+      : 0;
+  /** Quanto mais perto da baliza adversária está o alvo, mais vale o passe. */
+  const nearOppGoal01 = 1 - Math.min(o.distToOppGoal / 54, 1);
+  return (
+    safetyPenalty
+    + o.successProb * 0.33
+    + o.threatDepth01 * 0.46
+    + nearOppGoal01 * 0.2
+    + Math.min(o.spaceAtTarget, 14) / 14 * 0.13
+    + o.progressionGain * 0.1
+    + (o.isForward ? 0.08 : 0)
+    + vacancy * 0.11
+    + penetrationBonus
+  );
+}
+
 /** Find all viable pass targets for a carrier. */
 export function findPassOptions(
   carrier: AgentSnapshot,
@@ -79,6 +127,8 @@ export function findPassOptions(
   const pc = carrier.passeCurto / 100;
   const pl = carrier.passeLongo / 100;
   const cr = carrier.cruzamento / 100;
+  const goalX = attackDir === 1 ? FIELD_LENGTH : 0;
+  const goalZ = FIELD_WIDTH / 2;
 
   for (const t of teammates) {
     if (t.id === carrier.id) continue;
@@ -119,14 +169,27 @@ export function findPassOptions(
     if (wideLane) prob += cr * 0.06;
     prob = Math.max(0.12, Math.min(0.96, prob));
 
+    const threatDepth01 = passTargetThreatDepth01(t.x, attackDir);
+    const distToOppGoal = Math.hypot(goalX - t.x, goalZ - t.z);
+
+    let teammatesNearTarget = 0;
+    for (const tm of teammates) {
+      if (tm.id === t.id) continue;
+      if (Math.hypot(tm.x - t.x, tm.z - t.z) < 12) teammatesNearTarget++;
+    }
+    const sectorVacancy01 = Math.max(0, Math.min(1, 1 - teammatesNearTarget * 0.24));
+
     options.push({
       targetId: t.id, targetX: t.x, targetZ: t.z, distance: dist,
       successProb: prob, isForward, isLong,
       progressionGain, spaceAtTarget, linesBroken,
+      threatDepth01,
+      distToOppGoal,
+      sectorVacancy01,
     });
   }
 
-  return options.sort((a, b) => b.successProb - a.successProb);
+  return options.sort((a, b) => passOptionAttackBuildUpScore(b) - passOptionAttackBuildUpScore(a));
 }
 
 /** Calculate shot xG for a carrier. */
@@ -150,7 +213,8 @@ export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponent
   for (const o of opponents) {
     if (Math.hypot(o.x - carrier.x, o.z - carrier.z) < 4) nearOppCount++;
   }
-  xG -= nearOppCount * 0.028;
+  const crowdPen = dist < 16 ? 0.021 : 0.026;
+  xG -= nearOppCount * crowdPen;
 
   const press = nearestOpponentPressure01(carrier, opponents);
   const confRun = carrier.confidenceRuntime ?? 1;
@@ -172,8 +236,11 @@ export function resolveTackle(
   rng: RngDraw = rngFromMathRandom(),
 ): boolean {
   if (dist > 2.5) return false;
-  const defPower = defender.marcacao / 100 + defender.fisico / 100 * 0.32;
-  const carrPower = carrier.drible / 100 + carrier.velocidade / 100 * 0.22;
+  const defPower =
+    defender.marcacao / 100
+    + defender.fisico / 100 * 0.32
+    + defender.velocidade / 100 * 0.16;
+  const carrPower = carrier.drible / 100 + carrier.velocidade / 100 * 0.26;
   let base = 0.2 + (defPower - carrPower) * 0.36;
   const fp = defender.fairPlay / 100;
   base += (0.55 - fp) * FAIRPLAY_FOUL_BIAS * 0.5;

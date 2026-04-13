@@ -1,6 +1,15 @@
-import type { CardCollection } from '@/entities/types';
-import type { OlefootGameState } from './types';
+import type { CardCollection, ClubEntity } from '@/entities/types';
+import type {
+  ManagerProspectArtRequest,
+  ManagerProspectConfig,
+  ManagerProspectMarketState,
+  OlefootGameState,
+  PlayerCreationStep,
+} from './types';
+import type { ManagerProspectHeritageBrief, ManagerProspectPortraitStyleRegion } from '@/entities/managerProspect';
+import { buildNpcManagerProspectSnapshot, PORTRAIT_STYLE_REGION_LABELS } from '@/entities/managerProspect';
 import { createInitialGameState } from './initialState';
+import { normalizeFixture } from '@/entities/team';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { createInitialWalletState, normalizeWalletState } from '@/wallet/initial';
 import { createInitialLeagueSeason } from '@/match/leagueSeason';
@@ -10,6 +19,7 @@ import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
 import type { SocialState } from '@/social/types';
 import { pickHomeCaptainPlayerId } from '@/match/impactRules';
+import { clampPlayerToEvolutionCap, ensureMintOverall } from '@/entities/playerEvolution';
 import { filterLegacyPlacarFromInbox, hydrateInboxList } from './inboxItem';
 import { createHomeInboxSeedExamples } from './homeInboxSeedExamples';
 import { inboxHasVisibleHomeFeedItem } from './inboxTypes';
@@ -17,8 +27,200 @@ import { mergeSwapKycIntoWallet } from '@/wallet/swapKycStorage';
 import { defaultUserSettings } from '@/settings/defaultUserSettings';
 import { createDefaultAdminLeagues, hydrateAdminLeagues } from '@/match/adminLeagues';
 import { hydrateUiBanners } from '@/ui/banners';
+import {
+  buildRoundRobinSchedule,
+  createEmptyLeagueScheduleState,
+  type LeagueScheduleState,
+  type ScheduledLeagueFixture,
+} from '@/match/leagueSchedule';
 
 const KEY = 'olefoot-game-v1';
+
+function hydrateManagerProspectMarket(
+  raw: ManagerProspectMarketState | undefined,
+  base: ManagerProspectMarketState,
+): ManagerProspectMarketState {
+  const ownRaw = raw?.ownListings;
+  const ownListings = Array.isArray(ownRaw)
+    ? ownRaw.filter(
+        (l) =>
+          l &&
+          typeof l === 'object' &&
+          typeof (l as { listingId?: string }).listingId === 'string' &&
+          typeof (l as { playerId?: string }).playerId === 'string' &&
+          typeof (l as { priceExp?: number }).priceExp === 'number',
+      )
+    : base.ownListings;
+  const npcRaw = raw?.npcOffers;
+  let npcOffers = Array.isArray(npcRaw)
+    ? npcRaw.filter(
+        (o) =>
+          o &&
+          typeof o === 'object' &&
+          typeof (o as { listingId?: string }).listingId === 'string' &&
+          typeof (o as { priceExp?: number }).priceExp === 'number' &&
+          (o as { snapshot?: { id?: string } }).snapshot?.id,
+      )
+    : base.npcOffers;
+  if (!npcOffers.length) {
+    const seed = 'hydrate';
+    npcOffers = Array.from({ length: 5 }, (_, i) => ({
+      listingId: `npc_lst_${seed}_${i}`,
+      snapshot: buildNpcManagerProspectSnapshot(seed, i),
+      priceExp: 88_000 + ((i * 41_000) % 310_000),
+    }));
+  }
+  return { ownListings, npcOffers };
+}
+
+function hydrateManagerProspectConfig(
+  raw: ManagerProspectConfig | undefined,
+  base: ManagerProspectConfig,
+): ManagerProspectConfig {
+  const n =
+    raw && typeof raw.createCostExp === 'number' && Number.isFinite(raw.createCostExp)
+      ? Math.round(raw.createCostExp)
+      : base.createCostExp;
+  return { createCostExp: Math.max(0, Math.min(50_000_000, n)) };
+}
+
+const ATTR_KEYS: (keyof import('@/entities/types').PlayerAttributes)[] = [
+  'passe',
+  'marcacao',
+  'velocidade',
+  'drible',
+  'finalizacao',
+  'fisico',
+  'tatico',
+  'mentalidade',
+  'confianca',
+  'fairPlay',
+];
+
+function isFiniteAttrRecord(v: unknown): v is import('@/entities/types').PlayerAttributes {
+  if (!v || typeof v !== 'object') return false;
+  const o = v as Record<string, unknown>;
+  return ATTR_KEYS.every((k) => typeof o[k as string] === 'number' && Number.isFinite(o[k as string] as number));
+}
+
+const PLAYER_CREATION_STEPS: readonly PlayerCreationStep[] = [
+  'awaiting_photo',
+  'photo_uploaded',
+  'validated',
+  'approved',
+  'launched',
+];
+
+function isPlayerCreationStep(s: unknown): s is PlayerCreationStep {
+  return typeof s === 'string' && (PLAYER_CREATION_STEPS as readonly string[]).includes(s);
+}
+
+function isPortraitStyleRegion(s: unknown): s is ManagerProspectPortraitStyleRegion {
+  return typeof s === 'string' && s in PORTRAIT_STYLE_REGION_LABELS;
+}
+
+const LEGACY_HERITAGE: ManagerProspectHeritageBrief = {
+  portraitStyleRegion: 'americas_sul',
+  originTags: [],
+  originText: 'Pedido legado — completar nota de origem no Admin ou novo fluxo Academia.',
+};
+
+function hydrateHeritage(raw: unknown): ManagerProspectHeritageBrief {
+  if (!raw || typeof raw !== 'object') return { ...LEGACY_HERITAGE };
+  const h = raw as Record<string, unknown>;
+  const region = h.portraitStyleRegion;
+  const tagsRaw = h.originTags;
+  const tags = Array.isArray(tagsRaw)
+    ? tagsRaw.filter((t): t is string => typeof t === 'string' && t.trim().length > 0).map((t) => t.trim())
+    : [];
+  const text = typeof h.originText === 'string' ? h.originText.trim() : '';
+  if (!isPortraitStyleRegion(region) || text.length < 8) {
+    return { ...LEGACY_HERITAGE };
+  }
+  return { portraitStyleRegion: region, originTags: tags, originText: text };
+}
+
+function hydrateManagerProspectArtQueue(raw: unknown, cap = 200): ManagerProspectArtRequest[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ManagerProspectArtRequest[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const o = item as Record<string, unknown>;
+    if (typeof o.id !== 'string' || typeof o.playerId !== 'string') continue;
+    if (typeof o.createdAtIso !== 'string') continue;
+    if (typeof o.adminArtPrompt !== 'string') continue;
+    if (!isFiniteAttrRecord(o.attributesSnapshot)) continue;
+    const vb = o.visualBrief;
+    const visualBrief =
+      vb && typeof vb === 'object'
+        ? {
+            skinTone: typeof (vb as { skinTone?: unknown }).skinTone === 'string' ? (vb as { skinTone: string }).skinTone : undefined,
+            eyeColor: typeof (vb as { eyeColor?: unknown }).eyeColor === 'string' ? (vb as { eyeColor: string }).eyeColor : undefined,
+            hairStyle: typeof (vb as { hairStyle?: unknown }).hairStyle === 'string' ? (vb as { hairStyle: string }).hairStyle : undefined,
+            extraDetails:
+              typeof (vb as { extraDetails?: unknown }).extraDetails === 'string'
+                ? (vb as { extraDetails: string }).extraDetails
+                : undefined,
+          }
+        : undefined;
+    let playerCreationStep: PlayerCreationStep = 'awaiting_photo';
+    if (isPlayerCreationStep(o.playerCreationStep)) {
+      playerCreationStep = o.playerCreationStep;
+    } else if (o.status === 'fulfilled') {
+      playerCreationStep = 'launched';
+    } else if (o.status === 'pending') {
+      playerCreationStep = 'awaiting_photo';
+    }
+    const legacyStatus =
+      o.status === 'pending' || o.status === 'fulfilled' ? (o.status as 'pending' | 'fulfilled') : undefined;
+    const heritage = hydrateHeritage(o.heritage);
+    const draftPortraitUrl =
+      typeof o.draftPortraitUrl === 'string' && o.draftPortraitUrl.trim()
+        ? o.draftPortraitUrl.trim()
+        : o.draftPortraitUrl === null
+          ? null
+          : undefined;
+    out.push({
+      id: o.id,
+      playerId: o.playerId,
+      createdAtIso: o.createdAtIso,
+      playerCreationStep,
+      ...(legacyStatus ? { legacyStatus } : {}),
+      adminArtPrompt: o.adminArtPrompt,
+      attributesSnapshot: o.attributesSnapshot,
+      visualBrief,
+      heritage,
+      draftPortraitUrl,
+    });
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
+function hydrateLeagueSchedule(
+  raw: OlefootGameState,
+  adminLeagues: import('@/match/adminLeagues').AdminLeagueConfig[],
+  adminPrimaryLeagueId: string,
+  club: ClubEntity,
+): LeagueScheduleState {
+  const rawLs = raw.leagueSchedule as LeagueScheduleState | undefined;
+  const out: LeagueScheduleState = createEmptyLeagueScheduleState();
+  if (rawLs?.byLeagueId && typeof rawLs.byLeagueId === 'object') {
+    for (const [id, bucket] of Object.entries(rawLs.byLeagueId)) {
+      if (!bucket || typeof bucket !== 'object') continue;
+      const b = bucket as { fixtures?: unknown[]; updatedAtIso?: string };
+      out.byLeagueId[id] = {
+        fixtures: Array.isArray(b.fixtures) ? (b.fixtures as ScheduledLeagueFixture[]) : [],
+        updatedAtIso: typeof b.updatedAtIso === 'string' ? b.updatedAtIso : new Date().toISOString(),
+      };
+    }
+  }
+  const pl = adminLeagues.find((l) => l.id === adminPrimaryLeagueId);
+  if (pl?.format === 'round_robin' && !out.byLeagueId[pl.id]?.fixtures?.length) {
+    out.byLeagueId[pl.id] = buildRoundRobinSchedule(pl, club);
+  }
+  return out;
+}
 
 function hydrateCardCollections(
   raw: unknown,
@@ -42,10 +244,12 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   const base = createInitialGameState();
   const players: OlefootGameState['players'] = { ...base.players };
   for (const [id, p] of Object.entries(raw.players ?? {})) {
-    players[id] = {
-      ...p,
-      outForMatches: p.outForMatches ?? 0,
-    };
+    players[id] = clampPlayerToEvolutionCap(
+      ensureMintOverall({
+        ...p,
+        outForMatches: p.outForMatches ?? 0,
+      }),
+    );
   }
   const rawFsEarly = raw.manager?.formationScheme;
   const resolvedFormationScheme: FormationSchemeId =
@@ -67,7 +271,13 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       substitutionsUsed: liveMatch.substitutionsUsed ?? 0,
       travelKm: liveMatch.travelKm ?? 0,
       phase: liveMatch.phase ?? 'playing',
-      mode: (liveMatch as { mode?: string }).mode === 'fast' ? 'quick' : liveMatch.mode,
+      mode: (() => {
+        const m = (liveMatch as { mode?: string }).mode;
+        if (m === 'fast') return 'quick' as const;
+        if (m === 'live' || m === 'ultralive2d') return 'test2d' as const;
+        if (m === 'quick' || m === 'auto' || m === 'test2d') return m;
+        return 'test2d' as const;
+      })(),
       homeImpactLedger: liveMatch.homeImpactLedger ?? [],
       homeCaptainPlayerId:
         liveMatch.homeCaptainPlayerId ?? pickHomeCaptainPlayerId(liveMatch.homePlayers ?? []),
@@ -138,6 +348,14 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
 
   const cardCollections = hydrateCardCollections(raw.cardCollections, base.cardCollections ?? {});
 
+  const clubHydrated: ClubEntity = {
+    ...base.club,
+    ...(raw.club && typeof raw.club === 'object' ? raw.club : {}),
+  };
+  const leagueSchedule = hydrateLeagueSchedule(raw, adminLeagues, adminPrimaryLeagueId, clubHydrated);
+
+  const rawState = raw as OlefootGameState;
+
   return {
     ...base,
     ...raw,
@@ -147,6 +365,7 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
     finance,
     leagueSeason,
     manager,
+    nextFixture: normalizeFixture(rawState.nextFixture),
     lastWorldRealMs: raw.lastWorldRealMs ?? Date.now(),
     clubLogistics: raw.clubLogistics ?? base.clubLogistics,
     structures: raw.structures ?? base.structures,
@@ -155,6 +374,8 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       : base.memorableTrophyUnlockedIds,
     adminLeagues,
     adminPrimaryLeagueId,
+    leagueSchedule,
+    club: clubHydrated,
     social: hydrateSocial(raw.social),
     userSettings,
     inbox: (() => {
@@ -167,6 +388,17 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       return next;
     })(),
     uiBanners: hydrateUiBanners((raw as { uiBanners?: unknown }).uiBanners),
+    managerProspectMarket: hydrateManagerProspectMarket(
+      (raw as Partial<OlefootGameState>).managerProspectMarket,
+      base.managerProspectMarket,
+    ),
+    managerProspectConfig: hydrateManagerProspectConfig(
+      (raw as Partial<OlefootGameState>).managerProspectConfig,
+      base.managerProspectConfig,
+    ),
+    managerProspectArtQueue: hydrateManagerProspectArtQueue(
+      (raw as Partial<OlefootGameState>).managerProspectArtQueue,
+    ),
   };
 }
 

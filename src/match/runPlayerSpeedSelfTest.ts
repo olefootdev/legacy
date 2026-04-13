@@ -1,15 +1,17 @@
 /**
- * Locomotion tuning: attribute scaling, run cap vs walk reference, arrival time gap.
+ * Locomotion tuning: attribute scaling, jog/sprint tiers, arrival time gap.
  * Run: npx tsx src/match/runPlayerSpeedSelfTest.ts
  */
 import {
-  SPEED_RUN_BASE,
-  SPEED_RUN_MAX_MULT,
+  SPEED_JOG_MAX_MULT,
+  SPEED_SPRINT_MAX_MULT,
+  SPEED_WALK_MAX_MULT,
   V_MAX_ABSOLUTE,
-  blendWalkRunMaxSpeed,
+  blendThreeLocomotionCaps,
   clampVehicleMaxSpeed,
   fatigueSpeedMultiplier,
-  locomotionRunSpeed,
+  locomotionJogSpeed,
+  locomotionSprintSpeed,
   locomotionWalkSpeed,
   normalizeSpeedAttr01,
 } from './playerSpeedTuning';
@@ -36,54 +38,59 @@ function main() {
   const distance = 28;
   const fatigue = fatigueSpeedMultiplier(1, 1);
 
-  const vRunLow = locomotionRunSpeed(normalizeSpeedAttr01(12), fatigue);
-  const vRunHigh = locomotionRunSpeed(normalizeSpeedAttr01(96), fatigue);
-  assert(vRunHigh / vRunLow <= SPEED_RUN_MAX_MULT + 1e-9, 'run speed ratio should not exceed SPEED_RUN_MAX_MULT');
-
-  const baseRun = locomotionRunSpeed(0, 1);
-  const maxRun = locomotionRunSpeed(1, 1);
+  const vSprintLow = locomotionSprintSpeed(normalizeSpeedAttr01(12), fatigue);
+  const vSprintHigh = locomotionSprintSpeed(normalizeSpeedAttr01(96), fatigue);
   assert(
-    Math.abs(maxRun / baseRun - SPEED_RUN_MAX_MULT) < 1e-9,
-    `max attr run should be exactly ${SPEED_RUN_MAX_MULT}× base run`,
+    vSprintHigh / vSprintLow <= SPEED_SPRINT_MAX_MULT + 1e-9,
+    'sprint speed ratio should not exceed SPEED_SPRINT_MAX_MULT',
   );
+
+  const baseSprint = locomotionSprintSpeed(0, 1);
+  const maxSprint = locomotionSprintSpeed(1, 1);
   assert(
-    Math.abs(baseRun - SPEED_RUN_BASE) < 1e-9,
-    'zero-attr run should equal SPEED_RUN_BASE (fatigue 1)',
+    Math.abs(maxSprint / baseSprint - SPEED_SPRINT_MAX_MULT) < 1e-9,
+    `max attr sprint should be exactly ${SPEED_SPRINT_MAX_MULT}× base sprint`,
   );
 
   const walkLow = locomotionWalkSpeed(0, fatigue);
   const walkHigh = locomotionWalkSpeed(1, fatigue);
-  assert(walkHigh / walkLow <= 2 + 1e-9, 'walk mult cap is 2×');
+  assert(walkHigh / walkLow <= SPEED_WALK_MAX_MULT + 1e-9, 'walk mult cap matches SPEED_WALK_MAX_MULT');
 
-  const blendedSlow = blendWalkRunMaxSpeed(
+  const jogLow = locomotionJogSpeed(0, fatigue);
+  const jogHigh = locomotionJogSpeed(1, fatigue);
+  assert(jogHigh / jogLow <= SPEED_JOG_MAX_MULT + 1e-9, 'jog mult cap matches SPEED_JOG_MAX_MULT');
+
+  const blendedSlow = blendThreeLocomotionCaps(
     locomotionWalkSpeed(normalizeSpeedAttr01(8), fatigue),
-    locomotionRunSpeed(normalizeSpeedAttr01(8), fatigue),
+    locomotionJogSpeed(normalizeSpeedAttr01(8), fatigue),
+    locomotionSprintSpeed(normalizeSpeedAttr01(8), fatigue),
     1,
   );
-  const blendedFast = blendWalkRunMaxSpeed(
+  const blendedFast = blendThreeLocomotionCaps(
     locomotionWalkSpeed(normalizeSpeedAttr01(99), fatigue),
-    locomotionRunSpeed(normalizeSpeedAttr01(99), fatigue),
+    locomotionJogSpeed(normalizeSpeedAttr01(99), fatigue),
+    locomotionSprintSpeed(normalizeSpeedAttr01(99), fatigue),
     1,
   );
-  assert(blendedFast > blendedSlow, 'full-run blend: faster player should have higher cap');
+  assert(blendedFast > blendedSlow, 'full sprint effort: faster player should have higher cap');
   assert(
-    blendedFast / blendedSlow <= SPEED_RUN_MAX_MULT + 0.02,
-    'full-run blend ratio should not exceed configured run mult (same fatigue)',
+    blendedFast / blendedSlow >= 1.35,
+    'sprint cap gap between min/max pace should be visible in races',
   );
 
   const tSlow = timeToCover(distance, blendedSlow, dt);
   const tFast = timeToCover(distance, blendedFast, dt);
-  assert(tFast < tSlow - 0.25, 'faster attribute should reach same distance sooner (repro gap)');
+  assert(tFast < tSlow - 0.35, 'faster attribute should reach same distance sooner (repro gap)');
 
-  const rawMaxRun = SPEED_RUN_BASE * SPEED_RUN_MAX_MULT;
+  const rawMaxSprint = locomotionSprintSpeed(1, 1);
   assert(
-    clampVehicleMaxSpeed(rawMaxRun) <= V_MAX_ABSOLUTE + 1e-9,
-    'clamped run cap must respect V_MAX_ABSOLUTE',
+    clampVehicleMaxSpeed(rawMaxSprint) <= V_MAX_ABSOLUTE + 1e-9,
+    'clamped sprint cap must respect V_MAX_ABSOLUTE',
   );
 
   console.info(
     `[player-speed-selftest] OK distance=${distance}m tSlow=${tSlow.toFixed(3)}s tFast=${tFast.toFixed(3)}s ` +
-      `vRun(low/high)=${vRunLow.toFixed(2)}/${vRunHigh.toFixed(2)} cap=${V_MAX_ABSOLUTE}`,
+      `vSprint(low/high)=${vSprintLow.toFixed(2)}/${vSprintHigh.toFixed(2)} cap=${V_MAX_ABSOLUTE}`,
   );
 }
 

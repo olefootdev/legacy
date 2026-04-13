@@ -21,13 +21,23 @@ function fromLocalDepth(d: number, side: MatchTruthPlayer['side'], half: MatchHa
   return half === 1 ? FIELD_LENGTH - d : d;
 }
 
+function isForwardSlot(slotId: string | undefined): boolean {
+  return slotId === 'ata' || slotId === 'pe' || slotId === 'pd';
+}
+
+function isFullbackSlot(slotId: string | undefined): boolean {
+  return slotId === 'le' || slotId === 'ld';
+}
+
 /**
  * Anchors players to their role zone to maintain team structure.
  * Prevents defenders from pushing into the box, midfielders from
  * going too high, and keeps the team shaped — not a swarm.
+ *
+ * `slotId` (quando disponível) afinar: pontas/CA mais altos; laterais não sobem à linha de ataque.
  */
 export function clampTargetToRoleZone(
-  player: Pick<MatchTruthPlayer, 'role' | 'side'>,
+  player: Pick<MatchTruthPlayer, 'role' | 'side'> & { slotId?: string },
   rawX: number,
   rawZ: number,
   ctx: TacticalContext,
@@ -35,21 +45,33 @@ export function clampTargetToRoleZone(
   const half: MatchHalf = ctx.half ?? 1;
   let local = toLocalDepth(rawX, player.side, half);
   const defDepth = 12 + ctx.defensiveLineDepth * 0.15;
-  const attMin = FIELD_LENGTH * 0.42 + ctx.mentality * 0.12;
+  let attMin = FIELD_LENGTH * 0.42 + ctx.mentality * 0.12;
+  if (isForwardSlot(player.slotId)) {
+    attMin += 9;
+  }
 
   const defMax = defDepth + 15;
   const midMax = FIELD_LENGTH * 0.65;
   const midMin = defDepth - 2;
 
   if (player.role === 'gk') {
-    local = Math.min(local, 16);
+    local = Math.min(local, 14);
   } else if (player.role === 'def') {
-    local = Math.min(local, defMax);
+    let cap = defMax;
+    if (isFullbackSlot(player.slotId)) {
+      cap = Math.min(cap, defDepth + 22);
+    }
+    local = Math.min(local, cap);
   } else if (player.role === 'attack') {
     local = Math.max(local, attMin);
     local = Math.min(local, FIELD_LENGTH - 4);
   } else if (player.role === 'mid') {
-    local = Math.min(Math.max(local, midMin), midMax);
+    let lo = midMin;
+    let hi = midMax;
+    if (player.slotId === 'vol') {
+      hi = Math.min(FIELD_LENGTH * 0.72, hi + 6);
+    }
+    local = Math.min(Math.max(local, lo), hi);
   }
 
   const x = fromLocalDepth(local, player.side, half);

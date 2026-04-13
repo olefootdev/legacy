@@ -64,18 +64,21 @@ export function TeamTactics() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-display font-black uppercase tracking-wider flex items-center gap-2">
-            <Brain className="w-7 h-7 text-neon-yellow" />
+    <div className="mx-auto min-w-0 max-w-5xl space-y-6 pb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-display text-2xl font-black uppercase tracking-wider min-[390px]:text-3xl">
+            <Brain className="h-7 w-7 shrink-0 text-neon-yellow" />
             Meu Time / Tática
           </h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="mt-1 text-sm text-gray-400">
             Distribua <b>100 pontos</b> entre os 10 eixos. O motor usa a proporção de cada eixo nas decisões.
           </p>
         </div>
-        <Link to="/team" className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded text-sm font-bold flex items-center gap-2">
+        <Link
+          to="/team"
+          className="flex shrink-0 items-center gap-2 self-start rounded bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20 sm:self-auto"
+        >
           <ChevronLeft className="w-4 h-4" />
           Voltar
         </Link>

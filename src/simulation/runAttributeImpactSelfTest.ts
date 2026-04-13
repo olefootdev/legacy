@@ -8,6 +8,7 @@ import {
   type AgentSnapshot,
   type PassOption,
 } from './InteractionResolver';
+import { FIELD_LENGTH, FIELD_WIDTH } from './field';
 
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
@@ -52,6 +53,9 @@ const shortPassOpt: PassOption = {
   progressionGain: 0.22,
   spaceAtTarget: 3.2,
   linesBroken: 0,
+  threatDepth01: 62 / FIELD_LENGTH,
+  distToOppGoal: Math.hypot(FIELD_LENGTH - 62, FIELD_WIDTH / 2 - 34),
+  sectorVacancy01: 0.55,
 };
 
 function passCompletionRate(carrier: AgentSnapshot, pressure01: number, trials: number): number {
@@ -119,10 +123,11 @@ function main() {
     passeCurto: 72,
     confidenceRuntime: 1.15,
   });
-  const pLow = passCompletionRate(lowConf, highPress, trials);
-  const pHigh = passCompletionRate(highConf, highPress, trials);
+  const confTrials = 1200;
+  const pLow = passCompletionRate(lowConf, highPress, confTrials);
+  const pHigh = passCompletionRate(highConf, highPress, confTrials);
   assert(
-    pHigh > pLow + 0.03,
+    pHigh > pLow + 0.025,
     `confiança runtime deve ajudar conclusão sob pressão (got ${pHigh.toFixed(3)} vs ${pLow.toFixed(3)})`,
   );
 

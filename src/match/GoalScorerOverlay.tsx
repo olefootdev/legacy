@@ -14,17 +14,13 @@ export interface GoalScorerOverlayProps {
   awayShort: string;
   homeScore: number;
   awayScore: number;
+  /** Frase curta emocional sob o nome (substitui o antigo “Jogo posicional”). */
+  storyline?: string;
   goalBuildUp?: 'positional' | 'counter';
   /** Seed picsum (igual à partida rápida / Meu Time). */
   scorerPortraitSeed?: string;
   scorerCardStyle?: TeamCardVisualStyle;
   className?: string;
-}
-
-function buildUpLabel(buildUp: GoalScorerOverlayProps['goalBuildUp']): string {
-  if (buildUp === 'counter') return 'Contra-ataque';
-  if (buildUp === 'positional') return 'Jogo posicional';
-  return '';
 }
 
 /** Partida rápida: cartão de golo acima do placar (fluxo da página), um único fade vertical. */
@@ -37,13 +33,13 @@ export function GoalScorerOverlay({
   awayShort,
   homeScore,
   awayScore,
+  storyline,
   goalBuildUp,
   scorerPortraitSeed,
   scorerCardStyle = 'gray-400',
   className,
 }: GoalScorerOverlayProps) {
   const accent = side === 'home' ? 'text-neon-yellow' : 'text-white';
-  const sub = buildUpLabel(goalBuildUp);
   const dorsalBadge =
     scorerNumber != null && scorerNumber > 0 ? String(scorerNumber) : '—';
 
@@ -99,8 +95,24 @@ export function GoalScorerOverlay({
               >
                 {scorerName}
               </p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-gray-500">
-                {minute}&apos; {sub ? `· ${sub}` : ''}
+              <p className="mt-1.5 text-[13px] font-medium leading-snug text-gray-400 sm:text-sm">
+                <span className="font-display font-bold tabular-nums text-gray-500">{minute}&apos;</span>
+                {storyline ? (
+                  <>
+                    <span className="mx-1.5 text-gray-600">·</span>
+                    <span className="text-gray-300">{storyline}</span>
+                  </>
+                ) : goalBuildUp === 'counter' ? (
+                  <>
+                    <span className="mx-1.5 text-gray-600">·</span>
+                    <span className="text-gray-400">Contra-ataque</span>
+                  </>
+                ) : goalBuildUp === 'positional' ? (
+                  <>
+                    <span className="mx-1.5 text-gray-600">·</span>
+                    <span className="text-gray-400">Jogo posicional</span>
+                  </>
+                ) : null}
               </p>
             </div>
           </div>

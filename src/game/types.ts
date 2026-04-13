@@ -14,10 +14,16 @@ import type { InboxItem } from './inboxTypes';
 import type { ClubStructuresState, ClubStructureId } from '@/clubStructures/types';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import type { LeagueSeasonState } from '@/match/leagueSeason';
+import type { LeagueScheduleState } from '@/match/leagueSchedule';
 import type { AdminLeagueConfig } from '@/match/adminLeagues';
 import type { FormationSchemeId } from '@/match-engine/types';
 import type { SocialState } from '@/social/types';
 import type { BannerSlotId, UiBannerEntry, UiBannersState } from '@/ui/banners';
+import type {
+  ManagerProspectHeritageBrief,
+  ManagerProspectVisualBrief,
+} from '@/entities/managerProspect';
+import type { PlayerAttributes } from '@/entities/types';
 
 export interface SavedTacticPlan {
   id: string;
@@ -96,6 +102,58 @@ export interface StaffState {
   assignedCollective: Record<'defensivo' | 'criativo' | 'ataque', StaffRoleId[]>;
 }
 
+/** Anúncio EXP do teu prospect `managerCreated`. */
+export interface ManagerOwnListing {
+  listingId: string;
+  playerId: string;
+  priceExp: number;
+  listedAtIso: string;
+}
+
+/** Snapshot de prospect de outro manager (NPC) à venda por EXP. */
+export interface ManagerNpcMarketOffer {
+  listingId: string;
+  snapshot: PlayerEntity;
+  priceExp: number;
+}
+
+export interface ManagerProspectMarketState {
+  ownListings: ManagerOwnListing[];
+  npcOffers: ManagerNpcMarketOffer[];
+}
+
+/** Custo EXP da Academia OLE (configurável no Admin). */
+export interface ManagerProspectConfig {
+  createCostExp: number;
+}
+
+/** Passos do fluxo Admin «Player Creation» (Academia OLE → retrato → plantel). */
+export type PlayerCreationStep =
+  | 'awaiting_photo'
+  | 'photo_uploaded'
+  | 'validated'
+  | 'approved'
+  | 'launched';
+
+/**
+ * Demanda **Player Creation** (Academia OLE): jogador já existe no save; Admin cola retrato, valida, aprova e lança.
+ * Diferente de **Create player** (#create-player): wizard que minta carta do zero com GameSpirit.
+ */
+export interface ManagerProspectArtRequest {
+  id: string;
+  playerId: string;
+  createdAtIso: string;
+  playerCreationStep: PlayerCreationStep;
+  /** Saves antigos: `pending` | `fulfilled` antes de `playerCreationStep`. */
+  legacyStatus?: 'pending' | 'fulfilled';
+  adminArtPrompt: string;
+  attributesSnapshot: PlayerAttributes;
+  visualBrief?: ManagerProspectVisualBrief;
+  heritage: ManagerProspectHeritageBrief;
+  /** Rascunho do retrato (data URL ou https) antes de «Lançar». */
+  draftPortraitUrl?: string | null;
+}
+
 export interface OlefootGameState {
   version: 1;
   club: ClubEntity;
@@ -110,6 +168,8 @@ export interface OlefootGameState {
   results: PastResult[];
   /** Contagem simples da liga principal (persistida com cada FINALIZE_MATCH). */
   leagueSeason: LeagueSeasonState;
+  /** Calendário oficial (7 jogos/dia 09–21 de 2 em 2 h; treinos oficiais 10–22) por liga em pontos corridos. */
+  leagueSchedule: LeagueScheduleState;
   /** Ligas e tabelas configuráveis (Admin + persistência). */
   adminLeagues: AdminLeagueConfig[];
   /** Liga cujo cartão principal sincroniza estatísticas com `leagueSeason`. */
@@ -146,6 +206,11 @@ export interface OlefootGameState {
   userSettings: UserSettings;
   /** Banners por zona (Admin). */
   uiBanners: UiBannersState;
+  /** Academia OLE: listagens do plantel + ofertas NPC no mercado EXP. */
+  managerProspectMarket: ManagerProspectMarketState;
+  managerProspectConfig: ManagerProspectConfig;
+  /** Pedidos de retrato pendentes (prompt + atributos) para o fluxo Admin. */
+  managerProspectArtQueue: ManagerProspectArtRequest[];
 }
 
 export type GameAction =
@@ -158,6 +223,10 @@ export type GameAction =
   | { type: 'START_LIVE_MATCH'; mode: import('@/engine/types').MatchMode }
   | { type: 'BEGIN_PLAY_FROM_PREGAME' }
   | { type: 'TICK_MATCH_MINUTE' }
+  /** TESTE 2D: após coreografia bola (causal→visual), revela `deferredFeedEvent` no feed. */
+  | { type: 'COMMIT_TEST2D_VISUAL_BEAT_FEED' }
+  /** ultralive2d: idem com `ultralive2dStagedPlay`. */
+  | { type: 'COMMIT_ULTRALIVE2D_STAGED_FEED' }
   | { type: 'TICK_MATCH_BULK'; steps: number }
   | {
       type: 'SIM_SYNC';
@@ -179,11 +248,15 @@ export type GameAction =
       payload: { kind: 'penalty_advance' } | { kind: 'penalty_resolve'; rng?: number };
     }
   | { type: 'COACH_TECHNICAL_COMMAND'; text: string }
+  /** Partida ao vivo: troca dois titulares de posição (slot ↔ slot); atualiza `lineup` + `liveMatch.homePlayers`. */
+  | { type: 'LIVE_MATCH_SWAP_HOME_SLOTS'; slotA: string; slotB: string }
+  /** Partida ao vivo: muda esquema tático mantendo os 11 em campo; recalcula posições no snapshot. */
+  | { type: 'LIVE_MATCH_SET_FORMATION'; formationScheme: import('@/match-engine/types').FormationSchemeId }
   | { type: 'REGENERATE_LIVE_SECOND_HALF_STORY'; topPlayerImpactScore?: number }
   | { type: 'MATCH_SUBSTITUTE'; outPlayerId: string; inPlayerId: string }
   | { type: 'END_MATCH_TO_POST' }
   /** Desistência em partida rápida/automática: 0–5 para o visitante e fase pós-jogo. */
-  | { type: 'FORFEIT_MATCH'; mode: 'quick' | 'auto' }
+  | { type: 'FORFEIT_MATCH'; mode: 'quick' | 'auto' | 'test2d' }
   | { type: 'FINALIZE_MATCH' }
   | { type: 'MERGE_PLAYERS'; players: Record<string, PlayerEntity> }
   | { type: 'UPSERT_CARD_COLLECTION'; collection: CardCollection }
@@ -218,6 +291,8 @@ export type GameAction =
   | { type: 'WALLET_CLAIM_OLEXP'; positionId: string }
   | { type: 'WALLET_OLEXP_EARLY_TO_SPOT'; positionId: string }
   | { type: 'WALLET_SET_SPONSOR'; sponsorId: string }
+  /** Envio de SPOT BRO para outro utilizador pelo código de indicação (MVP cliente). */
+  | { type: 'WALLET_TRANSFER_BRO_BY_CODE'; recipientCode: string; amountCents: number }
   | { type: 'WALLET_ACCRUE_DAILY'; dateIso: string }
   | {
       type: 'WALLET_GAT_PURCHASE';
@@ -272,6 +347,12 @@ export type GameAction =
   | { type: 'ADMIN_SIMULATE_FIAT_WITHDRAWAL'; broCents: number; note?: string }
   /** Forçar KYC OLEXP no save (testes Admin). */
   | { type: 'ADMIN_SET_WALLET_KYC'; kycOlexpDone: boolean }
+  | { type: 'ADMIN_SET_MANAGER_PROSPECT_CONFIG'; createCostExp: number }
+  | { type: 'ADMIN_MARK_PROSPECT_ART_FULFILLED'; requestId: string }
+  | { type: 'ADMIN_PLAYER_CREATION_SET_PHOTO'; requestId: string; portraitUrl: string }
+  | { type: 'ADMIN_PLAYER_CREATION_VALIDATE'; requestId: string }
+  | { type: 'ADMIN_PLAYER_CREATION_APPROVE'; requestId: string }
+  | { type: 'ADMIN_PLAYER_CREATION_LAUNCH'; requestId: string }
   | { type: 'ADMIN_PATCH_PLAYER'; playerId: string; partial: Partial<import('@/entities/types').PlayerEntity> }
   | { type: 'ADMIN_REMOVE_PLAYER'; playerId: string }
   | {
@@ -302,4 +383,11 @@ export type GameAction =
     }
   | { type: 'ADMIN_CLEAR_TRAINING_PLANS' }
   | { type: 'ADMIN_PATCH_STAFF_ROLES'; roles: Partial<Record<StaffRoleId, number>> }
-  | { type: 'ADMIN_SET_UI_BANNER'; slot: BannerSlotId; entry: UiBannerEntry };
+  | { type: 'ADMIN_SET_UI_BANNER'; slot: BannerSlotId; entry: UiBannerEntry }
+  | {
+      type: 'CREATE_MANAGER_PROSPECT';
+      payload: import('@/entities/managerProspect').ManagerProspectCreatePayload;
+    }
+  | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
+  | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
+  | { type: 'BUY_MANAGER_NPC_OFFER'; listingId: string };

@@ -10,9 +10,11 @@ import type { OpponentStub } from '@/entities/types';
 import { cn } from '@/lib/utils';
 import { hashStringSeed } from '@/match/seededRng';
 import { computeAwayImpactsFromVirtualLedger, computeHomeImpactsFromLedger } from '@/match/impactLedger';
+import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
 import { GoalScorerOverlay } from '@/match/GoalScorerOverlay';
+import { pickGoalOverlayStoryline } from '@/match/goalOverlayNarration';
 import { GOAL_SCORER_OVERLAY_MS } from '@/gamespirit/spiritStateMachine';
 import {
   MatchdayVersusWithClock,
@@ -36,6 +38,11 @@ const QUICK_KICKOFF_COUNTDOWN_MS = 1000;
 const QUICK_KICKOFF_MESSAGE_MS = 1200;
 
 type QuickPreStartPhase = 'c3' | 'c2' | 'c1' | 'kickoff' | null;
+
+/** Só bloqueia efeitos da partida rápida para jogos 3D / auto explícitos; `mode` ausente = legado (tratar como quick). */
+function isBlockingNonQuickMatch(live: { mode?: string }): boolean {
+  return live.mode === 'auto';
+}
 
 /**
  * Relógio suave MM:SS — interpola entre ticks (cada tick = SECONDS_PER_TICK = 60s de jogo).
@@ -341,7 +348,7 @@ export function MatchQuick() {
   }, [live?.preGoalHint?.startedAtMs]);
 
   useEffect(() => {
-    if (!live || live.mode !== 'quick' || live.phase !== 'playing') return;
+    if (!live || isBlockingNonQuickMatch(live) || live.phase !== 'playing') return;
     if (preGoalActive) return;
     const top = live.events[0];
     if (!top || (top.kind !== 'goal_home' && top.kind !== 'goal_away')) return;
@@ -393,7 +400,7 @@ export function MatchQuick() {
   /** GameSpirit: overlay de golo/penálti — congela minutos e encadeia penálti. */
   useEffect(() => {
     const o = live?.spiritOverlay;
-    if (!live || live.mode !== 'quick' || live.phase !== 'playing' || !o) return;
+    if (!live || isBlockingNonQuickMatch(live) || live.phase !== 'playing' || !o) return;
     const until = o.startedAtMs + o.autoDismissMs;
     freezeUntilRef.current = Math.max(freezeUntilRef.current, until);
     if (o.kind === 'goal') {
@@ -433,7 +440,7 @@ export function MatchQuick() {
   }, [live?.events]);
 
   useEffect(() => {
-    if (!live || live.mode !== 'quick' || live.phase !== 'playing' || summary !== null) return;
+    if (!live || isBlockingNonQuickMatch(live) || live.phase !== 'playing' || summary !== null) return;
     const id = window.setInterval(() => {
       setFeedWindowStart((s) => {
         const evs = getGameState().liveMatch?.events ?? [];
@@ -452,7 +459,7 @@ export function MatchQuick() {
   }, [selected?.playerId]);
 
   useEffect(() => {
-    if (!live || live.mode !== 'quick') return;
+    if (!live || isBlockingNonQuickMatch(live)) return;
     if (live.phase !== 'postgame' || finalizedRef.current) return;
     finalizedRef.current = true;
     setSummary({
@@ -466,6 +473,12 @@ export function MatchQuick() {
     });
     dispatch({ type: 'FINALIZE_MATCH' });
   }, [live, dispatch]);
+
+  const squadReport = useMemo(
+    () => evaluateOfficialSquad(lineupIds, playersById),
+    [lineupIds, playersById],
+  );
+  const squadOkForMatch = squadReport.ok || isOfficialSquadGateRelaxedForTests();
 
   const maxOvr = useMemo(() => {
     const vals = Object.values(playersById);
@@ -519,6 +532,13 @@ export function MatchQuick() {
         scorerNumber = p.num;
       }
     }
+    const storyline = pickGoalOverlayStoryline({
+      scorerName,
+      minute: ev.minute,
+      goalBuildUp: ev.goalBuildUp,
+      side,
+      awayShort: live.awayShort,
+    });
     return {
       scorerName,
       scorerNumber,
@@ -529,6 +549,7 @@ export function MatchQuick() {
       homeScore: live.homeScore,
       awayScore: live.awayScore,
       goalBuildUp: ev.goalBuildUp,
+      storyline,
     };
   }, [live, pitch, awayRoster]);
 
@@ -627,7 +648,7 @@ export function MatchQuick() {
   };
 
   return (
-    <div className="w-full space-y-4 py-6 px-4 pb-24">
+    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-24 md:flex-none">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <Link to="/" className="text-xs font-bold text-gray-500 hover:text-neon-yellow">
           ← Home
@@ -646,6 +667,32 @@ export function MatchQuick() {
           </button>
         )}
       </div>
+
+      {showBoard && !live && (
+        <div className="glass-panel p-6 border border-white/10 space-y-3">
+          {!squadOkForMatch ? (
+            <>
+              <p className="font-display font-black text-sm uppercase tracking-wide text-amber-200">
+                Plantel incompleto
+              </p>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                São necessários 11 titulares disponíveis e pelo menos 5 no banco para entrar em campo.
+              </p>
+              {squadReport.reason ? (
+                <p className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-500">{squadReport.reason}</p>
+              ) : null}
+              <Link
+                to="/team"
+                className="inline-flex w-full justify-center rounded-xl bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wide text-black sm:w-auto"
+              >
+                Ajustar plantel
+              </Link>
+            </>
+          ) : (
+            <p className="py-8 text-center text-sm text-gray-400">A preparar a partida…</p>
+          )}
+        </div>
+      )}
 
       <AnimatePresence>
         {forfeitOpen && (
@@ -748,7 +795,7 @@ export function MatchQuick() {
             awayName={live.awayName}
             awaySeed={fixture.opponent.id}
             clock={matchClock}
-            rowClassName="text-sm"
+            rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
           />
           <div
             className={cn(
@@ -912,7 +959,6 @@ export function MatchQuick() {
                   side="home"
                   name={live.homeName ?? club.name}
                   className="text-xs text-neon-yellow"
-                  teamCrestSize="md"
                 />
                 <span className="text-[9px] text-gray-500 shrink-0">Casa</span>
               </div>
@@ -980,7 +1026,6 @@ export function MatchQuick() {
                   side="away"
                   name={live.awayName ?? fixture.opponent.name}
                   className="text-xs text-gray-300"
-                  teamCrestSize="md"
                 />
                 <span className="text-[9px] text-gray-500 shrink-0 text-right">Visitante (IA)</span>
               </div>

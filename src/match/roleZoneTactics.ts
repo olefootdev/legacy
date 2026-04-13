@@ -71,14 +71,15 @@ export function scoreActionZoneBias(tags: readonly string[], action: DecisionAct
     if (action === 'pass_progressive' || action === 'carry') w += 0.06;
   }
   if (inAttackingThird) {
-    if (action === 'shoot' || action === 'pass_progressive') w += 0.2;
-    if (action === 'pass_safe') w -= 0.05;
+    if (action === 'shoot' || action === 'pass_progressive') w += 0.28;
+    if (action === 'pass_safe') w -= 0.12;
   }
   if (set.has('half_space') || set.has('lane_left') || set.has('lane_right')) {
     if (action === 'cross' || action === 'dribble_risk') w += 0.12;
   }
   if (inOppBox) {
-    if (action === 'shoot') w += 0.22;
+    if (action === 'shoot') w += 0.38;
+    if (action === 'pass_safe') w -= 0.08;
   }
   return w;
 }

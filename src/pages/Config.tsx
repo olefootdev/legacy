@@ -207,7 +207,7 @@ export function Config() {
   const rowClass = 'px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/5 last:border-0';
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto pb-8">
+    <div className="mx-auto min-w-0 max-w-2xl space-y-8 pb-8">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3">
           <Settings className="w-8 h-8 text-neon-yellow" />
@@ -431,8 +431,8 @@ export function Config() {
                   Brasão do clube (matchday)
                 </span>
                 <p className="text-[10px] text-gray-500">
-                  PNG com fundo transparente. Aparece ao lado do nome do teu clube em jogos e na Home. Máx. ~384 px
-                  no maior lado.
+                  PNG com fundo transparente. No matchday e nas partidas, o escudo do time do coração (cadastro) vem
+                  primeiro; se não houver, usa-se este brasão. Máx. ~384 px no maior lado.
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/40">

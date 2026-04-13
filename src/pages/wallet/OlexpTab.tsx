@@ -8,7 +8,7 @@ import {
   Gift,
   ArrowLeftRight,
   FileText,
-  Wallet as WalletIconNav,
+
   Users,
   Gem,
   ChevronRight,
@@ -109,20 +109,17 @@ export function OlexpTab() {
   const yieldFootnote =
     'Yield creditado em dias úteis (seg–sex), sem capitalização sobre o principal em hold. Rendimentos passados não garantem resultados futuros.';
 
+  const refValueBro = ((ref.oleGameTotal + ref.nftTotal) / 100).toFixed(2);
+  const refValue =
+    ref.gatExpTotal > 0
+      ? `+${refValueBro} BRO · +${ref.gatExpTotal.toLocaleString('pt-BR')} EXP GAT`
+      : `+${refValueBro} BRO`;
+
   const secondaryModules = [
-    {
-      label: 'Conta SPOT',
-      sub: 'BRO imediato',
-      value: bro.primary,
-      icon: WalletIconNav,
-      href: '/wallet',
-      border: 'border-neon-yellow/25',
-      color: 'text-neon-yellow',
-    },
     {
       label: 'Indicações',
       sub: `${ref.directReferrals} direto(s)`,
-      value: `+${((ref.oleGameTotal + ref.nftTotal) / 100).toFixed(2)} BRO`,
+      value: refValue,
       icon: Users,
       href: '/wallet/referrals',
       border: 'border-blue-400/25',
@@ -131,7 +128,7 @@ export function OlexpTab() {
     {
       label: 'GAT',
       sub: `${gat.activeCount} posição(ões)`,
-      value: `+${(gat.totalAccrued / 100).toFixed(2)} BRO`,
+      value: `+${gat.totalAccrued.toLocaleString('pt-BR')} EXP`,
       icon: Gem,
       href: '/wallet/gat',
       border: 'border-amber-400/25',
@@ -205,7 +202,7 @@ export function OlexpTab() {
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-transparent backdrop-blur-xl p-6 md:p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.04),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        className="relative min-w-0 w-full overflow-x-hidden overflow-y-visible rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-transparent p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl md:p-8"
       >
         <div
           className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-neon-yellow/10 blur-3xl"

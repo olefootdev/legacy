@@ -241,17 +241,24 @@ export function Home() {
   );
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="mx-auto min-w-0 max-w-6xl space-y-8">
       {/* Header Mobile */}
-      <div className="md:hidden flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-neon-yellow flex items-center justify-center font-display font-bold text-xl text-black -skew-x-6">
+      <div className="mb-6 flex min-w-0 items-center justify-between gap-2 md:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-neon-yellow font-display text-xl font-bold text-black -skew-x-6">
             <span className="skew-x-6">O</span>
           </div>
-          <h1 className="text-2xl font-display font-black tracking-widest italic">OLEFOOT</h1>
+          <h1 className="truncate font-display text-xl font-black italic tracking-widest min-[360px]:text-2xl">
+            OLEFOOT
+          </h1>
         </div>
-        <Link to="/wallet" className="bg-[#111] border border-white/10 px-3 py-1.5 flex items-center gap-2">
-          <span className="text-sm font-display font-bold text-neon-yellow tracking-wider">{formatExp(finance.ole)} EXP</span>
+        <Link
+          to="/wallet"
+          className="flex max-w-[min(100%,11rem)] shrink-0 items-center gap-2 border border-white/10 bg-[#111] px-2 py-1.5 min-[360px]:px-3"
+        >
+          <span className="truncate text-xs font-display font-bold tracking-wider text-neon-yellow min-[360px]:text-sm">
+            {formatExp(finance.ole)} EXP
+          </span>
         </Link>
       </div>
 
@@ -383,7 +390,7 @@ export function Home() {
           {/* Ações */}
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pt-2 border-t border-white/10">
             <div className="flex flex-col gap-3 w-full lg:max-w-md">
-              <Link to="/match" className="w-full">
+              <Link to="/match/live" className="w-full">
                 <button type="button" className="btn-primary w-full text-lg sm:text-xl py-3.5 sm:py-4">
                   <span className="btn-primary-inner">
                     <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-black shrink-0" />
@@ -391,16 +398,17 @@ export function Home() {
                   </span>
                 </button>
               </Link>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-3 text-[10px] font-display font-bold uppercase tracking-widest text-gray-500">
-                <Link to="/match" className="text-neon-yellow hover:text-white transition-colors">
-                  Ao vivo
+              <div className="flex items-center justify-center lg:justify-start gap-2">
+                <Link
+                  to="/match/quick"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-center text-xs font-display font-bold uppercase tracking-wider text-gray-300 hover:border-white/20 hover:text-white transition-colors"
+                >
+                  Partida Rápida
                 </Link>
-                <span className="text-white/20">/</span>
-                <Link to="/match/quick" className="hover:text-neon-yellow transition-colors">
-                  Rápido
-                </Link>
-                <span className="text-white/20">/</span>
-                <Link to="/match/auto" className="hover:text-neon-yellow transition-colors">
+                <Link
+                  to="/match/auto"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-center text-xs font-display font-bold uppercase tracking-wider text-gray-300 hover:border-white/20 hover:text-white transition-colors"
+                >
                   Automático
                 </Link>
               </div>
@@ -575,25 +583,25 @@ export function Home() {
 
       <AnimatePresence>
         {amistosoOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/88 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/88 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              className="sports-panel w-full max-w-lg p-0 overflow-hidden border-neon-yellow/40 relative"
+              className="relative my-auto flex max-h-[min(90dvh,calc(100dvh-6rem))] w-full max-w-lg flex-col overflow-hidden border-neon-yellow/40 sports-panel p-0 sm:max-h-[min(92dvh,720px)]"
             >
               <button
                 type="button"
                 onClick={() => setAmistosoOpen(false)}
-                className="absolute right-4 top-4 p-2 rounded-full bg-black/60 text-gray-400 hover:text-white z-10"
+                className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
-              <div className="p-6 border-b border-white/10 bg-neon-yellow/5">
+              <div className="shrink-0 border-b border-white/10 bg-neon-yellow/5 p-6">
                 <h3 className="text-xl font-display font-black uppercase tracking-wider text-white">Amistoso</h3>
-                <p className="text-sm text-gray-300 mt-2 leading-snug">Mostre que você é o melhor no jogo</p>
+                <p className="mt-2 text-sm leading-snug text-gray-300">Mostre que você é o melhor no jogo</p>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-6">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-1.5">Buscar (Time, ID)</label>
                   <div className="grid grid-cols-1 gap-2">
@@ -713,9 +721,13 @@ export function Home() {
           transition={{ delay: 0.4 }}
           className="sports-panel p-0"
         >
-          <div className="bg-dark-gray p-4 border-b border-white/10 flex justify-between items-center">
-            <h3 className="font-display font-bold text-xl uppercase tracking-wider">Ranking OLE</h3>
-            <span className="text-neon-yellow text-xs font-bold uppercase tracking-wider">Top 10 por EXP</span>
+          <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-dark-gray p-4">
+            <h3 className="min-w-0 truncate font-display text-lg font-bold uppercase tracking-wider min-[390px]:text-xl">
+              Ranking OLE
+            </h3>
+            <span className="shrink-0 text-right text-[10px] font-bold uppercase tracking-wider text-neon-yellow min-[390px]:text-xs">
+              Top 10 por EXP
+            </span>
           </div>
           <div className="p-3 border-b border-white/10">
             <div className="relative">

@@ -1,6 +1,6 @@
 import { FIELD_LENGTH, FIELD_WIDTH } from './field';
 import type { AgentSnapshot, PassOption } from './InteractionResolver';
-import { evaluateShot, findPassOptions } from './InteractionResolver';
+import { evaluateShot, findPassOptions, passOptionAttackBuildUpScore } from './InteractionResolver';
 
 export type AgentAction =
   | { type: 'idle' }
@@ -88,7 +88,9 @@ export class AgentBrain {
     }
 
     if (passOptions.length > 0) {
-      const forwardPasses = passOptions.filter((p) => p.isForward && p.successProb > 0.45);
+      const forwardPasses = passOptions
+        .filter((p) => p.isForward && p.successProb > 0.45)
+        .sort((a, b) => passOptionAttackBuildUpScore(b) - passOptionAttackBuildUpScore(a));
       const safePasses = passOptions.filter((p) => p.successProb > 0.65);
 
       if (nearPressure >= 2 && safePasses.length > 0) {

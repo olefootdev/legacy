@@ -1,6 +1,9 @@
 import type { PitchPoint, PossessionSide } from '@/engine/types';
 import type { BallZone } from '@/gamespirit/types';
 
+/** Qualidade de contacto no remate (efeito em precisão / xG e leitura visual). */
+export type ShotStrikeProfile = 'weak' | 'placed' | 'power';
+
 /** Fases lógicas do motor textual (minuto a minuto), independentes do FSM do pitch 3D. */
 export type EngineSimPhase = 'LIVE' | 'GOAL_RESTART' | 'KICKOFF_PENDING' | 'STOPPED';
 
@@ -20,6 +23,8 @@ export type CausalMatchEvent =
         minute: number;
         /** Alvo heurístico da trajetória (UI %), opcional */
         target?: PitchPoint;
+        /** Perfil de remate (fraco / colocado / forte); omitido em logs antigos. */
+        strike?: ShotStrikeProfile;
       };
     }
   | {
@@ -31,6 +36,9 @@ export type CausalMatchEvent =
         shooterId: string;
         /** `post_in` conta como golo; `wide` = remate ao lado (reinício / posse). */
         outcome: 'goal' | 'save' | 'miss' | 'block' | 'post_in' | 'post_out' | 'wide';
+        strike?: ShotStrikeProfile;
+        /** Defesa com espalma vs segurar — só `save`; UI / replay. */
+        saveKind?: 'parry' | 'hold';
       };
     }
   | {
@@ -50,6 +58,37 @@ export type CausalMatchEvent =
       simTime: number;
       type: 'possession_change';
       payload: { to: PossessionSide; reason?: string };
+    }
+  /**
+   * Falta no fluxo contínuo (ex.: desarme tardio). Não altera placar;
+   * feed/UI derivam texto; replay ordena por simTime com shot/possession.
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'foul_committed';
+      payload: {
+        minute: number;
+        foulerId: string;
+        foulerSide: PossessionSide;
+        victimId: string;
+        /** ex.: tackle | draw_foul */
+        kind: string;
+        dangerous: boolean;
+      };
+    }
+  /** Cartão mostrado no loop contínuo (amarelo frequente, vermelho raro). */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'card_shown';
+      payload: {
+        minute: number;
+        playerId: string;
+        side: PossessionSide;
+        card: 'yellow' | 'red';
+        reason?: string;
+      };
     };
 
 export interface CausalLogState {

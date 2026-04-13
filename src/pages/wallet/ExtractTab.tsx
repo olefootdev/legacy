@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, FileText, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { NavBalanceStrip } from '@/components/NavBalanceStrip';
+
 import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { WalletLedgerType, WalletCurrencyExt, WalletLedgerEntry } from '@/wallet/types';
@@ -18,6 +18,7 @@ const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: 'SWAP_OLEXP_TO_SPOT', label: 'SWAP → SPOT' },
   { value: 'REFERRAL_OLE_GAME', label: 'Referral OLE' },
   { value: 'REFERRAL_NFT', label: 'Referral NFT' },
+  { value: 'REFERRAL_GAT_EXP', label: 'Referral GAT (EXP)' },
   { value: 'GAT_REWARD', label: 'GAT Reward' },
   { value: 'GAT_BASE_DEBIT', label: 'GAT Base' },
   { value: 'MATCH_REWARD', label: 'Match Reward' },
@@ -39,6 +40,7 @@ const CURRENCY_OPTIONS: { value: WalletCurrencyExt | ''; label: string }[] = [
 function badgeColor(type: WalletLedgerType): string {
   if (type.startsWith('SWAP')) return 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/30';
   if (type.startsWith('OLEXP')) return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+  if (type === 'REFERRAL_GAT_EXP') return 'bg-violet-500/20 text-violet-200 border-violet-500/30';
   if (type.startsWith('REFERRAL')) return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
   if (type.startsWith('GAT')) return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
   if (type === 'MATCH_REWARD') return 'bg-green-500/20 text-green-300 border-green-500/30';
@@ -80,7 +82,7 @@ export function ExtractTab() {
   const sorted = [...entries].sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-8">
+    <div className="mx-auto min-w-0 max-w-3xl space-y-6 pb-8">
       <button
         type="button"
         onClick={() => navigate('/wallet')}
@@ -88,8 +90,6 @@ export function ExtractTab() {
       >
         <ArrowLeft className="w-4 h-4" /> Carteira
       </button>
-
-      <NavBalanceStrip />
 
       <div className="flex items-center gap-3 mb-2">
         <FileText className="w-6 h-6 text-white" />
@@ -161,7 +161,12 @@ export function ExtractTab() {
                   entry.amount >= 0 ? 'text-neon-green' : 'text-red-500'
                 }`}
               >
-                {entry.amount >= 0 ? '+' : ''}{(entry.amount / 100).toFixed(2)}
+                {entry.currency === 'EXP'
+                  ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString('pt-BR')}`
+                  : `${entry.amount >= 0 ? '+' : ''}${(entry.amount / 100).toFixed(2)}`}
+                <span className="text-[10px] font-normal text-gray-500 ml-1">
+                  {entry.currency === 'EXP' ? 'EXP' : 'BRO'}
+                </span>
               </div>
             </motion.div>
           ))}

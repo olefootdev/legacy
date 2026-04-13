@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
 function hueFromSeed(seed: string): number {
   let h = 2166136261;
@@ -15,6 +16,12 @@ const crestSize = {
   sm: 'h-8 w-8 min-h-8 min-w-8 max-h-8 max-w-8 object-contain shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]',
   /** Partida rápida / live ribbon */
   md: 'h-10 w-10 min-h-10 min-w-10 sm:h-11 sm:w-11 sm:min-h-11 sm:min-w-11 object-contain shrink-0 drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]',
+  /**
+   * Faixa [casa][relógio][visitante] numa única linha (mobile → desktop).
+   * Brasões mais pequenos no telemóvel para caber sem quebrar linha.
+   */
+  quick:
+    'h-7 w-7 min-h-7 min-w-7 max-h-7 max-w-7 object-contain shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] min-[400px]:h-9 min-[400px]:w-9 min-[400px]:min-h-9 min-[400px]:min-w-9 min-[400px]:max-h-9 min-[400px]:max-w-9 sm:h-10 sm:w-10 sm:min-h-10 sm:min-w-10 sm:max-h-10 sm:max-w-10 md:h-11 md:w-11 md:min-h-11 md:min-w-11 md:max-h-11 md:max-w-11',
   /** Banner matchday — compacto para caber nomes completos na mesma linha (brasão largo limitado). */
   lg: 'h-[1.3rem] w-auto max-h-[1.45rem] max-w-[min(2.85rem,14vw)] object-contain object-left shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:h-[1.5rem] sm:max-h-[1.65rem] sm:max-w-[min(3.35rem,16vw)] md:h-[1.7rem] md:max-h-[1.9rem] md:max-w-[min(4rem,14vw)] lg:h-[1.85rem] lg:max-h-[2.05rem] lg:max-w-[min(4.75rem,11vw)]',
 } as const;
@@ -27,7 +34,7 @@ export function AwayCrestBadge({
 }: {
   seed: string;
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'quick';
 }) {
   const hue = hueFromSeed(seed || 'away');
   const letter = (seed.trim().charAt(0) || '?').toUpperCase();
@@ -36,7 +43,9 @@ export function AwayCrestBadge({
       ? 'h-8 w-8 min-w-8 text-[11px]'
       : size === 'lg'
         ? 'h-[1.2rem] w-[1.2rem] min-w-[1.2rem] text-[9px] sm:h-[1.4rem] sm:w-[1.4rem] sm:min-w-[1.4rem] sm:text-[10px] md:h-[1.55rem] md:w-[1.55rem] md:min-w-[1.55rem] md:text-[11px] lg:h-[1.7rem] lg:w-[1.7rem] lg:min-w-[1.7rem] lg:text-xs'
-        : 'h-10 w-10 min-w-10 text-xs sm:h-11 sm:w-11 sm:min-w-11';
+        : size === 'quick'
+          ? 'h-7 w-7 min-w-7 text-[10px] min-[400px]:h-8 min-[400px]:w-8 min-[400px]:min-w-8 min-[400px]:text-[11px] sm:h-10 sm:w-10 sm:min-w-10 sm:text-xs md:h-11 md:w-11 md:min-w-11'
+          : 'h-10 w-10 min-w-10 text-xs sm:h-11 sm:w-11 sm:min-w-11';
   return (
     <span
       className={cn(
@@ -52,6 +61,25 @@ export function AwayCrestBadge({
       {letter}
     </span>
   );
+}
+
+/** Escudo real do adversário (`nextFixture.opponent.supporterCrestUrl`) ou badge sintético. */
+function AwayCrestOrPhoto({
+  seed,
+  imageUrl,
+  className,
+  size = 'md',
+}: {
+  seed: string;
+  imageUrl?: string | null;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'quick';
+}) {
+  const u = imageUrl?.trim();
+  if (u) {
+    return <img src={u} alt="" className={cn(crestSize[size], className)} />;
+  }
+  return <AwayCrestBadge seed={seed} size={size} className={className} />;
 }
 
 /**
@@ -70,8 +98,9 @@ export function MatchdayVersusTitle({
   className?: string;
   vsClassName?: string;
 }) {
-  const crest = useGameStore((s) => s.userSettings.managerCrestPngDataUrl);
+  const crest = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
+  const awayCrestUrl = useGameStore((s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null);
   const seed = awaySeed ?? fallbackAway;
 
   const nameText =
@@ -104,7 +133,7 @@ export function MatchdayVersusTitle({
         <span className="flex min-w-0 min-h-0 flex-1 justify-start">
           <span className="flex max-w-full min-w-0 items-center justify-start gap-1 sm:gap-1.5 md:gap-2">
             <span className={cn(nameText, 'text-start')}>{awayName}</span>
-            <AwayCrestBadge seed={seed} size="lg" className="shrink-0" />
+            <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="lg" className="shrink-0" />
           </span>
         </span>
       </span>
@@ -124,8 +153,9 @@ export function MatchdayVersusInline({
   awaySeed?: string;
   className?: string;
 }) {
-  const crest = useGameStore((s) => s.userSettings.managerCrestPngDataUrl);
+  const crest = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
+  const awayCrestUrl = useGameStore((s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null);
   const seed = awaySeed ?? fallbackAway;
 
   return (
@@ -141,7 +171,7 @@ export function MatchdayVersusInline({
       </span>
       <span className="shrink-0 font-bold text-gray-500">x</span>
       <span className="inline-flex min-w-0 max-w-[min(100%,14rem)] flex-row-reverse items-center gap-2">
-        <AwayCrestBadge seed={seed} size="sm" />
+        <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="sm" />
         <span className="text-right text-white [overflow-wrap:anywhere]">{awayShort}</span>
       </span>
     </span>
@@ -159,6 +189,7 @@ export function MatchdayVersusWithClock({
   awaySeed,
   clock,
   rowClassName,
+  showTeamCrests = true,
 }: {
   homeShort: string;
   awayShort: string;
@@ -167,9 +198,12 @@ export function MatchdayVersusWithClock({
   awaySeed?: string;
   clock: string;
   rowClassName?: string;
+  /** Quando falso, só nomes/siglas (ex.: partida rápida sem brasões). */
+  showTeamCrests?: boolean;
 }) {
-  const crest = useGameStore((s) => s.userSettings.managerCrestPngDataUrl);
+  const crest = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
+  const awayCrestUrl = useGameStore((s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null);
   const seed = awaySeed ?? fallbackAway;
   const homeLabel = homeName?.trim() || homeShort;
   const awayLabel = awayName?.trim() || awayShort;
@@ -177,24 +211,35 @@ export function MatchdayVersusWithClock({
   return (
     <div
       className={cn(
-        'grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-2 md:gap-4',
+        'flex w-full min-w-0 flex-row flex-nowrap items-center justify-between gap-1.5 min-[360px]:gap-2 sm:gap-3 md:gap-4',
+        'py-0.5 sm:py-0',
         rowClassName,
       )}
     >
-      <div className="flex min-w-0 items-center justify-center gap-2.5 sm:justify-start md:gap-3">
-        {crest ? <img src={crest} alt="" className={crestSize.md} /> : null}
-        <span className="text-center font-display font-bold leading-snug text-white [overflow-wrap:anywhere] sm:text-left sm:text-base md:text-lg">
+      <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
+        {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.quick} /> : null}
+        <span
+          className={cn(
+            'min-w-0 truncate text-end font-display font-bold leading-tight text-white',
+            'text-[11px] min-[380px]:text-xs sm:text-sm md:text-base lg:text-lg',
+          )}
+        >
           {homeLabel}
         </span>
       </div>
-      <span className="mx-auto shrink-0 rounded bg-white/5 px-2 py-1 font-mono text-xs tabular-nums tracking-tight text-gray-300">
+      <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-tight text-gray-300 min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-xs sm:text-sm">
         {clock}
       </span>
-      <div className="flex min-w-0 items-center justify-center gap-2.5 sm:justify-end md:gap-3">
-        <span className="text-center font-display font-bold leading-snug text-gray-200 [overflow-wrap:anywhere] sm:text-right sm:text-base md:text-lg">
+      <div className="flex min-w-0 flex-1 basis-0 items-center justify-start gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
+        <span
+          className={cn(
+            'min-w-0 truncate text-start font-display font-bold leading-tight text-gray-200',
+            'text-[11px] min-[380px]:text-xs sm:text-sm md:text-base lg:text-lg',
+          )}
+        >
           {awayLabel}
         </span>
-        <AwayCrestBadge seed={seed} size="md" />
+        {showTeamCrests ? <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="quick" /> : null}
       </div>
     </div>
   );
@@ -216,12 +261,13 @@ export function MatchdayLiveScoreRibbon({
   homeScore: number;
   awayScore: number;
 }) {
-  const crest = useGameStore((s) => s.userSettings.managerCrestPngDataUrl);
+  const crest = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
+  const awayCrestUrl = useGameStore((s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null);
   const seed = awaySeed ?? fallbackAway;
 
   return (
-    <div className="pointer-events-auto flex max-w-[min(100vw-2rem,42rem)] items-stretch shadow-2xl">
+    <div className="pointer-events-auto flex max-w-[min(100dvw-2rem,42rem)] min-w-0 items-stretch shadow-2xl">
       <div className="flex shrink-0 items-center justify-center bg-white px-3 py-2 font-display text-xl font-black text-black tabular-nums sm:px-4 sm:text-2xl">
         {minuteDisplay}&apos;
       </div>
@@ -241,7 +287,7 @@ export function MatchdayLiveScoreRibbon({
             {awayScore}
           </span>
           <span className="inline-flex min-w-0 flex-row-reverse items-center gap-2">
-            <AwayCrestBadge seed={seed} size="md" />
+            <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="md" />
             <span className="truncate font-display font-bold tracking-wider text-gray-400">{awayShort}</span>
           </span>
         </div>
@@ -259,6 +305,7 @@ export function MatchdayResultScores({
   awayScore,
   awaySeed,
   className,
+  showTeamCrests = true,
 }: {
   homeShort: string;
   awayShort: string;
@@ -268,9 +315,11 @@ export function MatchdayResultScores({
   awayScore: number;
   awaySeed?: string;
   className?: string;
+  showTeamCrests?: boolean;
 }) {
-  const crest = useGameStore((s) => s.userSettings.managerCrestPngDataUrl);
+  const crest = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
+  const awayCrestUrl = useGameStore((s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null);
   const seed = awaySeed ?? fallbackAway;
   const homeLabel = homeName?.trim() || homeShort;
   const awayLabel = awayName?.trim() || awayShort;
@@ -283,14 +332,14 @@ export function MatchdayResultScores({
       )}
     >
       <span className="inline-flex max-w-[min(100%,16rem)] items-center gap-2 sm:max-w-[min(100%,20rem)] sm:gap-2.5">
-        {crest ? <img src={crest} alt="" className={crestSize.md} /> : null}
+        {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.md} /> : null}
         <span className="text-center leading-tight [overflow-wrap:anywhere]">{homeLabel}</span>
       </span>
       <span className="shrink-0 tabular-nums text-neon-yellow">{homeScore}</span>
       <span className="shrink-0 text-gray-600">–</span>
       <span className="shrink-0 tabular-nums text-neon-yellow">{awayScore}</span>
       <span className="inline-flex max-w-[min(100%,16rem)] flex-row-reverse items-center gap-2 sm:max-w-[min(100%,20rem)] sm:gap-2.5">
-        <AwayCrestBadge seed={seed} size="md" />
+        {showTeamCrests ? <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="md" /> : null}
         <span className="text-center leading-tight [overflow-wrap:anywhere]">{awayLabel}</span>
       </span>
     </p>
@@ -304,15 +353,19 @@ export function MatchdayLineupColumnTitle({
   className,
   awaySeed,
   teamCrestSize = 'md',
+  showTeamCrest = true,
 }: {
   side: 'home' | 'away';
   name: string;
   className?: string;
   awaySeed?: string;
   teamCrestSize?: 'sm' | 'md';
+  /** Quando falso, só o nome do clube (sem escudo). */
+  showTeamCrest?: boolean;
 }) {
-  const crest = useGameStore((s) => s.userSettings.managerCrestPngDataUrl);
+  const crest = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const fallbackAway = useGameStore((s) => s.nextFixture.opponent.id);
+  const awayCrestUrl = useGameStore((s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null);
   const seed = awaySeed ?? fallbackAway;
   const imgCls = teamCrestSize === 'sm' ? crestSize.sm : crestSize.md;
 
@@ -324,11 +377,17 @@ export function MatchdayLineupColumnTitle({
         className,
       )}
     >
-      {side === 'home' ? (
-        crest ? <img src={crest} alt="" className={imgCls} /> : null
-      ) : (
-        <AwayCrestBadge seed={seed} size={teamCrestSize === 'sm' ? 'sm' : 'md'} />
-      )}
+      {showTeamCrest ? (
+        side === 'home' ? (
+          crest ? <img src={crest} alt="" className={imgCls} /> : null
+        ) : (
+          <AwayCrestOrPhoto
+            seed={seed}
+            imageUrl={awayCrestUrl}
+            size={teamCrestSize === 'sm' ? 'sm' : 'md'}
+          />
+        )
+      ) : null}
       <span className="min-w-0 font-display font-bold leading-snug [overflow-wrap:anywhere]">{name}</span>
     </span>
   );

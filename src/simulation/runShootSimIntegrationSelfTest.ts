@@ -55,9 +55,10 @@ function minimalLive(): LiveMatchSnapshot {
   });
 
   return {
-    mode: 'live',
+    mode: 'test2d',
     phase: 'playing',
     minute: 0,
+    footballElapsedSec: 0,
     homeScore: 0,
     awayScore: 0,
     homeShort: 'TST',

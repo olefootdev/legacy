@@ -66,13 +66,13 @@ export function Profile() {
   const broDisplay = formatBroDisplay(finance.broCents);
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="mx-auto min-w-0 max-w-4xl space-y-8">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="bg-[#111] border border-white/10 p-8 flex flex-col md:flex-row items-center gap-6">
+        <div className="flex flex-col items-center gap-6 border border-white/10 bg-[#111] p-4 sm:p-8 md:flex-row">
           <div className="w-20 h-20 bg-neon-yellow flex items-center justify-center -skew-x-6">
             <span className="skew-x-6 font-display font-black text-4xl text-black">O</span>
           </div>
-          <div className="text-center md:text-left">
+          <div className="min-w-0 text-center md:text-left">
             <h2 className="text-3xl font-display font-black uppercase tracking-wider">{club.name}</h2>
             <p className="text-sm text-gray-500 font-medium mt-1">{club.city} — {club.stadium}</p>
             <div className="flex items-center gap-4 mt-3 justify-center md:justify-start">
@@ -541,7 +541,7 @@ function ProfilePrivateSocialSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/85 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-friend-title"
@@ -551,10 +551,10 @@ function ProfilePrivateSocialSection() {
               initial={{ scale: 0.96, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 10 }}
-              className="w-full max-w-md bg-[#111] border border-fuchsia-500/40 rounded-xl p-5 shadow-[0_0_40px_rgba(192,38,211,0.15)]"
+              className="my-auto flex max-h-[min(88dvh,calc(100dvh-5rem))] w-full max-w-md flex-col overflow-hidden rounded-xl border border-fuchsia-500/40 bg-[#111] p-5 shadow-[0_0_40px_rgba(192,38,211,0.15)] sm:max-h-[min(90dvh,640px)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
                 <div>
                   <h3 id="add-friend-title" className="font-display font-black text-lg uppercase tracking-wide text-white">
                     Adicionar amigo
@@ -574,9 +574,9 @@ function ProfilePrivateSocialSection() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Nome do clube ou cidade..."
-                className="w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-fuchsia-500/60 focus:outline-none mb-3"
+                className="mb-3 w-full shrink-0 rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-fuchsia-500/60 focus:outline-none"
               />
-              <ul className="max-h-56 overflow-y-auto divide-y divide-white/10 border border-white/10 rounded-lg">
+              <ul className="max-h-[min(40dvh,14rem)] min-h-0 flex-1 divide-y divide-white/10 overflow-y-auto overscroll-y-contain rounded-lg border border-white/10 sm:max-h-56">
                 {suggestions.length === 0 ? (
                   <li className="px-3 py-6 text-center text-sm text-gray-500">Nenhum resultado ou todos já na rede.</li>
                 ) : (

@@ -1,5 +1,10 @@
 import type { PlayerEntity } from '@/entities/types';
 
+/**
+ * Lesões em qualquer partida simulada (liga, amistoso, desafio) actualizam `outForMatches`
+ * no jogador — o resto do game (escalação, WO, treinos, outras ligas) lê o mesmo estado.
+ */
+
 /** Risco extra após minuto extenuante; pode gerar lesão curta. */
 export function rollMatchInjury(player: PlayerEntity, minuteIntensity: number): PlayerEntity {
   if (player.outForMatches > 0) return player;

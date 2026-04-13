@@ -113,7 +113,7 @@ export function Missions() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="mx-auto min-w-0 max-w-4xl space-y-8">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between mb-6">
           <div>

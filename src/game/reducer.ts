@@ -7,10 +7,27 @@ import { createInitialGameState, defaultLiveMatchShell } from './initialState';
 import { rehydrateGameState } from './persistence';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes } from '@/entities/player';
+import {
+  buildManagerCreatedPlayerEntity,
+  buildNpcManagerProspectSnapshot,
+  buildProspectAdminArtPrompt,
+  DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
+  isValidManagerHeritage,
+  MANAGER_PROSPECT_CREATE_MAX_OVR,
+  MANAGER_PROSPECT_EVOLVED_MAX_OVR,
+  scaleAttrsToMaxOvr,
+} from '@/entities/managerProspect';
+import {
+  applyMatchPerformanceEvolution,
+  clampPlayerToEvolutionCap,
+  ensureMintOverall,
+} from '@/entities/playerEvolution';
+import { validateAcademyProspectName } from '@/entities/managerProspectReservedNames';
 import { addBroCents, addOle, friendlyChallengeBroFeeCents, grantEarnedExp } from '@/systems/economy';
 import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics';
 import { tickRecoveryMatches } from '@/systems/injury';
 import { applyWorldCatchUp } from './worldCatchUp';
+import { mergeWalletIntoFinance } from './financeWalletSync';
 import { applySquadTraining } from '@/systems/training';
 import { buyOlePack } from '@/systems/market';
 import type { MatchEventEntry } from '@/engine/types';
@@ -38,10 +55,13 @@ import {
 } from '@/wallet/olexp';
 import { writeSwapKycToStorage } from '@/wallet/swapKycStorage';
 import { registerSponsor as walletRegisterSponsor } from '@/wallet/referral';
+import { transferBroByReferralCode } from '@/wallet/peerTransfer';
 import { registerGatBase, accrueGatDaily } from '@/wallet/gat';
 import { simulateFiatDeposit, simulateFiatWithdrawal } from '@/wallet/adminFiatFlow';
 import { STYLE_PRESETS } from '@/tactics/playingStyle';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
+import { buildRoundRobinSchedule } from '@/match/leagueSchedule';
+import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { addHoursIso, applyTrainingToPlayer, maxSlotsByTrainingCenter, resolveGroupPlayerIds, splitDuePlans } from '@/systems/trainingPlans';
 import {
   STAFF_LABELS,
@@ -55,7 +75,6 @@ import {
 import { hashStringSeed } from '@/match/seededRng';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import { appendMemorableTrophyUnlocks } from '@/trophies/memorableCatalog';
-import { buildLivePrematchBundle } from '@/gamespirit/buildLivePrematch';
 import {
   advancePenaltyStage,
   penaltyNarrativeLine,
@@ -89,11 +108,7 @@ function walletOf(state: OlefootGameState) {
 function syncWalletToFinance(state: OlefootGameState, wallet: import('@/wallet/types').WalletState): OlefootGameState {
   return {
     ...state,
-    finance: {
-      ...state.finance,
-      broCents: state.finance.broCents + (wallet.spotBroCents - (state.finance.wallet?.spotBroCents ?? 0)),
-      wallet,
-    },
+    finance: mergeWalletIntoFinance(state.finance, wallet),
   };
 }
 
@@ -112,6 +127,14 @@ function crowdMood(support: number): string {
   return 'Euforia';
 }
 
+function nextKitNumber(players: Record<string, import('@/entities/types').PlayerEntity>): number {
+  let m = 0;
+  for (const p of Object.values(players)) {
+    if (typeof p.num === 'number' && Number.isFinite(p.num) && p.num > m) m = p.num;
+  }
+  return m + 1;
+}
+
 function withExpHistory(
   finance: import('@/entities/types').FinanceState,
   amount: number,
@@ -128,6 +151,28 @@ function withExpHistory(
     ...(finance.expHistory ?? []),
   ].slice(0, 120);
   return { ...finance, expHistory: next };
+}
+
+/** Funde feed do sim (novos primeiro) com eventos só no store (ex.: apito inicial). */
+function mergeSimSyncEvents(
+  prev: import('@/engine/types').MatchEventEntry[],
+  fromSim: import('@/engine/types').MatchEventEntry[],
+): import('@/engine/types').MatchEventEntry[] {
+  if (fromSim.length === 0) return prev;
+  const seen = new Set<string>();
+  const out: import('@/engine/types').MatchEventEntry[] = [];
+  for (const e of fromSim) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
+  }
+  for (const e of prev) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
+  }
+  if (out.length > 60) out.length = 60;
+  return out;
 }
 
 function syncWalletSpotBro(finance: import('@/entities/types').FinanceState): import('@/entities/types').FinanceState {
@@ -182,6 +227,23 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return { ...state, lineup };
     }
     case 'START_LIVE_MATCH': {
+      const squadCheck = evaluateOfficialSquad(state.lineup, state.players);
+      const skipSquadGateForQuickTest =
+        (action.mode === 'quick' || action.mode === 'test2d') && isOfficialSquadGateRelaxedForTests();
+      if (!squadCheck.ok && !skipSquadGateForQuickTest) {
+        const inboxWithoutDup = state.inbox.filter((i) => i.id !== 'lineup-requirement-live-match');
+        const lineupNote = makeInboxItem(
+          'lineup-requirement-live-match',
+          'LINEUP_ISSUE',
+          'PLANTEL',
+          'Não podes entrar em campo — plantel incompleto',
+          {
+            body: `${squadCheck.reason ?? 'Requisitos não cumpridos.'} São necessários 11 titulares disponíveis (sem lesão/suspensão) e pelo menos 5 jogadores no banco. Reforça o plantel ou ajusta a escalação.`,
+            deepLink: '/team',
+          },
+        );
+        return { ...state, inbox: [lineupNote, ...inboxWithoutDup].slice(0, 24) };
+      }
       const lu = mergeLineupWithDefaults(state.lineup, state.players);
       const travelKm = tripKmForFixture(state.nextFixture);
       let players = applyTravelFatigueToSquad(state.players, travelKm);
@@ -213,11 +275,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         });
         players = { ...players, ...updatedPlayers };
         liveMatch = snapshot;
-      } else if (action.mode === 'quick') {
+      } else if (action.mode === 'quick' || action.mode === 'test2d') {
+        const kickLabel = action.mode === 'test2d' ? '(ao vivo 2D)' : '(partida rápida)';
         const kick: MatchEventEntry = {
           id: uid(),
           minute: 0,
-          text: `0' — ${state.club.shortName} x ${state.nextFixture.opponent.shortName} (partida rápida).`,
+          text: `0' — ${state.club.shortName} x ${state.nextFixture.opponent.shortName} ${kickLabel}.`,
           kind: 'whistle',
         };
         const opp = state.nextFixture.opponent;
@@ -247,24 +310,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           clockPeriod: 'first_half',
           events: [kick],
           awayRoster,
-        };
-      } else if (action.mode === 'live') {
-        const simSeed = hashStringSeed(
-          `${state.club.shortName}|${state.nextFixture.opponent.shortName}|${homePlayers.length}|live`,
-        );
-        const roster = homeRosterFromLineup({ ...state, players });
-        const livePrematch = buildLivePrematchBundle({
-          homePlayers,
-          homeRoster: roster,
-          opponentStrength: state.nextFixture.opponent.strength,
-          homeShort: state.club.shortName,
-          awayShort: state.nextFixture.opponent.shortName,
-          simulationSeed: simSeed,
-        });
-        liveMatch = {
-          ...liveMatch,
-          simulationSeed: simSeed,
-          livePrematch,
         };
       }
 
@@ -306,6 +351,36 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'TICK_MATCH_MINUTE': {
       return runTick(state);
     }
+    case 'COMMIT_TEST2D_VISUAL_BEAT_FEED': {
+      const lm = state.liveMatch;
+      if (!lm?.test2dVisualBeat) return state;
+      const ev = lm.test2dVisualBeat.deferredFeedEvent;
+      const nextEvents = [ev, ...lm.events];
+      if (nextEvents.length > 40) nextEvents.length = 40;
+      return {
+        ...state,
+        liveMatch: {
+          ...lm,
+          test2dVisualBeat: undefined,
+          events: nextEvents,
+        },
+      };
+    }
+    case 'COMMIT_ULTRALIVE2D_STAGED_FEED': {
+      const lm = state.liveMatch;
+      if (!lm?.ultralive2dStagedPlay) return state;
+      const ev = lm.ultralive2dStagedPlay.deferredFeedEvent;
+      const nextEvents = [ev, ...lm.events];
+      if (nextEvents.length > 40) nextEvents.length = 40;
+      return {
+        ...state,
+        liveMatch: {
+          ...lm,
+          ultralive2dStagedPlay: undefined,
+          events: nextEvents,
+        },
+      };
+    }
     case 'SIM_SYNC': {
       if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
       const lm = state.liveMatch;
@@ -322,10 +397,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       const homeScore = action.homeScore;
       const awayScore = action.awayScore;
-      let mergedEvents = [...lm.events];
-      if (action.events.length > 0) {
-        mergedEvents = action.events;
-      }
+      const mergedEvents =
+        action.events.length > 0 ? mergeSimSyncEvents(lm.events, action.events) : [...lm.events];
 
       let nextLive: import('@/engine/types').LiveMatchSnapshot = {
         ...lm,
@@ -500,6 +573,59 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'COACH_TECHNICAL_COMMAND': {
       return state;
     }
+    case 'LIVE_MATCH_SWAP_HOME_SLOTS': {
+      const lm = state.liveMatch;
+      if (!lm || lm.phase !== 'playing') return state;
+      const { slotA, slotB } = action;
+      if (slotA === slotB) return state;
+      const lu = mergeLineupWithDefaults(state.lineup, state.players);
+      const idA = lu[slotA];
+      const idB = lu[slotB];
+      if (!idA || !idB) return state;
+      const fs = state.manager.formationScheme;
+      const nextLineup = { ...lu, [slotA]: idB, [slotB]: idA };
+      const homePlayers = pitchPlayersFromLineup(nextLineup, state.players, fs);
+      const matchLineupBySlot: Record<string, string> = {};
+      for (const hp of homePlayers) {
+        matchLineupBySlot[hp.slotId] = hp.playerId;
+      }
+      return {
+        ...state,
+        lineup: { ...state.lineup, [slotA]: idB, [slotB]: idA },
+        liveMatch: {
+          ...lm,
+          homePlayers,
+          matchLineupBySlot,
+          homeFormationScheme: fs,
+        },
+      };
+    }
+    case 'LIVE_MATCH_SET_FORMATION': {
+      const lm = state.liveMatch;
+      if (!lm || lm.phase !== 'playing') return state;
+      const fs = action.formationScheme;
+      if (!(fs in FORMATION_BASES)) return state;
+      const base = mergeLineupWithDefaults(state.lineup, state.players);
+      const mergedLu = { ...base, ...lm.matchLineupBySlot };
+      const homePlayers = pitchPlayersFromLineup(mergedLu, state.players, fs);
+      const matchLineupBySlot: Record<string, string> = {};
+      const nextLineup = { ...state.lineup };
+      for (const hp of homePlayers) {
+        matchLineupBySlot[hp.slotId] = hp.playerId;
+        nextLineup[hp.slotId] = hp.playerId;
+      }
+      return {
+        ...state,
+        manager: { ...state.manager, formationScheme: fs },
+        lineup: nextLineup,
+        liveMatch: {
+          ...lm,
+          homePlayers,
+          matchLineupBySlot,
+          homeFormationScheme: fs,
+        },
+      };
+    }
     case 'REGENERATE_LIVE_SECOND_HALF_STORY': {
       return state;
     }
@@ -640,6 +766,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const results = [lastRow, ...state.results].slice(0, 8);
 
       let players = tickRecoveryMatches(state.players);
+      const outcome: 'win' | 'draw' | 'loss' = homeWin ? 'win' : draw ? 'draw' : 'loss';
+      for (const [pid, stat] of Object.entries(lm.homeStats ?? {})) {
+        const pl = players[pid];
+        if (!pl) continue;
+        let next = applyMatchPerformanceEvolution(pl, stat, outcome);
+        next = clampPlayerToEvolutionCap(ensureMintOverall(next));
+        players[pid] = next;
+      }
 
       if (lm.supabaseMatchId) {
         const postData: Record<string, unknown> = {
@@ -689,6 +823,170 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
     case 'MERGE_PLAYERS': {
       return { ...state, players: { ...state.players, ...action.players } };
+    }
+    case 'CREATE_MANAGER_PROSPECT': {
+      const cost = Math.max(
+        0,
+        Math.round(state.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP),
+      );
+      if (state.finance.ole < cost) return state;
+      const hasAcademiaTune = action.payload.attrs !== undefined;
+      if (hasAcademiaTune && !isValidManagerHeritage(action.payload.heritage)) return state;
+      if (hasAcademiaTune) {
+        const nameCheck = validateAcademyProspectName(action.payload.name ?? '');
+        if (!nameCheck.ok) return state;
+      }
+      const id = `mgr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const num = nextKitNumber(state.players);
+      const built = buildManagerCreatedPlayerEntity(action.payload, id, num, true);
+      if (overallFromAttributes(built.attrs) > MANAGER_PROSPECT_CREATE_MAX_OVR) return state;
+      const finance = withExpHistory(addOle(state.finance, -cost), -cost, 'academia_ole_criar');
+      const strongFoot = built.strongFoot ?? 'right';
+      const heritage = action.payload.heritage;
+      const adminArtPrompt = buildProspectAdminArtPrompt({
+        name: built.name,
+        pos: built.pos,
+        age: built.age ?? action.payload.age,
+        country: built.country ?? action.payload.country,
+        strongFoot,
+        behavior: built.behavior,
+        attrs: built.attrs,
+        heritage: hasAcademiaTune && heritage ? heritage : undefined,
+        visual: action.payload.visualBrief,
+      });
+      const requestId = `art_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const createdAtIso = new Date().toISOString();
+      const queueEntry = {
+        id: requestId,
+        playerId: built.id,
+        createdAtIso,
+        playerCreationStep: 'awaiting_photo' as const,
+        adminArtPrompt,
+        attributesSnapshot: { ...built.attrs },
+        visualBrief: action.payload.visualBrief,
+        heritage: heritage
+          ? {
+              portraitStyleRegion: heritage.portraitStyleRegion,
+              originTags: [...(heritage.originTags ?? [])],
+              originText: heritage.originText.trim(),
+            }
+          : {
+              portraitStyleRegion: 'americas_sul',
+              originTags: [],
+              originText:
+                'Registo interno sem bloco de origem do fluxo Academia — completar nota no painel Player Creation.',
+            },
+        draftPortraitUrl: undefined as string | null | undefined,
+      };
+      const prevQueue = state.managerProspectArtQueue ?? [];
+      const managerProspectArtQueue = [queueEntry, ...prevQueue].slice(0, 200);
+      return {
+        ...state,
+        finance,
+        players: { ...state.players, [built.id]: built },
+        managerProspectArtQueue,
+      };
+    }
+    case 'LIST_MANAGER_PROSPECT': {
+      const pl = state.players[action.playerId];
+      if (!pl) return state;
+      if (pl.listedOnMarket) return state;
+      if (state.managerProspectMarket.ownListings.some((l) => l.playerId === action.playerId)) return state;
+      const priceExp = Math.max(50_000, Math.min(5_000_000, Math.round(action.priceExp)));
+      const listingId = `lst_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+      const listedAtIso = new Date().toISOString();
+      const lineup = { ...state.lineup };
+      for (const [slot, pid] of Object.entries(lineup)) {
+        if (pid === action.playerId) delete lineup[slot];
+      }
+      const players = {
+        ...state.players,
+        [action.playerId]: { ...pl, listedOnMarket: true },
+      };
+      return {
+        ...state,
+        lineup,
+        players,
+        managerProspectMarket: {
+          ...state.managerProspectMarket,
+          ownListings: [
+            { listingId, playerId: action.playerId, priceExp, listedAtIso },
+            ...state.managerProspectMarket.ownListings,
+          ],
+        },
+      };
+    }
+    case 'DELIST_MANAGER_PROSPECT': {
+      const li = state.managerProspectMarket.ownListings.find((l) => l.listingId === action.listingId);
+      if (!li) return state;
+      const pl = state.players[li.playerId];
+      if (!pl) {
+        return {
+          ...state,
+          managerProspectMarket: {
+            ...state.managerProspectMarket,
+            ownListings: state.managerProspectMarket.ownListings.filter((l) => l.listingId !== action.listingId),
+          },
+        };
+      }
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          [li.playerId]: { ...pl, listedOnMarket: false },
+        },
+        managerProspectMarket: {
+          ...state.managerProspectMarket,
+          ownListings: state.managerProspectMarket.ownListings.filter((l) => l.listingId !== action.listingId),
+        },
+      };
+    }
+    case 'BUY_MANAGER_NPC_OFFER': {
+      const offer = state.managerProspectMarket.npcOffers.find((o) => o.listingId === action.listingId);
+      if (!offer) return state;
+      if (state.finance.ole < offer.priceExp) return state;
+      const newId = `mgr_imp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      const num = nextKitNumber(state.players);
+      let attrs = offer.snapshot.attrs;
+      if (overallFromAttributes(attrs) > MANAGER_PROSPECT_EVOLVED_MAX_OVR) {
+        attrs = scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_EVOLVED_MAX_OVR);
+      }
+      const importMint = overallFromAttributes(attrs);
+      const added: import('@/entities/types').PlayerEntity = {
+        ...offer.snapshot,
+        id: newId,
+        num,
+        attrs,
+        mintOverall: importMint,
+        evolutionRate: offer.snapshot.evolutionRate ?? 1,
+        listedOnMarket: false,
+        evolutionXp: offer.snapshot.evolutionXp ?? 0,
+      };
+      const price = offer.priceExp;
+      const finance = withExpHistory(addOle(state.finance, -price), -price, 'mercado_academia_npc');
+      let npcOffers = state.managerProspectMarket.npcOffers.filter((o) => o.listingId !== action.listingId);
+      let addIdx = 0;
+      while (npcOffers.length < 5) {
+        const seed = `${Date.now()}_${addIdx}_${Math.random().toString(36).slice(2, 5)}`;
+        npcOffers = [
+          ...npcOffers,
+          {
+            listingId: `npc_lst_${seed.replace(/[^a-z0-9_]/gi, '')}_${addIdx}`,
+            snapshot: buildNpcManagerProspectSnapshot(seed, addIdx + npcOffers.length * 7),
+            priceExp: 85_000 + ((addIdx * 47_233) % 318_000),
+          },
+        ];
+        addIdx++;
+      }
+      return {
+        ...state,
+        finance,
+        players: { ...state.players, [added.id]: added },
+        managerProspectMarket: {
+          ...state.managerProspectMarket,
+          npcOffers,
+        },
+      };
     }
     case 'UPSERT_CARD_COLLECTION': {
       const c = action.collection;
@@ -853,7 +1151,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           const roleIds = Array.from(new Set([...assigned, ...collectiveRoles]));
           const base = applyTrainingToPlayer(pl, plan.trainingType);
           const boosted = amplifyTrainingResult(pl, base, trainingGainMultiplier(state.manager.staff, roleIds));
-          players[pid] = applyNutritionRecovery(boosted, state.manager.staff);
+          const recovered = applyNutritionRecovery(boosted, state.manager.staff);
+          players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(recovered));
         }
       }
       const done = due.map((p) => ({ ...p, status: 'completed' as const }));
@@ -898,9 +1197,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           ].slice(0, 14),
         };
       }
+      const trainedPlayers: Record<string, import('@/entities/types').PlayerEntity> = {};
+      for (const [id, p] of Object.entries(r.players)) {
+        trainedPlayers[id] = clampPlayerToEvolutionCap(ensureMintOverall(p));
+      }
       return {
         ...state,
-        players: r.players,
+        players: trainedPlayers,
         finance: withExpHistory(r.finance, -40, 'Treino leve'),
         inbox: [
           makeInboxItem(
@@ -1379,6 +1682,26 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
               'WALLET_SPONSOR_FAIL',
               'FINANCEIRO',
               result.error,
+              { colorClass: 'text-red-400', deepLink: '/wallet/referrals' },
+            ),
+            ...state.inbox,
+          ].slice(0, 14),
+        };
+      }
+      return syncWalletToFinance(state, result.state);
+    }
+    case 'WALLET_TRANSFER_BRO_BY_CODE': {
+      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
+      const result = transferBroByReferralCode(w, action.recipientCode, action.amountCents);
+      if (result.ok === false) {
+        return {
+          ...state,
+          inbox: [
+            makeInboxItem(
+              `xfer-fail-${Date.now()}`,
+              'WALLET_TRANSFER_FAIL',
+              'FINANCEIRO',
+              result.error,
               { colorClass: 'text-red-400', deepLink: '/wallet' },
             ),
             ...state.inbox,
@@ -1670,13 +1993,26 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const idx = leagues.findIndex((l) => l.id === action.league.id);
       if (idx >= 0) leagues[idx] = action.league;
       else leagues.push(action.league);
-      return { ...state, adminLeagues: leagues };
+      const leagueSchedule = {
+        ...state.leagueSchedule,
+        byLeagueId: {
+          ...state.leagueSchedule.byLeagueId,
+          [action.league.id]: buildRoundRobinSchedule(action.league, state.club),
+        },
+      };
+      return { ...state, adminLeagues: leagues, leagueSchedule };
     }
     case 'ADMIN_REMOVE_LEAGUE': {
       const next = state.adminLeagues.filter((l) => l.id !== action.id);
       let primary = state.adminPrimaryLeagueId;
       if (primary === action.id) primary = next[0]?.id ?? '';
-      return { ...state, adminLeagues: next, adminPrimaryLeagueId: primary };
+      const { [action.id]: _removed, ...restBuckets } = state.leagueSchedule.byLeagueId;
+      return {
+        ...state,
+        adminLeagues: next,
+        adminPrimaryLeagueId: primary,
+        leagueSchedule: { ...state.leagueSchedule, byLeagueId: restBuckets },
+      };
     }
     case 'ADMIN_SET_PRIMARY_LEAGUE': {
       if (!state.adminLeagues.some((l) => l.id === action.id)) return state;
@@ -1790,6 +2126,78 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'ADMIN_SET_WALLET_KYC': {
       const w = walletOf(state);
       return syncWalletToFinance(state, { ...w, kycOlexpDone: action.kycOlexpDone });
+    }
+    case 'ADMIN_SET_MANAGER_PROSPECT_CONFIG': {
+      const createCostExp = Math.max(0, Math.min(50_000_000, Math.round(action.createCostExp)));
+      return {
+        ...state,
+        managerProspectConfig: { createCostExp },
+      };
+    }
+    case 'ADMIN_MARK_PROSPECT_ART_FULFILLED': {
+      const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) =>
+        r.id === action.requestId ? { ...r, playerCreationStep: 'launched' as const } : r,
+      );
+      return { ...state, managerProspectArtQueue };
+    }
+    case 'ADMIN_PATCH_PLAYER': {
+      const pl = state.players[action.playerId];
+      if (!pl) return state;
+      const attrs =
+        action.partial.attrs != null ? { ...pl.attrs, ...action.partial.attrs } : pl.attrs;
+      const merged = { ...pl, ...action.partial, attrs };
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          [action.playerId]: clampPlayerToEvolutionCap(ensureMintOverall(merged)),
+        },
+      };
+    }
+    case 'ADMIN_PLAYER_CREATION_SET_PHOTO': {
+      const url = action.portraitUrl.trim();
+      if (!url.startsWith('data:image/') && !/^https?:\/\//i.test(url)) return state;
+      const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) => {
+        if (r.id !== action.requestId) return r;
+        if (r.playerCreationStep !== 'awaiting_photo' && r.playerCreationStep !== 'photo_uploaded') return r;
+        return { ...r, draftPortraitUrl: url, playerCreationStep: 'photo_uploaded' as const };
+      });
+      return { ...state, managerProspectArtQueue };
+    }
+    case 'ADMIN_PLAYER_CREATION_VALIDATE': {
+      const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) => {
+        if (r.id !== action.requestId) return r;
+        if (r.playerCreationStep !== 'photo_uploaded' || !r.draftPortraitUrl?.trim()) return r;
+        return { ...r, playerCreationStep: 'validated' as const };
+      });
+      return { ...state, managerProspectArtQueue };
+    }
+    case 'ADMIN_PLAYER_CREATION_APPROVE': {
+      const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) => {
+        if (r.id !== action.requestId) return r;
+        if (r.playerCreationStep !== 'validated') return r;
+        return { ...r, playerCreationStep: 'approved' as const };
+      });
+      return { ...state, managerProspectArtQueue };
+    }
+    case 'ADMIN_PLAYER_CREATION_LAUNCH': {
+      const q = state.managerProspectArtQueue ?? [];
+      const req = q.find((r) => r.id === action.requestId);
+      if (!req || req.playerCreationStep !== 'approved') return state;
+      const draft = req.draftPortraitUrl?.trim();
+      if (!draft) return state;
+      const pl = state.players[req.playerId];
+      if (!pl) return state;
+      const managerProspectArtQueue = q.map((r) =>
+        r.id === action.requestId
+          ? { ...r, playerCreationStep: 'launched' as const, draftPortraitUrl: null }
+          : r,
+      );
+      return {
+        ...state,
+        managerProspectArtQueue,
+        players: { ...state.players, [req.playerId]: { ...pl, portraitUrl: draft } },
+      };
     }
     case 'RESET':
       return createInitialGameState();
