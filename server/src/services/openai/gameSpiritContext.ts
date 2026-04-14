@@ -9,6 +9,9 @@ export interface GameSpiritDecisionContext {
   pressureLevel: PressureLevel;
   nearbyPlayers: string[];
   objective: string;
+  /** Opcional: liga o log Supabase à partida online (`game_spirit_ai_logs`). */
+  matchId?: string;
+  clubId?: string;
 }
 
 export interface GameSpiritDecisionResult {
@@ -63,6 +66,10 @@ export function parseGameSpiritDecisionBody(raw: unknown): GameSpiritDecisionCon
   const objective =
     typeof o.objective === 'string' && o.objective.trim() ? o.objective.trim() : 'build_play';
 
+  const uuidLike = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+  const matchId = typeof o.matchId === 'string' && uuidLike(o.matchId.trim()) ? o.matchId.trim() : undefined;
+  const clubId = typeof o.clubId === 'string' && uuidLike(o.clubId.trim()) ? o.clubId.trim() : undefined;
+
   return {
     player,
     position,
@@ -70,5 +77,7 @@ export function parseGameSpiritDecisionBody(raw: unknown): GameSpiritDecisionCon
     pressureLevel,
     nearbyPlayers,
     objective,
+    matchId,
+    clubId,
   };
 }

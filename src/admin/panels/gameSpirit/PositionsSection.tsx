@@ -347,7 +347,9 @@ export function PositionsSection({
 
   const clearForm = () => {
     setEditingId(null);
+    setCode('MC');
     setLabel('');
+    setZone('mid');
     setActivitiesText('');
     setCoachingNotes('');
     setBlockNotes(emptyBlockNotes());

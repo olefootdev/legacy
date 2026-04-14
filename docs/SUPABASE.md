@@ -16,6 +16,7 @@ Configuração do servidor MCP Supabase (HTTP + `project_ref`): [SUPABASE_MCP.md
 | `VITE_SUPABASE_URL` | Client (bundle) | URL do projecto Supabase |
 | `VITE_SUPABASE_ANON_KEY` | Client (bundle) | Chave pública (anon) — segura, RLS protege |
 | `SUPABASE_SERVICE_ROLE_KEY` | Servidor / CI **apenas** | Chave privilegiada — nunca no bundle |
+| `GAMESPIRIT_AI_LOG_SUPABASE` | Servidor | `1` para gravar decisões OpenAI em `game_spirit_ai_logs` (migration 00004) |
 | `DATABASE_URL` | Servidor / CI **apenas** | Ligação direta ao PostgreSQL |
 
 Copiar `.env.example` para `.env` e preencher.
@@ -43,6 +44,7 @@ Para skills oficiais Supabase no Cursor/Claude: `npx skills add supabase/agent-s
 supabase/migrations/00001_initial_schema.sql   — perfil, clube de jogo, plantel, partidas
 supabase/migrations/00002_admin_leagues_competitions.sql — épocas, competições, fixtures
 supabase/migrations/00003_admin_platform_schema.sql    — catálogo sports, onboarding, blueprints, spirit, saves, banners, ledger
+supabase/migrations/00004_online_game_persistence.sql  — alinha matches/eventos/plantel ao motor; logs OpenAI (`game_spirit_ai_logs`)
 ```
 
 **00001 — núcleo jogo**
@@ -55,6 +57,8 @@ supabase/migrations/00003_admin_platform_schema.sql    — catálogo sports, onb
 **00002** — temporadas, divisões, competições, classificações, fixtures (sempre referenciando **`clubs` de jogo**).
 
 **00003** — Admin / onboarding: **`sports_leagues`**, **`sports_clubs`**, **`user_settings`**, **`platform_accounts`**, **`player_blueprints`**, Game Spirit, **`game_saves`**, **`admin_banners`**, **`finance_ledger_entries`**. Ver [ADMIN_DATABASE.md](./ADMIN_DATABASE.md).
+
+**00004** — Partidas online: colunas em **`matches`** (`away_name`, `simulation_seed`, `post_match_data`), **`mode`** com `test2d`, **`match_events.kind`**, plantel alinhado ao motor, **`game_spirit_ai_logs`** (sem políticas públicas — só backend).
 
 RLS habilitado; políticas variam por tabela (catálogo sports e banners activos legíveis por `anon`/`authenticated` onde indicado na migration).
 
@@ -72,7 +76,7 @@ npx supabase db push
 - Se `link` der erro de **privilégios**, confirma que fizeste login com o utilizador certo (`npx supabase projects list`).
 - O ficheiro **`supabase/config.toml`** usa `project_id` (local) no formato atual da CLI; não uses o bloco antigo `[project]` com `id`.
 
-**Sem CLI:** Dashboard → **SQL** → colar e executar, **por ordem**, `00001`, `00002`, `00003` em `supabase/migrations/`.
+**Sem CLI:** Dashboard → **SQL** → colar e executar, **por ordem**, `00001` … `00004` em `supabase/migrations/`.
 
 Depois do `db push`, tipos TypeScript (opcional):
 

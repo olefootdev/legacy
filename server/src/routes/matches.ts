@@ -67,24 +67,26 @@ matchRoutes.post('/matches/:id/events', async (c) => {
 
   const matchId = c.req.param('id');
   const body = await c.req.json<{
+    kind?: string;
     type?: string;
     minute?: number;
     payload?: Record<string, unknown>;
   }>();
 
-  if (!body.type) {
-    return c.json({ error: 'type is required' }, 400);
+  const kind = body.kind ?? body.type;
+  if (!kind) {
+    return c.json({ error: 'kind is required (alias: type)' }, 400);
   }
 
   const { data, error } = await supabaseAdmin
     .from('match_events')
     .insert({
       match_id: matchId,
-      type: body.type,
+      kind,
       minute: body.minute ?? 0,
       payload: body.payload ?? {},
     })
-    .select('id, type, minute, created_at')
+    .select('id, kind, minute, created_at')
     .single();
 
   if (error) {

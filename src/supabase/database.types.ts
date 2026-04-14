@@ -120,7 +120,7 @@ export interface Database {
       };
       match_events: {
         Row: {
-          id: number;
+          id: string;
           match_id: string;
           minute: number;
           kind: string;
@@ -132,6 +132,38 @@ export interface Database {
           minute: number;
           kind: string;
           payload?: Record<string, unknown>;
+        };
+        Update: never;
+      };
+
+      /** Telemetria Game Spirit + OpenAI (migration 00004); escrita só service_role. */
+      game_spirit_ai_logs: {
+        Row: {
+          id: string;
+          match_id: string | null;
+          club_id: string | null;
+          request_fingerprint: string;
+          provider: string;
+          model: string | null;
+          source: 'responses' | 'fallback' | 'cache_hit';
+          input_summary: Record<string, unknown>;
+          output_json: Record<string, unknown>;
+          latency_ms: number | null;
+          error: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          match_id?: string | null;
+          club_id?: string | null;
+          request_fingerprint: string;
+          provider?: string;
+          model?: string | null;
+          source?: 'responses' | 'fallback' | 'cache_hit';
+          input_summary?: Record<string, unknown>;
+          output_json?: Record<string, unknown>;
+          latency_ms?: number | null;
+          error?: string | null;
         };
         Update: never;
       };

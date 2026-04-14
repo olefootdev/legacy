@@ -4,6 +4,7 @@ import { noopGameSpiritDecisionCache } from './decisionCache.js';
 import type { GameSpiritDecisionContext, GameSpiritDecisionResult } from './gameSpiritContext.js';
 import { stableCacheKey } from './gameSpiritContext.js';
 import { intelligentFallbackDecision } from './fallbackDecision.js';
+import { logGameSpiritAiFireAndForget } from './logGameSpiritAi.js';
 
 const SYSTEM = `És um jogador de futebol profissional no simulador OLEFOOT.
 Analisas UM instante de jogo e respondes APENAS com um objeto JSON válido (sem markdown, sem texto extra), com as chaves exatas:
@@ -60,12 +61,22 @@ export async function getGameDecision(
 ): Promise<GameSpiritDecisionResult> {
   const cache = options.cache ?? noopGameSpiritDecisionCache;
   const cacheKey = stableCacheKey(ctx);
+  const t0 = Date.now();
 
   try {
     const hit = await cache.get(cacheKey);
     if (hit) {
       const parsed = parseModelJson(hit);
-      if (parsed) return parsed;
+      if (parsed) {
+        logGameSpiritAiFireAndForget({
+          ctx,
+          result: parsed,
+          source: 'cache_hit',
+          model: gamespiritModel(),
+          latencyMs: Date.now() - t0,
+        });
+        return parsed;
+      }
     }
   } catch {
     /* cache opcional — nunca falha o fluxo */
@@ -73,14 +84,23 @@ export async function getGameDecision(
 
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
-    return intelligentFallbackDecision(ctx);
+    const fb = intelligentFallbackDecision(ctx);
+    logGameSpiritAiFireAndForget({
+      ctx,
+      result: fb,
+      source: 'fallback',
+      latencyMs: Date.now() - t0,
+      error: 'OPENAI_API_KEY ausente',
+    });
+    return fb;
   }
 
   const openai = new OpenAI({ apiKey });
+  const model = gamespiritModel();
 
   try {
     const response = await openai.responses.create({
-      model: gamespiritModel(),
+      model,
       instructions: SYSTEM,
       input: buildResponsesInput(ctx),
       temperature: 0.25,
@@ -99,6 +119,13 @@ export async function getGameDecision(
       } catch {
         /* ignore cache write */
       }
+      logGameSpiritAiFireAndForget({
+        ctx,
+        result: parsed,
+        source: 'responses',
+        model,
+        latencyMs: Date.now() - t0,
+      });
       return parsed;
     }
     console.error('[gamespirit] Resposta OpenAI inválida ou vazia.');
@@ -107,5 +134,14 @@ export async function getGameDecision(
     console.error('[gamespirit] Falha OpenAI:', msg);
   }
 
-  return intelligentFallbackDecision(ctx);
+  const fb = intelligentFallbackDecision(ctx);
+  logGameSpiritAiFireAndForget({
+    ctx,
+    result: fb,
+    source: 'fallback',
+    model,
+    latencyMs: Date.now() - t0,
+    error: 'OpenAI inválida ou falhou',
+  });
+  return fb;
 }
