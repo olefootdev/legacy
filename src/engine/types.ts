@@ -42,6 +42,10 @@ export interface PitchPlayerState {
   attributes?: MatchPlayerAttributes;
   /** Perfil cognitivo para decisão individual (opcional) */
   cognitiveArchetype?: MatchCognitiveArchetype;
+  /** Pé preferencial do jogador (right/left/both) */
+  strongFoot?: import('@/entities/types').PlayerStrongFoot;
+  /** Arquétipo de jogador (profissional/novo_talento/lenda/meme/ai_plus) */
+  archetype?: import('@/entities/types').PlayerArchetype;
 }
 
 export type GoalBuildUp = 'positional' | 'counter';
@@ -51,6 +55,11 @@ export interface MatchEventEntry {
   minute: number;
   text: string;
   kind: 'narrative' | 'goal_home' | 'goal_away' | 'whistle' | 'sub' | 'yellow_home' | 'red_home' | 'yellow_away' | 'red_away' | 'injury_home' | 'penalty_start' | 'penalty_result';
+  /**
+   * Ao vivo 2D (`test2d`): destaque no feed de “aprendizagem” / feedback tático (acerto vs erro).
+   * Só o motor táctico preenche; restantes modos ignoram na UI.
+   */
+  live2dMoment?: 'good' | 'bad' | 'info';
   /** Jogador da casa (golo, cartões, lesão) ou metadado de golo visitante quando aplicável */
   playerId?: string;
   /** Barra de momento: true em qualquer golo. */

@@ -100,7 +100,7 @@ export type CausalMatchEvent =
       type: 'referee_shape_reset';
       payload: {
         minute: number;
-        reason: 'causal_whirlwind' | 'spatial_swarm';
+        reason: 'causal_whirlwind' | 'spatial_swarm' | 'box_clump_gk_foul' | 'box_clump_attacker_foul';
         awardedSide: PossessionSide;
       };
     };

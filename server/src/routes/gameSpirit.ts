@@ -1,15 +1,25 @@
 import { Hono } from 'hono';
+import { postGameSpiritDecision } from '../controllers/gameSpiritDecisionController.js';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 export const gameSpiritRoutes = new Hono();
+
+/** Decisão acionável + narração curta (motor GameSpirit; chave só no servidor). */
+gameSpiritRoutes.post('/api/gamespirit', postGameSpiritDecision);
 
 gameSpiritRoutes.get('/api/game-spirit/status', (c) => {
   const openaiConfigured = Boolean(process.env.OPENAI_API_KEY?.trim());
   return c.json({
     ok: true,
     openaiConfigured,
+    /** Modelo usado em `/api/game-spirit/teach` quando OPENAI_MODEL não está definido. */
     model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+    /** Modelo usado em `/api/gamespirit` (Responses API) quando as envs dedicadas não estão definidas. */
+    gamespiritModel:
+      process.env.OPENAI_GAMESPIRIT_MODEL?.trim() ||
+      process.env.OPENAI_MODEL?.trim() ||
+      'gpt-4.1-mini',
   });
 });
 

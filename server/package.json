@@ -7,13 +7,17 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "verify-openai": "tsx scripts/verify-openai.ts",
+    "test:openai": "tsx scripts/integration-openai.ts",
+    "test:openai:http": "tsx scripts/integration-openai.ts --http"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.4.7",
-    "hono": "^4.7.6"
+    "hono": "^4.7.6",
+    "openai": "^4.104.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

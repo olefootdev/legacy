@@ -545,11 +545,21 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     return computePitchTokenSeparation(agents, { ball: ballPos });
   }, [pitch, awayPitch, ballPos]);
 
+  const secondHalfResumeCountdown =
+    usesLive2dTacticalEngine && tacticalLive2dEnabled
+      ? (truthSnap?.secondHalfResumeCountdownSec ?? 0)
+      : 0;
+  const scoreboardCountdownSec =
+    secondHalfResumeCountdown >= 1 && secondHalfResumeCountdown <= 10
+      ? secondHalfResumeCountdown
+      : null;
+
   const clockFrozen =
     quickPreStart !== null ||
     halfTimeUi ||
     !!(live?.spiritOverlay) ||
     preGoalActive ||
+    secondHalfResumeCountdown > 0 ||
     Date.now() < freezeUntilRef.current;
   const matchClock = useMatchClock(
     live?.footballElapsedSec ?? 0,
@@ -727,12 +737,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             awayName={live.awayName}
             awaySeed={fixture.opponent.id}
             clock={matchClock}
+            scoreboardCountdownSec={scoreboardCountdownSec}
             rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
           />
           <div
             className={cn(
               'flex justify-center items-center gap-8 font-display font-black text-5xl transition-opacity',
-              typeof quickPreStart === 'number' || quickPreStart === 'kickoff'
+              typeof quickPreStart === 'number' || quickPreStart === 'kickoff' || secondHalfResumeCountdown > 0
                 ? 'opacity-35'
                 : 'opacity-100',
             )}
@@ -904,6 +915,27 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                       })}
                       <Test2dBallToken x={ballPos.x} y={ballPos.y} trajectoryKind={live.ballTrajectory?.kind} />
                     </div>
+                    {secondHalfResumeCountdown > 0 ? (
+                      <div
+                        className="pointer-events-none absolute inset-0 z-[20] flex flex-col items-center justify-center gap-2 rounded-sm bg-black/50 backdrop-blur-[2px]"
+                        aria-live="polite"
+                        role="status"
+                      >
+                        <p className="px-3 text-center font-display text-[clamp(9px,2vw,11px)] font-black uppercase tracking-[0.2em] text-white/90">
+                          2.º tempo · troca de campo
+                        </p>
+                        <motion.span
+                          key={secondHalfResumeCountdown}
+                          initial={{ scale: 0.88, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 520, damping: 28 }}
+                          className="font-display font-black tabular-nums text-neon-yellow drop-shadow-[0_0_24px_rgba(234,255,0,0.35)] text-[min(22vw,5.5rem)]"
+                        >
+                          {secondHalfResumeCountdown}
+                        </motion.span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -922,6 +954,41 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                 </>
               )}
             </p>
+          ) : null}
+
+          {live.phase === 'playing' && quickPreStart === null && live.events.length > 0 ? (
+            <div
+              className="rounded-lg border border-white/10 bg-black/35 px-3 py-2.5"
+              aria-label="Últimos lances e momentos táticos"
+            >
+              <p className="text-[9px] font-display font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+                Relato ao vivo
+              </p>
+              {usesLive2dTacticalEngine ? (
+                <p className="mb-1.5 text-[9px] leading-snug text-gray-500/90">
+                  Verde = acerto colectivo · vermelho = erro corrigível · azul = contexto (ex.: remate).
+                </p>
+              ) : null}
+              <ul className="max-h-[7.5rem] space-y-1 overflow-y-auto text-left [scrollbar-width:thin]">
+                {live.events.slice(0, 12).map((ev) => (
+                  <li
+                    key={ev.id}
+                    className={cn(
+                      'text-[11px] leading-snug border-b border-white/[0.06] pb-1 last:border-0 last:pb-0',
+                      usesLive2dTacticalEngine && ev.live2dMoment === 'good'
+                        ? 'rounded bg-emerald-500/[0.09] px-1.5 text-emerald-100/95'
+                        : usesLive2dTacticalEngine && ev.live2dMoment === 'bad'
+                          ? 'rounded bg-rose-500/[0.09] px-1.5 text-rose-100/90'
+                          : usesLive2dTacticalEngine && ev.live2dMoment === 'info'
+                            ? 'rounded bg-cyan-500/[0.08] px-1.5 text-cyan-100/88'
+                            : 'text-gray-200/95',
+                    )}
+                  >
+                    {ev.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
 
           {live.phase === 'playing' && quickPreStart === null ? (

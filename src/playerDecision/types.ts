@@ -54,6 +54,12 @@ export type DecisionPhase =
   | 'executing'
   | 'recovering';
 
+/**
+ * “Cabeça” ao tomar a bola — dura a janela de deliberação / scan antes da decisão:
+ * rápido (1s), moderado (2s), lento (3s).
+ */
+export type ReceptionThinkMode = 'fast' | 'moderate' | 'slow';
+
 // ---------------------------------------------------------------------------
 // Context reading — what the player perceives
 // ---------------------------------------------------------------------------
@@ -349,6 +355,14 @@ export interface PrethinkingState {
 // Decision context (superset of old BrainContext)
 // ---------------------------------------------------------------------------
 
+/** Resposta recente da Fase 1 (OpenAI via servidor); TTL em tempo real. */
+export interface GameSpiritPhase1Hint {
+  decision: string;
+  narration: string;
+  confidence: number;
+  expiresAtMs: number;
+}
+
 export interface DecisionContext {
   self: AgentSnapshot;
   teammates: AgentSnapshot[];
@@ -425,4 +439,8 @@ export interface DecisionContext {
    * GameSpirit: `spiritMomentumClamp01` do live match (0–1). Só enviesa tendências de intenção, não decide ações.
    */
   gameSpiritHomeMomentum01?: number | null;
+  /**
+   * GameSpirit Fase 1: sugestão assíncrona (decisão + confiança) preenchida pelo `TacticalSimLoop` quando disponível.
+   */
+  gameSpiritPhase1Hint?: GameSpiritPhase1Hint | null;
 }

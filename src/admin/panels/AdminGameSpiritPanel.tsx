@@ -21,14 +21,16 @@ import { PatternsSection } from './gameSpirit/PatternsSection';
 import { PositionsSection } from './gameSpirit/PositionsSection';
 import { ReferenceSection } from './gameSpirit/ReferenceSection';
 import { TeachSection } from './gameSpirit/TeachSection';
+import { AdminTacticalAdvisorBoard } from './gameSpirit/AdminTacticalAdvisorBoard';
 
-type TabId = 'diag' | 'nar' | 'pat' | 'pos' | 'teach' | 'ref';
+type TabId = 'diag' | 'nar' | 'pat' | 'pos' | 'board' | 'teach' | 'ref';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'diag', label: 'Diagnóstico' },
   { id: 'nar', label: 'Narrativas' },
   { id: 'pat', label: 'Padrões táticos' },
   { id: 'pos', label: 'Posições' },
+  { id: 'board', label: 'Campo ao vivo' },
   { id: 'teach', label: 'Ensino (OpenAI)' },
   { id: 'ref', label: 'Mapa código' },
 ];
@@ -125,6 +127,7 @@ export function AdminGameSpiritPanel() {
         {tab === 'nar' ? <NarrativesSection kb={kb} onChange={persist} /> : null}
         {tab === 'pat' ? <PatternsSection kb={kb} onChange={persist} /> : null}
         {tab === 'pos' ? <PositionsSection kb={kb} onChange={persist} /> : null}
+        {tab === 'board' ? <AdminTacticalAdvisorBoard kb={kb} onChange={persist} /> : null}
         {tab === 'teach' ? <TeachSection kb={kb} onChange={persist} /> : null}
         {tab === 'ref' ? (
           <div className="flex items-start gap-2 text-white/45">
@@ -138,7 +141,7 @@ export function AdminGameSpiritPanel() {
         <Activity className="h-3.5 w-3.5" />
         <span>
           Memória local: {kb.narrativePacks.length} pacotes · {kb.tacticalPatterns.length} padrões ·{' '}
-          {kb.positionTeachings.length} posições
+          {kb.positionTeachings.length} posições · {kb.pitchAdvisorMarkers?.length ?? 0} marcações no campo
         </span>
       </div>
     </div>

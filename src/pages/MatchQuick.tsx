@@ -838,6 +838,9 @@ export function MatchQuick() {
             awayName={live.awayName}
             awaySeed={fixture.opponent.id}
             clock={matchClock}
+            scoreboardCountdownSec={
+              halfTimeUi && halfTimeTick >= 1 && halfTimeTick <= 10 ? halfTimeTick : null
+            }
             rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
           />
           <div

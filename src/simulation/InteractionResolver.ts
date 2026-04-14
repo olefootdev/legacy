@@ -4,6 +4,7 @@ import type { MatchCognitiveArchetype } from '@/match/playerInMatch';
 import type { RngDraw } from '@/match/rngDraw';
 import { rngFromMathRandom } from '@/match/rngDraw';
 import { ACTION_SOFT_CAP_PASS } from '@/match/actionResolutionTuning';
+import type { PlayerArchetype, PlayerStrongFoot } from '@/entities/types';
 
 export interface AgentSnapshot {
   id: string;
@@ -31,6 +32,8 @@ export interface AgentSnapshot {
   /** 0.55–1.2 multiplicador de execução em runtime */
   confidenceRuntime?: number;
   stamina?: number;
+  strongFoot?: PlayerStrongFoot;
+  archetype?: PlayerArchetype;
 }
 
 export interface PassOption {
@@ -67,6 +70,70 @@ export interface ShotChance {
   angle: number;
   /** Raw xG 0-1 */
   xG: number;
+}
+
+/**
+ * Weak-foot penalty multiplier (0.7–1.0).
+ * `both` → 1 (no penalty). Single-footed players have a % chance of using
+ * the weak foot based on ball-z position relative to their body orientation,
+ * resulting in reduced accuracy / power.
+ *
+ * The RNG roll is optional — when not provided we use a deterministic spatial
+ * heuristic: if the ball arrives from a side that forces the weak foot the
+ * penalty always applies (keeping sim deterministic when no extra RNG seed is
+ * available).
+ */
+export function weakFootMultiplier(
+  agent: AgentSnapshot,
+  ballZ: number,
+  rng?: { nextUnit(): number },
+): number {
+  const foot = agent.strongFoot;
+  if (!foot || foot === 'both') return 1;
+  const isRight = foot === 'right';
+  const bodyCenter = agent.z;
+  const ballOnWeakSide = isRight
+    ? ballZ < bodyCenter - 1.2
+    : ballZ > bodyCenter + 1.2;
+  if (!ballOnWeakSide && (!rng || rng.nextUnit() > 0.22)) return 1;
+  const skill01 = agent.drible / 100;
+  return 0.72 + skill01 * 0.14;
+}
+
+/**
+ * Archetype execution modifier (multiplier on key attribute rolls).
+ * - `profissional`: consistent → floors bad rolls (+3% base, never <0.88×)
+ * - `lenda`: clutch gene → +6% on high-pressure actions
+ * - `novo_talento`: high variance → ±8% swing
+ * - `meme`: chaotic → ±14% swing
+ * - `ai_plus`: slight global boost +4%
+ * - undefined / default → 1 (neutral)
+ */
+export function archetypeExecutionMultiplier(
+  agent: AgentSnapshot,
+  pressure01: number,
+  rng: { nextUnit(): number },
+): number {
+  const arch = agent.archetype;
+  if (!arch) return 1;
+  switch (arch) {
+    case 'profissional':
+      return Math.max(0.94, 1 + 0.03 - rng.nextUnit() * 0.02);
+    case 'lenda':
+      return 1 + 0.03 + pressure01 * 0.06;
+    case 'novo_talento': {
+      const swing = (rng.nextUnit() - 0.5) * 0.16;
+      return 1 + swing;
+    }
+    case 'meme': {
+      const swing = (rng.nextUnit() - 0.5) * 0.28;
+      return 1 + swing;
+    }
+    case 'ai_plus':
+      return 1.04;
+    default:
+      return 1;
+  }
 }
 
 /** Pressão 0–1 a partir da distância ao adversário mais próximo */
@@ -236,10 +303,11 @@ export function resolveTackle(
   rng: RngDraw = rngFromMathRandom(),
 ): boolean {
   if (dist > 2.5) return false;
+  const defArchBonus = archetypeExecutionMultiplier(defender, 0.5, rng);
   const defPower =
-    defender.marcacao / 100
+    (defender.marcacao / 100
     + defender.fisico / 100 * 0.32
-    + defender.velocidade / 100 * 0.16;
+    + defender.velocidade / 100 * 0.16) * defArchBonus;
   const carrPower = carrier.drible / 100 + carrier.velocidade / 100 * 0.26;
   let base = 0.2 + (defPower - carrPower) * 0.36;
   const fp = defender.fairPlay / 100;

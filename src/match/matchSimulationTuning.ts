@@ -38,11 +38,21 @@ export const LIVE_SIM_SYNC_THROTTLE_MS = 72;
 // Deliberation after ball reception
 // ---------------------------------------------------------------------------
 
-/** Base deliberation window (sim seconds) when receiving ball. Modified by mentalidade/confianca/pressure. */
+/** @deprecated Janela antiga em sub-segundo; o motor usa `RECEPTION_THINK_*` + `receptionThinkMode`. Mantido para docs/ferramentas. */
 export const DELIBERATION_BASE_SEC = 0.12;
-/** Minimum deliberation (extreme urgency / instinct clear) */
+/** @deprecated Ver `RECEPTION_THINK_MIN_SEC`. */
 export const DELIBERATION_MIN_SEC = 0.03;
-/** Maximum deliberation (low pressure, deep position, slow thinker) */
+/** @deprecated Ver `RECEPTION_THINK_MAX_SEC`. */
 export const DELIBERATION_MAX_SEC = 0.28;
 /** Pressure radius (m) for counting nearby opponents during deliberation */
 export const DELIBERATION_PRESSURE_RADIUS = 8;
+
+/**
+ * Modo cognitivo ao receber a bola (antes de passe/chute/condução):
+ * rápido (instinto), moderado (ler o jogo), lento (risco/genialidade).
+ */
+export const RECEPTION_THINK_FAST_SEC = 1;
+export const RECEPTION_THINK_MODERATE_SEC = 2;
+export const RECEPTION_THINK_SLOW_SEC = 3;
+export const RECEPTION_THINK_MIN_SEC = 0.35;
+export const RECEPTION_THINK_MAX_SEC = 3.5;

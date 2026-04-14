@@ -47,7 +47,7 @@ export interface SimMatchState {
   possession: PossessionSide;
   carrierId: string | null;
   minute: number;
-  phase: 'live' | 'stopped' | 'kickoff' | 'halftime' | 'fulltime';
+  phase: 'live' | 'stopped' | 'kickoff' | 'goal_restart' | 'halftime' | 'fulltime';
   /** Alinhado ao MatchClock (exceto pós-jogo, quando pode ficar em second_half até sync final). */
   clockPeriod: LiveMatchClockPeriod;
   causalLog: CausalLogState;
@@ -116,8 +116,16 @@ export function pushMotorTelemetry(state: SimMatchState, rec: MotorTelemetryReco
   pushMotorTelemetryRecord(state.motorOutcomeLog, rec);
 }
 
-export function pushSimEvent(state: SimMatchState, text: string, kind: MatchEventEntry['kind'] = 'narrative') {
+export function pushSimEvent(
+  state: SimMatchState,
+  text: string,
+  kind: MatchEventEntry['kind'] = 'narrative',
+  live2dMoment?: MatchEventEntry['live2dMoment'],
+  playerId?: string,
+) {
   const ev: MatchEventEntry = { id: uid(), minute: state.minute, text, kind };
+  if (live2dMoment) ev.live2dMoment = live2dMoment;
+  if (playerId) ev.playerId = playerId;
   state.events.unshift(ev);
   if (state.events.length > 60) state.events.pop();
 }

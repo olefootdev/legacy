@@ -11,6 +11,11 @@ export {
 export { resolvePreReception } from './PreReception';
 export { resolveReception } from './Reception';
 export { decideOnBall, computeDecisionSpeed, decisionDelaySec, carryScanAction } from './OnBallDecision';
+export {
+  computeReceptionThinkMode,
+  mapReceptionThinkToDecisionSpeed,
+  receptionThinkBaseSec,
+} from './receptionThinkMode';
 export { decideOffBall } from './OffBallDecision';
 export { resolveOnBallOutcome, resolveOffBallOutcome } from './OutcomeResolver';
 export { deriveIntention } from './Intention';
@@ -53,6 +58,7 @@ export type {
   ReceptionType,
   ReceptionResult,
   DecisionSpeed,
+  ReceptionThinkMode,
   DecisionTiming,
   DecisionOutcome,
   DecisionResult,

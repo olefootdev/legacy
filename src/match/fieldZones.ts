@@ -26,6 +26,11 @@ export const PENALTY_AREA_DEPTH_M = 16.5;
 /** Metade da largura da grande área (m a cada lado do eixo central). */
 export const PENALTY_AREA_HALF_WIDTH_M = 20.16;
 
+/** IFAB pequena área (goal area): 5,5 m a partir da linha de golo; largura 18,32 m. */
+export const GOAL_AREA_DEPTH_M = 5.5;
+/** Metade da largura da pequena área (m), centrada no meio-campo. */
+export const GOAL_AREA_HALF_WIDTH_M = 9.16;
+
 const MID_X = FIELD_LENGTH / 2;
 const CZ = FIELD_WIDTH / 2;
 const Z_LO = CZ - PENALTY_AREA_HALF_WIDTH_M;
@@ -92,6 +97,41 @@ export function isInsidePenaltyAreaAtEnd(pos: PitchPosition, end: PitchEnd): boo
   if (z < Z_LO || z > Z_HI) return false;
   if (end === 'west') return x >= 0 && x <= PENALTY_AREA_DEPTH_M;
   return x <= FIELD_LENGTH && x >= FIELD_LENGTH - PENALTY_AREA_DEPTH_M;
+}
+
+const GA_Z_LO = CZ - GOAL_AREA_HALF_WIDTH_M;
+const GA_Z_HI = CZ + GOAL_AREA_HALF_WIDTH_M;
+
+/** Pequena área (6 jardas) na extremidade `end`. */
+export function isInsideGoalAreaAtEnd(pos: PitchPosition, end: PitchEnd): boolean {
+  const { x, z } = pos;
+  if (z < GA_Z_LO || z > GA_Z_HI) return false;
+  if (end === 'west') return x >= 0 && x <= GOAL_AREA_DEPTH_M;
+  return x <= FIELD_LENGTH && x >= FIELD_LENGTH - GOAL_AREA_DEPTH_M;
+}
+
+/** `west` / `east` se a bola estiver numa pequena área; caso contrário `null`. */
+export function goalAreaEndContainingBall(ballX: number, ballZ: number): PitchEnd | null {
+  const p = { x: ballX, z: ballZ };
+  if (isInsideGoalAreaAtEnd(p, 'west')) return 'west';
+  if (isInsideGoalAreaAtEnd(p, 'east')) return 'east';
+  return null;
+}
+
+/** `west` / `east` se a bola estiver numa grande área (qualquer uma); caso contrário `null`. */
+export function penaltyAreaEndContainingBall(ballX: number, ballZ: number): PitchEnd | null {
+  const p = { x: ballX, z: ballZ };
+  if (isInsidePenaltyAreaAtEnd(p, 'west')) return 'west';
+  if (isInsidePenaltyAreaAtEnd(p, 'east')) return 'east';
+  return null;
+}
+
+/** Equipa que defende a baliza nesta extremidade neste tempo. */
+export function defendingTeamAtGoalEnd(end: PitchEnd, half: MatchHalf): TeamSide {
+  const homeDef = getDefendingGoalX('home', half);
+  const homeDefendsWest = homeDef < MID_X;
+  if (end === 'west') return homeDefendsWest ? 'home' : 'away';
+  return homeDefendsWest ? 'away' : 'home';
 }
 
 /** Grande área própria do time (defende este gol). */

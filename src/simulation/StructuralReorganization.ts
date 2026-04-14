@@ -4,6 +4,7 @@ import { slotToWorld } from '@/formation/layout433';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
+import { kickoffWorldXZ } from '@/engine/kickoffFormationLayout';
 import {
   clampWorldOutsideBothPenaltyAreas,
   goalKickRestartGoalkeeperWorldPos,
@@ -18,6 +19,12 @@ import {
 } from './StructuralEvent';
 import { applyFormationPreset, buildSetPieceTeamMaps } from '@/formation/presets';
 
+/** In the 2nd half teams swap ends, so the effective side for positioning is inverted. */
+function effectiveSideForHalf(side: 'home' | 'away', half: MatchHalf): 'home' | 'away' {
+  if (half === 2) return side === 'home' ? 'away' : 'home';
+  return side;
+}
+
 export type StructuralTargetMap = Map<string, { x: number; z: number }>;
 
 const DEFAULT_SCHEME: FormationSchemeId = '4-3-3';
@@ -25,12 +32,33 @@ const DEFAULT_SCHEME: FormationSchemeId = '4-3-3';
 function formationAnchorsForSide(
   side: 'home' | 'away',
   scheme: FormationSchemeId = DEFAULT_SCHEME,
+  half: MatchHalf = 1,
 ): Map<string, { x: number; z: number }> {
+  const eSide = effectiveSideForHalf(side, half);
   const bases = FORMATION_BASES[scheme];
   const out = new Map<string, { x: number; z: number }>();
   if (!bases) return out;
   for (const [slot, base] of Object.entries(bases)) {
-    out.set(slot, slotToWorld(side, { nx: base.nx, nz: base.nz }));
+    out.set(slot, slotToWorld(eSide, { nx: base.nx, nz: base.nz }));
+  }
+  return out;
+}
+
+/**
+ * Kickoff-constrained anchors: every player stays in their own half,
+ * matching the layout used at the start of the match (IFAB kickoff positioning).
+ */
+function kickoffAnchorsForSide(
+  side: 'home' | 'away',
+  scheme: FormationSchemeId = DEFAULT_SCHEME,
+  half: MatchHalf = 1,
+): Map<string, { x: number; z: number }> {
+  const eSide = effectiveSideForHalf(side, half);
+  const bases = FORMATION_BASES[scheme];
+  const out = new Map<string, { x: number; z: number }>();
+  if (!bases) return out;
+  for (const slot of Object.keys(bases)) {
+    out.set(slot, kickoffWorldXZ(eSide, scheme, slot));
   }
   return out;
 }
@@ -137,7 +165,7 @@ export class StructuralReorganizationSystem {
   }
 
   /**
-   * Full per-player targets for goal restart: both teams to catalogue formation on own half.
+   * Full per-player targets for goal restart: both teams to kickoff formation in own half.
    * Em `goal_kick_wide`, empurra todos para fora das duas grandes áreas; só o GR da equipa
    * que defende a saída de baliza fica junto à sua baliza.
    */
@@ -145,14 +173,23 @@ export class StructuralReorganizationSystem {
     homeAgents: { id: string; slotId: string; side: PossessionSide; role: string }[],
     awayAgents: { id: string; slotId: string; side: PossessionSide; role: string }[],
     half: MatchHalf,
+    homeScheme: FormationSchemeId = DEFAULT_SCHEME,
+    awayScheme: FormationSchemeId = DEFAULT_SCHEME,
   ): StructuralTargetMap {
-    const homeSlots = formationAnchorsForSide('home');
-    const awaySlots = formationAnchorsForSide('away');
+    const isKickoffAfterGoal = !this.goalRestart || this.goalRestart.variant === 'kickoff_after_goal';
+
+    const homeSlots = isKickoffAfterGoal
+      ? kickoffAnchorsForSide('home', homeScheme, half)
+      : formationAnchorsForSide('home', homeScheme, half);
+    const awaySlots = isKickoffAfterGoal
+      ? kickoffAnchorsForSide('away', awayScheme, half)
+      : formationAnchorsForSide('away', awayScheme, half);
+
     const m = new Map<string, { x: number; z: number }>();
     for (const [id, pos] of mapSlotsToPlayerIds(homeAgents, homeSlots)) m.set(id, pos);
     for (const [id, pos] of mapSlotsToPlayerIds(awayAgents, awaySlots)) m.set(id, pos);
 
-    if (!this.goalRestart || this.goalRestart.variant !== 'goal_kick_wide') {
+    if (isKickoffAfterGoal) {
       return m;
     }
 

@@ -180,6 +180,7 @@ export function MatchdayVersusInline({
 
 /**
  * Barra com relógio (partida rápida) — nomes completos opcionais, logos maiores.
+ * `scoreboardCountdownSec`: contagem 10→1 por baixo do cronómetro (só 1–10).
  */
 export function MatchdayVersusWithClock({
   homeShort,
@@ -188,6 +189,7 @@ export function MatchdayVersusWithClock({
   awayName,
   awaySeed,
   clock,
+  scoreboardCountdownSec,
   rowClassName,
   showTeamCrests = true,
 }: {
@@ -197,6 +199,8 @@ export function MatchdayVersusWithClock({
   awayName?: string;
   awaySeed?: string;
   clock: string;
+  /** Segundos restantes (1–10) por baixo do relógio oficial, em amarelo; omitir fora desse intervalo. */
+  scoreboardCountdownSec?: number | null;
   rowClassName?: string;
   /** Quando falso, só nomes/siglas (ex.: partida rápida sem brasões). */
   showTeamCrests?: boolean;
@@ -207,6 +211,11 @@ export function MatchdayVersusWithClock({
   const seed = awaySeed ?? fallbackAway;
   const homeLabel = homeName?.trim() || homeShort;
   const awayLabel = awayName?.trim() || awayShort;
+  const showRibbonCountdown =
+    typeof scoreboardCountdownSec === 'number'
+    && scoreboardCountdownSec >= 1
+    && scoreboardCountdownSec <= 10
+    && Number.isInteger(scoreboardCountdownSec);
 
   return (
     <div
@@ -227,9 +236,20 @@ export function MatchdayVersusWithClock({
           {homeLabel}
         </span>
       </div>
-      <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-tight text-gray-300 min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-xs sm:text-sm">
-        {clock}
-      </span>
+      <div className="flex shrink-0 flex-col items-center justify-center gap-0 leading-none">
+        <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-tight text-gray-300 min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-xs sm:text-sm">
+          {clock}
+        </span>
+        {showRibbonCountdown ? (
+          <span
+            className="mt-0.5 font-display text-[10px] font-black tabular-nums tracking-tight text-neon-yellow min-[400px]:text-xs sm:text-sm"
+            aria-live="polite"
+            aria-label={`Contagem regressiva: ${scoreboardCountdownSec} segundos`}
+          >
+            {scoreboardCountdownSec}
+          </span>
+        ) : null}
+      </div>
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-start gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         <span
           className={cn(

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { supabaseAdmin } from '../lib/supabaseAdmin.js';
+import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 
 export const matchRoutes = new Hono();
 
@@ -8,9 +8,17 @@ export const matchRoutes = new Hono();
  * Cria uma partida. Corpo: { mode, home_club_id, away_club_id? }
  *
  * Auth: espera header `Authorization: Bearer <jwt>`.
- * TODO: validar JWT via supabaseAdmin.auth.getUser(jwt) para produção.
+ * TODO: validar JWT via getSupabaseAdmin()?.auth.getUser(jwt) para produção.
  */
 matchRoutes.post('/matches', async (c) => {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) {
+    return c.json(
+      { error: 'Supabase não configurado neste servidor (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY em server/.env).' },
+      503,
+    );
+  }
+
   const body = await c.req.json<{
     mode?: string;
     home_club_id?: string;
@@ -49,6 +57,14 @@ matchRoutes.post('/matches', async (c) => {
  * Corpo: { type, minute, payload? }
  */
 matchRoutes.post('/matches/:id/events', async (c) => {
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) {
+    return c.json(
+      { error: 'Supabase não configurado neste servidor (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY em server/.env).' },
+      503,
+    );
+  }
+
   const matchId = c.req.param('id');
   const body = await c.req.json<{
     type?: string;

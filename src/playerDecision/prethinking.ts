@@ -1,4 +1,5 @@
 import type { DecisionContext, OffBallAction, PrethinkingIntent, PrethinkingSpeed, PrethinkingState } from './types';
+import { applyPhase1HintToPrethinkingIntent } from '@/gamespirit/gameSpiritPhase1PrethinkingMerge';
 import type { DecisionActionId } from './collectiveIndividualDecision';
 import { buildContextReading, identifyFieldZone, scanPressure } from './ContextScanner';
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
@@ -256,6 +257,9 @@ export function buildPrethinkingState(
   let intent = pickPrethinkingIntent(ctx);
   intent = applySpiritIntentNudge(ctx, intent, teamHasBall);
   intent = softenRepeatedIntent(ctx, intent, previousIntent);
+  if (ctx.gameSpiritPhase1Hint) {
+    intent = applyPhase1HintToPrethinkingIntent(intent, ctx, ctx.gameSpiritPhase1Hint);
+  }
 
   const conviction01 = clamp(
     (ctx.self.mentalidade ?? 70) / 100 * 0.38

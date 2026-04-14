@@ -53,21 +53,21 @@ function displayStandingsForLeague(
 function KnockoutBracketSection({ rounds }: { rounds: KnockoutRound[] | undefined }) {
   if (!rounds?.length) {
     return (
-      <p className="text-sm text-white/40">
+      <p className="max-w-full break-words text-pretty text-sm leading-snug text-white/40">
         Chaves ainda não definidas. No painel <span className="text-neon-yellow">/admin</span>, escolhe o tamanho do
         bracket e usa <strong className="text-white/60">Sortear chaves</strong>.
       </p>
     );
   }
   return (
-    <div className="ole-scroll-x flex gap-4 pb-2">
+    <div className="ole-scroll-x flex w-full max-w-full min-w-0 gap-4 pb-2 md:gap-6">
       {rounds.map((round) => (
-        <div key={round.name} className="min-w-[200px] shrink-0 space-y-2">
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{round.name}</h4>
+        <div key={round.name} className="min-w-[200px] shrink-0 space-y-2 md:min-w-[220px] md:space-y-2.5">
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 md:text-xs">{round.name}</h4>
           {round.pairs.map((p, i) => (
             <div
               key={i}
-              className="border border-white/10 bg-black/50 px-3 py-2 text-xs text-white/85"
+              className="border border-white/10 bg-black/50 px-3 py-2 text-xs text-white/85 md:px-4 md:py-2.5 md:text-sm"
             >
               <div className="font-medium">{p.homeName}</div>
               <div className="py-0.5 text-center text-[10px] text-white/30">vs</div>
@@ -92,10 +92,10 @@ function StandingsBlock({
   const supporterCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
 
   return (
-    <div className="ole-scroll-x rounded border border-white/10 bg-[#111]">
-      <div className="grid min-w-[260px] grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem] gap-2 border-b border-white/10 px-4 py-2 text-[9px] font-bold uppercase tracking-wider text-gray-500">
+    <div className="ole-scroll-x w-full max-w-full min-w-0 rounded border border-white/10 bg-[#111] lg:rounded-lg">
+      <div className="grid w-full min-w-0 grid-cols-[1.75rem_minmax(0,1fr)_2.25rem_2.25rem_2.25rem] gap-x-1.5 gap-y-0 border-b border-white/10 px-2 py-2 text-[9px] font-bold uppercase tracking-wider text-gray-500 sm:grid-cols-[2rem_minmax(0,1fr)_2.5rem_2.5rem_2.5rem] sm:gap-x-2 sm:px-4 sm:text-[10px] md:grid-cols-[2.25rem_minmax(0,1fr)_2.75rem_2.75rem_3rem] md:gap-x-3 md:px-5 md:py-2.5 md:text-xs lg:grid-cols-[2.5rem_minmax(0,1fr)_3rem_3rem_3.5rem] lg:gap-x-4 lg:px-6">
         <span>#</span>
-        <span>Equipe</span>
+        <span className="min-w-0">Equipe</span>
         <span className="text-center">J</span>
         <span className="text-center">PTS</span>
         <span className="text-center">SG</span>
@@ -111,39 +111,58 @@ function StandingsBlock({
           <div
             key={row.teamId}
             className={cn(
-              'grid min-w-[260px] grid-cols-[2rem_1fr_2.5rem_2.5rem_2.5rem] items-center gap-2 border-b border-white/5 px-4 py-3',
+              'grid w-full min-w-0 grid-cols-[1.75rem_minmax(0,1fr)_2.25rem_2.25rem_2.25rem] items-center gap-x-1.5 gap-y-0 border-b border-white/5 px-2 py-2.5 sm:grid-cols-[2rem_minmax(0,1fr)_2.5rem_2.5rem_2.5rem] sm:gap-x-2 sm:px-4 sm:py-3 md:grid-cols-[2.25rem_minmax(0,1fr)_2.75rem_2.75rem_3rem] md:gap-x-3 md:px-5 md:py-3.5 lg:grid-cols-[2.5rem_minmax(0,1fr)_3rem_3rem_3.5rem] lg:gap-x-4 lg:px-6 last:border-b-0',
               isOle && 'bg-neon-yellow/5',
             )}
           >
-            <span className={cn('font-display text-sm font-bold', isOle ? 'text-neon-yellow' : 'text-gray-500')}>
+            <span
+              className={cn(
+                'shrink-0 font-display text-xs font-bold tabular-nums sm:text-sm md:text-base',
+                isOle ? 'text-neon-yellow' : 'text-gray-500',
+              )}
+            >
               {idx + 1}
             </span>
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 md:gap-3">
               {isOle && supporterCrestUrl ? (
                 <img
                   src={supporterCrestUrl}
                   alt=""
-                  className="h-7 w-7 min-h-7 min-w-7 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+                  className="h-7 w-7 min-h-7 min-w-7 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] md:h-8 md:w-8 md:min-h-8 md:min-w-8"
                 />
               ) : (
-                <Shield className={cn('h-4 w-4 shrink-0', isOle ? 'text-neon-yellow' : 'text-gray-600')} />
+                <Shield
+                  className={cn('h-4 w-4 shrink-0 md:h-5 md:w-5', isOle ? 'text-neon-yellow' : 'text-gray-600')}
+                />
               )}
               <span
                 className={cn(
-                  'min-w-0 truncate font-display text-sm font-bold tracking-wider',
+                  'min-w-0 truncate font-display text-sm font-bold tracking-wider md:text-base',
                   isOle ? 'text-white' : 'text-gray-400',
                 )}
               >
                 {row.name}
               </span>
             </div>
-            <span className={cn('text-center font-display text-sm font-bold', isOle ? 'text-neon-yellow' : 'text-white')}>
+            <span
+              className={cn(
+                'shrink-0 text-center font-display text-xs font-bold tabular-nums sm:text-sm md:text-base',
+                isOle ? 'text-neon-yellow' : 'text-white',
+              )}
+            >
               {row.played}
             </span>
-            <span className={cn('text-center font-display text-sm font-bold', isOle ? 'text-neon-yellow' : 'text-white')}>
+            <span
+              className={cn(
+                'shrink-0 text-center font-display text-xs font-bold tabular-nums sm:text-sm md:text-base',
+                isOle ? 'text-neon-yellow' : 'text-white',
+              )}
+            >
               {row.points}
             </span>
-            <span className="text-center text-sm text-gray-500">{sgLabel}</span>
+            <span className="shrink-0 text-center font-display text-xs tabular-nums text-gray-500 sm:text-sm md:text-base">
+              {sgLabel}
+            </span>
           </div>
         );
       })}
@@ -166,12 +185,14 @@ export function Leagues() {
 
   if (adminLeagues.length === 0) {
     return (
-      <div className="mx-auto min-w-0 max-w-4xl space-y-6">
-        <div className="relative overflow-hidden rounded-xl border border-white/10 px-4 py-5">
+      <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 lg:max-w-5xl xl:max-w-6xl">
+        <div className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6">
           <GameBannerBackdrop slot="leagues_header" imageOpacity={0.32} />
-          <div className="relative z-10">
-            <h2 className="font-display text-3xl font-black uppercase tracking-wider">Ligas</h2>
-            <p className="mt-2 text-sm text-gray-500">
+          <div className="relative z-10 min-w-0 max-w-full md:max-w-3xl">
+            <h2 className="break-words font-display text-2xl font-black uppercase tracking-wider sm:text-3xl md:text-4xl">
+              Ligas
+            </h2>
+            <p className="mt-2 max-w-full break-words text-pretty text-sm leading-snug text-gray-500 md:text-base md:leading-relaxed">
               Nenhuma competição configurada. Use o painel em <code className="text-neon-yellow">/admin</code> para criar
               ligas.
             </p>
@@ -182,22 +203,24 @@ export function Leagues() {
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-4xl space-y-10">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 sm:space-y-10 lg:max-w-5xl xl:max-w-6xl">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-xl border border-white/10 px-4 py-5"
+        className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6"
       >
         <GameBannerBackdrop slot="leagues_header" imageOpacity={0.32} />
-        <div className="relative z-10">
-          <h2 className="font-display text-3xl font-black uppercase tracking-wider">Ligas</h2>
-          <p className="mt-1 text-sm font-medium text-gray-500">
+        <div className="relative z-10 min-w-0 max-w-full md:max-w-3xl">
+          <h2 className="break-words font-display text-2xl font-black uppercase tracking-wider sm:text-3xl md:text-4xl">
+            Ligas
+          </h2>
+          <p className="mt-1 max-w-full break-words text-pretty text-sm font-medium leading-snug text-gray-500 md:mt-2 md:text-base md:leading-relaxed">
             Competições, calendário e formato — tabela, mata-mata ou híbrido.
           </p>
         </div>
       </motion.div>
 
-      <div className="space-y-10">
+      <div className="space-y-8 sm:space-y-10 lg:space-y-12">
         {orderedLeagues.map((lg, i) => {
           const isPrimary = lg.id === adminPrimaryLeagueId;
           const { sorted, userPosition, userForm } = displayStandingsForLeague(
@@ -221,45 +244,54 @@ export function Leagues() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06 }}
               className={cn(
-                'space-y-5 border border-white/10 bg-[#111] p-5',
+                'w-full min-w-0 max-w-full space-y-4 border border-white/10 bg-[#111] p-3 sm:space-y-5 sm:p-5 md:p-6 lg:rounded-lg',
                 isPrimary && 'ring-1 ring-neon-yellow/30',
               )}
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <Trophy className={cn('h-6 w-6 shrink-0', isPrimary ? 'text-neon-yellow' : 'text-neon-yellow/70')} />
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-display text-lg font-bold uppercase tracking-wider text-white">{lg.name}</h3>
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-6 sm:gap-y-4 md:gap-x-8 lg:gap-x-10">
+                <div className="flex min-w-0 items-start gap-2 sm:gap-3 md:gap-4">
+                  <Trophy
+                    className={cn(
+                      'mt-0.5 h-5 w-5 shrink-0 sm:h-6 sm:w-6 md:h-7 md:w-7',
+                      isPrimary ? 'text-neon-yellow' : 'text-neon-yellow/70',
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 md:gap-x-3">
+                      <h3 className="min-w-0 max-w-full break-words font-display text-base font-bold uppercase tracking-wider text-white sm:break-normal sm:text-lg md:text-xl lg:text-2xl">
+                        {lg.name}
+                      </h3>
                       {isPrimary ? (
-                        <span className="rounded bg-neon-yellow/20 px-2 py-0.5 text-[9px] font-bold uppercase text-neon-yellow">
+                        <span className="shrink-0 rounded bg-neon-yellow/20 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-neon-yellow sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
                           Principal
                         </span>
                       ) : null}
-                      <span className="rounded border border-white/15 px-2 py-0.5 text-[9px] font-bold uppercase text-gray-400">
+                      <span className="max-w-full min-w-0 rounded border border-white/15 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-gray-400 sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
                         {LEAGUE_FORMAT_LABELS[lg.format]}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">{lg.division}</p>
+                    <p className="mt-0.5 max-w-full break-words text-[10px] font-bold uppercase tracking-wider text-gray-500 md:text-xs">
+                      {lg.division}
+                    </p>
                     {dateLine ? (
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 max-w-full break-words text-xs leading-snug text-gray-400 md:text-sm">
                         <span className="text-gray-500">Período: </span>
                         {dateLine}
                       </p>
                     ) : null}
                     {lg.format === 'hybrid' && lg.hybridQualificationEndDate ? (
-                      <p className="mt-0.5 text-xs text-gray-500">
+                      <p className="mt-0.5 max-w-full break-words text-xs leading-snug text-gray-500 md:text-sm">
                         Fim qualificação: {formatDatePt(lg.hybridQualificationEndDate)}
                       </p>
                     ) : null}
                     {(lg.format === 'knockout' || lg.format === 'hybrid') && lg.knockoutStartDate ? (
-                      <p className="mt-0.5 text-xs text-gray-500">
+                      <p className="mt-0.5 max-w-full break-words text-xs leading-snug text-gray-500 md:text-sm">
                         Mata-mata: {formatDatePt(lg.knockoutStartDate)}
                         {lg.knockoutBracketSize ? ` · bracket ${lg.knockoutBracketSize}` : null}
                       </p>
                     ) : null}
                     {lg.prizeSummary ? (
-                      <p className="mt-2 max-w-prose text-sm text-gray-400">
+                      <p className="mt-2 max-w-full break-words text-pretty text-sm leading-snug text-gray-400 md:text-base md:leading-relaxed lg:max-w-2xl">
                         <span className="font-semibold text-gray-500">Prémios: </span>
                         {lg.prizeSummary}
                       </p>
@@ -267,28 +299,38 @@ export function Leagues() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 sm:max-w-md">
-                  <div className="border border-white/5 bg-black/40 p-3 text-center">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Posição</div>
-                    <div className="font-display text-xl font-black text-neon-yellow">{userPosition}º</div>
+                <div className="grid w-full min-w-0 grid-cols-3 gap-1.5 sm:w-auto sm:max-w-md sm:justify-self-stretch sm:gap-2 md:max-w-lg md:gap-3 lg:max-w-xl">
+                  <div className="min-w-0 border border-white/5 bg-black/40 px-1.5 py-2 text-center sm:p-3 md:px-4 md:py-4">
+                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
+                      Posição
+                    </div>
+                    <div className="truncate font-display text-lg font-black tabular-nums text-neon-yellow sm:text-xl md:text-2xl">
+                      {userPosition}º
+                    </div>
                   </div>
-                  <div className="border border-white/5 bg-black/40 p-3 text-center">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Pontos</div>
-                    <div className="font-display text-xl font-black text-white">
+                  <div className="min-w-0 border border-white/5 bg-black/40 px-1.5 py-2 text-center sm:p-3 md:px-4 md:py-4">
+                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
+                      Pontos
+                    </div>
+                    <div className="truncate font-display text-lg font-black tabular-nums text-white sm:text-xl md:text-2xl">
                       {rowMatchingClub(sorted, club.name, club.shortName)?.points ?? '—'}
                     </div>
                   </div>
-                  <div className="border border-white/5 bg-black/40 p-3 text-center">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Jogos</div>
-                    <div className="font-display text-xl font-black text-white">
+                  <div className="min-w-0 border border-white/5 bg-black/40 px-1.5 py-2 text-center sm:p-3 md:px-4 md:py-4">
+                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
+                      Jogos
+                    </div>
+                    <div className="truncate font-display text-lg font-black tabular-nums text-white sm:text-xl md:text-2xl">
                       {rowMatchingClub(sorted, club.name, club.shortName)?.played ?? '—'}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">Forma</span>
+              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
+                <span className="mr-0.5 shrink-0 text-[9px] font-bold uppercase tracking-wider text-gray-500 sm:mr-1">
+                  Forma
+                </span>
                 {userForm.map((f, j) => (
                   <span
                     key={j}
@@ -303,18 +345,20 @@ export function Leagues() {
               </div>
 
               {showTable ? (
-                <div>
-                  <h4 className="mb-3 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wider text-white">
-                    <TrendingUp className="h-4 w-4 text-neon-yellow" />
-                    {lg.format === 'hybrid' ? 'Fase de qualificação (tabela)' : 'Classificação'}
+                <div className="min-w-0 max-w-full">
+                  <h4 className="mb-2 flex min-w-0 max-w-full flex-wrap items-center gap-2 font-display text-xs font-bold uppercase tracking-wider text-white sm:mb-3 sm:text-sm md:text-base md:tracking-wide">
+                    <TrendingUp className="h-3.5 w-3.5 shrink-0 text-neon-yellow sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                    <span className="min-w-0 break-words leading-snug">
+                      {lg.format === 'hybrid' ? 'Fase de qualificação (tabela)' : 'Classificação'}
+                    </span>
                   </h4>
                   <StandingsBlock sorted={sorted} clubName={club.name} clubShort={club.shortName} />
                 </div>
               ) : null}
 
               {showBracket ? (
-                <div>
-                  <h4 className="mb-3 font-display text-sm font-bold uppercase tracking-wider text-white">
+                <div className="min-w-0 max-w-full">
+                  <h4 className="mb-2 max-w-full break-words font-display text-xs font-bold uppercase tracking-wider text-white sm:mb-3 sm:text-sm md:text-base">
                     {lg.format === 'hybrid' ? 'Mata-mata' : 'Chaves'}
                   </h4>
                   <KnockoutBracketSection rounds={lg.knockoutRounds} />

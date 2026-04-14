@@ -37,6 +37,7 @@ import {
 import {
   buildRefereeDispositionMaps,
   scanCausalLogConfusion,
+  scanPenaltyAreaClumpRecovery,
   scanSpatialSwarmConfusion,
 } from '@/simulation/matchConfusionReferee';
 import { MatchSimulationEventBus } from '@/match/events/matchSimulationEventBus';
@@ -62,6 +63,12 @@ import {
   getOrCreateStats,
   type SimMatchState,
 } from './SimMatchState';
+import {
+  attachGameSpiritPhase1Hint,
+  detectGameSpiritPhase1Trigger,
+  scheduleGameSpiritPhase1Request,
+  resetGameSpiritPhase1Orchestrator,
+} from '@/gamespirit/gameSpiritPhase1Orchestrator';
 import {
   resolveTackle,
   nearestOpponentPressure01,
@@ -151,6 +158,21 @@ import {
 } from '@/match/matchSimulationTuning';
 import { createSeededRng, hashTurnoverSeed, pickPlayAfterTurnover } from './pickPlayAfterTurnover';
 import {
+  test2dPassAfterTurnoverLine,
+  test2dCarryAfterTurnoverLine,
+  test2dInterceptCutPassLine,
+  test2dShotWindupLine,
+  test2dGkBallFromShotLine,
+  test2dShotMissDetailLine,
+  test2dPassIncompleteLine,
+  test2dReceptionFumbleLine,
+  test2dDribbleStrippedLine,
+  test2dDribbleLooseLine,
+  test2dCrossFailLine,
+  test2dPassSolidLine,
+  type Test2dTurnoverTag,
+} from '@/engine/test2d/test2dLiveFeedNarrative';
+import {
   createCausalBatch,
   type CausalMatchEvent,
   type ShotStrikeProfile,
@@ -179,9 +201,9 @@ import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 const FIXED_DT = 1 / 60;
 /**
  * Tempo mínimo com bola nas mãos do GR antes do pontapé (s).
- * Valores ~FIXED_DT*3 (~50 ms) faziam `gkHeldWait` quase invisível e a pressão voltava logo.
+ * ~3s dá tempo aos rivais de sair da grande área (evac no freeze) sem colapsar na bola.
  */
-const GK_RESTART_KICK_DELAY_SEC = 0.58;
+const GK_RESTART_KICK_DELAY_SEC = 3;
 const DECISION_DEBUG = (globalThis as { __OF_DECISION_DEBUG__?: boolean }).__OF_DECISION_DEBUG__ === true;
 
 function invertLineup(matchLineup: Record<string, string>): Map<string, string> {
@@ -220,6 +242,8 @@ interface AgentEx extends AgentBinding {
   cognitiveArchetype: MatchCognitiveArchetype;
   /** Esforço locomotor suavizado (0 ≈ andar, 1 ≈ sprint). */
   locomotionRunBlendSmoothed: number;
+  strongFoot?: import('@/entities/types').PlayerStrongFoot;
+  archetype?: import('@/entities/types').PlayerArchetype;
 }
 
 interface TacticalManagerParams {
@@ -317,6 +341,8 @@ export class TacticalSimLoop {
   private secondHalfKickoffAt: number | null = null;
   /** Cooldown do árbitro lógico (confusão causal / ajuntamento espacial). */
   private lastConfusionRefereeWorldTime = -1e9;
+  /** Evita spam de “momentos” pedagógicos no feed ao vivo 2D. */
+  private live2dLearningCooldownUntil = -1e9;
   // #region agent log
   private _dbgGkSteerLogSimTime = -1e9;
   private _dbgIntegrateTick = 0;
@@ -328,6 +354,11 @@ export class TacticalSimLoop {
     this.ballVehicle.maxSpeed = 48;
     this.ballVehicle.maxForce = 200;
     this.ballVehicle.mass = 0.3;
+  }
+
+  /** Narração rica do feed só em ao vivo 2D (`test2d`). */
+  private isTest2dLiveFeed(): boolean {
+    return this.liveRef?.mode === 'test2d';
   }
 
   /**
@@ -353,9 +384,10 @@ export class TacticalSimLoop {
       this.awayAgents = [];
       this.shirtNumbers.clear();
 
+      const homeSchemeInit: FormationSchemeId = (live.homeFormationScheme ?? '4-3-3') as FormationSchemeId;
       for (const hp of live.homePlayers) {
         const slot = hp.slotId || inv.get(hp.playerId) || 'mc1';
-        const w = uiPercentToWorld(hp.x, hp.y);
+        const w = kickoffWorldXZ('home', homeSchemeInit, slot);
         const base = createAgentBinding(hp.playerId, slot, 'home', hp.role, w.x, w.z, 14 + manager.tempo * 0.04);
         const prof = profileForSlot(slot, hp.role);
         const attrs = normalizeMatchAttributes(hp.attributes);
@@ -369,6 +401,8 @@ export class TacticalSimLoop {
           matchRuntime: rt,
           cognitiveArchetype: cog,
           locomotionRunBlendSmoothed: 0.35,
+          strongFoot: hp.strongFoot,
+          archetype: hp.archetype,
         };
         this.applyVehicleSpeedFromAttrs(agEx, FIXED_DT, null);
         this.homeAgents.push(agEx);
@@ -377,10 +411,10 @@ export class TacticalSimLoop {
 
       this.matchEngine.reset();
 
-      const awayScheme = live.homeFormationScheme ?? '4-3-3';
+      const awaySchemeInit: FormationSchemeId = homeSchemeInit;
       let awayNum = 1;
-      for (const slot of slotsForScheme(awayScheme)) {
-        const w = kickoffWorldXZ('away', awayScheme, slot);
+      for (const slot of slotsForScheme(awaySchemeInit)) {
+        const w = kickoffWorldXZ('away', awaySchemeInit, slot);
         const aid = `away-${slot}`;
         const role = roleFromSlotId(slot);
         const base = createAgentBinding(aid, slot, 'away', role, w.x, w.z, 13);
@@ -403,6 +437,7 @@ export class TacticalSimLoop {
       }
 
       this.simState = createSimMatchState();
+      resetGameSpiritPhase1Orchestrator();
       this.skipKickoffBallAssign = false;
       this.shotPending = null;
       this.gkRestart = null;
@@ -440,11 +475,6 @@ export class TacticalSimLoop {
   private kickoffGiveBall() {
     this.assignBallToRestartTeam();
     this.simState.phase = 'live';
-  }
-
-  /** After goal: ball to restarting side without forcing sim phase (FSM controls kickoff → live). */
-  private giveBallForKickoffRestart() {
-    this.assignBallToRestartTeam();
   }
 
   private assignBallToRestartTeam() {
@@ -563,11 +593,134 @@ export class TacticalSimLoop {
   }
 
   /**
-   * IFAB: troca de campo no intervalo — espelha posições em X antes do apito do 2.º tempo.
-   * Posse para a equipa que não iniciou o 1.º tempo; bola morta no centro durante
-   * {@link SECOND_HALF_KICKOFF_WAIT_SEC}s, depois o atacante inicia com passe.
+   * After a goal: ball at centre, taker at centre, opening pass → live.
+   * Mirrors the second-half kickoff logic but with goal-restart messaging.
+   */
+  private executeGoalKickoffPass(L: ReturnType<typeof createCausalBatch>): void {
+    this.ballSys.placeForKickoff();
+
+    const kickTeam = this.simState.possession === 'home' ? this.homeAgents : this.awayAgents;
+    const taker =
+      kickTeam.find((a) => a.role === 'attack')
+      ?? kickTeam.find((a) => a.slotId === 'ata')
+      ?? kickTeam.find((a) => a.role === 'mid')
+      ?? kickTeam[0];
+    if (!taker) {
+      this.fsm.resumeLive();
+      return;
+    }
+
+    const cx = FIELD_LENGTH / 2;
+    const cz = FIELD_WIDTH / 2;
+    taker.vehicle.position.x = cx;
+    taker.vehicle.position.z = cz;
+    taker.vehicle.velocity.set(0, 0, 0);
+    this.ballSys.giveTo(taker.id, cx, cz);
+    this.simState.carrierId = taker.id;
+
+    const selfSnap = this.toAgentSnapshot(taker);
+    const teamSnaps =
+      taker.side === 'home'
+        ? this.homeAgents.map((a) => this.toAgentSnapshot(a))
+        : this.awayAgents.map((a) => this.toAgentSnapshot(a));
+    const oppSnaps =
+      taker.side === 'home'
+        ? this.awayAgents.map((a) => this.toAgentSnapshot(a))
+        : this.homeAgents.map((a) => this.toAgentSnapshot(a));
+    const attackDir = getSideAttackDir(taker.side, this.matchClock.state.half);
+    const teammates = teamSnaps.filter((t) => t.id !== taker.id && t.role !== 'gk');
+    const baseSeed = this.simState.simulationSeed;
+    const tickK = Math.floor(this.world.simTime * 60);
+    const press01 = nearestOpponentPressure01(selfSnap, oppSnaps);
+    const disorg01 = this.tacticalDisorgFacingCarrier(taker.side);
+    const passOpts = findPassOptions(selfSnap, teammates, oppSnaps, attackDir);
+    const ranked = [...passOpts]
+      .filter((p) => p.successProb >= 0.44)
+      .sort(
+        (a, b) =>
+          b.progressionGain - a.progressionGain
+          || b.spaceAtTarget - a.spaceAtTarget
+          || b.successProb - a.successProb,
+      );
+    const opt = ranked[0] ?? passOpts[0];
+
+    const str = selfSnap.fisico / 100;
+    const speed = Math.max(14, Math.min(42, 17 + selfSnap.passeCurto * 0.11 + str * 0.9));
+
+    if (opt) {
+      const stats = getOrCreateStats(this.simState, taker.id);
+      stats.passesAttempt++;
+      const passRes = resolvePassForPossession(baseSeed, tickK, selfSnap, opt, press01, oppSnaps, disorg01);
+      if (passRes.completed) stats.passesOk++;
+      if (passRes.interceptPlayerId) {
+        const intr = this.findAgent(passRes.interceptPlayerId);
+        if (intr) {
+          L.push({ type: 'possession_change', payload: { to: intr.side, reason: 'goal_kickoff_intercept' } });
+          this.simState.possession = intr.side;
+          this.ballSys.giveTo(intr.id, intr.vehicle.position.x, intr.vehicle.position.z);
+          this.simState.carrierId = intr.id;
+          pushLastAction(intr.matchRuntime, 'intercept');
+          pushLastAction(taker.matchRuntime, 'pass_intercepted');
+          pushSimEvent(this.simState, `${this.simState.minute}' — Interceptação no reinício após golo.`);
+        }
+      } else if (passRes.completed) {
+        this.ballSys.startFlight(
+          { x: selfSnap.x, z: selfSnap.z },
+          { x: passRes.x, z: passRes.z },
+          speed,
+          'pass',
+          opt.targetId,
+        );
+        this.simState.carrierId = null;
+        pushLastAction(taker.matchRuntime, 'short_pass_safety');
+        pushSimEvent(this.simState, `${this.simState.minute}' — Reinício: passe de saída após golo.`);
+      } else {
+        this.ballSys.setLoose(passRes.x, passRes.z);
+        this.simState.carrierId = null;
+        pushSimEvent(this.simState, `${this.simState.minute}' — Reinício após golo: segunda bola.`);
+      }
+    } else {
+      const r = rngFromSeed(baseSeed, `goal-kick:${taker.id}:${tickK}`).nextUnit();
+      const toX = Math.min(FIELD_LENGTH - 4, Math.max(4, cx + attackDir * (16 + r * 10)));
+      const toZ = Math.min(FIELD_WIDTH - 4, Math.max(4, cz + (r - 0.5) * 18));
+      const c = clampToPitch(toX, toZ, 0.55);
+      this.ballSys.startFlight({ x: cx, z: cz }, { x: c.x, z: c.z }, speed, 'pass');
+      this.simState.carrierId = null;
+      pushSimEvent(this.simState, `${this.simState.minute}' — Reinício: pontapé de saída após golo.`);
+    }
+
+    this.gkReleaseChaseSuppressionUntil = this.world.simTime + 0.32;
+    this.fsm.resumeLive();
+  }
+
+  /**
+   * IFAB: troca de campo no intervalo — recoloca ambas as equipas na formação de saída
+   * (como no apito inicial), depois espelha em X para o 2.º tempo; posse para quem não
+   * iniciou o 1.º tempo; bola morta no centro durante {@link SECOND_HALF_KICKOFF_WAIT_SEC}s.
    */
   private applySecondHalfSideSwapAndKickoff() {
+    const live = this.liveRef;
+    const homeScheme = (live?.homeFormationScheme ?? '4-3-3') as FormationSchemeId;
+    const inv = live ? invertLineup(live.matchLineupBySlot) : new Map<string, string>();
+
+    for (const ag of this.homeAgents) {
+      const slot = ag.slotId || inv.get(ag.id) || 'mc1';
+      const w = kickoffWorldXZ('home', homeScheme, slot);
+      ag.vehicle.position.x = w.x;
+      ag.vehicle.position.z = w.z;
+      ag.vehicle.velocity.set(0, 0, 0);
+      ag.arrive.target.x = w.x;
+      ag.arrive.target.z = w.z;
+    }
+    for (const ag of this.awayAgents) {
+      const w = kickoffWorldXZ('away', homeScheme, ag.slotId);
+      ag.vehicle.position.x = w.x;
+      ag.vehicle.position.z = w.z;
+      ag.vehicle.velocity.set(0, 0, 0);
+      ag.arrive.target.x = w.x;
+      ag.arrive.target.z = w.z;
+    }
+
     const L = FIELD_LENGTH;
     for (const ag of [...this.homeAgents, ...this.awayAgents]) {
       ag.vehicle.position.x = L - ag.vehicle.position.x;
@@ -648,7 +801,7 @@ export class TacticalSimLoop {
    * teletransporta suavemente o bloco para formação deslocada pela bola (sem linha na UI).
    */
   private tryConfusionRefereeIntegrateEnd(fsmPhaseAfter: MatchTruthPhase, ballStoppedRestart: boolean): void {
-    const REF_COOLDOWN_SEC = 3.2;
+    const REF_COOLDOWN_SEC = 2.15;
     if (fsmPhaseAfter !== 'live' || ballStoppedRestart) return;
     if (this.shotPending) return;
 
@@ -686,35 +839,128 @@ export class TacticalSimLoop {
 
     const ballX = this.ballSys.state.x;
     const ballZ = this.ballSys.state.z;
+    const half = this.matchClock.state.half;
 
     let causalVerdict = scanCausalLogConfusion(this.simState.causalLog.entries);
     if (gkHoldingRestart) causalVerdict = null;
-    const allPos = [
+
+    const allPosRef = [
       ...this.homeAgents.map((a) => ({
+        id: a.id,
         x: a.vehicle.position.x,
         z: a.vehicle.position.z,
         slotId: a.slotId,
         role: a.role,
+        side: 'home' as const,
       })),
       ...this.awayAgents.map((a) => ({
+        id: a.id,
         x: a.vehicle.position.x,
         z: a.vehicle.position.z,
         slotId: a.slotId,
         role: a.role,
+        side: 'away' as const,
       })),
     ];
+    const allPosForSwarm = allPosRef.map(({ x, z, slotId, role }) => ({ x, z, slotId, role }));
+
     let verdict = causalVerdict;
+    if (!verdict && !gkHoldingRestart && this.ballSys.state.mode !== 'dead') {
+      verdict = scanPenaltyAreaClumpRecovery(
+        allPosRef,
+        ballX,
+        ballZ,
+        this.ballSys.state.mode,
+        this.simState.carrierId,
+        half,
+      );
+    }
     if (!verdict && this.ballSys.state.mode !== 'dead') {
-      verdict = scanSpatialSwarmConfusion(allPos, ballX, ballZ, this.simState.possession);
+      verdict = scanSpatialSwarmConfusion(allPosForSwarm, ballX, ballZ, this.simState.possession);
     }
     if (!verdict) return;
 
     const homeScheme = this.liveRef?.homeFormationScheme ?? '4-3-3';
-    const awayScheme: FormationSchemeId = '4-3-3';
-    const half = this.matchClock.state.half;
+    const awayScheme: FormationSchemeId = (this.liveRef?.homeFormationScheme ?? '4-3-3') as FormationSchemeId;
     const maps = buildRefereeDispositionMaps(homeScheme, awayScheme, ballX, ballZ, half);
 
-    if (verdict.reason === 'causal_whirlwind') {
+    if (
+      (verdict.reason === 'box_clump_gk_foul' || verdict.reason === 'box_clump_attacker_foul')
+      && verdict.foulFoulerId
+      && verdict.foulFoulerSide
+    ) {
+      let victimId = verdict.foulVictimId ?? verdict.foulFoulerId;
+      if (!verdict.foulVictimId) {
+        let victimBestD = Infinity;
+        for (const p of allPosRef) {
+          if (p.side === verdict.foulFoulerSide) continue;
+          if (p.role === 'gk' || p.slotId === 'gol') continue;
+          const d = Math.hypot(p.x - ballX, p.z - ballZ);
+          if (d < victimBestD) {
+            victimBestD = d;
+            victimId = p.id;
+          }
+        }
+      }
+      const foulKind = verdict.foulKind ?? 'gk_box_clump';
+      const Lf = createCausalBatch(this.simState.minute, this.simState.causalLog.nextSeq);
+      Lf.push({
+        type: 'foul_committed',
+        payload: {
+          minute: this.simState.minute,
+          foulerId: verdict.foulFoulerId,
+          foulerSide: verdict.foulFoulerSide,
+          victimId,
+          kind: foulKind,
+          dangerous: false,
+        },
+      });
+      Lf.push({
+        type: 'possession_change',
+        payload: {
+          to: verdict.awardedSide,
+          reason: verdict.reason === 'box_clump_attacker_foul' ? 'attacker_box_clump_foul' : 'gk_box_clump_foul',
+        },
+      });
+      appendSimCausal(this.simState, Lf.events);
+      this.notePossessionEvents(Lf.events);
+      this.simState.possession = verdict.awardedSide;
+
+      if (verdict.reason === 'box_clump_attacker_foul') {
+        const gkAg = this.findGoalkeeper(verdict.awardedSide);
+        if (gkAg) {
+          this.simState.carrierId = gkAg.id;
+          this.ballSys.giveTo(gkAg.id, gkAg.vehicle.position.x, gkAg.vehicle.position.z);
+          this.gkRestart = { gkId: gkAg.id, kickAt: this.world.simTime + GK_RESTART_KICK_DELAY_SEC };
+        }
+        pushSimEvent(
+          this.simState,
+          `${this.simState.minute}' — Falta do atacante na área: contacto ilegal com o guarda-redes. Bola para a defesa.`,
+        );
+      } else {
+        this.gkRestart = null;
+        const poolAwarded = verdict.awardedSide === 'home' ? this.homeAgents : this.awayAgents;
+        const hasOutfieldAwarded = poolAwarded.some((o) => o.role !== 'gk' && o.slotId !== 'gol');
+        let bestAwarded: AgentEx | null = null;
+        let bestAwardedD = Infinity;
+        for (const ag of poolAwarded) {
+          if (hasOutfieldAwarded && (ag.role === 'gk' || ag.slotId === 'gol')) continue;
+          const d = Math.hypot(ag.vehicle.position.x - ballX, ag.vehicle.position.z - ballZ);
+          if (d < bestAwardedD) {
+            bestAwardedD = d;
+            bestAwarded = ag;
+          }
+        }
+        if (bestAwarded) {
+          this.simState.carrierId = bestAwarded.id;
+          this.ballSys.giveTo(bestAwarded.id, ballX, ballZ);
+        }
+        pushSimEvent(
+          this.simState,
+          `${this.simState.minute}' — Falta do guarda-redes na área (aglomerado). Bola para o adversário.`,
+        );
+      }
+    } else if (verdict.reason === 'causal_whirlwind') {
       this.simState.possession = verdict.awardedSide;
       const car = this.simState.carrierId ? this.findAgent(this.simState.carrierId) : null;
       if (!car || car.side !== verdict.awardedSide) {
@@ -756,18 +1002,16 @@ export class TacticalSimLoop {
     for (const ag of this.homeAgents) snap(ag, maps.home);
     for (const ag of this.awayAgents) snap(ag, maps.away);
 
-    appendSimCausal(this.simState, [
-      {
-        seq: this.simState.causalLog.nextSeq,
-        simTime: this.simState.minute + 0.997,
-        type: 'referee_shape_reset',
-        payload: {
-          minute: this.simState.minute,
-          reason: verdict.reason,
-          awardedSide: verdict.awardedSide,
-        },
+    const LShape = createCausalBatch(this.simState.minute, this.simState.causalLog.nextSeq);
+    LShape.push({
+      type: 'referee_shape_reset',
+      payload: {
+        minute: this.simState.minute,
+        reason: verdict.reason,
+        awardedSide: verdict.awardedSide,
       },
-    ]);
+    });
+    appendSimCausal(this.simState, LShape.events);
 
     // #region agent log
     if (gkHoldingRestart && verdict.reason === 'spatial_swarm') {
@@ -824,6 +1068,8 @@ export class TacticalSimLoop {
       cognitiveArchetype: a.cognitiveArchetype,
       confidenceRuntime: a.matchRuntime.confidenceRuntime,
       stamina: a.matchRuntime.stamina,
+      strongFoot: a.strongFoot,
+      archetype: a.archetype,
     };
   }
 
@@ -859,10 +1105,35 @@ export class TacticalSimLoop {
   }
 
   private bumpRuntimeConfidence(ag: AgentEx, delta: number): void {
+    const mult = this.isTest2dLiveFeed() ? 1.22 : 1;
+    const scaled = delta * mult;
     ag.matchRuntime.confidenceRuntime = Math.max(
       0.48,
-      Math.min(1.28, ag.matchRuntime.confidenceRuntime + delta),
+      Math.min(1.28, ag.matchRuntime.confidenceRuntime + scaled),
     );
+  }
+
+  /** Momentos “acerto/erro” no feed `test2d` com espaçamento mínimo. */
+  private pushLive2dLearningLine(
+    text: string,
+    tone: NonNullable<MatchEventEntry['live2dMoment']>,
+    opts?: { playerId?: string; minGapSec?: number },
+  ): void {
+    if (!this.isTest2dLiveFeed()) return;
+    const gap = opts?.minGapSec ?? 2.15;
+    if (this.world.simTime < this.live2dLearningCooldownUntil) return;
+    this.live2dLearningCooldownUntil = this.world.simTime + gap;
+    pushSimEvent(this.simState, text, 'narrative', tone, opts?.playerId);
+  }
+
+  /** Marca um momento forte (sem cooldown) — interceptações, rupturas, etc. */
+  private tagLive2dMoment(
+    text: string,
+    tone: NonNullable<MatchEventEntry['live2dMoment']>,
+    playerId?: string,
+  ): void {
+    if (!this.isTest2dLiveFeed()) return;
+    pushSimEvent(this.simState, text, 'narrative', tone, playerId);
   }
 
   /** Lado que defende contra `carrierSide`: 0–1 se o bloco ainda está “partido”. */
@@ -1056,14 +1327,24 @@ export class TacticalSimLoop {
     if (!freezeFsmForSecondHalfKickoffHold) {
       this.fsm.tick(fixedDt);
     }
-    const fsmPhaseAfter = this.fsm.state.phase;
+    let fsmPhaseAfter = this.fsm.state.phase;
 
     if (fsmPhaseBefore === 'goal_restart' && fsmPhaseAfter === 'kickoff') {
       if (this.skipKickoffBallAssign) {
         this.skipKickoffBallAssign = false;
       } else {
-        this.giveBallForKickoffRestart();
+        const LKick = createCausalBatch(this.simState.minute, this.simState.causalLog.nextSeq);
+        this.executeGoalKickoffPass(LKick);
+        if (LKick.events.length > 0) {
+          appendSimCausal(this.simState, [...LKick.events]);
+          this.notePossessionEvents(LKick.events);
+          for (const ev of LKick.events) {
+            emitCausalMatchEvent(this.eventBus, ev, this.world.simTime);
+          }
+        }
       }
+      this.structuralSys.clearGoalRestart();
+      fsmPhaseAfter = this.fsm.state.phase;
     }
     if (fsmPhaseAfter === 'live' && (fsmPhaseBefore === 'kickoff' || fsmPhaseBefore === 'goal_restart')) {
       this.structuralSys.clearGoalRestart();
@@ -1071,7 +1352,9 @@ export class TacticalSimLoop {
 
     if (fsmPhaseAfter === 'live') {
       this.simState.phase = 'live';
-    } else if (fsmPhaseAfter === 'goal_restart' || fsmPhaseAfter === 'kickoff') {
+    } else if (fsmPhaseAfter === 'goal_restart') {
+      this.simState.phase = 'goal_restart';
+    } else if (fsmPhaseAfter === 'kickoff') {
       this.simState.phase = 'kickoff';
     } else {
       this.simState.phase = 'stopped';
@@ -1112,13 +1395,16 @@ export class TacticalSimLoop {
     };
 
     const homeScheme: FormationSchemeId = this.liveRef?.homeFormationScheme ?? '4-3-3';
-    const awayScheme: FormationSchemeId = '4-3-3';
+    const awayScheme: FormationSchemeId = (this.liveRef?.homeFormationScheme ?? '4-3-3') as FormationSchemeId;
     const homePlayers = this.homeAgents.map((a) => ({ id: a.id, x: a.vehicle.position.x, z: a.vehicle.position.z }));
     const awayPlayers = this.awayAgents.map((a) => ({ id: a.id, x: a.vehicle.position.x, z: a.vehicle.position.z }));
 
+    const isSecondHalf = half === 2;
+    const engineBallX = isSecondHalf ? FIELD_LENGTH - ballX : ballX;
+
     const engineFrame = this.matchEngine.step({
       dt: fixedDt,
-      ballX, ballZ,
+      ballX: engineBallX, ballZ,
       livePossession: this.simState.possession,
       onBallPlayerId: this.simState.carrierId ?? undefined,
       contestCarrierId: this.simState.carrierId,
@@ -1127,13 +1413,16 @@ export class TacticalSimLoop {
       awayScheme,
     });
 
+    const worldHomeSide: 'home' | 'away' = isSecondHalf ? 'away' : 'home';
+    const worldAwaySide: 'home' | 'away' = isSecondHalf ? 'home' : 'away';
+
     const dynamicHome = new Map<string, { x: number; z: number }>();
     for (const [slot, intent] of engineFrame.homeSlots) {
-      dynamicHome.set(slot, slotToWorld('home', { nx: intent.nx, nz: intent.nz }));
+      dynamicHome.set(slot, slotToWorld(worldHomeSide, { nx: intent.nx, nz: intent.nz }));
     }
     const dynamicAway = new Map<string, { x: number; z: number }>();
     for (const [slot, intent] of engineFrame.awaySlots) {
-      dynamicAway.set(slot, slotToWorld('away', { nx: intent.nx, nz: intent.nz }));
+      dynamicAway.set(slot, slotToWorld(worldAwaySide, { nx: intent.nx, nz: intent.nz }));
     }
 
     const dynamicHomeForAgents = new Map(dynamicHome);
@@ -1249,6 +1538,8 @@ export class TacticalSimLoop {
         this.homeAgents,
         this.awayAgents,
         this.matchClock.state.half,
+        homeScheme,
+        awayScheme,
       );
     } else if (
       this.structuralSys.hasSetPieceStructural()
@@ -1587,15 +1878,16 @@ export class TacticalSimLoop {
       a.vehicle.position.x += (t.x - a.vehicle.position.x) * k;
       a.vehicle.position.z += (t.z - a.vehicle.position.z) * k;
     };
+    const skipNudge = this.fsm.isReforming();
     for (const a of this.homeAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
       stepVehicle(a, fixedDt);
-      nudgeTowardOperative18(a);
+      if (!skipNudge) nudgeTowardOperative18(a);
     }
     for (const a of this.awayAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
       stepVehicle(a, fixedDt);
-      nudgeTowardOperative18(a);
+      if (!skipNudge) nudgeTowardOperative18(a);
     }
 
     this.tryConfusionRefereeIntegrateEnd(fsmPhaseAfter, ballStoppedRestart);
@@ -1678,12 +1970,6 @@ export class TacticalSimLoop {
     const ballSector = computeBallSector(this.ballSys.state.z);
 
     for (const ag of agents) {
-      if (this.isGkRestartBallInHandFreeze() && this.gkRestart && ag.id !== this.gkRestart.gkId) {
-        const px = ag.vehicle.position.x;
-        const pz = ag.vehicle.position.z;
-        this.safeArrive(ag, px, pz, 'reforming');
-        continue;
-      }
       let slotTarget: { x: number; z: number };
       if (structuralByPlayer?.has(ag.id)) {
         slotTarget = structuralByPlayer.get(ag.id)!;
@@ -1694,6 +1980,74 @@ export class TacticalSimLoop {
         slotTarget = d ?? { x: ag.vehicle.position.x, z: ag.vehicle.position.z };
       }
       const clamped = clampTargetToRoleZone({ side: ag.side, role: ag.role, slotId: ag.slotId }, slotTarget.x, slotTarget.z, tactx);
+
+      if (this.isGkRestartBallInHandFreeze() && this.gkRestart && ag.id !== this.gkRestart.gkId) {
+        const bx = this.ballSys.state.x;
+        const bz = this.ballSys.state.z;
+        const px = ag.vehicle.position.x;
+        const pz = ag.vehicle.position.z;
+        const outPen = clampWorldOutsideBothPenaltyAreas(clamped.x, clamped.z);
+        let dx = px - bx;
+        let dz = pz - bz;
+        let dBall = Math.hypot(dx, dz);
+        if (dBall < 0.08) {
+          dx = ag.side === 'home' ? 1 : -1;
+          dz = 0;
+          dBall = 1;
+        }
+        const ux = dx / dBall;
+        const uz = dz / dBall;
+        /** Mínimo afastamento da bola (m) — só `outPen` deixava pressão colada ao GR. */
+        const MIN_FROM_BALL_M = 12.5;
+        const fromBallX = bx + ux * Math.max(MIN_FROM_BALL_M, dBall + 0.6);
+        const fromBallZ = bz + uz * Math.max(MIN_FROM_BALL_M, dBall + 0.6);
+        const outFromBall = clampWorldOutsideBothPenaltyAreas(fromBallX, fromBallZ);
+        const dPen = Math.hypot(outPen.x - bx, outPen.z - bz);
+        const dFb = Math.hypot(outFromBall.x - bx, outFromBall.z - bz);
+        const out = dFb >= dPen ? outFromBall : outPen;
+
+        const odx = out.x - px;
+        const odz = out.z - pz;
+        const odist = Math.hypot(odx, odz);
+        /** `integrateFixed` ignora `stepVehicle` neste freeze — deslocamento explícito. */
+        const maxStep = 22 * dt;
+        if (odist > 0.06) {
+          const s = Math.min(odist, maxStep) / odist;
+          const cp = clampToPitch(px + odx * s, pz + odz * s, 0.9);
+          ag.vehicle.position.x = cp.x;
+          ag.vehicle.position.z = cp.z;
+        }
+        ag.vehicle.velocity.set(0, 0, 0);
+        // #region agent log
+        fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '743469' },
+          body: JSON.stringify({
+            sessionId: '743469',
+            hypothesisId: 'H3',
+            location: 'TacticalSimLoop.ts:gk_ball_in_hand_freeze',
+            message: 'freeze_evac_ball_ring',
+            data: {
+              agId: ag.id,
+              role: ag.role,
+              outX: out.x,
+              outZ: out.z,
+              odist,
+              dPen,
+              dFb,
+              bx,
+              bz,
+              distToBall: Math.hypot(ag.vehicle.position.x - bx, ag.vehicle.position.z - bz),
+              simTime: this.world.simTime,
+              kickAt: this.gkRestart.kickAt,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+        this.safeArrive(ag, out.x, out.z, 'reforming');
+        continue;
+      }
 
       // Structural reorganisation: drive arrive directly (skip role clamp — targets are authored for the event).
       if (structuralByPlayer?.has(ag.id)) {
@@ -1709,18 +2063,6 @@ export class TacticalSimLoop {
           this.safeArrive(ag, sx, sz, mode);
           continue;
         }
-      }
-
-      // GR com bola à espera de repor: todo o campo (exceto o GR) sai da grande área.
-      if (
-        this.gkRestart
-        && this.ballSys.state.mode === 'held'
-        && this.simState.carrierId === this.gkRestart.gkId
-        && !(ag.id === this.gkRestart.gkId && (ag.role === 'gk' || ag.slotId === 'gol'))
-      ) {
-        const out = clampWorldOutsideBothPenaltyAreas(clamped.x, clamped.z);
-        this.safeArrive(ag, out.x, out.z, mode);
-        continue;
       }
 
       const isCarrier = this.simState.carrierId === ag.id;
@@ -1740,6 +2082,25 @@ export class TacticalSimLoop {
           this.safeArrive(ag, stepX, ag.vehicle.position.z, mode);
           continue;
         }
+        // #region agent log
+        fetch('http://127.0.0.1:7569/ingest/813b0eb5-3788-4dcf-a782-9114cfd985ed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '743469' },
+          body: JSON.stringify({
+            sessionId: '743469',
+            hypothesisId: 'H2',
+            location: 'TacticalSimLoop.ts:gk_execute_restart_distribution',
+            message: 'gk_kick_now',
+            data: {
+              gkId: ag.id,
+              simTime: this.world.simTime,
+              kickAt: this.gkRestart.kickAt,
+              deltaKickSec: this.world.simTime - this.gkRestart.kickAt,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         this.executeGkRestartDistribution(ag, selfSnap, teamSnaps, oppSnaps, attackDir, L, manager);
         this.gkRestart = null;
         continue;
@@ -1853,6 +2214,21 @@ export class TacticalSimLoop {
         gameSpiritHomeMomentum01: this.liveRef?.spiritMomentumClamp01 ?? null,
       };
 
+      attachGameSpiritPhase1Hint(decCtx, ag.id);
+      const gsTrigger = detectGameSpiritPhase1Trigger(ag.id, isReceiver, isCarrier, flightProgress);
+      if (gsTrigger) {
+        scheduleGameSpiritPhase1Request({
+          playerId: ag.id,
+          decCtx,
+          simTime: this.world.simTime,
+          trigger: gsTrigger,
+          shirtNumber: this.shirtNumbers.get(ag.id),
+          onNarration: (text) => {
+            pushSimEvent(this.simState, text, 'narrative');
+          },
+        });
+      }
+
       const playerAction = ag.decision.tick(decCtx, this.world.simTime);
       this.executePlayerAction(ag, playerAction, selfSnap, oppSnaps, attackDir, clamped, mode, L);
     }
@@ -1889,6 +2265,13 @@ export class TacticalSimLoop {
           if (this.simState.carrierId === ag.id) {
             this.ballSys.setLoose(bx, bz);
             this.simState.carrierId = null;
+            if (this.isTest2dLiveFeed()) {
+              const vk = `${ag.id}:${Math.floor(this.world.simTime * 30)}`;
+              this.pushLive2dLearningLine(test2dReceptionFumbleLine(this.simState.minute, vk), 'bad', {
+                playerId: ag.id,
+                minGapSec: 1.4,
+              });
+            }
           }
         } else {
           // Successful reception: player moves in the attack direction
@@ -1991,7 +2374,19 @@ export class TacticalSimLoop {
             this.bumpRuntimeConfidence(ag, -CONFIDENCE_DELTA_BAD * 0.25);
             pushLastAction(intr.matchRuntime, 'intercept');
             pushLastAction(ag.matchRuntime, 'pass_intercepted');
-            pushSimEvent(this.simState, `${this.simState.minute}' — Interceptação corta o passe.`);
+            {
+              const icKey = `${ag.id}:${intr.id}:${tickK}`;
+              const icLine = this.isTest2dLiveFeed()
+                ? test2dInterceptCutPassLine(this.simState.minute, icKey)
+                : `${this.simState.minute}' — Interceptação corta o passe.`;
+              pushSimEvent(
+                this.simState,
+                icLine,
+                'narrative',
+                this.isTest2dLiveFeed() ? 'good' : undefined,
+                this.isTest2dLiveFeed() ? intr.id : undefined,
+              );
+            }
             if (this.turnoverCtx) {
               this.applyTurnoverPlay(
                 intr,
@@ -2036,8 +2431,17 @@ export class TacticalSimLoop {
             pushSimEvent(
               this.simState,
               `${this.simState.minute}' — Passe de ruptura — linha adversária desorganizada.`,
+              'narrative',
+              this.isTest2dLiveFeed() ? 'good' : undefined,
+              this.isTest2dLiveFeed() ? ag.id : undefined,
             );
             this.bumpRuntimeConfidence(ag, CONFIDENCE_DELTA_GOOD * 0.22);
+          } else if (passRes.executionTier === 'excellent' && this.isTest2dLiveFeed()) {
+            const vk = `${ag.id}:${opt.targetId}:${tickK}`;
+            this.pushLive2dLearningLine(test2dPassSolidLine(this.simState.minute, vk), 'good', {
+              playerId: ag.id,
+              minGapSec: 2.35,
+            });
           }
           const forwardPass =
             opt.isForward
@@ -2066,6 +2470,13 @@ export class TacticalSimLoop {
           );
         } else {
           this.ballSys.setLoose(passRes.x, passRes.z);
+          if (this.isTest2dLiveFeed()) {
+            const vk = `${ag.id}:${tickK}`;
+            this.pushLive2dLearningLine(test2dPassIncompleteLine(this.simState.minute, vk), 'bad', {
+              playerId: ag.id,
+              minGapSec: 1.55,
+            });
+          }
         }
         this.simState.carrierId = null;
         pushLastAction(ag.matchRuntime, passRes.completed ? 'pass_ok' : 'pass_fail');
@@ -2122,7 +2533,17 @@ export class TacticalSimLoop {
         });
         {
           const who = this.shirtNumbers.get(ag.id) ? `#${this.shirtNumbers.get(ag.id)}` : ag.id;
-          pushSimEvent(this.simState, `${this.simState.minute}' — Remate de ${who}!`);
+          const shotKey = `${ag.id}:${Math.floor(this.world.simTime * 1000)}`;
+          const shotLine = this.isTest2dLiveFeed()
+            ? test2dShotWindupLine(this.simState.minute, who, shotKey)
+            : `${this.simState.minute}' — Remate de ${who}!`;
+          pushSimEvent(
+            this.simState,
+            shotLine,
+            'narrative',
+            this.isTest2dLiveFeed() ? 'info' : undefined,
+            this.isTest2dLiveFeed() ? ag.id : undefined,
+          );
         }
 
         logActionResolverDebug({
@@ -2197,8 +2618,20 @@ export class TacticalSimLoop {
         });
         if (cRes.success) stats.passesOk++;
         if (cRes.success && cRes.executionTier === 'critical_hit') {
-          pushSimEvent(this.simState, `${this.simState.minute}' — Cruzamento de ruptura!`);
+          pushSimEvent(
+            this.simState,
+            `${this.simState.minute}' — Cruzamento de ruptura!`,
+            'narrative',
+            this.isTest2dLiveFeed() ? 'good' : undefined,
+            this.isTest2dLiveFeed() ? ag.id : undefined,
+          );
           this.bumpRuntimeConfidence(ag, CONFIDENCE_DELTA_GOOD * 0.18);
+        } else if (!cRes.success && this.isTest2dLiveFeed()) {
+          const vk = `${ag.id}:${tickK}`;
+          this.pushLive2dLearningLine(test2dCrossFailLine(this.simState.minute, vk), 'bad', {
+            playerId: ag.id,
+            minGapSec: 1.8,
+          });
         }
         const cr = selfSnap.cruzamento / 100;
         const speed = action.type === 'high_cross' ? 26 + cr * 4 : 22 + cr * 3;
@@ -2237,7 +2670,13 @@ export class TacticalSimLoop {
         if (dr.success) {
           this.applyMotorExecutionChain(ag, 'dribble', dr.executionTier, dr.impact01);
           if (dr.executionTier === 'critical_hit') {
-            pushSimEvent(this.simState, `${this.simState.minute}' — Drible de elite — linha ultrapassada!`);
+            pushSimEvent(
+              this.simState,
+              `${this.simState.minute}' — Drible de elite — linha ultrapassada!`,
+              'narrative',
+              this.isTest2dLiveFeed() ? 'good' : undefined,
+              this.isTest2dLiveFeed() ? ag.id : undefined,
+            );
             this.bumpRuntimeConfidence(ag, CONFIDENCE_DELTA_GOOD * 0.2);
           }
         }
@@ -2274,11 +2713,22 @@ export class TacticalSimLoop {
                   this.turnoverCtx.slotTargetFor,
                 );
               }
+              if (this.isTest2dLiveFeed()) {
+                const vk = `${ag.id}:${defA.id}:${tickK}`;
+                this.tagLive2dMoment(test2dDribbleStrippedLine(this.simState.minute, vk), 'bad', ag.id);
+              }
               break;
             }
           }
           this.ballSys.setLoose(stealX, stealZ);
           this.simState.carrierId = null;
+          if (this.isTest2dLiveFeed()) {
+            const vk = `${ag.id}:${tickK}`;
+            this.pushLive2dLearningLine(test2dDribbleLooseLine(this.simState.minute, vk), 'bad', {
+              playerId: ag.id,
+              minGapSec: 1.5,
+            });
+          }
           break;
         }
         this.safeArrive(ag, action.targetX, action.targetZ, 'pressing');
@@ -2548,10 +2998,18 @@ export class TacticalSimLoop {
         this.simState.possession = defendingSide;
         L.push({ type: 'possession_change', payload: { to: defendingSide, reason } });
       }
-      pushSimEvent(
-        this.simState,
-        `${this.simState.minute}' — ${shooterSide === defendingSide ? 'Defesa' : 'Remate'}: bola com GR (${reason}).`,
-      );
+      {
+        const gkKey = `${defendingSide}|${shooterSide}|${reason}|${Math.floor(this.world.simTime * 1000)}`;
+        const gkLine = this.isTest2dLiveFeed()
+          ? test2dGkBallFromShotLine(
+              this.simState.minute,
+              shooterSide === defendingSide,
+              reason,
+              gkKey,
+            )
+          : `${this.simState.minute}' — ${shooterSide === defendingSide ? 'Defesa' : 'Remate'}: bola com GR (${reason}).`;
+        pushSimEvent(this.simState, gkLine);
+      }
     } else {
       const gx = defendingSide === 'home' ? 6 : FIELD_LENGTH - 6;
       this.ballSys.setLoose(gx, FIELD_WIDTH / 2);
@@ -2613,6 +3071,7 @@ export class TacticalSimLoop {
       stealX,
       stealZ,
       reason,
+      livelyTurnoverFeed: this.isTest2dLiveFeed(),
     });
 
     {
@@ -2639,19 +3098,26 @@ export class TacticalSimLoop {
     }
     carrier.decision.syncAfterTurnoverImmediateAction(action, this.world.simTime);
 
-    const tag =
+    const tag: Test2dTurnoverTag =
       reason === 'tackle' ? 'desarme'
       : reason === 'intercept' ? 'interceptação'
       : reason === 'dribble_fail' ? 'perda'
       : 'recuperação';
+    const narrKey = `${seed}|${carrier.id}|${action.type}`;
     if (this.isPassOnBallType(action.type)) {
-      pushSimEvent(this.simState, `${this.simState.minute}' — Passe após ${tag}.`);
+      const line = this.isTest2dLiveFeed()
+        ? test2dPassAfterTurnoverLine(this.simState.minute, tag, narrKey)
+        : `${this.simState.minute}' — Passe após ${tag}.`;
+      pushSimEvent(this.simState, line);
     } else if (
       action.type === 'simple_carry'
       || action.type === 'aggressive_carry'
       || action.type === 'progressive_dribble'
     ) {
-      pushSimEvent(this.simState, `${this.simState.minute}' — Condução após ${tag}.`);
+      const line = this.isTest2dLiveFeed()
+        ? test2dCarryAfterTurnoverLine(this.simState.minute, tag, narrKey)
+        : `${this.simState.minute}' — Condução após ${tag}.`;
+      pushSimEvent(this.simState, line);
     }
   }
 
@@ -2672,9 +3138,7 @@ export class TacticalSimLoop {
     const carrier = this.simState.carrierId ? this.findAgent(this.simState.carrierId) : undefined;
     const teamHasBall = carrier?.side === ag.side;
     const half = this.matchClock.state.half;
-    const scheme: FormationSchemeId = ag.side === 'home'
-      ? (this.liveRef?.homeFormationScheme ?? '4-3-3')
-      : '4-3-3';
+    const scheme: FormationSchemeId = (this.liveRef?.homeFormationScheme ?? '4-3-3') as FormationSchemeId;
     const zoneModel = buildSlotZoneProfile(ag.slotId, ag.role, scheme, ag.side, half);
     const engagement = resolveZoneEngagement(ball.x, ball.z, zoneModel, { team: ag.side, half });
     let radii = tacticalRadiiFor(ag.role, ag.slotId);
@@ -2988,13 +3452,24 @@ export class TacticalSimLoop {
         this.simState,
         `${this.simState.minute}' — Bola para fora. Equipas na saída de bola; o GR coloca em jogo.`,
       );
-      const missLine =
-        strike === 'power'
-          ? 'Remate forte para fora.'
-          : strike === 'weak'
-            ? 'Remate fraco — longe da baliza.'
-            : 'Remate ao lado.';
-      pushSimEvent(this.simState, `${this.simState.minute}' — ${missLine}`);
+      const strikeKind = strike === 'power' ? 'power' : strike === 'weak' ? 'weak' : 'placed';
+      const missKey = `${pend.shooterId}|${strike}|${Math.floor(this.world.simTime * 1000)}`;
+      const missLine = this.isTest2dLiveFeed()
+        ? test2dShotMissDetailLine(this.simState.minute, strikeKind, missKey)
+        : `${this.simState.minute}' — ${
+            strike === 'power'
+              ? 'Remate forte para fora.'
+              : strike === 'weak'
+                ? 'Remate fraco — longe da baliza.'
+                : 'Remate ao lado.'
+          }`;
+      pushSimEvent(
+        this.simState,
+        missLine,
+        'narrative',
+        this.isTest2dLiveFeed() ? 'bad' : undefined,
+        this.isTest2dLiveFeed() ? pend.shooterId : undefined,
+      );
       return;
     }
 
@@ -3003,7 +3478,13 @@ export class TacticalSimLoop {
         pushLastAction(ag.matchRuntime, `shot_${shotOutcome}`);
         this.bumpRuntimeConfidence(ag, CONFIDENCE_DELTA_GOOD * 0.08);
       }
-      pushSimEvent(this.simState, `${this.simState.minute}' — Remate bloqueado — segunda bola viva.`);
+      pushSimEvent(
+        this.simState,
+        `${this.simState.minute}' — Remate bloqueado — segunda bola viva.`,
+        'narrative',
+        this.isTest2dLiveFeed() ? 'info' : undefined,
+        this.isTest2dLiveFeed() ? pend.shooterId : undefined,
+      );
       return;
     }
 
@@ -3020,12 +3501,21 @@ export class TacticalSimLoop {
           : strike === 'weak'
             ? 'Guarda-redes segura remate fraco.'
             : 'Guarda-redes agarra o remate colocado.';
-      pushSimEvent(this.simState, `${this.simState.minute}' — ${saveLine}`);
+      pushSimEvent(
+        this.simState,
+        `${this.simState.minute}' — ${saveLine}`,
+        'narrative',
+        this.isTest2dLiveFeed() ? 'good' : undefined,
+        undefined,
+      );
       return;
     }
     pushSimEvent(
       this.simState,
       `${this.simState.minute}' — Espalma! Bola viva na área — disputa segunda bola.`,
+      'narrative',
+      this.isTest2dLiveFeed() ? 'good' : undefined,
+      undefined,
     );
   }
 
@@ -3097,6 +3587,9 @@ export class TacticalSimLoop {
           pushSimEvent(
             this.simState,
             `${this.simState.minute}' — Desarme de classe — bola recuperada com autoridade.`,
+            'narrative',
+            this.isTest2dLiveFeed() ? 'good' : undefined,
+            this.isTest2dLiveFeed() ? def.id : undefined,
           );
           this.bumpRuntimeConfidence(def, CONFIDENCE_DELTA_GOOD * 0.2);
         }
@@ -3112,7 +3605,13 @@ export class TacticalSimLoop {
         pushLastAction(def.matchRuntime, 'tackle_won');
         pushLastAction(carrier.matchRuntime, 'tackle_lost');
 
-        pushSimEvent(this.simState, `${this.simState.minute}' — Desarme limpo!`);
+        pushSimEvent(
+          this.simState,
+          `${this.simState.minute}' — Desarme limpo!`,
+          'narrative',
+          this.isTest2dLiveFeed() ? 'good' : undefined,
+          this.isTest2dLiveFeed() ? def.id : undefined,
+        );
         this.applyTurnoverPlay(def, carrier.id, stealX, stealZ, 'tackle', L, manager, slotTargetFor);
         return;
       }
@@ -3291,9 +3790,7 @@ export class TacticalSimLoop {
       let taken = 0;
       for (let j = 0; j < ranked.length && taken < chasersPerTeam; j++) {
         const r = ranked[j]!;
-        const schemeCh: FormationSchemeId = r.ag.side === 'home'
-          ? (this.liveRef?.homeFormationScheme ?? '4-3-3')
-          : '4-3-3';
+        const schemeCh: FormationSchemeId = (this.liveRef?.homeFormationScheme ?? '4-3-3') as FormationSchemeId;
         const zModel = buildSlotZoneProfile(r.ag.slotId, r.ag.role, schemeCh, r.ag.side, halfChase);
         const zoneEng = resolveZoneEngagement(targetX, targetZ, zModel, { team: r.ag.side, half: halfChase });
         const anchor = slotTargetFor(r.ag);
@@ -3351,13 +3848,13 @@ export class TacticalSimLoop {
       this.world.simTime,
     );
 
-    this.captureFrameStart();
     this.accumulator += Math.min(dt, 0.08);
     while (this.accumulator >= FIXED_DT) {
+      this.captureFrameStart();
       this.integrateFixed(FIXED_DT, manager);
       this.accumulator -= FIXED_DT;
     }
-    this.renderBlend = 1 - this.accumulator / FIXED_DT;
+    this.renderBlend = this.accumulator / FIXED_DT;
   }
 
   private lerp(a: number, b: number, t: number) {
@@ -3499,6 +3996,14 @@ export class TacticalSimLoop {
       home: { primaryColor: '#E6DC23', secondaryColor: '#235E23', accent: '#F2F2F2' },
       away: { primaryColor: '#3358C7', secondaryColor: '#6B707A', accent: '#F24038' },
     };
+    if (
+      live.phase === 'playing'
+      && this.secondHalfKickoffAt !== null
+      && this.world.simTime < this.secondHalfKickoffAt
+    ) {
+      const rem = this.secondHalfKickoffAt - this.world.simTime;
+      snap.secondHalfResumeCountdownSec = Math.max(1, Math.ceil(rem));
+    }
     return snap;
   }
 }

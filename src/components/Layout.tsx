@@ -84,11 +84,12 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans md:flex-row">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
-        <div className="flex items-center gap-3 mb-12 p-6 pb-0">
-          <div className="w-12 h-12 bg-neon-yellow flex items-center justify-center font-display font-bold text-3xl text-black -skew-x-6">
-            <span className="skew-x-6">O</span>
-          </div>
-          <h1 className="text-3xl font-display font-black tracking-widest text-white italic">OLEFOOT</h1>
+        <div className="flex items-center mb-12 p-6 pb-0">
+          <img
+            src="/test-pitch/olefoot-logo-game.svg"
+            alt="Olefoot"
+            className="h-10 w-auto"
+          />
         </div>
 
         <nav className="flex-1 space-y-1 px-4">
@@ -218,11 +219,12 @@ export function Layout({ children }: { children: ReactNode }) {
               className="fixed top-0 left-0 bottom-0 w-64 bg-deep-black border-r border-white/10 z-[70] md:hidden flex flex-col"
             >
               <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-neon-yellow flex items-center justify-center font-display font-bold text-2xl text-black -skew-x-6">
-                    <span className="skew-x-6">O</span>
-                  </div>
-                  <h1 className="text-2xl font-display font-black tracking-widest text-white italic">OLEFOOT</h1>
+                <div className="flex items-center">
+                  <img
+                    src="/test-pitch/olefoot-logo-game.svg"
+                    alt="Olefoot"
+                    className="h-9 w-auto"
+                  />
                 </div>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 hover:text-white">
                   <X className="w-6 h-6" />

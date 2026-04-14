@@ -4,10 +4,12 @@
 
 import { FIELD_LENGTH, FIELD_WIDTH, GOAL_INNER_WIDTH_M, GOAL_MOUTH_HALF_WIDTH_M } from './field';
 import {
+  archetypeExecutionMultiplier,
   evaluateShot,
   nearestOpponentPressure01,
   pointToSegmentDist,
   resolvePassLanding,
+  weakFootMultiplier,
   type AgentSnapshot,
   type PassOption,
 } from './InteractionResolver';
@@ -242,7 +244,17 @@ export function resolvePassForPossession(
 ): PassPossessionResult {
   const rng = rngFromSeed(baseSeed, `pass:${carrier.id}:${tickKey}:${option.targetId}`);
   const rngTier = rngFromSeed(baseSeed, `pass-tier:${carrier.id}:${tickKey}:${option.targetId}`);
-  const land = resolvePassLanding(option, carrier, pressure01, rng);
+  const rngFoot = rngFromSeed(baseSeed, `pass-foot:${carrier.id}:${tickKey}`);
+  const wfMul = weakFootMultiplier(carrier, option.targetZ, rngFoot);
+  const archMul = archetypeExecutionMultiplier(carrier, pressure01, rngFoot);
+  const effCarrier: AgentSnapshot = wfMul < 1 || archMul !== 1
+    ? { ...carrier,
+      passeCurto: Math.round(carrier.passeCurto * wfMul * archMul),
+      passeLongo: Math.round(carrier.passeLongo * wfMul * archMul),
+      passe: Math.round(carrier.passe * wfMul * archMul),
+    }
+    : carrier;
+  const land = resolvePassLanding(option, effCarrier, pressure01, rng);
 
   if (!land.completed) {
     const failTier = resolvePassExecutionTier({
@@ -334,8 +346,11 @@ export function resolveCrossForPossession(
 ): CrossPossessionResult {
   const rng = rngFromSeed(baseSeed, `cross:${carrier.id}:${tickKey}`);
   const rngTier = rngFromSeed(baseSeed, `cross-tier:${carrier.id}:${tickKey}`);
+  const rngFoot = rngFromSeed(baseSeed, `cross-foot:${carrier.id}:${tickKey}`);
   const press = nearestOpponentPressure01(carrier, opponents);
-  const cr = carrier.cruzamento / 100;
+  const wfMul = weakFootMultiplier(carrier, targetZ, rngFoot);
+  const archMul = archetypeExecutionMultiplier(carrier, press, rngFoot);
+  const cr = (carrier.cruzamento * wfMul * archMul) / 100;
   const conf = Math.min(1.28, carrier.confidenceRuntime ?? 1);
   const st = (carrier.stamina ?? 90) / 100;
   let pOk = 0.4 + cr * 0.42 + (carrier.mentalidade / 100) * 0.1;
@@ -375,7 +390,9 @@ export function resolveDribbleBeat(
 ): DribbleContestResult {
   const rng = rngFromSeed(baseSeed, `dribble:${carrier.id}:${tickKey}`);
   const rngTier = rngFromSeed(baseSeed, `dribble-tier:${carrier.id}:${tickKey}`);
-  const skill = carrier.drible / 100;
+  const rngFoot = rngFromSeed(baseSeed, `dribble-foot:${carrier.id}:${tickKey}`);
+  const archMul = archetypeExecutionMultiplier(carrier, pressure01, rngFoot);
+  const skill = (carrier.drible * archMul) / 100;
   const st = (carrier.stamina ?? 90) / 100;
   let pOk = 0.38 + skill * 0.42;
   pOk -= pressure01 * 0.55;
@@ -418,11 +435,20 @@ export function resolveShotForPossession(
 ): ShotPossessionResult {
   const rng = rngFromSeed(baseSeed, `shot:${carrier.id}:${tickKey}`);
   const rngTier = rngFromSeed(baseSeed, `shot-tier:${carrier.id}:${tickKey}`);
-  const strikeProfile = pickShotStrikeProfile(rng, carrier, nearestOpponentPressure01(carrier, opponents), longRange);
-  const chance = evaluateShot(carrier, attackDir, opponents);
+  const rngFoot = rngFromSeed(baseSeed, `shot-foot:${carrier.id}:${tickKey}`);
+  const wfMul = weakFootMultiplier(carrier, FIELD_WIDTH / 2, rngFoot);
   const press = nearestOpponentPressure01(carrier, opponents);
-  const fin = carrier.finalizacao / 100;
-  const str01 = carrier.fisico / 100;
+  const archMul = archetypeExecutionMultiplier(carrier, press, rngFoot);
+  const effCarrier: AgentSnapshot = wfMul < 1 || archMul !== 1
+    ? { ...carrier,
+      finalizacao: Math.round(carrier.finalizacao * wfMul * archMul),
+      fisico: Math.round(carrier.fisico * archMul),
+    }
+    : carrier;
+  const strikeProfile = pickShotStrikeProfile(rng, effCarrier, press, longRange);
+  const chance = evaluateShot(effCarrier, attackDir, opponents);
+  const fin = effCarrier.finalizacao / 100;
+  const str01 = effCarrier.fisico / 100;
   const mental = (carrier.mentalidade + carrier.confianca) / 200;
   let pOnTarget =
     0.28
@@ -498,7 +524,7 @@ export function resolveShotForPossession(
       ? Number.POSITIVE_INFINITY
       : pointToSegmentDist(gk.x, gk.z, carrier.x, carrier.z, goalX, goalZ);
   const inGkPresence = gk !== null && trajDistGk <= GK_SHOT_PRESENCE_TRAJ_DIST_M;
-  const shotPower01 = shotPower01FromStrike(strikeProfile, carrier);
+  const shotPower01 = shotPower01FromStrike(strikeProfile, effCarrier);
   const gkDef01 = gk ? gkDefense01FromSnapshot(gk) : 0;
   const powerBeatsGk = gk === null || shotPower01 > gkDef01 + 0.028;
   const pGkCorrect = gk ? gkCorrectDecisionProb(gk, press) : 1;

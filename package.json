@@ -29,7 +29,10 @@
     "test:player-speed": "tsx src/match/runPlayerSpeedSelfTest.ts",
     "test:live-story": "tsx src/gamespirit/runLiveStorySelfTest.ts",
     "test:playing-style": "tsx src/playerDecision/runPlayingStyleSelfTest.ts",
-    "dev:server": "npm run dev --prefix server"
+    "dev:server": "npm run dev --prefix server",
+    "test:openai": "npm run test:openai --prefix server",
+    "test:openai:http": "npm run test:openai:http --prefix server",
+    "test:openai:local": "npm run verify-openai --prefix server && npm run test:openai --prefix server"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

@@ -82,8 +82,8 @@ export const GAME_SPIRIT_WIRING_TABLE: WiringRow[] = [
   {
     id: 'openai',
     nome: 'OpenAI (Admin → olefoot-server)',
-    status: 'codigo_sem_ui',
-    fact: 'POST /api/game-spirit/teach no servidor (Hono); OPENAI_API_KEY no server/.env. O motor de jogo não consome isto ainda — só estrutura o teu ensino para a biblioteca local.',
+    status: 'motor',
+    fact: 'POST /api/game-spirit/teach e POST /api/gamespirit; OPENAI_API_KEY só em server/.env. Com `VITE_OLEFOOT_GAMESPIRIT_PHASE1=true`, o TacticalSimLoop agenda pedidos nos gatilhos receção/portador, enviesa prethinking e empurra narração curta para `simState.events` — nunca no loop por frame.',
   },
 ];
 

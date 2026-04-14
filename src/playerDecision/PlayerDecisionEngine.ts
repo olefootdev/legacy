@@ -8,19 +8,19 @@ import type {
   OffBallAction,
   PreReceptionResult,
   ReceptionResult,
-  DecisionSpeed,
+  ReceptionThinkMode,
 } from './types';
 import { resolvePreReception } from './PreReception';
 import { resolveReception } from './Reception';
-import { decideOnBall, computeDecisionSpeed, decisionDelaySec, carryScanAction } from './OnBallDecision';
+import { decideOnBall, carryScanAction } from './OnBallDecision';
+import {
+  computeReceptionThinkMode,
+  mapReceptionThinkToDecisionSpeed,
+  receptionThinkBaseSec,
+} from './receptionThinkMode';
 import { decideOffBall } from './OffBallDecision';
 import { buildContextReading, identifyFieldZone, scanPressure } from './ContextScanner';
-import {
-  DECISION_TICK_MS,
-  DELIBERATION_BASE_SEC,
-  DELIBERATION_MIN_SEC,
-  DELIBERATION_MAX_SEC,
-} from '@/match/matchSimulationTuning';
+import { DECISION_TICK_MS, RECEPTION_THINK_MIN_SEC, RECEPTION_THINK_MAX_SEC } from '@/match/matchSimulationTuning';
 import type { PrethinkingIntent, PrethinkingState } from './types';
 import {
   buildPrethinkingState,
@@ -60,6 +60,8 @@ export class PlayerDecisionEngine {
   private lastDecisionTime = 0;
   private deliberationDuration = 0;
   private deliberationCarryAction: OnBallAction | null = null;
+  /** Último modo cognitivo ao tomar a bola (debug / feed). */
+  lastBallThinkMode: ReceptionThinkMode | null = null;
   /** Intenção antecipada + velocidade cognitiva; invalidada quando o lance muda. */
   private prethinking: PrethinkingState | null = null;
   private lastPrethinkingSimTime = -1e9;
@@ -212,32 +214,20 @@ export class PlayerDecisionEngine {
    */
   private enterDeliberation(ctx: DecisionContext, simTime: number) {
     const reading = buildContextReading(ctx);
-    const mental01 = (ctx.self.mentalidade ?? 70) / 100;
-    const conf01 = (ctx.self.confianca ?? 70) / 100;
-    const pressure = reading.pressure;
+    const thinkMode = computeReceptionThinkMode(ctx, reading);
+    this.lastBallThinkMode = thinkMode;
+    let dur = receptionThinkBaseSec(thinkMode);
 
-    let dur = DELIBERATION_BASE_SEC;
-    dur -= mental01 * 0.04;
-    dur -= conf01 * 0.03;
-    if (pressure.intensity === 'extreme') dur *= 0.35;
-    else if (pressure.intensity === 'high') dur *= 0.55;
-    else if (pressure.intensity === 'none') dur *= 1.3;
-    if (pressure.closingSpeed > 6.5 && pressure.nearestOpponentDist < 8) dur *= 0.42;
-    else if (pressure.closingSpeed > 4.2 && pressure.nearestOpponentDist < 6) dur *= 0.72;
-    if (reading.fieldZone === 'own_box' || reading.fieldZone === 'def_third') dur *= 1.15;
-    if (reading.fieldZone === 'opp_box') dur *= 0.6;
-
-    // Pre-scanned first-touch receptions: player already anticipated action,
-    // so deliberation is shorter — but never zero (the player still processes).
+    // Primeiro toque já antecipado — menos “pensar”, mantém no mínimo configurável.
     const recType = this.reception?.type;
     if (recType === 'first_touch_pass' || recType === 'first_touch_shot') {
-      dur *= 0.4;
+      dur *= 0.38;
     } else if (recType === 'oriented_forward' || recType === 'let_run') {
-      dur *= 0.6;
+      dur *= 0.62;
     }
 
-    dur = Math.max(DELIBERATION_MIN_SEC, Math.min(DELIBERATION_MAX_SEC, dur));
     dur *= prethinkingDeliberationFactor(ctx);
+    dur = Math.max(RECEPTION_THINK_MIN_SEC, Math.min(RECEPTION_THINK_MAX_SEC, dur));
 
     this.phase = 'deliberating';
     this.phaseTimer = 0;
@@ -278,11 +268,13 @@ export class PlayerDecisionEngine {
 
     this.phase = 'scanning';
     this.phaseTimer = 0;
-    const speed = computeDecisionSpeed(reading, ctx.profile, ctx.decisionExecutionBoost01);
-    const baseDelay = decisionDelaySec(speed, ctx.roll01 ?? Math.random);
+    const thinkMode = computeReceptionThinkMode(ctx, reading);
+    this.lastBallThinkMode = thinkMode;
+    let delaySec = receptionThinkBaseSec(thinkMode) * prethinkingScanDelayFactor(ctx);
+    delaySec = Math.max(RECEPTION_THINK_MIN_SEC * 0.5, Math.min(RECEPTION_THINK_MAX_SEC, delaySec));
     this.timing = {
-      speed,
-      delaySec: Math.max(0.02, baseDelay * prethinkingScanDelayFactor(ctx)),
+      speed: mapReceptionThinkToDecisionSpeed(thinkMode),
+      delaySec,
       elapsed: 0,
     };
     this.scanCarryAction = carryScanAction(ctx, reading);

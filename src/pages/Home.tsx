@@ -245,12 +245,11 @@ export function Home() {
       {/* Header Mobile */}
       <div className="mb-6 flex min-w-0 items-center justify-between gap-2 md:hidden">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-neon-yellow font-display text-xl font-bold text-black -skew-x-6">
-            <span className="skew-x-6">O</span>
-          </div>
-          <h1 className="truncate font-display text-xl font-black italic tracking-widest min-[360px]:text-2xl">
-            OLEFOOT
-          </h1>
+          <img
+            src="/test-pitch/olefoot-logo-game.svg"
+            alt="Olefoot"
+            className="h-8 min-[360px]:h-9 w-auto shrink-0"
+          />
         </div>
         <Link
           to="/wallet"

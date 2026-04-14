@@ -1,20 +1,7 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-/**
- * Ordem: SVG transparente primeiro (sem caixa cinza). PNG com fundo preto + `mix-blend-screen`
- * misturava com gradientes do hero e parecia “fundo cinza escuro”.
- */
-const LOGO_URLS = ['/brand/olefoot-logo.svg', '/brand/olefoot-logo-yellow.png', '/olefoot-logo.png', '/logo-olefoot-header.png'] as const;
-
-/**
- * Login — topo transparente (logo + chip sobre o hero); sem barra com fundo próprio.
- */
 export function Login() {
-  const [logoIndex, setLogoIndex] = useState(0);
-  const showWordmark = logoIndex >= LOGO_URLS.length;
-
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
       <div
@@ -29,7 +16,6 @@ export function Login() {
         aria-hidden
       />
 
-      {/* Topo sem barra: logo + chip sobre o hero escuro (só sombras para legibilidade) */}
       <header
         role="banner"
         className="relative z-[100] w-full shrink-0 bg-transparent px-4 pb-2 pt-5 sm:px-6 sm:pb-3 sm:pt-6 md:px-8"
@@ -38,24 +24,17 @@ export function Login() {
           <Link
             to="/"
             className="flex min-w-0 flex-1 items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-            aria-label="Olefoot — início"
+            aria-label="Olefoot"
           >
-            {!showWordmark ? (
-              <img
-                src={LOGO_URLS[logoIndex]}
-                alt="Olefoot"
-                width={260}
-                height={72}
-                decoding="async"
-                fetchPriority="high"
-                className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.75)] sm:h-12 sm:max-h-[3.25rem]"
-                onError={() => setLogoIndex((i) => i + 1)}
-              />
-            ) : (
-              <span className="font-display text-xl font-bold uppercase tracking-tight text-neon-yellow [text-shadow:0_2px_16px_rgba(0,0,0,0.9)] sm:text-2xl">
-                Olefoot
-              </span>
-            )}
+            <img
+              src="/test-pitch/olefoot-logo-game.svg"
+              alt="Olefoot"
+              width={260}
+              height={72}
+              decoding="async"
+              fetchPriority="high"
+              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.75)] sm:h-12 sm:max-h-[3.25rem]"
+            />
           </Link>
 
           <button

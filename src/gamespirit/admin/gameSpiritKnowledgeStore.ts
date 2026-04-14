@@ -58,11 +58,49 @@ export interface PositionTeaching {
   updatedAt: string;
 }
 
+/** Etiqueta estável para futura ligação ao motor / GameSpirit (export JSON). */
+export type PitchAdvisorLogicTag =
+  | 'hint_generic'
+  | 'press_trigger'
+  | 'support_lane'
+  | 'danger_zone'
+  | 'build_up'
+  | 'transition'
+  | 'counter'
+  | 'final_third';
+
+export const PITCH_ADVISOR_LOGIC_TAGS: { id: PitchAdvisorLogicTag; label: string }[] = [
+  { id: 'hint_generic', label: 'Nota geral' },
+  { id: 'press_trigger', label: 'Gatilho de pressão' },
+  { id: 'support_lane', label: 'Linha de apoio / corredor' },
+  { id: 'danger_zone', label: 'Zona de perigo' },
+  { id: 'build_up', label: 'Saída / construção' },
+  { id: 'transition', label: 'Transição' },
+  { id: 'counter', label: 'Contra-ataque' },
+  { id: 'final_third', label: 'Último terço / finalização' },
+];
+
+/**
+ * Marcador no campo (mesmo referencial 0–1 que a partida ao vivo: x = comprimento, y = largura).
+ * A zona 18 (Z1…Z18) é derivada em runtime com `worldPositionToTactical18ShortLabel` — não duplicar aqui.
+ */
+export interface PitchAdvisorMarker {
+  id: string;
+  x01: number;
+  y01: number;
+  title: string;
+  notes: string;
+  logicTag: PitchAdvisorLogicTag;
+  updatedAt: string;
+}
+
 export interface GameSpiritKnowledgeRoot {
   v: 2;
   narrativePacks: NarrativePack[];
   tacticalPatterns: TacticalPattern[];
   positionTeachings: PositionTeaching[];
+  /** Anotações no campo estilo “ao vivo” (admin) — export JSON para integração futura. */
+  pitchAdvisorMarkers: PitchAdvisorMarker[];
 }
 
 export function nowIso(): string {
@@ -79,6 +117,7 @@ export function defaultKnowledge(): GameSpiritKnowledgeRoot {
     narrativePacks: [],
     tacticalPatterns: [],
     positionTeachings: [],
+    pitchAdvisorMarkers: [],
   };
 }
 
@@ -105,6 +144,35 @@ function normalizePositionTeaching(x: unknown): PositionTeaching | null {
   return { id, code, label, zone, x01, y01, blockNotes, mainActivities, coachingNotes, updatedAt };
 }
 
+const ADVISOR_TAGS: PitchAdvisorLogicTag[] = [
+  'hint_generic',
+  'press_trigger',
+  'support_lane',
+  'danger_zone',
+  'build_up',
+  'transition',
+  'counter',
+  'final_third',
+];
+
+function normalizePitchAdvisorMarker(x: unknown): PitchAdvisorMarker | null {
+  if (typeof x !== 'object' || x === null) return null;
+  const o = x as Record<string, unknown>;
+  const id = typeof o.id === 'string' ? o.id : '';
+  if (!id) return null;
+  const x01 = typeof o.x01 === 'number' && Number.isFinite(o.x01) ? Math.min(1, Math.max(0, o.x01)) : 0.5;
+  const y01 = typeof o.y01 === 'number' && Number.isFinite(o.y01) ? Math.min(1, Math.max(0, o.y01)) : 0.5;
+  const title = typeof o.title === 'string' ? o.title : '';
+  const notes = typeof o.notes === 'string' ? o.notes : '';
+  const tagRaw = o.logicTag;
+  const logicTag =
+    typeof tagRaw === 'string' && ADVISOR_TAGS.includes(tagRaw as PitchAdvisorLogicTag)
+      ? (tagRaw as PitchAdvisorLogicTag)
+      : 'hint_generic';
+  const updatedAt = typeof o.updatedAt === 'string' ? o.updatedAt : nowIso();
+  return { id, x01, y01, title, notes, logicTag, updatedAt };
+}
+
 export function loadKnowledge(): GameSpiritKnowledgeRoot {
   try {
     const raw = localStorage.getItem(GAME_SPIRIT_KNOWLEDGE_KEY);
@@ -113,11 +181,14 @@ export function loadKnowledge(): GameSpiritKnowledgeRoot {
     if (p.v !== 2 || !Array.isArray(p.narrativePacks)) return defaultKnowledge();
     const rawPos = Array.isArray(p.positionTeachings) ? p.positionTeachings : [];
     const positionTeachings = rawPos.map(normalizePositionTeaching).filter((x): x is PositionTeaching => x !== null);
+    const rawAdv = Array.isArray(p.pitchAdvisorMarkers) ? p.pitchAdvisorMarkers : [];
+    const pitchAdvisorMarkers = rawAdv.map(normalizePitchAdvisorMarker).filter((x): x is PitchAdvisorMarker => x !== null);
     return {
       v: 2,
       narrativePacks: p.narrativePacks,
       tacticalPatterns: Array.isArray(p.tacticalPatterns) ? p.tacticalPatterns : [],
       positionTeachings,
+      pitchAdvisorMarkers,
     };
   } catch {
     return defaultKnowledge();

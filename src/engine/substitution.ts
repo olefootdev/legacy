@@ -59,6 +59,8 @@ export function applySubstitution(input: {
     role: roleFromPos(incoming.pos),
     attributes: matchAttributesFromPlayerEntity(incoming),
     cognitiveArchetype: behaviorToCognitiveArchetype(incoming.behavior),
+    strongFoot: incoming.strongFoot,
+    archetype: incoming.archetype,
   };
 
   const homePlayers = snapshot.homePlayers.map((p) => (p.playerId === outPlayerId ? newPitch : p));

@@ -56,6 +56,11 @@ export interface MatchTruthSnapshot {
   cameraCues?: CameraCue[];
   /** Kits por lado — enviado no primeiro snapshot ou quando muda. */
   kits?: { home: TeamKit; away: TeamKit };
+  /**
+   * Contagem regressiva (segundos inteiros restantes) antes do pontapé de saída do 2.º tempo,
+   * com equipas já na formação de saída e trocadas de campo.
+   */
+  secondHalfResumeCountdownSec?: number;
 }
 
 export function serializeMatchTruth(s: MatchTruthSnapshot): string {
