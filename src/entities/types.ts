@@ -79,10 +79,14 @@ export interface PlayerEntity {
   evolutionXp: number;
   /** Partidas em que não pode entrar (lesão curta) */
   outForMatches: number;
-  /** Foto do jogador (data URL ou URL https) — Admin CREATE PLAYER */
+  /** Foto do jogador formato card (data URL ou URL https) — Admin CREATE PLAYER */
   portraitUrl?: string;
+  /** Foto circular para token na partida ao vivo (crop separado otimizado para 1:1) */
+  portraitTokenUrl?: string;
   /** Valor de mercado em centavos de BRO (0,01 BRO) — mercado / transferências */
   marketValueBroCents?: number;
+  /** Valor de mercado em EXP (ex.: catálogo Genesis); quando definido, UI e livro usam EXP em vez de BRO. */
+  marketValueExp?: number;
   /** País (texto livre) */
   country?: string;
   /** Pé bom */
@@ -99,6 +103,8 @@ export interface PlayerEntity {
   bio?: string;
   /** Listado no mercado (Admin “Lançar no Mercado”) */
   listedOnMarket?: boolean;
+  /** Tag de coleção admin-market (ex.: 'welcomepack'). Separado do collectionId NFT. */
+  adminMarketTag?: string;
   /** Prospect criado pelo manager no fluxo Academia OLE (OVR criação / evolução limitados). */
   managerCreated?: boolean;
   /** Idade exibida / narrativa (plantel criado pelo manager). */
@@ -107,6 +113,28 @@ export interface PlayerEntity {
   mintOverall?: number;
   /** Multiplicador de ganho/perda de evolução (treino, jogo); 1 = normal. */
   evolutionRate?: number;
+  /** Jogos restantes no contrato (amistoso + oficial); omitir = legado sem limite. */
+  contractMatchesRemaining?: number;
+  /** Jogos incluídos ao assinar (UI). */
+  contractMatchesIncluded?: number;
+  /** Contrato sem fim de jogos (só catálogo Admin / excepções). */
+  contractIsLifetime?: boolean;
+  /** Contrato esgotado — recomprar no mercado; não entra em XI oficial. */
+  contractExpired?: boolean;
+  /** Id no catálogo `genesis_market_players` (ex. GEN-001), sem prefixo `genesis-`. */
+  genesisCatalogId?: string;
+  /**
+   * Conhecimento de posição acumulado via sessões de treino com agentes de lenda.
+   * Contém pesos de ação por zona + traits comportamentais.
+   * Zero tokens durante a partida — motor lê este JSON localmente.
+   */
+  positionKnowledge?: import('@/gamespirit/legacy/positionKnowledgeTypes').PositionKnowledge;
+  /** Marca este jogador como Legacy DNA (comprado em loja, criado no admin). */
+  isLegacy?: boolean;
+  /** Booster numérico de time ativo quando este legacy é titular (ex.: {morale:3, possession_pct:5}). */
+  legacyTeamBooster?: Record<string, number>;
+  /** Atributos que este legacy ensina aos jogadores da mesma posição no elenco. */
+  legacyTaughtAttributes?: string[];
 }
 
 export interface OpponentStub {
@@ -118,6 +146,11 @@ export interface OpponentStub {
   highlightPlayer?: { name: string; ovr: number };
   /** Escudo “do coração” do clube adversário (ex.: demo TITANS FC → Real Madrid) no matchday / partida rápida. */
   supporterCrestUrl?: string | null;
+  /**
+   * Elenco visitante real (ex.: plantel Genesis de teste). Quando preenchido, partida rápida / test2d
+   * usam estes jogadores no lugar do roster sintético (cérebro + atributos).
+   */
+  genesisAwayPlayers?: PlayerEntity[];
 }
 
 export interface Fixture {
@@ -140,6 +173,9 @@ export interface PastResult {
   result: 'win' | 'draw' | 'loss';
   /** ID da partida no Supabase (quando persistida). */
   supabaseMatchId?: string;
+  /** MVP e top-3 de scout da partida. */
+  scoutMvp?: import('@/gamespirit/scoutScoring').ScoutMvpEntry;
+  scoutTop3?: import('@/gamespirit/scoutScoring').ScoutMvpEntry[];
 }
 
 export interface FinanceState {

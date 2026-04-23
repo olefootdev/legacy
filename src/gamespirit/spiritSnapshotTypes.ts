@@ -26,12 +26,12 @@ export interface SpiritOverlay {
 
 export type PenaltyStage = 'banner' | 'walk' | 'kick' | 'result';
 
-/** Desfecho do penálti (UI + narrativa). */
+/** Desfecho do penalty (UI + narrativa). */
 export type PenaltyOutcomeKind = 'goal' | 'miss_wide' | 'save' | 'post_in' | 'post_out' | 'miss_far';
 
 export interface PenaltyState {
   stage: PenaltyStage;
-  /** Quem bate o penálti. */
+  /** Quem bate o penalty. */
   side: PossessionSideSpirit;
   takerName: string;
   /** PlayerId do cobrador (para atribuir golo/evento ao jogador correto). */

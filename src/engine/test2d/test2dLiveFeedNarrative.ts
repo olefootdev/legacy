@@ -253,6 +253,37 @@ const PASS_SOLID: readonly string[] = [
   'Passe a dar fluidez ao último terço.',
 ];
 
+const DRIBBLE_SUCCESS: readonly string[] = [
+  'Drible cirúrgico — deixa o marcador a ver navios.',
+  'Um-para-um ganho com classe: espaço criado do nada.',
+  'Finesse a ultrapassar a linha de pressão.',
+  'Bola colada ao pé, adversário fora do jogo.',
+  'Quebra o duelo com um toque de qualidade rara.',
+  'Dribla como se soubesse o que o adversário ia fazer.',
+  'Saída técnica; o bloco abre caminho à frente.',
+  'Condução que vale ouro: linha ultrapassada.',
+];
+
+const HIGH_PRESS_EVENT: readonly string[] = [
+  'Pressing alto — a equipa sufoca a saída adversária.',
+  'Bloco compacto a fechar espaços: ritmo a subir.',
+  'Intensidade máxima! Adversário sem respiro na saída.',
+  'A pressão organizada faz a diferença — trânsito bloqueado.',
+  'Pressão coletiva a tirar a bola das mãos do adversário.',
+  'Sem espaço, sem tempo — pressing a dar resultado.',
+  'Caçada coletiva à bola: o jogo fica apertado.',
+];
+
+const CHANCE_CREATED: readonly string[] = [
+  'Grande oportunidade de golo! A baliza à vista!',
+  'Espaço criado — momento de decisão crucial.',
+  'Combinação rápida a abrir brecha na defesa.',
+  'A jogada desenvolve-se bem — chance a emergir!',
+  'Defesa exposta! A bola chega ao rematador.',
+  'Que jogada! O último passe é perfeito.',
+  'Situação perigosa — a defesa pede socorro.',
+];
+
 export function test2dPassIncompleteLine(minute: number, varietyKey: string): string {
   const body = pickLine(`${minute}|passinc|${varietyKey}`, PASS_INCOMPLETE);
   return `${minute}' — ${body}`;
@@ -280,5 +311,20 @@ export function test2dCrossFailLine(minute: number, varietyKey: string): string 
 
 export function test2dPassSolidLine(minute: number, varietyKey: string): string {
   const body = pickLine(`${minute}|passsolid|${varietyKey}`, PASS_SOLID);
+  return `${minute}' — ${body}`;
+}
+
+export function test2dDribbleSuccessLine(minute: number, varietyKey: string): string {
+  const body = pickLine(`${minute}|dribsuc|${varietyKey}`, DRIBBLE_SUCCESS);
+  return `${minute}' — ${body}`;
+}
+
+export function test2dHighPressLine(minute: number, varietyKey: string): string {
+  const body = pickLine(`${minute}|hipress|${varietyKey}`, HIGH_PRESS_EVENT);
+  return `${minute}' — ${body}`;
+}
+
+export function test2dChanceCreatedLine(minute: number, varietyKey: string): string {
+  const body = pickLine(`${minute}|chance|${varietyKey}`, CHANCE_CREATED);
   return `${minute}' — ${body}`;
 }

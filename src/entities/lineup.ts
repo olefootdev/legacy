@@ -1,4 +1,5 @@
 import type { PlayerEntity } from './types';
+import { AWAY_SLOT_ORDER } from '@/engine/test2d/tacticalPositioning';
 
 export const PITCH_SLOT_ORDER: Array<{ id: string; label: string }> = [
   { id: 'pe', label: 'PE' },
@@ -37,4 +38,17 @@ export function mergeLineupWithDefaults(
 ): Record<string, string> {
   const base = buildDefaultLineup(playersById);
   return { ...base, ...saved };
+}
+
+/** Ordem dos titulares visitantes alinhada a `buildAwayPitchPlayers` / `AWAY_SLOT_ORDER`. */
+export function awayStartingElevenFromSquad(squad: PlayerEntity[]): PlayerEntity[] {
+  const byId = Object.fromEntries(squad.map((p) => [p.id, p]));
+  const lu = buildDefaultLineup(byId);
+  const out: PlayerEntity[] = [];
+  for (const slotId of AWAY_SLOT_ORDER) {
+    const pid = lu[slotId];
+    const p = pid ? byId[pid] : undefined;
+    if (p) out.push(p);
+  }
+  return out;
 }

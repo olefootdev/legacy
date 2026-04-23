@@ -1,4 +1,4 @@
-import type { PlayingStylePresetId } from '@/tactics/playingStyle';
+import { PRESET_LABEL_PT, type PlayingStylePresetId } from '@/tactics/playingStyle';
 
 export type AiLabsMode = 'livre' | 'classico';
 
@@ -12,15 +12,6 @@ export interface AiLabsProposal {
   transferByPos: { pos: string; label: string }[];
 }
 
-const PRESET_PT: Record<PlayingStylePresetId, string> = {
-  balanced: 'Equilíbrio OLE',
-  tiki_positional: 'Posse e circulação',
-  vertical_transition: 'Transição vertical',
-  wide_crossing: 'Jogo pelas alas',
-  low_block_counter: 'Bloco baixo e contra-golpe',
-  direct_long_ball: 'Jogo direto e profundidade',
-};
-
 /** Clássicos públicos → preset interno (interpretação, não simulação 1:1). */
 const CLASSIC_ROWS: {
   needles: string[];
@@ -32,7 +23,7 @@ const CLASSIC_ROWS: {
     needles: ['corinthians', '2012', 'timão', 'libertadores 2012'],
     headline:
       'Corinthians 2012: bloco firme, transição rápida e criatividade no último terço — referência pública, estilo aproximado no OLE.',
-    presetId: 'low_block_counter',
+    presetId: 'BLOCO_BAIXO',
     transfer: [
       { pos: 'VOL', label: 'Volante que segura e sai' },
       { pos: 'ATA', label: 'Referência de área' },
@@ -41,8 +32,8 @@ const CLASSIC_ROWS: {
   {
     needles: ['barcelona', 'guardiola', 'tiki', '2011'],
     headline:
-      'Barça de posse: troca curta, amplitude e pressão alta — referência pública; no OLE aproxima a posse e circulação.',
-    presetId: 'tiki_positional',
+      'Barça de posse: troca curta, amplitude e pressão alta — referência pública; no OLE aproxima posse controlada.',
+    presetId: 'POSSE_CONTROLADA',
     transfer: [
       { pos: 'MC', label: 'Meias que ligam o jogo' },
       { pos: 'LE', label: 'Ala que sobe e cruza' },
@@ -51,18 +42,28 @@ const CLASSIC_ROWS: {
   {
     needles: ['liverpool', ' gegen', 'klopp', 'pressão alta'],
     headline:
-      'Transição e pressão alta: recuperar e ir à baliza rápido — referência pública; no OLE favorece verticalidade e intensidade.',
-    presetId: 'vertical_transition',
+      'Gegenpressing: perder e ir atrás da bola, bloco curto — referência pública; no OLE aproxima pressão alta.',
+    presetId: 'PRESSAO_ALTA',
     transfer: [
       { pos: 'PE', label: 'Extremo que parte em velocidade' },
       { pos: 'VOL', label: 'Meio que cobre espaços' },
     ],
   },
   {
-    needles: ['real madrid', 'contra', 'transição', 'champions'],
+    needles: ['real madrid', 'ancelotti', 'modric', 'kroos'],
     headline:
-      'Contra-ataque e profundidade: campo aberto e finalização — referência pública; no OLE aproxima transição vertical.',
-    presetId: 'vertical_transition',
+      'Criação com liberdade e leitura individual — referência pública; no OLE aproxima estilo criativo livre.',
+    presetId: 'CRIATIVO_LIVRE',
+    transfer: [
+      { pos: 'MOC', label: 'Meia que desequilibra' },
+      { pos: 'ATA', label: 'Homem-gol móvel' },
+    ],
+  },
+  {
+    needles: ['contra ataque', 'transicao rapida', 'vertical rapida', 'profundidade direta'],
+    headline:
+      'Contra-ataque e profundidade: campo aberto e finalização — referência pública; no OLE aproxima transição rápida.',
+    presetId: 'TRANSICAO_RAPIDA',
     transfer: [
       { pos: 'PD', label: 'Ponta que fixa e desmarca' },
       { pos: 'ATA', label: 'Finalizador' },
@@ -72,7 +73,7 @@ const CLASSIC_ROWS: {
     needles: ['atletico', 'simeone', 'bloco baixo', 'fechadinho'],
     headline:
       'Bloco compacto e jogo direto: defender junto e punir no erro — referência pública; no OLE aproxima bloco baixo.',
-    presetId: 'low_block_counter',
+    presetId: 'BLOCO_BAIXO',
     transfer: [
       { pos: 'ZAG', label: 'Central agressivo no jogo aéreo' },
       { pos: 'VOL', label: 'Primeiro volante' },
@@ -82,7 +83,7 @@ const CLASSIC_ROWS: {
     needles: ['inglaterra', '1966', 'long ball', 'wing'],
     headline:
       'Jogo inglês clássico: amplitude e bolas na área — referência pública; no OLE aproxima alas e cruzamentos.',
-    presetId: 'wide_crossing',
+    presetId: 'JOGO_PELAS_LATERAIS',
     transfer: [
       { pos: 'LD', label: 'Lateral ofensivo' },
       { pos: 'ATA', label: 'Homem de área' },
@@ -112,16 +113,18 @@ function matchClassic(text: string): (typeof CLASSIC_ROWS)[number] | null {
 
 function heuristicFree(text: string): PlayingStylePresetId {
   const n = norm(text);
-  if (/contra|transi|vertical|rapido|veloc|diret|profund/.test(n)) return 'vertical_transition';
-  if (/posse|tiki|toc|triang|circul|pacienc|curta/.test(n)) return 'tiki_positional';
-  if (/ala|cruz|lateral|extens|ponta/.test(n)) return 'wide_crossing';
-  if (/bloco|fechad|defens|baix|compact|catenaccio/.test(n)) return 'low_block_counter';
-  if (/longa|lanc|rasto|bota|2.?a|segunda bola/.test(n)) return 'direct_long_ball';
+  if (/bloco|fechad|defens.*baix|simeone|mourinho|catenaccio/.test(n)) return 'BLOCO_BAIXO';
+  if (/gegen|press|pressing|klopp|recuper.*imed|alta.*linha/.test(n)) return 'PRESSAO_ALTA';
+  if (/posse|tiki|guardiola|triang|circul|pacienc|curta|toc/.test(n)) return 'POSSE_CONTROLADA';
+  if (/contra|transi|vertical|rapido|veloc|profund/.test(n)) return 'TRANSICAO_RAPIDA';
+  if (/ala|cruz|lateral|extens|ponta|wing/.test(n)) return 'JOGO_PELAS_LATERAIS';
+  if (/longa|lanc|rasto|bota|2.?a|segunda bola|jogo direto/.test(n)) return 'JOGO_DIRETO';
+  if (/criativ|ancelotti|livre|imprevis|liberdade/.test(n)) return 'CRIATIVO_LIVRE';
   return 'balanced';
 }
 
 function buildImplementation(presetId: PlayingStylePresetId, mode: AiLabsMode): string {
-  const nome = PRESET_PT[presetId];
+  const nome = PRESET_LABEL_PT[presetId];
   if (mode === 'classico') {
     return `Aplicamos o preset «${nome}» na tática do clube. Ajusta depois em Tática se quiseres matizar. O treino continua a usar a lógica que já tens no Centro de treino.`;
   }
@@ -145,13 +148,13 @@ export function oleSuggestionFromFavoriteTeam(teamName: string | undefined | nul
   if (n.includes('corinth') || n.includes('timao')) return interpretAiLabsInput('classico', 'Corinthians 2012');
   if (n.includes('flam') || n.includes('mengo')) {
     return {
-      presetId: 'vertical_transition',
+      presetId: 'TRANSICAO_RAPIDA',
       headline:
         'Sugestão OLE: ritmo e transição — inspiração em fases fortes do teu clube (visão de adepto, não estatística oficial).'.slice(
           0,
           150,
         ),
-      implementation: buildImplementation('vertical_transition', 'classico'),
+      implementation: buildImplementation('TRANSICAO_RAPIDA', 'classico'),
       transferByPos: [
         { pos: 'VOL', label: 'Meio completo' },
         { pos: 'ATA', label: 'Homem-gol' },
@@ -160,13 +163,13 @@ export function oleSuggestionFromFavoriteTeam(teamName: string | undefined | nul
   }
   if (n.includes('palme') || n.includes('verdao')) {
     return {
-      presetId: 'low_block_counter',
+      presetId: 'BLOCO_BAIXO',
       headline:
         'Sugestão OLE: bloco firme e bola parada — inspiração em ciclos sólidos do clube (referência genérica).'.slice(
           0,
           150,
         ),
-      implementation: buildImplementation('low_block_counter', 'classico'),
+      implementation: buildImplementation('BLOCO_BAIXO', 'classico'),
       transferByPos: [
         { pos: 'ZAG', label: 'Central' },
         { pos: 'MC', label: 'Meia que entra na área' },
@@ -214,26 +217,31 @@ export function interpretAiLabsInput(mode: AiLabsMode, raw: string): AiLabsPropo
   const presetId = heuristicFree(text);
   return {
     presetId,
-    headline: `Visão lida: encaixámos em «${PRESET_PT[presetId]}».`,
+    headline: `Visão lida: encaixámos em «${PRESET_LABEL_PT[presetId]}».`,
     implementation: buildImplementation(presetId, 'livre'),
     transferByPos:
-      presetId === 'wide_crossing'
+      presetId === 'JOGO_PELAS_LATERAIS'
         ? [
             { pos: 'LE', label: 'Ala esquerdo' },
             { pos: 'LD', label: 'Ala direito' },
           ]
-        : presetId === 'low_block_counter'
+        : presetId === 'BLOCO_BAIXO'
           ? [
               { pos: 'ZAG', label: 'Central' },
               { pos: 'VOL', label: 'Volante' },
             ]
-          : [
-              { pos: 'MC', label: 'Meio' },
-              { pos: 'ATA', label: 'Avançado' },
-            ],
+          : presetId === 'PRESSAO_ALTA'
+            ? [
+                { pos: 'PE', label: 'Extremo na pressão' },
+                { pos: 'VOL', label: 'Cobertura nas costas' },
+              ]
+            : [
+                { pos: 'MC', label: 'Meio' },
+                { pos: 'ATA', label: 'Avançado' },
+              ],
   };
 }
 
 export function presetDisplayName(id: PlayingStylePresetId): string {
-  return PRESET_PT[id] ?? id;
+  return PRESET_LABEL_PT[id] ?? id;
 }

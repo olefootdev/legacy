@@ -27,6 +27,18 @@ import {
   CITY_QUICK_TRAINING_DURATION_H,
 } from '@/game/cityQuickConstants';
 import { maxSlotsByTrainingCenter } from '@/systems/trainingPlans';
+import {
+  megastoreAwayConfidenceBonusPoints,
+  megastoreHomeConfidenceBonusPoints,
+  medicalDeptRecoverySpeedBonusPercent,
+  medicalDeptTreatmentSlots,
+  stadiumCapacityByLevel,
+  stadiumExpPerSpectatorByLevel,
+  trainingCenterAttributeGainMultiplier,
+  trainingCenterHasAiLabs,
+  trainingCenterMaxConcurrentCollectivePlans,
+  youthAcademyProspectTrainingMultiplier,
+} from '@/clubStructures/benefits';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { STRUCTURE_TO_BANNER_SLOT } from '@/ui/banners';
 
@@ -58,8 +70,12 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     actionIcon: Users,
     statsForLevel: (lvl) => [
       {
-        label: 'Capacidade (aprox.)',
-        value: `${(22000 + (lvl - 1) * 8500).toLocaleString('pt-BR')} lugares`,
+        label: 'Capacidade',
+        value: `${stadiumCapacityByLevel(lvl).toLocaleString('pt-BR')} lugares`,
+      },
+      {
+        label: 'EXP / assistente (casa)',
+        value: `${stadiumExpPerSpectatorByLevel(lvl)}`,
       },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
@@ -76,7 +92,19 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     action: 'Treino Intensivo',
     actionIcon: Zap,
     statsForLevel: (lvl) => [
-      { label: 'Slots de plano', value: String(maxSlotsByTrainingCenter(lvl)) },
+      { label: 'Slots por tipo de treino', value: String(maxSlotsByTrainingCenter(lvl)) },
+      {
+        label: 'Colectivos simultâneos',
+        value: String(trainingCenterMaxConcurrentCollectivePlans(lvl)),
+      },
+      {
+        label: 'AI Labs',
+        value: trainingCenterHasAiLabs(lvl) ? 'Desbloqueado' : 'Bloqueado',
+      },
+      {
+        label: 'Booster atributos',
+        value: `${Math.round((trainingCenterAttributeGainMultiplier(lvl) - 1) * 100)}%`,
+      },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
@@ -92,7 +120,11 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     action: 'Mutirão de Cura',
     actionIcon: Activity,
     statsForLevel: (lvl) => [
-      { label: 'Cobertura', value: `Nível ${lvl}` },
+      { label: 'Slots de tratamento', value: String(medicalDeptTreatmentSlots(lvl)) },
+      {
+        label: 'Velocidade recuperação',
+        value: `+${medicalDeptRecoverySpeedBonusPercent(lvl)}%`,
+      },
       { label: 'Mutirão (EXP)', value: `${CITY_QUICK_MEDICAL_COST_EXP} EXP` },
     ],
   },
@@ -108,7 +140,10 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     action: 'Buscar Promessas',
     actionIcon: Users,
     statsForLevel: (lvl) => [
-      { label: 'Potencial de scouting', value: `Nível ${lvl}` },
+      {
+        label: 'Booster treino (promessas)',
+        value: `${Math.round((youthAcademyProspectTrainingMultiplier(lvl) - 1) * 100)}%`,
+      },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
@@ -120,11 +155,19 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     color: 'text-purple-400',
     bg: 'bg-purple-400/10',
     border: 'border-purple-400',
-    desc: 'Merchandising e campanhas relâmpago convertem EXP em BRO e reforçam o apoio da torcida.',
+    desc: 'Reforça o apoio em casa e fora; em vitórias, converte confiança da torcida em EXP extra.',
     action: 'Campanha de Vendas',
     actionIcon: Coins,
     statsForLevel: (lvl) => [
       { label: 'Campanha (EXP → BRO)', value: `${CITY_QUICK_STORE_COST_EXP} → +${CITY_QUICK_STORE_BRO_GAIN_CENTS / 100} BRO` },
+      {
+        label: 'Apoio em casa',
+        value: `+${megastoreHomeConfidenceBonusPoints(lvl)} pts`,
+      },
+      {
+        label: 'Apoio fora',
+        value: lvl >= 4 ? `+${megastoreAwayConfidenceBonusPoints(lvl)} pts` : '—',
+      },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
@@ -312,8 +355,8 @@ export function City() {
             : 'Abre o olheiro da categoria de base.';
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-6">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto min-w-0 max-w-6xl space-y-5 pb-2 sm:space-y-6 sm:pb-0">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <h2 className="font-display text-2xl font-black italic uppercase tracking-wider sm:text-3xl md:text-4xl">
           Cidade do Clube
         </h2>
@@ -324,7 +367,7 @@ export function City() {
         </div>
       </div>
 
-      <div className="sports-panel relative overflow-hidden bg-black/80 p-4 sm:p-6 md:p-8">
+      <div className="sports-panel relative overflow-hidden bg-black/80 p-3 sm:p-6 md:p-8">
         <div
           className="absolute inset-0 opacity-10 pointer-events-none"
           style={{
@@ -334,7 +377,8 @@ export function City() {
           }}
         />
 
-        <div className="relative z-10 mx-auto grid aspect-square w-full min-w-0 max-w-4xl grid-cols-3 grid-rows-3 gap-2 sm:gap-4 md:aspect-[16/9] md:gap-8">
+        {/* Mobile: largura máx. + proporção menos alta que 1:1 para libertar espaço vertical ao painel / CTAs; desktop mantém 16:9. */}
+        <div className="relative z-10 mx-auto grid w-full min-w-0 max-w-[min(100%,19.5rem)] grid-cols-3 grid-rows-3 gap-2 aspect-[5/6] sm:max-w-2xl sm:gap-3 sm:aspect-square md:max-w-4xl md:gap-8 md:aspect-[16/9]">
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ strokeDasharray: '8 8' }}>
             <line x1="50%" y1="50%" x2="16.6%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
             <line x1="50%" y1="50%" x2="83.3%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
@@ -368,7 +412,7 @@ export function City() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className={cn(
-              'sports-panel max-h-[min(88dvh,calc(100dvh-9rem))] overflow-x-hidden overflow-y-auto border-2 p-0 transition-colors duration-500 sm:max-h-none sm:overflow-y-visible',
+              'sports-panel overflow-x-hidden border-2 p-0 transition-colors duration-500',
               selected.border,
             )}
           >
@@ -395,7 +439,7 @@ export function City() {
               <selected.icon className={cn('w-20 h-20 opacity-20 absolute right-6 -bottom-4 rotate-12', selected.color)} />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 bg-dark-gray p-4 sm:gap-6 sm:p-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 bg-dark-gray p-4 pb-6 sm:gap-6 sm:p-6 sm:pb-8 md:grid-cols-3">
               <div className="space-y-4">
                 <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
                   <Activity className="w-4 h-4" /> Status atual
@@ -451,13 +495,13 @@ export function City() {
                 <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
                   <Zap className="w-4 h-4" /> Ação rápida
                 </h4>
-                <div className="h-full flex flex-col justify-start pt-2">
+                <div className="flex min-h-0 flex-col justify-start pt-1 sm:pt-2">
                   <button
                     type="button"
                     disabled={quickDisabled}
                     onClick={openQuickConfirm}
                     className={cn(
-                      'w-full py-5 text-black font-display font-black uppercase tracking-wider text-lg -skew-x-6 transition-all shadow-lg',
+                      'w-full touch-manipulation py-4 text-black font-display font-black uppercase tracking-wider text-base -skew-x-6 transition-all shadow-lg sm:py-5 sm:text-lg',
                       quickDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'hover:scale-[1.02]',
                       selected.structureId === 'stadium' ? 'bg-neon-yellow hover:shadow-[0_0_20px_rgba(228,255,0,0.4)]' :
                       selected.structureId === 'training_center' ? 'bg-neon-green hover:shadow-[0_0_20px_rgba(0,255,102,0.4)]' :

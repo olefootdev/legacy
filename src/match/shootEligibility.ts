@@ -11,6 +11,7 @@ export function isShootMinEligible(
   ctx: Pick<DecisionContext, 'clockHalf'>,
 ): boolean {
   if (self.role === 'gk' || self.slotId === 'gol') return false;
+  if (reading.inOppPenaltyArea) return true;
   const half = ctx.clockHalf ?? 1;
   const tags = getZoneTags({ x: self.x, z: self.z }, { team: self.side as TeamSide, half });
   const inZone = SHOOT_MIN_ZONE_TAGS.some((t) => tags.includes(t));

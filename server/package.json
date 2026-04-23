@@ -8,16 +8,15 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "tsc --noEmit",
-    "verify-openai": "tsx scripts/verify-openai.ts",
-    "test:openai": "tsx scripts/integration-openai.ts",
-    "test:openai:http": "tsx scripts/integration-openai.ts --http"
+    "verify-anthropic": "tsx scripts/verify-anthropic.ts",
+    "generate-narratives": "tsx scripts/generate-narrative-catalog.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@hono/node-server": "^1.13.8",
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.4.7",
-    "hono": "^4.7.6",
-    "openai": "^4.104.0"
+    "hono": "^4.7.6"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

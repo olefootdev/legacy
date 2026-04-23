@@ -136,6 +136,96 @@ export interface Database {
         Update: never;
       };
 
+      /** Catálogo Genesis + mercado global (migration 00006). */
+      genesis_market_players: {
+        Row: {
+          id: string;
+          kit_number: number;
+          name: string;
+          pos: string;
+          pos_original: string | null;
+          archetype: string;
+          zone: string;
+          behavior: string;
+          attributes: Record<string, number>;
+          fatigue: number;
+          injury_risk: number;
+          evolution_xp: number;
+          out_for_matches: number;
+          market_value_bro_cents: number;
+          market_value_exp: number;
+          price_bro_cents: number;
+          price_exp: number;
+          contract_matches_included: number;
+          contract_is_lifetime: boolean;
+          country: string | null;
+          age: number | null;
+          strong_foot: string | null;
+          creator_label: string | null;
+          rarity_label: string | null;
+          bio: string | null;
+          listed_on_market: boolean;
+          mint_overall: number | null;
+          evolution_rate: number | null;
+          collection_id: string | null;
+          card_supply: number | null;
+          spirit_notes: string | null;
+          portrait_storage_path: string | null;
+          portrait_public_url: string | null;
+          portrait_token_public_url: string | null;
+          portrait_media_refs: Record<string, unknown> | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Partial<
+          Pick<
+            Database['public']['Tables']['genesis_market_players']['Row'],
+            | 'portrait_storage_path'
+            | 'portrait_public_url'
+            | 'portrait_token_public_url'
+            | 'portrait_media_refs'
+            | 'listed_on_market'
+            | 'updated_at'
+          >
+        >;
+      };
+
+      /** Academia OLE — lançamento + mercado EXP (migration 00011). */
+      academy_managers: {
+        Row: {
+          id: string;
+          created_at: string;
+          club_id: string;
+          listing_id: string;
+          game_player_id: string;
+          art_request_id: string;
+          price_exp: number;
+          listed_at: string;
+          listed_on_market: boolean;
+          mint_overall: number;
+          player_snapshot: Record<string, unknown>;
+          portrait_public_url: string | null;
+          portrait_token_public_url: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          club_id: string;
+          listing_id: string;
+          game_player_id: string;
+          art_request_id: string;
+          price_exp: number;
+          listed_at?: string;
+          listed_on_market?: boolean;
+          mint_overall: number;
+          player_snapshot: Record<string, unknown>;
+          portrait_public_url?: string | null;
+          portrait_token_public_url?: string | null;
+        };
+        Update: Partial<Omit<Database['public']['Tables']['academy_managers']['Insert'], 'id'>>;
+      };
+
       /** Telemetria Game Spirit + OpenAI (migration 00004); escrita só service_role. */
       game_spirit_ai_logs: {
         Row: {

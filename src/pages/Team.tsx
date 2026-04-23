@@ -1,10 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Users,
-  Brain,
-  Dumbbell,
-  UserPlus,
   X,
   Save,
   Shield,
@@ -12,28 +8,30 @@ import {
   Check,
   AlertCircle,
   Sparkles,
-  FlaskConical,
   Megaphone,
+  LineChart,
+  Heart,
 } from 'lucide-react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import { FORMATION_SCHEME_LIST, SCHEME_LINE_GROUPS, pitchUiSlots } from '@/match-engine/formations/catalog';
 import { suggestBestLineup } from '@/team/suggestBestLineup';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { ManagerCreatePlayerModal } from '@/components/ManagerCreatePlayerModal';
+import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
+import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 
 type CardPlayer = ReturnType<typeof playerToCardView> & { id: string };
 
 export function Team() {
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useGameDispatch();
   const playersById = useGameStore((s) => s.players);
   const lineupSaved = useGameStore((s) => s.lineup);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
+  const favoriteRealTeam = useGameStore((s) => s.userSettings.favoriteRealTeam);
 
   const maxOvr = useMemo(() => {
     const vals = Object.values(playersById);
@@ -60,6 +58,8 @@ export function Team() {
   const [saveBanner, setSaveBanner] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const [announcePlayer, setAnnouncePlayer] = useState<CardPlayer | null>(null);
   const [announcePrice, setAnnouncePrice] = useState('180000');
+  /** Ficha temporada / evolução (clique no token ou no cartão). */
+  const [sheetPlayerId, setSheetPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (lineupDirty) {
@@ -84,6 +84,22 @@ export function Team() {
   const lineupPlayerIds = Object.values(lineup)
     .filter((p): p is CardPlayer => Boolean(p))
     .map((p) => p.id);
+
+  /** Soma dos OVR dos titulares (força combinada do XI) + média para leitura rápida. */
+  const startersStrength = useMemo(() => {
+    const starters = pitchSlots
+      .map((s) => lineup[s.id])
+      .filter((p): p is CardPlayer => Boolean(p));
+    if (!starters.length) return { sum: 0, avg: 0, count: 0, full: false };
+    const sum = starters.reduce((acc, p) => acc + p.ovr, 0);
+    const avg = sum / starters.length;
+    return {
+      sum,
+      avg,
+      count: starters.length,
+      full: starters.length === pitchSlots.length,
+    };
+  }, [lineup, pitchSlots]);
   const availablePlayers = rosterCards.filter((p) => {
     const ent = playersById[p.id];
     return (
@@ -206,82 +222,53 @@ export function Team() {
     });
   };
 
-  const tabs = [
-    { id: 'elenco', label: 'ELENCO', icon: Users },
-    { id: 'tatica', label: 'TÁTICA', icon: Brain },
-    { id: 'treino', label: 'TREINO', icon: Dumbbell },
-    { id: 'staff', label: 'STAFF', icon: UserPlus },
-    { id: 'ailabs', label: 'AI LABS', icon: FlaskConical },
-  ];
-
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 overflow-x-hidden pb-8 md:space-y-8">
-      {/* Header & Tabs */}
-      <div className="relative rounded-xl">
-        <GameBannerBackdrop slot="team_header" imageOpacity={0.35} />
-        <div className="relative z-10 flex min-w-0 flex-col items-start justify-between gap-3 px-1 pb-1 md:flex-row md:items-end md:gap-4 md:px-2 md:pb-2">
-          <div className="min-w-0">
-            <h2 className="text-2xl md:text-4xl font-display font-black italic uppercase tracking-wider">Plantel Principal</h2>
-            <p className="text-[10px] md:text-sm text-gray-400 font-medium mt-0.5 md:mt-1">
-              Temporada 2026 •{' '}
-              <span className="text-white/90 font-semibold">{formationScheme}</span>
-              <span className="text-gray-500"> tático</span>
-            </p>
-            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFormationModalOpen(true)}
-                className="inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-display font-bold uppercase tracking-widest text-neon-yellow/90 hover:text-neon-yellow border border-neon-yellow/25 bg-neon-yellow/5 hover:bg-neon-yellow/10 px-2 py-1 rounded-sm -skew-x-6 transition-colors"
+      <TeamMeuTimeHeader
+        title="Plantel Principal"
+        subtitle={
+          <>
+            Temporada 2026 •{' '}
+            <span className="font-semibold text-white/90">{formationScheme}</span>
+            <span className="text-gray-500"> tático</span>
+          </>
+        }
+        actions={
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFormationModalOpen(true)}
+              className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-neon-yellow/25 bg-neon-yellow/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90 transition-colors hover:bg-neon-yellow/10 hover:text-neon-yellow md:text-[10px]"
+            >
+              <span className="inline-flex skew-x-6 items-center gap-1">
+                <LayoutGrid className="h-3 w-3 shrink-0 opacity-90" />
+                Escolher formação
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateProspectOpen(true)}
+              className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-white/20 bg-white/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-white/90 transition-colors hover:bg-white/10 hover:text-white md:text-[10px]"
+            >
+              <span className="inline-flex skew-x-6 items-center gap-1">
+                <Sparkles className="h-3 w-3 shrink-0 text-neon-yellow opacity-90" />
+                Criar jogador
+              </span>
+            </button>
+            {favoriteRealTeam?.name ? (
+              <Link
+                to="/ranking?tab=nacional&heart=1"
+                className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-neon-green/30 bg-neon-green/10 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-neon-green/95 transition-colors hover:bg-neon-green/20 md:text-[10px]"
               >
-                <span className="skew-x-6 inline-flex items-center gap-1">
-                  <LayoutGrid className="w-3 h-3 shrink-0 opacity-90" />
-                  Escolher formação
+                <span className="inline-flex skew-x-6 items-center gap-1">
+                  <Heart className="h-3 w-3 shrink-0 opacity-90" />
+                  Ranking · {favoriteRealTeam.name}
                 </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreateProspectOpen(true)}
-                className="inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-display font-bold uppercase tracking-widest text-white/90 hover:text-white border border-white/20 bg-white/5 hover:bg-white/10 px-2 py-1 rounded-sm -skew-x-6 transition-colors"
-              >
-                <span className="skew-x-6 inline-flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 shrink-0 text-neon-yellow opacity-90" />
-                  Criar jogador
-                </span>
-              </button>
-            </div>
+              </Link>
+            ) : null}
           </div>
-
-          <div className="hide-scrollbar flex min-w-0 w-full gap-2 overflow-x-auto pb-2 md:w-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  if (tab.id === 'elenco') navigate('/team');
-                  if (tab.id === 'tatica') navigate('/team/tatica');
-                  if (tab.id === 'treino') navigate('/team/treino');
-                  if (tab.id === 'staff') navigate('/team/staff');
-                  if (tab.id === 'ailabs') navigate('/team/ailabs');
-                }}
-                className={cn(
-                  'shrink-0 whitespace-nowrap border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-all [-webkit-tap-highlight-color:transparent] -skew-x-6 sm:px-4 sm:text-xs md:px-6 md:py-2 md:text-sm',
-                  (tab.id === 'elenco' && location.pathname === '/team')
-                    || (tab.id === 'tatica' && location.pathname === '/team/tatica')
-                    || (tab.id === 'treino' && location.pathname === '/team/treino')
-                    || (tab.id === 'staff' && location.pathname === '/team/staff')
-                    || (tab.id === 'ailabs' && location.pathname === '/team/ailabs')
-                    ? "bg-neon-yellow text-black border-neon-yellow"
-                    : "bg-dark-gray text-gray-400 border-white/10 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                <span className="skew-x-6 block flex items-center gap-2">
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/*
         `items-stretch` (não `items-start`): em coluna, filhos ocupam 100% da largura útil — evita largura
@@ -312,6 +299,27 @@ export function Team() {
 
               {/* Pitch: `min-w-0` + `max-w-full` garantem que a caixa de aspeto nunca força overflow horizontal. */}
               <div className="relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden rounded-md border border-white/25 bg-[#0a2e15] shadow-lg shadow-black/40 sm:rounded-lg sm:border-2 sm:shadow-2xl md:rounded-lg md:border-4 md:border-white/20 md:shadow-2xl">
+              {/* Força do XI: soma dos OVR dos titulares (canto superior esquerdo do gramado) */}
+              <div
+                className="pointer-events-none absolute left-1 top-1 z-20 w-max max-w-[min(88%,15rem)] rounded-md border border-white/20 bg-black/75 px-2 py-1 shadow-lg shadow-black/30 backdrop-blur-[3px] sm:left-1.5 sm:top-1.5 sm:px-2.5 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
+                title={
+                  startersStrength.count === 0
+                    ? 'Escala os titulares para ver a força combinada (soma dos OVR).'
+                    : `Força do XI: soma dos OVR dos titulares = ${startersStrength.sum}. Média do XI = ${startersStrength.avg.toFixed(1)}. Escalados: ${startersStrength.count} de ${pitchSlots.length}.`
+                }
+              >
+                <p className="font-display text-[7px] font-black uppercase leading-none tracking-[0.2em] text-white/65 sm:text-[8px] md:text-[9px] lg:text-[10px]">
+                  OVERALL
+                </p>
+                <p className="font-display text-xl font-black tabular-nums leading-none text-neon-yellow sm:text-2xl md:text-3xl lg:text-4xl">
+                  {startersStrength.count === 0 ? '—' : startersStrength.sum}
+                </p>
+                <p className="mt-1 font-display text-[6px] font-bold uppercase tabular-nums leading-none text-white/50 sm:text-[7px] md:text-[8px]">
+                  {startersStrength.count === 0
+                    ? `${pitchSlots.length} posições no XI`
+                    : `méd. ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
+                </p>
+              </div>
               {/* Pitch Lines */}
               <div className="absolute inset-0 pointer-events-none opacity-40">
                 {/* Grass pattern */}
@@ -347,7 +355,11 @@ export function Team() {
               {pitchSlots.map((slot) => (
                 <div key={slot.id} className="absolute -translate-x-1/2 -translate-y-1/2 z-10" style={{ top: slot.top, left: slot.left }}>
                   {lineup[slot.id] ? (
-                    <PitchPlayer player={lineup[slot.id]} onRemove={() => handleRemove(slot.id)} />
+                    <PitchPlayer
+                      player={lineup[slot.id]}
+                      onOpenSheet={() => setSheetPlayerId(lineup[slot.id]!.id)}
+                      onRemove={() => handleRemove(slot.id)}
+                    />
                   ) : (
                     <div 
                       onClick={() => setSelectedSlotId(slot.id)}
@@ -424,7 +436,7 @@ export function Team() {
             <span className="shrink-0 text-xs font-bold text-gray-500">{availablePlayers.length} Reservas</span>
           </div>
           
-          <div className="space-y-3 lg:overflow-y-auto lg:pr-2 lg:max-h-[calc(100vh-16rem)]">
+          <div className="space-y-3 lg:overflow-y-auto lg:pr-2 lg:max-h-[calc(100vh-16rem)] pb-[max(3rem,env(safe-area-inset-bottom,0px))]">
             <AnimatePresence>
               {availablePlayers.map((player) => (
                 <motion.div
@@ -438,6 +450,12 @@ export function Team() {
                     player.style === 'neon-yellow' ? 'border-neon-yellow/50' : 'border-white/10'
                   )}
                 >
+                  {/* Left + middle: abre ficha temporada */}
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 cursor-pointer text-left [-webkit-tap-highlight-color:transparent]"
+                    onClick={() => setSheetPlayerId(player.id)}
+                  >
                   {/* Left: Image & OVR */}
                   <div className="w-20 md:w-24 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 md:pt-4 border-r border-white/5">
                     <div className={cn(
@@ -472,7 +490,19 @@ export function Team() {
                     <div className="font-display font-black text-lg md:text-xl italic uppercase tracking-wider text-white leading-none mb-1 truncate pr-8">
                       {player.name}
                     </div>
-                    
+
+                    {player.outForMatches > 0 ? (
+                      <div className="mt-1 inline-flex items-center gap-1 rounded-sm bg-red-500/20 border border-red-500/50 px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-red-300 w-fit">
+                        <span>🚑</span>
+                        <span>Fora {player.outForMatches}j</span>
+                      </div>
+                    ) : player.injuryRisk >= 70 ? (
+                      <div className="mt-1 inline-flex items-center gap-1 rounded-sm bg-amber-500/20 border border-amber-500/50 px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-amber-300 w-fit">
+                        <span>⚠</span>
+                        <span>Risco {player.injuryRisk}</span>
+                      </div>
+                    ) : null}
+
                     {/* Stats */}
                     <div className="flex gap-2 md:gap-4 mt-1 md:mt-3">
                       <div className="flex flex-col">
@@ -493,6 +523,7 @@ export function Team() {
                       </div>
                     </div>
                   </div>
+                  </button>
 
                   {/* Right: ESCALAR + ANUNCIAR (mercado EXP — mesmo fluxo que /transfer) */}
                   <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch justify-center gap-1.5 border-l border-white/5 bg-black/20 p-1.5 sm:w-[7.5rem] md:w-[8.25rem] md:p-2">
@@ -589,8 +620,20 @@ export function Team() {
                       </div>
 
                       {/* Middle: Info */}
-                      <div className="flex-1 p-2 md:p-3 flex flex-col justify-center relative min-w-0">
-                        <div className="flex items-center gap-1.5 pr-2">
+                      <div className="relative flex-1 p-2 md:p-3 flex flex-col justify-center min-w-0">
+                        <button
+                          type="button"
+                          title="Ver ficha e temporada"
+                          aria-label={`Estatísticas e temporada — ${player.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSheetPlayerId(player.id);
+                          }}
+                          className="absolute right-2 top-2 z-[1] rounded border border-white/15 bg-black/60 p-1.5 text-neon-yellow/90 transition-colors hover:bg-neon-yellow/15 hover:text-neon-yellow"
+                        >
+                          <LineChart className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                        <div className="flex items-center gap-1.5 pr-10">
                           {player.countryFlagEmoji ? (
                             <span className="shrink-0 text-base leading-none" title={player.country ?? undefined} aria-hidden>
                               {player.countryFlagEmoji}
@@ -799,50 +842,87 @@ export function Team() {
       </AnimatePresence>
 
       <ManagerCreatePlayerModal open={createProspectOpen} onClose={() => setCreateProspectOpen(false)} />
+
+      <AnimatePresence>
+        {sheetPlayerId ? (
+          <TeamPlayerSeasonSheet playerId={sheetPlayerId} onClose={() => setSheetPlayerId(null)} />
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
 
-function PitchPlayer({ player, onRemove }: { player: any, onRemove: () => void }) {
+function PitchPlayer({
+  player,
+  onOpenSheet,
+  onRemove,
+}: {
+  player: CardPlayer;
+  onOpenSheet: () => void;
+  onRemove: () => void;
+}) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0, opacity: 0 }}
-      onClick={onRemove} 
-      className="relative group cursor-pointer flex flex-col items-center"
+      className="relative flex flex-col items-center"
     >
-      <div className={cn(
-        'relative size-7 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-8 md:size-12 md:border-2',
-        player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white'
-      )}>
-        {player.countryFlagEmoji ? (
-          <span
-            className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[1px] text-[7px] leading-none sm:text-[8px] md:text-[11px]"
-            title={player.country ?? undefined}
-            aria-hidden
-          >
-            {player.countryFlagEmoji}
-          </span>
-        ) : null}
-        <img src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)} alt={player.name} className="h-full w-full object-cover object-top" referrerPolicy="no-referrer" />
-      </div>
-      
-      <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate rounded border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]">
-        {player.name}
-      </div>
-      
-      <div className={cn(
-        'absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full text-[6px] font-black shadow-md sm:-right-1 sm:-top-1 sm:size-4 sm:text-[7px] md:-right-2 md:-top-2 md:size-5 md:text-[9px]',
-        player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black'
-      )}>
-        {player.ovr}
-      </div>
-      
-      {/* Hover overlay to remove */}
-      <div className="absolute left-0 top-0 flex size-7 items-center justify-center rounded-full bg-red-500/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 sm:size-8 md:size-12">
-        <X className="h-3 w-3 text-white sm:h-3.5 sm:w-3.5 md:h-5 md:w-5" />
-      </div>
+      <button
+        type="button"
+        onClick={onOpenSheet}
+        className="group/token relative flex cursor-pointer flex-col items-center [-webkit-tap-highlight-color:transparent]"
+        aria-label={`Ver estatísticas e temporada — ${player.name}`}
+      >
+        <div
+          className={cn(
+            'relative size-7 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-8 md:size-12 md:border-2',
+            player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white',
+          )}
+        >
+          {player.countryFlagEmoji ? (
+            <span
+              className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[1px] text-[7px] leading-none sm:text-[8px] md:text-[11px]"
+              title={player.country ?? undefined}
+              aria-hidden
+            >
+              {player.countryFlagEmoji}
+            </span>
+          ) : null}
+          <img
+            src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
+            alt=""
+            className="h-full w-full object-cover object-top"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate rounded border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]">
+          {player.name}
+        </div>
+
+        <div
+          className={cn(
+            'pointer-events-none absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full text-[6px] font-black shadow-md sm:-right-1 sm:-top-1 sm:size-4 sm:text-[7px] md:-right-2 md:-top-2 md:size-5 md:text-[9px]',
+            player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
+          )}
+        >
+          {player.ovr}
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        title={`Retirar ${player.name} do campo`}
+        aria-label={`Retirar ${player.name} do campo`}
+        className="absolute -right-1 -top-1 z-20 flex size-4 items-center justify-center rounded-full border border-white/30 bg-red-600 text-white shadow-md transition-transform hover:scale-110 sm:size-5 md:-right-0.5 md:-top-0.5 md:size-6"
+      >
+        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" strokeWidth={2.5} />
+      </button>
     </motion.div>
   );
 }

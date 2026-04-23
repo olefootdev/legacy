@@ -2,16 +2,19 @@ import { motion } from 'motion/react';
 import { Trophy, TrendingUp, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
-import type { AdminLeagueConfig, KnockoutRound } from '@/match/adminLeagues';
+import type { AdminLeagueConfig, KnockoutRound, LeagueScope } from '@/match/adminLeagues';
 import {
   goalDiff,
+  isLeagueVisibleInPlayerApp,
   LEAGUE_FORMAT_LABELS,
+  LEAGUE_SCOPE_LABELS,
   positionOfClub,
   rowMatchingClub,
   sortStandings,
+  standingsRowsForDisplay,
 } from '@/match/adminLeagues';
 import type { LeagueSeasonState } from '@/match/leagueSeason';
 
@@ -34,17 +37,7 @@ function displayStandingsForLeague(
   userPosition: number;
   userForm: import('@/entities/types').FormLetter[];
 } {
-  let standings = league.standings.map((r) => ({ ...r }));
-  if (league.syncStatsFromSeason) {
-    const row = rowMatchingClub(standings, clubName, clubShort);
-    if (row) {
-      row.played = leagueSeason.played;
-      row.points = leagueSeason.points;
-      row.goalsFor = leagueSeason.goalsFor;
-      row.goalsAgainst = leagueSeason.goalsAgainst;
-    }
-  }
-  const sorted = sortStandings(standings);
+  const sorted = standingsRowsForDisplay(league, clubName, clubShort, leagueSeason);
   const userPosition = positionOfClub(sorted, clubName, clubShort);
   const userForm = league.syncStatsFromSeason ? globalForm.slice(0, 5) : league.form;
   return { sorted, userPosition, userForm };
@@ -170,6 +163,11 @@ function StandingsBlock({
   );
 }
 
+const PLAYER_SCOPE_TABS: { id: Exclude<LeagueScope, 'world'>; label: string }[] = [
+  { id: 'national', label: 'Nacionais' },
+  { id: 'state', label: 'Estaduais' },
+];
+
 export function Leagues() {
   const club = useGameStore((s) => s.club);
   const leagueSeason = useGameStore((s) => s.leagueSeason);
@@ -177,11 +175,16 @@ export function Leagues() {
   const adminLeagues = useGameStore((s) => s.adminLeagues);
   const adminPrimaryLeagueId = useGameStore((s) => s.adminPrimaryLeagueId);
 
+  const playerLeagues = useMemo(() => adminLeagues.filter(isLeagueVisibleInPlayerApp), [adminLeagues]);
+
+  const [scopeTab, setScopeTab] = useState<Exclude<LeagueScope, 'world'>>('national');
+
   const orderedLeagues = useMemo(() => {
-    const primary = adminLeagues.find((l) => l.id === adminPrimaryLeagueId);
-    const rest = adminLeagues.filter((l) => l.id !== adminPrimaryLeagueId);
-    return primary ? [primary, ...rest] : [...adminLeagues];
-  }, [adminLeagues, adminPrimaryLeagueId]);
+    const inTab = playerLeagues.filter((l) => l.scope === scopeTab);
+    const primary = inTab.find((l) => l.id === adminPrimaryLeagueId);
+    const rest = inTab.filter((l) => l.id !== adminPrimaryLeagueId);
+    return primary ? [primary, ...rest] : inTab;
+  }, [playerLeagues, adminPrimaryLeagueId, scopeTab]);
 
   if (adminLeagues.length === 0) {
     return (
@@ -202,6 +205,26 @@ export function Leagues() {
     );
   }
 
+  if (playerLeagues.length === 0) {
+    return (
+      <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 lg:max-w-5xl xl:max-w-6xl">
+        <div className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6">
+          <GameBannerBackdrop slot="leagues_header" imageOpacity={0.32} />
+          <div className="relative z-10 min-w-0 max-w-full md:max-w-3xl">
+            <h2 className="break-words font-display text-2xl font-black uppercase tracking-wider sm:text-3xl md:text-4xl">
+              Ligas
+            </h2>
+            <p className="mt-2 max-w-full break-words text-pretty text-sm leading-snug text-gray-500 md:text-base md:leading-relaxed">
+              Só existem competições <strong className="text-white/70">mundiais</strong> no save — em{' '}
+              <code className="text-neon-yellow">/admin</code> cria também ligas estaduais ou nacionais para as veres
+              aqui.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 sm:space-y-10 lg:max-w-5xl xl:max-w-6xl">
       <motion.div
@@ -215,12 +238,35 @@ export function Leagues() {
             Ligas
           </h2>
           <p className="mt-1 max-w-full break-words text-pretty text-sm font-medium leading-snug text-gray-500 md:mt-2 md:text-base md:leading-relaxed">
-            Competições, calendário e formato — tabela, mata-mata ou híbrido.
+            Competições estaduais e nacionais — tabela, mata-mata ou híbrido. (Mundiais ficam só no ranking global.)
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {PLAYER_SCOPE_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setScopeTab(t.id)}
+                className={cn(
+                  'rounded-lg border px-3 py-2 font-display text-[10px] font-black uppercase tracking-wider sm:text-xs',
+                  scopeTab === t.id
+                    ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
+                    : 'border-white/15 text-white/55 hover:border-white/25 hover:text-white/80',
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       </motion.div>
 
       <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+        {orderedLeagues.length === 0 ? (
+          <div className="rounded-xl border border-white/10 bg-[#111] p-6 text-center text-sm text-gray-500">
+            Nenhuma competição <span className="text-white/80">{LEAGUE_SCOPE_LABELS[scopeTab].toLowerCase()}</span> neste
+            momento. Troca de separador ou configura no <code className="text-neon-yellow">/admin</code>.
+          </div>
+        ) : null}
         {orderedLeagues.map((lg, i) => {
           const isPrimary = lg.id === adminPrimaryLeagueId;
           const { sorted, userPosition, userForm } = displayStandingsForLeague(
@@ -268,6 +314,9 @@ export function Leagues() {
                       ) : null}
                       <span className="max-w-full min-w-0 rounded border border-white/15 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-gray-400 sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
                         {LEAGUE_FORMAT_LABELS[lg.format]}
+                      </span>
+                      <span className="max-w-full min-w-0 rounded border border-neon-green/25 bg-neon-green/10 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-neon-green/90 sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
+                        {LEAGUE_SCOPE_LABELS[lg.scope]}
                       </span>
                     </div>
                     <p className="mt-0.5 max-w-full break-words text-[10px] font-bold uppercase tracking-wider text-gray-500 md:text-xs">

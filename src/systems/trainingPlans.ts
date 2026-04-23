@@ -1,20 +1,21 @@
 import type { IndividualTrainingType, CollectiveTrainingType, TrainingPlan, TrainingGroup } from '@/game/types';
 import type { PlayerEntity } from '@/entities/types';
+import { trainingCenterSlotsPerSkillType } from '@/clubStructures/benefits';
 
 function clampAttr(v: number): number {
   return Math.max(1, Math.min(99, Math.round(v)));
 }
 
+/** Slots simultâneos por tipo de treino (habilidade), conforme nível do CT. */
 export function maxSlotsByTrainingCenter(level: number): number {
-  if (level >= 3) return 5;
-  if (level >= 2) return 3;
-  return 1;
+  return trainingCenterSlotsPerSkillType(level);
 }
 
 export function addHoursIso(iso: string, h: number): string {
   return new Date(new Date(iso).getTime() + h * 3600_000).toISOString();
 }
 
+/** Pilar 3 (evolução por plano): mapa em `@/lib/veracityPillarsMap`. */
 export function applyTrainingToPlayer(
   player: PlayerEntity,
   trainingType: IndividualTrainingType | CollectiveTrainingType,

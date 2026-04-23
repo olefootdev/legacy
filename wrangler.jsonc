@@ -1,7 +1,13 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "olefoot-game",
-  "compatibility_date": "2026-04-09",
+  // Atualizar periodicamente: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
+  "compatibility_date": "2026-04-13",
+  // Logs e traces no dashboard Workers (útil com agente / debugging remoto).
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.25
+  },
   "assets": {
     "not_found_handling": "single-page-application"
   }

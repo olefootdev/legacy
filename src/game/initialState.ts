@@ -3,8 +3,8 @@ import type { LiveMatchSnapshot } from '@/engine/types';
 import type { FinanceState } from '@/entities/types';
 import type { ManagerProspectMarketState, OlefootGameState } from './types';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
-import { buildNpcManagerProspectSnapshot } from '@/entities/managerProspect';
 import { defaultUserSettings } from '@/settings/defaultUserSettings';
+import { FORMATION_SCHEME_LIST } from '@/match-engine/formations/catalog';
 import { createInitialSquad, defaultFixture, DEFAULT_CLUB } from '@/entities/team';
 import { createDefaultStructures } from '@/clubStructures/upgrade';
 import { createInitialWalletState } from '@/wallet/initial';
@@ -16,6 +16,8 @@ import { createInitialStaffState } from '@/systems/staff';
 import { createInitialSocialState } from '@/social/types';
 import { pickHomeCaptainPlayerId } from '@/match/impactRules';
 import { grantEarnedExp } from '@/systems/economy';
+import { createInitialExpExchangeState } from '@/economy/expExchange';
+import { defaultShopCatalog } from './shopCatalog';
 
 function startingExpBonusForTests(): number {
   const raw = import.meta.env.VITE_STARTING_EXP;
@@ -28,14 +30,9 @@ function startingExpBonusForTests(): number {
 }
 
 function createInitialManagerProspectMarket(): ManagerProspectMarketState {
-  const seed = 'v1';
   return {
     ownListings: [],
-    npcOffers: Array.from({ length: 5 }, (_, i) => ({
-      listingId: `npc_lst_${seed}_${i}`,
-      snapshot: buildNpcManagerProspectSnapshot(seed, i),
-      priceExp: 88_000 + ((i * 41_000) % 310_000),
-    })),
+    npcOffers: [],
   };
 }
 
@@ -90,6 +87,7 @@ export function createInitialGameState(): OlefootGameState {
       activeMatchTacticId: null,
       activeTrainingTacticId: null,
       trainingPlans: [],
+      treatmentPlans: [],
       staff: createInitialStaffState(),
     },
     lastWorldRealMs: Date.now(),
@@ -102,6 +100,11 @@ export function createInitialGameState(): OlefootGameState {
     managerProspectMarket: createInitialManagerProspectMarket(),
     managerProspectConfig: { createCostExp: DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP },
     managerProspectArtQueue: [],
+    expExchange: createInitialExpExchangeState(),
+    playerSeasonLedger: {},
+    playerEvolutionTimeline: {},
+    shopCatalog: defaultShopCatalog(),
+    shopInventory: {},
   };
 }
 
@@ -128,6 +131,9 @@ export function defaultLiveMatchShell(
     possession: 'home',
     ball: { x: 52, y: 48 },
     homeFormationScheme,
+    awayFormationScheme: FORMATION_SCHEME_LIST[
+      Math.floor(Math.random() * FORMATION_SCHEME_LIST.length)
+    ],
     homePlayers,
     events: [
       {

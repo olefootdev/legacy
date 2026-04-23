@@ -25,6 +25,23 @@ const BASE_REFRESH: Record<PrethinkingSpeed, number> = {
   slow: 0.36,
 };
 
+/**
+ * Com portador nosso, entre colegas sem bola: 0 = mais perto da bola (único “primeiro apoio”).
+ * Usado para não reforçar prethinking com avanço à bola quando já há apoio melhor posicionado.
+ */
+function offBallSupportRankAmongNonCarriers(ctx: DecisionContext): number {
+  if (!ctx.carrierId || ctx.self.id === ctx.carrierId) return 0;
+  const dSelf = Math.hypot(ctx.ballX - ctx.self.x, ctx.ballZ - ctx.self.z);
+  let rank = 0;
+  for (const t of ctx.teammates) {
+    if (t.id === ctx.self.id || t.id === ctx.carrierId) continue;
+    const d = Math.hypot(ctx.ballX - t.x, ctx.ballZ - t.z);
+    if (d < dSelf - 0.45) rank++;
+    else if (Math.abs(d - dSelf) <= 0.45 && t.id.localeCompare(ctx.self.id) < 0) rank++;
+  }
+  return rank;
+}
+
 /** Distância ao adversário mais próximo (m). */
 function nearestOpponentDist(ctx: DecisionContext): number {
   let min = Infinity;
@@ -111,6 +128,8 @@ export function computePrethinkingSpeed(ctx: DecisionContext): PrethinkingSpeed 
   if (score <= 0.37) return 'slow';
   return 'normal';
 }
+
+// (match rhythm influence handled where DecisionContext is built)
 
 export function invalidatePrethinking(state: PrethinkingState, ctx: DecisionContext, simTime: number): boolean {
   if (simTime > state.validUntil) return true;
@@ -316,9 +335,6 @@ export function prethinkingDeliberationFactor(ctx: DecisionContext): number {
     case 'tabela':
       f *= 1 - c * 0.1;
       break;
-    case 'finalizar_rapido':
-      f *= 1 - c * 0.11;
-      break;
     default:
       break;
   }
@@ -421,6 +437,8 @@ export function applyPrethinkingToOffBall(ctx: DecisionContext, action: OffBallA
 
   if (teamHasBall && !ctx.isCarrier && 'targetX' in action) {
     if (i === 'atacar_espaco' || i === 'finalizar_rapido') {
+      const dBall = Math.hypot(ctx.ballX - ctx.self.x, ctx.ballZ - ctx.self.z);
+      if (offBallSupportRankAmongNonCarriers(ctx) > 0 && dBall < 24) return action;
       const ad = ctx.attackDir;
       const side = ctx.self.z < ctx.ballZ ? -1 : 1;
       return {

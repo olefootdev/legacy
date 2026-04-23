@@ -127,3 +127,25 @@ html[data-graphic-quality='low'] {
 html[data-graphic-quality='low'] .sports-panel::after {
   opacity: 0.012;
 }
+
+/* Rotação do sprite da bola na partida ao vivo. Respeita reduce-motion via override acima. */
+@keyframes olefoot-ball-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Tombo/rolamento — rotação 360° com leve oscilação (eixos compostos) pra dar sensação
+   de bola tumbando no campo, nunca no mesmo plano. */
+@keyframes olefoot-ball-tumble {
+  0%   { transform: rotate(0deg)    scale(1);    }
+  25%  { transform: rotate(120deg)  scale(1.04); }
+  50%  { transform: rotate(200deg)  scale(0.97); }
+  75%  { transform: rotate(300deg)  scale(1.02); }
+  100% { transform: rotate(360deg)  scale(1);    }
+}
+
+/* Pulso de escala/brilho em chutes — sensação de pancada. */
+@keyframes olefoot-ball-pulse {
+  from { filter: drop-shadow(0 0 10px rgba(255,235,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+  to   { filter: drop-shadow(0 0 18px rgba(255,235,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
+}

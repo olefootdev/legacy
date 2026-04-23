@@ -4,12 +4,24 @@
  */
 
 /** Base: desarme limpo vs falta (defensor). MVP: mais contacto → faltas visíveis. */
-export const TACKLE_FOUL_PROB_BASE = 0.11;
+export const TACKLE_FOUL_PROB_BASE = 0.12;
 /** Baixo fairPlay aumenta probabilidade de falta no desarme. */
 export const TACKLE_FOUL_FAIRPLAY_WEIGHT = 0.3;
 export const TACKLE_FOUL_PROB_CAP = 0.44;
 
-/** Dado falta no desarme: amarelo (cumulativo com vermelho abaixo). */
+/**
+ * Cartões após falta: um `u ~ U(0,1)` cumulativo — [0,red) vermelho, [red,red+yellow) amarelo.
+ * Severidade (leve / firme / feia) vem do contacto.
+ */
+export const FOUL_CARD_RED_P_LIGHT = 0.008;
+export const FOUL_CARD_RED_P_FIRM = 0.024;
+export const FOUL_CARD_RED_P_UGLY = 0.05;
+
+export const FOUL_CARD_YELLOW_P_LIGHT = 0.52;
+export const FOUL_CARD_YELLOW_P_FIRM = 0.5;
+export const FOUL_CARD_YELLOW_P_UGLY = 0.58;
+
+/** @deprecated Probabilidades cumulativas antigas — mantidas só para referência em testes legados. */
 export const FOUL_AFTER_TACKLE_YELLOW_PROB = 0.4;
 export const FOUL_AFTER_TACKLE_RED_PROB = 0.034;
 

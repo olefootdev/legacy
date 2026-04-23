@@ -19,6 +19,10 @@ secrets/
 # NPM — ficheiros .npmrc podem conter token de registry
 .npmrc
 
+# Arquivo consolidado temporário de bootstrap Supabase — gerado por cat migrations/
+supabase/CONSOLIDATED_BOOTSTRAP.sql
+supabase/SEED_GENESIS_WITH_PORTRAITS.sql
+
 # Mobile / Expo
 mobile/.env
 mobile/.env.*

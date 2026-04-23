@@ -3,75 +3,95 @@
  * Dashboard interativo: KPIs, gestão de ligas persistidas, acções de utilizador no save local.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { clearAdminPanelSession, loadAdminPanelSession } from '@/supabase/adminPanelAuth';
 import {
   ArrowLeft,
   Banknote,
+  Beaker,
   Brain,
   Brush,
+  Camera,
   LayoutDashboard,
   Shield,
-  Sparkles,
+  ShoppingBag,
   Trophy,
   TrendingUp,
-  UserCog,
   Users,
-  Image,
-  Database,
+  LineChart,
+  Crown,
+  Rocket,
+  FileClock,
+  ShieldAlert,
+  BookOpen,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGameStore } from '@/game/store';
 import { formatBroFromCents } from '@/systems/economy';
 import { computePlatformAggregate, useAdminPlatformStore } from '@/admin/platformStore';
 import { AdminOverviewPanel } from './panels/AdminOverviewPanel';
 import { AdminLeaguesPanel } from './panels/AdminLeaguesPanel';
-import { AdminUserPanel } from './panels/AdminUserPanel';
 import { AdminUsuariosPanel } from './panels/AdminUsuariosPanel';
 import { AdminFinanceiroPanel } from './panels/AdminFinanceiroPanel';
-import { AdminCreatePlayerPanel } from './panels/AdminCreatePlayerPanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
-import { AdminBannersPanel } from './panels/AdminBannersPanel';
-import { AdminSaveHubPanel } from './panels/AdminSaveHubPanel';
-import { AdminSportsDataPanel } from './panels/AdminSportsDataPanel';
 import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
 import { AdminPlayerEvolutionPanel } from './panels/AdminPlayerEvolutionPanel';
+import { AdminGrowthPanel } from './panels/AdminGrowthPanel';
+import { AdminGenesisPortraitsPanel } from './panels/AdminGenesisPortraitsPanel';
+import { AdminShopPanel } from './panels/AdminShopPanel';
+import { AdminMarketPanel } from './panels/AdminMarketPanel';
+import { AdminLegacyPanel } from './panels/AdminLegacyPanel';
+import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
+import { AdminProfanityPanel } from './panels/AdminProfanityPanel';
+import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
+import { AdminCreatePlayerAgentsPanel } from './panels/AdminCreatePlayerAgentsPanel';
+import { AdminGlobalPanel } from './panels/AdminGlobalPanel';
 
 type TabId =
   | 'overview'
+  | 'growth'
   | 'financeiro'
   | 'usuarios'
   | 'leagues'
-  | 'sportsData'
-  | 'user'
-  | 'createPlayer'
+  | 'shop'
+  | 'market'
+  | 'legacy'
+  | 'global'
+  | 'audit'
+  | 'profanity'
+  | 'learnedPhrases'
+  | 'createPlayerAgents'
   | 'prospectArt'
   | 'playerEvolution'
   | 'gameSpirit'
-  | 'banners'
-  | 'saveData';
+  | 'genesisPortraits';
 
 const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Resumo', icon: LayoutDashboard },
+  { id: 'growth', label: 'Growth', icon: LineChart },
   { id: 'financeiro', label: 'Financeiro', icon: Banknote },
+  { id: 'global', label: 'Global', icon: Rocket },
+  { id: 'shop', label: 'Loja', icon: ShoppingBag },
+  { id: 'market', label: 'Market', icon: Shield },
+  { id: 'legacy', label: 'Legacy DNA', icon: Crown },
+  { id: 'audit', label: 'Auditoria', icon: FileClock },
+  { id: 'profanity', label: 'Linguagem', icon: ShieldAlert },
+  { id: 'learnedPhrases', label: 'Frases aprendidas', icon: BookOpen },
   { id: 'usuarios', label: 'Usuários', icon: Users },
-  { id: 'saveData', label: 'Dados do save', icon: Database },
-  { id: 'banners', label: 'Banners', icon: Image },
   { id: 'gameSpirit', label: 'Game Spirit', icon: Brain },
-  { id: 'createPlayer', label: 'Create player', icon: Sparkles },
-  { id: 'prospectArt', label: 'Player creation', icon: Brush },
+  { id: 'createPlayerAgents', label: 'Agency', icon: Brain },
+  { id: 'prospectArt', label: 'Academy players', icon: Brush },
   { id: 'playerEvolution', label: 'Evolução', icon: TrendingUp },
   { id: 'leagues', label: 'Ligas', icon: Trophy },
-  { id: 'sportsData', label: 'Sports Data', icon: Database },
-  { id: 'user', label: 'Sessão local', icon: UserCog },
+  { id: 'genesisPortraits', label: 'Fotos Genesis', icon: Camera },
 ];
 
-/** Hash na URL pode usar alias (ex.: #create-player). */
+/** Hash na URL pode usar alias (ex.: #academy-players; #academia-art mantém compat.). */
 const HASH_TO_TAB: Record<string, TabId> = {
-  'create-player': 'createPlayer',
+  'academy-players': 'prospectArt',
   'academia-art': 'prospectArt',
   'game-spirit': 'gameSpirit',
-  'sports-data': 'sportsData',
-  save: 'saveData',
+  'genesis-portraits': 'genesisPortraits',
   evolution: 'playerEvolution',
 };
 
@@ -84,8 +104,14 @@ function readHashTab(): TabId {
 }
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
+  const adminSession = loadAdminPanelSession();
   const [tab, setTab] = useState<TabId>(readHashTab);
-  const clubName = useGameStore((s) => s.club.name);
+
+  const signOutAdminPanel = () => {
+    clearAdminPanelSession();
+    navigate('/admin/login', { replace: true });
+  };
   /** Referência estável do estado; nunca usar selector que devolve objeto novo (useSyncExternalStore + Object.is → loop infinito). */
   const platform = useAdminPlatformStore((s) => s);
   const platformUserCount = platform.users.length;
@@ -98,11 +124,9 @@ export function AdminDashboard() {
   }, []);
 
   const setHashTab = (id: TabId) => {
-    if (id === 'createPlayer') window.location.hash = 'create-player';
-    else if (id === 'prospectArt') window.location.hash = 'academia-art';
+    if (id === 'prospectArt') window.location.hash = 'academy-players';
     else if (id === 'gameSpirit') window.location.hash = 'game-spirit';
-    else if (id === 'sportsData') window.location.hash = 'sports-data';
-    else if (id === 'saveData') window.location.hash = 'save';
+    else if (id === 'genesisPortraits') window.location.hash = 'genesis-portraits';
     else if (id === 'playerEvolution') window.location.hash = 'evolution';
     else window.location.hash = id;
     setTab(id);
@@ -139,7 +163,14 @@ export function AdminDashboard() {
               );
             })}
           </nav>
-          <div className="mt-auto hidden p-3 md:block">
+          <div className="mt-auto hidden flex-col gap-2 p-3 md:flex">
+            <Link
+              to="/admin/testes"
+              className="flex items-center gap-2 rounded-lg border border-neon-yellow/25 bg-neon-yellow/10 px-3 py-2 text-xs font-bold text-neon-yellow/90 hover:bg-neon-yellow/15"
+            >
+              <Beaker className="h-4 w-4" />
+              Área de testes
+            </Link>
             <Link
               to="/"
               className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-white/60 hover:bg-white/10 hover:text-white"
@@ -147,6 +178,21 @@ export function AdminDashboard() {
               <ArrowLeft className="h-4 w-4" />
               Voltar ao jogo
             </Link>
+            <button
+              type="button"
+              onClick={signOutAdminPanel}
+              className="flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/5 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-500/15 hover:text-rose-100"
+              title="Encerra a sessão do painel admin (mantém o login do jogo)"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair do painel
+            </button>
+            {adminSession ? (
+              <p className="px-1 pt-1 text-[10px] leading-snug text-white/35">
+                <span className="text-white/55">Logado:</span>{' '}
+                <span className="font-mono text-white/75">{adminSession.email}</span>
+              </p>
+            ) : null}
           </div>
         </aside>
 
@@ -159,46 +205,42 @@ export function AdminDashboard() {
                   <span className="text-white/55">Plataforma:</span>{' '}
                   <span className="text-white/85">{platformUserCount}</span> conta(s) · Σ BRO{' '}
                   <span className="font-mono text-neon-yellow/90">{formatBroFromCents(platformAg.sumBroCents)}</span>
-                  <span className="mx-2 text-white/20">·</span>
-                  <span className="text-white/55">Save local:</span>{' '}
-                  <span className="text-white/85">{clubName}</span>
-                </p>
-                <p className="mt-1 text-[10px] text-white/30">
-                  <code className="text-neon-yellow/70">#overview</code>
-                  <code className="ml-1.5 text-white/25">#financeiro</code>
-                  <code className="ml-1.5 text-white/25">#usuarios</code>
-                  <code className="ml-1.5 text-white/25">#leagues</code>
-                  <code className="ml-1.5 text-white/25">#sports-data</code>
-                  <code className="ml-1.5 text-white/25">#banners</code>
-                  <code className="ml-1.5 text-white/25">#save</code>
-                  <code className="ml-1.5 text-white/25">#user</code>
-                  <code className="ml-1.5 text-white/25">#game-spirit</code>
-                  <code className="ml-1.5 text-white/25">#create-player</code>
-                  <code className="ml-1.5 text-white/25">#academia-art</code>
-                  <code className="ml-1.5 text-white/25">#evolution</code>
                 </p>
               </div>
-              <Link
-                to="/"
-                className="rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/10 md:hidden"
-              >
-                ← Jogo
-              </Link>
+              <div className="flex flex-wrap items-center gap-2 md:hidden">
+                <Link
+                  to="/admin/testes"
+                  className="rounded-lg border border-neon-yellow/25 bg-neon-yellow/10 px-3 py-2 text-xs font-bold text-neon-yellow/90 hover:bg-neon-yellow/15"
+                >
+                  Testes
+                </Link>
+                <Link
+                  to="/"
+                  className="rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/10"
+                >
+                  ← Jogo
+                </Link>
+              </div>
             </div>
           </header>
 
           <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:px-8">
             <div className="mx-auto min-w-0 w-full max-w-6xl">
               {tab === 'overview' ? <AdminOverviewPanel /> : null}
+              {tab === 'growth' ? <AdminGrowthPanel /> : null}
               {tab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
+              {tab === 'global' ? <AdminGlobalPanel /> : null}
+              {tab === 'shop' ? <AdminShopPanel /> : null}
+              {tab === 'market' ? <AdminMarketPanel /> : null}
+              {tab === 'legacy' ? <AdminLegacyPanel /> : null}
+              {tab === 'audit' ? <AdminAuditLogPanel /> : null}
+              {tab === 'profanity' ? <AdminProfanityPanel /> : null}
+              {tab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}
               {tab === 'usuarios' ? <AdminUsuariosPanel /> : null}
               {tab === 'leagues' ? <AdminLeaguesPanel /> : null}
-              {tab === 'sportsData' ? <AdminSportsDataPanel /> : null}
-              {tab === 'user' ? <AdminUserPanel /> : null}
               {tab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
-              {tab === 'banners' ? <AdminBannersPanel /> : null}
-              {tab === 'saveData' ? <AdminSaveHubPanel /> : null}
-              {tab === 'createPlayer' ? <AdminCreatePlayerPanel /> : null}
+              {tab === 'genesisPortraits' ? <AdminGenesisPortraitsPanel /> : null}
+              {tab === 'createPlayerAgents' ? <AdminCreatePlayerAgentsPanel /> : null}
               {tab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
               {tab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
             </div>

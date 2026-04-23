@@ -293,6 +293,27 @@ function fillTemplate(
     .replace(/\{\{keeper\}\}/g, p.keeper ?? 'o guarda-redes');
 }
 
+/** Injeta linhas dos NarrativePacks do admin no pool de candidatos. */
+function adminPackEntries(situations: string[]): NarrationEntry[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('olefoot-gamespirit-knowledge-v2');
+    if (!raw) return [];
+    const p = JSON.parse(raw) as { v: number; narrativePacks?: { bucket: string; lines: string[] }[] };
+    if (p.v !== 2 || !Array.isArray(p.narrativePacks)) return [];
+    const out: NarrationEntry[] = [];
+    for (const pack of p.narrativePacks) {
+      if (!situations.includes(pack.bucket)) continue;
+      for (const line of pack.lines) {
+        if (line.trim()) out.push({ situation: pack.bucket, template: line.trim(), tags: ['admin'], weight: 15 });
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Seleciona um template por situação(ões), pondera por weight, preenche placeholders
  * e devolve a linha pronta com prefixo de minuto. Retorna null se nenhum candidato
@@ -306,7 +327,8 @@ export function pickLine(
   seed?: number,
 ): string | null {
   const sits = Array.isArray(situation) ? situation : [situation];
-  let candidates = NARRATION_SEED.filter((s) => sits.includes(s.situation));
+  const adminEntries = adminPackEntries(sits);
+  let candidates = [...NARRATION_SEED.filter((s) => sits.includes(s.situation)), ...adminEntries];
 
   if (!params.to) {
     candidates = candidates.filter((c) => !c.template.includes('{{to}}'));

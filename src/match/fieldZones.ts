@@ -1,9 +1,11 @@
 /**
  * Consciência espacial IFAB em metros (eixo X comprimento, Z largura).
  * 2.º tempo: troca de lados — gol defendido/ataque invertem para ambos os times.
+ * Enriched with SMARTFIELD zone tags for tactical intelligence.
  */
 
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
+import { sfGetZone, sfGetSubzone, sfGetGoalContext } from '@/smartfield/smartfieldBridge';
 
 export type MatchHalf = 1 | 2;
 export type TeamSide = 'home' | 'away';
@@ -152,6 +154,45 @@ export const PENALTY_AREA_EXIT_MARGIN_M = 1.2;
 /** Limiar de X (lado oeste) para jogadores de campo na saída de baliza — fora da grande área. */
 export const OUTSIDE_WEST_PENALTY_MIN_X_M = PENALTY_AREA_DEPTH_M + PENALTY_AREA_EXIT_MARGIN_M;
 
+/** Grande área na extremidade da baliza que `team` defende neste tempo. */
+export function defendingPenaltyEndForTeam(team: TeamSide, half: MatchHalf): PitchEnd {
+  return getDefendingGoalX(team, half) < MID_X ? 'west' : 'east';
+}
+
+/**
+ * Fora só da grande área em `end` (a “primeira linha” à frente dessa baliza).
+ * Não empurra quem está na grande área do outro lado — evita comprimir o plantel no terço adversário.
+ */
+export function clampWorldOutsidePenaltyAreaAtEnd(
+  x: number,
+  z: number,
+  end: PitchEnd,
+): { x: number; z: number } {
+  const m = PENALTY_AREA_EXIT_MARGIN_M;
+  let nx = x;
+  const nz = z;
+  if (!isInsidePenaltyAreaAtEnd({ x: nx, z: nz }, end)) {
+    return {
+      x: Math.min(FIELD_LENGTH - 1.2, Math.max(1.2, nx)),
+      z: Math.min(FIELD_WIDTH - 1.2, Math.max(1.2, nz)),
+    };
+  }
+  if (end === 'west') {
+    nx = PENALTY_AREA_DEPTH_M + m;
+  } else {
+    nx = FIELD_LENGTH - PENALTY_AREA_DEPTH_M - m;
+  }
+  return {
+    x: Math.min(FIELD_LENGTH - 1.2, Math.max(1.2, nx)),
+    z: Math.min(FIELD_WIDTH - 1.2, Math.max(1.2, nz)),
+  };
+}
+
+/** Lado do pontapé de baliza a partir da bola (pequena/grande área) ou `null`. */
+export function goalKickEndFromBallPosition(ballX: number, ballZ: number): PitchEnd | null {
+  return goalAreaEndContainingBall(ballX, ballZ) ?? penaltyAreaEndContainingBall(ballX, ballZ);
+}
+
 /**
  * Empurra (x,z) para fora das duas grandes áreas (ambas as balizas), com pequena margem.
  * Usado na saída de baliza após remate para fora: todos os jogadores de campo devem sair da área.
@@ -216,6 +257,7 @@ export function getLane(pos: PitchPosition): PitchLane {
 
 /**
  * Tags compostas para decisão / debug.
+ * Enriched with SMARTFIELD macro-zone and subzone when available.
  */
 export function getZoneTags(pos: PitchPosition, ctx: TeamPitchContext): string[] {
   const tags: string[] = [];
@@ -224,11 +266,55 @@ export function getZoneTags(pos: PitchPosition, ctx: TeamPitchContext): string[]
   tags.push(`lane_${getLane(pos)}`);
   if (isInsideOwnPenaltyArea(pos, ctx)) tags.push('own_box');
   if (isInsideOppPenaltyArea(pos, ctx)) tags.push('opp_box');
+  const attackingGoalX = getAttackingGoalX(ctx.team, ctx.half);
+  const attackDir: 1 | -1 = attackingGoalX > MID_X ? 1 : -1;
+  const goalCtx = sfGetGoalContext(pos.x, pos.z, attackDir);
+  if (goalCtx.inSixYard) tags.push('six_yard');
   if (isInsideOwnHalf(pos, ctx)) tags.push('own_half');
   else tags.push('opp_half');
   if (third === 'middle' && getLane(pos) === 'center') tags.push('central_corridor');
   if (third === 'attacking' && (getLane(pos) === 'half_left' || getLane(pos) === 'half_right')) {
     tags.push('half_space');
   }
+
+  const macroZone = sfGetZone(pos.x, pos.z);
+  if (macroZone) tags.push(`sf_${macroZone}`);
+  const subzone = sfGetSubzone(pos.x, pos.z);
+  if (subzone) tags.push(`sf_sub_${subzone}`);
+
   return tags;
+}
+
+/** test2d / UI: motor 0–100% ↔ metros no eixo de comprimento. */
+export function worldXZFromEnginePercent(engineX: number, engineY: number): PitchPosition {
+  return {
+    x: (engineX / 100) * FIELD_LENGTH,
+    z: (engineY / 100) * FIELD_WIDTH,
+  };
+}
+
+export function enginePercentFromWorldXZ(x: number, z: number): { ex: number; ey: number } {
+  return {
+    ex: (x / FIELD_LENGTH) * 100,
+    ey: (z / FIELD_WIDTH) * 100,
+  };
+}
+
+/**
+ * Zona da bola em terços IFAB (profundidade desde a baliza defendida),
+ * alinhada com `getThird` — não usa faixas fixas 35/65 no eixo do motor.
+ */
+export type TacticalBallZone = 'def' | 'mid' | 'att';
+
+export function tacticalBallZoneForTeam(
+  ballEnginePercentX: number,
+  ballEnginePercentY: number,
+  team: TeamSide,
+  half: MatchHalf,
+): TacticalBallZone {
+  const { x, z } = worldXZFromEnginePercent(ballEnginePercentX, ballEnginePercentY);
+  const third = getThird({ x, z }, { team, half });
+  if (third === 'defensive') return 'def';
+  if (third === 'middle') return 'mid';
+  return 'att';
 }

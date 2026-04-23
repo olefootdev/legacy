@@ -3,6 +3,17 @@
  * Adjustable without touching logic in goalContext.ts or OnBallDecision.ts.
  */
 
+import { GOAL_INNER_WIDTH_IFAB_M, GOAL_INNER_WIDTH_M } from '@/simulation/field';
+
+/**
+ * Só em `ActionResolver` (golo/defesa após remate). A decisão da IA usa `evaluateShot` sem este factor;
+ * assim a boca maior não aumenta a conversão quase linearmente com a largura.
+ */
+export const XG_RESOLUTION_GOAL_MOUTH_DAMP =
+  GOAL_INNER_WIDTH_M <= GOAL_INNER_WIDTH_IFAB_M
+    ? 1
+    : Math.sqrt(GOAL_INNER_WIDTH_IFAB_M / GOAL_INNER_WIDTH_M);
+
 // ---------------------------------------------------------------------------
 // xG estimation
 // ---------------------------------------------------------------------------

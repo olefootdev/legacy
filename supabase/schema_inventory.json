@@ -1,0 +1,61 @@
+{
+  "project": "olefootv-11",
+  "schema": "public",
+  "description": "Inventário das tabelas OLEFOOT para alinhamento com Supabase Table Editor, APIs e ferramentas (OpenAI/MCP). A fonte canónica do DDL é supabase/migrations/00001–00006.",
+  "groups": [
+    {
+      "id": "core_game",
+      "description": "Utilizador, clube de jogo, plantel, partidas e eventos (persistência em tempo real / pós-jogo).",
+      "tables": [
+        { "name": "clubs", "purpose": "Clube gerido no simulador.", "written_by": ["client_anon_signup_flow", "authenticated"] },
+        { "name": "profiles", "purpose": "Liga auth.users ao club_id de jogo.", "written_by": ["authenticated"] },
+        { "name": "players", "purpose": "Plantel e atributos JSONB do motor.", "written_by": ["authenticated", "match_end_upsert"] },
+        { "name": "genesis_market_players", "purpose": "Catálogo oficial Genesis (CSV); mercado global; retratos via Storage `genesis-player-portraits`.", "written_by": ["migration_seed", "sql_dashboard"] },
+        { "name": "matches", "purpose": "Registo de partida (modo, placar, seed, post_match_data).", "written_by": ["authenticated", "server_service_role"] },
+        { "name": "match_events", "purpose": "Eventos append-only (golos, faltas, narrativa curta).", "written_by": ["authenticated", "server_service_role"] }
+      ]
+    },
+    {
+      "id": "leagues_admin",
+      "description": "Épocas, competições, fixtures e classificações (módulo ligas / admin).",
+      "tables": [
+        { "name": "seasons", "purpose": "Temporada com janela e regras de desempate." },
+        { "name": "season_divisions", "purpose": "Divisões por tier dentro da época." },
+        { "name": "season_division_memberships", "purpose": "Clubes de jogo inscritos numa divisão." },
+        { "name": "competitions", "purpose": "Liga ou copa; metadados e estado." },
+        { "name": "competition_phases", "purpose": "Fases league/knockout." },
+        { "name": "competition_participants", "purpose": "Clubes inscritos na competição." },
+        { "name": "competition_standings", "purpose": "Tabela classificativa snapshot." },
+        { "name": "competition_rewards", "purpose": "Recompensas por competição." },
+        { "name": "fixtures", "purpose": "Confrontos agendados; ligação opcional a matches.id." }
+      ]
+    },
+    {
+      "id": "platform_onboarding",
+      "description": "Catálogo desportivo real, onboarding, saves, banners, ledger.",
+      "tables": [
+        { "name": "sports_leagues", "purpose": "Ligas reais (import admin / seed)." },
+        { "name": "sports_clubs", "purpose": "Clubes reais por liga (onboarding)." },
+        { "name": "sports_data_imports", "purpose": "Auditoria de imports." },
+        { "name": "user_settings", "purpose": "Preferências de UI por utilizador." },
+        { "name": "platform_accounts", "purpose": "Contas de plataforma / ligações auth." },
+        { "name": "player_blueprints", "purpose": "Templates de jogador criados no admin." },
+        { "name": "game_spirit_profiles", "purpose": "Perfis Game Spirit publicados." },
+        { "name": "game_spirit_rules", "purpose": "Regras narrativas / motor." },
+        { "name": "game_spirit_templates", "purpose": "Templates Game Spirit." },
+        { "name": "game_spirit_knowledge", "purpose": "Conhecimento curado (pitch, posições)." },
+        { "name": "game_spirit_snapshots", "purpose": "Snapshots versionados." },
+        { "name": "game_saves", "purpose": "Gravações de jogo por utilizador." },
+        { "name": "admin_banners", "purpose": "Banners promocionais." },
+        { "name": "finance_ledger_entries", "purpose": "Movimentos wallet / EXP / BRO." }
+      ]
+    },
+    {
+      "id": "telemetry",
+      "description": "Telemetria servidor (OpenAI); sem políticas RLS para cliente — só service_role.",
+      "tables": [
+        { "name": "game_spirit_ai_logs", "purpose": "Decisões Game Spirit + modelo, latência, cache/fallback.", "written_by": ["server_service_role_only"] }
+      ]
+    }
+  ]
+}

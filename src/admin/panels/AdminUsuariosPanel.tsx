@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Download,
   Pencil,
@@ -17,6 +17,7 @@ import {
   useAdminPlatformDispatch,
   useAdminPlatformStore,
 } from '@/admin/platformStore';
+import { adminSetUserStatus, adminListProfiles, type AdminProfileRow } from '@/supabase/adminCore';
 
 function newUserTemplate(): AdminPlatformUser {
   const now = new Date().toISOString();
@@ -39,11 +40,54 @@ function newUserTemplate(): AdminPlatformUser {
   };
 }
 
+function profileToPlatformUser(p: AdminProfileRow): AdminPlatformUser {
+  return {
+    id: p.id,
+    displayName: p.display_name ?? '(sem nome)',
+    clubName: p.club_name ?? '(sem clube)',
+    clubShort: p.club_short ?? '—',
+    broCents: 0,
+    spotBroCents: 0,
+    spotExpBalance: 0,
+    ole: 0,
+    olexpPrincipalLockedCents: 0,
+    olexpYieldAccruedCents: 0,
+    gatPositionsCount: 0,
+    ledgerEntriesCount: 0,
+    createdAtIso: p.created_at,
+    updatedAtIso: p.updated_at,
+    status: 'active',
+    notes: p.onboarding_data ? 'Cadastro completo no Supabase' : undefined,
+  };
+}
+
 export function AdminUsuariosPanel() {
   const platform = useAdminPlatformStore((s) => s);
   const dispatch = useAdminPlatformDispatch();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<AdminPlatformUser>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncErr, setSyncErr] = useState<string | null>(null);
+
+  const refreshFromSupabase = async () => {
+    setSyncing(true);
+    setSyncErr(null);
+    try {
+      const rows = await adminListProfiles();
+      const users = rows.map(profileToPlatformUser);
+      dispatch({ type: 'REPLACE_USERS', users });
+    } catch (e) {
+      setSyncErr(e instanceof Error ? e.message : 'Falha ao sincronizar.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Hydrate na primeira montagem.
+  useEffect(() => {
+    void refreshFromSupabase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sorted = useMemo(
     () => [...platform.users].sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso)),
@@ -120,16 +164,16 @@ export function AdminUsuariosPanel() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('Repor lista demo + tesouraria padrão?')) {
-                dispatch({ type: 'RESET_SEED' });
-              }
-            }}
-            className="flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold uppercase text-amber-200 hover:bg-amber-500/10"
+            onClick={() => void refreshFromSupabase()}
+            disabled={syncing}
+            className="flex items-center gap-2 rounded-lg border border-cyan-500/40 px-3 py-2 text-xs font-bold uppercase text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4" />
-            Repor demo
+            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+            {syncing ? 'Sincronizando…' : 'Sincronizar Supabase'}
           </button>
+          {syncErr ? (
+            <span className="text-[10px] text-rose-300">{syncErr}</span>
+          ) : null}
         </div>
       </div>
 
@@ -265,14 +309,25 @@ export function AdminUsuariosPanel() {
                 Estado
                 <select
                   value={(draft.status as AdminPlatformUserStatus) ?? 'active'}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, status: e.target.value as AdminPlatformUserStatus }))
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as AdminPlatformUserStatus;
+                    setDraft((d) => ({ ...d, status: next }));
+                    const userId = draft.id ?? editingId;
+                    if (userId) {
+                      void adminSetUserStatus(userId, next).then((ok) => {
+                        if (!ok) console.error('[admin] adminSetUserStatus falhou');
+                      });
+                    }
+                  }}
                   className="mt-1 w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white"
                 >
                   <option value="active">active</option>
                   <option value="suspended">suspended</option>
+                  <option value="banned">banned</option>
                 </select>
+                <p className="mt-1 text-[9px] text-white/40">
+                  <strong>banned</strong> bloqueia RLS no Supabase (usuário é deslogado no próximo boot).
+                </p>
               </label>
               <label className="block text-[10px] font-bold uppercase text-white/40">
                 Notas internas

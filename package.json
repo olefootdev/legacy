@@ -32,10 +32,17 @@
     "dev:server": "npm run dev --prefix server",
     "test:openai": "npm run test:openai --prefix server",
     "test:openai:http": "npm run test:openai:http --prefix server",
-    "test:openai:local": "npm run verify-openai --prefix server && npm run test:openai --prefix server"
+    "test:openai:local": "npm run verify-openai --prefix server && npm run test:openai --prefix server",
+    "supabase:bundle-sql": "bash scripts/bundle-supabase-migrations.sh",
+    "genesis:seed-sql": "node scripts/gen-genesis-seed-sql.mjs",
+    "genesis:migrate-portraits-to-pinata": "node scripts/migrate-genesis-portraits-to-pinata.mjs",
+    "genesis:apply-pinata-manifest": "node scripts/apply-genesis-pinata-manifest.mjs",
+    "genesis:import-local-photos-to-pinata": "node scripts/import-local-players-photos-to-pinata.mjs",
+    "genesis:apply-pinata-folder-cid": "node scripts/apply-genesis-from-pinata-folder-cid.mjs",
+    "genesis:repair-pinata-token-from-card-url": "node scripts/repair-genesis-pinata-token-from-card-url.mjs",
+    "deploy:cloudflare": "npm run build && wrangler deploy"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
     "@tailwindcss/vite": "^4.1.14",
@@ -54,7 +61,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.31.2",
+    "@cloudflare/vite-plugin": "^1.32.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
@@ -62,6 +69,6 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "wrangler": "^4.81.1"
+    "wrangler": "^4.82.2"
   }
 }

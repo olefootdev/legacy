@@ -79,8 +79,8 @@ export const DAILY_ACCRUE_HOUR = 23;
 export const DAILY_ACCRUE_MINUTE = 59;
 
 // ---------------------------------------------------------------------------
-// TradingView (wallet — mercado de referência)
+// TradingView (wallet OLEXP — mercado de referência)
 // ---------------------------------------------------------------------------
 
-/** Símbolo genérico de referência; ajustar quando houver par BRO listado. */
-export const TRADINGVIEW_SYMBOL = 'FOREXCOM:SPXUSD';
+/** Cotação de referência na aba OLEXP (mini overview TradingView). */
+export const TRADINGVIEW_SYMBOL = 'BINANCE:BTCUSDT';

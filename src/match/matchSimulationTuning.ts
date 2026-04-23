@@ -6,17 +6,18 @@
 /** Cooldown anti devolução ao ex-portador após desarme (ms de tempo de simulação ≈ world.simTime em s — usamos segundos no loop) */
 export const POSSESSION_LOCK_SEC = 0.5;
 
-/** Intervalo mínimo entre replanejamentos completos de decisão (≈ 11 Hz) */
-export const DECISION_TICK_MS = 80;
+/** Intervalo mínimo entre replanejamentos completos de decisão (≈ 12.5 Hz) */
+export const DECISION_TICK_MS = 72;
 
 /** Peso 0–1: quanto fair play baixo aumenta “agressividade” em disputas (efeito marginal no desarme) */
 export const FAIRPLAY_FOUL_BIAS = 0.12;
 
-/** Fadiga base por segundo em intensidade média (0–100 stamina) */
-export const FATIGUE_RATE_BASE = 2.8;
+/** Fadiga base por segundo em intensidade média (0–100 stamina).
+ *  Calibrado para partida de ~6 min reais (180s/metade): jogadores notam cansaço no 2.º tempo. */
+export const FATIGUE_RATE_BASE = 1.4;
 
 /** Recuperação de stamina por segundo quando longe da bola e baixa intensidade */
-export const STAMINA_RECOVERY_BASE = 1.1;
+export const STAMINA_RECOVERY_BASE = 0.9;
 
 /** Multiplicador máximo de execução técnica vindo da confiança em runtime */
 export const CONFIDENCE_EXECUTION_CAP = 0.14;
@@ -32,7 +33,16 @@ export const LAST_ACTIONS_MAX = 5;
 export const DECISION_DEBUG_TOP_N = 3;
 
 /** Throttle mínimo entre `SIM_SYNC` só por mudança de feed (evita 60 dispatch/s; mantém remates/faltas visíveis). */
-export const LIVE_SIM_SYNC_THROTTLE_MS = 72;
+export const LIVE_SIM_SYNC_THROTTLE_MS = 100;
+
+/** Ao vivo 2D: cadência do alerta de fadiga na UI (amostra sem mudar o DOM a cada frame). */
+export const LIVE2D_ENERGY_HALO_UI_MS = 25_000;
+
+/**
+ * Fadiga 0–100: acima ou igual a este valor mostra o pin de alerta no token (partida ao vivo 2D).
+ * Alinhado ao tier vermelho antigo (energia abaixo de ~40%).
+ */
+export const LIVE2D_FATIGUE_ALERT_THRESHOLD = 60;
 
 // ---------------------------------------------------------------------------
 // Deliberation after ball reception

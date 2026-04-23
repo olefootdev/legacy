@@ -1,13 +1,14 @@
 /**
- * Códigos de indicação OLEFOOT: 3–5 caracteres alfanuméricos (A–Z, 2–9), sem especiais.
- * Usados em links olefoot.ai/CÓDIGO, vínculo de patrocinador e envio BRO por código (MVP cliente).
+ * Códigos de indicação OLEFOOT: 6–8 caracteres alfanuméricos (A–Z, 2–9), sem especiais.
+ * Mínimo 6 chars = 32^6 ≈ 1 bilhão de combinações, inviável para brute-force.
+ * Usados em links olefoot.ai/CÓDIGO, vínculo de patrocinador e envio BRO por código.
  */
 
 /** Caracteres legíveis (evita O/0 e I/1). */
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-/** 3 a 5 caracteres, apenas letras e números após normalização. */
-const CODE_PATTERN = /^[A-Z0-9]{3,5}$/;
+/** 6 a 8 caracteres, apenas letras e números após normalização. */
+const CODE_PATTERN = /^[A-Z0-9]{6,8}$/;
 
 /** Segmentos de URL de 1 nível que não podem ser interpretados como código de indicação. */
 export const REFERRAL_PATH_RESERVED = new Set(
@@ -44,7 +45,7 @@ export const PENDING_REFERRER_SESSION_KEY = 'olefoot-pending-referrer-code';
 
 export function normalizeReferralCode(raw: string): string | null {
   const s = raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (s.length < 3 || s.length > 5) return null;
+  if (s.length < 6 || s.length > 8) return null;
   if (!CODE_PATTERN.test(s)) return null;
   return s;
 }
@@ -58,14 +59,15 @@ export function isReservedInviteSegment(segment: string): boolean {
 }
 
 export function generateRandomReferralCode(): string {
-  const bytes = new Uint8Array(5);
+  const LENGTH = 8; // 32^8 ≈ 1 trilhão de combinações
+  const bytes = new Uint8Array(LENGTH);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);
   } else {
-    for (let i = 0; i < 5; i++) bytes[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < LENGTH; i++) bytes[i] = Math.floor(Math.random() * 256);
   }
   let out = '';
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < LENGTH; i++) {
     out += CODE_ALPHABET[bytes[i]! % CODE_ALPHABET.length];
   }
   return out;

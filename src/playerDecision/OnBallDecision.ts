@@ -3,7 +3,6 @@ import {
   findPassOptions,
   evaluateShot,
   nearestOpponentPressure01,
-  passOptionAttackBuildUpScore,
   passTargetThreatDepth01,
 } from '@/simulation/InteractionResolver';
 import type { AgentSnapshot, PassOption } from '@/simulation/InteractionResolver';
@@ -32,8 +31,27 @@ import { isShootMinEligible, shouldCountShootCandidate } from '@/match/shootElig
 import { estimatePositionalXG } from '@/match/goalContext';
 import { PASS_XG_DELTA_WEIGHT, PASS_XG_DELTA_MIN_THRESHOLD } from '@/match/xgTuning';
 import { pick01ForDecision } from './decisionRng';
+import { sfGetGoalContext } from '@/smartfield/smartfieldBridge';
 import { resolveCarrierMacroDecision } from './carrierMacroBrain';
 import { prethinkingMacroTilt } from './prethinking';
+import {
+  computeContextualGameplayMacroTilt,
+  tryConnectorPassBeforeShot,
+} from './contextualGameplayBoost';
+import {
+  computeGoalEvolutionMacroTilt,
+  offensiveThreatSnapshot01,
+  passOptionAttackBuildUpWithGoalEvolution,
+  shouldDeferInstinctShotForProgression,
+  shouldDeferBoxAutoShot,
+} from './goalEvolutionRead';
+import {
+  evaluateCarrierLocalDuel,
+  duelMacroTiltForCarrier,
+  type LocalDuelRead,
+} from './localDuelRead';
+import { playContinuityScore } from './teamCollectiveState';
+import type { DecisionActionId } from './collectiveIndividualDecision';
 
 // ---------------------------------------------------------------------------
 // Decision timing
@@ -102,22 +120,62 @@ function attackUrgency01(reading: ContextReading): number {
 }
 
 /**
+ * Continuity tilt: when the play is building well, favor passing/carrying
+ * over risky shots or clearances. When play is stalled, favor recycling.
+ */
+function computePlayContinuityTilt(ctx: DecisionContext): Partial<Record<DecisionActionId, number>> {
+  if (!ctx.collective) return {};
+  const c = ctx.collective;
+  const cont = playContinuityScore(
+    ctx.threatLevel, ctx.threatTrend, c.passChainLength, c.supportCount, c.phase,
+  );
+
+  if (cont > 0.55) {
+    // Play is building — favor progressive passing and carrying, penalize clearance
+    return {
+      pass_progressive: cont * 0.12,
+      carry: cont * 0.06,
+      clearance: -cont * 0.15,
+      pass_safe: -cont * 0.04,
+    };
+  }
+  if (cont < 0.2) {
+    // Play is stalled — favor recycling, long switches, risk taking
+    return {
+      pass_safe: 0.06,
+      pass_long: 0.08,
+      carry: -0.04,
+    };
+  }
+  return {};
+}
+
+/**
  * Com linha de remate tapada mas espaço a jogar — conduzir / driblar para ganhar ângulo ou profundidade.
  */
 function trySeekBetterGoalAngleDribble(
   ctx: DecisionContext,
   reading: ContextReading,
   profile: PlayerProfile,
+  carrierDuel: LocalDuelRead,
 ): OnBallAction | null {
+  if (
+    carrierDuel.outcome === 'disadvantage'
+    && (carrierDuel.kind === 'dribble' || carrierDuel.kind === 'speed' || carrierDuel.kind === 'body')
+  ) {
+    return null;
+  }
   if (reading.pressure.intensity === 'extreme') return null;
-  if (reading.distToGoal < 11 || reading.distToGoal > 36) return null;
+  if (reading.distToGoal < 6 || reading.distToGoal > 36) return null;
   if (reading.lineOfSightScore >= 0.58) return null;
-  if (reading.space.forwardSpaceDepth < 4.2) return null;
+  const minForwardSpace = reading.inOppPenaltyArea ? 2.8 : 4.2;
+  if (reading.space.forwardSpaceDepth < minForwardSpace) return null;
 
+  const inFinishingZone = reading.fieldZone === 'att_third' || reading.fieldZone === 'opp_box' || reading.inOppPenaltyArea;
   const drive =
     profile.dribbleTendency * 0.52
     + profile.composure * 0.22
-    + (reading.fieldZone === 'att_third' || reading.fieldZone === 'opp_box' ? 0.2 : 0);
+    + (inFinishingZone ? 0.24 : 0);
   if (pick01ForDecision(ctx) > drive) return null;
 
   const sideSign = ctx.self.z < FIELD_WIDTH / 2 ? 1 : -1;
@@ -137,11 +195,14 @@ function trySeekBetterGoalAngleDribble(
   };
 }
 
-/** Entre candidatos válidos, escolhe o que melhor equilibra segurança e profundidade rumo ao golo adversário. */
-function pickBestPassByAttackBuildUp(pool: PassOption[]): PassOption | null {
+/** Entre candidatos válidos, escolhe o que melhor equilibra segurança, profundidade e ameaça futura ao golo. */
+function pickBestPassByAttackBuildUp(pool: PassOption[], ctx: DecisionContext): PassOption | null {
   if (pool.length === 0) return null;
   return pool.reduce((best, p) =>
-    passOptionAttackBuildUpScore(p) > passOptionAttackBuildUpScore(best) ? p : best,
+    passOptionAttackBuildUpWithGoalEvolution(p, ctx.teammates, ctx.opponents, ctx.attackDir)
+    > passOptionAttackBuildUpWithGoalEvolution(best, ctx.teammates, ctx.opponents, ctx.attackDir)
+      ? p
+      : best,
   );
 }
 
@@ -183,14 +244,24 @@ export function decideOnBallWithIntention(
   intention: PlayIntention,
 ): OnBallAction {
   const profile = ctx.profile;
+  /** Duelo local vs o adversário mais relevante — inclina chooseAction / instinto sem substituir o pipeline. */
+  const carrierDuel = evaluateCarrierLocalDuel(ctx, reading);
   let passOptions = findPassOptions(ctx.self, ctx.teammates, ctx.opponents, ctx.attackDir);
+  // Respect nudges from FanFrustrationSystem (propagated as transient ctx fields)
+  try {
+    if ((ctx as any)._nudgeAvoidKeeperPass) {
+      passOptions = passOptions.filter((o) => !o.targetId || !(o.targetId.toLowerCase().includes('gol') || o.targetId.toLowerCase().includes('keeper')));
+    }
+  } catch (e) {
+    // noop
+  }
   if (ctx.passBlocklist?.length) {
     const bl = new Set(ctx.passBlocklist);
     passOptions = passOptions.filter((o) => !bl.has(o.targetId));
   }
   const shot = evaluateShot(ctx.self, ctx.attackDir, ctx.opponents);
 
-  const backToGoalPlay = tryBackToGoalAttackPlay(ctx, reading, passOptions, shot, profile);
+  const backToGoalPlay = tryBackToGoalAttackPlay(ctx, reading, passOptions, shot, profile, carrierDuel);
   if (backToGoalPlay) return backToGoalPlay;
 
   /**
@@ -203,17 +274,33 @@ export function decideOnBallWithIntention(
     passOptions.length > 0
     && (reading.fieldZone === 'opp_box' || reading.fieldZone === 'att_third')
   ) {
-    const instinctFirst = tryGoalInstinct(ctx, reading, passOptions, shot.xG, profile);
+    const instinctFirst = tryGoalInstinct(ctx, reading, passOptions, shot.xG, profile, carrierDuel);
     if (instinctFirst) return instinctFirst;
   }
 
   const pressEarly = nearestOpponentPressure01(ctx.self, ctx.opponents);
-  const panicClear = tryPanicForwardClearance(ctx, reading, passOptions, pressEarly);
+  const panicClear = tryPanicForwardClearance(ctx, reading, passOptions, pressEarly, carrierDuel);
   if (panicClear) return panicClear;
 
   // Collective/Individual architecture layer: score canonical actions
   // by role fit + attributes + archetype + context risk.
   if (passOptions.length > 0) {
+    // Encourage lead passes into the box: if a pass option targets a teammate
+    // near the penalty area and that teammate is likely to run, boost progressive
+    // pass weight so midfielders consider "pass where he'll be" rather than
+    // the static receiver location.
+    try {
+      for (const p of passOptions) {
+        if (p.distToOppGoal < 24 && p.spaceAtTarget > 3.2 && p.successProb > 0.28) {
+          // increase weight for progression / through style
+          p.progressionGain = Math.min(1, (p.progressionGain ?? 0) + 0.08);
+          // mark a transient hint used by chooseAction via macroTilt: nudge connector logic
+          (ctx as any)._leadPassPreferred = true;
+        }
+      }
+    } catch (e) {
+      // noop
+    }
     const attrs = extractAttributes(ctx.self, ctx.profile);
     const role = mapRole(ctx.self);
     const arch = mapArchetype(ctx.profile, ctx.self);
@@ -221,18 +308,23 @@ export function decideOnBallWithIntention(
     const pressure01 = nearestOpponentPressure01(ctx.self, ctx.opponents);
     const pstate = buildPlayerState(ctx, pressure01);
 
+    // Voice: "passa pro X" — se o receptor pedido for uma opção viável, força ele como safePass.
+    const preferredId = ctx.voiceBias?.preferredReceiverId;
+    const preferredOption = preferredId ? passOptions.find((p) => p.targetId === preferredId && p.successProb > 0.2) : undefined;
     const safeBackward = passOptions.filter((p) => p.successProb > 0.62 && !p.isForward);
     const safePass =
-      safeBackward.length > 0
+      preferredOption ??
+      (safeBackward.length > 0
         ? safeBackward.reduce((a, b) => (a.successProb >= b.successProb ? a : b))
         : passOptions.filter((p) => p.successProb > 0.55).sort((a, b) => b.successProb - a.successProb)[0]
-          ?? passOptions[0]!;
+          ?? passOptions[0]!);
     const progressive =
-      pickBestPassByAttackBuildUp(passOptions.filter((p) => p.isForward && p.successProb > 0.3))
+      pickBestPassByAttackBuildUp(passOptions.filter((p) => p.isForward && p.successProb > 0.3), ctx)
       ?? passOptions[0]!;
     const longPass =
       pickBestPassByAttackBuildUp(
         passOptions.filter((p) => p.isLong && p.isForward && p.successProb > 0.25),
+        ctx,
       )
       ?? progressive;
     const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
@@ -243,6 +335,8 @@ export function decideOnBallWithIntention(
       || ctx.self.slotId?.includes('pd')
       || ctx.self.slotId === 'le'
       || ctx.self.slotId === 'ld';
+  // If there's a nudge to advance, slightly bias to crossing / attack width
+  const nudgeAdvance = Boolean((ctx as any)._nudgeAdvance);
     const dribbleSide = ctx.self.z < FIELD_WIDTH / 2 ? 1 : -1;
     const dribbleZBias =
       Math.abs(ctx.self.z - FIELD_WIDTH / 2) < 9 ? dribbleSide * 5.2 : dribbleSide * 2.8;
@@ -264,13 +358,42 @@ export function decideOnBallWithIntention(
       { id: 'clearance', targetX: clampX(ctx.attackDir === 1 ? FIELD_LENGTH - 8 : 8), targetZ: FIELD_WIDTH / 2 },
     ];
     if (wingSlot || Math.abs(ctx.self.z - FIELD_WIDTH / 2) > 14) {
-      options.splice(3, 0, { id: 'cross', targetX: crossX, targetZ: crossZ });
+  const crossOption = { id: 'cross' as any, targetX: crossX, targetZ: crossZ } as ActionOption;
+      if (nudgeAdvance) {
+        // place cross earlier in options so it's more likely to be chosen
+        options.splice(2, 0, crossOption);
+      } else {
+        options.splice(3, 0, crossOption);
+      }
     }
     const half = ctx.clockHalf ?? 1;
     const zoneTags = getZoneTags({ x: ctx.self.x, z: ctx.self.z }, { team: ctx.self.side, half });
     const shootFloorEligible = isShootMinEligible(ctx.self, reading, ctx);
     const macro = resolveCarrierMacroDecision(ctx, reading, passOptions);
-    const macroTilt = { ...macro.macroTilt, ...prethinkingMacroTilt(ctx) };
+    const passSlice = { progressive, safePass, longPass };
+    // Ameaça ao golo (smartfield + LOS + GR + pressão): inclina passes/condução vs remate precipitado.
+    const goalEvolutionTilt = computeGoalEvolutionMacroTilt(ctx, reading, shot, passOptions);
+    const macroTilt = {
+      ...macro.macroTilt,
+      ...prethinkingMacroTilt(ctx),
+      ...computeContextualGameplayMacroTilt(ctx, reading, passSlice),
+      ...goalEvolutionTilt,
+      ...duelMacroTiltForCarrier(carrierDuel, reading),
+  // Prefer finish if requested by the nudge
+  ...( (ctx as any)._nudgePreferFinish ? { shoot: 0.35 } : {} ),
+  // Voice command bias — treinador mandou algo específico pro portador
+  ...(ctx.voiceBias ? {
+    ...(ctx.voiceBias.shootBoost ? { shoot: ctx.voiceBias.shootBoost } : {}),
+    ...(ctx.voiceBias.dribbleBoost ? { dribble_risk: ctx.voiceBias.dribbleBoost, dribble_safe: ctx.voiceBias.dribbleBoost * 0.6 } : {}),
+    ...(ctx.voiceBias.crossBoost ? { cross: ctx.voiceBias.crossBoost } : {}),
+    ...(ctx.voiceBias.quickPassBoost ? { pass_safe: ctx.voiceBias.quickPassBoost * 0.7, pass_progressive: ctx.voiceBias.quickPassBoost * 0.4 } : {}),
+    ...(ctx.voiceBias.holdBallBoost ? { pass_safe: ctx.voiceBias.holdBallBoost * 0.6, shoot: -ctx.voiceBias.holdBallBoost * 0.4, pass_long: -ctx.voiceBias.holdBallBoost * 0.3 } : {}),
+    ...(ctx.voiceBias.freedomBoost ? { dribble_risk: ctx.voiceBias.freedomBoost * 0.7, shoot: ctx.voiceBias.freedomBoost * 0.3 } : {}),
+  } : {}),
+  // If lead pass preference detected, bias progressive/through a bit
+  ...((ctx as any)._leadPassPreferred ? { pass_progressive: 0.26, pass_long: 0.08 } : {}),
+      ...computePlayContinuityTilt(ctx),
+    };
     const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, {
       tags: zoneTags,
       shootFloorEligible,
@@ -288,7 +411,13 @@ export function decideOnBallWithIntention(
 
     if (pick.action.id === 'shoot' && isShootMinEligible(ctx.self, reading, ctx)) {
       const allow =
-        canShoot(reading, shot.xG, ctx.shootBudgetForce || ctx.offensiveStallShotBoost ? 0.12 : 0, ctx.profile)
+        canShoot(
+          reading,
+          shot.xG,
+          ctx.shootBudgetForce || ctx.offensiveStallShotBoost ? 0.12 : 0,
+          ctx.profile,
+          { ctx, passOptions },
+        )
         || ctx.shootBudgetForce
         || ctx.offensiveStallShotBoost
         || shot.xG >= 0.019;
@@ -344,10 +473,10 @@ export function decideOnBallWithIntention(
   // Goal is the ultimate objective. If the player has a clear chance
   // to score or to set up a teammate for a clear chance, act NOW.
   // =================================================================
-  const instinct = tryGoalInstinct(ctx, reading, passOptions, shot.xG, profile);
+  const instinct = tryGoalInstinct(ctx, reading, passOptions, shot.xG, profile, carrierDuel);
   if (instinct) return instinct;
 
-  const angleSeek = trySeekBetterGoalAngleDribble(ctx, reading, profile);
+  const angleSeek = trySeekBetterGoalAngleDribble(ctx, reading, profile, carrierDuel);
   if (angleSeek) return angleSeek;
 
   // Route by intention
@@ -379,7 +508,7 @@ export function decideOnBallWithIntention(
 
     case 'finish': {
       const urgency = ctx.scoreDiff < 0 && ctx.minute > 70 ? 0.12 : 0;
-      if (canShoot(reading, shot.xG, urgency, profile)) {
+      if (canShoot(reading, shot.xG, urgency, profile, { ctx, passOptions })) {
         return retShoot(reading, ctx, reading.distToGoal > 22 && profile.riskAppetite > 0.5);
       }
       return decideCreateChance(ctx, reading, passOptions, profile, shot.xG);
@@ -457,7 +586,11 @@ function tryPanicForwardClearance(
   reading: ContextReading,
   passOptions: PassOption[],
   press01: number,
+  carrierDuel: LocalDuelRead,
 ): OnBallAction | null {
+  if (carrierDuel.kind === 'pass' && carrierDuel.outcome === 'advantage' && press01 < 0.62) {
+    return null;
+  }
   const inDanger =
     reading.fieldZone === 'opp_box'
     || (reading.fieldZone === 'att_third' && reading.distToGoal < 32);
@@ -506,6 +639,7 @@ function tryBackToGoalAttackPlay(
   passOptions: PassOption[],
   shot: { xG: number },
   profile: PlayerProfile,
+  carrierDuel: LocalDuelRead,
 ): OnBallAction | null {
   if (!isReceivingBackToGoalShaped(ctx, reading)) return null;
 
@@ -514,7 +648,7 @@ function tryBackToGoalAttackPlay(
 
   if (ctx.self.role === 'attack') {
     const finishUrgency = 0.028;
-    if (canShoot(reading, shot.xG, finishUrgency, profile)) {
+    if (canShoot(reading, shot.xG, finishUrgency, profile, { ctx, passOptions })) {
       return retShoot(reading, ctx, reading.distToGoal > 21);
     }
     if (
@@ -529,6 +663,10 @@ function tryBackToGoalAttackPlay(
       reading.pressure.opponentsInZone <= 2
       && profile.dribbleTendency > 0.32
       && pick01ForDecision(ctx) < 0.4 + profile.dribbleTendency * 0.3
+      && !(
+        carrierDuel.outcome === 'disadvantage'
+        && (carrierDuel.kind === 'dribble' || carrierDuel.kind === 'body' || carrierDuel.kind === 'speed')
+      )
     ) {
       const dribbleSide = ctx.self.z < FIELD_WIDTH / 2 ? 1 : -1;
       return {
@@ -575,12 +713,15 @@ function tryGoalInstinct(
   passOptions: PassOption[],
   xG: number,
   profile: PlayerProfile,
+  carrierDuel: LocalDuelRead,
 ): OnBallAction | null {
   const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
   const distToGoal = reading.distToGoal;
   const backShaped = isReceivingBackToGoalShaped(ctx, reading);
   const strikerBack = ctx.self.role === 'attack' && backShaped;
   const xgEps = strikerBack ? 0.0045 : 0;
+  const duelFinishDisadv = carrierDuel.kind === 'finish' && carrierDuel.outcome === 'disadvantage';
+  const duelFinishAdv = carrierDuel.kind === 'finish' && carrierDuel.outcome === 'advantage';
 
   // -----------------------------------------------------------------------
   // COMFORT ZONE: in defensive zones with no pressure, don't trigger instinct.
@@ -590,18 +731,57 @@ function tryGoalInstinct(
     return null;
   }
 
+  const connectorFirst = tryConnectorPassBeforeShot(ctx, reading, passOptions, xG);
+  if (connectorFirst) return connectorFirst;
+
+  /** Instinto de remate só se um passe claramente melhor não subir mais a probabilidade de golo. */
+  const shootUnlessSmarterPass = (longRange: boolean): OnBallAction | null => {
+    if (shouldDeferInstinctShotForProgression(ctx, reading, passOptions, xG)) return null;
+    if (duelFinishDisadv) {
+      const long = longRange || distToGoal > 20;
+      if (long && xG < 0.062) return null;
+      if (!long && xG < 0.019) return null;
+    }
+    if (
+      duelFinishAdv
+      && longRange
+      && distToGoal > 19
+      && ctx.self.fisico >= 70
+      && reading.lineOfSightScore > 0.34
+      && reading.space.forwardSpaceDepth > 5
+    ) {
+      if (xG > 0.05) return retShoot(reading, ctx, true);
+    }
+    return retShoot(reading, ctx, longRange);
+  };
+
+  // -----------------------------------------------------------------------
+  // PEQUENA ÁREA: chute imediato — qualquer bola na six_yard é gol quase certo
+  // -----------------------------------------------------------------------
+  const sixYardCtx = sfGetGoalContext(ctx.self.x, ctx.self.z, ctx.attackDir);
+  if (sixYardCtx.inSixYard) {
+    const s = retShoot(reading, ctx, false);
+    if (s) return s;
+  }
+
   // -----------------------------------------------------------------------
   // Terço de ataque (fora da área): mais remates de média distância — “vida” no jogo
   // -----------------------------------------------------------------------
-  if (reading.fieldZone === 'att_third') {
+  const inPenaltyArea = reading.inOppPenaltyArea;
+  const effectivelyInBox = reading.fieldZone === 'opp_box' || inPenaltyArea;
+
+  if (reading.fieldZone === 'att_third' && !inPenaltyArea) {
     if (distToGoal < 22 && xG > 0.013 - xgEps && reading.pressure.opponentsInZone < 7) {
-      return retShoot(reading, ctx, distToGoal > 21);
+      const s = shootUnlessSmarterPass(distToGoal > 21);
+      if (s) return s;
     }
     if (distToGoal < 26 && xG > 0.036 - xgEps && reading.pressure.nearestOpponentDist > 1.9) {
-      return retShoot(reading, ctx, true);
+      const s = shootUnlessSmarterPass(true);
+      if (s) return s;
     }
     if (strikerBack && distToGoal < 24 && xG > 0.011 && reading.lineOfSightScore > 0.3) {
-      return retShoot(reading, ctx, distToGoal > 20);
+      const s = shootUnlessSmarterPass(distToGoal > 20);
+      if (s) return s;
     }
   }
 
@@ -611,33 +791,40 @@ function tryGoalInstinct(
 
   // Grande área: `evaluateShot` penaliza aglomeração; sem fallback geométrico o xG
   // cai e o instinto nunca dispara — exatamente o “ping-pong” na área.
-  if (reading.fieldZone === 'opp_box') {
+  if (effectivelyInBox) {
     if (distToGoal < 11 && xG > 0.009 - xgEps) {
-      return retShoot(reading, ctx, false);
+      const s = shootUnlessSmarterPass(false);
+      if (s) return s;
     }
     if (distToGoal < 20 && xG > 0.015 - xgEps && reading.pressure.opponentsInZone < 8) {
-      return retShoot(reading, ctx, false);
+      const s = shootUnlessSmarterPass(false);
+      if (s) return s;
     }
   }
 
-  // Área / próximo: remate com limiares que toleram mais corpo na zona
-  if (reading.fieldZone === 'opp_box' && xG > 0.021 - xgEps && reading.pressure.opponentsInZone < 7) {
-    return retShoot(reading, ctx, false);
+  if (effectivelyInBox && xG > 0.021 - xgEps && reading.pressure.opponentsInZone < 7) {
+    const s = shootUnlessSmarterPass(false);
+    if (s) return s;
   }
 
   // Dentro da área ou muito perto: chance moderada basta
   if (distToGoal < 14 && xG > 0.026 && reading.pressure.opponentsInZone < 5) {
-    return retShoot(reading, ctx, false);
+    const s = shootUnlessSmarterPass(false);
+    if (s) return s;
   }
 
   // Limite da área: linha de visão mais limpa
   if (distToGoal < 21 && xG > 0.04 && reading.pressure.opponentsInZone < 4) {
-    return retShoot(reading, ctx, false);
+    const s = shootUnlessSmarterPass(false);
+    if (s) return s;
   }
 
   // Média distância, bom ângulo e espaço: arriscar o remate
   if (distToGoal < 25 && xG > 0.078 && reading.pressure.nearestOpponentDist > 2.6) {
-    return profile.riskAppetite > 0.22 ? retShoot(reading, ctx, true) : null;
+    if (profile.riskAppetite > 0.22) {
+      const s = shootUnlessSmarterPass(true);
+      if (s) return s;
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -656,8 +843,12 @@ function tryGoalInstinct(
     return true;
   });
   keyed.sort((a, b) => {
-    const scoreA = a.distToOppGoal - a.threatDepth01 * 5.5 - a.successProb * 6;
-    const scoreB = b.distToOppGoal - b.threatDepth01 * 5.5 - b.successProb * 6;
+    const tmA = ctx.teammates.find((t) => t.id === a.targetId);
+    const tmB = ctx.teammates.find((t) => t.id === b.targetId);
+    const ta = tmA ? offensiveThreatSnapshot01(tmA, a.targetX, a.targetZ, ctx.attackDir, ctx.opponents) : 0;
+    const tb = tmB ? offensiveThreatSnapshot01(tmB, b.targetX, b.targetZ, ctx.attackDir, ctx.opponents) : 0;
+    const scoreA = a.distToOppGoal - a.threatDepth01 * 5.5 - a.successProb * 6 - ta * 8.2;
+    const scoreB = b.distToOppGoal - b.threatDepth01 * 5.5 - b.successProb * 6 - tb * 8.2;
     return scoreA - scoreB;
   });
   const bestScoringTeammate = keyed[0] ?? null;
@@ -692,11 +883,11 @@ function trySituationalBehavior(
   passOptions: PassOption[],
 ): OnBallAction | null {
   const role = ctx.self.role;
-  const slot = ctx.self.id;
+  const selfSlot = ctx.self.slotId ?? '';
   const profile = ctx.profile;
 
   // CDM receiving with back to goal, turning under low pressure
-  if ((role === 'def' || slot.includes('vol')) && reading.pressure.intensity === 'low' && profile.composure > 0.5) {
+  if ((role === 'def' || selfSlot.includes('vol')) && reading.pressure.intensity === 'low' && profile.composure > 0.5) {
     if (reading.space.canConductForward && pick01ForDecision(ctx) < 0.35) {
       const tx = ctx.self.x + ctx.attackDir * 8;
       const tz = ctx.self.z + (pick01ForDecision(ctx) - 0.5) * 4;
@@ -705,7 +896,7 @@ function trySituationalBehavior(
   }
 
   // Fullback receiving wide — advance or pass inside
-  if (slot.includes('le') || slot.includes('ld')) {
+  if (selfSlot.includes('le') || selfSlot.includes('ld')) {
     if (reading.space.canConductForward && reading.pressure.intensity !== 'high') {
       if (pick01ForDecision(ctx) < 0.4 + profile.dribbleTendency * 0.3) {
         const tx = ctx.self.x + ctx.attackDir * 12;
@@ -721,7 +912,7 @@ function trySituationalBehavior(
   }
 
   // Winger 1v1 — dribble or cut inside
-  if ((slot.includes('pe') || slot.includes('pd')) && reading.pressure.opponentsInZone === 1) {
+  if ((selfSlot.includes('pe') || selfSlot.includes('pd')) && reading.pressure.opponentsInZone === 1) {
     if (profile.dribbleTendency > 0.5 && pick01ForDecision(ctx) < profile.dribbleTendency) {
       const isLeft = ctx.self.z < FIELD_WIDTH / 2;
       const cutZ = isLeft ? ctx.self.z + 10 : ctx.self.z - 10;
@@ -776,7 +967,7 @@ function trySituationalBehavior(
   }
 
   // CB under pressure clears
-  if ((slot.includes('zag') || role === 'def') && reading.pressure.intensity === 'extreme') {
+  if ((selfSlot.includes('zag') || role === 'def') && reading.pressure.intensity === 'extreme') {
     if (passOptions.length === 0) {
       return { type: 'clearance', targetX: FIELD_LENGTH / 2, targetZ: FIELD_WIDTH / 2 };
     }
@@ -794,6 +985,7 @@ function canShoot(
   xG: number,
   urgency: number,
   profile: PlayerProfile,
+  opt?: { ctx: DecisionContext; passOptions: PassOption[] },
 ): boolean {
   if (reading.distToGoal > 32) return false;
 
@@ -805,8 +997,14 @@ function canShoot(
 
   const threshold = 0.042 - urgency - profile.riskAppetite * 0.045 - threatBonus - tierBonus;
 
-  // Inside the box: very low threshold — shoot almost always
-  if (reading.fieldZone === 'opp_box' && reading.distToGoal < 19 && xG > 0.017) return true;
+  // Dentro da área: limiar baixo, mas não “só porque estou perto” se o passe eleva muito mais a ameaça.
+  if ((reading.fieldZone === 'opp_box' || reading.inOppPenaltyArea) && reading.distToGoal < 19 && xG > 0.017) {
+    if (opt && shouldDeferBoxAutoShot(opt.ctx, reading, opt.passOptions, xG)) {
+      /* continua para as regras seguintes */
+    } else {
+      return true;
+    }
+  }
   if (reading.distToGoal < 14 && xG > 0.025) return true;
   // Edge of box with some quality
   if (reading.distToGoal < 20 && xG > threshold) return true;
@@ -998,6 +1196,16 @@ function decideProgress(
     if (sw) return { type: 'switch_play', option: sw };
   }
 
+  // Dentro da grande área adversária: atacantes tentam arrancar falta com mais frequência
+  // (duelo com zagueiro → chance de pênalti). Pressão mínima basta.
+  if (
+    reading.fieldZone === 'opp_box'
+    && reading.pressure.intensity !== 'none'
+    && pick01ForDecision(ctx) < 0.28
+  ) {
+    return { type: 'draw_foul' };
+  }
+
   if (
     isAttackZone(reading.fieldZone)
     && (reading.pressure.intensity === 'high' || reading.pressure.intensity === 'extreme')
@@ -1054,7 +1262,7 @@ function decideAccelerate(
   const threatRising = reading.threatTrend === 'rising';
 
   // Threat rising: the play is maturing — try to finish before defense recovers
-  if (threatRising && canShoot(reading, xG, 0.02, profile)) {
+  if (threatRising && canShoot(reading, xG, 0.02, profile, { ctx, passOptions })) {
     return retShoot(reading, ctx, reading.distToGoal > 22);
   }
 
@@ -1099,7 +1307,7 @@ function decideCreateChance(
   const threatFalling = reading.threatTrend === 'falling';
 
   // Threat falling while in chance-creation zone: defense is recovering, act NOW
-  if (threatFalling && reading.distToGoal < 25 && canShoot(reading, xG, 0.03, profile)) {
+  if (threatFalling && reading.distToGoal < 25 && canShoot(reading, xG, 0.03, profile, { ctx, passOptions })) {
     return retShoot(reading, ctx, reading.distToGoal > 20);
   }
 
@@ -1148,12 +1356,83 @@ function decideCreateChance(
  * each intention weights progression, safety, space and goal proximity
  * differently, so the "best" pass changes with context.
  */
+/**
+ * Peso do cone de visão do portador sobre o passe.
+ * Retorna multiplicador em ~[0.35, 1.10]:
+ *   ∙ Alvo totalmente à frente: 1.00–1.10
+ *   ∙ Alvo perpendicular: 0.80
+ *   ∙ Alvo atrás (oposto ao olhar): 0.35–0.45
+ * Jogador sem heading (parado) → 1.0 (sem penalidade).
+ * `tatico` alto alarga o cone (visão periférica de armador).
+ */
+function visionConeWeight(
+  selfX: number,
+  selfZ: number,
+  heading: number | undefined,
+  targetX: number,
+  targetZ: number,
+  tatico: number,
+): number {
+  if (heading === undefined || !Number.isFinite(heading)) return 1.0;
+  const dx = targetX - selfX;
+  const dz = targetZ - selfZ;
+  const dist2 = dx * dx + dz * dz;
+  if (dist2 < 0.25) return 1.0; // alvo muito perto
+  const targetAng = Math.atan2(dx, dz);
+  let delta = targetAng - heading;
+  // normaliza pra [-PI, PI]
+  while (delta > Math.PI) delta -= 2 * Math.PI;
+  while (delta < -Math.PI) delta += 2 * Math.PI;
+  const cosAlign = Math.cos(delta); // +1 à frente, -1 atrás
+  // Visão periférica do tático: entre 70 e 95 de tatico expande o cone.
+  const periph = Math.max(0, Math.min(1, (tatico - 55) / 40)); // 0..1
+  // Base: 0.65 + 0.35*cosAlign → atrás: 0.30, frente: 1.00.
+  // Periferia: puxa o mínimo pra cima (0.45) e dá leve bonus na frente.
+  const base = 0.65 + 0.35 * cosAlign;
+  const withPeriph = base + periph * 0.12 + (cosAlign > 0.8 ? periph * 0.04 : 0);
+  return Math.max(0.35, Math.min(1.10, withPeriph));
+}
+
+/**
+ * Bônus de criatividade: passe do meio rompendo a linha defensiva (lance-livre pro atacante).
+ * Combina 3 sinais: (a) carrier é meio-campo, (b) passe cruza linhas, (c) alvo ganha
+ * profundidade significativa → dá um boost que torna essa decisão preferida quando existe.
+ */
+function creativityBonus(
+  option: PassOption,
+  ctx: DecisionContext,
+  reading: ContextReading,
+): number {
+  const role = ctx.self.role;
+  if (role !== 'mid') return 0;
+  if (option.linesBroken < 1) return 0;
+  // Alvo tem que estar mais perto do gol adversário que o carrier.
+  const depthGain = option.threatDepth01 > 0.55 ? option.threatDepth01 - 0.5 : 0;
+  if (depthGain <= 0) return 0;
+  // Zona do campo: zona intermediária ou ofensiva (passe de fundação não conta).
+  if (reading.fieldZone === 'own_box' || reading.fieldZone === 'def_third') return 0;
+  // Espaço no alvo importa — passe pra cima de zagueiro apertado é suicida.
+  const spaceOk = Math.min(1, option.spaceAtTarget / 6);
+  return (0.18 + depthGain * 0.35) * spaceOk;
+}
+
 function scorePassForIntention(
   option: PassOption,
   intention: PlayIntention,
   ctx: DecisionContext,
   reading: ContextReading,
 ): number {
+  const visionW = visionConeWeight(
+    ctx.self.x,
+    ctx.self.z,
+    ctx.self.heading,
+    option.targetX,
+    option.targetZ,
+    ctx.self.tatico ?? 60,
+  );
+  const creatBonus = creativityBonus(option, ctx, reading);
+  // Helper para aplicar peso de visão ao score final (+ bônus criativo aditivo).
+  const withVision = (score: number) => score * visionW + creatBonus;
   const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
   const targetDistToGoal = Math.hypot(goalX - option.targetX, FIELD_WIDTH / 2 - option.targetZ);
   const goalProximity = 1 - Math.min(targetDistToGoal / (FIELD_LENGTH * 0.7), 1);
@@ -1174,48 +1453,52 @@ function scorePassForIntention(
 
   switch (intention) {
     case 'progress':
-      return prog * 0.28 + option.successProb * 0.2 + space * 0.16
+      return withVision(prog * 0.28 + option.successProb * 0.2 + space * 0.16
         + (option.isForward ? 0.12 : 0) + lines * 0.05 + xgBonus + goalProximity * 0.06
-        + option.threatDepth01 * 0.14;
+        + option.threatDepth01 * 0.14);
 
     case 'maintain_possession':
-      return option.successProb * 0.4 + space * 0.22
+      return withVision(option.successProb * 0.4 + space * 0.22
         + (!option.isLong ? 0.14 : 0) + (option.distance < 15 ? 0.08 : 0)
         + (!option.isForward ? 0.04 : 0) + xgBonus * 0.5
-        + option.threatDepth01 * 0.06;
+        + option.threatDepth01 * 0.06);
 
     case 'accelerate':
     case 'attack_space':
     case 'break_line':
-      return prog * 0.2 + lines * 0.2 + goalProximity * 0.23
+      return withVision(prog * 0.2 + lines * 0.2 + goalProximity * 0.23
         + (option.isForward ? 0.12 : 0) + option.successProb * 0.12 + xgBonus
-        + option.threatDepth01 * 0.22;
+        + option.threatDepth01 * 0.22);
 
     case 'create_chance':
     case 'finish':
-      return goalProximity * 0.34 + space * 0.15 + option.successProb * 0.15
+      return withVision(goalProximity * 0.34 + space * 0.15 + option.successProb * 0.15
         + prog * 0.1 + lines * 0.08 + xgBonus * 1.55
-        + option.threatDepth01 * 0.2;
+        + option.threatDepth01 * 0.2);
 
     case 'reorganize':
-      return option.successProb * 0.33
+      return withVision(option.successProb * 0.33
         + (Math.abs(option.targetZ - ctx.self.z) > 20 ? 0.18 : 0)
         + space * 0.18 + (!option.isForward ? 0.14 : 0)
-        + (option.distance > 15 && option.distance < 35 ? 0.09 : 0) + xgBonus * 0.3;
+        + (option.distance > 15 && option.distance < 35 ? 0.09 : 0) + xgBonus * 0.3);
 
     case 'relieve_pressure':
-      return option.successProb * 0.48 + space * 0.24
-        + (!option.isLong ? 0.14 : 0) + (option.distance < 20 ? 0.09 : 0) + xgBonus * 0.2;
+      // Passe curto pra trás / pro goleiro é legítimo aqui, mas ainda queremos evitar
+      // que o jogador gire 180° contra a inércia — peso de visão atenuado (raiz).
+      return withVision(option.successProb * 0.48 + space * 0.24
+        + (!option.isLong ? 0.14 : 0) + (option.distance < 20 ? 0.09 : 0) + xgBonus * 0.2)
+        * 0.6 + (option.successProb * 0.48 + space * 0.24
+        + (!option.isLong ? 0.14 : 0) + (option.distance < 20 ? 0.09 : 0) + xgBonus * 0.2) * 0.4;
 
     case 'protect_result':
-      return option.successProb * 0.43 + (!option.isForward ? 0.18 : 0)
+      return withVision(option.successProb * 0.43 + (!option.isForward ? 0.18 : 0)
         + space * 0.18 + (!option.isLong ? 0.09 : 0)
-        + (option.distance < 20 ? 0.05 : 0) + xgBonus * 0.15;
+        + (option.distance < 20 ? 0.05 : 0) + xgBonus * 0.15);
 
     default:
-      return option.successProb * 0.26 + prog * 0.2 + space * 0.16
+      return withVision(option.successProb * 0.26 + prog * 0.2 + space * 0.16
         + (option.isForward ? 0.12 : 0) + goalProximity * 0.1 + xgBonus
-        + option.threatDepth01 * 0.12;
+        + option.threatDepth01 * 0.12);
   }
 }
 

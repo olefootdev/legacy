@@ -11,7 +11,7 @@ import {
   PENALTY_AREA_DEPTH_M,
   PENALTY_AREA_HALF_WIDTH_M,
 } from '@/match/fieldZones';
-import { FIELD_LENGTH, FIELD_WIDTH, uiPercentToWorld } from '@/simulation/field';
+import { FIELD_LENGTH, FIELD_WIDTH, GOAL_INNER_WIDTH_M, uiPercentToWorld } from '@/simulation/field';
 import {
   buildGrid12OverlayCells,
   worldPositionToGrid12CodeForTeam,
@@ -20,6 +20,12 @@ import {
   buildTactical18OverlayCells,
   worldPositionToTactical18ShortLabel,
 } from '@/match/tacticalField18';
+import { sfSnapshot, sfGetAllAnchors, sfRoleFromSlot, type SfAnchor } from '@/smartfield/smartfieldBridge';
+import {
+  tacticalPointingQuality01,
+  tacticalVisionArrowEndPercent,
+} from '@/match/tacticalPointingDisplay';
+import { tacticalRadiiFor } from '@/simulation/tacticalAnchorBlend';
 
 const GOAL_AREA_DEPTH_M = 5.5;
 const CZ = FIELD_WIDTH / 2;
@@ -79,6 +85,9 @@ export interface TacticalPitchDevLayerProps {
    * Deslocamento visual por jogador (`h:${playerId}` / `a:${playerId}`), p.ex. anti-chaos dos tokens.
    */
   pitchTokenNudges?: Map<string, { dx: number; dy: number }>;
+  /** Bola em % do campo (íman) — olhar em fallback e reforço “bola → golo”. */
+  ballPercent?: { x: number; y: number };
+  showOperationalRadii?: boolean;
 }
 
 /**
@@ -95,6 +104,8 @@ export function TacticalPitchDevLayer({
   showZoneView = false,
   zonePerspectiveTeam = 'home',
   pitchTokenNudges,
+  ballPercent,
+  showOperationalRadii = false,
 }: TacticalPitchDevLayerProps) {
   const arrowId = useId().replace(/:/g, '');
   const half = clockToHalf(clockPeriod);
@@ -130,6 +141,13 @@ export function TacticalPitchDevLayer({
   const grid12 = buildGrid12OverlayCells(half);
   const colBandLabels = ['D', 'MD', 'MO', 'O'];
   const grid18 = showZoneView ? buildTactical18OverlayCells(zonePerspectiveTeam, half) : [];
+
+  const sfData = showZoneView ? sfSnapshot() : null;
+  const sfSubs = sfData?.subzones ?? [];
+  const sfMacroZones = sfData?.macro_zones ?? [];
+  const sfGoals = sfData?.goals;
+  const sfHomeAnchors = sfData ? sfGetAllAnchors('home') : {};
+  const sfAwayAnchors = sfData ? sfGetAllAnchors('away') : {};
 
   return (
     <svg
@@ -265,7 +283,7 @@ export function TacticalPitchDevLayer({
       </text>
 
       {/* Golos (boca) */}
-      <rect x={-1.2} y={uyFromZm(34 - 7.32 / 2)} width={1.2} height={(7.32 / FIELD_WIDTH) * 100} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.08} />
+      <rect x={-1.2} y={uyFromZm(34 - GOAL_INNER_WIDTH_M / 2)} width={1.2} height={(GOAL_INNER_WIDTH_M / FIELD_WIDTH) * 100} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.08} />
       <text
         x={-2.2}
         y={48.2}
@@ -280,7 +298,7 @@ export function TacticalPitchDevLayer({
       <text x={-2.2} y={51.2} textAnchor="end" fill="rgba(255,255,255,0.42)" fontSize={1.05} fontWeight={600} style={{ fontFamily: 'system-ui, sans-serif' }}>
         Oeste
       </text>
-      <rect x={100} y={uyFromZm(34 - 7.32 / 2)} width={1.2} height={(7.32 / FIELD_WIDTH) * 100} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.08} />
+      <rect x={100} y={uyFromZm(34 - GOAL_INNER_WIDTH_M / 2)} width={1.2} height={(GOAL_INNER_WIDTH_M / FIELD_WIDTH) * 100} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.08} />
       <text
         x={102.2}
         y={48.2}
@@ -321,10 +339,10 @@ export function TacticalPitchDevLayer({
       </text>
       <text x={3} y={13.2} fill="rgba(255,255,255,0.4)" fontSize={1.05}>
         Gols: Oeste = {labelWestGoal} · Leste = {labelEastGoal} · IFAB · grelha 12 ·
-        {showZoneView ? ` 18 zonas (${zonePerspectiveTeam === 'home' ? homeShort : awayShort})` : ' 18 (Zone View)'}
+        {showZoneView ? ` SMARTFIELD · zonas · âncoras (${zonePerspectiveTeam === 'home' ? homeShort : awayShort})` : ' Zone View'}
       </text>
       <text x={3} y={16.4} fill="rgba(196,181,253,0.72)" fontSize={1.05} fontWeight={600}>
-        Setor no rótulo = vista da equipa · le/pe Esq. · ld/pd Dir.
+        SMARTFIELD: ● = âncora · ◯ = raio permitido · subzones coloridas por fase
       </text>
 
       {/* Grelha 12 setores por cima das faixas — perspetiva CASA nas colunas D→O */}
@@ -416,7 +434,206 @@ export function TacticalPitchDevLayer({
         </g>
       ) : null}
 
-      {/* Jogadores: seta para o golo que atacam + rótulo */}
+      {/* SMARTFIELD macro zones overlay */}
+      {showZoneView && sfMacroZones.length > 0 ? (
+        <g aria-label="SMARTFIELD macro zones">
+          {sfMacroZones.map((zone) => {
+            const uxLo = (zone.rect.x_min / FIELD_LENGTH) * 100;
+            const uxHi = (zone.rect.x_max / FIELD_LENGTH) * 100;
+            const uyLo = (zone.rect.z_min / FIELD_WIDTH) * 100;
+            const uyHi = (zone.rect.z_max / FIELD_WIDTH) * 100;
+            const thirdColor =
+              zone.third === 'defensive'
+                ? 'rgba(46,204,113,0.08)'
+                : zone.third === 'attacking'
+                  ? 'rgba(231,76,60,0.08)'
+                  : 'rgba(241,196,15,0.06)';
+            const borderColor =
+              zone.third === 'defensive'
+                ? 'rgba(46,204,113,0.3)'
+                : zone.third === 'attacking'
+                  ? 'rgba(231,76,60,0.3)'
+                  : 'rgba(241,196,15,0.25)';
+            return (
+              <g key={`sfm-${zone.id}`}>
+                <rect
+                  x={uxLo}
+                  y={uyLo}
+                  width={uxHi - uxLo}
+                  height={uyHi - uyLo}
+                  fill={thirdColor}
+                  stroke={borderColor}
+                  strokeWidth={0.06}
+                />
+                <text
+                  x={(uxLo + uxHi) / 2}
+                  y={(uyLo + uyHi) / 2 + 0.3}
+                  textAnchor="middle"
+                  fill="rgba(255,255,255,0.28)"
+                  fontSize={0.7}
+                  fontWeight={600}
+                  style={{ fontFamily: 'system-ui, sans-serif' }}
+                >
+                  {zone.lane.replace('_', ' ')}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      ) : null}
+
+      {/* SMARTFIELD subzones overlay */}
+      {showZoneView && sfSubs.length > 0 ? (
+        <g aria-label="SMARTFIELD subzones">
+          {sfSubs.map((sub) => {
+            const uxLo = (sub.rect.x_min / FIELD_LENGTH) * 100;
+            const uxHi = (sub.rect.x_max / FIELD_LENGTH) * 100;
+            const uyLo = (sub.rect.z_min / FIELD_WIDTH) * 100;
+            const uyHi = (sub.rect.z_max / FIELD_WIDTH) * 100;
+            const isAttacking = sub.id.startsWith('box') || sub.id.startsWith('six_yard') || sub.id.startsWith('goalmouth') || sub.id.startsWith('creation');
+            const isDefensive = sub.id.startsWith('recovery') || sub.id.startsWith('build_up');
+            const fillColor = isAttacking
+              ? 'rgba(239,68,68,0.06)'
+              : isDefensive
+                ? 'rgba(59,130,246,0.06)'
+                : 'rgba(251,191,36,0.06)';
+            const strokeColor = isAttacking
+              ? 'rgba(239,68,68,0.4)'
+              : isDefensive
+                ? 'rgba(59,130,246,0.4)'
+                : 'rgba(251,191,36,0.35)';
+            return (
+              <g key={`sf-${sub.id}`}>
+                <rect
+                  x={uxLo}
+                  y={uyLo}
+                  width={uxHi - uxLo}
+                  height={uyHi - uyLo}
+                  fill={fillColor}
+                  stroke={strokeColor}
+                  strokeWidth={0.08}
+                  strokeDasharray="0.4 0.2"
+                />
+                <text
+                  x={(uxLo + uxHi) / 2}
+                  y={(uyLo + uyHi) / 2 + 0.35}
+                  textAnchor="middle"
+                  fill={isAttacking ? 'rgba(239,68,68,0.75)' : isDefensive ? 'rgba(96,165,250,0.75)' : 'rgba(251,191,36,0.7)'}
+                  fontSize={0.85}
+                  fontWeight={600}
+                  style={{ fontFamily: 'system-ui, sans-serif' }}
+                >
+                  {sub.id.replace(/_/g, ' ')}
+                </text>
+              </g>
+            );
+          })}
+          <text x={99} y={5.5} textAnchor="end" fill="rgba(251,191,36,0.65)" fontSize={0.9} fontWeight={700}>
+            SMARTFIELD · subzones
+          </text>
+        </g>
+      ) : null}
+
+      {/* SMARTFIELD goal sub-zones (near post, far post, central channel) */}
+      {showZoneView && sfGoals ? (
+        <g aria-label="SMARTFIELD goal zones">
+          {[sfGoals.west, sfGoals.east].map((goal, gi) => {
+            const nearUxLo = (goal.near_post_zone.x_min / FIELD_LENGTH) * 100;
+            const nearUxHi = (goal.near_post_zone.x_max / FIELD_LENGTH) * 100;
+            const nearUyLo = (goal.near_post_zone.z_min / FIELD_WIDTH) * 100;
+            const nearUyHi = (goal.near_post_zone.z_max / FIELD_WIDTH) * 100;
+            const farUxLo = (goal.far_post_zone.x_min / FIELD_LENGTH) * 100;
+            const farUxHi = (goal.far_post_zone.x_max / FIELD_LENGTH) * 100;
+            const farUyLo = (goal.far_post_zone.z_min / FIELD_WIDTH) * 100;
+            const farUyHi = (goal.far_post_zone.z_max / FIELD_WIDTH) * 100;
+            const cenUxLo = (goal.central_channel.x_min / FIELD_LENGTH) * 100;
+            const cenUxHi = (goal.central_channel.x_max / FIELD_LENGTH) * 100;
+            const cenUyLo = (goal.central_channel.z_min / FIELD_WIDTH) * 100;
+            const cenUyHi = (goal.central_channel.z_max / FIELD_WIDTH) * 100;
+            const spotUx = (goal.penalty_spot.x / FIELD_LENGTH) * 100;
+            const spotUy = (goal.penalty_spot.z / FIELD_WIDTH) * 100;
+            return (
+              <g key={`sfg-${gi}`}>
+                <rect x={nearUxLo} y={nearUyLo} width={nearUxHi - nearUxLo} height={nearUyHi - nearUyLo}
+                  fill="rgba(52,152,219,0.45)" stroke="rgba(52,152,219,0.8)" strokeWidth={0.12} />
+                <rect x={farUxLo} y={farUyLo} width={farUxHi - farUxLo} height={farUyHi - farUyLo}
+                  fill="rgba(230,126,34,0.45)" stroke="rgba(230,126,34,0.8)" strokeWidth={0.12} />
+                <rect x={cenUxLo} y={cenUyLo} width={cenUxHi - cenUxLo} height={cenUyHi - cenUyLo}
+                  fill="rgba(46,204,113,0.45)" stroke="rgba(46,204,113,0.8)" strokeWidth={0.12} />
+                <circle cx={spotUx} cy={spotUy} r={0.5} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={0.12} />
+                <line x1={spotUx - 0.35} y1={spotUy} x2={spotUx + 0.35} y2={spotUy} stroke="rgba(255,255,255,0.7)" strokeWidth={0.1} />
+                <line x1={spotUx} y1={spotUy - 0.35} x2={spotUx} y2={spotUy + 0.35} stroke="rgba(255,255,255,0.7)" strokeWidth={0.1} />
+              </g>
+            );
+          })}
+        </g>
+      ) : null}
+
+      {/* SMARTFIELD tactical anchors — home (yellow) */}
+      {showZoneView && Object.keys(sfHomeAnchors).length > 0 ? (
+        <g aria-label="SMARTFIELD home anchors">
+          {Object.entries(sfHomeAnchors).map(([role, anchor]: [string, SfAnchor]) => {
+            const cx = (anchor.base_anchor.x / FIELD_LENGTH) * 100;
+            const cy = (anchor.base_anchor.z / FIELD_WIDTH) * 100;
+            const rxPct = (anchor.allowed_radius / FIELD_LENGTH) * 100;
+            const ryPct = (anchor.allowed_radius / FIELD_WIDTH) * 100;
+            return (
+              <g key={`sfah-${role}`}>
+                <ellipse cx={cx} cy={cy} rx={rxPct} ry={ryPct}
+                  fill="rgba(234,255,0,0.05)" stroke="rgba(234,255,0,0.3)" strokeWidth={0.08} strokeDasharray="0.3 0.15" />
+                <circle cx={cx} cy={cy} r={0.55} fill="rgba(234,255,0,0.75)" stroke="rgba(0,0,0,0.5)" strokeWidth={0.08} />
+                <text x={cx} y={cy - 1.2} textAnchor="middle" fill="rgba(234,255,0,0.85)" fontSize={0.9} fontWeight={800}
+                  stroke="rgba(0,0,0,0.6)" strokeWidth={0.08} paintOrder="stroke"
+                  style={{ fontFamily: 'system-ui, sans-serif' }}>
+                  {role}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      ) : null}
+
+      {/* SMARTFIELD tactical anchors — away (pink) */}
+      {showZoneView && Object.keys(sfAwayAnchors).length > 0 ? (
+        <g aria-label="SMARTFIELD away anchors">
+          {Object.entries(sfAwayAnchors).map(([role, anchor]: [string, SfAnchor]) => {
+            const cx = (anchor.base_anchor.x / FIELD_LENGTH) * 100;
+            const cy = (anchor.base_anchor.z / FIELD_WIDTH) * 100;
+            const rxPct = (anchor.allowed_radius / FIELD_LENGTH) * 100;
+            const ryPct = (anchor.allowed_radius / FIELD_WIDTH) * 100;
+            return (
+              <g key={`sfaa-${role}`}>
+                <ellipse cx={cx} cy={cy} rx={rxPct} ry={ryPct}
+                  fill="rgba(251,113,133,0.04)" stroke="rgba(251,113,133,0.25)" strokeWidth={0.08} strokeDasharray="0.3 0.15" />
+                <circle cx={cx} cy={cy} r={0.45} fill="rgba(251,113,133,0.7)" stroke="rgba(0,0,0,0.5)" strokeWidth={0.08} />
+                <text x={cx} y={cy + 2} textAnchor="middle" fill="rgba(251,113,133,0.8)" fontSize={0.8} fontWeight={800}
+                  stroke="rgba(0,0,0,0.6)" strokeWidth={0.08} paintOrder="stroke"
+                  style={{ fontFamily: 'system-ui, sans-serif' }}>
+                  {role}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      ) : null}
+
+      {showOperationalRadii && [...homePlayers, ...awayPlayers].map((p) => {
+        const isHome = homePlayers.includes(p);
+        const radii = tacticalRadiiFor(p.role, p.slotId);
+        const nudge = pitchTokenNudges?.get(`${isHome ? 'h' : 'a'}:${p.playerId}`) ?? { dx: 0, dy: 0 };
+        const px = (p.x >= 0 && p.x <= 1 ? p.x * 100 : p.x) + nudge.dx;
+        const py = (p.y >= 0 && p.y <= 1 ? p.y * 100 : p.y) + nudge.dy;
+        const actionPct = (radii.actionRadius / FIELD_LENGTH) * 100;
+        const supportPct = (radii.supportRadius / FIELD_LENGTH) * 100;
+        const color = isHome ? 'rgba(234,255,0' : 'rgba(251,113,133';
+        return (
+          <g key={`rad-${isHome ? 'h' : 'a'}-${p.playerId}`}>
+            <circle cx={px} cy={py} r={supportPct} fill="none" stroke={`${color},0.12)`} strokeWidth={0.08} strokeDasharray="0.3 0.2" />
+            <circle cx={px} cy={py} r={actionPct} fill={`${color},0.04)`} stroke={`${color},0.22)`} strokeWidth={0.1} />
+          </g>
+        );
+      })}
+
       {homePlayers.map((p) => {
         const wx = pitchPercentToWorld(p.x, p.y);
         const g12 = worldPositionToGrid12CodeForTeam(wx.x, wx.z, 'home', half);
@@ -427,10 +644,17 @@ export function TacticalPitchDevLayer({
         const nudge = pitchTokenNudges?.get(`h:${p.playerId}`) ?? { dx: 0, dy: 0 };
         const px = (p.x >= 0 && p.x <= 1 ? p.x * 100 : p.x) + nudge.dx;
         const py = (p.y >= 0 && p.y <= 1 ? p.y * 100 : p.y) + nudge.dy;
-        const len = 5.5;
-        const x2 = px + dir * len;
-        const shortLabel = `${p.slotId ?? '?'} · ${showZoneView ? z18 : g12}`;
-        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]}`;
+        const { x2, y2 } = tacticalVisionArrowEndPercent({
+          px,
+          py,
+          player: p,
+          ballPercent,
+          attackDir: dir,
+        });
+        const aimQ = tacticalPointingQuality01(p);
+        const sfRole = sfRoleFromSlot(p.slotId);
+        const shortLabel = `${p.slotId ?? '?'} · ${sfRole} · ${showZoneView ? z18 : g12}`;
+        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]} · pont${Math.round(aimQ * 100)}`;
         return (
           <g key={`h-${p.playerId}`}>
             <title>{detailLabel}</title>
@@ -438,7 +662,7 @@ export function TacticalPitchDevLayer({
               x1={px}
               y1={py}
               x2={x2}
-              y2={py}
+              y2={y2}
               stroke="rgba(234,255,0,0.85)"
               strokeWidth={0.22}
               markerEnd={`url(#${arrowId})`}
@@ -471,10 +695,16 @@ export function TacticalPitchDevLayer({
         const nudge = pitchTokenNudges?.get(`a:${p.playerId}`) ?? { dx: 0, dy: 0 };
         const px = (p.x >= 0 && p.x <= 1 ? p.x * 100 : p.x) + nudge.dx;
         const py = (p.y >= 0 && p.y <= 1 ? p.y * 100 : p.y) + nudge.dy;
-        const len = 5.5;
-        const x2 = px + dir * len;
+        const { x2, y2 } = tacticalVisionArrowEndPercent({
+          px,
+          py,
+          player: p,
+          ballPercent,
+          attackDir: dir,
+        });
+        const aimQ = tacticalPointingQuality01(p);
         const shortLabel = `${p.slotId ?? '?'} · ${showZoneView ? z18 : g12}`;
-        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]}`;
+        const detailLabel = `${shortLabel} · ${p.role} · ${THIRD_LABEL[third]} · ${LANE_LABEL[lane]} · pont${Math.round(aimQ * 100)}`;
         return (
           <g key={`a-${p.playerId}`}>
             <title>{detailLabel}</title>
@@ -482,7 +712,7 @@ export function TacticalPitchDevLayer({
               x1={px}
               y1={py}
               x2={x2}
-              y2={py}
+              y2={y2}
               stroke="rgba(251,113,133,0.9)"
               strokeWidth={0.22}
               markerEnd={`url(#${arrowId})`}

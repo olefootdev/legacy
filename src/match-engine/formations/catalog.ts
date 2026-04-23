@@ -194,3 +194,41 @@ export function pitchUiSlots(scheme: FormationSchemeId): Array<{
 export const FORMATION_SCHEME_LIST: FormationSchemeId[] = Object.keys(
   FORMATION_BASES,
 ) as FormationSchemeId[];
+
+/* ── Formation-aware role mapping ────────────────────────────────── */
+
+import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
+
+type CoarseRole = 'gk' | 'def' | 'mid' | 'attack';
+
+/**
+ * Derive the coarse tactical role for a slot in a specific formation.
+ * Uses SCHEME_LINE_GROUPS as the single source of truth —
+ * a `vol` is `att` in 4-4-2 but `def` in 5-3-2.
+ */
+export function roleForSlotInFormation(
+  slotId: string,
+  formation: FormationSchemeId,
+): CoarseRole {
+  if (slotId === 'gol') return 'gk';
+  const groups = SCHEME_LINE_GROUPS[formation];
+  if (groups.def.includes(slotId)) return 'def';
+  if (groups.att.includes(slotId)) return 'attack';
+  return 'mid';
+}
+
+/**
+ * Convert a normalized slot position (nx, nz ∈ [0,1]) to world meters.
+ * Home attacks +X; away mirrors.
+ * Replaces the legacy `layout433.slotToWorld` with a formation-agnostic version.
+ */
+export function slotToWorld(
+  side: 'home' | 'away',
+  slot: { nx: number; nz: number },
+): { x: number; z: number } {
+  const nx = side === 'home' ? slot.nx : 1 - slot.nx;
+  return {
+    x: nx * FIELD_LENGTH,
+    z: slot.nz * FIELD_WIDTH,
+  };
+}

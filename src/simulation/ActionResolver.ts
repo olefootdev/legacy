@@ -7,6 +7,7 @@ import {
   archetypeExecutionMultiplier,
   evaluateShot,
   nearestOpponentPressure01,
+  passInterceptLineMetrics,
   pointToSegmentDist,
   resolvePassLanding,
   weakFootMultiplier,
@@ -14,6 +15,7 @@ import {
   type PassOption,
 } from './InteractionResolver';
 import { rngFromSeed } from '@/match/rngDraw';
+import type { HomeStaffMatchBonuses } from '@/systems/staffBenefits';
 import {
   ACTION_SOFT_CAP_CROSS,
   ACTION_SOFT_CAP_DRIBBLE,
@@ -23,6 +25,7 @@ import {
   SHOT_P_ON_TARGET_FLOOR,
   SHOT_XG_CAP,
 } from '@/match/actionResolutionTuning';
+import { XG_RESOLUTION_GOAL_MOUTH_DAMP } from '@/match/xgTuning';
 import type { ShotStrikeProfile } from '@/match/causal/matchCausalTypes';
 import type { ActionExecutionTier, ExecutionImpact01 } from '@/match/actionExecutionTier';
 import {
@@ -39,6 +42,9 @@ export type ShotOutcomeKind = 'goal' | 'save' | 'block' | 'miss';
 
 /** Subtipo de `save` no motor contínuo: espalma (rebote) vs segurar. */
 export type ShotSaveKind = 'parry' | 'hold';
+
+/** Duelo rematador–GR para feed causal / narrativa. */
+export type ShotGkHighlight = 'spectacular_save' | 'gk_blunder_goal' | 'world_class_goal';
 
 export interface PassPossessionResult {
   completed: boolean;
@@ -91,6 +97,8 @@ export interface ShotPossessionResult {
   saveKind?: ShotSaveKind;
   /** Ponto de contacto no bloqueio (trajetória contínua até ao defensor). */
   blockContact?: { x: number; z: number; deflectorId: string | null };
+  /** Frango / defesa espetacular / golaço (só quando aplicável). */
+  gkHighlight?: ShotGkHighlight;
 }
 
 export interface ActionResolverDebugRow {
@@ -165,22 +173,48 @@ function spiritAttackMomentum01(side: AgentSnapshot['side'], spiritMomentumClamp
   return (side === 'home' ? favorHome : -favorHome) * 0.11;
 }
 
-function bestInterceptorOnLine(
+/** Antecipação 0–1: pico quando o defensor corta o meio da linha de passe (não colado ao passador). */
+function passInterceptAnticipation01(t: number): number {
+  if (t < 0.08 || t > 0.94) return 0.12 + Math.min(t, 1 - t) * 1.2;
+  const c = 1 - Math.abs(t - 0.46) / 0.46;
+  return Math.max(0, Math.min(1, c));
+}
+
+/**
+ * Escolhe o melhor interceptor: proximidade à linha + leitura (`tatico`) + marcação + velocidade
+ * + bónus de posição entre passador e alvo (antecipação).
+ */
+function bestPassInterceptorOnLine(
   opponents: AgentSnapshot[],
   carrier: AgentSnapshot,
   tx: number,
   tz: number,
-): { id: string; lineDist: number; snap: AgentSnapshot } | null {
-  let best: AgentSnapshot | null = null;
-  let bestD = PASS_INTERCEPT_LINE_DIST;
+): { id: string; lineDist: number; snap: AgentSnapshot; anticipation01: number } | null {
+  let best: {
+    id: string;
+    lineDist: number;
+    snap: AgentSnapshot;
+    anticipation01: number;
+    score: number;
+  } | null = null;
+
   for (const o of opponents) {
-    const d = pointToSegmentDist(o.x, o.z, carrier.x, carrier.z, tx, tz);
-    if (d < bestD) {
-      bestD = d;
-      best = o;
+    const { dist, t } = passInterceptLineMetrics(o.x, o.z, carrier.x, carrier.z, tx, tz);
+    if (dist >= PASS_INTERCEPT_LINE_DIST) continue;
+    const ant01 = passInterceptAnticipation01(t);
+    const line01 = 1 - dist / PASS_INTERCEPT_LINE_DIST;
+    const skill =
+      (o.marcacao / 100) * 0.38
+      + (o.tatico / 100) * 0.26
+      + (o.velocidade / 100) * 0.1
+      + ant01 * 0.18
+      + line01 * 0.22;
+    const score = skill * (0.55 + 0.45 * line01) * (0.78 + 0.22 * ant01);
+    if (!best || score > best.score) {
+      best = { id: o.id, lineDist: dist, snap: o, anticipation01: ant01, score };
     }
   }
-  return best ? { id: best.id, lineDist: bestD, snap: best } : null;
+  return best ? { id: best.id, lineDist: best.lineDist, snap: best.snap, anticipation01: best.anticipation01 } : null;
 }
 
 function pickShotStrikeProfile(
@@ -241,12 +275,18 @@ export function resolvePassForPossession(
   pressure01: number,
   opponents: AgentSnapshot[],
   tacticalDisorg01 = 0,
+  homeStaff: HomeStaffMatchBonuses | null = null,
 ): PassPossessionResult {
   const rng = rngFromSeed(baseSeed, `pass:${carrier.id}:${tickKey}:${option.targetId}`);
   const rngTier = rngFromSeed(baseSeed, `pass-tier:${carrier.id}:${tickKey}:${option.targetId}`);
   const rngFoot = rngFromSeed(baseSeed, `pass-foot:${carrier.id}:${tickKey}`);
   const wfMul = weakFootMultiplier(carrier, option.targetZ, rngFoot);
-  const archMul = archetypeExecutionMultiplier(carrier, pressure01, rngFoot);
+  const isHome = carrier.side === 'home';
+  const mental =
+    isHome && homeStaff
+      ? { execAdd01: homeStaff.mentalExecAdd01, clutchProb: homeStaff.mentalClutchProb }
+      : undefined;
+  const archMul = archetypeExecutionMultiplier(carrier, pressure01, rngFoot, mental);
   const effCarrier: AgentSnapshot = wfMul < 1 || archMul !== 1
     ? { ...carrier,
       passeCurto: Math.round(carrier.passeCurto * wfMul * archMul),
@@ -254,7 +294,8 @@ export function resolvePassForPossession(
       passe: Math.round(carrier.passe * wfMul * archMul),
     }
     : carrier;
-  const land = resolvePassLanding(option, effCarrier, pressure01, rng);
+  const passAdd = isHome && homeStaff ? homeStaff.passSuccessAdd01Home : 0;
+  const land = resolvePassLanding(option, effCarrier, pressure01, rng, passAdd);
 
   if (!land.completed) {
     const failTier = resolvePassExecutionTier({
@@ -299,11 +340,15 @@ export function resolvePassForPossession(
   lx = tight.x;
   lz = tight.z;
 
-  const cand = bestInterceptorOnLine(opponents, carrier, option.targetX, option.targetZ);
+  const cand = bestPassInterceptorOnLine(opponents, carrier, option.targetX, option.targetZ);
   if (cand) {
+    const line01 = 1 - cand.lineDist / PASS_INTERCEPT_LINE_DIST;
     let pInt = Math.min(
       PASS_INTERCEPT_PROB_CAP,
-      cand.snap.marcacao / 100 * 0.44 + (1 - cand.lineDist / PASS_INTERCEPT_LINE_DIST) * 0.22,
+      cand.snap.marcacao / 100 * 0.4 + cand.snap.tatico / 100 * 0.2
+        + (cand.snap.velocidade / 100) * 0.07
+        + line01 * 0.24
+        + cand.anticipation01 * 0.14,
     );
     pInt *= passInterceptMultiplierForTier(passTier.tier);
     const r = rng.nextUnit();
@@ -317,7 +362,7 @@ export function resolvePassForPossession(
         pSuccess: land.pSuccess,
         executionTier: 'error',
         impact01: -0.52,
-        reason: `intercept passTier=${passTier.tier} lineDist=${cand.lineDist.toFixed(2)} pInt=${pInt.toFixed(3)} r=${r.toFixed(3)}`,
+        reason: `intercept passTier=${passTier.tier} lineDist=${cand.lineDist.toFixed(2)} ant=${cand.anticipation01.toFixed(2)} pInt=${pInt.toFixed(3)} r=${r.toFixed(3)}`,
       };
     }
   }
@@ -343,13 +388,19 @@ export function resolveCrossForPossession(
   targetX: number,
   targetZ: number,
   isHigh: boolean,
+  homeStaff: HomeStaffMatchBonuses | null = null,
 ): CrossPossessionResult {
   const rng = rngFromSeed(baseSeed, `cross:${carrier.id}:${tickKey}`);
   const rngTier = rngFromSeed(baseSeed, `cross-tier:${carrier.id}:${tickKey}`);
   const rngFoot = rngFromSeed(baseSeed, `cross-foot:${carrier.id}:${tickKey}`);
   const press = nearestOpponentPressure01(carrier, opponents);
   const wfMul = weakFootMultiplier(carrier, targetZ, rngFoot);
-  const archMul = archetypeExecutionMultiplier(carrier, press, rngFoot);
+  const isHome = carrier.side === 'home';
+  const mentalBoost =
+    isHome && homeStaff
+      ? { execAdd01: homeStaff.mentalExecAdd01, clutchProb: homeStaff.mentalClutchProb }
+      : undefined;
+  const archMul = archetypeExecutionMultiplier(carrier, press, rngFoot, mentalBoost);
   const cr = (carrier.cruzamento * wfMul * archMul) / 100;
   const conf = Math.min(1.28, carrier.confidenceRuntime ?? 1);
   const st = (carrier.stamina ?? 90) / 100;
@@ -387,11 +438,17 @@ export function resolveDribbleBeat(
   tickKey: number,
   carrier: AgentSnapshot,
   pressure01: number,
+  homeStaff: HomeStaffMatchBonuses | null = null,
 ): DribbleContestResult {
   const rng = rngFromSeed(baseSeed, `dribble:${carrier.id}:${tickKey}`);
   const rngTier = rngFromSeed(baseSeed, `dribble-tier:${carrier.id}:${tickKey}`);
   const rngFoot = rngFromSeed(baseSeed, `dribble-foot:${carrier.id}:${tickKey}`);
-  const archMul = archetypeExecutionMultiplier(carrier, pressure01, rngFoot);
+  const isHome = carrier.side === 'home';
+  const mentalBoost =
+    isHome && homeStaff
+      ? { execAdd01: homeStaff.mentalExecAdd01, clutchProb: homeStaff.mentalClutchProb }
+      : undefined;
+  const archMul = archetypeExecutionMultiplier(carrier, pressure01, rngFoot, mentalBoost);
   const skill = (carrier.drible * archMul) / 100;
   const st = (carrier.stamina ?? 90) / 100;
   let pOk = 0.38 + skill * 0.42;
@@ -432,13 +489,18 @@ export function resolveShotForPossession(
   longRange: boolean,
   tacticalDisorg01 = 0,
   spiritMomentumClamp01: number | null | undefined = undefined,
+  homeStaff: HomeStaffMatchBonuses | null = null,
 ): ShotPossessionResult {
   const rng = rngFromSeed(baseSeed, `shot:${carrier.id}:${tickKey}`);
   const rngTier = rngFromSeed(baseSeed, `shot-tier:${carrier.id}:${tickKey}`);
   const rngFoot = rngFromSeed(baseSeed, `shot-foot:${carrier.id}:${tickKey}`);
   const wfMul = weakFootMultiplier(carrier, FIELD_WIDTH / 2, rngFoot);
   const press = nearestOpponentPressure01(carrier, opponents);
-  const archMul = archetypeExecutionMultiplier(carrier, press, rngFoot);
+  const mentalBoost =
+    carrier.side === 'home' && homeStaff
+      ? { execAdd01: homeStaff.mentalExecAdd01, clutchProb: homeStaff.mentalClutchProb }
+      : undefined;
+  const archMul = archetypeExecutionMultiplier(carrier, press, rngFoot, mentalBoost);
   const effCarrier: AgentSnapshot = wfMul < 1 || archMul !== 1
     ? { ...carrier,
       finalizacao: Math.round(carrier.finalizacao * wfMul * archMul),
@@ -447,21 +509,26 @@ export function resolveShotForPossession(
     : carrier;
   const strikeProfile = pickShotStrikeProfile(rng, effCarrier, press, longRange);
   const chance = evaluateShot(effCarrier, attackDir, opponents);
+  const chanceXGRes = chance.xG * XG_RESOLUTION_GOAL_MOUTH_DAMP;
   const fin = effCarrier.finalizacao / 100;
   const str01 = effCarrier.fisico / 100;
-  const mental = (carrier.mentalidade + carrier.confianca) / 200;
+  const mentalAvg = (carrier.mentalidade + carrier.confianca) / 200;
   let pOnTarget =
     0.28
     + fin * 0.26
-    + mental * 0.12
+    + mentalAvg * 0.12
     - press * 0.21
     + (1 - Math.min(1, chance.angle / (Math.PI * 0.42))) * 0.07;
   if (chance.distance > 20) pOnTarget -= (chance.distance - 20) * 0.0075;
   const tagSet = new Set(zoneTags);
-  if (tagSet.has('opp_box')) pOnTarget += 0.17;
+  if (tagSet.has('six_yard')) pOnTarget += 0.28;
+  else if (tagSet.has('opp_box')) pOnTarget += 0.17;
   if (tagSet.has('own_box') || tagSet.has('defensive_third')) pOnTarget -= 0.22;
   if (longRange) pOnTarget -= 0.12;
-  const confRun = Math.min(1.25, carrier.confidenceRuntime ?? 1);
+  let confRun = Math.min(1.25, carrier.confidenceRuntime ?? 1);
+  if (carrier.side === 'home' && homeStaff) {
+    confRun = Math.min(1.28, confRun + homeStaff.mentalPressureConfAdd01);
+  }
   pOnTarget *= 0.92 + confRun * 0.08;
   if (strikeProfile === 'weak') {
     pOnTarget += 0.045;
@@ -471,6 +538,12 @@ export function resolveShotForPossession(
     pOnTarget += str01 * 0.025;
   }
   pOnTarget = Math.max(SHOT_P_ON_TARGET_FLOOR, Math.min(SHOT_P_ON_TARGET_CAP, pOnTarget));
+  if (carrier.side === 'home' && homeStaff) {
+    pOnTarget = Math.max(
+      SHOT_P_ON_TARGET_FLOOR,
+      Math.min(SHOT_P_ON_TARGET_CAP, pOnTarget + homeStaff.shotOnTargetAdd01Home),
+    );
+  }
 
   const rollOnTarget = rng.nextUnit();
   const goalX = attackDir === 1 ? FIELD_LENGTH : 0;
@@ -525,7 +598,10 @@ export function resolveShotForPossession(
       : pointToSegmentDist(gk.x, gk.z, carrier.x, carrier.z, goalX, goalZ);
   const inGkPresence = gk !== null && trajDistGk <= GK_SHOT_PRESENCE_TRAJ_DIST_M;
   const shotPower01 = shotPower01FromStrike(strikeProfile, effCarrier);
-  const gkDef01 = gk ? gkDefense01FromSnapshot(gk) : 0;
+  let gkDef01 = gk ? gkDefense01FromSnapshot(gk) : 0;
+  if (gk && carrier.side === 'away' && homeStaff) {
+    gkDef01 = Math.min(1, gkDef01 + homeStaff.gkDefAdd01Home);
+  }
   const powerBeatsGk = gk === null || shotPower01 > gkDef01 + 0.028;
   const pGkCorrect = gk ? gkCorrectDecisionProb(gk, press) : 1;
   const gkWrongDecision = gk === null || rngGkDec.nextUnit() > pGkCorrect;
@@ -538,7 +614,7 @@ export function resolveShotForPossession(
       rollOnTarget,
       pOnTarget,
       rollBranch: rollBranchGk,
-      xGOnTarget: chance.xG,
+      xGOnTarget: chanceXGRes,
       carrier,
       press01: press,
       tacticalDisorg01,
@@ -551,20 +627,22 @@ export function resolveShotForPossession(
       rollBranch: rollBranchGk,
       goalX,
       goalZ,
-      xGOnTarget: chance.xG,
+      xGOnTarget: chanceXGRes,
       strikeProfile,
       executionTier: st.tier,
       impact01: st.impact01,
       xGCriticalBoosted: false,
+      gkHighlight: st.tier === 'critical_hit' ? 'world_class_goal' : undefined,
       reason:
         `goal_gk_presence trajD=${trajDistGk.toFixed(2)} power=${shotPower01.toFixed(2)}>def=${gkDef01.toFixed(2)} `
         + `gkWrong=${gkWrongDecision} tier=${st.tier} strike=${strikeProfile}`,
     };
   }
 
-  let xG = chance.xG * (longRange ? 0.72 : 1);
+  let xG = chanceXGRes * (longRange ? 0.72 : 1);
   xG *= 0.94 + Math.min(confRun, 1.2) * 0.06;
-  if (tagSet.has('opp_box')) xG *= 1.07;
+  if (tagSet.has('six_yard')) xG *= 1.55;
+  else if (tagSet.has('opp_box')) xG *= 1.07;
   if (strikeProfile === 'weak') {
     xG *= 0.82;
   } else if (strikeProfile === 'power') {
@@ -573,14 +651,25 @@ export function resolveShotForPossession(
   xG = Math.max(0.02, Math.min(SHOT_XG_CAP, xG));
   const spiritBias = spiritAttackMomentum01(carrier.side, spiritMomentumClamp01);
   xG = Math.max(0.02, Math.min(SHOT_XG_CAP, xG * (1 + spiritBias)));
+  if (carrier.side === 'home' && homeStaff) {
+    xG = Math.max(0.02, Math.min(SHOT_XG_CAP, xG + homeStaff.shotXgAdd01Home));
+  }
 
   const rngCrit = rngFromSeed(baseSeed, `shot-xgcrit:${carrier.id}:${tickKey}`);
   let xGCriticalBoosted = false;
   const pCritShot = computeCriticalHitProbShot(carrier, press, tacticalDisorg01);
-  const suppressXgBecauseGkPresence = gk !== null && inGkPresence;
-  if (suppressXgBecauseGkPresence) {
-    xG = 0;
-  } else if (rngCrit.nextUnit() < pCritShot * 0.52) {
+  /** Antes: xG=0 com GR na trajetória → quase só defesa. Agora duelo remate vs GR mantém hipótese de golo. */
+  if (gk !== null && inGkPresence) {
+    const duel = shotPower01 - gkDef01;
+    const strikeAdj =
+      strikeProfile === 'power' ? 0.045 : strikeProfile === 'weak' ? -0.038 : 0;
+    const presenceMul = Math.max(
+      0.17,
+      Math.min(1.08, 0.48 + duel * 0.68 + strikeAdj + (press < 0.38 ? 0.05 : -0.03)),
+    );
+    xG *= presenceMul;
+  }
+  if (rngCrit.nextUnit() < pCritShot * 0.52) {
     xG = Math.min(SHOT_XG_CAP, xG * 1.16);
     xGCriticalBoosted = true;
   }
@@ -607,6 +696,8 @@ export function resolveShotForPossession(
       executionTier = st.tier;
       impact01 = st.impact01;
     }
+    const gkHi: ShotGkHighlight | undefined =
+      xGCriticalBoosted || executionTier === 'critical_hit' ? 'world_class_goal' : undefined;
     return {
       outcome: 'goal',
       rollOnTarget,
@@ -619,12 +710,57 @@ export function resolveShotForPossession(
       executionTier,
       impact01,
       xGCriticalBoosted,
+      gkHighlight: gkHi,
       reason: `goal tier=${executionTier} strike=${strikeProfile} xG=${xG.toFixed(3)} branch=${rollBranch.toFixed(3)} xgCrit=${xGCriticalBoosted}`,
     };
   }
   const rem = 1 - xG;
   const saveShare = rem * (strikeProfile === 'weak' ? 0.64 : strikeProfile === 'power' ? 0.52 : 0.58);
   if (rollBranch < xG + saveShare) {
+    const rngBlunder = rngFromSeed(baseSeed, `shot-gkblunder:${carrier.id}:${tickKey}`);
+    let pBlunder = 0;
+    if (gk) {
+      const confGap = (72 - Math.min(88, gk.confianca)) / 100;
+      pBlunder = Math.min(
+        0.13,
+        0.004
+        + (1 - gkDef01) * 0.052
+        + confGap * 0.034
+        + (strikeProfile === 'weak' ? 0.018 : strikeProfile === 'power' ? -0.006 : 0.008)
+        + (inGkPresence ? 0.012 : 0)
+        + (shotPower01 > gkDef01 + 0.06 ? 0.014 : 0),
+      );
+    }
+    if (gk && rngBlunder.nextUnit() < pBlunder) {
+      const rollB = rngBlunder.nextUnit();
+      const stG = resolveShotExecutionTier({
+        outcome: 'goal',
+        rollOnTarget,
+        pOnTarget,
+        rollBranch: rollB,
+        xGOnTarget: Math.min(SHOT_XG_CAP, xG + 0.08),
+        carrier,
+        press01: press,
+        tacticalDisorg01,
+        rng: rngTier,
+      });
+      return {
+        outcome: 'goal',
+        rollOnTarget,
+        pOnTarget,
+        rollBranch: rollB,
+        goalX,
+        goalZ,
+        xGOnTarget: xG,
+        strikeProfile,
+        executionTier: stG.tier,
+        impact01: stG.impact01,
+        xGCriticalBoosted,
+        gkHighlight: 'gk_blunder_goal',
+        reason: `goal_gk_blunder p=${pBlunder.toFixed(3)} strike=${strikeProfile} tier=${stG.tier}`,
+      };
+    }
+
     const st = resolveShotExecutionTier({
       outcome: 'save',
       rollOnTarget,
@@ -641,9 +777,26 @@ export function resolveShotForPossession(
       (strikeProfile === 'weak' ? 0.24 : strikeProfile === 'placed' ? 0.11 : -0.06)
       + (press < 0.36 ? 0.11 : -0.04)
       + Math.max(0, gkDef01 - shotPower01) * 0.38
-      + (inGkPresence ? 0.09 : -0.05);
+      + (inGkPresence ? 0.09 : -0.05)
+      + (carrier.side === 'away' && homeStaff ? homeStaff.gkHoldLeanAdd01Home : 0);
     const pHold = Math.max(0.16, Math.min(0.84, 0.44 + holdLean));
     const saveKind: ShotSaveKind = rngSk.nextUnit() < pHold ? 'hold' : 'parry';
+    const rngSpec = rngFromSeed(baseSeed, `shot-gkspec:${carrier.id}:${tickKey}`);
+    const pSpecSave = gk
+      ? Math.max(
+        0.05,
+        Math.min(
+          0.44,
+          (gkDef01 - 0.5) * 0.62
+            + xG * 0.42
+            + (strikeProfile === 'power' ? 0.07 : 0)
+            + (inGkPresence ? 0.06 : 0)
+            + (carrier.side === 'away' && homeStaff ? homeStaff.gkClutchSaveProbHome * 0.9 : 0),
+        ),
+      )
+      : 0;
+    const gkHighlight: ShotGkHighlight | undefined =
+      gk && rngSpec.nextUnit() < pSpecSave ? 'spectacular_save' : undefined;
     return {
       outcome: 'save',
       rollOnTarget,
@@ -657,7 +810,8 @@ export function resolveShotForPossession(
       impact01: st.impact01,
       xGCriticalBoosted,
       saveKind,
-      reason: `save tier=${st.tier} strike=${strikeProfile} branch=${rollBranch.toFixed(3)} xG=${xG.toFixed(3)} save=${saveKind}`,
+      gkHighlight,
+      reason: `save tier=${st.tier} strike=${strikeProfile} branch=${rollBranch.toFixed(3)} xG=${xG.toFixed(3)} save=${saveKind}${gkHighlight ? ` ${gkHighlight}` : ''}`,
     };
   }
   const sb = resolveShotExecutionTier({

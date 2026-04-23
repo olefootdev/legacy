@@ -22,16 +22,18 @@ import { PositionsSection } from './gameSpirit/PositionsSection';
 import { ReferenceSection } from './gameSpirit/ReferenceSection';
 import { TeachSection } from './gameSpirit/TeachSection';
 import { AdminTacticalAdvisorBoard } from './gameSpirit/AdminTacticalAdvisorBoard';
+import { PositionCoachSection } from './gameSpirit/PositionCoachSection';
 
-type TabId = 'diag' | 'nar' | 'pat' | 'pos' | 'board' | 'teach' | 'ref';
+type TabId = 'diag' | 'nar' | 'pat' | 'pos' | 'board' | 'teach' | 'ref' | 'agents';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'diag', label: 'Diagnóstico' },
+  { id: 'agents', label: '🧬 Agentes' },
   { id: 'nar', label: 'Narrativas' },
   { id: 'pat', label: 'Padrões táticos' },
   { id: 'pos', label: 'Posições' },
   { id: 'board', label: 'Campo ao vivo' },
-  { id: 'teach', label: 'Ensino (OpenAI)' },
+  { id: 'teach', label: 'Ensino (Anthropic)' },
   { id: 'ref', label: 'Mapa código' },
 ];
 
@@ -69,7 +71,7 @@ export function AdminGameSpiritPanel() {
             <p className="font-display text-lg font-black text-white">GAME SPIRIT</p>
             <p className="mt-1 text-white/75">
               Sistema <strong className="text-white">verificável</strong>: diagnóstico do que o motor usa, biblioteca
-              local que podes alimentar, e ensino via OpenAI no servidor. Sem fingir que Docling ou a tua biblioteca já
+              local que podes alimentar, e ensino via Anthropic (Claude) no servidor. Sem fingir que Docling ou a tua biblioteca já
               entram no simulador — até estarem ligados no código.
             </p>
             <p className="mt-2 text-[10px] uppercase tracking-widest text-white/40">{GAME_SPIRIT_VERSION_TAG}</p>
@@ -124,6 +126,7 @@ export function AdminGameSpiritPanel() {
 
       <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 md:p-6">
         {tab === 'diag' ? <DiagnosticsSection /> : null}
+        {tab === 'agents' ? <PositionCoachSection /> : null}
         {tab === 'nar' ? <NarrativesSection kb={kb} onChange={persist} /> : null}
         {tab === 'pat' ? <PatternsSection kb={kb} onChange={persist} /> : null}
         {tab === 'pos' ? <PositionsSection kb={kb} onChange={persist} /> : null}

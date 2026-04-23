@@ -1,31 +1,39 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, LogOut, Plus, Trophy, RotateCcw } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import type { PitchPlayerState } from '@/engine/types';
+import { roleFromPos } from '@/engine/pitchFromLineup';
 import type { OpponentStub } from '@/entities/types';
 import { cn } from '@/lib/utils';
+import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { hashStringSeed } from '@/match/seededRng';
 import { computeAwayImpactsFromVirtualLedger, computeHomeImpactsFromLedger } from '@/match/impactLedger';
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
+import {
+  fetchFriendlyChallengeById,
+  userParticipatesInChallenge,
+} from '@/supabase/friendlyChallenges';
 import { GoalScorerOverlay } from '@/match/GoalScorerOverlay';
 import { pickGoalOverlayStoryline } from '@/match/goalOverlayNarration';
 import { GOAL_SCORER_OVERLAY_MS } from '@/gamespirit/spiritStateMachine';
+import { fetchKeyMomentNarration } from '@/match/narrativeKeyMomentClient';
+import { PenaltyKickModal } from '@/match/PenaltyKickModal';
+import { AssistantPanel, AssistantFab, type AssistantEvent } from '@/match/AssistantPanel';
 import {
   MatchdayVersusWithClock,
   MatchdayLineupColumnTitle,
   MatchdayResultScores,
 } from '@/components/matchday/MatchdayVersusTitle';
+import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
 
-import { SECONDS_PER_TICK } from '@/engine/types';
-
-const FIRST_HALF_MS = 25_000;
-const HALFTIME_MS = 3_000;
+const FIRST_HALF_MS = 45_000;
+const HALFTIME_MS = 15_000;
 const MINUTES_PER_HALF = 45;
 const MS_PER_MINUTE = Math.round(FIRST_HALF_MS / MINUTES_PER_HALF);
 const GOAL_FREEZE_MS = 2_000;
@@ -33,57 +41,30 @@ const FEED_VISIBLE_COUNT = 3;
 const FEED_POOL_MAX = 14;
 const FEED_ROTATE_MS = 4_200;
 
-/** Pré-partida: 3–2–1 (1s cada) e mensagem no feed antes do primeiro tick. */
-const QUICK_KICKOFF_COUNTDOWN_MS = 1000;
-const QUICK_KICKOFF_MESSAGE_MS = 1200;
+/** Pré-partida: prelúdio “pronto?” + 3–2–1 (1.2s cada) + mensagem de bola a rolar. */
+const QUICK_KICKOFF_PRELUDE_MS = 900;
+const QUICK_KICKOFF_COUNTDOWN_MS = 1200;
+const QUICK_KICKOFF_MESSAGE_MS = 1400;
 
-type QuickPreStartPhase = 'c3' | 'c2' | 'c1' | 'kickoff' | null;
+type QuickPreStartPhase = 'ready' | 'c3' | 'c2' | 'c1' | 'kickoff' | null;
+
+interface SecondYellowAlert {
+  playerId: string;
+  playerName: string;
+  playerNum: number;
+  playerPos: string;
+  slotId: string;
+}
+
+interface CoachMoment {
+  eventId: string;
+  homeScore: number;
+  awayScore: number;
+}
 
 /** Só bloqueia efeitos da partida rápida para jogos 3D / auto explícitos; `mode` ausente = legado (tratar como quick). */
 function isBlockingNonQuickMatch(live: { mode?: string }): boolean {
   return live.mode === 'auto';
-}
-
-/**
- * Relógio suave MM:SS — interpola entre ticks (cada tick = SECONDS_PER_TICK = 60s de jogo).
- * Congela durante golo / overlay.
- */
-function useMatchClock(
-  elapsedSec: number,
-  frozen: boolean,
-  phase: string | undefined,
-): string {
-  const [display, setDisplay] = useState('00:00');
-  const baseRef = useRef({ wallMs: Date.now(), baseSec: 0 });
-
-  useEffect(() => {
-    baseRef.current = { wallMs: Date.now(), baseSec: elapsedSec };
-  }, [elapsedSec]);
-
-  useEffect(() => {
-    if (phase !== 'playing') return;
-    let raf: number;
-    const step = () => {
-      if (frozen) {
-        raf = requestAnimationFrame(step);
-        return;
-      }
-      const { wallMs, baseSec } = baseRef.current;
-      const realElapsed = Date.now() - wallMs;
-      const interpSec = Math.min(
-        baseSec + (realElapsed / MS_PER_MINUTE) * SECONDS_PER_TICK,
-        5400,
-      );
-      const m = Math.floor(interpSec / 60);
-      const s = Math.floor(interpSec % 60);
-      setDisplay(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [frozen, phase]);
-
-  return display;
 }
 
 /**
@@ -223,6 +204,8 @@ function buildAwayQuickRoster(opponent: OpponentStub, sessionKey: number): Quick
  */
 export function MatchQuick() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fcParam = searchParams.get('fc');
   const dispatch = useGameDispatch();
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
@@ -237,6 +220,31 @@ export function MatchQuick() {
   const [subPickId, setSubPickId] = useState('');
   const [forfeitOpen, setForfeitOpen] = useState(false);
   const [halfTimeTick, setHalfTimeTick] = useState(3);
+  const [secondYellowAlert, setSecondYellowAlert] = useState<SecondYellowAlert | null>(null);
+  const [yellowCountdown, setYellowCountdown] = useState(8);
+  const secondYellowAlertRef = useRef<SecondYellowAlert | null>(null);
+  const secondYellowAutoRedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const injurySubAutoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [injurySubCountdown, setInjurySubCountdown] = useState(5);
+  const [coachMoment, setCoachMoment] = useState<CoachMoment | null>(null);
+  const coachMomentDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCoachMomentEventIdRef = useRef<string | null>(null);
+
+  // Assistente técnico
+  const [assistantEvent, setAssistantEvent] = useState<AssistantEvent | null>(null);
+  const shownAssistantEventsRef = useRef(new Set<string>());
+  const halftimeForceEndRef = useRef<(() => void) | null>(null);
+  const lastAssistantShownMsRef = useRef<number>(0);
+  /** Timestamp real de quando o loop de jogo arrancou — garante que o assistente
+   *  nunca dispara nos primeiros segundos mesmo que o estado de fadiga já seja alto. */
+  const matchLoopStartMsRef = useRef<number>(0);
+  const [tacticalFeedback, setTacticalFeedback] = useState<string | null>(null);
+  const tacticalFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEmotionalMinuteRef = useRef<number>(-1);
+  const processedNarrativeEventIdRef = useRef<Set<string>>(new Set());
+
+  // sync ref for use inside interval
+  useEffect(() => { secondYellowAlertRef.current = secondYellowAlert; }, [secondYellowAlert]);
 
   const htRef = useRef(0);
   const htTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -247,17 +255,117 @@ export function MatchQuick() {
   const [momentumAnimKey, setMomentumAnimKey] = useState<string | null>(null);
   const [feedWindowStart, setFeedWindowStart] = useState(0);
   const lastFeedHeadIdRef = useRef<string | undefined>(undefined);
+  const injurySubOpenForRef = useRef<string | null>(null);
   const [preGoalActive, setPreGoalActive] = useState(false);
   const [goalScorerRevealDone, setGoalScorerRevealDone] = useState(false);
-  const [quickPreStart, setQuickPreStart] = useState<QuickPreStartPhase>('c3');
+
+  // Animações de eventos
+  const [scoreShakeKey, setScoreShakeKey] = useState(0);
+  const [gloveVisible, setGloveVisible] = useState(false);
+  const lastShakeEventIdRef = useRef<string | null>(null);
+  const [quickPreStart, setQuickPreStart] = useState<QuickPreStartPhase>('ready');
   const preKickoffTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [fcGate, setFcGate] = useState<'off' | 'pending' | 'ok' | 'fail'>('off');
+  const fcSeedRef = useRef<number | undefined>(undefined);
+  const soundEnabled = useGameStore((s) => s.userSettings.soundEnabled);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [soundStarted, setSoundStarted] = useState(false);
 
   useEffect(() => {
+    if (!fcParam) {
+      setFcGate('off');
+      fcSeedRef.current = undefined;
+      return;
+    }
+    let cancelled = false;
+    setFcGate('pending');
+    void (async () => {
+      const row = await fetchFriendlyChallengeById(fcParam);
+      if (cancelled) return;
+      if (!row || row.status !== 'accepted') {
+        setFcGate('fail');
+        return;
+      }
+      const ok = await userParticipatesInChallenge(row);
+      if (cancelled || !ok) {
+        setFcGate('fail');
+        return;
+      }
+      fcSeedRef.current =
+        row.simulation_seed != null && Number.isFinite(Number(row.simulation_seed))
+          ? Math.floor(Number(row.simulation_seed))
+          : undefined;
+      setFcGate('ok');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fcParam]);
+
+  // Preload quick-match sound (do not autoplay). The user must press the button to start playback.
+  useEffect(() => {
+    if (!soundEnabled) return;
+    const a = new Audio('/test-pitch/quick-match-sound.mp3');
+    a.volume = 0.75;
+    a.loop = true; // will loop until kickoff
+    // keep reference for the button handler
+    audioRef.current = a;
+    // try to load the asset
+    try {
+      a.load();
+    } catch (e) {
+      // ignore
+    }
+    return () => {
+      try {
+        a.pause();
+        a.currentTime = 0;
+      } catch (e) {
+        // ignore
+      }
+      if (audioRef.current === a) audioRef.current = null;
+    };
+  }, [soundEnabled]);
+
+  // Stop/cleanup the audio once the pre-start sequence finishes and the match really begins (kickoff)
+  useEffect(() => {
+    if (quickPreStart === null && audioRef.current) {
+      try {
+        audioRef.current.loop = false;
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch (e) {
+        // ignore
+      }
+      setSoundStarted(false);
+    }
+  }, [quickPreStart]);
+
+  useEffect(() => {
+    if (fcGate === 'fail') {
+      navigate('/', { replace: true });
+    }
+  }, [fcGate, navigate]);
+
+  useEffect(() => {
+    if (fcParam && fcGate !== 'ok') return;
     finalizedRef.current = false;
     setSummary(null);
     htRef.current = 0;
     setHalfTimeUi(false);
     setHalfTimeTick(3);
+    setSecondYellowAlert(null);
+    setYellowCountdown(8);
+    if (secondYellowAutoRedRef.current) clearTimeout(secondYellowAutoRedRef.current);
+    setCoachMoment(null);
+    lastCoachMomentEventIdRef.current = null;
+    if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
+    setTacticalFeedback(null);
+    lastEmotionalMinuteRef.current = -1;
+    setAssistantEvent(null);
+    shownAssistantEventsRef.current = new Set();
+    processedNarrativeEventIdRef.current = new Set();
+    if (tacticalFeedbackTimerRef.current) clearTimeout(tacticalFeedbackTimerRef.current);
     freezeUntilRef.current = 0;
     lastSeenGoalEventIdRef.current = null;
     setMomentumAnimKey(null);
@@ -265,10 +373,14 @@ export function MatchQuick() {
     lastFeedHeadIdRef.current = undefined;
     setPreGoalActive(false);
     setGoalScorerRevealDone(false);
-    setQuickPreStart('c3');
+    setQuickPreStart('ready');
     preKickoffTimersRef.current.forEach(clearTimeout);
     preKickoffTimersRef.current = [];
-    dispatch({ type: 'START_LIVE_MATCH', mode: 'quick' });
+    dispatch({
+      type: 'START_LIVE_MATCH',
+      mode: 'quick',
+      ...(fcSeedRef.current != null ? { simulationSeed: fcSeedRef.current } : {}),
+    });
 
     const clearIv = () => {
       if (ivRef.current) {
@@ -283,6 +395,8 @@ export function MatchQuick() {
 
     const loop = () => {
       clearIv();
+      matchLoopStartMsRef.current = Date.now();
+      lastAssistantShownMsRef.current = Date.now(); // cooldown inicia no arranque real
       ivRef.current = setInterval(() => {
         const lm = getGameState().liveMatch;
         if (!lm || lm.phase !== 'playing') {
@@ -296,6 +410,67 @@ export function MatchQuick() {
         if (Date.now() < freezeUntilRef.current) {
           return;
         }
+        if (secondYellowAlertRef.current) {
+          return;
+        }
+
+        // ── Triggers do Assistente Técnico ───────────────────────────────
+        const shown = shownAssistantEventsRef.current;
+        const penaltyActive = lm.penalty?.stage === 'kick';
+        const now = Date.now();
+        const cooldownOk = now - lastAssistantShownMsRef.current > 10_000;
+        // Nenhum assistente nos primeiros 18s de jogo real (evita disparo imediato
+        // quando jogadores já carregam fadiga de partidas anteriores)
+        const matchWarmupOk = now - matchLoopStartMsRef.current > 18_000;
+
+        // Clear assistant when penalty activates
+        if (penaltyActive) {
+          setAssistantEvent(null);
+        }
+
+        if (!penaltyActive && cooldownOk && matchWarmupOk) {
+          // Min 15 — Como está o jogo?
+          if (lm.minute >= 15 && lm.minute <= 18 && !shown.has('min15_check')) {
+            shown.add('min15_check');
+            lastAssistantShownMsRef.current = Date.now();
+            setAssistantEvent({ kind: 'min15_check' });
+          }
+
+          // Min 25–40 — Risco de lesão
+          if (lm.minute >= 25 && lm.minute <= 40 && !shown.has('injury_warning')) {
+            const pitchPlayers = lm.homePlayers ?? [];
+            const outPlayer = pitchPlayers.find(p => p.fatigue >= 70);
+            if (outPlayer) {
+              const benchState = getGameState();
+              const pitchIdSet = new Set(pitchPlayers.map(p => p.playerId));
+              const benchPlayer = Object.values(benchState.players ?? {}).find(
+                p => !pitchIdSet.has(p.id) && p.outForMatches <= 0
+              );
+              shown.add('injury_warning');
+              lastAssistantShownMsRef.current = Date.now();
+              setAssistantEvent({
+                kind: 'injury_warning',
+                injuryOutPlayer: {
+                  name: outPlayer.name,
+                  pos: outPlayer.role ?? '—',
+                  fatigue: outPlayer.fatigue,
+                  playerId: outPlayer.playerId,
+                },
+                suggestedSubPlayer: benchPlayer
+                  ? { name: benchPlayer.name, pos: benchPlayer.pos ?? '—', playerId: benchPlayer.id }
+                  : undefined,
+              });
+            }
+          }
+
+          // Min 70 — O que fazemos agora?
+          if (lm.minute >= 70 && lm.minute <= 73 && !shown.has('min70_check')) {
+            shown.add('min70_check');
+            lastAssistantShownMsRef.current = Date.now();
+            setAssistantEvent({ kind: 'min70_check' });
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────
 
         if (lm.minute === 45 && htRef.current === 0) {
           htRef.current = 1;
@@ -303,16 +478,26 @@ export function MatchQuick() {
           htTimersRef.current.forEach(clearTimeout);
           htTimersRef.current = [];
           setHalfTimeUi(true);
-          setHalfTimeTick(3);
+          // Assistente do intervalo
+          const st = getGameState().liveMatch;
+          lastAssistantShownMsRef.current = Date.now();
+          setAssistantEvent({
+            kind: 'halftime',
+            currentFormation: lineupIds?.formation ?? '4-3-3',
+            subsUsed: st?.substitutionsUsed ?? 0,
+            subsMax: 3,
+          });
+          const endHalftime = () => {
+            htTimersRef.current.forEach(clearTimeout);
+            htTimersRef.current = [];
+            setHalfTimeUi(false);
+            setAssistantEvent(null);
+            htRef.current = 2;
+            loop();
+          };
+          halftimeForceEndRef.current = endHalftime;
           htTimersRef.current.push(
-            window.setTimeout(() => setHalfTimeTick(2), 1000),
-            window.setTimeout(() => setHalfTimeTick(1), 2000),
-            window.setTimeout(() => {
-              setHalfTimeUi(false);
-              setHalfTimeTick(3);
-              htRef.current = 2;
-              loop();
-            }, HALFTIME_MS),
+            window.setTimeout(endHalftime, HALFTIME_MS),
           );
           return;
         }
@@ -321,15 +506,18 @@ export function MatchQuick() {
       }, MS_PER_MINUTE);
     };
 
-    const t1 = QUICK_KICKOFF_COUNTDOWN_MS;
-    const t2 = QUICK_KICKOFF_COUNTDOWN_MS * 2;
-    const t3 = QUICK_KICKOFF_COUNTDOWN_MS * 3;
-    const tEnd = t3 + QUICK_KICKOFF_MESSAGE_MS;
+    const tPrelude = QUICK_KICKOFF_PRELUDE_MS;
+    const t3Start = tPrelude;
+    const t2Start = tPrelude + QUICK_KICKOFF_COUNTDOWN_MS;
+    const t1Start = tPrelude + QUICK_KICKOFF_COUNTDOWN_MS * 2;
+    const tKickoff = tPrelude + QUICK_KICKOFF_COUNTDOWN_MS * 3;
+    const tEnd = tKickoff + QUICK_KICKOFF_MESSAGE_MS;
 
     preKickoffTimersRef.current.push(
-      window.setTimeout(() => setQuickPreStart('c2'), t1),
-      window.setTimeout(() => setQuickPreStart('c1'), t2),
-      window.setTimeout(() => setQuickPreStart('kickoff'), t3),
+      window.setTimeout(() => setQuickPreStart('c3'), t3Start),
+      window.setTimeout(() => setQuickPreStart('c2'), t2Start),
+      window.setTimeout(() => setQuickPreStart('c1'), t1Start),
+      window.setTimeout(() => setQuickPreStart('kickoff'), tKickoff),
       window.setTimeout(() => {
         setQuickPreStart(null);
         loop();
@@ -343,7 +531,22 @@ export function MatchQuick() {
       preKickoffTimersRef.current.forEach(clearTimeout);
       preKickoffTimersRef.current = [];
     };
-  }, [session, dispatch]);
+  }, [session, dispatch, fcParam, fcGate]);
+
+  // Detecta chute defendido/bloqueado pelo texto do evento mais recente
+  useEffect(() => {
+    const top = live?.events[0];
+    if (!top || top.kind !== 'narrative') return;
+    if (top.id === lastShakeEventIdRef.current) return;
+    const t = top.text.toLowerCase();
+    const isSave = ['defende', 'salva', 'voou', 'bloqueou', 'punh', 'nega', 'trav'].some((kw) => t.includes(kw));
+    if (!isSave) return;
+    lastShakeEventIdRef.current = top.id;
+    setScoreShakeKey((k) => k + 1);
+    setGloveVisible(true);
+    const timer = setTimeout(() => setGloveVisible(false), 1400);
+    return () => clearTimeout(timer);
+  }, [live?.events]);
 
   useEffect(() => {
     const hint = live?.preGoalHint;
@@ -413,7 +616,7 @@ export function MatchQuick() {
     live?.preGoalHint?.durationMs,
   ]);
 
-  /** GameSpirit: overlay de golo/penálti — congela minutos e encadeia penálti. */
+  /** GameSpirit: overlay de golo/penalty — congela minutos e encadeia penalty. */
   useEffect(() => {
     const o = live?.spiritOverlay;
     if (!live || isBlockingNonQuickMatch(live) || live.phase !== 'playing' || !o) return;
@@ -433,7 +636,10 @@ export function MatchQuick() {
       if (cur.kind === 'penalty') {
         const p = st?.penalty;
         if (p?.stage === 'kick') {
-          dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve' } });
+          // Em quick mode: o PenaltyKickModal trata o kick interativamente — não auto-resolver aqui
+          if (st?.mode !== 'quick') {
+            dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve' } });
+          }
         } else if (p?.stage === 'result') {
           dispatch({ type: 'DISMISS_SPIRIT_OVERLAY' });
         } else {
@@ -470,9 +676,203 @@ export function MatchQuick() {
     return () => window.clearInterval(id);
   }, [live?.mode, live?.phase, session, summary]);
 
+  // Enforce quick-match card rules: direct red on injury, two yellows -> red.
+  const _quickEnforcedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    // reset when session (new match) starts
+    _quickEnforcedRef.current = new Set();
+  }, [session]);
+
+  useEffect(() => {
+    if (!live || live.phase !== 'playing' || isBlockingNonQuickMatch(live) || live.mode !== 'quick') return;
+    const events = live.events ?? [];
+    const yellowCount = new Map<string, number>();
+    for (const ev of events) {
+      if (!ev.playerId) continue;
+      // handle yellows
+      if (ev.kind === 'yellow_home' || ev.kind === 'yellow_away') {
+        const c = (yellowCount.get(ev.playerId) ?? 0) + 1;
+        yellowCount.set(ev.playerId, c);
+        if (c >= 2) {
+          const pid = ev.playerId;
+          if (!_quickEnforcedRef.current.has(pid) && !(live.sentOffPlayerIds ?? []).includes(pid)) {
+            _quickEnforcedRef.current.add(pid);
+            const pitchPlayer = pitch.find((p) => p.playerId === pid);
+            const entity = playersById[pid];
+            setSecondYellowAlert({
+              playerId: pid,
+              playerName: pitchPlayer?.name ?? entity?.name ?? 'Jogador',
+              playerNum: pitchPlayer?.num ?? entity?.num ?? 0,
+              playerPos: pitchPlayer?.pos ?? entity?.pos ?? '',
+              slotId: pitchPlayer?.slotId ?? '',
+            });
+          }
+        }
+      }
+  // injury -> direct red
+  if (String(ev.kind).startsWith('injury')) {
+        const pid = ev.playerId;
+        if (pid && !_quickEnforcedRef.current.has(pid) && !(live.sentOffPlayerIds ?? []).includes(pid)) {
+          dispatch({ type: 'QUICK_ENFORCE_CARD_RULES', playerId: pid, reason: 'injury_red' });
+          _quickEnforcedRef.current.add(pid);
+        }
+      }
+    }
+  }, [live?.events, live?.phase, live?.mode, dispatch]);
+
+  // Countdown + auto-red when 2nd yellow alert is shown
+  useEffect(() => {
+    if (!secondYellowAlert) return;
+    setYellowCountdown(5);
+    if (secondYellowAutoRedRef.current) clearTimeout(secondYellowAutoRedRef.current);
+
+    const start = Date.now();
+    const tickInterval = window.setInterval(() => {
+      const remaining = Math.ceil(Math.max(0, 5 - (Date.now() - start) / 1000));
+      setYellowCountdown(remaining);
+    }, 200);
+
+    secondYellowAutoRedRef.current = window.setTimeout(() => {
+      clearInterval(tickInterval);
+      dispatch({ type: 'QUICK_ENFORCE_CARD_RULES', playerId: secondYellowAlert.playerId, reason: 'two_yellows' });
+      setSecondYellowAlert(null);
+    }, 5000);
+
+    return () => {
+      clearInterval(tickInterval);
+      if (secondYellowAutoRedRef.current) clearTimeout(secondYellowAutoRedRef.current);
+    };
+  }, [secondYellowAlert?.playerId, dispatch]);
+
   useEffect(() => {
     setSubPickId('');
   }, [selected?.playerId]);
+
+  useEffect(() => {
+    const q = live?.quickInjurySub;
+    if (!q || live.phase !== 'playing' || halfTimeUi || summary !== null) {
+      if (!q) injurySubOpenForRef.current = null;
+      return;
+    }
+    if (injurySubOpenForRef.current === q.outPlayerId) return;
+    const ent = playersById[q.outPlayerId];
+    if (!ent) return;
+    injurySubOpenForRef.current = q.outPlayerId;
+    setSelected({
+      playerId: q.outPlayerId,
+      slotId: q.slotId,
+      name: q.name,
+      num: ent.num,
+      pos: ent.pos,
+      x: q.x,
+      y: q.y,
+      fatigue: Math.round(ent.fatigue),
+      role: roleFromPos(ent.pos),
+    });
+  }, [live?.quickInjurySub, live?.phase, halfTimeUi, summary, playersById]);
+
+  // Auto-close injury sub dialog após 5s — partida retoma sem substituição
+  useEffect(() => {
+    const q = live?.quickInjurySub;
+    if (!q || live?.phase !== 'playing' || halfTimeUi || summary !== null) {
+      if (injurySubAutoCloseRef.current) clearTimeout(injurySubAutoCloseRef.current);
+      setInjurySubCountdown(5);
+      return;
+    }
+    setInjurySubCountdown(5);
+    const start = Date.now();
+    const tickId = window.setInterval(() => {
+      setInjurySubCountdown(Math.ceil(Math.max(0, 5 - (Date.now() - start) / 1000)));
+    }, 200);
+    injurySubAutoCloseRef.current = window.setTimeout(() => {
+      clearInterval(tickId);
+      dispatch({ type: 'CANCEL_QUICK_INJURY_SUB' });
+      setSelected(null);
+    }, 5000);
+    return () => {
+      clearInterval(tickId);
+      if (injurySubAutoCloseRef.current) clearTimeout(injurySubAutoCloseRef.current);
+    };
+  }, [live?.quickInjurySub?.outPlayerId, live?.phase, halfTimeUi, summary, dispatch]);
+
+  // Feature 6 — estado emocional: mensagens no feed em momentos chave da partida
+  useEffect(() => {
+    if (!live || live.phase !== 'playing' || isBlockingNonQuickMatch(live)) return;
+    const m = live.minute ?? 0;
+    const milestones = [30, 60, 75, 85];
+    const milestone = milestones.find((ms) => m >= ms && lastEmotionalMinuteRef.current < ms);
+    if (!milestone) return;
+    lastEmotionalMinuteRef.current = milestone;
+
+    const players = live.homePlayers ?? [];
+    const avgFatigue = players.length
+      ? players.reduce((s, p) => s + p.fatigue, 0) / players.length
+      : 0;
+    const diff = live.homeScore - live.awayScore;
+
+    let text = '';
+    if (avgFatigue > 78) {
+      text = `${m}' — Elenco visivelmente desgastado. Risco elevado de lesão e erros de concentração.`;
+    } else if (avgFatigue > 65) {
+      text = `${m}' — Jogadores já sentem o peso dos minutos. Substituições podem mudar a partida.`;
+    } else if (diff > 1) {
+      text = `${m}' — Moral em alta! O grupo joga com confiança após a vantagem no marcador.`;
+    } else if (diff < -1) {
+      text = `${m}' — Elenco pressionado pela desvantagem. Precisa de reação imediata.`;
+    } else if (diff === 0 && milestone >= 75) {
+      text = `${m}' — Empate nos minutos finais — quem arrisca mais pode vencer ou perder tudo.`;
+    }
+    if (text) dispatch({ type: 'ADD_LIVE_MATCH_EVENT', text, kind: 'narrative' });
+  }, [live?.minute, live?.phase, dispatch]);
+
+  // OpenAI narration: gols e cartões vermelhos
+  useEffect(() => {
+    if (!live || live.phase !== 'playing' || isBlockingNonQuickMatch(live)) return;
+    const top = live.events[0];
+    if (!top) return;
+    const KEY_KINDS = new Set(['goal_home', 'goal_away', 'red_home', 'red_away']);
+    if (!KEY_KINDS.has(top.kind ?? '')) return;
+    if (processedNarrativeEventIdRef.current.has(top.id)) return;
+    processedNarrativeEventIdRef.current.add(top.id);
+
+    const recentLines = live.events
+      .slice(1, 4)
+      .map((e) => e.text)
+      .filter(Boolean) as string[];
+
+    // Resolve player name from homePlayers for goal/red events
+    const playerEntity = top.playerId
+      ? live.homePlayers?.find((p) => p.playerId === top.playerId)
+      : undefined;
+
+    fetchKeyMomentNarration({
+      kind: top.kind as 'goal_home' | 'goal_away' | 'red_home' | 'red_away',
+      player: playerEntity?.name ?? undefined,
+      minute: live.minute ?? 0,
+      homeTeam: live.homeShort ?? 'Casa',
+      awayTeam: live.awayShort ?? 'Fora',
+      homeScore: live.homeScore,
+      awayScore: live.awayScore,
+      buildUp: top.goalBuildUp === 'counter' ? 'counter' : top.goalBuildUp === 'positional' ? 'positional' : undefined,
+      recentLines,
+    }).then((narration) => {
+      if (narration) {
+        dispatch({ type: 'ADD_LIVE_MATCH_EVENT', text: narration, kind: 'narrative' });
+      }
+    });
+  }, [live?.events, live?.phase, dispatch]);
+
+  // Coach Moment: abre painel não-bloqueante quando adversário marca
+  useEffect(() => {
+    if (!live || live.phase !== 'playing' || isBlockingNonQuickMatch(live)) return;
+    const top = live.events[0];
+    if (!top || top.kind !== 'goal_away') return;
+    if (lastCoachMomentEventIdRef.current === top.id) return;
+    lastCoachMomentEventIdRef.current = top.id;
+    if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
+    setCoachMoment({ eventId: top.id, homeScore: live.homeScore, awayScore: live.awayScore });
+    coachMomentDismissRef.current = window.setTimeout(() => setCoachMoment(null), 5_000);
+  }, [live?.events, live?.phase, live?.homeScore, live?.awayScore]);
 
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live)) return;
@@ -519,6 +919,26 @@ export function MatchQuick() {
   const homeStats = live?.homeStats ?? {};
   const pitch = live?.homePlayers ?? [];
 
+  // Força = SOMA dos overalls dos titulares em campo (atualiza a cada substituição/expulsão)
+  const homeForce = useMemo(() => {
+    const lineupMap = live?.matchLineupBySlot ?? {};
+    const pitchIds = Object.keys(lineupMap).length
+      ? Object.values(lineupMap)
+      : (live?.homePlayers ?? []).map((p) => p.playerId);
+    const sentOff = new Set(live?.sentOffPlayerIds ?? []);
+    return pitchIds
+      .filter((id) => !sentOff.has(id))
+      .map((id) => playersById[id])
+      .filter(Boolean)
+      .reduce((sum, ent) => sum + overallFromAttributes(ent!.attrs), 0);
+  }, [live?.matchLineupBySlot, live?.homePlayers, live?.sentOffPlayerIds, playersById]);
+
+  const awayForce = useMemo(() => {
+    const baseOvr = fixture.opponent.strength ?? 72;
+    const count = (live?.awayRoster ?? []).length || 11;
+    return baseOvr * count;
+  }, [live?.awayRoster, fixture.opponent.strength]);
+
   const eventsChronological = useMemo(() => [...(live?.events ?? [])].reverse(), [live?.events]);
 
   const awayRoster = useMemo(
@@ -535,11 +955,16 @@ export function MatchQuick() {
     const side = ev.kind === 'goal_home' ? 'home' : 'away';
     let scorerName = 'Marcador';
     let scorerNumber: number | undefined;
+    let scorerPortraitUrl: string | undefined;
     if (side === 'home' && ev.playerId) {
       const p = pitch.find((x) => x.playerId === ev.playerId);
       if (p) {
         scorerName = p.name;
         scorerNumber = p.num;
+      }
+      const entity = playersById[ev.playerId];
+      if (entity) {
+        scorerPortraitUrl = playerPortraitSrc(entity, 200, 200);
       }
     } else if (side === 'away' && ev.playerId) {
       const p = awayRoster.find((x) => x.id === ev.playerId);
@@ -558,6 +983,8 @@ export function MatchQuick() {
     return {
       scorerName,
       scorerNumber,
+      scorerPortraitUrl,
+      scorerPortraitSeed: ev.playerId ?? scorerName,
       minute: ev.minute,
       side,
       homeShort: live.homeShort,
@@ -567,7 +994,7 @@ export function MatchQuick() {
       goalBuildUp: ev.goalBuildUp,
       storyline,
     };
-  }, [live, pitch, awayRoster]);
+  }, [live, pitch, awayRoster, playersById]);
 
   const awayRanked = useMemo(() => {
     const hs = live?.homeScore ?? 0;
@@ -600,7 +1027,7 @@ export function MatchQuick() {
 
   /** Expulsos em partida rápida saem do `pitch` — mostrar no fim da lista com cartão vermelho. */
   const homeSentOffRows = useMemo(() => {
-    const ids = live?.sentOffPlayerIds ?? [];
+    const ids = [...new Set(live?.sentOffPlayerIds ?? [])];
     const seen = new Set(homeRanked.map((r) => r.player.playerId));
     const out: { playerId: string; num: number; name: string; pos: string }[] = [];
     for (const id of ids) {
@@ -613,15 +1040,13 @@ export function MatchQuick() {
     return out;
   }, [live?.sentOffPlayerIds, homeRanked, playersById]);
 
-  const fullAwayRosterRef = useMemo(
-    () => buildAwayQuickRoster(fixture.opponent, session),
-    [fixture.opponent, session],
-  );
-
+  /** Só jogadores que saíram do `awayRoster` após vermelho — baseline = snapshot no apito (reducer). */
   const awaySentOffRows = useMemo(() => {
+    const baseline = live?.awayRosterAtKickoff;
+    if (!baseline?.length) return [];
     const currentIds = new Set(awayRoster.map((p) => p.id));
-    return fullAwayRosterRef.filter((p) => !currentIds.has(p.id));
-  }, [fullAwayRosterRef, awayRoster]);
+    return baseline.filter((p) => !currentIds.has(p.id));
+  }, [live?.awayRosterAtKickoff, awayRoster]);
 
   const feedHomeNames = useMemo(() => pitch.map((p) => p.name).filter(Boolean), [pitch]);
   const feedAwayNames = useMemo(() => awayRoster.map((p) => p.name).filter(Boolean), [awayRoster]);
@@ -660,7 +1085,14 @@ export function MatchQuick() {
     !!(live?.spiritOverlay) ||
     preGoalActive ||
     Date.now() < freezeUntilRef.current;
-  const matchClock = useMatchClock(live?.footballElapsedSec ?? 0, clockFrozen, live?.phase);
+  const matchClock = (
+    <LiveMatchClockDisplay
+      elapsedSec={live?.footballElapsedSec ?? 0}
+      frozen={clockFrozen}
+      phase={live?.phase}
+      msPerMinute={MS_PER_MINUTE}
+    />
+  );
   const showBoard = summary === null;
 
   const momentumPressure = useMemo(() => {
@@ -682,21 +1114,126 @@ export function MatchQuick() {
   /** Mesmo easing do retorno ao centro pós-golo: desacelera ao aproximar do extremo. */
   const barEasing = 'ease-out';
 
+  const handleYellowSubstituteNow = () => {
+    if (!secondYellowAlert) return;
+    if (secondYellowAutoRedRef.current) clearTimeout(secondYellowAutoRedRef.current);
+    const pitchPlayer = pitch.find((p) => p.playerId === secondYellowAlert.playerId);
+    setSelected(
+      pitchPlayer ?? {
+        playerId: secondYellowAlert.playerId,
+        slotId: secondYellowAlert.slotId,
+        name: secondYellowAlert.playerName,
+        num: secondYellowAlert.playerNum,
+        pos: secondYellowAlert.playerPos,
+        x: 50,
+        y: 50,
+        fatigue: 0,
+        role: 'mid',
+      },
+    );
+    setSecondYellowAlert(null);
+  };
+
+  const handleYellowWaitVar = () => {
+    if (!secondYellowAlert) return;
+    if (secondYellowAutoRedRef.current) clearTimeout(secondYellowAutoRedRef.current);
+    dispatch({ type: 'QUICK_ENFORCE_CARD_RULES', playerId: secondYellowAlert.playerId, reason: 'two_yellows' });
+    setSecondYellowAlert(null);
+  };
+
+  const dismissCoachMoment = () => {
+    if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
+    setCoachMoment(null);
+  };
+
+  const COACH_ACTION_FEED: Record<string, string> = {
+    PRESSAO_ALTA: 'Treinador manda pressionar alto — equipe avança as linhas e aumenta a intensidade.',
+    TRANSICAO_RAPIDA: 'Instrução: transição rápida após recuperar a bola — menos toques, mais velocidade.',
+    JOGO_DIRETO: 'Equipe adota jogo direto — bolas longas e disputa de segunda bola.',
+    BLOCO_BAIXO: 'Time recua o bloco — linhas defensivas fechadas, menos espaço ao adversário.',
+    POSSE_CONTROLADA: 'Instrução de posse controlada — construção paciente pelo meio.',
+    CRIATIVO_LIVRE: 'Liberdade tática para o ataque — menos rigidez, mais improviso.',
+    JOGO_PELAS_LATERAIS: 'Equipe busca as laterais — amplitude e cruzamentos na área.',
+    balanced: 'Retorno ao equilíbrio tático — bloco organizado, transições controladas.',
+  };
+
+  const applyCoachAction = (presetId: string) => {
+    dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: presetId as import('@/tactics/playingStyle').PlayingStylePresetId });
+    const feedText = COACH_ACTION_FEED[presetId];
+    if (feedText && live?.phase === 'playing') {
+      dispatch({ type: 'ADD_LIVE_MATCH_EVENT', text: feedText, kind: 'narrative' });
+    }
+    dismissCoachMoment();
+  };
+
   const confirmForfeitQuick = () => {
     dispatch({ type: 'FORFEIT_MATCH', mode: 'quick' });
     setForfeitOpen(false);
     setSelected(null);
   };
 
+  if (fcParam && fcGate === 'pending') {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
+        <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">Amistoso online</p>
+        <p className="max-w-sm text-sm text-gray-400">A validar convite aceite…</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-24 md:flex-none">
+    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-52 md:flex-none">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <Link to="/" className="text-xs font-bold text-gray-500 hover:text-neon-yellow">
           ← Home
         </Link>
-        <span className="text-[10px] font-display font-bold uppercase tracking-widest text-gray-600">
-          Partida rápida
-        </span>
+        <div className="flex flex-col items-center gap-2">
+          <img
+            src="/brand/olefoot-logo-2.svg"
+            alt="Partida rápida"
+            className="h-[72px] sm:h-[96px] md:h-[120px] mx-auto"
+          />
+          {soundEnabled ? (
+            <div className="mt-1">
+              {!soundStarted ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const a = audioRef.current ?? new Audio('/test-pitch/quick-match-sound.mp3');
+                    a.loop = true;
+                    a.volume = 0.75;
+                    audioRef.current = a;
+                    void a.play().then(() => setSoundStarted(true)).catch(() => {
+                      // user gesture required: try again on click will work
+                      setSoundStarted(false);
+                    });
+                  }}
+                  className="text-[10px] font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-neon-yellow text-black"
+                >
+                  Tocar som
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const a = audioRef.current;
+                    if (a) {
+                      try {
+                        a.loop = false;
+                        a.pause();
+                        a.currentTime = 0;
+                      } catch (e) {}
+                    }
+                    setSoundStarted(false);
+                  }}
+                  className="text-[10px] font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-white/20 text-gray-200"
+                >
+                  Parar som
+                </button>
+              )}
+            </div>
+          ) : null}
+        </div>
         {showBoard && live?.phase === 'playing' && quickPreStart === null && (
           <button
             type="button"
@@ -741,7 +1278,7 @@ export function MatchQuick() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90"
             role="dialog"
             aria-modal="true"
             aria-labelledby="forfeit-quick-title"
@@ -751,7 +1288,7 @@ export function MatchQuick() {
               initial={{ scale: 0.96, y: 8 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 8 }}
-              className="glass-panel w-full p-6 border border-red-500/40 shadow-[0_0_40px_rgba(239,68,68,0.12)]"
+              className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 border border-red-500/60 shadow-[0_0_40px_rgba(239,68,68,0.2)]"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="forfeit-quick-title" className="font-display font-black text-xl text-white text-center uppercase tracking-wide">
@@ -782,14 +1319,90 @@ export function MatchQuick() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {secondYellowAlert && live?.phase === 'playing' && (
+          <motion.div
+            key="second-yellow-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[97] flex items-center justify-center p-4 bg-black/80"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="second-yellow-title"
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 8 }}
+              transition={{ type: 'spring', stiffness: 480, damping: 32 }}
+              className="w-full max-w-sm bg-zinc-900 border border-amber-400 rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(251,191,36,0.25)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-amber-400 px-6 py-4 flex items-center gap-3">
+                <div className="flex gap-1 shrink-0">
+                  <span className="inline-block w-5 h-7 rounded-[3px] bg-amber-500 shadow-inner" />
+                  <span className="inline-block w-5 h-7 rounded-[3px] bg-amber-500 shadow-inner" />
+                </div>
+                <div>
+                  <p className="font-display font-black text-xs uppercase tracking-widest text-amber-900">
+                    Segundo Amarelo
+                  </p>
+                  <p className="font-display font-black text-xl text-black leading-tight uppercase tracking-wide">
+                    {secondYellowAlert.playerNum} {secondYellowAlert.playerName}
+                  </p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 pt-5 pb-4 space-y-4">
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                  O VAR está a rever o lance. Tens{' '}
+                  <span className="font-display font-black text-amber-400 text-base tabular-nums">
+                    {yellowCountdown}s
+                  </span>{' '}
+                  para decidir — se não agires, o árbitro mostrará o vermelho.
+                </p>
+
+                {/* Countdown bar */}
+                <div className="w-full h-1.5 rounded-full bg-zinc-700 overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full bg-amber-400"
+                    animate={{ width: `${(yellowCountdown / 5) * 100}%` }}
+                    transition={{ duration: 0.2, ease: 'linear' }}
+                  />
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleYellowSubstituteNow}
+                    className="w-full py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-display font-black uppercase tracking-wider text-sm transition-colors"
+                  >
+                    Substituir agora — salvar o jogador
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleYellowWaitVar}
+                    className="w-full py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 font-display font-black uppercase tracking-wider text-sm transition-colors"
+                  >
+                    Aguardar VAR — risco de vermelho
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {halfTimeUi ? (
           <Fragment key="match-halftime">
             <MatchInterruptOverlay
               kind="halftime"
               title="Intervalo"
-              lines={['2.º tempo a seguir…']}
-              countdown={halfTimeTick}
+              lines={['Escolhe as alterações para o 2.º tempo']}
             />
           </Fragment>
         ) : live?.spiritOverlay?.kind === 'goal' &&
@@ -812,41 +1425,112 @@ export function MatchQuick() {
       </AnimatePresence>
 
       {showBoard && live && (
-        <div className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-hidden">
-          {quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
+        <div className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">
+          {quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
             <div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 backdrop-blur-[2px] pointer-events-none"
               aria-live="polite"
             >
-              <motion.span
-                key={quickPreStart}
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 520, damping: 28 }}
-                className="font-display font-black text-[min(22vw,7rem)] text-neon-yellow tabular-nums drop-shadow-[0_0_24px_rgba(234,255,0,0.35)]"
-              >
-                {quickPreStart === 'c3' ? 3 : quickPreStart === 'c2' ? 2 : 1}
-              </motion.span>
+              {quickPreStart === 'ready' ? (
+                <motion.span
+                  key="ready"
+                  initial={{ scale: 0.9, opacity: 0, letterSpacing: '0.05em' }}
+                  animate={{ scale: 1, opacity: 1, letterSpacing: '0.25em' }}
+                  exit={{ opacity: 0, scale: 1.05 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                  className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90 drop-shadow-[0_0_18px_rgba(234,255,0,0.35)]"
+                >
+                  Preparados?
+                </motion.span>
+              ) : (
+                <motion.span
+                  key={quickPreStart}
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 28 }}
+                  className="font-display font-black text-[min(22vw,7rem)] text-neon-yellow tabular-nums drop-shadow-[0_0_24px_rgba(234,255,0,0.35)]"
+                >
+                  {quickPreStart === 'c3' ? 3 : quickPreStart === 'c2' ? 2 : 1}
+                </motion.span>
+              )}
             </div>
           ) : null}
 
-          <MatchdayVersusWithClock
-            homeShort={live.homeShort}
-            awayShort={live.awayShort}
-            homeName={live.homeName}
-            awayName={live.awayName}
-            awaySeed={fixture.opponent.id}
-            clock={matchClock}
-            scoreboardCountdownSec={
-              halfTimeUi && halfTimeTick >= 1 && halfTimeTick <= 10 ? halfTimeTick : null
-            }
-            rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
-          />
+          <motion.div
+            key={scoreShakeKey}
+            animate={scoreShakeKey > 0 ? { x: [0, -7, 7, -5, 5, -3, 3, 0] } : { x: 0 }}
+            transition={{ duration: 0.42, ease: 'easeInOut' }}
+            className="relative"
+          >
+            <MatchdayVersusWithClock
+              homeShort={live.homeShort}
+              awayShort={live.awayShort}
+              homeName={live.homeName}
+              awayName={live.awayName}
+              awaySeed={fixture.opponent.id}
+              clock={matchClock}
+              scoreboardCountdownSec={null}
+              rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
+            />
+            <AnimatePresence>
+              {gloveVisible && (
+                <motion.span
+                  key="glove"
+                  initial={{ opacity: 0, scale: 0.4, y: 8 }}
+                  animate={{ opacity: 1, scale: 1.5, y: -8 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -24 }}
+                  transition={{ duration: 0.38 }}
+                  className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-3xl"
+                  style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.6))' }}
+                >
+                  🧤
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.div>
+          {/* Força dos times — soma dos overalls, atualiza a cada sub/expulsão */}
+          <div className="w-full max-w-[min(100%,44rem)] mx-auto mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Força — Casa</span>
+              <motion.span
+                key={homeForce}
+                initial={{ scale: 1.15, color: '#eaff00' }}
+                animate={{ scale: 1, color: '#eaff00' }}
+                transition={{ duration: 0.4 }}
+                className="font-display font-black text-2xl text-neon-yellow tabular-nums"
+              >
+                {homeForce || '—'}
+              </motion.span>
+            </div>
+            <div className="flex flex-col items-center gap-1 text-[9px] text-gray-600 font-bold uppercase tracking-wider">
+              <span>vs</span>
+              <div className="flex flex-col gap-0.5 text-center">
+                {(live.sentOffPlayerIds ?? []).length > 0 && (
+                  <span className="text-red-400">{(live.sentOffPlayerIds ?? []).length} exp.</span>
+                )}
+                {awaySentOffRows.length > 0 && (
+                  <span className="text-red-400/70">{awaySentOffRows.length} exp. vis.</span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Força — Vis.</span>
+              <motion.span
+                key={awayForce}
+                initial={{ scale: 1.15 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="font-display font-black text-2xl text-white tabular-nums"
+              >
+                {awayForce || '—'}
+              </motion.span>
+            </div>
+          </div>
           <div
             className={cn(
               'flex justify-center items-center gap-8 font-display font-black text-5xl transition-opacity',
-              quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1'
+              quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1'
                 ? 'opacity-35'
                 : 'opacity-100',
             )}
@@ -960,35 +1644,49 @@ export function MatchQuick() {
                     COMEÇA A PARTIDA
                   </p>
                 </div>
-              ) : quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
+              ) : quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
                 <div className="flex items-center justify-center min-h-[4.5rem]">
                   <p className="text-[11px] text-gray-500 text-center font-medium">Feed ao vivo após o apito…</p>
                 </div>
               ) : (
                 <AnimatePresence initial={false} mode="popLayout">
-                  {feedVisibleEvents.map((e) => (
-                    <motion.div
-                      key={e.id}
-                      layout="position"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -8 }}
-                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      className={cn(
-                        'text-[11px] text-gray-300 leading-relaxed rounded-md px-2 py-1.5 border border-white/6',
-                        quickFeedLineClass(e.kind),
-                      )}
-                    >
-                      {renderQuickFeedRichText(e.text, {
-                        homeShort: live.homeShort,
-                        awayShort: live.awayShort,
-                        homeNames: feedHomeNames,
-                        awayNames: feedAwayNames,
-                        homeClassName: 'text-neon-yellow',
-                        awayClassName: 'text-gray-100',
-                      })}
-                    </motion.div>
-                  ))}
+                  {feedVisibleEvents.map((e) => {
+                    const isYellow = e.kind === 'yellow_home' || e.kind === 'yellow_away';
+                    const isRed = e.kind === 'red_home' || e.kind === 'red_away';
+                    const isCard = isYellow || isRed;
+                    const cardGlow = isRed
+                      ? ['0 0 0 2px #ef4444cc', '0 0 10px 3px #ef444466', '0 0 0 0px transparent']
+                      : isYellow
+                        ? ['0 0 0 2px #fbbf24cc', '0 0 10px 3px #fbbf2466', '0 0 0 0px transparent']
+                        : undefined;
+                    return (
+                      <motion.div
+                        key={e.id}
+                        layout="position"
+                        initial={{ opacity: 0, x: 44 }}
+                        animate={
+                          isCard
+                            ? { opacity: 1, x: 0, boxShadow: cardGlow }
+                            : { opacity: 1, x: 0 }
+                        }
+                        exit={{ opacity: 0, x: -10, transition: { duration: 0.18 } }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                        className={cn(
+                          'text-[11px] text-gray-300 leading-relaxed rounded-md px-2 py-1.5 border border-white/6',
+                          quickFeedLineClass(e.kind),
+                        )}
+                      >
+                        {renderQuickFeedRichText(e.text, {
+                          homeShort: live.homeShort,
+                          awayShort: live.awayShort,
+                          homeNames: feedHomeNames,
+                          awayNames: feedAwayNames,
+                          homeClassName: 'text-neon-yellow',
+                          awayClassName: 'text-gray-100',
+                        })}
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
               )}
             </div>
@@ -998,7 +1696,7 @@ export function MatchQuick() {
 
       {showBoard && live && (
         <div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 sm:gap-3 md:gap-4 items-start w-full">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1.5 sm:gap-3 md:gap-4 items-start w-full">
             <div className="space-y-2 min-w-0">
               <div className="flex items-center justify-between border-b border-neon-yellow/30 pb-2 gap-2">
                 <MatchdayLineupColumnTitle
@@ -1008,7 +1706,7 @@ export function MatchQuick() {
                 />
                 <span className="text-[9px] text-gray-500 shrink-0">Casa</span>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5 sm:gap-2">
                 {homeRanked.map(({ player: p, impact }, idx) => {
                   const top = idx < 3;
                   return (
@@ -1020,29 +1718,50 @@ export function MatchQuick() {
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                       onClick={() => setSelected(p)}
                       className={cn(
-                        'w-full text-left glass-panel p-2.5 sm:p-3 border flex items-center justify-between gap-2 rounded-lg',
+                        'w-full text-left glass-panel p-1.5 sm:p-3 border flex items-center justify-between gap-1 sm:gap-2 rounded-lg',
                         selected?.playerId === p.playerId
                           ? 'border-neon-yellow bg-neon-yellow/10'
-                          : top
-                            ? 'border-neon-yellow/50 bg-neon-yellow/[0.06] shadow-[0_0_14px_rgba(234,255,0,0.12)]'
-                            : 'border-white/10',
+                          : p.fatigue >= 68
+                            ? 'border-orange-400/60 bg-orange-950/20'
+                            : top
+                              ? 'border-neon-yellow/50 bg-neon-yellow/[0.06] shadow-[0_0_14px_rgba(234,255,0,0.12)]'
+                              : 'border-white/10',
                       )}
                     >
-                      <span className="text-[10px] font-display font-black text-gray-500 w-5 shrink-0 tabular-nums">
+                      <span className="text-[9px] font-display font-black text-gray-500 w-4 shrink-0 tabular-nums">
                         {idx + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs sm:text-sm text-white truncate flex items-center min-w-0">
+                        <div className="font-bold text-[10px] sm:text-sm text-white truncate flex items-center min-w-0">
                           <span className="truncate">
                             {p.num} {p.name}
                           </span>
                           <PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />
                         </div>
-                        <div className="text-[9px] sm:text-[10px] text-gray-500">
-                          {p.pos} • {Math.round(p.fatigue)}% cond.
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <div className="text-[8px] sm:text-[10px] text-gray-500 truncate flex items-center gap-1.5">
+                            <span>{p.pos}</span>
+                            <span className="text-white/30">•</span>
+                            <span className={cn(
+                              'font-bold tabular-nums',
+                              p.fatigue >= 80 ? 'text-red-400' : p.fatigue >= 60 ? 'text-orange-400' : 'text-gray-400',
+                            )}>
+                              {Math.round(p.fatigue)}% CANSAÇO
+                            </span>
+                          </div>
+                          {/* Barra de cansaço */}
+                          <div className="h-1 w-full max-w-[4rem] rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-all duration-700',
+                                p.fatigue >= 80 ? 'bg-red-500' : p.fatigue >= 60 ? 'bg-orange-400' : 'bg-emerald-500',
+                              )}
+                              style={{ width: `${Math.min(100, p.fatigue)}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="text-[10px] sm:text-xs font-display font-bold text-neon-yellow shrink-0 tabular-nums">
+                      <div className="text-[9px] sm:text-xs font-display font-bold text-neon-yellow shrink-0 tabular-nums">
                         {impact.toFixed(2)}
                       </div>
                     </motion.button>
@@ -1078,11 +1797,11 @@ export function MatchQuick() {
             </div>
 
             <div
-              className="flex flex-col items-center justify-center shrink-0 self-stretch w-8 sm:w-11 md:w-14 py-2 sm:py-6 select-none"
+              className="flex flex-col items-center justify-center shrink-0 self-stretch w-5 sm:w-10 md:w-14 py-2 sm:py-6 select-none"
               aria-hidden
             >
               <div className="hidden sm:block w-px flex-1 min-h-6 bg-gradient-to-b from-transparent via-neon-yellow/35 to-transparent" />
-              <span className="font-display font-black text-[10px] sm:text-sm md:text-lg text-neon-yellow/90 italic tracking-tighter leading-none py-2 flex flex-col items-center sm:hidden">
+              <span className="font-display font-black text-[8px] text-neon-yellow/90 italic tracking-tighter leading-none py-1 flex flex-col items-center sm:hidden">
                 <span>V</span>
                 <span>S</span>
               </span>
@@ -1101,7 +1820,7 @@ export function MatchQuick() {
                 />
                 <span className="text-[9px] text-gray-500 shrink-0 text-right">Visitante (IA)</span>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5 sm:gap-2">
                 {awayRanked.map((p, idx) => {
                   const top = idx < 3;
                   return (
@@ -1117,19 +1836,19 @@ export function MatchQuick() {
                           : 'border-white/10',
                       )}
                     >
-                      <span className="text-[10px] font-display font-black text-gray-500 w-5 shrink-0 tabular-nums">
+                      <span className="text-[9px] font-display font-black text-gray-500 w-4 shrink-0 tabular-nums">
                         {idx + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs sm:text-sm text-white truncate flex items-center min-w-0">
+                        <div className="font-bold text-[10px] sm:text-sm text-white truncate flex items-center min-w-0">
                           <span className="truncate">
                             {p.num} {p.name}
                           </span>
                           <PlayerEventStrip badges={awayEventBadges.get(p.id) ?? []} />
                         </div>
-                        <div className="text-[9px] sm:text-[10px] text-gray-500">{p.pos}</div>
+                        <div className="text-[8px] sm:text-[10px] text-gray-500 truncate">{p.pos}</div>
                       </div>
-                      <div className="text-[10px] sm:text-xs font-display font-bold text-gray-200 shrink-0 tabular-nums">
+                      <div className="text-[9px] sm:text-xs font-display font-bold text-gray-200 shrink-0 tabular-nums">
                         {p.impact.toFixed(2)}
                       </div>
                     </motion.div>
@@ -1172,64 +1891,274 @@ export function MatchQuick() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-black/90"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sub-quick-title"
-          onClick={() => setSelected(null)}
+          onClick={() => {
+            if (!live?.quickInjurySub) setSelected(null);
+          }}
         >
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="glass-panel w-full max-w-md p-5 border border-neon-yellow/25 shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+            className="w-full max-w-md bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-[0_0_50px_rgba(0,0,0,0.95)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="sub-quick-title" className="font-display font-black text-lg text-white uppercase tracking-wide">
-              Substituição
-            </h2>
-            <p className="text-sm text-gray-400 mt-2">Sai: {selected.name}</p>
-            <label className="block mt-4 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-              Entra (banco)
-            </label>
-            <select
-              value={subPickId}
-              onChange={(e) => setSubPickId(e.target.value)}
-              className="mt-1.5 w-full bg-black/50 border border-white/15 rounded-lg px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
-            >
-              <option value="">— Escolher jogador —</option>
-              {benchCards.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.num} {c.name}
-                </option>
-              ))}
-            </select>
-            <div className="mt-5 flex flex-col gap-2">
-              <button
-                type="button"
-                disabled={!subPickId}
-                className="w-full py-3 rounded-xl bg-neon-yellow text-black font-display font-black uppercase tracking-wider text-sm disabled:opacity-40 disabled:pointer-events-none"
-                onClick={() => {
-                  if (!subPickId) return;
-                  dispatch({
-                    type: 'MATCH_SUBSTITUTE',
-                    outPlayerId: selected.playerId,
-                    inPlayerId: subPickId,
-                  });
-                  setSelected(null);
-                }}
-              >
-                Confirmar troca
-              </button>
-              <button
-                type="button"
-                className="w-full py-3 rounded-xl border border-white/20 text-gray-300 font-bold text-sm"
-                onClick={() => setSelected(null)}
-              >
-                Cancelar
-              </button>
+            {/* Header colorido por tipo */}
+            {live?.quickInjurySub ? (() => {
+              const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
+              const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
+              return (
+                <div className={cn('px-5 py-4 flex items-center justify-between gap-3', isGrave ? 'bg-red-700' : 'bg-amber-500')}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{isGrave ? '🚑' : '⚠️'}</span>
+                    <div>
+                      <p className={cn('font-display font-black text-xs uppercase tracking-widest', isGrave ? 'text-red-200' : 'text-amber-900')}>
+                        {isGrave ? 'Lesão grave' : 'Lesão leve'}
+                      </p>
+                      <p className={cn('font-display font-black text-lg leading-tight', isGrave ? 'text-white' : 'text-black')}>
+                        {selected.num} {selected.name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={cn('font-display font-black text-3xl tabular-nums', isGrave ? 'text-red-200' : 'text-amber-900')}>
+                    {injurySubCountdown}s
+                  </div>
+                </div>
+              );
+            })() : (
+              <div className="bg-zinc-800 px-5 py-4 flex items-center gap-3 border-b border-zinc-700">
+                <span className="text-2xl">🔄</span>
+                <div>
+                  <p className="font-display font-black text-xs uppercase tracking-widest text-zinc-400">Substituição</p>
+                  <p className="font-display font-black text-lg text-white leading-tight">{selected.num} {selected.name} sai</p>
+                </div>
+              </div>
+            )}
+
+            <div className="p-5 space-y-4">
+              {live?.quickInjurySub ? (() => {
+                const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
+                const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
+                return (
+                  <p className="text-sm leading-relaxed" style={{ color: isGrave ? '#fca5a5' : '#fcd34d' }}>
+                    {isGrave
+                      ? `Lesão grave — ${selected.name} não pode continuar. Escolhe o substituto obrigatoriamente.`
+                      : `Lesão leve — podes substituir ou arriscar que ${selected.name} continue em campo.`}
+                  </p>
+                );
+              })() : null}
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Entra (banco)
+                </label>
+                <select
+                  value={subPickId}
+                  onChange={(e) => setSubPickId(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                >
+                  <option value="">— Escolher jogador —</option>
+                  {benchCards.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.num} {c.name} · {c.pos} · {c.ovr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {live?.quickInjurySub && benchCards.length === 0 ? (
+                <p className="text-sm text-red-300">
+                  Não há jogadores elegíveis no banco. Termina a partida ou joga com menos.
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={!subPickId}
+                  className="w-full py-3 rounded-xl bg-neon-yellow text-black font-display font-black uppercase tracking-wider text-sm disabled:opacity-40 disabled:pointer-events-none"
+                  onClick={() => {
+                    if (!subPickId) return;
+                    dispatch({ type: 'MATCH_SUBSTITUTE', outPlayerId: selected.playerId, inPlayerId: subPickId });
+                    setSelected(null);
+                  }}
+                >
+                  Confirmar substituição
+                </button>
+
+                {/* Opção "Arriscar" só para lesão leve */}
+                {live?.quickInjurySub && (() => {
+                  const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
+                  const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
+                  if (isGrave) return null;
+                  return (
+                    <button
+                      type="button"
+                      className="w-full py-3 rounded-xl bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 text-amber-300 font-display font-black uppercase tracking-wider text-sm transition-colors"
+                      onClick={() => {
+                        dispatch({ type: 'CANCEL_QUICK_INJURY_SUB' });
+                        setSelected(null);
+                      }}
+                    >
+                      Arriscar — continua em campo
+                    </button>
+                  );
+                })()}
+
+                {!live?.quickInjurySub ? (
+                  <button
+                    type="button"
+                    className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-300 font-bold text-sm transition-colors"
+                    onClick={() => setSelected(null)}
+                  >
+                    Cancelar
+                  </button>
+                ) : null}
+              </div>
             </div>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* Coach Moment — painel não-bloqueante, desliza do fundo */}
+      <AnimatePresence>
+        {coachMoment && live?.phase === 'playing' && !summary && (
+          <motion.div
+            key={`coach-moment-${coachMoment.eventId}`}
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            className="fixed bottom-[5.5rem] left-0 right-0 z-[80] p-3 sm:p-4 md:bottom-4"
+            aria-live="polite"
+          >
+            <div className="mx-auto max-w-lg bg-black border border-zinc-800 rounded-2xl overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.95)]">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-zinc-800 border-b border-zinc-700">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <p className="font-display font-black text-[10px] uppercase tracking-widest text-zinc-300">
+                    Momento do Treinador
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <p className="text-[10px] text-zinc-500 font-medium">
+                    {coachMoment.awayScore > coachMoment.homeScore
+                      ? `Estás a perder ${coachMoment.homeScore}–${coachMoment.awayScore}`
+                      : coachMoment.awayScore === coachMoment.homeScore
+                        ? `Empate ${coachMoment.homeScore}–${coachMoment.awayScore} — pressão adversária`
+                        : `${coachMoment.homeScore}–${coachMoment.awayScore}`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={dismissCoachMoment}
+                    className="text-zinc-500 hover:text-zinc-200 transition-colors text-lg leading-none"
+                    aria-label="Fechar"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="px-4 py-3 space-y-1.5">
+                <p className="text-[10px] text-zinc-400 mb-2">Escolhe a reação tática — a partida continua:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applyCoachAction('PRESSAO_ALTA')}
+                    className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-red-950 hover:bg-red-900 border border-red-700 text-white transition-colors text-center"
+                  >
+                    <span className="text-lg leading-none">🔥</span>
+                    <span className="font-display font-black text-[10px] uppercase tracking-wide leading-tight">
+                      Pressão alta
+                    </span>
+                    <span className="text-[9px] text-red-300/80">+agressividade, +risco</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyCoachAction('TRANSICAO_RAPIDA')}
+                    className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-blue-950 hover:bg-blue-900 border border-blue-700 text-white transition-colors text-center"
+                  >
+                    <span className="text-lg leading-none">⚡</span>
+                    <span className="font-display font-black text-[10px] uppercase tracking-wide leading-tight">
+                      Transição rápida
+                    </span>
+                    <span className="text-[9px] text-blue-300/80">contra-ataque direto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyCoachAction('JOGO_DIRETO')}
+                    className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-white transition-colors text-center"
+                  >
+                    <span className="text-lg leading-none">🎯</span>
+                    <span className="font-display font-black text-[10px] uppercase tracking-wide leading-tight">
+                      Jogo direto
+                    </span>
+                    <span className="text-[9px] text-emerald-300/80">vertical, segunda bola</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Assistente Técnico ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {assistantEvent && !summary && (
+          <AssistantPanel
+            key={assistantEvent.kind}
+            event={assistantEvent}
+            onDismiss={() => setAssistantEvent(null)}
+            onApplyPreset={(presetId) => {
+              applyCoachAction(presetId);
+              setAssistantEvent(null);
+            }}
+            onFormationChange={(formation) => {
+              dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formation } as any);
+            }}
+            onConfirmSub={(outPlayerId, inPlayerId) => {
+              dispatch({
+                type: 'MATCH_SUBSTITUTE',
+                outPlayerId,
+                inPlayerId,
+                slotId: live?.matchLineupBySlot
+                  ? Object.entries(live.matchLineupBySlot).find(([, id]) => id === outPlayerId)?.[0] ?? ''
+                  : '',
+              } as any);
+              setAssistantEvent(null);
+            }}
+            onOpenSubs={() => {
+              setAssistantEvent(null);
+              const firstPlayer = live?.homePlayers?.[0];
+              if (firstPlayer) setSelected(firstPlayer);
+            }}
+            onStartSecondHalf={() => {
+              halftimeForceEndRef.current?.();
+              setAssistantEvent(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* FAB do assistente — visível durante a partida, oculto no resumo */}
+      {live?.phase === 'playing' && !summary && (
+        <AssistantFab
+          hasPending={assistantEvent !== null}
+          onClick={() => {
+            if (!assistantEvent && !halfTimeUi) {
+              // Reabre o último sugerido (min15/min70) ou abre min70 se depois dos 60'
+              const min = live?.minute ?? 0;
+              if (min >= 60 && !shownAssistantEventsRef.current.has('min70_check_manual')) {
+                shownAssistantEventsRef.current.add('min70_check_manual');
+                setAssistantEvent({ kind: 'min70_check' });
+              }
+            }
+          }}
+        />
       )}
 
       {summary && (
@@ -1282,6 +2211,39 @@ export function MatchQuick() {
           </div>
         </motion.div>
       )}
+
+      {/* ─── Penalty Kick Modal ─────────────────────────────────────────── */}
+      {live?.penalty?.stage === 'kick' && live?.phase === 'playing' && live?.penalty && (
+        <PenaltyKickModal
+          key={`penalty-${live.penalty.takerId ?? live.penalty.takerName ?? 'anon'}`}
+          penalty={live.penalty}
+          homePlayers={live.homePlayers ?? []}
+          opponentStrength={fixture?.opponent?.strength ?? 50}
+          takerReady={Boolean(live.penalty.takerId)}
+          homeScore={live.homeScore}
+          awayScore={live.awayScore}
+          homeShort={live.homeShort ?? ''}
+          awayShort={live.awayShort ?? fixture?.opponent?.shortName ?? ''}
+          minute={live.minute ?? 0}
+          takerPortraitUrl={(() => {
+            const takerId = live.penalty.takerId;
+            const entity = takerId ? playersById[takerId] : undefined;
+            return entity ? playerPortraitSrc(entity, 200, 200) : undefined;
+          })()}
+          onPickTaker={(playerId, name) => {
+            dispatch({ type: 'PENALTY_SET_TAKER', playerId, name } as any);
+          }}
+          onResolve={(rng) => {
+            // 2s com placar visível antes de retomar o jogo
+            window.setTimeout(() => {
+              dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve', rng } });
+            }, 2000);
+          }}
+        />
+      )}
+
+      {/* Espaçador de segurança — garante rolagem confortável acima da nav bar */}
+      <div className="h-24 shrink-0" aria-hidden />
     </div>
   );
 }

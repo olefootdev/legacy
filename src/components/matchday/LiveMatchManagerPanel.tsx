@@ -1,5 +1,9 @@
-import { useMemo, useState } from 'react';
-import { LayoutGrid, SlidersHorizontal, UserMinus, UserPlus, Users } from 'lucide-react';
+import { memo, useEffect, useMemo, useState } from 'react';
+import {
+  CheckCircle2, SlidersHorizontal, UserMinus, UserPlus, Users,
+  Shield, Zap, Clock, Flame, Crosshair, Swords, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import { issueManagerCommand } from '@/voiceCommand/managerCommandBus';
 import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
@@ -7,6 +11,7 @@ import { FORMATION_SCHEME_LIST, slotsForScheme } from '@/match-engine/formations
 import type { FormationSchemeId } from '@/match-engine/types';
 import {
   STYLE_PRESETS,
+  PRESET_LABEL_PT,
   redistributeStylePoints,
   type PlayingStylePresetId,
   type StyleAxisKey,
@@ -29,18 +34,20 @@ const SLOT_LABEL_PT: Record<string, string> = {
 
 const QUICK_PRESETS: { id: PlayingStylePresetId; label: string }[] = [
   { id: 'balanced', label: 'Equilíbrio' },
-  { id: 'vertical_transition', label: 'Transição' },
-  { id: 'wide_crossing', label: 'Largura / cruz.' },
-  { id: 'low_block_counter', label: 'Bloco + contra' },
-  { id: 'direct_long_ball', label: 'Jogo direto' },
-  { id: 'tiki_positional', label: 'Posicional' },
+  { id: 'POSSE_CONTROLADA', label: 'Posse' },
+  { id: 'PRESSAO_ALTA', label: 'Pressão' },
+  { id: 'TRANSICAO_RAPIDA', label: 'Transição' },
+  { id: 'BLOCO_BAIXO', label: 'Bloco' },
+  { id: 'JOGO_PELAS_LATERAIS', label: 'Alas' },
+  { id: 'JOGO_DIRETO', label: 'Direto' },
+  { id: 'CRIATIVO_LIVRE', label: 'Criativo' },
 ];
 
 function slotLabel(slotId: string): string {
   return SLOT_LABEL_PT[slotId] ?? slotId.toUpperCase();
 }
 
-export function LiveMatchManagerPanel({
+export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
   homeShort,
   awayShort,
   homePlayers,
@@ -54,9 +61,6 @@ export function LiveMatchManagerPanel({
   playersById: Record<string, PlayerEntity>;
 }) {
   const dispatch = useGameDispatch();
-  const tacticalMentality = useGameStore((s) => s.manager.tacticalMentality);
-  const defensiveLine = useGameStore((s) => s.manager.defensiveLine);
-  const tempo = useGameStore((s) => s.manager.tempo);
   const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
   const liveMatch = useGameStore((s) => s.liveMatch);
@@ -65,6 +69,15 @@ export function LiveMatchManagerPanel({
   const [subOutId, setSubOutId] = useState('');
   const [subInId, setSubInId] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
+  /** Formação selecionada pelo treinador mas ainda NÃO aplicada — aguarda IMPLEMENTAR. */
+  const [pendingScheme, setPendingScheme] = useState<FormationSchemeId | null>(null);
+
+  // Se a formação em vigor mudar por fora (ex.: meio-tempo), descarta pendente resolvido.
+  useEffect(() => {
+    if (pendingScheme && pendingScheme === formationScheme) {
+      setPendingScheme(null);
+    }
+  }, [formationScheme, pendingScheme]);
 
   const orderedHome = useMemo(() => {
     const order = slotsForScheme(formationScheme);
@@ -89,13 +102,9 @@ export function LiveMatchManagerPanel({
   const subsUsed = liveMatch?.substitutionsUsed ?? 0;
   const subsLeft = Math.max(0, maxSubs - subsUsed);
 
-  const setSlider = (partial: { tacticalMentality?: number; defensiveLine?: number; tempo?: number }) => {
-    dispatch({ type: 'SET_MANAGER_SLIDERS', partial });
-  };
-
   const applyPreset = (presetId: PlayingStylePresetId) => {
     dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId });
-    setFeedback(`Padrão aplicado: ${presetId.replaceAll('_', ' ')}`);
+    setFeedback(`Padrão: ${PRESET_LABEL_PT[presetId]}`);
     window.setTimeout(() => setFeedback(null), 2400);
   };
 
@@ -111,11 +120,23 @@ export function LiveMatchManagerPanel({
     window.setTimeout(() => setFeedback(null), 2000);
   };
 
-  const applyFormation = (scheme: FormationSchemeId) => {
-    if (scheme === formationScheme) return;
-    dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: scheme });
-    setFeedback(`Formação: ${scheme}`);
+  const selectFormation = (scheme: FormationSchemeId) => {
+    if (scheme === formationScheme) {
+      // Clicar novamente na atual cancela o rascunho pendente.
+      setPendingScheme(null);
+      return;
+    }
+    setPendingScheme(scheme);
+    setFeedback(`Rascunho: ${scheme} — clica IMPLEMENTAR`);
     window.setTimeout(() => setFeedback(null), 2600);
+  };
+
+  const implementFormation = () => {
+    if (!pendingScheme) return;
+    dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: pendingScheme });
+    setFeedback(`Implementado: ${pendingScheme} — time atuando na nova formação`);
+    setPendingScheme(null);
+    window.setTimeout(() => setFeedback(null), 3000);
   };
 
   const doSubstitution = () => {
@@ -197,148 +218,73 @@ export function LiveMatchManagerPanel({
         </p>
       ) : null}
 
-      {/* 1. Padrão de jogo */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Padrão de jogo</p>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_PRESETS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => applyPreset(id)}
-              className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors',
-                presetActive === id
-                  ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
-                  : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Ajuste fino (estilo)</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('pressing', 6)}
-          >
-            + Pressão
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('width', 6)}
-          >
-            + Largura
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('verticality', 6)}
-          >
-            + Vertical
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('riskTaking', 5)}
-          >
-            + Risco
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('compactness', 6)}
-          >
-            + Compac.
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('defensiveBlock', 5)}
-          >
-            Bloco recua
-          </button>
-        </div>
-      </div>
+      {/* 1. Action Cards — mesmos verbos da voz. Clicar = emitir como se falasse. */}
+      <LiveActionCards
+        onFire={(label) => {
+          setFeedback(`📨 "${label}"`);
+          window.setTimeout(() => setFeedback(null), 2000);
+        }}
+      />
+
+      {/* Ajuste fino legado — mantido escondido pra ajustes táticos detalhados. */}
+      <LegacyFineTune
+        presetActive={presetActive}
+        onApplyPreset={applyPreset}
+        onBumpAxis={bumpAxis}
+      />
 
       {/* 2. Formação */}
       <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Formação</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Formação</p>
+          {pendingScheme ? (
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+              Rascunho: {pendingScheme}
+            </span>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
-          {FORMATION_SCHEME_LIST.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => applyFormation(id)}
-              className={cn(
-                'rounded-lg border px-2.5 py-1.5 font-display text-[11px] font-black tabular-nums transition-colors',
-                formationScheme === id
-                  ? 'border-neon-yellow bg-neon-yellow/12 text-neon-yellow'
-                  : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
-              )}
-            >
-              {id}
-            </button>
-          ))}
+          {FORMATION_SCHEME_LIST.map((id) => {
+            const isActive = formationScheme === id && pendingScheme === null;
+            const isPending = pendingScheme === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => selectFormation(id)}
+                className={cn(
+                  'rounded-lg border px-2.5 py-1.5 font-display text-[11px] font-black tabular-nums transition-colors',
+                  isActive
+                    ? 'border-neon-yellow bg-neon-yellow/12 text-neon-yellow'
+                    : isPending
+                      ? 'border-amber-400 bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/50'
+                      : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
+                )}
+              >
+                {id}
+              </button>
+            );
+          })}
         </div>
+        <button
+          type="button"
+          onClick={implementFormation}
+          disabled={!pendingScheme}
+          className={cn(
+            'inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.15em] transition-colors',
+            pendingScheme
+              ? 'border-neon-yellow bg-neon-yellow text-black hover:bg-white animate-pulse'
+              : 'border-white/10 bg-white/5 text-gray-500 cursor-not-allowed',
+          )}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          {pendingScheme ? `Implementar ${pendingScheme}` : 'Implementar'}
+        </button>
         <p className="text-[9px] leading-relaxed text-gray-500">
-          Mantém os 11 em campo; só altera o desenho tático e as coordenadas no relvado.
+          {pendingScheme
+            ? 'Clica IMPLEMENTAR para o time começar a atuar na nova formação.'
+            : 'Selecione uma formação; o time só muda depois de IMPLEMENTAR.'}
         </p>
-      </div>
-
-      {/* 3. Comportamento de equipa */}
-      <div className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-4">
-        <div className="flex items-center gap-2 text-gray-300">
-          <LayoutGrid className="h-3.5 w-3.5 text-neon-yellow" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-            Comportamento de equipa
-          </span>
-        </div>
-        <label className="block space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-            <span>Mentalidade</span>
-            <span className="tabular-nums text-white">{Math.round(tacticalMentality)}</span>
-          </div>
-          <input
-            type="range"
-            min={25}
-            max={95}
-            value={tacticalMentality}
-            onChange={(e) => setSlider({ tacticalMentality: Number(e.target.value) })}
-            className="w-full accent-neon-yellow"
-          />
-        </label>
-        <label className="block space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-            <span>Linha defensiva</span>
-            <span className="tabular-nums text-white">{Math.round(defensiveLine)}</span>
-          </div>
-          <input
-            type="range"
-            min={20}
-            max={85}
-            value={defensiveLine}
-            onChange={(e) => setSlider({ defensiveLine: Number(e.target.value) })}
-            className="w-full accent-cyan-400"
-          />
-        </label>
-        <label className="block space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-            <span>Ritmo / transições</span>
-            <span className="tabular-nums text-white">{Math.round(tempo)}</span>
-          </div>
-          <input
-            type="range"
-            min={30}
-            max={92}
-            value={tempo}
-            onChange={(e) => setSlider({ tempo: Number(e.target.value) })}
-            className="w-full accent-amber-400"
-          />
-        </label>
       </div>
 
       {/* 4. Substituições */}
@@ -364,7 +310,7 @@ export function LiveMatchManagerPanel({
             <select
               value={subOutId}
               onChange={(e) => setSubOutId(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white"
+              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <option value="">—</option>
               {orderedHome.map((p) => {
@@ -383,7 +329,7 @@ export function LiveMatchManagerPanel({
             <select
               value={subInId}
               onChange={(e) => setSubInId(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white"
+              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <option value="">—</option>
               {benchPlayers.map((p) => (
@@ -450,6 +396,153 @@ export function LiveMatchManagerPanel({
           </div>
         </div>
       </div>
+    </div>
+  );
+});
+
+// ─── Action Cards — espelho dos intents de voz ─────────────────────────────
+
+interface ActionCardDef {
+  id: string;
+  icon: typeof Shield;
+  label: string;
+  /** Frase enviada pra pipeline de voz (mesmo parser usado em VoiceCommandPanel). */
+  phrase: string;
+  hint: string;
+  tone: 'press' | 'retreat' | 'possess' | 'accel' | 'attack' | 'cross';
+}
+
+const ACTION_CARDS: ActionCardDef[] = [
+  { id: 'press',   icon: Flame,     label: 'Pressiona alto', phrase: 'pressiona alto',    hint: 'Linha sobe, marca no campo adversário.', tone: 'press' },
+  { id: 'retreat', icon: Shield,    label: 'Recua bloco',    phrase: 'recua',             hint: 'Bloco baixo, compacta atrás da bola.',   tone: 'retreat' },
+  { id: 'possess', icon: Clock,     label: 'Mata o jogo',    phrase: 'mata o jogo',       hint: 'Posse segura, ritmo baixo.',             tone: 'possess' },
+  { id: 'accel',   icon: Zap,       label: 'Acelera',        phrase: 'pisa no acelerador', hint: 'Transição rápida, sem pensar duas vezes.', tone: 'accel' },
+  { id: 'invade',  icon: Crosshair, label: 'Invade área',    phrase: 'invade a area',     hint: 'Atacantes atacam a grande área.',        tone: 'attack' },
+  { id: 'cross',   icon: Swords,    label: 'Cruza mais',     phrase: 'laterais cruza mais', hint: 'Laterais sobem e cruzam pra área.',    tone: 'cross' },
+];
+
+const TONE_STYLES: Record<ActionCardDef['tone'], string> = {
+  press:   'border-rose-500/40    bg-rose-500/10    text-rose-100    hover:border-rose-400',
+  retreat: 'border-sky-500/40     bg-sky-500/10     text-sky-100     hover:border-sky-400',
+  possess: 'border-violet-500/40  bg-violet-500/10  text-violet-100  hover:border-violet-400',
+  accel:   'border-orange-500/40  bg-orange-500/10  text-orange-100  hover:border-orange-400',
+  attack:  'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow hover:border-neon-yellow',
+  cross:   'border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:border-emerald-400',
+};
+
+function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
+  const [firedId, setFiredId] = useState<string | null>(null);
+  const fire = (c: ActionCardDef) => {
+    issueManagerCommand(c.phrase, 'touch');
+    setFiredId(c.id);
+    onFire(c.label);
+    window.setTimeout(() => setFiredId((cur) => (cur === c.id ? null : cur)), 600);
+  };
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+        Comando rápido
+        <span className="ml-1.5 text-gray-600 normal-case tracking-normal">(ou fala a frase no mic)</span>
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {ACTION_CARDS.map((c) => {
+          const Icon = c.icon;
+          const active = firedId === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => fire(c)}
+              className={cn(
+                'group relative flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all',
+                TONE_STYLES[c.tone],
+                active && 'scale-[0.98] shadow-[0_0_18px_currentColor]',
+              )}
+              title={`Voz: "${c.phrase}"`}
+            >
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              <div className="min-w-0 w-full">
+                <p className="truncate font-display text-[11px] font-black uppercase leading-tight tracking-wider">
+                  {c.label}
+                </p>
+                <p className="mt-0.5 line-clamp-2 text-[9px] font-normal leading-snug opacity-70">
+                  {c.hint}
+                </p>
+              </div>
+              <span className="pointer-events-none absolute right-1.5 top-1.5 rounded-sm bg-black/40 px-1 py-0.5 font-mono text-[7px] uppercase opacity-0 backdrop-blur transition-opacity group-hover:opacity-80">
+                🎤 "{c.phrase}"
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Ajuste fino legado (collapsed por padrão) ─────────────────────────────
+
+function LegacyFineTune({
+  presetActive,
+  onApplyPreset,
+  onBumpAxis,
+}: {
+  presetActive: PlayingStylePresetId | undefined;
+  onApplyPreset: (id: PlayingStylePresetId) => void;
+  onBumpAxis: (key: StyleAxisKey, delta: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-white/5 bg-black/20">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 transition-colors hover:text-white"
+        aria-expanded={open}
+      >
+        <span>Ajuste fino (presets + estilo)</span>
+        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+      {open ? (
+        <div className="space-y-2 border-t border-white/5 px-3 pb-3 pt-2">
+          <div className="flex flex-wrap gap-2">
+            {QUICK_PRESETS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onApplyPreset(id)}
+                className={cn(
+                  'rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors',
+                  presetActive === id
+                    ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
+                    : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {([
+              { key: 'pressing' as StyleAxisKey, label: '+ Pressão',  delta: 6 },
+              { key: 'width' as StyleAxisKey,    label: '+ Largura',  delta: 6 },
+              { key: 'verticality' as StyleAxisKey, label: '+ Vertical', delta: 6 },
+              { key: 'riskTaking' as StyleAxisKey, label: '+ Risco',   delta: 5 },
+              { key: 'compactness' as StyleAxisKey, label: '+ Compac.', delta: 6 },
+              { key: 'defensiveBlock' as StyleAxisKey, label: 'Bloco recua', delta: 5 },
+            ]).map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
+                onClick={() => onBumpAxis(b.key, b.delta)}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

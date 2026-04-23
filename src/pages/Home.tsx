@@ -5,12 +5,31 @@ import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp, FRIENDLY_CHALLENGE_BRO_FEE_RATE, friendlyChallengeBroFeeCents } from '@/systems/economy';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
+import {
+  createFriendlyChallenge,
+  FRIENDLY_CHALLENGE_TTL_SEC,
+  markFriendlyChallengeExpiredIfNeeded,
+  searchClubsForFriendly,
+  subscribeFriendlyChallengeUpdates,
+  unsubscribeChannel,
+  updateFriendlyChallengeStatus,
+  type ClubSearchHit,
+  type FriendlyChallengeRow,
+} from '@/supabase/friendlyChallenges';
 import type { PastResult, PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import { isHiddenFromHomeInboxFeed, type InboxItem } from '@/game/inboxTypes';
-import { buildHomeRankingPreview, getFullRankingEntries } from '@/ranking/worldRanking';
+import {
+  buildHomeRankingPreview,
+  filterOpponentRankingMatches,
+  getFullRankingEntries,
+  type RankingEntry,
+} from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { MatchdayVersusTitle } from '@/components/matchday/MatchdayVersusTitle';
+import { playerPortraitSrc } from '@/lib/playerPortrait';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
 
@@ -60,15 +79,11 @@ function InboxBodyText({ text }: { text: string }) {
   return <p className="text-xs text-gray-400 mt-1 leading-relaxed">{parts}</p>;
 }
 
-function pickHomeHighlight(players: Record<string, PlayerEntity>): {
-  id: string;
-  name: string;
-  ovr: number;
-} {
+function pickHighlightFromRoster(players: Record<string, PlayerEntity>): PlayerEntity | null {
   const list = Object.values(players);
   const outfield = list.filter((p) => p.pos.toUpperCase() !== 'GOL');
   const candidates = outfield.length ? outfield : list;
-  if (!candidates.length) return { id: '', name: '—', ovr: 70 };
+  if (!candidates.length) return null;
   let best = candidates[0]!;
   let bestOvr = overallFromAttributes(best.attrs);
   for (const p of candidates) {
@@ -78,7 +93,23 @@ function pickHomeHighlight(players: Record<string, PlayerEntity>): {
       bestOvr = o;
     }
   }
-  return { id: best.id, name: best.name, ovr: bestOvr };
+  return best;
+}
+
+function pickHighlightFromEntities(players: PlayerEntity[]): PlayerEntity | null {
+  if (!players.length) return null;
+  const outfield = players.filter((p) => p.pos.toUpperCase() !== 'GOL');
+  const candidates = outfield.length ? outfield : players;
+  let best = candidates[0]!;
+  let bestOvr = best.mintOverall ?? overallFromAttributes(best.attrs);
+  for (const p of candidates) {
+    const o = p.mintOverall ?? overallFromAttributes(p.attrs);
+    if (o > bestOvr) {
+      best = p;
+      bestOvr = o;
+    }
+  }
+  return best;
 }
 
 function starsForOvr(ovr: number): number {
@@ -125,14 +156,55 @@ export function Home() {
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
 
-  const homeHighlight = useMemo(() => pickHomeHighlight(players), [players]);
+  const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
+  const homeHighlight = useMemo(() => {
+    if (!homeHighlightBest) {
+      return {
+        id: '',
+        name: '—',
+        ovr: 70,
+        imageSrc: 'https://picsum.photos/seed/home-placeholder/400/520',
+      };
+    }
+    const ovr = homeHighlightBest.mintOverall ?? overallFromAttributes(homeHighlightBest.attrs);
+    return {
+      id: homeHighlightBest.id,
+      name: homeHighlightBest.name,
+      ovr,
+      imageSrc: playerPortraitSrc(
+        { name: homeHighlightBest.name, portraitUrl: homeHighlightBest.portraitUrl },
+        400,
+        520,
+      ),
+    };
+  }, [homeHighlightBest]);
+
   const awayHighlight = useMemo(() => {
-    const h = fixture.opponent.highlightPlayer;
-    if (h) return { name: h.name, ovr: h.ovr, imgSeed: `${fixture.opponent.id}-star` };
+    const opp = fixture.opponent;
+    const away = opp.genesisAwayPlayers;
+    if (away?.length) {
+      const best = pickHighlightFromEntities(away);
+      if (best) {
+        const ovr = opp.highlightPlayer?.ovr ?? best.mintOverall ?? overallFromAttributes(best.attrs);
+        return {
+          name: best.name,
+          ovr,
+          imageSrc: playerPortraitSrc({ name: best.name, portraitUrl: best.portraitUrl }, 400, 520),
+        };
+      }
+    }
+    const h = opp.highlightPlayer;
+    if (h) {
+      return {
+        name: h.name,
+        ovr: h.ovr,
+        imageSrc: `https://picsum.photos/seed/${encodeURIComponent(`${opp.id}-star`)}/400/520`,
+      };
+    }
     return {
       name: 'DESTAQUE',
-      ovr: fixture.opponent.strength,
-      imgSeed: fixture.opponent.id,
+      ovr: opp.strength,
+      imageSrc: `https://picsum.photos/seed/${encodeURIComponent(opp.id)}/400/520`,
     };
   }, [fixture.opponent]);
   const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
@@ -143,9 +215,27 @@ export function Home() {
   const [searchTeam, setSearchTeam] = useState('');
   const { favorites, toggleFavorite } = useRankingFavorites();
   const [amistosoOpen, setAmistosoOpen] = useState(false);
-  const [opponentName, setOpponentName] = useState('');
-  const [opponentId, setOpponentId] = useState('');
-  const [friendlyMode, setFriendlyMode] = useState<'live' | 'quick'>('quick');
+  const [hasOnlineSession, setHasOnlineSession] = useState(false);
+  const [opponentQuery, setOpponentQuery] = useState('');
+  const [amistosoOnlineHits, setAmistosoOnlineHits] = useState<ClubSearchHit[]>([]);
+  const [amistosoOfflineHits, setAmistosoOfflineHits] = useState<RankingEntry[]>([]);
+  const [amistosoLookupMessage, setAmistosoLookupMessage] = useState<string | null>(null);
+  const [selectedOnlineOpponent, setSelectedOnlineOpponent] = useState<ClubSearchHit | null>(null);
+  const [selectedOfflineOpponent, setSelectedOfflineOpponent] = useState<RankingEntry | null>(null);
+  const [amistosoSearchBusy, setAmistosoSearchBusy] = useState(false);
+  const [waitingChallenge, setWaitingChallenge] = useState<{
+    id: string;
+    expiresAt: string;
+    opponentName: string;
+    mode: 'live' | 'quick' | 'penalty';
+    betCurrency: 'BRO' | 'EXP';
+    prizeBroUnits: number;
+    prizeExp: number;
+  } | null>(null);
+  const [waitTick, setWaitTick] = useState(0);
+  const waitChannelRef = useRef<RealtimeChannel | null>(null);
+  const refundedChallengeIdsRef = useRef<Set<string>>(new Set());
+  const [friendlyMode, setFriendlyMode] = useState<'quick' | 'penalty'>('quick');
   const [betCurrency, setBetCurrency] = useState<'BRO' | 'EXP'>('BRO');
   const [betInput, setBetInput] = useState('10');
   const [notifTab, setNotifTab] = useState<HomeNotifTab>('ALL');
@@ -155,6 +245,157 @@ export function Home() {
   useEffect(() => {
     setNotifShowAll(false);
   }, [notifTab]);
+
+  useEffect(() => {
+    if (!amistosoOpen) {
+      setOpponentQuery('');
+      setAmistosoOnlineHits([]);
+      setAmistosoOfflineHits([]);
+      setAmistosoLookupMessage(null);
+      setSelectedOnlineOpponent(null);
+      setSelectedOfflineOpponent(null);
+      setWaitingChallenge(null);
+      unsubscribeChannel(waitChannelRef.current);
+      waitChannelRef.current = null;
+    }
+  }, [amistosoOpen]);
+
+  useEffect(() => {
+    if (!amistosoOpen) return;
+    void (async () => {
+      const sb = getSupabase();
+      if (!sb) {
+        setHasOnlineSession(false);
+        return;
+      }
+      const { data } = await sb.auth.getUser();
+      setHasOnlineSession(!!data.user);
+    })();
+  }, [amistosoOpen]);
+
+  const useOnlineInviteFlow = isSupabaseConfigured() && hasOnlineSession;
+
+  const refundChallengeOnce = (challengeId: string, fn: () => void) => {
+    if (refundedChallengeIdsRef.current.has(challengeId)) return;
+    refundedChallengeIdsRef.current.add(challengeId);
+    fn();
+  };
+
+  const refundWaitingStake = (meta: {
+    id: string;
+    opponentName: string;
+    mode: 'live' | 'quick' | 'penalty';
+    betCurrency: 'BRO' | 'EXP';
+    prizeBroUnits: number;
+    prizeExp: number;
+  }) => {
+    refundChallengeOnce(meta.id, () => {
+    if (meta.betCurrency === 'BRO') {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: meta.opponentName,
+        mode: meta.mode,
+        currency: 'BRO',
+        prizeAmount: meta.prizeBroUnits,
+      });
+    } else {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: meta.opponentName,
+        mode: meta.mode,
+        currency: 'EXP',
+        prizeAmount: meta.prizeExp,
+      });
+    }
+    });
+  };
+
+  const refundFromChallengeRow = (row: FriendlyChallengeRow) => {
+    refundChallengeOnce(row.id, () => {
+    const name = row.challenged_club_name;
+    if (row.bet_currency === 'BRO' && row.bet_bro_cents != null && row.bet_bro_cents > 0) {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: name,
+        mode: row.mode,
+        currency: 'BRO',
+        prizeAmount: row.bet_bro_cents / 100,
+      });
+    } else if (row.bet_currency === 'EXP' && row.bet_exp != null && row.bet_exp > 0) {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: name,
+        mode: row.mode,
+        currency: 'EXP',
+        prizeAmount: row.bet_exp,
+      });
+    }
+    });
+  };
+
+  useEffect(() => {
+    if (!waitingChallenge) return;
+    const id = waitingChallenge.id;
+    const sb = getSupabase();
+    if (!sb) return;
+    try {
+      waitChannelRef.current = subscribeFriendlyChallengeUpdates(id, (row: FriendlyChallengeRow) => {
+        if (row.status === 'accepted') {
+          unsubscribeChannel(waitChannelRef.current);
+          waitChannelRef.current = null;
+          setWaitingChallenge(null);
+          setAmistosoOpen(false);
+          const path = (row.mode as string) === 'penalty' ? '/match/penalty' : '/match/quick';
+          navigate(`${path}?fc=${encodeURIComponent(id)}`);
+        } else if (row.status === 'declined' || row.status === 'expired' || row.status === 'cancelled') {
+          unsubscribeChannel(waitChannelRef.current);
+          waitChannelRef.current = null;
+          refundFromChallengeRow(row);
+          setWaitingChallenge(null);
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      unsubscribeChannel(waitChannelRef.current);
+      waitChannelRef.current = null;
+    };
+  }, [waitingChallenge?.id, navigate, dispatch]);
+
+  useEffect(() => {
+    if (!waitingChallenge) return;
+    const iv = window.setInterval(() => setWaitTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [waitingChallenge?.id]);
+
+  const expireHandledIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!waitingChallenge) {
+      expireHandledIdRef.current = null;
+      return;
+    }
+    if (expireHandledIdRef.current === waitingChallenge.id) return;
+    const leftMs = new Date(waitingChallenge.expiresAt).getTime() - Date.now();
+    if (leftMs > 0) return;
+    expireHandledIdRef.current = waitingChallenge.id;
+    const meta = waitingChallenge;
+    void (async () => {
+      await markFriendlyChallengeExpiredIfNeeded(meta.id);
+      const sb = getSupabase();
+      if (sb) {
+        const { data } = await sb.from('friendly_challenges').select('status').eq('id', meta.id).maybeSingle();
+        const st = (data as { status?: string } | null)?.status;
+        if (st === 'pending') {
+          await updateFriendlyChallengeStatus(meta.id, 'expired');
+        }
+      }
+      refundWaitingStake({ id: meta.id, ...meta });
+      unsubscribeChannel(waitChannelRef.current);
+      waitChannelRef.current = null;
+      setWaitingChallenge(null);
+    })();
+  }, [waitingChallenge, waitTick, dispatch]);
 
   const homeFeedInbox = useMemo(
     () => inbox.filter((i) => !isHiddenFromHomeInboxFeed(i)),
@@ -183,13 +424,14 @@ export function Home() {
   const feeBroCents = betBroCents > 0 ? friendlyChallengeBroFeeCents(betBroCents) : 0;
   const totalBroCents = betBroCents + feeBroCents;
 
-  const startFriendly = () => {
-    const name = opponentName.trim();
-    const oid = opponentId.trim();
-    if (!name || !oid) {
-      alert('Preencha o nome do time e o ID do adversário.');
+  const startOfflineFriendly = () => {
+    const row = selectedOfflineOpponent;
+    if (!row) {
+      alert('Busque e selecione um time no ranking local.');
       return;
     }
+    const name = row.team;
+    const oid = row.entryId;
     if (betCurrency === 'BRO') {
       if (betBroCents < 1) {
         alert('Informe um valor de prêmio em BRO válido.');
@@ -227,13 +469,138 @@ export function Home() {
       });
     }
     setAmistosoOpen(false);
-    navigate(friendlyMode === 'live' ? '/match/live' : '/match/quick');
+    navigate(friendlyMode === 'penalty' ? '/match/penalty' : '/match/quick');
+  };
+
+  const cancelWaitingChallenge = async () => {
+    if (!waitingChallenge) return;
+    await updateFriendlyChallengeStatus(waitingChallenge.id, 'cancelled');
+    refundWaitingStake({ id: waitingChallenge.id, ...waitingChallenge });
+    unsubscribeChannel(waitChannelRef.current);
+    waitChannelRef.current = null;
+    setWaitingChallenge(null);
+  };
+
+  const sendOnlineFriendlyChallenge = async () => {
+    const hit = selectedOnlineOpponent;
+    if (!hit) {
+      alert('Busque e selecione um clube com conta online.');
+      return;
+    }
+    if (betCurrency === 'BRO') {
+      if (betBroCents < 1) {
+        alert('Informe um valor de prêmio em BRO válido.');
+        return;
+      }
+      if (finance.broCents < totalBroCents) {
+        alert('Saldo BRO insuficiente para prêmio + taxa de 5% (feeChallenger).');
+        return;
+      }
+    } else {
+      const exp = Math.max(1, Math.round(parseFloat(betInput.replace(',', '.')) || 0));
+      if (Number.isNaN(exp) || exp < 1) {
+        alert('Informe um valor inteiro de EXP para o prêmio.');
+        return;
+      }
+      if (finance.ole < exp) {
+        alert('Saldo EXP insuficiente.');
+        return;
+      }
+    }
+    const created = await createFriendlyChallenge({
+      challengedClubId: hit.club_id,
+      challengedClubName: hit.name,
+      challengerClubName: club.name,
+      mode: friendlyMode,
+      betCurrency,
+      betBroCents: betCurrency === 'BRO' ? betBroCents : null,
+      betExp:
+        betCurrency === 'EXP'
+          ? Math.max(1, Math.round(parseFloat(betInput.replace(',', '.')) || 0))
+          : null,
+    });
+    if ('error' in created) {
+      alert(created.error);
+      return;
+    }
+    const expVal = Math.max(1, Math.round(parseFloat(betInput.replace(',', '.')) || 0));
+    if (betCurrency === 'BRO') {
+      dispatch({
+        type: 'START_FRIENDLY_CHALLENGE',
+        opponentName: hit.name,
+        opponentId: hit.club_id,
+        mode: friendlyMode,
+        currency: 'BRO',
+        prizeAmount: betBroCents / 100,
+      });
+    } else {
+      dispatch({
+        type: 'START_FRIENDLY_CHALLENGE',
+        opponentName: hit.name,
+        opponentId: hit.club_id,
+        mode: friendlyMode,
+        currency: 'EXP',
+        prizeAmount: expVal,
+      });
+    }
+    const expiresAt = new Date(Date.now() + FRIENDLY_CHALLENGE_TTL_SEC * 1000).toISOString();
+    refundedChallengeIdsRef.current.delete(created.id);
+    setWaitingChallenge({
+      id: created.id,
+      expiresAt,
+      opponentName: hit.name,
+      mode: friendlyMode,
+      betCurrency,
+      prizeBroUnits: betBroCents / 100,
+      prizeExp: expVal,
+    });
   };
 
   const fullSorted = useMemo(
-    () => getFullRankingEntries(club.name, finance.ole),
-    [club.name, finance.ole],
+    () => getFullRankingEntries(club.name, finance.ole, club.id),
+    [club.name, finance.ole, club.id],
   );
+
+  const lookupAmistosoOpponent = () => {
+    const q = opponentQuery.trim();
+    if (!q) {
+      setAmistosoOfflineHits([]);
+      setAmistosoOnlineHits([]);
+      setAmistosoLookupMessage('Digite o nome (ou parte) do time e toque em Buscar time.');
+      return;
+    }
+    if (useOnlineInviteFlow) {
+      setAmistosoSearchBusy(true);
+      void (async () => {
+        const hits = await searchClubsForFriendly(q);
+        setAmistosoSearchBusy(false);
+        setAmistosoOnlineHits(hits);
+        setAmistosoLookupMessage(
+          hits.length ? null : 'Nenhum clube online encontrado. Tente outro termo (mín. 2 letras).',
+        );
+      })();
+      return;
+    }
+    const hits = filterOpponentRankingMatches(fullSorted, q, 12);
+    setAmistosoOfflineHits(hits);
+    setAmistosoLookupMessage(
+      hits.length ? null : 'Nenhum time encontrado no ranking local. Tente outro termo.',
+    );
+  };
+
+  const pickOnlineOpponent = (hit: ClubSearchHit) => {
+    setSelectedOnlineOpponent(hit);
+    setOpponentQuery(hit.name);
+    setAmistosoOnlineHits([]);
+    setAmistosoLookupMessage(null);
+  };
+
+  const pickOfflineOpponent = (row: RankingEntry) => {
+    setSelectedOfflineOpponent(row);
+    setOpponentQuery(row.team);
+    setAmistosoOfflineHits([]);
+    setAmistosoLookupMessage(null);
+  };
 
   const ranking = useMemo(
     () => buildHomeRankingPreview(fullSorted, searchTeam, favorites),
@@ -309,7 +676,7 @@ export function Home() {
             <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
               <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/15 shadow-lg bg-dark-gray">
                 <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(`${homeHighlight.id || homeHighlight.name}-home`)}/400/520`}
+                  src={homeHighlight.imageSrc}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover object-top"
                   referrerPolicy="no-referrer"
@@ -349,7 +716,7 @@ export function Home() {
             <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
               <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/15 shadow-lg bg-dark-gray">
                 <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(awayHighlight.imgSeed)}/400/520`}
+                  src={awayHighlight.imageSrc}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover object-top"
                   referrerPolicy="no-referrer"
@@ -591,7 +958,10 @@ export function Home() {
             >
               <button
                 type="button"
-                onClick={() => setAmistosoOpen(false)}
+                onClick={() => {
+                  if (waitingChallenge) void cancelWaitingChallenge();
+                  setAmistosoOpen(false);
+                }}
                 className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
@@ -601,113 +971,221 @@ export function Home() {
                 <p className="mt-2 text-sm leading-snug text-gray-300">Mostre que você é o melhor no jogo</p>
               </div>
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-6">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-1.5">Buscar (Time, ID)</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    <input
-                      value={opponentName}
-                      onChange={(e) => setOpponentName(e.target.value)}
-                      placeholder="Nome do time"
-                      className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      value={opponentId}
-                      onChange={(e) => setOpponentId(e.target.value)}
-                      placeholder="ID do adversário"
-                      className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Modo de partida</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFriendlyMode('quick')}
-                      className={cn(
-                        'py-2.5 rounded text-xs font-display font-bold uppercase border',
-                        friendlyMode === 'quick' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
+                {waitingChallenge ? (
+                  <div className="space-y-4 py-2 text-center">
+                    <p className="text-sm font-bold text-white">À espera de {waitingChallenge.opponentName}</p>
+                    <p className="text-[11px] text-gray-500">
+                      O adversário tem {FRIENDLY_CHALLENGE_TTL_SEC}s para aceitar (ambos online). Quando aceitar, a
+                      partida abre automaticamente.
+                    </p>
+                    <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-4 border-neon-yellow/40 font-display text-3xl font-black text-neon-yellow">
+                      {Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(waitingChallenge.expiresAt).getTime() - Date.now()) / 1000,
+                        ),
                       )}
-                    >
-                      Partida rápida
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFriendlyMode('live')}
-                      className={cn(
-                        'py-2.5 rounded text-xs font-display font-bold uppercase border',
-                        friendlyMode === 'live' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
-                      )}
-                    >
-                      Partida ao vivo
-                    </button>
-                  </div>
-                  <p className="mt-2 text-[10px] text-gray-500 leading-snug">
-                    Desafio amistoso: a partida rápida segue as mesmas regras oficiais da liga. A ao vivo é experimental.
-                  </p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Bet (prêmio do vencedor)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setBetCurrency('BRO')}
-                        className={cn(
-                          'px-2 py-1 rounded text-[10px] font-bold uppercase',
-                          betCurrency === 'BRO' ? 'bg-white text-black' : 'bg-white/5 text-gray-500',
-                        )}
-                      >
-                        BRO
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBetCurrency('EXP')}
-                        className={cn(
-                          'px-2 py-1 rounded text-[10px] font-bold uppercase',
-                          betCurrency === 'EXP' ? 'bg-neon-yellow text-black' : 'bg-white/5 text-gray-500',
-                        )}
-                      >
-                        EXP
-                      </button>
+                      s
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => void cancelWaitingChallenge()}
+                      className="w-full border border-white/15 py-2.5 text-xs font-bold uppercase text-gray-400 hover:bg-white/5"
+                    >
+                      Cancelar convite
+                    </button>
                   </div>
-                  <input
-                    value={betInput}
-                    onChange={(e) => setBetInput(e.target.value)}
-                    placeholder={betCurrency === 'BRO' ? 'Ex.: 10,50' : 'Ex.: 500'}
-                    className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
-                  />
-                  {betCurrency === 'BRO' && betBroCents > 0 && (
-                    <div className="mt-2 text-[11px] text-gray-500 space-y-1 border border-white/10 rounded p-2 bg-black/30">
-                      <div className="flex justify-between">
-                        <span>Prêmio ao vencedor</span>
-                        <span className="text-white font-bold">{(betBroCents / 100).toFixed(2)} BRO</span>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-1.5">
+                        {useOnlineInviteFlow ? 'Buscar clube (conta online)' : 'Buscar adversário (ranking local)'}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          value={opponentQuery}
+                          onChange={(e) => {
+                            setOpponentQuery(e.target.value);
+                            setAmistosoOnlineHits([]);
+                            setAmistosoOfflineHits([]);
+                            setAmistosoLookupMessage(null);
+                            setSelectedOnlineOpponent(null);
+                            setSelectedOfflineOpponent(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              lookupAmistosoOpponent();
+                            }
+                          }}
+                          placeholder={useOnlineInviteFlow ? 'Nome do clube (mín. 2 letras)' : 'Nome do time'}
+                          className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
+                        />
+                        <button
+                          type="button"
+                          disabled={amistosoSearchBusy}
+                          onClick={() => void lookupAmistosoOpponent()}
+                          className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded border border-neon-yellow/50 bg-neon-yellow/10 px-3 py-2 text-[11px] font-display font-bold uppercase tracking-wide text-neon-yellow hover:bg-neon-yellow/20 disabled:opacity-40"
+                        >
+                          <Search className="h-4 w-4" />
+                          <span className="hidden min-[380px]:inline">Buscar time</span>
+                        </button>
                       </div>
-                      <div className="flex justify-between text-neon-yellow/90">
-                        <span>Taxa plataforma ({Math.round(FRIENDLY_CHALLENGE_BRO_FEE_RATE * 100)}% · feeChallenger)</span>
-                        <span className="font-bold">{(feeBroCents / 100).toFixed(2)} BRO</span>
+                      <p className="mt-1.5 text-[10px] text-gray-600 leading-snug">
+                        {useOnlineInviteFlow
+                          ? 'Só aparecem clubes com perfil Supabase. Seleciona um resultado — não precisas de ID.'
+                          : 'Sem sessão online: ranking local Olefoot. Ao enviar, entras logo em campo (sem convite).'}
+                      </p>
+                      {amistosoLookupMessage ? (
+                        <p className="mt-2 text-[11px] text-amber-200/90">{amistosoLookupMessage}</p>
+                      ) : null}
+                      {useOnlineInviteFlow && selectedOnlineOpponent ? (
+                        <p className="mt-2 text-xs text-neon-yellow">
+                          Selecionado: <strong>{selectedOnlineOpponent.name}</strong>
+                        </p>
+                      ) : null}
+                      {!useOnlineInviteFlow && selectedOfflineOpponent ? (
+                        <p className="mt-2 text-xs text-neon-yellow">
+                          Selecionado: <strong>{selectedOfflineOpponent.team}</strong>
+                        </p>
+                      ) : null}
+                      {useOnlineInviteFlow && amistosoOnlineHits.length > 0 ? (
+                        <ul className="mt-2 max-h-40 overflow-y-auto rounded border border-white/10 divide-y divide-white/5">
+                          {amistosoOnlineHits.map((hit) => (
+                            <li key={hit.club_id}>
+                              <button
+                                type="button"
+                                onClick={() => pickOnlineOpponent(hit)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-white/5"
+                              >
+                                <span className="min-w-0 truncate font-display font-bold text-white">{hit.name}</span>
+                                <span className="shrink-0 text-[10px] text-gray-500">{hit.short_name}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {!useOnlineInviteFlow && amistosoOfflineHits.length > 0 ? (
+                        <ul className="mt-2 max-h-40 overflow-y-auto rounded border border-white/10 divide-y divide-white/5">
+                          {amistosoOfflineHits.map((row) => (
+                            <li key={row.entryId}>
+                              <button
+                                type="button"
+                                onClick={() => pickOfflineOpponent(row)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-white/5"
+                              >
+                                <span className="min-w-0 truncate font-display font-bold text-white">{row.team}</span>
+                                <span className="shrink-0 text-[10px] text-gray-500">{formatExp(row.exp)} EXP</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
+                        Modo de partida
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFriendlyMode('quick')}
+                          className={cn(
+                            'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                            friendlyMode === 'quick'
+                              ? 'bg-neon-yellow text-black border-neon-yellow'
+                              : 'border-white/15 text-gray-400',
+                          )}
+                        >
+                          Partida Rápida
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFriendlyMode('penalty')}
+                          className={cn(
+                            'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                            friendlyMode === 'penalty'
+                              ? 'bg-neon-yellow text-black border-neon-yellow'
+                              : 'border-white/15 text-gray-400',
+                          )}
+                        >
+                          Disputa Penalty
+                        </button>
                       </div>
-                      <div className="flex justify-between pt-1 border-t border-white/10 font-bold text-white">
-                        <span>Total debitado</span>
-                        <span>{(totalBroCents / 100).toFixed(2)} BRO</span>
-                      </div>
-                      <p className="text-[10px] text-gray-600 pt-1">
-                        A taxa credita a tesouraria da empresa (destino final configurável no Admin).
+                      <p className="mt-2 text-[10px] text-gray-500 leading-snug">
+                        Partida Rápida segue as regras oficiais da liga. Disputa Penalty é uma disputa de 5 cobranças.
                       </p>
                     </div>
-                  )}
-                  {betCurrency === 'EXP' && (
-                    <p className="text-[10px] text-gray-600 mt-2">Desafios em EXP não cobram taxa de plataforma neste fluxo.</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={startFriendly}
-                  className="w-full btn-primary py-3"
-                >
-                  <span className="btn-primary-inner">Criar desafio e jogar</span>
-                </button>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                          Bet (prêmio do vencedor)
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setBetCurrency('BRO')}
+                            className={cn(
+                              'px-2 py-1 rounded text-[10px] font-bold uppercase',
+                              betCurrency === 'BRO' ? 'bg-white text-black' : 'bg-white/5 text-gray-500',
+                            )}
+                          >
+                            BRO
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBetCurrency('EXP')}
+                            className={cn(
+                              'px-2 py-1 rounded text-[10px] font-bold uppercase',
+                              betCurrency === 'EXP' ? 'bg-neon-yellow text-black' : 'bg-white/5 text-gray-500',
+                            )}
+                          >
+                            EXP
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        value={betInput}
+                        onChange={(e) => setBetInput(e.target.value)}
+                        placeholder={betCurrency === 'BRO' ? 'Ex.: 10,50' : 'Ex.: 500'}
+                        className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
+                      />
+                      {betCurrency === 'BRO' && betBroCents > 0 && (
+                        <div className="mt-2 text-[11px] text-gray-500 space-y-1 border border-white/10 rounded p-2 bg-black/30">
+                          <div className="flex justify-between">
+                            <span>Prêmio ao vencedor</span>
+                            <span className="text-white font-bold">{(betBroCents / 100).toFixed(2)} BRO</span>
+                          </div>
+                          <div className="flex justify-between text-neon-yellow/90">
+                            <span>Taxa plataforma ({Math.round(FRIENDLY_CHALLENGE_BRO_FEE_RATE * 100)}% · feeChallenger)</span>
+                            <span className="font-bold">{(feeBroCents / 100).toFixed(2)} BRO</span>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-white/10 font-bold text-white">
+                            <span>Total debitado</span>
+                            <span>{(totalBroCents / 100).toFixed(2)} BRO</span>
+                          </div>
+                          <p className="text-[10px] text-gray-600 pt-1">
+                            A taxa credita a tesouraria da empresa (destino final configurável no Admin).
+                          </p>
+                        </div>
+                      )}
+                      {betCurrency === 'EXP' && (
+                        <p className="text-[10px] text-gray-600 mt-2">
+                          Desafios em EXP não cobram taxa de plataforma neste fluxo.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void (useOnlineInviteFlow ? sendOnlineFriendlyChallenge() : startOfflineFriendly())}
+                      className="w-full btn-primary py-3"
+                    >
+                      <span className="btn-primary-inner">
+                        {useOnlineInviteFlow ? 'Enviar desafio' : 'Criar desafio e jogar'}
+                      </span>
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>

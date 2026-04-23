@@ -150,6 +150,9 @@ function rollReceptionSuccess(
 
   const skill = drible * 0.15 + composure * 0.1;
   let prob = Math.max(0.15, Math.min(0.98, baseSuccess - pressurePenalty + skill));
+  // Ball control difficulty reduces reception probability (heavier / slippery balls)
+  const ballDifficulty = ctx.ballControlDifficulty ?? 0;
+  prob -= ballDifficulty * 0.12;
   prob -= prethinkingReceptionSuccessPenalty(ctx);
   prob = Math.max(0.12, prob);
   return pick01ForDecision(ctx) < prob;

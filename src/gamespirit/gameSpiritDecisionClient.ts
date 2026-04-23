@@ -1,4 +1,5 @@
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { isFeatureEnabled } from '@/admin/platformConfigStore';
 
 export interface GameSpiritDecisionRequest {
   player: string;
@@ -7,6 +8,8 @@ export interface GameSpiritDecisionRequest {
   pressureLevel: string;
   nearbyPlayers: string[];
   objective: string;
+  /** Resumo compacto dos traits de posição do jogador (DNA de lenda). Ex: "press:0.8 offRuns:0.9 risk:0.7". */
+  positionTraits?: string;
 }
 
 export interface GameSpiritDecisionResponse {
@@ -27,6 +30,10 @@ export interface GameSpiritDecisionErr {
 export async function requestGameSpiritDecision(
   body: GameSpiritDecisionRequest,
 ): Promise<GameSpiritDecisionResponse | GameSpiritDecisionErr> {
+  // Feature flag: admin pode desligar todas as chamadas OpenAI em runtime.
+  if (!isFeatureEnabled('GAMESPIRIT_ENABLED')) {
+    return { error: 'GameSpirit desativado pelo admin (feature flag).', status: 503 };
+  }
   const base = olefootApiBase();
   try {
     const r = await fetch(`${base}/api/gamespirit`, {

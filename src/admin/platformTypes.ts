@@ -5,7 +5,7 @@
 
 import type { OlexpPlanId } from '@/wallet/types';
 
-export type AdminPlatformUserStatus = 'active' | 'suspended';
+export type AdminPlatformUserStatus = 'active' | 'suspended' | 'banned';
 
 /** Custódia OLEXP ao nível plataforma (visão operacional / backend futuro). */
 export type PlatformOlexpCustodyStatus =
@@ -81,6 +81,56 @@ export interface PlatformLedgerLine {
   failureReason?: string;
 }
 
+/** Receita de comércio in-game (loja, mercado) — MVP local; futuro: pipeline analytics. */
+export type GrowthCommerceKind = 'store_item' | 'transfer_player' | 'bundle';
+
+export interface GrowthCommerceLine {
+  id: string;
+  createdAt: string;
+  kind: GrowthCommerceKind;
+  /** Receita OLEFOOT (taxas / margem) em centavos BRO */
+  revenueBroCents: number;
+  /** Volume bruto opcional (ex.: preço do item) */
+  grossBroCents?: number;
+  userId?: string;
+  label?: string;
+}
+
+/** Métricas de topo de funil por dia (impressões / cliques CTA) — alimenta CTR e campanhas. */
+export interface GrowthDailyPulseRow {
+  date: string;
+  bannerImpressions: number;
+  ctaClicks: number;
+  /** Registos atribuídos a tráfego pago / campanha (MVP manual ou ingestão futura) */
+  attributedSignups?: number;
+}
+
+/** Despesas operacionais reais (R$) — cashflow da empresa, não confundir com BRO do jogo. */
+export type CashflowExpenseCategory =
+  | 'pessoas'
+  | 'infra'
+  | 'marketing'
+  | 'legal'
+  | 'ferramentas'
+  | 'impostos'
+  | 'outro';
+
+export interface CashflowExpenseLine {
+  id: string;
+  /** YYYY-MM-DD — dia de competência do gasto (ou início da recorrência) */
+  date: string;
+  label: string;
+  category: CashflowExpenseCategory;
+  /** Valor em centavos de BRL (ex.: R$ 120,00 → 12000) */
+  amountBrlCents: number;
+  note?: string;
+  /** Se true, repete todo mês a partir de `date` até `endDate` (ou indefinidamente). */
+  recurring?: boolean;
+  /** YYYY-MM-DD — último mês de competência (inclusive). Só relevante quando `recurring=true`. */
+  endDate?: string;
+  createdAt: string;
+}
+
 export interface AdminPlatformState {
   version: 1;
   /** Tesouraria OLEFOOT (taxas, spreads) — não é soma automática dos users */
@@ -92,6 +142,17 @@ export interface AdminPlatformState {
   platformLedger: PlatformLedgerLine[];
   /** Posições OLEXP (detalhe por cliente; agregados em `users` recalculam quando há linhas). */
   platformOlexpPositions: PlatformOlexpPosition[];
+  /** Histórico de compras (loja / transferências) para growth e faturamento próprio da plataforma */
+  growthCommerceLines: GrowthCommerceLine[];
+  /** Série diária para CTA, impressões e sinais de aquisição */
+  growthDailyPulse: GrowthDailyPulseRow[];
+  /** Gastos diários / operacionais em R$ (centavos) */
+  growthCashflowExpenses: CashflowExpenseLine[];
+  /**
+   * Referência manual: quantos centavos de BRO equivalem a 1,00 BRL (para cruzar receita do ecossistema com despesas).
+   * Ex.: 50 → 1 BRL = 0,50 BRO. Opcional — sem isto, o painel mostra as duas moedas lado a lado.
+   */
+  growthBroCentsPerBrl?: number;
 }
 
 export function emptyPlatformState(): AdminPlatformState {
@@ -102,5 +163,8 @@ export function emptyPlatformState(): AdminPlatformState {
     users: [],
     platformLedger: [],
     platformOlexpPositions: [],
+    growthCommerceLines: [],
+    growthDailyPulse: [],
+    growthCashflowExpenses: [],
   };
 }

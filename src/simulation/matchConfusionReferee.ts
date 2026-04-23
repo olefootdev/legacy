@@ -5,9 +5,8 @@
  */
 import type { PossessionSide } from '@/engine/types';
 import type { CausalMatchEvent } from '@/match/causal/matchCausalTypes';
-import { FORMATION_BASES } from '@/match-engine/formations/catalog';
+import { FORMATION_BASES, slotToWorld } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
-import { slotToWorld } from '@/formation/layout433';
 import { applyBallCentricShiftToSlotMap } from '@/match/tacticalField18';
 import {
   defendingTeamAtGoalEnd,

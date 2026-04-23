@@ -45,7 +45,12 @@ supabase/migrations/00001_initial_schema.sql   — perfil, clube de jogo, plante
 supabase/migrations/00002_admin_leagues_competitions.sql — épocas, competições, fixtures
 supabase/migrations/00003_admin_platform_schema.sql    — catálogo sports, onboarding, blueprints, spirit, saves, banners, ledger
 supabase/migrations/00004_online_game_persistence.sql  — alinha matches/eventos/plantel ao motor; logs OpenAI (`game_spirit_ai_logs`)
+supabase/migrations/00005_postgrest_grants_core_game.sql — GRANT explícito nas tabelas core para PostgREST (anon/authenticated)
 ```
+
+**Inventário para agentes / ferramentas:** `supabase/schema_inventory.json` (lista tabelas por domínio).
+
+**SQL único (Dashboard, base vazia):** `supabase/apply_full_public_schema.sql` — gerado com `npm run supabase:bundle-sql` a partir das migrations; colar no **SQL Editor** *uma vez* se não usares a CLI. Não reexecutar no mesmo schema (políticas duplicadas).
 
 **00001 — núcleo jogo**
 
@@ -76,7 +81,7 @@ npx supabase db push
 - Se `link` der erro de **privilégios**, confirma que fizeste login com o utilizador certo (`npx supabase projects list`).
 - O ficheiro **`supabase/config.toml`** usa `project_id` (local) no formato atual da CLI; não uses o bloco antigo `[project]` com `id`.
 
-**Sem CLI:** Dashboard → **SQL** → colar e executar, **por ordem**, `00001` … `00004` em `supabase/migrations/`.
+**Sem CLI:** Dashboard → **SQL** → colar **uma vez** o ficheiro `supabase/apply_full_public_schema.sql`, **ou** executar **por ordem** `00001` … `00005` em `supabase/migrations/`.
 
 Depois do `db push`, tipos TypeScript (opcional):
 

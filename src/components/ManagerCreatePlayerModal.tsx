@@ -21,6 +21,11 @@ import {
   type ManagerProspectPortraitStyleRegion,
   type ManagerProspectVisualBrief,
 } from '@/entities/managerProspect';
+import {
+  MANAGER_PROSPECT_CONTRACT_GAMES,
+  managerProspectContractPremiumExp,
+  type ManagerProspectContractGames,
+} from '@/playerContracts/playerContracts';
 import { validateAcademyProspectName } from '@/entities/managerProspectReservedNames';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp } from '@/systems/economy';
@@ -140,6 +145,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const [portraitStyleRegion, setPortraitStyleRegion] = useState<ManagerProspectPortraitStyleRegion>('europa');
   const [originTags, setOriginTags] = useState<string[]>([]);
   const [originText, setOriginText] = useState('');
+  const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(10);
 
   /** Corpo com scroll do modal — repõe-se ao topo no passo 2 (Afinar) para não saltar os sliders. */
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
@@ -161,6 +167,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     setPortraitStyleRegion('europa');
     setOriginTags([]);
     setOriginText('');
+    setContractMatches(10);
   }, []);
 
   useEffect(() => {
@@ -193,7 +200,9 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     setStep('tune');
   };
 
-  const canAfford = oleBal >= createCostExp;
+  const contractPremiumExp = managerProspectContractPremiumExp(contractMatches);
+  const totalCreateCostExp = createCostExp + contractPremiumExp;
+  const canAfford = oleBal >= totalCreateCostExp;
   const trimmed = name.trim();
   const namePolicy = useMemo(() => validateAcademyProspectName(trimmed), [trimmed]);
   const canAdvanceIdentity = trimmed.length >= 2 && namePolicy.ok;
@@ -244,6 +253,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
         originText: originText.trim(),
       },
       visualBrief,
+      contractMatches,
     };
     dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload });
     onClose();
@@ -395,6 +405,36 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       ))}
                     </select>
                   </label>
+
+                  <div className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                      Contrato (jogos)
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {MANAGER_PROSPECT_CONTRACT_GAMES.map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setContractMatches(n)}
+                          className={cn(
+                            'rounded-lg border px-2 py-1 text-[10px] font-bold uppercase',
+                            contractMatches === n
+                              ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
+                              : 'border-white/15 text-gray-400 hover:border-white/30 hover:text-white',
+                          )}
+                        >
+                          {n}
+                          {managerProspectContractPremiumExp(n) > 0
+                            ? ` (+${formatExp(managerProspectContractPremiumExp(n))})`
+                            : ''}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] leading-relaxed text-gray-500">
+                      Amistosos e oficiais contam por jogo; ao fim do contrato o jogador fica indisponível para XI
+                      oficial.
+                    </p>
+                  </div>
 
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Característica</span>
@@ -618,6 +658,13 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       <dt className="text-gray-500">Perfil</dt>
                       <dd className="text-white">{BEHAVIORS.find((b) => b.id === behavior)?.label}</dd>
                     </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-gray-500">Contrato</dt>
+                      <dd className="text-white">
+                        {contractMatches} jogos
+                        {contractPremiumExp > 0 ? ` · +${formatExp(contractPremiumExp)} EXP` : null}
+                      </dd>
+                    </div>
                     <div className="border-t border-white/10 pt-2 text-[10px] text-white/80">
                       <div className="font-bold uppercase text-neon-yellow/90">Origem (retrato)</div>
                       <div className="mt-1 text-gray-400">
@@ -662,8 +709,18 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   canAfford ? 'border-white/10 bg-black/30 text-gray-400' : 'border-red-500/40 bg-red-950/30 text-red-200',
                 )}
               >
-                Custo:{' '}
+                Custo base:{' '}
                 <span className="font-display font-black text-neon-yellow">{formatExp(createCostExp)} EXP</span>
+                {contractPremiumExp > 0 ? (
+                  <>
+                    {' · '}
+                    prémio contrato:{' '}
+                    <span className="font-display font-bold text-white/90">{formatExp(contractPremiumExp)} EXP</span>
+                  </>
+                ) : null}
+                {' · '}
+                total:{' '}
+                <span className="font-display font-black text-neon-yellow">{formatExp(totalCreateCostExp)} EXP</span>
                 {' · '}
                 Saldo: <span className="text-white">{formatExp(oleBal)} EXP</span>
                 {!canAfford ? <span className="mt-1 block">EXP não chega.</span> : null}

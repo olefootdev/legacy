@@ -14,11 +14,15 @@ export interface GoalScorerOverlayProps {
   awayShort: string;
   homeScore: number;
   awayScore: number;
+  /** Quando false exibe “Defesa!” em vez de “Golo!”. Default true. */
+  isGoal?: boolean;
   /** Frase curta emocional sob o nome (substitui o antigo “Jogo posicional”). */
   storyline?: string;
   goalBuildUp?: 'positional' | 'counter';
   /** Seed picsum (igual à partida rápida / Meu Time). */
   scorerPortraitSeed?: string;
+  /** URL direta do retrato (prioridade sobre seed picsum). */
+  scorerPortraitUrl?: string;
   scorerCardStyle?: TeamCardVisualStyle;
   className?: string;
 }
@@ -34,8 +38,10 @@ export function GoalScorerOverlay({
   homeScore,
   awayScore,
   storyline,
+  isGoal = true,
   goalBuildUp,
   scorerPortraitSeed,
+  scorerPortraitUrl,
   scorerCardStyle = 'gray-400',
   className,
 }: GoalScorerOverlayProps) {
@@ -56,17 +62,51 @@ export function GoalScorerOverlay({
     >
       <div
         className={cn(
-          'glass-panel w-full p-5 border text-center',
-          'border-neon-yellow/45 shadow-[0_0_40px_rgba(234,255,0,0.18)]',
+          'glass-panel w-full p-5 border text-center relative overflow-hidden',
+          side === 'away'
+            ? 'border-red-500/40 shadow-[0_0_40px_rgba(239,68,68,0.18)]'
+            : 'border-neon-yellow/45 shadow-[0_0_40px_rgba(234,255,0,0.18)]',
         )}
       >
-        <p className="font-display font-black text-2xl sm:text-3xl uppercase tracking-[0.2em] text-neon-yellow">
-          Golo!
+        {side === 'away' && (
+          <>
+            <img
+              src="/test-pitch/tomamos-o-gol.jpg"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover opacity-25"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
+          </>
+        )}
+        <p className={cn(
+          'relative z-10 font-display font-black text-2xl sm:text-3xl uppercase tracking-[0.2em]',
+          side === 'away' ? 'text-red-400' : 'text-neon-yellow',
+        )}>
+          {isGoal ? (side === 'away' ? 'Tomamos gol...' : 'Golo!') : 'Defesa!'}
         </p>
 
-        <div className="mt-6 flex flex-col items-stretch gap-4">
+        <div className="relative z-10 mt-6 flex flex-col items-stretch gap-4">
           <div className="flex min-h-[6rem] items-stretch gap-0 overflow-hidden rounded-xl border border-white/10 bg-dark-gray/80 sm:min-h-[6.75rem] sm:gap-0">
-            {scorerPortraitSeed ? (
+            {scorerPortraitUrl ? (
+              <div className="relative w-[6.25rem] shrink-0 self-stretch overflow-hidden border-r border-white/10 bg-neutral-900 sm:w-28 md:w-32">
+                <img
+                  src={scorerPortraitUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover object-top grayscale"
+                  referrerPolicy="no-referrer"
+                />
+                <div
+                  className={cn(
+                    'absolute left-1 top-1 z-[1] rounded px-1 py-0.5 font-display text-[9px] font-black tabular-nums drop-shadow-md sm:left-1.5 sm:top-1.5 sm:px-1.5 sm:text-[10px]',
+                    side === 'home'
+                      ? 'bg-neon-yellow text-black'
+                      : 'bg-black/80 text-white border border-white/20',
+                  )}
+                >
+                  {dorsalBadge}
+                </div>
+              </div>
+            ) : scorerPortraitSeed ? (
               <TeamStylePortraitColumn
                 portraitSeed={scorerPortraitSeed}
                 style={scorerCardStyle}
@@ -117,7 +157,7 @@ export function GoalScorerOverlay({
             </div>
           </div>
 
-          <div className="flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-black/30 px-4 py-3 font-display font-black text-lg tabular-nums">
+          <div className="relative z-10 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-white/10 bg-black/30 px-4 py-3 font-display font-black text-lg tabular-nums">
             <span className={side === 'home' ? 'text-neon-yellow' : 'text-gray-500'}>{homeShort}</span>
             <span className="text-2xl text-white">
               <span className={side === 'home' ? 'text-neon-yellow' : ''}>{homeScore}</span>

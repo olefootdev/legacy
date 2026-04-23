@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Server, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  clientGeminiConfigured,
-  GAME_SPIRIT_WIRING_TABLE,
-  olefootApiBase,
-  statusLabelPt,
-  type WiringStatus,
-} from '@/gamespirit/admin/runtimeTruth';
+import { GAME_SPIRIT_WIRING_TABLE, olefootApiBase, statusLabelPt, type WiringStatus } from '@/gamespirit/admin/runtimeTruth';
 import { fetchGameSpiritServerStatus } from '@/gamespirit/admin/gameSpiritTeachClient';
 
 function statusColor(s: WiringStatus): string {
@@ -38,8 +32,6 @@ export function DiagnosticsSection() {
     };
   }, []);
 
-  const gemini = clientGeminiConfigured();
-
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-sm text-rose-100/95">
@@ -59,14 +51,18 @@ export function DiagnosticsSection() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-sm">
-          <p className="text-[10px] font-bold uppercase text-white/40">Gemini (Create player)</p>
+          <p className="text-[10px] font-bold uppercase text-white/40">Create player (Anthropic)</p>
           <div className="mt-2 flex items-center gap-2">
-            {gemini ? (
+            {server?.reachable && server.openaiConfigured ? (
               <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             ) : (
               <XCircle className="h-5 w-5 text-rose-400" />
             )}
-            <span>{gemini ? 'GEMINI_API_KEY definida (Vite)' : 'Sem chave no .env do Vite'}</span>
+            <span>
+              {server?.reachable && server.openaiConfigured
+                ? 'Servidor com ANTHROPIC_API_KEY — pronto para interpretar prompts'
+                : 'Servidor sem Anthropic ou inacessível — corre dev:server e configura server/.env'}
+            </span>
           </div>
         </div>
         <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-sm">
@@ -78,7 +74,7 @@ export function DiagnosticsSection() {
           {server?.reachable ? (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-emerald-300/90">
               <CheckCircle2 className="h-3.5 w-3.5" /> A responder
-              {server.openaiConfigured ? ' · OpenAI configurada' : ' · OpenAI não configurada no server'}
+              {server.openaiConfigured ? ' · Anthropic configurada' : ' · Anthropic não configurada no server'}
             </p>
           ) : (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-200/90">

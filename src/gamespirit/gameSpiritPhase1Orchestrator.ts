@@ -3,6 +3,7 @@ import type { GameSpiritDecisionRequest } from '@/gamespirit/gameSpiritDecisionC
 import { requestGameSpiritDecision } from '@/gamespirit/gameSpiritDecisionClient';
 import { buildContextReading, identifyFieldZone } from '@/playerDecision/ContextScanner';
 import type { GameSpiritPhase1Hint } from '@/playerDecision/types';
+import type { PositionKnowledge } from '@/gamespirit/legacy/positionKnowledgeTypes';
 
 export type GameSpiritPhase1Trigger = 'receive_ball' | 'gain_possession';
 
@@ -71,6 +72,7 @@ export function buildGameSpiritPhase1Request(
   ctx: DecisionContext,
   trigger: GameSpiritPhase1Trigger,
   shirtNumber: number | undefined,
+  positionKnowledge?: PositionKnowledge,
 ): GameSpiritDecisionRequest {
   const reading = buildContextReading(ctx);
   const zone = identifyFieldZone(ctx.self.x, ctx.attackDir);
@@ -81,6 +83,14 @@ export function buildGameSpiritPhase1Request(
   const num = shirtNumber != null ? String(shirtNumber) : '';
   const player = `${slotLabel(ctx)}${num ? ` ${num}` : ''}`.trim();
 
+  // Compact traits string para enriquecer o contexto da IA sem aumentar tokens
+  let positionTraits: string | undefined;
+  if (positionKnowledge && positionKnowledge.sessionsCompleted > 0) {
+    const t = positionKnowledge.traits;
+    const legend = positionKnowledge.legendSource ? ` dna:${positionKnowledge.legendSource}` : '';
+    positionTraits = `press:${t.pressIntensity.toFixed(1)} offRuns:${t.offensiveRuns.toFixed(1)} risk:${t.riskTaking.toFixed(1)} buildup:${t.buildUpPreference.toFixed(1)}${legend}`;
+  }
+
   return {
     player,
     position: zone,
@@ -88,6 +98,7 @@ export function buildGameSpiritPhase1Request(
     pressureLevel,
     nearbyPlayers: nearbyLabels(ctx),
     objective: objectiveFor(ctx, trigger),
+    positionTraits,
   };
 }
 
@@ -129,10 +140,11 @@ export function scheduleGameSpiritPhase1Request(opts: {
   trigger: GameSpiritPhase1Trigger;
   shirtNumber: number | undefined;
   onNarration: (text: string) => void;
+  positionKnowledge?: PositionKnowledge;
 }): void {
   if (!isGameSpiritPhase1ClientEnabled()) return;
 
-  const { playerId, decCtx, simTime, trigger, shirtNumber, onNarration } = opts;
+  const { playerId, decCtx, simTime, trigger, shirtNumber, onNarration, positionKnowledge } = opts;
   if (decCtx.self.role === 'gk' || decCtx.self.slotId === 'gol') return;
   const flightKey = `${playerId}:${trigger}`;
   if (inFlight.has(flightKey)) return;
@@ -140,7 +152,7 @@ export function scheduleGameSpiritPhase1Request(opts: {
   const last = lastRequestSimTime.get(playerId) ?? -1e9;
   if (simTime - last < MIN_REPEAT_SIM_SEC) return;
 
-  const body = buildGameSpiritPhase1Request(decCtx, trigger, shirtNumber);
+  const body = buildGameSpiritPhase1Request(decCtx, trigger, shirtNumber, positionKnowledge);
 
   inFlight.add(flightKey);
 

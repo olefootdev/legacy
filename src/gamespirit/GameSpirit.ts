@@ -1,6 +1,7 @@
 import type { PitchPlayerState, PitchPoint, PossessionSide } from '@/engine/types';
 import { overallFromAttributes } from '@/entities/player';
 import type { BallZone, SpiritContext, SpiritOutcome, ProposedAction, SpiritSnapshotMeta } from './types';
+import { applyPositionKnowledgeBias } from '@/gamespirit/legacy/positionKnowledgeTypes';
 import { PRE_GOAL_DURATION_MS, SECONDS_PER_TICK, type GoalBuildUp } from '@/engine/types';
 import {
   adjustHomeShotWeights,
@@ -14,6 +15,8 @@ import {
   penaltyOverlayForStage,
   PENALTY_FROM_FOUL_PROB,
   rollHomeShotLogicalOutcome,
+  rollGkSaveSubtype,
+  rollTackleOutcome,
 } from './spiritStateMachine';
 import * as T from './narrativeTemplates';
 import { pickLine } from './narrationSeed';
@@ -21,6 +24,7 @@ import type { PlayerEntity } from '@/entities/types';
 import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
 import { createCausalBatch, type CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import { normalizeStyle } from '@/tactics/playingStyle';
+import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
   const dx = a.x - b.x;
@@ -32,6 +36,14 @@ function zoneFromBallX(x: number): BallZone {
   if (x < 38) return 'def';
   if (x < 68) return 'mid';
   return 'att';
+}
+
+/** Alvo UI (0–100) junto à boca real da baliza — coerente com coreografia test2d. */
+function spiritShotTargetUI(side: 'home' | 'away'): PitchPoint {
+  const halfUy = (GOAL_MOUTH_HALF_WIDTH_M / FIELD_WIDTH) * 100;
+  const y = 50 + (Math.random() - 0.5) * (2 * halfUy * 0.88);
+  if (side === 'home') return { x: 96.4 + Math.random() * 2.6, y };
+  return { x: 1 + Math.random() * 2.6, y };
 }
 
 /** Remate com desfecho pleno (golo/defesa/bloqueio): só com bola na zona final (≥68 m no eixo 0–100). */
@@ -99,8 +111,13 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   }
   if (ctx.possession === 'away' && ctx.ballZone === 'def') return 'clear';
   if (ctx.possession === 'home' && ctx.ballZone === 'mid' && Math.random() > 0.65) return 'progress';
-  if (Math.random() > 0.72) return 'progress';
-  return 'recycle';
+  const base: ProposedAction = Math.random() > 0.72 ? 'progress' : 'recycle';
+
+  // DNA de lenda: aplica pesos de posição sobre a decisão base (zero tokens, local).
+  if (ctx.possession === 'home' && ctx.onBallKnowledge) {
+    return applyPositionKnowledgeBias(base, ctx.onBallKnowledge, ctx.ballZone);
+  }
+  return base;
 }
 
 function pick<T>(arr: T[], seed: number): T {
@@ -184,6 +201,7 @@ export function buildSpiritContext(input: {
   test2dTickModifiers?: SpiritContext['test2dTickModifiers'];
   live2dStagnationTicks?: number;
   motorTelemetryTail?: SpiritContext['motorTelemetryTail'];
+  penaltyCooldownTicks?: number;
 }): SpiritContext {
   const avg =
     input.homeRoster.length === 0
@@ -198,6 +216,24 @@ export function buildSpiritContext(input: {
   const nearestTeammateDist = nearestTeammateDistance(input.onBall, input.homePlayers);
   const homeDensityNearBall = densityNearBall(input.ball, input.homePlayers);
   const crowdPressure = crowdSpiritFromSupport(input.crowdSupport);
+
+  // Extrai positionKnowledge do jogador com a bola (quando em posse da casa)
+  const onBallKnowledge =
+    input.possession === 'home' && input.onBall
+      ? input.homeRoster.find((p) => p.id === input.onBall!.playerId)?.positionKnowledge
+      : undefined;
+
+  // LegacyDNA: soma o team_booster dos legacies titulares (em `homePlayers`).
+  let legacyTeamBooster: Record<string, number> | undefined;
+  for (const pitch of input.homePlayers) {
+    const entity = input.homeRoster.find((p) => p.id === pitch.playerId);
+    if (!entity?.isLegacy || !entity.legacyTeamBooster) continue;
+    if (!legacyTeamBooster) legacyTeamBooster = {};
+    for (const [k, v] of Object.entries(entity.legacyTeamBooster)) {
+      if (typeof v !== 'number' || !Number.isFinite(v)) continue;
+      legacyTeamBooster[k] = (legacyTeamBooster[k] ?? 0) + v;
+    }
+  }
 
   return {
     minute: input.minute,
@@ -224,6 +260,9 @@ export function buildSpiritContext(input: {
     test2dTickModifiers: input.test2dTickModifiers,
     live2dStagnationTicks: input.live2dStagnationTicks,
     motorTelemetryTail: input.motorTelemetryTail,
+    onBallKnowledge,
+    penaltyCooldownTicks: input.penaltyCooldownTicks,
+    legacyTeamBooster,
   };
 }
 
@@ -285,7 +324,7 @@ interface CommitGoalInput {
   homeShort: string;
   awayShort: string;
   /** Variante textual: post_in, penalty, etc. */
-  variant?: 'post_in';
+  variant?: 'post_in' | 'keeper_error';
   nowMs: number;
   /** Batch de eventos causais já em construção. */
   L: ReturnType<typeof createCausalBatch>;
@@ -323,6 +362,8 @@ function commitGoal(input: CommitGoalInput): {
   if (variant === 'post_in') {
     narrative = pickLine('goal_rebound', gParams, minute)
       ?? T.goalPostIn({ min: minute, scorer: scorerName });
+  } else if (variant === 'keeper_error') {
+    narrative = `${minute}' — Falha clamorosa do goleiro! ${scorerName} aproveita e empurra para o gol.`;
   } else {
     narrative = pickLine(['goal_simple', 'goal_beautiful'], gParams, minute)
       ?? (scorerSide === 'home'
@@ -388,11 +429,12 @@ export function gameSpiritTick(
     };
   }
 
-  /** Falta perigosa na zona final (casa a atacar): penálti ou bola parada. */
+  /** Falta perigosa na zona final (casa a atacar): penalty ou bola parada. */
   if (
     ctx.possession === 'home' &&
     ctx.ballZone === 'att' &&
     ctx.onBall &&
+    !(ctx.penaltyCooldownTicks && ctx.penaltyCooldownTicks > 0) &&
     Math.random() < DANGEROUS_FOUL_PROB
   ) {
     const toPenalty = Math.random() < PENALTY_FROM_FOUL_PROB;
@@ -465,9 +507,13 @@ export function gameSpiritTick(
         }
       : undefined;
 
-  const shotSkill = ctx.homeTeamAvg / 100;
-  const errorTax = cp.errorPenalty + (ctx.nearestTeammateDist > 26 ? 0.04 : 0);
-  const supportBoost = cp.supportBoost;
+  const legacyBooster = ctx.legacyTeamBooster ?? {};
+  const legacyAttack01 = (legacyBooster.attack_pct ?? 0) / 100;
+  const legacyDefense01 = (legacyBooster.defense_pct ?? 0) / 100;
+  const legacyMorale01 = (legacyBooster.morale ?? 0) / 100;
+  const shotSkill = Math.min(1, ctx.homeTeamAvg / 100 + legacyAttack01);
+  const errorTax = Math.max(0, cp.errorPenalty - legacyDefense01 * 0.5 + (ctx.nearestTeammateDist > 26 ? 0.04 : 0));
+  const supportBoost = cp.supportBoost + legacyMorale01;
   let spiritMeta: SpiritSnapshotMeta | undefined;
 
   if (ctx.possession === 'home') {
@@ -481,7 +527,7 @@ export function gameSpiritTick(
           shooterId,
           zone: ctx.ballZone,
           minute: ctx.minute,
-          target: { x: 96 + Math.random() * 3, y: 40 + Math.random() * 20 },
+          target: spiritShotTargetUI('home'),
         },
       });
 
@@ -550,20 +596,82 @@ export function gameSpiritTick(
           spiritBuildupGkTicksRemaining: patch.spiritBuildupGkTicksRemaining,
         };
       } else if (logical === 'save') {
-        const patch = patchAfterHomeShot(logical, yNorm);
-        L.push({
-          type: 'ball_state',
-          payload: { ...patch.ball, reason: 'keeper_save' },
-        });
-        L.push({ type: 'possession_change', payload: { to: 'away', reason: 'after_save' } });
-        narrative = pickLine('shot_save', { min: ctx.minute, from: ctx.onBall?.name ?? 'Atacante' }, ctx.minute)
-          ?? T.shotSave({ min: ctx.minute, shooter: ctx.onBall?.name ?? 'Atacante' });
-        next = patch.possession;
-        ball = patch.ball;
-        spiritMeta = {
-          spiritPhase: patch.spiritPhase,
-          spiritBuildupGkTicksRemaining: patch.spiritBuildupGkTicksRemaining,
-        };
+        // Crítico do goleiro: defende, falha (gol), espalma pra frente ou pra escanteio.
+        const gkSkill01 = Math.min(1, Math.max(0, ctx.opponentStrength / 100));
+        const subtype = rollGkSaveSubtype(Math.random(), gkSkill01);
+        const shooterName = ctx.onBall?.name ?? 'Atacante';
+
+        if (subtype === 'error_goal') {
+          // Falha do GK — vira gol da casa com narração própria.
+          const isCounter = detectCounter(ctx.possession, 'home', [...L.events]);
+          const gol = commitGoal({
+            scorerSide: 'home',
+            minute: ctx.minute,
+            buildUp: isCounter ? 'counter' : 'positional',
+            scorerName: shooterName,
+            homeShort: ctx.homeShort ?? 'Casa',
+            awayShort,
+            variant: 'keeper_error',
+            nowMs,
+            L,
+            shooterId,
+            ctx,
+          });
+          goalFor = gol.goalFor;
+          goalScorerPlayerId = gol.goalScorerPlayerId;
+          narrative = gol.narrative;
+          ball = gol.ball;
+          next = gol.nextPossession;
+          spiritMeta = gol.spiritMeta;
+          goalBuildUp = gol.goalBuildUp;
+          threatBar01 = gol.threatBar01;
+        } else if (subtype === 'parry_corner') {
+          // Espalma pra fora da linha de fundo → escanteio.
+          const patch = patchAfterHomeShot(logical, yNorm);
+          L.push({
+            type: 'ball_state',
+            payload: { ...patch.ball, reason: 'keeper_parry_corner' },
+          });
+          // Bola volta pra casa no canto pra executar o escanteio.
+          L.push({ type: 'possession_change', payload: { to: 'home', reason: 'after_save_corner' } });
+          narrative = `${ctx.minute}' — O goleiro espalma com as pontas dos dedos para escanteio! Boa chance para ${shooterName}.`;
+          next = 'home';
+          ball = { x: 95, y: Math.random() < 0.5 ? 8 : 92 };
+          spiritMeta = {
+            spiritPhase: 'set_piece',
+            spiritBuildupGkTicksRemaining: 0,
+          };
+        } else if (subtype === 'parry_forward') {
+          // Espalma pra frente — rebote, casa pega a sobra perto da área.
+          L.push({
+            type: 'ball_state',
+            payload: { x: 82, y: 50, reason: 'keeper_parry_forward' },
+          });
+          L.push({ type: 'possession_change', payload: { to: 'home', reason: 'after_save_rebound' } });
+          narrative = `${ctx.minute}' — O goleiro espalma para frente, a bola fica viva na área — rebote perigoso para ${ctx.homeShort ?? 'Casa'}!`;
+          next = 'home';
+          ball = { x: 82, y: 50 };
+          spiritMeta = {
+            spiritPhase: 'open_play',
+            spiritBuildupGkTicksRemaining: 0,
+          };
+        } else {
+          // hold — comportamento anterior.
+          const patch = patchAfterHomeShot(logical, yNorm);
+          L.push({
+            type: 'ball_state',
+            payload: { ...patch.ball, reason: 'keeper_save' },
+          });
+          L.push({ type: 'possession_change', payload: { to: 'away', reason: 'after_save' } });
+          narrative = pickLine('shot_save', { min: ctx.minute, from: shooterName }, ctx.minute)
+            ?? T.shotSave({ min: ctx.minute, shooter: shooterName });
+          next = patch.possession;
+          ball = patch.ball;
+          spiritMeta = {
+            spiritPhase: patch.spiritPhase,
+            spiritBuildupGkTicksRemaining: patch.spiritBuildupGkTicksRemaining,
+          };
+        }
       } else {
         const patch = patchAfterHomeShot(logical, yNorm);
         L.push({
@@ -631,13 +739,78 @@ export function gameSpiritTick(
       ? awayAttackers[Math.floor(Math.random() * awayAttackers.length)]!
       : (ctx.awayRoster ?? [])[Math.floor(Math.random() * (ctx.awayRoster?.length || 1))] ?? { id: `away:${awayShort}`, name: awayShort };
     const awayShooterId = awayScorer.id;
-    if (action === 'press' && Math.random() < 0.22 + (ctx.tacticalMentality - 50) / 250) {
-      next = 'home';
-      ball = { x: 58 + Math.random() * 10, y: 32 + Math.random() * 36 };
-      L.push({ type: 'possession_change', payload: { to: 'home', reason: 'high_press_win' } });
-      L.push({ type: 'ball_state', payload: { ...ball, reason: 'recovery_attack' } });
-      narrative = pickLine(['pressure_high', 'tackle_clean'], { min: ctx.minute, from: secondaryMate(ctx), team: ctx.homeShort ?? 'Casa' }, ctx.minute)
-        ?? T.press({ min: ctx.minute, team: ctx.homeShort ?? 'Casa', recoverer: secondaryMate(ctx) });
+    // Roubada de bola — 3 níveis + crítico de erro (miss).
+    // Só tenta desarme quando o motor seleciona 'press' + passa no gate de probabilidade.
+    const willTackle = action === 'press' && Math.random() < 0.42 + (ctx.tacticalMentality - 50) / 250;
+    if (willTackle) {
+      const tacklerName = secondaryMate(ctx);
+      const tackler = ctx.homePlayers?.find((p) => p.name === tacklerName);
+      const tacklerId = tackler?.playerId ?? 'home:unknown';
+      const fairPlay01 = tackler ? (tackler.attributes?.fairPlay ?? 70) / 100 : 0.7;
+
+      const tackleOut = rollTackleOutcome(Math.random(), {
+        tacticalMentality: ctx.tacticalMentality,
+        fairPlay01,
+      });
+
+      const victimName = ctx.onBall?.name ?? awayShort;
+      const victimId = ctx.onBall?.playerId ?? `away:${awayShort}`;
+
+      if (tackleOut === 'clean') {
+        // Roubada limpa — inicia contra-ataque.
+        next = 'home';
+        ball = { x: 58 + Math.random() * 10, y: 32 + Math.random() * 36 };
+        L.push({ type: 'possession_change', payload: { to: 'home', reason: 'tackle_clean' } });
+        L.push({ type: 'ball_state', payload: { ...ball, reason: 'recovery_attack' } });
+        narrative =
+          pickLine(['pressure_high', 'tackle_clean'], { min: ctx.minute, from: tacklerName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
+          ?? `${ctx.minute}' — ${tacklerName} rouba na divida limpa e ${ctx.homeShort ?? 'Casa'} sai no contra-ataque.`;
+      } else if (tackleOut === 'miss') {
+        // Erro crítico — marcador passou batido, atacante segue.
+        next = 'away';
+        ball = { x: ctx.ball.x, y: ctx.ball.y };
+        narrative = `${ctx.minute}' — ${tacklerName} tenta o desarme, falha feio e ${victimName} escapa com a bola!`;
+      } else if (tackleOut === 'foul_soft') {
+        // Falta forte — árbitro para o jogo, adversário reinicia na bola parada.
+        next = 'away';
+        ball = { x: ctx.ball.x, y: ctx.ball.y };
+        L.push({
+          type: 'foul_committed',
+          payload: {
+            minute: ctx.minute,
+            foulerSide: 'home',
+            foulerId: tacklerId,
+            victimId,
+            kind: 'tackle',
+            dangerous: false,
+            severity: 'firm',
+          },
+        });
+        L.push({ type: 'ball_state', payload: { ...ball, reason: 'free_kick_against' } });
+        narrative =
+          pickLine(['foul_soft'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
+          ?? `${ctx.minute}' — ${tacklerName} faz falta forte em ${victimName}. O árbitro para a partida.`;
+      } else {
+        // foul_hard — agressão, falta grave. Vermelho/amarelo + chance de lesão narrada.
+        next = 'away';
+        ball = { x: ctx.ball.x, y: ctx.ball.y };
+        L.push({
+          type: 'foul_committed',
+          payload: {
+            minute: ctx.minute,
+            foulerSide: 'home',
+            foulerId: tacklerId,
+            victimId,
+            kind: 'tackle',
+            dangerous: true,
+            severity: 'ugly',
+          },
+        });
+        L.push({ type: 'ball_state', payload: { ...ball, reason: 'dangerous_foul' } });
+        narrative =
+          pickLine(['foul_hard'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
+          ?? `${ctx.minute}' — Entrada agressiva de ${tacklerName}! Falta grave em ${victimName}, o árbitro já busca o cartão.`;
+      }
     } else {
       const rShot = Math.random();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
@@ -655,7 +828,7 @@ export function gameSpiritTick(
             shooterId: awayShooterId,
             zone: awayZone,
             minute: ctx.minute,
-            target: { x: 4 + Math.random() * 4, y: 40 + Math.random() * 20 },
+            target: spiritShotTargetUI('away'),
           },
         });
         L.push({
@@ -691,7 +864,7 @@ export function gameSpiritTick(
             shooterId: awayShooterId,
             zone: awayZone,
             minute: ctx.minute,
-            target: { x: 4 + Math.random() * 4, y: 40 + Math.random() * 20 },
+            target: spiritShotTargetUI('away'),
           },
         });
         L.push({

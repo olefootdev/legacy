@@ -90,7 +90,7 @@ export const CREATE_PLAYER_ENTITY_OPTIONAL_FIELDS = [
 ] as const;
 
 /**
- * JSON que o Gemini devolve (após o passo 6). Não incluir name/pos/country/strongFoot/creatorType/rarity — vêm do wizard.
+ * JSON que o modelo devolve (após o passo 6; OpenAI no olefoot-server). Não incluir name/pos/country/strongFoot/creatorType/rarity — vêm do wizard.
  * Copiar para documentação ou para testes de contrato.
  */
 export const CREATE_PLAYER_GEMINI_RESPONSE_SHAPE = `
@@ -129,7 +129,7 @@ OLEFOOT — CREATE PLAYER (integração)
 Wizard:
 ${CREATE_PLAYER_WIZARD_STEPS.map((s) => `- ${s}`).join('\n')}
 
-Contexto enviado ao Gemini (fixo, não no JSON de resposta):
+Contexto enviado ao servidor (fixo, não no JSON de resposta):
 - name, pos, country, creatorType, rarity, strongFoot
 
 Resposta JSON do modelo (apenas estes campos dinâmicos):

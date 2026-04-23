@@ -9,6 +9,8 @@ export interface TacticalContext {
   ballZ: number;
   /** 1 = 1.º tempo; 2 = 2.º tempo (lados IFAB invertidos para clamp por profundidade local). */
   half?: MatchHalf;
+  /** Team has possession — fullbacks allowed further forward. */
+  teamHasBall?: boolean;
 }
 
 function toLocalDepth(x: number, side: MatchTruthPlayer['side'], half: MatchHalf): number {
@@ -59,7 +61,8 @@ export function clampTargetToRoleZone(
   } else if (player.role === 'def') {
     let cap = defMax;
     if (isFullbackSlot(player.slotId)) {
-      cap = Math.min(cap, defDepth + 22);
+      const fbCeiling = ctx.teamHasBall ? defDepth + 38 : defDepth + 22;
+      cap = Math.min(cap + (ctx.teamHasBall ? 16 : 0), fbCeiling);
     }
     local = Math.min(local, cap);
   } else if (player.role === 'attack') {

@@ -22,6 +22,8 @@ import { useProgressionStore } from '@/progression/progressionStore';
 import { MISSION_CATALOG } from '@/progression/missions/catalog';
 import { COMPETITION_TROPHY_CATALOG } from '@/trophies/competitionCatalog';
 import { MEMORABLE_TROPHY_SLOTS } from '@/trophies/memorableCatalog';
+import { CareerTierBadge } from '@/components/CareerTierBadge';
+import { ManagerPersonaCard } from '@/components/ManagerPersonaCard';
 
 const MISSION_TROPHY_KINDS = new Set(['onboarding', 'achievement', 'special']);
 
@@ -114,7 +116,13 @@ export function Profile() {
             <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-400">EXP Acumulado</h3>
           </div>
           <p className="font-display font-bold text-xl text-neon-yellow">{formatExp(finance.expLifetimeEarned ?? 0)}</p>
-          <p className="text-xs text-gray-500 mt-1">Histórico de conquistas</p>
+          <div className="mt-3">
+            <CareerTierBadge expLifetimeEarned={finance.expLifetimeEarned ?? 0} showProgress />
+          </div>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="sm:col-span-2">
+          <ManagerPersonaCard />
         </motion.div>
       </div>
 

@@ -12,10 +12,28 @@ import {
   getCollectiveTarget,
   type ActionOption,
 } from './collectiveIndividualDecision';
-import { getZoneTags } from '@/match/fieldZones';
+import { evaluateSupportQuality } from './teamCollectiveState';
+import { getZoneTags, getDefendingGoalX, clampGoalkeeperTargetX, type TeamSide } from '@/match/fieldZones';
 import { getDefensiveIntent } from '@/tactics/playingStyle';
 import { pick01ForDecision } from './decisionRng';
 import { applyPrethinkingToOffBall } from './prethinking';
+import { contextualFullbackOverlapRoll01 } from './contextualGameplayBoost';
+import { nudgeOffBallTowardHigherThreat } from './goalEvolutionRead';
+import {
+  evaluateGoalkeeperPositionDuel,
+  evaluateMarkingDuelDefender,
+  evaluateAnticipationDuel,
+} from './localDuelRead';
+
+/** Bote só se o duelo de marcação ou a antecipação favorecer — evita exposição burra. */
+function shouldPressCarrierByDuel(ctx: DecisionContext, reading: ContextReading): boolean {
+  const carrier = ctx.opponents.find((o) => o.id === ctx.carrierId);
+  if (!carrier) return true;
+  const marking = evaluateMarkingDuelDefender(ctx.self, carrier, reading);
+  const anticipation = evaluateAnticipationDuel(ctx.self, carrier, reading);
+  if (marking.outcome === 'disadvantage' && anticipation.outcome !== 'advantage') return false;
+  return true;
+}
 
 /**
  * Off-ball decision for players without possession.
@@ -34,7 +52,26 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
   const teamHasBall = ctx.possession === ctx.self.side;
 
   if (ctx.self.role === 'gk') {
-    return { type: 'move_to_slot', targetX: ctx.slotX, targetZ: ctx.slotZ };
+    const gkDuel = evaluateGoalkeeperPositionDuel(ctx, reading);
+    const half = ctx.clockHalf ?? 1;
+    const team = ctx.self.side as TeamSide;
+    const ownGx = getDefendingGoalX(team, half);
+    const toBallSign = Math.sign(ctx.ballX - ctx.self.x) || ctx.attackDir;
+    const threat = Math.min(1, ctx.threatLevel);
+    let tx = ctx.slotX;
+    if (gkDuel.outcome === 'advantage') {
+      tx = ctx.slotX + toBallSign * (4.2 + threat * 3.6) * (0.45 + threat * 0.5);
+    } else if (gkDuel.outcome === 'balance') {
+      tx = ctx.slotX + toBallSign * 1.9 * (0.4 + threat * 0.45);
+    } else {
+      tx = ctx.slotX + Math.sign(ownGx - ctx.slotX) * 1.5;
+    }
+    tx = clampGoalkeeperTargetX(team, half, tx);
+    return {
+      type: 'move_to_slot',
+      targetX: tx,
+      targetZ: clamp(ctx.slotZ + (ctx.ballZ - FIELD_WIDTH / 2) * 0.14, 12, FIELD_WIDTH - 12),
+    };
   }
 
   // Collective/individual architecture layer for off-ball behavior.
@@ -54,7 +91,23 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
   const zoneTags = getZoneTags({ x: ctx.self.x, z: ctx.self.z }, { team: ctx.self.side, half });
   const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, { tags: zoneTags });
   if (!teamHasBall) {
+    // Voice command: pressão / falta tática → força press mais próximo, ignora delay.
+    const vPress = ctx.voiceBias?.pressIntensity ?? 0;
+    const vFoul = ctx.voiceBias?.foulBoost ?? 0;
+    if (vPress >= 0.5 || vFoul >= 0.5) {
+      const distToBall = Math.hypot(ctx.self.x - ctx.ballX, ctx.self.z - ctx.ballZ);
+      if (distToBall < 22) {
+        return { type: 'press_carrier', targetX: ctx.ballX, targetZ: ctx.ballZ };
+      }
+    }
     if (pick.action.id === 'press') {
+      if (!shouldPressCarrierByDuel(ctx, reading)) {
+        return {
+          type: 'delay_press',
+          targetX: (ctx.self.x + ctx.ballX) / 2,
+          targetZ: (ctx.self.z + ctx.ballZ) / 2,
+        };
+      }
       return { type: 'press_carrier', targetX: ctx.ballX, targetZ: ctx.ballZ };
     }
     if (pick.action.id === 'cover' || pick.action.id === 'hold_position') {
@@ -88,6 +141,66 @@ function countTeammatesNearBall(ctx: DecisionContext, radius: number): number {
   return n;
 }
 
+/**
+ * Entre colegas sem a bola, quão “à frente” na fila de apoio curto estamos (0 = mais perto).
+ * O portador não entra — já está na jogada.
+ */
+function nonCarrierDistanceRankToBall(ctx: DecisionContext): number {
+  if (!ctx.carrierId || ctx.self.id === ctx.carrierId) return 0;
+  const dSelf = Math.hypot(ctx.ballX - ctx.self.x, ctx.ballZ - ctx.self.z);
+  let rank = 0;
+  for (const t of ctx.teammates) {
+    if (t.id === ctx.self.id) continue;
+    if (t.id === ctx.carrierId) continue;
+    const d = Math.hypot(ctx.ballX - t.x, ctx.ballZ - t.z);
+    if (d < dSelf - 0.45) rank++;
+    else if (Math.abs(d - dSelf) <= 0.45 && t.id.localeCompare(ctx.self.id) < 0) rank++;
+  }
+  return rank;
+}
+
+/** Evita “vaca louca”: com portador, só 1–2 apoiantes fecham a bola; os outros largam e esperam linha. */
+function shouldDeferOffBallBallChase(ctx: DecisionContext, distToBall: number): boolean {
+  if (!ctx.carrierId || ctx.self.id === ctx.carrierId) return false;
+  const rank = nonCarrierDistanceRankToBall(ctx);
+  if (distToBall < 18 && rank > 0) return true;
+  if (distToBall < 30 && rank > 1) return true;
+  return false;
+}
+
+function peelFromCarrierBallCluster(ctx: DecisionContext): OffBallAction {
+  const role = ctx.self.role;
+  const sideSign = ctx.self.z < ctx.ballZ ? -1 : 1;
+
+  // Attackers peel forward into depth instead of sideways
+  if (role === 'attack') {
+    return {
+      type: 'attack_depth',
+      targetX: clamp(ctx.ballX + ctx.attackDir * (12 + pick01ForDecision(ctx) * 8), 5, FIELD_LENGTH - 5),
+      targetZ: clamp(ctx.self.z + sideSign * (6 + pick01ForDecision(ctx) * 6), 6, FIELD_WIDTH - 6),
+    };
+  }
+
+  // Defenders/DMs peel back toward slot to provide coverage
+  if (role === 'def' || ctx.self.slotId === 'vol') {
+    return {
+      type: 'defensive_cover',
+      targetX: clamp(ctx.slotX, 5, FIELD_LENGTH - 5),
+      targetZ: clamp(ctx.slotZ + sideSign * 4, 4, FIELD_WIDTH - 4),
+    };
+  }
+
+  // Midfielders / wingers: peel wide to create passing angle
+  const rz = findReceptionZone(ctx);
+  const peelZ = clamp(rz.z + sideSign * (10 + pick01ForDecision(ctx) * 7), 4, FIELD_WIDTH - 4);
+  const peelX = clamp(rz.x + ctx.attackDir * (2 + pick01ForDecision(ctx) * 5), 3, FIELD_LENGTH - 3);
+  return {
+    type: 'open_width',
+    targetX: peelX,
+    targetZ: peelZ,
+  };
+}
+
 function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): OffBallAction {
   const distToBall = Math.hypot(ctx.ballX - ctx.self.x, ctx.ballZ - ctx.self.z);
   const profile = ctx.profile;
@@ -95,22 +208,15 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
   const slot = ctx.self.slotId ?? '';
   const sector = ctx.ballSector;
 
-  // Amontoado na bola: abrir corredor / largura em vez de apertar o portador.
-  if (
+  // Hard cap: max 2 teammates near ball — third player MUST peel away.
+  const nearBallCount = countTeammatesNearBall(ctx, 10);
+  const tripleCluster =
     ctx.carrierId
     && ctx.self.id !== ctx.carrierId
-    && countTeammatesNearBall(ctx, 12) >= 2
-    && distToBall < 14
-  ) {
-    const rz = findReceptionZone(ctx);
-    const side = ctx.self.z < ctx.ballZ ? -1 : 1;
-    const peelZ = clamp(rz.z + side * (7 + pick01ForDecision(ctx) * 6), 4, FIELD_WIDTH - 4);
-    const peelX = clamp(rz.x - ctx.attackDir * (2.5 + pick01ForDecision(ctx) * 3), 3, FIELD_LENGTH - 3);
-    return applySpacingToAction(ctx, {
-      type: 'open_width',
-      targetX: peelX,
-      targetZ: peelZ,
-    });
+    && nearBallCount >= 2
+    && distToBall < 18;
+  if (shouldDeferOffBallBallChase(ctx, distToBall) || tripleCluster) {
+    return applySpacingToAction(ctx, peelFromCarrierBallCluster(ctx));
   }
 
   // -----------------------------------------------------------------------
@@ -133,6 +239,50 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
   }
 
   // -----------------------------------------------------------------------
+  // Collective support quality: redirect players who aren't helping the play.
+  // Active for ALL distances when collective state is available.
+  // -----------------------------------------------------------------------
+  if (ctx.collective) {
+    const sq = evaluateSupportQuality(
+      ctx.self, ctx.ballX, ctx.ballZ, ctx.attackDir,
+      ctx.teammates, ctx.opponents, ctx.collective,
+    );
+    if (sq.usefulness < 0.35 && sq.suggestion !== 'stay') {
+      if (sq.suggestion === 'create_width') {
+        const wideDir = ctx.self.z < FIELD_WIDTH / 2 ? -1 : 1;
+        const wz = clamp(ctx.self.z + wideDir * (10 + pick01ForDecision(ctx) * 6), 4, FIELD_WIDTH - 4);
+        return applySpacingToAction(ctx, {
+          type: 'open_width',
+          targetX: clamp(ctx.self.x + ctx.attackDir * 3, 5, FIELD_LENGTH - 5),
+          targetZ: wz,
+        });
+      }
+      if (sq.suggestion === 'attack_space') {
+        return applySpacingToAction(ctx, {
+          type: 'attack_depth',
+          targetX: clamp(ctx.self.x + ctx.attackDir * (8 + pick01ForDecision(ctx) * 5), 5, FIELD_LENGTH - 5),
+          targetZ: clamp(ctx.self.z + (pick01ForDecision(ctx) - 0.5) * 8, 6, FIELD_WIDTH - 6),
+        });
+      }
+      if (sq.suggestion === 'recycle') {
+        return applySpacingToAction(ctx, {
+          type: 'move_to_slot',
+          targetX: clamp(ctx.slotX - ctx.attackDir * 4, 5, FIELD_LENGTH - 5),
+          targetZ: ctx.slotZ,
+        });
+      }
+      if (sq.suggestion === 'offer_line') {
+        const rz = findReceptionZone(ctx);
+        return applySpacingToAction(ctx, {
+          type: 'offer_short_line',
+          targetX: rz.x,
+          targetZ: rz.z,
+        });
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Role-specific positioning with spacing enforcement
   // -----------------------------------------------------------------------
   let action: OffBallAction;
@@ -147,7 +297,7 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
     action = decideMidSupport(ctx, reading, distToBall, sector);
   } else if (role === 'def') {
     action = decideDefenderSupport(ctx, reading, distToBall);
-  } else if (distToBall < 15) {
+  } else if (distToBall < 15 && nonCarrierDistanceRankToBall(ctx) === 0) {
     const rz = findReceptionZone(ctx);
     action = {
       type: 'offer_short_line',
@@ -166,8 +316,9 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
       : applyLightSectorNudgeAfterPass(ctx, action);
   }
 
-  // Apply spacing enforcement to the chosen target
-  return applySpacingToAction(ctx, action);
+  // Ajuste leve rumo a posições que elevam ameaça ao golo (integrado ao apoio existente).
+  const lifted = nudgeOffBallTowardHigherThreat(ctx, reading, action);
+  return applySpacingToAction(ctx, lifted);
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +357,65 @@ function applyLightSectorNudgeAfterPass(ctx: DecisionContext, action: OffBallAct
 // Role-specific attacking support (sector-aware)
 // ---------------------------------------------------------------------------
 
+/**
+ * Detect if a *teammate* fullback has pushed far forward, exposing the
+ * corridor behind them. Used by CBs/DMs to shift cover toward that wing.
+ */
+function detectExposedFlankFromTeammate(
+  ctx: DecisionContext,
+): { x: number; z: number } | null {
+  const ad = ctx.attackDir;
+  for (const tm of ctx.teammates) {
+    if (tm.id === ctx.self.id) continue;
+    if (tm.role !== 'def') continue;
+    const isFb = tm.z < FIELD_WIDTH * 0.3 || tm.z > FIELD_WIDTH * 0.7;
+    if (!isFb) continue;
+    const localDepth = ad === 1 ? tm.x : FIELD_LENGTH - tm.x;
+    if (localDepth > FIELD_LENGTH * 0.55) {
+      const ownGoalX = ad === 1 ? 0 : FIELD_LENGTH;
+      const coverX = ownGoalX + ad * 18;
+      const coverZ = tm.z < FIELD_WIDTH / 2
+        ? FIELD_WIDTH * 0.22
+        : FIELD_WIDTH * 0.78;
+      return { x: coverX, z: coverZ };
+    }
+  }
+  return null;
+}
+
+/**
+ * Detect if an opponent fullback has pushed far forward, opening a corridor
+ * behind them. Returns the Z of the open wing and target X depth, or null.
+ */
+function detectOpenCorridorFromAdvancedFullback(
+  ctx: DecisionContext,
+): { targetX: number; targetZ: number } | null {
+  const ad = ctx.attackDir;
+  const defLineX = ad === 1 ? FIELD_LENGTH * 0.25 : FIELD_LENGTH * 0.75;
+  for (const opp of ctx.opponents) {
+    if (opp.role !== 'def') continue;
+    const isFullback = opp.z < FIELD_WIDTH * 0.3 || opp.z > FIELD_WIDTH * 0.7;
+    if (!isFullback) continue;
+    const oppDepthFromGoal = ad === 1
+      ? FIELD_LENGTH - opp.x
+      : opp.x;
+    if (oppDepthFromGoal > 35) {
+      const behindZ = opp.z;
+      const behindX = ad === 1 ? FIELD_LENGTH - 12 : 12;
+      const nearbyOpps = ctx.opponents.filter(
+        (o) => o.id !== opp.id && Math.hypot(o.x - behindX, o.z - behindZ) < 14,
+      );
+      if (nearbyOpps.length < 2) {
+        return {
+          targetX: clamp(behindX, 5, FIELD_LENGTH - 5),
+          targetZ: clamp(behindZ, 6, FIELD_WIDTH - 6),
+        };
+      }
+    }
+  }
+  return null;
+}
+
 function decideStrikerSupport(
   ctx: DecisionContext,
   reading: ContextReading,
@@ -216,6 +426,30 @@ function decideStrikerSupport(
   const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
 
   if (reading.teamPhase === 'attack') {
+    // If penalty area has some free space (few opponents in immediate box)
+    // prefer to infiltrate the small area to create finishing chances.
+    try {
+      const opponentsInBox = ctx.opponents.filter((o) => {
+        const inBoxX = ctx.attackDir === 1 ? o.x > FIELD_LENGTH - 22 : o.x < 22;
+        const inBoxZ = Math.abs(o.z - FIELD_WIDTH / 2) < FIELD_WIDTH * 0.34;
+        return inBoxX && inBoxZ;
+      }).length;
+      const boxSpaceFactor = Math.max(0, 1 - opponentsInBox / 4);
+      if (boxSpaceFactor > 0.45 && pick01ForDecision(ctx) < 0.45 + profile.verticality * 0.3) {
+        // aim to occupy central penalty area depth
+        return {
+          type: 'infiltrate',
+          targetX: clamp(goalX - ctx.attackDir * (8 + pick01ForDecision(ctx) * 6), 3, FIELD_LENGTH - 3),
+          targetZ: clamp(FIELD_WIDTH / 2 + (pick01ForDecision(ctx) - 0.5) * 8, 6, FIELD_WIDTH - 6),
+        };
+      }
+    } catch (e) {
+      // noop
+    }
+    const openCorridor = detectOpenCorridorFromAdvancedFullback(ctx);
+    if (openCorridor && pick01ForDecision(ctx) < 0.55) {
+      return { type: 'attack_depth', ...openCorridor };
+    }
     // Ball on the wing → attack box at specific posts (spread)
     if (sector !== 'center') {
       const nearPost = sector === 'left' ? FIELD_WIDTH * 0.3 : FIELD_WIDTH * 0.7;
@@ -232,7 +466,13 @@ function decideStrikerSupport(
 
     // Central play: position between defenders but use own lateral offset
     const lateralOffset = ctx.self.z < FIELD_WIDTH / 2 ? -8 : 8;
-    if (pick01ForDecision(ctx) < 0.5) {
+    const laneBoost =
+      reading.laneBehindBall.depthM > 10
+      && reading.laneBehindBall.widthM > 7
+      && reading.localTargetConfidence.ball01 > 0.42
+        ? 0.14
+        : 0;
+    if (pick01ForDecision(ctx) < 0.5 + laneBoost) {
       return {
         type: 'attack_depth',
         targetX: clamp(goalX - ctx.attackDir * (5 + pick01ForDecision(ctx) * 7), 3, FIELD_LENGTH - 3),
@@ -249,6 +489,13 @@ function decideStrikerSupport(
       };
     }
 
+    if (nonCarrierDistanceRankToBall(ctx) > 0) {
+      return {
+        type: 'attack_depth',
+        targetX: clamp(goalX - ctx.attackDir * (8 + pick01ForDecision(ctx) * 8), 5, FIELD_LENGTH - 5),
+        targetZ: clamp(ctx.self.z + (pick01ForDecision(ctx) - 0.5) * 10, 6, FIELD_WIDTH - 6),
+      };
+    }
     return {
       type: 'anticipate_second_ball',
       targetX: clamp(ctx.ballX + ctx.attackDir * 6, 5, FIELD_LENGTH - 5),
@@ -256,8 +503,8 @@ function decideStrikerSupport(
     };
   }
 
-  // Progression: position between CBs to receive — use own slot Z for spread
-  if (distToBall < 20) {
+  // Progression: short line ONLY if closest non-carrier AND no one else is already there.
+  if (distToBall < 20 && nonCarrierDistanceRankToBall(ctx) === 0 && countTeammatesNearBall(ctx, 12) < 2) {
     const rz = findReceptionZone(ctx);
     return {
       type: 'offer_short_line',
@@ -266,11 +513,30 @@ function decideStrikerSupport(
     };
   }
 
+  // Default: hold depth — striker's primary duty is staying high.
   return {
-    type: 'move_to_slot',
-    targetX: ctx.slotX,
-    targetZ: ctx.slotZ,
+    type: 'attack_depth',
+    targetX: clamp(goalX - ctx.attackDir * (10 + pick01ForDecision(ctx) * 8), 5, FIELD_LENGTH - 5),
+    targetZ: clamp(ctx.self.z + (pick01ForDecision(ctx) - 0.5) * 10, 6, FIELD_WIDTH - 6),
   };
+}
+
+// When midfield is congested, nudge fullbacks to push higher and open width
+function shouldFullbackPushOnCongestedMidfield(ctx: DecisionContext): boolean {
+  try {
+    const midOpponents = ctx.opponents.filter((o) => {
+      const inMidX = ctx.attackDir === 1 ? o.x > FIELD_LENGTH * 0.33 && o.x < FIELD_LENGTH * 0.77 : o.x < FIELD_LENGTH * 0.66 && o.x > FIELD_LENGTH * 0.23;
+      return inMidX;
+    }).length;
+    const midTeammates = ctx.teammates.filter((t) => {
+      const inMidX = ctx.attackDir === 1 ? t.x > FIELD_LENGTH * 0.33 && t.x < FIELD_LENGTH * 0.77 : t.x < FIELD_LENGTH * 0.66 && t.x > FIELD_LENGTH * 0.23;
+      return inMidX;
+    }).length;
+    // If midfield is crowded (more opponents than teammates near midfield) suggest push
+    return midOpponents >= Math.max(3, midTeammates + 1);
+  } catch (e) {
+    return false;
+  }
 }
 
 function decideWingerSupport(
@@ -283,6 +549,19 @@ function decideWingerSupport(
   const isLeft = ctx.self.z < FIELD_WIDTH / 2;
   const mySector: BallSector = isLeft ? 'left' : 'right';
   const wideZ = isLeft ? 4 + pick01ForDecision(ctx) * 6 : FIELD_WIDTH - 4 - pick01ForDecision(ctx) * 6;
+
+  // Exploit corridor left by advanced opponent fullback on the winger's side
+  if (reading.teamPhase === 'attack' || reading.teamPhase === 'progression') {
+    const openCorridor = detectOpenCorridorFromAdvancedFullback(ctx);
+    if (openCorridor) {
+      const corridorOnMySide = isLeft
+        ? openCorridor.targetZ < FIELD_WIDTH * 0.4
+        : openCorridor.targetZ > FIELD_WIDTH * 0.6;
+      if (corridorOnMySide && pick01ForDecision(ctx) < 0.6) {
+        return { type: 'attack_depth', ...openCorridor };
+      }
+    }
+  }
 
   // Same-side as ball: get wide and high
   if (sector === mySector) {
@@ -339,11 +618,17 @@ function decideFullbackSupport(
 
   // Ball on my side: overlap forward
   if (sector === mySector && (reading.teamPhase === 'attack' || reading.teamPhase === 'progression')) {
-    if (profile.workRate > 0.55 && pick01ForDecision(ctx) < 0.35) {
+    const overlapP = 0.35 + contextualFullbackOverlapRoll01(ctx, reading, sector);
+    if (profile.workRate > 0.55 && pick01ForDecision(ctx) < overlapP) {
+      const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
+      // In attack phase: push to crossing zone near byline; in progression: stay moderate
+      const targetX = reading.teamPhase === 'attack'
+        ? clamp(goalX - ctx.attackDir * (8 + pick01ForDecision(ctx) * 8), 8, FIELD_LENGTH - 8)
+        : clamp(ctx.ballX + ctx.attackDir * 18, 10, FIELD_LENGTH - 8);
       return {
         type: 'overlap_run',
-        targetX: clamp(ctx.ballX + ctx.attackDir * 15, 10, FIELD_LENGTH - 5),
-        targetZ: isLeft ? 3 + pick01ForDecision(ctx) * 5 : FIELD_WIDTH - 3 - pick01ForDecision(ctx) * 5,
+        targetX,
+        targetZ: isLeft ? 2 + pick01ForDecision(ctx) * 5 : FIELD_WIDTH - 2 - pick01ForDecision(ctx) * 5,
       };
     }
     return {
@@ -354,7 +639,7 @@ function decideFullbackSupport(
   }
 
   // Ball on opposite side: tuck in to cover transition
-  if (sector !== mySector) {
+  if (sector !== mySector && sector !== 'center') {
     return {
       type: 'defensive_cover',
       targetX: clamp(ctx.slotX + ctx.attackDir * 3, 5, FIELD_LENGTH - 5),
@@ -362,10 +647,12 @@ function decideFullbackSupport(
     };
   }
 
+  // Ball central: hold width on own wing to stretch the defense
+  const wideTarget = isLeft ? 5 + pick01ForDecision(ctx) * 5 : FIELD_WIDTH - 5 - pick01ForDecision(ctx) * 5;
   return {
-    type: 'offer_short_line',
-    targetX: clamp(ctx.ballX - ctx.attackDir * 5, 3, FIELD_LENGTH - 3),
-    targetZ: ctx.self.z,
+    type: 'open_width',
+    targetX: clamp(ctx.ballX + ctx.attackDir * 4, 5, FIELD_LENGTH - 5),
+    targetZ: wideTarget,
   };
 }
 
@@ -377,13 +664,26 @@ function decideMidSupport(
 ): OffBallAction {
   const profile = ctx.profile;
 
-  // Close to ball → find reception zone at a passing angle from carrier
-  if (distToBall < 15 && pick01ForDecision(ctx) < 0.45) {
-    const rz = findReceptionZone(ctx);
+  // Close to ball → short line ONLY if closest AND no other short supporters already.
+  if (distToBall < 15 && nonCarrierDistanceRankToBall(ctx) === 0 && countTeammatesNearBall(ctx, 12) < 2) {
+    if (pick01ForDecision(ctx) < 0.4) {
+      const rz = findReceptionZone(ctx);
+      return {
+        type: 'offer_short_line',
+        targetX: rz.x,
+        targetZ: rz.z,
+      };
+    }
+  }
+
+  // Diagonal line: primary mid role — offer angle away from carrier's line.
+  if (distToBall < 25 && pick01ForDecision(ctx) < 0.5 + profile.vision * 0.2) {
+    const diagDir = ctx.self.z < FIELD_WIDTH / 2 ? 1 : -1;
+    const diagZ = ctx.self.z + diagDir * (8 + pick01ForDecision(ctx) * 6);
     return {
-      type: 'offer_short_line',
-      targetX: rz.x,
-      targetZ: rz.z,
+      type: 'offer_diagonal_line',
+      targetX: clamp(ctx.ballX + ctx.attackDir * (6 + pick01ForDecision(ctx) * 6), 5, FIELD_LENGTH - 5),
+      targetZ: clamp(diagZ, 5, FIELD_WIDTH - 5),
     };
   }
 
@@ -391,7 +691,6 @@ function decideMidSupport(
   if (sector !== 'center' && reading.teamPhase === 'attack') {
     if (pick01ForDecision(ctx) < 0.3 + profile.workRate * 0.15) {
       const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
-      // Use own slot Z to maintain lateral spread
       const t = anchoredTarget(ctx,
         goalX - ctx.attackDir * 20,
         ctx.slotZ,
@@ -401,8 +700,8 @@ function decideMidSupport(
     }
   }
 
-  // Progression: infiltrate between lines but respect slot anchor
-  if (reading.teamPhase === 'progression' && profile.verticality > 0.5 && pick01ForDecision(ctx) < 0.3) {
+  // Infiltrate: between lines (progression) or box run (attack phase for high-verticality mids)
+  if (reading.teamPhase === 'progression' && profile.verticality > 0.5 && pick01ForDecision(ctx) < 0.35) {
     const t = anchoredTarget(ctx,
       ctx.ballX + ctx.attackDir * 12,
       ctx.slotZ + (pick01ForDecision(ctx) - 0.5) * 10,
@@ -410,13 +709,12 @@ function decideMidSupport(
     );
     return { type: 'infiltrate', targetX: t.x, targetZ: t.z };
   }
-
-  // Offer diagonal passing lane — use own Z side for spread
-  if (distToBall < 20 && pick01ForDecision(ctx) < 0.3) {
+  if (reading.teamPhase === 'attack' && profile.verticality > 0.65 && pick01ForDecision(ctx) < 0.28) {
+    const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
     return {
-      type: 'offer_diagonal_line',
-      targetX: clamp(ctx.ballX + ctx.attackDir * 8, 5, FIELD_LENGTH - 5),
-      targetZ: clamp(ctx.self.z + (ctx.self.z < FIELD_WIDTH / 2 ? 8 : -8), 5, FIELD_WIDTH - 5),
+      type: 'infiltrate',
+      targetX: clamp(goalX - ctx.attackDir * (14 + pick01ForDecision(ctx) * 8), 5, FIELD_LENGTH - 5),
+      targetZ: clamp(FIELD_WIDTH / 2 + (pick01ForDecision(ctx) - 0.5) * 18, 8, FIELD_WIDTH - 8),
     };
   }
 
@@ -505,6 +803,8 @@ function decideDefending(ctx: DecisionContext, reading: ContextReading): OffBall
   const half = ctx.clockHalf ?? 1;
   const zoneTags = getZoneTags({ x: ctx.self.x, z: ctx.self.z }, { team: ctx.self.side, half });
   const inOwnBox = zoneTags.includes('own_box');
+  const collectivePhase = ctx.collective?.phase;
+  const isBlockPhase = collectivePhase === 'defensive_block';
 
   // Segurança > estilo: em perigo máximo dentro da própria área, colapsar central.
   if (inOwnBox && role !== 'gk') {
@@ -515,15 +815,44 @@ function decideDefending(ctx: DecisionContext, reading: ContextReading): OffBall
     };
   }
 
+  // Coordinated defensive retreat: if opponents outnumber defenders near our goal,
+  // any non-GK not already in position drops back to cover the line.
+  if (role !== 'gk') {
+    const ownGoalX = ctx.attackDir === 1 ? 0 : FIELD_LENGTH;
+    const dangerZone = 35; // metres from own goal
+    const defendersNearGoal = ctx.teammates.filter(
+      (t) => t.role !== 'gk' && Math.abs(t.x - ownGoalX) < dangerZone,
+    ).length;
+    const attackersNearGoal = ctx.opponents.filter(
+      (o) => Math.abs(o.x - ownGoalX) < dangerZone,
+    ).length;
+    const selfNearGoal = Math.abs(ctx.self.x - ownGoalX) < dangerZone;
+    if (attackersNearGoal > defendersNearGoal + 1 && !selfNearGoal) {
+      // Outnumbered — retreat to reinforce
+      const retreatX = clamp(ownGoalX + ctx.attackDir * (12 + (pick01ForDecision(ctx) * 8)), 5, FIELD_LENGTH - 5);
+      const retreatZ = clamp(ctx.self.z, 8, FIELD_WIDTH - 8);
+      return { type: 'recover_behind_ball', targetX: retreatX, targetZ: retreatZ };
+    }
+  }
+
   if (ctx.teamPhase === 'transition_def') {
     const td = decideTransitionDefense(ctx, reading);
     if (td) return td;
   }
 
-  // The opponent's threat level (from their perspective = our danger)
-  // We use our own ctx.threatLevel which is our attacking threat;
-  // the opponent's threat is conceptually the inverse scenario.
-  // For defending, high threat against us → more urgent defense.
+  // Cover the corridor left by an advanced teammate fullback:
+  // CBs and DMs shift toward the exposed wing to prevent opponent counters.
+  if (role === 'def' || ctx.self.slotId === 'vol') {
+    const exposed = detectExposedFlankFromTeammate(ctx);
+    if (exposed) {
+      return {
+        type: 'cover_central',
+        targetX: clamp(exposed.x, 5, FIELD_LENGTH - 5),
+        targetZ: clamp(exposed.z, 6, FIELD_WIDTH - 6),
+      };
+    }
+  }
+
   const oppThreat = reading.threatLevel;
   const oppTrend = reading.threatTrend;
 
@@ -568,15 +897,24 @@ function decideDefending(ctx: DecisionContext, reading: ContextReading): OffBall
   // -----------------------------------------------------------------------
   if (oppThreat > 0.4) {
     const pressThreshold = mentality > 65 ? 18 : 12;
-    const maxPressers = 2;
+    const dangerMaxPressers = isBlockPhase ? 1 : 2;
 
     // Press the carrier if close enough and not too many already pressing
     if (distToBall < pressThreshold && role !== 'gk') {
-      const nearerCount = ctx.teammates.filter(t => Math.hypot(ctx.ballX - t.x, ctx.ballZ - t.z) < distToBall).length;
-      if (nearerCount < maxPressers && (profile.workRate > 0.55 || pick01ForDecision(ctx) < 0.4)) {
+      const dangerNearerCount = ctx.teammates.filter(t =>
+        t.id !== ctx.self.id && Math.hypot(ctx.ballX - t.x, ctx.ballZ - t.z) < distToBall,
+      ).length;
+      if (dangerNearerCount < dangerMaxPressers && (profile.workRate > 0.55 || pick01ForDecision(ctx) < 0.4)) {
+        if (!shouldPressCarrierByDuel(ctx, reading)) {
+          return {
+            type: 'delay_press',
+            targetX: (ctx.self.x + ctx.ballX) / 2,
+            targetZ: (ctx.self.z + ctx.ballZ) / 2,
+          };
+        }
         return { type: 'press_carrier', targetX: ctx.ballX, targetZ: ctx.ballZ };
       }
-      if (nearerCount < maxPressers) {
+      if (dangerNearerCount < dangerMaxPressers) {
         return { type: 'delay_press', targetX: (ctx.self.x + ctx.ballX) / 2, targetZ: (ctx.self.z + ctx.ballZ) / 2 };
       }
     }
@@ -605,18 +943,51 @@ function decideDefending(ctx: DecisionContext, reading: ContextReading): OffBall
   // LOW-MEDIUM opponent threat: structured defense, look to recover
   // -----------------------------------------------------------------------
 
+  // Collective defense: limit active pressers based on phase and proximity
   const pressThreshold = Math.max(8, (mentality > 65 ? 20 : mentality > 45 ? 14 : 10) + (defenseIntent.pressTrigger - 16));
-  const maxPressers = mentality > 65 ? 3 : 2;
+  const maxPressers = isBlockPhase ? 1 : (mentality > 65 ? 3 : 2);
 
-  // Press if in range
-  if (distToBall < pressThreshold && role !== 'gk') {
-    const nearerCount = ctx.teammates.filter(t => Math.hypot(ctx.ballX - t.x, ctx.ballZ - t.z) < distToBall).length;
-    if (nearerCount < maxPressers && (profile.workRate > 0.6 || pick01ForDecision(ctx) < 0.5)) {
+  // Count who is closer to the ball — prevent swarm
+  const nearerCount = ctx.teammates.filter(t =>
+    t.id !== ctx.self.id && Math.hypot(ctx.ballX - t.x, ctx.ballZ - t.z) < distToBall,
+  ).length;
+
+  // Press if in range, respecting anti-swarm limits
+  if (distToBall < pressThreshold && role !== 'gk' && nearerCount < maxPressers) {
+    if (profile.workRate > 0.6 || pick01ForDecision(ctx) < 0.5) {
+      if (!shouldPressCarrierByDuel(ctx, reading)) {
+        return {
+          type: 'delay_press',
+          targetX: (ctx.self.x + ctx.ballX) / 2,
+          targetZ: (ctx.self.z + ctx.ballZ) / 2,
+        };
+      }
       return { type: 'press_carrier', targetX: ctx.ballX, targetZ: ctx.ballZ };
     }
     if (nearerCount < maxPressers) {
       return { type: 'delay_press', targetX: (ctx.self.x + ctx.ballX) / 2, targetZ: (ctx.self.z + ctx.ballZ) / 2 };
     }
+  }
+
+  // In defensive block with good compactness: protect zone over chasing
+  if (isBlockPhase && ctx.collective && ctx.collective.compactness > 0.35) {
+    const ownGoalX = ctx.attackDir === 1 ? 0 : FIELD_LENGTH;
+    const ballIsCentral = Math.abs(ctx.ballZ - FIELD_WIDTH / 2) < 15;
+    if (ballIsCentral && role === 'mid') {
+      return {
+        type: 'close_passing_lane',
+        targetX: clamp(ctx.slotX, 5, FIELD_LENGTH - 5),
+        targetZ: clamp(
+          (ctx.self.z + ctx.ballZ) / 2,
+          8, FIELD_WIDTH - 8,
+        ),
+      };
+    }
+    if (role === 'def') {
+      const coverX = clamp(ctx.slotX + (ctx.ballX - ctx.slotX) * 0.15, 5, FIELD_LENGTH - 5);
+      return { type: 'cover_central', targetX: coverX, targetZ: ctx.slotZ };
+    }
+    void ownGoalX;
   }
 
   // Recover behind ball line if ahead of it
@@ -759,7 +1130,7 @@ function findNearestOpponentInZone(ctx: DecisionContext) {
 // ANTI-SWARM: spacing system
 // ---------------------------------------------------------------------------
 
-const MIN_TEAMMATE_SPACING = 7.5;
+const MIN_TEAMMATE_SPACING = 8.5;
 
 /**
  * Apply spacing to any off-ball action that has target coordinates.
@@ -778,12 +1149,15 @@ function applySpacingToAction(ctx: DecisionContext, action: OffBallAction): OffB
 function repelFromBallSwarm(ctx: DecisionContext, tx: number, tz: number): { x: number; z: number } {
   if (!ctx.carrierId || ctx.self.id === ctx.carrierId) return { x: tx, z: tz };
   const dBall = Math.hypot(tx - ctx.ballX, tz - ctx.ballZ);
-  if (dBall > 17) return { x: tx, z: tz };
-  if (countTeammatesNearBall(ctx, 12) < 2) return { x: tx, z: tz };
+  if (dBall > 22) return { x: tx, z: tz };
+  // Já há companheiro na bola: empurra alvos que ainda “caem” para o mesmo poço.
+  const nearBall = countTeammatesNearBall(ctx, 12);
+  if (nearBall < 1) return { x: tx, z: tz };
   const vx = tx - ctx.ballX;
   const vz = tz - ctx.ballZ;
   const d = Math.hypot(vx, vz) || 1;
-  const push = (17 - dBall) * 0.44;
+  const crowdFactor = nearBall >= 2 ? 0.65 : 0.48;
+  const push = (22 - dBall) * crowdFactor;
   return { x: tx + (vx / d) * push, z: tz + (vz / d) * push };
 }
 
@@ -802,8 +1176,8 @@ function enforceSpacing(
     const dist = Math.hypot(dx, dz);
     if (dist < MIN_TEAMMATE_SPACING && dist > 0.1) {
       const pushFactor = (MIN_TEAMMATE_SPACING - dist) / dist;
-      tx += dx * pushFactor * 0.6;
-      tz += dz * pushFactor * 0.6;
+      tx += dx * pushFactor * 0.75;
+      tz += dz * pushFactor * 0.75;
     }
   }
 

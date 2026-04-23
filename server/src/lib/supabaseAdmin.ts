@@ -16,8 +16,26 @@ export function getSupabaseAdmin(): SupabaseClient | null {
     return null;
   }
 
+  // Validação básica de formato: service role keys são JWTs (3 segmentos base64)
+  const parts = key.split('.');
+  if (parts.length !== 3) {
+    console.error('[supabaseAdmin] SUPABASE_SERVICE_ROLE_KEY não parece um JWT válido — verifique a variável de ambiente.');
+    cached = null;
+    return null;
+  }
+
   cached = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Validação assíncrona no startup: testa conectividade real sem bloquear o servidor
+  cached.from('matches').select('id').limit(1).then(({ error }) => {
+    if (error) {
+      console.error(`[supabaseAdmin] Falha de conectividade Supabase no startup: ${error.message}`);
+    } else {
+      console.log('[supabaseAdmin] Conexão Supabase validada com sucesso.');
+    }
+  });
+
   return cached;
 }

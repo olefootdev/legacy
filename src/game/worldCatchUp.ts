@@ -8,14 +8,23 @@ import { accrueGatDaily } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
 import { processLeagueScheduleDue } from '@/match/processLeagueSchedule';
 import { mergeWalletIntoFinance } from './financeWalletSync';
+import { effectiveCrowdSupportPercent, medicalDeptRecoverySpeedBonusPercent } from '@/clubStructures/benefits';
+import { staffPhysicalRecoveryBonusPercent, staffRunMatchMinuteEffects } from '@/systems/staffBenefits';
 
-function recoverOffMatch(player: PlayerEntity, gameMinutes: number): PlayerEntity {
+function recoverOffMatch(
+  player: PlayerEntity,
+  gameMinutes: number,
+  medicalDeptLevel: number,
+  staffPhysRecoveryPct: number,
+): PlayerEntity {
   const g = Math.min(gameMinutes, 360);
-  const rec = (g / 120) * (8 + player.attrs.fisico / 25);
+  const mult =
+    1 + medicalDeptRecoverySpeedBonusPercent(medicalDeptLevel) / 100 + staffPhysRecoveryPct / 100;
+  const rec = ((g / 120) * (8 + player.attrs.fisico / 25)) * mult;
   return {
     ...player,
     fatigue: Math.max(0, player.fatigue - rec),
-    injuryRisk: Math.max(0, player.injuryRisk - g / 200),
+    injuryRisk: Math.max(0, player.injuryRisk - (g / 200) * mult),
   };
 }
 
@@ -41,10 +50,12 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
   let crowd = { ...state.crowd };
 
   const playingIds = new Set(liveMatch?.homePlayers.map((p) => p.playerId) ?? []);
+  const medLvl = state.structures.medical_dept ?? 1;
+  const staffPhys = staffPhysicalRecoveryBonusPercent(state.manager.staff);
 
   for (const [id, p] of Object.entries(players)) {
     if (playingIds.has(id) && liveMatch?.phase === 'playing') continue;
-    players[id] = recoverOffMatch(p, gm);
+    players[id] = recoverOffMatch(p, gm, medLvl, staffPhys);
   }
 
   if (
@@ -55,21 +66,28 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
   ) {
     let roster = homeRosterFromLineupState({ ...state, players });
     const maxSim = Math.min(40, Math.floor(gm), 90 - liveMatch.minute);
+    const staffFx = staffRunMatchMinuteEffects(state.manager.staff);
     for (let i = 0; i < maxSim; i++) {
       const homeRoster = roster.map((r) => players[r.id] ?? r);
       const { snapshot, updatedPlayers } = runMatchMinute({
         snapshot: liveMatch,
         homeRoster,
         allPlayers: players,
-        crowdSupport: crowd.supportPercent,
+        crowdSupport: effectiveCrowdSupportPercent(
+          crowd.supportPercent,
+          state.structures,
+          state.nextFixture.isHome,
+        ),
         tacticalMentality: state.manager.tacticalMentality,
         tacticalStyle: state.manager.tacticalStyle,
         opponentStrength: state.nextFixture.opponent.strength,
         awayShort: state.nextFixture.opponent.shortName,
         opponentId: state.nextFixture.opponent.id,
+        staffMatchEffects: staffFx,
       });
       liveMatch = snapshot;
       players = { ...players, ...updatedPlayers };
+      if (liveMatch.mode === 'quick' && liveMatch.quickInjurySub) break;
       roster = roster.map((r) => players[r.id] ?? r);
     }
     if (liveMatch.minute >= 90 && liveMatch.phase === 'playing') {

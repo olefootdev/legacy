@@ -128,6 +128,13 @@ export type LocomotionSteeringContext = {
    * Só deve ser true quando o motor está nesses modos.
    */
   looseOrFlightBall?: boolean;
+  /**
+   * Em `reforming`: jogador disciplinado longe do alvo Arrive corre de volta ao corredor;
+   * sem isto o teto de esforço fica baixo (mais “caminhada”) — útil para quem é taticamente caótico.
+   */
+  urgeShapeReturn?: boolean;
+  /** Distância ao `arrive.target` (m) — opcional, para escalar corrida de regresso à forma. */
+  distToArriveTargetM?: number;
 };
 
 /**
@@ -142,28 +149,35 @@ export function targetRunBlendFromSteering(ctx: LocomotionSteeringContext): numb
   const chaseBall = Boolean(ctx.looseOrFlightBall);
 
   if (mode === 'reforming') {
-    return clamp01((0.05 + Math.min(1, distToBall / 48) * 0.12) * stRunMul);
+    let base = (0.05 + Math.min(1, distToBall / 48) * 0.12) * stRunMul;
+    if (ctx.urgeShapeReturn) {
+      const farSlot01 = clamp01(ctx.distToArriveTargetM ? Math.min(1, ctx.distToArriveTargetM / 55) : 0.5);
+      base = Math.max(base, (0.26 + farSlot01 * 0.38) * stRunMul);
+    }
+    return clamp01(base);
   }
   if (isCarrier) {
-    const sprintToGoal = ap * 0.34;
+    const sprintToGoal = ap * 0.40;
     return clamp01(
-      (0.4 + pursuitWeight * 0.34 + (distToBall > 24 ? 0.1 : 0) + sprintToGoal) * stRunMul,
+      (0.52 + pursuitWeight * 0.34 + (distToBall > 24 ? 0.1 : 0) + sprintToGoal) * stRunMul,
     );
   }
   if (teamHasBall) {
     const supportBurst = ap * 0.26;
-    const closeSupport = distToBall < 28 ? 0.08 + (1 - distToBall / 28) * 0.12 : 0;
+    // Sem posse na própria chuteira: apoio curva menos — poupa fadiga quando o portador já segura a jogada.
+    const closeSupport = distToBall < 28 ? 0.05 + (1 - distToBall / 28) * 0.11 : 0;
+    const farShapeWalk = distToBall > 50 ? -0.035 - Math.min(0.07, (distToBall - 50) / 240) : 0;
     return clamp01(
-      (0.12 + pursuitWeight * 0.3 + Math.min(0.16, distToBall / 180) + supportBurst + closeSupport)
+      (0.15 + pursuitWeight * 0.32 + Math.min(0.14, distToBall / 180) + supportBurst + closeSupport + farShapeWalk)
         * stRunMul,
     );
   }
 
-  let b = pursuitWeight * 2.05;
-  if (mode === 'pressing' && distToBall < 28) b += 0.36;
-  if (distToBall < 11) b += 0.32;
-  else if (distToBall < 21) b += 0.14;
-  else if (distToBall < 34) b += 0.06;
+  let b = pursuitWeight * 2.2;
+  if (mode === 'pressing' && distToBall < 28) b += 0.42;
+  if (distToBall < 11) b += 0.38;
+  else if (distToBall < 21) b += 0.18;
+  else if (distToBall < 34) b += 0.08;
 
   if (chaseBall && distToBall < 46) {
     b += Math.max(0, 1 - distToBall / 50) * 0.58;
@@ -178,3 +192,42 @@ export function smoothRunBlend(prev: number, target: number, dt: number): number
   const a = 1 - Math.exp(-k * dt);
   return prev * (1 - a) + target * a;
 }
+
+/**
+ * 5 tiers de locomoção. Mapeia o `effort` (0–1) já suavizado do jogador + estado
+ * de lesão em campo para um rótulo narrativo discreto, consumido pela UI e animação.
+ */
+export type LocomotionTier =
+  | 'caminhando_lento'   // 1 — lesionado em campo, mal se move
+  | 'caminhando_normal'  // 2 — deslocamento em modo espera/organização
+  | 'correndo_pouco'     // 3 — trote, suporte tático
+  | 'correndo_normal'    // 4 — corrida
+  | 'muito_veloz';       // 5 — arranque / sprint
+
+/**
+ * Derivação estável: lesionado em campo (outForMatches > 0) força tier 1 independente
+ * do esforço; caso contrário classifica por faixa de effort.
+ */
+export function classifyLocomotionTier(
+  effort01: number,
+  injuredOnPitch: boolean,
+): LocomotionTier {
+  if (injuredOnPitch) return 'caminhando_lento';
+  const e = clamp01(effort01);
+  if (e < 0.10) return 'caminhando_lento';
+  if (e < 0.35) return 'caminhando_normal';
+  if (e < 0.55) return 'correndo_pouco';
+  if (e < 0.80) return 'correndo_normal';
+  return 'muito_veloz';
+}
+
+export const LOCOMOTION_TIER_LABEL_PT: Record<LocomotionTier, string> = {
+  caminhando_lento: 'Caminhando lento',
+  caminhando_normal: 'Caminhando',
+  correndo_pouco: 'Correndo pouco',
+  correndo_normal: 'Correndo',
+  muito_veloz: 'Muito veloz',
+};
+
+/** Multiplicador adicional aplicado ao `maxSpeed` quando o jogador está lesionado em campo. */
+export const INJURED_ON_PITCH_SPEED_MULT = 0.42;

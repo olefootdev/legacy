@@ -5,6 +5,9 @@
  * we store origin/destination and interpolate smoothly.
  * The viewer reads the trajectory state and renders the ball
  * along the path with appropriate speed per action type.
+ *
+ * Continuidade: `progress01` só avança; não saltar `from`/`to` no mesmo fotograma sem novo evento.
+ * Alinhar com `BallSystem` (mundo tático) para o mesmo sentido físico quando ambos existirem.
  */
 import type { PitchPoint } from '@/engine/types';
 
@@ -93,7 +96,7 @@ export function computeBallTrajectory(
       from: { ...ballFrom },
       to: { ...ballTo },
       kind,
-      progress01: SPEED_TABLE[kind],
+      progress01: 0,
     };
   }
 
@@ -101,7 +104,7 @@ export function computeBallTrajectory(
   const speed = SPEED_TABLE[prev.kind];
   return {
     ...prev,
-    progress01: Math.min(1, prev.progress01 + speed * 0.5),
+    progress01: Math.min(1, prev.progress01 + speed),
   };
 }
 

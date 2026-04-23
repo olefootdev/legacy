@@ -182,7 +182,7 @@ export function counter(p: { min: number; leader: string }): string {
 // ── Faltas ───────────────────────────────────────────────
 
 export function foulPenalty(p: { min: number; fouled: string }): string {
-  return `${s(p.min)} Falta sobre ${p.fouled} na grande área — penálti!`;
+  return `${s(p.min)} Falta sobre ${p.fouled} na grande área — penalty!`;
 }
 
 export function foulFreeKick(p: { min: number; fouled: string }): string {

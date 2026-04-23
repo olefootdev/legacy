@@ -3,9 +3,16 @@ import type { InboxItem } from './inboxTypes';
 
 /**
  * Exemplos de notificações para a HOME (painel Notificações).
- * Foco em gestão do clube — sem placares nem resultados de partida (isso fica noutras áreas).
+ * DESATIVADO pro deploy de testes online — managers começam com inbox vazio.
+ * Histórico completo das 16 demos permanece abaixo, só não é retornado.
+ * Reativar devolvendo `_DEMO_ITEMS` quando quiser repopular.
  */
 export function createHomeInboxSeedExamples(): InboxItem[] {
+  return [];
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _DEMO_ITEMS(): InboxItem[] {
   return [
     makeInboxItem('demo-conta-1', 'SOCIAL_FRIEND_INVITE', 'CONTA', 'WOLVES quer entrar na sua rede de managers', {
       kind: 'friend_invite',

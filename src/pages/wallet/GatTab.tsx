@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 
 import { gatSummary } from '@/wallet/gat';
-import { GAT_CATEGORY_LABELS, GAT_DURATION_MONTHS, GAT_TIER_SUMMARY_PT } from '@/wallet/constants';
+import { GAT_CATEGORY_LABELS, GAT_DURATION_MONTHS } from '@/wallet/constants';
 import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { GatPosition } from '@/wallet/types';
@@ -88,7 +88,7 @@ export function GatTab() {
     <WalletShell
       account="gat"
       title="Game Assets Treasury"
-      subtitle={`Treasury em EXP: taxa diária por faixa sobre a base em BRO + referral GAT 1%/nível (EXP). ${GAT_TIER_SUMMARY_PT} Crédito automático no teu saldo EXP.`}
+      subtitle="Game Assets Treasury (GAT) é o motor de crescimento em EXP dentro da OLEFOOT. Ao alocar teus ativos em BRO, você ativa uma taxa diária progressiva conforme a faixa: de 1 a 100 BRO rende 1,5% ao dia, de 101 a 300 rende 2,5%, de 301 a 999 rende 3,5% e acima de 1000 BRO atinge 5,5% ao dia, tudo convertido automaticamente em EXP. Além disso, o sistema de referral GAT distribui 1% por nível, até três níveis, também em EXP."
     >
       {/* Mesmo design system da Conta OLEXP — cartão principal glass */}
       <motion.div
@@ -107,7 +107,6 @@ export function GatTab() {
             </p>
             <p className="font-display text-3xl font-black tracking-tight text-amber-100 md:text-4xl">{rewardPrimary}</p>
             <p className="mt-2 max-w-sm text-[10px] leading-relaxed text-gray-500">{programFootnote}</p>
-            <p className="mt-2 max-w-lg text-[10px] leading-relaxed text-gray-600">{GAT_TIER_SUMMARY_PT}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 border-t border-white/10 pt-2 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/5 bg-black/30 px-4 py-3">

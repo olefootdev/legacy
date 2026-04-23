@@ -7,50 +7,50 @@ export type RankingEntry = {
   team: string;
   exp: number;
   isMe: boolean;
+  /** Identificador estável para convite de amistoso (clube real = id persistido; mundo mock = slug). */
+  entryId: string;
 };
 
-/** Times do mundo (mock) com EXP base — o manager é injetado em merge. */
-const WORLD_TEAMS: { team: string; exp: number }[] = [
-  { team: 'Nova Empire', exp: 198450 },
-  { team: 'Black Hawks', exp: 193220 },
-  { team: 'Urban Legends', exp: 189030 },
-  { team: 'Royal Titans', exp: 186910 },
-  { team: 'Storm Eleven', exp: 181740 },
-  { team: 'Thunder FC', exp: 173800 },
-  { team: 'Night Owls', exp: 169300 },
-  { team: 'Blue Orbit', exp: 162440 },
-  { team: 'Spartans', exp: 158900 },
-  { team: 'Dragons', exp: 155220 },
-  { team: 'Wolves', exp: 149500 },
-  { team: 'Falcons', exp: 145080 },
-  { team: 'Titans FC', exp: 141900 },
-  { team: 'River North', exp: 138200 },
-  { team: 'Solar SC', exp: 134550 },
-  { team: 'Iron Gate', exp: 130100 },
-  { team: 'Crimson XI', exp: 126800 },
-  { team: 'Pacific FC', exp: 122400 },
-  { team: 'Metro United', exp: 118900 },
-  { team: 'Atlas City', exp: 115300 },
-  { team: 'Vertex', exp: 111700 },
-  { team: 'Lynx SC', exp: 108200 },
-  { team: 'Quartz FC', exp: 104600 },
-  { team: 'Harbor Line', exp: 101000 },
-];
+function worldEntryId(team: string): string {
+  const slug = team
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `world:${slug || 'team'}`;
+}
+
+/**
+ * Times do mundo — zerado pra deploy de testes online.
+ * Ranking começa só com o próprio manager; população real virá de
+ * `ranking_world_teams` no Supabase quando houver managers suficientes.
+ * Histórico com os 24 mocks (Nova Empire, Spartans, Titans FC, etc.) está no git.
+ */
+const WORLD_TEAMS: { team: string; exp: number }[] = [];
 
 /**
  * Lista completa ordenada por EXP (maior primeiro), com o teu clube incluído.
  */
-export function getFullRankingEntries(clubName: string, managerOle: number): RankingEntry[] {
+export function getFullRankingEntries(clubName: string, managerOle: number, clubId: string): RankingEntry[] {
   const world: RankingEntry[] = WORLD_TEAMS.map((r) => ({
     team: r.team,
     exp: r.exp,
     isMe: false,
+    entryId: worldEntryId(r.team),
   }));
   const withManager: RankingEntry[] = [
-    { team: clubName, exp: Math.round(managerOle), isMe: true },
+    { team: clubName, exp: Math.round(managerOle), isMe: true, entryId: clubId },
     ...world,
   ];
   return [...withManager].sort((a, b) => b.exp - a.exp);
+}
+
+/** Adversários do ranking cujo nome ou entryId contém a busca (exclui o próprio clube). */
+export function filterOpponentRankingMatches(entries: RankingEntry[], query: string, limit = 12): RankingEntry[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return entries
+    .filter((r) => !r.isMe && (r.team.toLowerCase().includes(q) || r.entryId.toLowerCase().includes(q)))
+    .slice(0, limit);
 }
 
 export type HomePreviewRow = RankingEntry & { rank: number };

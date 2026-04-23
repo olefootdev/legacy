@@ -81,7 +81,8 @@ export type InboxMessageType =
   | 'SOCIAL_FRIEND_ACCEPTED'
   | 'SOCIAL_INVITE_SENT'
   | 'SOCIAL_INVITE_ACCEPTED_NOTICE'
-  | 'STAFF_ADVICE';
+  | 'STAFF_ADVICE'
+  | 'ADMIN_BROADCAST';
 
 export type SuggestedActionKind = 'OPEN_TRAINING' | 'APPLY_PRESET';
 

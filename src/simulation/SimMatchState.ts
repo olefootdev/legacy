@@ -15,6 +15,14 @@ export interface SimMatchStats {
   km: number;
   shots: number;
   goals: number;
+  /** Chutes que foram a gol (gol + defendido + bloqueado + trave interna). */
+  shotsOn: number;
+  /** Chutes fora do alvo. */
+  shotsOff: number;
+  /** Defesas do goleiro. */
+  saves: number;
+  /** Dribles concluídos com sucesso. */
+  dribblesOk: number;
 }
 
 /** Agregado de finalização por partida (motor tático / QA). */
@@ -66,6 +74,12 @@ export interface SimMatchState {
   carrierDebugLog: CarrierDebugLogEntry[];
   /** Últimos outcomes do motor (remate, defesa, desarme, passe, interceptação) — debug / narração. */
   motorOutcomeLog: MotorTelemetryRecord[];
+  /** Analytics: counts of critical/high-impact events (toggled by resolver) */
+  analytics?: {
+    criticalEvents: number;
+    passEntropySum: number;
+    passEntropyCount: number;
+  };
 }
 
 function uid(): string {
@@ -73,7 +87,7 @@ function uid(): string {
 }
 
 function defaultStats(): SimMatchStats {
-  return { passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, shots: 0, goals: 0 };
+  return { passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, shots: 0, goals: 0, shotsOn: 0, shotsOff: 0, saves: 0, dribblesOk: 0 };
 }
 
 function defaultShotTelemetry(): ShotMatchTelemetry {
@@ -108,6 +122,7 @@ export function createSimMatchState(): SimMatchState {
     shotTelemetry: defaultShotTelemetry(),
     carrierDebugLog: [],
     motorOutcomeLog: [],
+  analytics: { criticalEvents: 0, passEntropySum: 0, passEntropyCount: 0 },
   };
 }
 

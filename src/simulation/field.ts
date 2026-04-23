@@ -2,13 +2,18 @@
 export const FIELD_LENGTH = 105;
 export const FIELD_WIDTH = 68;
 
+/** Raio do círculo central (IFAB). */
+export const CENTER_CIRCLE_RADIUS_M = 9.15;
+
 /**
- * Dimensões IFAB da baliza (jogo em planta: a “largura” da boca ao longo de Z no golo).
- * @see https://www.theifab.com/laws/1/field-of-play/
+ * Boca do golo (planta: largura ao longo de Z). Valores acima do IFAB (7,32 × 2,44 m) para subir taxa de golo.
+ * @see https://www.theifab.com/laws/1/field-of-play/ (referência regulamentar)
  */
-export const GOAL_INNER_WIDTH_M = 7.32;
+export const GOAL_INNER_WIDTH_M = 10;
+/** Largura interior IFAB (m) — referência para amortecer conversão de remate quando a boca em jogo é maior. */
+export const GOAL_INNER_WIDTH_IFAB_M = 7.32;
 /** Altura interior do travessão ao solo (referência 3D / UI; remates no plano XZ usam `GOAL_INNER_WIDTH_M` em Z). */
-export const GOAL_CROSSBAR_HEIGHT_M = 2.44;
+export const GOAL_CROSSBAR_HEIGHT_M = 3;
 /** Metade da distância entre postes (metros), a partir do centro da linha de golo. */
 export const GOAL_MOUTH_HALF_WIDTH_M = GOAL_INNER_WIDTH_M / 2;
 

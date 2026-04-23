@@ -61,6 +61,21 @@ export interface SpiritContext {
    * para narração reativa sem o Spirit “decidir” o resultado antes da simulação.
    */
   motorTelemetryTail?: readonly MotorTelemetryRecord[];
+
+  /**
+   * Conhecimento de posição do jogador com a bola (positionKnowledge do PlayerEntity).
+   * Lido localmente do estado do jogador — zero tokens, zero chamadas externas.
+   * Injetado por `buildSpiritContext` quando o jogador tem DNA de lenda treinado.
+   */
+  onBallKnowledge?: import('@/gamespirit/legacy/positionKnowledgeTypes').PositionKnowledge;
+  /** Ticks restantes de cooldown pós-pênalti (bloqueia novo pênalti enquanto > 0). */
+  penaltyCooldownTicks?: number;
+  /**
+   * Booster agregado dos jogadores LegacyDNA titulares em campo.
+   * Soma dos `legacyTeamBooster` de cada legacy presente em `homePlayers` (XI inicial).
+   * Consumido por moral de time, posse, defesa/ataque etc.
+   */
+  legacyTeamBooster?: Record<string, number>;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */

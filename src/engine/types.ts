@@ -36,6 +36,8 @@ export interface PitchPlayerState {
   pos: string;
   x: number;
   y: number;
+  /** Orientação no plano 2D (rad), quando o truth expõe `heading` / `facingYaw`. */
+  heading?: number;
   fatigue: number;
   role: 'attack' | 'mid' | 'def' | 'gk';
   /** Atributos de partida normalizados (opcional: preenchido a partir do elenco) */
@@ -95,6 +97,14 @@ export interface LiveMatchSnapshot {
   mode: MatchMode;
   phase: MatchPhase;
   minute: number;
+  /**
+   * Comandos de voz ativos, indexados por playerId da casa.
+   * Populados por `VOICE_COMMAND_ISSUED`; lidos por `tacticalPositioning` e brain.
+   * Limpos em `VOICE_COMMAND_EXPIRED` / expiração automática / fim do jogo.
+   */
+  voiceCommands?: Record<string, import('@/voiceCommand/types').PendingCommand>;
+  /** Quantos avisos de linguagem o árbitro já deu (0-2). */
+  refereeLanguageWarnings?: number;
   /** Relógio de jogo em segundos (0–5400); incrementado por SECONDS_PER_TICK a cada tick. */
   footballElapsedSec: number;
   /** Sincronizado com o TacticalSimLoop / MatchClock (modo live). */
@@ -118,10 +128,26 @@ export interface LiveMatchSnapshot {
   /** Estatísticas simples por jogador (lado casa) */
   homeStats: Record<
     string,
-    { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number }
+    {
+      passesOk: number;
+      passesAttempt: number;
+      tackles: number;
+      km: number;
+      rating: number;
+      /** Chutes no alvo (gol, defendido, trave interna, bloqueado). */
+      shotsOn?: number;
+      /** Chutes fora (wide, por cima, trave externa). */
+      shotsOff?: number;
+      /** Defesas do goleiro (só preenchido em slot GK). */
+      saves?: number;
+      /** Dribles bem-sucedidos. */
+      dribblesOk?: number;
+    }
   >;
   /** Formação do time da casa nesta partida (congelada no início / ao salvar titulares). */
   homeFormationScheme?: FormationSchemeId;
+  /** Formação do visitante — independente do esquema da casa. */
+  awayFormationScheme?: FormationSchemeId;
   /** Titulares atuais slot → playerId (permite substituições) */
   matchLineupBySlot: Record<string, string>;
   substitutionsUsed: number;
@@ -142,6 +168,17 @@ export interface LiveMatchSnapshot {
   spiritPendingRestart?: { side: PossessionSide } | null;
   /** Jogadores expulsos (não elegíveis para voltar à mesma partida). */
   sentOffPlayerIds?: string[];
+  /**
+   * Partida rápida (`quick`): lesão retira o jogador do `homePlayers` mas mantém o slot em
+   * `matchLineupBySlot` até o manager substituir. Enquanto preenchido, o motor não avança o minuto.
+   */
+  quickInjurySub?: {
+    outPlayerId: string;
+    slotId: string;
+    x: number;
+    y: number;
+    name: string;
+  } | null;
   /** Substituições visitantes (paridade FIFA simplificada). */
   awaySubstitutionsUsed?: number;
   /** Auditoria pós-jogo (copiada em FINALIZE_MATCH). */
@@ -156,20 +193,30 @@ export interface LiveMatchSnapshot {
   /** Capitão — amplifica só fatores individuais (ver `impactRules.ts`). */
   homeCaptainPlayerId?: string;
 
+  /** Scout scoring acumulado por jogador (casa) durante a partida. */
+  scoutTallies?: Record<string, import('@/gamespirit/scoutScoring').ScoutTally>;
+
   /** Fase lógica GameSpirit (partida rápida / texto) — ver `spiritStateMachine.ts`. */
   spiritPhase?: SpiritPhase;
-  /** Painel central (golo, penálti, intervalo, cena). */
+  /** Painel central (golo, penalty, intervalo, cena). */
   spiritOverlay?: SpiritOverlay | null;
-  /** Máquina de penálti (estágios + desfecho). */
+  /** Máquina de penalty (estágios + desfecho). */
   penalty?: PenaltyState | null;
   /** Ticks de minuto em `buildup_gk` antes de voltar a `open_play`. */
   spiritBuildupGkTicksRemaining?: number;
+  /** Cooldown após pênalti resolvido — impede novo pênalti imediato. Decrementado por tick. */
+  spiritPenaltyCooldownTicks?: number;
   /** 0–1: força a barra de momento (ex.: extremo de quem marcou durante overlay de golo). */
   spiritMomentumClamp01?: number | null;
   /** Antecipação visual antes de confirmar o golo (barra cresce + desliza). */
   preGoalHint?: PreGoalHint | null;
   /** Roster visitante sintético (partida rápida) — cartões/golos com playerId concreto. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
+  /**
+   * Cópia do `awayRoster` no apito inicial — para a UI listar só expulsos reais (vs. roster actual
+   * já filtrado após vermelhos), sem confundir IDs gerados noutro `sessionKey`.
+   */
+  awayRosterAtKickoff?: { id: string; num: number; name: string; pos: string }[];
 
   /* ── Partida ao vivo 2D (`test2d`) ─────────────────────────────────── */
 

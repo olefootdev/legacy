@@ -7,7 +7,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Bem-vindo',
     description: 'Abra o app uma vez.',
     targetCount: 1,
-    rewardExp: 50,
+    rewardExp: 50000,
     trackEvent: 'session_login',
   },
   {
@@ -16,7 +16,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Página inicial',
     description: 'Visite a Home.',
     targetCount: 1,
-    rewardExp: 40,
+    rewardExp: 40000,
     trackEvent: 'screen_home',
   },
   {
@@ -25,7 +25,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Rotina do dia',
     description: 'Abra a Home hoje.',
     targetCount: 1,
-    rewardExp: 30,
+    rewardExp: 30000,
     trackEvent: 'screen_home',
   },
   {
@@ -34,7 +34,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Olhar o elenco',
     description: 'Abra a tela Time.',
     targetCount: 1,
-    rewardExp: 30,
+    rewardExp: 30000,
     trackEvent: 'screen_team',
   },
   {
@@ -43,7 +43,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Finanças',
     description: 'Abra a carteira.',
     targetCount: 1,
-    rewardExp: 25,
+    rewardExp: 25000,
     trackEvent: 'screen_wallet',
   },
   {
@@ -52,7 +52,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Cidade',
     description: 'Abra a cidade.',
     targetCount: 1,
-    rewardExp: 25,
+    rewardExp: 25000,
     trackEvent: 'screen_city',
   },
   {
@@ -61,7 +61,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Mercado',
     description: 'Abra transferências.',
     targetCount: 1,
-    rewardExp: 25,
+    rewardExp: 25000,
     trackEvent: 'screen_transfer',
   },
   {
@@ -70,7 +70,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Loja',
     description: 'Abra a loja.',
     targetCount: 1,
-    rewardExp: 25,
+    rewardExp: 25000,
     trackEvent: 'screen_store',
   },
   {
@@ -79,7 +79,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Central de missões',
     description: 'Abra a aba Missões.',
     targetCount: 1,
-    rewardExp: 20,
+    rewardExp: 20000,
     trackEvent: 'screen_missions',
   },
   {
@@ -88,7 +88,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Compromisso semanal',
     description: 'Resgate 3 missões (qualquer) nesta semana.',
     targetCount: 3,
-    rewardExp: 200,
+    rewardExp: 20000,
     trackEvent: 'mission_claimed',
   },
   {
@@ -97,7 +97,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Primeira vitória',
     description: 'Vença uma partida.',
     targetCount: 1,
-    rewardExp: 100,
+    rewardExp: 10000,
     trackEvent: 'match_won',
   },
   {
@@ -106,7 +106,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Artilheiro',
     description: 'Marque 3 gols (acumulado).',
     targetCount: 3,
-    rewardExp: 150,
+    rewardExp: 15000,
     trackEvent: 'goal_scored',
   },
   {
@@ -115,7 +115,7 @@ export const MISSION_CATALOG: MissionDef[] = [
     title: 'Rodada completa',
     description: 'Termine 2 partidas.',
     targetCount: 2,
-    rewardExp: 120,
+    rewardExp: 12000,
     trackEvent: 'match_completed',
   },
 ];

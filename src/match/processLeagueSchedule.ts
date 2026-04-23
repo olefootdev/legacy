@@ -8,8 +8,10 @@ import type { Fixture, OpponentStub } from '@/entities/types';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { pitchPlayersFromLineup } from '@/engine/pitchFromLineup';
 import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics';
-import { grantEarnedExp } from '@/systems/economy';
+import { addBroCents, grantEarnedExp } from '@/systems/economy';
+import { diffNewMemorableTrophyIds, memorableTrophyFinanceReward } from '@/trophies/memorablePrizes';
 import { tickRecoveryMatches } from '@/systems/injury';
+import { effectiveCrowdSupportPercent, structureMatchExpBonuses } from '@/clubStructures/benefits';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
 import { appendMemorableTrophyUnlocks } from '@/trophies/memorableCatalog';
 import { evaluateOfficialSquad } from '@/match/squadEligibility';
@@ -30,6 +32,13 @@ import {
 import { normalizeOpponentStub } from '@/entities/team';
 import type { LiveMatchSnapshot } from '@/engine/types';
 import type { FormLetter } from '@/entities/types';
+import {
+  ledgerTouchMarketAfterMatch,
+  marketBroSnapshotFromPlayers,
+  mergeLedgerAfterMatch,
+} from '@/team/playerSeasonLedger';
+import { appendEvolutionTimelinePoints } from '@/team/playerEvolutionTimeline';
+import { applyHomeContractsAfterMatch } from '@/playerContracts/playerContracts';
 
 /** Evita simular meses de uma vez no mesmo WORLD_CATCH_UP; o resto fica para a próxima sincronização. */
 export const MAX_LEAGUE_FIXTURES_PER_WORLD_CATCHUP = 12;
@@ -125,6 +134,8 @@ function applyUserMatchResolution(
   const league = state.adminLeagues.find((l) => l.id === leagueId);
   if (!league) return state;
 
+  const marketBeforeMatch = marketBroSnapshotFromPlayers(state.players);
+
   const userHome = userIsHomeInFixture(fx, userTeamId);
   const oppTeamId = userHome ? fx.awayTeamId : fx.homeTeamId;
   const oppName = userHome ? fx.awayName : fx.homeName;
@@ -165,7 +176,7 @@ function applyUserMatchResolution(
       snapshot: liveMatch,
       homeRoster: roster,
       allPlayers: players,
-      crowdSupport: state.crowd.supportPercent,
+      crowdSupport: effectiveCrowdSupportPercent(state.crowd.supportPercent, state.structures, userHome),
       tacticalMentality: state.manager.tacticalMentality,
       tacticalStyle: state.manager.tacticalStyle,
       opponentStrength: tempFx.opponent.strength,
@@ -182,13 +193,21 @@ function applyUserMatchResolution(
   const userAgainst = userHome ? officialSA : officialSH;
   const userWin = userFor > userAgainst;
   const draw = userFor === userAgainst;
-  const oleGain = 80 + userFor * 35 + (userWin ? 120 : 0);
-  let finance = grantEarnedExp(state.finance, oleGain);
-  finance = appendExpHistory(finance, oleGain, 'Jornada (GameSpirit)');
+  const oleGainBase = 80 + userFor * 35 + (userWin ? 120 : 0);
+  const structBonuses = structureMatchExpBonuses({
+    structures: state.structures,
+    baseCrowdSupportPercent: state.crowd.supportPercent,
+    isHomeFixture: userHome,
+    userWin,
+  });
+  const oleGain = oleGainBase + structBonuses.totalExtra;
 
   const staffNote = buildPostMatchStaffInboxItem(state, liveMatch);
   const financeNote = makeInboxItem(`finance-${fx.id}`, 'FINANCE_EXP_GAIN', 'FINANCEIRO', `+${oleGain} EXP (jogo simulado)`, {
-    body: 'Resultado processado automaticamente pelo GameSpirit.',
+    body:
+      structBonuses.totalExtra > 0
+        ? `Resultado processado automaticamente pelo GameSpirit. Bónus de estruturas: estádio +${structBonuses.stadiumExp}${userWin ? `, Megaloja +${structBonuses.megastoreExp}` : ''} EXP.`
+        : 'Resultado processado automaticamente pelo GameSpirit.',
     deepLink: '/wallet',
     hideFromHomeFeed: true,
   });
@@ -214,23 +233,50 @@ function applyUserMatchResolution(
     result: userWin ? ('win' as const) : draw ? ('draw' as const) : ('loss' as const),
   };
   const results = [lastRow, ...state.results].slice(0, 8);
-  players = tickRecoveryMatches(players);
+  players = tickRecoveryMatches(players, state.structures.medical_dept ?? 1);
+  players = applyHomeContractsAfterMatch(players, liveMatch);
 
   let leagueSeason = state.leagueSeason;
-  let memorableTrophyUnlockedIds = state.memorableTrophyUnlockedIds ?? [];
+  const prevMem = state.memorableTrophyUnlockedIds ?? [];
+  let memorableTrophyUnlockedIds = prevMem;
   if (league.syncStatsFromSeason && league.id === state.adminPrimaryLeagueId) {
     leagueSeason = applyResultToLeagueSeason(leagueSeason, lastRow);
-    memorableTrophyUnlockedIds = appendMemorableTrophyUnlocks(memorableTrophyUnlockedIds, {
+    memorableTrophyUnlockedIds = appendMemorableTrophyUnlocks(prevMem, {
       homeWin: userWin,
       competition: league.name,
       leaguePoints: leagueSeason.points,
       leaguePlayed: leagueSeason.played,
     });
   }
+  const newTrophies = diffNewMemorableTrophyIds(prevMem, memorableTrophyUnlockedIds);
+
+  let finance = grantEarnedExp(state.finance, oleGain);
+  finance = appendExpHistory(finance, oleGain, 'Jornada (GameSpirit)');
+  for (const tid of newTrophies) {
+    const { exp: te, broCents: tb } = memorableTrophyFinanceReward(tid);
+    if (te > 0) {
+      finance = grantEarnedExp(finance, te);
+      finance = appendExpHistory(finance, te, 'Prémio de competição (troféu)');
+    }
+    if (tb > 0) finance = addBroCents(finance, tb);
+  }
 
   let adminLeagues = patchStandingsAfterResult(state.adminLeagues, leagueId, fx.homeTeamId, fx.awayTeamId, officialSH, officialSA);
 
-  const inbox = [simNote, staffNote, financeNote, ...state.inbox].slice(0, 20);
+  let inbox = [simNote, staffNote, financeNote, ...state.inbox].slice(0, 20);
+  if (newTrophies.length > 0) {
+    const trophyNote = makeInboxItem(
+      `trophy-${fx.id}-${Date.now()}`,
+      'FINANCE_EXP_GAIN',
+      'COMPETIÇÃO',
+      'Prémios de título memorável creditados.',
+      {
+        body: `Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`,
+        deepLink: '/profile',
+      },
+    );
+    inbox = [trophyNote, ...inbox].slice(0, 20);
+  }
 
   const resolvedFx: ScheduledLeagueFixture = {
     ...fx,
@@ -256,6 +302,24 @@ function applyUserMatchResolution(
 
   const nextFixture = pickNextFixtureFromSchedule({ ...state, adminLeagues, leagueSchedule: nextSchedule });
 
+  let playerSeasonLedger = mergeLedgerAfterMatch(state.playerSeasonLedger, liveMatch, marketBeforeMatch);
+  const playedIds =
+    Object.keys(liveMatch.homeStats ?? {}).length > 0
+      ? Object.keys(liveMatch.homeStats ?? {})
+      : (liveMatch.homePlayers ?? []).map((h) => h.playerId).filter(Boolean);
+  const playedUnique = [...new Set(playedIds)];
+  const marketAfterMatch = marketBroSnapshotFromPlayers(players);
+  playerSeasonLedger = ledgerTouchMarketAfterMatch(playerSeasonLedger, playedUnique, marketAfterMatch);
+
+  const playerEvolutionTimeline = appendEvolutionTimelinePoints(
+    state.playerEvolutionTimeline,
+    playedUnique,
+    players,
+    playerSeasonLedger,
+    'match',
+    userWin,
+  );
+
   return {
     ...state,
     players,
@@ -269,6 +333,8 @@ function applyUserMatchResolution(
     leagueSchedule: nextSchedule,
     liveMatch: null,
     nextFixture: nextFixture ?? state.nextFixture,
+    playerSeasonLedger,
+    playerEvolutionTimeline,
   };
 }
 

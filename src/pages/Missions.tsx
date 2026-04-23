@@ -1,12 +1,17 @@
 import { motion } from 'motion/react';
-import { Target, CheckCircle2, Clock, Gift, ChevronRight } from 'lucide-react';
+import { Target, CheckCircle2, Clock, Gift, ChevronRight, Copy, CheckCircle, Link2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useGameStore } from '@/game/store';
+import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp } from '@/systems/economy';
 import { useEffect, useMemo, useState } from 'react';
 import { MISSION_CATALOG } from '@/progression/missions/catalog';
 import { useProgressionStore } from '@/progression/progressionStore';
 import type { MissionDef, MissionEvent } from '@/progression/types';
+import { normalizeWalletState } from '@/wallet/initial';
+import { inviteLinkForCode } from '@/wallet/referralCode';
+
+const XP_HISTORY_INITIAL = 10;
 
 interface MissionStub {
   id: string;
@@ -54,13 +59,21 @@ function statusIcon(s: MissionStub['status']) {
 }
 
 export function Missions() {
+  const dispatch = useGameDispatch();
   const finance = useGameStore((s) => s.finance);
   const ensureResets = useProgressionStore((s) => s.ensureResets);
   const claimMission = useProgressionStore((s) => s.claimMission);
   const runtime = useProgressionStore((s) => s.missions);
   const [tab, setTab] = useState<'ongoing' | 'completed'>('ongoing');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [xpHistoryExpanded, setXpHistoryExpanded] = useState(false);
   const expHistory = finance.expHistory ?? [];
+
+  const wallet = useMemo(() => normalizeWalletState(finance.wallet ?? undefined), [finance.wallet]);
+  const myReferralCode = wallet.myReferralCode ?? '';
+  const inviteUrl = myReferralCode ? inviteLinkForCode(myReferralCode) : '';
 
   useEffect(() => {
     ensureResets();
@@ -95,6 +108,11 @@ export function Missions() {
     if ((m.progress?.current ?? 0) >= m.target) {
       const ok = claimMission(m.id);
       if (ok) {
+        dispatch({
+          type: 'GRANT_EARNED_EXP',
+          amount: m.reward,
+          historySource: `Missão: ${m.title}`,
+        });
         setFeedback('Missão concluída com sucesso.');
         setTab('completed');
       }
@@ -112,6 +130,20 @@ export function Missions() {
     setFeedback(`Você está chegando lá. ${missingText}`);
   };
 
+  function copyCode() {
+    if (!myReferralCode) return;
+    void navigator.clipboard.writeText(myReferralCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  }
+
+  function copyInviteLink() {
+    if (!inviteUrl) return;
+    void navigator.clipboard.writeText(inviteUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  }
+
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-8">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
@@ -124,6 +156,61 @@ export function Missions() {
             <span className="text-sm font-display font-bold text-neon-yellow tracking-wider">{formatExp(finance.ole)} EXP</span>
           </div>
         </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="bg-[#111] border border-blue-400/25 p-5 space-y-3"
+      >
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link2 className="w-5 h-5 text-blue-400 shrink-0" aria-hidden />
+            <div>
+              <h3 className="text-sm font-display font-black uppercase tracking-wider text-white">Seu link de indicação</h3>
+              <p className="text-[11px] text-gray-500 mt-0.5 max-w-xl">
+                Quem abrir este endereço entra no cadastro já com o seu código. O mesmo link usa o domínio actual da app (localhost em dev, o teu site em produção).
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/wallet/referrals"
+            className="text-[10px] font-bold uppercase tracking-wider text-blue-300 hover:text-blue-200 border border-blue-500/30 px-2.5 py-1.5 shrink-0"
+          >
+            Carteira → Indicações
+          </Link>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-stretch">
+          <div className="flex-1 min-w-0 bg-black/40 border border-white/10 px-3 py-2.5 font-mono text-xs text-white/90 break-all">
+            {inviteUrl || '—'}
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={copyInviteLink}
+              disabled={!inviteUrl}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/15 border border-blue-400/35 text-blue-200 text-[11px] font-bold uppercase tracking-wider hover:bg-blue-500/25 disabled:opacity-30"
+            >
+              {copiedLink ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              Copiar link
+            </button>
+            <button
+              type="button"
+              onClick={copyCode}
+              disabled={!myReferralCode}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/15 text-gray-200 text-[11px] font-bold uppercase tracking-wider hover:bg-white/10 disabled:opacity-30"
+            >
+              {copiedCode ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              Só código
+            </button>
+          </div>
+        </div>
+        {myReferralCode ? (
+          <p className="text-[10px] text-gray-600 font-mono">
+            Código: <span className="text-gray-400">{myReferralCode}</span>
+          </p>
+        ) : null}
       </motion.div>
 
       <div className="space-y-3">
@@ -230,7 +317,7 @@ export function Missions() {
           <div className="text-xs text-gray-500">Sem movimentações de EXP registradas ainda.</div>
         ) : (
           <div className="space-y-2">
-            {expHistory.slice(0, 20).map((row) => (
+            {(xpHistoryExpanded ? expHistory : expHistory.slice(0, XP_HISTORY_INITIAL)).map((row) => (
               <div key={row.id} className="flex items-center justify-between bg-black/30 border border-white/5 p-2.5 rounded">
                 <div className="min-w-0">
                   <div className="text-xs text-white truncate">{row.source}</div>
@@ -241,6 +328,17 @@ export function Missions() {
                 </div>
               </div>
             ))}
+            {expHistory.length > XP_HISTORY_INITIAL ? (
+              <button
+                type="button"
+                onClick={() => setXpHistoryExpanded((v) => !v)}
+                className="w-full mt-1 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-400 border border-white/10 rounded hover:bg-white/5 hover:text-white transition-colors"
+              >
+                {xpHistoryExpanded
+                  ? 'Ver menos'
+                  : `Ver mais (${expHistory.length - XP_HISTORY_INITIAL} ocultas)`}
+              </button>
+            ) : null}
           </div>
         )}
       </motion.div>

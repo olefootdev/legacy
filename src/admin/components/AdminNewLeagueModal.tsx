@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
-import type { AdminLeagueConfig, KnockoutBracketSize, LeagueFormat, LeagueStandingRow } from '@/match/adminLeagues';
+import type {
+  AdminLeagueConfig,
+  KnockoutBracketSize,
+  LeagueFormat,
+  LeagueScope,
+  LeagueStandingRow,
+} from '@/match/adminLeagues';
 import {
   generateKnockoutRounds,
   KNOCKOUT_BRACKET_SIZES,
   LEAGUE_FORMAT_LABELS,
+  LEAGUE_SCOPE_LABELS,
   newLeagueId,
   newTeamId,
   sortStandings,
@@ -51,12 +58,14 @@ export function AdminNewLeagueModal({
   const [bracketSize, setBracketSize] = useState<KnockoutBracketSize>(8);
   const [drawKnockoutOnCreate, setDrawKnockoutOnCreate] = useState(true);
   const [syncStatsFromSeason, setSyncStatsFromSeason] = useState(false);
+  const [scope, setScope] = useState<LeagueScope>('national');
 
   useEffect(() => {
     if (!open) return;
     setName('Nova competição');
     setDivision('1ª fase');
     setFormat('round_robin');
+    setScope('national');
     setStartDate('');
     setEndDate('');
     setPrizeSummary('');
@@ -96,6 +105,7 @@ export function AdminNewLeagueModal({
       id,
       name: name.trim() || 'Sem nome',
       division: division.trim() || '—',
+      scope,
       syncStatsFromSeason,
       form: ['W', 'D'],
       standings,
@@ -162,6 +172,33 @@ export function AdminNewLeagueModal({
               className="mt-1 w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
             />
           </label>
+
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Âmbito</p>
+            <div className="flex flex-col gap-2">
+              {(['state', 'national', 'world'] as const).map((s) => (
+                <label
+                  key={s}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm',
+                    scope === s ? 'border-neon-yellow/50 bg-neon-yellow/10 text-white' : 'border-white/10 text-white/70',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="lg-scope"
+                    checked={scope === s}
+                    onChange={() => setScope(s)}
+                    className="border-white/30"
+                  />
+                  {LEAGUE_SCOPE_LABELS[s]}
+                  {s === 'world' ? (
+                    <span className="text-[10px] font-normal text-white/35">(só ranking global / admin)</span>
+                  ) : null}
+                </label>
+              ))}
+            </div>
+          </div>
 
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Formato</p>

@@ -2,10 +2,15 @@
  * Converte snapshot do TacticalSimLoop (metros mundo) para `PitchPlayerState` 0–100
  * usado pelo canvas 2D. Visitantes no sim: `away-{slot}`; alinhamos ao `awayRoster`
  * de `START_LIVE_MATCH` (mesma ordem que `TacticalSimLoop` + 4-3-3).
+ * As posições dos jogadores vêm dos `Vehicle` Yuka integrados no loop (steering + passo físico).
  */
 import type { PitchPlayerState } from '@/engine/types';
 import type { MatchTruthSnapshot } from '@/bridge/matchTruthSchema';
 import { worldToUiPercent } from '@/simulation/field';
+import {
+  awayCognitiveArchetypeForSlot,
+  defaultAwayMatchAttributes,
+} from '@/match/playerInMatch';
 
 /** Índice em `awayRoster` (reducer) por slot — espelha `defaultSlotOrder` / 4-3-3. */
 const SLOT_TO_AWAY_ROSTER_INDEX: Record<string, number> = {
@@ -47,6 +52,8 @@ export function truthSnapshotToTest2dPitch(args: {
   homePitch: PitchPlayerState[];
   awayPitch: PitchPlayerState[];
   ball: { x: number; y: number };
+  /** Ball height above ground in metres (0 = on ground). */
+  ballHeight: number;
 } {
   const { snap, homePlayers, awayRoster } = args;
   const byHomeId = new Map(homePlayers.map((p) => [p.playerId, p]));
@@ -54,10 +61,17 @@ export function truthSnapshotToTest2dPitch(args: {
   const homePitch: PitchPlayerState[] = [];
   const awayPitch: PitchPlayerState[] = [];
 
+  const fatigueFromSimStamina = (stamina: number | undefined, fallback: number): number => {
+    if (stamina === undefined || !Number.isFinite(stamina)) return fallback;
+    return Math.round(Math.max(0, Math.min(100, 100 - stamina)));
+  };
+
   for (const tp of snap.players) {
     const { ux, uy } = worldToUiPercent(tp.x, tp.z);
+    const facing = tp.facingYaw ?? tp.heading;
     if (tp.side === 'home') {
       const base = byHomeId.get(tp.id);
+      const fb = base?.fatigue ?? 50;
       homePitch.push({
         playerId: tp.id,
         slotId: base?.slotId ?? 'mc1',
@@ -66,16 +80,18 @@ export function truthSnapshotToTest2dPitch(args: {
         pos: base?.pos ?? String(tp.role),
         x: ux,
         y: uy,
-        fatigue: base?.fatigue ?? 50,
+        fatigue: fatigueFromSimStamina(tp.matchStamina, fb),
         role: base?.role ?? coercePitchRole(tp.role),
         attributes: base?.attributes,
         cognitiveArchetype: base?.cognitiveArchetype,
+        ...(facing !== undefined ? { heading: facing } : {}),
       });
     } else {
       const slot = awaySlotFromSimId(tp.id);
       const idx = slot != null ? SLOT_TO_AWAY_ROSTER_INDEX[slot] : undefined;
       const roster = idx !== undefined ? awayRoster[idx] : undefined;
       const role = slot ? roleFromSlotId(slot) : 'mid';
+      const awaySeed = roster?.num ?? (idx !== undefined ? idx + 1 : 1);
       awayPitch.push({
         playerId: roster?.id ?? tp.id,
         slotId: slot ?? 'mc1',
@@ -84,15 +100,18 @@ export function truthSnapshotToTest2dPitch(args: {
         pos: roster?.pos ?? String(tp.role),
         x: ux,
         y: uy,
-        fatigue: 50,
+        fatigue: fatigueFromSimStamina(tp.matchStamina, 50),
         role,
+        attributes: defaultAwayMatchAttributes(awaySeed),
+        cognitiveArchetype: slot ? awayCognitiveArchetypeForSlot(slot) : 'construtor',
+        ...(facing !== undefined ? { heading: facing } : {}),
       });
     }
   }
 
   const b = snap.ball;
   const ballPt = worldToUiPercent(b.x, b.z);
-  return { homePitch, awayPitch, ball: { x: ballPt.ux, y: ballPt.uy } };
+  return { homePitch, awayPitch, ball: { x: ballPt.ux, y: ballPt.uy }, ballHeight: b.y ?? 0 };
 }
 
 /** Converte `carrierId` do sim para o `playerId` usado no store / highlight. */

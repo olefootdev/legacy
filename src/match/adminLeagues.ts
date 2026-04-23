@@ -1,4 +1,14 @@
 import type { FormLetter } from '@/entities/types';
+import type { LeagueSeasonState } from '@/match/leagueSeason';
+
+/** Âmbito geográfico da competição (criação no /admin; jogador vê Estadual e Nacional em /leagues). */
+export type LeagueScope = 'state' | 'national' | 'world';
+
+export const LEAGUE_SCOPE_LABELS: Record<LeagueScope, string> = {
+  state: 'Estadual',
+  national: 'Nacional',
+  world: 'Mundial',
+};
 
 /** Linha da classificação (persistida; a UI ordena por pontos/SG). */
 export interface LeagueStandingRow {
@@ -31,6 +41,8 @@ export interface AdminLeagueConfig {
   id: string;
   name: string;
   division: string;
+  /** Estadual, nacional ou mundial (default nacional em saves antigos). */
+  scope: LeagueScope;
   /** Se true, a linha do clube do jogador recebe jogos/pontos/GF/GA de `leagueSeason`. */
   syncStatsFromSeason: boolean;
   /** Forma exibida no cartão da competição (W/D/L). */
@@ -52,6 +64,11 @@ export interface AdminLeagueConfig {
   knockoutBracketSize?: KnockoutBracketSize;
   /** Chaveamento após sorteio + placeholders das rondas seguintes. */
   knockoutRounds?: KnockoutRound[];
+}
+
+/** Ligas visíveis em /leagues (exclui competições mundiais). */
+export function isLeagueVisibleInPlayerApp(league: AdminLeagueConfig): boolean {
+  return league.scope !== 'world';
 }
 
 export const LEAGUE_FORMAT_LABELS: Record<LeagueFormat, string> = {
@@ -101,6 +118,26 @@ export function rowMatchingClub(
       r.name.trim().toUpperCase().includes(s) ||
       (u.length > 0 && r.name.toUpperCase().includes(u)),
   );
+}
+
+/** Tabela ordenada como na UI (/leagues), com opcional sincronização da linha do manager. */
+export function standingsRowsForDisplay(
+  league: AdminLeagueConfig,
+  clubName: string,
+  clubShort: string,
+  leagueSeason: LeagueSeasonState,
+): LeagueStandingRow[] {
+  let standings = league.standings.map((r) => ({ ...r }));
+  if (league.syncStatsFromSeason) {
+    const row = rowMatchingClub(standings, clubName, clubShort);
+    if (row) {
+      row.played = leagueSeason.played;
+      row.points = leagueSeason.points;
+      row.goalsFor = leagueSeason.goalsFor;
+      row.goalsAgainst = leagueSeason.goalsAgainst;
+    }
+  }
+  return sortStandings(standings);
 }
 
 /** Nome da ronda eliminatória pelo nº de jogos nessa ronda. */
@@ -183,71 +220,9 @@ export function generateKnockoutRounds(
 }
 
 export function createDefaultAdminLeagues(): AdminLeagueConfig[] {
-  const oleSerieA: AdminLeagueConfig = {
-    id: 'lg_ole_serie_a',
-    name: 'Liga OLE — Série A',
-    division: '1ª Divisão',
-    syncStatsFromSeason: true,
-    form: ['W', 'W', 'D', 'W'],
-    format: 'round_robin',
-    startDate: '2026-01-01',
-    endDate: '2026-06-30',
-    prizeSummary: 'Título nacional + vaga continental.',
-    standings: [
-      { teamId: 't1', name: 'TITANS FC', played: 6, points: 12, goalsFor: 14, goalsAgainst: 6 },
-      { teamId: 't2', name: 'SPARTANS', played: 6, points: 11, goalsFor: 12, goalsAgainst: 6 },
-      { teamId: 't3', name: 'OLE FC', played: 4, points: 10, goalsFor: 10, goalsAgainst: 5 },
-      { teamId: 't4', name: 'DRAGONS', played: 6, points: 8, goalsFor: 9, goalsAgainst: 7 },
-      { teamId: 't5', name: 'WOLVES', played: 6, points: 7, goalsFor: 8, goalsAgainst: 7 },
-      { teamId: 't6', name: 'PHOENIX', played: 6, points: 6, goalsFor: 7, goalsAgainst: 8 },
-    ],
-  };
-
-  const copaStandings: LeagueStandingRow[] = [
-    { teamId: 'c1', name: 'OLE FC', played: 2, points: 6, goalsFor: 5, goalsAgainst: 1 },
-    { teamId: 'c2', name: 'RIVER NORTH', played: 2, points: 3, goalsFor: 2, goalsAgainst: 3 },
-    { teamId: 'c3', name: 'STEEL CITY', played: 2, points: 0, goalsFor: 1, goalsAgainst: 4 },
-    { teamId: 'c4', name: 'COAST UNITED', played: 2, points: 3, goalsFor: 3, goalsAgainst: 3 },
-  ];
-
-  const copaSorted = sortStandings(copaStandings);
-  const copaNeo: AdminLeagueConfig = {
-    id: 'lg_copa_neo',
-    name: 'Copa Neo Arena',
-    division: 'Mata-mata',
-    syncStatsFromSeason: false,
-    form: ['W', 'W'],
-    format: 'knockout',
-    startDate: '2026-03-01',
-    endDate: '2026-05-15',
-    prizeSummary: 'Taça + 500 EXP ao campeão (sintético).',
-    knockoutBracketSize: 8,
-    standings: copaStandings,
-    knockoutRounds: [
-      {
-        name: 'Quartos de final',
-        pairs: [
-          { homeTeamId: 'c1', awayTeamId: 'bye_0', homeName: copaSorted[0]!.name, awayName: '— Livre —' },
-          { homeTeamId: 'c2', awayTeamId: 'bye_1', homeName: copaSorted[1]!.name, awayName: '— Livre —' },
-          { homeTeamId: 'c3', awayTeamId: 'bye_2', homeName: copaSorted[2]!.name, awayName: '— Livre —' },
-          { homeTeamId: 'c4', awayTeamId: 'bye_3', homeName: copaSorted[3]!.name, awayName: '— Livre —' },
-        ],
-      },
-      {
-        name: 'Meias-finais',
-        pairs: [
-          { homeTeamId: '', awayTeamId: '', homeName: 'Vencedor jogo 1', awayName: 'Vencedor jogo 2' },
-          { homeTeamId: '', awayTeamId: '', homeName: 'Vencedor jogo 3', awayName: 'Vencedor jogo 4' },
-        ],
-      },
-      {
-        name: 'Final',
-        pairs: [{ homeTeamId: '', awayTeamId: '', homeName: 'Vencedor jogo 1', awayName: 'Vencedor jogo 2' }],
-      },
-    ],
-  };
-
-  return [oleSerieA, copaNeo];
+  // Ligas começam vazias. Admin cria via painel quando houver managers
+  // suficientes. Histórico com Liga OLE Série A + Copa Neo (mocks) no git.
+  return [];
 }
 
 export function newLeagueId(): string {
@@ -261,6 +236,11 @@ export function newTeamId(): string {
 function parseFormat(x: unknown): LeagueFormat {
   if (x === 'knockout' || x === 'hybrid' || x === 'round_robin') return x;
   return 'round_robin';
+}
+
+function parseScope(x: unknown): LeagueScope {
+  if (x === 'state' || x === 'national' || x === 'world') return x;
+  return 'national';
 }
 
 function parseBracketSize(x: unknown): KnockoutBracketSize | undefined {
@@ -318,6 +298,7 @@ export function normalizeAdminLeague(r: Partial<AdminLeagueConfig> & { id: strin
     id: r.id,
     name: typeof r.name === 'string' ? r.name : 'Sem nome',
     division: typeof r.division === 'string' ? r.division : '—',
+    scope: parseScope(r.scope),
     syncStatsFromSeason: Boolean(r.syncStatsFromSeason),
     form,
     standings,

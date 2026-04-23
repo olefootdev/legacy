@@ -5,3 +5,4 @@ export { DEFAULT_BRO_PRICES_CENTS } from './broDefaults';
 export { getNextUpgradeCost, tryUpgradeStructure, createDefaultStructures } from './upgrade';
 export type { UpgradeResult } from './upgrade';
 export { gatCategoryForStructure } from './gatCategory';
+export * from './benefits';

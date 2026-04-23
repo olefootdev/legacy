@@ -31,8 +31,15 @@ export interface StructuralEventState {
 
 export const DEFAULT_GOAL_RESTART_REPOSITION_SEC = 3;
 export const DEFAULT_SET_PIECE_REPOSITION_SEC = 3;
+/** Distância mínima adversários ↔ bola no remate de baliza (m) — IFAB: fora da grande área. */
 export const MIN_DIST_GOAL_KICK_M = 9.15;
+/** Distância mínima adversários ↔ bola em canto / lateral (m) — alinhado ao mínimo de barreira IFAB. */
 export const MIN_DIST_CORNER_THROW_M = 9.15;
+/**
+ * Tolerância numérica (m) para asserções `dist >= minM - eps` após clamps de campo / empurradão radial.
+ * Não substitui `MIN_DIST_*`: só suaviza comparações float.
+ */
+export const MIN_DIST_NUMERIC_EPS_M = 1e-3;
 
 export function defaultConstraintsForEvent(type: StructuralEventType): StructuralConstraints {
   switch (type) {

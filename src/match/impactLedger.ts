@@ -2,6 +2,8 @@
  * Ledger de impacto (casa) + cálculo determinístico visitante a partir do feed.
  * Ver `impactRules.ts` para fórmulas e políticas.
  *
+ * Pilar 2 (impacto em jogo): mapa de rastreio em `@/lib/veracityPillarsMap`.
+ *
  * Anti-spam (desarmes/saves repetidos): ao emitir `INDIV.tackleRecovery` / saves, respeitar
  * `ANTI_SPAM_MAX_PER_MINUTE` em `impactRules.ts` antes de chamar `appendEntry` (não ligado aqui).
  */

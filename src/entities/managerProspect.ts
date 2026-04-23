@@ -1,4 +1,7 @@
 import { createPlayer, overallFromAttributes } from './player';
+import { applyScoutBonusToNpcAttrs } from '@/systems/staffBenefits';
+import type { ManagerProspectContractGames } from '@/playerContracts/playerContracts';
+import { contractFieldsForManagerProspectTier } from '@/playerContracts/playerContracts';
 import type { PlayerAttributes, PlayerBehavior, PlayerEntity, PlayerStrongFoot } from './types';
 
 /** OVR máximo na criação (Academia OLE + prospects NPC). */
@@ -257,6 +260,8 @@ export type ManagerProspectCreatePayload = {
   /** Origem / referência cultural do cartão (obrigatório no fluxo Academia com attrs). */
   heritage?: ManagerProspectHeritageBrief;
   visualBrief?: ManagerProspectVisualBrief;
+  /** Duração do contrato em jogos (10 / 70 / 150 / 250); omissão = 10. */
+  contractMatches?: ManagerProspectContractGames;
 };
 
 function strongFootPt(f: PlayerStrongFoot): string {
@@ -368,6 +373,7 @@ export function buildManagerCreatedPlayerEntity(
   }
 
   const mintOvr = overallFromAttributes(attrs);
+  const tier = (payload.contractMatches ?? 10) as ManagerProspectContractGames;
   return createPlayer({
     id,
     num,
@@ -385,6 +391,7 @@ export function buildManagerCreatedPlayerEntity(
     bio: markAsManagerCreated ? `Academia OLE · ${age} anos` : `Rede OLE · ${age} anos`,
     listedOnMarket: false,
     fatigue: 12,
+    ...contractFieldsForManagerProspectTier(tier),
   });
 }
 
@@ -400,7 +407,7 @@ function hash32(s: string): number {
 }
 
 /** Prospect NPC (outro manager) para compra no mercado — OVR já limitado. */
-export function buildNpcManagerProspectSnapshot(seed: string, index: number): PlayerEntity {
+export function buildNpcManagerProspectSnapshot(seed: string, index: number, olheiroLevel?: number): PlayerEntity {
   const h = hash32(`${seed}:${index}`);
   const name = `${NPC_FIRST_NAMES[h % NPC_FIRST_NAMES.length]} ${NPC_LAST[(h >> 3) % NPC_LAST.length]}`;
   const pos = NPC_POS[(h >> 5) % NPC_POS.length]!;
@@ -412,7 +419,7 @@ export function buildNpcManagerProspectSnapshot(seed: string, index: number): Pl
   const foot: PlayerStrongFoot[] = ['right', 'left', 'both'];
   const strongFoot = foot[(h >> 11) % foot.length]!;
   const bias = 30 + (h % 41);
-  return buildManagerCreatedPlayerEntity(
+  const base = buildManagerCreatedPlayerEntity(
     {
       name,
       age,
@@ -426,4 +433,12 @@ export function buildNpcManagerProspectSnapshot(seed: string, index: number): Pl
     0,
     false,
   );
+  if (olheiroLevel === undefined) return base;
+  let t = (h + index * 17) >>> 0;
+  const rng = () => {
+    t = (Math.imul(1664525, t) + 1013904223) >>> 0;
+    return t / 0x1_0000_0000;
+  };
+  const boosted = applyScoutBonusToNpcAttrs(base.attrs, olheiroLevel, rng);
+  return { ...base, attrs: scaleAttrsToMaxOvr(boosted, MANAGER_PROSPECT_CREATE_MAX_OVR) };
 }

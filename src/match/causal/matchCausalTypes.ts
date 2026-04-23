@@ -39,6 +39,8 @@ export type CausalMatchEvent =
         strike?: ShotStrikeProfile;
         /** Defesa com espalma vs segurar — só `save`; UI / replay. */
         saveKind?: 'parry' | 'hold';
+        /** Destaque do duelo com o GR (narrativa / replay). */
+        gkHighlight?: 'spectacular_save' | 'gk_blunder_goal' | 'world_class_goal';
       };
     }
   | {
@@ -75,6 +77,8 @@ export type CausalMatchEvent =
         /** ex.: tackle | draw_foul */
         kind: string;
         dangerous: boolean;
+        /** Leve / firme / criminosa — influencia cartão no motor contínuo. */
+        severity?: 'light' | 'firm' | 'ugly';
       };
     }
   /** Cartão mostrado no loop contínuo (amarelo frequente, vermelho raro). */
@@ -111,7 +115,8 @@ export interface CausalLogState {
   entries: CausalMatchEvent[];
 }
 
-const MAX_CAUSAL_ENTRIES = 2000;
+/** Stress test2d / partidas longas: muitos micro-eventos; manter histórico completo para replay/disciplina. */
+const MAX_CAUSAL_ENTRIES = 25_000;
 
 export function appendCausalEntries(state: CausalLogState | undefined, batch: CausalMatchEvent[]): CausalLogState {
   const prev = state ?? { nextSeq: 1, entries: [] };

@@ -8,6 +8,7 @@
 
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import { getAttackingGoalX, getSideAttackDir, depthFromOwnGoal } from './fieldZones';
+import { sfGetGoalContext, sfGetPostZone } from '@/smartfield/smartfieldBridge';
 import type { TeamSide, MatchHalf } from './fieldZones';
 import type { AgentSnapshot } from '@/simulation/InteractionResolver';
 import {
@@ -48,6 +49,14 @@ export interface GoalContext {
   lineOfSightScore: number;
   /** 0–1: progress toward attacked goal (0 = own goal line, 1 = opponent goal line). */
   progressToGoal: number;
+
+  /** SMARTFIELD: explicit post coordinates and finishing lane. */
+  nearPost?: { x: number; z: number };
+  farPost?: { x: number; z: number };
+  /** 'near_post' | 'far_post' | 'central' | 'outside' — closest goal sub-zone. */
+  postZone?: string;
+  /** 'excellent' | 'good' | 'tight' | 'very_tight' */
+  angleQuality?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +81,9 @@ export function buildGoalContext(
   const progress = computeProgressToGoal(selfX, side, half);
   const los = computeLineOfSight(selfX, selfZ, targetGoalX, targetGoalZ, opponents);
 
+  const sfCtx = sfGetGoalContext(selfX, selfZ, attackUnitX);
+  const postZone = sfGetPostZone(selfX, selfZ, attackUnitX);
+
   return {
     targetGoalX,
     targetGoalZ,
@@ -80,6 +92,10 @@ export function buildGoalContext(
     angleToGoal,
     lineOfSightScore: los,
     progressToGoal: progress,
+    nearPost: sfCtx.nearPost,
+    farPost: sfCtx.farPost,
+    postZone,
+    angleQuality: sfCtx.angleQuality,
   };
 }
 
@@ -150,8 +166,25 @@ export function estimateShotXG(
   else if (distToGoal < 20) xg += XG_MID_BONUS;
   else if (distToGoal > 30) xg += XG_FAR_PENALTY;
 
-  // Angle penalty (wide angles reduce chance)
-  if (angleToGoal > Math.PI * 0.35) xg += XG_ANGLE_PENALTY;
+  // Angle — use Smartfield angleQuality when available for finer granularity
+  if (goalCtx.angleQuality === 'excellent') {
+    xg += 0.04;
+  } else if (goalCtx.angleQuality === 'good') {
+    /* neutral — no modifier */
+  } else if (goalCtx.angleQuality === 'tight') {
+    xg += XG_ANGLE_PENALTY * 0.6;
+  } else if (goalCtx.angleQuality === 'very_tight') {
+    xg += XG_ANGLE_PENALTY * 1.3;
+  } else if (angleToGoal > Math.PI * 0.35) {
+    xg += XG_ANGLE_PENALTY;
+  }
+
+  // Post zone bonus (central shots are higher quality)
+  if (goalCtx.postZone === 'central') {
+    xg += 0.03;
+  } else if (goalCtx.postZone === 'outside') {
+    xg -= 0.04;
+  }
 
   // Line of sight
   xg += (lineOfSightScore - 0.5) * 0.06;

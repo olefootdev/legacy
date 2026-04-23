@@ -1,6 +1,7 @@
 import type { FinanceState, PlayerEntity } from '@/entities/types';
 import type { StaffRoleId, StaffState } from '@/game/types';
 import { addBroCents, addOle } from './economy';
+import { headCoachTrainingAttrMultiplier } from './staffBenefits';
 
 export const STAFF_LABELS: Record<StaffRoleId, string> = {
   preparador_fisico: 'Preparador físico',
@@ -76,17 +77,19 @@ export function tryUpgradeStaffRole(
 
 export function trainingGainMultiplier(staff: StaffState, roleIds: StaffRoleId[]): number {
   const roleBonus = roleIds.reduce((sum, id) => sum + ((staff.roles[id] ?? 1) - 1) * 0.06, 0);
-  const coachBonus = ((staff.roles.treinador ?? 1) - 1) * 0.05;
-  return 1 + roleBonus + coachBonus;
+  const coachMul = headCoachTrainingAttrMultiplier(staff);
+  return coachMul + roleBonus;
 }
 
 export function applyNutritionRecovery(player: PlayerEntity, staff: StaffState): PlayerEntity {
   const lvl = staff.roles.nutricao ?? 1;
   if (lvl <= 1) return player;
+  const fatRel = [0.06, 0.09, 0.12, 0.18, 0.24][lvl - 1] ?? 0.06;
+  const injRel = [0.06, 0.09, 0.12, 0.18, 0.24][lvl - 1] ?? 0.06;
   return {
     ...player,
-    fatigue: Math.max(0, player.fatigue - lvl),
-    injuryRisk: Math.max(0, player.injuryRisk - lvl * 0.8),
+    fatigue: Math.max(0, player.fatigue - Math.round(4 + player.fatigue * fatRel)),
+    injuryRisk: Math.max(0, player.injuryRisk - (2 + player.injuryRisk * injRel)),
   };
 }
 

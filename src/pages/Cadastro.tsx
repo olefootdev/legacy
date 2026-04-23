@@ -4,23 +4,18 @@ import { cn } from '@/lib/utils';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { useSportsDataStore, type SportsClub, type SportsLeague } from '@/admin/sportsDataStore';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
-import { Search } from 'lucide-react';
 import {
   clearPendingReferrerCode,
   readPendingReferrerCode,
   normalizeReferralCode,
 } from '@/wallet/referralCode';
-
-const FORMATION_STYLE_LABELS: Record<string, string> = {
-  balanced: 'Equilibrado',
-  tiki_positional: 'Posse de bola / Posicional',
-  vertical_transition: 'Transição vertical',
-  wide_crossing: 'Jogo aberto / Cruzamentos',
-  low_block_counter: 'Bloco baixo / Contra-ataque',
-  direct_long_ball: 'Jogo direto / Bola longa',
-};
+import { PRESET_LABEL_PT } from '@/tactics/playingStyle';
+import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
+import { syncProfileManagerFirstName } from '@/supabase/profileDisplayName';
+import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
+import type { FavoriteRealTeamRef } from '@/game/types';
+import { signUpWithEmail } from '@/supabase/auth';
 
 const FORMATION_OPTIONS: FormationSchemeId[] = [
   '4-3-3',
@@ -61,6 +56,7 @@ export function Cadastro() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [dialOption, setDialOption] = useState<CountryDialOption>(COUNTRY_DIAL_OPTIONS[0]);
   const [customDialDigits, setCustomDialDigits] = useState('');
   const [ddd, setDdd] = useState('');
@@ -71,34 +67,15 @@ export function Cadastro() {
   const [initials, setInitials] = useState('');
   const [formationScheme, setFormationScheme] = useState<FormationSchemeId>('4-3-3');
 
-  const leagues = useSportsDataStore((s) => s.leagues);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
-  const [selectedClub, setSelectedClub] = useState<SportsClub | null>(null);
-  const [searchQ, setSearchQ] = useState('');
+  const [favoriteTeam, setFavoriteTeam] = useState<FavoriteRealTeamRef | null>(null);
+  const [leagueBucketId, setLeagueBucketId] = useState<string>('brasil');
 
-  const hasData = leagues.length > 0;
+  const [finishBusy, setFinishBusy] = useState(false);
 
   useEffect(() => {
     const p = readPendingReferrerCode();
     if (p) setReferrerCode(p);
   }, []);
-
-  const selectedLeague = useMemo(
-    () => leagues.find((l) => l.id === selectedLeagueId) ?? null,
-    [leagues, selectedLeagueId],
-  );
-
-  const filteredClubs = useMemo(() => {
-    if (!selectedLeague) return [];
-    const q = searchQ.trim().toLowerCase();
-    if (!q) return selectedLeague.clubs;
-    return selectedLeague.clubs.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.short_name.toLowerCase().includes(q) ||
-        c.city.toLowerCase().includes(q),
-    );
-  }, [selectedLeague, searchQ]);
 
   const dialDigits = useMemo(() => {
     if (dialOption.iso2 === 'OTHER') return digitsOnly(customDialDigits);
@@ -111,62 +88,88 @@ export function Cadastro() {
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     simpleEmailOk(email) &&
+    password.length >= 6 &&
     phoneE164.length >= 8;
 
   const step2Valid = clubName.trim().length > 0 && initials.trim().length > 0;
-
-  const step3Valid = !hasData || selectedClub !== null;
+  const step3Valid = !!favoriteTeam;
 
   const goNext = () => {
     if (step === 1 && step1Valid) setStep(2);
     else if (step === 2 && step2Valid) setStep(3);
   };
 
-  const finish = () => {
-    if (!step3Valid) return;
+  const [finishError, setFinishError] = useState<string | null>(null);
+
+  const finish = async () => {
+    if (!step3Valid || finishBusy) return;
+    setFinishError(null);
+    setFinishBusy(true);
     const sn = initials.trim().toUpperCase().slice(0, 6);
-    dispatch({
-      type: 'SET_USER_SETTINGS',
-      partial: {
-        managerProfile: {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-          phoneE164,
-        },
-        ...(selectedClub
-          ? {
-              favoriteRealTeam: {
-                id: 0,
-                name: selectedClub.name,
-                logo: selectedClub.logo_url ?? null,
-              },
-            }
-          : {}),
-      },
-    });
-    clearPendingReferrerCode();
-    const refNorm = normalizeReferralCode(referrerCode);
-    if (refNorm) {
-      dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: refNorm });
-    }
-    dispatch({
-      type: 'ADMIN_PATCH_CLUB',
-      partial: { name: clubName.trim(), shortName: sn },
-    });
-    const tacticalDefaults = FORMATION_TACTICAL_DEFAULTS[formationScheme];
-    dispatch({
-      type: 'SET_MANAGER_SLIDERS',
-      partial: {
+    try {
+      // Supabase signup ANTES de alterar o save local. Se der erro (email já
+      // existente, senha fraca, etc), não quebramos o estado local.
+      const managerProfile = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phoneE164,
+      };
+      const signUp = await signUpWithEmail({
+        email: email.trim(),
+        password,
+        managerProfile,
+        favoriteRealTeam: favoriteTeam,
+        clubName: clubName.trim(),
+        clubShort: sn,
         formationScheme,
-        tacticalMentality: tacticalDefaults.tacticalMentality,
-        defensiveLine: tacticalDefaults.defensiveLine,
-        tempo: tacticalDefaults.tempo,
-        tacticalStyle: tacticalDefaults.style,
-      },
-    });
-    dispatch({ type: 'SET_LINEUP', lineup: { ...lineup }, formationScheme });
-    navigate('/');
+      });
+      if (!signUp.ok) {
+        setFinishError(signUp.error ?? 'Falha ao criar conta.');
+        return;
+      }
+      dispatch({
+        type: 'SET_USER_SETTINGS',
+        partial: {
+          managerProfile,
+          favoriteRealTeam: favoriteTeam,
+        },
+      });
+      clearPendingReferrerCode();
+      const refNorm = normalizeReferralCode(referrerCode);
+      if (refNorm) {
+        dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: refNorm });
+      }
+      dispatch({
+        type: 'ADMIN_PATCH_CLUB',
+        partial: { name: clubName.trim(), shortName: sn },
+      });
+      const tacticalDefaults = FORMATION_TACTICAL_DEFAULTS[formationScheme];
+      dispatch({
+        type: 'SET_MANAGER_SLIDERS',
+        partial: {
+          formationScheme,
+          tacticalMentality: tacticalDefaults.tacticalMentality,
+          defensiveLine: tacticalDefaults.defensiveLine,
+          tempo: tacticalDefaults.tempo,
+          tacticalStyle: tacticalDefaults.style,
+        },
+      });
+      dispatch({ type: 'SET_LINEUP', lineup: { ...lineup }, formationScheme });
+
+      const welcome = await tryGrantWelcomeGenesisPack();
+      if (welcome.ok === false) {
+        const ignorable =
+          welcome.reason === 'already_granted' || welcome.reason === 'squad_not_empty';
+        if (!ignorable) console.warn('[Cadastro] welcome genesis pack:', welcome.reason);
+      }
+
+      await syncProfileManagerFirstName(firstName.trim());
+
+      navigate('/');
+    } finally {
+      setFinishBusy(false);
+    }
   };
 
   return (
@@ -174,7 +177,7 @@ export function Cadastro() {
       <div className="sports-panel w-full min-w-0 max-w-lg rounded-xl p-6 sm:p-8">
         <h1 className="font-display text-center text-2xl font-bold uppercase tracking-wide text-white">Cadastro</h1>
         <p className="mt-2 text-center font-sans text-xs text-white/55">
-          Agora vamos escolher o seu time do coração.
+          Cria o teu perfil de treinador.
         </p>
 
         <div className="mt-6 flex justify-center gap-2" aria-hidden>
@@ -221,6 +224,19 @@ export function Cadastro() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-white/65">
+                Senha <span className="text-white/35">(mín. 6 chars — usada pra entrar de qualquer dispositivo)</span>
+              </span>
+              <input
+                type="password"
+                className={inputClass}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={6}
               />
             </label>
             <label className="block">
@@ -288,6 +304,118 @@ export function Cadastro() {
           </div>
         )}
 
+        {step === 3 && (
+          <div className="mt-8 space-y-4">
+            <div>
+              <p className="mb-1 text-center font-display text-sm font-bold uppercase tracking-wide text-white">
+                Escolhe o teu time do coração
+              </p>
+              <p className="text-center text-[11px] text-white/50">
+                13 ligas disponíveis. O escudo aparece ao lado do nome do teu clube nas telas do jogo.
+              </p>
+            </div>
+
+            {/* Seleção Brasil em destaque (1 card cheio no topo) */}
+            <button
+              type="button"
+              onClick={() => setFavoriteTeam(SELECAO_BRASIL)}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg border bg-black/30 p-3 transition-colors',
+                favoriteTeam?.id === SELECAO_BRASIL.id
+                  ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
+                  : 'border-white/10 hover:border-white/30',
+              )}
+              aria-pressed={favoriteTeam?.id === SELECAO_BRASIL.id}
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/60">
+                {SELECAO_BRASIL.logo ? (
+                  <img
+                    src={SELECAO_BRASIL.logo}
+                    alt={SELECAO_BRASIL.name}
+                    className="h-9 w-9 object-contain"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="font-display text-sm font-bold text-white">🇧🇷 Seleção Brasil</p>
+                <p className="text-[10px] text-white/50">Time do coração dos que torcem pela pátria.</p>
+              </div>
+            </button>
+
+            {/* Chips de ligas */}
+            <div className="flex flex-wrap gap-1.5 border-t border-white/5 pt-3">
+              {LEAGUE_BUCKETS.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setLeagueBucketId(b.id)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                    leagueBucketId === b.id
+                      ? 'border-neon-yellow/60 bg-neon-yellow/15 text-neon-yellow'
+                      : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/25 hover:text-white',
+                  )}
+                >
+                  <span className="mr-1">{b.flag}</span>
+                  {b.label.split(' — ')[1] ?? b.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Grid de clubes da liga selecionada */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {(LEAGUE_BUCKETS.find((b) => b.id === leagueBucketId)?.teams ?? []).map((c) => {
+                const selected = favoriteTeam?.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setFavoriteTeam(c)}
+                    className={cn(
+                      'group flex flex-col items-center gap-1 rounded-lg border bg-black/30 p-2 transition-colors',
+                      selected
+                        ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
+                        : 'border-white/10 hover:border-white/30',
+                    )}
+                    aria-pressed={selected}
+                  >
+                    <div className={cn(
+                      'flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border',
+                      selected ? 'border-neon-yellow/70 bg-black' : 'border-white/20 bg-black/60',
+                    )}>
+                      {c.logo ? (
+                        <img
+                          src={c.logo}
+                          alt={c.name}
+                          className="h-9 w-9 object-contain"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                        />
+                      ) : null}
+                    </div>
+                    <span className={cn(
+                      'line-clamp-2 text-center text-[10px] font-bold leading-tight',
+                      selected ? 'text-neon-yellow' : 'text-white/75',
+                    )}>
+                      {c.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {favoriteTeam ? (
+              <p className="text-center text-[11px] text-neon-yellow/80">
+                💛 {favoriteTeam.name} selecionado
+              </p>
+            ) : null}
+          </div>
+        )}
+
         {step === 2 && (
           <div className="mt-8 space-y-4">
             <label className="block">
@@ -323,117 +451,26 @@ export function Cadastro() {
               <p className="mt-1 text-[10px] text-white/40">
                 Estilo tático:{' '}
                 <span className="text-neon-yellow/70">
-                  {FORMATION_STYLE_LABELS[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
+                  {PRESET_LABEL_PT[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
                 </span>
               </p>
             </label>
           </div>
         )}
 
-        {step === 3 && (
-          <div className="mt-8 space-y-4">
-            {!hasData ? (
-              <div className="rounded-lg border border-dashed border-white/15 p-6 text-center">
-                <p className="text-sm text-white/50">Nenhuma liga cadastrada ainda.</p>
-                <p className="mt-1 text-xs text-white/30">
-                  O administrador pode importar dados em Admin → Sports Data.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Seleção de liga */}
-                <div>
-                  <span className="mb-2 block text-xs font-medium text-white/65">Escolha a liga</span>
-                  <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-2">
-                    {leagues.map((league) => (
-                      <button
-                        key={league.id}
-                        type="button"
-                        className={cn(
-                          'rounded-md px-3 py-2.5 text-left text-sm transition',
-                          selectedLeagueId === league.id
-                            ? 'bg-neon-yellow/20 text-white'
-                            : 'text-white/80 hover:bg-white/5',
-                        )}
-                        onClick={() => {
-                          setSelectedLeagueId(league.id);
-                          setSelectedClub(null);
-                          setSearchQ('');
-                        }}
-                      >
-                        <span className="font-medium">{league.name}</span>
-                        <span className="ml-2 text-white/40 text-xs">
-                          {league.country} · {league.clubs.length} clubes
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Seleção de clube */}
-                {selectedLeague && (
-                  <div>
-                    <span className="mb-2 block text-xs font-medium text-white/65">
-                      Escolha seu time — {selectedLeague.name}
-                    </span>
-                    {selectedLeague.clubs.length > 8 && (
-                      <div className="relative mb-2">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30 pointer-events-none" />
-                        <input
-                          className={cn(inputClass, 'pl-9')}
-                          placeholder="Filtrar clube…"
-                          value={searchQ}
-                          onChange={(e) => setSearchQ(e.target.value)}
-                        />
-                      </div>
-                    )}
-                    <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-2">
-                      {filteredClubs.map((club) => (
-                        <ClubRow
-                          key={club.id}
-                          club={club}
-                          selected={selectedClub?.id === club.id}
-                          onPick={() => setSelectedClub(club)}
-                        />
-                      ))}
-                      {filteredClubs.length === 0 && (
-                        <p className="px-2 py-3 text-center text-sm text-white/45">Nenhum clube encontrado.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Clube selecionado */}
-                {selectedClub && (
-                  <div className="flex items-center gap-3 rounded-lg border border-neon-yellow/25 bg-neon-yellow/5 p-3">
-                    {selectedClub.logo_url ? (
-                      <img
-                        src={selectedClub.logo_url}
-                        alt=""
-                        className="h-12 w-12 shrink-0 object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-white/10 font-display text-sm font-bold text-white/50">
-                        {selectedClub.short_name.slice(0, 3)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-white">Time do coração</p>
-                      <p className="text-sm text-white/70">{selectedClub.name}</p>
-                      {selectedClub.city && (
-                        <p className="text-[10px] text-white/40">{selectedClub.city}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+        {finishError ? (
+          <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
+            ✗ {finishError}
           </div>
-        )}
+        ) : null}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
           {step > 1 ? (
-            <button type="button" className="btn-secondary order-2 sm:order-1" onClick={() => setStep((s) => (s === 2 ? 1 : 2))}>
+            <button
+              type="button"
+              className="btn-secondary order-2 sm:order-1"
+              onClick={() => setStep((step - 1) as 1 | 2 | 3)}
+            >
               <span className="btn-secondary-inner justify-center">Voltar</span>
             </button>
           ) : (
@@ -444,7 +481,10 @@ export function Cadastro() {
           {step < 3 ? (
             <button
               type="button"
-              className={cn('btn-primary order-1 sm:order-2', (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '')}
+              className={cn(
+                'btn-primary order-1 sm:order-2',
+                (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '',
+              )}
               disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
               onClick={goNext}
             >
@@ -453,11 +493,16 @@ export function Cadastro() {
           ) : (
             <button
               type="button"
-              className={cn('btn-primary order-1 sm:order-2', !step3Valid ? 'pointer-events-none opacity-40' : '')}
-              disabled={!step3Valid}
-              onClick={finish}
+              className={cn(
+                'btn-primary order-1 sm:order-2',
+                !step3Valid || finishBusy ? 'pointer-events-none opacity-40' : '',
+              )}
+              disabled={!step3Valid || finishBusy}
+              onClick={() => void finish()}
             >
-              <span className="btn-primary-inner justify-center">Concluir</span>
+              <span className="btn-primary-inner justify-center">
+                {finishBusy ? 'A preparar o teu plantel…' : 'Concluir'}
+              </span>
             </button>
           )}
         </div>
@@ -466,36 +511,3 @@ export function Cadastro() {
   );
 }
 
-function ClubRow({
-  club,
-  selected,
-  onPick,
-}: {
-  key?: string;
-  club: SportsClub;
-  selected: boolean;
-  onPick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition',
-        selected ? 'bg-neon-yellow/20 text-white' : 'text-white/85 hover:bg-white/5',
-      )}
-    >
-      {club.logo_url ? (
-        <img src={club.logo_url} alt="" className="h-8 w-8 shrink-0 object-contain" />
-      ) : (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-white/10 font-display text-[10px] font-bold text-white/40">
-          {club.short_name.slice(0, 3)}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{club.name}</span>
-        {club.city && <span className="block truncate text-[10px] text-white/40">{club.city}</span>}
-      </div>
-    </button>
-  );
-}

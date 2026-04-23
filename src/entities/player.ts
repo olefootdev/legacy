@@ -9,11 +9,13 @@ import type {
   TacticalZone,
 } from './types';
 import { countryCodeToFlagEmoji } from '@/lib/flagEmoji';
+import { seedPositionKnowledgeFromLegend } from '@/gamespirit/legacy/positionKnowledgeInit';
 
 function clamp(n: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, n));
 }
 
+/** Pilar 2 (impacto agregado no XI / cartões): mapa em `@/lib/veracityPillarsMap`. */
 export function overallFromAttributes(a: PlayerAttributes): number {
   const w =
     a.passe * 0.12 +
@@ -74,6 +76,10 @@ export function playerToCardView(p: PlayerEntity, highlightOvr?: number) {
     cardSupply: p.cardSupply,
     bio: p.bio,
     listedOnMarket: p.listedOnMarket,
+    /** Partidas que o jogador ainda fica fora (lesão ou suspensão). 0 = disponível. */
+    outForMatches: p.outForMatches ?? 0,
+    /** Risco 0-100 de sofrer lesão no próximo tick extenuante. */
+    injuryRisk: Math.round(p.injuryRisk ?? 0),
   };
 }
 
@@ -82,6 +88,7 @@ export function createPlayer(partial: {
   num: number;
   name: string;
   pos: string;
+  zone?: TacticalZone;
   archetype?: PlayerArchetype;
   behavior?: PlayerBehavior;
   attrs?: Partial<PlayerAttributes>;
@@ -90,7 +97,9 @@ export function createPlayer(partial: {
   evolutionXp?: number;
   outForMatches?: number;
   portraitUrl?: string;
+  portraitTokenUrl?: string;
   marketValueBroCents?: number;
+  marketValueExp?: number;
   country?: string;
   strongFoot?: PlayerStrongFoot;
   creatorType?: PlayerCreatorType;
@@ -104,6 +113,16 @@ export function createPlayer(partial: {
   age?: number;
   mintOverall?: number;
   evolutionRate?: number;
+  contractMatchesRemaining?: number;
+  contractMatchesIncluded?: number;
+  contractIsLifetime?: boolean;
+  contractExpired?: boolean;
+  genesisCatalogId?: string;
+  /** DNA de posição pré-carregado (Fase 4 — Legado Perpétuo). */
+  positionKnowledge?: import('@/gamespirit/legacy/positionKnowledgeTypes').PositionKnowledge;
+  isLegacy?: boolean;
+  legacyTeamBooster?: Record<string, number>;
+  legacyTaughtAttributes?: string[];
 }): PlayerEntity {
   const base: PlayerAttributes = {
     passe: 72,
@@ -131,7 +150,7 @@ export function createPlayer(partial: {
     name: partial.name,
     pos: partial.pos,
     archetype,
-    zone: zoneFromPos(partial.pos),
+    zone: partial.zone ?? zoneFromPos(partial.pos),
     behavior,
     attrs: base,
     fatigue: partial.fatigue ?? 18 + (partial.num % 12),
@@ -144,8 +163,12 @@ export function createPlayer(partial: {
   return {
     ...core,
     ...(partial.portraitUrl ? { portraitUrl: partial.portraitUrl } : {}),
+    ...(partial.portraitTokenUrl ? { portraitTokenUrl: partial.portraitTokenUrl } : {}),
     ...(partial.marketValueBroCents != null && partial.marketValueBroCents >= 0
       ? { marketValueBroCents: Math.round(partial.marketValueBroCents) }
+      : {}),
+    ...(partial.marketValueExp != null && Number.isFinite(partial.marketValueExp) && partial.marketValueExp > 0
+      ? { marketValueExp: Math.round(partial.marketValueExp) }
       : {}),
     ...(partial.country?.trim() ? { country: partial.country.trim() } : {}),
     ...(partial.strongFoot ? { strongFoot: partial.strongFoot } : {}),
@@ -166,5 +189,26 @@ export function createPlayer(partial: {
     ...(partial.age != null && Number.isFinite(partial.age)
       ? { age: Math.max(16, Math.min(40, Math.round(partial.age))) }
       : {}),
+    ...(partial.genesisCatalogId?.trim() ? { genesisCatalogId: partial.genesisCatalogId.trim() } : {}),
+    positionKnowledge: partial.positionKnowledge ?? seedPositionKnowledgeFromLegend(core),
+    ...(partial.isLegacy ? { isLegacy: true as const } : {}),
+    ...(partial.legacyTeamBooster && Object.keys(partial.legacyTeamBooster).length > 0
+      ? { legacyTeamBooster: partial.legacyTeamBooster }
+      : {}),
+    ...(partial.legacyTaughtAttributes && partial.legacyTaughtAttributes.length > 0
+      ? { legacyTaughtAttributes: partial.legacyTaughtAttributes }
+      : {}),
+    ...(partial.contractExpired === true ? { contractExpired: true as const } : {}),
+    ...(partial.contractIsLifetime === true
+      ? { contractIsLifetime: true as const, contractExpired: false }
+      : partial.contractMatchesRemaining != null && Number.isFinite(partial.contractMatchesRemaining)
+        ? {
+            contractMatchesRemaining: Math.max(0, Math.round(partial.contractMatchesRemaining)),
+            contractMatchesIncluded:
+              partial.contractMatchesIncluded != null && Number.isFinite(partial.contractMatchesIncluded)
+                ? Math.max(0, Math.round(partial.contractMatchesIncluded))
+                : Math.max(0, Math.round(partial.contractMatchesRemaining)),
+          }
+        : {}),
   };
 }

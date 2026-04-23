@@ -25,7 +25,6 @@ export interface AntiChaosOptions {
 
 function toPlanePercent(v: number): number {
   if (!Number.isFinite(v)) return 50;
-  if (v >= 0 && v <= 1) return Math.min(100, Math.max(0, v * 100));
   return Math.min(100, Math.max(0, v));
 }
 
@@ -57,7 +56,7 @@ function perAgentMaxOffsets(
       const d = Math.hypot(baseX[i]! - baseX[j]!, baseY[i]! - baseY[j]!);
       if (d < DENSITY_NEIGHBOR_RADIUS) neighbors++;
     }
-    maxPer[i] = Math.min(42, baseMax + neighbors * 1.95);
+    maxPer[i] = Math.min(5, baseMax + neighbors * 0.4);
   }
   return maxPer;
 }
@@ -86,11 +85,11 @@ export function computePitchTokenSeparation(
   const out = new Map<string, { dx: number; dy: number }>();
   if (!agents.length) return out;
 
-  const minSep = opts.minSeparation ?? 4.05;
+  const minSep = opts.minSeparation ?? 2.2;
   const n = agents.length;
-  const iterations = opts.iterations ?? (n > 16 ? 24 : 18);
-  const baseMaxOffset = opts.maxOffset ?? 14;
-  const minFromBall = opts.minFromBall ?? 2.9;
+  const iterations = opts.iterations ?? 6;
+  const baseMaxOffset = opts.maxOffset ?? 3.5;
+  const minFromBall = opts.minFromBall ?? 1.8;
   const eps = 1e-4;
 
   const baseX = new Float64Array(n);
@@ -183,7 +182,7 @@ export function computePitchTokenSeparation(
     }
   }
 
-  const polishPasses = 10;
+  const polishPasses = 3;
   for (let pass = 0; pass < polishPasses; pass++) {
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {

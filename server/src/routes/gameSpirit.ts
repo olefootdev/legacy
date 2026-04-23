@@ -1,29 +1,136 @@
 import { Hono } from 'hono';
 import { postGameSpiritDecision } from '../controllers/gameSpiritDecisionController.js';
+import { rateLimit } from '../lib/rateLimit.js';
+import { sanitizePrompt } from '../lib/inputGuards.js';
+import { hasAnthropicKey, MODELS } from '../lib/anthropic.js';
+import {
+  generatePlayerPersonaCombined,
+  runScoutAgent,
+  runAttributesAgent,
+  runBioAgent,
+  runValuationAgent,
+  type AdminPlayerLocked,
+  type ScoutResearch,
+  type AttributesResult,
+} from '../services/anthropic/playerPersona.js';
+import { runGrowthAnalyst } from '../services/anthropic/growthAnalyst.js';
+import { runTeach, type TeachKind } from '../services/anthropic/teach.js';
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+// Os prompts e tipos do legado OpenAI foram migrados pra
+// `server/src/services/anthropic/*`. Mantemos aqui só a composição de rotas.
 
 export const gameSpiritRoutes = new Hono();
 
 /** Decisão acionável + narração curta (motor GameSpirit; chave só no servidor). */
-gameSpiritRoutes.post('/api/gamespirit', postGameSpiritDecision);
+gameSpiritRoutes.post('/api/gamespirit', rateLimit(30), postGameSpiritDecision);
 
 gameSpiritRoutes.get('/api/game-spirit/status', (c) => {
-  const openaiConfigured = Boolean(process.env.OPENAI_API_KEY?.trim());
+  const anthropicConfigured = hasAnthropicKey();
   return c.json({
     ok: true,
-    openaiConfigured,
-    /** Modelo usado em `/api/game-spirit/teach` quando OPENAI_MODEL não está definido. */
-    model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
-    /** Modelo usado em `/api/gamespirit` (Responses API) quando as envs dedicadas não estão definidas. */
-    gamespiritModel:
-      process.env.OPENAI_GAMESPIRIT_MODEL?.trim() ||
-      process.env.OPENAI_MODEL?.trim() ||
-      'gpt-4.1-mini',
+    provider: 'anthropic',
+    anthropicConfigured,
+    /** Back-compat para o client antigo que verifica `openaiConfigured`. */
+    openaiConfigured: anthropicConfigured,
+    model: MODELS.haiku,
+    gamespiritModel: MODELS.haiku,
+    sonnetModel: MODELS.sonnet,
   });
 });
 
-type TeachKind = 'narrative' | 'tactical' | 'position';
+/** Admin Create Player — modo combined (compat). Preferir os 4 agentes abaixo. */
+gameSpiritRoutes.post('/api/admin/player-from-prompt', rateLimit(20), async (c) => {
+  if (!hasAnthropicKey()) {
+    return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
+  }
+
+  let body: { userPrompt?: string; locked?: AdminPlayerLocked };
+  try {
+    body = (await c.req.json()) as { userPrompt?: string; locked?: AdminPlayerLocked };
+  } catch {
+    return c.json({ ok: false, error: 'JSON inválido.' }, 400);
+  }
+
+  const userPrompt = sanitizePrompt(body.userPrompt ?? '', 4000);
+  if (userPrompt.length < 4) {
+    return c.json({ ok: false, error: 'Prompt demasiado curto (mín. 4 caracteres).' }, 400);
+  }
+
+  const locked = body.locked;
+  if (!locked || typeof locked.name !== 'string' || !locked.name.trim()) {
+    return c.json({ ok: false, error: 'Campo "locked.name" obrigatório.' }, 400);
+  }
+  if (typeof locked.pos !== 'string' || !locked.pos.trim()) {
+    return c.json({ ok: false, error: 'Campo "locked.pos" obrigatório.' }, 400);
+  }
+
+  const r = await generatePlayerPersonaCombined(locked, userPrompt);
+  if (!r.ok) return c.json({ ok: false, error: r.error ?? 'Falha Anthropic.' }, 502);
+  return c.json({ ok: true, rawAssistant: r.rawAssistant, json: r.json });
+});
+
+// ─── Create Player — 4 agentes especializados (novo fluxo) ─────────────
+// Use na UI em sequência: scout → attributes → bio → valuation.
+// Cada passo pode ser editado pelo admin antes de prosseguir.
+
+gameSpiritRoutes.post('/api/admin/player/scout', rateLimit(10), async (c) => {
+  if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
+  const body = await c.req.json().catch(() => ({}));
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name) return c.json({ ok: false, error: 'name obrigatório.' }, 400);
+  const r = await runScoutAgent({
+    name,
+    nickname: typeof body.nickname === 'string' ? body.nickname : undefined,
+    hintPosition: typeof body.hintPosition === 'string' ? body.hintPosition : undefined,
+    hintEra: typeof body.hintEra === 'string' ? body.hintEra : undefined,
+    sources: Array.isArray(body.sources)
+      ? body.sources.filter((s: unknown) => typeof s === 'string' && s.trim().length > 0).slice(0, 5)
+      : undefined,
+  });
+  if (!r.ok) return c.json({ ok: false, error: r.error ?? 'Falha no scout.' }, 502);
+  return c.json({ ok: true, research: r.research });
+});
+
+gameSpiritRoutes.post('/api/admin/player/attributes', rateLimit(10), async (c) => {
+  if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
+  const body = await c.req.json().catch(() => ({}));
+  if (!body || typeof body !== 'object' || !body.research) {
+    return c.json({ ok: false, error: 'research obrigatório.' }, 400);
+  }
+  const r = await runAttributesAgent({
+    research: body.research as ScoutResearch,
+    targetRarity: body.targetRarity,
+  });
+  if (!r.ok) return c.json({ ok: false, error: r.error ?? 'Falha nos atributos.' }, 502);
+  return c.json({ ok: true, attrs: r.attrs });
+});
+
+gameSpiritRoutes.post('/api/admin/player/bio', rateLimit(10), async (c) => {
+  if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
+  const body = await c.req.json().catch(() => ({}));
+  if (!body || typeof body !== 'object' || !body.research) {
+    return c.json({ ok: false, error: 'research obrigatório.' }, 400);
+  }
+  const r = await runBioAgent({
+    research: body.research as ScoutResearch,
+    attrs: body.attrs as AttributesResult | undefined,
+  });
+  if (!r.ok) return c.json({ ok: false, error: r.error ?? 'Falha na bio.' }, 502);
+  return c.json({ ok: true, bio: r.bio });
+});
+
+gameSpiritRoutes.post('/api/admin/player/valuation', rateLimit(10), async (c) => {
+  if (!hasAnthropicKey()) return c.json({ ok: false, error: 'ANTHROPIC_API_KEY ausente.' }, 503);
+  const body = await c.req.json().catch(() => ({}));
+  if (!body?.attrs) return c.json({ ok: false, error: 'attrs obrigatório.' }, 400);
+  const r = await runValuationAgent({
+    attrs: body.attrs as AttributesResult,
+    research: body.research as ScoutResearch | undefined,
+    collectionContext: typeof body.collectionContext === 'string' ? body.collectionContext : undefined,
+  });
+  if (!r.ok) return c.json({ ok: false, error: r.error ?? 'Falha na valuation.' }, 502);
+  return c.json({ ok: true, valuation: r.valuation });
+});
 
 type TeachBody = {
   kind?: TeachKind;
@@ -31,10 +138,32 @@ type TeachBody = {
   contextJson?: string;
 };
 
-gameSpiritRoutes.post('/api/game-spirit/teach', async (c) => {
-  const key = process.env.OPENAI_API_KEY?.trim();
-  if (!key) {
-    return c.json({ ok: false, error: 'OPENAI_API_KEY em falta no servidor (.env do olefoot-server).' }, 503);
+gameSpiritRoutes.post('/api/admin/growth-analyst', rateLimit(20), async (c) => {
+  if (!hasAnthropicKey()) {
+    return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
+  }
+
+  let body: { snapshot?: unknown; founderNote?: string };
+  try {
+    body = (await c.req.json()) as { snapshot?: unknown; founderNote?: string };
+  } catch {
+    return c.json({ ok: false, error: 'JSON inválido.' }, 400);
+  }
+
+  const snap = body.snapshot;
+  if (snap == null || typeof snap !== 'object') {
+    return c.json({ ok: false, error: 'Campo "snapshot" (object) obrigatório.' }, 400);
+  }
+
+  const founderNote = sanitizePrompt(body.founderNote ?? '', 2000);
+  const r = await runGrowthAnalyst({ snapshot: snap, founderNote });
+  if (!r.ok) return c.json({ ok: false, error: r.error ?? 'Falha Anthropic.' }, 502);
+  return c.json({ ok: true, rawAssistant: r.rawAssistant, analysis: r.analysis });
+});
+
+gameSpiritRoutes.post('/api/game-spirit/teach', rateLimit(20), async (c) => {
+  if (!hasAnthropicKey()) {
+    return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }
 
   let body: TeachBody;
@@ -47,83 +176,15 @@ gameSpiritRoutes.post('/api/game-spirit/teach', async (c) => {
   const rawKind = body.kind ?? 'narrative';
   const kind: TeachKind =
     rawKind === 'tactical' || rawKind === 'position' || rawKind === 'narrative' ? rawKind : 'narrative';
-  const userMessage = (body.userMessage ?? '').trim();
+  const userMessage = sanitizePrompt(body.userMessage ?? '', 3000);
   if (userMessage.length < 8) {
     return c.json({ ok: false, error: 'Mensagem demasiado curta (mín. 8 caracteres).' }, 400);
   }
+  const contextJson = body.contextJson ? sanitizePrompt(body.contextJson, 12000) : undefined;
 
-  const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
-
-  const systemByKind: Record<TeachKind, string> = {
-    narrative: `És um editor técnico do OLEFOOT GameSpirit. O utilizador ensina estilo de narração ou exemplos de frases.
-Responde APENAS com um único objeto JSON válido (sem markdown), formato:
-{"title": string, "bucket": string, "lines": string[], "notes": string}
-- lines: 3 a 12 frases, uma por entrada, estilo transmissão PT, placeholders {name} e {away} quando fizer sentido.
-- bucket: etiqueta curta ex: dribble, cross, press, custom.`,
-    tactical: `És um analista tático do OLEFOOT. O utilizador descreve um padrão ou ideia.
-Responde APENAS JSON válido:
-{"name": string, "intentTag": string, "notes": string}
-intentTag: uma etiqueta curta (ex: press_high, build_up, counter) ou texto livre.`,
-    position: `És um treinador do OLEFOOT. O utilizador descreve uma posição e responsabilidades.
-Responde APENAS JSON válido:
-{"code": string, "label": string, "zone": "gk"|"def"|"mid"|"att"|"wide", "x01": number, "y01": number, "mainActivities": string[], "coachingNotes": string}
-x01,y01 entre 0 e 1 (posição aproximada no campo 105x68, origem canto superior esquerdo).`,
-  };
-
-  const system = systemByKind[kind];
-  const ctx = body.contextJson?.trim()
-    ? `\nContexto já existente (JSON, não alteres salvo pedido):\n${body.contextJson.slice(0, 12000)}`
-    : '';
-
-  try {
-    const r = await fetch(OPENAI_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: `${userMessage}${ctx}` },
-        ],
-      }),
-    });
-
-    if (!r.ok) {
-      const errText = await r.text();
-      return c.json(
-        { ok: false, error: `OpenAI HTTP ${r.status}: ${errText.slice(0, 400)}` },
-        502,
-      );
-    }
-
-    const raw = (await r.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = raw.choices?.[0]?.message?.content?.trim() ?? '';
-    if (!content) {
-      return c.json({ ok: false, error: 'Resposta vazia da OpenAI.' }, 502);
-    }
-
-    let data: unknown;
-    try {
-      data = JSON.parse(content) as unknown;
-    } catch {
-      return c.json(
-        { ok: false, error: 'Modelo não devolveu JSON parseável.', rawAssistant: content },
-        502,
-      );
-    }
-
-    return c.json({ ok: true, data, rawAssistant: content });
-  } catch (e) {
-    return c.json(
-      { ok: false, error: e instanceof Error ? e.message : 'Falha de rede para OpenAI.' },
-      502,
-    );
+  const r = await runTeach({ kind, userMessage, contextJson });
+  if (!r.ok) {
+    return c.json({ ok: false, error: r.error ?? 'Falha Anthropic.', rawAssistant: r.rawAssistant }, 502);
   }
+  return c.json({ ok: true, data: r.data, rawAssistant: r.rawAssistant });
 });
