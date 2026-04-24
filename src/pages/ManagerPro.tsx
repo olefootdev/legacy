@@ -17,6 +17,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 import { getMyVerification, type VerificationStatus } from '@/supabase/verification';
 import { getMyLinkedCards, type LinkedCardRow } from '@/admin/playerLinking';
+import {
+  getMyProSummary,
+  getMyProPayouts,
+  subscribeMyProPayouts,
+  type ProPayoutRow,
+  type ProSummary,
+} from '@/supabase/proPayouts';
+import { getSupabase } from '@/supabase/client';
+import { formatExp } from '@/systems/economy';
 import { cn } from '@/lib/utils';
 
 export function ManagerPro() {
@@ -29,13 +38,50 @@ export function ManagerPro() {
   );
 
   const [linkedCards, setLinkedCards] = useState<LinkedCardRow[]>([]);
+  const [proSummary, setProSummary] = useState<ProSummary>({ balance_exp: 0, total_sales: 0, last_sale_at: null });
+  const [proPayouts, setProPayouts] = useState<ProPayoutRow[]>([]);
+  const [flashPayoutId, setFlashPayoutId] = useState<number | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const list = await getMyLinkedCards();
-      if (!cancelled) setLinkedCards(list);
+      const [list, sum, payouts] = await Promise.all([
+        getMyLinkedCards(),
+        getMyProSummary(),
+        getMyProPayouts(50),
+      ]);
+      if (cancelled) return;
+      setLinkedCards(list);
+      if (sum) setProSummary(sum);
+      setProPayouts(payouts);
     })();
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+    (async () => {
+      const sb = getSupabase();
+      if (!sb) return;
+      const { data } = await sb.auth.getUser();
+      const uid = data?.user?.id;
+      if (!uid || cancelled) return;
+      cleanup = subscribeMyProPayouts(uid, (row) => {
+        setProPayouts((prev) => [row, ...prev].slice(0, 50));
+        setProSummary((prev) => ({
+          balance_exp: prev.balance_exp + Number(row.amount_exp || 0),
+          total_sales: prev.total_sales + 1,
+          last_sale_at: row.created_at,
+        }));
+        setFlashPayoutId(row.id);
+        setTimeout(() => setFlashPayoutId((cur) => (cur === row.id ? null : cur)), 5000);
+      });
+    })();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, []);
 
   const [verified, setVerified] = useState(false);
@@ -54,8 +100,8 @@ export function ManagerPro() {
   const totalCards = academyCards.length + linkedCards.length;
   const listedCount =
     academyCards.filter((p) => p.listedOnMarket).length + linkedCards.filter((c) => c.listed_on_market).length;
-  const balanceBRL = 'R$ 0,00';
-  const salesCount = 0;
+  const balanceDisplay = verified ? `${formatExp(proSummary.balance_exp)} EXP` : `${formatExp(proSummary.balance_exp)} EXP`;
+  const salesCount = proSummary.total_sales;
 
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-5 pb-16">
@@ -115,9 +161,13 @@ export function ManagerPro() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
           label="Saldo"
-          value={balanceBRL}
+          value={balanceDisplay}
           tone="cyan"
-          footer={verified ? 'Pronto pra sacar' : 'Aguarda verificação'}
+          footer={
+            verified
+              ? proSummary.balance_exp > 0 ? 'Pronto pra sacar' : 'Sem saldo ainda'
+              : 'Aguarda verificação'
+          }
         />
         <KpiCard
           label="Vendas"
@@ -285,16 +335,54 @@ export function ManagerPro() {
 
       {/* ── Histórico de vendas ────────────────────────────────── */}
       <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-        <h3 className="mb-3 flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-widest text-white/80">
-          <Activity className="h-3.5 w-3.5 text-cyan-300" />
-          Histórico de vendas
-        </h3>
-        <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-center">
-          <p className="text-sm text-white/80">Sem vendas ainda.</p>
-          <p className="mt-1 text-[11px] text-white/45">
-            Quando alguém comprar um card teu, a venda aparece aqui em tempo real.
-          </p>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-widest text-white/80">
+            <Activity className="h-3.5 w-3.5 text-cyan-300" />
+            Histórico de vendas ({proPayouts.length})
+          </h3>
+          {proSummary.last_sale_at ? (
+            <span className="text-[10px] text-white/45">
+              Última: {new Date(proSummary.last_sale_at).toLocaleString('pt-BR')}
+            </span>
+          ) : null}
         </div>
+        {proPayouts.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-center">
+            <p className="text-sm text-white/80">Sem vendas ainda.</p>
+            <p className="mt-1 text-[11px] text-white/45">
+              Quando alguém comprar um card teu, a venda aparece aqui em tempo real.
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-1.5">
+            {proPayouts.map((p) => {
+              const isFlash = flashPayoutId === p.id;
+              return (
+                <li
+                  key={p.id}
+                  className={cn(
+                    'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition',
+                    isFlash
+                      ? 'border-neon-green/50 bg-neon-green/10 shadow-[0_0_12px_rgba(0,255,128,0.18)]'
+                      : 'border-white/10 bg-black/30',
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display text-sm font-bold text-white">
+                      {p.player_name ?? p.player_id}
+                    </p>
+                    <p className="text-[10px] text-white/45">
+                      {new Date(p.created_at).toLocaleString('pt-BR')} · {p.split_kind} · {p.percent}%
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-mono text-xs font-bold text-cyan-200">
+                    +{formatExp(p.amount_exp)} EXP
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       {/* ── Como funciona ──────────────────────────────────────── */}

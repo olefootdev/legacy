@@ -102,6 +102,12 @@ export interface SpiritSnapshotMeta {
   momentum?: import('@/gamespirit/momentum').MomentumState;
   /** Set/limpa hint de escanteio entre ticks. `null` = consumido. */
   pendingCornerForSide?: PossessionSide | null;
+  /** Probabilidades agregadas do tiro neste tick (pra barra de transparência). */
+  lastShotPreview?: {
+    side: PossessionSide;
+    ts: number;
+    probs: { goal: number; save: number; out: number };
+  } | null;
 }
 
 export interface SpiritOutcome {

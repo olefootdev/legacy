@@ -536,6 +536,7 @@ export function gameSpiritTick(
   const errorTax = Math.max(0, cp.errorPenalty - legacyDefense01 * 0.5 + (ctx.nearestTeammateDist > 26 ? 0.04 : 0));
   const supportBoost = cp.supportBoost + legacyMorale01;
   let spiritMeta: SpiritSnapshotMeta | undefined;
+  let lastShotPreview: SpiritSnapshotMeta['lastShotPreview'] = null;
   const consumedCorner = ctx.pendingCornerForSide === 'home' && ctx.possession === 'home' && action === 'shot';
 
   if (ctx.possession === 'home') {
@@ -576,6 +577,21 @@ export function gameSpiritTick(
       const homeNumericRatio = Math.max(0.55, homeOnPitch / 11);
       weights.goal *= homeNumericRatio;
       weights.post_in *= homeNumericRatio;
+
+      // Radical transparency: agrega em 3 buckets pra barra de preview.
+      const sumW = Math.max(
+        0.0001,
+        weights.goal + weights.post_in + weights.save + weights.block + weights.wide + weights.post_out + weights.miss_far,
+      );
+      lastShotPreview = {
+        side: 'home',
+        ts: nowMs,
+        probs: {
+          goal: (weights.goal + weights.post_in) / sumW,
+          save: weights.save / sumW,
+          out: (weights.block + weights.wide + weights.post_out + weights.miss_far) / sumW,
+        },
+      };
       let logical = rollHomeShotLogicalOutcome(Math.random(), weights);
       /** Rede de segurança: golo só com bola na zona final (coerente com buildup / 2D). */
       if ((logical === 'goal' || logical === 'post_in') && ctx.ballZone !== 'att') {
@@ -996,6 +1012,7 @@ export function gameSpiritTick(
     ...(consumedCorner && spiritMeta?.pendingCornerForSide === undefined
       ? { pendingCornerForSide: null }
       : {}),
+    ...(lastShotPreview ? { lastShotPreview } : {}),
   };
 
   return {

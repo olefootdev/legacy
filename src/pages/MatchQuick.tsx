@@ -1097,12 +1097,17 @@ export function MatchQuick() {
     preGoalActive ||
     Date.now() < freezeUntilRef.current;
   const matchClock = (
-    <LiveMatchClockDisplay
-      elapsedSec={live?.footballElapsedSec ?? 0}
-      frozen={clockFrozen}
-      phase={live?.phase}
-      msPerMinute={MS_PER_MINUTE}
-    />
+    <div className="flex flex-col items-center gap-1.5">
+      <LiveMatchClockDisplay
+        elapsedSec={live?.footballElapsedSec ?? 0}
+        frozen={clockFrozen}
+        phase={live?.phase}
+        msPerMinute={MS_PER_MINUTE}
+      />
+      {live?.lastShotPreview && Date.now() - live.lastShotPreview.ts < 3500 ? (
+        <ShotProbabilityBar preview={live.lastShotPreview} />
+      ) : null}
+    </div>
   );
   const showBoard = summary === null;
 
@@ -2255,6 +2260,43 @@ export function MatchQuick() {
 
       {/* Espaçador de segurança — garante rolagem confortável acima da nav bar */}
       <div className="h-24 shrink-0" aria-hidden />
+    </div>
+  );
+}
+
+/**
+ * Barra de transparência: mostra probabilidades agregadas do último tiro.
+ * Gol (amarelo) · Defesa (ciano) · Fora (cinza).
+ * Visível só por ~3.5s após o shot_attempt; desaparece depois.
+ */
+function ShotProbabilityBar({
+  preview,
+}: {
+  preview: NonNullable<NonNullable<ReturnType<typeof useGameStore<import('@/engine/types').LiveMatchSnapshot | null>>>['lastShotPreview']>;
+}) {
+  const { goal, save, out } = preview.probs;
+  const pct = (v: number) => Math.round(v * 100);
+  const labels: Array<{ k: 'goal' | 'save' | 'out'; v: number; cls: string; txt: string }> = [
+    { k: 'goal', v: goal, cls: 'bg-neon-yellow text-black', txt: `${pct(goal)}% GOL` },
+    { k: 'save', v: save, cls: 'bg-cyan-500/80 text-black', txt: `${pct(save)}% DEF` },
+    { k: 'out',  v: out,  cls: 'bg-white/20 text-white',    txt: `${pct(out)}% FORA` },
+  ];
+  return (
+    <div
+      role="status"
+      aria-label="Probabilidades do tiro"
+      className="flex h-5 w-[min(260px,70vw)] overflow-hidden rounded-md border border-white/10 bg-black/40 font-display text-[9px] font-black uppercase tracking-wider shadow-[0_0_16px_rgba(234,255,0,0.18)]"
+    >
+      {labels.map((l) => (
+        <div
+          key={l.k}
+          className={cn('flex items-center justify-center truncate px-1 transition-[flex-basis] duration-300', l.cls)}
+          style={{ flexBasis: `${l.v * 100}%` }}
+          title={l.txt}
+        >
+          {l.v > 0.08 ? l.txt : ''}
+        </div>
+      ))}
     </div>
   );
 }

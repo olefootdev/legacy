@@ -174,7 +174,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   let spiritMomentumClamp01 = s.spiritMomentumClamp01 ?? null;
   let spiritMomentum: { home: number; away: number } = s.spiritMomentum ?? { home: 0, away: 0 };
   let pendingCornerForSide: 'home' | 'away' | null = s.pendingCornerForSide ?? null;
+  let lastShotPreview = s.lastShotPreview ?? null;
   let preGoalHint = s.preGoalHint ?? null;
+
+  // Expira preview antigo (> 3.5s desde o tiro) para desaparecer na UI.
+  if (lastShotPreview && Date.now() - lastShotPreview.ts > 3500) {
+    lastShotPreview = null;
+  }
 
   if (spiritMomentumClamp01 === 0.5 && !spiritOverlay) {
     spiritMomentumClamp01 = null;
@@ -492,6 +498,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       if (sm.spiritMomentumClamp01 !== undefined) spiritMomentumClamp01 = sm.spiritMomentumClamp01;
       if (sm.momentum !== undefined) spiritMomentum = sm.momentum;
       if (sm.pendingCornerForSide !== undefined) pendingCornerForSide = sm.pendingCornerForSide;
+      if (sm.lastShotPreview !== undefined) lastShotPreview = sm.lastShotPreview;
       if (sm.preGoalHint !== undefined) preGoalHint = sm.preGoalHint;
     }
 
@@ -991,6 +998,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     spiritMomentumClamp01,
     spiritMomentum,
     pendingCornerForSide,
+    lastShotPreview,
     preGoalHint,
     awayRoster,
     quickInjurySub,
