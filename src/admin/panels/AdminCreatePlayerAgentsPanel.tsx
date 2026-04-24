@@ -25,6 +25,7 @@ import {
   type ValuationResult,
 } from '@/admin/createPlayerAgentsClient';
 import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
+import { PlayerLinkEditor, DEFAULT_LINK_VALUE, type PlayerLinkEditorValue } from '@/admin/components/PlayerLinkEditor';
 
 type Stage = 'scout' | 'attributes' | 'bio' | 'valuation';
 
@@ -198,6 +199,8 @@ export function AdminCreatePlayerAgentsPanel() {
     }
   };
 
+  const [linkDraft, setLinkDraft] = useState<PlayerLinkEditorValue>(DEFAULT_LINK_VALUE);
+
   const consolidatedPayload = {
     input: {
       name, nickname, position, yearsActive, targetRarity,
@@ -205,6 +208,8 @@ export function AdminCreatePlayerAgentsPanel() {
     },
     research, attrs, bio, valuation,
     portraits: { cardUrl, tokenUrl },
+    beneficiary_user_id: linkDraft.beneficiaryUserId,
+    payment_split: linkDraft.split,
   };
 
   return (
@@ -415,6 +420,23 @@ export function AdminCreatePlayerAgentsPanel() {
           <p className="text-[10px] text-emerald-300/80">
             Próximo passo: adicione foto de moldura e token abaixo antes de mintar.
           </p>
+        </section>
+      ) : null}
+
+      {/* ─── Etapa 4.5: Vinculação & split de pagamento ───── */}
+      {valuation ? (
+        <section className="rounded-xl border border-neon-yellow/30 bg-neon-yellow/[0.03] p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-neon-yellow" />
+            <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
+              4.5 · Vinculação & Split
+            </h3>
+          </div>
+          <p className="text-[10px] text-white/55">
+            Define quem é o beneficiário do card (jogador real / manager que criou) e o split de cada venda. Entra no
+            payload final.
+          </p>
+          <PlayerLinkEditor value={linkDraft} onChange={setLinkDraft} />
         </section>
       ) : null}
 

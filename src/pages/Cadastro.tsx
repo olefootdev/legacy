@@ -15,7 +15,7 @@ import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
 import { syncProfileManagerFirstName } from '@/supabase/profileDisplayName';
 import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
 import type { FavoriteRealTeamRef } from '@/game/types';
-import { signUpWithEmail } from '@/supabase/auth';
+import { signUpWithEmail, checkEmailExists } from '@/supabase/auth';
 
 const FORMATION_OPTIONS: FormationSchemeId[] = [
   '4-3-3',
@@ -71,11 +71,28 @@ export function Cadastro() {
   const [leagueBucketId, setLeagueBucketId] = useState<string>('brasil');
 
   const [finishBusy, setFinishBusy] = useState(false);
+  const [emailTaken, setEmailTaken] = useState(false);
+  const [emailChecking, setEmailChecking] = useState(false);
 
   useEffect(() => {
     const p = readPendingReferrerCode();
     if (p) setReferrerCode(p);
   }, []);
+
+  useEffect(() => {
+    setEmailTaken(false);
+    if (!simpleEmailOk(email)) return;
+    setEmailChecking(true);
+    const t = setTimeout(async () => {
+      const taken = await checkEmailExists(email);
+      setEmailTaken(taken);
+      setEmailChecking(false);
+    }, 450);
+    return () => {
+      clearTimeout(t);
+      setEmailChecking(false);
+    };
+  }, [email]);
 
   const dialDigits = useMemo(() => {
     if (dialOption.iso2 === 'OTHER') return digitsOnly(customDialDigits);
@@ -88,6 +105,8 @@ export function Cadastro() {
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     simpleEmailOk(email) &&
+    !emailTaken &&
+    !emailChecking &&
     password.length >= 6 &&
     phoneE164.length >= 8;
 
@@ -123,6 +142,7 @@ export function Cadastro() {
         clubName: clubName.trim(),
         clubShort: sn,
         formationScheme,
+        referredByCode: normalizeReferralCode(referrerCode),
       });
       if (!signUp.ok) {
         setFinishError(signUp.error ?? 'Falha ao criar conta.');
@@ -224,7 +244,19 @@ export function Cadastro() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                aria-invalid={emailTaken || undefined}
               />
+              {simpleEmailOk(email) && emailChecking ? (
+                <p className="mt-1 text-[11px] text-white/45">Verificando…</p>
+              ) : null}
+              {emailTaken ? (
+                <p className="mt-1 text-[11px] text-rose-300">
+                  ✗ E-mail já cadastrado.{' '}
+                  <Link to="/login" className="underline decoration-rose-300/50 hover:text-rose-200">
+                    Fazer login
+                  </Link>
+                </p>
+              ) : null}
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-white/65">

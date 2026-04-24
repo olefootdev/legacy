@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Trophy, ArrowRight, Star, Megaphone } from 'lucide-react';
 import { useGameStore } from '@/game/store';
+import { trackMissionEvent } from '@/progression/trackEvent';
 
 type TeamStats = {
   passesOk: number;
@@ -35,6 +36,21 @@ export default function Postgame() {
   const playersById = useGameStore((s) => s.players);
   const clubName = useGameStore((s) => s.club.name);
 
+  useEffect(() => {
+    if (!live) {
+      navigate('/', { replace: true });
+      return;
+    }
+    const mode = live.mode;
+    const evt: import('@/progression/types').MissionEvent =
+      mode === 'quick' ? 'fast_match_completed' : 'match_completed';
+    trackMissionEvent(evt);
+    const homeScore = live.homeScore ?? 0;
+    const awayScore = live.awayScore ?? 0;
+    if (homeScore > awayScore) trackMissionEvent('match_won');
+    if (homeScore > 0) trackMissionEvent('goal_scored', homeScore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (!live) navigate('/', { replace: true });
   }, [live, navigate]);

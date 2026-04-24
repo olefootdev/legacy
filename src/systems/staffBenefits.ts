@@ -264,3 +264,28 @@ export const STAFF_BENEFIT_SUMMARY: Record<
     ],
   },
 };
+
+/**
+ * Buff ATIVO por jogador (extra acima do buff coletivo).
+ *
+ * Cada role a que o jogador está atribuído aplica um bônus extra no multiplicador
+ * de atributos do atleta durante a partida, escalando com o nível do profissional.
+ *
+ * Fórmula: 1 + sum(roleBoost(level)) para cada role em que o jogador está, capado a 1.30.
+ */
+export function buildActivePlayerStaffBoosts(staff: StaffState): Record<string, number> {
+  const out: Record<string, number> = {};
+  const assigned = staff.assignedByPlayer ?? {};
+  for (const [pid, roles] of Object.entries(assigned)) {
+    if (!roles || roles.length === 0) continue;
+    let boost = 0;
+    for (const r of roles) {
+      const lvl = clampLvl(staff.roles[r] ?? 1);
+      // +2% por nível da role, saturando em +10% por role (nível 5).
+      boost += 0.02 * lvl;
+    }
+    const mul = Math.min(1.3, 1 + boost);
+    if (mul > 1.0001) out[pid] = mul;
+  }
+  return out;
+}

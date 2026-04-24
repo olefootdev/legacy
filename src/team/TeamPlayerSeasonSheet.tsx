@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, TrendingDown, TrendingUp, Minus, Activity, Zap } from 'lucide-react';
+import { X, TrendingDown, TrendingUp, Minus, Activity, Zap, Megaphone, Sparkles, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -27,9 +27,11 @@ function TrendGlyph({ label }: { label: 'up' | 'down' | 'flat' | 'unknown' }) {
 export function TeamPlayerSeasonSheet({
   playerId,
   onClose,
+  onAnnounceSale,
 }: {
   playerId: string | null;
   onClose: () => void;
+  onAnnounceSale?: (playerId: string) => void;
 }) {
   const dispatch = useGameDispatch();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,69 @@ export function TeamPlayerSeasonSheet({
     ledger && ledger.passesAttempt > 0
       ? Math.round((ledger.passesOk / ledger.passesAttempt) * 1000) / 10
       : null;
+
+  /** Insight auto-gerado — 1 status principal + highlight + recomendação. */
+  const insight = useMemo(() => {
+    const mp = ledger?.matchesPlayed ?? 0;
+    const goals = ledger?.goals ?? 0;
+    const reds = ledger?.redCards ?? 0;
+    const yellows = ledger?.yellowCards ?? 0;
+    const tacklesAvg = mp > 0 ? (ledger?.tackles ?? 0) / mp : 0;
+    const goalsAvg = mp > 0 ? goals / mp : 0;
+    const pos = (player.pos ?? '').toUpperCase();
+    const isAttacker = /ATA|SA|PL|CF|ST/.test(pos);
+    const isMid = /MC|MEI|MED|CM|AM/.test(pos);
+    const isDef = /ZAG|CB|LD|LE|LB|DF/.test(pos);
+
+    // Status momento
+    let momentum: { label: string; tone: 'good' | 'bad' | 'neutral' } = { label: 'Acompanhamento neutro', tone: 'neutral' };
+    if (trendSinceLastMatch.pct != null && trendSinceLastMatch.pct > 4) {
+      momentum = { label: 'Em alta desde o último jogo', tone: 'good' };
+    } else if (trendSinceLastMatch.pct != null && trendSinceLastMatch.pct < -4) {
+      momentum = { label: 'Em baixa desde o último jogo', tone: 'bad' };
+    } else if (trendSeason.pct != null && trendSeason.pct > 8) {
+      momentum = { label: 'Valorizando na temporada', tone: 'good' };
+    } else if (trendSeason.pct != null && trendSeason.pct < -8) {
+      momentum = { label: 'Desvalorizando na temporada', tone: 'bad' };
+    }
+
+    // Highlight estatístico
+    let highlight: string | null = null;
+    if (mp >= 3) {
+      if (goalsAvg >= 0.5 && (isAttacker || isMid)) {
+        highlight = `Goleador — ${goalsAvg.toFixed(2)} gols/jogo`;
+      } else if (passPct != null && passPct >= 85 && (isMid || isDef)) {
+        highlight = `Precisão alta — ${passPct}% de passes certos`;
+      } else if (tacklesAvg >= 3 && isDef) {
+        highlight = `Marcador forte — ${tacklesAvg.toFixed(1)} desarmes/jogo`;
+      } else if (ovrDelta >= 2) {
+        highlight = `Evoluiu +${ovrDelta} OVR no clube`;
+      } else if (ovrDelta <= -2) {
+        highlight = `Regrediu ${ovrDelta} OVR desde o mint`;
+      }
+    } else if (mp === 0) {
+      highlight = 'Ainda sem jogos contabilizados';
+    }
+
+    // Recomendação de venda
+    let recommendation: { text: string; action: 'sell' | 'hold' | 'watch' } = {
+      text: 'Continua monitorando — sem sinal forte.',
+      action: 'watch',
+    };
+    if (trendSeason.pct != null && trendSeason.pct > 15) {
+      recommendation = { text: 'Janela boa pra venda: valor subiu >15% na temporada.', action: 'sell' };
+    } else if (reds >= 2) {
+      recommendation = { text: 'Atenção disciplinar — 2+ expulsões nesta temporada.', action: 'watch' };
+    } else if (mp >= 5 && goalsAvg < 0.1 && isAttacker) {
+      recommendation = { text: 'Produção baixa pra atacante — reavaliar posição ou venda.', action: 'watch' };
+    } else if (goalsAvg >= 0.5 || (passPct != null && passPct >= 88)) {
+      recommendation = { text: 'Peça-chave. Segura enquanto o rendimento se mantiver.', action: 'hold' };
+    } else if (yellows >= 5) {
+      recommendation = { text: 'Cartões acumulando — risco de suspensão futura.', action: 'watch' };
+    }
+
+    return { momentum, highlight, recommendation };
+  }, [ledger, player.pos, trendSeason.pct, trendSinceLastMatch.pct, ovrDelta, passPct]);
 
   return (
     <motion.div
@@ -162,6 +227,54 @@ export function TeamPlayerSeasonSheet({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+          {/* ── Insight inteligente ───────────────────────────────── */}
+          <section
+            className={cn(
+              'rounded-xl border p-3',
+              insight.momentum.tone === 'good' && 'border-emerald-400/30 bg-emerald-950/20',
+              insight.momentum.tone === 'bad' && 'border-rose-400/30 bg-rose-950/20',
+              insight.momentum.tone === 'neutral' && 'border-white/10 bg-white/[0.02]',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-neon-yellow" aria-hidden />
+              <span className="font-display text-[10px] font-black uppercase tracking-widest text-white/70">
+                Leitura rápida
+              </span>
+            </div>
+            <p
+              className={cn(
+                'mt-2 font-display text-sm font-bold',
+                insight.momentum.tone === 'good' && 'text-emerald-300',
+                insight.momentum.tone === 'bad' && 'text-rose-300',
+                insight.momentum.tone === 'neutral' && 'text-white',
+              )}
+            >
+              {insight.momentum.label}
+            </p>
+            {insight.highlight ? (
+              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-white/85">
+                <Flame className="h-3 w-3 shrink-0 text-neon-yellow/80" aria-hidden />
+                {insight.highlight}
+              </p>
+            ) : null}
+            <div
+              className={cn(
+                'mt-2 rounded border px-2.5 py-1.5 text-[11px] leading-snug',
+                insight.recommendation.action === 'sell' && 'border-neon-yellow/35 bg-neon-yellow/5 text-neon-yellow',
+                insight.recommendation.action === 'hold' && 'border-cyan-500/25 bg-cyan-950/20 text-cyan-200',
+                insight.recommendation.action === 'watch' && 'border-white/10 bg-black/30 text-gray-300',
+              )}
+            >
+              <span className="mr-1 font-bold uppercase tracking-wider text-[9px]">
+                {insight.recommendation.action === 'sell' && '💰 Oportunidade'}
+                {insight.recommendation.action === 'hold' && '🔒 Segurar'}
+                {insight.recommendation.action === 'watch' && '👁 Observar'}
+              </span>
+              {insight.recommendation.text}
+            </div>
+          </section>
+
           {player ? <LegacyMentorSection student={player} /> : null}
           {boosterRows.length ? (
             <section className="rounded-xl border border-fuchsia-500/35 bg-fuchsia-950/20 p-3">
@@ -337,6 +450,28 @@ export function TeamPlayerSeasonSheet({
             </ul>
           </section>
         </div>
+
+        {/* ── Footer CTA ───────────────────────────────────────────── */}
+        {onAnnounceSale ? (
+          <div className="shrink-0 border-t border-white/10 bg-black/55 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => onAnnounceSale(player.id)}
+              className="group flex w-full items-center justify-center gap-2 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-2.5 font-display text-xs font-black uppercase tracking-wider text-neon-yellow transition-colors hover:bg-neon-yellow hover:text-black"
+            >
+              <Megaphone className="h-4 w-4 shrink-0" aria-hidden />
+              Anunciar Venda
+              <span className="ml-1 rounded border border-neon-yellow/40 bg-black/30 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider text-neon-yellow/90 group-hover:border-black/30 group-hover:text-black">
+                {usesExpMarket ? `${formatExp(marketCurrent)} EXP` : `${formatBroFromCents(marketCurrent)} BRO`}
+              </span>
+            </button>
+            {insight.recommendation.action === 'sell' ? (
+              <p className="mt-2 text-center text-[10px] text-neon-yellow/85">
+                Oportunidade detectada — valor subiu recentemente.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </motion.div>
     </motion.div>
   );

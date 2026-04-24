@@ -56,3 +56,10 @@ GoogleService-Info.plist
 .turbo
 .vercel
 *.tsbuildinfo
+
+# Python cache
+**/__pycache__/
+*.pyc
+
+# MCP per-user config
+.mcp.json

@@ -15,6 +15,7 @@ export interface Live2dTacticalManagerSlice {
   tacticalStyle?: TeamTacticalStyle;
   isHomeFixture?: boolean;
   homeStaffMatch?: HomeStaffMatchBonuses | null;
+  homeStaffPlayerBoosts?: Record<string, number>;
 }
 
 /** ~40 fps de commit React: movimento dos tokens mais fluido; `SIM_SYNC` continua com throttle próprio. */

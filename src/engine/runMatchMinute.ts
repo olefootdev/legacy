@@ -172,6 +172,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   let spiritBuildupGkTicksRemaining = s.spiritBuildupGkTicksRemaining ?? 0;
   let spiritPenaltyCooldownTicks = Math.max(0, (s.spiritPenaltyCooldownTicks ?? 0) - 1);
   let spiritMomentumClamp01 = s.spiritMomentumClamp01 ?? null;
+  let spiritMomentum: { home: number; away: number } = s.spiritMomentum ?? { home: 0, away: 0 };
+  let pendingCornerForSide: 'home' | 'away' | null = s.pendingCornerForSide ?? null;
   let preGoalHint = s.preGoalHint ?? null;
 
   if (spiritMomentumClamp01 === 0.5 && !spiritOverlay) {
@@ -245,6 +247,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       test2dTickModifiers,
       live2dStagnationTicks: live2dPitchEarly ? (s.live2dDecisionStagnationTicks ?? 0) : undefined,
       penaltyCooldownTicks: s.spiritPenaltyCooldownTicks ?? 0,
+      momentum: s.spiritMomentum ?? { home: 0, away: 0 },
+      pendingCornerForSide: s.pendingCornerForSide ?? null,
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());
@@ -486,6 +490,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         spiritBuildupGkTicksRemaining = sm.spiritBuildupGkTicksRemaining;
       }
       if (sm.spiritMomentumClamp01 !== undefined) spiritMomentumClamp01 = sm.spiritMomentumClamp01;
+      if (sm.momentum !== undefined) spiritMomentum = sm.momentum;
+      if (sm.pendingCornerForSide !== undefined) pendingCornerForSide = sm.pendingCornerForSide;
       if (sm.preGoalHint !== undefined) preGoalHint = sm.preGoalHint;
     }
 
@@ -983,6 +989,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     spiritBuildupGkTicksRemaining,
     spiritPenaltyCooldownTicks,
     spiritMomentumClamp01,
+    spiritMomentum,
+    pendingCornerForSide,
     preGoalHint,
     awayRoster,
     quickInjurySub,

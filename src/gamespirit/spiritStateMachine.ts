@@ -144,27 +144,35 @@ export type TackleOutcome = 'clean' | 'foul_soft' | 'foul_hard' | 'miss';
 
 export function rollTackleOutcome(
   rng: number,
-  opts: { tacticalMentality?: number; fairPlay01?: number } = {},
+  opts: {
+    tacticalMentality?: number;
+    fairPlay01?: number;
+    /** Desarme do defensor (0-100). Sobe pClean, desce pMiss. */
+    defenderMarcacao?: number;
+    /** Velocidade do defensor (0-100). Pequeno bônus em pClean. */
+    defenderVelocidade?: number;
+    /** Drible do carregador (0-100). Contrapeso: sobe pMiss. */
+    attackerDrible?: number;
+  } = {},
 ): TackleOutcome {
   const mentality = Math.min(100, Math.max(0, opts.tacticalMentality ?? 50));
   const fairPlay = Math.min(1, Math.max(0, opts.fairPlay01 ?? 0.7));
   const aggressive = (mentality - 50) / 100; // -0.5..+0.5
 
-  // Base:
-  //   clean 0.46 | miss 0.25 | foul_soft 0.19 | foul_hard 0.10
-  // Enviesamentos:
-  //   mentality agressivo: +clean (melhor desarme) mas MUITO mais foul_hard; menos miss.
-  //   fairPlay alto: converte parte do foul_hard em foul_soft ou clean.
-  let pClean = 0.46 + aggressive * 0.08;
-  let pMiss = 0.25 - aggressive * 0.10;
-  let pFoulHard = 0.10 + aggressive * 0.12 - (fairPlay - 0.5) * 0.08;
+  // Vantagem líquida do duelo desarme vs drible (−1..+1).
+  const defSkill01 = (((opts.defenderMarcacao ?? 50) + (opts.defenderVelocidade ?? 50) * 0.45) / 145);
+  const atkSkill01 = (opts.attackerDrible ?? 50) / 100;
+  const edge = Math.max(-1, Math.min(1, defSkill01 - atkSkill01));
+
+  let pClean = 0.46 + aggressive * 0.08 + edge * 0.18;
+  let pMiss = 0.25 - aggressive * 0.10 - edge * 0.12;
+  let pFoulHard = 0.10 + aggressive * 0.12 - (fairPlay - 0.5) * 0.08 - Math.max(0, edge) * 0.04;
   let pFoulSoft = 1 - pClean - pMiss - pFoulHard;
 
-  // Clamps de segurança
-  pClean = Math.max(0.2, Math.min(0.7, pClean));
-  pMiss = Math.max(0.08, Math.min(0.4, pMiss));
+  pClean = Math.max(0.2, Math.min(0.72, pClean));
+  pMiss = Math.max(0.06, Math.min(0.42, pMiss));
   pFoulHard = Math.max(0.03, Math.min(0.28, pFoulHard));
-  pFoulSoft = Math.max(0.08, 1 - pClean - pMiss - pFoulHard);
+  pFoulSoft = Math.max(0.06, 1 - pClean - pMiss - pFoulHard);
 
   let t = Math.max(0, Math.min(1, rng));
   if (t < pClean) return 'clean';
@@ -176,12 +184,15 @@ export function rollTackleOutcome(
   return 'foul_hard';
 }
 
-export function rollGkSaveSubtype(rng: number, gkSkill01: number): GkSaveSubtype {
+export function rollGkSaveSubtype(rng: number, gkSkill01: number, gkFatigue01 = 0): GkSaveSubtype {
   const skill = Math.min(1, Math.max(0, gkSkill01));
+  const fat = Math.min(1, Math.max(0, gkFatigue01));
+  // Fadiga > 70% amplifica erros até +15%.
+  const fatiguePenalty = Math.max(0, fat - 0.7) * 0.5;
   // Falha do goleiro: cai muito se skill alto. Base ~7% em GK fraco, ~1.2% em GK elite.
-  const pError = Math.max(0.012, 0.07 * (1 - skill));
-  // Segurou: base 48% + bônus skill até 78%.
-  const pHold = 0.48 + skill * 0.3;
+  const pError = Math.min(0.32, Math.max(0.012, 0.07 * (1 - skill)) + fatiguePenalty);
+  // Segurou: base 48% + bônus skill até 78%, levemente reduzido por fadiga.
+  const pHold = Math.max(0.3, 0.48 + skill * 0.3 - fat * 0.08);
   // Espalma pro escanteio: 12–17% (pouco sensível a skill).
   const pParryCorner = 0.17 - skill * 0.05;
   // Resto = espalma pra frente (rebote).

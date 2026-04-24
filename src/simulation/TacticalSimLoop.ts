@@ -302,6 +302,8 @@ interface TacticalManagerParams {
   isHomeFixture?: boolean;
   /** Bónus de staff Casa pré-calculados (undefined = neutro). */
   homeStaffMatch?: HomeStaffMatchBonuses | null;
+  /** Buff ATIVO por jogador (extra acima do coletivo). playerId → multiplicador de atributos. */
+  homeStaffPlayerBoosts?: Record<string, number>;
 }
 
 type ShotPlanKind = 'goal' | 'miss_wide' | 'hold' | 'parry' | 'block_rebound';
@@ -615,7 +617,9 @@ export class TacticalSimLoop {
         const prof = profileForSlot(slot, hp.role);
         let attrs = normalizeMatchAttributes(hp.attributes);
         const coachMul = manager.homeStaffMatch?.coachAttrMulHome ?? 1;
-        if (coachMul > 1.0001) attrs = scaleMatchAttributesForCoach(attrs, coachMul);
+        const playerExtra = manager.homeStaffPlayerBoosts?.[hp.playerId] ?? 1;
+        const effectiveMul = coachMul * playerExtra;
+        if (effectiveMul > 1.0001) attrs = scaleMatchAttributesForCoach(attrs, effectiveMul);
         const rt = createPlayerMatchRuntimeFromPitch(hp.fatigue, attrs);
         const morale = manager.homeStaffMatch?.coachMoraleStartAdd01 ?? 0;
         if (morale > 0) {
@@ -845,7 +849,9 @@ export class TacticalSimLoop {
     const prof = profileForSlot(oldAg.slotId, hp.role);
     let attrs = normalizeMatchAttributes(hp.attributes);
     const coachMul = manager.homeStaffMatch?.coachAttrMulHome ?? 1;
-    if (coachMul > 1.0001) attrs = scaleMatchAttributesForCoach(attrs, coachMul);
+    const playerExtra = manager.homeStaffPlayerBoosts?.[hp.playerId] ?? 1;
+    const effectiveMul = coachMul * playerExtra;
+    if (effectiveMul > 1.0001) attrs = scaleMatchAttributesForCoach(attrs, effectiveMul);
     const rt = createPlayerMatchRuntimeFromPitch(hp.fatigue, attrs);
     const morale = manager.homeStaffMatch?.coachMoraleStartAdd01 ?? 0;
     if (morale > 0) {

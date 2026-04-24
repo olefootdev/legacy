@@ -24,6 +24,7 @@ import { WalletShell } from './wallet/WalletShell';
 import { DepositModal } from './wallet/DepositModal';
 import { SendModal } from './wallet/SendModal';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
+import { useTrackScreen } from '@/progression/trackEvent';
 
 function fmtBroCents(cents: number): string {
   const abs = Math.abs(cents);
@@ -71,6 +72,7 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function Wallet() {
+  useTrackScreen('screen_wallet');
   const navigate = useNavigate();
   const finance = useGameStore((s) => s.finance);
   const wallet = finance.wallet ?? createInitialWalletState();

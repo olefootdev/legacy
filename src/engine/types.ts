@@ -208,6 +208,10 @@ export interface LiveMatchSnapshot {
   spiritPenaltyCooldownTicks?: number;
   /** 0–1: força a barra de momento (ex.: extremo de quem marcou durante overlay de golo). */
   spiritMomentumClamp01?: number | null;
+  /** Momentum narrativo por lado (-1..+1). Persiste entre ticks; alimenta pickAction + UI. */
+  spiritMomentum?: { home: number; away: number };
+  /** Escanteio pendente: próximo tick consome hint e resolve cabeçada. */
+  pendingCornerForSide?: PossessionSide | null;
   /** Antecipação visual antes de confirmar o golo (barra cresce + desliza). */
   preGoalHint?: PreGoalHint | null;
   /** Roster visitante sintético (partida rápida) — cartões/golos com playerId concreto. */

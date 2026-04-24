@@ -41,11 +41,11 @@ import { AdminGenesisPortraitsPanel } from './panels/AdminGenesisPortraitsPanel'
 import { AdminShopPanel } from './panels/AdminShopPanel';
 import { AdminMarketPanel } from './panels/AdminMarketPanel';
 import { AdminLegacyPanel } from './panels/AdminLegacyPanel';
-import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
 import { AdminProfanityPanel } from './panels/AdminProfanityPanel';
 import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
 import { AdminCreatePlayerAgentsPanel } from './panels/AdminCreatePlayerAgentsPanel';
 import { AdminGlobalPanel } from './panels/AdminGlobalPanel';
+import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
 
 type TabId =
   | 'overview'
@@ -71,10 +71,10 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'growth', label: 'Growth', icon: LineChart },
   { id: 'financeiro', label: 'Financeiro', icon: Banknote },
   { id: 'global', label: 'Global', icon: Rocket },
+  { id: 'audit', label: 'Auditoria', icon: FileClock },
   { id: 'shop', label: 'Loja', icon: ShoppingBag },
   { id: 'market', label: 'Market', icon: Shield },
   { id: 'legacy', label: 'Legacy DNA', icon: Crown },
-  { id: 'audit', label: 'Auditoria', icon: FileClock },
   { id: 'profanity', label: 'Linguagem', icon: ShieldAlert },
   { id: 'learnedPhrases', label: 'Frases aprendidas', icon: BookOpen },
   { id: 'usuarios', label: 'Usuários', icon: Users },
@@ -230,10 +230,10 @@ export function AdminDashboard() {
               {tab === 'growth' ? <AdminGrowthPanel /> : null}
               {tab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
               {tab === 'global' ? <AdminGlobalPanel /> : null}
+              {tab === 'audit' ? <AdminAuditLogPanel /> : null}
               {tab === 'shop' ? <AdminShopPanel /> : null}
               {tab === 'market' ? <AdminMarketPanel /> : null}
               {tab === 'legacy' ? <AdminLegacyPanel /> : null}
-              {tab === 'audit' ? <AdminAuditLogPanel /> : null}
               {tab === 'profanity' ? <AdminProfanityPanel /> : null}
               {tab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}
               {tab === 'usuarios' ? <AdminUsuariosPanel /> : null}

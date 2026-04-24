@@ -10,6 +10,7 @@ import { shopItemIcon, type ShopCatalogItem, type ShopRarity, type ShopTabId } f
 import { trackGrowthCommerce } from '@/admin/platformStore';
 import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider';
 import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
+import { trackMissionEvent } from '@/progression/trackEvent';
 
 type ShopTab = 'todos' | ShopTabId;
 
@@ -175,6 +176,7 @@ export function Store() {
     const bro0 = Math.floor(Number(before.finance.broCents ?? 0));
 
     dispatch({ type: 'SHOP_PURCHASE_ITEM', itemId: item.id, currency });
+    trackMissionEvent('store_purchase');
 
     const after = getGameState();
     const ole1 = Math.floor(Number(after.finance.ole ?? 0));

@@ -30,6 +30,7 @@ import {
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { MatchdayVersusTitle } from '@/components/matchday/MatchdayVersusTitle';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
+import { useTrackScreen } from '@/progression/trackEvent';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
 
@@ -146,6 +147,7 @@ function resultOutcomeMeta(result: PastResult['result']) {
 }
 
 export function Home() {
+  useTrackScreen('screen_home');
   const dispatch = useGameDispatch();
   const navigate = useNavigate();
   const finance = useGameStore((s) => s.finance);
@@ -779,7 +781,7 @@ export function Home() {
              
               </p>
             </div>
-            <Link to="/team/tatica" className="w-full lg:w-auto lg:min-w-[200px]">
+            <Link to="/team" className="w-full lg:w-auto lg:min-w-[200px]">
               <button type="button" className="btn-secondary w-full py-3">
                 <span className="btn-secondary-inner">TÁTICAS</span>
               </button>

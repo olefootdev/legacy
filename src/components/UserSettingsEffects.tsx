@@ -6,6 +6,7 @@ import { getMyStatus } from '@/supabase/adminCore';
 import { loadPlatformConfigOnce } from '@/admin/platformConfigStore';
 import { getSupabase } from '@/supabase/client';
 import { syncAdminBroadcasts } from '@/notifications/broadcastConsumer';
+import { trackMissionEvent } from '@/progression/trackEvent';
 
 function applyGraphicQuality(q: UserSettings['graphicQuality']) {
   document.documentElement.dataset.graphicQuality = q;
@@ -34,6 +35,7 @@ export function UserSettingsEffects() {
   const dispatch = useGameDispatch();
 
   useEffect(() => {
+    trackMissionEvent('session_login');
     void syncLegacyMentorships(dispatch);
     void loadPlatformConfigOnce();
     void syncAdminBroadcasts();

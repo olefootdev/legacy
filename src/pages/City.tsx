@@ -41,6 +41,7 @@ import {
 } from '@/clubStructures/benefits';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { STRUCTURE_TO_BANNER_SLOT } from '@/ui/banners';
+import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 
 type CityStructDef = {
   uiId: string;
@@ -210,6 +211,7 @@ function upgradeLine(
 }
 
 export function City() {
+  useTrackScreen('screen_city');
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const structuresState = useGameStore((s) => s.structures);
@@ -233,6 +235,7 @@ export function City() {
   const handleUpgrade = () => {
     if (!upgrade.hasUpgrade || !upgrade.canAfford) return;
     dispatch({ type: 'UPGRADE_STRUCTURE', structureId: selected.structureId });
+    trackMissionEvent('structure_upgraded');
   };
 
   const runQuickAction = (id: ClubStructureId) => {
@@ -241,11 +244,13 @@ export function City() {
       const up = upgradeLine('stadium', lvl, finance.ole, finance.broCents);
       if (!up.hasUpgrade || !up.canAfford) return;
       dispatch({ type: 'UPGRADE_STRUCTURE', structureId: 'stadium' });
+      trackMissionEvent('structure_upgraded');
       return;
     }
     if (id === 'training_center') {
       if (!canQuickTraining) return;
       dispatch({ type: 'CITY_QUICK_TRAINING_INTENSIVO' });
+      trackMissionEvent('training_session');
       return;
     }
     if (id === 'medical_dept') {

@@ -32,6 +32,7 @@ import {
 import { TREATMENT_PLAN_DURATION_H } from '@/systems/medicalTreatment';
 import type { PlayerEntity } from '@/entities/types';
 import type { TrainingPlan } from '@/game/types';
+import { trackMissionEvent } from '@/progression/trackEvent';
 
 type IndividualType = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial';
 type CollectiveType = 'formacao' | 'empatia' | 'fisico';
@@ -187,6 +188,7 @@ export function TeamTraining() {
       group,
       durationHours,
     });
+    trackMissionEvent('training_session');
     setSelectedPlayers([]);
   };
 

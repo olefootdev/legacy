@@ -52,6 +52,11 @@ export interface MissionDef {
   progressMode?: 'sum' | 'distinct';
   /** Missões com troféu aparecem no perfil quando resgatadas (onboarding, achievement, special). */
   trophy?: MissionTrophyMeta;
+  /**
+   * Tier mínimo de carreira (1=Fraldinha, 2=Juvenil, … 8=Lenda) em que a missão aparece.
+   * Default = 1 (visível a todos). Veja `src/systems/careerTiers.ts`.
+   */
+  minTier?: number;
 }
 
 export interface MissionRuntimeState {

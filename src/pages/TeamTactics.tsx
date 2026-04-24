@@ -18,25 +18,8 @@ import { useGameDispatch, useGameStore } from '@/game/store';
 import {
   STYLE_PRESETS,
   PRESET_LABEL_PT,
-  totalStylePoints,
-  redistributeStylePoints,
-  type TeamTacticalStyle,
   type PlayingStylePresetId,
-  type StyleAxisKey,
 } from '@/tactics/playingStyle';
-
-const AXES: Array<{ key: StyleAxisKey; label: string; left: string; right: string }> = [
-  { key: 'buildUp', label: 'Construção', left: 'Posicional/curta', right: 'Direta/longa' },
-  { key: 'width', label: 'Amplitude', left: 'Estreito', right: 'Amplo' },
-  { key: 'verticality', label: 'Verticalidade', left: 'Circulação', right: 'Progressão imediata' },
-  { key: 'chanceCreation', label: 'Criação', left: 'Central/entrelinhas', right: 'Cruzamentos/alas' },
-  { key: 'shootingProfile', label: 'Perfil de chute', left: 'Prioriza dentro da área', right: 'Aceita longa distância' },
-  { key: 'defensiveBlock', label: 'Bloco defensivo', left: 'Linha alta', right: 'Bloco baixo' },
-  { key: 'pressing', label: 'Pressão', left: 'Baixa', right: 'Alta/Gegen' },
-  { key: 'compactness', label: 'Compactação', left: 'Solto', right: 'Muito compacto' },
-  { key: 'riskTaking', label: 'Risco', left: 'Seguro', right: 'Agressivo' },
-  { key: 'velocidade', label: 'Velocidade', left: 'Jogo pausado', right: 'Transições rápidas' },
-];
 
 const PRESET_ICONS: Record<PlayingStylePresetId, LucideIcon> = {
   balanced: Scale,
@@ -62,16 +45,6 @@ export function TeamTactics() {
     [manager.activeMatchTacticId, savedTactics],
   );
 
-  const pointsTotal = totalStylePoints(current);
-
-  const setAxis = (key: StyleAxisKey, nextPoints: number) => {
-    const next = redistributeStylePoints(current, key, nextPoints);
-    dispatch({
-      type: 'SET_MANAGER_SLIDERS',
-      partial: { tacticalStyle: { ...next, presetId: undefined } },
-    });
-  };
-
   const applyPreset = (presetId: PlayingStylePresetId) => {
     dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId });
   };
@@ -91,12 +64,7 @@ export function TeamTactics() {
     <div className="mx-auto min-w-0 max-w-5xl space-y-6 pb-8">
       <TeamMeuTimeHeader
         title="Tática"
-        subtitle={
-          <>
-            Distribui <span className="font-semibold text-white/90">100 pontos</span> entre os 10 eixos. O motor usa a
-            proporção de cada eixo nas decisões.
-          </>
-        }
+        subtitle="Escolha um preset e salve suas táticas favoritas para usar em partidas e treinos."
       />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5">
@@ -122,43 +90,6 @@ export function TeamTactics() {
             );
           })}
         </div>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5 space-y-5">
-        <div className="flex justify-between items-center flex-wrap gap-2">
-          <h3 className="font-display font-black uppercase tracking-wider text-lg">Eixos do estilo</h3>
-          <div className="text-xs font-bold uppercase tracking-wider">
-            <span className={pointsTotal === 100 ? 'text-neon-yellow' : 'text-red-400'}>
-              Total: {pointsTotal}/100 pontos
-            </span>
-            {current.presetId === undefined && (
-              <span className="text-gray-500 ml-2 font-normal normal-case">(personalizado)</span>
-            )}
-          </div>
-        </div>
-        {AXES.map((axis) => {
-          const value = Math.max(0, Math.round(Number(current[axis.key as keyof TeamTacticalStyle]) || 0));
-          return (
-            <div key={axis.key}>
-              <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                <span>{axis.label}</span>
-                <span className="text-neon-yellow">{value} pts</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={value}
-                onChange={(e) => setAxis(axis.key, Number(e.target.value))}
-                className="w-full accent-neon-yellow h-1 bg-black appearance-none cursor-pointer rounded-full"
-              />
-              <div className="flex justify-between text-[10px] text-gray-600 font-bold mt-1">
-                <span>{axis.left}</span>
-                <span>{axis.right}</span>
-              </div>
-            </div>
-          );
-        })}
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5 space-y-4">

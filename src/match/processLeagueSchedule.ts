@@ -272,7 +272,7 @@ function applyUserMatchResolution(
       'Prémios de título memorável creditados.',
       {
         body: `Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`,
-        deepLink: '/profile',
+        deepLink: '/manager',
       },
     );
     inbox = [trophyNote, ...inbox].slice(0, 20);

@@ -11,26 +11,65 @@ import {
   Megaphone,
   LineChart,
   Heart,
+  Info,
+  Scale,
+  Orbit,
+  Flame,
+  Zap,
+  StretchHorizontal,
+  ArrowUpRight,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import { FORMATION_SCHEME_LIST, SCHEME_LINE_GROUPS, pitchUiSlots } from '@/match-engine/formations/catalog';
+import {
+  PRESET_LABEL_PT,
+  PRESET_DESCRIPTION_PT,
+  type PlayingStylePresetId,
+} from '@/tactics/playingStyle';
+
+const PRESET_IDS: readonly PlayingStylePresetId[] = [
+  'balanced',
+  'POSSE_CONTROLADA',
+  'PRESSAO_ALTA',
+  'TRANSICAO_RAPIDA',
+  'BLOCO_BAIXO',
+  'JOGO_PELAS_LATERAIS',
+  'JOGO_DIRETO',
+  'CRIATIVO_LIVRE',
+];
+
+const PRESET_ICONS: Record<PlayingStylePresetId, LucideIcon> = {
+  balanced: Scale,
+  POSSE_CONTROLADA: Orbit,
+  PRESSAO_ALTA: Flame,
+  TRANSICAO_RAPIDA: Zap,
+  BLOCO_BAIXO: Shield,
+  JOGO_PELAS_LATERAIS: StretchHorizontal,
+  JOGO_DIRETO: ArrowUpRight,
+  CRIATIVO_LIVRE: Sparkles,
+};
 import { suggestBestLineup } from '@/team/suggestBestLineup';
 import { ManagerCreatePlayerModal } from '@/components/ManagerCreatePlayerModal';
 import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 
 type CardPlayer = ReturnType<typeof playerToCardView> & { id: string };
 
 export function Team() {
+  useTrackScreen('screen_team');
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const playersById = useGameStore((s) => s.players);
   const lineupSaved = useGameStore((s) => s.lineup);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
+  const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
+  const currentPresetId: PlayingStylePresetId = tacticalStyle?.presetId ?? 'balanced';
   const favoriteRealTeam = useGameStore((s) => s.userSettings.favoriteRealTeam);
 
   const maxOvr = useMemo(() => {
@@ -53,6 +92,9 @@ export function Team() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [formationModalOpen, setFormationModalOpen] = useState(false);
+  const [pendingFormation, setPendingFormation] = useState(formationScheme);
+  const [pendingPreset, setPendingPreset] = useState<PlayingStylePresetId>(currentPresetId);
+  const [presetInfoId, setPresetInfoId] = useState<PlayingStylePresetId | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
   /** Feedback visível no painel (substitui alert nativo). */
   const [saveBanner, setSaveBanner] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
@@ -189,6 +231,7 @@ export function Team() {
         .map(([slot, pl]) => [slot, pl.id]),
     ) as Record<string, string>;
     dispatch({ type: 'SET_LINEUP', lineup: ids, formationScheme });
+    trackMissionEvent('lineup_saved');
     setLineupDirty(false);
     setTimeout(() => {
       setIsSaving(false);
@@ -237,7 +280,12 @@ export function Team() {
           <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setFormationModalOpen(true)}
+              onClick={() => {
+                setPendingFormation(formationScheme);
+                setPendingPreset(currentPresetId);
+                setPresetInfoId(null);
+                setFormationModalOpen(true);
+              }}
               className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-neon-yellow/25 bg-neon-yellow/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90 transition-colors hover:bg-neon-yellow/10 hover:text-neon-yellow md:text-[10px]"
             >
               <span className="inline-flex skew-x-6 items-center gap-1">
@@ -712,7 +760,7 @@ export function Team() {
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white flex items-center gap-2">
                   <LayoutGrid className="w-5 h-5 text-neon-yellow shrink-0" />
-                  Formações disponíveis
+                  Formação e Tática
                 </h3>
                 <button
                   type="button"
@@ -723,38 +771,140 @@ export function Team() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-3 md:p-4 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {FORMATION_SCHEME_LIST.map((id) => {
-                  const groups = SCHEME_LINE_GROUPS[id];
-                  const linesLabel = `${groups.def.length}-${groups.mid.length}-${groups.att.length}`;
-                  const selected = formationScheme === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => {
-                        dispatch({ type: 'SET_MANAGER_SLIDERS', partial: { formationScheme: id } });
-                        setFormationModalOpen(false);
-                      }}
-                      className={cn(
-                        'relative text-left rounded-lg border px-3 py-2.5 transition-colors',
-                        selected
-                          ? 'border-neon-yellow bg-neon-yellow/15 text-white'
-                          : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5 text-white',
-                      )}
-                    >
-                      {selected && (
-                        <span className="absolute top-1.5 right-1.5 text-neon-yellow">
-                          <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                        </span>
-                      )}
-                      <span className="font-display font-black text-sm tracking-tight block pr-5">{id}</span>
-                      <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 block">
-                        Linhas {linesLabel}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="p-3 md:p-4 overflow-y-auto space-y-5">
+                <section>
+                  <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
+                    1. Formação
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {FORMATION_SCHEME_LIST.map((id) => {
+                      const groups = SCHEME_LINE_GROUPS[id];
+                      const linesLabel = `${groups.def.length}-${groups.mid.length}-${groups.att.length}`;
+                      const selected = pendingFormation === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setPendingFormation(id)}
+                          className={cn(
+                            'relative text-left rounded-lg border px-3 py-2.5 transition-colors',
+                            selected
+                              ? 'border-neon-yellow bg-neon-yellow/15 text-white'
+                              : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5 text-white',
+                          )}
+                        >
+                          {selected && (
+                            <span className="absolute top-1.5 right-1.5 text-neon-yellow">
+                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            </span>
+                          )}
+                          <span className="font-display font-black text-sm tracking-tight block pr-5">{id}</span>
+                          <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 block">
+                            Linhas {linesLabel}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
+                    2. Tática
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {PRESET_IDS.map((id) => {
+                      const Icon = PRESET_ICONS[id];
+                      const selected = pendingPreset === id;
+                      return (
+                        <div
+                          key={id}
+                          className={cn(
+                            'relative rounded-lg border transition-colors',
+                            selected
+                              ? 'border-neon-yellow bg-neon-yellow/15'
+                              : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setPendingPreset(id)}
+                            className="w-full flex items-start gap-2 px-3 py-2.5 text-left"
+                          >
+                            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-neon-yellow/90" aria-hidden />
+                            <span className="min-w-0 pr-6">
+                              <span className="block font-display font-black text-[11px] uppercase tracking-wider text-white leading-tight">
+                                {PRESET_LABEL_PT[id]}
+                              </span>
+                            </span>
+                            {selected ? (
+                              <Check className="absolute top-1.5 right-7 w-3.5 h-3.5 text-neon-yellow" strokeWidth={3} />
+                            ) : null}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPresetInfoId((cur) => (cur === id ? null : id));
+                            }}
+                            aria-label={`Info ${PRESET_LABEL_PT[id]}`}
+                            className="absolute top-1 right-1 p-1 text-white/40 hover:text-neon-yellow transition-colors"
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {presetInfoId ? (
+                    <div className="mt-3 rounded-lg border border-neon-yellow/25 bg-neon-yellow/5 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 font-display font-black text-[11px] uppercase tracking-wider text-neon-yellow">
+                          <Info className="w-3.5 h-3.5" />
+                          {PRESET_LABEL_PT[presetInfoId]}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPresetInfoId(null)}
+                          className="text-white/40 hover:text-white"
+                          aria-label="Fechar info"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[11px] text-white/80 leading-relaxed">
+                        {PRESET_DESCRIPTION_PT[presetInfoId]}
+                      </p>
+                    </div>
+                  ) : null}
+                </section>
+              </div>
+              <div className="border-t border-white/10 bg-black/40 p-3 md:p-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormationModalOpen(false)}
+                  className="rounded border border-white/15 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingFormation !== formationScheme) {
+                      dispatch({
+                        type: 'SET_MANAGER_SLIDERS',
+                        partial: { formationScheme: pendingFormation },
+                      });
+                    }
+                    if (pendingPreset !== currentPresetId) {
+                      dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: pendingPreset });
+                    }
+                    setFormationModalOpen(false);
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white"
+                >
+                  <Check className="w-4 h-4" /> Aplicar formação e tática
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -845,7 +995,19 @@ export function Team() {
 
       <AnimatePresence>
         {sheetPlayerId ? (
-          <TeamPlayerSeasonSheet playerId={sheetPlayerId} onClose={() => setSheetPlayerId(null)} />
+          <TeamPlayerSeasonSheet
+            playerId={sheetPlayerId}
+            onClose={() => setSheetPlayerId(null)}
+            onAnnounceSale={(pid) => {
+              const pl = playersById[pid];
+              if (!pl) return;
+              const card: CardPlayer = { ...playerToCardView(pl, maxOvr), id: pl.id };
+              setSheetPlayerId(null);
+              setSaveBanner(null);
+              setAnnouncePrice('180000');
+              setAnnouncePlayer(card);
+            }}
+          />
         ) : null}
       </AnimatePresence>
     </div>

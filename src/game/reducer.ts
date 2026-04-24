@@ -1223,7 +1223,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           'Prémios de título memorável creditados.',
           {
             body: `Novos troféus: ${newTrophies.join(', ')}. EXP e BRO na carteira de jogo.`,
-            deepLink: '/profile',
+            deepLink: '/manager',
           },
         );
         inbox = [trophyNote, ...inbox].slice(0, 14);
@@ -2094,7 +2094,17 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
     case 'ASSIGN_STAFF_TO_PLAYER': {
-      const maxSlots = maxStaffSlotsByLevel(state.manager.staff.roles.treinador ?? 1);
+      const perRoleCap = maxStaffSlotsByLevel(state.manager.staff.roles.treinador ?? 1);
+      const prev = state.manager.staff.assignedByPlayer ?? {};
+      const requested = Array.from(new Set(action.roleIds));
+      // Enforce per-role slot capacity: se a role já está cheia com outros jogadores, não aceita este.
+      const accepted: typeof requested = [];
+      for (const roleId of requested) {
+        const otherUsers = Object.entries(prev)
+          .filter(([pid, roles]) => pid !== action.playerId && (roles ?? []).includes(roleId))
+          .length;
+        if (otherUsers < perRoleCap) accepted.push(roleId);
+      }
       return {
         ...state,
         manager: {
@@ -2102,8 +2112,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           staff: {
             ...state.manager.staff,
             assignedByPlayer: {
-              ...state.manager.staff.assignedByPlayer,
-              [action.playerId]: action.roleIds.slice(0, maxSlots),
+              ...prev,
+              [action.playerId]: accepted,
             },
           },
         },
@@ -2724,7 +2734,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           inbox: [
             makeInboxItem(uid(), 'SOCIAL_FRIEND_ACCEPTED', 'CONTA', `${clubName} entrou na tua rede de managers.`, {
               kind: 'news',
-              deepLink: '/profile#rede-manager',
+              deepLink: '/manager#rede-manager',
             }),
             ...state.inbox,
           ].slice(0, 14),
@@ -2749,7 +2759,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           makeInboxItem(uid(), 'SOCIAL_INVITE_SENT', 'CONTA', `Pedido de amizade enviado a ${clubName}.`, {
             kind: 'news',
             body: 'Serás notificado quando aceitarem.',
-            deepLink: '/profile#rede-manager',
+            deepLink: '/manager#rede-manager',
           }),
           ...state.inbox,
         ].slice(0, 14),
@@ -2787,7 +2797,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             'SOCIAL_INVITE_ACCEPTED_NOTICE',
             'CONTA',
             `${req.fromClubName} faz agora parte da tua rede.`,
-            { kind: 'news', deepLink: '/profile#rede-manager' },
+            { kind: 'news', deepLink: '/manager#rede-manager' },
           ),
           ...inboxWithout,
         ].slice(0, 14),
@@ -2919,7 +2929,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const invite = makeInboxItem(uid(), 'SOCIAL_FRIEND_INVITE', 'CONTA', `Pedido: ${action.clubName}`, {
         kind: 'friend_invite',
         friendRequestId: reqId,
-        deepLink: '/profile',
+        deepLink: '/manager',
       });
       return {
         ...state,
@@ -2957,7 +2967,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         inbox: [
           makeInboxItem(uid(), 'SOCIAL_INVITE_ACCEPTED_NOTICE', 'CONTA', `${action.clubName} adicionado à rede.`, {
             kind: 'news',
-            deepLink: '/profile#rede-manager',
+            deepLink: '/manager#rede-manager',
           }),
           ...state.inbox,
         ].slice(0, 50),

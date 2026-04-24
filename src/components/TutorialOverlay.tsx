@@ -36,10 +36,10 @@ const STEPS: TutorialStep[] = [
       'Aqui está o time que recebes no Welcome Pack — 15 jogadores pra começar.',
       'Clica em qualquer jogador pra ver atributos, evolução e mentoria.',
     ],
-    action: { kind: 'goto', path: '/team/tatica', label: 'Agora a tática' },
+    action: { kind: 'goto', path: '/team', label: 'Agora a tática' },
   },
   {
-    route: '/team/tatica',
+    route: '/team',
     title: 'Tática',
     lines: [
       'Aqui defines a formação e o estilo de jogo.',

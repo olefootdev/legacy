@@ -14,7 +14,6 @@ import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
-const TeamTactics = lazy(() => import('./pages/TeamTactics').then((m) => ({ default: m.TeamTactics })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamEvolutionLine = lazy(() =>
   import('./pages/TeamEvolutionLine').then((m) => ({ default: m.TeamEvolutionLine })),
@@ -42,7 +41,8 @@ const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
 const Leagues = lazy(() => import('./pages/Leagues').then((m) => ({ default: m.Leagues })));
-const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
+const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
@@ -149,11 +149,13 @@ export default function App() {
             <Route path="/missions" element={<Missions />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/leagues" element={<Leagues />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/manager" element={<Manager />} />
+            <Route path="/manager/pro" element={<ManagerPro />} />
+            <Route path="/profile" element={<Navigate to="/manager" replace />} />
             <Route path="/config" element={<Config />} />
             <Route path="/how-to-play" element={<HowToPlay />} />
             <Route path="/team" element={<Team />} />
-            <Route path="/team/tatica" element={<TeamTactics />} />
+            <Route path="/team/tatica" element={<Navigate to="/team" replace />} />
             <Route path="/team/treino" element={<TeamTraining />} />
             <Route path="/team/linha-evolutiva" element={<TeamEvolutionLine />} />
             <Route path="/team/staff" element={<TeamStaff />} />

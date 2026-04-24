@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   Users,
-  Brain,
+  Building2,
   Dumbbell,
   UserPlus,
   FlaskConical,
@@ -15,7 +15,7 @@ import { VeracityPillarsStrip } from '@/components/VeracityPillarsStrip';
 const TABS = [
   { id: 'elenco', label: 'ELENCO', icon: Users, path: '/team' },
   { id: 'evolutiva', label: 'LINHA', icon: LineChart, path: '/team/linha-evolutiva' },
-  { id: 'tatica', label: 'TÁTICA', icon: Brain, path: '/team/tatica' },
+  { id: 'clube', label: 'CLUBE', icon: Building2, path: '/city' },
   { id: 'treino', label: 'TREINO', icon: Dumbbell, path: '/team/treino' },
   { id: 'staff', label: 'STAFF', icon: UserPlus, path: '/team/staff' },
   { id: 'ailabs', label: 'AI LABS', icon: FlaskConical, path: '/team/ailabs' },

@@ -21,7 +21,7 @@ import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
 import { truthSnapshotToTest2dPitch, carrierIdToStoreOnBallId } from '@/engine/test2d/truthToTest2dPitch';
 import { useLive2dTacticalSim, LIVE2D_RENDER_INTERVAL_MS } from '@/pages/useLive2dTacticalSim';
 import { tryAutoAttachFromWindow } from '@/bridge/babylonPlayerVisualsIntegration';
-import { buildHomeStaffMatchBonuses } from '@/systems/staffBenefits';
+import { buildHomeStaffMatchBonuses, buildActivePlayerStaffBoosts } from '@/systems/staffBenefits';
 import { cn } from '@/lib/utils';
 import {
   TacticalPitchDevLayer,
@@ -584,6 +584,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     () => buildHomeStaffMatchBonuses(staff, { isHomeFixture: fixture.isHome }),
     [staff, fixture.isHome],
   );
+  const homeStaffPlayerBoosts = useMemo(() => buildActivePlayerStaffBoosts(staff), [staff]);
   const manager = useMemo(
     () => ({
       tacticalMentality,
@@ -592,8 +593,9 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       tacticalStyle,
       isHomeFixture: fixture.isHome,
       homeStaffMatch,
+      homeStaffPlayerBoosts,
     }),
-    [tacticalMentality, defensiveLine, tempo, tacticalStyle, fixture.isHome, homeStaffMatch],
+    [tacticalMentality, defensiveLine, tempo, tacticalStyle, fixture.isHome, homeStaffMatch, homeStaffPlayerBoosts],
   );
 
   const [session, setSession] = useState(0);

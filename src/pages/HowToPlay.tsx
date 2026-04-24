@@ -35,7 +35,7 @@ const STEPS: Step[] = [
     title: 'Escolhe uma tática coerente',
     body:
       'Formação e estilo têm de casar com quem joga. 4-3-3 ofensivo sem velocidade nas pontas perde. 5-3-2 defensivo sem zagueiros fortes também. Testa.',
-    cta: { label: 'Definir tática', to: '/team/tatica' },
+    cta: { label: 'Definir tática', to: '/team' },
   },
   {
     icon: Dumbbell,

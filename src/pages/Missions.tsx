@@ -10,8 +10,7 @@ import { useProgressionStore } from '@/progression/progressionStore';
 import type { MissionDef, MissionEvent } from '@/progression/types';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode } from '@/wallet/referralCode';
-
-const XP_HISTORY_INITIAL = 10;
+import { computeCareerTier } from '@/systems/careerTiers';
 
 interface MissionStub {
   id: string;
@@ -64,12 +63,12 @@ export function Missions() {
   const ensureResets = useProgressionStore((s) => s.ensureResets);
   const claimMission = useProgressionStore((s) => s.claimMission);
   const runtime = useProgressionStore((s) => s.missions);
+  const expLifetimeEarned = useProgressionStore((s) => s.expLifetimeEarned);
+  const currentTier = useMemo(() => computeCareerTier(expLifetimeEarned), [expLifetimeEarned]);
   const [tab, setTab] = useState<'ongoing' | 'completed'>('ongoing');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [xpHistoryExpanded, setXpHistoryExpanded] = useState(false);
-  const expHistory = finance.expHistory ?? [];
 
   const wallet = useMemo(() => normalizeWalletState(finance.wallet ?? undefined), [finance.wallet]);
   const myReferralCode = wallet.myReferralCode ?? '';
@@ -80,7 +79,7 @@ export function Missions() {
   }, [ensureResets]);
 
   const missions = useMemo<MissionStub[]>(() => {
-    return MISSION_CATALOG.map((def: MissionDef) => {
+    return MISSION_CATALOG.filter((def) => (def.minTier ?? 1) <= currentTier.id).map((def: MissionDef) => {
       const st = runtime[def.id] ?? { progress: 0, claimed: false, distinctDone: [] };
       const status: MissionStub['status'] = st.claimed ? 'completed' : st.progress > 0 ? 'in_progress' : 'available';
       return {
@@ -95,7 +94,7 @@ export function Missions() {
         progress: { current: st.progress, total: def.targetCount },
       };
     });
-  }, [runtime]);
+  }, [runtime, currentTier.id]);
 
   const visibleMissions = useMemo(() => {
     const list = tab === 'completed'
@@ -150,7 +149,13 @@ export function Missions() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-3xl font-display font-black uppercase tracking-wider">Missões</h2>
-            <p className="text-sm text-gray-500 font-medium mt-1">Complete objetivos para ganhar EXP e recompensas.</p>
+            <p className="text-sm text-gray-500 font-medium mt-1">
+              Seu tier atual: <span className="text-neon-yellow font-bold">{currentTier.glyph} {currentTier.name}</span>
+              {' · '}
+              {MISSION_CATALOG.length - missions.length > 0
+                ? `${MISSION_CATALOG.length - missions.length} missão(ões) travada(s) — evolua para desbloquear.`
+                : 'Todas as missões desbloqueadas.'}
+            </p>
           </div>
           <div className="bg-[#111] border border-white/10 px-4 py-2">
             <span className="text-sm font-display font-bold text-neon-yellow tracking-wider">{formatExp(finance.ole)} EXP</span>
@@ -308,40 +313,6 @@ export function Missions() {
         )}
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111] border border-white/10 p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-display font-black uppercase tracking-wider text-white">Histórico de EXP</h3>
-          <span className="text-[10px] text-gray-500">{expHistory.length} movimentações</span>
-        </div>
-        {expHistory.length === 0 ? (
-          <div className="text-xs text-gray-500">Sem movimentações de EXP registradas ainda.</div>
-        ) : (
-          <div className="space-y-2">
-            {(xpHistoryExpanded ? expHistory : expHistory.slice(0, XP_HISTORY_INITIAL)).map((row) => (
-              <div key={row.id} className="flex items-center justify-between bg-black/30 border border-white/5 p-2.5 rounded">
-                <div className="min-w-0">
-                  <div className="text-xs text-white truncate">{row.source}</div>
-                  <div className="text-[10px] text-gray-500">{new Date(row.createdAt).toLocaleString('pt-BR')}</div>
-                </div>
-                <div className={cn('text-xs font-bold', row.amount >= 0 ? 'text-neon-green' : 'text-red-400')}>
-                  {row.amount >= 0 ? '+' : ''}{formatExp(row.amount)} EXP
-                </div>
-              </div>
-            ))}
-            {expHistory.length > XP_HISTORY_INITIAL ? (
-              <button
-                type="button"
-                onClick={() => setXpHistoryExpanded((v) => !v)}
-                className="w-full mt-1 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-400 border border-white/10 rounded hover:bg-white/5 hover:text-white transition-colors"
-              >
-                {xpHistoryExpanded
-                  ? 'Ver menos'
-                  : `Ver mais (${expHistory.length - XP_HISTORY_INITIAL} ocultas)`}
-              </button>
-            ) : null}
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 }

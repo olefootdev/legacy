@@ -23,14 +23,34 @@ export const LEGACY_PLAYING_STYLE_PRESET_MAP: Record<string, PlayingStylePresetI
 
 /** Rótulos PT para UI, OLE Labs e cadastro. */
 export const PRESET_LABEL_PT: Record<PlayingStylePresetId, string> = {
-  balanced: 'Equilíbrio OLE',
-  POSSE_CONTROLADA: 'Posse controlada — construção pelo meio',
-  PRESSAO_ALTA: 'Pressão alta — recuperação imediata',
-  TRANSICAO_RAPIDA: 'Transição rápida — poucos passes à baliza',
-  BLOCO_BAIXO: 'Bloco baixo + contra — linhas recuadas',
-  JOGO_PELAS_LATERAIS: 'Jogo pelas laterais — amplitude e cruzamentos',
-  JOGO_DIRETO: 'Jogo direto — vertical / segunda bola',
-  CRIATIVO_LIVRE: 'Criativo livre — menos rigidez, mais improviso',
+  balanced: 'Equilíbrio',
+  POSSE_CONTROLADA: 'Jogadas pelo Meio',
+  PRESSAO_ALTA: 'Pressão Alta',
+  TRANSICAO_RAPIDA: 'Transição Rápida',
+  BLOCO_BAIXO: 'Contra-Ataque',
+  JOGO_PELAS_LATERAIS: 'Jogada Lateral',
+  JOGO_DIRETO: 'Jogo Vertical',
+  CRIATIVO_LIVRE: 'Jogo Criativo',
+};
+
+/** Descrição curta — tooltip / popover no card da tática. */
+export const PRESET_DESCRIPTION_PT: Record<PlayingStylePresetId, string> = {
+  balanced:
+    'Equilíbrio entre ataque e defesa. Não prioriza lados do campo — reage ao jogo sem extremos. Ideal pra manager ainda descobrindo o seu estilo.',
+  POSSE_CONTROLADA:
+    'Construção pelo meio com toques curtos. Paciência na saída de bola e prioridade aos médios. Exige jogadores técnicos no centro.',
+  PRESSAO_ALTA:
+    'Recupera a bola no campo adversário. Linha avançada, desgaste físico alto. Funciona melhor com plantel fresco e laterais velozes.',
+  TRANSICAO_RAPIDA:
+    'Poucos toques até a finalização. Ataca no erro do rival, verticalidade máxima. Pede pontas rápidos e um atacante frio.',
+  BLOCO_BAIXO:
+    'Linhas recuadas, compactação defensiva e contra-ataque fulminante. Defende primeiro, explora espaços nas costas do adversário.',
+  JOGO_PELAS_LATERAIS:
+    'Amplitude total, saídas pelos alas e cruzamentos na área. Pede laterais ofensivos e centroavante forte no jogo aéreo.',
+  JOGO_DIRETO:
+    'Bola longa para a frente, briga pela segunda bola. Menos posse, mais verticalidade. Depende de atacante pivô e meio-campo intenso.',
+  CRIATIVO_LIVRE:
+    'Menos rigidez posicional, mais improviso. Dá liberdade ao camisa 10 e aceita risco nas decisões. Brilha com jogadores de flair.',
 };
 
 /** Chaves dos eixos (pontos 0–100; soma = 100 no estado persistido). */

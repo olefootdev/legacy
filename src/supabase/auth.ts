@@ -20,6 +20,8 @@ export interface GameSignUpInput {
   clubName: string;
   clubShort: string;
   formationScheme: FormationSchemeId;
+  /** Código de indicação normalizado (6-8 chars A–Z/0–9) ou null. */
+  referredByCode?: string | null;
 }
 
 export interface OnboardingPayload {
@@ -46,6 +48,7 @@ export async function signUpWithEmail(input: GameSignUpInput): Promise<{ ok: boo
       favoriteRealTeam: input.favoriteRealTeam,
       formationScheme: input.formationScheme,
     },
+    referredByCode: input.referredByCode ?? null,
   });
   if (saveErr) return { ok: false, error: saveErr };
   return { ok: true };
@@ -79,6 +82,17 @@ export async function updateUserPassword(newPassword: string): Promise<{ ok: boo
   return { ok: true };
 }
 
+export async function checkEmailExists(email: string): Promise<boolean> {
+  const sb = getSupabase();
+  if (!sb) return false;
+  const { data, error } = await sb.rpc('check_email_exists', { p_email: email.trim() });
+  if (error) {
+    console.warn('[auth] checkEmailExists:', error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
 export async function signOutGame(): Promise<void> {
   const sb = getSupabase();
   if (sb) {
@@ -91,6 +105,7 @@ export async function saveOnboardingProfile(input: {
   clubName: string;
   clubShort: string;
   onboarding: OnboardingPayload;
+  referredByCode?: string | null;
 }): Promise<string | null> {
   const sb = getSupabase();
   if (!sb) return null;
@@ -99,6 +114,7 @@ export async function saveOnboardingProfile(input: {
     p_club_name: input.clubName,
     p_club_short: input.clubShort,
     p_onboarding_data: input.onboarding,
+    p_referred_by_code: input.referredByCode ?? null,
   });
   return error ? error.message : null;
 }

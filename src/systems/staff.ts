@@ -47,7 +47,7 @@ export function maxStaffSlotsByLevel(level: number): number {
 
 export function getStaffUpgradeCost(level: number): { currency: 'exp' | 'bro'; amount: number } | null {
   if (level >= 5) return null;
-  if (level < 3) return { currency: 'exp', amount: level === 1 ? 350 : 900 };
+  if (level < 3) return { currency: 'exp', amount: level === 1 ? 3_500_000 : 9_000_000 };
   return { currency: 'bro', amount: level === 3 ? 799 : 1499 };
 }
 

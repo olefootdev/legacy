@@ -31,6 +31,7 @@ import {
   MatchdayResultScores,
 } from '@/components/matchday/MatchdayVersusTitle';
 import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
+import { trackMissionEvent } from '@/progression/trackEvent';
 
 const FIRST_HALF_MS = 45_000;
 const HALFTIME_MS = 15_000;
@@ -135,10 +136,17 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
   );
 }
 
-function momentumPressure01(possession: 'home' | 'away', ballX: number): number {
+function momentumPressure01(
+  possession: 'home' | 'away',
+  ballX: number,
+  spiritMomentum?: { home: number; away: number } | null,
+): number {
   const bx = (Math.min(92, Math.max(8, ballX)) - 50) / 50;
   const base = possession === 'home' ? 0.74 : 0.26;
-  return Math.min(0.96, Math.max(0.04, base + bx * 0.26));
+  const narrative = spiritMomentum
+    ? (spiritMomentum.home - spiritMomentum.away) * 0.12
+    : 0;
+  return Math.min(0.96, Math.max(0.04, base + bx * 0.26 + narrative));
 }
 
 interface EndSummary {
@@ -888,6 +896,9 @@ export function MatchQuick() {
       events: live.events.map((e) => ({ id: e.id, text: e.text })),
     });
     dispatch({ type: 'FINALIZE_MATCH' });
+    trackMissionEvent('fast_match_completed');
+    if (live.homeScore > live.awayScore) trackMissionEvent('match_won');
+    if (live.homeScore > 0) trackMissionEvent('goal_scored', live.homeScore);
   }, [live, dispatch]);
 
   const squadReport = useMemo(
@@ -1100,8 +1111,8 @@ export function MatchQuick() {
     if (live.spiritMomentumClamp01 != null) {
       return Math.min(0.98, Math.max(0.02, live.spiritMomentumClamp01));
     }
-    return momentumPressure01(live.possession, live.ball.x);
-  }, [live?.possession, live?.ball.x, live?.phase, live?.spiritMomentumClamp01]);
+    return momentumPressure01(live.possession, live.ball.x, live.spiritMomentum);
+  }, [live?.possession, live?.ball.x, live?.phase, live?.spiritMomentumClamp01, live?.spiritMomentum]);
 
   const displayHomeScore = preGoalActive && live?.preGoalHint?.side === 'home'
     ? (live?.homeScore ?? 1) - 1

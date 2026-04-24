@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
   Users,
-  Building2,
   ArrowRightLeft,
   Wallet,
   Target,
@@ -31,9 +30,9 @@ import { AssistantWidget } from '@/components/AssistantWidget';
 
 const mainNavItems = [
   { icon: Home, label: 'HOME', path: '/' },
-  { icon: Users, label: 'MEU TIME', path: '/team' },
-  { icon: Building2, label: 'CLUBE', path: '/city' },
+  { icon: Users, label: 'TIME', path: '/team' },
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/transfer' },
+  { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
 ];
 
@@ -43,7 +42,6 @@ const drawerNavItems = [
   { icon: Calendar, label: 'CALENDÁRIO', path: '/calendar' },
   { icon: ShoppingBag, label: 'LOJA', path: '/store' },
   { icon: Trophy, label: 'LIGAS', path: '/leagues' },
-  { icon: User, label: 'PROFILE', path: '/profile' },
   { icon: GraduationCap, label: 'COMO JOGAR', path: '/how-to-play' },
   { icon: Settings, label: 'CONFIG', path: '/config' },
 ];

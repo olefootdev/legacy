@@ -8,13 +8,6 @@ type Tip = { title: string; body: string };
 
 const ROUTE_TIPS: Array<{ match: RegExp; tip: Tip }> = [
   {
-    match: /^\/team\/tatica/,
-    tip: {
-      title: 'Tática',
-      body: 'Se o plantel tem velocidade, experimenta 4-3-3 alto. Com zagueiros fortes mas lentos, 5-3-2 recua bem.',
-    },
-  },
-  {
     match: /^\/team/,
     tip: {
       title: 'Plantel',

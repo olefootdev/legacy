@@ -76,6 +76,18 @@ export interface SpiritContext {
    * Consumido por moral de time, posse, defesa/ataque etc.
    */
   legacyTeamBooster?: Record<string, number>;
+
+  /**
+   * Momentum acumulado entre ticks (-1..+1 por lado).
+   * Injetado pelo caller; o tick atualiza e retorna novo valor em `spiritMeta.momentum`.
+   */
+  momentum?: import('@/gamespirit/momentum').MomentumState;
+
+  /**
+   * Escanteio pendente desde o tick anterior — força cabeçada nessa posse.
+   * Consumido/limpo no tick corrente via `spiritMeta.pendingCornerForSide = null`.
+   */
+  pendingCornerForSide?: PossessionSide | null;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */
@@ -86,6 +98,10 @@ export interface SpiritSnapshotMeta {
   spiritBuildupGkTicksRemaining?: number;
   spiritMomentumClamp01?: number | null;
   preGoalHint?: import('@/engine/types').PreGoalHint | null;
+  /** Momentum atualizado com os eventos deste tick. */
+  momentum?: import('@/gamespirit/momentum').MomentumState;
+  /** Set/limpa hint de escanteio entre ticks. `null` = consumido. */
+  pendingCornerForSide?: PossessionSide | null;
 }
 
 export interface SpiritOutcome {

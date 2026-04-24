@@ -8,6 +8,12 @@ import {
   legacyPortraitImageUrl,
   type LegacyPlayerRow,
 } from '@/supabase/legacyPlayers';
+import { adminSavePlayerLink, isSplitValid } from '@/admin/playerLinking';
+import {
+  PlayerLinkEditor,
+  DEFAULT_LINK_VALUE,
+  type PlayerLinkEditorValue,
+} from '@/admin/components/PlayerLinkEditor';
 
 const POSITIONS = ['GOL', 'ZAG', 'LE', 'LD', 'VOL', 'MC', 'PE', 'PD', 'ATA'] as const;
 
@@ -103,6 +109,8 @@ export function AdminLegacyPanel() {
 
   const listedCount = useMemo(() => rows.filter((r) => r.listed_on_market).length, [rows]);
 
+  const [linkDraft, setLinkDraft] = useState<PlayerLinkEditorValue>(DEFAULT_LINK_VALUE);
+
   const save = async () => {
     if (!editing) return;
     const payload = {
@@ -124,13 +132,27 @@ export function AdminLegacyPanel() {
       window.alert('Nome é obrigatório');
       return;
     }
-    const saved = await upsertLegacyPlayer(payload);
-    if (saved) {
-      setEditing(null);
-      refresh();
-    } else {
-      window.alert('Falha ao salvar (ver console).');
+    if (!isSplitValid(linkDraft.split)) {
+      window.alert('Split inválido — soma deve ser 100%.');
+      return;
     }
+    const saved = await upsertLegacyPlayer(payload);
+    if (!saved) {
+      window.alert('Falha ao salvar (ver console).');
+      return;
+    }
+    const linkRes = await adminSavePlayerLink({
+      table: 'legacy_players',
+      playerId: editing.id,
+      beneficiaryUserId: linkDraft.beneficiaryUserId,
+      split: linkDraft.split,
+    });
+    if (!linkRes.ok) {
+      window.alert(`Player salvo, mas falha ao gravar split: ${linkRes.error ?? 'erro desconhecido'}`);
+    }
+    setEditing(null);
+    setLinkDraft(DEFAULT_LINK_VALUE);
+    refresh();
   };
 
   const remove = async (id: string) => {
@@ -270,8 +292,13 @@ export function AdminLegacyPanel() {
         <EditorModal
           draft={editing}
           onChange={setEditing}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            setLinkDraft(DEFAULT_LINK_VALUE);
+          }}
           onSave={save}
+          linkValue={linkDraft}
+          onLinkChange={setLinkDraft}
         />
       )}
     </div>
@@ -283,11 +310,15 @@ function EditorModal({
   onChange,
   onClose,
   onSave,
+  linkValue,
+  onLinkChange,
 }: {
   draft: DraftRow;
   onChange: (d: DraftRow) => void;
   onClose: () => void;
   onSave: () => void;
+  linkValue: PlayerLinkEditorValue;
+  onLinkChange: (v: PlayerLinkEditorValue) => void;
 }) {
   const update = <K extends keyof DraftRow>(k: K, v: DraftRow[K]) => onChange({ ...draft, [k]: v });
 
@@ -465,6 +496,10 @@ function EditorModal({
               ))}
             </div>
           </Field>
+        </div>
+
+        <div className="mt-5 rounded-lg border border-white/10 bg-black/40 p-4">
+          <PlayerLinkEditor value={linkValue} onChange={onLinkChange} />
         </div>
 
         <div className="mt-5 flex items-center justify-end gap-2">

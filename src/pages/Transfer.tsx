@@ -10,10 +10,6 @@ import {
   TrendingUp,
   Trophy,
   UserCircle,
-  Sparkles,
-  Gem,
-  Zap,
-  ChevronUp,
   CheckCircle2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -31,12 +27,12 @@ import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider';
 import { TransferFeaturedBoxes } from '@/transfer/TransferFeaturedBoxes';
 import { isSupabaseConfigured } from '@/supabase/client';
-import { MANAGER_PROSPECT_CREATE_MAX_OVR, MANAGER_PROSPECT_EVOLVED_MAX_OVR } from '@/entities/managerProspect';
 import type { PlayerEntity } from '@/entities/types';
 import { countryCodeToFlagEmoji } from '@/lib/flagEmoji';
 import { trackGrowthCommerce } from '@/admin/platformStore';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
+import { useTrackScreen } from '@/progression/trackEvent';
 
 const BIO_MAX_LEN = 250;
 
@@ -143,9 +139,6 @@ function playerIdentityLine(p: MockAuctionPlayer): string {
 }
 
 /** Cartas iniciais no carril “Sessão do mercado” (ordem por OVR); “Ver mais” acrescenta do mesmo ranking. */
-const SESSION_SPOTLIGHT_MAX = 11;
-const SESSION_CAROUSEL_STEP = 5;
-
 /** Carris de descoberta: quantos compactos mostrar de início e por cada “Ver mais” (mesma ordenação do carril). */
 const DISCOVERY_CAROUSEL_INITIAL = 10;
 const DISCOVERY_CAROUSEL_STEP = 5;
@@ -314,12 +307,12 @@ function featuredBoxesPlayersForTab(tab: HeroTab, pool: MockAuctionPlayer[]): Mo
 }
 
 export function Transfer() {
+  useTrackScreen('screen_transfer');
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [purchaseCompleteBanner, setPurchaseCompleteBanner] = useState(false);
   const purchaseBannerHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<MockAuctionPlayer | null>(null);
-  const [sessionVisibleCount, setSessionVisibleCount] = useState(SESSION_SPOTLIGHT_MAX);
   const [discoveryVisibleCount, setDiscoveryVisibleCount] = useState(initialDiscoveryVisibleMap);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const highlightsScrollRef = useRef<HTMLDivElement>(null);
@@ -331,7 +324,6 @@ export function Transfer() {
 
   // NPC offers removidos — mercado é exclusivamente Genesis.
 
-  const [listPriceByPlayer, setListPriceByPlayer] = useState<Record<string, string>>({});
   const [genesisAuctionCards, setGenesisAuctionCards] = useState<MockAuctionPlayer[]>([]);
   const [genesisListedEntities, setGenesisListedEntities] = useState<Record<string, PlayerEntity>>({});
   const [marketTab, setMarketTab] = useState<HeroTab>('genesis');
@@ -392,28 +384,21 @@ export function Transfer() {
     return [...genesisFiltered, ...managerAuctionCards];
   }, [genesisAuctionCards, managerAuctionCards, ownedGenesisCatalogIds]);
 
-  const prospectsToList = useMemo(
-    () =>
-      Object.values(playersById).filter(
-        (p) =>
-          !p.listedOnMarket &&
-          !managerProspectMarket.ownListings.some((l) => l.playerId === p.id),
-      ),
-    [playersById, managerProspectMarket.ownListings],
-  );
-
   // Filters State
+  type SortKey = 'relevance' | 'value_desc' | 'price_asc' | 'new' | 'deals';
   const [filters, setFilters] = useState<{
     pos: string;
     nat: string;
     name: string;
     /** Vazio = todas as moedas. */
     currency: '' | AuctionCurrency;
+    sort: SortKey;
   }>({
     pos: '',
     nat: '',
     name: '',
     currency: '',
+    sort: 'relevance',
   });
 
   useEffect(() => {
@@ -436,7 +421,7 @@ export function Transfer() {
     [auctionPool, filters.pos, filters.nat, filters.currency, nameQueryNorm],
   );
 
-  /** Com busca por nome ativa: ordena por nome, depois OVR (maior primeiro), depois id — lista previsível para homônimos. */
+  /** Aplica busca por nome (alfabética) OU ordenação explícita (ecommerce-style). */
   const gridPlayers = useMemo(() => {
     const list = [...filteredPlayers];
     if (nameQueryNorm) {
@@ -446,9 +431,28 @@ export function Transfer() {
         if (b.ovr !== a.ovr) return b.ovr - a.ovr;
         return a.id - b.id;
       });
+      return list;
+    }
+    switch (filters.sort) {
+      case 'value_desc':
+        list.sort((a, b) => b.buyNow - a.buyNow);
+        break;
+      case 'price_asc':
+        list.sort((a, b) => a.buyNow - b.buyNow);
+        break;
+      case 'new':
+        list.sort((a, b) => b.id - a.id);
+        break;
+      case 'deals':
+        list.sort((a, b) => timeLeftToSeconds(a.timeLeft) - timeLeftToSeconds(b.timeLeft));
+        break;
+      case 'relevance':
+      default:
+        list.sort((a, b) => b.ovr - a.ovr);
+        break;
     }
     return list;
-  }, [filteredPlayers, nameQueryNorm]);
+  }, [filteredPlayers, nameQueryNorm, filters.sort]);
 
   /** Dentro do resultado atual, quantos anúncios compartilham o mesmo nome (para mostrar 1/3, 2/3…). */
   const homonymRankById = useMemo(() => {
@@ -467,20 +471,17 @@ export function Transfer() {
     return map;
   }, [gridPlayers]);
 
-  /** Sem filtros nem busca: vitrine horizontal (escala). Com filtros: grelha clássica. */
-  const isFiltered = Boolean(filters.pos || filters.nat || filters.currency || nameQueryNorm);
+  /** Sem filtros/sort nem busca: vitrine horizontal (escala). Com filtros ou sort não-default: grelha clássica. */
+  const isFiltered = Boolean(
+    filters.pos || filters.nat || filters.currency || nameQueryNorm || filters.sort !== 'relevance',
+  );
 
   useEffect(() => {
-    setSessionVisibleCount(SESSION_SPOTLIGHT_MAX);
     setDiscoveryVisibleCount(initialDiscoveryVisibleMap());
   }, [isFiltered]);
 
   const discoveryRails = useMemo(() => {
-    const pool = [...auctionPool];
-    const byOvr = [...pool].sort((a, b) => b.ovr - a.ovr);
-    const byNew = [...pool].sort((a, b) => b.id - a.id);
-    const byValue = [...pool].sort((a, b) => b.buyNow - a.buyNow);
-    const byUrgency = [...pool].sort((a, b) => timeLeftToSeconds(a.timeLeft) - timeLeftToSeconds(b.timeLeft));
+    const byOvr = [...auctionPool].sort((a, b) => b.ovr - a.ovr);
     return [
       {
         id: 'highlights' as const,
@@ -489,44 +490,8 @@ export function Transfer() {
         icon: TrendingUp,
         ordered: byOvr,
       },
-      {
-        id: 'fresh' as const,
-        title: 'Novos no mercado',
-        hint: 'Ideal para encontrar novidade.',
-        icon: Sparkles,
-        ordered: byNew,
-      },
-      {
-        id: 'valuable' as const,
-        title: 'Mais valiosos',
-        hint: 'Ordenado por preço de compra imediata.',
-        icon: Gem,
-        ordered: byValue,
-      },
-      {
-        id: 'deals' as const,
-        title: 'Oportunidades',
-        hint: 'Leilões a terminar mais cedo - atenção ao relógio.',
-        icon: Zap,
-        ordered: byUrgency,
-      },
     ];
   }, [auctionPool]);
-
-  /** Sessão do mercado (mock): ordenação comercial por OVR; “Ver mais” revela mais cartas do mesmo ranking. */
-  const sessionMarketOrder = useMemo(
-    () => [...auctionPool].sort((a, b) => (b.ovr !== a.ovr ? b.ovr - a.ovr : a.id - b.id)),
-    [auctionPool],
-  );
-  const sessionCarouselPlayers = useMemo(
-    () => sessionMarketOrder.slice(0, sessionVisibleCount),
-    [sessionMarketOrder, sessionVisibleCount],
-  );
-  const sessionHomonymRankById = useMemo(
-    () => homonymRankMapForPlayers(sessionMarketOrder),
-    [sessionMarketOrder],
-  );
-  const canShowMoreSession = sessionVisibleCount < sessionMarketOrder.length;
 
   const highlightsOrdered = discoveryRails.find((r) => r.id === 'highlights')?.ordered ?? [];
   const highlightsVisibleCap = discoveryVisibleCount.highlights ?? DISCOVERY_CAROUSEL_INITIAL;
@@ -908,6 +873,37 @@ export function Transfer() {
                   autoComplete="off"
                 />
               </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Ordenar
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    { id: 'relevance', label: 'Relevância' },
+                    { id: 'value_desc', label: 'Mais valiosos' },
+                    { id: 'price_asc', label: 'Mais baratos' },
+                    { id: 'new', label: 'Novos' },
+                    { id: 'deals', label: 'Oportunidades' },
+                  ] as const).map((s) => {
+                    const active = filters.sort === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setFilters({ ...filters, sort: s.id })}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-colors',
+                          active
+                            ? 'border-neon-yellow bg-neon-yellow text-black'
+                            : 'border-white/15 bg-white/5 text-gray-300 hover:bg-white/10',
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1051,84 +1047,45 @@ export function Transfer() {
             </div>
           </section>
 
-          <section
-            id="transfer-academia-ole"
-            className="sports-panel mt-8 min-w-0 scroll-mt-4 space-y-4 border border-neon-yellow/20 bg-black/35 p-4 sm:p-5"
-          >
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h3 className="font-display text-sm font-black uppercase tracking-wide text-neon-yellow sm:text-base">
-                  Academia OLE · mercado EXP
-                </h3>
-                <p className="mt-1 max-w-full text-[10px] leading-relaxed text-gray-500 [overflow-wrap:anywhere] sm:text-[11px]">
-                  Anuncia jogadores do plantel no mercado EXP (preço entre 50k e 5M). Prospects da Academia (OVR ≤{' '}
-                  {MANAGER_PROSPECT_CREATE_MAX_OVR} na criação; evolução até {MANAGER_PROSPECT_EVOLVED_MAX_OVR}) ou
-                  cartas do elenco: os anúncios aparecem nas carruagens acima — abre o cartão para retirar o anúncio.
-                </p>
+          {managerAuctionCards.length > 0 ? (
+            <section className="min-w-0 space-y-3">
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <div className="min-w-0">
+                  <h3 className="font-display text-sm font-black uppercase tracking-widest text-neon-yellow sm:text-base">
+                    Jogadores anunciados
+                  </h3>
+                  <p className="text-[10px] text-gray-500">
+                    Os teus cards à venda. Clica pra gerir preço ou retirar do mercado.
+                  </p>
+                </div>
+                <Link
+                  to="/team"
+                  className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-white hover:bg-white/10"
+                >
+                  Anunciar mais
+                </Link>
               </div>
-              <Link
-                to="/team"
-                className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center font-display text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-white/10"
-              >
-                Plantel
-              </Link>
-            </div>
-            {prospectsToList.length > 0 ? (
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Anunciar jogador</p>
-                <ul className="space-y-2">
-                  {prospectsToList.map((p) => {
-                    const ovr = overallFromAttributes(p.attrs);
-                    const draft = listPriceByPlayer[p.id] ?? '180000';
-                    return (
-                      <li
-                        key={p.id}
-                        className="flex min-w-0 flex-col gap-2 rounded-lg border border-white/10 bg-black/40 p-3 sm:flex-row sm:items-center sm:justify-between"
+              <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-3 bg-gradient-to-r from-deep-black/90 to-transparent sm:w-4 lg:w-8" />
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-16 bg-gradient-to-l from-deep-black/95 via-deep-black/60 to-transparent sm:w-20 lg:w-24" />
+                <div className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]">
+                  <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
+                    {managerAuctionCards.map((player) => (
+                      <motion.div
+                        key={`own-${player.id}`}
+                        initial={{ opacity: 0, scale: 0.96 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-[min(160px,calc(55dvw))] min-w-0 shrink-0 cursor-pointer sm:w-40"
+                        onClick={() => setSelectedPlayer(player)}
                       >
-                        <div className="min-w-0">
-                          <span className="font-display text-xs font-black uppercase text-white">{p.name}</span>
-                          <span className="ml-2 text-[10px] text-gray-500">
-                            {p.pos} · OVR {ovr}
-                          </span>
-                        </div>
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <label className="sr-only" htmlFor={`list-price-${p.id}`}>
-                            Preço EXP {p.name}
-                          </label>
-                          <input
-                            id={`list-price-${p.id}`}
-                            type="number"
-                            min={50_000}
-                            max={5_000_000}
-                            value={draft}
-                            onChange={(e) =>
-                              setListPriceByPlayer((prev) => ({ ...prev, [p.id]: e.target.value }))
-                            }
-                            className="min-w-0 flex-1 rounded border border-white/15 bg-black/60 px-2 py-1.5 font-display text-xs font-bold text-white sm:max-w-[10rem]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const n = Math.round(Number(draft) || 180_000);
-                              dispatch({ type: 'LIST_MANAGER_PROSPECT', playerId: p.id, priceExp: n });
-                            }}
-                            className="rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-wide text-neon-yellow hover:bg-neon-yellow/20"
-                          >
-                            Listar
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                        <TransferMarketCompactCard player={player} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <p className="text-[10px] text-gray-600">
-                Nenhum jogador disponível para anunciar (todos já estão no mercado ou listados). Usa{' '}
-                <span className="text-gray-400">Meu Time</span> para anunciar reservas ou cria um na Academia OLE.
-              </p>
-            )}
-          </section>
+            </section>
+          ) : null}
         </div>
       )}
 

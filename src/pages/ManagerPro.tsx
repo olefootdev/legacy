@@ -1,0 +1,358 @@
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
+import {
+  Lock,
+  ChevronRight,
+  Wallet,
+  Trophy,
+  Activity,
+  ShieldCheck,
+  Search,
+  Filter,
+  TrendingUp,
+  ArrowLeft,
+  Download,
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useGameStore } from '@/game/store';
+import { getMyVerification, type VerificationStatus } from '@/supabase/verification';
+import { getMyLinkedCards, type LinkedCardRow } from '@/admin/playerLinking';
+import { cn } from '@/lib/utils';
+
+export function ManagerPro() {
+  const navigate = useNavigate();
+  const players = useGameStore((s) => s.players);
+
+  const academyCards = useMemo(
+    () => Object.values(players).filter((p) => p.managerCreated === true),
+    [players],
+  );
+
+  const [linkedCards, setLinkedCards] = useState<LinkedCardRow[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list = await getMyLinkedCards();
+      if (!cancelled) setLinkedCards(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const [verified, setVerified] = useState(false);
+  const [vStatus, setVStatus] = useState<VerificationStatus>('not_submitted');
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const r = await getMyVerification();
+      if (cancelled) return;
+      setVerified(Boolean(r?.verified));
+      setVStatus((r?.verification_status as VerificationStatus) ?? 'not_submitted');
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const totalCards = academyCards.length + linkedCards.length;
+  const listedCount =
+    academyCards.filter((p) => p.listedOnMarket).length + linkedCards.filter((c) => c.listed_on_market).length;
+  const balanceBRL = 'R$ 0,00';
+  const salesCount = 0;
+
+  return (
+    <div className="mx-auto min-w-0 max-w-4xl space-y-5 pb-16">
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/manager')}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[10px] font-bold uppercase tracking-widest text-cyan-300/80">Manager · PRO</p>
+          <h1 className="font-display text-xl font-black uppercase tracking-tight text-white md:text-2xl">
+            Vendas dos teus cards
+          </h1>
+        </div>
+      </div>
+
+      {/* ── Banner de verificação (só se não verificado) ──────── */}
+      {!verified ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 rounded-xl border border-amber-500/35 bg-amber-500/[0.08] p-4"
+        >
+          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-xs font-black uppercase tracking-wider text-amber-200">
+              {vStatus === 'pending'
+                ? 'Em análise pelo Admin'
+                : vStatus === 'rejected'
+                ? 'Verificação rejeitada — ajusta e reenvia'
+                : 'Modo prévia — conta não verificada'}
+            </p>
+            <p className="mt-1 text-[12px] leading-snug text-amber-100/80">
+              {vStatus === 'pending'
+                ? 'Aguarda a aprovação. Assim que liberada, o saldo real e o botão de saque ficam ativos.'
+                : 'Podes ver os teus cards e como ficará o painel. O saldo real e o saque ficam ativos depois que a verificação for aprovada pelo Admin.'}
+            </p>
+            {vStatus !== 'pending' ? (
+              <Link
+                to="/config"
+                className="mt-2 inline-flex items-center gap-1.5 rounded border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-amber-100 hover:bg-amber-500/25"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" /> {vStatus === 'rejected' ? 'Reenviar verificação' : 'Verificar conta'}
+                <ChevronRight className="h-3 w-3" />
+              </Link>
+            ) : null}
+          </div>
+        </motion.div>
+      ) : null}
+
+      {/* ── KPIs principais ────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard
+          label="Saldo"
+          value={balanceBRL}
+          tone="cyan"
+          footer={verified ? 'Pronto pra sacar' : 'Aguarda verificação'}
+        />
+        <KpiCard
+          label="Vendas"
+          value={String(salesCount)}
+          tone="emerald"
+          footer="Cards vendidos no total"
+        />
+        <KpiCard
+          label="Cards"
+          value={String(totalCards)}
+          tone="yellow"
+          footer="Criados pelo manager"
+        />
+        <KpiCard
+          label="À venda"
+          value={String(listedCount)}
+          tone="fuchsia"
+          footer="Listados no mercado"
+        />
+      </div>
+
+      {/* ── Ações rápidas ──────────────────────────────────────── */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <Link
+          to="/wallet"
+          className={cn(
+            'flex items-center gap-3 rounded-xl border p-4 transition',
+            verified
+              ? 'border-cyan-500/40 bg-gradient-to-br from-cyan-500/10 to-black/40 hover:bg-cyan-500/15'
+              : 'border-white/10 bg-white/[0.02] opacity-60 pointer-events-none',
+          )}
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/20">
+            <Download className="h-5 w-5 text-cyan-200" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-xs font-black uppercase tracking-wider text-white">
+              Sacar para Wallet
+            </p>
+            <p className="mt-0.5 text-[11px] text-white/55">
+              {verified ? 'Converte saldo em BRO' : 'Disponível após verificação'}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/40" />
+        </Link>
+
+        <Link
+          to="/city/youth-prospects"
+          className="flex items-center gap-3 rounded-xl border border-neon-yellow/25 bg-gradient-to-br from-neon-yellow/5 to-black/40 p-4 transition hover:bg-neon-yellow/10"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neon-yellow/20">
+            <TrendingUp className="h-5 w-5 text-neon-yellow" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-xs font-black uppercase tracking-wider text-white">
+              Criar novo card
+            </p>
+            <p className="mt-0.5 text-[11px] text-white/55">
+              Mais cards na academia = mais vendas possíveis
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/40" />
+        </Link>
+      </div>
+
+      {/* ── Meus cards ─────────────────────────────────────────── */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-widest text-white/80">
+            <Trophy className="h-3.5 w-3.5 text-cyan-300" />
+            Meus cards ({totalCards})
+          </h3>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
+              title="Em breve"
+            >
+              <Search className="h-3 w-3" /> Buscar
+            </button>
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
+              title="Em breve"
+            >
+              <Filter className="h-3 w-3" /> Filtrar
+            </button>
+          </div>
+        </div>
+
+        {totalCards === 0 ? (
+          <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-center">
+            <p className="text-sm text-white/80">Ainda não criaste nenhum card e nada vinculado pelo Admin.</p>
+            <Link
+              to="/city/youth-prospects"
+              className="mt-2 inline-flex text-xs font-bold text-cyan-300 hover:underline"
+            >
+              Criar meu primeiro card →
+            </Link>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {linkedCards.map((c) => {
+              const playerPct = Array.isArray(c.payment_split)
+                ? c.payment_split.find((e) => e.kind === 'player')?.percent ?? 50
+                : 50;
+              return (
+                <li
+                  key={`${c.source}:${c.id}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] px-3 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display text-sm font-bold text-white">
+                      {c.name}
+                      <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
+                        {c.source}
+                      </span>
+                    </p>
+                    <p className="text-[10px] text-white/45">
+                      {c.pos || '—'}
+                      {c.rarity_label ? ` · ${c.rarity_label}` : ''}
+                      {c.listed_on_market ? ' · À venda' : ''}
+                      {` · split ${playerPct}%`}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                      0 vendas
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-white/30" />
+                  </div>
+                </li>
+              );
+            })}
+            {academyCards.map((p) => (
+              <li
+                key={`academy:${p.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-sm font-bold text-white">
+                    {p.name}
+                    <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
+                      academy
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-white/45">
+                    {p.pos} · OVR {Math.round((p.ovr ?? 0))}
+                    {p.listedOnMarket ? ' · À venda' : ''}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                    0 vendas
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-white/30" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* ── Histórico de vendas ────────────────────────────────── */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <h3 className="mb-3 flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-widest text-white/80">
+          <Activity className="h-3.5 w-3.5 text-cyan-300" />
+          Histórico de vendas
+        </h3>
+        <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-center">
+          <p className="text-sm text-white/80">Sem vendas ainda.</p>
+          <p className="mt-1 text-[11px] text-white/45">
+            Quando alguém comprar um card teu, a venda aparece aqui em tempo real.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Como funciona ──────────────────────────────────────── */}
+      <section className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-4">
+        <h3 className="font-display text-xs font-black uppercase tracking-widest text-cyan-200">
+          Como o PRO funciona
+        </h3>
+        <ul className="mt-2 space-y-1.5 text-[12px] text-white/75">
+          <li className="flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+            Crias um card na Academia (ou vinculas um card real).
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+            Anuncias no mercado com preço em EXP.
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+            Cada venda confirmada credita o teu saldo aqui em tempo real.
+          </li>
+          <li className="flex items-start gap-2">
+            <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-300" />
+            Saque é feito pela Wallet após verificação da conta.
+          </li>
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  footer,
+  tone,
+}: {
+  label: string;
+  value: string;
+  footer: string;
+  tone: 'cyan' | 'emerald' | 'yellow' | 'fuchsia';
+}) {
+  const tones: Record<typeof tone, string> = {
+    cyan: 'border-cyan-500/25 from-cyan-500/5',
+    emerald: 'border-emerald-500/25 from-emerald-500/5',
+    yellow: 'border-neon-yellow/25 from-neon-yellow/5',
+    fuchsia: 'border-fuchsia-500/25 from-fuchsia-500/5',
+  };
+  const valueClass: Record<typeof tone, string> = {
+    cyan: 'text-cyan-200',
+    emerald: 'text-emerald-300',
+    yellow: 'text-neon-yellow',
+    fuchsia: 'text-fuchsia-300',
+  };
+  return (
+    <div className={cn('rounded-xl border bg-gradient-to-br to-black/40 p-3', tones[tone])}>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">{label}</p>
+      <p className={cn('mt-1 font-display text-xl font-black', valueClass[tone])}>{value}</p>
+      <p className="mt-1 text-[10px] text-white/45">{footer}</p>
+    </div>
+  );
+}

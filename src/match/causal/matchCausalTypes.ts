@@ -2,7 +2,7 @@ import type { PitchPoint, PossessionSide } from '@/engine/types';
 import type { BallZone } from '@/gamespirit/types';
 
 /** Qualidade de contacto no remate (efeito em precisão / xG e leitura visual). */
-export type ShotStrikeProfile = 'weak' | 'placed' | 'power';
+export type ShotStrikeProfile = 'weak' | 'placed' | 'power' | 'header';
 
 /** Fases lógicas do motor textual (minuto a minuto), independentes do FSM do pitch 3D. */
 export type EngineSimPhase = 'LIVE' | 'GOAL_RESTART' | 'KICKOFF_PENDING' | 'STOPPED';
@@ -106,6 +106,49 @@ export type CausalMatchEvent =
         minute: number;
         reason: 'causal_whirlwind' | 'spatial_swarm' | 'box_clump_gk_foul' | 'box_clump_attacker_foul';
         awardedSide: PossessionSide;
+      };
+    }
+  /**
+   * Drible tentado (evento discreto pra estatísticas pós-jogo).
+   * Sucesso: carregador passa o defensor; fracasso: desarme implícito (NÃO emite `foul_committed`).
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'dribble_attempt';
+      payload: {
+        minute: number;
+        carrierId: string;
+        carrierSide: PossessionSide;
+        defenderId: string | null;
+        success: boolean;
+      };
+    }
+  /**
+   * Interceptação (corte de passe/avanço sem desarme direto).
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'interception';
+      payload: {
+        minute: number;
+        defenderId: string;
+        defenderSide: PossessionSide;
+        zone: 'def' | 'mid' | 'att';
+      };
+    }
+  /**
+   * Escanteio (derivado de remate `block`/`wide` ou falta na área).
+   * Próximo tick usa hint de set-piece para forçar cruzamento + cabeçada.
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'corner_kick';
+      payload: {
+        minute: number;
+        side: PossessionSide;
       };
     };
 

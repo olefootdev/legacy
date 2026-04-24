@@ -10,6 +10,7 @@ export interface AdminProfileRow {
   created_at: string;
   updated_at: string;
   onboarding_data: Record<string, unknown> | null;
+  referred_by_code: string | null;
 }
 
 export async function adminListProfiles(): Promise<AdminProfileRow[]> {
@@ -21,6 +22,24 @@ export async function adminListProfiles(): Promise<AdminProfileRow[]> {
     return [];
   }
   return (data ?? []) as AdminProfileRow[];
+}
+
+export interface AdminTopReferrerRow {
+  referred_by_code: string;
+  referred_count: number;
+  first_referral_at: string;
+  last_referral_at: string;
+}
+
+export async function adminListTopReferrers(limit = 50): Promise<AdminTopReferrerRow[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('admin_list_top_referrers', { p_limit: limit });
+  if (error) {
+    console.warn('[adminCore] list_top_referrers:', error.message);
+    return [];
+  }
+  return (data ?? []) as AdminTopReferrerRow[];
 }
 
 export type AuditLogRow = {

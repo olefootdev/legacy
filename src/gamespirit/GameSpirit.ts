@@ -24,6 +24,8 @@ import type { PlayerEntity } from '@/entities/types';
 import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
 import { createCausalBatch, type CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import { normalizeStyle } from '@/tactics/playingStyle';
+import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum';
+import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
@@ -74,6 +76,10 @@ function densityNearBall(ball: PitchPoint, mates: PitchPlayerState[], radius = 1
 }
 
 function pickAction(ctx: SpiritContext): ProposedAction {
+  // Escanteio pendente — resolve cabeçada na hora, consome hint depois no tick.
+  if (ctx.pendingCornerForSide === 'home' && ctx.possession === 'home') {
+    return 'shot';
+  }
   const style = normalizeStyle(ctx.tacticalStyle);
   const losingHome = ctx.possession === 'home' && ctx.homeScore < ctx.awayScore;
   const highPress = ctx.tacticalMentality > 72;
@@ -97,7 +103,8 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   }
   if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
-    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18 + (m?.shotInAttThirdBias ?? 0);
+    const momentumBias = (ctx.momentum?.home ?? 0) * 0.10;
+    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18 + (m?.shotInAttThirdBias ?? 0) + momentumBias;
     return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
   }
   if (ctx.possession === 'home' && style.buildUp > 0.72 && Math.random() < 0.22) return 'clear';
@@ -202,11 +209,23 @@ export function buildSpiritContext(input: {
   live2dStagnationTicks?: number;
   motorTelemetryTail?: SpiritContext['motorTelemetryTail'];
   penaltyCooldownTicks?: number;
+  momentum?: SpiritContext['momentum'];
+  pendingCornerForSide?: SpiritContext['pendingCornerForSide'];
 }): SpiritContext {
-  const avg =
-    input.homeRoster.length === 0
-      ? 78
-      : input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / input.homeRoster.length;
+  // Overall do time ponderado por role (atacantes pesam ataque, zagueiros pesam defesa).
+  // Usa `homePlayers` (MatchPlayerAttributes) quando disponível; fallback pro overall do roster.
+  const avg = (() => {
+    if (input.homePlayers.length > 0) {
+      let sum = 0;
+      for (const hp of input.homePlayers) {
+        const role = roleFromSlotId(hp.slotId);
+        sum += weightedOverall(hp.attributes, role);
+      }
+      return sum / input.homePlayers.length;
+    }
+    if (input.homeRoster.length === 0) return 78;
+    return input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / input.homeRoster.length;
+  })();
   const avgHomeFatigue =
     input.homePlayers.length === 0
       ? 48
@@ -263,6 +282,8 @@ export function buildSpiritContext(input: {
     onBallKnowledge,
     penaltyCooldownTicks: input.penaltyCooldownTicks,
     legacyTeamBooster,
+    momentum: input.momentum,
+    pendingCornerForSide: input.pendingCornerForSide,
   };
 }
 
@@ -515,11 +536,13 @@ export function gameSpiritTick(
   const errorTax = Math.max(0, cp.errorPenalty - legacyDefense01 * 0.5 + (ctx.nearestTeammateDist > 26 ? 0.04 : 0));
   const supportBoost = cp.supportBoost + legacyMorale01;
   let spiritMeta: SpiritSnapshotMeta | undefined;
+  const consumedCorner = ctx.pendingCornerForSide === 'home' && ctx.possession === 'home' && action === 'shot';
 
   if (ctx.possession === 'home') {
     const shooterId = ctx.onBall!.playerId;
     if (action === 'shot') {
       homeStat!.passesAttempt += 1;
+      const fromCorner = ctx.pendingCornerForSide === 'home';
       L.push({
         type: 'shot_attempt',
         payload: {
@@ -528,6 +551,7 @@ export function gameSpiritTick(
           zone: ctx.ballZone,
           minute: ctx.minute,
           target: spiritShotTargetUI('home'),
+          ...(fromCorner ? { strike: 'header' as const } : {}),
         },
       });
 
@@ -540,6 +564,14 @@ export function gameSpiritTick(
         gkFactor01: ctx.opponentStrength / 120,
         errorTax,
       });
+      // Cabeçada de escanteio: +18% xG se físico do cabeceador ≥ 75 (mandante alto);
+      // sempre sobrescreve zona pra att e adiciona bônus fixo por bola parada.
+      if (fromCorner) {
+        const physHigh = (ctx.onBall?.attributes?.fisico ?? 50) >= 75;
+        const headerBonus = physHigh ? 1.18 : 1.08;
+        weights.goal *= headerBonus;
+        weights.post_in *= headerBonus;
+      }
       const homeOnPitch = Math.max(0, ctx.homePlayers?.length ?? 11);
       const homeNumericRatio = Math.max(0.55, homeOnPitch / 11);
       weights.goal *= homeNumericRatio;
@@ -586,14 +618,22 @@ export function gameSpiritTick(
           type: 'ball_state',
           payload: { ...patch.ball, reason: 'defensive_clearance' },
         });
-        L.push({ type: 'possession_change', payload: { to: 'away', reason: 'after_block' } });
+        // 35% de bloqueios viram escanteio (em vez de posse pro rival). Mantém narrativa do block.
+        const isCorner = Math.random() < 0.35;
+        if (isCorner) {
+          L.push({ type: 'corner_kick', payload: { minute: ctx.minute, side: 'home' } });
+          next = 'home';
+        } else {
+          L.push({ type: 'possession_change', payload: { to: 'away', reason: 'after_block' } });
+          next = patch.possession;
+        }
         narrative = pickLine('shot_blocked', { min: ctx.minute, from: ctx.onBall?.name ?? 'Atacante' }, ctx.minute)
           ?? T.shotBlock({ min: ctx.minute, shooter: ctx.onBall?.name ?? 'Atacante' });
-        next = patch.possession;
         ball = patch.ball;
         spiritMeta = {
           spiritPhase: patch.spiritPhase,
           spiritBuildupGkTicksRemaining: patch.spiritBuildupGkTicksRemaining,
+          pendingCornerForSide: isCorner ? 'home' : null,
         };
       } else if (logical === 'save') {
         // Crítico do goleiro: defende, falha (gol), espalma pra frente ou pra escanteio.
@@ -712,8 +752,38 @@ export function gameSpiritTick(
         type: 'ball_state',
         payload: { ...ball, reason: 'progress_carry' },
       });
+
+      // Eventos discretos de drible (estatísticas pós-jogo) — ~30% dos progress viram dribble_attempt.
+      const carrierDrible = ctx.onBall?.attributes?.drible ?? 50;
+      const dribbleUrge = 0.22 + Math.max(0, (carrierDrible - 55) / 200); // 22% base, até ~45% em Driblador top
+      if (Math.random() < dribbleUrge && ctx.onBall?.playerId) {
+        const succ = Math.random() < 0.38 + (carrierDrible - 50) / 200; // drible>=90 → ~58% sucesso
+        L.push({
+          type: 'dribble_attempt',
+          payload: {
+            minute: ctx.minute,
+            carrierId: ctx.onBall.playerId,
+            carrierSide: 'home',
+            defenderId: null,
+            success: succ,
+          },
+        });
+      }
+
       if (Math.random() < lossChance) {
         next = 'away';
+        // 40% das perdas são interceptação (vs. simples perda de bola).
+        if (Math.random() < 0.4) {
+          L.push({
+            type: 'interception',
+            payload: {
+              minute: ctx.minute,
+              defenderId: `away:${awayShort}`,
+              defenderSide: 'away',
+              zone: ctx.ballZone === 'att' ? 'def' : ctx.ballZone === 'mid' ? 'mid' : 'att',
+            },
+          });
+        }
         L.push({ type: 'possession_change', payload: { to: 'away', reason: 'progress_loss' } });
         ball = { x: 40 + Math.random() * 15, y: 25 + Math.random() * 50 };
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'turnover_after_carry' } });
@@ -751,6 +821,9 @@ export function gameSpiritTick(
       const tackleOut = rollTackleOutcome(Math.random(), {
         tacticalMentality: ctx.tacticalMentality,
         fairPlay01,
+        defenderMarcacao: tackler?.attributes?.marcacao,
+        defenderVelocidade: tackler?.attributes?.velocidade,
+        attackerDrible: ctx.onBall?.attributes?.drible,
       });
 
       const victimName = ctx.onBall?.name ?? awayShort;
@@ -913,6 +986,18 @@ export function gameSpiritTick(
     }
   }
 
+  // Atualiza momentum a partir dos eventos deste tick e expõe no meta.
+  const nextMomentum = updateMomentumFromTick(ctx.momentum, [...L.events]);
+  const spiritMetaWithMomentum: SpiritSnapshotMeta = {
+    ...(spiritMeta ?? {}),
+    momentum: nextMomentum,
+    // Se este tick consumiu o corner (cabeçada executada), limpa o hint.
+    // Senão preserva o que spiritMeta já tiver definido (ex.: novo corner emitido agora).
+    ...(consumedCorner && spiritMeta?.pendingCornerForSide === undefined
+      ? { pendingCornerForSide: null }
+      : {}),
+  };
+
   return {
     narrative,
     action,
@@ -924,6 +1009,6 @@ export function gameSpiritTick(
     threatBar01,
     statDeltas: homeStat,
     causalEvents: [...L.events],
-    spiritMeta,
+    spiritMeta: spiritMetaWithMomentum,
   };
 }

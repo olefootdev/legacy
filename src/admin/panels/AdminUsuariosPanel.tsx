@@ -17,7 +17,13 @@ import {
   useAdminPlatformDispatch,
   useAdminPlatformStore,
 } from '@/admin/platformStore';
-import { adminSetUserStatus, adminListProfiles, type AdminProfileRow } from '@/supabase/adminCore';
+import {
+  adminSetUserStatus,
+  adminListProfiles,
+  adminListTopReferrers,
+  type AdminProfileRow,
+  type AdminTopReferrerRow,
+} from '@/supabase/adminCore';
 
 function newUserTemplate(): AdminPlatformUser {
   const now = new Date().toISOString();
@@ -68,14 +74,20 @@ export function AdminUsuariosPanel() {
   const [draft, setDraft] = useState<Partial<AdminPlatformUser>>({});
   const [syncing, setSyncing] = useState(false);
   const [syncErr, setSyncErr] = useState<string | null>(null);
+  const [referralCodes, setReferralCodes] = useState<Record<string, string>>({});
+  const [topReferrers, setTopReferrers] = useState<AdminTopReferrerRow[]>([]);
 
   const refreshFromSupabase = async () => {
     setSyncing(true);
     setSyncErr(null);
     try {
-      const rows = await adminListProfiles();
+      const [rows, top] = await Promise.all([adminListProfiles(), adminListTopReferrers(20)]);
       const users = rows.map(profileToPlatformUser);
+      const codes: Record<string, string> = {};
+      for (const r of rows) if (r.referred_by_code) codes[r.id] = r.referred_by_code;
       dispatch({ type: 'REPLACE_USERS', users });
+      setReferralCodes(codes);
+      setTopReferrers(top);
     } catch (e) {
       setSyncErr(e instanceof Error ? e.message : 'Falha ao sincronizar.');
     } finally {
@@ -177,11 +189,57 @@ export function AdminUsuariosPanel() {
         </div>
       </div>
 
+      {topReferrers.length > 0 ? (
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-display text-xs font-black uppercase tracking-wider text-white/80">
+              Top Indicações (por código)
+            </h4>
+            <span className="text-[10px] text-white/40">{topReferrers.length} códigos ativos</span>
+          </div>
+          <div className="ole-scroll-x">
+            <table className="w-full min-w-[520px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/40">
+                  <th className="px-3 py-2">Código</th>
+                  <th className="px-3 py-2">Cadastros</th>
+                  <th className="px-3 py-2">Primeiro</th>
+                  <th className="px-3 py-2">Último</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topReferrers.map((r) => (
+                  <tr key={r.referred_by_code} className="border-b border-white/5">
+                    <td className="px-3 py-2 font-mono font-bold text-neon-yellow">
+                      {r.referred_by_code}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-white">{r.referred_count}</td>
+                    <td className="px-3 py-2 text-[10px] text-white/50">
+                      {new Date(r.first_referral_at).toLocaleString('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </td>
+                    <td className="px-3 py-2 text-[10px] text-white/50">
+                      {new Date(r.last_referral_at).toLocaleString('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
       <div className="ole-scroll-x rounded-xl border border-white/10">
-        <table className="w-full min-w-[960px] text-left text-xs">
+        <table className="w-full min-w-[1040px] text-left text-xs">
           <thead>
             <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/40">
               <th className="px-3 py-2">Utilizador / Clube</th>
+              <th className="px-3 py-2">Indicado por</th>
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">BRO</th>
               <th className="px-3 py-2">SPOT</th>
@@ -205,6 +263,15 @@ export function AdminUsuariosPanel() {
                       {u.email ? <div className="text-[10px] text-white/35">{u.email}</div> : null}
                     </div>
                   </div>
+                </td>
+                <td className="px-3 py-2">
+                  {referralCodes[u.id] ? (
+                    <span className="rounded bg-neon-yellow/10 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow">
+                      {referralCodes[u.id]}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-white/25">—</span>
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <span
