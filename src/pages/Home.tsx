@@ -29,8 +29,20 @@ import {
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
-import { MatchdayHero } from '@/components/matchday/MatchdayHero';
+import { MatchdayHero, MOCK_MATCHDAY } from '@/components/matchday/MatchdayHero';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+
+/**
+ * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
+ * sem histórico), mostra o MOCK editorial pra reconstrução visual ficar
+ * "viva". Em produção, o fallback ESTREIA limpo é exibido.
+ */
+const HOME_HERO_DEV_MOCK = import.meta.env.DEV;
+/** Brasões CDN (Wikimedia) usados só em DEV pra preview do hero/banner. */
+const DEV_HOME_CREST =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Flamengo_braz_logo.svg/240px-Flamengo_braz_logo.svg.png';
+const DEV_AWAY_CREST =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Palmeiras_logo.svg/240px-Palmeiras_logo.svg.png';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
@@ -591,6 +603,27 @@ export function Home() {
           // Sem histórico → estado "antes da estreia" (coerente com o tema
           // do hero: ÚLTIMA partida; aqui não houve nenhuma ainda).
           if (!lastMatch) {
+            // DEV: mostra mock editorial (Flamengo 2-1 Palmeiras + Gabriel Barbosa)
+            // pra reconstrução visual ficar viva mesmo sem dados reais.
+            if (HOME_HERO_DEV_MOCK) {
+              return (
+                <MatchdayHero
+                  data={{
+                    ...MOCK_MATCHDAY,
+                    statusVariant: 'preview',
+                    statusPrimary: 'Final',
+                    statusSecondary: 'Vitória',
+                    home: { ...MOCK_MATCHDAY.home, crestUrl: DEV_HOME_CREST },
+                    away: { ...MOCK_MATCHDAY.away, crestUrl: DEV_AWAY_CREST },
+                    actions: [
+                      { label: 'Ver elenco', href: '/team', variant: 'primary' },
+                    ],
+                    topLeft: { label: 'Olefoot' },
+                    scrollCueTargetId: 'home-below-fold',
+                  }}
+                />
+              );
+            }
             return (
               <MatchdayHero
                 data={{
@@ -727,12 +760,17 @@ export function Home() {
               <span>Próxima partida · {fixture.kickoffLabel}</span>
             </div>
 
-            {/* Duelo: [crest] CASA × VISITANTE [crest] — brasões reais quando houver */}
+            {/* Duelo: [crest] CASA × VISITANTE [crest] — brasões reais quando houver
+                (em DEV, fallback nos crests Wikimedia pra preview) */}
+            {(() => {
+              const renderHomeCrest = homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null);
+              const renderAwayCrest = awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null);
+              return (
             <div className="flex items-center justify-center gap-4 sm:gap-6">
-              {homeCrestUrl ? (
+              {renderHomeCrest ? (
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-white grid place-items-center overflow-hidden shrink-0">
                   <img
-                    src={homeCrestUrl}
+                    src={renderHomeCrest}
                     alt={club.name}
                     className="w-[78%] h-[78%] object-contain"
                     referrerPolicy="no-referrer"
@@ -758,10 +796,10 @@ export function Home() {
               >
                 ×
               </span>
-              {awayCrestUrl ? (
+              {renderAwayCrest ? (
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-white grid place-items-center overflow-hidden shrink-0">
                   <img
-                    src={awayCrestUrl}
+                    src={renderAwayCrest}
                     alt={fixture.opponent.name}
                     className="w-[78%] h-[78%] object-contain"
                     referrerPolicy="no-referrer"
@@ -778,6 +816,8 @@ export function Home() {
                 </div>
               )}
             </div>
+              );
+            })()}
 
             {/* Liga + Estádio — abaixo dos ícones, centralizado */}
             <p
