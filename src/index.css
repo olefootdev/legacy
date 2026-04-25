@@ -1,14 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-neon-yellow: #E4FF00;
+  /* Cores — alinhadas ao olefoot.com */
+  --color-neon-yellow: #FDE100;
+  --color-neon-yellow-dark: #C9B000;
   --color-neon-green: #00FF66;
-  --color-deep-black: #090909;
-  --color-dark-gray: #151515;
-  --color-panel: #111111;
-  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --color-deep-black: #0D0D0D;
+  --color-dark-gray: #1A1A1A;
+  --color-panel: #1A1A1A;
+  --color-card: #242424;
+  --color-card-hi: #2E2E2E;
+  --color-text-soft: #A0A0A0;
+  --color-text-muted: #555555;
+
+  /* Tipografia — alinhada ao site */
+  --font-sans: "Inter", "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Agency FB", "AgencyFB", Impact, "Oswald", ui-sans-serif, sans-serif;
+  --font-serif-hero: "Moret", Georgia, "Times New Roman", serif;
+  --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", ui-sans-serif, sans-serif;
 }
 
 @layer utilities {
@@ -54,6 +64,53 @@
   }
   .momentum-bar-goal-flash {
     animation: momentum-goal-flash 2s ease-in-out;
+  }
+
+  /* === Olefoot identity utilities (Design Brief Fase 1) === */
+  .ole-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 border border-neon-yellow/60 text-neon-yellow uppercase tracking-[0.18em] text-[11px] font-medium;
+    font-family: var(--font-ui);
+  }
+  .ole-tag-solid {
+    @apply bg-neon-yellow text-black border-transparent;
+  }
+
+  .ole-eyebrow {
+    @apply flex items-center justify-center gap-3 text-neon-yellow uppercase tracking-[0.35em] text-[10px] font-medium;
+    font-family: var(--font-ui);
+  }
+  .ole-eyebrow::before,
+  .ole-eyebrow::after {
+    content: "";
+    @apply h-px w-8 bg-neon-yellow/40;
+  }
+
+  .ole-headline {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+  .ole-headline-italic {
+    font-family: var(--font-serif-hero);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+  }
+
+  .ole-card {
+    @apply bg-[var(--color-card)] border border-white/8 rounded-md;
+  }
+  .ole-card-accent {
+    @apply bg-[var(--color-card)] border border-white/8 rounded-md border-l-4 border-l-neon-yellow;
+  }
+  .ole-card-hover {
+    @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)];
+  }
+
+  .btn-on-yellow {
+    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-deep-black transition-all;
   }
 }
 
@@ -146,6 +203,6 @@ html[data-graphic-quality='low'] .sports-panel::after {
 
 /* Pulso de escala/brilho em chutes — sensação de pancada. */
 @keyframes olefoot-ball-pulse {
-  from { filter: drop-shadow(0 0 10px rgba(255,235,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
-  to   { filter: drop-shadow(0 0 18px rgba(255,235,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
+  from { filter: drop-shadow(0 0 10px rgba(253,225,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+  to   { filter: drop-shadow(0 0 18px rgba(253,225,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
 }
