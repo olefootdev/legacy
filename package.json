@@ -16,6 +16,7 @@
     "test:impact-ledger": "tsx src/match/runImpactLedgerSelfTest.ts",
     "test:spirit-machine": "tsx src/gamespirit/runSpiritStateMachineSelfTest.ts",
     "test:awareness": "tsx src/smartfield/runAwarenessSelfTest.ts",
+    "test:skill-engine": "tsx src/skills/runSkillEngineSelfTest.ts",
     "test:structural": "tsx src/simulation/runStructuralSelfTest.ts",
     "test:turnover": "tsx src/simulation/runPickPlayAfterTurnoverTest.ts",
     "test:collective-individual": "tsx src/playerDecision/runCollectiveIndividualSelfTest.ts",
