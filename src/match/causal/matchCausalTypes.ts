@@ -150,6 +150,33 @@ export type CausalMatchEvent =
         minute: number;
         side: PossessionSide;
       };
+    }
+  /**
+   * Lateral cobrado: bola saiu pela linha lateral.
+   * `awardedTo` = lado que cobra (oposto de quem tocou por último).
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'throw_in';
+      payload: {
+        minute: number;
+        awardedTo: PossessionSide;
+        zone: 'def' | 'mid' | 'att';
+      };
+    }
+  /**
+   * Tiro de meta: bola saiu pela linha de fundo defendida (atacante chutou pra fora ou rebote).
+   * `awardedTo` = goleiro do time que defende.
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'goal_kick';
+      payload: {
+        minute: number;
+        awardedTo: PossessionSide;
+      };
     };
 
 export interface CausalLogState {

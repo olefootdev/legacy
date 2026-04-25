@@ -1417,12 +1417,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             className="mx-auto w-full max-w-3xl py-0.5 sm:py-1 [perspective:min(1400px,110vw)]"
             aria-label="Campo: gol à esquerda é da casa, à direita é do visitante; a equipa da casa ataca para a direita e o visitante ataca para a esquerda."
           >
-            <motion.div
+            <div
               className="origin-[50%_100%] transform-gpu will-change-transform"
-              style={{ transformStyle: 'preserve-3d' }}
-              initial={{ rotateX: 0 }}
-              animate={{ rotateX: 5.5 + pitchCameraRig.rotateXAdd }}
-              transition={{ type: 'spring', stiffness: 70, damping: 18 }}
+              style={{
+                transformStyle: 'preserve-3d',
+                transform: `rotateX(${5.5 + pitchCameraRig.rotateXAdd}deg)`,
+                transition: prefersReducedMotion ? 'none' : 'transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+              }}
             >
               <div
                 className={cn(
@@ -1635,7 +1636,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                 </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
 
           {live.phase === 'playing' && quickPreStart === null ? (

@@ -212,6 +212,8 @@ export interface LiveMatchSnapshot {
   spiritMomentum?: { home: number; away: number };
   /** Escanteio pendente: próximo tick consome hint e resolve cabeçada. */
   pendingCornerForSide?: PossessionSide | null;
+  /** Falta perigosa na zona de ataque: próximo tick força cobrança direta ao gol. */
+  pendingFreeKickForSide?: PossessionSide | null;
   /** Preview de probabilidades do último tiro (transparência ao jogador). */
   lastShotPreview?: {
     side: PossessionSide;
