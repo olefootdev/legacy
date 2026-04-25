@@ -22,6 +22,8 @@ import {
   tickSkillCooldowns,
   teamSkillMultiplier,
 } from '@/skills/skillEngine';
+import { validateCoachSkill } from '@/skills/playbookV1';
+import { COACH_SKILLS_SEED } from '@/skills/seedCatalog';
 
 function makePlayer(overrides: Partial<PitchPlayerState> = {}): PitchPlayerState {
   return {
@@ -69,7 +71,7 @@ const HIGH_PRESS: AwarenessContext = {
 } as unknown as AwarenessContext;
 
 let passed = 0;
-const total = 6;
+const total = 8;
 const realRandom = Math.random;
 
 // Garante que cada teste arranca sem cooldown residual.
@@ -193,6 +195,45 @@ function resetCooldowns() {
   console.log(
     `✓ T6 zona amplifica chance: box=${inBox.triggerChance.toFixed(3)} creation=${inCreation.triggerChance.toFixed(3)}`,
   );
+  passed++;
+}
+
+// ── 7. PlaybookV1 validator: rejeita bias fora do clamp ±0.30 ──────
+{
+  const bad = {
+    schema: 'playbook_v1',
+    id: 'skl_test_bad_bias',
+    name: 'Bad Bias',
+    role: 'meia',
+    tier: 'generica',
+    philosophy: 'invalid bias overflow',
+    level: 1,
+    behaviors: [
+      { id: 'bh_a', name: 'A', when: 'always', bias: { x: 0.10 } },
+      { id: 'bh_b', name: 'B', when: 'always', bias: { y: 0.55 } }, // > 0.30
+    ],
+    unlock: { minCareerTier: 1 },
+  };
+  const r = validateCoachSkill(bad);
+  assert.equal(r.ok, false, 'bias 0.55 deveria falhar (clamp ±0.30)');
+  const issue = r.issues.find((i) => i.path.includes('bias.y'));
+  assert.ok(issue, `expected issue em behaviors[1].bias.y; got ${JSON.stringify(r.issues)}`);
+  console.log(`✓ T7 validator pega bias > 0.30 (path=${issue!.path})`);
+  passed++;
+}
+
+// ── 8. Seed catálogo: todos os 6 passam validação ─────────────────
+{
+  const failures: string[] = [];
+  for (const skill of COACH_SKILLS_SEED) {
+    const r = validateCoachSkill(skill);
+    if (!r.ok) {
+      failures.push(`${skill.id}: ${r.issues.map((i) => `${i.path} ${i.message}`).join('; ')}`);
+    }
+  }
+  assert.equal(failures.length, 0, `seed catalog falhou:\n${failures.join('\n')}`);
+  assert.equal(COACH_SKILLS_SEED.length, 6, `esperado 6 skills no seed, got ${COACH_SKILLS_SEED.length}`);
+  console.log(`✓ T8 seed catálogo: ${COACH_SKILLS_SEED.length}/6 skills válidas`);
   passed++;
 }
 
