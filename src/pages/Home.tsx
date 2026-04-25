@@ -97,22 +97,6 @@ function pickHighlightFromRoster(players: Record<string, PlayerEntity>): PlayerE
   return best;
 }
 
-function pickHighlightFromEntities(players: PlayerEntity[]): PlayerEntity | null {
-  if (!players.length) return null;
-  const outfield = players.filter((p) => p.pos.toUpperCase() !== 'GOL');
-  const candidates = outfield.length ? outfield : players;
-  let best = candidates[0]!;
-  let bestOvr = best.mintOverall ?? overallFromAttributes(best.attrs);
-  for (const p of candidates) {
-    const o = p.mintOverall ?? overallFromAttributes(p.attrs);
-    if (o > bestOvr) {
-      best = p;
-      bestOvr = o;
-    }
-  }
-  return best;
-}
-
 function starsForOvr(ovr: number): number {
   return Math.max(1, Math.min(5, Math.round(ovr / 20)));
 }
@@ -181,34 +165,9 @@ export function Home() {
     };
   }, [homeHighlightBest]);
 
-  const awayHighlight = useMemo(() => {
-    const opp = fixture.opponent;
-    const away = opp.genesisAwayPlayers;
-    if (away?.length) {
-      const best = pickHighlightFromEntities(away);
-      if (best) {
-        const ovr = opp.highlightPlayer?.ovr ?? best.mintOverall ?? overallFromAttributes(best.attrs);
-        return {
-          name: best.name,
-          ovr,
-          imageSrc: playerPortraitSrc({ name: best.name, portraitUrl: best.portraitUrl }, 400, 520),
-        };
-      }
-    }
-    const h = opp.highlightPlayer;
-    if (h) {
-      return {
-        name: h.name,
-        ovr: h.ovr,
-        imageSrc: `https://picsum.photos/seed/${encodeURIComponent(`${opp.id}-star`)}/400/520`,
-      };
-    }
-    return {
-      name: 'DESTAQUE',
-      ovr: opp.strength,
-      imageSrc: `https://picsum.photos/seed/${encodeURIComponent(opp.id)}/400/520`,
-    };
-  }, [fixture.opponent]);
+  // awayHighlight removido — destaque agora é único (homeHighlight) no padrão
+  // /matchday/preview com número OVR gigante decorativo. Se voltar a precisar
+  // do duo casa × visitante, recuperar via git history.
   const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
   const supportLabel = roundedSupport.toLocaleString('pt-BR', {
     minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
@@ -856,112 +815,141 @@ export function Home() {
           </div>
         </div>
 
-        {/* CONTINUAÇÃO DARK — destaque casa × visitante + ações */}
-        <div className="relative z-10 px-5 py-7 sm:px-8 sm:py-9 md:px-10 md:py-10 flex flex-col gap-7 lg:gap-9 bg-deep-black border-t border-white/8">
-          {/* Duelo: destaque casa × destaque visitante — fotos centralizadas (largura explícita: evita colapso com flex + items-center) */}
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10 w-full">
-            {/* Casa */}
-            <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
-              <div className="ole-player-card ole-card-hover relative w-full aspect-[3/4]">
-                <img
-                  src={homeHighlight.imageSrc}
-                  alt=""
-                  className="ole-player-card__photo absolute inset-0 w-full h-full object-top"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="ole-player-card__photo-overlay" />
-                <div className="absolute right-2.5 top-2 z-20 flex flex-col items-end leading-[0.85]">
-                  <span className="ole-player-card__overall text-[2.75rem] sm:text-[3rem]">
-                    {homeHighlight.ovr}
-                  </span>
-                  <span className="ole-player-card__position mt-0.5">Destaque</span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-10 flex flex-col items-center text-center gap-1">
-                  <p className="ole-player-card__name text-xs sm:text-sm truncate max-w-full w-full leading-tight">
-                    {homeHighlight.name}
+        {/* STATS STRIP — 5 cards alternados (forma + apoio + mood) */}
+        {(() => {
+          const last5 = results.slice(0, 5);
+          const wins = last5.filter((r) => r.result === 'win').length;
+          const draws = last5.filter((r) => r.result === 'draw').length;
+          const losses = last5.filter((r) => r.result === 'loss').length;
+          const formStr =
+            last5.length > 0
+              ? last5
+                  .map((r) =>
+                    r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D',
+                  )
+                  .join(' ')
+              : '—';
+          const supportPct = `${Math.round(roundedSupport)}%`;
+          const stats = [
+            { label: 'Vitórias', value: String(wins), onYellow: true },
+            { label: 'Empates', value: String(draws), onYellow: true },
+            { label: 'Derrotas', value: String(losses), onYellow: false },
+            { label: 'Apoio', value: supportPct, onYellow: false },
+            { label: 'Forma', value: formStr, onYellow: false },
+          ];
+          return (
+            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 px-5 sm:px-8 md:px-10 mt-[-28px] sm:mt-[-36px]">
+              {stats.map((s) => (
+                <article
+                  key={s.label}
+                  className={
+                    s.onYellow
+                      ? 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
+                      : 'bg-deep-black border border-white/8 px-3 py-3 sm:px-4 sm:py-4 text-center shadow-[0_8px_24px_rgba(0,0,0,0.45)]'
+                  }
+                >
+                  <p
+                    className="text-neon-yellow tabular-nums leading-none truncate"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 900,
+                      fontSize: 'clamp(22px, 4vw, 36px)',
+                      letterSpacing: s.label === 'Forma' ? '0.05em' : '-0.01em',
+                    }}
+                  >
+                    {s.value}
                   </p>
-                  <div className="flex gap-0.5 justify-center">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          'w-3 h-3 sm:w-3.5 sm:h-3.5',
-                          i < starsForOvr(homeHighlight.ovr) ? 'text-neon-yellow fill-neon-yellow' : 'text-white/15',
-                        )}
-                      />
-                    ))}
-                  </div>
-                </div>
+                  <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
+                    {s.label}
+                  </p>
+                </article>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* DESTAQUE DA PARTIDA + número gigante decorativo + ações */}
+        <div className="relative z-10 bg-deep-black px-5 py-9 sm:px-8 sm:py-12 md:px-10 md:py-14">
+          {/* Diagonal accent decorativo (assinatura BVB) */}
+          <div
+            className="diagonal-accent"
+            style={{ top: '-40px', right: '-60px', width: '300px', height: '300px' }}
+            aria-hidden
+          />
+
+          <div className="relative grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-6 items-end mb-8">
+            {/* Coluna esquerda: eyebrow + nome + frase */}
+            <div>
+              <div className="ole-eyebrow !justify-start mb-3">
+                <span>★ Destaque da partida</span>
               </div>
+              <h3
+                className="ole-headline-italic text-white leading-[0.9]"
+                style={{ fontSize: 'clamp(36px, 7vw, 80px)' }}
+              >
+                {homeHighlight.name.split(/\s+/)[0]}
+                <br />
+                {homeHighlight.name.split(/\s+/).slice(1).join(' ')}
+              </h3>
+              <blockquote
+                className="ole-headline-italic mt-4 text-white/65 max-w-md leading-snug"
+                style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+              >
+                “OVR {homeHighlight.ovr} · {starsForOvr(homeHighlight.ovr)} estrelas. A torcida espera o gol nessa partida.”
+              </blockquote>
             </div>
 
-            {/* Visitante */}
-            <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
-              <div className="ole-player-card ole-card-hover relative w-full aspect-[3/4]">
-                <img
-                  src={awayHighlight.imageSrc}
-                  alt=""
-                  className="ole-player-card__photo absolute inset-0 w-full h-full object-top"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="ole-player-card__photo-overlay" />
-                <div className="absolute right-2.5 top-2 z-20 flex flex-col items-end leading-[0.85]">
-                  <span className="ole-player-card__overall text-[2.75rem] sm:text-[3rem]">
-                    {awayHighlight.ovr}
-                  </span>
-                  <span className="ole-player-card__position mt-0.5">Destaque</span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-10 flex flex-col items-center text-center gap-1">
-                  <p className="ole-player-card__name text-xs sm:text-sm truncate max-w-full w-full leading-tight">
-                    {awayHighlight.name}
-                  </p>
-                  <div className="flex gap-0.5 justify-center">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          'w-3 h-3 sm:w-3.5 sm:h-3.5',
-                          i < starsForOvr(awayHighlight.ovr) ? 'text-neon-yellow fill-neon-yellow' : 'text-white/15',
-                        )}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {/* Coluna direita: número gigante (OVR) decorativo */}
+            <div
+              className="relative h-[140px] sm:h-[200px] flex items-center justify-center"
+              aria-hidden
+            >
+              <span
+                className="leading-none tabular-nums text-neon-yellow/15 select-none"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: 'clamp(160px, 24vw, 280px)',
+                  letterSpacing: '-0.04em',
+                }}
+              >
+                {String(homeHighlight.ovr).padStart(2, '0')}
+              </span>
             </div>
           </div>
 
-          {/* Ações */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pt-2 border-t border-white/10">
-            <div className="flex flex-col gap-3 w-full lg:max-w-md">
-              <Link to="/match/quick" className="w-full">
-                <button type="button" className="btn-primary w-full text-lg sm:text-xl py-3.5 sm:py-4">
-                  <span className="btn-primary-inner">
-                    <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-black shrink-0" />
-                    Partida rápida
-                  </span>
-                </button>
-              </Link>
-              <p className="text-center lg:text-left text-[10px] font-bold uppercase tracking-wider text-neon-yellow/80 -mt-1">
-                Conta para a liga e histórico oficial
-              </p>
-              <Link to="/match/live" className="w-full">
+          {/* Action buttons row + scroll cue */}
+          <div className="relative flex flex-col items-stretch gap-3">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+              <Link to="/match/quick" className="flex-1 min-w-[140px]">
                 <button
                   type="button"
-                  className="w-full rounded-sm border border-white/15 bg-white/[0.06] py-3 sm:py-3.5 text-sm sm:text-base font-display font-bold uppercase tracking-wider text-white hover:border-neon-yellow/35 hover:bg-white/[0.09] transition-colors"
+                  className="w-full bg-neon-yellow text-black px-5 py-3 font-display font-black uppercase tracking-[0.18em] text-[12px] sm:text-[13px] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all rounded-sm shadow-[0_8px_24px_rgba(253,225,0,0.18)] flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4 fill-black" />
+                  Partida rápida
+                </button>
+              </Link>
+              <Link to="/match/live" className="flex-1 min-w-[140px]">
+                <button
+                  type="button"
+                  className="w-full bg-black border border-white/15 text-white px-5 py-3 font-display font-bold uppercase tracking-[0.18em] text-[12px] sm:text-[13px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm"
                 >
                   Partida ao vivo
                 </button>
               </Link>
-              <p className="text-center lg:text-left text-[10px] text-gray-500 leading-snug -mt-1 max-w-md">
-             
-              </p>
+              <Link to="/team" className="flex-1 min-w-[140px]">
+                <button
+                  type="button"
+                  className="w-full bg-black border border-white/15 text-white px-5 py-3 font-display font-bold uppercase tracking-[0.18em] text-[12px] sm:text-[13px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm"
+                >
+                  Táticas
+                </button>
+              </Link>
             </div>
-            <Link to="/team" className="w-full lg:w-auto lg:min-w-[200px]">
-              <button type="button" className="btn-secondary w-full py-3">
-                <span className="btn-secondary-inner">TÁTICAS</span>
-              </button>
-            </Link>
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.18em] text-neon-yellow/80">
+              Partida rápida conta para a liga e histórico oficial
+            </p>
           </div>
         </div>
       </motion.div>
