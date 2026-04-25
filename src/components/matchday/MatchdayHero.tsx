@@ -29,6 +29,8 @@ export interface MatchdayHeroData {
     form?: { v: number; e: number; d: number };
     /** Subtítulo opcional embaixo do nome (ex: venue). Default = form pills. */
     sublabel?: string;
+    /** URL do brasão real (time do coração). Se ausente, mostra crest sintético com `short`. */
+    crestUrl?: string | null;
   };
   away: {
     short: string;
@@ -36,6 +38,7 @@ export interface MatchdayHeroData {
     score?: number;
     form?: { v: number; e: number; d: number };
     sublabel?: string;
+    crestUrl?: string | null;
   };
   stats: { label: string; value: string }[];
   highlight: {
@@ -198,7 +201,12 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
         {/* Scoreboard */}
         <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-3 sm:gap-5 mb-10 sm:mb-14">
           {/* Casa */}
-          <CrestCircle short={data.home.short} variant="onYellow" />
+          <CrestCircle
+            short={data.home.short}
+            variant="onYellow"
+            crestUrl={data.home.crestUrl}
+            alt={data.home.name}
+          />
           <div className="min-w-0">
             <h2
               className="ole-headline text-black leading-[0.85] uppercase truncate"
@@ -280,15 +288,29 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
               </p>
             ) : null}
           </div>
-          <div
-            className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center ${rightCrestRing} ${rightCrestBg}`}
-          >
-            <span
-              className={`font-display font-black uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+          {data.away.crestUrl?.trim() ? (
+            <div
+              className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] ${rightCrestRing} bg-white grid place-items-center overflow-hidden shrink-0`}
             >
-              {data.away.short}
-            </span>
-          </div>
+              <img
+                src={data.away.crestUrl}
+                alt={data.away.name}
+                className="w-[78%] h-[78%] object-contain"
+                referrerPolicy="no-referrer"
+                draggable={false}
+              />
+            </div>
+          ) : (
+            <div
+              className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center shrink-0 ${rightCrestRing} ${rightCrestBg}`}
+            >
+              <span
+                className={`font-display font-black uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+              >
+                {data.away.short}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Stats strip */}
@@ -324,7 +346,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
               style={{ fontFamily: 'var(--font-ui)' }}
             >
               <span aria-hidden className="h-px w-8 bg-black/40" />
-              <span>★ MVP </span>
+              <span>★ DESTAQUE DA PARTIDA ★ </span>
             </div>
             <h3
               className="ole-headline text-black leading-[0.9] uppercase"
@@ -430,16 +452,37 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
 function CrestCircle({
   short,
   variant,
+  crestUrl,
+  alt,
 }: {
   short: string;
   variant: 'onYellow' | 'onDark';
+  crestUrl?: string | null;
+  alt?: string;
 }) {
   const ring = variant === 'onYellow' ? 'border-black' : 'border-white';
   const text = variant === 'onYellow' ? 'text-black' : 'text-white';
   const bg = variant === 'onYellow' ? 'bg-neon-yellow' : 'bg-deep-black';
+  const baseSize = 'w-12 h-12 sm:w-16 sm:h-16';
+  if (crestUrl?.trim()) {
+    // Brasão real — fundo branco pra logos coloridos respirarem, anel mantido
+    return (
+      <div
+        className={`${baseSize} rounded-full border-[2.5px] ${ring} bg-white grid place-items-center overflow-hidden shrink-0`}
+      >
+        <img
+          src={crestUrl}
+          alt={alt ?? short}
+          className="w-[78%] h-[78%] object-contain"
+          referrerPolicy="no-referrer"
+          draggable={false}
+        />
+      </div>
+    );
+  }
   return (
     <div
-      className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center ${ring} ${bg}`}
+      className={`${baseSize} rounded-full border-[2.5px] grid place-items-center shrink-0 ${ring} ${bg}`}
     >
       <span
         className={`font-display font-black uppercase ${text} text-[11px] sm:text-[14px] tracking-[0.06em]`}

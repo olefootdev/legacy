@@ -30,6 +30,7 @@ import {
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
@@ -141,6 +142,10 @@ export function Home() {
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+  const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
+  const awayCrestUrl = useGameStore(
+    (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
+  );
 
   const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
   const homeHighlight = useMemo(() => {
@@ -599,6 +604,7 @@ export function Home() {
                     name: club.name,
                     score: 0,
                     sublabel: 'Aguardando 1ª partida',
+                    crestUrl: homeCrestUrl,
                   },
                   away: {
                     short: '—',
@@ -673,11 +679,13 @@ export function Home() {
                   name: lastMatch.home || club.name,
                   score: lastMatch.scoreHome,
                   form: { v: wins, e: draws, d: losses },
+                  crestUrl: homeCrestUrl,
                 },
                 away: {
                   short: awayShort,
                   name: lastMatch.away,
                   score: lastMatch.scoreAway,
+                  crestUrl: awayCrestUrl,
                 },
                 stats: [
                   { label: 'Vitórias', value: String(wins) },
@@ -719,13 +727,25 @@ export function Home() {
               <span>Próxima partida · {fixture.kickoffLabel}</span>
             </div>
 
-            {/* Duelo: [crest] CASA × VISITANTE [crest] — só iniciais */}
+            {/* Duelo: [crest] CASA × VISITANTE [crest] — brasões reais quando houver */}
             <div className="flex items-center justify-center gap-4 sm:gap-6">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
-                <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
-                  {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
-                </span>
-              </div>
+              {homeCrestUrl ? (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-white grid place-items-center overflow-hidden shrink-0">
+                  <img
+                    src={homeCrestUrl}
+                    alt={club.name}
+                    className="w-[78%] h-[78%] object-contain"
+                    referrerPolicy="no-referrer"
+                    draggable={false}
+                  />
+                </div>
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
+                    {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
+                  </span>
+                </div>
+              )}
               <span
                 className="text-neon-yellow/85 leading-none select-none"
                 style={{
@@ -738,13 +758,25 @@ export function Home() {
               >
                 ×
               </span>
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
-                <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
-                  {(fixture.opponent.shortName ?? fixture.opponent.name)
-                    .slice(0, 3)
-                    .toUpperCase()}
-                </span>
-              </div>
+              {awayCrestUrl ? (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-white grid place-items-center overflow-hidden shrink-0">
+                  <img
+                    src={awayCrestUrl}
+                    alt={fixture.opponent.name}
+                    className="w-[78%] h-[78%] object-contain"
+                    referrerPolicy="no-referrer"
+                    draggable={false}
+                  />
+                </div>
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
+                    {(fixture.opponent.shortName ?? fixture.opponent.name)
+                      .slice(0, 3)
+                      .toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Liga + Estádio — abaixo dos ícones, centralizado */}
@@ -966,20 +998,67 @@ export function Home() {
           </div>
         </motion.div>
 
-        {/* Create Game */}
+        {/* Amistoso — card amarelo destacado, AMISTOSO em Moret italic */}
         <motion.button
           type="button"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           onClick={() => setAmistosoOpen(true)}
-          className="sports-panel p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:border-neon-yellow transition-colors group w-full"
+          className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 rounded-sm p-6 flex flex-col justify-center items-center text-center cursor-pointer w-full hover:scale-[1.01] active:scale-[0.99] transition-transform"
+          style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
         >
-          <div className="w-16 h-16 bg-dark-gray border border-white/10 flex items-center justify-center mb-4 -skew-x-6 group-hover:bg-neon-yellow transition-colors">
-            <Zap className="w-8 h-8 text-white group-hover:text-black skew-x-6 transition-colors" />
+          {/* Eyebrow preto sobre amarelo */}
+          <div
+            className="relative z-10 inline-flex items-center gap-3 text-black/85 mb-3"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <span aria-hidden className="h-px w-8 bg-black/60" />
+            <span className="uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.22em' }}>
+              Desafie rivais
+            </span>
+            <span aria-hidden className="h-px w-8 bg-black/60" />
           </div>
-          <h3 className="font-display font-bold text-2xl uppercase tracking-wider">Amistoso</h3>
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">Desafie Rivais</p>
+
+          {/* Título: AMISTOSO em Moret italic preto */}
+          <h3
+            className="relative z-10 italic text-black leading-none"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Amistoso
+          </h3>
+
+          {/* Raio destaque — abaixo do título, pulsa pra dar dinâmica */}
+          <motion.div
+            className="relative z-10 mt-5 grid place-items-center"
+            initial={{ scale: 1, rotate: -4 }}
+            animate={{ scale: [1, 1.08, 1], rotate: [-4, 2, -4] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+            aria-hidden
+          >
+            <Zap
+              className="h-12 w-12 sm:h-14 sm:w-14 fill-black text-black"
+              strokeWidth={0}
+            />
+          </motion.div>
+
+          {/* Mini-CTA — afirmação do clique (sem raio, evita repetição) */}
+          <p
+            className="relative z-10 mt-4 text-black/75 uppercase"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.22em',
+            }}
+          >
+            Convidar online ou IA
+          </p>
         </motion.button>
       </div>
 
