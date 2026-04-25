@@ -250,20 +250,19 @@ const Test2dHomePlayerToken = memo(function Test2dHomePlayerToken({
 }: HomePlayerTokenProps) {
   const left = pitchPlanePercent(p.x) + nudge.dx;
   const top = pitchPlanePercent(p.y) + nudge.dy;
+  // P1: animate transform only (composite-only, no layout/paint).
   const motionCss =
     reducedMotion || TOKEN_MOVE_MS <= 0
       ? undefined
-      : (`left ${TOKEN_MOVE_MS}ms ease-out, top ${TOKEN_MOVE_MS}ms ease-out` as const);
+      : (`transform ${TOKEN_MOVE_MS}ms ease-out` as const);
   return (
     <div
-      className="absolute"
+      className="absolute left-0 top-0"
       style={{
-        left: `${left}%`,
-        top: `${top}%`,
         zIndex: onBall ? 4 : 3,
-        transform: 'translate3d(-50%, -50%, 0)',
+        transform: `translate3d(${left}cqw, ${top}cqh, 0) translate(-50%, -50%)`,
         transition: motionCss,
-        willChange: reducedMotion ? undefined : ('left, top' as const),
+        willChange: reducedMotion ? undefined : ('transform' as const),
         backfaceVisibility: 'hidden',
         cursor: onSelect ? 'pointer' : undefined,
       }}
@@ -369,20 +368,19 @@ const Test2dAwayPlayerToken = memo(function Test2dAwayPlayerToken({
 }: AwayPlayerTokenProps) {
   const left = pitchPlanePercent(p.x) + nudge.dx;
   const top = pitchPlanePercent(p.y) + nudge.dy;
+  // P1: animate transform only (composite-only, no layout/paint).
   const motionCss =
     reducedMotion || TOKEN_MOVE_MS <= 0
       ? undefined
-      : (`left ${TOKEN_MOVE_MS}ms ease-out, top ${TOKEN_MOVE_MS}ms ease-out` as const);
+      : (`transform ${TOKEN_MOVE_MS}ms ease-out` as const);
   return (
     <div
-      className="absolute"
+      className="absolute left-0 top-0"
       style={{
-        left: `${left}%`,
-        top: `${top}%`,
         zIndex: onBall ? 4 : 2,
-        transform: 'translate3d(-50%, -50%, 0)',
+        transform: `translate3d(${left}cqw, ${top}cqh, 0) translate(-50%, -50%)`,
         transition: motionCss,
-        willChange: reducedMotion ? undefined : ('left, top' as const),
+        willChange: reducedMotion ? undefined : ('transform' as const),
         backfaceVisibility: 'hidden',
       }}
     >
@@ -474,8 +472,9 @@ const Test2dBallToken = memo(function Test2dBallToken({
         : trajectoryKind === 'carry'
           ? 100
           : BALL_BASE_MOVE_MS;
+  // P1: animate transform only.
   const motionPos =
-    reducedMotion || speed <= 0 ? undefined : (`left ${speed}ms linear, top ${speed}ms linear` as const);
+    reducedMotion || speed <= 0 ? undefined : (`transform ${speed}ms linear` as const);
   const motionInner =
     reducedMotion || speed <= 0 ? undefined : (`transform ${speed}ms linear` as const);
   const h = Math.max(0, heightM ?? 0);
@@ -494,13 +493,11 @@ const Test2dBallToken = memo(function Test2dBallToken({
 
   return (
     <div
-      className="pointer-events-none absolute z-[4]"
+      className="pointer-events-none absolute left-0 top-0 z-[4]"
       style={{
-        left: `${left}%`,
-        top: `${top}%`,
-        transform: 'translate3d(-50%, -50%, 0)',
+        transform: `translate3d(${left}cqw, ${top}cqh, 0) translate(-50%, -50%)`,
         transition: motionPos,
-        willChange: reducedMotion ? undefined : ('left, top' as const),
+        willChange: reducedMotion ? undefined : ('transform' as const),
         backfaceVisibility: 'hidden',
       }}
       aria-hidden
@@ -1497,7 +1494,15 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                         ballPercent={ballPos}
                       />
                     ) : null}
-                    <div className="field-tokens-layer" style={{ contain: 'layout' }}>
+                    <div
+                      className="field-tokens-layer"
+                      style={{
+                        contain: 'layout',
+                        // P1: enable container-query units (cqw/cqh) so tokens
+                        // can use transform-only positioning relative to this layer.
+                        containerType: 'size' as const,
+                      }}
+                    >
                       {awayPitch.map((p) => {
                         const awayOnBall =
                           usesLive2dTacticalEngine && tacticalLive2dEnabled && storeOnBallId
