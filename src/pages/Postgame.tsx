@@ -30,6 +30,13 @@ function formatPct(ok: number, attempts: number): string {
   return `${Math.round((ok / attempts) * 100)}%`;
 }
 
+/** Tier de atributo (Football Manager). Aplica via data-tier no .ole-attr. */
+const attrTier = (n: number): 'elite' | 'good' | 'avg' | 'weak' =>
+  n >= 80 ? 'elite' : n >= 65 ? 'good' : n >= 50 ? 'avg' : 'weak';
+
+/** Rating 0–10 mapeado para tier (10→elite, 7→good, 5→avg, <5→weak). */
+const ratingTier = (r: number) => attrTier(r * 10);
+
 export default function Postgame() {
   const navigate = useNavigate();
   const live = useGameStore((s) => s.liveMatch);
@@ -119,6 +126,11 @@ export default function Postgame() {
   const draw = homeScore === awayScore;
   const resultLabel = homeWin ? 'VITÓRIA' : draw ? 'EMPATE' : 'DERROTA';
   const resultColor = homeWin ? 'text-neon-green' : draw ? 'text-neon-yellow' : 'text-rose-400';
+  const resultNarrative = homeWin
+    ? 'enfim.'
+    : draw
+      ? 'fica pra próxima.'
+      : 'amanhã o sol nasce de novo.';
 
   const voiceStats = (() => {
     let total = 0, accepted = 0, refused = 0;
@@ -142,25 +154,33 @@ export default function Postgame() {
         transition={{ duration: 0.4 }}
         className="space-y-6"
       >
-        {/* Resultado */}
-        <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-black/70 to-black/40 p-6 text-center">
-          <p className={`font-display text-[10px] font-black uppercase tracking-[0.35em] ${resultColor}`}>
+        {/* Header — eyebrow + result */}
+        <header className="text-center space-y-3">
+          <div className="ole-eyebrow">Pós-jogo</div>
+          <p className={`font-ui text-[11px] font-medium uppercase tracking-[0.35em] ${resultColor}`}>
             {resultLabel}
           </p>
-          <h1 className="mt-2 font-display text-4xl font-black text-white sm:text-5xl">
+        </header>
+
+        {/* Resultado — placar monumental + narrativa Moret italic */}
+        <section className="ole-card p-6 text-center bg-gradient-to-b from-panel to-deep-black">
+          <h1 className="ole-headline text-5xl sm:text-7xl">
             {clubName}{' '}
-            <span className="text-neon-yellow">{homeScore}</span>
-            <span className="mx-3 text-white/30">×</span>
-            <span className="text-neon-yellow">{awayScore}</span>{' '}
+            <span className="text-neon-yellow tabular-nums">{homeScore}</span>
+            <span className="ole-scoreboard__separator">×</span>
+            <span className="text-neon-yellow tabular-nums">{awayScore}</span>{' '}
             {live.awayShort ?? 'Visitante'}
           </h1>
-          <p className="mt-2 text-xs text-white/45">
+          <p className="ole-headline-italic mt-2 text-lg sm:text-xl text-white/55">
+            {resultNarrative}
+          </p>
+          <p className="mt-3 text-xs text-white/45">
             {live.homeShort} vs {live.awayShort} · {Math.max(90, live.minute ?? 0)}′
           </p>
         </section>
 
         {/* MVP */}
-        <section className="rounded-2xl border border-neon-yellow/40 bg-neon-yellow/[0.06] p-5">
+        <section className="ole-card-accent p-5 bg-neon-yellow/[0.06]">
           <header className="mb-3 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-neon-yellow" />
             <h2 className="font-display text-sm font-black uppercase tracking-[0.25em] text-neon-yellow">
@@ -170,22 +190,36 @@ export default function Postgame() {
           {mvp ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-display text-2xl font-black text-white">{mvp.name}</p>
+                <p className="font-display text-2xl font-black text-white uppercase tracking-wide">{mvp.name}</p>
                 <p className="text-[11px] uppercase tracking-wider text-white/50">
-                  {mvp.pos} · nota {mvp.rating.toFixed(1)}
+                  {mvp.pos} · nota{' '}
+                  <span className="ole-attr text-base" data-tier={ratingTier(mvp.rating)}>
+                    {mvp.rating.toFixed(1)}
+                  </span>
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center sm:text-right">
                 <div>
-                  <p className="font-mono text-base font-bold text-white">{mvp.stats.shotsOn}</p>
+                  <p className="ole-attr text-2xl" data-tier={attrTier(mvp.stats.shotsOn * 20)}>
+                    {mvp.stats.shotsOn}
+                  </p>
                   <p className="text-[9px] uppercase tracking-wider text-white/40">Chutes no alvo</p>
                 </div>
                 <div>
-                  <p className="font-mono text-base font-bold text-white">{mvp.stats.tackles}</p>
+                  <p className="ole-attr text-2xl" data-tier={attrTier(mvp.stats.tackles * 15)}>
+                    {mvp.stats.tackles}
+                  </p>
                   <p className="text-[9px] uppercase tracking-wider text-white/40">Desarmes</p>
                 </div>
                 <div>
-                  <p className="font-mono text-base font-bold text-white">
+                  <p
+                    className="ole-attr text-2xl"
+                    data-tier={
+                      mvp.stats.passesAttempt > 0
+                        ? attrTier((mvp.stats.passesOk / mvp.stats.passesAttempt) * 100)
+                        : 'avg'
+                    }
+                  >
                     {mvp.stats.passesOk}/{mvp.stats.passesAttempt || '—'}
                   </p>
                   <p className="text-[9px] uppercase tracking-wider text-white/40">Passes</p>
@@ -198,7 +232,7 @@ export default function Postgame() {
         </section>
 
         {/* Estatísticas do time */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+        <section className="ole-card p-5 bg-white/[0.02]">
           <header className="mb-3 flex items-center gap-2">
             <Star className="h-4 w-4 text-white/60" />
             <h2 className="font-display text-xs font-black uppercase tracking-[0.25em] text-white/70">
@@ -217,12 +251,12 @@ export default function Postgame() {
             <StatTile label="Desarmes" value={teamStats.tackles.toString()} />
             <StatTile label="Defesas (GK)" value={teamStats.saves.toString()} />
             <StatTile label="Dribles certos" value={teamStats.dribblesOk.toString()} />
-            <StatTile label="Gols" value={homeScore.toString()} />
+            <StatTile label="Gols" value={homeScore.toString()} highlight />
           </div>
         </section>
 
         {voiceStats.total > 0 ? (
-          <section className="rounded-2xl border border-violet-500/40 bg-violet-950/30 p-5">
+          <section className="ole-card p-5 border-l-4 border-l-violet-400/70 bg-violet-950/30">
             <header className="mb-3 flex items-center gap-2">
               <Megaphone className="h-4 w-4 text-violet-300" />
               <h2 className="font-display text-xs font-black uppercase tracking-[0.25em] text-violet-200">
@@ -242,7 +276,7 @@ export default function Postgame() {
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl bg-neon-yellow px-6 py-3 font-display text-sm font-black uppercase tracking-[0.25em] text-black transition-colors hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-sm bg-neon-yellow px-6 py-3 font-display text-sm font-black uppercase tracking-[0.25em] text-black transition-colors hover:bg-white"
           >
             Continuar
             <ArrowRight className="h-4 w-4" />
@@ -253,10 +287,25 @@ export default function Postgame() {
   );
 }
 
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatTile({
+  label,
+  value,
+  sub,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-white/10 bg-black/40 p-3 text-center">
-      <p className="font-mono text-xl font-bold text-white">{value}</p>
+    <div className="ole-card p-3 text-center">
+      <p
+        className="ole-attr text-xl"
+        style={highlight ? { color: 'var(--color-neon-yellow)' } : undefined}
+      >
+        {value}
+      </p>
       <p className="mt-0.5 text-[9px] uppercase tracking-wider text-white/50">{label}</p>
       {sub ? <p className="text-[9px] text-white/30">{sub}</p> : null}
     </div>
