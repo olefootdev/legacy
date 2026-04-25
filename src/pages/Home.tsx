@@ -623,7 +623,7 @@ export function Home() {
         </div>
         <Link
           to="/wallet"
-          className="flex max-w-[min(100%,11rem)] shrink-0 items-center gap-2 border border-white/10 bg-[#111] px-2 py-1.5 min-[360px]:px-3"
+          className="flex max-w-[min(100%,11rem)] shrink-0 items-center gap-2 border border-white/10 bg-panel px-2 py-1.5 min-[360px]:px-3"
         >
           <span className="truncate text-xs font-display font-bold tracking-wider text-neon-yellow min-[360px]:text-sm">
             {formatExp(finance.ole)} EXP
@@ -933,7 +933,7 @@ export function Home() {
               <Link to="/match/live" className="w-full">
                 <button
                   type="button"
-                  className="w-full rounded-lg border border-white/15 bg-white/[0.06] py-3 sm:py-3.5 text-sm sm:text-base font-display font-bold uppercase tracking-wider text-white hover:border-neon-yellow/35 hover:bg-white/[0.09] transition-colors"
+                  className="w-full rounded-sm border border-white/15 bg-white/[0.06] py-3 sm:py-3.5 text-sm sm:text-base font-display font-bold uppercase tracking-wider text-white hover:border-neon-yellow/35 hover:bg-white/[0.09] transition-colors"
                 >
                   Partida ao vivo
                 </button>
@@ -963,7 +963,7 @@ export function Home() {
         >
           <div className="flex justify-between items-end mb-4">
             <div>
-              <h3 className="font-display font-bold text-xl text-gray-400 uppercase tracking-wider">Apoio da Torcida</h3>
+              <h3 className="font-display font-bold text-xl text-neon-yellow uppercase tracking-[0.2em]">Apoio da Torcida</h3>
               <div className="text-4xl font-display font-black text-white mt-1">{supportLabel}<span className="text-2xl text-neon-yellow">%</span></div>
             </div>
             <Activity className="w-8 h-8 text-neon-yellow opacity-50 mb-1" />
@@ -988,7 +988,7 @@ export function Home() {
         >
           <div className="flex justify-between items-end gap-3 px-6 pt-6 pb-4 border-b border-white/10">
             <div className="min-w-0">
-              <h3 className="font-display font-bold text-xl text-gray-400 uppercase tracking-wider">Últimos resultados</h3>
+              <h3 className="font-display font-bold text-xl text-neon-yellow uppercase tracking-[0.2em]">Últimos resultados</h3>
               <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">
                 {results.length > 0
                   ? `${Math.min(5, results.length)} últimos · o teu percurso`
@@ -1417,7 +1417,7 @@ export function Home() {
           <div className="p-3 border-t border-white/10 bg-black/20">
             <Link
               to="/ranking"
-              className="flex w-full items-center justify-center gap-2 py-3 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow font-display font-black uppercase text-sm tracking-wider hover:bg-neon-yellow/20 transition-colors"
+              className="flex w-full items-center justify-center gap-2 py-3 rounded-sm border border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow font-display font-black uppercase text-sm tracking-wider hover:bg-neon-yellow/20 transition-colors"
             >
               Ver ranking completo
               <ChevronRight className="w-4 h-4" />
@@ -1437,7 +1437,7 @@ export function Home() {
           <div className="bg-dark-gray p-4 border-b border-white/10 space-y-3">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
               <div>
-                <h3 className="font-display font-bold text-xl uppercase tracking-wider">Notificações</h3>
+                <h3 className="font-display font-bold text-xl uppercase tracking-[0.2em] text-neon-yellow">Notificações</h3>
                 <p className="text-[10px] text-gray-500 mt-1 max-w-md">
                   Staff, torcida, jogadores e competição. Placares e histórico de jogos ficam na liga e no histórico de partidas.
                 </p>
@@ -1508,7 +1508,7 @@ export function Home() {
                       {news.kind === 'friend_invite' && (
                         <Link
                           to="/profile#rede-manager"
-                          className="inline-flex items-center gap-1 mt-2 text-[10px] font-display font-bold uppercase tracking-wider text-fuchsia-400 hover:text-fuchsia-300"
+                          className="inline-flex items-center gap-1 mt-2 text-[10px] font-display font-bold uppercase tracking-wider text-neon-yellow hover:text-neon-yellow/80"
                         >
                           <UserPlus className="w-3.5 h-3.5" />
                           Ver solicitações no perfil
