@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ShoppingBag, Zap, Sparkles, Wallet, ChevronRight, X } from 'lucide-react';
+import { ShoppingBag, Zap, Sparkles, Wallet, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { ManagerOutcomePanel } from '@/components/manager/ManagerOutcomePanel';
 import { cn } from '@/lib/utils';
 import { shopItemIcon, type ShopCatalogItem, type ShopRarity, type ShopTabId } from '@/game/shopCatalog';
@@ -224,53 +223,151 @@ export function Store() {
     confirmItem.priceBroCents > 0 &&
     finance.broCents >= confirmItem.priceBroCents;
 
+  // Meta da aba — segue padrão BVB do /transfer (num + eyebrow + subtitle + quote)
+  const TAB_META: Record<ShopTab, { num: string; eyebrow: string; subtitle: string; quote: string }> = {
+    todos:    { num: '01', eyebrow: 'Catálogo Olefoot',  subtitle: 'tudo aqui.',          quote: '“boosters, packs e raridades — sob um teto só.”' },
+    packs:    { num: '02', eyebrow: 'Packs de Jogadores', subtitle: 'abre e descobre.',    quote: '“cada pack carrega uma surpresa do mercado.”' },
+    boosters: { num: '03', eyebrow: 'Boosters de Partida', subtitle: 'vantagem agora.',    quote: '“pequena vantagem, grande diferença no minuto certo.”' },
+    extra:    { num: '04', eyebrow: 'Extras Especiais',   subtitle: 'o que falta no jogo.', quote: '“utilidades raras pra quem joga sério.”' },
+  };
+  const tabMeta = TAB_META[tab] ?? TAB_META.todos;
+
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-8 pb-28 md:pb-12">
-      <div className="relative overflow-hidden rounded-md border border-white/10 px-4 py-8 md:px-8 md:py-10">
-        <GameBannerBackdrop slot="leagues_header" imageOpacity={0.22} />
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-28 md:pb-12">
+      {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico (espelha /transfer) ── */}
+      <section
+        aria-label="Loja Olefoot"
+        className="relative w-full overflow-hidden bg-neon-yellow"
+      >
+        {/* Watermark gigante do número da aba — preto/5% */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 2l8 14H22L30 2zm0 56l-8-14h16L30 58zM2 30l14-8v16L2 30zm56 0l-14 8V22l14 8z' fill='%23fff' fill-opacity='1'/%3E%3C/svg%3E")`,
-          }}
-        />
-        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0 space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-neon-green/35 bg-neon-green/10 px-3 py-1">
-              <Sparkles className="h-3.5 w-3.5 text-neon-green" aria-hidden />
-              <span className="font-display text-[9px] font-black uppercase tracking-[0.2em] text-neon-green">
-                Marketplace
-              </span>
-            </div>
-            <h1 className="font-display text-3xl font-black italic tracking-tight text-white md:text-4xl">
-              LOJA <span className="text-neon-yellow">OLEFOOT</span>
-            </h1>
-            <p className="max-w-xl text-sm leading-relaxed text-gray-400">
-              Boosters, packs de jogadores e utilidades raras. Compras em{' '}
-              <strong className="text-white">BRO</strong> ou <strong className="text-neon-yellow">EXP</strong>.
-              Consumíveis ficam no inventário e aplicam efeito em <strong className="text-white">Meu Time</strong>.
-            </p>
+          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+          aria-hidden
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={tabMeta.num}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.04 }}
+              transition={{ duration: 0.4 }}
+              className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.05]"
+              style={{
+                fontSize: 'clamp(180px, 32vw, 460px)',
+                lineHeight: '0.85',
+                letterSpacing: '-0.05em',
+              }}
+            >
+              {tabMeta.num}
+            </motion.span>
+          </AnimatePresence>
+        </div>
+
+        {/* Composição editorial centrada vertical */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+        >
+          {/* Eyebrow */}
+          <div
+            className="ole-eyebrow !text-black mb-5 sm:mb-6"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <span className="!text-black">{tabMeta.eyebrow}</span>
           </div>
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="rounded-xl border border-white/15 bg-black/50 px-4 py-3 backdrop-blur-sm">
-              <p className="font-display text-[9px] font-bold uppercase tracking-wider text-gray-500">Saldo EXP</p>
-              <p className="font-mono text-lg font-bold text-neon-yellow">{expDisplay}</p>
-            </div>
-            <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/40 px-4 py-3 backdrop-blur-sm">
-              <p className="font-display text-[9px] font-bold uppercase tracking-wider text-cyan-400/80">Saldo BRO</p>
-              <p className="font-mono text-lg font-bold text-cyan-200">{broDisplay}</p>
-            </div>
+
+          {/* Headline duo: LOJA + italic dinâmico */}
+          <h1 className="leading-[0.9]">
+            <span
+              className="block font-bold uppercase text-black"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
+                letterSpacing: '0.005em',
+              }}
+            >
+              Loja
+            </span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={tabMeta.subtitle}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.35 }}
+                className="block italic text-black"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(2.25rem, 7vw, 5rem)',
+                  marginTop: '0.04em',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {tabMeta.subtitle}
+              </motion.span>
+            </AnimatePresence>
+          </h1>
+
+          {/* Régua decorativa */}
+          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+
+          {/* Quote italic — centerpiece editorial */}
+          <AnimatePresence mode="wait">
+            <motion.blockquote
+              key={`q-${tab}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.35, delay: 0.05 }}
+              className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
+              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+            >
+              {tabMeta.quote}
+            </motion.blockquote>
+          </AnimatePresence>
+
+          {/* Subtítulo — saldos vivos */}
+          <p
+            className="mt-3 text-black/60 mx-auto max-w-md"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
+              lineHeight: 1.55,
+            }}
+          >
+            saldo {expDisplay} EXP · {broDisplay} BRO
+          </p>
+
+          {/* CTAs — primary preto sobre amarelo + outline preto */}
+          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/wallet"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-3 font-display text-xs font-bold uppercase tracking-wide text-neon-yellow transition hover:bg-neon-yellow/20"
+              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                borderRadius: 'var(--radius-sm)',
+              }}
             >
-              <Wallet className="h-4 w-4" aria-hidden />
-              Wallet
-              <ChevronRight className="h-4 w-4 opacity-60" aria-hidden />
+              <Wallet className="w-4 h-4" />
+              Carteira
             </Link>
+            <button
+              type="button"
+              onClick={() => setTab('packs')}
+              className="inline-flex items-center gap-2 border border-black/70 bg-transparent px-7 py-3 text-black font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-black/10 transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <Sparkles className="w-4 h-4" />
+              Ver packs
+            </button>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </section>
 
       {/* Hero promocional por aba — arte substituída pelo designer em /public/store-heroes/ */}
       <TransferHeroSlider
