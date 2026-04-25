@@ -28,7 +28,6 @@ import {
   type RankingEntry,
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
-import { MatchdayVersusTitle } from '@/components/matchday/MatchdayVersusTitle';
 import { SectionDivider } from '@/components/home/SectionDivider';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useTrackScreen } from '@/progression/trackEvent';
@@ -742,107 +741,123 @@ export function Home() {
       {/* Matchday — banner editorial (Nike Football style) */}
       <section aria-label="Matchday" className="space-y-4">
         <SectionDivider label="Matchday" />
-      {/* Next Game Banner — duelo destaques + matchday */}
+      {/* Next Game Banner — Matchday Hero split (estilo /matchday/preview) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative isolate overflow-hidden bg-deep-black border border-white/10"
       >
-        {/* Linhas de campo em SVG — opacity baixa, cor neon-yellow, escala via preserveAspectRatio */}
-        <svg
-          className="absolute inset-0 z-0 h-full w-full pointer-events-none"
-          viewBox="0 0 800 480"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden
-        >
-          <g fill="none" stroke="#FDE100" strokeOpacity="0.07" strokeWidth="1.5">
-            {/* Linha do meio */}
-            <line x1="400" y1="0" x2="400" y2="480" />
-            {/* Círculo central */}
-            <circle cx="400" cy="240" r="78" />
-            <circle cx="400" cy="240" r="2" fill="#FDE100" fillOpacity="0.08" stroke="none" />
-            {/* Grande área esquerda */}
-            <rect x="0" y="120" width="120" height="240" />
-            <rect x="0" y="180" width="44" height="120" />
-            {/* Grande área direita */}
-            <rect x="680" y="120" width="120" height="240" />
-            <rect x="756" y="180" width="44" height="120" />
-            {/* Borda do campo */}
-            <rect x="0" y="0" width="800" height="480" />
-          </g>
-        </svg>
-        {/* Glow radial central — substitui o blur amarelo + dots */}
-        <div
-          className="absolute inset-0 z-[1] pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(ellipse 60% 55% at 50% 45%, rgba(253,225,0,0.10) 0%, rgba(253,225,0,0.04) 35%, transparent 70%)',
-          }}
-        />
-        <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/15 blur-[80px] rounded-full pointer-events-none" />
-
-        {/* Top hairline ribbon — meta editorial em Inter caps tight (Nike Football) */}
-        <div
-          className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-white/8 px-5 py-2.5 sm:px-8 md:px-10"
-          style={{ fontFamily: 'var(--font-sans)' }}
-        >
-          <span
-            className="text-[var(--color-neon-yellow)] uppercase font-semibold"
-            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+        {/* HERO SPLIT — amarelo (esq 62%) → preto (dir) */}
+        <div className="relative w-full overflow-hidden bg-deep-black">
+          {/* Camada amarela */}
+          <div
+            className="absolute inset-0 bg-neon-yellow"
+            style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
+            aria-hidden
+          />
+          {/* Linhas verticais sutis sobre o amarelo */}
+          <svg
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
+            width="100%"
+            height="100%"
+            preserveAspectRatio="none"
+            viewBox="0 0 100 100"
           >
-            Olé Football · Matchday
-          </span>
-          <span
-            className="text-[var(--color-text-soft)] uppercase"
-            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-          >
-            {fixture.kickoffLabel} · {fixture.competition} · {fixture.venue}
-          </span>
-        </div>
+            <g stroke="#000" strokeOpacity="0.06" strokeWidth="0.15">
+              <line x1="20" y1="0" x2="20" y2="100" />
+              <line x1="40" y1="0" x2="40" y2="100" />
+              <line x1="60" y1="0" x2="60" y2="100" />
+              <line x1="80" y1="0" x2="80" y2="100" />
+            </g>
+          </svg>
 
-        <div className="relative z-10 px-5 py-7 sm:px-8 sm:py-9 md:px-10 md:py-12 flex flex-col gap-7 lg:gap-9">
-          {/* Duelo — confronto editorial */}
-          <div className="text-center space-y-3">
-            <MatchdayVersusTitle
-              homeName={club.name}
-              awayName={fixture.opponent.name}
-              awaySeed={fixture.opponent.id}
-              className="text-[clamp(0.75rem,2.85vw+0.35rem,1.125rem)] sm:text-[clamp(1.05rem,2.4vw+0.5rem,1.65rem)] md:text-[2rem] lg:text-[2.35rem]"
-              vsClassName="text-[0.9em] sm:text-[0.95em] md:text-[1em]"
-            />
-            {/* Editorial Moret italic — "frase do jogo" com dados embutidos */}
+          <div className="relative z-10 px-4 sm:px-8 md:px-10 py-5 sm:py-7">
+            {/* Top bar: OLEFOOT | competição | kickoff (PRÓXIMA) */}
+            <div className="flex items-center justify-between gap-3 mb-7 sm:mb-10">
+              <span className="text-black/80 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px]">
+                Olefoot
+              </span>
+              <span className="text-black/70 font-display font-bold uppercase tracking-[0.22em] text-[10px] sm:text-[12px] text-center flex-1 truncate">
+                {fixture.competition}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-white font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px]">
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-neon-yellow"
+                  aria-hidden
+                />
+                {fixture.kickoffLabel}
+              </span>
+            </div>
+
+            {/* Scoreboard: [crest] CASA + form / VS / [crest] FORA + form */}
             {(() => {
               const last5 = results.slice(0, 5);
               const wins = last5.filter((r) => r.result === 'win').length;
               const draws = last5.filter((r) => r.result === 'draw').length;
               const losses = last5.filter((r) => r.result === 'loss').length;
-              const formStr = last5.length > 0 ? `${wins}-${draws}-${losses}` : '—';
+              const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
+              const awayShort = (fixture.opponent.shortName ?? fixture.opponent.name).slice(0, 3).toUpperCase();
               return (
-                <p
-                  className="italic text-white/90 mx-auto max-w-2xl"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontSize: 'clamp(1.1rem, 2.4vw, 1.75rem)',
-                    lineHeight: 1.35,
-                    letterSpacing: '-0.005em',
-                  }}
-                >
-                  Forma{' '}
-                  <span className="text-[var(--color-neon-yellow)] not-italic font-semibold tracking-tight">
-                    {formStr}
-                  </span>
-                  {'  ·  '}
-                  apoio{' '}
-                  <span className="text-[var(--color-neon-yellow)] not-italic font-semibold tracking-tight">
-                    {Math.round(roundedSupport)}%
-                  </span>
-                  {'  ·  '}
-                  <span className="text-white/55">{crowd.moodLabel.toLowerCase()}</span>
-                </p>
+                <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-2 sm:gap-5">
+                  {/* Casa */}
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-black bg-neon-yellow grid place-items-center">
+                    <span className="font-display font-black uppercase text-black text-[10px] sm:text-[12px] tracking-[0.06em]">
+                      {homeShort}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <h2
+                      className="ole-headline text-black leading-[0.85] truncate"
+                      style={{ fontSize: 'clamp(18px, 3.6vw, 40px)' }}
+                    >
+                      {club.name}
+                    </h2>
+                    <p className="mt-1 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px] text-black/70">
+                      {wins}V · {draws}E · {losses}D
+                    </p>
+                  </div>
+
+                  {/* VS Moret italic gigante */}
+                  <div className="self-stretch flex items-center justify-center px-1 sm:px-2">
+                    <span
+                      className="leading-none text-black/85"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontStyle: 'italic',
+                        fontSize: 'clamp(36px, 7vw, 80px)',
+                      }}
+                    >
+                      vs
+                    </span>
+                  </div>
+
+                  {/* Visitante */}
+                  <div className="text-right min-w-0">
+                    <h2
+                      className="ole-headline text-white leading-[0.85] truncate"
+                      style={{ fontSize: 'clamp(18px, 3.6vw, 40px)' }}
+                    >
+                      {fixture.opponent.name}
+                    </h2>
+                    <p className="mt-1 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px] text-white/70">
+                      {fixture.venue}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-white bg-deep-black grid place-items-center">
+                    <span className="font-display font-black uppercase text-white text-[10px] sm:text-[12px] tracking-[0.06em]">
+                      {awayShort}
+                    </span>
+                  </div>
+                </div>
               );
             })()}
           </div>
+        </div>
 
+        {/* CONTINUAÇÃO DARK — destaque casa × visitante + ações */}
+        <div className="relative z-10 px-5 py-7 sm:px-8 sm:py-9 md:px-10 md:py-10 flex flex-col gap-7 lg:gap-9 bg-deep-black border-t border-white/8">
           {/* Duelo: destaque casa × destaque visitante — fotos centralizadas (largura explícita: evita colapso com flex + items-center) */}
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10 w-full">
             {/* Casa */}
