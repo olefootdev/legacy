@@ -14,6 +14,7 @@ import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const Legend = lazy(() => import('./pages/Legend').then((m) => ({ default: m.Legend })));
+const MatchdayPreview = lazy(() => import('./pages/MatchdayPreview').then((m) => ({ default: m.MatchdayPreview })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamEvolutionLine = lazy(() =>
@@ -158,6 +159,7 @@ export default function App() {
             <Route path="/team" element={<Team />} />
             <Route path="/legend/:id" element={<Legend />} />
             <Route path="/legend" element={<Legend />} />
+            <Route path="/matchday/preview" element={<MatchdayPreview />} />
             <Route path="/team/tatica" element={<Navigate to="/team" replace />} />
             <Route path="/team/treino" element={<TeamTraining />} />
             <Route path="/team/linha-evolutiva" element={<TeamEvolutionLine />} />
