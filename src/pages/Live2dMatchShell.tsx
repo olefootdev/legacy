@@ -1063,6 +1063,16 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     return computePitchTokenSeparation(agents, { ball: ballPos });
   }, [pitch, awayPitch, ballPos]);
 
+  // P6: hoist per-frame derived values out of the .map() iterations below.
+  // Without this, nearestToPoint(awayPitch, ballPos) and pitchPlanePercent(ballPos.*)
+  // were recomputed N times per render (~22 × 42fps = 924/sec). Now once per render.
+  const ballPxPct = pitchPlanePercent(ballPos.x);
+  const ballPyPct = pitchPlanePercent(ballPos.y);
+  const awayNearestBallId = useMemo(
+    () => nearestToPoint(awayPitch, ballPos)?.playerId ?? null,
+    [awayPitch, ballPos],
+  );
+
   const secondHalfResumeCountdown =
     usesLive2dTacticalEngine && tacticalLive2dEnabled
       ? (truthSnap?.secondHalfResumeCountdownSec ?? 0)
@@ -1508,16 +1518,11 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                           usesLive2dTacticalEngine && tacticalLive2dEnabled && storeOnBallId
                             ? storeOnBallId === p.playerId
                             : live.possession === 'away' &&
-                              nearestToPoint(awayPitch, ballPos)?.playerId === p.playerId;
+                              awayNearestBallId === p.playerId;
                         const nudgeA = tokenSeparation.get(`a:${p.playerId}`) ?? { dx: 0, dy: 0 };
                         const pxA = pitchPlanePercent(p.x) + nudgeA.dx;
                         const pyA = pitchPlanePercent(p.y) + nudgeA.dy;
-                        const dBallA = distPlayerBallPct(
-                          pxA,
-                          pyA,
-                          pitchPlanePercent(ballPos.x),
-                          pitchPlanePercent(ballPos.y),
-                        );
+                        const dBallA = distPlayerBallPct(pxA, pyA, ballPxPct, ballPyPct);
                         return (
                           <Fragment key={p.playerId}>
                             <Test2dAwayPlayerToken
@@ -1547,12 +1552,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                         const nudgeH = tokenSeparation.get(`h:${p.playerId}`) ?? { dx: 0, dy: 0 };
                         const pxH = pitchPlanePercent(p.x) + nudgeH.dx;
                         const pyH = pitchPlanePercent(p.y) + nudgeH.dy;
-                        const dBallH = distPlayerBallPct(
-                          pxH,
-                          pyH,
-                          pitchPlanePercent(ballPos.x),
-                          pitchPlanePercent(ballPos.y),
-                        );
+                        const dBallH = distPlayerBallPct(pxH, pyH, ballPxPct, ballPyPct);
                         return (
                           <Fragment key={p.playerId}>
                             <Test2dHomePlayerToken
