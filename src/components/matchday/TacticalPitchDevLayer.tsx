@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { memo, useEffect, useId, useRef, useState } from 'react';
 import type { PitchPlayerState } from '@/engine/types';
 import type { LiveMatchClockPeriod } from '@/engine/types';
 import {
@@ -94,19 +94,32 @@ export interface TacticalPitchDevLayerProps {
  * Overlay de desenvolvimento: terços IFAB por equipa, corredores, grandes/pequenas áreas,
  * gols e etiquetas por jogador (papel, slot, terço e corredor — mesma lógica que `fieldZones`).
  */
-export function TacticalPitchDevLayer({
-  homeShort,
-  awayShort,
-  homePlayers,
-  awayPlayers,
-  clockPeriod,
-  possession,
-  showZoneView = false,
-  zonePerspectiveTeam = 'home',
-  pitchTokenNudges,
-  ballPercent,
-  showOperationalRadii = false,
-}: TacticalPitchDevLayerProps) {
+/** Throttle de ~8fps para o overlay de debug — não precisa de fluidez de tokens. */
+const DEV_LAYER_THROTTLE_MS = 125;
+
+function TacticalPitchDevLayerInner(props: TacticalPitchDevLayerProps) {
+  const [snapshot, setSnapshot] = useState<TacticalPitchDevLayerProps>(props);
+  const latestRef = useRef(props);
+  latestRef.current = props;
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setSnapshot(latestRef.current);
+    }, DEV_LAYER_THROTTLE_MS);
+    return () => window.clearInterval(id);
+  }, []);
+  const {
+    homeShort,
+    awayShort,
+    homePlayers,
+    awayPlayers,
+    clockPeriod,
+    possession,
+    showZoneView = false,
+    zonePerspectiveTeam = 'home',
+    pitchTokenNudges,
+    ballPercent,
+    showOperationalRadii = false,
+  } = snapshot;
   const arrowId = useId().replace(/:/g, '');
   const half = clockToHalf(clockPeriod);
 
@@ -737,6 +750,8 @@ export function TacticalPitchDevLayer({
     </svg>
   );
 }
+
+export const TacticalPitchDevLayer = memo(TacticalPitchDevLayerInner);
 
 const STORAGE_KEY = 'olefoot_live_tactical_layer';
 const ZONE_VIEW_STORAGE_KEY = 'olefoot_live_zone_view_18';
