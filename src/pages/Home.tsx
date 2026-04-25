@@ -611,11 +611,21 @@ export function Home() {
               <MatchdayHero
                 data={{
                   competition: fixture.competition,
-                  statusPrimary: 'Próxima',
+                  statusPrimary: 'Estreia',
                   statusSecondary: fixture.kickoffLabel,
                   statusVariant: 'preview',
-                  home: { short: homeShort, name: club.name, form: { v: wins, e: draws, d: losses } },
-                  away: { short: awayShort, name: fixture.opponent.name, sublabel: fixture.venue },
+                  home: {
+                    short: homeShort,
+                    name: club.name,
+                    score: 0,
+                    form: { v: wins, e: draws, d: losses },
+                  },
+                  away: {
+                    short: awayShort,
+                    name: fixture.opponent.name,
+                    score: 0,
+                    sublabel: fixture.venue,
+                  },
                   stats: [
                     { label: 'Vitórias', value: String(wins) },
                     { label: 'Empates', value: String(draws) },
