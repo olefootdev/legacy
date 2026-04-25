@@ -226,7 +226,7 @@ export function HowToPlay() {
                 className="bg-[var(--color-card)] border border-white/8 rounded-sm border-l-4 border-l-neon-yellow p-4 transition-transform duration-150 hover:-translate-y-0.5"
               >
                 <div className="flex items-start gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm bg-neon-yellow/10 text-neon-yellow border border-neon-yellow/30">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm bg-neon-yellow text-black">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
