@@ -7,7 +7,7 @@
  * evento canônico em frase bonita.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Flag, Square, AlertTriangle, Trophy } from 'lucide-react';
 import { useGameStore } from '@/game/store';
@@ -120,7 +120,7 @@ function eventToNarration(
   return null;
 }
 
-export function PitchNarrationOverlay() {
+function PitchNarrationOverlayInner() {
   const live = useGameStore((s) => s.liveMatch);
   const players = useGameStore((s) => s.players);
   const [active, setActive] = useState<NarrationCard[]>([]);
@@ -220,3 +220,5 @@ export function PitchNarrationOverlay() {
     </div>
   );
 }
+
+export const PitchNarrationOverlay = memo(PitchNarrationOverlayInner);

@@ -5,7 +5,7 @@
  * pra mostrar métricas globais do time da casa. Atualiza a cada tick do motor.
  */
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { BarChart3, Target, Shield, Users, Swords, Hand, Zap, Flag, AlertCircle } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import type { LiveMatchSnapshot } from '@/engine/types';
@@ -90,7 +90,7 @@ function countCorners(live: LiveMatchSnapshot | null): { home: number; away: num
   return out;
 }
 
-export function LiveStatsPanel() {
+function LiveStatsPanelInner() {
   const live = useGameStore((s) => s.liveMatch);
   const stats = useMemo(() => aggregateHomeStats(live), [live?.homeStats]);
   const cards = useMemo(() => countCards(live), [live?.events]);
@@ -143,6 +143,8 @@ export function LiveStatsPanel() {
     </div>
   );
 }
+
+export const LiveStatsPanel = memo(LiveStatsPanelInner);
 
 function StatTile({
   icon: Icon,
