@@ -27,6 +27,7 @@ import {
 } from 'react';
 import { useGameDispatch, useGameStore, getGameState } from '@/game/store';
 import { cn } from '@/lib/utils';
+import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import { tryHydrateGameState } from '@/game/persistence';
 import type { GraphicQualityId, ReduceMotionPreference } from '@/game/types';
 import {
@@ -201,16 +202,76 @@ export function Config() {
   const rowClass = 'px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/5 last:border-0';
 
   return (
-    <div className="mx-auto min-w-0 max-w-2xl space-y-8 pb-8">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3">
-          <Settings className="w-8 h-8 text-neon-yellow" />
-          <div>
-            <h2 className="text-3xl font-display font-black uppercase tracking-wider">Configurações</h2>
-            <p className="text-sm text-gray-500 font-medium mt-1">Preferências persistidas com o teu save.</p>
-          </div>
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
+      {/* ── HERO BVB — amarelo full + watermark + Agency caps + Moret italic ── */}
+      <section
+        aria-label="Configurações"
+        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
+      >
+        {/* Watermark */}
+        <div
+          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+          aria-hidden
+        >
+          <span
+            className="font-display font-black uppercase whitespace-nowrap text-black/[0.05]"
+            style={{
+              fontSize: 'clamp(140px, 28vw, 360px)',
+              lineHeight: '0.85',
+              letterSpacing: '-0.05em',
+            }}
+          >
+            CONFIG
+          </span>
         </div>
-      </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+        >
+          <div
+            className="ole-eyebrow !text-black mb-5 sm:mb-6"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <span className="!text-black">Preferências</span>
+          </div>
+          <h1 className="leading-[0.9]">
+            <span
+              className="block font-bold uppercase text-black"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2.5rem, 8vw, 5.5rem)',
+                letterSpacing: '0.005em',
+              }}
+            >
+              Configurações
+            </span>
+            <span
+              className="block italic text-black"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(1.75rem, 5.5vw, 3.5rem)',
+                marginTop: '0.04em',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              do seu jogo.
+            </span>
+          </h1>
+          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+          <p
+            className="mt-5 text-black/65 mx-auto max-w-md"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
+              lineHeight: 1.55,
+            }}
+          >
+            Preferências persistidas com o teu save.
+          </p>
+        </motion.div>
+      </section>
 
       <VerificationSection />
 
@@ -221,8 +282,12 @@ export function Config() {
         transition={{ delay: 0.04 }}
         className="space-y-3"
       >
-        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Geral</h3>
-        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
+        <StoreSectionHeadline
+          title="Geral"
+          subtitle="Idioma, sons e preferências do app."
+          className="mb-3"
+        />
+        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
           <div className={rowClass}>
             <div className="flex items-center gap-3">
               <Globe className="w-4 h-4 text-gray-500" />
@@ -337,8 +402,12 @@ export function Config() {
         transition={{ delay: 0.06 }}
         className="space-y-3"
       >
-        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Clube</h3>
-        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden">
+        <StoreSectionHeadline
+          title="Clube"
+          subtitle="Identidade do seu time no save."
+          className="mb-3"
+        />
+        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
           <div className={rowClass}>
             <div className="flex items-start gap-3">
               <Building2 className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
@@ -429,8 +498,12 @@ export function Config() {
         transition={{ delay: 0.08 }}
         className="space-y-3"
       >
-        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Segurança local</h3>
-        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden">
+        <StoreSectionHeadline
+          title="Segurança local"
+          subtitle="PIN e proteção do save no dispositivo."
+          className="mb-3"
+        />
+        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
           <button
             type="button"
             onClick={() => {
@@ -606,8 +679,12 @@ export function Config() {
         transition={{ delay: 0.1 }}
         className="space-y-3"
       >
-        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Dados</h3>
-        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
+        <StoreSectionHeadline
+          title="Dados"
+          subtitle="Backup, exportação e reset do save."
+          className="mb-3"
+        />
+        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
           <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
               <Download className="w-4 h-4 text-neon-yellow" />
@@ -660,8 +737,12 @@ export function Config() {
         transition={{ delay: 0.12 }}
         className="space-y-3"
       >
-        <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Sobre</h3>
-        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
+        <StoreSectionHeadline
+          title="Sobre"
+          subtitle="Versão, créditos e suporte."
+          className="mb-3"
+        />
+        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
           <div className="px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Info className="w-4 h-4 text-gray-500" />
@@ -766,7 +847,11 @@ function VerificationSection() {
 
   return (
     <section className="space-y-3">
-      <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Verificação da conta</h3>
+      <StoreSectionHeadline
+        title="Verificação da conta"
+        subtitle="Confirme seu e-mail e proteja seu save."
+        className="mb-3"
+      />
       <div className="rounded-lg border border-white/10 bg-panel overflow-hidden">
         <button
           type="button"
