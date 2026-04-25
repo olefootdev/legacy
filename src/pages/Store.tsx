@@ -9,6 +9,7 @@ import { shopItemIcon, type ShopCatalogItem, type ShopRarity, type ShopTabId } f
 import { trackGrowthCommerce } from '@/admin/platformStore';
 import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider';
 import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
+import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import { trackMissionEvent } from '@/progression/trackEvent';
 
 type ShopTab = 'todos' | ShopTabId;
@@ -407,6 +408,16 @@ export function Store() {
         variant={featuredBoxesConfigForStoreTab(tab).variant}
         items={featuredItemsForStoreTab(tab, catalog)}
         onSelect={(item) => { setPurchaseErr(null); setConfirmItem(item); }}
+      />
+
+      <StoreSectionHeadline
+        title={
+          tab === 'todos' ? 'Catálogo Completo' :
+          tab === 'packs' ? 'Todos os Packs' :
+          tab === 'boosters' ? 'Todos os Boosters' :
+          'Todos os Extras'
+        }
+        subtitle={`${filtered.length} ${filtered.length === 1 ? 'item disponível' : 'itens disponíveis'} nesta categoria.`}
       />
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

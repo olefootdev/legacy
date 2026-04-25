@@ -5,9 +5,10 @@
  */
 
 import { motion } from 'motion/react';
-import { Trophy, Sparkles, Gem, ShoppingBag } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { shopItemIcon, type ShopCatalogItem, type ShopRarity } from '@/game/shopCatalog';
+import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 
 interface StoreFeaturedBoxesProps {
   title: string;
@@ -18,22 +19,18 @@ interface StoreFeaturedBoxesProps {
 }
 
 const VARIANT_STYLES: Record<NonNullable<StoreFeaturedBoxesProps['variant']>, {
-  icon: typeof Trophy;
   badge: string;
   glow: string;
 }> = {
   premium: {
-    icon: Trophy,
     badge: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40',
     glow: 'shadow-[0_0_24px_rgba(234,255,0,0.08)]',
   },
   rising: {
-    icon: Sparkles,
     badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
     glow: 'shadow-[0_0_24px_rgba(16,185,129,0.08)]',
   },
   drop: {
-    icon: Gem,
     badge: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/40',
     glow: 'shadow-[0_0_24px_rgba(217,70,239,0.08)]',
   },
@@ -62,22 +59,17 @@ export function StoreFeaturedBoxes({
 }: StoreFeaturedBoxesProps) {
   if (items.length === 0) return null;
   const v = VARIANT_STYLES[variant];
-  const HeaderIcon = v.icon;
-  const shown = items.slice(0, 6);
+  const SHOWN_LIMIT = 6;
+  const shown = items.slice(0, SHOWN_LIMIT);
+  const moreCount = Math.max(0, items.length - SHOWN_LIMIT);
 
   return (
-    <section className="min-w-0 space-y-3">
-      <div className="flex min-w-0 items-center gap-2.5 px-0.5">
-        <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border', v.badge)}>
-          <HeaderIcon className="h-4 w-4" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-display text-sm font-black uppercase tracking-widest text-white sm:text-base">
-            {title}
-          </h3>
-          {subtitle ? <p className="text-[10px] leading-snug text-gray-500">{subtitle}</p> : null}
-        </div>
-      </div>
+    <section className="min-w-0 space-y-4">
+      <StoreSectionHeadline
+        title={title}
+        subtitle={subtitle}
+        rightLabel={moreCount > 0 ? `+${moreCount} mais` : undefined}
+      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((item, i) => {
