@@ -43,6 +43,8 @@ export interface MatchdayHeroData {
     /** Número decorativo gigante atrás (camisa, OVR, etc.). 1-3 dígitos. */
     number: number;
     quote: string;
+    /** Foto do jogador (idealmente 4:5 portrait). Recebe filtro P&B BVB. */
+    photoUrl?: string;
   };
   /** Botões de ação centrados no rodapé. Default = mock buttons. */
   actions?: { label: string; href?: string; onClick?: () => void; variant?: 'primary' | 'outline' }[];
@@ -282,7 +284,13 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
         {/* Destaque da partida */}
         <div className="relative grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-6 items-end pb-4">
           <div>
-            <div className="ole-eyebrow !justify-start mb-3">
+            {/* Eyebrow forçado a preto — sobre o lado amarelo do split fica
+                ilegível em yellow. text-black + linhas pretas via override. */}
+            <div
+              className="flex items-center justify-start gap-3 mb-3 uppercase tracking-[0.35em] text-[10px] font-medium text-black"
+              style={{ fontFamily: 'var(--font-ui)' }}
+            >
+              <span aria-hidden className="h-px w-8 bg-black/40" />
               <span>★ Destaque da partida</span>
             </div>
             <h3
@@ -301,13 +309,14 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             </blockquote>
           </div>
 
-          {/* Número gigante decorativo */}
+          {/* Foto + Número gigante decorativo (layered: número atrás, foto na frente) */}
           <div
-            className="relative h-[160px] sm:h-[220px] flex items-center justify-center"
-            aria-hidden
+            className="relative h-[220px] sm:h-[280px] md:h-[320px] flex items-center justify-center"
           >
+            {/* Número decorativo atrás — z-0 */}
             <span
-              className="leading-none tabular-nums text-neon-yellow/15 select-none"
+              aria-hidden
+              className="absolute inset-0 flex items-center justify-center leading-none tabular-nums text-neon-yellow/15 select-none pointer-events-none"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 900,
@@ -317,6 +326,20 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             >
               {String(data.highlight.number).padStart(2, '0')}
             </span>
+            {/* Foto P&B (filtro grayscale) — z-10 sobre o número */}
+            {data.highlight.photoUrl ? (
+              <div className="relative z-10 h-full aspect-[4/5] max-h-full">
+                <img
+                  src={data.highlight.photoUrl}
+                  alt={data.highlight.name}
+                  className="w-full h-full object-cover object-top ole-player-photo-bw shadow-[0_24px_48px_rgba(0,0,0,0.45)]"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                />
+                {/* Borda inferior amarela 3px — assinatura BVB */}
+                <div className="absolute inset-x-0 bottom-0 h-[3px] bg-neon-yellow" aria-hidden />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

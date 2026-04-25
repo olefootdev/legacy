@@ -640,6 +640,7 @@ export function Home() {
                   name: homeHighlight.name,
                   number: homeHighlight.ovr,
                   quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. A torcida espera o gol nessa partida.`,
+                  photoUrl: homeHighlight.imageSrc,
                 },
                 actions: [
                   { label: 'Partida rápida', href: '/match/quick', variant: 'primary' },
