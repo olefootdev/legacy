@@ -38,11 +38,13 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
  * "viva". Em produção, o fallback ESTREIA limpo é exibido.
  */
 const HOME_HERO_DEV_MOCK = import.meta.env.DEV;
-/** Brasões CDN (Wikimedia) usados só em DEV pra preview do hero/banner. */
-const DEV_HOME_CREST =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Flamengo_braz_logo.svg/240px-Flamengo_braz_logo.svg.png';
-const DEV_AWAY_CREST =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Palmeiras_logo.svg/240px-Palmeiras_logo.svg.png';
+/**
+ * Brasões usados só em DEV pra preview do hero/banner.
+ * Origem: api-sports media (mesmo CDN que o save real consome via
+ * src/settings/brazilianClubs.ts — Flamengo id=127, Palmeiras id=121).
+ */
+const DEV_HOME_CREST = 'https://media.api-sports.io/football/teams/127.png';
+const DEV_AWAY_CREST = 'https://media.api-sports.io/football/teams/121.png';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
