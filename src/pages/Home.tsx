@@ -634,20 +634,40 @@ export function Home() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative isolate overflow-hidden bg-[#111] border border-white/10"
+        className="relative isolate overflow-hidden bg-deep-black border border-white/10"
       >
+        {/* Linhas de campo em SVG — opacity baixa, cor neon-yellow, escala via preserveAspectRatio */}
+        <svg
+          className="absolute inset-0 z-0 h-full w-full pointer-events-none"
+          viewBox="0 0 800 480"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden
+        >
+          <g fill="none" stroke="#FDE100" strokeOpacity="0.07" strokeWidth="1.5">
+            {/* Linha do meio */}
+            <line x1="400" y1="0" x2="400" y2="480" />
+            {/* Círculo central */}
+            <circle cx="400" cy="240" r="78" />
+            <circle cx="400" cy="240" r="2" fill="#FDE100" fillOpacity="0.08" stroke="none" />
+            {/* Grande área esquerda */}
+            <rect x="0" y="120" width="120" height="240" />
+            <rect x="0" y="180" width="44" height="120" />
+            {/* Grande área direita */}
+            <rect x="680" y="120" width="120" height="240" />
+            <rect x="756" y="180" width="44" height="120" />
+            {/* Borda do campo */}
+            <rect x="0" y="0" width="800" height="480" />
+          </g>
+        </svg>
+        {/* Glow radial central — substitui o blur amarelo + dots */}
         <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none"
+          className="absolute inset-0 z-[1] pointer-events-none"
           style={{
-            backgroundImage:
-              'linear-gradient(180deg, rgba(9,9,9,0.5) 0%, rgba(9,9,9,0.68) 50%, rgba(9,9,9,0.78) 100%), url(/banners/presets/fundo-div-home.jpg)',
+            background:
+              'radial-gradient(ellipse 60% 55% at 50% 45%, rgba(253,225,0,0.10) 0%, rgba(253,225,0,0.04) 35%, transparent 70%)',
           }}
         />
-        <div
-          className="absolute inset-0 z-[1] opacity-[0.18] pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(#fff 1.5px, transparent 1.5px)', backgroundSize: '14px 14px' }}
-        />
-        <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/25 blur-[80px] rounded-full pointer-events-none" />
+        <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/15 blur-[80px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-6 md:px-10 md:py-8 flex flex-col gap-5 lg:gap-6">
           {/* Cabeçalho: matchday + horário + duelo (nomes completos + brasões) */}
