@@ -28,7 +28,6 @@ import {
   type RankingEntry,
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
-import { SectionDivider } from '@/components/home/SectionDivider';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useTrackScreen } from '@/progression/trackEvent';
 
@@ -589,122 +588,13 @@ export function Home() {
         </Link>
       </div>
 
-      {/* HERO PRINCIPAL — Olefoot BVB hero (amarelo + watermark + Agency/Moret) */}
-      <motion.section
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="relative isolate overflow-hidden bg-neon-yellow"
-        style={{ minHeight: 'min(64vh, 560px)' }}
-        aria-label="Hero Olefoot"
-      >
-        {/* Watermark gigante OLEFOOT — preto/4% sobre amarelo */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden z-0"
-          aria-hidden
-        >
-          <span
-            className="font-display font-black uppercase tracking-tight whitespace-nowrap text-black/[0.04]"
-            style={{ fontSize: 'clamp(160px, 32vw, 480px)', lineHeight: '0.85' }}
-          >
-            OLEFOOT
-          </span>
-        </div>
-        {/* Vinheta inferior pra costurar com o restante da página dark */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 z-0"
-          style={{
-            background:
-              'linear-gradient(to bottom, transparent 0%, rgba(13,13,13,0.18) 100%)',
-          }}
-        />
-
-        {/* Conteúdo */}
-        <div
-          className="relative z-10 flex h-full flex-col justify-between gap-10 px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16"
-          style={{ minHeight: 'inherit' }}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="flex flex-col items-center text-center gap-5 max-w-3xl mx-auto"
-          >
-            {/* 1. Eyebrow inverted (preto sobre amarelo) */}
-            <div
-              className="ole-eyebrow"
-              style={{ color: '#000' }}
-            >
-              <span style={{ color: '#000' }}>Entre no novo futebol</span>
-            </div>
-
-            {/* 2. Headline — Agency line1 + Moret italic line2 */}
-            <h1 className="flex flex-col leading-[0.85]">
-              <span
-                className="ole-headline text-black"
-                style={{ fontSize: 'clamp(48px, 10vw, 96px)' }}
-              >
-                BEM-VINDO AO
-              </span>
-              <span
-                className="ole-headline-italic text-black/85"
-                style={{ fontSize: 'clamp(36px, 8vw, 84px)' }}
-              >
-                {club.name}
-              </span>
-            </h1>
-
-            {/* Régua decorativa */}
-            <div className="w-16 h-[3px] bg-black mt-1" aria-hidden />
-
-            {/* 3. Tagline */}
-            <p
-              className="text-black/75 max-w-xl"
-              style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: 'clamp(0.95rem, 1.2vw, 1.125rem)',
-                lineHeight: 1.6,
-              }}
-            >
-              Cada minuto, cada decisão, cada partida — gerada ao vivo pela engine
-              tática nativa do Olefoot. Você é o técnico. Eles são os agentes.
-            </p>
-
-            {/* 4. CTAs — primary preto sobre amarelo + secondary outline preto */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-3">
-              <Link to="/match/quick" className="inline-block">
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 bg-black text-neon-yellow px-8 py-3.5 font-display font-bold uppercase tracking-[0.2em] text-[14px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-sm"
-                >
-                  <Play className="h-4 w-4 fill-current" />
-                  Começar agora
-                </button>
-              </Link>
-              <Link to="/team" className="inline-block">
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 border border-black/65 text-black px-8 py-3.5 font-display font-bold uppercase tracking-[0.2em] text-[14px] hover:bg-black hover:text-neon-yellow transition-colors rounded-sm"
-                >
-                  Ver elenco
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </Link>
-            </div>
-          </motion.div>
-
-        </div>
-      </motion.section>
-
-      {/* Matchday — banner editorial (Nike Football style) */}
+      {/* HERO PRINCIPAL — Matchday Hero cinematográfico (entrada da Home) */}
       <section aria-label="Matchday" className="space-y-4">
-        <SectionDivider label="Matchday" />
-      {/* Next Game Banner — Matchday Hero split (estilo /matchday/preview) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative isolate overflow-hidden bg-deep-black border border-white/10"
+        transition={{ duration: 0.6 }}
+        className="relative isolate overflow-hidden bg-deep-black"
       >
         {/* HERO SPLIT — amarelo (esq 62%) → preto (dir) */}
         <div className="relative w-full overflow-hidden bg-deep-black">
