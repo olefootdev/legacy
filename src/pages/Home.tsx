@@ -621,7 +621,6 @@ export function Home() {
                   },
                   actions: [
                     { label: 'Ver elenco', href: '/team', variant: 'primary' },
-                    { label: 'Treinar', href: '/team/treino', variant: 'outline' },
                   ],
                   topLeft: { label: 'Olefoot' },
                   scrollCueTargetId: 'home-below-fold',
@@ -783,48 +782,82 @@ export function Home() {
       ) : null}
 
       <div id="home-below-fold" className="grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-4">
-        {/* Torcidômetro - Industrial Style */}
-        <motion.div 
+        {/* Apoio da Torcida — modelo box "Próxima partida" */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="sports-panel panel-accent p-6"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <h3 className="font-display font-bold text-xl text-neon-yellow uppercase tracking-[0.2em]">Apoio da Torcida</h3>
-              <div className="text-4xl font-display font-black text-white mt-1">{supportLabel}<span className="text-2xl text-neon-yellow">%</span></div>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 flex flex-col items-center text-center gap-4">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Apoio da torcida</span>
             </div>
-            <Activity className="w-8 h-8 text-neon-yellow opacity-50 mb-1" />
+            {/* Valor central — Moret italic editorial */}
+            <p
+              className="italic text-neon-yellow leading-none tabular-nums"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {supportLabel}
+              <span
+                className="ml-1 text-white/45 not-italic"
+                style={{ fontFamily: 'var(--font-display)', fontSize: '0.55em' }}
+              >
+                %
+              </span>
+            </p>
+            {/* Barra */}
+            <div className="w-full h-2 bg-dark-gray overflow-hidden relative" style={{ borderRadius: 'var(--radius-sm)' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${roundedSupport}%` }}
+                transition={{ duration: 1, delay: 0.5 }}
+                className="absolute top-0 left-0 h-full bg-neon-yellow"
+              />
+            </div>
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {crowd.moodLabel}
+            </p>
           </div>
-          <div className="h-2 bg-dark-gray overflow-hidden relative skew-x-[-10deg]">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${roundedSupport}%` }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="absolute top-0 left-0 h-full bg-neon-yellow"
-            />
-          </div>
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-4">Status: {crowd.moodLabel}</p>
         </motion.div>
 
-        {/* Últimos resultados — alinhado ao bloco industrial da grelha (Torcidômetro / Amistoso) */}
+        {/* Últimos resultados — modelo box "Próxima partida" */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="sports-panel panel-accent p-0 overflow-hidden flex flex-col min-h-[300px]"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden flex flex-col min-h-[300px]"
         >
-          <div className="flex justify-between items-end gap-3 px-6 pt-6 pb-4 border-b border-white/10">
-            <div className="min-w-0">
-              <h3 className="font-display font-bold text-xl text-neon-yellow uppercase tracking-[0.2em]">Últimos resultados</h3>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">
-                {results.length > 0
-                  ? `${Math.min(5, results.length)} últimos · o teu percurso`
-                  : 'Histórico vazio'}
-              </p>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Últimos resultados</span>
             </div>
-            <Trophy className="w-8 h-8 text-neon-yellow opacity-50 shrink-0 mb-0.5" />
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {results.length > 0
+                ? `${Math.min(5, results.length)} últimos · o teu percurso`
+                : 'Histórico vazio'}
+            </p>
           </div>
 
           <div className="px-6 py-4 flex-1 flex flex-col gap-2">
@@ -913,11 +946,20 @@ export function Home() {
             )}
           </div>
 
-          <div className="px-6 pb-6 pt-2">
+          <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-2">
             <button
               type="button"
               onClick={scrollToNotificacoes}
-              className="w-full py-2.5 border border-white/10 bg-dark-gray text-[10px] font-display font-bold uppercase tracking-widest text-gray-400 hover:text-neon-yellow hover:border-neon-yellow/25 transition-colors"
+              className="w-full py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              }}
             >
               Ver notificações ↓
             </button>
@@ -1188,20 +1230,17 @@ export function Home() {
 
       {/* Ranking + Notificações */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ranking OLE */}
-        <motion.div 
+        {/* Ranking OLE — modelo box "Próxima partida" */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="sports-panel p-0"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-dark-gray p-4">
-            <h3 className="min-w-0 truncate font-display text-lg font-bold uppercase tracking-wider min-[390px]:text-xl">
-              Ranking OLE
-            </h3>
-            <span className="shrink-0 text-right text-[10px] font-bold uppercase tracking-wider text-neon-yellow min-[390px]:text-xs">
-              Top 10 por EXP
-            </span>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Ranking OLE · Top 10 por EXP</span>
+            </div>
           </div>
           <div className="p-3 border-b border-white/10">
             <div className="relative">
@@ -1243,10 +1282,19 @@ export function Home() {
               </div>
             ))}
           </div>
-          <div className="p-3 border-t border-white/10 bg-black/20">
+          <div className="p-4 sm:p-5 border-t border-white/10 bg-black/20">
             <Link
               to="/ranking"
-              className="flex w-full items-center justify-center gap-2 py-3 rounded-sm border border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow font-display font-black uppercase text-sm tracking-wider hover:bg-neon-yellow/20 transition-colors"
+              className="flex w-full items-center justify-center gap-2 py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              }}
             >
               Ver ranking completo
               <ChevronRight className="w-4 h-4" />
@@ -1254,36 +1302,49 @@ export function Home() {
           </div>
         </motion.div>
 
-        {/* Notificações — inbox operacional (não placares) */}
+        {/* Notificações — modelo box "Próxima partida" */}
         <motion.div
           ref={notificacoesRef}
           id="notificacoes"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="sports-panel p-0 scroll-mt-24"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden scroll-mt-24"
         >
-          <div className="bg-dark-gray p-4 border-b border-white/10 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-              <div>
-                <h3 className="font-display font-bold text-xl uppercase tracking-[0.2em] text-neon-yellow">Notificações</h3>
-                <p className="text-[10px] text-gray-500 mt-1 max-w-md">
-                  Staff, torcida, jogadores e competição. Placares e histórico de jogos ficam na liga e no histórico de partidas.
-                </p>
-              </div>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-3">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Notificações</span>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
+            <p
+              className="text-white/55 max-w-md mx-auto"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '11px',
+                lineHeight: 1.5,
+              }}
+            >
+              Staff, torcida, jogadores e competição. Placares e histórico de jogos ficam na liga e no histórico de partidas.
+            </p>
+            <div className="flex gap-1.5 flex-wrap justify-center pt-1">
               {HOME_NOTIF_TABS.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setNotifTab(key)}
                   className={cn(
-                    'px-2.5 py-1 text-[10px] font-display font-bold uppercase tracking-wider border transition-colors',
+                    'px-3 py-1.5 border transition-colors',
                     notifTab === key
-                      ? 'border-neon-yellow text-neon-yellow bg-neon-yellow/10'
-                      : 'border-white/10 text-gray-400 hover:border-white/20',
+                      ? 'border-neon-yellow bg-neon-yellow text-black'
+                      : 'border-[var(--color-border)] bg-deep-black text-white/65 hover:border-neon-yellow/50 hover:text-white',
                   )}
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                 >
                   {label}
                 </button>
