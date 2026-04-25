@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
 @import "tailwindcss";
+@import "./styles/design-system.css";
 
 @theme {
   /* Cores — alinhadas ao olefoot.com */
@@ -37,6 +38,13 @@
   --color-warning: #FFB300;
   --color-danger:  #FF3D3D;
   --color-info:    #2979FF;
+
+  /* === Tokens da brief de design (Fase 2 — refactor da home) === */
+  --color-border: rgba(255,255,255,0.08);
+  --color-text-on-accent: #000000;
+  --color-accent-rgb: 253,225,0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
 
   /* === Threshold de atributos (Football Manager) === */
   --attr-elite: #00FF66;  /* 80+   */
@@ -192,12 +200,14 @@
     z-index: 1;
   }
   .ole-player-card__overall {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: var(--text-rating);
+    font-family: var(--font-serif-hero);
+    font-style: italic;
+    font-weight: 700;
+    font-size: calc(var(--text-rating) * 1.05);
     color: var(--color-neon-yellow);
-    line-height: 1;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.65);
   }
   .ole-player-card__position {
     font-family: var(--font-ui);
@@ -214,9 +224,9 @@
   }
   .ole-player-card__name {
     font-family: var(--font-display);
-    font-weight: 900;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     color: #fff;
   }
 
