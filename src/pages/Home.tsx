@@ -588,27 +588,28 @@ export function Home() {
         </Link>
       </div>
 
-      {/* HERO PRINCIPAL — Matchday Hero cinematográfico (entrada da Home) */}
-      <section aria-label="Matchday" className="space-y-4">
+      {/* HERO PRINCIPAL — Matchday Hero cinematográfico edge-to-edge */}
+      <section
+        aria-label="Matchday"
+        className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-8"
+      >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative isolate overflow-hidden bg-deep-black"
+        className="relative isolate overflow-hidden bg-deep-black min-h-[78vh] sm:min-h-[85vh] flex flex-col"
       >
         {/* HERO SPLIT — amarelo (esq 62%) → preto (dir) */}
         <div className="relative w-full overflow-hidden bg-deep-black">
           {/* Camada amarela */}
           <div
-            className="absolute inset-0 bg-neon-yellow"
-            style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
+            className="absolute inset-0 bg-neon-yellow ole-hero-split"
             aria-hidden
           />
           {/* Linhas verticais sutis sobre o amarelo */}
           <svg
             aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
+            className="absolute inset-0 pointer-events-none ole-hero-split"
             width="100%"
             height="100%"
             preserveAspectRatio="none"
@@ -759,7 +760,7 @@ export function Home() {
         })()}
 
         {/* DESTAQUE DA PARTIDA + número gigante decorativo + ações */}
-        <div className="relative z-10 bg-deep-black px-5 py-9 sm:px-8 sm:py-12 md:px-10 md:py-14">
+        <div className="relative z-10 bg-deep-black px-5 py-9 sm:px-8 sm:py-12 md:px-10 md:py-14 flex-1 flex flex-col justify-between">
           {/* Diagonal accent decorativo (assinatura BVB) */}
           <div
             className="diagonal-accent"
@@ -841,12 +842,28 @@ export function Home() {
               Partida rápida conta para a liga e histórico oficial
             </p>
           </div>
+
+          {/* Scroll cue circular — assinatura cinematográfica */}
+          <div className="flex justify-center mt-8 sm:mt-10">
+            <button
+              type="button"
+              aria-label="Mais detalhes"
+              onClick={() => {
+                const el = document.getElementById('home-below-fold');
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.25)] animate-bounce"
+              style={{ animationDuration: '2s' }}
+            >
+              <ChevronRight className="w-4 h-4 rotate-90" />
+            </button>
+          </div>
         </div>
       </motion.div>
 
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div id="home-below-fold" className="grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-4">
         {/* Torcidômetro - Industrial Style */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
