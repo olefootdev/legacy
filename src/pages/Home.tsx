@@ -602,46 +602,44 @@ export function Home() {
           const lastMatch = results[0];
           const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
 
-          // Sem histórico → modo PREVIEW da próxima partida (fallback do antigo).
+          // Sem histórico → estado "antes da estreia" (coerente com o tema
+          // do hero: ÚLTIMA partida; aqui não houve nenhuma ainda).
           if (!lastMatch) {
-            const awayShort = (fixture.opponent.shortName ?? fixture.opponent.name)
-              .slice(0, 3)
-              .toUpperCase();
             return (
               <MatchdayHero
                 data={{
-                  competition: fixture.competition,
+                  competition: 'Pré-temporada · sem jogos',
                   statusPrimary: 'Estreia',
-                  statusSecondary: fixture.kickoffLabel,
+                  statusSecondary: 'Aguardando',
                   statusVariant: 'preview',
                   home: {
                     short: homeShort,
                     name: club.name,
                     score: 0,
-                    form: { v: wins, e: draws, d: losses },
+                    sublabel: 'Pronto para entrar em campo',
                   },
                   away: {
-                    short: awayShort,
-                    name: fixture.opponent.name,
+                    short: '—',
+                    name: 'Adversário',
                     score: 0,
-                    sublabel: fixture.venue,
+                    sublabel: 'Sem partida disputada',
                   },
                   stats: [
-                    { label: 'Vitórias', value: String(wins) },
-                    { label: 'Empates', value: String(draws) },
-                    { label: 'Derrotas', value: String(losses) },
+                    { label: 'Vitórias', value: '0' },
+                    { label: 'Empates', value: '0' },
+                    { label: 'Derrotas', value: '0' },
                     { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
                     { label: 'Forma', value: '—' },
                   ],
                   highlight: {
                     name: homeHighlight.name,
                     number: homeHighlight.ovr,
-                    quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. A primeira partida está chegando.`,
+                    quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. Pronto para a primeira partida.`,
                     photoUrl: homeHighlight.imageSrc,
                   },
                   actions: [
-                    { label: 'Partida rápida', href: '/match/quick', variant: 'primary' },
-                    { label: 'Táticas', href: '/team', variant: 'outline' },
+                    { label: 'Ver elenco', href: '/team', variant: 'primary' },
+                    { label: 'Treinar', href: '/team/treino', variant: 'outline' },
                   ],
                   topLeft: { label: 'Olefoot' },
                   scrollCueTargetId: 'home-below-fold',
