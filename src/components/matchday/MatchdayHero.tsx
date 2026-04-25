@@ -52,6 +52,13 @@ export interface MatchdayHeroData {
   topLeft?: { label: string; href?: string };
   /** ID do destino do scroll cue (smooth scroll). Sem isso, o cue não aparece. */
   scrollCueTargetId?: string;
+  /**
+   * `true` = fundo amarelo total (sem split diagonal preto).
+   * Texto/elementos do lado direito viram pretos pra contraste.
+   * Mobile-first: evita texto branco em região que vira amarela em viewports
+   * estreitos (causa de quebra/sumiço).
+   */
+  solidYellow?: boolean;
 }
 
 export const MOCK_MATCHDAY: MatchdayHeroData = {
@@ -94,20 +101,44 @@ export const MOCK_MATCHDAY: MatchdayHeroData = {
 export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData }) {
   const showScore = data.home.score != null && data.away.score != null;
   const actions = data.actions ?? MOCK_MATCHDAY.actions ?? [];
+  const solid = data.solidYellow === true;
+
+  // Cores do lado direito — quando solidYellow, tudo preto pra contraste
+  const rightTextStrong = solid ? 'text-black' : 'text-white';
+  const rightTextSoft = solid ? 'text-black/70' : 'text-white/70';
+  const rightTextMuted = solid ? 'text-black/40' : 'text-white/40';
+  const rightCrestRing = solid ? 'border-black' : 'border-white';
+  const rightCrestBg = solid ? 'bg-neon-yellow' : 'bg-deep-black';
+  const rightCrestText = solid ? 'text-black' : 'text-white';
+  const statusPrimaryColor = solid ? 'text-black/85' : 'text-white';
+  const statusSubColor = solid ? 'text-black/65' : 'text-white/70';
+
+  // Stats: solid → todos bg-black uniforme; split → alternados
+  const statsBg = (i: number) => {
+    if (solid) return 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center';
+    return i < 2
+      ? 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center'
+      : 'bg-deep-black border border-white/8 px-3 py-3 sm:px-4 sm:py-4 text-center';
+  };
+
+  // Bg da section: solid amarelo, ou dark com split
+  const sectionBg = solid ? 'bg-neon-yellow' : 'bg-deep-black';
 
   return (
-    <section className="relative w-full overflow-hidden bg-deep-black min-h-[78vh] sm:min-h-[88vh]">
-      {/* Camada amarela com clip-path (esq → 62%) */}
-      <div
-        className="absolute inset-0 bg-neon-yellow"
-        style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
-        aria-hidden
-      />
-      {/* Linhas verticais sutis (textura de campo) sobre o amarelo */}
+    <section className={`relative w-full overflow-hidden ${sectionBg} min-h-[78vh] sm:min-h-[88vh]`}>
+      {/* Camada amarela com clip-path (esq → 62%) — só no modo split */}
+      {!solid && (
+        <div
+          className="absolute inset-0 bg-neon-yellow"
+          style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
+          aria-hidden
+        />
+      )}
+      {/* Linhas verticais sutis (textura de campo) — full width no solid, clipped no split */}
       <svg
         aria-hidden
         className="absolute inset-0 pointer-events-none"
-        style={{ clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
+        style={solid ? undefined : { clipPath: 'polygon(0 0, 62% 0, 38% 100%, 0% 100%)' }}
         width="100%"
         height="100%"
         preserveAspectRatio="none"
@@ -141,17 +172,19 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           <span className="text-black/70 font-display font-bold uppercase tracking-[0.22em] text-[10px] sm:text-[12px] text-center flex-1 truncate">
             {data.competition}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-white font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]">
-            <span className="text-white/70">{data.statusPrimary}</span>
+          <span className={`inline-flex items-center gap-1.5 ${statusPrimaryColor} font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px]`}>
+            <span className={statusSubColor}>{data.statusPrimary}</span>
             {data.statusSecondary ? (
               <>
-                <span aria-hidden className="text-white/40">—</span>
+                <span aria-hidden className={rightTextMuted}>—</span>
                 <span className="inline-flex items-center gap-1.5">
                   <span
                     className={
                       data.statusVariant === 'live'
                         ? 'w-1.5 h-1.5 rounded-full bg-rose-500 live-dot'
-                        : 'w-1.5 h-1.5 rounded-full bg-neon-yellow'
+                        : solid
+                          ? 'w-1.5 h-1.5 rounded-full bg-black'
+                          : 'w-1.5 h-1.5 rounded-full bg-neon-yellow'
                     }
                     aria-hidden
                   />
@@ -166,9 +199,9 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
         <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-3 sm:gap-5 mb-10 sm:mb-14">
           {/* Casa */}
           <CrestCircle short={data.home.short} variant="onYellow" />
-          <div>
+          <div className="min-w-0">
             <h2
-              className="ole-headline text-black leading-[0.85] uppercase"
+              className="ole-headline text-black leading-[0.85] uppercase truncate"
               style={{ fontSize: 'clamp(24px, 4.5vw, 56px)' }}
             >
               {data.home.name}
@@ -176,7 +209,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             {data.home.form ? (
               <FormPills form={data.home.form} variant="onYellow" />
             ) : data.home.sublabel ? (
-              <p className="mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-black/70">
+              <p className="mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-black/70 truncate">
                 {data.home.sublabel}
               </p>
             ) : null}
@@ -207,7 +240,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   –
                 </span>
                 <span
-                  className="leading-none text-white tabular-nums"
+                  className={`leading-none tabular-nums ${rightTextStrong}`}
                   style={{
                     fontFamily: 'var(--font-serif-hero)',
                     fontStyle: 'italic',
@@ -232,37 +265,37 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           </div>
 
           {/* Visitante */}
-          <div className="text-right">
+          <div className="text-right min-w-0">
             <h2
-              className="ole-headline text-white leading-[0.85] uppercase"
+              className={`ole-headline ${rightTextStrong} leading-[0.85] uppercase truncate`}
               style={{ fontSize: 'clamp(24px, 4.5vw, 56px)' }}
             >
               {data.away.name}
             </h2>
             {data.away.form ? (
-              <FormPills form={data.away.form} variant="onDark" align="right" />
+              <FormPills form={data.away.form} variant={solid ? 'onYellow' : 'onDark'} align="right" />
             ) : data.away.sublabel ? (
-              <p className="mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-white/70 text-right">
+              <p className={`mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${rightTextSoft} text-right truncate`}>
                 {data.away.sublabel}
               </p>
             ) : null}
           </div>
-          <CrestCircle short={data.away.short} variant="onDark" />
+          <div
+            className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center ${rightCrestRing} ${rightCrestBg}`}
+          >
+            <span
+              className={`font-display font-black uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+            >
+              {data.away.short}
+            </span>
+          </div>
         </div>
 
         {/* Stats strip */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-10 sm:mb-14">
           {data.stats.map((s, i) => {
-            const onYellow = i < 2;
             return (
-              <article
-                key={s.label}
-                className={
-                  onYellow
-                    ? 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center'
-                    : 'bg-deep-black border border-white/8 px-3 py-3 sm:px-4 sm:py-4 text-center'
-                }
-              >
+              <article key={s.label} className={statsBg(i)}>
                 <p
                   className="text-neon-yellow tabular-nums leading-none"
                   style={{
@@ -281,7 +314,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           })}
         </div>
 
-        {/* Destaque da partida */}
+        {/* MVP */}
         <div className="relative grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-6 items-end pb-4">
           <div>
             {/* Eyebrow forçado a preto — sobre o lado amarelo do split fica
@@ -291,7 +324,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
               style={{ fontFamily: 'var(--font-ui)' }}
             >
               <span aria-hidden className="h-px w-8 bg-black/40" />
-              <span>★ Destaque da partida</span>
+              <span>★ MVP </span>
             </div>
             <h3
               className="ole-headline text-black leading-[0.9] uppercase"

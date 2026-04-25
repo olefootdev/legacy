@@ -570,25 +570,6 @@ export function Home() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-8">
-      {/* Header Mobile */}
-      <div className="mb-6 flex min-w-0 items-center justify-between gap-2 md:hidden">
-        <div className="flex min-w-0 items-center gap-2">
-          <img
-            src="/test-pitch/olefoot-logo-game.svg"
-            alt="Olefoot"
-            className="h-8 min-[360px]:h-9 w-auto shrink-0"
-          />
-        </div>
-        <Link
-          to="/wallet"
-          className="flex max-w-[min(100%,11rem)] shrink-0 items-center gap-2 border border-white/10 bg-panel px-2 py-1.5 min-[360px]:px-3"
-        >
-          <span className="truncate text-xs font-display font-bold tracking-wider text-neon-yellow min-[360px]:text-sm">
-            {formatExp(finance.ole)} EXP
-          </span>
-        </Link>
-      </div>
-
       {/* HERO PRINCIPAL — Matchday Hero do ÚLTIMO JOGO (placar real + MVP) */}
       <section
         aria-label="Último jogo"
@@ -608,21 +589,22 @@ export function Home() {
             return (
               <MatchdayHero
                 data={{
-                  competition: 'Pré-temporada · sem jogos',
+                  competition: 'Sem jogos disputados',
                   statusPrimary: 'Estreia',
                   statusSecondary: 'Aguardando',
                   statusVariant: 'preview',
+                  solidYellow: true,
                   home: {
                     short: homeShort,
                     name: club.name,
                     score: 0,
-                    sublabel: 'Pronto para entrar em campo',
+                    sublabel: 'Aguardando 1ª partida',
                   },
                   away: {
                     short: '—',
                     name: 'Adversário',
                     score: 0,
-                    sublabel: 'Sem partida disputada',
+                    sublabel: 'Sem partida',
                   },
                   stats: [
                     { label: 'Vitórias', value: '0' },
@@ -729,64 +711,72 @@ export function Home() {
           aria-label="Próxima partida"
           className="mb-8 bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
-          <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+          <div className="px-4 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
+            {/* Eyebrow centralizado */}
             <div
-              className="flex items-center justify-start gap-3 mb-3 uppercase tracking-[0.35em] text-[10px] font-medium text-neon-yellow"
+              className="ole-eyebrow !text-neon-yellow"
               style={{ fontFamily: 'var(--font-ui)' }}
             >
-              <span aria-hidden className="h-px w-6 bg-neon-yellow/40" />
               <span>Próxima partida · {fixture.kickoffLabel}</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              {/* Duelo: [crest] CLB vs [crest] OPP */}
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
-                  <span className="font-display font-black uppercase text-neon-yellow text-[11px] sm:text-[13px] tracking-[0.06em]">
-                    {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
-                  </span>
-                </div>
-                <span
-                  className="text-white/70 leading-none select-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontStyle: 'italic',
-                    fontSize: 'clamp(20px, 3vw, 32px)',
-                  }}
-                >
-                  vs
-                </span>
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
-                  <span className="font-display font-black uppercase text-white text-[11px] sm:text-[13px] tracking-[0.06em]">
-                    {(fixture.opponent.shortName ?? fixture.opponent.name)
-                      .slice(0, 3)
-                      .toUpperCase()}
-                  </span>
-                </div>
-                <div className="min-w-0 ml-1 sm:ml-2">
-                  <p className="font-display font-black uppercase text-white text-[14px] sm:text-[18px] tracking-tight leading-tight truncate">
-                    {fixture.opponent.name}
-                  </p>
-                  <p className="font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[11px] text-white/55 truncate">
-                    {fixture.competition} · {fixture.venue}
-                  </p>
-                </div>
-              </div>
 
-              {/* Ações */}
-              <div className="flex gap-2 sm:gap-3 shrink-0">
-                <Link
-                  to="/match/quick"
-                  className="bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                >
-                  Partida rápida
-                </Link>
-                <Link
-                  to="/team"
-                  className="bg-black border border-white/15 text-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm"
-                >
-                  Ver táticas
-                </Link>
+            {/* Duelo: [crest] CASA × VISITANTE [crest] — só iniciais */}
+            <div className="flex items-center justify-center gap-4 sm:gap-6">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
+                <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
+                  {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
+                </span>
               </div>
+              <span
+                className="text-neon-yellow/85 leading-none select-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(28px, 4.5vw, 44px)',
+                  letterSpacing: '-0.04em',
+                  transform: 'translateY(-0.04em)',
+                }}
+              >
+                ×
+              </span>
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
+                <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
+                  {(fixture.opponent.shortName ?? fixture.opponent.name)
+                    .slice(0, 3)
+                    .toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            {/* Liga + Estádio — abaixo dos ícones, centralizado */}
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {fixture.competition} · {fixture.venue}
+            </p>
+
+            {/* Ações centralizadas */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1">
+              <Link
+                to="/match/quick"
+                className="bg-neon-yellow text-black hover:bg-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                Partida rápida
+              </Link>
+              <Link
+                to="/team"
+                className="bg-deep-black border border-[var(--color-border)] text-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                Ver táticas
+              </Link>
             </div>
           </div>
         </section>
