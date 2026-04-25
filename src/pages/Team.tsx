@@ -277,7 +277,7 @@ export function Team() {
           </>
         }
         actions={
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
@@ -286,32 +286,50 @@ export function Team() {
                 setPresetInfoId(null);
                 setFormationModalOpen(true);
               }}
-              className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-neon-yellow/25 bg-neon-yellow/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90 transition-colors hover:bg-neon-yellow/10 hover:text-neon-yellow md:text-[10px]"
+              className="inline-flex items-center gap-1.5 bg-neon-yellow px-3 py-1.5 text-black hover:bg-white transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
             >
-              <span className="inline-flex skew-x-6 items-center gap-1">
-                <LayoutGrid className="h-3 w-3 shrink-0 opacity-90" />
-                Escolher formação
-              </span>
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Escolher formação
             </button>
             <button
               type="button"
               onClick={() => setCreateProspectOpen(true)}
-              className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-white/20 bg-white/5 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-white/90 transition-colors hover:bg-white/10 hover:text-white md:text-[10px]"
+              className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
             >
-              <span className="inline-flex skew-x-6 items-center gap-1">
-                <Sparkles className="h-3 w-3 shrink-0 text-neon-yellow opacity-90" />
-                Criar jogador
-              </span>
+              <Sparkles className="h-3.5 w-3.5" />
+              Criar jogador
             </button>
             {favoriteRealTeam?.name ? (
               <Link
                 to="/ranking?tab=nacional&heart=1"
-                className="-skew-x-6 inline-flex items-center gap-1.5 rounded-sm border border-neon-green/30 bg-neon-green/10 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-widest text-neon-green/95 transition-colors hover:bg-neon-green/20 md:text-[10px]"
+                className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
-                <span className="inline-flex skew-x-6 items-center gap-1">
-                  <Heart className="h-3 w-3 shrink-0 opacity-90" />
-                  Ranking · {favoriteRealTeam.name}
-                </span>
+                <Heart className="h-3.5 w-3.5" />
+                Ranking · {favoriteRealTeam.name}
               </Link>
             ) : null}
           </div>
@@ -329,9 +347,19 @@ export function Team() {
             {/* Largura do relvado: sempre ≤ largura do painel; `mx-auto` centra o bloco no ecrã estreito. */}
             <div className="mx-auto w-full min-w-0 max-w-[min(100%,17.5rem)] md:max-w-md">
               <div className="mb-2 flex w-full min-w-0 items-center justify-between gap-2 px-0.5 sm:mb-3 md:mb-4 md:px-0">
-                <h3 className="flex min-w-0 flex-1 items-center gap-1 font-display text-xs font-black uppercase tracking-wider sm:gap-1.5 sm:text-sm md:gap-2 md:text-base lg:text-lg">
-                  <Shield className="h-3.5 w-3.5 shrink-0 text-neon-yellow sm:h-4 sm:w-4 md:h-[1.1rem] md:w-[1.1rem] lg:h-5 lg:w-5" aria-hidden />
-                  <span className="min-w-0 truncate">Titulares</span>
+                <h3 className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <span aria-hidden className="shrink-0 w-[3px] h-5 sm:h-6 bg-neon-yellow" />
+                  <span
+                    className="min-w-0 truncate text-neon-yellow uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    Titulares
+                  </span>
                 </h3>
                 <button
                   type="button"
@@ -461,32 +489,67 @@ export function Team() {
               )}
             </AnimatePresence>
 
-            {/* Save: sem skew no xs — skew + overflow-x-hidden do painel cortava a direita em mobile. */}
-            <button 
+            {/* Save — primário sistema (sharp 4px, sem skew, sombra base) */}
+            <button
               onClick={handleSave}
               disabled={isSaving}
-              className="mt-2 box-border w-full min-w-0 max-w-full bg-neon-yellow py-2 font-display text-xs font-black uppercase tracking-wider text-black transition-all [-webkit-tap-highlight-color:transparent] hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:mt-3 sm:-skew-x-6 sm:py-2.5 sm:text-sm md:mt-4 md:py-4 md:text-lg"
+              className="mt-3 box-border inline-flex w-full items-center justify-center gap-2 bg-neon-yellow py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neon-yellow disabled:hover:scale-100 [-webkit-tap-highlight-color:transparent]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              }}
             >
-              <span className="flex items-center justify-center gap-1.5 sm:skew-x-6 sm:gap-2">
-                <Save className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                {isSaving ? 'Salvando...' : 'Salvar Titulares'}
-              </span>
+              <Save className="h-4 w-4 shrink-0" />
+              {isSaving ? 'Salvando…' : 'Salvar titulares'}
             </button>
           </div>
         </div>
 
         {/* Right: Available Players (Horizontal Cards) */}
         <div className="flex min-w-0 w-full max-w-full flex-col gap-4 lg:w-1/2">
-          <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
-            <h3 className="min-w-0 truncate font-display text-base font-black uppercase tracking-wider text-gray-400 sm:text-lg">
-              Jogadores Disponíveis
-            </h3>
-            <span className="shrink-0 text-xs font-bold text-gray-500">{availablePlayers.length} Reservas</span>
+          <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span aria-hidden className="shrink-0 w-[3px] h-7 bg-neon-yellow" />
+              <h3
+                className="min-w-0 truncate text-neon-yellow uppercase"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                }}
+              >
+                Jogadores disponíveis
+              </h3>
+            </div>
+            <span
+              className="shrink-0 text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {availablePlayers.length} {availablePlayers.length === 1 ? 'reserva' : 'reservas'}
+            </span>
           </div>
           
           <div className="space-y-3 lg:overflow-y-auto lg:pr-2 lg:max-h-[calc(100vh-16rem)] pb-[max(3rem,env(safe-area-inset-bottom,0px))]">
             <AnimatePresence>
-              {availablePlayers.map((player) => (
+              {availablePlayers.map((player) => {
+                const stats = [
+                  { label: 'PAC', val: player.pac },
+                  { label: 'SHO', val: player.sho },
+                  { label: 'PAS', val: player.pas },
+                  { label: 'FAT', val: player.fatigue },
+                ];
+                return (
                 <motion.div
                   key={player.id}
                   layout
@@ -494,9 +557,12 @@ export function Team() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   className={cn(
-                    "flex bg-dark-gray border rounded-xl overflow-hidden h-24 md:h-28 transition-all hover:border-white/40 group",
-                    player.style === 'neon-yellow' ? 'border-neon-yellow/50' : 'border-white/10'
+                    'flex bg-dark-gray border border-l-[3px] overflow-hidden h-52 sm:h-60 md:h-64 transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5 group',
+                    player.style === 'neon-yellow'
+                      ? 'border-[var(--color-border)] border-l-neon-yellow'
+                      : 'border-[var(--color-border)] border-l-white/15',
                   )}
+                  style={{ borderRadius: 'var(--radius-md)' }}
                 >
                   {/* Left + middle: abre ficha temporada */}
                   <button
@@ -504,83 +570,165 @@ export function Team() {
                     className="flex min-w-0 flex-1 cursor-pointer text-left [-webkit-tap-highlight-color:transparent]"
                     onClick={() => setSheetPlayerId(player.id)}
                   >
-                  {/* Left: Image & OVR */}
-                  <div className="w-20 md:w-24 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 md:pt-4 border-r border-white/5">
-                    <div className={cn(
-                      "absolute inset-0 opacity-20",
-                      player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
-                    )} />
-                    <img 
-                      src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 200, 300)} 
-                      alt={player.name} 
-                      className="w-[80%] h-[90%] object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300" 
-                      referrerPolicy="no-referrer"
-                      style={{ maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)' }}
+                  {/* Foto — ocupa todo o espaço, vira fundo do OVR */}
+                  <div className="relative w-36 sm:w-44 md:w-52 flex-shrink-0 overflow-hidden bg-black border-r border-white/8">
+                    {/* Tonal background (sutil, atrás da foto) */}
+                    <div
+                      className={cn(
+                        'absolute inset-0',
+                        player.style === 'neon-yellow' ? 'bg-neon-yellow/10' : 'bg-white/5',
+                      )}
+                      aria-hidden
                     />
-                    <div className={cn(
-                      "absolute top-1 left-1 md:top-2 md:left-2 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-black drop-shadow-md",
-                      player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-black/80 text-white border border-white/20'
-                    )}>
-                      {player.ovr}
+                    <img
+                      src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
+                      alt={player.name}
+                      className="absolute inset-0 h-full w-full object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300"
+                      referrerPolicy="no-referrer"
+                    />
+                    {/* Gradient pra leitura do OVR sobre a foto */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
+                    />
+                    {/* OVR — Moret italic editorial gigante (assinatura /legend, agora com foto de fundo) */}
+                    <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
+                      <p
+                        className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: 'clamp(38px, 5.5vw, 56px)',
+                          letterSpacing: '-0.04em',
+                        }}
+                      >
+                        {player.ovr}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Middle: Info */}
-                  <div className="flex-1 p-2 md:p-3 flex flex-col justify-center relative min-w-0">
-                    <div className="absolute top-2 right-2 md:right-3 flex max-w-[calc(100%-3rem)] items-center gap-1 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-black/40 px-1.5 md:px-2 py-0.5 md:py-1 rounded">
-                      {player.countryFlagEmoji ? (
-                        <span className="text-sm leading-none" title={player.country ?? undefined} aria-hidden>
-                          {player.countryFlagEmoji}
+                  {/* Middle: Info + DNA stats em 2x2 */}
+                  <div className="flex-1 px-3 py-3 md:px-4 md:py-3.5 flex flex-col justify-between gap-3 relative min-w-0">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-white uppercase truncate"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 800,
+                            fontSize: 'clamp(17px, 2.2vw, 22px)',
+                            letterSpacing: '0.03em',
+                            lineHeight: 1.05,
+                          }}
+                        >
+                          {player.name}
+                        </p>
+                        <p
+                          className="text-white/50 uppercase mt-0.5"
+                          style={{
+                            fontFamily: 'var(--font-ui)',
+                            fontSize: '10px',
+                            letterSpacing: '0.22em',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {player.countryFlagEmoji ? (
+                            <span className="mr-1.5 not-italic" title={player.country ?? undefined} aria-hidden>
+                              {player.countryFlagEmoji}
+                            </span>
+                          ) : null}
+                          {player.pos}
+                        </p>
+                      </div>
+                      {player.outForMatches > 0 ? (
+                        <span
+                          className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-danger)] bg-[rgba(255,61,61,0.1)] text-[var(--color-danger)] uppercase px-1.5 py-0.5"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            letterSpacing: '0.18em',
+                            borderRadius: 'var(--radius-sm)',
+                          }}
+                        >
+                          Fora {player.outForMatches}j
+                        </span>
+                      ) : player.injuryRisk >= 70 ? (
+                        <span
+                          className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-warning)] bg-[rgba(255,179,0,0.1)] text-[var(--color-warning)] uppercase px-1.5 py-0.5"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            letterSpacing: '0.18em',
+                            borderRadius: 'var(--radius-sm)',
+                          }}
+                        >
+                          Risco {player.injuryRisk}
                         </span>
                       ) : null}
-                      <span>{player.pos}</span>
-                    </div>
-                    <div className="font-display font-black text-lg md:text-xl italic uppercase tracking-wider text-white leading-none mb-1 truncate pr-8">
-                      {player.name}
                     </div>
 
-                    {player.outForMatches > 0 ? (
-                      <div className="mt-1 inline-flex items-center gap-1 rounded-sm bg-red-500/20 border border-red-500/50 px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-red-300 w-fit">
-                        <span>🚑</span>
-                        <span>Fora {player.outForMatches}j</span>
-                      </div>
-                    ) : player.injuryRisk >= 70 ? (
-                      <div className="mt-1 inline-flex items-center gap-1 rounded-sm bg-amber-500/20 border border-amber-500/50 px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-amber-300 w-fit">
-                        <span>⚠</span>
-                        <span>Risco {player.injuryRisk}</span>
-                      </div>
-                    ) : null}
-
-                    {/* Stats */}
-                    <div className="flex gap-2 md:gap-4 mt-1 md:mt-3">
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">PAC</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.pac}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">SHO</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.sho}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">PAS</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.pas}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">FAT</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.fatigue}</span>
-                      </div>
+                    {/* DNA do Campeão — grid 2x2 (mobile-safe, fontes maiores chamando atenção) */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:gap-x-6">
+                      {stats.map((s) => {
+                        const v = Math.max(0, Math.min(100, s.val));
+                        return (
+                          <div key={s.label} className="min-w-0">
+                            <div className="flex items-baseline justify-between gap-1.5">
+                              <span
+                                className="text-white/55 uppercase"
+                                style={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.22em',
+                                }}
+                              >
+                                {s.label}
+                              </span>
+                              <span
+                                className="italic text-neon-yellow tabular-nums leading-none"
+                                style={{
+                                  fontFamily: 'var(--font-serif-hero)',
+                                  fontWeight: 700,
+                                  fontSize: 'clamp(18px, 2vw, 22px)',
+                                  letterSpacing: '-0.02em',
+                                }}
+                              >
+                                {s.val}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 h-[3px] bg-white/8 overflow-hidden">
+                              <div
+                                className="h-full bg-neon-yellow transition-all duration-500"
+                                style={{ width: `${v}%` }}
+                                aria-hidden
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   </button>
 
-                  {/* Right: ESCALAR + ANUNCIAR (mercado EXP — mesmo fluxo que /transfer) */}
-                  <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch justify-center gap-1.5 border-l border-white/5 bg-black/20 p-1.5 sm:w-[7.5rem] md:w-[8.25rem] md:p-2">
+                  {/* Right: ESCALAR (primário) + ANUNCIAR (outline) */}
+                  <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch justify-center gap-1.5 border-l border-white/8 bg-black/20 p-2 sm:w-[7.5rem] md:w-[8.25rem]">
                     <button
                       type="button"
                       onClick={() => handleEscalar(player)}
-                      className="w-full rounded-sm bg-white/10 py-2 font-display text-[9px] font-bold uppercase tracking-wider text-white transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow hover:text-black sm:py-2.5 sm:text-[10px] sm:max-md:-skew-x-6 md:text-[11px]"
+                      className="w-full bg-neon-yellow py-2 text-black hover:bg-white transition-colors [-webkit-tap-highlight-color:transparent]"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
                     >
-                      <span className="block sm:max-md:skew-x-6">Escalar</span>
+                      Escalar
                     </button>
                     <button
                       type="button"
@@ -589,19 +737,40 @@ export function Team() {
                         setAnnouncePrice('180000');
                         setAnnouncePlayer(player);
                       }}
-                      className="flex w-full items-center justify-center gap-1 rounded-sm border border-neon-yellow/35 bg-neon-yellow/10 py-2 font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow/20 sm:py-2.5 sm:text-[10px] md:text-[11px]"
+                      className="flex w-full items-center justify-center gap-1 border border-[var(--color-border)] bg-deep-black py-2 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent]"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
                     >
-                      <Megaphone className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+                      <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
                       <span>Anunciar</span>
                     </button>
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
             
             {availablePlayers.length === 0 && (
-              <div className="text-center py-12 text-gray-500 font-display font-bold text-xl">
-                Sem reservas aqui — titulares completos ou jogadores no mercado EXP.
+              <div
+                className="text-center py-12 border border-[var(--color-border)] bg-dark-gray"
+                style={{ borderRadius: 'var(--radius-md)' }}
+              >
+                <p
+                  className="italic text-white/55 mx-auto max-w-md px-6"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(16px, 2.2vw, 20px)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  “sem reservas — titulares completos ou jogadores no mercado.”
+                </p>
               </div>
             )}
           </div>
@@ -647,7 +816,7 @@ export function Team() {
                       onClick={() => handleEscalarToSlot(player, selectedSlot.id)}
                     >
                       {/* Left: Image & OVR */}
-                      <div className="w-16 md:w-20 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 border-r border-white/5">
+                      <div className="w-20 sm:w-24 md:w-28 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 border-r border-white/5">
                         <div className={cn(
                           "absolute inset-0 opacity-20",
                           player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
@@ -687,7 +856,7 @@ export function Team() {
                               {player.countryFlagEmoji}
                             </span>
                           ) : null}
-                          <div className="min-w-0 flex-1 font-display font-black text-base md:text-lg italic uppercase tracking-wider text-white leading-none truncate">
+                          <div className="min-w-0 flex-1 font-display font-black text-lg sm:text-xl md:text-2xl uppercase tracking-wide text-white leading-none truncate">
                             {player.name}
                           </div>
                         </div>
