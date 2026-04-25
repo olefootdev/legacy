@@ -10,6 +10,7 @@ import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/mat
 import { playerTokenSrc } from '@/lib/playerPortrait';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
 import { MatchdayResultScores, MatchdayVersusWithClock } from '@/components/matchday/MatchdayVersusTitle';
+import { GoalTakeover } from '@/components/matchday/GoalTakeover';
 import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
 import { LiveMatchManagerPanel } from '@/components/matchday/LiveMatchManagerPanel';
 import { VoiceCommandPanel } from '@/components/matchday/VoiceCommandPanel';
@@ -600,6 +601,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   );
   const [preGoalActive, setPreGoalActive] = useState(false);
   const [, setMomentumAnimKey] = useState<string | null>(null);
+  const [goalTakeoverKey, setGoalTakeoverKey] = useState<string | null>(null);
   const [tacticalDevLayer, setTacticalDevLayer] = useState(loadTacticalLayerPref);
   const [zoneView18, setZoneView18] = useState(loadZoneView18Pref);
   const [pitchCameraMode, setPitchCameraMode] = useState<Live2dPitchCameraMode>(() => loadLive2dPitchCamera());
@@ -890,6 +892,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     lastSeenGoalEventIdRef.current = top.id;
     freezeUntilRef.current = Date.now() + GOAL_FREEZE_MS;
     setMomentumAnimKey(top.id);
+    setGoalTakeoverKey(top.id);
   }, [live?.events, live?.phase, live?.mode, preGoalActive]);
 
   useEffect(() => {
@@ -1120,6 +1123,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
 
   return (
     <div className="flex w-full min-h-0 flex-1 flex-col space-y-3 sm:space-y-4 py-4 sm:py-6 px-2 sm:px-4 pb-20 sm:pb-24 md:flex-none">
+      <GoalTakeover triggerKey={goalTakeoverKey} disabled={prefersReducedMotion} />
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <Link to="/" className="text-[10px] sm:text-xs font-bold text-gray-500 hover:text-neon-yellow">
           ← Home
