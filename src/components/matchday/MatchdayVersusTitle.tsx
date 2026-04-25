@@ -53,6 +53,11 @@ function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }
         }
         transition={{ type: 'spring', stiffness: 420, damping: 18 }}
         className="relative tabular-nums text-neon-yellow"
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.02em',
+        }}
       >
         {value}
       </motion.span>
@@ -438,7 +443,7 @@ export function MatchdayResultScores({
         <span className="text-center leading-tight [overflow-wrap:anywhere]">{homeLabel}</span>
       </span>
       <AnimatedScore value={homeScore} side="home" />
-      <span className="shrink-0 text-gray-600">–</span>
+      <span className="shrink-0 ole-scoreboard__separator">–</span>
       <AnimatedScore value={awayScore} side="away" />
       <span className="inline-flex max-w-[min(100%,16rem)] flex-row-reverse items-center gap-2 sm:max-w-[min(100%,20rem)] sm:gap-2.5">
         {showTeamCrests ? <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="md" /> : null}

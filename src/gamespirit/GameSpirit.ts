@@ -42,9 +42,13 @@ function zoneFromBallX(x: number): BallZone {
 }
 
 /** Alvo UI (0–100) junto à boca real da baliza — coerente com coreografia test2d. */
-function spiritShotTargetUI(side: 'home' | 'away'): PitchPoint {
+function spiritShotTargetUI(side: 'home' | 'away', shooter?: PitchPlayerState): PitchPoint {
   const halfUy = (GOAL_MOUTH_HALF_WIDTH_M / FIELD_WIDTH) * 100;
-  const y = 50 + (Math.random() - 0.5) * (2 * halfUy * 0.88);
+  // ângulo proxy: 0 = central, 1 = lateral extremo. Reduz janela e viesa pro canto curto.
+  const lateralBias = shooter ? Math.min(1, Math.abs(shooter.y - 50) / 35) : 0;
+  const usable = 0.88 * (1 - lateralBias * 0.55);
+  const sideBias = shooter ? Math.sign(shooter.y - 50) * lateralBias * halfUy * 0.45 : 0;
+  const y = 50 + sideBias + (Math.random() - 0.5) * (2 * halfUy * usable);
   if (side === 'home') return { x: 96.4 + Math.random() * 2.6, y };
   return { x: 1 + Math.random() * 2.6, y };
 }
@@ -147,6 +151,38 @@ function densityNearBall(ball: PitchPoint, mates: PitchPlayerState[], radius = 1
   return c;
 }
 
+function countOpponentsWithin(
+  ball: PitchPoint,
+  opps: PitchPlayerState[] | undefined,
+  radius = 8,
+): number {
+  if (!opps) return 0;
+  let c = 0;
+  for (const o of opps) if (dist(ball, { x: o.x, y: o.y }) < radius) c += 1;
+  return c;
+}
+
+function findFreeForwardTeammate(
+  onBall: PitchPlayerState | undefined,
+  mates: PitchPlayerState[] | undefined,
+  opps: PitchPlayerState[] | undefined,
+  side: 'home' | 'away',
+): PitchPlayerState | null {
+  if (!onBall || !mates) return null;
+  const forwardSign = side === 'home' ? 1 : -1;
+  let best: PitchPlayerState | null = null;
+  let bestAdvance = 0;
+  for (const m of mates) {
+    if (m.playerId === onBall.playerId) continue;
+    const advance = (m.x - onBall.x) * forwardSign;
+    if (advance < 4) continue;
+    const marked = (opps ?? []).some((o) => dist({ x: m.x, y: m.y }, { x: o.x, y: o.y }) < 4);
+    if (marked) continue;
+    if (advance > bestAdvance) { bestAdvance = advance; best = m; }
+  }
+  return best;
+}
+
 function pickAction(ctx: SpiritContext): ProposedAction {
   // Escanteio pendente — resolve cabeçada na hora, consome hint depois no tick.
   if (ctx.pendingCornerForSide === 'home' && ctx.possession === 'home') {
@@ -180,12 +216,19 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   const m = ctx.test2dTickModifiers;
   const st = ctx.live2dStagnationTicks ?? 0;
 
+  // Awareness local: quantos adversários cercam a bola e há colega livre adiantado?
+  const oppsNear = ctx.ball ? countOpponentsWithin(ctx.ball, ctx.awayPlayers, 8) : 0;
+  const freeFwd = findFreeForwardTeammate(ctx.onBall, ctx.homePlayers, ctx.awayPlayers, 'home');
+  const underPressure = oppsNear >= 2;
+
   /** live2d: após N recycles seguidos, obrigar avanço (condução/passe longo). */
   if (ctx.possession === 'home' && st >= 2) {
     return 'progress';
   }
   if (ctx.possession === 'home' && st >= 1 && ctx.onBall?.role === 'def' && ctx.ballZone === 'def') {
-    return Math.random() < 0.88 ? 'progress' : 'recycle';
+    // Zagueiro: só recicla se realmente pressionado E sem colega livre adiantado.
+    if (underPressure && !freeFwd) return 'recycle';
+    return 'progress';
   }
 
   if (ctx.possession === 'away' && deepDefense && highPress) {
@@ -201,12 +244,26 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     const zoneShotBias = zi
       ? (isBox(zi) ? 0.30 : 0) + (isCreationZone(zi) ? 0.12 : 0)
       : 0;
-    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18 + (m?.shotInAttThirdBias ?? 0) + momentumBias + zoneShotBias;
+    const inDangerZone = zi ? (isBox(zi) || isCreationZone(zi)) : false;
+    // Awareness bias: portador sob pressão E sem colega livre → chuta (evita recycle suicida).
+    const awarenessShotBias = (underPressure && !freeFwd && inDangerZone) ? 0.20 : 0;
+    // Inverso: portador livre + colega livre adiantado fora da box → passa em vez de chutar.
+    const passOverShot = (!underPressure && freeFwd && zi && !isBox(zi)) ? -0.18 : 0;
+    const shotBias =
+      style.shootingProfile * 0.25 +
+      style.riskTaking * 0.18 +
+      (m?.shotInAttThirdBias ?? 0) +
+      momentumBias +
+      zoneShotBias +
+      awarenessShotBias +
+      passOverShot;
     return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
   }
-  if (ctx.possession === 'home' && style.buildUp > 0.72 && Math.random() < 0.22) return 'clear';
+  // Build-up: só joga longo (clear) se realmente sem opção curta.
+  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && Math.random() < 0.22) return 'clear';
+  if (ctx.possession === 'home' && style.verticality > 0.72 && freeFwd) return 'progress';
   if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < 0.24) return 'progress';
-  if (ctx.possession === 'home' && style.verticality < 0.28 && Math.random() < 0.28) return 'recycle';
+  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && Math.random() < 0.28) return 'recycle';
   /** Sem remate “milagre” do meio-campo: em desespero só remata quem já chegou à zona final. */
   if (ctx.possession === 'home' && losingHome && ctx.minute > 70) {
     return crowded && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')
@@ -214,8 +271,12 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       : 'progress';
   }
   if (ctx.possession === 'away' && ctx.ballZone === 'def') return 'clear';
-  if (ctx.possession === 'home' && ctx.ballZone === 'mid' && Math.random() > 0.65) return 'progress';
-  const base: ProposedAction = Math.random() > 0.72 ? 'progress' : 'recycle';
+  if (ctx.possession === 'home' && ctx.ballZone === 'mid') {
+    if (freeFwd) return 'progress';
+    if (underPressure) return 'recycle';
+    if (Math.random() > 0.65) return 'progress';
+  }
+  const base: ProposedAction = freeFwd ? 'progress' : (Math.random() > 0.72 ? 'progress' : 'recycle');
 
   // DNA de lenda: aplica pesos de posição sobre a decisão base (zero tokens, local).
   if (ctx.possession === 'home' && ctx.onBallKnowledge) {

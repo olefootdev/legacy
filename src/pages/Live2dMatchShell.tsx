@@ -291,7 +291,7 @@ const Test2dHomePlayerToken = memo(function Test2dHomePlayerToken({
           className={cn(
             'relative z-[1] flex h-full w-full items-center justify-center overflow-hidden rounded-full border-[1.5px] bg-black/55 transition-shadow',
             onBall
-              ? 'border-neon-yellow ring-[1.5px] ring-neon-yellow/50 shadow-[0_0_12px_rgba(234,255,0,0.35)]'
+              ? 'border-neon-yellow ring-[1.5px] ring-neon-yellow/50 shadow-[0_0_12px_rgba(253,225,0,0.35)]'
               : 'border-white/75 shadow-[0_3px_9px_rgba(0,0,0,0.5)]',
             onSelect && 'hover:ring-2 hover:ring-cyan-400/50 hover:shadow-[0_0_14px_rgba(34,211,238,0.3)]',
           )}
@@ -519,7 +519,7 @@ const Test2dBallToken = memo(function Test2dBallToken({
         const rotateDur = isShot ? 0.16 : isLong ? 0.38 : isCarry ? 0.8 : isMoving ? 1.4 : 3.2;
         const blurPx = isShot ? 0.9 : isLong ? 0.45 : 0;
         const glowClass = isShot
-          ? 'drop-shadow-[0_0_14px_rgba(255,235,0,0.85)] drop-shadow-[0_0_6px_rgba(255,255,255,0.6)] drop-shadow-[0_3px_5px_rgba(0,0,0,0.4)]'
+          ? 'drop-shadow-[0_0_14px_rgba(253,225,0,0.85)] drop-shadow-[0_0_6px_rgba(255,255,255,0.6)] drop-shadow-[0_3px_5px_rgba(0,0,0,0.4)]'
           : isLong
             ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.6)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.38)]'
             : airborne
@@ -1259,7 +1259,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                   animate={{ scale: 1, opacity: 1, letterSpacing: '0.25em' }}
                   exit={{ opacity: 0, scale: 1.05 }}
                   transition={{ duration: 0.35, ease: 'easeOut' }}
-                  className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90 drop-shadow-[0_0_18px_rgba(234,255,0,0.35)]"
+                  className="font-display font-black text-[min(8vw,2.2rem)] uppercase text-white/90 drop-shadow-[0_0_18px_rgba(253,225,0,0.35)]"
                 >
                   Preparados?
                 </motion.span>
@@ -1271,7 +1271,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                   exit={{ opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 520, damping: 28 }}
                   className={cn(
-                    'font-display font-black text-neon-yellow tabular-nums drop-shadow-[0_0_24px_rgba(234,255,0,0.35)]',
+                    'font-display font-black text-neon-yellow tabular-nums drop-shadow-[0_0_24px_rgba(253,225,0,0.35)]',
                     quickPreStart === 'kickoff'
                       ? 'text-[min(8vw,2.25rem)] uppercase tracking-widest'
                       : 'text-[min(22vw,7rem)]',
@@ -1611,7 +1611,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                           animate={{ scale: 1, opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ type: 'spring', stiffness: 520, damping: 28 }}
-                          className="font-display font-black tabular-nums text-neon-yellow drop-shadow-[0_0_24px_rgba(234,255,0,0.35)] text-[min(22vw,5.5rem)]"
+                          className="font-display font-black tabular-nums text-neon-yellow drop-shadow-[0_0_24px_rgba(253,225,0,0.35)] text-[min(22vw,5.5rem)]"
                         >
                           {tacticalKickoffHoldCountdown}
                         </motion.span>
