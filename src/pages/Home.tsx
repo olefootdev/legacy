@@ -670,16 +670,20 @@ export function Home() {
         <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/15 blur-[80px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-6 md:px-10 md:py-8 flex flex-col gap-5 lg:gap-6">
-          {/* Cabeçalho: matchday + horário + duelo (nomes completos + brasões) */}
+          {/* Cabeçalho: eyebrow MATCHDAY + headline italic + duelo (nomes completos + brasões) */}
           <div className="text-center space-y-2.5">
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-              <span className="bg-neon-yellow text-black font-display font-bold px-2.5 py-1 text-xs sm:text-sm tracking-widest -skew-x-6 uppercase">
-                Matchday
-              </span>
-              <span className="text-gray-400 font-display tracking-widest text-xs sm:text-sm uppercase">
+            <div className="ole-eyebrow">
+              <span>Matchday</span>
+              <span className="ml-3 text-text-soft normal-case tracking-widest">
                 {fixture.kickoffLabel}
               </span>
             </div>
+            <h2
+              className="ole-headline-italic text-white/85"
+              style={{ fontSize: 'clamp(0.95rem, 2vw, 1.4rem)' }}
+            >
+              Sua partida começa agora.
+            </h2>
             <MatchdayVersusTitle
               homeName={club.name}
               awayName={fixture.opponent.name}
@@ -687,7 +691,7 @@ export function Home() {
               className="text-[clamp(0.75rem,2.85vw+0.35rem,1.125rem)] sm:text-[clamp(1.05rem,2.4vw+0.5rem,1.65rem)] md:text-[2rem] lg:text-[2.35rem]"
               vsClassName="text-[0.9em] sm:text-[0.95em] md:text-[1em]"
             />
-            <p className="text-gray-400 text-sm font-medium tracking-wide">
+            <p className="text-text-soft text-sm font-medium tracking-wide">
               {fixture.venue} · {fixture.competition}
             </p>
           </div>
