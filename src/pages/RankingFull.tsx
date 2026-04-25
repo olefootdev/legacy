@@ -144,8 +144,9 @@ export function RankingFull() {
         <div className="bg-dark-gray p-4 border-b border-white/10 flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="font-display font-black text-2xl md:text-3xl uppercase tracking-wider text-white">
-                Ranking OLE
+              <div className="ole-eyebrow justify-start mb-2">Ranking</div>
+              <h1 className="ole-headline text-3xl md:text-4xl text-white">
+                RANKING <span className="ole-headline-italic text-neon-yellow">OLE.</span>
               </h1>
               <p className="text-[11px] text-gray-500 mt-1">{subtitle}</p>
             </div>
@@ -160,7 +161,7 @@ export function RankingFull() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  'rounded-lg border px-3 py-2 font-display text-[10px] font-black uppercase tracking-wider sm:text-xs',
+                  'rounded-sm border px-3 py-2 font-display text-[10px] font-black uppercase tracking-wider sm:text-xs',
                   tab === t.id
                     ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
                     : 'border-white/15 text-white/55 hover:border-white/25 hover:text-white/85',
@@ -200,8 +201,14 @@ export function RankingFull() {
               >
                 <div
                   className={cn(
-                    'w-9 h-9 flex items-center justify-center text-xs font-display font-black rounded shrink-0',
-                    row.globalRank <= 3 ? 'bg-neon-yellow text-black' : 'bg-white/10 text-white',
+                    'w-9 h-9 flex items-center justify-center text-xs font-display font-black rounded-sm shrink-0',
+                    row.globalRank === 1
+                      ? 'bg-[#FFD700] text-black shadow-[0_0_12px_rgba(255,215,0,0.35)]'
+                      : row.globalRank === 2
+                        ? 'bg-[#C0C0C0] text-black'
+                        : row.globalRank === 3
+                          ? 'bg-[#CD7F32] text-black'
+                          : 'bg-white/10 text-white',
                   )}
                 >
                   {row.globalRank <= 3 ? <Trophy className="w-4 h-4" /> : `#${row.globalRank}`}
@@ -248,7 +255,7 @@ export function RankingFull() {
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className={cn(
-                  'inline-flex items-center gap-1 px-3 py-2 rounded border text-sm font-display font-bold uppercase tracking-wider transition-colors',
+                  'inline-flex items-center gap-1 px-3 py-2 rounded-sm border text-sm font-display font-bold uppercase tracking-wider transition-colors',
                   safePage <= 1
                     ? 'border-white/10 text-gray-600 cursor-not-allowed'
                     : 'border-white/20 text-white hover:bg-white/10',
@@ -262,7 +269,7 @@ export function RankingFull() {
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 className={cn(
-                  'inline-flex items-center gap-1 px-3 py-2 rounded border text-sm font-display font-bold uppercase tracking-wider transition-colors',
+                  'inline-flex items-center gap-1 px-3 py-2 rounded-sm border text-sm font-display font-bold uppercase tracking-wider transition-colors',
                   safePage >= totalPages
                     ? 'border-white/10 text-gray-600 cursor-not-allowed'
                     : 'border-white/20 text-white hover:bg-white/10',

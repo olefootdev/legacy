@@ -624,7 +624,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
+              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-xl text-white flex items-center gap-2">
@@ -755,7 +755,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
+              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white flex items-center gap-2">
@@ -926,7 +926,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 16 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-neon-yellow/25 bg-dark-gray shadow-2xl"
+              className="my-auto w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/25 bg-dark-gray shadow-2xl"
               role="dialog"
               aria-modal="true"
               aria-labelledby="announce-market-title"

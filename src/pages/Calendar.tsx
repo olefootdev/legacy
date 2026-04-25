@@ -202,7 +202,7 @@ export function Calendar() {
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border-2 border-red-500/50 bg-red-950/40 shadow-xl shadow-red-950/40"
+          className="relative overflow-hidden rounded-md border-2 border-red-500/50 bg-red-950/40 shadow-xl shadow-red-950/40"
         >
           <div className="relative z-10 p-5 md:p-6">
             <div className="flex items-center gap-2 text-red-300">
@@ -246,7 +246,7 @@ export function Calendar() {
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl border border-neon-yellow/30"
+          className="relative overflow-hidden rounded-md border border-neon-yellow/30"
         >
           <GameBannerBackdrop slot="leagues_header" imageOpacity={0.35} />
           <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-black/80" aria-hidden />
@@ -301,7 +301,7 @@ export function Calendar() {
           </div>
         </motion.section>
       ) : (
-        <section className="relative overflow-hidden rounded-2xl border border-white/10">
+        <section className="relative overflow-hidden rounded-md border border-white/10">
           <GameBannerBackdrop slot="leagues_header" imageOpacity={0.22} />
           <div className="absolute inset-0 bg-black/55" aria-hidden />
           <div className="relative z-10 p-5 md:p-6">
@@ -378,7 +378,7 @@ export function Calendar() {
       ) : null}
 
       {/* ── Day navigator + timeline ────────────────────────────── */}
-      <div className="rounded-2xl border border-white/12 bg-white/[0.03] p-4">
+      <div className="rounded-md border border-white/12 bg-white/[0.03] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
