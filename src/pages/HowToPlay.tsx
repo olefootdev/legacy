@@ -1,5 +1,4 @@
 import {
-  GraduationCap,
   Users,
   Target,
   Dumbbell,
@@ -7,13 +6,14 @@ import {
   ShoppingBag,
   TrendingUp,
   BookOpen,
-  Sparkles,
   RotateCcw,
   ChevronRight,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
+import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 
 type Step = {
   icon: typeof Users;
@@ -94,28 +94,84 @@ export function HowToPlay() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
-      <header className="flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-violet-500/20 text-violet-300">
-          <GraduationCap className="h-5 w-5" />
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
+      {/* ── HERO BVB — amarelo full + watermark + Agency + Moret italic ── */}
+      <section
+        aria-label="Como jogar"
+        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-2"
+      >
+        <div
+          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+          aria-hidden
+        >
+          <span
+            className="font-display font-black uppercase whitespace-nowrap text-black/[0.05]"
+            style={{
+              fontSize: 'clamp(140px, 28vw, 360px)',
+              lineHeight: '0.85',
+              letterSpacing: '-0.05em',
+            }}
+          >
+            GUIA
+          </span>
         </div>
-        <div>
-          <h1 className="font-display text-xl font-black text-white">Como jogar</h1>
-          <p className="text-[11px] text-gray-400">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+        >
+          <div
+            className="ole-eyebrow !text-black mb-5 sm:mb-6"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <span className="!text-black">Tutorial · 7 passos</span>
+          </div>
+          <h1 className="leading-[0.9]">
+            <span
+              className="block font-bold uppercase text-black"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2.5rem, 8vw, 5.5rem)',
+                letterSpacing: '0.005em',
+              }}
+            >
+              Como jogar
+            </span>
+            <span
+              className="block italic text-black"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(1.75rem, 5.5vw, 3.5rem)',
+                marginTop: '0.04em',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              passo a passo.
+            </span>
+          </h1>
+          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+          <p
+            className="mt-5 text-black/65 mx-auto max-w-md"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
+              lineHeight: 1.55,
+            }}
+          >
             Sete passos pra seres um bom manager do teu clube. Lê com calma — o resto é prática.
           </p>
-        </div>
-      </header>
+        </motion.div>
+      </section>
 
-      {/* Opções */}
-      <section className="rounded-2xl border border-violet-500/25 bg-violet-500/[0.04] p-4">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-white">
-          <Sparkles className="h-4 w-4 text-violet-300" />
-          Opções
-        </h2>
-
-        <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
+      {/* ── Opções ── */}
+      <section className="space-y-3">
+        <StoreSectionHeadline
+          title="Opções"
+          subtitle="Assistente flutuante e reinício do tutorial inicial."
+        />
+        <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
+          <div className="flex items-center justify-between gap-3 px-5 py-4">
             <div className="min-w-0">
               <p className="text-sm font-bold text-white">Ativar assistente</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-gray-400">
@@ -126,17 +182,17 @@ export function HowToPlay() {
               type="button"
               onClick={toggleAssistant}
               className={cn(
-                'shrink-0 rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                'shrink-0 rounded-sm px-4 py-1.5 text-[10px] font-display font-bold uppercase tracking-[0.18em] transition-colors',
                 assistantEnabled
-                  ? 'bg-green-500/20 text-green-300'
-                  : 'bg-white/5 text-gray-500 hover:bg-white/10',
+                  ? 'bg-neon-yellow text-black hover:bg-white'
+                  : 'bg-white/5 text-gray-500 hover:bg-white/10 border border-white/10',
               )}
             >
               {assistantEnabled ? 'Ligado' : 'Desligado'}
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 px-5 py-4">
             <div className="min-w-0">
               <p className="text-sm font-bold text-white">Refazer tutorial inicial</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-gray-400">
@@ -146,7 +202,7 @@ export function HowToPlay() {
             <button
               type="button"
               onClick={restartTutorial}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-white/10"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-black border border-white/15 px-3 py-1.5 text-[10px] font-display font-bold uppercase tracking-[0.18em] text-white hover:border-neon-yellow hover:text-neon-yellow transition-colors"
             >
               <RotateCcw className="h-3 w-3" />
               Reiniciar
@@ -155,44 +211,48 @@ export function HowToPlay() {
         </div>
       </section>
 
-      {/* 7 passos */}
-      <ol className="space-y-3">
-        {STEPS.map((step, i) => {
-          const Icon = step.icon;
-          return (
-            <li
-              key={step.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
-            >
-              <div className="flex items-start gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-300">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-display text-[10px] font-bold uppercase tracking-widest text-violet-300/80">
-                      Passo {i + 1}
-                    </span>
+      {/* ── 7 passos ── */}
+      <section className="space-y-3">
+        <StoreSectionHeadline
+          title="Os 7 passos"
+          subtitle="Manager bom é o que entende o ciclo: plantel → tática → treino → finanças → mercado → evolução → leitura."
+        />
+        <ol className="space-y-3">
+          {STEPS.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <li
+                key={step.title}
+                className="bg-[var(--color-card)] border border-white/8 rounded-sm border-l-4 border-l-neon-yellow p-4 transition-transform duration-150 hover:-translate-y-0.5"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm bg-neon-yellow/10 text-neon-yellow border border-neon-yellow/30">
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="mt-0.5 text-base font-black text-white">
-                    {step.title}
-                  </h3>
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-gray-300">
-                    {step.body}
-                  </p>
-                  <Link
-                    to={step.cta.to}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-black transition-colors hover:bg-violet-400"
-                  >
-                    {step.cta.label}
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-neon-yellow">
+                      Passo {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <h3 className="mt-0.5 font-display font-black uppercase text-white text-base sm:text-lg tracking-wide">
+                      {step.title}
+                    </h3>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-gray-300">
+                      {step.body}
+                    </p>
+                    <Link
+                      to={step.cta.to}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-sm bg-neon-yellow px-4 py-2 text-[11px] font-display font-bold uppercase tracking-[0.18em] text-black transition-colors hover:bg-white shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
+                    >
+                      {step.cta.label}
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
     </div>
   );
 }
