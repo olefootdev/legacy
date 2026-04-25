@@ -29,7 +29,7 @@ import {
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
-import { MatchdayHero, MOCK_MATCHDAY } from '@/components/matchday/MatchdayHero';
+import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
 /**
@@ -605,27 +605,6 @@ export function Home() {
           // Sem histórico → estado "antes da estreia" (coerente com o tema
           // do hero: ÚLTIMA partida; aqui não houve nenhuma ainda).
           if (!lastMatch) {
-            // DEV: mostra mock editorial (Flamengo 2-1 Palmeiras + Gabriel Barbosa)
-            // pra reconstrução visual ficar viva mesmo sem dados reais.
-            if (HOME_HERO_DEV_MOCK) {
-              return (
-                <MatchdayHero
-                  data={{
-                    ...MOCK_MATCHDAY,
-                    statusVariant: 'preview',
-                    statusPrimary: 'Final',
-                    statusSecondary: 'Vitória',
-                    home: { ...MOCK_MATCHDAY.home, crestUrl: DEV_HOME_CREST },
-                    away: { ...MOCK_MATCHDAY.away, crestUrl: DEV_AWAY_CREST },
-                    actions: [
-                      { label: 'Ver elenco', href: '/team', variant: 'primary' },
-                    ],
-                    topLeft: { label: 'Olefoot' },
-                    scrollCueTargetId: 'home-below-fold',
-                  }}
-                />
-              );
-            }
             return (
               <MatchdayHero
                 data={{
@@ -639,13 +618,14 @@ export function Home() {
                     name: club.name,
                     score: 0,
                     sublabel: 'Aguardando 1ª partida',
-                    crestUrl: homeCrestUrl,
+                    crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
                   },
                   away: {
                     short: '—',
                     name: 'Adversário',
                     score: 0,
                     sublabel: 'Sem partida',
+                    crestUrl: HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null,
                   },
                   stats: [
                     { label: 'Vitórias', value: '0' },
@@ -714,13 +694,13 @@ export function Home() {
                   name: lastMatch.home || club.name,
                   score: lastMatch.scoreHome,
                   form: { v: wins, e: draws, d: losses },
-                  crestUrl: homeCrestUrl,
+                  crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
                 },
                 away: {
                   short: awayShort,
                   name: lastMatch.away,
                   score: lastMatch.scoreAway,
-                  crestUrl: awayCrestUrl,
+                  crestUrl: awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null),
                 },
                 stats: [
                   { label: 'Vitórias', value: String(wins) },
@@ -770,15 +750,13 @@ export function Home() {
               return (
             <div className="flex items-center justify-center gap-4 sm:gap-6">
               {renderHomeCrest ? (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-white grid place-items-center overflow-hidden shrink-0">
-                  <img
-                    src={renderHomeCrest}
-                    alt={club.name}
-                    className="w-[78%] h-[78%] object-contain"
-                    referrerPolicy="no-referrer"
-                    draggable={false}
-                  />
-                </div>
+                <img
+                  src={renderHomeCrest}
+                  alt={club.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                  referrerPolicy="no-referrer"
+                  draggable={false}
+                />
               ) : (
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
                   <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
@@ -799,15 +777,13 @@ export function Home() {
                 ×
               </span>
               {renderAwayCrest ? (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-white grid place-items-center overflow-hidden shrink-0">
-                  <img
-                    src={renderAwayCrest}
-                    alt={fixture.opponent.name}
-                    className="w-[78%] h-[78%] object-contain"
-                    referrerPolicy="no-referrer"
-                    draggable={false}
-                  />
-                </div>
+                <img
+                  src={renderAwayCrest}
+                  alt={fixture.opponent.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                  referrerPolicy="no-referrer"
+                  draggable={false}
+                />
               ) : (
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
                   <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">

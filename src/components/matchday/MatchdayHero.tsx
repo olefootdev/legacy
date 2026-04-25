@@ -289,17 +289,13 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             ) : null}
           </div>
           {data.away.crestUrl?.trim() ? (
-            <div
-              className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] ${rightCrestRing} bg-white grid place-items-center overflow-hidden shrink-0`}
-            >
-              <img
-                src={data.away.crestUrl}
-                alt={data.away.name}
-                className="w-[78%] h-[78%] object-contain"
-                referrerPolicy="no-referrer"
-                draggable={false}
-              />
-            </div>
+            <img
+              src={data.away.crestUrl}
+              alt={data.away.name}
+              className="w-12 h-12 sm:w-16 sm:h-16 object-contain shrink-0"
+              referrerPolicy="no-referrer"
+              draggable={false}
+            />
           ) : (
             <div
               className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center shrink-0 ${rightCrestRing} ${rightCrestBg}`}
@@ -465,19 +461,15 @@ function CrestCircle({
   const bg = variant === 'onYellow' ? 'bg-neon-yellow' : 'bg-deep-black';
   const baseSize = 'w-12 h-12 sm:w-16 sm:h-16';
   if (crestUrl?.trim()) {
-    // Brasão real — fundo branco pra logos coloridos respirarem, anel mantido
+    // Brasão real — sem circle/border/bg, só a logo respirando sobre o fundo
     return (
-      <div
-        className={`${baseSize} rounded-full border-[2.5px] ${ring} bg-white grid place-items-center overflow-hidden shrink-0`}
-      >
-        <img
-          src={crestUrl}
-          alt={alt ?? short}
-          className="w-[78%] h-[78%] object-contain"
-          referrerPolicy="no-referrer"
-          draggable={false}
-        />
-      </div>
+      <img
+        src={crestUrl}
+        alt={alt ?? short}
+        className={`${baseSize} object-contain shrink-0`}
+        referrerPolicy="no-referrer"
+        draggable={false}
+      />
     );
   }
   return (
