@@ -696,36 +696,31 @@ export function Home() {
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10 w-full">
             {/* Casa */}
             <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
-              <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/15 shadow-lg bg-dark-gray">
+              <div className="ole-player-card ole-card-hover relative w-full aspect-[3/4]">
                 <img
                   src={homeHighlight.imageSrc}
                   alt=""
-                  className="absolute inset-0 w-full h-full object-cover object-top"
+                  className="ole-player-card__photo absolute inset-0 w-full h-full object-top"
                   referrerPolicy="no-referrer"
                 />
-                <div
-                  className="absolute left-2.5 top-2.5 z-20 flex h-9 w-[2.1rem] items-center justify-center bg-neon-yellow text-black font-display font-black text-sm shadow-[0_0_16px_rgba(234,255,0,0.4)]"
-                  style={{
-                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                  }}
-                >
-                  {homeHighlight.ovr}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent pointer-events-none z-[1]" />
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-12 flex flex-col items-center text-center gap-0.5">
-                  <span className="text-neon-yellow font-display font-bold text-[9px] sm:text-[10px] tracking-[0.2em] uppercase">
-                    Destaque
+                <div className="ole-player-card__photo-overlay" />
+                <div className="absolute right-2.5 top-2 z-20 flex flex-col items-end leading-[0.85]">
+                  <span className="ole-player-card__overall text-[2.75rem] sm:text-[3rem]">
+                    {homeHighlight.ovr}
                   </span>
-                  <p className="text-white font-display font-black text-xs sm:text-sm uppercase tracking-wide truncate max-w-full w-full leading-tight">
+                  <span className="ole-player-card__position mt-0.5">Destaque</span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-10 flex flex-col items-center text-center gap-1">
+                  <p className="ole-player-card__name text-xs sm:text-sm truncate max-w-full w-full leading-tight">
                     {homeHighlight.name}
                   </p>
-                  <div className="flex gap-0.5 justify-center mt-0.5">
+                  <div className="flex gap-0.5 justify-center">
                     {Array.from({ length: 5 }, (_, i) => (
                       <Star
                         key={i}
                         className={cn(
                           'w-3 h-3 sm:w-3.5 sm:h-3.5',
-                          i < starsForOvr(homeHighlight.ovr) ? 'text-amber-400 fill-amber-400' : 'text-white/15',
+                          i < starsForOvr(homeHighlight.ovr) ? 'text-neon-yellow fill-neon-yellow' : 'text-white/15',
                         )}
                       />
                     ))}
@@ -736,36 +731,31 @@ export function Home() {
 
             {/* Visitante */}
             <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
-              <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/15 shadow-lg bg-dark-gray">
+              <div className="ole-player-card ole-card-hover relative w-full aspect-[3/4]">
                 <img
                   src={awayHighlight.imageSrc}
                   alt=""
-                  className="absolute inset-0 w-full h-full object-cover object-top"
+                  className="ole-player-card__photo absolute inset-0 w-full h-full object-top"
                   referrerPolicy="no-referrer"
                 />
-                <div
-                  className="absolute left-2.5 top-2.5 z-20 flex h-9 w-[2.1rem] items-center justify-center bg-neon-yellow text-black font-display font-black text-sm shadow-[0_0_16px_rgba(234,255,0,0.4)]"
-                  style={{
-                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                  }}
-                >
-                  {awayHighlight.ovr}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent pointer-events-none z-[1]" />
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-12 flex flex-col items-center text-center gap-0.5">
-                  <span className="text-neon-yellow font-display font-bold text-[9px] sm:text-[10px] tracking-[0.2em] uppercase">
-                    Destaque
+                <div className="ole-player-card__photo-overlay" />
+                <div className="absolute right-2.5 top-2 z-20 flex flex-col items-end leading-[0.85]">
+                  <span className="ole-player-card__overall text-[2.75rem] sm:text-[3rem]">
+                    {awayHighlight.ovr}
                   </span>
-                  <p className="text-white font-display font-black text-xs sm:text-sm uppercase tracking-wide truncate max-w-full w-full leading-tight">
+                  <span className="ole-player-card__position mt-0.5">Destaque</span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-10 flex flex-col items-center text-center gap-1">
+                  <p className="ole-player-card__name text-xs sm:text-sm truncate max-w-full w-full leading-tight">
                     {awayHighlight.name}
                   </p>
-                  <div className="flex gap-0.5 justify-center mt-0.5">
+                  <div className="flex gap-0.5 justify-center">
                     {Array.from({ length: 5 }, (_, i) => (
                       <Star
                         key={i}
                         className={cn(
                           'w-3 h-3 sm:w-3.5 sm:h-3.5',
-                          i < starsForOvr(awayHighlight.ovr) ? 'text-amber-400 fill-amber-400' : 'text-white/15',
+                          i < starsForOvr(awayHighlight.ovr) ? 'text-neon-yellow fill-neon-yellow' : 'text-white/15',
                         )}
                       />
                     ))}
