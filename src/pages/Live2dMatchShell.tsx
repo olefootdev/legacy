@@ -948,6 +948,23 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   );
   const squadOkForMatch = squadReport.ok || isOfficialSquadGateRelaxedForTests();
 
+  useEffect(() => {
+    if (!live?.homePlayers?.length) return;
+    const urls = new Set<string>();
+    for (const p of live.homePlayers) {
+      const ent = playersById[p.playerId];
+      if (ent) {
+        const u = playerTokenSrc(ent, 72);
+        if (u) urls.add(u);
+      }
+    }
+    for (const u of urls) {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = u;
+    }
+  }, [live?.homePlayers, playersById]);
+
   const tacticalPitchFromTruth = useMemo(() => {
     if (!usesLive2dTacticalEngine || !truthSnap?.players?.length || !live?.homePlayers?.length) {
       return null;
