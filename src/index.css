@@ -19,6 +19,30 @@
   --font-display: "Agency FB", "AgencyFB", Impact, "Oswald", ui-sans-serif, sans-serif;
   --font-serif-hero: "Moret", Georgia, "Times New Roman", serif;
   --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", ui-sans-serif, sans-serif;
+
+  /* === Escala tipográfica (Brief v2) === */
+  --text-xs:     11px;
+  --text-sm:     13px;
+  --text-base:   15px;
+  --text-lg:     18px;
+  --text-xl:     22px;
+  --text-2xl:    32px;
+  --text-3xl:    48px;
+  --text-hero:   80px;
+  --text-score:  96px;
+  --text-rating: 56px;
+
+  /* === Cores semânticas (NÃO substituem --color-neon-green da marca) === */
+  --color-success: #00C851;
+  --color-warning: #FFB300;
+  --color-danger:  #FF3D3D;
+  --color-info:    #2979FF;
+
+  /* === Threshold de atributos (Football Manager) === */
+  --attr-elite: #00FF66;  /* 80+   */
+  --attr-good:  #FDE100;  /* 65–79 */
+  --attr-avg:   #FFB300;  /* 50–64 */
+  --attr-weak:  #FF3D3D;  /* <50   */
 }
 
 @layer utilities {
@@ -112,6 +136,148 @@
   .btn-on-yellow {
     @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-deep-black transition-all;
   }
+
+  /* === Scoreboard (Brief v2 COMP-01) === */
+  .ole-scoreboard {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: var(--text-score);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .ole-scoreboard__separator {
+    color: var(--color-text-muted);
+    font-size: 0.5em;
+    padding: 0 0.3em;
+  }
+  .ole-scoreboard--live { color: var(--color-neon-yellow); }
+  .ole-scoreboard__minute {
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-neon-yellow);
+  }
+
+  /* === Atributo com tier (Brief v2 COMP-03) === */
+  .ole-attr {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+  .ole-attr[data-tier="elite"] { color: var(--attr-elite); }
+  .ole-attr[data-tier="good"]  { color: var(--attr-good); }
+  .ole-attr[data-tier="avg"]   { color: var(--attr-avg); }
+  .ole-attr[data-tier="weak"]  { color: var(--attr-weak); }
+
+  /* === Player Card "carta colecionável" (Brief v2 COMP-02 + NFT-frame BVB-vibe) === */
+  .ole-player-card {
+    background: linear-gradient(180deg, var(--color-card-hi) 0%, var(--color-card) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .ole-player-card::before {
+    /* Glow amarelo no topo — assinatura de "carta esportiva" */
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 30%;
+    background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(253,225,0,0.18) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ole-player-card__overall {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: var(--text-rating);
+    color: var(--color-neon-yellow);
+    line-height: 1;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+  .ole-player-card__position {
+    font-family: var(--font-ui);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-neon-yellow);
+  }
+  .ole-player-card__photo { aspect-ratio: 3/4; object-fit: cover; }
+  .ole-player-card__photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(13,13,13,0.95) 100%);
+    pointer-events: none;
+  }
+  .ole-player-card__name {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #fff;
+  }
+
+  /* === Goal Takeover (Brief v2 COMP-04) === */
+  .ole-goal-takeover {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--color-neon-yellow);
+    display: grid; place-items: center;
+    pointer-events: none;
+    animation: ole-goal-takeover 1.2s ease-in-out forwards;
+  }
+  .ole-goal-takeover__text {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(80px, 18vw, 240px);
+    line-height: 0.85;
+    text-transform: uppercase;
+    color: #000;
+    text-align: center;
+  }
+  .ole-goal-takeover__italic {
+    font-family: var(--font-serif-hero);
+    font-style: italic;
+    font-size: 0.4em;
+    font-weight: 400;
+    display: block;
+    margin-top: 0.1em;
+    color: #000;
+  }
+
+  /* === Tabela esportiva (Brief v2 COMP-05) === */
+  .ole-table thead th {
+    font-family: var(--font-ui);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-text-soft);
+    background: var(--color-panel);
+    position: sticky; top: 0;
+  }
+  .ole-table tbody tr:nth-child(odd)  { background: var(--color-deep-black); }
+  .ole-table tbody tr:nth-child(even) { background: var(--color-card); }
+  .ole-table tbody tr:hover           { background: var(--color-card-hi); }
+  .ole-table__pos[data-rank="1"] { color: #FFD700; font-weight: 900; }
+  .ole-table__pos[data-rank="2"] { color: #C0C0C0; font-weight: 900; }
+  .ole-table__pos[data-rank="3"] { color: #CD7F32; font-weight: 900; }
+  .ole-table__form-pill {
+    width: 18px; height: 18px; border-radius: 9999px;
+    display: inline-block; font-size: 10px; font-weight: 700;
+    line-height: 18px; text-align: center;
+  }
+  .ole-table__form-pill[data-r="V"] { background: var(--attr-elite); color: #000; }
+  .ole-table__form-pill[data-r="E"] { background: var(--attr-avg);   color: #000; }
+  .ole-table__form-pill[data-r="D"] { background: var(--attr-weak);  color: #fff; }
+}
+
+@keyframes ole-goal-takeover {
+  0%   { opacity: 0; transform: scale(0.96); }
+  10%  { opacity: 1; transform: scale(1);    }
+  85%  { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(1.02); }
 }
 
 @keyframes shimmer {
