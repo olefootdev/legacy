@@ -30,6 +30,7 @@ import {
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
+import { DashboardGrid, DashboardSection } from '@/components/dashboard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
 /**
@@ -617,14 +618,12 @@ export function Home() {
                     short: homeShort,
                     name: club.name,
                     score: 0,
-                    sublabel: 'Aguardando 1ª partida',
                     crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
                   },
                   away: {
                     short: '—',
                     name: 'Adversário',
                     score: 0,
-                    sublabel: 'Sem partida',
                     crestUrl: HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null,
                   },
                   stats: [
@@ -689,6 +688,7 @@ export function Home() {
                       ? 'Empate'
                       : 'Derrota',
                 statusVariant: 'preview',
+                solidYellow: true,
                 home: {
                   short: homeShort,
                   name: lastMatch.home || club.name,
@@ -727,11 +727,13 @@ export function Home() {
         })()}
       </section>
 
-      {/* PRÓXIMA PARTIDA — banner enxuto: brasões + iniciais + 2 ações */}
+      <DashboardGrid id="home-below-fold">
+      {/* PRÓXIMA PARTIDA — wide */}
       {fixture?.opponent ? (
-        <section
-          aria-label="Próxima partida"
-          className="mb-8 bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
+        <DashboardSection
+          size="wide"
+          ariaLabel="Próxima partida"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
           <div className="px-4 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
             {/* Eyebrow centralizado */}
@@ -828,11 +830,11 @@ export function Home() {
               </Link>
             </div>
           </div>
-        </section>
+        </DashboardSection>
       ) : null}
 
-      <div id="home-below-fold" className="grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-4">
-        {/* Apoio da Torcida — modelo box "Próxima partida" */}
+        {/* Apoio da Torcida — sm */}
+        <DashboardSection size="sm">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -883,8 +885,10 @@ export function Home() {
             </p>
           </div>
         </motion.div>
+        </DashboardSection>
 
-        {/* Últimos resultados — modelo box "Próxima partida" */}
+        {/* Últimos resultados — md (lista alta) */}
+        <DashboardSection size="md">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1015,8 +1019,10 @@ export function Home() {
             </button>
           </div>
         </motion.div>
+        </DashboardSection>
 
-        {/* Amistoso — card amarelo destacado, AMISTOSO em Moret italic */}
+        {/* Amistoso — sm */}
+        <DashboardSection size="sm">
         <motion.button
           type="button"
           initial={{ opacity: 0, y: 20 }}
@@ -1078,7 +1084,8 @@ export function Home() {
             Convidar online ou IA
           </p>
         </motion.button>
-      </div>
+        </DashboardSection>
+      </DashboardGrid>
 
       <AnimatePresence>
         {amistosoOpen && (
@@ -1326,8 +1333,9 @@ export function Home() {
       </AnimatePresence>
 
       {/* Ranking + Notificações */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ranking OLE — modelo box "Próxima partida" */}
+      <DashboardGrid>
+        {/* Ranking OLE — md */}
+        <DashboardSection size="md">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1398,8 +1406,10 @@ export function Home() {
             </Link>
           </div>
         </motion.div>
+        </DashboardSection>
 
-        {/* Notificações — modelo box "Próxima partida" */}
+        {/* Notificações — md */}
+        <DashboardSection size="md">
         <motion.div
           ref={notificacoesRef}
           id="notificacoes"
@@ -1533,7 +1543,8 @@ export function Home() {
             )}
           </div>
         </motion.div>
-      </div>
+        </DashboardSection>
+      </DashboardGrid>
     </div>
   );
 }
