@@ -486,10 +486,6 @@ const Test2dBallToken = memo(function Test2dBallToken({
   const shadowH = 2 + Math.min(h * 0.3, 1.5);
   const shadowBlur = 0.5 + Math.min(h * 0.3, 1.5);
   const shadowOpacity = Math.max(0.04, 0.25 - h * 0.03);
-  const motionShadow =
-    reducedMotion || speed <= 0
-      ? undefined
-      : (`width ${speed}ms linear, height ${speed}ms linear, opacity ${speed}ms linear, filter ${speed}ms linear` as const);
 
   return (
     <div
@@ -511,7 +507,6 @@ const Test2dBallToken = memo(function Test2dBallToken({
           opacity: shadowOpacity,
           background: 'radial-gradient(ellipse at center, #000 0%, transparent 70%)',
           filter: `blur(${shadowBlur}px)`,
-          transition: motionShadow,
         }}
       />
       {/* Ball sprite — OLEFOOT ball, com vida: sempre girando quando em movimento, padrão varia a cada ação */}
