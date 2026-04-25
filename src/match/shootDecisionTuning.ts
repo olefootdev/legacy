@@ -46,3 +46,65 @@ export const SHOT_CROWD_PEN_FAR = 0.026;
 export const SHOT_CROWD_PEN_CLOSE_MIN = 0.009;
 /** Distance (m) to goal below which crowd penalty starts tapering down. */
 export const SHOT_CROWD_TAPER_DIST_M = 16;
+
+// ─────────────────────────────────────────────────────────────────
+// SmartField integration (zone-aware shoot tuning)
+// ─────────────────────────────────────────────────────────────────
+//
+// Centraliza a consulta SHOOT × zona usando os módulos do SmartField.
+// Consumers existentes (`isShootMinEligible`, scoring) podem chamar:
+//
+//   if (isZoneShootIncompatible(carrier, side)) return false;
+//   const mult = shootZoneMultiplier(carrier, homePlayers, side);
+//   triggerChance = baseTriggerChance * mult;
+
+import type { PitchPlayerState } from '@/engine/types';
+import { zoneAtUI } from '@/match/spatialZones';
+import { getAwarenessContext, type AwarePlayer } from '@/smartfield/awareness';
+import {
+  isSkillCompatibleWithZone,
+  zoneMultiplierForSkill,
+} from '@/smartfield/skillZoneIntegration';
+
+/**
+ * `true` se a zona atual da bola/portador NÃO autoriza skill SHOOT
+ * (ex.: meio-campo defensivo, próprio terço). Consumers devem zerar
+ * triggerChance e logar reason.
+ */
+export function isZoneShootIncompatible(
+  carrier: PitchPlayerState,
+  side: 'home' | 'away',
+): { incompatible: boolean; reason?: string } {
+  const z = zoneAtUI(carrier.x, carrier.y, side);
+  const compat = isSkillCompatibleWithZone('SHOOT', z);
+  if (!compat) {
+    return { incompatible: true, reason: `SHOOT incompatível com ${z.macro ?? 'zona desconhecida'}` };
+  }
+  return { incompatible: false };
+}
+
+/**
+ * Multiplicador zonal a aplicar em `baseTriggerChance` (ou em qualquer
+ * score de chute). Aplica `ZONE_BIAS` + ajuste de pressão (focal cone
+ * com adversários a < 8u UI).
+ *
+ * `homePlayers` deve incluir o portador; é convertido pra `AwarePlayer`
+ * com team='home'. Se o caller tem o lado adversário em pitch (test2d),
+ * inclui também tagado com team='away' pra leitura de pressureLevel.
+ */
+export function shootZoneMultiplier(
+  carrier: PitchPlayerState,
+  homePlayers: PitchPlayerState[],
+  side: 'home' | 'away',
+  awayPlayers: PitchPlayerState[] = [],
+): number {
+  const carrierAware: AwarePlayer = { ...carrier, team: side };
+  const tagged: AwarePlayer[] = [
+    ...homePlayers.map((p): AwarePlayer => ({ ...p, team: side })),
+    ...awayPlayers.map(
+      (p): AwarePlayer => ({ ...p, team: side === 'home' ? 'away' : 'home' }),
+    ),
+  ];
+  const aw = getAwarenessContext(carrierAware, tagged, side);
+  return zoneMultiplierForSkill('SHOOT', aw.ballZoneInfo, aw);
+}
