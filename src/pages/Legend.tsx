@@ -124,30 +124,23 @@ export function Legend() {
     <div className="min-h-screen bg-deep-black text-white">
       {/* ── HERO: fundo amarelo + diagonal preta à direita ───────── */}
       <section className="relative w-full overflow-hidden bg-neon-yellow">
-        {/* Diagonal preta */}
+        {/* Watermark sutil do nome — preto sobre amarelo, opacidade baixa */}
         <div
-          className="absolute inset-0 bg-deep-black pointer-events-none"
-          style={{ clipPath: 'polygon(58% 0, 100% 0%, 100% 100%, 42% 100%)' }}
-          aria-hidden
-        />
-
-        {/* Watermark com nome (decorativo) */}
-        <div
-          className="absolute inset-y-0 right-0 left-1/2 grid place-items-center pointer-events-none select-none overflow-hidden"
+          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
           aria-hidden
         >
           <span
-            className="font-display font-black uppercase tracking-tight whitespace-nowrap text-white/[0.04]"
-            style={{ fontSize: 'clamp(120px, 22vw, 320px)', lineHeight: '0.85' }}
+            className="font-display font-black uppercase tracking-tight whitespace-nowrap text-black/[0.04]"
+            style={{ fontSize: 'clamp(160px, 28vw, 420px)', lineHeight: '0.85' }}
           >
             {legend.name}
           </span>
         </div>
 
-        {/* Conteúdo do hero */}
-        <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-8 py-10 sm:py-14">
+        {/* Conteúdo do hero — vertical, centrado, na sequência: epithet → nome → foto → frase → CTA */}
+        <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-8 sm:py-12">
           {/* Top bar */}
-          <div className="flex items-center justify-between mb-8 sm:mb-12">
+          <div className="flex items-center justify-between mb-10 sm:mb-14">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -158,70 +151,72 @@ export function Legend() {
             </button>
             <Link
               to="/"
-              className="text-white/65 hover:text-white font-display text-[12px] uppercase tracking-[0.18em] font-bold"
+              className="text-black/55 hover:text-black font-display text-[12px] uppercase tracking-[0.18em] font-bold"
             >
               Olefoot
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 md:gap-12 items-start">
-            {/* Coluna esquerda: epithet + nome + citação + CTA */}
-            <div className="max-w-xl">
-              <Eyebrow align="start" className="!text-black mb-3">
-                <span className="!text-black">{legend.epithet}</span>
-              </Eyebrow>
+          {/* 1. Epithet */}
+          <Eyebrow align="center" className="!text-black mb-5 sm:mb-6">
+            <span className="!text-black">{legend.epithet}</span>
+          </Eyebrow>
 
-              <h1
-                className="ole-headline text-black leading-[0.85]"
-                style={{ fontSize: 'clamp(64px, 14vw, 120px)' }}
-              >
-                {legend.name}
-              </h1>
+          {/* 2. Nome */}
+          <h1
+            className="ole-headline text-black text-center leading-[0.85]"
+            style={{ fontSize: 'clamp(64px, 14vw, 128px)' }}
+          >
+            {legend.name}
+          </h1>
 
-              <div className="mt-4 w-16 h-[3px] bg-black" aria-hidden />
+          {/* Régua decorativa */}
+          <div className="mx-auto mt-5 w-16 h-[3px] bg-black" aria-hidden />
 
-              <blockquote
-                className="ole-headline-italic mt-5 text-black/85 leading-snug"
-                style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-              >
-                “{legend.quote}”
-              </blockquote>
-              {legend.quoteAuthor ? (
-                <p className="mt-3 text-black/60 text-[12px] uppercase tracking-[0.18em] font-medium">
-                  — {legend.quoteAuthor}
-                </p>
-              ) : null}
+          {/* 3. Foto */}
+          <div className="relative mx-auto mt-8 sm:mt-10 w-full max-w-[320px] aspect-[4/5]">
+            {legend.photoUrl ? (
+              <img
+                src={legend.photoUrl}
+                alt={legend.name}
+                className="w-full h-full object-cover ole-player-photo-bw shadow-[0_24px_48px_rgba(0,0,0,0.18)]"
+                draggable={false}
+              />
+            ) : (
+              <div className="w-full h-full bg-black/90 grid place-items-center shadow-[0_24px_48px_rgba(0,0,0,0.22)]">
+                <span
+                  className="font-display font-black text-white/15 uppercase"
+                  style={{ fontSize: 'clamp(96px, 18vw, 160px)', lineHeight: 1 }}
+                  aria-hidden
+                >
+                  {legend.name.charAt(0)}
+                </span>
+              </div>
+            )}
+          </div>
 
-              <button
-                type="button"
-                className="mt-7 inline-flex items-center gap-2 border border-black/65 text-black px-6 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[12px] hover:bg-black hover:text-neon-yellow transition-colors"
-              >
-                Treinar com {legend.name}
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          {/* 4. Frase */}
+          <blockquote
+            className="ole-headline-italic mt-8 sm:mt-10 text-black/85 text-center max-w-2xl mx-auto leading-snug"
+            style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
+          >
+            “{legend.quote}”
+          </blockquote>
+          {legend.quoteAuthor ? (
+            <p className="mt-3 text-black/60 text-[12px] uppercase tracking-[0.18em] font-medium text-center">
+              — {legend.quoteAuthor}
+            </p>
+          ) : null}
 
-            {/* Coluna direita: foto / placeholder estilizado */}
-            <div className="relative w-full md:w-[280px] lg:w-[340px] aspect-[4/5] mx-auto md:mx-0">
-              {legend.photoUrl ? (
-                <img
-                  src={legend.photoUrl}
-                  alt={legend.name}
-                  className="w-full h-full object-cover ole-player-photo-bw"
-                  draggable={false}
-                />
-              ) : (
-                <div className="w-full h-full bg-deep-black/85 border border-white/10 grid place-items-center">
-                  <span
-                    className="font-display font-black text-white/15 uppercase"
-                    style={{ fontSize: 'clamp(72px, 14vw, 140px)', lineHeight: 1 }}
-                    aria-hidden
-                  >
-                    {legend.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-            </div>
+          {/* 5. CTA Treinar com */}
+          <div className="flex justify-center mt-8 sm:mt-10">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 bg-black text-neon-yellow px-7 py-3 font-display font-bold uppercase tracking-[0.2em] text-[13px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+            >
+              Treinar com {legend.name}
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </section>
@@ -238,7 +233,8 @@ export function Legend() {
 
           <div className="relative">
             <div
-              className="ole-scroll-x flex gap-3 sm:gap-4 pb-2"
+              className="ole-scroll-x hide-scrollbar flex gap-3 sm:gap-4 pb-2 snap-x snap-mandatory scroll-smooth"
+              style={{ scrollPaddingLeft: '0px' }}
               role="list"
               aria-label={`Marcos da carreira de ${legend.name}`}
             >
@@ -246,7 +242,7 @@ export function Legend() {
                 <article
                   key={ev.year}
                   role="listitem"
-                  className="shrink-0 w-[200px] sm:w-[220px] bg-[var(--color-card)] border border-[var(--border)] border-l-2 border-l-neon-yellow rounded-sm p-4"
+                  className="shrink-0 snap-start w-[210px] sm:w-[230px] bg-[var(--color-card)] border border-[var(--border)] border-l-2 border-l-neon-yellow rounded-sm p-4 transition-transform duration-200 hover:-translate-y-0.5"
                 >
                   <p className="ole-headline text-neon-yellow text-[28px] sm:text-[32px] leading-none">
                     {ev.year}
