@@ -589,63 +589,123 @@ export function Home() {
         </Link>
       </div>
 
-      {/* HERO PRINCIPAL — Matchday Hero cinematográfico (clone exato do /matchday/preview) */}
+      {/* HERO PRINCIPAL — Matchday Hero do ÚLTIMO JOGO (placar real + MVP) */}
       <section
-        aria-label="Matchday"
-        className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-8"
+        aria-label="Último jogo"
+        className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-6"
       >
         {(() => {
           const last5 = results.slice(0, 5);
           const wins = last5.filter((r) => r.result === 'win').length;
           const draws = last5.filter((r) => r.result === 'draw').length;
           const losses = last5.filter((r) => r.result === 'loss').length;
+          const lastMatch = results[0];
           const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
-          const awayShort = (fixture.opponent.shortName ?? fixture.opponent.name).slice(0, 3).toUpperCase();
+
+          // Sem histórico → modo PREVIEW da próxima partida (fallback do antigo).
+          if (!lastMatch) {
+            const awayShort = (fixture.opponent.shortName ?? fixture.opponent.name)
+              .slice(0, 3)
+              .toUpperCase();
+            return (
+              <MatchdayHero
+                data={{
+                  competition: fixture.competition,
+                  statusPrimary: 'Próxima',
+                  statusSecondary: fixture.kickoffLabel,
+                  statusVariant: 'preview',
+                  home: { short: homeShort, name: club.name, form: { v: wins, e: draws, d: losses } },
+                  away: { short: awayShort, name: fixture.opponent.name, sublabel: fixture.venue },
+                  stats: [
+                    { label: 'Vitórias', value: String(wins) },
+                    { label: 'Empates', value: String(draws) },
+                    { label: 'Derrotas', value: String(losses) },
+                    { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
+                    { label: 'Forma', value: '—' },
+                  ],
+                  highlight: {
+                    name: homeHighlight.name,
+                    number: homeHighlight.ovr,
+                    quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. A primeira partida está chegando.`,
+                    photoUrl: homeHighlight.imageSrc,
+                  },
+                  actions: [
+                    { label: 'Partida rápida', href: '/match/quick', variant: 'primary' },
+                    { label: 'Táticas', href: '/team', variant: 'outline' },
+                  ],
+                  topLeft: { label: 'Olefoot' },
+                  scrollCueTargetId: 'home-below-fold',
+                }}
+              />
+            );
+          }
+
+          // ── Modo RESULTADO (último jogo) ────────────────────────────
+          const awayShort = lastMatch.away.slice(0, 3).toUpperCase();
+          const formStr =
+            last5.length > 0
+              ? last5
+                  .map((r) =>
+                    r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D',
+                  )
+                  .join(' ')
+              : '—';
+
+          // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
+          const mvp = lastMatch.scoutMvp;
+          const mvpEntity = mvp ? players[mvp.playerId] : null;
+          const mvpOvr = mvpEntity
+            ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs)
+            : homeHighlight.ovr;
+          const mvpName = mvp?.name ?? homeHighlight.name;
+          const mvpQuote = mvp?.headline ?? `OVR ${mvpOvr} · jogador de impacto.`;
+          const mvpPhoto = mvpEntity
+            ? playerPortraitSrc(
+                { name: mvpEntity.name, portraitUrl: mvpEntity.portraitUrl },
+                400,
+                520,
+              )
+            : homeHighlight.imageSrc;
 
           return (
             <MatchdayHero
               data={{
-                competition: fixture.competition,
-                statusPrimary: 'Próxima',
-                statusSecondary: fixture.kickoffLabel,
+                competition: lastMatch.status || 'Último jogo',
+                statusPrimary: 'Final',
+                statusSecondary:
+                  lastMatch.result === 'win'
+                    ? 'Vitória'
+                    : lastMatch.result === 'draw'
+                      ? 'Empate'
+                      : 'Derrota',
                 statusVariant: 'preview',
                 home: {
                   short: homeShort,
-                  name: club.name,
+                  name: lastMatch.home || club.name,
+                  score: lastMatch.scoreHome,
                   form: { v: wins, e: draws, d: losses },
                 },
                 away: {
                   short: awayShort,
-                  name: fixture.opponent.name,
-                  sublabel: fixture.venue,
+                  name: lastMatch.away,
+                  score: lastMatch.scoreAway,
                 },
                 stats: [
                   { label: 'Vitórias', value: String(wins) },
                   { label: 'Empates', value: String(draws) },
                   { label: 'Derrotas', value: String(losses) },
                   { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
-                  {
-                    label: 'Forma',
-                    value:
-                      last5.length > 0
-                        ? last5
-                            .map((r) =>
-                              r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D',
-                            )
-                            .join(' ')
-                        : '—',
-                  },
+                  { label: 'Forma', value: formStr },
                 ],
                 highlight: {
-                  name: homeHighlight.name,
-                  number: homeHighlight.ovr,
-                  quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. A torcida espera o gol nessa partida.`,
-                  photoUrl: homeHighlight.imageSrc,
+                  name: mvpName,
+                  number: mvpOvr,
+                  quote: mvpQuote,
+                  photoUrl: mvpPhoto,
                 },
                 actions: [
-                  { label: 'Partida rápida', href: '/match/quick', variant: 'primary' },
-                  { label: 'Partida ao vivo', href: '/match/live', variant: 'outline' },
-                  { label: 'Táticas', href: '/team', variant: 'outline' },
+                  { label: 'Ver postgame', href: '/postgame', variant: 'primary' },
+                  { label: 'Histórico', href: '/wallet', variant: 'outline' },
                 ],
                 topLeft: { label: 'Olefoot' },
                 scrollCueTargetId: 'home-below-fold',
@@ -654,6 +714,75 @@ export function Home() {
           );
         })()}
       </section>
+
+      {/* PRÓXIMA PARTIDA — banner enxuto: brasões + iniciais + 2 ações */}
+      {fixture?.opponent ? (
+        <section
+          aria-label="Próxima partida"
+          className="mb-8 bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
+        >
+          <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-5">
+            <div
+              className="flex items-center justify-start gap-3 mb-3 uppercase tracking-[0.35em] text-[10px] font-medium text-neon-yellow"
+              style={{ fontFamily: 'var(--font-ui)' }}
+            >
+              <span aria-hidden className="h-px w-6 bg-neon-yellow/40" />
+              <span>Próxima partida · {fixture.kickoffLabel}</span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* Duelo: [crest] CLB vs [crest] OPP */}
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-neon-yellow text-[11px] sm:text-[13px] tracking-[0.06em]">
+                    {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
+                  </span>
+                </div>
+                <span
+                  className="text-white/70 leading-none select-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontStyle: 'italic',
+                    fontSize: 'clamp(20px, 3vw, 32px)',
+                  }}
+                >
+                  vs
+                </span>
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-white text-[11px] sm:text-[13px] tracking-[0.06em]">
+                    {(fixture.opponent.shortName ?? fixture.opponent.name)
+                      .slice(0, 3)
+                      .toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0 ml-1 sm:ml-2">
+                  <p className="font-display font-black uppercase text-white text-[14px] sm:text-[18px] tracking-tight leading-tight truncate">
+                    {fixture.opponent.name}
+                  </p>
+                  <p className="font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[11px] text-white/55 truncate">
+                    {fixture.competition} · {fixture.venue}
+                  </p>
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="flex gap-2 sm:gap-3 shrink-0">
+                <Link
+                  to="/match/quick"
+                  className="bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
+                >
+                  Partida rápida
+                </Link>
+                <Link
+                  to="/team"
+                  className="bg-black border border-white/15 text-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm"
+                >
+                  Ver táticas
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <div id="home-below-fold" className="grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-4">
         {/* Torcidômetro - Industrial Style */}
