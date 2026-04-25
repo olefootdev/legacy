@@ -124,7 +124,7 @@ export default function Postgame() {
   const awayScore = live.awayScore ?? 0;
   const homeWin = homeScore > awayScore;
   const draw = homeScore === awayScore;
-  const resultLabel = homeWin ? 'VITÓRIA' : draw ? 'EMPATE' : 'DERROTA';
+  const resultLabel = homeWin ? 'Vitória.' : draw ? 'Empate.' : 'Derrota.';
   const resultColor = homeWin ? 'text-neon-green' : draw ? 'text-neon-yellow' : 'text-rose-400';
   const resultNarrative = homeWin
     ? 'enfim.'
@@ -154,12 +154,16 @@ export default function Postgame() {
         transition={{ duration: 0.4 }}
         className="space-y-6"
       >
-        {/* Header — eyebrow + result */}
-        <header className="text-center space-y-3">
+        {/* Header — eyebrow + resultado emocional em Moret italic */}
+        <header className="text-center space-y-4">
           <div className="ole-eyebrow">Pós-jogo</div>
-          <p className={`font-ui text-[11px] font-medium uppercase tracking-[0.35em] ${resultColor}`}>
+          <h1
+            className={`ole-headline-italic ${resultColor} leading-[0.9]`}
+            style={{ fontSize: 'clamp(64px, 14vw, 128px)' }}
+          >
             {resultLabel}
-          </p>
+          </h1>
+          <div className="mx-auto w-12 h-[3px] bg-white/30" aria-hidden />
         </header>
 
         {/* Resultado — placar monumental + narrativa Moret italic */}
