@@ -29,6 +29,7 @@ import {
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { MatchdayVersusTitle } from '@/components/matchday/MatchdayVersusTitle';
+import { SectionDivider } from '@/components/home/SectionDivider';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useTrackScreen } from '@/progression/trackEvent';
 
@@ -630,6 +631,117 @@ export function Home() {
         </Link>
       </div>
 
+      {/* HERO PRINCIPAL — Olefoot BVB hero (amarelo + watermark + Agency/Moret) */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative isolate overflow-hidden bg-neon-yellow"
+        style={{ minHeight: 'min(64vh, 560px)' }}
+        aria-label="Hero Olefoot"
+      >
+        {/* Watermark gigante OLEFOOT — preto/4% sobre amarelo */}
+        <div
+          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden z-0"
+          aria-hidden
+        >
+          <span
+            className="font-display font-black uppercase tracking-tight whitespace-nowrap text-black/[0.04]"
+            style={{ fontSize: 'clamp(160px, 32vw, 480px)', lineHeight: '0.85' }}
+          >
+            OLEFOOT
+          </span>
+        </div>
+        {/* Vinheta inferior pra costurar com o restante da página dark */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 z-0"
+          style={{
+            background:
+              'linear-gradient(to bottom, transparent 0%, rgba(13,13,13,0.18) 100%)',
+          }}
+        />
+
+        {/* Conteúdo */}
+        <div
+          className="relative z-10 flex h-full flex-col justify-between gap-10 px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16"
+          style={{ minHeight: 'inherit' }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="flex flex-col items-center text-center gap-5 max-w-3xl mx-auto"
+          >
+            {/* 1. Eyebrow inverted (preto sobre amarelo) */}
+            <div
+              className="ole-eyebrow"
+              style={{ color: '#000' }}
+            >
+              <span style={{ color: '#000' }}>Entre no novo futebol</span>
+            </div>
+
+            {/* 2. Headline — Agency line1 + Moret italic line2 */}
+            <h1 className="flex flex-col leading-[0.85]">
+              <span
+                className="ole-headline text-black"
+                style={{ fontSize: 'clamp(48px, 10vw, 96px)' }}
+              >
+                BEM-VINDO AO
+              </span>
+              <span
+                className="ole-headline-italic text-black/85"
+                style={{ fontSize: 'clamp(36px, 8vw, 84px)' }}
+              >
+                {club.name}
+              </span>
+            </h1>
+
+            {/* Régua decorativa */}
+            <div className="w-16 h-[3px] bg-black mt-1" aria-hidden />
+
+            {/* 3. Tagline */}
+            <p
+              className="text-black/75 max-w-xl"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'clamp(0.95rem, 1.2vw, 1.125rem)',
+                lineHeight: 1.6,
+              }}
+            >
+              Cada minuto, cada decisão, cada partida — gerada ao vivo pela engine
+              tática nativa do Olefoot. Você é o técnico. Eles são os agentes.
+            </p>
+
+            {/* 4. CTAs — primary preto sobre amarelo + secondary outline preto */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              <Link to="/match/quick" className="inline-block">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2 bg-black text-neon-yellow px-8 py-3.5 font-display font-bold uppercase tracking-[0.2em] text-[14px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-sm"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  Começar agora
+                </button>
+              </Link>
+              <Link to="/team" className="inline-block">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2 border border-black/65 text-black px-8 py-3.5 font-display font-bold uppercase tracking-[0.2em] text-[14px] hover:bg-black hover:text-neon-yellow transition-colors rounded-sm"
+                >
+                  Ver elenco
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </Link>
+            </div>
+          </motion.div>
+
+        </div>
+      </motion.section>
+
+      {/* Matchday — banner editorial (Nike Football style) */}
+      <section aria-label="Matchday" className="space-y-4">
+        <SectionDivider label="Matchday" />
       {/* Next Game Banner — duelo destaques + matchday */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -669,21 +781,28 @@ export function Home() {
         />
         <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/15 blur-[80px] rounded-full pointer-events-none" />
 
-        <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-6 md:px-10 md:py-8 flex flex-col gap-5 lg:gap-6">
-          {/* Cabeçalho: eyebrow MATCHDAY + headline italic + duelo (nomes completos + brasões) */}
-          <div className="text-center space-y-2.5">
-            <div className="ole-eyebrow">
-              <span>Matchday</span>
-              <span className="ml-3 text-text-soft normal-case tracking-widest">
-                {fixture.kickoffLabel}
-              </span>
-            </div>
-            <h2
-              className="ole-headline-italic text-white/85"
-              style={{ fontSize: 'clamp(0.95rem, 2vw, 1.4rem)' }}
-            >
-              Sua partida começa agora.
-            </h2>
+        {/* Top hairline ribbon — meta editorial em Inter caps tight (Nike Football) */}
+        <div
+          className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-white/8 px-5 py-2.5 sm:px-8 md:px-10"
+          style={{ fontFamily: 'var(--font-sans)' }}
+        >
+          <span
+            className="text-[var(--color-neon-yellow)] uppercase font-semibold"
+            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+          >
+            Olé Football · Matchday
+          </span>
+          <span
+            className="text-[var(--color-text-soft)] uppercase"
+            style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+          >
+            {fixture.kickoffLabel} · {fixture.competition} · {fixture.venue}
+          </span>
+        </div>
+
+        <div className="relative z-10 px-5 py-7 sm:px-8 sm:py-9 md:px-10 md:py-12 flex flex-col gap-7 lg:gap-9">
+          {/* Duelo — confronto editorial */}
+          <div className="text-center space-y-3">
             <MatchdayVersusTitle
               homeName={club.name}
               awayName={fixture.opponent.name}
@@ -691,9 +810,37 @@ export function Home() {
               className="text-[clamp(0.75rem,2.85vw+0.35rem,1.125rem)] sm:text-[clamp(1.05rem,2.4vw+0.5rem,1.65rem)] md:text-[2rem] lg:text-[2.35rem]"
               vsClassName="text-[0.9em] sm:text-[0.95em] md:text-[1em]"
             />
-            <p className="text-text-soft text-sm font-medium tracking-wide">
-              {fixture.venue} · {fixture.competition}
-            </p>
+            {/* Editorial Moret italic — "frase do jogo" com dados embutidos */}
+            {(() => {
+              const last5 = results.slice(0, 5);
+              const wins = last5.filter((r) => r.result === 'win').length;
+              const draws = last5.filter((r) => r.result === 'draw').length;
+              const losses = last5.filter((r) => r.result === 'loss').length;
+              const formStr = last5.length > 0 ? `${wins}-${draws}-${losses}` : '—';
+              return (
+                <p
+                  className="italic text-white/90 mx-auto max-w-2xl"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(1.1rem, 2.4vw, 1.75rem)',
+                    lineHeight: 1.35,
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  Forma{' '}
+                  <span className="text-[var(--color-neon-yellow)] not-italic font-semibold tracking-tight">
+                    {formStr}
+                  </span>
+                  {'  ·  '}
+                  apoio{' '}
+                  <span className="text-[var(--color-neon-yellow)] not-italic font-semibold tracking-tight">
+                    {Math.round(roundedSupport)}%
+                  </span>
+                  {'  ·  '}
+                  <span className="text-white/55">{crowd.moodLabel.toLowerCase()}</span>
+                </p>
+              );
+            })()}
           </div>
 
           {/* Duelo: destaque casa × destaque visitante — fotos centralizadas (largura explícita: evita colapso com flex + items-center) */}
@@ -803,6 +950,8 @@ export function Home() {
           </div>
         </div>
       </motion.div>
+
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Torcidômetro - Industrial Style */}
