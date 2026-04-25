@@ -162,12 +162,12 @@ export function Legend() {
             <span className="!text-black">{legend.epithet}</span>
           </Eyebrow>
 
-          {/* 2. Nome */}
+          {/* 2. Nome — TESTE Moret italic (capitalização normal) */}
           <h1
-            className="ole-headline text-black text-center leading-[0.85]"
-            style={{ fontSize: 'clamp(64px, 14vw, 128px)' }}
+            className="ole-headline-italic text-black text-center leading-[0.9]"
+            style={{ fontSize: 'clamp(72px, 16vw, 144px)' }}
           >
-            {legend.name}
+            {legend.name.charAt(0) + legend.name.slice(1).toLowerCase()}
           </h1>
 
           {/* Régua decorativa */}
