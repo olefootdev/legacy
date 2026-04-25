@@ -222,7 +222,7 @@ export function Config() {
         className="space-y-3"
       >
         <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Geral</h3>
-        <div className="bg-[#111] border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
+        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
           <div className={rowClass}>
             <div className="flex items-center gap-3">
               <Globe className="w-4 h-4 text-gray-500" />
@@ -338,7 +338,7 @@ export function Config() {
         className="space-y-3"
       >
         <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Clube</h3>
-        <div className="bg-[#111] border border-white/10 rounded-lg overflow-hidden">
+        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden">
           <div className={rowClass}>
             <div className="flex items-start gap-3">
               <Building2 className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
@@ -430,7 +430,7 @@ export function Config() {
         className="space-y-3"
       >
         <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Segurança local</h3>
-        <div className="bg-[#111] border border-white/10 rounded-lg overflow-hidden">
+        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden">
           <button
             type="button"
             onClick={() => {
@@ -607,7 +607,7 @@ export function Config() {
         className="space-y-3"
       >
         <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Dados</h3>
-        <div className="bg-[#111] border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
+        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
           <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
               <Download className="w-4 h-4 text-neon-yellow" />
@@ -661,7 +661,7 @@ export function Config() {
         className="space-y-3"
       >
         <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Sobre</h3>
-        <div className="bg-[#111] border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
+        <div className="bg-panel border border-white/10 rounded-lg overflow-hidden divide-y divide-white/5">
           <div className="px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Info className="w-4 h-4 text-gray-500" />
@@ -767,7 +767,7 @@ function VerificationSection() {
   return (
     <section className="space-y-3">
       <h3 className="text-xs font-display font-bold uppercase tracking-wider text-gray-500 mb-2">Verificação da conta</h3>
-      <div className="rounded-lg border border-white/10 bg-[#111] overflow-hidden">
+      <div className="rounded-lg border border-white/10 bg-panel overflow-hidden">
         <button
           type="button"
           onClick={() => !loading && setExpanded((v) => !v)}

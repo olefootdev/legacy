@@ -226,7 +226,7 @@ export function Store() {
 
   return (
     <div className="mx-auto min-w-0 max-w-5xl space-y-8 pb-28 md:pb-12">
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 px-4 py-8 md:px-8 md:py-10">
+      <div className="relative overflow-hidden rounded-md border border-white/10 px-4 py-8 md:px-8 md:py-10">
         <GameBannerBackdrop slot="leagues_header" imageOpacity={0.22} />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -324,14 +324,14 @@ export function Store() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.04, type: 'spring', stiffness: 380, damping: 28 }}
               className={cn(
-                'group relative overflow-hidden rounded-2xl border bg-[#0c0c0f] p-1',
+                'group relative overflow-hidden rounded-md border bg-deep-black p-1',
                 rs.border,
                 rs.glow,
                 item.featured && 'ring-1 ring-neon-yellow/30',
               )}
             >
               <div
-                className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition duration-500 group-hover:opacity-100"
+                className="pointer-events-none absolute -inset-px rounded-md opacity-0 transition duration-500 group-hover:opacity-100"
                 style={{
                   background:
                     'linear-gradient(125deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)',
@@ -416,7 +416,7 @@ export function Store() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              className="relative w-full max-w-md overflow-hidden rounded-2xl border border-neon-yellow/35 bg-[#0f0f12] shadow-[0_0_48px_rgba(234,255,0,0.12)]"
+              className="relative w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/35 bg-panel shadow-[0_0_48px_rgba(234,255,0,0.12)]"
               role="dialog"
               aria-modal="true"
               aria-labelledby="store-checkout-title"

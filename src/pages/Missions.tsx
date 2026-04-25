@@ -157,7 +157,7 @@ export function Missions() {
                 : 'Todas as missões desbloqueadas.'}
             </p>
           </div>
-          <div className="bg-[#111] border border-white/10 px-4 py-2">
+          <div className="bg-panel border border-white/10 px-4 py-2">
             <span className="text-sm font-display font-bold text-neon-yellow tracking-wider">{formatExp(finance.ole)} EXP</span>
           </div>
         </div>
@@ -167,7 +167,7 @@ export function Missions() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-[#111] border border-blue-400/25 p-5 space-y-3"
+        className="bg-panel border border-blue-400/25 p-5 space-y-3"
       >
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
@@ -258,7 +258,7 @@ export function Missions() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.06 }}
               className={cn(
-                'bg-[#111] border border-white/10 p-5 flex items-center gap-4 group hover:border-white/20 transition-colors',
+                'bg-panel border border-white/10 p-5 flex items-center gap-4 group hover:border-white/20 transition-colors',
                 m.status === 'completed' && 'border-neon-yellow/50 bg-neon-yellow/10',
               )}
             >
@@ -307,7 +307,7 @@ export function Missions() {
           );
         })}
         {visibleMissions.length === 0 && (
-          <div className="bg-[#111] border border-white/10 p-5 text-xs text-gray-500">
+          <div className="bg-panel border border-white/10 p-5 text-xs text-gray-500">
             Nenhuma missão nesta aba.
           </div>
         )}

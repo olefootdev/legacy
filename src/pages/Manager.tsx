@@ -170,7 +170,7 @@ export function Manager() {
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border border-neon-yellow/20 bg-gradient-to-br from-[#141109] via-black/80 to-black/90"
+        className="relative overflow-hidden rounded-md border border-neon-yellow/20 bg-gradient-to-br from-[#141109] via-black/80 to-black/90"
       >
         <div
           className="pointer-events-none absolute inset-0 opacity-40"
@@ -181,7 +181,7 @@ export function Manager() {
         />
         <div className="relative z-10 p-5 md:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-2 border-neon-yellow/60 bg-black/60 sm:mx-0 sm:h-28 sm:w-28">
+            <div className="relative mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-md border-2 border-neon-yellow/60 bg-black/60 sm:mx-0 sm:h-28 sm:w-28">
               {avatarSrc ? (
                 <img src={avatarSrc} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
               ) : (
@@ -638,7 +638,7 @@ function TrophyRoomSummary({
               'relative flex min-h-[140px] flex-col gap-2 overflow-hidden rounded-lg border p-3',
               c.earned
                 ? 'border-neon-yellow/40 bg-gradient-to-br from-neon-yellow/10 to-black/40'
-                : 'border-white/10 bg-[#111] opacity-80',
+                : 'border-white/10 bg-panel opacity-80',
             )}
           >
             <div className="flex items-start justify-between gap-2">
@@ -709,7 +709,7 @@ function DrawerShell({
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.96, y: 12, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl"
+        className="my-auto flex max-h-[min(90dvh,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl"
         role="dialog"
         aria-modal="true"
       >
@@ -991,7 +991,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 10 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto flex max-h-[min(88dvh,calc(100dvh-5rem))] w-full max-w-md flex-col overflow-hidden rounded-xl border border-fuchsia-500/40 bg-[#111] p-5 sm:max-h-[min(90dvh,640px)]"
+              className="my-auto flex max-h-[min(88dvh,calc(100dvh-5rem))] w-full max-w-md flex-col overflow-hidden rounded-xl border border-fuchsia-500/40 bg-panel p-5 sm:max-h-[min(90dvh,640px)]"
             >
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
