@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus } from 'lucide-react';
+import { Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -29,6 +29,7 @@ import {
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
+import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
@@ -588,279 +589,69 @@ export function Home() {
         </Link>
       </div>
 
-      {/* HERO PRINCIPAL — Matchday Hero cinematográfico edge-to-edge */}
+      {/* HERO PRINCIPAL — Matchday Hero cinematográfico (clone exato do /matchday/preview) */}
       <section
         aria-label="Matchday"
         className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-8"
       >
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative isolate overflow-hidden bg-deep-black min-h-[78vh] sm:min-h-[85vh] flex flex-col"
-      >
-        {/* HERO SPLIT — amarelo (esq 62%) → preto (dir) */}
-        <div className="relative w-full overflow-hidden bg-deep-black">
-          {/* Camada amarela */}
-          <div
-            className="absolute inset-0 bg-neon-yellow ole-hero-split"
-            aria-hidden
-          />
-          {/* Linhas verticais sutis sobre o amarelo */}
-          <svg
-            aria-hidden
-            className="absolute inset-0 pointer-events-none ole-hero-split"
-            width="100%"
-            height="100%"
-            preserveAspectRatio="none"
-            viewBox="0 0 100 100"
-          >
-            <g stroke="#000" strokeOpacity="0.06" strokeWidth="0.15">
-              <line x1="20" y1="0" x2="20" y2="100" />
-              <line x1="40" y1="0" x2="40" y2="100" />
-              <line x1="60" y1="0" x2="60" y2="100" />
-              <line x1="80" y1="0" x2="80" y2="100" />
-            </g>
-          </svg>
-
-          <div className="relative z-10 px-4 sm:px-8 md:px-10 py-5 sm:py-7">
-            {/* Top bar: OLEFOOT | competição | kickoff (PRÓXIMA) */}
-            <div className="flex items-center justify-between gap-3 mb-7 sm:mb-10">
-              <span className="text-black/80 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px]">
-                Olefoot
-              </span>
-              <span className="text-black/70 font-display font-bold uppercase tracking-[0.22em] text-[10px] sm:text-[12px] text-center flex-1 truncate">
-                {fixture.competition}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-white font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px]">
-                <span
-                  className="w-1.5 h-1.5 rounded-full bg-neon-yellow"
-                  aria-hidden
-                />
-                {fixture.kickoffLabel}
-              </span>
-            </div>
-
-            {/* Scoreboard: [crest] CASA + form / VS / [crest] FORA + form */}
-            {(() => {
-              const last5 = results.slice(0, 5);
-              const wins = last5.filter((r) => r.result === 'win').length;
-              const draws = last5.filter((r) => r.result === 'draw').length;
-              const losses = last5.filter((r) => r.result === 'loss').length;
-              const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
-              const awayShort = (fixture.opponent.shortName ?? fixture.opponent.name).slice(0, 3).toUpperCase();
-              return (
-                <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-2 sm:gap-5">
-                  {/* Casa */}
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-black bg-neon-yellow grid place-items-center">
-                    <span className="font-display font-black uppercase text-black text-[10px] sm:text-[12px] tracking-[0.06em]">
-                      {homeShort}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <h2
-                      className="ole-headline text-black leading-[0.85] truncate"
-                      style={{ fontSize: 'clamp(18px, 3.6vw, 40px)' }}
-                    >
-                      {club.name}
-                    </h2>
-                    <p className="mt-1 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px] text-black/70">
-                      {wins}V · {draws}E · {losses}D
-                    </p>
-                  </div>
-
-                  {/* VS Moret italic gigante */}
-                  <div className="self-stretch flex items-center justify-center px-1 sm:px-2">
-                    <span
-                      className="leading-none text-black/85"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontStyle: 'italic',
-                        fontSize: 'clamp(36px, 7vw, 80px)',
-                      }}
-                    >
-                      vs
-                    </span>
-                  </div>
-
-                  {/* Visitante */}
-                  <div className="text-right min-w-0">
-                    <h2
-                      className="ole-headline text-white leading-[0.85] truncate"
-                      style={{ fontSize: 'clamp(18px, 3.6vw, 40px)' }}
-                    >
-                      {fixture.opponent.name}
-                    </h2>
-                    <p className="mt-1 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[12px] text-white/70">
-                      {fixture.venue}
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-[2.5px] border-white bg-deep-black grid place-items-center">
-                    <span className="font-display font-black uppercase text-white text-[10px] sm:text-[12px] tracking-[0.06em]">
-                      {awayShort}
-                    </span>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* STATS STRIP — 5 cards alternados (forma + apoio + mood) */}
         {(() => {
           const last5 = results.slice(0, 5);
           const wins = last5.filter((r) => r.result === 'win').length;
           const draws = last5.filter((r) => r.result === 'draw').length;
           const losses = last5.filter((r) => r.result === 'loss').length;
-          const formStr =
-            last5.length > 0
-              ? last5
-                  .map((r) =>
-                    r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D',
-                  )
-                  .join(' ')
-              : '—';
-          const supportPct = `${Math.round(roundedSupport)}%`;
-          const stats = [
-            { label: 'Vitórias', value: String(wins), onYellow: true },
-            { label: 'Empates', value: String(draws), onYellow: true },
-            { label: 'Derrotas', value: String(losses), onYellow: false },
-            { label: 'Apoio', value: supportPct, onYellow: false },
-            { label: 'Forma', value: formStr, onYellow: false },
-          ];
+          const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
+          const awayShort = (fixture.opponent.shortName ?? fixture.opponent.name).slice(0, 3).toUpperCase();
+
           return (
-            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 px-5 sm:px-8 md:px-10 mt-[-28px] sm:mt-[-36px]">
-              {stats.map((s) => (
-                <article
-                  key={s.label}
-                  className={
-                    s.onYellow
-                      ? 'bg-black px-3 py-3 sm:px-4 sm:py-4 text-center shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
-                      : 'bg-deep-black border border-white/8 px-3 py-3 sm:px-4 sm:py-4 text-center shadow-[0_8px_24px_rgba(0,0,0,0.45)]'
-                  }
-                >
-                  <p
-                    className="text-neon-yellow tabular-nums leading-none truncate"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 900,
-                      fontSize: 'clamp(22px, 4vw, 36px)',
-                      letterSpacing: s.label === 'Forma' ? '0.05em' : '-0.01em',
-                    }}
-                  >
-                    {s.value}
-                  </p>
-                  <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                    {s.label}
-                  </p>
-                </article>
-              ))}
-            </div>
+            <MatchdayHero
+              data={{
+                competition: fixture.competition,
+                statusPrimary: 'Próxima',
+                statusSecondary: fixture.kickoffLabel,
+                statusVariant: 'preview',
+                home: {
+                  short: homeShort,
+                  name: club.name,
+                  form: { v: wins, e: draws, d: losses },
+                },
+                away: {
+                  short: awayShort,
+                  name: fixture.opponent.name,
+                  sublabel: fixture.venue,
+                },
+                stats: [
+                  { label: 'Vitórias', value: String(wins) },
+                  { label: 'Empates', value: String(draws) },
+                  { label: 'Derrotas', value: String(losses) },
+                  { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
+                  {
+                    label: 'Forma',
+                    value:
+                      last5.length > 0
+                        ? last5
+                            .map((r) =>
+                              r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D',
+                            )
+                            .join(' ')
+                        : '—',
+                  },
+                ],
+                highlight: {
+                  name: homeHighlight.name,
+                  number: homeHighlight.ovr,
+                  quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. A torcida espera o gol nessa partida.`,
+                },
+                actions: [
+                  { label: 'Partida rápida', href: '/match/quick', variant: 'primary' },
+                  { label: 'Partida ao vivo', href: '/match/live', variant: 'outline' },
+                  { label: 'Táticas', href: '/team', variant: 'outline' },
+                ],
+                topLeft: { label: 'Olefoot' },
+                scrollCueTargetId: 'home-below-fold',
+              }}
+            />
           );
         })()}
-
-        {/* DESTAQUE DA PARTIDA + número gigante decorativo + ações */}
-        <div className="relative z-10 bg-deep-black px-5 py-9 sm:px-8 sm:py-12 md:px-10 md:py-14 flex-1 flex flex-col justify-between">
-          {/* Diagonal accent decorativo (assinatura BVB) */}
-          <div
-            className="diagonal-accent"
-            style={{ top: '-40px', right: '-60px', width: '300px', height: '300px' }}
-            aria-hidden
-          />
-
-          <div className="relative grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-6 items-end mb-8">
-            {/* Coluna esquerda: eyebrow + nome + frase */}
-            <div>
-              <div className="ole-eyebrow !justify-start mb-3">
-                <span>★ Destaque da partida</span>
-              </div>
-              <h3
-                className="ole-headline-italic text-white leading-[0.9]"
-                style={{ fontSize: 'clamp(36px, 7vw, 80px)' }}
-              >
-                {homeHighlight.name.split(/\s+/)[0]}
-                <br />
-                {homeHighlight.name.split(/\s+/).slice(1).join(' ')}
-              </h3>
-              <blockquote
-                className="ole-headline-italic mt-4 text-white/65 max-w-md leading-snug"
-                style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-              >
-                “OVR {homeHighlight.ovr} · {starsForOvr(homeHighlight.ovr)} estrelas. A torcida espera o gol nessa partida.”
-              </blockquote>
-            </div>
-
-            {/* Coluna direita: número gigante (OVR) decorativo */}
-            <div
-              className="relative h-[140px] sm:h-[200px] flex items-center justify-center"
-              aria-hidden
-            >
-              <span
-                className="leading-none tabular-nums text-neon-yellow/15 select-none"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 'clamp(160px, 24vw, 280px)',
-                  letterSpacing: '-0.04em',
-                }}
-              >
-                {String(homeHighlight.ovr).padStart(2, '0')}
-              </span>
-            </div>
-          </div>
-
-          {/* Action buttons row + scroll cue */}
-          <div className="relative flex flex-col items-stretch gap-3">
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-              <Link to="/match/quick" className="flex-1 min-w-[140px]">
-                <button
-                  type="button"
-                  className="w-full bg-neon-yellow text-black px-5 py-3 font-display font-black uppercase tracking-[0.18em] text-[12px] sm:text-[13px] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all rounded-sm shadow-[0_8px_24px_rgba(253,225,0,0.18)] flex items-center justify-center gap-2"
-                >
-                  <Play className="w-4 h-4 fill-black" />
-                  Partida rápida
-                </button>
-              </Link>
-              <Link to="/match/live" className="flex-1 min-w-[140px]">
-                <button
-                  type="button"
-                  className="w-full bg-black border border-white/15 text-white px-5 py-3 font-display font-bold uppercase tracking-[0.18em] text-[12px] sm:text-[13px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm"
-                >
-                  Partida ao vivo
-                </button>
-              </Link>
-              <Link to="/team" className="flex-1 min-w-[140px]">
-                <button
-                  type="button"
-                  className="w-full bg-black border border-white/15 text-white px-5 py-3 font-display font-bold uppercase tracking-[0.18em] text-[12px] sm:text-[13px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm"
-                >
-                  Táticas
-                </button>
-              </Link>
-            </div>
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.18em] text-neon-yellow/80">
-              Partida rápida conta para a liga e histórico oficial
-            </p>
-          </div>
-
-          {/* Scroll cue circular — assinatura cinematográfica */}
-          <div className="flex justify-center mt-8 sm:mt-10">
-            <button
-              type="button"
-              aria-label="Mais detalhes"
-              onClick={() => {
-                const el = document.getElementById('home-below-fold');
-                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.25)] animate-bounce"
-              style={{ animationDuration: '2s' }}
-            >
-              <ChevronRight className="w-4 h-4 rotate-90" />
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
       </section>
 
       <div id="home-below-fold" className="grid grid-cols-1 md:grid-cols-3 gap-6 scroll-mt-4">
