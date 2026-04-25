@@ -7,6 +7,7 @@ import type {
 } from './types';
 import type { MatchHalf } from '@/match/fieldZones';
 import { buildSpiritContext, gameSpiritTick } from '@/gamespirit/GameSpirit';
+import { getBestAction } from '@/smartfield/decision';
 import type { PlayerEntity } from '@/entities/types';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import { applyMatchMinuteFatigue } from '@/systems/fatigue';
@@ -174,6 +175,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   let spiritMomentumClamp01 = s.spiritMomentumClamp01 ?? null;
   let spiritMomentum: { home: number; away: number } = s.spiritMomentum ?? { home: 0, away: 0 };
   let pendingCornerForSide: 'home' | 'away' | null = s.pendingCornerForSide ?? null;
+  let pendingFreeKickForSide: 'home' | 'away' | null = s.pendingFreeKickForSide ?? null;
   let lastShotPreview = s.lastShotPreview ?? null;
   let preGoalHint = s.preGoalHint ?? null;
 
@@ -197,6 +199,24 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   const onBall =
     possession === 'home' ? nearestToBall(s.homePlayers, ball) : undefined;
+
+  // ── SmartField: pré-decide a ação do portador antes de invocar o Spirit ───
+  // `getBestAction` consulta a hierarquia de zonas (goalmouth>six_yard>box>...).
+  // Quando a confiança é alta (≥0.7), o `Decision.action` vira um hint que o
+  // pickAction do Spirit prefere sobre o seu fallback heurístico. Não-destrutivo:
+  // se confiança baixa ou faltar dado, o Spirit segue seu fluxo normal.
+  let spiritActionHint: import('@/smartfield/decision').ActionKind | null = null;
+  if (possession === 'home' && onBall && s.homePlayers.length > 0) {
+    const tagged = s.homePlayers.map((p) => ({ ...p, team: 'home' as const }));
+    const carrierAware = { ...onBall, team: 'home' as const };
+    const decision = getBestAction(carrierAware, tagged, 'home', {
+      hasBall: true,
+      isFreeKick: false,
+    });
+    if (decision.confidence >= 0.7) {
+      spiritActionHint = decision.action;
+    }
+  }
 
   let awayRoster = s.awayRoster ?? input.awayRoster;
 
@@ -255,6 +275,8 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       penaltyCooldownTicks: s.spiritPenaltyCooldownTicks ?? 0,
       momentum: s.spiritMomentum ?? { home: 0, away: 0 },
       pendingCornerForSide: s.pendingCornerForSide ?? null,
+      pendingFreeKickForSide: s.pendingFreeKickForSide ?? null,
+      smartfieldActionHint: spiritActionHint,
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());
@@ -498,6 +520,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       if (sm.spiritMomentumClamp01 !== undefined) spiritMomentumClamp01 = sm.spiritMomentumClamp01;
       if (sm.momentum !== undefined) spiritMomentum = sm.momentum;
       if (sm.pendingCornerForSide !== undefined) pendingCornerForSide = sm.pendingCornerForSide;
+      if (sm.pendingFreeKickForSide !== undefined) pendingFreeKickForSide = sm.pendingFreeKickForSide;
       if (sm.lastShotPreview !== undefined) lastShotPreview = sm.lastShotPreview;
       if (sm.preGoalHint !== undefined) preGoalHint = sm.preGoalHint;
     }
@@ -998,6 +1021,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     spiritMomentumClamp01,
     spiritMomentum,
     pendingCornerForSide,
+    pendingFreeKickForSide,
     lastShotPreview,
     preGoalHint,
     awayRoster,

@@ -26,6 +26,7 @@ import { createCausalBatch, type CausalMatchEvent } from '@/match/causal/matchCa
 import { normalizeStyle } from '@/tactics/playingStyle';
 import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum';
 import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
+import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
@@ -67,6 +68,77 @@ function nearestTeammateDistance(onBall: PitchPlayerState | undefined, mates: Pi
   return best > 1e8 ? 40 : best;
 }
 
+/**
+ * Devolve o jogador da casa mais próximo da bola e a distância (UI 0–100).
+ * Usado pra "snapar" a bola num jogador real depois de turnover/clear, evitando
+ * que ela fique parada em zona vazia.
+ */
+function nearestHomeToBall(
+  ball: PitchPoint,
+  homePlayers: PitchPlayerState[] | undefined,
+): { player: PitchPlayerState; dist: number } | null {
+  if (!homePlayers || homePlayers.length === 0) return null;
+  let best: { player: PitchPlayerState; dist: number } | null = null;
+  for (const p of homePlayers) {
+    const d = dist(ball, { x: p.x, y: p.y });
+    if (!best || d < best.dist) best = { player: p, dist: d };
+  }
+  return best;
+}
+
+/**
+ * Detecta se a bola caiu numa zona morta (longe de qualquer jogador OU encostada
+ * nas linhas — fora do campo). Devolve um restart se for o caso, senão null.
+ */
+type OutOfPlayRestart =
+  | { kind: 'throw_in'; awardedTo: 'home' | 'away'; ball: PitchPoint; zone: 'def' | 'mid' | 'att' }
+  | { kind: 'goal_kick'; awardedTo: 'home' | 'away'; ball: PitchPoint }
+  | { kind: 'corner_kick'; forSide: 'home' | 'away'; ball: PitchPoint };
+
+function detectOutOfPlay(
+  ball: PitchPoint,
+  carrier: 'home' | 'away',
+  homePlayers: PitchPlayerState[] | undefined,
+): OutOfPlayRestart | null {
+  // Linha lateral (saiu pelo Y).
+  if (ball.y <= 4 || ball.y >= 96) {
+    const zone: 'def' | 'mid' | 'att' = ball.x < 38 ? 'def' : ball.x < 68 ? 'mid' : 'att';
+    const awardedTo: 'home' | 'away' = carrier === 'home' ? 'away' : 'home';
+    return {
+      kind: 'throw_in',
+      awardedTo,
+      zone,
+      ball: { x: Math.min(98, Math.max(2, ball.x)), y: ball.y <= 4 ? 5 : 95 },
+    };
+  }
+  // Linha de fundo defendida pela CASA (x próximo de 0).
+  if (ball.x <= 3) {
+    if (carrier === 'away') {
+      // Atacante visitante chutou pra fora → tiro de meta da casa.
+      return { kind: 'goal_kick', awardedTo: 'home', ball: { x: 6, y: 50 } };
+    }
+    // Casa cortou pra trás (rebote do zagueiro casa) → escanteio do visitante.
+    return { kind: 'corner_kick', forSide: 'away', ball: { x: 1.5, y: ball.y < 50 ? 6 : 94 } };
+  }
+  // Linha de fundo defendida pelo VISITANTE (x próximo de 100).
+  if (ball.x >= 97) {
+    if (carrier === 'home') {
+      // Atacante da casa chutou pra fora → tiro de meta do visitante.
+      return { kind: 'goal_kick', awardedTo: 'away', ball: { x: 94, y: 50 } };
+    }
+    return { kind: 'corner_kick', forSide: 'home', ball: { x: 98.5, y: ball.y < 50 ? 6 : 94 } };
+  }
+
+  // Zona morta no meio (longe de todo jogador conhecido). Só tem dado da casa,
+  // mas se a casa tem posse e o nearest > 12 dá pra arrastar a bola até ele.
+  const near = nearestHomeToBall(ball, homePlayers);
+  if (carrier === 'home' && near && near.dist > 12) {
+    // Arrastar pro jogador casa mais próximo (pisa na bola).
+    return null; // Tratado fora; caller usa snap.
+  }
+  return null;
+}
+
 function densityNearBall(ball: PitchPoint, mates: PitchPlayerState[], radius = 18): number {
   let c = 0;
   for (const m of mates) {
@@ -79,6 +151,25 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   // Escanteio pendente — resolve cabeçada na hora, consome hint depois no tick.
   if (ctx.pendingCornerForSide === 'home' && ctx.possession === 'home') {
     return 'shot';
+  }
+  // Cobrança de falta pendente — força chute direto ao gol, não deixa tocar pra trás.
+  if (ctx.pendingFreeKickForSide === 'home' && ctx.possession === 'home' && ctx.ballZone === 'att') {
+    return 'shot';
+  }
+  // SmartField hint (high-confidence): prioriza decisão posicional vinda de
+  // `getBestAction`. Mapa SmartField → Spirit:
+  //   SHOOT/FREE_KICK_DIRECT → 'shot'
+  //   PASS/CROSS             → 'progress'
+  //   CLEAR                  → 'clear'
+  //   PRESS                  → 'press'
+  //   HOLD/RECOVER_*/DRIBBLE → cai no fluxo normal
+  if (ctx.possession === 'home' && ctx.smartfieldActionHint) {
+    const h = ctx.smartfieldActionHint;
+    if (h === 'SHOOT' || h === 'FREE_KICK_DIRECT') return 'shot';
+    if (h === 'PASS' || h === 'CROSS') return 'progress';
+    if (h === 'CLEAR') return 'clear';
+    if (h === 'PRESS') return 'press';
+    // demais (HOLD/RECOVER_POSITION/DRIBBLE): segue heurística normal abaixo
   }
   const style = normalizeStyle(ctx.tacticalStyle);
   const losingHome = ctx.possession === 'home' && ctx.homeScore < ctx.awayScore;
@@ -104,7 +195,13 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
     const momentumBias = (ctx.momentum?.home ?? 0) * 0.10;
-    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18 + (m?.shotInAttThirdBias ?? 0) + momentumBias;
+    // Bias adicional por zona granular: dentro da área (+0.30) ou criativa (+0.12)
+    // empurra a decisão pra chute. Resolve "tocava pra trás na cara do gol".
+    const zi = ctx.ballZoneInfo;
+    const zoneShotBias = zi
+      ? (isBox(zi) ? 0.30 : 0) + (isCreationZone(zi) ? 0.12 : 0)
+      : 0;
+    const shotBias = style.shootingProfile * 0.25 + style.riskTaking * 0.18 + (m?.shotInAttThirdBias ?? 0) + momentumBias + zoneShotBias;
     return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
   }
   if (ctx.possession === 'home' && style.buildUp > 0.72 && Math.random() < 0.22) return 'clear';
@@ -211,6 +308,8 @@ export function buildSpiritContext(input: {
   penaltyCooldownTicks?: number;
   momentum?: SpiritContext['momentum'];
   pendingCornerForSide?: SpiritContext['pendingCornerForSide'];
+  pendingFreeKickForSide?: SpiritContext['pendingFreeKickForSide'];
+  smartfieldActionHint?: SpiritContext['smartfieldActionHint'];
 }): SpiritContext {
   // Overall do time ponderado por role (atacantes pesam ataque, zagueiros pesam defesa).
   // Usa `homePlayers` (MatchPlayerAttributes) quando disponível; fallback pro overall do roster.
@@ -268,6 +367,7 @@ export function buildSpiritContext(input: {
     homeTeamAvg: avg,
     nearbyOpponentDist: dist(input.ball, mirrorAttack),
     ballZone,
+    ballZoneInfo: zoneAtUI(input.ball.x, input.ball.y, input.possession),
     nearestTeammateDist,
     homeDensityNearBall,
     crowdPressure,
@@ -284,6 +384,8 @@ export function buildSpiritContext(input: {
     legacyTeamBooster,
     momentum: input.momentum,
     pendingCornerForSide: input.pendingCornerForSide,
+    pendingFreeKickForSide: input.pendingFreeKickForSide,
+    smartfieldActionHint: input.smartfieldActionHint,
   };
 }
 
@@ -450,15 +552,28 @@ export function gameSpiritTick(
     };
   }
 
-  /** Falta perigosa na zona final (casa a atacar): penalty ou bola parada. */
+  /**
+   * Falta perigosa: usa awareness espacial (SmartField) — não só `ballZone === 'att'`.
+   * `isFinalThird` cobre attacking_*; `isCreationZone` casa creation_* (zona criativa);
+   * `isBox` casa box_* / six_yard_* (área); `dangerToOppGoal01` modula prob de pênalti.
+   */
+  const ballZi = ctx.ballZoneInfo;
+  const inAttackingArea = ballZi
+    ? isFinalThird(ballZi) || isBox(ballZi) || isCreationZone(ballZi)
+    : ctx.ballZone === 'att';
+  const danger01 = ballZi ? dangerToOppGoal01(ctx.ball.x, ctx.ball.y, 'home') : 0.5;
+  // Boost da prob de falta perigosa quando bola está mais perto do gol.
+  const dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 0.6);
   if (
     ctx.possession === 'home' &&
-    ctx.ballZone === 'att' &&
+    inAttackingArea &&
     ctx.onBall &&
     !(ctx.penaltyCooldownTicks && ctx.penaltyCooldownTicks > 0) &&
-    Math.random() < DANGEROUS_FOUL_PROB
+    Math.random() < dangerousFoulProbAdj
   ) {
-    const toPenalty = Math.random() < PENALTY_FROM_FOUL_PROB;
+    // Se a bola está dentro da área (box ou six-yard), todo foul vira pênalti.
+    const insideBox = ballZi ? isBox(ballZi) : false;
+    const toPenalty = insideBox || Math.random() < PENALTY_FROM_FOUL_PROB;
     const takerName = ctx.onBall.name;
     if (toPenalty) {
       L.push({
@@ -499,6 +614,8 @@ export function gameSpiritTick(
       causalEvents: [...L.events],
       spiritMeta: {
         spiritPhase: 'set_piece',
+        // Hint: próximo tick deve resolver em chute direto, não em recycle.
+        pendingFreeKickForSide: 'home',
       },
     };
   }
@@ -538,12 +655,14 @@ export function gameSpiritTick(
   let spiritMeta: SpiritSnapshotMeta | undefined;
   let lastShotPreview: SpiritSnapshotMeta['lastShotPreview'] = null;
   const consumedCorner = ctx.pendingCornerForSide === 'home' && ctx.possession === 'home' && action === 'shot';
+  const consumedFreeKick = ctx.pendingFreeKickForSide === 'home' && ctx.possession === 'home' && action === 'shot';
 
   if (ctx.possession === 'home') {
     const shooterId = ctx.onBall!.playerId;
     if (action === 'shot') {
       homeStat!.passesAttempt += 1;
       const fromCorner = ctx.pendingCornerForSide === 'home';
+      const fromFreeKick = ctx.pendingFreeKickForSide === 'home';
       L.push({
         type: 'shot_attempt',
         payload: {
@@ -552,7 +671,7 @@ export function gameSpiritTick(
           zone: ctx.ballZone,
           minute: ctx.minute,
           target: spiritShotTargetUI('home'),
-          ...(fromCorner ? { strike: 'header' as const } : {}),
+          ...(fromCorner ? { strike: 'header' as const } : fromFreeKick ? { strike: 'placed' as const } : {}),
         },
       });
 
@@ -572,6 +691,16 @@ export function gameSpiritTick(
         const headerBonus = physHigh ? 1.18 : 1.08;
         weights.goal *= headerBonus;
         weights.post_in *= headerBonus;
+      }
+      // Cobrança de falta: batedor com finalização alta coloca no canto (+xG).
+      // Barreira reduz ángulo: +save weight levemente.
+      if (fromFreeKick) {
+        const finHigh = (ctx.onBall?.attributes?.finalizacao ?? 50) >= 78;
+        const fkBonus = finHigh ? 1.22 : 1.06;
+        weights.goal *= fkBonus;
+        weights.post_in *= fkBonus;
+        weights.save *= 1.12; // barreira aumenta chance de GK pegar
+        weights.block *= 0.6; // menos bloqueio (barreira, não adversário solto)
       }
       const homeOnPitch = Math.max(0, ctx.homePlayers?.length ?? 11);
       const homeNumericRatio = Math.max(0.55, homeOnPitch / 11);
@@ -1002,6 +1131,59 @@ export function gameSpiritTick(
     }
   }
 
+  // ── Validação de bola viva ────────────────────────────────────
+  // Evita que a bola termine o tick em zona morta. Casos:
+  //   • saiu pela linha → emitir throw_in / goal_kick / corner_kick
+  //   • zona vazia (sem jogador casa por perto) com posse casa → snap pro mais próximo
+  // Skip se já estamos num overlay (golo, pênalti) ou bola já é set-piece pendente.
+  const skipBallValidator =
+    spiritMeta?.spiritOverlay ||
+    spiritMeta?.spiritPhase === 'celebration_goal' ||
+    spiritMeta?.spiritPhase === 'penalty' ||
+    spiritMeta?.pendingCornerForSide ||
+    spiritMeta?.pendingFreeKickForSide;
+  if (!skipBallValidator) {
+    const restart = detectOutOfPlay(ball, next, ctx.homePlayers);
+    if (restart) {
+      if (restart.kind === 'throw_in') {
+        L.push({
+          type: 'throw_in',
+          payload: { minute: ctx.minute, awardedTo: restart.awardedTo, zone: restart.zone },
+        });
+        L.push({ type: 'ball_state', payload: { ...restart.ball, reason: 'throw_in_restart' } });
+        ball = restart.ball;
+        next = restart.awardedTo;
+      } else if (restart.kind === 'goal_kick') {
+        L.push({
+          type: 'goal_kick',
+          payload: { minute: ctx.minute, awardedTo: restart.awardedTo },
+        });
+        L.push({ type: 'ball_state', payload: { ...restart.ball, reason: 'goal_kick_restart' } });
+        ball = restart.ball;
+        next = restart.awardedTo;
+      } else if (restart.kind === 'corner_kick') {
+        L.push({
+          type: 'corner_kick',
+          payload: { minute: ctx.minute, side: restart.forSide },
+        });
+        L.push({ type: 'ball_state', payload: { ...restart.ball, reason: 'corner_kick_restart' } });
+        ball = restart.ball;
+        next = restart.forSide;
+        // Se for casa cobrando, preparar hint de cabeçada igual fluxo do block→corner.
+        if (restart.forSide === 'home') {
+          spiritMeta = { ...(spiritMeta ?? {}), pendingCornerForSide: 'home' };
+        }
+      }
+    } else if (next === 'home') {
+      // Sem restart, mas se posse casa e jogador mais próximo > 12 → snap.
+      const near = nearestHomeToBall(ball, ctx.homePlayers);
+      if (near && near.dist > 12) {
+        ball = { x: near.player.x, y: near.player.y };
+        L.push({ type: 'ball_state', payload: { ...ball, reason: 'snap_to_carrier' } });
+      }
+    }
+  }
+
   // Atualiza momentum a partir dos eventos deste tick e expõe no meta.
   const nextMomentum = updateMomentumFromTick(ctx.momentum, [...L.events]);
   const spiritMetaWithMomentum: SpiritSnapshotMeta = {
@@ -1011,6 +1193,9 @@ export function gameSpiritTick(
     // Senão preserva o que spiritMeta já tiver definido (ex.: novo corner emitido agora).
     ...(consumedCorner && spiritMeta?.pendingCornerForSide === undefined
       ? { pendingCornerForSide: null }
+      : {}),
+    ...(consumedFreeKick && spiritMeta?.pendingFreeKickForSide === undefined
+      ? { pendingFreeKickForSide: null }
       : {}),
     ...(lastShotPreview ? { lastShotPreview } : {}),
   };

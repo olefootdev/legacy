@@ -84,10 +84,28 @@ export interface SpiritContext {
   momentum?: import('@/gamespirit/momentum').MomentumState;
 
   /**
+   * Awareness espacial granular (SmartField) na posição da bola.
+   * Acessa pelo lado em posse (espelho automático para 'away').
+   * Consumido por `pickAction`, handler de falta perigosa, e Skills.
+   */
+  ballZoneInfo?: import('@/match/spatialZones').ZoneInfo;
+  /**
+   * Hint de ação posicional (SmartField) computado em `runMatchMinute`
+   * via `getBestAction`. Quando definido, `pickAction` prefere SHOOT/PASS/
+   * CROSS antes do fallback heurístico.
+   */
+  smartfieldActionHint?: import('@/smartfield/decision').ActionKind | null;
+
+  /**
    * Escanteio pendente desde o tick anterior — força cabeçada nessa posse.
    * Consumido/limpo no tick corrente via `spiritMeta.pendingCornerForSide = null`.
    */
   pendingCornerForSide?: PossessionSide | null;
+
+  /**
+   * Falta perigosa pendente (cobrança direta). Próximo tick força `shot` tipo `placed`.
+   */
+  pendingFreeKickForSide?: PossessionSide | null;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */
@@ -102,6 +120,8 @@ export interface SpiritSnapshotMeta {
   momentum?: import('@/gamespirit/momentum').MomentumState;
   /** Set/limpa hint de escanteio entre ticks. `null` = consumido. */
   pendingCornerForSide?: PossessionSide | null;
+  /** Set/limpa hint de cobrança de falta (chute direto). `null` = consumido. */
+  pendingFreeKickForSide?: PossessionSide | null;
   /** Probabilidades agregadas do tiro neste tick (pra barra de transparência). */
   lastShotPreview?: {
     side: PossessionSide;
