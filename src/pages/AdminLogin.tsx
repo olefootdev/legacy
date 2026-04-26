@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Shield, AlertTriangle } from 'lucide-react';
+import { Lock, Shield, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { adminPanelLogin } from '@/supabase/adminPanelAuth';
 
 export function AdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,16 +31,12 @@ export function AdminLogin() {
   return (
     <div className="flex min-h-svh w-full min-w-0 flex-col items-center justify-center bg-deep-black px-4 py-10 sm:px-6">
       <div className="sports-panel w-full min-w-0 max-w-md rounded-xl p-6 sm:p-8">
-        <div className="mb-6 flex flex-col items-center gap-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-neon-yellow/40 bg-neon-yellow/10">
-            <Shield className="h-7 w-7 text-neon-yellow" />
-          </div>
-          <h1 className="font-display text-center text-2xl font-bold uppercase tracking-wide text-white">
-            Painel Admin
-          </h1>
-          <p className="text-center text-[11px] text-white/50">
-            Acesso restrito — credencial separada do jogo.
-          </p>
+        <div className="mb-6 flex flex-col items-center">
+          <img
+            src="/brand/olefoot-yellow-01.svg"
+            alt="Olefoot"
+            className="h-16 w-auto"
+          />
         </div>
 
         <form
@@ -74,18 +71,30 @@ export function AdminLogin() {
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 name="admin-panel-password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 pl-9 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/50 focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
+                className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 pl-9 pr-10 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/50 focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
                 placeholder="mínimo 12 caracteres"
                 required
                 minLength={12}
                 pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$"
                 title="Mínimo 12 caracteres: maiúscula, minúscula, número e símbolo especial"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white/70"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-white/35">
               ⚠️ Senha forte: mín. 12 caracteres com maiúscula, minúscula, número e símbolo (@$!%*?&).
@@ -94,9 +103,9 @@ export function AdminLogin() {
           </label>
 
           {error ? (
-            <div className="flex items-start gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{error}</span>
+            <div className="flex items-start gap-2 rounded-lg border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+              <span className="flex-1">{error}</span>
             </div>
           ) : null}
 

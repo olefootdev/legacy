@@ -26,7 +26,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { formatExp, formatBroDisplay } from '@/systems/economy';
+import { formatExp, formatBroDisplay, formatCompactNumber } from '@/systems/economy';
 import { useProgressionStore } from '@/progression/progressionStore';
 import { MISSION_CATALOG } from '@/progression/missions/catalog';
 import { COMPETITION_TROPHY_CATALOG } from '@/trophies/competitionCatalog';
@@ -318,7 +318,7 @@ export function Manager() {
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
-                {formatExp(finance.ole)}
+                {formatCompactNumber(finance.ole)}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
                 EXP

@@ -33,6 +33,22 @@ export function formatOle(n: number): string {
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+/**
+ * Formata números grandes com sufixos K (mil) e M (milhões).
+ * Exemplos: 1500 → "1.5K", 10000 → "10K", 10000000 → "10M"
+ */
+export function formatCompactNumber(n: number): string {
+  if (n >= 1_000_000) {
+    const millions = n / 1_000_000;
+    return `${millions.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}M`;
+  }
+  if (n >= 1_000) {
+    const thousands = n / 1_000;
+    return `${thousands.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}K`;
+  }
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
 /** Preferir na UI nova copy de EXP em vez de OLE. */
 export const formatExp = formatOle;
 

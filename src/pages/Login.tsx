@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Sparkles, Zap, ShoppingCart, Trophy, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
@@ -129,23 +130,90 @@ export function Login() {
 
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end">
           {mode === 'landing' ? (
-            <div
-              className={cn(
-                'relative overflow-hidden rounded-sm border border-white/[0.1]',
-                'bg-black/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_40px_rgba(0,0,0,0.45)]',
-                'backdrop-blur-md',
-              )}
-            >
-              <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
-              <div className="relative px-5 py-6 pl-6 sm:px-6 sm:py-7 sm:pl-7">
-                <h1 className="font-display text-[clamp(1.65rem,6.8vw,2.65rem)] font-bold uppercase leading-[1.02] tracking-tight text-white [text-shadow:0_3px_28px_rgba(0,0,0,0.92)]">
-                  Mostre que você entende de <span className="text-neon-yellow">futebol</span>
-                </h1>
-                <p className="mt-4 font-sans text-sm font-medium leading-snug text-white/88 [text-shadow:0_2px_14px_rgba(0,0,0,0.85)] sm:text-base">
-                  Seja o maior Manager do mundo
-                </p>
+            <>
+              <div
+                className={cn(
+                  'relative overflow-hidden rounded-xl border border-white/[0.12]',
+                  'bg-gradient-to-br from-black/60 via-black/50 to-black/70',
+                  'shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_20px_50px_rgba(0,0,0,0.6)]',
+                  'backdrop-blur-xl',
+                )}
+              >
+                <div className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-neon-yellow via-neon-yellow/80 to-neon-yellow/60" aria-hidden />
+                <div className="relative px-6 py-8 pl-8 sm:px-8 sm:py-10 sm:pl-10">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-1">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neon-yellow" />
+                    <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-neon-yellow">Jogue Agora</span>
+                  </div>
+
+                  {/* Headline com Moret (serif hero) para emoção */}
+                  <h1 className="font-serif-hero text-[clamp(2.2rem,8vw,3.5rem)] font-normal italic leading-[0.92] tracking-tight text-white [text-shadow:0_4px_32px_rgba(0,0,0,0.95)]">
+                    Monte seu time<br />
+                    Domine o <span className="text-neon-yellow not-italic">mercado</span><br />
+                    Seja <span className="text-neon-yellow not-italic">campeão</span>.
+                  </h1>
+
+                  {/* Subheadline com Agency FB (display) para impacto */}
+                  <p className="mt-6 font-display text-[17px] font-bold uppercase leading-tight tracking-wide text-white/95 [text-shadow:0_2px_16px_rgba(0,0,0,0.9)] sm:text-[19px]">
+                    Contrate novos talentos<br />
+                    Escale lendas do futebol<br />
+                    Dispute ligas mundiais.
+                  </p>
+
+                  <div className="mt-6 flex flex-wrap gap-3 font-display text-[11px] font-bold uppercase tracking-[0.15em] text-white/70">
+                    <span className="flex items-center gap-1.5">
+                      <ShoppingCart className="h-3.5 w-3.5 text-neon-yellow" />
+                      Mercado Real
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Trophy className="h-3.5 w-3.5 text-neon-yellow" />
+                      Partidas ao Vivo
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-neon-yellow" />
+                      Ligas Online
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
+
+              {/* Feature Highlights com tipografia mista */}
+              <div className="mt-6 space-y-3">
+                {/* Agency Feature */}
+                <div className="group relative overflow-hidden rounded-lg border border-purple-500/20 bg-gradient-to-r from-purple-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-purple-500/40">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-purple-400/30 bg-purple-500/10">
+                      <span className="font-display text-lg font-black text-purple-300">AI</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                        Crie Jogadores com IA
+                      </h3>
+                      <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                        Descreva o perfil e gere jogadores únicos com atributos reais
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Moret Feature */}
+                <div className="group relative overflow-hidden rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-cyan-500/40">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-500/10">
+                      <span className="font-display text-lg font-black text-cyan-300">⚡</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                        Análise Tática em Tempo Real
+                      </h3>
+                      <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                        IA analisa partidas e sugere mudanças táticas instantâneas
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : mode === 'forgot' ? (
             <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
               <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
@@ -179,9 +247,10 @@ export function Login() {
                       />
                     </label>
                     {error ? (
-                      <p className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
-                        ✗ {error}
-                      </p>
+                      <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
+                        <span className="shrink-0 text-rose-300">✗</span>
+                        <span className="flex-1">{error}</span>
+                      </div>
                     ) : null}
                     <button
                       type="submit"
@@ -239,9 +308,10 @@ export function Login() {
                     />
                   </label>
                   {error ? (
-                    <p className="rounded-sm border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-200">
-                      ✗ {error}
-                    </p>
+                    <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
+                      <span className="shrink-0 text-rose-300">✗</span>
+                      <span className="flex-1">{error}</span>
+                    </div>
                   ) : null}
                   <button
                     type="submit"
@@ -269,23 +339,27 @@ export function Login() {
               <button
                 type="button"
                 onClick={() => setMode('form')}
-                className="btn-primary block w-full text-center"
+                className="group relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-4 font-display text-base font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98]"
               >
-                <span className="btn-primary-inner justify-center py-1">Entrar</span>
+                <span className="relative z-10">Entrar</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
               </button>
-              <Link to="/cadastro" className="btn-secondary block w-full text-center">
-                <span className="btn-secondary-inner justify-center py-1">Cadastrar</span>
+              <Link
+                to="/cadastro"
+                className="group relative flex items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white/5 px-6 py-4 font-display text-base font-black uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98]"
+              >
+                <span className="relative z-10">Cadastrar</span>
               </Link>
               <button
                 type="button"
-                className="pt-1 text-center font-sans text-xs font-bold uppercase tracking-wide text-white/60 underline decoration-white/30 underline-offset-[6px] transition hover:text-neon-yellow hover:decoration-neon-yellow/45"
+                className="mt-2 pt-1 text-center font-sans text-xs font-bold uppercase tracking-wider text-white/55 underline decoration-white/25 underline-offset-4 transition hover:text-neon-yellow/90 hover:decoration-neon-yellow/40"
                 onClick={() => {
                   setError(null);
                   setForgotSent(false);
                   setMode('forgot');
                 }}
               >
-                Esqueci Senha
+                Esqueci minha senha
               </button>
             </nav>
           ) : null}

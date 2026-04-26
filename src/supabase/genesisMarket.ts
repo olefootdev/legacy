@@ -88,6 +88,7 @@ export type GenesisMarketPlayerRow = {
   rarity_label: string | null;
   bio: string | null;
   listed_on_market: boolean;
+  admin_market_tag: string | null;
   mint_overall: number | null;
   evolution_rate: number | null;
   collection_id: string | null;
@@ -195,6 +196,9 @@ export function mergeGenesisRowWithSavedPlayer(
     contractIsLifetime: saved.contractIsLifetime ?? fresh.contractIsLifetime,
     contractExpired: saved.contractExpired ?? fresh.contractExpired,
     genesisCatalogId: saved.genesisCatalogId ?? fresh.genesisCatalogId,
+    // Admin market controls sempre vêm do Supabase (fresh), não do save local
+    listedOnMarket: fresh.listedOnMarket,
+    adminMarketTag: fresh.adminMarketTag,
   };
 }
 
@@ -245,7 +249,8 @@ export function genesisRowToPlayerEntity(row: GenesisMarketPlayerRow): PlayerEnt
     collectionId: row.collection_id?.trim() || undefined,
     cardSupply: row.card_supply != null && Number.isFinite(row.card_supply) ? Math.floor(row.card_supply) : undefined,
     bio: row.bio?.trim() || undefined,
-    listedOnMarket: false,
+    listedOnMarket: row.listed_on_market === true,
+    adminMarketTag: row.admin_market_tag?.trim() || undefined,
     age: row.age != null && Number.isFinite(row.age) ? Math.round(row.age) : undefined,
     mintOverall: mintOvr,
     evolutionRate: evo,

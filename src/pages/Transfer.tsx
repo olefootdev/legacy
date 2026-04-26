@@ -1914,9 +1914,13 @@ function PlayerCard({
         {/* Top Left Info (OVR & POS) */}
         <div className="absolute top-3 left-3 z-20 flex flex-col items-center drop-shadow-md">
           <div className={cn(
-            "font-display font-black text-3xl leading-none",
+            "italic text-3xl leading-none",
             player.style === 'neon-yellow' ? 'text-neon-yellow' : 'text-white'
-          )}>
+          )}
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontWeight: 700,
+          }}>
             {player.ovr}
           </div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-white mt-1">{player.pos}</div>
@@ -2033,10 +2037,10 @@ function PlayerCard({
             </div>
             <button
               type="button"
-              className="flex w-full min-h-11 max-w-full items-center justify-center gap-1.5 rounded-sm bg-neon-yellow px-1.5 py-2.5 font-display text-xs font-bold uppercase leading-tight tracking-wider text-black transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-white sm:gap-2 sm:py-2 sm:text-sm sm:-skew-x-6 md:text-base"
+              className="flex w-full min-h-11 max-w-full items-center justify-center gap-1.5 rounded-sm bg-neon-yellow px-1.5 py-2.5 text-xs font-bold uppercase leading-tight tracking-wider text-black transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-white sm:gap-2 sm:py-2 sm:text-sm sm:-skew-x-6 md:text-base"
+              style={{ fontFamily: 'var(--font-sans)' }}
             >
-              <span className="flex min-w-0 max-w-full items-center justify-center gap-1.5 whitespace-normal text-center sm:skew-x-6 sm:whitespace-nowrap">
-                <Gavel className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="flex min-w-0 max-w-full items-center justify-center whitespace-normal text-center sm:skew-x-6 sm:whitespace-nowrap">
                 Dar Lance
               </span>
             </button>

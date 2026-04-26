@@ -46,6 +46,9 @@ export async function adminPanelLogin(email: string, password: string): Promise<
   const { data, error } = await sb.rpc('admin_panel_login', {
     p_email: email,
     p_password: password,
+    p_ip_address: null,
+    p_user_agent: null,
+    p_two_factor_code: null,
   });
 
   if (error) return { ok: false, error: `RPC: ${error.message}` };

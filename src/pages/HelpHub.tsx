@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, HelpCircle, BookOpen, ChevronRight } from 'lucide-react';
+import { GraduationCap, HelpCircle, BookOpen, ChevronRight, Sparkles, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { OlefootAssistant } from '@/components/assistant/OlefootAssistant';
 
 const quickActions = [
   {
@@ -29,9 +31,10 @@ const quickActions = [
 
 export function HelpHub() {
   useTrackScreen('screen_help_hub');
+  const [showAssistant, setShowAssistant] = useState(false);
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10">
+    <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10 pb-24">
       {/* ── HERO BVB — amarelo + watermark + tipografia épica ── */}
       <section
         aria-label="Ajuda"
@@ -115,6 +118,43 @@ export function HelpHub() {
         </motion.div>
       </section>
 
+      {/* Tutorial Interativo CTA */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="relative overflow-hidden rounded-lg border-2 border-neon-yellow/40 bg-gradient-to-br from-neon-yellow/10 via-black to-black p-6 sm:p-8"
+      >
+        {/* Diagonal accent */}
+        <div
+          className="absolute -right-12 -top-12 h-48 w-48 bg-neon-yellow opacity-[0.08]"
+          style={{ transform: 'rotate(34deg) skewX(-12deg)' }}
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-neon-yellow/20 border-2 border-neon-yellow/40 shadow-[0_0_20px_rgba(253,225,0,0.3)]">
+            <Sparkles className="h-8 w-8 text-neon-yellow" strokeWidth={2.5} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-display text-xl sm:text-2xl font-black uppercase tracking-wide text-neon-yellow mb-2">
+              Tutorial Interativo
+            </h2>
+            <p className="text-sm sm:text-base text-white/70 leading-relaxed">
+              Aprenda a dominar o Olefoot com nosso assistente passo a passo.
+              Guias visuais, dicas práticas e acesso direto às funcionalidades.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAssistant(true)}
+            className="shrink-0 flex items-center gap-2 rounded-sm bg-neon-yellow px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-black transition-all hover:bg-white hover:scale-105 shadow-[0_0_20px_rgba(253,225,0,0.4)]"
+          >
+            <PlayCircle className="h-5 w-5" />
+            Iniciar tutorial
+          </button>
+        </div>
+      </motion.section>
+
       {/* Quick Actions Grid */}
       <section>
         <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white/70 mb-4 px-1">
@@ -181,6 +221,19 @@ export function HelpHub() {
           </Link>
         </div>
       </motion.section>
+
+      {/* Assistente flutuante */}
+      <AnimatePresence>
+        {showAssistant && (
+          <OlefootAssistant
+            autoOpen
+            onComplete={() => {
+              setShowAssistant(false);
+              // Opcional: mostrar toast de conclusão
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

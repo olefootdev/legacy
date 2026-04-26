@@ -71,7 +71,7 @@ export function TransferFeaturedBoxes({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {shown.map((p, i) => (
           <motion.button
             key={p.id}
@@ -83,8 +83,8 @@ export function TransferFeaturedBoxes({
             className="group relative overflow-hidden border border-[var(--color-border)] bg-dark-gray p-0 text-left transition-colors hover:border-neon-yellow/40"
             style={{ borderRadius: 'var(--radius-md)' }}
           >
-            {/* Retrato */}
-            <div className="relative h-56 w-full overflow-hidden bg-gradient-to-br from-black to-white/5">
+            {/* Retrato — aspect-square para manter proporção */}
+            <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-black to-white/5">
               {p.portraitSrc ? (
                 <img
                   src={p.portraitSrc}
@@ -148,14 +148,14 @@ export function TransferFeaturedBoxes({
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/90 to-transparent" />
             </div>
 
-            {/* Info */}
-            <div className="space-y-2 p-3.5">
+            {/* Info — compacta para caber no square */}
+            <div className="space-y-1.5 p-2.5">
               <div className="min-w-0">
                 <p
                   className="truncate text-white uppercase"
                   style={{
                     fontFamily: 'var(--font-display)',
-                    fontSize: '13px',
+                    fontSize: '11px',
                     fontWeight: 700,
                     letterSpacing: '0.04em',
                   }}
@@ -166,34 +166,33 @@ export function TransferFeaturedBoxes({
                   className="text-white/45 uppercase truncate"
                   style={{
                     fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.18em',
+                    fontSize: '9px',
+                    letterSpacing: '0.14em',
                   }}
                 >
                   {p.pos} · {p.nat}
-                  {p.style ? ` · ${p.style}` : ''}
                 </p>
               </div>
 
-              <div className="flex items-end justify-between gap-2 border-t border-white/5 pt-2.5">
+              <div className="flex items-end justify-between gap-2 border-t border-white/5 pt-1.5">
                 <div className="min-w-0">
                   <p
                     className="text-white/45 uppercase"
                     style={{
                       fontFamily: 'var(--font-ui)',
-                      fontSize: '9px',
-                      letterSpacing: '0.22em',
+                      fontSize: '8px',
+                      letterSpacing: '0.18em',
                       fontWeight: 600,
                     }}
                   >
-                    Compra imediata
+                    Compra
                   </p>
                   <p
                     className="italic text-neon-yellow tabular-nums leading-none mt-0.5"
                     style={{
                       fontFamily: 'var(--font-serif-hero)',
                       fontWeight: 700,
-                      fontSize: '15px',
+                      fontSize: '13px',
                     }}
                   >
                     {formatBuyNow(p)}
@@ -203,7 +202,7 @@ export function TransferFeaturedBoxes({
                   className="text-white/45 shrink-0"
                   style={{
                     fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
+                    fontSize: '9px',
                     letterSpacing: '0.04em',
                   }}
                 >

@@ -24,7 +24,7 @@ const STEPS: TutorialStep[] = [
     route: '/',
     title: 'Bem-vindo ao OLEFOOT',
     lines: [
-      'Eu sou o teu Game Spirit — vou te mostrar o essencial em 60 segundos.',
+      'Sou teu assistente, vou te mostrar o essencial em 60 segundos.',
       'Antes da primeira partida, vê o teu plantel e escolhe a tática.',
     ],
     action: { kind: 'goto', path: '/team', label: 'Ver o plantel' },

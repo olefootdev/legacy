@@ -96,18 +96,23 @@ function shuffleInPlace<T>(arr: T[]): void {
 }
 
 /**
- * Escolhe 11 titulares (uma passagem por posição na ordem do campo) + 5 reservas aleatórias.
+ * Escolhe 11 titulares (uma passagem por posição na ordem do campo) + 9 reservas aleatórias.
  * Exclui linhas `contract_is_lifetime` do pool de boas-vindas (pack = sempre 70 jogos).
+ * IMPORTANTE: Apenas jogadores com `listed_on_market: true` são elegíveis.
  */
 export function selectWelcomeGenesisRows(rows: GenesisMarketPlayerRow[]): {
   starters: GenesisMarketPlayerRow[];
   bench: GenesisMarketPlayerRow[];
 } | null {
-  // Prioriza linhas marcadas pelo admin como 'welcomepack'; se insuficientes, cai pro catálogo geral.
+  // Prioriza linhas marcadas pelo admin como 'welcomepack' E listadas; se insuficientes, cai pro catálogo geral listado.
   const tagged = rows.filter(
-    (r) => r?.id && r.contract_is_lifetime !== true && (r as unknown as { admin_market_tag?: string | null }).admin_market_tag === WELCOME_PACK_TAG,
+    (r) =>
+      r?.id &&
+      r.contract_is_lifetime !== true &&
+      r.listed_on_market === true &&
+      (r as unknown as { admin_market_tag?: string | null }).admin_market_tag === WELCOME_PACK_TAG,
   );
-  const general = rows.filter((r) => r?.id && r.contract_is_lifetime !== true);
+  const general = rows.filter((r) => r?.id && r.contract_is_lifetime !== true && r.listed_on_market === true);
   const needed = WELCOME_STARTER_POS_SEQUENCE.length + WELCOME_BENCH_COUNT;
   const pool = (tagged.length >= needed ? tagged : general).sort(
     (a, b) => (a.kit_number ?? 0) - (b.kit_number ?? 0),

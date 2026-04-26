@@ -43,6 +43,8 @@ import { AdminMarketPanel } from './panels/AdminMarketPanel';
 import { AdminLegacyPanel } from './panels/AdminLegacyPanel';
 import { AdminProfanityPanel } from './panels/AdminProfanityPanel';
 import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
+import { AdminFootballVocabularyPanel } from './panels/AdminFootballVocabularyPanel';
+import { AdminVoiceLibraryPanel } from './panels/AdminVoiceLibraryPanel';
 import { AdminCreatePlayerAgentsPanel } from './panels/AdminCreatePlayerAgentsPanel';
 import { AdminGlobalPanel } from './panels/AdminGlobalPanel';
 import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
@@ -76,6 +78,8 @@ type SubTabId =
   | 'createPlayerAgents'
   | 'profanity'
   | 'learnedPhrases'
+  | 'voiceLibrary'
+  | 'footballVocabulary'
   | 'global'
   | 'security'
   | 'platformConfig'
@@ -117,7 +121,9 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
       { id: 'gameSpirit', label: 'Game Spirit' },
       { id: 'createPlayerAgents', label: 'Agency' },
       { id: 'profanity', label: 'Linguagem' },
+      { id: 'voiceLibrary', label: 'Biblioteca de Voz' },
       { id: 'learnedPhrases', label: 'Frases aprendidas' },
+      { id: 'footballVocabulary', label: 'Vocabulário de Futebol' },
     ],
   },
   { id: 'leagues', label: 'Ligas', icon: Trophy },
@@ -148,7 +154,9 @@ const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
   legacy: 'legacy',
   skills: 'skills',
   profanity: 'profanity',
+  voiceLibrary: 'voiceLibrary',
   learnedPhrases: 'learnedPhrases',
+  footballVocabulary: 'footballVocabulary',
   createPlayerAgents: 'createPlayerAgents',
   global: 'global',
   security: 'security',
@@ -347,7 +355,9 @@ export function AdminDashboard() {
               {tab === 'ia' && subTab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
               {tab === 'ia' && subTab === 'createPlayerAgents' ? <AdminCreatePlayerAgentsPanel /> : null}
               {tab === 'ia' && subTab === 'profanity' ? <AdminProfanityPanel /> : null}
+              {tab === 'ia' && subTab === 'voiceLibrary' ? <AdminVoiceLibraryPanel /> : null}
               {tab === 'ia' && subTab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}
+              {tab === 'ia' && subTab === 'footballVocabulary' ? <AdminFootballVocabularyPanel /> : null}
               {tab === 'ia' && !subTab ? <AdminGameSpiritPanel /> : null}
 
               {/* Sistema group */}

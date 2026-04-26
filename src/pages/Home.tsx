@@ -668,12 +668,14 @@ export function Home() {
 
           // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
           const mvp = lastMatch.scoutMvp;
-          const mvpEntity = mvp ? players[mvp.playerId] : null;
+          // Ignora MVP se for o fallback 'Equipa' (sem playerId válido)
+          const isValidMvp = mvp && mvp.playerId && mvp.name !== 'Equipa';
+          const mvpEntity = isValidMvp ? players[mvp.playerId] : null;
           const mvpOvr = mvpEntity
             ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs)
             : homeHighlight.ovr;
-          const mvpName = mvp?.name ?? homeHighlight.name;
-          const mvpQuote = mvp?.headline ?? `OVR ${mvpOvr} · jogador de impacto.`;
+          const mvpName = isValidMvp ? mvp.name : homeHighlight.name;
+          const mvpQuote = isValidMvp ? mvp.headline : `OVR ${mvpOvr} · jogador de impacto.`;
           const mvpPhoto = mvpEntity
             ? playerPortraitSrc(
                 { name: mvpEntity.name, portraitUrl: mvpEntity.portraitUrl },

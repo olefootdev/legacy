@@ -11,6 +11,8 @@ import { pinataMediaRoutes } from './routes/pinataMedia.js';
 import { positionCoachRoutes } from './routes/positionCoach.js';
 import { narrativeMomentRoutes } from './routes/narrativeMoment.js';
 import { marketRoutes } from './routes/market.js';
+import { voiceRoutes } from './routes/voice.js';
+import { assistantRoutes } from './routes/assistant.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 
 const app = new Hono();
@@ -40,7 +42,9 @@ function corsOrigins(): string | string[] {
 }
 
 app.use('*', securityHeaders);
-app.use('*', bodyLimit(65_536)); // 64 KB máximo por request
+// Voice routes precisam de limite maior (áudio até 25MB)
+app.use('/api/voice/transcribe', bodyLimit(26 * 1024 * 1024)); // 26 MB para áudio
+app.use('*', bodyLimit(65_536)); // 64 KB máximo por request padrão
 app.use('*', csrfGuard);
 
 app.use(
@@ -59,6 +63,8 @@ app.route('/', pinataMediaRoutes);
 app.route('/', positionCoachRoutes);
 app.route('/', narrativeMomentRoutes);
 app.route('/', marketRoutes);
+app.route('/api/voice', voiceRoutes);
+app.route('/api/assistant', assistantRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 

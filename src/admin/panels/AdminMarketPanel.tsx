@@ -326,8 +326,21 @@ function ColecoesTab() {
 
   const dispatch = useGameDispatch();
 
-  const removeFromWP = (playerId: string) =>
+  const removeFromWP = (playerId: string) => {
     dispatch({ type: 'ADMIN_SET_PLAYER_COLLECTION', playerId, collectionId: undefined });
+    // Persiste no Supabase (genesis_market_players.admin_market_tag) se for jogador Genesis.
+    const catalogId = playerId.startsWith('genesis-') ? playerId.replace(/^genesis-/, '') : null;
+    const sb = getSupabase();
+    if (catalogId && sb) {
+      void sb
+        .from('genesis_market_players')
+        .update({ admin_market_tag: null, updated_at: new Date().toISOString() })
+        .eq('id', catalogId)
+        .then(({ error }) => {
+          if (error) console.error('[AdminMarketPanel] persist remove admin_market_tag:', error.message);
+        });
+    }
+  };
 
   return (
     <div className="space-y-6">

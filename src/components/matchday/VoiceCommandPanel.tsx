@@ -43,6 +43,7 @@ import { subscribeManagerCommand } from '@/voiceCommand/managerCommandBus';
 import { guessCommand, intentLabelPt, type GuessResult } from '@/voiceCommand/intentGuess';
 import { saveLearnedPhrase, lookupLearned, hydrateLearnedFromSupabase, syncLearnedPhraseToSupabase } from '@/voiceCommand/learnedPhrases';
 import { extractMentions, detectMentionAtCursor, applyMentionCompletion, SECTOR_SUGGESTIONS, type MentionEditState } from '@/voiceCommand/mentions';
+import { validateCommand } from '@/voiceCommand/commandValidation';
 
 type FeedbackEntry = {
   id: string;
@@ -53,14 +54,15 @@ type FeedbackEntry = {
 };
 
 const SUGGESTIONS = [
-  'Adrien invade a área',
+  '@adrien invade a área',
   'Pressiona alto',
-  'Sai Adrien entra Gui',
+  '#ataque cruza mais',
   'Muda pra 4-3-3',
 ];
 
 const MAX_RECORDING_SECS = 5;
-const EFFECTIVE_COMMAND_COOLDOWN_MS = 25_000;
+const INDIVIDUAL_COOLDOWN_MS = 8_000;  // 8s por jogador
+const TEAM_COOLDOWN_MS = 25_000;       // 25s para comandos coletivos
 
 export function VoiceCommandPanel() {
   const dispatch = useGameDispatch();
@@ -72,7 +74,8 @@ export function VoiceCommandPanel() {
   const relationByPlayer = useGameStore((s) => s.managerRelationByPlayer);
   const [text, setText] = useState('');
   const [feedbacks, setFeedbacks] = useState<FeedbackEntry[]>([]);
-  const [lastEffectiveAt, setLastEffectiveAt] = useState<number>(0);
+  const [cooldownByPlayer, setCooldownByPlayer] = useState<Record<string, number>>({});
+  const [cooldownTeam, setCooldownTeam] = useState<number>(0);
   const [now, setNow] = useState(Date.now());
   const [lastAssistant, setLastAssistant] = useState<AssistantRole | null>(null);
   const [pendingGuess, setPendingGuess] = useState<{ guess: GuessResult; originalPhrase: string } | null>(null);
@@ -90,8 +93,18 @@ export function VoiceCommandPanel() {
     return () => window.clearInterval(iv);
   }, [dispatch]);
 
-  const cooldownLeftMs = Math.max(0, EFFECTIVE_COMMAND_COOLDOWN_MS - (now - lastEffectiveAt));
-  const cooldownActive = cooldownLeftMs > 0;
+  // Calcula cooldown ativo (individual ou coletivo)
+  const getActiveCooldown = (targetPlayerId?: string) => {
+    if (!targetPlayerId) {
+      // Comando coletivo
+      const teamCooldownLeft = Math.max(0, TEAM_COOLDOWN_MS - (now - cooldownTeam));
+      return { active: teamCooldownLeft > 0, leftMs: teamCooldownLeft, type: 'team' as const };
+    }
+    // Comando individual
+    const lastCmd = cooldownByPlayer[targetPlayerId] ?? 0;
+    const individualCooldownLeft = Math.max(0, INDIVIDUAL_COOLDOWN_MS - (now - lastCmd));
+    return { active: individualCooldownLeft > 0, leftMs: individualCooldownLeft, type: 'player' as const };
+  };
 
   const addFeedback = (f: Omit<FeedbackEntry, 'id'>) => {
     const id = `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -129,18 +142,10 @@ export function VoiceCommandPanel() {
     const clean = phrase.trim();
     if (!clean || !live || live.phase !== 'playing') return;
 
-    if (cooldownActive) {
-      addFeedback({
-        kind: 'error',
-        message: `⏱ Cooldown: aguarde ${Math.ceil(cooldownLeftMs / 1000)}s para o próximo comando`,
-      });
-      return;
-    }
-
-    // 1. profanity — consome cooldown se houver hit (evita spamming).
+    // 1. profanity — consome cooldown coletivo se houver hit (evita spamming).
     const hits = scanProfanity(clean);
     if (hits.length > 0) {
-      setLastEffectiveAt(Date.now());
+      setCooldownTeam(Date.now());
       const warnings = live.refereeLanguageWarnings ?? 0;
       if (warnings === 0) {
         dispatch({ type: 'REFEREE_WARNING_LANGUAGE', minute: live.minute });
@@ -224,13 +229,12 @@ export function VoiceCommandPanel() {
       return;
     }
 
-    // Comando efetivamente reconhecido — agora sim consumimos cooldown + ENVIADO.
+    // Comando efetivamente reconhecido — feedback ENVIADO.
     addFeedback({
       kind: 'sent',
       message: `📨 ENVIADO${source === 'voice' ? ' 🎤' : ''}: "${clean}"`,
       detail: `Obediência coletiva: ${Math.round(teamObedience)}%`,
     });
-    setLastEffectiveAt(Date.now());
 
     // 3. relay por assistente (cada intent passa pelo assistente apropriado)
     const relayedList = parsed.map((cmd) => {
@@ -291,6 +295,17 @@ export function VoiceCommandPanel() {
 
       const tgt = cmd.target;
       if (tgt.kind === 'team') {
+        // Comando coletivo — verifica cooldown team
+        const teamCooldown = getActiveCooldown();
+        if (teamCooldown.active) {
+          addFeedback({
+            kind: 'error',
+            message: `⏱ Comando coletivo aguarda ${Math.ceil(teamCooldown.leftMs / 1000)}s`,
+          });
+          continue;
+        }
+        setCooldownTeam(Date.now());
+
         const tiers: Record<ObedienceTier, number> = { critical_accept: 0, accept: 0, weak_accept: 0, refuse: 0, protest: 0 };
         for (const p of live.homePlayers) {
           const r = rollObedience({
@@ -369,6 +384,53 @@ export function VoiceCommandPanel() {
       const player = live.homePlayers.find((p) => p.playerId === effectivePlayerId);
       if (!player) continue;
       targetPlayerId = effectivePlayerId;
+
+      // Validação pré-dispatch
+      const validation = validateCommand(cmd.intent, {
+        player: {
+          playerId: player.playerId,
+          name: player.name,
+          x: player.x ?? 50,
+          y: player.y ?? 50,
+          role: player.role,
+          slotId: player.slotId,
+          attributes: player.attributes as MatchPlayerAttributes | undefined,
+          hasBall: live.onBallPlayerId === player.playerId,
+        },
+        match: {
+          side: 'home',
+          ballCarrierPlayerId: live.onBallPlayerId,
+          minute: live.minute,
+        },
+      });
+
+      if (!validation.valid) {
+        addFeedback({
+          kind: 'error',
+          message: `❌ ${validation.reason}`,
+          detail: validation.suggestion,
+        });
+        continue;
+      }
+
+      if (validation.severity === 'warning') {
+        addFeedback({
+          kind: 'warning',
+          message: `⚠ ${validation.reason}`,
+          detail: validation.suggestion,
+        });
+      }
+
+      // Cooldown individual
+      const playerCooldown = getActiveCooldown(targetPlayerId);
+      if (playerCooldown.active) {
+        addFeedback({
+          kind: 'error',
+          message: `⏱ ${player.name} aguarda ${Math.ceil(playerCooldown.leftMs / 1000)}s`,
+        });
+        continue;
+      }
+      setCooldownByPlayer(prev => ({ ...prev, [targetPlayerId]: Date.now() }));
 
       const r = rollObedience({
         intent: cmd.intent,
@@ -532,18 +594,20 @@ export function VoiceCommandPanel() {
           <span className="text-[10px] font-bold uppercase tracking-wider">Comando técnico</span>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono font-bold">
-          {cooldownActive ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/15 px-2 py-0.5 text-amber-200">
-              <Clock className="h-3 w-3" />
-              {Math.ceil(cooldownLeftMs / 1000)}s
-            </span>
-          ) : null}
           <span className="text-white/50 uppercase">obediência</span>
           <span className="rounded-full border border-violet-400/50 bg-violet-500/20 px-2 py-0.5 text-violet-100">
             {Math.round(teamObedience)}%
           </span>
         </div>
       </header>
+
+      {/* Dica de mentions — mostra nas primeiras vezes */}
+      {!mentionEdit && (
+        <div className="rounded-lg border border-cyan-400/30 bg-cyan-500/5 px-2.5 py-1.5 text-[10px] text-cyan-200/90">
+          <span className="font-bold">💡 Dica:</span> Use <span className="font-mono font-bold text-cyan-100">@jogador</span> ou <span className="font-mono font-bold text-cyan-100">#setor</span> pra comandos precisos
+          <span className="ml-1 text-cyan-300/60">— ex: "@adrien chuta" ou "#ataque pressiona"</span>
+        </div>
+      )}
 
       {/* Waveform + transcript ao vivo durante captura */}
       <AnimatePresence>
