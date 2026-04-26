@@ -223,6 +223,10 @@ export function City() {
 
   const [selected, setSelected] = useState<CityStructDef | null>(null);
   const [quickPendingId, setQuickPendingId] = useState<ClubStructureId | null>(null);
+  const [upgradeModalState, setUpgradeModalState] = useState<{
+    structureId: ClubStructureId;
+    phase: 'confirm' | 'loading' | 'success';
+  } | null>(null);
 
   const stadiumLevel = levelOf(structuresState, 'stadium');
   const stadiumUpgrade = useMemo(
@@ -542,8 +546,7 @@ export function City() {
                     type="button"
                     disabled={!upgrade.hasUpgrade || !upgrade.canAfford}
                     onClick={() => {
-                      dispatch({ type: 'UPGRADE_STRUCTURE', structureId: struct.structureId });
-                      trackMissionEvent('structure_upgraded');
+                      setUpgradeModalState({ structureId: struct.structureId, phase: 'confirm' });
                     }}
                     className={cn(
                       'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
@@ -591,7 +594,192 @@ export function City() {
       </div>
       </div>
 
-      {/* Modal de confirmação */}
+      {/* Modal de Upgrade (Evoluir) com 3 fases */}
+      <AnimatePresence>
+        {upgradeModalState && (() => {
+          const def = CITY_STRUCTURE_DEFS.find((d) => d.structureId === upgradeModalState.structureId);
+          const level = levelOf(structuresState, upgradeModalState.structureId);
+          const upgrade = upgradeLine(upgradeModalState.structureId, level, finance.ole, finance.broCents);
+          const cost = getNextUpgradeCost(upgradeModalState.structureId, level, DEFAULT_BRO_PRICES_CENTS);
+
+          const handleConfirm = () => {
+            setUpgradeModalState({ ...upgradeModalState, phase: 'loading' });
+            setTimeout(() => {
+              dispatch({ type: 'UPGRADE_STRUCTURE', structureId: upgradeModalState.structureId });
+              trackMissionEvent('structure_upgraded');
+              setUpgradeModalState({ ...upgradeModalState, phase: 'success' });
+            }, 3000);
+          };
+
+          const handleClose = () => {
+            setUpgradeModalState(null);
+          };
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              onClick={upgradeModalState.phase === 'success' ? handleClose : undefined}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-deep-black via-dark-gray to-deep-black shadow-2xl"
+              >
+                {/* Fase 1: Confirmação */}
+                {upgradeModalState.phase === 'confirm' && (
+                  <>
+                    <div className="border-b border-white/10 bg-black/40 p-6">
+                      <div className="flex items-center gap-3 mb-3">
+                        {def && <def.icon className={cn('h-8 w-8', def.color)} strokeWidth={2} />}
+                        <h3 className="font-display text-xl font-black uppercase tracking-wider text-white">
+                          Evoluir {def?.name}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-gray-400">
+                        Confirme a evolução da estrutura para o próximo nível
+                      </p>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                      {/* Custo em Moret */}
+                      <div className="rounded-lg border border-neon-yellow/20 bg-neon-yellow/5 p-4 text-center">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70">
+                          Custo da Evolução
+                        </p>
+                        <p
+                          className="text-neon-yellow"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontStyle: 'italic',
+                            fontSize: '2rem',
+                            letterSpacing: '-0.02em',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {cost?.currency === 'exp' ? formatExp(cost.amount) : formatBroFromCents(cost?.amount ?? 0)}
+                        </p>
+                      </div>
+
+                      {/* Benefícios */}
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Benefícios do Nível {level + 1}
+                        </p>
+                        <ul className="space-y-2 text-sm text-gray-300">
+                          {def?.statsForLevel(level + 1).slice(0, 3).map((stat, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <span className="h-1 w-1 rounded-full bg-neon-yellow" />
+                              <span className="text-gray-400">{stat.label}:</span>
+                              <span className="font-bold text-white">{stat.value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 border-t border-white/10 bg-black/30 p-6">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="flex-1 rounded-lg border border-white/20 px-4 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-white/5"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirm}
+                        disabled={!upgrade.canAfford}
+                        className={cn(
+                          'flex-1 rounded-lg px-4 py-3 font-display text-sm font-black uppercase tracking-wider transition-all',
+                          upgrade.canAfford
+                            ? 'bg-neon-yellow text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] hover:brightness-110'
+                            : 'cursor-not-allowed bg-white/10 text-gray-500',
+                        )}
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Fase 2: Loading (3 segundos) */}
+                {upgradeModalState.phase === 'loading' && (
+                  <div className="p-12 text-center">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      className="mx-auto mb-6 h-16 w-16 rounded-full border-4 border-neon-yellow/20 border-t-neon-yellow"
+                    />
+                    <p className="font-display text-lg font-bold uppercase tracking-wider text-white">
+                      Evoluindo...
+                    </p>
+                    <p className="mt-2 text-sm text-gray-400">
+                      Aplicando melhorias na estrutura
+                    </p>
+                  </div>
+                )}
+
+                {/* Fase 3: Sucesso */}
+                {upgradeModalState.phase === 'success' && (
+                  <>
+                    <div className="p-12 text-center">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-neon-yellow"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                        >
+                          <TrendingUp className="h-10 w-10 text-black" strokeWidth={3} />
+                        </motion.div>
+                      </motion.div>
+
+                      <motion.h3
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-neon-yellow"
+                      >
+                        Evoluído com Sucesso!
+                      </motion.h3>
+
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-sm text-gray-400"
+                      >
+                        {def?.name} agora está no nível {level + 1}
+                      </motion.p>
+                    </div>
+
+                    <div className="border-t border-white/10 bg-black/30 p-6">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="w-full rounded-lg bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] transition-all hover:brightness-110"
+                      >
+                        Continuar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Modal de confirmação (ações rápidas) */}
       <AnimatePresence>
         {quickPendingId && quickConfirmCopy && (
           <motion.div
