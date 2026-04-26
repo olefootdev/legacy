@@ -164,7 +164,7 @@ export function Manager() {
   }, [missionsReady, social.incoming.length, nextTier, tierFrac, expLifetime]);
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
+    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden pb-6 md:pb-8 px-3 sm:px-4 lg:px-6">
       {/* ── HERO EDITORIAL — amarelo com watermark cinematográfico ── */}
       <section
         aria-label="Perfil do Manager"
@@ -503,7 +503,7 @@ export function Manager() {
 
       {/* ── TROFÉUS ─────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 px-3 sm:px-4 lg:px-6">
+        <div className="flex items-center gap-2">
           <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
             <span>Troféus</span>
           </div>
@@ -515,7 +515,7 @@ export function Manager() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="bg-panel border border-white/10 border-l-4 border-l-neon-yellow rounded-sm p-5 sm:p-6"
+          className="bg-panel border border-white/10 border-l-4 border-l-neon-yellow rounded-sm p-4 sm:p-5 lg:p-6"
         >
           <h3 className="font-display text-xs font-black uppercase tracking-wider text-white mb-2">
             Memoráveis
@@ -523,7 +523,7 @@ export function Manager() {
           <p className="text-[11px] text-gray-400 mb-4">
             Somente <span className="text-white/90 font-bold">campeonatos conquistados</span>: liga, copa e supercopa.
           </p>
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {MEMORABLE_TROPHY_SLOTS.map((slot, i) => {
               const earned = memorableTrophyUnlockedIds.includes(slot.id);
               return (
@@ -533,7 +533,7 @@ export function Manager() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 + i * 0.05 }}
                   className={cn(
-                    'flex flex-col items-center gap-2 p-3 rounded-sm border-2 transition-all',
+                    'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border-2 transition-all',
                     earned
                       ? 'bg-neon-yellow/5 border-neon-yellow/40 hover:border-neon-yellow/60 hover:shadow-[0_0_20px_rgba(253,225,0,0.15)]'
                       : 'bg-black/40 border-white/10 opacity-50',
@@ -541,20 +541,20 @@ export function Manager() {
                 >
                   <div
                     className={cn(
-                      'flex h-12 w-12 items-center justify-center rounded-sm transition-transform hover:scale-110',
+                      'flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm transition-transform hover:scale-110',
                       earned
                         ? 'bg-gradient-to-br from-neon-yellow via-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]'
                         : 'bg-white/5 text-gray-600',
                     )}
                   >
                     {earned ? (
-                      <Trophy className="h-6 w-6" strokeWidth={2.5} />
+                      <Trophy className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
                     ) : (
-                      <Lock className="h-5 w-5" />
+                      <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </div>
                   <p className={cn(
-                    'text-center text-[9px] font-bold uppercase tracking-wider leading-tight',
+                    'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
                     earned ? 'text-neon-yellow' : 'text-gray-500',
                   )}>
                     {slot.name}
@@ -570,12 +570,12 @@ export function Manager() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="bg-panel border border-white/10 rounded-sm p-5 sm:p-6"
+          className="bg-panel border border-white/10 rounded-sm p-4 sm:p-5 lg:p-6"
         >
           <h3 className="font-display text-xs font-black uppercase tracking-wider text-white mb-4">
             Competição
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {competitionTrophies.map((t, i) => (
               <motion.div
                 key={t.id}
@@ -583,7 +583,7 @@ export function Manager() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4 + i * 0.03 }}
                 className={cn(
-                  'flex flex-col items-center gap-2 p-3 rounded-sm border transition-all',
+                  'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border transition-all',
                   t.earned
                     ? 'bg-cyan-500/5 border-cyan-500/30 hover:border-cyan-500/50'
                     : 'bg-black/40 border-white/10 opacity-50',
@@ -591,20 +591,20 @@ export function Manager() {
               >
                 <div
                   className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-sm',
+                    'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
                       ? 'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-black'
                       : 'bg-white/5 text-gray-600',
                   )}
                 >
                   {t.earned ? (
-                    <Trophy className="h-5 w-5" strokeWidth={2.5} />
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
                   ) : (
-                    <Lock className="h-4 w-4" />
+                    <Lock className="h-3 w-3 sm:h-4 sm:w-4" />
                   )}
                 </div>
                 <p className={cn(
-                  'text-center text-[9px] font-bold uppercase tracking-wider leading-tight',
+                  'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
                   t.earned ? 'text-cyan-300' : 'text-gray-500',
                 )}>
                   {t.name}
@@ -619,12 +619,12 @@ export function Manager() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-panel border border-white/10 rounded-sm p-5 sm:p-6"
+          className="bg-panel border border-white/10 rounded-sm p-4 sm:p-5 lg:p-6"
         >
           <h3 className="font-display text-xs font-black uppercase tracking-wider text-white mb-4">
             Missões
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {missionTrophies.map((t, i) => (
               <motion.div
                 key={t.def.id}
@@ -632,7 +632,7 @@ export function Manager() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.45 + i * 0.03 }}
                 className={cn(
-                  'flex flex-col items-center gap-2 p-3 rounded-sm border transition-all',
+                  'flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border transition-all',
                   t.earned
                     ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/50'
                     : 'bg-black/40 border-white/10 opacity-50',
@@ -640,20 +640,20 @@ export function Manager() {
               >
                 <div
                   className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-sm',
+                    'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
                       ? 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 text-black'
                       : 'bg-white/5 text-gray-600',
                   )}
                 >
                   {t.earned ? (
-                    <Trophy className="h-5 w-5" strokeWidth={2.5} />
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} />
                   ) : (
-                    <Lock className="h-4 w-4" />
+                    <Lock className="h-3 w-3 sm:h-4 sm:w-4" />
                   )}
                 </div>
                 <p className={cn(
-                  'text-center text-[9px] font-bold uppercase tracking-wider leading-tight',
+                  'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
                   t.earned ? 'text-emerald-300' : 'text-gray-500',
                 )}>
                   {t.trophy.name}

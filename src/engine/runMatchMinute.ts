@@ -108,6 +108,8 @@ export interface RunMinuteInput {
   /** Roster visitante sintético — para cartões/golos com playerId real. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
   skipEvent?: boolean;
+  /** Intensidade tática escolhida pelo jogador (Quick Match). */
+  tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
   /**
    * Probabilidade por minuto de correr um tick GameSpirit (fora de live2d).
    * Predefinido 0.62; modo automático usa valor mais baixo via matchBulk.
@@ -277,6 +279,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       pendingCornerForSide: s.pendingCornerForSide ?? null,
       pendingFreeKickForSide: s.pendingFreeKickForSide ?? null,
       smartfieldActionHint: spiritActionHint,
+      tacticalIntensity: input.tacticalIntensity,
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());

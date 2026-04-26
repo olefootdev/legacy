@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus } from 'lucide-react';
+import { Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus, TrendingUp } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -32,6 +32,9 @@ import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { DashboardGrid, DashboardSection } from '@/components/dashboard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+import { MarketActivityFeed } from '@/market/MarketActivityFeed';
+import { generateMockActivities } from '@/market/socialTrade';
+import { FriendlyMatchBox } from '@/components/home/FriendlyMatchBox';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -162,6 +165,56 @@ export function Home() {
     (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
   );
 
+  // Adiciona notificação de boas-vindas na primeira visita
+  useEffect(() => {
+    const hasWelcomeNotification = inbox.some(
+      (item) => item.category === 'STAFF' && item.title.includes('Bem-vindo')
+    );
+
+    if (!hasWelcomeNotification) {
+      const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
+      const supportLabel = roundedSupport.toLocaleString('pt-BR', {
+        minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
+        maximumFractionDigits: 1,
+      });
+
+      dispatch({
+        type: 'INBOX_PUSH',
+        item: {
+          category: 'STAFF',
+          title: 'Bem-vindo ao Olefoot! ⚽',
+          body: 'Seu clube está pronto para dominar o mundo do futebol. Explore o mercado, treine seus jogadores e conquiste títulos. A jornada começa agora!',
+          timestamp: new Date().toISOString(),
+          read: false,
+        },
+      });
+
+      // Adiciona mais algumas notificações de exemplo
+      dispatch({
+        type: 'INBOX_PUSH',
+        item: {
+          category: 'COMPETIÇÃO',
+          title: 'Próxima partida agendada',
+          body: `**${club.name}** enfrenta **${fixture.opponent.name}** em breve. Prepare sua tática e escale o melhor time!`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min atrás
+          read: false,
+          link: '/match/quick',
+        },
+      });
+
+      dispatch({
+        type: 'INBOX_PUSH',
+        item: {
+          category: 'TORCIDA',
+          title: 'Apoio da torcida crescendo',
+          body: `A torcida está com **${supportLabel}%** de confiança no time. Continue vencendo para aumentar o apoio!`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1h atrás
+          read: false,
+        },
+      });
+    }
+  }, [dispatch, inbox.length, club.name, fixture.opponent.name, crowd.supportPercent]);
+
   const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
   const homeHighlight = useMemo(() => {
     if (!homeHighlightBest) {
@@ -222,6 +275,9 @@ export function Home() {
   const [notifTab, setNotifTab] = useState<HomeNotifTab>('ALL');
   const [notifShowAll, setNotifShowAll] = useState(false);
   const notificacoesRef = useRef<HTMLDivElement>(null);
+
+  // Social Trade: atividades do mercado
+  const [marketActivities] = useState(() => generateMockActivities(10));
 
   useEffect(() => {
     setNotifShowAll(false);
@@ -393,7 +449,7 @@ export function Home() {
     [filteredInbox, notifShowAll],
   );
 
-  const scrollToNotificacoes = () => {
+  const scrollToMarketFeed = () => {
     notificacoesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -628,15 +684,11 @@ export function Home() {
                     crestUrl: HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null,
                   },
                   stats: [
-                    { label: 'Vitórias', value: '0' },
-                    { label: 'Empates', value: '0' },
-                    { label: 'Derrotas', value: '0' },
                     { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
                     { label: 'Forma', value: '—' },
                   ],
                   highlight: {
                     name: homeHighlight.name,
-                    teamName: 'DESTAQUE',
                     number: homeHighlight.ovr,
                     quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. Pronto para a primeira partida.`,
                     photoUrl: homeHighlight.imageSrc,
@@ -711,22 +763,27 @@ export function Home() {
                   crestUrl: awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null),
                 },
                 stats: [
-                  { label: 'Vitórias', value: String(wins) },
-                  { label: 'Empates', value: String(draws) },
-                  { label: 'Derrotas', value: String(losses) },
                   { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
                   { label: 'Ranking', value: rankingChangeStr },
                 ],
                 highlight: {
                   name: mvpName,
-                  teamName: 'DESTAQUE',
                   number: mvpOvr,
                   quote: mvpQuote,
                   photoUrl: mvpPhoto,
                 },
-                actions: [
-                  { label: 'Ver postgame', href: '/postgame', variant: 'primary' },
-                ],
+                actions: results.length === 0
+                  ? [
+                      {
+                        label: 'Sem jogos registrados',
+                        href: '#',
+                        variant: 'secondary' as const,
+                        disabled: true
+                      },
+                    ]
+                  : [
+                      { label: 'Ver postgame', href: '/postgame', variant: 'primary' as const },
+                    ],
                 topLeft: { label: 'Olefoot' },
                 scrollCueTargetId: 'home-below-fold',
               }}
@@ -1011,7 +1068,7 @@ export function Home() {
           <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-2">
             <button
               type="button"
-              onClick={scrollToNotificacoes}
+              onClick={scrollToMarketFeed}
               className="w-full py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
               style={{
                 fontFamily: 'var(--font-display)',
@@ -1023,76 +1080,14 @@ export function Home() {
                 boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
               }}
             >
-              Ver notificações ↓
+              Ver atividades do mercado ↓
             </button>
           </div>
         </motion.div>
         </DashboardSection>
 
         {/* Amistoso — sm */}
-        <DashboardSection size="sm">
-        <motion.button
-          type="button"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          onClick={() => setAmistosoOpen(true)}
-          className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 rounded-sm p-6 flex flex-col justify-center items-center text-center cursor-pointer w-full hover:scale-[1.01] active:scale-[0.99] transition-transform"
-          style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
-        >
-          {/* Eyebrow preto sobre amarelo */}
-          <div
-            className="relative z-10 inline-flex items-center gap-3 text-black/85 mb-3"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            <span aria-hidden className="h-px w-8 bg-black/60" />
-            <span className="uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.22em' }}>
-              Desafie rivais
-            </span>
-            <span aria-hidden className="h-px w-8 bg-black/60" />
-          </div>
-
-          {/* Título: AMISTOSO em Moret italic preto */}
-          <h3
-            className="relative z-10 italic text-black leading-none"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Amistoso
-          </h3>
-
-          {/* Raio destaque — abaixo do título, pulsa pra dar dinâmica */}
-          <motion.div
-            className="relative z-10 mt-5 grid place-items-center"
-            initial={{ scale: 1, rotate: -4 }}
-            animate={{ scale: [1, 1.08, 1], rotate: [-4, 2, -4] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-            aria-hidden
-          >
-            <Zap
-              className="h-12 w-12 sm:h-14 sm:w-14 fill-black text-black"
-              strokeWidth={0}
-            />
-          </motion.div>
-
-          {/* Mini-CTA — afirmação do clique (sem raio, evita repetição) */}
-          <p
-            className="relative z-10 mt-4 text-black/75 uppercase"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.22em',
-            }}
-          >
-            Convidar online ou IA
-          </p>
-        </motion.button>
-        </DashboardSection>
+        <FriendlyMatchBox />
       </DashboardGrid>
 
       <AnimatePresence>
@@ -1416,11 +1411,11 @@ export function Home() {
         </motion.div>
         </DashboardSection>
 
-        {/* Notificações — md */}
+        {/* Atividades do Mercado — md */}
         <DashboardSection size="md">
         <motion.div
           ref={notificacoesRef}
-          id="notificacoes"
+          id="market-feed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -1428,7 +1423,7 @@ export function Home() {
         >
           <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-3">
             <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-              <span>Notificações</span>
+              <span>Atividades do Mercado</span>
             </div>
             <p
               className="text-white/55 max-w-md mx-auto"
@@ -1438,117 +1433,26 @@ export function Home() {
                 lineHeight: 1.5,
               }}
             >
-              Staff, torcida, jogadores e competição. Placares e histórico de jogos ficam na liga e no histórico de partidas.
+              Compras, vendas e leilões recentes. Fique por dentro das movimentações dos outros managers e clubes IA.
             </p>
-            <div className="flex gap-1.5 flex-wrap justify-center pt-1">
-              {HOME_NOTIF_TABS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setNotifTab(key)}
-                  className={cn(
-                    'px-3 py-1.5 border transition-colors',
-                    notifTab === key
-                      ? 'border-neon-yellow bg-neon-yellow text-black'
-                      : 'border-[var(--color-border)] bg-deep-black text-white/65 hover:border-neon-yellow/50 hover:text-white',
-                  )}
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex gap-2 justify-center pt-1">
+              <Link
+                to="/manager/mensagens"
+                className="rounded-full border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neon-yellow transition-all hover:bg-neon-yellow/20"
+              >
+                Ver Mensagens
+              </Link>
+              <Link
+                to="/transfer"
+                className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
+              >
+                Ir para Mercado
+              </Link>
             </div>
           </div>
 
-          <div className="divide-y divide-white/5">
-            {filteredInbox.length === 0 ? (
-              <div className="p-6 text-center text-sm text-gray-500 space-y-2">
-                <p>Nada nesta categoria na HOME.</p>
-                <p className="text-[11px] text-gray-600 max-w-sm mx-auto leading-relaxed">
-                  Recompensas de EXP e relatórios de staff após cada partida não aparecem aqui — ficam registados na carteira e no fluxo do plantel; o desfecho desportivo está no histórico de jogos.
-                </p>
-              </div>
-            ) : (
-              <>
-                {inboxPanelList.map((news) => (
-                  <div
-                    key={news.id}
-                    className={cn(
-                      'flex items-start gap-4 p-4 hover:bg-white/5 transition-colors',
-                      news.read && 'opacity-70',
-                      news.kind === 'friend_invite' && 'border-l-2 border-fuchsia-500/70 bg-fuchsia-500/[0.06]',
-                    )}
-                  >
-                    <div className="text-gray-500 font-display font-bold text-sm w-12 text-right shrink-0 pt-0.5">
-                      {news.timeLabel}
-                    </div>
-                    <div className="w-1 min-h-[2.5rem] bg-dark-gray relative shrink-0 rounded-sm">
-                      <div className={cn('absolute inset-0', news.colorClass.replace('text-', 'bg-'))} style={{ opacity: 0.5 }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className={cn('text-[10px] font-bold uppercase tracking-widest', news.colorClass)}>{news.tag}</span>
-                        {news.advisorLabel ? (
-                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">{news.advisorLabel}</span>
-                        ) : null}
-                      </div>
-                      <h4 className="font-bold text-md mt-0.5">{news.title}</h4>
-                      {news.body ? <InboxBodyText text={news.body} /> : null}
-                      {news.deepLink && news.kind !== 'friend_invite' ? (
-                        <Link
-                          to={news.deepLink}
-                          className="inline-flex items-center gap-1 mt-2 text-[10px] font-display font-bold uppercase tracking-wider text-neon-yellow/90 hover:text-neon-yellow"
-                        >
-                          Abrir
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </Link>
-                      ) : null}
-                      {news.kind === 'friend_invite' && (
-                        <Link
-                          to="/profile#rede-manager"
-                          className="inline-flex items-center gap-1 mt-2 text-[10px] font-display font-bold uppercase tracking-wider text-neon-yellow hover:text-neon-yellow/80"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          Ver solicitações no perfil
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {filteredInbox.length > HOME_NOTIF_VISIBLE_COUNT && (
-                  <div className="p-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-black/20">
-                    <p className="text-[11px] text-gray-500">
-                      A mostrar {notifShowAll ? filteredInbox.length : HOME_NOTIF_VISIBLE_COUNT} de {filteredInbox.length}{' '}
-                      nesta categoria.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setNotifShowAll((v) => !v)}
-                      className="text-[10px] font-display font-bold uppercase tracking-widest text-neon-yellow hover:text-white transition-colors inline-flex items-center gap-1"
-                    >
-                      {notifShowAll ? (
-                        <>
-                          Mostrar menos
-                          <ChevronRight className="w-3.5 h-3.5 rotate-[-90deg]" />
-                        </>
-                      ) : (
-                        <>
-                          Ler tudo
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
+          <div className="px-5 sm:px-6 py-5">
+            <MarketActivityFeed activities={marketActivities} maxVisible={5} />
           </div>
         </motion.div>
         </DashboardSection>

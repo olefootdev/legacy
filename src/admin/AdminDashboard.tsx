@@ -53,6 +53,7 @@ import { AdminSecurityPanel } from './panels/AdminSecurityPanel';
 import { AdminBroadcastPanel } from './panels/AdminBroadcastPanel';
 import { AdminLaunchPanel } from './panels/AdminLaunchPanel';
 import { AdminPlatformConfigPanel } from './panels/AdminPlatformConfigPanel';
+import { AdminAgentsPanel } from './AdminAgentsPanel';
 
 type TabId =
   | 'overview'
@@ -76,6 +77,7 @@ type SubTabId =
   | 'skills'
   | 'gameSpirit'
   | 'createPlayerAgents'
+  | 'agents'
   | 'profanity'
   | 'learnedPhrases'
   | 'voiceLibrary'
@@ -120,6 +122,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     subTabs: [
       { id: 'gameSpirit', label: 'Game Spirit' },
       { id: 'createPlayerAgents', label: 'Agency' },
+      { id: 'agents', label: 'Agentes Offline' },
       { id: 'profanity', label: 'Linguagem' },
       { id: 'voiceLibrary', label: 'Biblioteca de Voz' },
       { id: 'learnedPhrases', label: 'Frases aprendidas' },
@@ -354,6 +357,7 @@ export function AdminDashboard() {
               {/* IA & Moderação group */}
               {tab === 'ia' && subTab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
               {tab === 'ia' && subTab === 'createPlayerAgents' ? <AdminCreatePlayerAgentsPanel /> : null}
+              {tab === 'ia' && subTab === 'agents' ? <AdminAgentsPanel /> : null}
               {tab === 'ia' && subTab === 'profanity' ? <AdminProfanityPanel /> : null}
               {tab === 'ia' && subTab === 'voiceLibrary' ? <AdminVoiceLibraryPanel /> : null}
               {tab === 'ia' && subTab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}

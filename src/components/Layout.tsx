@@ -9,6 +9,7 @@ import {
   Trophy,
   User,
   Settings,
+  Bell,
   GraduationCap,
   Play,
   Menu,
@@ -21,6 +22,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { HeaderOtzStrip } from '@/components/HeaderOtzStrip';
 import { TrainerAvatarHeaderControl } from '@/components/TrainerAvatarHeaderControl';
+import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 import { getGameState, useGameStore } from '@/game/store';
 import { formatExp } from '@/systems/economy';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
@@ -140,7 +142,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar — visible only at ≥1024px */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
         <div className="flex items-center mb-10 p-6 pb-0">
-          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-3 w-auto" />
+          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-2.5 w-auto" />
         </div>
 
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
@@ -215,26 +217,27 @@ export function Layout({ children }: { children: ReactNode }) {
             </Link>
           </div>
 
-          {/* Direita — botão rápido: saldo da wallet (link pra /wallet) */}
-          <div className="flex justify-end">
+          {/* Direita — 3 ícones importantes: Notificações, Wallet, Config */}
+          <div className="flex justify-end items-center gap-2 sm:gap-3">
+            {/* Notificações com dropdown inteligente */}
+            <NotificationsDropdown />
+
+            {/* Wallet */}
             <Link
               to="/wallet"
-              className="inline-flex items-center gap-2 border border-[var(--color-border)] bg-deep-black px-3 py-2 text-white/80 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors lg:px-4"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-              aria-label={`Wallet · saldo ${formatExp(oleBalance)} EXP`}
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              aria-label="Wallet"
             >
-              <Wallet className="h-4 w-4" strokeWidth={2.25} />
-              <span className="text-neon-yellow tabular-nums">{formatExp(oleBalance)}</span>
-              <span className="hidden sm:inline text-white/55" style={{ letterSpacing: '0.18em' }}>
-                EXP
-              </span>
+              <Wallet className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
+            </Link>
+
+            {/* Config */}
+            <Link
+              to="/manager/config"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              aria-label="Configurações"
+            >
+              <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
             </Link>
           </div>
         </header>
@@ -247,8 +250,8 @@ export function Layout({ children }: { children: ReactNode }) {
             location.pathname === '/match' || location.pathname === '/match/live'
               ? ''
               : isQuickMatchRoute
-                ? 'lg:p-8 lg:pb-8'
-                : 'p-3 pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 lg:p-8 lg:pb-8',
+                ? 'lg:py-8'
+                : 'py-3 pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))] sm:py-4 lg:py-8',
           )}
         >
           {children}
@@ -276,7 +279,7 @@ export function Layout({ children }: { children: ReactNode }) {
               className="fixed top-0 left-0 bottom-0 w-72 bg-deep-black border-r border-white/10 z-[70] lg:hidden flex flex-col"
             >
               <div className="flex items-center justify-between p-5 border-b border-white/10">
-                <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-3 w-auto" />
+                <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-2.5 w-auto" />
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
@@ -32,6 +33,9 @@ const Transfer = lazy(() => import('./pages/Transfer').then((m) => ({ default: m
 const TransferExchange = lazy(() =>
   import('./pages/TransferExchange').then((m) => ({ default: m.TransferExchange })),
 );
+const LiveAuctionsPage = lazy(() =>
+  import('./pages/LiveAuctionsPage').then((m) => ({ default: m.LiveAuctionsPage })),
+);
 const Store = lazy(() => import('./pages/Store').then((m) => ({ default: m.Store })));
 const Wallet = lazy(() => import('./pages/Wallet').then((m) => ({ default: m.Wallet })));
 const OlexpTab = lazy(() => import('./pages/wallet/OlexpTab').then((m) => ({ default: m.OlexpTab })));
@@ -49,6 +53,7 @@ const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ defaul
 const Leagues = lazy(() => import('./pages/Leagues').then((m) => ({ default: m.Leagues })));
 const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
+const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
@@ -63,6 +68,8 @@ const Cadastro = lazy(() => import('./pages/Cadastro').then((m) => ({ default: m
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
+const TrainingFreeKicks = lazy(() => import('./pages/TrainingFreeKicks').then((m) => ({ default: m.default })));
+const TrainingShootingDrill = lazy(() => import('./pages/TrainingShootingDrill').then((m) => ({ default: m.default })));
 
 function RequireAdmin() {
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -118,6 +125,32 @@ function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-white/60">
       Carregando…
+    </div>
+  );
+}
+
+function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  console.error('MatchQuick Error:', error);
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+      <p className="font-display text-sm font-bold uppercase tracking-wider text-red-500">Erro na Partida Rápida</p>
+      <pre className="max-w-2xl overflow-auto rounded bg-black/50 p-4 text-left text-xs text-white/80">
+        {error.message}
+        {'\n\n'}
+        {error.stack}
+      </pre>
+      <button
+        onClick={resetErrorBoundary}
+        className="mt-4 rounded bg-neon-yellow px-6 py-2 font-display text-xs font-bold uppercase tracking-wider text-black hover:bg-white transition-colors"
+      >
+        Tentar novamente
+      </button>
+      <a
+        href="/"
+        className="text-sm text-white/60 hover:text-neon-yellow transition-colors"
+      >
+        ← Voltar para Home
+      </a>
     </div>
   );
 }
@@ -191,16 +224,22 @@ export default function App() {
             {/* Mercado subpages */}
             <Route path="/mercado/transfer" element={<Transfer />} />
             <Route path="/mercado/exchange" element={<TransferExchange />} />
+            <Route path="/mercado/leiloes" element={<LiveAuctionsPage />} />
             <Route path="/mercado/loja" element={<Store />} />
 
             {/* Manager subpages */}
             <Route path="/manager" element={<Manager />} />
+            <Route path="/manager/mensagens" element={<ManagerMessages />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
             <Route path="/manager/missoes" element={<Missions />} />
             <Route path="/manager/config" element={<Config />} />
 
             {/* Ajuda subpages */}
             <Route path="/ajuda/como-jogar" element={<HowToPlay />} />
+
+            {/* Training mini-games */}
+            <Route path="/training/free-kicks" element={<TrainingFreeKicks />} />
+            <Route path="/training/shooting-drill" element={<TrainingShootingDrill />} />
 
             {/* Wallet (mantém estrutura atual) */}
             <Route path="/wallet" element={<Wallet />} />
@@ -238,7 +277,17 @@ export default function App() {
             <Route path="/match/test2d" element={<Navigate to="/match/live" replace />} />
             <Route path="/match/ultralive2d" element={<Navigate to="/match/live" replace />} />
             <Route path="/match/auto" element={<MatchAuto />} />
-            <Route path="/match/quick" element={<MatchQuick />} />
+            <Route
+              path="/match/quick"
+              element={
+                <ErrorBoundary
+                  FallbackComponent={MatchQuickErrorFallback}
+                  onReset={() => window.location.href = '/match/quick'}
+                >
+                  <MatchQuick />
+                </ErrorBoundary>
+              }
+            />
             <Route path="/match/penalty" element={<MatchPenalty />} />
             <Route path="/postgame" element={<Postgame />} />
           </Route>

@@ -3,7 +3,7 @@
  * Integra com backend para processar contexto do código e responder com precisão.
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'motion/react';
 import {
   MessageCircle,
@@ -163,7 +163,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
     handleSendMessage(question);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
       handleSendMessage(input.trim());

@@ -1,0 +1,13 @@
+{
+  "name": "player-placeholder",
+  "description": "Placeholder genérico de jogador",
+  "prompt": "minimalist silhouette of athletic soccer player in dynamic running pose,\n    solid black figure against dark gradient background from pure black to charcoal gray,\n    subtle neon yellow rim light on edges, professional sports design, clean composition,\n    studio lighting, modern minimalist aesthetic, high contrast",
+  "negativePrompt": "face, facial features, jersey details, numbers, text, logos,\n    realistic textures, photographic, detailed anatomy, colors other than black and yellow",
+  "style": "digital-art",
+  "size": "portrait",
+  "dimensions": {
+    "width": 400,
+    "height": 520
+  },
+  "generatedAt": "2026-04-26T16:56:51.091Z"
+}

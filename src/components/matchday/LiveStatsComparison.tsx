@@ -1,11 +1,13 @@
 /**
- * Painel de Estatísticas ao Vivo Comparativas — Fase 1 Quick Win #8
+ * Painel de Estatísticas ao Vivo Comparativas — Fase 1 Quick Win #8 + Melhoria #3 (Gráfico)
  * Mostra stats em tempo real com animações quando valores mudam significativamente.
  */
 import { type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, TrendingDown, Target, Activity, Shield, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatsLineChart } from './StatsLineChart';
+import type { StatsHistoryPoint } from '@/hooks/useStatsHistory';
 
 export interface LiveMatchStats {
   possession: { home: number; away: number };
@@ -109,10 +111,11 @@ interface LiveStatsComparisonProps {
   stats: LiveMatchStats;
   homeShort: string;
   awayShort: string;
+  statsHistory?: StatsHistoryPoint[];
   className?: string;
 }
 
-export function LiveStatsComparison({ stats, homeShort, awayShort, className }: LiveStatsComparisonProps) {
+export function LiveStatsComparison({ stats, homeShort, awayShort, statsHistory, className }: LiveStatsComparisonProps) {
   // Detecta trends (simplificado — em produção, comparar com stats anteriores)
   const possessionTrend: StatTrend =
     stats.possession.home > 60 ? 'home_up' :
@@ -139,6 +142,16 @@ export function LiveStatsComparison({ stats, homeShort, awayShort, className }: 
           {awayShort}
         </span>
       </div>
+
+      {/* Gráfico de posse (Melhoria #3) */}
+      {statsHistory && statsHistory.length >= 2 && (
+        <div className="border-b border-white/5 px-3 py-2">
+          <div className="mb-1 text-center text-[10px] font-medium uppercase tracking-wider text-white/50">
+            Posse últimos {statsHistory.length} min
+          </div>
+          <StatsLineChart history={statsHistory} stat="possession" />
+        </div>
+      )}
 
       {/* Stats */}
       <div className="divide-y divide-white/5">

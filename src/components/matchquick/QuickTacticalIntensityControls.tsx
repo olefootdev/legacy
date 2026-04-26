@@ -1,6 +1,6 @@
 /**
- * Sprint 2: Controles de Intensidade Tática
- * 3 botões: Conservar | Equilibrado | Sobrecarregar
+ * Controles de Intensidade Tática
+ * 5 opções: Defender | Posse | Contra-Ataque | Pressionar | Ataque Total
  */
 
 import { motion } from 'motion/react';
@@ -15,10 +15,10 @@ interface Props {
 }
 
 export function QuickTacticalIntensityControls({ current, onChange, disabled }: Props) {
-  const levels: TacticalIntensityLevel[] = ['conserve', 'balanced', 'overload'];
+  const levels: TacticalIntensityLevel[] = ['defend', 'possession', 'counter', 'press', 'attack'];
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 overflow-x-auto">
       {levels.map((level) => {
         const preset = TACTICAL_INTENSITY_PRESETS[level];
         const isActive = current === level;
@@ -31,7 +31,7 @@ export function QuickTacticalIntensityControls({ current, onChange, disabled }: 
             whileHover={!disabled && !isActive ? { scale: 1.05 } : {}}
             whileTap={!disabled && !isActive ? { scale: 0.95 } : {}}
             className={cn(
-              'flex-1 p-2 rounded-lg border-2 transition-all',
+              'flex-1 min-w-[70px] p-2 rounded-lg border-2 transition-all',
               'flex flex-col items-center gap-1',
               isActive
                 ? 'bg-yellow-500/20 border-yellow-400 shadow-lg shadow-yellow-500/20'
@@ -39,8 +39,10 @@ export function QuickTacticalIntensityControls({ current, onChange, disabled }: 
               disabled && 'opacity-50 cursor-not-allowed',
             )}
           >
-            <span className="text-xl">{preset.icon}</span>
-            <span className="text-xs font-bold text-white">{preset.label}</span>
+            <span className="text-lg">{preset.icon}</span>
+            <span className="text-[10px] font-bold text-white leading-tight text-center">
+              {preset.label}
+            </span>
             {isActive && (
               <motion.div
                 layoutId="intensity-indicator"

@@ -110,7 +110,7 @@ export function createInitialGameState(): OlefootGameState {
       lastRefreshDate: new Date().toISOString(),
     },
     quickMatchIntensity: {
-      current: 'balanced',
+      current: 'counter',
       changedAtMinute: 0,
     },
   };

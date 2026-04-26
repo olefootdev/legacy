@@ -11,22 +11,30 @@ import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
 type ValueProposition = 'nostalgia' | 'ai' | 'speed';
 
 const VALUE_PROPS: Record<ValueProposition, {
-  headline: string;
+  headline: { white1: string; yellow: string; white2: string };
   subheadline: string;
   features: Array<{ icon: typeof Clock; text: string; color: string }>;
 }> = {
   nostalgia: {
-    headline: 'A gente sabe que você já virou noite para ser o melhor clube do mundo',
-    subheadline: 'Agora com IA que aprende com você, mercado de transferências real e partidas que decidem em minutos.',
+    headline: {
+      white1: 'A gente sabe que',
+      yellow: 'você já virou noite para ser o melhor',
+      white2: 'clube do mundo!',
+    },
+    subheadline: 'Bem vindo ao OLEFOOT',
     features: [
-      { icon: ShoppingCart, text: 'Garimpe talentos no mercado', color: 'text-amber-400' },
-      { icon: Trophy, text: 'Construa sua dinastia', color: 'text-yellow-400' },
-      { icon: Users, text: 'Dispute ligas com amigos', color: 'text-blue-400' },
+      { icon: ShoppingCart, text: 'Revele novos talentos no mercado', color: 'text-amber-400' },
+      { icon: Trophy, text: 'Construa sua cidade do futebol', color: 'text-yellow-400' },
+      { icon: Users, text: 'Dispute ligas contra gringos', color: 'text-blue-400' },
     ],
   },
   ai: {
-    headline: 'Gestão de futebol que aprende com você',
-    subheadline: 'IA analisa suas partidas, sugere táticas em tempo real e gera jogadores únicos. O futuro da gestão esportiva.',
+    headline: {
+      white1: 'A gente sabe que',
+      yellow: 'você já virou noite para ser o melhor',
+      white2: 'clube do mundo',
+    },
+    subheadline: 'Bem vindo ao OLEFOOT',
     features: [
       { icon: Brain, text: 'Assistente tático com IA', color: 'text-purple-400' },
       { icon: Sparkles, text: 'Crie jogadores com prompt', color: 'text-cyan-400' },
@@ -34,8 +42,12 @@ const VALUE_PROPS: Record<ValueProposition, {
     ],
   },
   speed: {
-    headline: 'De time pequeno a campeão em 20 minutos',
-    subheadline: 'Partidas rápidas, mercado dinâmico e progressão visível. Cada decisão conta, cada vitória te aproxima da glória.',
+    headline: {
+      white1: 'A gente sabe que',
+      yellow: 'você já virou noite para ser o melhor',
+      white2: 'clube do mundo',
+    },
+    subheadline: 'Bem vindo ao OLEFOOT',
     features: [
       { icon: Rocket, text: 'Partidas de 30 segundos', color: 'text-orange-400' },
       { icon: Clock, text: 'Temporada completa em 5min', color: 'text-green-400' },
@@ -204,12 +216,22 @@ export function Login() {
                   </div>
 
                   {/* Headline dinâmico baseado na variante A/B */}
-                  <h1 className="font-serif-hero text-[clamp(1.8rem,7vw,3rem)] font-normal italic leading-[1.05] tracking-tight text-white [text-shadow:0_4px_32px_rgba(0,0,0,0.95)]">
-                    {VALUE_PROPS[variant].headline}
+                  <h1 className="font-serif-hero text-[clamp(1.8rem,7vw,3rem)] font-normal italic leading-[1.05] tracking-tight [text-shadow:0_4px_32px_rgba(0,0,0,0.95)]">
+                    <span className="text-white">{VALUE_PROPS[variant].headline.white1} </span>
+                    <span className="text-neon-yellow">{VALUE_PROPS[variant].headline.yellow} </span>
+                    <span className="text-white">{VALUE_PROPS[variant].headline.white2}</span>
                   </h1>
 
-                  {/* Subheadline com Agency FB (display) para impacto */}
-                  <p className="mt-5 font-sans text-[14px] leading-relaxed text-white/85 [text-shadow:0_2px_16px_rgba(0,0,0,0.9)] sm:text-[15px]">
+                  {/* Subheadline com Moret italic */}
+                  <p
+                    className="mt-6 italic text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.9)]"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontSize: 'clamp(1.5rem, 5vw, 2rem)',
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
                     {VALUE_PROPS[variant].subheadline}
                   </p>
 
@@ -228,32 +250,47 @@ export function Login() {
               <div className="mt-6 space-y-3">
                 {variant === 'nostalgia' && (
                   <>
-                    <div className="group relative overflow-hidden rounded-lg border border-amber-500/20 bg-gradient-to-r from-amber-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-amber-500/40">
+                    <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-black/60 via-black/50 to-black/60 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/10">
-                          <ShoppingCart className="h-5 w-5 text-amber-300" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black border-2 border-neon-yellow/40">
+                          <ShoppingCart className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Mercado de Transferências Real
+                            Mercado Real
                           </h3>
                           <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Leilões ao vivo, descubra talentos baratos e venda por fortuna
+                            Leilões ao vivo, garimpe talentos baratos e venda por fortuna
                           </p>
                         </div>
                       </div>
                     </div>
-                    <div className="group relative overflow-hidden rounded-lg border border-yellow-500/20 bg-gradient-to-r from-yellow-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-yellow-500/40">
+                    <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-black/60 via-black/50 to-black/60 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-500/10">
-                          <Trophy className="h-5 w-5 text-yellow-300" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black border-2 border-neon-yellow/40">
+                          <Trophy className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
                             Construa Sua Dinastia
                           </h3>
                           <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Jogue décadas de carreira, veja jogadores envelhecerem e novos talentos surgirem
+                            Décadas de carreira, jogadores envelhecem e novos talentos surgem
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-black/60 via-black/50 to-black/60 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black border-2 border-neon-yellow/40">
+                          <Zap className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            O Jogo Começou
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            Mostre que você entende de futebol e domine o ranking mundial
                           </p>
                         </div>
                       </div>
@@ -489,19 +526,50 @@ export function Login() {
               >
                 Esqueci minha senha
               </button>
-
-              {/* Debug: mostrar variante atual (remover em produção) */}
-              <div className="mt-4 rounded border border-white/10 bg-white/5 px-3 py-2 text-center">
-                <p className="text-[9px] font-mono text-white/40">
-                  A/B Test: <span className="text-neon-yellow/60">{variant}</span>
-                </p>
-              </div>
             </nav>
           ) : null}
         </div>
 
-        <footer className="mx-auto mt-8 max-w-md text-center text-[10px] text-white/35 sm:mt-10 sm:text-[11px]">
-          Olefoot © 2026 · Todos os direitos reservados
+        <footer className="mx-auto mt-8 max-w-md text-center sm:mt-10">
+          {/* Redes sociais */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <a
+              href="https://www.instagram.com/olefootgame"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              aria-label="Instagram"
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+              </svg>
+            </a>
+            <a
+              href="https://www.youtube.com/@olefoot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              aria-label="YouTube"
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+            </a>
+            <a
+              href="https://x.com/olefootgame"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/70 transition-all hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
+              aria-label="X (Twitter)"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+          </div>
+          <p className="text-[10px] text-white/35 sm:text-[11px]">
+            Olefoot © 2026 · Todos os direitos reservados
+          </p>
         </footer>
       </div>
     </div>

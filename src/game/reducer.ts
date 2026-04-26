@@ -78,6 +78,11 @@ import {
   splitDueTreatments,
   TREATMENT_PLAN_DURATION_H,
 } from '@/systems/medicalTreatment';
+import { resolveInteractiveMoment } from '@/match/quickInteractiveMoments';
+import { updateChallengeProgress as updateStreakProgress, generateWeeklyChallenges, shouldRefreshChallenges } from '@/match/quickStreakChallenges';
+import { createPendingCommand } from '@/voiceCommand/commandQueue';
+import { TEAM_OBEDIENCE_DELTAS } from '@/voiceCommand/obedienceRoll';
+import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import {
   CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_MEDICAL_FATIGUE_DELTA,
@@ -275,6 +280,7 @@ function runTick(state: OlefootGameState): OlefootGameState {
     opponentId: state.nextFixture.opponent.id,
     awayRoster: state.liveMatch.awayRoster,
     staffMatchEffects: staffRunMatchMinuteEffects(state.manager.staff),
+    tacticalIntensity: state.quickMatchIntensity?.current,
   });
   let liveMatch = snapshot;
   const players = { ...state.players, ...updatedPlayers };
@@ -456,7 +462,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'RESOLVE_QUICK_INTERACTIVE_MOMENT': {
       if (!state.liveMatch?.activeInteractiveMoment) return state;
-      const { resolveInteractiveMoment } = require('@/match/quickInteractiveMoments');
 
       const outcome = resolveInteractiveMoment(
         state.liveMatch.activeInteractiveMoment,
@@ -502,9 +507,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'UPDATE_STREAK_CHALLENGES': {
       if (!state.streakChallenges) return state;
-      const { updateChallengeProgress } = require('@/match/quickStreakChallenges');
 
-      const updated = updateChallengeProgress(
+      const updated = updateStreakProgress(
         state.streakChallenges.challenges,
         action.currentStreak,
         action.won,
@@ -520,7 +524,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
 
     case 'REFRESH_STREAK_CHALLENGES': {
-      const { generateWeeklyChallenges } = require('@/match/quickStreakChallenges');
       return {
         ...state,
         streakChallenges: {
@@ -1044,7 +1047,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
     case 'VOICE_COMMAND_ISSUED': {
       if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
-      const { createPendingCommand } = require('@/voiceCommand/commandQueue');
       const lm = state.liveMatch;
       const cmd = createPendingCommand({
         intent: action.intent,
@@ -1071,7 +1073,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         playerId: action.playerId,
       };
       // Bump team obedience ponderado pelo tier do resultado individual.
-      const { TEAM_OBEDIENCE_DELTAS } = require('@/voiceCommand/obedienceRoll');
       const tierDelta = TEAM_OBEDIENCE_DELTAS.byTier[action.tier] ?? 0;
       const nextObed = Math.max(30, Math.min(100, (state.tacticalObedience ?? 30) + tierDelta));
       // Relação individual: accept sobe, refuse/protest cai — persistente entre partidas.
@@ -1184,8 +1185,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let bonusOle = 0;
       let bonusExp = 0;
       if (lm.mode === 'quick') {
-        const { evaluatePerformanceBonuses, calculateTotalBonusRewards } = require('@/match/quickPerformanceBonuses');
-
         // Check if was losing at some point
         let wasLosing = false;
         let tempHome = 0;
@@ -1220,11 +1219,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // Update streak challenges (Sprint 3)
       let streakChallenges = state.streakChallenges;
       if (lm.mode === 'quick' && streakChallenges && quickMatchStreak) {
-        const { updateChallengeProgress: updateStreakProgress, shouldRefreshChallenges } = require('@/match/quickStreakChallenges');
-
         // Check if needs refresh
         if (shouldRefreshChallenges(streakChallenges)) {
-          const { generateWeeklyChallenges } = require('@/match/quickStreakChallenges');
           streakChallenges = {
             challenges: generateWeeklyChallenges(),
             lastRefreshDate: new Date().toISOString(),

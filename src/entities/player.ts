@@ -15,6 +15,13 @@ function clamp(n: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, n));
 }
 
+/**
+ * Gera um ID único para um jogador
+ */
+export function generatePlayerId(): string {
+  return `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
 /** Pilar 2 (impacto agregado no XI / cartões): mapa em `@/lib/veracityPillarsMap`. */
 export function overallFromAttributes(a: PlayerAttributes): number {
   const w =

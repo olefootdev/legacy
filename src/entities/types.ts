@@ -137,6 +137,8 @@ export interface PlayerEntity {
   legacyTaughtAttributes?: string[];
   /** IDs de Coach Skills equipadas (ex.: ['skl_lateral_overlap_cross']). Max 3 skills ativas. */
   skills?: string[];
+  /** Perfil de agente offline (comportamento, decisão, aprendizado) */
+  agentProfile?: import('@/agents/types').AgentProfile;
 }
 
 export interface OpponentStub {
@@ -224,6 +226,10 @@ export interface ClubEntity {
   shortName: string;
   city: string;
   stadium: string;
+  /** Disponibilidade para amistosos: ONLINE (aceita convites, impacta ranking) ou OFFLINE (só vs bots). */
+  friendlyAvailability?: 'ONLINE' | 'OFFLINE';
+  /** Aceita convites automaticamente quando ONLINE. */
+  friendlyAutoAccept?: boolean;
 }
 
 export interface ClubLogisticsState {

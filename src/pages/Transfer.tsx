@@ -604,7 +604,7 @@ export function Transfer() {
   ];
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-6 md:pb-8">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-20 md:pb-24">
       <BackButton to="/mercado" label="Mercado" />
       {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico ── */}
       <section

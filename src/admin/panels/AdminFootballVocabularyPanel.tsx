@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, Plus, Search, TestTube, Trash2, Edit2, Save, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/supabase/client';
+import { getSupabase } from '@/supabase/client';
 import type { VoiceIntent } from '@/voiceCommand/types';
 import { intentLabelPt } from '@/voiceCommand/intentGuess';
 import { parseVoiceCommand } from '@/voiceCommand/intentMatcher';
@@ -126,6 +126,13 @@ export function AdminFootballVocabularyPanel() {
   const loadVocabulary = async () => {
     setLoading(true);
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        alert('Supabase não configurado');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('learned_phrases')
         .select('*')
@@ -151,6 +158,12 @@ export function AdminFootballVocabularyPanel() {
     try {
       // Gera stem automaticamente
       const stem = generateStem(newEntry.phrase);
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        alert('Supabase não configurado');
+        return;
+      }
 
       const { error } = await supabase.from('learned_phrases').insert({
         phrase: newEntry.phrase,
@@ -190,6 +203,12 @@ export function AdminFootballVocabularyPanel() {
     if (!confirm('Remover esta entrada?')) return;
 
     try {
+      const supabase = getSupabase();
+      if (!supabase) {
+        alert('Supabase não configurado');
+        return;
+      }
+
       const { error } = await supabase
         .from('learned_phrases')
         .delete()

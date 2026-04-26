@@ -152,6 +152,23 @@ export type CausalMatchEvent =
       };
     }
   /**
+   * Signature Move usado (meta-progressão).
+   * Registra quando jogador usa move especial desbloqueado.
+   */
+  | {
+      seq: number;
+      simTime: number;
+      type: 'signature_move_used';
+      payload: {
+        playerId: string;
+        playerName: string;
+        moveId: string;
+        moveName: string;
+        xGBoost: number;
+        minute: number;
+      };
+    }
+  /**
    * Lateral cobrado: bola saiu pela linha lateral.
    * `awardedTo` = lado que cobra (oposto de quem tocou por último).
    */

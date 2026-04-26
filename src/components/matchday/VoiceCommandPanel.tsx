@@ -585,6 +585,11 @@ export function VoiceCommandPanel() {
   const processing = voice.state === 'processing';
   const liveText = voice.transcript + voice.interim;
 
+  // Calcula cooldown ativo para UI
+  const cooldownStatus = getActiveCooldown();
+  const cooldownActive = cooldownStatus.active;
+  const cooldownLeftMs = cooldownStatus.leftMs;
+
   return (
     <div className="space-y-2">
       <div className="rounded-xl border border-violet-500/40 bg-violet-950/30 px-3 py-3 sm:px-4 sm:py-4 space-y-3">

@@ -324,114 +324,148 @@ export function City() {
   ]);
 
   return (
-    <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden">
-      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4">
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden px-3 sm:px-4 lg:px-6">
+      <div className="w-full max-w-6xl min-w-0 mx-auto">
         <BackButton to="/clube" label="Clube" />
       </div>
       {/* Header com navegação integrada */}
-      <TeamMeuTimeHeader
-        title="Cidade do Clube"
-        subtitle={
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            <span>Estruturas, evolução e ações rápidas para o desenvolvimento do clube.</span>
-            <div className="flex items-center gap-3 text-xs flex-wrap">
-              <span className="text-neon-yellow font-display font-black">{formatExp(finance.ole)} EXP</span>
-              <span className="text-white/40">·</span>
-              <span className="text-white/70 font-display font-bold">{formatBroFromCents(finance.broCents)}</span>
-              <span className="text-white/40">·</span>
-              <span className="text-white/60">Apoio {crowd.supportPercent.toFixed(1)}%</span>
+      <div className="w-full max-w-6xl min-w-0 mx-auto">
+        <TeamMeuTimeHeader
+          title="Cidade do Clube"
+          subtitle={
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <span>Estruturas, evolução e ações rápidas para o desenvolvimento do clube.</span>
+              <div className="flex items-center gap-3 text-xs flex-wrap">
+                <span className="text-neon-yellow font-display font-black">{formatExp(finance.ole)} EXP</span>
+                <span className="text-white/40">·</span>
+                <span className="text-white/70 font-display font-bold">{formatBroFromCents(finance.broCents)}</span>
+                <span className="text-white/40">·</span>
+                <span className="text-white/60">Apoio {crowd.supportPercent.toFixed(1)}%</span>
+              </div>
             </div>
-          </div>
-        }
-      />
+          }
+        />
+      </div>
 
-      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 space-y-6">
+      <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6">
         {/* Hero Principal — Estádio */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="ole-card overflow-hidden w-full max-w-full min-w-0"
+          className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 w-full max-w-full min-w-0"
+          style={{ borderRadius: 'var(--radius-sm)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
         >
-        {/* Header com foto placeholder */}
-        <div className="relative h-48 sm:h-64 bg-gradient-to-br from-neon-yellow/20 to-deep-black overflow-hidden">
-          {/* Placeholder para foto do estádio */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Building2 className="w-32 h-32 text-neon-yellow/20" />
+          {/* Watermark gigante */}
+          <div
+            className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+            aria-hidden
+          >
+            <Building2
+              className="text-black/[0.04]"
+              style={{ width: 'clamp(200px, 40vw, 500px)', height: 'clamp(200px, 40vw, 500px)' }}
+              strokeWidth={1}
+            />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/60 to-transparent" />
 
-          {/* Info sobreposta */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <div className="ole-eyebrow !text-neon-yellow mb-2">ESTÁDIO</div>
-                <h1 className="ole-headline text-3xl sm:text-4xl md:text-5xl">
-                  {clubName}<span className="ole-headline-italic text-neon-yellow">.</span>
-                </h1>
-                <p className="text-sm text-[var(--text-secondary)] mt-2">
-                  Capacidade: {stadiumCapacityByLevel(stadiumLevel).toLocaleString('pt-BR')} lugares
+          {/* Conteúdo */}
+          <div className="relative z-10 p-6 sm:p-8">
+            {/* Eyebrow */}
+            <div className="inline-flex items-center gap-3 text-black/85 mb-3">
+              <span aria-hidden className="h-px w-8 bg-black/60" />
+              <span className="uppercase font-semibold text-[10px] tracking-[0.22em]">
+                Estrutura Principal
+              </span>
+              <span aria-hidden className="h-px w-8 bg-black/60" />
+            </div>
+
+            {/* Título */}
+            <h2
+              className="italic text-black leading-none mb-2"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Estádio
+            </h2>
+
+            <p className="text-black/70 text-sm sm:text-base mb-6 max-w-2xl">
+              O coração do clube. Cada nível reforça capacidade, receita em dias de jogo e o ambiente para a torcida.
+            </p>
+
+            {/* Stats strip */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
+                  Capacidade
+                </p>
+                <p
+                  className="text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                  }}
+                >
+                  {(stadiumCapacityByLevel(stadiumLevel) / 1000).toFixed(0)}k
                 </p>
               </div>
-              <div className="text-right">
-                <div className="text-neon-yellow font-display font-black text-2xl sm:text-3xl">
-                  NÍVEL {stadiumLevel}
-                </div>
-                <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider">
+              <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
+                  EXP/Torcedor
+                </p>
+                <p
+                  className="text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                  }}
+                >
+                  {stadiumExpPerSpectatorByLevel(stadiumLevel)}
+                </p>
+              </div>
+              <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
+                  Nível
+                </p>
+                <p
+                  className="text-white tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                  }}
+                >
                   {stadiumLevel}/{MAX_LEVEL}
-                </div>
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Stats e ações */}
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="bg-black/40 p-3 rounded border border-white/5">
-              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-1">Capacidade</div>
-              <div className="font-display font-bold text-lg text-white">
-                {stadiumCapacityByLevel(stadiumLevel).toLocaleString('pt-BR')}
-              </div>
-            </div>
-            <div className="bg-black/40 p-3 rounded border border-white/5">
-              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-1">EXP/Torcedor</div>
-              <div className="font-display font-bold text-lg text-neon-yellow">
-                {stadiumExpPerSpectatorByLevel(stadiumLevel)}
-              </div>
-            </div>
-            <div className="bg-black/40 p-3 rounded border border-white/5 col-span-2 sm:col-span-1">
-              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-1">Próximo nível</div>
-              <div className={cn(
-                "font-display font-bold text-lg",
-                stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford ? "text-neon-yellow" : "text-gray-500"
-              )}>
-                {stadiumUpgrade.title}
-              </div>
-            </div>
+            {/* CTA */}
+            <button
+              type="button"
+              disabled={!stadiumUpgrade.hasUpgrade || !stadiumUpgrade.canAfford}
+              onClick={() => setQuickPendingId('stadium')}
+              className={cn(
+                'w-full px-5 py-3 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-all flex items-center justify-center gap-2',
+                stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford
+                  ? 'bg-black text-neon-yellow hover:bg-deep-black shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
+                  : 'bg-black/60 text-black/40 cursor-not-allowed',
+              )}
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              <ArrowUpCircle className="w-4 h-4" />
+              {stadiumUpgrade.hasUpgrade ? `Expandir · ${stadiumUpgrade.title}` : 'Nível Máximo'}
+            </button>
           </div>
-
-          <button
-            type="button"
-            disabled={!stadiumUpgrade.hasUpgrade || !stadiumUpgrade.canAfford}
-            onClick={() => setQuickPendingId('stadium')}
-            className={cn(
-              'w-full py-3 font-display font-black uppercase tracking-wider text-sm -skew-x-6 transition-all border',
-              stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford
-                ? 'bg-neon-yellow text-black border-neon-yellow hover:brightness-110'
-                : 'bg-white/5 text-gray-500 border-white/10 cursor-not-allowed',
-            )}
-          >
-            <span className="skew-x-6 flex items-center justify-center gap-2">
-              <ArrowUpCircle className="w-5 h-5" />
-              Expandir Arquibancada
-            </span>
-          </button>
-        </div>
-      </motion.div>
+        </motion.div>
 
       {/* Grid de estruturas menores */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-full min-w-0">
-        {CITY_STRUCTURE_DEFS.slice(1).map((struct) => {
+        {CITY_STRUCTURE_DEFS.slice(1).map((struct, idx) => {
           const level = levelOf(structuresState, struct.structureId);
           const upgrade = upgradeLine(struct.structureId, level, finance.ole, finance.broCents);
           const canQuick =
@@ -445,51 +479,65 @@ export function City() {
               key={struct.uiId}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className={cn(
-                'ole-card overflow-hidden border-l-4 transition-all hover:shadow-lg w-full max-w-full min-w-0',
-                struct.border
-              )}
+              transition={{ delay: 0.1 + idx * 0.05 }}
+              className="relative isolate overflow-hidden bg-panel border border-white/10 w-full max-w-full min-w-0 hover:border-white/20 transition-all"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              {/* Header com placeholder de foto */}
-              <div className={cn('relative h-32 overflow-hidden', struct.bg)}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <struct.icon className={cn('w-20 h-20 opacity-20', struct.color)} />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-deep-black/80 to-transparent" />
-
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <h3 className="font-display font-black text-lg uppercase tracking-wide text-white">
-                        {struct.name}
-                      </h3>
-                    </div>
-                    <div className={cn('font-display font-black text-xl', struct.color)}>
-                      N{level}
-                    </div>
-                  </div>
-                </div>
+              {/* Watermark do ícone */}
+              <div
+                className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+                aria-hidden
+              >
+                <struct.icon
+                  className={cn('opacity-[0.03]', struct.color)}
+                  style={{ width: 'clamp(120px, 30vw, 200px)', height: 'clamp(120px, 30vw, 200px)' }}
+                  strokeWidth={1}
+                />
               </div>
 
               {/* Conteúdo */}
-              <div className="p-4 space-y-3 w-full max-w-full min-w-0">
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed break-words">
+              <div className="relative z-10 p-5 sm:p-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'flex h-12 w-12 shrink-0 items-center justify-center border-2 transition-transform hover:scale-110',
+                        struct.bg,
+                        struct.border
+                      )}
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      <struct.icon className={cn('h-6 w-6', struct.color)} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-base font-black uppercase tracking-wider text-white">
+                        {struct.name}
+                      </h3>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                        Nível {level}/{MAX_LEVEL}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Descrição */}
+                <p className="text-xs text-gray-400 leading-relaxed">
                   {struct.desc}
                 </p>
 
                 {/* Stats principais */}
-                <div className="space-y-2 w-full max-w-full min-w-0">
+                <div className="space-y-2 pt-2 border-t border-white/5">
                   {struct.statsForLevel(level).slice(0, 2).map((stat, i) => (
-                    <div key={i} className="flex justify-between items-center text-xs gap-2 min-w-0">
-                      <span className="text-[var(--text-secondary)] truncate">{stat.label}</span>
-                      <span className="font-display font-bold text-white shrink-0">{stat.value}</span>
+                    <div key={i} className="flex justify-between items-center text-xs gap-2">
+                      <span className="text-gray-500 uppercase tracking-wider text-[10px]">{stat.label}</span>
+                      <span className={cn('font-display font-bold', struct.color)}>{stat.value}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Ações */}
-                <div className="flex gap-2 pt-2 w-full max-w-full min-w-0">
+                <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     disabled={!upgrade.hasUpgrade || !upgrade.canAfford}
@@ -498,30 +546,30 @@ export function City() {
                       trackMissionEvent('structure_upgraded');
                     }}
                     className={cn(
-                      'flex-1 py-2 text-xs font-display font-bold uppercase tracking-wider transition-colors border rounded min-w-0',
+                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
                       upgrade.hasUpgrade && upgrade.canAfford
                         ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
                         : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
                     )}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    <TrendingUp className="w-3 h-3 inline mr-1" />
-                    <span className="hidden xs:inline">Evoluir</span>
-                    <span className="xs:hidden">↑</span>
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    Evoluir
                   </button>
                   <button
                     type="button"
                     disabled={!canQuick}
                     onClick={() => setQuickPendingId(struct.structureId)}
                     className={cn(
-                      'flex-1 py-2 text-xs font-display font-bold uppercase tracking-wider transition-colors border rounded min-w-0',
+                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
                       canQuick
-                        ? cn('text-black border-transparent', struct.bg.replace('/10', ''), 'hover:brightness-110')
+                        ? cn('border-transparent hover:brightness-110', struct.bg.replace('/10', '/90'), 'text-black')
                         : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
                     )}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    <struct.actionIcon className="w-3 h-3 inline mr-1" />
-                    <span className="hidden xs:inline">Ação</span>
-                    <span className="xs:hidden">⚡</span>
+                    <struct.actionIcon className="w-3.5 h-3.5" />
+                    {struct.action.split(' ')[0]}
                   </button>
                 </div>
 
@@ -529,11 +577,11 @@ export function City() {
                 {struct.structureId === 'youth_academy' && (
                   <button
                     type="button"
-                    onClick={() => navigate('/city/youth-prospects')}
-                    className="w-full text-xs text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1 pt-2 min-w-0"
+                    onClick={() => navigate('/clube/academia')}
+                    className="w-full text-xs text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1 pt-2 transition-colors"
                   >
-                    <span className="truncate">Ver promessas</span>
-                    <ChevronRight className="w-3 h-3 shrink-0" />
+                    <span>Ver promessas</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>

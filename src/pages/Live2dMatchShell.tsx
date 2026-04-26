@@ -52,6 +52,23 @@ import {
 import { MomentumVisualBar } from '@/components/matchday/MomentumVisualBar';
 import { LiveStatsComparison } from '@/components/matchday/LiveStatsComparison';
 import { useLiveMatchStats } from '@/hooks/useLiveMatchStats';
+import { MomentumShiftOverlay } from '@/components/matchday/MomentumShiftOverlay';
+import { MomentumFieldEffect } from '@/components/matchday/MomentumFieldEffect';
+import { useStatsHistory } from '@/hooks/useStatsHistory';
+import { useStatHighlights } from '@/hooks/useStatHighlights';
+import { useThrottle } from '@/hooks/useThrottle';
+import { InteractiveMomentOverlay } from '@/components/matchday/InteractiveMomentOverlay';
+import { SpecialEventOverlay } from '@/components/matchday/SpecialEventOverlay';
+import { SkillVisualEffect, useSkillVisuals } from '@/components/matchday/SkillVisualEffect';
+import { SubstitutionSuggestionPanel } from '@/components/matchday/SubstitutionSuggestionPanel';
+import { TacticalMinimap, useTacticalAnalysis } from '@/components/matchday/TacticalMinimap';
+import { MatchChallengesPanel, ChallengeCompletedNotification } from '@/components/matchday/MatchChallengesPanel';
+import { detectAllSubstitutionSuggestions } from '@/match/smartSubstitutions';
+import { MATCH_CHALLENGES, checkCompletedChallenges, calculateChallengeProgress } from '@/match/matchChallenges';
+import type { InteractiveMoment, InteractiveMomentOption } from '@/match/interactiveMoments';
+import type { SpecialEvent } from '@/match/specialEvents';
+import type { SubstitutionSuggestion } from '@/match/smartSubstitutions';
+import type { MatchChallenge } from '@/match/matchChallenges';
 
 const LIVE_MATCH_ENGINE_MODE = 'test2d' as const;
 
@@ -623,8 +640,94 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PitchPlayerState | null>(null);
 
-  // Fase 1 — Quick Wins: Stats ao vivo
+  // Fase 1 — Quick Wins: Stats ao vivo + Melhorias
   const liveStats = useLiveMatchStats(live);
+  const throttledStats = useThrottle(liveStats, 1000); // Melhoria #10: throttle 1s
+  const statsHistory = useStatsHistory(throttledStats, live?.minute); // Melhoria #3: histórico
+
+  // Melhoria #8: Stat Highlights (toasts)
+  const showToast = useCallback((message: string, type: 'success' | 'info' | 'warning') => {
+    console.log(`[${type.toUpperCase()}] ${message}`);
+  }, []);
+
+  useStatHighlights(throttledStats, showToast);
+
+  // Fase 2 — Core Gameplay: Momentos Interativos + Skills + Eventos Especiais
+  const [interactiveMoment, setInteractiveMoment] = useState<InteractiveMoment | null>(null);
+  const [specialEvent, setSpecialEvent] = useState<SpecialEvent | null>(null);
+  const { activeSkills, addSkillVisual } = useSkillVisuals();
+
+  const handleInteractiveMomentChoice = useCallback((option: InteractiveMomentOption) => {
+    console.log('[Interactive Moment] Escolha:', option.action, 'xG:', option.xG);
+    setInteractiveMoment(null);
+  }, []);
+
+  const handleInteractiveMomentTimeout = useCallback(() => {
+    console.log('[Interactive Moment] Timeout - IA decide');
+    setInteractiveMoment(null);
+  }, []);
+
+  // Fase 3 — Polish: Substituições + Desafios + Mini-mapa
+  const [dismissedSubstitutions, setDismissedSubstitutions] = useState<Set<string>>(new Set());
+  const [completedChallengeIds, setCompletedChallengeIds] = useState<Set<string>>(new Set());
+  const [lastCompletedChallenge, setLastCompletedChallenge] = useState<MatchChallenge | null>(null);
+
+  // Pitch players (precisa estar antes do useMemo de substituições)
+  const pitch = tacticalPitchFromTruth?.homePitch ?? live?.homePlayers ?? [];
+
+  // Detecta sugestões de substituição
+  const substitutionSuggestions = useMemo(() => {
+    if (!live || !pitch || pitch.length === 0) return [];
+
+    const bench = Object.values(playersById).filter(p => {
+      const lineupPlayerIds = Object.values(lineupIds ?? {});
+      return !lineupPlayerIds.includes(p.id);
+    });
+
+    const scoreDiff = (live.homeScore ?? 0) - (live.awayScore ?? 0);
+    const momentum = live.spiritMomentum ?? { home: 50, away: 50 };
+
+    return detectAllSubstitutionSuggestions(
+      pitch,
+      bench,
+      live.minute ?? 0,
+      scoreDiff,
+      momentum
+    ).filter(s => !dismissedSubstitutions.has(s.id));
+  }, [live, pitch, playersById, lineupIds, dismissedSubstitutions]);
+
+  const handleAcceptSubstitution = useCallback((suggestion: SubstitutionSuggestion) => {
+    console.log('[Substitution] Aceita:', suggestion.playerOut.name, '→', suggestion.playerIn.name);
+    // TODO: Aplicar substituição via dispatch
+    setDismissedSubstitutions(prev => new Set(prev).add(suggestion.id));
+  }, []);
+
+  const handleDismissSubstitution = useCallback((suggestionId: string) => {
+    setDismissedSubstitutions(prev => new Set(prev).add(suggestionId));
+  }, []);
+
+  // Análise tática (mini-mapa)
+  const { heatmap, pattern } = useTacticalAnalysis(live);
+
+  // Desafios in-match
+  const challengeProgress = useMemo(() => {
+    if (!live) return new Map();
+    return calculateChallengeProgress(live, throttledStats);
+  }, [live, throttledStats]);
+
+  useEffect(() => {
+    if (!live) return;
+
+    const newlyCompleted = checkCompletedChallenges(live, throttledStats, completedChallengeIds);
+
+    if (newlyCompleted.length > 0) {
+      const challenge = newlyCompleted[0]!;
+      setCompletedChallengeIds(prev => new Set(prev).add(challenge.id));
+      setLastCompletedChallenge(challenge);
+
+      console.log(`[Challenge] Completado: ${challenge.title} - +${challenge.reward.ole} OLE`);
+    }
+  }, [live, throttledStats, completedChallengeIds]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -1016,7 +1119,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     return live?.onBallPlayerId;
   }, [usesLive2dTacticalEngine, tacticalLive2dEnabled, carrierSimId, live?.awayRoster, live?.onBallPlayerId]);
 
-  const pitch = tacticalPitchFromTruth?.homePitch ?? live?.homePlayers ?? [];
   const awayPitch = tacticalPitchFromTruth?.awayPitch ?? live?.awayPitchPlayers ?? [];
   const showBoard = summary === null;
 
@@ -1167,6 +1269,18 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   return (
     <div className="flex w-full min-h-0 flex-1 flex-col space-y-3 sm:space-y-4 py-4 sm:py-6 px-2 sm:px-4 pb-20 sm:pb-24 md:flex-none">
       <GoalTakeover triggerKey={goalTakeoverKey} disabled={prefersReducedMotion} />
+
+      {/* Fase 2 — Core Gameplay: Overlays */}
+      <InteractiveMomentOverlay
+        moment={interactiveMoment}
+        onChoose={handleInteractiveMomentChoice}
+        onTimeout={handleInteractiveMomentTimeout}
+      />
+      <SpecialEventOverlay
+        event={specialEvent}
+        onDismiss={() => setSpecialEvent(null)}
+      />
+
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <Link to="/" className="text-[10px] sm:text-xs font-bold text-gray-500 hover:text-neon-yellow">
           ← Home
@@ -1361,7 +1475,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             <span className="text-white">{displayAwayScore}</span>
           </div>
 
-          {/* Fase 1 — Quick Win #2: Barra de Momentum Visual */}
+          {/* Fase 1 — Quick Win #2: Barra de Momentum Visual + Melhorias */}
           {live.spiritMomentum && (
             <MomentumVisualBar
               momentum={live.spiritMomentum}
@@ -1371,14 +1485,22 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             />
           )}
 
-          {/* Fase 1 — Quick Win #8: Stats ao Vivo */}
+          {/* Fase 1 — Quick Win #8: Stats ao Vivo + Melhoria #3 (Gráfico) */}
           <div className="mx-auto w-full max-w-md">
             <LiveStatsComparison
-              stats={liveStats}
+              stats={throttledStats}
               homeShort={live.homeShort}
               awayShort={live.awayShort}
+              statsHistory={statsHistory}
             />
           </div>
+
+          {/* Melhoria #7: Momentum Shift Overlay */}
+          <MomentumShiftOverlay
+            momentum={live.spiritMomentum}
+            homeShort={live.homeShort}
+            awayShort={live.awayShort}
+          />
           <div
             className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-0.5 pb-0.5 sm:pb-1"
             role="toolbar"
@@ -1529,6 +1651,9 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                 >
                   <div className="field-container w-full overflow-visible rounded-lg p-2 sm:p-3">
                   <div className={cn('field', tacticalDevLayer && 'show-zones')}>
+                    {/* Melhoria #9: Efeito Visual no Campo quando Momentum Extremo */}
+                    <MomentumFieldEffect momentum={live.spiritMomentum} />
+
                     <div className="pitch-overlay">
                       <div className="half-line" />
                       <div className="center-circle" />

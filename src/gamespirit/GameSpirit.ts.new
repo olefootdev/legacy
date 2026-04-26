@@ -1,0 +1,17 @@
+/**
+ * Re-export do GameSpirit compartilhado
+ * Mantém compatibilidade com código existente no frontend
+ */
+
+export {
+  gameSpiritTick,
+  buildSpiritContext,
+  type SpiritContext,
+  type SpiritOutcome,
+  type ProposedAction,
+  type SpiritSnapshotMeta,
+  type BallZone,
+} from '../../shared/gamespirit';
+
+// Re-exporta tudo do arquivo original para compatibilidade
+export * from '../../shared/gamespirit/GameSpirit';

@@ -80,9 +80,9 @@ export function buildCounterAttackMoment(
   ctx: MomentTriggerContext,
   attacker: PitchPlayerState,
 ): QuickInteractiveMoment {
-  const attrs = attacker.attributes ?? { passing: 50, finishing: 50, technique: 50, pace: 50, dribbling: 50, shooting: 50, defending: 50, physical: 50 };
-  const passChance = calculateSuccessChance(0.65, attrs as MatchPlayerAttributes, 'passing');
-  const shootChance = calculateSuccessChance(0.45, attrs as MatchPlayerAttributes, 'finishing');
+  const attrs = attacker.attributes ?? { passeCurto: 50, finalizacao: 50, tatico: 50, velocidade: 50, drible: 50, fisico: 50, marcacao: 50, passeLongo: 50, cruzamento: 50, fairPlay: 50, mentalidade: 50, confianca: 50 };
+  const passChance = calculateSuccessChance(0.65, attrs as MatchPlayerAttributes, 'passeCurto');
+  const shootChance = calculateSuccessChance(0.45, attrs as MatchPlayerAttributes, 'finalizacao');
 
   return {
     id: `counter_${ctx.minute}_${Date.now()}`,
@@ -121,15 +121,15 @@ export function buildSetPieceMoment(
     throw new Error('buildSetPieceMoment: need at least 2 takers');
   }
 
-  const attrs1 = taker1.attributes ?? { finishing: 50, technique: 50, passing: 50, pace: 50, dribbling: 50, shooting: 50, defending: 50, physical: 50 };
-  const attrs2 = taker2.attributes ?? { finishing: 50, technique: 50, passing: 50, pace: 50, dribbling: 50, shooting: 50, defending: 50, physical: 50 };
-  const chance1 = calculateSuccessChance(0.35, attrs1 as MatchPlayerAttributes, 'finishing');
-  const chance2 = calculateSuccessChance(0.35, attrs2 as MatchPlayerAttributes, 'finishing');
+  const attrs1 = taker1.attributes ?? { finalizacao: 50, tatico: 50, passeCurto: 50, velocidade: 50, drible: 50, fisico: 50, marcacao: 50, passeLongo: 50, cruzamento: 50, fairPlay: 50, mentalidade: 50, confianca: 50 };
+  const attrs2 = taker2.attributes ?? { finalizacao: 50, tatico: 50, passeCurto: 50, velocidade: 50, drible: 50, fisico: 50, marcacao: 50, passeLongo: 50, cruzamento: 50, fairPlay: 50, mentalidade: 50, confianca: 50 };
+  const chance1 = calculateSuccessChance(0.35, attrs1 as MatchPlayerAttributes, 'finalizacao');
+  const chance2 = calculateSuccessChance(0.35, attrs2 as MatchPlayerAttributes, 'finalizacao');
 
-  const finishing1 = 'finishing' in attrs1 ? attrs1.finishing : 50;
-  const technique1 = 'technique' in attrs1 ? attrs1.technique : 50;
-  const finishing2 = 'finishing' in attrs2 ? attrs2.finishing : 50;
-  const technique2 = 'technique' in attrs2 ? attrs2.technique : 50;
+  const finishing1 = 'finalizacao' in attrs1 ? attrs1.finalizacao : 50;
+  const technique1 = 'tatico' in attrs1 ? attrs1.tatico : 50;
+  const finishing2 = 'finalizacao' in attrs2 ? attrs2.finalizacao : 50;
+  const technique2 = 'tatico' in attrs2 ? attrs2.tatico : 50;
 
   return {
     id: `setpiece_${ctx.minute}_${Date.now()}`,

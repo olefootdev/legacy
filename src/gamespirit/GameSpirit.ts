@@ -30,6 +30,15 @@ import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
 import { enrichNarrative } from './contextualNarrative';
+import { detectSpecialEvent, applySpecialEventEffect } from '@/match/specialEvents';
+import { PlayerProgressionManager, SIGNATURE_MOVES, type SignatureMoveType } from '@/progression/playerProgression';
+import {
+  applyIntensityToShotChance,
+  applyIntensityToDefense,
+  getCounterAttackChance,
+  getPressureIntensity,
+  type TacticalIntensityLevel
+} from '@/match/quickTacticalIntensity';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
   const dx = a.x - b.x;
@@ -393,6 +402,7 @@ export function buildSpiritContext(input: {
   pendingCornerForSide?: SpiritContext['pendingCornerForSide'];
   pendingFreeKickForSide?: SpiritContext['pendingFreeKickForSide'];
   smartfieldActionHint?: SpiritContext['smartfieldActionHint'];
+  tacticalIntensity?: TacticalIntensityLevel;
 }): SpiritContext {
   // Overall do time ponderado por role (atacantes pesam ataque, zagueiros pesam defesa).
   // Usa `homePlayers` (MatchPlayerAttributes) quando disponível; fallback pro overall do roster.
@@ -469,6 +479,7 @@ export function buildSpiritContext(input: {
     pendingCornerForSide: input.pendingCornerForSide,
     pendingFreeKickForSide: input.pendingFreeKickForSide,
     smartfieldActionHint: input.smartfieldActionHint,
+    tacticalIntensity: input.tacticalIntensity,
   };
 }
 
@@ -786,6 +797,10 @@ export function gameSpiritTick(
             legacyTeamBooster: ctx.legacyTeamBooster,
           })
         : null;
+
+      // Fase 2 — Core Gameplay #3: Detecta eventos especiais raros
+      const specialEvent = ctx.onBall ? detectSpecialEvent('shot', ctx.onBall, ctx) : null;
+
       const adjustedShotSkill = skillRes
         ? Math.min(1, shotSkill * skillRes.modifier)
         : shotSkill;
@@ -798,6 +813,53 @@ export function gameSpiritTick(
         gkFactor01: ctx.opponentStrength / 120,
         errorTax,
       });
+
+      // Aplica bônus de evento especial (bicicleta, bomba, etc.)
+      if (specialEvent?.effect?.xGBonus) {
+        weights.goal = applySpecialEventEffect(specialEvent, weights.goal);
+        weights.post_in = applySpecialEventEffect(specialEvent, weights.post_in);
+      }
+
+      // META-PROGRESSÃO: Signature Moves
+      // Verifica se jogador tem moves desbloqueados e aplica xGBoost
+      let usedSignatureMove: SignatureMoveType | null = null;
+      if (ctx.onBall) {
+        const progression = PlayerProgressionManager.getProgression(ctx.onBall.playerId);
+
+        // Filtra moves desbloqueados (apenas verifica se estão desbloqueados, sem validação de atributos)
+        const availableMoves = progression.unlockedMoves.filter((moveId) => {
+          // Verifica apenas se o move está desbloqueado
+          return progression.unlockedMoves.includes(moveId);
+        });
+
+        // 15% chance de usar signature move se disponível
+        if (availableMoves.length > 0 && Math.random() < 0.15) {
+          // Escolhe move aleatório dos disponíveis
+          usedSignatureMove = availableMoves[Math.floor(Math.random() * availableMoves.length)]!;
+          const move = SIGNATURE_MOVES[usedSignatureMove];
+
+          // Aplica xGBoost do move
+          weights.goal *= move.xGBoost;
+          weights.post_in *= move.xGBoost;
+
+          // Registra uso
+          PlayerProgressionManager.recordMoveUsage(ctx.onBall.playerId, usedSignatureMove);
+
+          // Adiciona ao log causal
+          L.push({
+            type: 'signature_move_used',
+            payload: {
+              playerId: ctx.onBall.playerId,
+              playerName: ctx.onBall.name,
+              moveId: usedSignatureMove,
+              moveName: move.name,
+              xGBoost: move.xGBoost,
+              minute: ctx.minute,
+            },
+          });
+        }
+      }
+
       // Cabeçada de escanteio: +18% xG se físico do cabeceador ≥ 75 (mandante alto);
       // sempre sobrescreve zona pra att e adiciona bônus fixo por bola parada.
       if (fromCorner) {
@@ -820,6 +882,20 @@ export function gameSpiritTick(
       const homeNumericRatio = Math.max(0.55, homeOnPitch / 11);
       weights.goal *= homeNumericRatio;
       weights.post_in *= homeNumericRatio;
+
+      // TACTICAL INTENSITY: Aplica modificadores baseados na tática escolhida
+      if (ctx.tacticalIntensity) {
+        const baseGoalChance = weights.goal / (weights.goal + weights.save + weights.block + weights.wide + weights.miss_far);
+        const modifiedChance = applyIntensityToShotChance(baseGoalChance, ctx.tacticalIntensity);
+        const intensityMultiplier = modifiedChance / Math.max(0.01, baseGoalChance);
+        weights.goal *= intensityMultiplier;
+        weights.post_in *= intensityMultiplier;
+
+        // Bônus defensivo reduz chances do adversário (aplicado em defesas)
+        const defenseBonus = applyIntensityToDefense(1.0, ctx.tacticalIntensity);
+        weights.save *= defenseBonus;
+        weights.block *= defenseBonus;
+      }
 
       // Radical transparency: agrega em 3 buckets pra barra de preview.
       const sumW = Math.max(

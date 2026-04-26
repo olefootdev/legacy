@@ -1,10 +1,11 @@
 /**
- * Barra de Momentum Visual — Fase 1 Quick Win #2
- * Mostra domínio/pressão em tempo real com feedback visual forte.
+ * Barra de Momentum Visual — Fase 1 Quick Win #2 + Melhoria #2 (Histórico e Tendências)
+ * Mostra domínio/pressão em tempo real com feedback visual forte + tendências.
  */
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingUp, Flame, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Flame, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMomentumHistory, type MomentumWithTrend } from '@/hooks/useMomentumHistory';
 
 export interface MomentumState {
   home: number; // 0-100
@@ -79,15 +80,41 @@ function getStreakLabel(streak: MomentumStreak): string {
   }
 }
 
+function TrendIndicator({ trend, gain }: { trend: MomentumWithTrend['homeTrend']; gain: number }) {
+  if (trend === 'stable') return null;
+
+  return (
+    <motion.div
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="flex items-center gap-0.5"
+    >
+      {trend === 'rising' ? (
+        <TrendingUp className="h-3 w-3 text-green-400" />
+      ) : (
+        <TrendingDown className="h-3 w-3 text-red-400" />
+      )}
+      <span className={cn(
+        'text-[9px] font-bold',
+        trend === 'rising' ? 'text-green-400' : 'text-red-400'
+      )}>
+        {gain > 0 ? '+' : ''}{gain}
+      </span>
+    </motion.div>
+  );
+}
+
 export function MomentumVisualBar({ momentum, homeShort, awayShort, className }: MomentumVisualBarProps) {
-  const homeStreak = getMomentumStreak(momentum.home);
-  const awayStreak = getMomentumStreak(momentum.away);
+  const momentumWithTrend = useMomentumHistory(momentum);
 
-  const homePercent = Math.max(5, Math.min(95, momentum.home));
-  const awayPercent = Math.max(5, Math.min(95, momentum.away));
+  const homeStreak = getMomentumStreak(momentumWithTrend.home);
+  const awayStreak = getMomentumStreak(momentumWithTrend.away);
 
-  const homeDominant = momentum.home > momentum.away + 20;
-  const awayDominant = momentum.away > momentum.home + 20;
+  const homePercent = Math.max(5, Math.min(95, momentumWithTrend.home));
+  const awayPercent = Math.max(5, Math.min(95, momentumWithTrend.away));
+
+  const homeDominant = momentumWithTrend.home > momentumWithTrend.away + 20;
+  const awayDominant = momentumWithTrend.away > momentumWithTrend.home + 20;
 
   return (
     <div className={cn('relative w-full', className)}>
@@ -97,6 +124,7 @@ export function MomentumVisualBar({ momentum, homeShort, awayShort, className }:
           <span className="font-display text-xs font-bold uppercase tracking-wider text-white/90">
             {homeShort}
           </span>
+          <TrendIndicator trend={momentumWithTrend.homeTrend} gain={momentumWithTrend.homeGain} />
           <AnimatePresence mode="wait">
             {homeStreak !== 'neutral' && (
               <motion.div
@@ -140,6 +168,7 @@ export function MomentumVisualBar({ momentum, homeShort, awayShort, className }:
               </motion.div>
             )}
           </AnimatePresence>
+          <TrendIndicator trend={momentumWithTrend.awayTrend} gain={momentumWithTrend.awayGain} />
           <span className="font-display text-xs font-bold uppercase tracking-wider text-white/90">
             {awayShort}
           </span>

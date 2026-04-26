@@ -108,6 +108,12 @@ export interface SpiritContext {
    * Falta perigosa pendente (cobrança direta). Próximo tick força `shot` tipo `placed`.
    */
   pendingFreeKickForSide?: PossessionSide | null;
+
+  /**
+   * Intensidade tática escolhida pelo jogador (Quick Match).
+   * Modifica chances de gol, fadiga, contra-ataques, pressão e defesa.
+   */
+  tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */

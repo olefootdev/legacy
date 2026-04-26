@@ -39,6 +39,7 @@ import { sanitizePlayerSeasonLedger } from '@/team/playerSeasonLedger';
 import { sanitizePlayerEvolutionTimeline } from '@/team/playerEvolutionTimeline';
 import { hydrateLegacyGenesisContract } from '@/playerContracts/playerContracts';
 import { defaultShopCatalog, normalizeShopCatalog } from './shopCatalog';
+import { generateMissingAgentProfiles } from '@/agents/agentProfileLoader';
 
 const KEY = 'olefoot-game-v1';
 

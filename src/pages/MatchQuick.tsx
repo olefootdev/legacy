@@ -84,12 +84,6 @@ interface SecondYellowAlert {
   slotId: string;
 }
 
-interface CoachMoment {
-  eventId: string;
-  homeScore: number;
-  awayScore: number;
-}
-
 /** Só bloqueia efeitos da partida rápida para jogos 3D / auto explícitos; `mode` ausente = legado (tratar como quick). */
 function isBlockingNonQuickMatch(live: { mode?: string }): boolean {
   return live.mode === 'auto';
@@ -264,10 +258,6 @@ export function MatchQuick() {
   const secondYellowAlertRef = useRef<SecondYellowAlert | null>(null);
   const secondYellowAutoRedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const injurySubAutoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [injurySubCountdown, setInjurySubCountdown] = useState(5);
-  const [coachMoment, setCoachMoment] = useState<CoachMoment | null>(null);
-  const coachMomentDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastCoachMomentEventIdRef = useRef<string | null>(null);
 
   // Assistente técnico
   const [assistantEvent, setAssistantEvent] = useState<AssistantEvent | null>(null);
@@ -408,10 +398,6 @@ export function MatchQuick() {
     setSecondYellowAlert(null);
     setYellowCountdown(8);
     if (secondYellowAutoRedRef.current) clearTimeout(secondYellowAutoRedRef.current);
-    setCoachMoment(null);
-    lastCoachMomentEventIdRef.current = null;
-    if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
-    setTacticalFeedback(null);
     lastEmotionalMinuteRef.current = -1;
     setAssistantEvent(null);
     shownAssistantEventsRef.current = new Set();
@@ -582,15 +568,11 @@ export function MatchQuick() {
             const takers = lm.homePlayers
               .filter(p => p.role !== 'gk')
               .sort((a, b) => {
-                const aFinishing = a.attributes?.finishing ?? 50;
-                const bFinishing = b.attributes?.finishing ?? 50;
+                const aFinishing = a.attributes?.finalizacao ?? 50;
+                const bFinishing = b.attributes?.finalizacao ?? 50;
                 return bFinishing - aFinishing;
               });
             if (takers.length >= 2) {
-              const moment = buildSetPieceMoment(ctx, takers);
-              dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
-            }
-          }
               const moment = buildSetPieceMoment(ctx, takers);
               dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
             }
@@ -988,18 +970,6 @@ export function MatchQuick() {
     });
   }, [live?.events, live?.phase, dispatch]);
 
-  // Coach Moment: abre painel não-bloqueante quando adversário marca
-  useEffect(() => {
-    if (!live || live.phase !== 'playing' || isBlockingNonQuickMatch(live)) return;
-    const top = live.events[0];
-    if (!top || top.kind !== 'goal_away') return;
-    if (lastCoachMomentEventIdRef.current === top.id) return;
-    lastCoachMomentEventIdRef.current = top.id;
-    if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
-    setCoachMoment({ eventId: top.id, homeScore: live.homeScore, awayScore: live.awayScore });
-    coachMomentDismissRef.current = window.setTimeout(() => setCoachMoment(null), 5_000);
-  }, [live?.events, live?.phase, live?.homeScore, live?.awayScore]);
-
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live)) return;
     if (live.phase !== 'postgame' || finalizedRef.current) return;
@@ -1085,18 +1055,21 @@ export function MatchQuick() {
   }, [live?.matchLineupBySlot, live?.homePlayers, live?.sentOffPlayerIds, playersById]);
 
   const awayForce = useMemo(() => {
+    if (!fixture?.opponent) return 72 * 11;
     const baseOvr = fixture.opponent.strength ?? 72;
     const count = (live?.awayRoster ?? []).length || 11;
     return baseOvr * count;
-  }, [live?.awayRoster, fixture.opponent.strength]);
+  }, [live?.awayRoster, fixture?.opponent?.strength]);
 
   const eventsChronological = useMemo(() => [...(live?.events ?? [])].reverse(), [live?.events]);
 
   const awayRoster = useMemo(
-    () => (live?.awayRoster ?? []).length > 0
-      ? live!.awayRoster!
-      : buildAwayQuickRoster(fixture.opponent, session),
-    [live?.awayRoster, fixture.opponent, session],
+    () => {
+      if ((live?.awayRoster ?? []).length > 0) return live!.awayRoster!;
+      if (!fixture?.opponent) return [];
+      return buildAwayQuickRoster(fixture.opponent, session);
+    },
+    [live?.awayRoster, fixture?.opponent, session],
   );
 
   const goalScorerOverlayProps = useMemo(() => {
@@ -1333,6 +1306,15 @@ export function MatchQuick() {
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
         <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">Amistoso online</p>
         <p className="max-w-sm text-sm text-gray-400">A validar convite aceite…</p>
+      </div>
+    );
+  }
+
+  // Verificação de segurança: aguarda inicialização do live match
+  if (!live) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
+        <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">A carregar partida...</p>
       </div>
     );
   }
@@ -1601,123 +1583,39 @@ export function MatchQuick() {
         )}
       </AnimatePresence>
 
+      {/* Second Yellow Alert - Notificação discreta no topo */}
       <AnimatePresence>
         {secondYellowAlert && live?.phase === 'playing' && (
           <motion.div
-            key="second-yellow-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[97] flex items-center justify-center p-4 bg-black/80"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="second-yellow-title"
+            key="second-yellow-notification"
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] w-full max-w-md px-4"
           >
-            <motion.div
-              initial={{ scale: 0.92, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 8 }}
-              transition={{ type: 'spring', stiffness: 480, damping: 32 }}
-              className="w-full max-w-sm border border-[var(--color-warning)] bg-deep-black overflow-hidden"
-              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 24px 64px rgba(0,0,0,0.65)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header amarelo (cor do cartão — semântico) */}
-              <div className="bg-[var(--color-warning)] px-5 py-4 flex items-center gap-3">
+            <div className="bg-amber-500/95 backdrop-blur-sm border-2 border-amber-400 rounded-lg p-3 shadow-lg">
+              <div className="flex items-center gap-3">
                 <div className="flex gap-1 shrink-0">
-                  <span className="inline-block w-5 h-7 rounded-[2px] bg-amber-500 shadow-inner" />
-                  <span className="inline-block w-5 h-7 rounded-[2px] bg-amber-500 shadow-inner" />
+                  <span className="inline-block w-3 h-4 rounded-[2px] bg-amber-600" />
+                  <span className="inline-block w-3 h-4 rounded-[2px] bg-amber-600" />
                 </div>
-                <div className="min-w-0">
-                  <p
-                    className="text-amber-900 uppercase"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      letterSpacing: '0.22em',
-                    }}
-                  >
-                    Segundo amarelo
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                    Segundo Amarelo
                   </p>
-                  <p
-                    className="text-black uppercase truncate"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '18px',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em',
-                      lineHeight: 1.05,
-                    }}
-                  >
-                    {secondYellowAlert.playerNum} {secondYellowAlert.playerName}
+                  <p className="text-sm font-black text-black truncate">
+                    #{secondYellowAlert.playerNum} {secondYellowAlert.playerName}
                   </p>
                 </div>
-              </div>
-
-              {/* Body */}
-              <div className="px-5 pt-5 pb-5 space-y-4">
-                <p
-                  className="italic text-white/85"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontSize: '15px',
-                    lineHeight: 1.45,
-                  }}
+                <button
+                  onClick={handleYellowSubstituteNow}
+                  className="shrink-0 px-3 py-1.5 bg-black text-amber-400 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-900 transition-colors"
                 >
-                  VAR a rever o lance. Tens{' '}
-                  <span
-                    className="not-italic text-[var(--color-warning)] tabular-nums"
-                    style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '18px' }}
-                  >
-                    {yellowCountdown}s
-                  </span>{' '}
-                  pra decidir — se não agires, vem o vermelho.
-                </p>
-
-                {/* Countdown bar */}
-                <div className="w-full h-[3px] bg-white/10 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-[var(--color-warning)]"
-                    animate={{ width: `${(yellowCountdown / 5) * 100}%` }}
-                    transition={{ duration: 0.2, ease: 'linear' }}
-                  />
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleYellowSubstituteNow}
-                    className="w-full py-3 bg-[var(--color-warning)] hover:bg-white text-black transition-colors"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      letterSpacing: '0.2em',
-                      textTransform: 'uppercase',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
-                  >
-                    Substituir agora
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleYellowWaitVar}
-                    className="w-full py-3 border border-[var(--color-border)] bg-deep-black text-white/75 hover:border-[var(--color-warning)] hover:text-[var(--color-warning)] transition-colors"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      letterSpacing: '0.2em',
-                      textTransform: 'uppercase',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
-                  >
-                    Aguardar VAR
-                  </button>
-                </div>
+                  Substituir
+                </button>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1794,7 +1692,7 @@ export function MatchQuick() {
               awayShort={live.awayShort}
               homeName={live.homeName}
               awayName={live.awayName}
-              awaySeed={fixture.opponent.id}
+              awaySeed={fixture?.opponent?.id ?? 'away'}
               clock={matchClock}
               scoreboardCountdownSec={null}
               rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
@@ -1966,6 +1864,20 @@ export function MatchQuick() {
                 homeColor="#FDE047"
                 awayColor="#FFFFFF"
               />
+
+              {/* ─── Sprint 2: Controles de Intensidade Tática (logo abaixo do momentum) ─────────────────── */}
+              {live?.phase === 'playing' && !halfTimeUi && !live.activeInteractiveMoment && !summary && (
+                <div className="mt-4">
+                  <QuickTacticalIntensityControls
+                    current={quickMatchIntensity?.current ?? 'balanced'}
+                    onChange={(level) => dispatch({ type: 'SET_TACTICAL_INTENSITY', level })}
+                    disabled={false}
+                  />
+                  <div className="mt-2">
+                    <QuickTacticalIntensityInfo level={quickMatchIntensity?.current ?? 'balanced'} />
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
           {quickPreStart === null ? (
@@ -2363,7 +2275,7 @@ export function MatchQuick() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    {live.awayName ?? fixture.opponent.name}
+                    {live.awayName ?? fixture?.opponent?.name ?? 'Visitante'}
                   </span>
                 </div>
                 <span
@@ -2652,109 +2564,6 @@ export function MatchQuick() {
         </motion.div>
       )}
 
-      {/* Coach Moment — painel não-bloqueante, desliza do fundo */}
-      <AnimatePresence>
-        {coachMoment && live?.phase === 'playing' && !summary && (
-          <motion.div
-            key={`coach-moment-${coachMoment.eventId}`}
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            className="fixed bottom-[5.5rem] left-0 right-0 z-[80] p-3 sm:p-4 md:bottom-4"
-            aria-live="polite"
-          >
-            <div
-              className="mx-auto max-w-lg bg-deep-black border border-[var(--color-border)] overflow-hidden"
-              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 -8px 40px rgba(0,0,0,0.95)' }}
-            >
-              {/* Header — scoreboard tape style */}
-              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-dark-gray border-b border-[var(--color-border)]">
-                <div className="flex items-center gap-2">
-                  <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 live-dot" />
-                  <p
-                    className="text-neon-yellow uppercase"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      letterSpacing: '0.22em',
-                    }}
-                  >
-                    Momento do treinador
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <p
-                    className="text-white/55 truncate"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '10px',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {coachMoment.awayScore > coachMoment.homeScore
-                      ? `A perder ${coachMoment.homeScore}–${coachMoment.awayScore}`
-                      : coachMoment.awayScore === coachMoment.homeScore
-                        ? `Empate ${coachMoment.homeScore}–${coachMoment.awayScore}`
-                        : `${coachMoment.homeScore}–${coachMoment.awayScore}`}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={dismissCoachMoment}
-                    className="grid h-7 w-7 place-items-center text-white/45 hover:text-neon-yellow transition-colors"
-                    style={{ borderRadius: 'var(--radius-sm)' }}
-                    aria-label="Fechar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Ações */}
-              <div className="px-4 py-3 space-y-1.5">
-                <p className="text-[10px] text-zinc-400 mb-2">Escolhe a reação tática — a partida continua:</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => applyCoachAction('PRESSAO_ALTA')}
-                    className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-red-950 hover:bg-red-900 border border-red-700 text-white transition-colors text-center"
-                  >
-                    <span className="text-lg leading-none">🔥</span>
-                    <span className="font-display font-black text-[10px] uppercase tracking-wide leading-tight">
-                      Pressão alta
-                    </span>
-                    <span className="text-[9px] text-red-300/80">+agressividade, +risco</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyCoachAction('TRANSICAO_RAPIDA')}
-                    className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-blue-950 hover:bg-blue-900 border border-blue-700 text-white transition-colors text-center"
-                  >
-                    <span className="text-lg leading-none">⚡</span>
-                    <span className="font-display font-black text-[10px] uppercase tracking-wide leading-tight">
-                      Transição rápida
-                    </span>
-                    <span className="text-[9px] text-blue-300/80">contra-ataque direto</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyCoachAction('JOGO_DIRETO')}
-                    className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-white transition-colors text-center"
-                  >
-                    <span className="text-lg leading-none">🎯</span>
-                    <span className="font-display font-black text-[10px] uppercase tracking-wide leading-tight">
-                      Jogo direto
-                    </span>
-                    <span className="text-[9px] text-emerald-300/80">vertical, segunda bola</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ─── Assistente Técnico ─────────────────────────────────────────── */}
       <AnimatePresence>
         {assistantEvent && !summary && (
@@ -2763,7 +2572,8 @@ export function MatchQuick() {
             event={assistantEvent}
             onDismiss={() => setAssistantEvent(null)}
             onApplyPreset={(presetId) => {
-              applyCoachAction(presetId);
+              const feedText = `Ajuste tático aplicado: ${presetId}`;
+              dispatch({ type: 'APPLY_COACH_ACTION', presetId, feedText });
               setAssistantEvent(null);
             }}
             onFormationChange={(formation) => {
@@ -2820,20 +2630,6 @@ export function MatchQuick() {
         </div>
       )}
 
-      {/* ─── Sprint 2: Controles de Intensidade Tática ─────────────────── */}
-      {live?.phase === 'playing' && !halfTimeUi && !live.activeInteractiveMoment && !summary && (
-        <div className="fixed bottom-32 left-4 right-4 z-10">
-          <QuickTacticalIntensityControls
-            current={quickMatchIntensity?.current ?? 'balanced'}
-            onChange={(level) => dispatch({ type: 'SET_TACTICAL_INTENSITY', level })}
-            disabled={false}
-          />
-          <div className="mt-2">
-            <QuickTacticalIntensityInfo level={quickMatchIntensity?.current ?? 'balanced'} />
-          </div>
-        </div>
-      )}
-
       {summary && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
           {/* Resumo editorial — eyebrow + score + frase */}
@@ -2851,7 +2647,7 @@ export function MatchQuick() {
               awayName={summary.awayName}
               homeScore={summary.homeScore}
               awayScore={summary.awayScore}
-              awaySeed={fixture.opponent.id}
+              awaySeed={fixture?.opponent?.id ?? 'away'}
               className="text-2xl sm:text-3xl"
             />
             <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
