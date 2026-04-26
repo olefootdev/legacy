@@ -1,0 +1,13 @@
+{
+  "name": "login-hero",
+  "description": "Background hero da tela de login — Cinematográfico Olefoot",
+  "prompt": "cinematic masterpiece, epic wide angle establishing shot of a futuristic-retro\n    football stadium at twilight, merging past and future aesthetics, empty pristine emerald\n    green grass field with glowing neon yellow (#FBE100) painted lines in sharp focus foreground,\n    holographic stadium architecture with brutalist concrete mixed with sleek LED panels,\n    dramatic golden hour sunlight breaking through storm clouds creating god rays and volumetric\n    lighting, deep shadows with rich blacks (#0A0A0A), warm amber and electric yellow color\n    grading, atmospheric haze and fog, blade runner meets classic football nostalgia,\n    anamorphic lens flares, shallow depth of field with cinematic bokeh, moody and epic\n    atmosphere, shot on ARRI Alexa 65, 8K resolution, photorealistic, ultra detailed textures,\n    film grain, color science perfection",
+  "negativePrompt": "people, players, crowd, fans, spectators, text, watermark, logos, brands,\n    advertisements, low quality, blurry, distorted, oversaturated, cartoonish, artificial,\n    plastic, daytime harsh light, busy composition, amateur photography, digital artifacts,\n    noise, unrealistic colors, flat lighting, boring composition, modern generic stadium,\n    bright daylight, cheerful atmosphere",
+  "style": "photo",
+  "size": "wide",
+  "dimensions": {
+    "width": 1920,
+    "height": 1080
+  },
+  "generatedAt": "2026-04-26T17:06:49.669Z"
+}

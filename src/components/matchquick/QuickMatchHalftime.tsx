@@ -39,7 +39,7 @@ export function QuickMatchHalftime({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9998] bg-black/92 backdrop-blur-md flex items-center justify-center px-4"
+      className="fixed inset-0 z-[9998] flex items-center justify-center bg-deep-black/95 backdrop-blur-md px-4"
     >
       <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
         {/* Eyebrow */}
@@ -122,28 +122,28 @@ export function QuickMatchHalftime({
         {/* Stats do 1º tempo */}
         {stats.length > 0 && (
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {stats.map((s, i) => (
+            {stats.map((s) => (
               <div
                 key={s.label}
-                className="bg-[var(--color-card)] border border-white/8 px-3 py-3 sm:px-4 sm:py-4 text-center"
+                className="border border-white/10 bg-black/60 px-3 py-3 text-center backdrop-blur-sm sm:px-4 sm:py-4"
                 style={{ borderRadius: 'var(--radius-sm)' }}
               >
                 <p
-                  className="text-white/45 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium mb-1.5"
+                  className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/45 sm:text-[10px]"
                   style={{ fontFamily: 'var(--font-ui)' }}
                 >
                   {s.label}
                 </p>
                 <div className="flex items-center justify-center gap-2">
                   <span
-                    className="text-neon-yellow tabular-nums leading-none font-display font-black"
+                    className="font-display font-black leading-none tabular-nums text-neon-yellow"
                     style={{ fontSize: 'clamp(18px, 3vw, 24px)' }}
                   >
                     {s.homeValue}
                   </span>
-                  <span className="text-white/25 text-xs">×</span>
+                  <span className="text-xs text-white/25">×</span>
                   <span
-                    className="text-white tabular-nums leading-none font-display font-black"
+                    className="font-display font-black leading-none tabular-nums text-white"
                     style={{ fontSize: 'clamp(18px, 3vw, 24px)' }}
                   >
                     {s.awayValue}
@@ -159,7 +159,7 @@ export function QuickMatchHalftime({
           <button
             type="button"
             onClick={onForceEnd}
-            className="inline-flex items-center gap-2 bg-neon-yellow text-black px-6 py-3 hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+            className="inline-flex items-center gap-2 border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-3 text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98]"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '12px',
@@ -174,10 +174,10 @@ export function QuickMatchHalftime({
           </button>
 
           <p
-            className="text-white/45 text-xs"
+            className="text-xs text-white/45"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
-            Retoma automaticamente em <span className="text-neon-yellow font-bold tabular-nums">{countdown}s</span>
+            Retoma automaticamente em <span className="font-bold tabular-nums text-neon-yellow">{countdown}s</span>
           </p>
         </div>
       </div>

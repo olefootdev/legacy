@@ -685,7 +685,10 @@ export function Home() {
                   },
                   stats: [
                     { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
-                    { label: 'Forma', value: '—' },
+                    { label: 'Vitórias', value: '0' },
+                    { label: 'Empates', value: '0' },
+                    { label: 'Derrotas', value: '0' },
+                    { label: 'Ranking', value: '—' },
                   ],
                   highlight: {
                     name: homeHighlight.name,
@@ -753,7 +756,6 @@ export function Home() {
                   short: homeShort,
                   name: lastMatch.home || club.name,
                   score: lastMatch.scoreHome,
-                  form: { v: wins, e: draws, d: losses },
                   crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
                 },
                 away: {
@@ -765,6 +767,9 @@ export function Home() {
                 stats: [
                   { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
                   { label: 'Ranking', value: rankingChangeStr },
+                  { label: 'Vitórias', value: `${wins}` },
+                  { label: 'Empates', value: `${draws}` },
+                  { label: 'Derrotas', value: `${losses}` },
                 ],
                 highlight: {
                   name: mvpName,

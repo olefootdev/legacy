@@ -320,38 +320,6 @@ export function Team() {
               <Sparkles className="h-3.5 w-3.5" />
               Criar jogador
             </button>
-            <button
-              type="button"
-              onClick={() => navigate('/training/free-kicks')}
-              className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Target className="h-3.5 w-3.5" />
-              Treino Faltas
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/training/shooting-drill')}
-              className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Crosshair className="h-3.5 w-3.5" />
-              Treino Finalizações
-            </button>
             {favoriteRealTeam?.name ? (
               <Link
                 to="/ranking?tab=nacional&heart=1"

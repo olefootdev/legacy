@@ -319,7 +319,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-10 sm:mb-14">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 md:gap-3 mb-10 sm:mb-14">
           {data.stats.map((s, i) => {
             return (
               <article key={s.label} className={statsBg(i)}>
@@ -328,12 +328,12 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   style={{
                     fontFamily: 'var(--font-serif-hero)',
                     fontWeight: 700,
-                    fontSize: 'clamp(28px, 4.8vw, 44px)',
+                    fontSize: 'clamp(20px, 4.2vw, 44px)',
                   }}
                 >
                   {s.value}
                 </p>
-                <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
+                <p className="mt-1 sm:mt-1.5 text-white/65 uppercase tracking-[0.12em] sm:tracking-[0.18em] text-[8px] sm:text-[9px] md:text-[10px] font-medium">
                   {s.label}
                 </p>
               </article>

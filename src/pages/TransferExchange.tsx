@@ -115,7 +115,7 @@ export function TransferExchange() {
             letterSpacing: '0.22em',
           }}
         >
-          Olé Football · Exchange
+          OLE Football · Exchange
         </span>
       </div>
 

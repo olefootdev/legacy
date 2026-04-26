@@ -64,7 +64,7 @@ export function TeamMeuTimeHeader({
               className="uppercase font-semibold"
               style={{ fontSize: '10px', letterSpacing: '0.22em' }}
             >
-              Olé Football · Meu Time
+              OLE Football · Meu Time
             </span>
           </div>
           {/* Headline — Moret italic case mixto (assinatura /legend) */}

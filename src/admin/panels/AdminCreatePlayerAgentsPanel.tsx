@@ -96,6 +96,7 @@ export function AdminCreatePlayerAgentsPanel() {
   const [stage, setStage] = useState<Stage>('scout');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   // Upload de fotos (moldura + token).
   const [cardFile, setCardFile] = useState<File | null>(null);
@@ -110,8 +111,25 @@ export function AdminCreatePlayerAgentsPanel() {
   const runStage = async (which: Stage) => {
     setBusy(true);
     setError(null);
+    setDuplicateWarning(null);
     try {
       if (which === 'scout') {
+        // Validação de duplicatas no Supabase
+        const sb = getSupabase();
+        if (sb) {
+          const searchName = name.trim().toLowerCase();
+          const { data } = await sb
+            .from('genesis_market_players')
+            .select('name, collection_id')
+            .ilike('name', `%${searchName}%`)
+            .limit(5);
+
+          if (data && data.length > 0) {
+            const matches = data.map((p) => `${p.name} (${p.collection_id})`).join(', ');
+            setDuplicateWarning(`⚠️ Jogadores similares encontrados: ${matches}`);
+          }
+        }
+
         const r = await runScoutAgent({
           name: name.trim(),
           nickname: nickname.trim() || undefined,
@@ -336,6 +354,12 @@ export function AdminCreatePlayerAgentsPanel() {
         </div>
       ) : null}
 
+      {duplicateWarning ? (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+          {duplicateWarning}
+        </div>
+      ) : null}
+
       {/* ─── Etapa 1: Scout ──────────────────────────── */}
       <StageCard
         Icon={User}
@@ -347,6 +371,18 @@ export function AdminCreatePlayerAgentsPanel() {
         busy={busy && stage === 'scout'}
         disabled={!name.trim() || busy}
         payload={research}
+        extraInfo={
+          research?.rarity_preview ? (
+            <div className="mt-2 rounded border border-cyan-500/30 bg-cyan-500/5 px-2 py-1.5">
+              <p className="text-[9px] font-bold uppercase text-cyan-300">
+                Preview raridade: {research.rarity_preview.toUpperCase()}
+              </p>
+              {research.rarity_reasoning ? (
+                <p className="mt-0.5 text-[8px] text-white/60">{research.rarity_reasoning}</p>
+              ) : null}
+            </div>
+          ) : null
+        }
       />
 
       {/* ─── Etapa 2: Atributos ────────────────────── */}
@@ -543,7 +579,7 @@ export function AdminCreatePlayerAgentsPanel() {
 }
 
 function StageCard({
-  Icon, title, subtitle, active, done, onRun, busy, disabled, payload,
+  Icon, title, subtitle, active, done, onRun, busy, disabled, payload, extraInfo,
 }: {
   Icon: typeof User;
   title: string;
@@ -554,6 +590,7 @@ function StageCard({
   busy: boolean;
   disabled: boolean;
   payload: unknown;
+  extraInfo?: JSX.Element | null;
 }) {
   const [show, setShow] = useState(true);
   return (
@@ -601,6 +638,7 @@ function StageCard({
           </button>
         </div>
       </div>
+      {extraInfo}
       {payload && show ? (
         <pre className="max-h-80 overflow-auto rounded border border-white/10 bg-black/50 p-2 text-[10px] text-white/80">
 {JSON.stringify(payload, null, 2)}

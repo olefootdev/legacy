@@ -194,6 +194,8 @@ export interface LiveMatchSnapshot {
   homeImpactLedger?: ImpactLedgerEntry[];
   /** Capitão — amplifica só fatores individuais (ver `impactRules.ts`). */
   homeCaptainPlayerId?: string;
+  /** Timestamp de quando as forças dos times foram recalculadas (após substituição). */
+  teamStrengthRecalculatedAt?: number;
 
   /** Scout scoring acumulado por jogador (casa) durante a partida. */
   scoutTallies?: Record<string, import('@/gamespirit/scoutScoring').ScoutTally>;

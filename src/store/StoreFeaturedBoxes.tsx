@@ -57,8 +57,12 @@ function formatBro(cents: number): string {
 export function StoreFeaturedBoxes({
   title, subtitle, items, onSelect, variant = 'premium',
 }: StoreFeaturedBoxesProps) {
-  if (items.length === 0) return null;
-  const v = VARIANT_STYLES[variant];
+  // Proteção contra dados inválidos
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  const v = VARIANT_STYLES[variant] ?? VARIANT_STYLES.premium;
   const SHOWN_LIMIT = 6;
   const shown = items.slice(0, SHOWN_LIMIT);
   const moreCount = Math.max(0, items.length - SHOWN_LIMIT);

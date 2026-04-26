@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste Free Kicks</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      background: #2a2a2a;
+    }
+    .success { border-left: 4px solid #22c55e; }
+    .error { border-left: 4px solid #ef4444; }
+    .warning { border-left: 4px solid #f59e0b; }
+    button {
+      background: #eab308;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover { background: #facc15; }
+    pre {
+      background: #0a0a0a;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: 2px solid #eab308;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Teste do Modo Free Kicks</h1>
+
+  <div id="results"></div>
+
+  <button onclick="testRoute()">1. Testar Rota</button>
+  <button onclick="testGameState()">2. Verificar Estado do Jogo</button>
+  <button onclick="openInIframe()">3. Abrir no iFrame</button>
+  <button onclick="openInNewTab()">4. Abrir em Nova Aba</button>
+
+  <div id="iframe-container"></div>
+
+  <script>
+    const BASE_URL = 'http://localhost:5182';
+    const results = document.getElementById('results');
+
+    function log(message, type = 'status') {
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+      div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong><br>${message}`;
+      results.insertBefore(div, results.firstChild);
+    }
+
+    async function testRoute() {
+      log('Testando rota /training/free-kicks...', 'warning');
+      try {
+        const response = await fetch(`${BASE_URL}/training/free-kicks`);
+        if (response.ok) {
+          const html = await response.text();
+          const hasReact = html.includes('root') || html.includes('vite');
+          log(`✅ Rota acessível (${response.status})<br>HTML contém React/Vite: ${hasReact}`, 'success');
+        } else {
+          log(`❌ Erro HTTP ${response.status}`, 'error');
+        }
+      } catch (err) {
+        log(`❌ Erro de rede: ${err.message}`, 'error');
+      }
+    }
+
+    async function testGameState() {
+      log('Verificando localStorage do jogo...', 'warning');
+      try {
+        // Simula verificação do estado
+        const mockState = {
+          players: {
+            'p1': { id: 'p1', name: 'Cristiano', attrs: { finalizacao: 95, passe: 85 }, outForMatches: 0 },
+            'p2': { id: 'p2', name: 'Messi', attrs: { finalizacao: 94, passe: 92 }, outForMatches: 0 }
+          }
+        };
+        log(`✅ Estado mockado criado:<br><pre>${JSON.stringify(mockState, null, 2)}</pre>`, 'success');
+      } catch (err) {
+        log(`❌ Erro: ${err.message}`, 'error');
+      }
+    }
+
+    function openInIframe() {
+      log('Abrindo no iFrame...', 'warning');
+      const container = document.getElementById('iframe-container');
+      container.innerHTML = `<iframe src="${BASE_URL}/training/free-kicks"></iframe>`;
+      log('✅ iFrame carregado. Se aparecer tela preta, verifique o console do navegador (F12)', 'success');
+    }
+
+    function openInNewTab() {
+      log('Abrindo em nova aba...', 'warning');
+      window.open(`${BASE_URL}/training/free-kicks`, '_blank');
+      log('✅ Nova aba aberta', 'success');
+    }
+
+    // Auto-test ao carregar
+    window.onload = () => {
+      log('🚀 Teste iniciado. Clique nos botões para diagnosticar.', 'warning');
+      testRoute();
+    };
+  </script>
+</body>
+</html>

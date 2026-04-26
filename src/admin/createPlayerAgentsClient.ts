@@ -21,6 +21,9 @@ export interface ScoutResearch {
   personality_traits: string[];
   confidence: 'high' | 'medium' | 'low';
   sources_used: string[];
+  /** Preview de raridade baseado em era + títulos (calculado no agente 1) */
+  rarity_preview?: AdminRarityTier;
+  rarity_reasoning?: string;
 }
 
 export type AdminRarityTier = 'premium' | 'gol' | 'rare' | 'ultra_rare' | 'champion' | 'legend' | 'epic';

@@ -21,6 +21,7 @@ const FREEPIK_API_URL = 'https://api.freepik.com/v1/ai/text-to-image';
 interface FreepikGenerateParams {
   prompt: string;
   negative_prompt?: string;
+  model?: 'flux' | 'flux-realism' | 'mystic' | 'seedream';
   styling?: {
     style?: 'photo' | 'digital-art' | '3d' | 'painting' | 'vector' | 'anime';
     color?: 'vibrant' | 'neutral' | 'pastel' | 'dark' | 'light';
@@ -40,13 +41,19 @@ interface FreepikResponse {
 }
 
 async function generateImageFreepik(params: FreepikGenerateParams): Promise<Buffer> {
+  // Remover parâmetro model (não suportado pela API)
+  // A API usa automaticamente o melhor modelo disponível
+  const { model, ...payload } = params;
+
+  console.log(`   🎬 Usando modelo padrão Freepik (alta qualidade)`);
+
   const response = await fetch(FREEPIK_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-freepik-api-key': FREEPIK_API_KEY,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -103,16 +110,22 @@ const ASSETS_CATALOG: AssetConfig[] = [
   // ========================================================================
   {
     name: 'login-hero',
-    description: 'Background hero da tela de login',
-    prompt: `cinematic wide angle shot of empty modern football stadium at golden hour,
-    pristine green grass field with sharp white painted lines in foreground,
-    blurred stadium stands in background, dramatic warm sunlight rays piercing through
-    stadium architecture creating lens flares, professional sports photography,
-    shallow depth of field, bokeh effect, moody atmospheric lighting with deep blacks
-    and warm golden highlights, 8k resolution, photorealistic, ultra detailed`,
-    negativePrompt: `people, players, crowd, fans, text, watermark, logos, brands,
-    low quality, blurry, distorted, oversaturated, cartoonish, artificial, plastic,
-    daytime harsh light, busy composition`,
+    description: 'Background hero da tela de login — Cinematográfico Olefoot',
+    prompt: `cinematic masterpiece, epic wide angle establishing shot of a futuristic-retro
+    football stadium at twilight, merging past and future aesthetics, empty pristine emerald
+    green grass field with glowing neon yellow (#FBE100) painted lines in sharp focus foreground,
+    holographic stadium architecture with brutalist concrete mixed with sleek LED panels,
+    dramatic golden hour sunlight breaking through storm clouds creating god rays and volumetric
+    lighting, deep shadows with rich blacks (#0A0A0A), warm amber and electric yellow color
+    grading, atmospheric haze and fog, blade runner meets classic football nostalgia,
+    anamorphic lens flares, shallow depth of field with cinematic bokeh, moody and epic
+    atmosphere, shot on ARRI Alexa 65, 8K resolution, photorealistic, ultra detailed textures,
+    film grain, color science perfection`,
+    negativePrompt: `people, players, crowd, fans, spectators, text, watermark, logos, brands,
+    advertisements, low quality, blurry, distorted, oversaturated, cartoonish, artificial,
+    plastic, daytime harsh light, busy composition, amateur photography, digital artifacts,
+    noise, unrealistic colors, flat lighting, boring composition, modern generic stadium,
+    bright daylight, cheerful atmosphere`,
     style: 'photo',
     size: 'wide',
     width: 1920,
@@ -387,7 +400,7 @@ const ASSETS_CATALOG: AssetConfig[] = [
 // ============================================================================
 
 /**
- * Adiciona logo Olefoot na imagem
+ * Adiciona logo Olefoot na imagem (usa logos da pasta image-generation)
  */
 async function addLogoWatermark(
   imageBuffer: Buffer,
@@ -395,7 +408,13 @@ async function addLogoWatermark(
   position: string = 'top-left',
   size: number = 120,
 ): Promise<Buffer> {
-  const logo = await sharp(logoPath)
+  // Usar logo amarelo da pasta image-generation (melhor qualidade)
+  const logoImageGenPath = path.join(process.cwd(), 'public/image-generation/olefoot-brand-yellow.png');
+  const finalLogoPath = await fs.access(logoImageGenPath).then(() => logoImageGenPath).catch(() => logoPath);
+
+  console.log(`   🏷️  Logo: ${path.basename(finalLogoPath)}`);
+
+  const logo = await sharp(finalLogoPath)
     .resize(size, null, { fit: 'inside' })
     .toBuffer();
 

@@ -54,6 +54,7 @@ import { AdminBroadcastPanel } from './panels/AdminBroadcastPanel';
 import { AdminLaunchPanel } from './panels/AdminLaunchPanel';
 import { AdminPlatformConfigPanel } from './panels/AdminPlatformConfigPanel';
 import { AdminAgentsPanel } from './AdminAgentsPanel';
+import { AdminCreativePanel } from './AdminCreativePanel';
 
 type TabId =
   | 'overview'
@@ -64,6 +65,7 @@ type TabId =
   | 'jogadores'
   | 'ia'
   | 'leagues'
+  | 'creative'
   | 'sistema';
 
 type SubTabId =
@@ -130,6 +132,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     ],
   },
   { id: 'leagues', label: 'Ligas', icon: Trophy },
+  { id: 'creative', label: 'Creative', icon: Brush },
   {
     id: 'sistema',
     label: 'Sistema',
@@ -339,6 +342,7 @@ export function AdminDashboard() {
               {tab === 'usuarios' ? <AdminUsuariosPanel /> : null}
               {tab === 'audit' ? <AdminAuditLogPanel /> : null}
               {tab === 'leagues' ? <AdminLeaguesPanel /> : null}
+              {tab === 'creative' ? <AdminCreativePanel /> : null}
 
               {/* Economia group */}
               {tab === 'economia' && subTab === 'financeiro' ? <AdminFinanceiroPanel /> : null}

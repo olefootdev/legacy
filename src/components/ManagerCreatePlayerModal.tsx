@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, X, Sparkles } from 'lucide-react';
+import { ChevronLeft, X, Sparkles, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PlayerAttributes, PlayerBehavior, PlayerStrongFoot } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
@@ -39,6 +39,7 @@ import {
   skinTonePromptFromCatalogId,
   skinToneSelectLabel,
 } from '@/entities/managerProspectSkinTones';
+import { APPEARANCE_PRESETS, getPresetById } from '@/entities/managerProspectAppearancePresets';
 
 const POSITIONS = ['GOL', 'ZAG', 'LE', 'LD', 'VOL', 'MC', 'PE', 'PD', 'ATA'] as const;
 const NATIONS = [
@@ -146,9 +147,31 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const [originTags, setOriginTags] = useState<string[]>([]);
   const [originText, setOriginText] = useState('');
   const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(10);
+  const [selectedPreset, setSelectedPreset] = useState('');
 
   /** Corpo com scroll do modal — repõe-se ao topo no passo 2 (Afinar) para não saltar os sliders. */
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
+
+  const applyAppearancePreset = useCallback((presetId: string) => {
+    const preset = getPresetById(presetId);
+    if (!preset) return;
+
+    setPortraitStyleRegion(preset.region);
+    setSkinTone(preset.skinToneId);
+    setEyeColor(preset.eyeColor);
+    setOriginTags(preset.originTags);
+    setOriginText(preset.originTextTemplate);
+    setSelectedPreset(presetId);
+
+    // Aplicar cabelo
+    if (preset.hairStyleId === 'careca') {
+      setHairBald(true);
+      setHairChoice('');
+    } else {
+      setHairBald(false);
+      setHairChoice(preset.hairStyleId);
+    }
+  }, []);
 
   const resetForm = useCallback(() => {
     setStep('identity');
@@ -168,6 +191,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     setOriginTags([]);
     setOriginText('');
     setContractMatches(10);
+    setSelectedPreset('');
   }, []);
 
   useEffect(() => {
@@ -489,12 +513,44 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   </div>
 
                   <div className="space-y-3 rounded-lg border border-neon-yellow/25 bg-neon-yellow/[0.04] p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
-                      Origem para o retrato (obrigatório)
-                    </p>
-                    <p className="text-[9px] leading-relaxed text-gray-500">
-                      Guia o desenho do rosto; não muda a nacionalidade da ficha. Ex.: «Brasil, raízes japonesas».
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+                          Origem para o retrato (obrigatório)
+                        </p>
+                        <p className="text-[9px] leading-relaxed text-gray-500">
+                          Guia o desenho do rosto; não muda a nacionalidade da ficha.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Presets de aparência */}
+                    <div className="space-y-2 rounded-lg border border-white/10 bg-black/30 p-2">
+                      <div className="flex items-center gap-1.5">
+                        <Wand2 className="h-3 w-3 text-neon-yellow" />
+                        <span className="text-[9px] font-bold uppercase text-white/80">Presets rápidos</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {APPEARANCE_PRESETS.slice(0, 6).map((preset) => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => applyAppearancePreset(preset.id)}
+                            className={cn(
+                              'rounded border px-2 py-1.5 text-left text-[9px] font-bold transition-colors',
+                              selectedPreset === preset.id
+                                ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow'
+                                : 'border-white/15 text-white/70 hover:border-white/30 hover:bg-white/5',
+                            )}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[8px] text-gray-600">
+                        Aplica origem, aparência e região automaticamente
+                      </p>
+                    </div>
                     <label className="block space-y-1">
                       <span className="text-[9px] font-bold uppercase text-gray-500">Estilo do retrato</span>
                       <select

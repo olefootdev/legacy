@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, Search, Star, Trophy, TrendingUp, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -159,22 +159,6 @@ export function RankingFull() {
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-6 pb-8">
       <BackButton to="/competicao" label="Competição" />
-      <div className="flex items-center gap-3">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-          }}
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          Olefoot
-        </Link>
-      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}

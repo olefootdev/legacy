@@ -255,6 +255,7 @@ export function MatchQuick() {
   const [halfTimeTick, setHalfTimeTick] = useState(3);
   const [secondYellowAlert, setSecondYellowAlert] = useState<SecondYellowAlert | null>(null);
   const [yellowCountdown, setYellowCountdown] = useState(8);
+  const [injurySubCountdown, setInjurySubCountdown] = useState(5);
   const secondYellowAlertRef = useRef<SecondYellowAlert | null>(null);
   const secondYellowAutoRedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const injurySubAutoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -276,6 +277,9 @@ export function MatchQuick() {
   const { nearMissEvent, triggerNearMiss, clearNearMiss } = useNearMissDetection();
   const [showNearMissMotivation, setShowNearMissMotivation] = useState(false);
   const lastShotPreviewRef = useRef<string | null>(null);
+
+  // Interactive Moment auto-timeout
+  const interactiveMomentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // sync ref for use inside interval
   useEffect(() => { secondYellowAlertRef.current = secondYellowAlert; }, [secondYellowAlert]);
@@ -473,7 +477,7 @@ export function MatchQuick() {
             setAssistantEvent({ kind: 'min15_check' });
           }
 
-          // Min 25–40 — Risco de lesão
+          // Min 25–40 — Risco de lesão (IA decide automaticamente)
           if (lm.minute >= 25 && lm.minute <= 40 && !shown.has('injury_warning')) {
             const pitchPlayers = lm.homePlayers ?? [];
             const outPlayer = pitchPlayers.find(p => p.fatigue >= 70);
@@ -485,18 +489,56 @@ export function MatchQuick() {
               );
               shown.add('injury_warning');
               lastAssistantShownMsRef.current = Date.now();
-              setAssistantEvent({
-                kind: 'injury_warning',
-                injuryOutPlayer: {
-                  name: outPlayer.name,
-                  pos: outPlayer.role ?? '—',
-                  fatigue: outPlayer.fatigue,
-                  playerId: outPlayer.playerId,
-                },
-                suggestedSubPlayer: benchPlayer
-                  ? { name: benchPlayer.name, pos: benchPlayer.pos ?? '—', playerId: benchPlayer.id }
-                  : undefined,
-              });
+
+              // IA decide automaticamente se troca ou não
+              const shouldSubstitute = outPlayer.fatigue >= 85 || (benchPlayer && Math.random() > 0.3);
+
+              if (shouldSubstitute && benchPlayer) {
+                // Executa a substituição automaticamente
+                const slotId = Object.entries(lm.matchLineupBySlot ?? {}).find(
+                  ([, id]) => id === outPlayer.playerId
+                )?.[0] ?? '';
+
+                dispatch({
+                  type: 'MATCH_SUBSTITUTE',
+                  outPlayerId: outPlayer.playerId,
+                  inPlayerId: benchPlayer.id,
+                  slotId,
+                } as any);
+
+                // Notifica GameSpirit para recalcular forças dos times
+                dispatch({
+                  type: 'RECALCULATE_TEAM_STRENGTH',
+                  reason: 'substitution',
+                  minute: lm.minute,
+                } as any);
+
+                // Mostra notificação no feed
+                const feedText = `🔄 Substituição: ${outPlayer.name} ➜ ${benchPlayer.name} (fadiga ${Math.round(outPlayer.fatigue)}%)`;
+                dispatch({
+                  type: 'ADD_MATCH_EVENT',
+                  event: {
+                    id: `sub_${Date.now()}`,
+                    kind: 'narrative',
+                    minute: lm.minute,
+                    text: feedText,
+                  },
+                } as any);
+              } else {
+                // IA decidiu não trocar - apenas mostra aviso
+                setAssistantEvent({
+                  kind: 'injury_warning',
+                  injuryOutPlayer: {
+                    name: outPlayer.name,
+                    pos: outPlayer.role ?? '—',
+                    fatigue: outPlayer.fatigue,
+                    playerId: outPlayer.playerId,
+                  },
+                  suggestedSubPlayer: benchPlayer
+                    ? { name: benchPlayer.name, pos: benchPlayer.pos ?? '—', playerId: benchPlayer.id }
+                    : undefined,
+                });
+              }
             }
           }
 
@@ -970,6 +1012,52 @@ export function MatchQuick() {
     });
   }, [live?.events, live?.phase, dispatch]);
 
+  // Auto-timeout para Interactive Moments (5s)
+  useEffect(() => {
+    if (!live?.activeInteractiveMoment) {
+      if (interactiveMomentTimeoutRef.current) {
+        clearTimeout(interactiveMomentTimeoutRef.current);
+        interactiveMomentTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Cria timeout de 5s para escolha automática baseada na intensidade tática
+    interactiveMomentTimeoutRef.current = setTimeout(() => {
+      const moment = live.activeInteractiveMoment;
+      if (!moment) return;
+
+      // Escolha automática baseada na Tactical Intensity
+      const intensity = quickMatchIntensity?.current ?? 'counter';
+      let autoChoiceId = moment.choices[0]?.id; // fallback: primeira opção
+
+      // Lógica de escolha baseada na intensidade
+      if (intensity === 'attack' || intensity === 'press') {
+        // Táticas agressivas: escolhe opção mais ofensiva (geralmente a primeira)
+        autoChoiceId = moment.choices[0]?.id;
+      } else if (intensity === 'defend') {
+        // Tática defensiva: escolhe opção mais conservadora (geralmente a última)
+        autoChoiceId = moment.choices[moment.choices.length - 1]?.id;
+      } else {
+        // Posse/Counter: escolhe opção do meio (balanceada)
+        const midIndex = Math.floor(moment.choices.length / 2);
+        autoChoiceId = moment.choices[midIndex]?.id;
+      }
+
+      dispatch({
+        type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT',
+        momentId: moment.id,
+        choiceId: autoChoiceId,
+      });
+    }, 5000);
+
+    return () => {
+      if (interactiveMomentTimeoutRef.current) {
+        clearTimeout(interactiveMomentTimeoutRef.current);
+      }
+    };
+  }, [live?.activeInteractiveMoment, quickMatchIntensity?.current, dispatch]);
+
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live)) return;
     if (live.phase !== 'postgame' || finalizedRef.current) return;
@@ -1005,8 +1093,9 @@ export function MatchQuick() {
     if (lastShotPreviewRef.current === shotId) return;
     lastShotPreviewRef.current = shotId;
 
+    // Near-Miss: apenas para casos MUITO próximos (intensidade alta)
     const nearMiss = detectShotNearMiss(live.lastShotPreview.probs);
-    if (nearMiss) {
+    if (nearMiss && nearMiss.intensity >= 0.8) {
       triggerNearMiss(nearMiss.type, nearMiss.message, nearMiss.intensity);
     }
   }, [live?.lastShotPreview, triggerNearMiss]);
@@ -1345,12 +1434,6 @@ export function MatchQuick() {
           <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
             <span>Partida rápida</span>
           </div>
-          <img
-            src="/brand/olefoot-logo-2.svg"
-            alt="Partida rápida"
-            className="h-[64px] sm:h-[88px] md:h-[108px]"
-            draggable={false}
-          />
           {soundEnabled ? (
             !soundStarted ? (
               <button

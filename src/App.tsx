@@ -68,8 +68,6 @@ const Cadastro = lazy(() => import('./pages/Cadastro').then((m) => ({ default: m
 const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
-const TrainingFreeKicks = lazy(() => import('./pages/TrainingFreeKicks').then((m) => ({ default: m.default })));
-const TrainingShootingDrill = lazy(() => import('./pages/TrainingShootingDrill').then((m) => ({ default: m.default })));
 
 function RequireAdmin() {
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -236,10 +234,6 @@ export default function App() {
 
             {/* Ajuda subpages */}
             <Route path="/ajuda/como-jogar" element={<HowToPlay />} />
-
-            {/* Training mini-games */}
-            <Route path="/training/free-kicks" element={<TrainingFreeKicks />} />
-            <Route path="/training/shooting-drill" element={<TrainingShootingDrill />} />
 
             {/* Wallet (mantém estrutura atual) */}
             <Route path="/wallet" element={<Wallet />} />

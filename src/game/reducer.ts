@@ -880,7 +880,25 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       for (const [slot, pid] of Object.entries(snap.matchLineupBySlot ?? {})) {
         if (pid) nextLineup[slot] = pid;
       }
-      return { ...state, liveMatch: snap, lineup: nextLineup };
+
+      // Recalcula forças dos times após substituição
+      const updatedSnap = {
+        ...snap,
+        teamStrengthRecalculatedAt: Date.now(),
+      };
+
+      return { ...state, liveMatch: updatedSnap, lineup: nextLineup };
+    }
+    case 'RECALCULATE_TEAM_STRENGTH': {
+      if (!state.liveMatch) return state;
+      // Marca timestamp para GameSpirit recalcular forças
+      return {
+        ...state,
+        liveMatch: {
+          ...state.liveMatch,
+          teamStrengthRecalculatedAt: Date.now(),
+        },
+      };
     }
     case 'CANCEL_QUICK_INJURY_SUB': {
       const lm = state.liveMatch;
@@ -1587,6 +1605,42 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         finance,
         players: { ...state.players, [built.id]: built },
         managerProspectArtQueue,
+      };
+    }
+    case 'RENEW_MANAGER_PROSPECT_CONTRACT': {
+      const player = state.players[action.playerId];
+      if (!player) return state;
+      if (!player.contractExpired) return state;
+      if (player.creatorType !== 'managerCreated') return state;
+
+      // Custo de renovação: 50% do custo base + prêmio do contrato
+      const baseCost = Math.max(
+        0,
+        Math.round(state.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP),
+      );
+      const renewalBaseCost = Math.round(baseCost * 0.5);
+      const contractPremium = managerProspectContractPremiumExp(action.contractMatches);
+      const totalCost = renewalBaseCost + contractPremium;
+
+      if (state.finance.ole < totalCost) return state;
+
+      const finance = withExpHistory(
+        addOle(state.finance, -totalCost),
+        -totalCost,
+        'academia_ole_renovar',
+      );
+
+      const updatedPlayer: PlayerEntity = {
+        ...player,
+        contractMatchesRemaining: action.contractMatches,
+        contractMatchesIncluded: action.contractMatches,
+        contractExpired: false,
+      };
+
+      return {
+        ...state,
+        finance,
+        players: { ...state.players, [action.playerId]: updatedPlayer },
       };
     }
     case 'LIST_MANAGER_PROSPECT': {

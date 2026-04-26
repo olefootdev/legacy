@@ -14,7 +14,6 @@ export interface TacticalIntensity {
   pressureIntensity: number;  // Intensidade de pressão (0.3 a 1.5)
   defensiveBonus: number;     // Bônus defensivo (-0.10 a +0.25)
   label: string;
-  icon: string;
   description: string;
 }
 
@@ -28,7 +27,6 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     pressureIntensity: 0.3,
     defensiveBonus: 0.25,
     label: 'Defender',
-    icon: '🛡️',
     description: 'Bloco baixo, +25% defesa, contra-ataques rápidos',
   },
   possession: {
@@ -40,7 +38,6 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     pressureIntensity: 0.6,
     defensiveBonus: 0.10,
     label: 'Posse',
-    icon: '🔄',
     description: 'Controla o jogo, +15% posse, desgasta adversário',
   },
   counter: {
@@ -52,7 +49,6 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     pressureIntensity: 0.5,
     defensiveBonus: 0.15,
     label: 'Contra-Ataque',
-    icon: '⚡',
     description: 'Aguarda e explora espaços, +30% contra-ataques',
   },
   press: {
@@ -64,7 +60,6 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     pressureIntensity: 1.5,
     defensiveBonus: -0.05,
     label: 'Pressionar',
-    icon: '🔥',
     description: 'Pressão alta, recupera bola rápido, fadiga 1.6x',
   },
   attack: {
@@ -76,7 +71,6 @@ export const TACTICAL_INTENSITY_PRESETS: Record<TacticalIntensityLevel, Tactical
     pressureIntensity: 1.2,
     defensiveBonus: -0.10,
     label: 'Ataque Total',
-    icon: '⚔️',
     description: '+20% chances de gol, -10% defesa, fadiga 2x',
   },
 };

@@ -403,26 +403,22 @@ export function Store() {
         ))}
       </div>
 
-      {/* Boxes em destaque — featured + rarer items. */}
+      {/* Boxes em destaque — 3 BOOSTERS GRANDES */}
       <StoreFeaturedBoxes
-        title={featuredBoxesConfigForStoreTab(tab).title}
-        subtitle={featuredBoxesConfigForStoreTab(tab).subtitle}
-        variant={featuredBoxesConfigForStoreTab(tab).variant}
-        items={featuredItemsForStoreTab(tab, catalog)}
+        title="Boosters em Destaque"
+        subtitle="Os 3 boosters mais poderosos para turbinar seu time"
+        variant="boosters"
+        items={featuredItemsForStoreTab('boosters', catalog).slice(0, 3)}
         onSelect={(item) => { setPurchaseErr(null); setConfirmItem(item); }}
       />
 
       <StoreSectionHeadline
-        title={
-          tab === 'todos' ? 'Catálogo Completo' :
-          tab === 'packs' ? 'Todos os Packs' :
-          tab === 'boosters' ? 'Todos os Boosters' :
-          'Todos os Extras'
-        }
-        subtitle={`${filtered.length} ${filtered.length === 1 ? 'item disponível' : 'itens disponíveis'} nesta categoria.`}
+        title="Todos os Boosters"
+        subtitle={`${filtered.length} ${filtered.length === 1 ? 'booster disponível' : 'boosters disponíveis'} para melhorar seu desempenho.`}
       />
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Grid de boosters menores - 4 por linha em desktop, compactos */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {filtered.map((item, index) => {
           const rs = rarityStyles(item.rarity);
           const Icon = shopItemIcon(item.iconKey);
@@ -432,77 +428,106 @@ export function Store() {
               key={item.id}
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.04, type: 'spring', stiffness: 380, damping: 28 }}
+              transition={{ delay: index * 0.02, type: 'spring', stiffness: 380, damping: 28 }}
               className={cn(
-                'group relative overflow-hidden rounded-md border bg-deep-black p-1',
+                'group relative overflow-hidden rounded-lg border bg-deep-black cursor-pointer',
                 rs.border,
-                rs.glow,
-                item.featured && 'ring-1 ring-neon-yellow/30',
+                'hover:scale-[1.03] transition-all',
               )}
+              onClick={() => { setPurchaseErr(null); setConfirmItem(item); }}
             >
-              <div
-                className="pointer-events-none absolute -inset-px rounded-md opacity-0 transition duration-500 group-hover:opacity-100"
-                style={{
-                  background:
-                    'linear-gradient(125deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)',
-                }}
-              />
-              <div className="relative rounded-[0.9rem] bg-gradient-to-b from-white/[0.06] to-transparent p-4 md:p-5">
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <span
-                    className={cn(
-                      'rounded px-2 py-0.5 font-display text-[8px] font-black uppercase tracking-widest',
-                      rs.labelClass,
-                    )}
-                  >
-                    {rs.label}
-                  </span>
-                  {item.featured ? (
-                    <span className="rounded border border-neon-yellow/40 bg-neon-yellow/10 px-2 py-0.5 font-display text-[8px] font-bold uppercase text-neon-yellow">
-                      Featured mint
-                    </span>
-                  ) : (
-                    <span className="font-mono text-[9px] text-gray-600">#{String(8400 + index).padStart(5, '0')}</span>
+              {/* Ícone e raridade */}
+              <div className="relative aspect-square flex items-center justify-center bg-gradient-to-br from-white/5 to-black/60 border-b border-white/5">
+                <Icon className="h-12 w-12 text-white/30 transition group-hover:text-white/50" aria-hidden />
+                <span
+                  className={cn(
+                    'absolute top-2 right-2 rounded px-1.5 py-0.5 font-display text-[7px] font-black uppercase tracking-widest',
+                    rs.labelClass,
                   )}
-                </div>
-                <div className="mb-4 flex h-24 items-center justify-center rounded-xl border border-white/5 bg-black/60">
-                  <Icon className="h-14 w-14 text-white/25 transition group-hover:text-white/40" aria-hidden />
-                </div>
-                <h2 className="font-display text-lg font-black tracking-tight text-white md:text-xl">{item.title}</h2>
-                <p className="mt-2 text-[11px] leading-relaxed text-gray-500">{item.blurb}</p>
-                {item.consumable && inv > 0 ? (
-                  <p className="mt-2 text-[10px] font-bold uppercase tracking-wide text-emerald-300/90">
-                    Inventário: {inv}×
-                  </p>
-                ) : null}
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
+                >
+                  {rs.label}
+                </span>
+              </div>
+
+              {/* Info compacta */}
+              <div className="p-2.5">
+                <h3 className="font-display text-xs font-black uppercase tracking-tight text-white line-clamp-1 mb-1">
+                  {item.title}
+                </h3>
+                <p className="text-[9px] leading-snug text-gray-500 line-clamp-2 mb-2">
+                  {item.blurb}
+                </p>
+
+                {/* Preços compactos */}
+                <div className="flex flex-wrap gap-1">
                   {item.priceBroCents != null && item.priceBroCents > 0 ? (
-                    <span className="rounded-lg border border-cyan-500/30 bg-cyan-950/50 px-2.5 py-1 font-mono text-[11px] font-bold text-cyan-200">
+                    <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-200">
                       {formatBro(item.priceBroCents)} BRO
                     </span>
                   ) : null}
                   {item.priceExp != null && item.priceExp > 0 ? (
-                    <span className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 px-2.5 py-1 font-mono text-[11px] font-bold text-neon-yellow">
+                    <span className="rounded border border-neon-yellow/30 bg-neon-yellow/5 px-1.5 py-0.5 font-mono text-[9px] font-bold text-neon-yellow">
                       {item.priceExp.toLocaleString('pt-BR')} EXP
                     </span>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPurchaseErr(null);
-                    setConfirmItem(item);
-                  }}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] py-3 font-display text-[10px] font-black uppercase tracking-wider text-white transition hover:border-neon-yellow/40 hover:bg-neon-yellow/10 hover:text-neon-yellow"
-                >
-                  <ShoppingBag className="h-4 w-4" aria-hidden />
-                  Comprar
-                </button>
+
+                {/* Inventário se houver */}
+                {item.consumable && inv > 0 ? (
+                  <p className="mt-1.5 text-[8px] font-bold uppercase tracking-wide text-emerald-300/90">
+                    {inv}× no inventário
+                  </p>
+                ) : null}
               </div>
+
+              {/* Hover overlay */}
+              <div
+                className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
+                style={{
+                  background: 'linear-gradient(125deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)',
+                }}
+              />
             </motion.article>
           );
         })}
       </div>
+
+      {/* CTA de Depositar Agora */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 p-8 text-center shadow-[0_0_40px_rgba(253,224,71,0.3)]"
+      >
+        <div className="relative z-10">
+          <div className="ole-eyebrow !text-black mb-4" style={{ fontFamily: 'var(--font-ui)' }}>
+            <span className="!text-black">Precisa de mais saldo?</span>
+          </div>
+          <h3
+            className="font-display text-3xl sm:text-4xl font-black uppercase tracking-wider text-black mb-3"
+          >
+            Deposite Agora
+          </h3>
+          <p className="text-black/80 text-sm sm:text-base mb-6 max-w-2xl mx-auto">
+            Adicione BRO à sua carteira e desbloqueie todos os boosters premium. Compre com segurança e receba instantaneamente.
+          </p>
+          <Link
+            to="/wallet"
+            className="inline-flex items-center gap-3 bg-black text-neon-yellow hover:bg-deep-black px-8 py-4 font-display font-black uppercase tracking-[0.2em] text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <Wallet className="w-5 h-5" />
+            Ir para Carteira
+          </Link>
+        </div>
+        {/* Efeito de brilho */}
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 70%)',
+          }}
+        />
+      </motion.div>
 
       <p className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-center text-[10px] leading-relaxed text-gray-500">
         Catálogo editável no <strong className="text-gray-400">Admin → Loja</strong>. Itens consumíveis aplicam efeitos

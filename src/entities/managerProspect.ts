@@ -5,9 +5,9 @@ import { contractFieldsForManagerProspectTier } from '@/playerContracts/playerCo
 import type { PlayerAttributes, PlayerBehavior, PlayerEntity, PlayerStrongFoot } from './types';
 
 /** OVR máximo na criação (Academia OLE + prospects NPC). */
-export const MANAGER_PROSPECT_CREATE_MAX_OVR = 50;
+export const MANAGER_PROSPECT_CREATE_MAX_OVR = 70;
 /** OVR máximo após evolução (treinos, jogos) para `managerCreated`. */
-export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 60;
+export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 88;
 /** @deprecated Usa CREATE vs EVOLVED; mantido para texto “máx. evoluído” em alguns ecrãs. */
 export const MANAGER_PROSPECT_MAX_OVR = MANAGER_PROSPECT_EVOLVED_MAX_OVR;
 /** Idade no cartão / ficha (Academia OLE e prospects geridos). */

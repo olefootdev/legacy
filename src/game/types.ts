@@ -326,6 +326,7 @@ export type GameAction =
   | { type: 'LIVE_MATCH_SET_FORMATION'; formationScheme: import('@/match-engine/types').FormationSchemeId }
   | { type: 'REGENERATE_LIVE_SECOND_HALF_STORY'; topPlayerImpactScore?: number }
   | { type: 'MATCH_SUBSTITUTE'; outPlayerId: string; inPlayerId: string }
+  | { type: 'RECALCULATE_TEAM_STRENGTH'; reason?: string; minute?: number }
   | { type: 'QUICK_ENFORCE_CARD_RULES'; playerId: string; reason?: 'injury_red' | 'two_yellows' | 'direct_red' }
   /** Lesão leve: manager decide arriscar — recoloca o jogador em campo e limpa o quickInjurySub. */
   | { type: 'CANCEL_QUICK_INJURY_SUB' }
@@ -521,6 +522,11 @@ export type GameAction =
   | {
       type: 'CREATE_MANAGER_PROSPECT';
       payload: import('@/entities/managerProspect').ManagerProspectCreatePayload;
+    }
+  | {
+      type: 'RENEW_MANAGER_PROSPECT_CONTRACT';
+      playerId: string;
+      contractMatches: import('@/playerContracts/playerContracts').ManagerProspectContractGames;
     }
   | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
