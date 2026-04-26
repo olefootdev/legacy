@@ -354,13 +354,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           const nm = goalScorerHomeId
             ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
             : undefined;
-          ev.text = nm ? `${minute}' — Golo: ${nm}.` : `${minute}' — Golo (casa).`;
+          ev.text = nm ? `${minute}' — Gol: ${nm}.` : `${minute}' — Gol (casa).`;
           ev.kind = 'goal_home';
           ev.playerId = goalScorerHomeId;
         } else if (beatGeom.kind === 'goal_away') {
           const aid = out.goalScorerPlayerId;
           const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-          ev.text = nm ? `${minute}' — Golo: ${nm} (visitante).` : `${minute}' — Golo (visitante).`;
+          ev.text = nm ? `${minute}' — Gol: ${nm} (visitante).` : `${minute}' — Gol (visitante).`;
           ev.kind = 'goal_away';
           ev.playerId = aid;
         } else if (beatGeom.kind === 'shot_save') {
@@ -387,13 +387,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         const nm = goalScorerHomeId
           ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
           : undefined;
-        ev.text = nm ? `${minute}' — Golo: ${nm}.` : `${minute}' — Golo (casa).`;
+        ev.text = nm ? `${minute}' — Gol: ${nm}.` : `${minute}' — Gol (casa).`;
         events.unshift(ev);
         if (events.length > 40) events.pop();
       } else if (goalAway) {
         const aid = out.goalScorerPlayerId;
         const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-        ev.text = nm ? `${minute}' — Golo: ${nm} (visitante).` : `${minute}' — Golo (visitante).`;
+        ev.text = nm ? `${minute}' — Gol: ${nm} (visitante).` : `${minute}' — Gol (visitante).`;
         events.unshift(ev);
         if (events.length > 40) events.pop();
       }

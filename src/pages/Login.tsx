@@ -1,11 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Zap, ShoppingCart, Trophy, Users } from 'lucide-react';
+import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
+
+// A/B Test: 3 propostas de valor
+type ValueProposition = 'nostalgia' | 'ai' | 'speed';
+
+const VALUE_PROPS: Record<ValueProposition, {
+  headline: string;
+  subheadline: string;
+  features: Array<{ icon: typeof Clock; text: string; color: string }>;
+}> = {
+  nostalgia: {
+    headline: 'A gente sabe que você já virou noite para ser o melhor clube do mundo',
+    subheadline: 'Agora com IA que aprende com você, mercado de transferências real e partidas que decidem em minutos.',
+    features: [
+      { icon: ShoppingCart, text: 'Garimpe talentos no mercado', color: 'text-amber-400' },
+      { icon: Trophy, text: 'Construa sua dinastia', color: 'text-yellow-400' },
+      { icon: Users, text: 'Dispute ligas com amigos', color: 'text-blue-400' },
+    ],
+  },
+  ai: {
+    headline: 'Gestão de futebol que aprende com você',
+    subheadline: 'IA analisa suas partidas, sugere táticas em tempo real e gera jogadores únicos. O futuro da gestão esportiva.',
+    features: [
+      { icon: Brain, text: 'Assistente tático com IA', color: 'text-purple-400' },
+      { icon: Sparkles, text: 'Crie jogadores com prompt', color: 'text-cyan-400' },
+      { icon: Zap, text: 'Análise em tempo real', color: 'text-pink-400' },
+    ],
+  },
+  speed: {
+    headline: 'De time pequeno a campeão em 20 minutos',
+    subheadline: 'Partidas rápidas, mercado dinâmico e progressão visível. Cada decisão conta, cada vitória te aproxima da glória.',
+    features: [
+      { icon: Rocket, text: 'Partidas de 30 segundos', color: 'text-orange-400' },
+      { icon: Clock, text: 'Temporada completa em 5min', color: 'text-green-400' },
+      { icon: Trophy, text: 'Progressão transparente', color: 'text-yellow-400' },
+    ],
+  },
+};
 
 export function Login() {
   const navigate = useNavigate();
@@ -16,6 +53,26 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forgotSent, setForgotSent] = useState(false);
+
+  // A/B Test: rotaciona proposta de valor a cada visita
+  const [variant, setVariant] = useState<ValueProposition>('nostalgia');
+
+  useEffect(() => {
+    // Detecta qual variante mostrar (baseado em hash do timestamp ou localStorage)
+    const stored = localStorage.getItem('olefoot_ab_variant');
+    if (stored && ['nostalgia', 'ai', 'speed'].includes(stored)) {
+      setVariant(stored as ValueProposition);
+    } else {
+      // Distribui aleatoriamente entre as 3 variantes
+      const variants: ValueProposition[] = ['nostalgia', 'ai', 'speed'];
+      const selected = variants[Math.floor(Math.random() * variants.length)];
+      setVariant(selected);
+      localStorage.setItem('olefoot_ab_variant', selected);
+    }
+
+    // Track impressão da variante (para analytics futuro)
+    console.log('[A/B Test] Variant shown:', stored || variant);
+  }, []);
 
   const onForgotSubmit = async (e: import('react').FormEvent) => {
     e.preventDefault();
@@ -146,72 +203,133 @@ export function Login() {
                     <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-neon-yellow">Jogue Agora</span>
                   </div>
 
-                  {/* Headline com Moret (serif hero) para emoção */}
-                  <h1 className="font-serif-hero text-[clamp(2.2rem,8vw,3.5rem)] font-normal italic leading-[0.92] tracking-tight text-white [text-shadow:0_4px_32px_rgba(0,0,0,0.95)]">
-                    Monte seu time<br />
-                    Domine o <span className="text-neon-yellow not-italic">mercado</span><br />
-                    Seja <span className="text-neon-yellow not-italic">campeão</span>.
+                  {/* Headline dinâmico baseado na variante A/B */}
+                  <h1 className="font-serif-hero text-[clamp(1.8rem,7vw,3rem)] font-normal italic leading-[1.05] tracking-tight text-white [text-shadow:0_4px_32px_rgba(0,0,0,0.95)]">
+                    {VALUE_PROPS[variant].headline}
                   </h1>
 
                   {/* Subheadline com Agency FB (display) para impacto */}
-                  <p className="mt-6 font-display text-[17px] font-bold uppercase leading-tight tracking-wide text-white/95 [text-shadow:0_2px_16px_rgba(0,0,0,0.9)] sm:text-[19px]">
-                    Contrate novos talentos<br />
-                    Escale lendas do futebol<br />
-                    Dispute ligas mundiais.
+                  <p className="mt-5 font-sans text-[14px] leading-relaxed text-white/85 [text-shadow:0_2px_16px_rgba(0,0,0,0.9)] sm:text-[15px]">
+                    {VALUE_PROPS[variant].subheadline}
                   </p>
 
-                  <div className="mt-6 flex flex-wrap gap-3 font-display text-[11px] font-bold uppercase tracking-[0.15em] text-white/70">
-                    <span className="flex items-center gap-1.5">
-                      <ShoppingCart className="h-3.5 w-3.5 text-neon-yellow" />
-                      Mercado Real
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Trophy className="h-3.5 w-3.5 text-neon-yellow" />
-                      Partidas ao Vivo
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-neon-yellow" />
-                      Ligas Online
-                    </span>
+                  <div className="mt-6 flex flex-wrap gap-3 font-display text-[11px] font-bold uppercase tracking-[0.15em]">
+                    {VALUE_PROPS[variant].features.map((feature, i) => (
+                      <span key={i} className="flex items-center gap-1.5 text-white/70">
+                        <feature.icon className={cn('h-3.5 w-3.5', feature.color)} />
+                        {feature.text}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Feature Highlights com tipografia mista */}
+              {/* Feature Highlights — adapta ao contexto da variante */}
               <div className="mt-6 space-y-3">
-                {/* Agency Feature */}
-                <div className="group relative overflow-hidden rounded-lg border border-purple-500/20 bg-gradient-to-r from-purple-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-purple-500/40">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-purple-400/30 bg-purple-500/10">
-                      <span className="font-display text-lg font-black text-purple-300">AI</span>
+                {variant === 'nostalgia' && (
+                  <>
+                    <div className="group relative overflow-hidden rounded-lg border border-amber-500/20 bg-gradient-to-r from-amber-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-amber-500/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-500/10">
+                          <ShoppingCart className="h-5 w-5 text-amber-300" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            Mercado de Transferências Real
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            Leilões ao vivo, descubra talentos baratos e venda por fortuna
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                        Crie Jogadores com IA
-                      </h3>
-                      <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                        Descreva o perfil e gere jogadores únicos com atributos reais
-                      </p>
+                    <div className="group relative overflow-hidden rounded-lg border border-yellow-500/20 bg-gradient-to-r from-yellow-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-yellow-500/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-500/10">
+                          <Trophy className="h-5 w-5 text-yellow-300" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            Construa Sua Dinastia
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            Jogue décadas de carreira, veja jogadores envelhecerem e novos talentos surgirem
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
-                {/* Moret Feature */}
-                <div className="group relative overflow-hidden rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-cyan-500/40">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-500/10">
-                      <span className="font-display text-lg font-black text-cyan-300">⚡</span>
+                {variant === 'ai' && (
+                  <>
+                    <div className="group relative overflow-hidden rounded-lg border border-purple-500/20 bg-gradient-to-r from-purple-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-purple-500/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-purple-400/30 bg-purple-500/10">
+                          <span className="font-display text-lg font-black text-purple-300">AI</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            Crie Jogadores com IA
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            Descreva o perfil e gere jogadores únicos com atributos reais
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                        Análise Tática em Tempo Real
-                      </h3>
-                      <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                        IA analisa partidas e sugere mudanças táticas instantâneas
-                      </p>
+                    <div className="group relative overflow-hidden rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-cyan-500/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-500/10">
+                          <Zap className="h-5 w-5 text-cyan-300" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            Análise Tática em Tempo Real
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            IA analisa partidas e sugere mudanças táticas instantâneas
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
+
+                {variant === 'speed' && (
+                  <>
+                    <div className="group relative overflow-hidden rounded-lg border border-orange-500/20 bg-gradient-to-r from-orange-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-orange-500/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orange-400/30 bg-orange-500/10">
+                          <Rocket className="h-5 w-5 text-orange-300" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            Partidas Ultrarrápidas
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            Jogue uma partida completa em 30 segundos, gratificação instantânea
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="group relative overflow-hidden rounded-lg border border-green-500/20 bg-gradient-to-r from-green-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-green-500/40">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-green-400/30 bg-green-500/10">
+                          <Clock className="h-5 w-5 text-green-300" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
+                            Temporada Completa em 5 Minutos
+                          </h3>
+                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
+                            Simule 38 jogos rapidamente e veja seu time subir na tabela
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           ) : mode === 'forgot' ? (
@@ -338,7 +456,12 @@ export function Login() {
             <nav className="mt-8 flex w-full flex-col gap-3 sm:mt-10" aria-label="Acesso à conta">
               <button
                 type="button"
-                onClick={() => setMode('form')}
+                onClick={() => {
+                  setMode('form');
+                  // Track conversão do A/B test
+                  console.log('[A/B Test] User clicked "Entrar" on variant:', variant);
+                  localStorage.setItem('olefoot_ab_converted', variant);
+                }}
                 className="group relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-4 font-display text-base font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98]"
               >
                 <span className="relative z-10">Entrar</span>
@@ -346,6 +469,11 @@ export function Login() {
               </button>
               <Link
                 to="/cadastro"
+                onClick={() => {
+                  // Track conversão do A/B test
+                  console.log('[A/B Test] User clicked "Cadastrar" on variant:', variant);
+                  localStorage.setItem('olefoot_ab_converted', variant);
+                }}
                 className="group relative flex items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white/5 px-6 py-4 font-display text-base font-black uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98]"
               >
                 <span className="relative z-10">Cadastrar</span>
@@ -361,6 +489,13 @@ export function Login() {
               >
                 Esqueci minha senha
               </button>
+
+              {/* Debug: mostrar variante atual (remover em produção) */}
+              <div className="mt-4 rounded border border-white/10 bg-white/5 px-3 py-2 text-center">
+                <p className="text-[9px] font-mono text-white/40">
+                  A/B Test: <span className="text-neon-yellow/60">{variant}</span>
+                </p>
+              </div>
             </nav>
           ) : null}
         </div>

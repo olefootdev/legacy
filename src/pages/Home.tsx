@@ -668,8 +668,8 @@ export function Home() {
 
           // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
           const mvp = lastMatch.scoutMvp;
-          // Ignora MVP se for o fallback 'Equipa' (sem playerId válido)
-          const isValidMvp = mvp && mvp.playerId && mvp.name !== 'Equipa';
+          // Ignora MVP se for o fallback 'Equipe' (sem playerId válido)
+          const isValidMvp = mvp && mvp.playerId && mvp.name !== 'Equipe';
           const mvpEntity = isValidMvp ? players[mvp.playerId] : null;
           const mvpOvr = mvpEntity
             ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs)

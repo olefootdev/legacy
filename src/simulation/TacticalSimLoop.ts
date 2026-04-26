@@ -362,7 +362,7 @@ export class TacticalSimLoop {
   /** Receptor com passe crítico: decisão mais rápida até `simTime`. */
   private executionBoostUntil = new Map<string, number>();
   private executionBoostImpact01 = new Map<string, number>();
-  /** Equipa que saiu no 1.º tempo — o 2.º saída de bola é a outra (IFAB). */
+  /** Equipe que saiu no 1.º tempo — o 2.º saída de bola é a outra (IFAB). */
   private firstKickoffPossessionSide: PossessionSide = 'home';
   private initialized = false;
   // Deadball / throw-in state

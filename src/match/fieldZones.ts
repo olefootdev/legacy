@@ -128,7 +128,7 @@ export function penaltyAreaEndContainingBall(ballX: number, ballZ: number): Pitc
   return null;
 }
 
-/** Equipa que defende a baliza nesta extremidade neste tempo. */
+/** Equipe que defende a baliza nesta extremidade neste tempo. */
 export function defendingTeamAtGoalEnd(end: PitchEnd, half: MatchHalf): TeamSide {
   const homeDef = getDefendingGoalX('home', half);
   const homeDefendsWest = homeDef < MID_X;

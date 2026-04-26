@@ -116,7 +116,7 @@ function woSnapshot(state: OlefootGameState, homeScore: number, awayScore: numbe
       {
         id: `wo-${Date.now()}`,
         minute: 0,
-        text: `WO — Equipa não cumpriu requisitos mínimos de inscrição (11 titulares + 5 no banco).`,
+        text: `WO — Equipe não cumpriu requisitos mínimos de inscrição (11 titulares + 5 no banco).`,
         kind: 'whistle',
       },
     ],

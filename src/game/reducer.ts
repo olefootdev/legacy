@@ -442,6 +442,93 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         liveMatch: { ...lm, supabaseMatchId: action.matchId },
       };
     }
+
+    case 'TRIGGER_QUICK_INTERACTIVE_MOMENT': {
+      if (!state.liveMatch) return state;
+      return {
+        ...state,
+        liveMatch: {
+          ...state.liveMatch,
+          activeInteractiveMoment: action.moment,
+        },
+      };
+    }
+
+    case 'RESOLVE_QUICK_INTERACTIVE_MOMENT': {
+      if (!state.liveMatch?.activeInteractiveMoment) return state;
+      const { resolveInteractiveMoment } = require('@/match/quickInteractiveMoments');
+
+      const outcome = resolveInteractiveMoment(
+        state.liveMatch.activeInteractiveMoment,
+        action.choiceId,
+      );
+
+      const newFinance = {
+        ...state.finance,
+        ole: state.finance.ole + outcome.rewards.ole,
+      };
+
+      const newMomentum = state.liveMatch.spiritMomentum ?? { home: 50, away: 50 };
+      newMomentum.home = Math.max(0, Math.min(100, newMomentum.home + outcome.momentumDelta));
+
+      const narrativeEvent: MatchEventEntry = {
+        id: `moment_${Date.now()}`,
+        minute: state.liveMatch.minute,
+        text: outcome.narrative,
+        kind: 'narrative',
+      };
+
+      return {
+        ...state,
+        finance: newFinance,
+        liveMatch: {
+          ...state.liveMatch,
+          activeInteractiveMoment: null,
+          spiritMomentum: newMomentum,
+          events: [narrativeEvent, ...state.liveMatch.events],
+        },
+      };
+    }
+
+    case 'SET_TACTICAL_INTENSITY': {
+      return {
+        ...state,
+        quickMatchIntensity: {
+          current: action.level,
+          changedAtMinute: state.liveMatch?.minute ?? 0,
+        },
+      };
+    }
+
+    case 'UPDATE_STREAK_CHALLENGES': {
+      if (!state.streakChallenges) return state;
+      const { updateChallengeProgress } = require('@/match/quickStreakChallenges');
+
+      const updated = updateChallengeProgress(
+        state.streakChallenges.challenges,
+        action.currentStreak,
+        action.won,
+      );
+
+      return {
+        ...state,
+        streakChallenges: {
+          ...state.streakChallenges,
+          challenges: updated,
+        },
+      };
+    }
+
+    case 'REFRESH_STREAK_CHALLENGES': {
+      const { generateWeeklyChallenges } = require('@/match/quickStreakChallenges');
+      return {
+        ...state,
+        streakChallenges: {
+          challenges: generateWeeklyChallenges(),
+          lastRefreshDate: new Date().toISOString(),
+        },
+      };
+    }
     case 'BEGIN_PLAY_FROM_PREGAME': {
       if (!state.liveMatch || state.liveMatch.phase !== 'pregame') return state;
       const kick: MatchEventEntry = {
@@ -1092,6 +1179,69 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // Apply streak multiplier to rewards for quick matches
       const streakMultiplier = lm.mode === 'quick' && quickMatchStreak ? quickMatchStreak.multiplier : 1.0;
 
+      // Evaluate performance bonuses for quick matches (Sprint 1)
+      let performanceBonuses: import('@/match/quickPerformanceBonuses').PerformanceBonus[] = [];
+      let bonusOle = 0;
+      let bonusExp = 0;
+      if (lm.mode === 'quick') {
+        const { evaluatePerformanceBonuses, calculateTotalBonusRewards } = require('@/match/quickPerformanceBonuses');
+
+        // Check if was losing at some point
+        let wasLosing = false;
+        let tempHome = 0;
+        let tempAway = 0;
+        for (const e of [...lm.events].reverse()) {
+          if (e.kind === 'goal_home') tempHome++;
+          if (e.kind === 'goal_away') tempAway++;
+          if (tempAway > tempHome) wasLosing = true;
+        }
+
+        const shots = lm.events.filter(e =>
+          e.kind === 'shot_home' ||
+          (e.kind === 'narrative' && e.text.toLowerCase().includes('chut'))
+        ).length;
+
+        performanceBonuses = evaluatePerformanceBonuses({
+          homeScore: lm.homeScore,
+          awayScore: lm.awayScore,
+          goalsAgainst: lm.awayScore,
+          possession: 60, // TODO: track real possession
+          shots,
+          events: lm.events,
+          wasLosing,
+          won: homeWin,
+        });
+
+        const bonusRewards = calculateTotalBonusRewards(performanceBonuses);
+        bonusOle = bonusRewards.ole;
+        bonusExp = bonusRewards.exp;
+      }
+
+      // Update streak challenges (Sprint 3)
+      let streakChallenges = state.streakChallenges;
+      if (lm.mode === 'quick' && streakChallenges && quickMatchStreak) {
+        const { updateChallengeProgress: updateStreakProgress, shouldRefreshChallenges } = require('@/match/quickStreakChallenges');
+
+        // Check if needs refresh
+        if (shouldRefreshChallenges(streakChallenges)) {
+          const { generateWeeklyChallenges } = require('@/match/quickStreakChallenges');
+          streakChallenges = {
+            challenges: generateWeeklyChallenges(),
+            lastRefreshDate: new Date().toISOString(),
+          };
+        } else {
+          // Update progress
+          streakChallenges = {
+            ...streakChallenges,
+            challenges: updateStreakProgress(
+              streakChallenges.challenges,
+              quickMatchStreak.current,
+              homeWin,
+            ),
+          };
+        }
+      }
+
       // Update daily challenges for quick matches
       let dailyChallenges = state.dailyChallenges;
       if (lm.mode === 'quick' && dailyChallenges) {
@@ -1152,7 +1302,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         isHomeFixture: state.nextFixture.isHome,
         userWin: homeWin,
       });
-      const oleGain = Math.round((oleGainBase + structBonuses.totalExtra) * streakMultiplier);
+      const oleGain = Math.round((oleGainBase + structBonuses.totalExtra + bonusOle) * streakMultiplier);
       const draw = lm.homeScore === lm.awayScore;
       const staffNote = buildPostMatchStaffInboxItem(state, lm);
       const structExtraLine =
@@ -1162,6 +1312,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const streakBonusLine =
         streakMultiplier > 1.0
           ? ` 🔥 Streak de ${quickMatchStreak?.current ?? 0} vitórias: ${streakMultiplier}x multiplicador aplicado!`
+          : '';
+      const performanceBonusLine =
+        performanceBonuses.length > 0
+          ? ` 🏆 Bônus de Performance: +${bonusOle} OLE, +${bonusExp} EXP (${performanceBonuses.map(b => b.name).join(', ')})`
           : '';
       const financeNote = makeInboxItem(
         `finance-${Date.now()}`,
@@ -1173,7 +1327,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             ? 'Bónus de jornada creditado. Desfecho desportivo e detalhes ficam no histórico de jogos e na liga — não na caixa de notificações.'
             : draw
               ? 'Jornada contabilizada na competição — tabela e calendário na área de competição.'
-              : 'Jornada contabilizada — segue a preparação no plantel e no staff; placares no histórico de jogos.'}${structExtraLine}${streakBonusLine}`,
+              : 'Jornada contabilizada — segue a preparação no plantel e no staff; placares no histórico de jogos.'}${structExtraLine}${streakBonusLine}${performanceBonusLine}`,
           deepLink: '/wallet',
           hideFromHomeFeed: true,
         },
@@ -1317,6 +1471,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         playerEvolutionTimeline,
         quickMatchStreak,
         dailyChallenges,
+        streakChallenges,
       };
     }
     case 'MERGE_PLAYERS': {

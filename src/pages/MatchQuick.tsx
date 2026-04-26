@@ -42,7 +42,23 @@ import { QuickMatchFeed } from '@/components/matchquick/QuickMatchFeed';
 import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
 import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
 import { QuickMatchSummary } from '@/components/matchquick/QuickMatchSummary';
+import { QuickInteractiveMomentOverlay } from '@/components/matchquick/QuickInteractiveMomentOverlay';
+import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
+import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
+import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
+import { QuickStreakChallengesPanel } from '@/components/matchquick/QuickStreakChallengesPanel';
+import { QuickMatchHeatmapPanel } from '@/components/matchquick/QuickMatchHeatmapPanel';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+import {
+  shouldTriggerCounterAttack,
+  shouldTriggerSetPiece,
+  buildCounterAttackMoment,
+  buildSetPieceMoment,
+} from '@/match/quickInteractiveMoments';
+import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
+import { shouldAutoSwitchIntensity } from '@/match/quickTacticalIntensity';
+import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
+import { buildHeatmapFromEvents } from '@/match/quickMatchHeatmap';
 
 const FIRST_HALF_MS = 45_000;
 const HALFTIME_MS = 15_000;
@@ -114,7 +130,7 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
       {badges.map((b, i) => {
         if (b === 'goal')
           return (
-            <span key={`g-${i}`} title="Golo" className="inline-flex text-[11px] leading-none">
+            <span key={`g-${i}`} title="Gol" className="inline-flex text-[11px] leading-none">
               ⚽
             </span>
           );
@@ -233,6 +249,8 @@ export function MatchQuick() {
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const quickMatchStreak = useGameStore((s) => s.quickMatchStreak);
+  const quickMatchIntensity = useGameStore((s) => s.quickMatchIntensity);
+  const streakChallenges = useGameStore((s) => s.streakChallenges);
 
   const [session, setSession] = useState(0);
   const [halfTimeUi, setHalfTimeUi] = useState(false);
@@ -327,6 +345,13 @@ export function MatchQuick() {
       cancelled = true;
     };
   }, [fcParam]);
+
+  // Sprint 3: Inicializar desafios semanais
+  useEffect(() => {
+    if (!streakChallenges || streakChallenges.challenges.length === 0) {
+      dispatch({ type: 'REFRESH_STREAK_CHALLENGES' });
+    }
+  }, [streakChallenges, dispatch]);
 
   // Preload quick-match sound (do not autoplay). The user must press the button to start playback.
   useEffect(() => {
@@ -494,6 +519,81 @@ export function MatchQuick() {
             shown.add('min70_check');
             lastAssistantShownMsRef.current = Date.now();
             setAssistantEvent({ kind: 'min70_check' });
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        // ── Sprint 2: Detectar arco narrativo a cada 5 minutos ───────────
+        if (lm.minute % 5 === 0 && lm.minute > 0) {
+          const shots = lm.events.filter(e =>
+            e.kind === 'shot_home' ||
+            (e.kind === 'narrative' && e.text.toLowerCase().includes('chut'))
+          ).length;
+
+          const shotsAgainst = lm.events.filter(e =>
+            e.kind === 'shot_away' ||
+            (e.kind === 'narrative' && e.text.toLowerCase().includes('adversário') && e.text.toLowerCase().includes('chut'))
+          ).length;
+
+          const arc = detectNarrativeArc({
+            minute: lm.minute,
+            homeScore: lm.homeScore,
+            awayScore: lm.awayScore,
+            events: lm.events,
+            possession: lm.possession === 'home' ? 60 : 40,
+            shots,
+            shotsAgainst,
+          });
+
+          // Atualizar narrativeArc no state (via SIM_SYNC ou action dedicada)
+          const updatedLm = { ...lm, narrativeArc: arc };
+          // Note: idealmente criar action SET_NARRATIVE_ARC, mas por ora mantemos no state local
+        }
+
+        // ── Sprint 2: Auto-switch de intensidade tática ──────────────────
+        const autoIntensity = shouldAutoSwitchIntensity(
+          lm.minute,
+          lm.homeScore,
+          lm.awayScore,
+          quickMatchIntensity?.current ?? 'balanced',
+        );
+        if (autoIntensity) {
+          dispatch({ type: 'SET_TACTICAL_INTENSITY', level: autoIntensity });
+        }
+
+        // ── Sprint 1: Trigger momentos interativos (15% chance/min) ──────
+        if (!lm.activeInteractiveMoment && Math.random() < 0.15) {
+          const ctx = {
+            minute: lm.minute,
+            homeScore: lm.homeScore,
+            awayScore: lm.awayScore,
+            possession: lm.possession,
+            homePlayers: lm.homePlayers,
+            momentum: lm.spiritMomentum ?? { home: 50, away: 50 },
+          };
+
+          if (shouldTriggerCounterAttack(ctx)) {
+            const attacker = lm.homePlayers.find(p => p.role === 'attack');
+            if (attacker) {
+              const moment = buildCounterAttackMoment(ctx, attacker);
+              dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            }
+          } else if (shouldTriggerSetPiece(ctx)) {
+            const takers = lm.homePlayers
+              .filter(p => p.role !== 'gk')
+              .sort((a, b) => {
+                const aFinishing = a.attributes?.finishing ?? 50;
+                const bFinishing = b.attributes?.finishing ?? 50;
+                return bFinishing - aFinishing;
+              });
+            if (takers.length >= 2) {
+              const moment = buildSetPieceMoment(ctx, takers);
+              dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            }
+          }
+              const moment = buildSetPieceMoment(ctx, takers);
+              dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            }
           }
         }
         // ─────────────────────────────────────────────────────────────────
@@ -2710,6 +2810,30 @@ export function MatchQuick() {
         />
       )}
 
+      {/* ─── Sprint 2: Indicador de Arco Narrativo ─────────────────────── */}
+      {live?.narrativeArc && live.phase === 'playing' && !halfTimeUi && !summary && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-10 w-full max-w-md px-4">
+          <QuickNarrativeArcIndicator
+            arc={live.narrativeArc.arc}
+            intensity={live.narrativeArc.intensity}
+          />
+        </div>
+      )}
+
+      {/* ─── Sprint 2: Controles de Intensidade Tática ─────────────────── */}
+      {live?.phase === 'playing' && !halfTimeUi && !live.activeInteractiveMoment && !summary && (
+        <div className="fixed bottom-32 left-4 right-4 z-10">
+          <QuickTacticalIntensityControls
+            current={quickMatchIntensity?.current ?? 'balanced'}
+            onChange={(level) => dispatch({ type: 'SET_TACTICAL_INTENSITY', level })}
+            disabled={false}
+          />
+          <div className="mt-2">
+            <QuickTacticalIntensityInfo level={quickMatchIntensity?.current ?? 'balanced'} />
+          </div>
+        </div>
+      )}
+
       {summary && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
           {/* Resumo editorial — eyebrow + score + frase */}
@@ -2778,6 +2902,34 @@ export function MatchQuick() {
               ))}
             </div>
           </div>
+
+          {/* ─── Sprint 1: Painel de Bônus de Performance ─────────────────── */}
+          {live?.performanceBonuses && live.performanceBonuses.length > 0 && (
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              <QuickPerformanceBonusPanel
+                bonuses={live.performanceBonuses}
+                totalOle={calculateTotalBonusRewards(live.performanceBonuses).ole}
+                totalExp={calculateTotalBonusRewards(live.performanceBonuses).exp}
+              />
+            </div>
+          )}
+
+          {/* ─── Sprint 3: Heatmap Tático ─────────────────────────────────── */}
+          {live?.events && (
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              <QuickMatchHeatmapPanel
+                heatmap={buildHeatmapFromEvents(live.events, 60)}
+                homeColor="#fbbf24"
+                awayColor="#ef4444"
+              />
+            </div>
+          )}
 
           {/* CTAs */}
           <div className="flex flex-col gap-2">
@@ -2908,6 +3060,20 @@ export function MatchQuick() {
             window.setTimeout(() => {
               dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve', rng } });
             }, 2000);
+          }}
+        />
+      )}
+
+      {/* ─── Sprint 1: Overlay de Momento Interativo ─────────────────────── */}
+      {live?.activeInteractiveMoment && (
+        <QuickInteractiveMomentOverlay
+          moment={live.activeInteractiveMoment}
+          onChoice={(choiceId) => {
+            dispatch({
+              type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT',
+              momentId: live.activeInteractiveMoment!.id,
+              choiceId,
+            });
           }}
         />
       )}

@@ -257,7 +257,7 @@ export async function tryGrantWelcomeGenesisPack(): Promise<WelcomeGenesisPackRe
       : '';
   const note = makeInboxItem('welcome-genesis-pack-v1', 'SHOP_PACK', 'PLANTEL', 'Pack de boas-vindas OLE', {
     body:
-      `Recebeste 11 jogadores Genesis titulares + ${WELCOME_BENCH_COUNT} reservas + ${WELCOME_EXP_GRANT.toLocaleString('pt-BR')} EXP iniciais. Cada jogador tem ${WELCOME_CONTRACT_MATCHES} jogos de contrato (amistosos e oficiais).${positionLine} Boa sorte, treinador — vê o plantel em Equipa.`,
+      `Recebeste 11 jogadores Genesis titulares + ${WELCOME_BENCH_COUNT} reservas + ${WELCOME_EXP_GRANT.toLocaleString('pt-BR')} EXP iniciais. Cada jogador tem ${WELCOME_CONTRACT_MATCHES} jogos de contrato (amistosos e oficiais).${positionLine} Boa sorte, treinador — vê o plantel em Equipe.`,
     deepLink: '/team',
   });
   dispatchGame({ type: 'INBOX_PREPEND', item: note });

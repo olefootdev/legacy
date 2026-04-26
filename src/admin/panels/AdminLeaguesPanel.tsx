@@ -366,7 +366,7 @@ export function AdminLeaguesPanel() {
                           <thead>
                             <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
                               <th className="px-2 py-2">#</th>
-                              <th className="px-2 py-2">Equipa</th>
+                              <th className="px-2 py-2">Equipe</th>
                               <th className="px-2 py-2">J</th>
                               <th className="px-2 py-2">PTS</th>
                               <th className="px-2 py-2">GF</th>

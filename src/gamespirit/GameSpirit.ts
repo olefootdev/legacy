@@ -29,6 +29,7 @@ import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
+import { enrichNarrative } from './contextualNarrative';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
   const dx = a.x - b.x;
@@ -1313,8 +1314,28 @@ export function gameSpiritTick(
     ...(lastShotPreview ? { lastShotPreview } : {}),
   };
 
-  return {
+  // Enriquece narrativa com contexto emocional (Fase 1 — Quick Win #6)
+  const enrichedNarrative = enrichNarrative(
+    {
+      narrative,
+      action,
+      nextPossession: next,
+      ball,
+      goalFor,
+      goalScorerPlayerId,
+      goalBuildUp,
+      threatBar01,
+      statDeltas: homeStat,
+      causalEvents: [...L.events],
+      spiritMeta: spiritMetaWithMomentum,
+    },
+    ctx,
+    awayShort,
     narrative,
+  );
+
+  return {
+    narrative: enrichedNarrative,
     action,
     nextPossession: next,
     ball,

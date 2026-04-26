@@ -41,7 +41,7 @@ function _DEMO_ITEMS(): InboxItem[] {
       'Clube: melhoria na Megaloja concluída.',
       {
         timeLabel: '15:40',
-        body: 'Equipa comercial reporta maior capacidade de merchandising — revisão de preços sugerida.',
+        body: 'Equipe comercial reporta maior capacidade de merchandising — revisão de preços sugerida.',
         deepLink: '/city',
       },
     ),
@@ -139,7 +139,7 @@ function _DEMO_ITEMS(): InboxItem[] {
       {
         timeLabel: '09:10',
         body: 'Nutrição destaca boa adesão ao plano de hidratação; manter vigilância nos deslocamentos.',
-        advisorLabel: 'Equipa de bem-estar',
+        advisorLabel: 'Equipe de bem-estar',
         staffRole: 'nutricao',
         deepLink: '/team/treino',
       },

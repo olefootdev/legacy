@@ -232,6 +232,15 @@ export interface LiveMatchSnapshot {
    */
   awayRosterAtKickoff?: { id: string; num: number; name: string; pos: string }[];
 
+  /* ── Melhorias Partida Rápida (Sprint 1-3) ─────────────────────────── */
+
+  /** Sprint 1: Momento interativo ativo (counter_attack, set_piece) */
+  activeInteractiveMoment?: import('@/match/quickInteractiveMoments').QuickInteractiveMoment | null;
+  /** Sprint 2: Arco narrativo detectado */
+  narrativeArc?: import('@/match/quickNarrativeArcs').NarrativeArcState | null;
+  /** Sprint 1: Bônus de performance acumulados */
+  performanceBonuses?: import('@/match/quickPerformanceBonuses').PerformanceBonus[];
+
   /* ── Partida ao vivo 2D (`test2d`) ─────────────────────────────────── */
 
   /** Jogadores visitantes simulados com posicionamento tático. */

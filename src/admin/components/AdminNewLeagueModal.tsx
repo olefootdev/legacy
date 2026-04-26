@@ -25,7 +25,7 @@ function makeStandings(teamCount: number, clubName: string): LeagueStandingRow[]
   for (let i = 0; i < n; i++) {
     rows.push({
       teamId: newTeamId(),
-      name: i === 0 ? clubName : `Equipa ${i + 1}`,
+      name: i === 0 ? clubName : `Equipe ${i + 1}`,
       played: 0,
       points: 0,
       goalsFor: 0,

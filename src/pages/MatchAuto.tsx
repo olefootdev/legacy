@@ -87,7 +87,7 @@ export function MatchAuto() {
 
       if (!lm && !simError) {
         setBlockedReason(
-          'Não foi possível jogar: plantel incompleto ou jogadores indisponíveis (lesão / suspensão). Titulares e banco cumprem os requisitos em Equipa.',
+          'Não foi possível jogar: plantel incompleto ou jogadores indisponíveis (lesão / suspensão). Titulares e banco cumprem os requisitos em Equipe.',
         );
       } else if (simError) {
         setBlockedReason(simError);
@@ -256,7 +256,7 @@ export function MatchAuto() {
               className="btn-primary flex-1 flex justify-center"
               onClick={() => navigate('/team')}
             >
-              <span className="btn-primary-inner">Ir para Equipa</span>
+              <span className="btn-primary-inner">Ir para Equipe</span>
             </button>
             <button
               type="button"

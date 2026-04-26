@@ -267,7 +267,7 @@ export function computeMatchMvp(tallies: Record<string, ScoutTally>): {
   const entries = Object.values(tallies);
   if (entries.length === 0) {
     const fallback: ScoutMvpEntry = {
-      playerId: '', name: 'Equipa', pos: '—',
+      playerId: '', name: 'Equipe', pos: '—',
       totalPoints: 0, headline: '—',
     };
     return { mvp: fallback, top3: [fallback] };

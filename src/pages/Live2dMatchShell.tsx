@@ -49,6 +49,9 @@ import {
   fetchFriendlyChallengeById,
   userParticipatesInChallenge,
 } from '@/supabase/friendlyChallenges';
+import { MomentumVisualBar } from '@/components/matchday/MomentumVisualBar';
+import { LiveStatsComparison } from '@/components/matchday/LiveStatsComparison';
+import { useLiveMatchStats } from '@/hooks/useLiveMatchStats';
 
 const LIVE_MATCH_ENGINE_MODE = 'test2d' as const;
 
@@ -619,6 +622,9 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const [namesOn, setNamesOn] = useState(loadLive2dNamesPref);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PitchPlayerState | null>(null);
+
+  // Fase 1 — Quick Wins: Stats ao vivo
+  const liveStats = useLiveMatchStats(live);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -1353,6 +1359,25 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             <span className="text-neon-yellow">{displayHomeScore}</span>
             <span className="text-gray-600 text-2xl sm:text-3xl">–</span>
             <span className="text-white">{displayAwayScore}</span>
+          </div>
+
+          {/* Fase 1 — Quick Win #2: Barra de Momentum Visual */}
+          {live.spiritMomentum && (
+            <MomentumVisualBar
+              momentum={live.spiritMomentum}
+              homeShort={live.homeShort}
+              awayShort={live.awayShort}
+              className="mx-auto w-full max-w-md"
+            />
+          )}
+
+          {/* Fase 1 — Quick Win #8: Stats ao Vivo */}
+          <div className="mx-auto w-full max-w-md">
+            <LiveStatsComparison
+              stats={liveStats}
+              homeShort={live.homeShort}
+              awayShort={live.awayShort}
+            />
           </div>
           <div
             className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-0.5 pb-0.5 sm:pb-1"

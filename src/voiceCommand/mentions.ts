@@ -38,9 +38,8 @@ const SECTOR_ALIASES: Record<string, CommandTarget> = {
   // GK
   goleiro:    { kind: 'role', role: 'gk' },
   arqueiro:   { kind: 'role', role: 'gk' },
-  // Equipa
+  // Equipe
   time:       { kind: 'team' },
-  equipa:     { kind: 'team' },
   equipe:     { kind: 'team' },
   todos:      { kind: 'team' },
   // Laterais como slots

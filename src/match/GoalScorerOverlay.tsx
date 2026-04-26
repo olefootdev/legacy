@@ -14,7 +14,7 @@ export interface GoalScorerOverlayProps {
   awayShort: string;
   homeScore: number;
   awayScore: number;
-  /** Quando false exibe “Defesa!” em vez de “Golo!”. Default true. */
+  /** Quando false exibe “Defesa!” em vez de “Gol!”. Default true. */
   isGoal?: boolean;
   /** Frase curta emocional sob o nome (substitui o antigo “Jogo posicional”). */
   storyline?: string;
@@ -58,7 +58,7 @@ export function GoalScorerOverlay({
       className={cn('w-full', className)}
       role="status"
       aria-live="assertive"
-      aria-label={`Golo de ${scorerName}`}
+      aria-label={`Gol de ${scorerName}`}
     >
       <div
         className={cn(
@@ -82,7 +82,7 @@ export function GoalScorerOverlay({
           'relative z-10 font-display font-black text-2xl sm:text-3xl uppercase tracking-[0.2em]',
           side === 'away' ? 'text-red-400' : 'text-neon-yellow',
         )}>
-          {isGoal ? (side === 'away' ? 'Tomamos gol...' : 'Golo!') : 'Defesa!'}
+          {isGoal ? (side === 'away' ? 'Tomamos gol...' : 'Gol!') : 'Defesa!'}
         </p>
 
         <div className="relative z-10 mt-6 flex flex-col items-stretch gap-4">

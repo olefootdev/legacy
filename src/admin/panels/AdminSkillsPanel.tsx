@@ -107,7 +107,7 @@ export function AdminSkillsPanel() {
           <div>
             <p className="font-display text-lg font-black text-white">COACH SKILLS</p>
             <p className="mt-1 text-white/75">
-              Equipa até <strong className="text-neon-yellow">{MAX_SKILLS_PER_PLAYER} skills</strong> por jogador.
+              Equipe até <strong className="text-neon-yellow">{MAX_SKILLS_PER_PLAYER} skills</strong> por jogador.
               Skills modificam comportamento tático em tempo real (sobreposição, cruzamento, pressão, etc.).
             </p>
             <p className="mt-2 text-xs text-white/60">

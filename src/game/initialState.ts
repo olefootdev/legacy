@@ -105,6 +105,14 @@ export function createInitialGameState(): OlefootGameState {
     playerEvolutionTimeline: {},
     shopCatalog: defaultShopCatalog(),
     shopInventory: {},
+    streakChallenges: {
+      challenges: [],
+      lastRefreshDate: new Date().toISOString(),
+    },
+    quickMatchIntensity: {
+      current: 'balanced',
+      changedAtMinute: 0,
+    },
   };
 }
 

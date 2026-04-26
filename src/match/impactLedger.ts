@@ -59,7 +59,7 @@ export function appendTeamGoalScoredHome(
 }
 
 /**
- * Golo sofrido (visitante marcou): política B — GR ×0,85; resto ×0,90.
+ * Gol sofrido (visitante marcou): política B — GR ×0,85; resto ×0,90.
  * Não acumular os dois no GR.
  */
 export function appendTeamGoalConcededHome(

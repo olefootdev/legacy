@@ -215,8 +215,8 @@ export function causalOutcomeFromHomeShot(out: HomeShotLogicalOutcome): 'goal' |
 }
 
 /**
- * Após remate da casa (não golo): posse e bola coerentes com saída de baliza / reinício.
- * Golo: posse para quem sofreu (saída); bola ao centro; fase celebração (overlay trata pausa).
+ * Após remate da casa (não gol): posse e bola coerentes com saída de baliza / reinício.
+ * Gol: posse para quem sofreu (saída); bola ao centro; fase celebração (overlay trata pausa).
  */
 export function patchAfterHomeShot(
   outcome: HomeShotLogicalOutcome,
@@ -275,7 +275,7 @@ export function createGoalOverlay(input: {
   return {
     overlay: {
       kind: 'goal',
-      title: 'Golo!',
+      title: 'Gol!',
       lines: [input.narrativeLine],
       startedAtMs: input.nowMs,
       autoDismissMs: GOAL_SCORER_OVERLAY_MS + GOAL_NARRATIVE_OVERLAY_MS,

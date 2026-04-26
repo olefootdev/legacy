@@ -274,6 +274,10 @@ export interface OlefootGameState {
   quickMatchStreak?: QuickMatchStreak;
   /** Desafios diários com recompensas. */
   dailyChallenges?: DailyChallengesState;
+  /** Desafios semanais de streak (Sprint 3). */
+  streakChallenges?: import('@/match/quickStreakChallenges').StreakChallengesState;
+  /** Intensidade tática atual na partida rápida (Sprint 2). */
+  quickMatchIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityState;
 }
 
 export type GameAction =
@@ -363,6 +367,16 @@ export type GameAction =
   | { type: 'FINALIZE_MATCH' }
   /** Quando `insertMatch` resolve — actualiza o snapshot em curso (evita mutar objecto já descartado). */
   | { type: 'SET_LIVE_MATCH_SUPABASE_ID'; matchId: string; matchClientNonce: number }
+  /** Sprint 1: Trigger momento interativo na partida rápida */
+  | { type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT'; moment: import('@/match/quickInteractiveMoments').QuickInteractiveMoment }
+  /** Sprint 1: Resolver escolha do momento interativo */
+  | { type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT'; momentId: string; choiceId: string | null }
+  /** Sprint 2: Mudar intensidade tática */
+  | { type: 'SET_TACTICAL_INTENSITY'; level: import('@/match/quickTacticalIntensity').TacticalIntensityLevel }
+  /** Sprint 3: Atualizar progresso dos desafios semanais */
+  | { type: 'UPDATE_STREAK_CHALLENGES'; currentStreak: number; won: boolean }
+  /** Sprint 3: Renovar desafios semanais */
+  | { type: 'REFRESH_STREAK_CHALLENGES' }
   | { type: 'MERGE_PLAYERS'; players: Record<string, PlayerEntity> }
   /** Substitui o plantel (ex.: sincronizar só com genesis_market_players); sanitiza escalação e mercado. */
   | { type: 'SET_PLAYERS_RECORD'; players: Record<string, PlayerEntity> }

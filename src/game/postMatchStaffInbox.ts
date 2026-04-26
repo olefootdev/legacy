@@ -48,7 +48,7 @@ export function buildPostMatchStaffInboxItem(
       `staff-mental-${Date.now()}`,
       'STAFF_ADVICE',
       'STAFF',
-      'Equipa técnica de performance mental',
+      'Equipe técnica de performance mental',
       {
         body:
           'Notamos insegurança no grupo após o desgaste da última jornada. Sugerimos um treino mental em circuito para destravar o bloco.',

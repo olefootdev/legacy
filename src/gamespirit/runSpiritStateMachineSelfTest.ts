@@ -20,7 +20,7 @@ import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
   assert.ok(p.spiritBuildupGkTicksRemaining >= 1);
 }
 
-// Golo: overlay 3s + barra no extremo do marcador durante flash
+// Gol: overlay 3s + barra no extremo do marcador durante flash
 {
   const { overlay, spiritMomentumClamp01 } = createGoalOverlay({
     nowMs: 1_700_000,
