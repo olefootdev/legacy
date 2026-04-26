@@ -672,7 +672,53 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const [completedChallengeIds, setCompletedChallengeIds] = useState<Set<string>>(new Set());
   const [lastCompletedChallenge, setLastCompletedChallenge] = useState<MatchChallenge | null>(null);
 
-  // Pitch players (precisa estar antes do useMemo de substituições)
+  useEffect(() => {
+    if (!live) return;
+
+    const newlyCompleted = checkCompletedChallenges(live, throttledStats, completedChallengeIds);
+
+    if (newlyCompleted.length > 0) {
+      const challenge = newlyCompleted[0]!;
+      setCompletedChallengeIds(prev => new Set(prev).add(challenge.id));
+      setLastCompletedChallenge(challenge);
+
+      console.log(`[Challenge] Completado: ${challenge.title} - +${challenge.reward.ole} OLE`);
+    }
+  }, [live, throttledStats, completedChallengeIds]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => setPrefersReducedMotion(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  const tacticalLive2dEnabled =
+    usesLive2dTacticalEngine && live?.phase === 'playing' && quickPreStart === null;
+  const { loopRef: tacticalLive2dLoopRef, truthSnap, carrierSimId, fatigue: simFatigue } = useLive2dTacticalSim({
+    enabled: tacticalLive2dEnabled,
+    session,
+    live,
+    manager,
+  });
+
+  const truthSnapRef = useRef(truthSnap);
+  truthSnapRef.current = truthSnap;
+
+  // CORREÇÃO ERRO CRÍTICO #1: tacticalPitchFromTruth precisa estar após useLive2dTacticalSim
+  const tacticalPitchFromTruth = useMemo(() => {
+    if (!usesLive2dTacticalEngine || !truthSnap?.players?.length || !live?.homePlayers?.length) {
+      return null;
+    }
+    return truthSnapshotToTest2dPitch({
+      snap: truthSnap,
+      homePlayers: live.homePlayers,
+      awayRoster: live.awayRoster ?? [],
+    });
+  }, [usesLive2dTacticalEngine, truthSnap, live?.homePlayers, live?.awayRoster]);
+
+  // Pitch players (usado em substituições e renderização)
   const pitch = tacticalPitchFromTruth?.homePitch ?? live?.homePlayers ?? [];
 
   // Detecta sugestões de substituição
@@ -708,46 +754,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
 
   // Análise tática (mini-mapa)
   const { heatmap, pattern } = useTacticalAnalysis(live);
-
-  // Desafios in-match
-  const challengeProgress = useMemo(() => {
-    if (!live) return new Map();
-    return calculateChallengeProgress(live, throttledStats);
-  }, [live, throttledStats]);
-
-  useEffect(() => {
-    if (!live) return;
-
-    const newlyCompleted = checkCompletedChallenges(live, throttledStats, completedChallengeIds);
-
-    if (newlyCompleted.length > 0) {
-      const challenge = newlyCompleted[0]!;
-      setCompletedChallengeIds(prev => new Set(prev).add(challenge.id));
-      setLastCompletedChallenge(challenge);
-
-      console.log(`[Challenge] Completado: ${challenge.title} - +${challenge.reward.ole} OLE`);
-    }
-  }, [live, throttledStats, completedChallengeIds]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => setPrefersReducedMotion(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
-
-  const tacticalLive2dEnabled =
-    usesLive2dTacticalEngine && live?.phase === 'playing' && quickPreStart === null;
-  const { loopRef: tacticalLive2dLoopRef, truthSnap, carrierSimId, fatigue: simFatigue } = useLive2dTacticalSim({
-    enabled: tacticalLive2dEnabled,
-    session,
-    live,
-    manager,
-  });
-
-  const truthSnapRef = useRef(truthSnap);
-  truthSnapRef.current = truthSnap;
 
   // Penalty bridge — TacticalSimLoop detecta falta dentro da grande área e dispara o modal via reducer.
   useEffect(() => {
@@ -1050,19 +1056,24 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     if (!live || isBlockingNonQuickMatch(live)) return;
     if (live.phase !== 'postgame' || finalizedRef.current) return;
     finalizedRef.current = true;
+
+    // CORREÇÃO ERRO CRÍTICO #2: Garantir que live ainda existe antes de dispatch
+    const currentLive = getGameState().liveMatch;
+    if (!currentLive) return;
+
     setSummary({
-      homeShort: live.homeShort,
-      awayShort: live.awayShort,
-      homeName: live.homeName,
-      awayName: live.awayName,
-      homeScore: live.homeScore,
-      awayScore: live.awayScore,
-      events: live.events.map((e) => ({ id: e.id, text: e.text })),
+      homeShort: currentLive.homeShort,
+      awayShort: currentLive.awayShort,
+      homeName: currentLive.homeName,
+      awayName: currentLive.awayName,
+      homeScore: currentLive.homeScore,
+      awayScore: currentLive.awayScore,
+      events: currentLive.events.map((e) => ({ id: e.id, text: e.text })),
     });
   dispatch({ type: 'FINALIZE_MATCH' });
   // move to postgame screen
   navigate('/postgame');
-  }, [live, dispatch]);
+  }, [live, dispatch, navigate]);
 
   const squadReport = useMemo(
     () => evaluateOfficialSquad(lineupIds, playersById),
@@ -1101,16 +1112,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     };
   }, [live?.homePlayers, playersById]);
 
-  const tacticalPitchFromTruth = useMemo(() => {
-    if (!usesLive2dTacticalEngine || !truthSnap?.players?.length || !live?.homePlayers?.length) {
-      return null;
-    }
-    return truthSnapshotToTest2dPitch({
-      snap: truthSnap,
-      homePlayers: live.homePlayers,
-      awayRoster: live.awayRoster ?? [],
-    });
-  }, [usesLive2dTacticalEngine, truthSnap, live?.homePlayers, live?.awayRoster]);
+  // CORREÇÃO: tacticalPitchFromTruth já foi movido para cima (linha ~676)
 
   const storeOnBallId = useMemo(() => {
     if (usesLive2dTacticalEngine && tacticalLive2dEnabled) {

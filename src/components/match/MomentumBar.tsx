@@ -171,25 +171,6 @@ export function MomentumBar({
           />
         )}
       </div>
-
-      {/* Momentum Indicator Arrow */}
-      <div className="relative h-3 mt-1">
-        <motion.div
-          className="absolute top-0 flex items-center justify-center"
-          animate={{
-            left: `calc(${homePercent}% - 8px)`,
-          }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        >
-          <div
-            className="w-4 h-4 rotate-45 border-2 shadow-lg"
-            style={{
-              borderColor: homePercent > 50 ? homeColor : awayColor,
-              backgroundColor: homePercent > 50 ? homeColor : awayColor,
-            }}
-          />
-        </motion.div>
-      </div>
     </div>
   );
 }
