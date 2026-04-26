@@ -42,7 +42,8 @@ export interface MatchdayHeroData {
   };
   stats: { label: string; value: string }[];
   highlight: {
-    name: string;
+    /** Nome do time (vai no título grande em Moret italic). */
+    teamName: string;    name: string;
     /** Número decorativo gigante atrás (camisa, OVR, etc.). 1-3 dígitos. */
     number: number;
     quote: string;
@@ -89,7 +90,7 @@ export const MOCK_MATCHDAY: MatchdayHeroData = {
     { label: 'Escanteios', value: '3' },
   ],
   highlight: {
-    name: 'Gabriel Barbosa',
+    teamName: 'Flamengo',    name: 'Gabriel Barbosa',
     number: 9,
     quote: 'Dois gols em 15 minutos. A camisa 9 pesou quando precisou pesar.',
   },
@@ -315,10 +316,10 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
             return (
               <article key={s.label} className={statsBg(i)}>
                 <p
-                  className="text-neon-yellow tabular-nums leading-none"
+                  className="text-neon-yellow tabular-nums leading-none italic"
                   style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 900,
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
                     fontSize: 'clamp(28px, 4.8vw, 44px)',
                   }}
                 >
@@ -345,8 +346,8 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
               <span>★ DESTAQUE DA PARTIDA ★ </span>
             </div>
             <h3
-              className="ole-headline text-black leading-[0.9] uppercase"
-              style={{ fontSize: 'clamp(36px, 7.5vw, 80px)' }}
+              className="ole-headline-italic text-black leading-[0.85]"
+              style={{ fontSize: 'clamp(48px, 10vw, 96px)' }}
             >
               {data.highlight.name.split(' ').slice(0, 1)}
               <br />

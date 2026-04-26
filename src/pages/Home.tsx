@@ -589,7 +589,8 @@ export function Home() {
   );
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-8">
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
+      <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6 sm:space-y-8">
       {/* HERO PRINCIPAL — Matchday Hero do ÚLTIMO JOGO (placar real + MVP) */}
       <section
         aria-label="Último jogo"
@@ -635,6 +636,7 @@ export function Home() {
                   ],
                   highlight: {
                     name: homeHighlight.name,
+                    teamName: 'DESTAQUE',
                     number: homeHighlight.ovr,
                     quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. Pronto para a primeira partida.`,
                     photoUrl: homeHighlight.imageSrc,
@@ -651,14 +653,18 @@ export function Home() {
 
           // ── Modo RESULTADO (último jogo) ────────────────────────────
           const awayShort = lastMatch.away.slice(0, 3).toUpperCase();
-          const formStr =
-            last5.length > 0
-              ? last5
-                  .map((r) =>
-                    r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D',
-                  )
-                  .join(' ')
-              : '—';
+
+          // Calcular ranking e variação percentual
+          const currentRanking = 1; // TODO: pegar do sistema de ranking real
+          const previousRanking = 1; // TODO: pegar do histórico de ranking
+          const rankingChange = previousRanking > 0
+            ? Math.round(((previousRanking - currentRanking) / previousRanking) * 100)
+            : 0;
+          const rankingChangeStr = rankingChange > 0
+            ? `+${rankingChange}%`
+            : rankingChange < 0
+              ? `${rankingChange}%`
+              : '0%';
 
           // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
           const mvp = lastMatch.scoutMvp;
@@ -707,10 +713,11 @@ export function Home() {
                   { label: 'Empates', value: String(draws) },
                   { label: 'Derrotas', value: String(losses) },
                   { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
-                  { label: 'Forma', value: formStr },
+                  { label: 'Ranking', value: rankingChangeStr },
                 ],
                 highlight: {
                   name: mvpName,
+                  teamName: 'DESTAQUE',
                   number: mvpOvr,
                   quote: mvpQuote,
                   photoUrl: mvpPhoto,
@@ -735,7 +742,7 @@ export function Home() {
           ariaLabel="Próxima partida"
           className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
-          <div className="px-4 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
+          <div className="w-full max-w-full min-w-0 px-3 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
             {/* Eyebrow centralizado */}
             <div
               className="ole-eyebrow !text-neon-yellow"
@@ -750,7 +757,7 @@ export function Home() {
               const renderHomeCrest = homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null);
               const renderAwayCrest = awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null);
               return (
-            <div className="flex items-center justify-center gap-4 sm:gap-6">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-full min-w-0">
               {renderHomeCrest ? (
                 <img
                   src={renderHomeCrest}
@@ -1545,6 +1552,7 @@ export function Home() {
         </motion.div>
         </DashboardSection>
       </DashboardGrid>
+      </div>
     </div>
   );
 }
