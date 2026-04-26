@@ -470,84 +470,21 @@ export function MatchQuick() {
         }
 
         if (!penaltyActive && cooldownOk && matchWarmupOk) {
-          // Min 15 — Como está o jogo?
-          if (lm.minute >= 15 && lm.minute <= 18 && !shown.has('min15_check')) {
-            shown.add('min15_check');
-            lastAssistantShownMsRef.current = Date.now();
-            setAssistantEvent({ kind: 'min15_check' });
-          }
+          // Calcular estatísticas para contexto
+          const shots = lm.events.filter(e => e.kind === 'shot_home').length;
+          const shotsAgainst = lm.events.filter(e => e.kind === 'shot_away').length;
+          const possession = lm.possession === 'home' ? 60 : 40;
 
-          // Min 25–40 — Risco de lesão (IA decide automaticamente)
-          if (lm.minute >= 25 && lm.minute <= 40 && !shown.has('injury_warning')) {
-            const pitchPlayers = lm.homePlayers ?? [];
-            const outPlayer = pitchPlayers.find(p => p.fatigue >= 70);
-            if (outPlayer) {
-              const benchState = getGameState();
-              const pitchIdSet = new Set(pitchPlayers.map(p => p.playerId));
-              const benchPlayer = Object.values(benchState.players ?? {}).find(
-                p => !pitchIdSet.has(p.id) && p.outForMatches <= 0
-              );
-              shown.add('injury_warning');
-              lastAssistantShownMsRef.current = Date.now();
+          // Triggers inteligentes baseados em eventos (Passo 5)
+          const scoreDiff = lm.homeScore - lm.awayScore;
+          const isLosing = scoreDiff < 0;
+          const isLosingBadly = scoreDiff <= -2;
+          const lowPossession = possession < 35;
+          const noShots = shots === 0 && lm.minute >= 15;
 
-              // IA decide automaticamente se troca ou não
-              const shouldSubstitute = outPlayer.fatigue >= 85 || (benchPlayer && Math.random() > 0.3);
-
-              if (shouldSubstitute && benchPlayer) {
-                // Executa a substituição automaticamente
-                const slotId = Object.entries(lm.matchLineupBySlot ?? {}).find(
-                  ([, id]) => id === outPlayer.playerId
-                )?.[0] ?? '';
-
-                dispatch({
-                  type: 'MATCH_SUBSTITUTE',
-                  outPlayerId: outPlayer.playerId,
-                  inPlayerId: benchPlayer.id,
-                  slotId,
-                } as any);
-
-                // Notifica GameSpirit para recalcular forças dos times
-                dispatch({
-                  type: 'RECALCULATE_TEAM_STRENGTH',
-                  reason: 'substitution',
-                  minute: lm.minute,
-                } as any);
-
-                // Mostra notificação no feed
-                const feedText = `🔄 Substituição: ${outPlayer.name} ➜ ${benchPlayer.name} (fadiga ${Math.round(outPlayer.fatigue)}%)`;
-                dispatch({
-                  type: 'ADD_MATCH_EVENT',
-                  event: {
-                    id: `sub_${Date.now()}`,
-                    kind: 'narrative',
-                    minute: lm.minute,
-                    text: feedText,
-                  },
-                } as any);
-              } else {
-                // IA decidiu não trocar - apenas mostra aviso
-                setAssistantEvent({
-                  kind: 'injury_warning',
-                  injuryOutPlayer: {
-                    name: outPlayer.name,
-                    pos: outPlayer.role ?? '—',
-                    fatigue: outPlayer.fatigue,
-                    playerId: outPlayer.playerId,
-                  },
-                  suggestedSubPlayer: benchPlayer
-                    ? { name: benchPlayer.name, pos: benchPlayer.pos ?? '—', playerId: benchPlayer.id }
-                    : undefined,
-                });
-              }
-            }
-          }
-
-          // Min 70 — O que fazemos agora?
-          if (lm.minute >= 70 && lm.minute <= 73 && !shown.has('min70_check')) {
-            shown.add('min70_check');
-            lastAssistantShownMsRef.current = Date.now();
-            setAssistantEvent({ kind: 'min70_check' });
-          }
+          // REMOVIDO: Min 15 check (usuário já tem controles de intensidade tática)
+          // REMOVIDO: Triggers inteligentes de tática (redundante com controles sempre visíveis)
+          // REMOVIDO: Min 70 check (usuário já tem controles de intensidade tática)
         }
         // ─────────────────────────────────────────────────────────────────
 
@@ -921,7 +858,7 @@ export function MatchQuick() {
     });
   }, [live?.quickInjurySub, live?.phase, halfTimeUi, summary, playersById]);
 
-  // Auto-close injury sub dialog após 5s — partida retoma sem substituição
+  // Auto-close injury sub dialog após 5s — IA decide automaticamente para lesões graves
   useEffect(() => {
     const q = live?.quickInjurySub;
     if (!q || live?.phase !== 'playing' || halfTimeUi || summary !== null) {
@@ -929,6 +866,66 @@ export function MatchQuick() {
       setInjurySubCountdown(5);
       return;
     }
+
+    // Verificar se é lesão grave
+    const injuredPlayer = playersById[q.outPlayerId];
+    const isGrave = (injuredPlayer?.outForMatches ?? 1) >= 3;
+
+    if (isGrave) {
+      // Lesão grave: IA decide automaticamente quem entra
+      const benchState = getGameState();
+      const pitchIdSet = new Set((live.homePlayers ?? []).map(p => p.playerId));
+
+      // Buscar melhor substituto disponível da mesma posição
+      const injuredPos = injuredPlayer?.pos ?? '';
+      const benchPlayers = Object.values(benchState.players ?? {}).filter(
+        p => !pitchIdSet.has(p.id) && p.outForMatches <= 0
+      );
+
+      // Priorizar jogador da mesma posição, senão pegar o melhor disponível
+      const bestSub = benchPlayers.find(p => p.pos === injuredPos) || benchPlayers[0];
+
+      if (bestSub) {
+        // Executa substituição automática
+        dispatch({
+          type: 'MATCH_SUBSTITUTE',
+          outPlayerId: q.outPlayerId,
+          inPlayerId: bestSub.id,
+          slotId: q.slotId,
+        } as any);
+
+        // Notifica GameSpirit para recalcular forças
+        dispatch({
+          type: 'RECALCULATE_TEAM_STRENGTH',
+          reason: 'injury_substitution',
+          minute: live.minute,
+        } as any);
+
+        // Feedback no feed
+        const feedText = `🚑 Lesão grave! ${injuredPlayer?.name} sai. ${bestSub.name} entra no lugar.`;
+        dispatch({
+          type: 'ADD_LIVE_MATCH_EVENT',
+          text: feedText,
+          kind: 'narrative',
+        } as any);
+
+        setSelected(null);
+        return;
+      } else {
+        // Sem substitutos: jogador sai e time fica com 10
+        const feedText = `🚑 Lesão grave! ${injuredPlayer?.name} sai. Sem substitutos disponíveis.`;
+        dispatch({
+          type: 'ADD_LIVE_MATCH_EVENT',
+          text: feedText,
+          kind: 'narrative',
+        } as any);
+        dispatch({ type: 'CANCEL_QUICK_INJURY_SUB' });
+        setSelected(null);
+        return;
+      }
+    }
+
+    // Lesão leve: mantém comportamento original (countdown 5s)
     setInjurySubCountdown(5);
     const start = Date.now();
     const tickId = window.setInterval(() => {
@@ -943,7 +940,7 @@ export function MatchQuick() {
       clearInterval(tickId);
       if (injurySubAutoCloseRef.current) clearTimeout(injurySubAutoCloseRef.current);
     };
-  }, [live?.quickInjurySub?.outPlayerId, live?.phase, halfTimeUi, summary, dispatch]);
+  }, [live?.quickInjurySub?.outPlayerId, live?.phase, halfTimeUi, summary, dispatch, playersById]);
 
   // Feature 6 — estado emocional: mensagens no feed em momentos chave da partida
   useEffect(() => {
@@ -2655,9 +2652,52 @@ export function MatchQuick() {
             event={assistantEvent}
             onDismiss={() => setAssistantEvent(null)}
             onApplyPreset={(presetId) => {
-              const feedText = `Ajuste tático aplicado: ${presetId}`;
-              dispatch({ type: 'APPLY_COACH_ACTION', presetId, feedText });
+              // Feedback tático detalhado (Passo 7)
+              let feedText = '';
+              let feedbackDetail = '';
+
+              if (presetId === 'MORAL_BOOST') {
+                feedText = '⚡ Bônus de Moral aplicado! Equipa motivada.';
+                feedbackDetail = 'Confiança +10%, Fadiga -5% nos próximos 10 minutos';
+                // Aplicar bônus de moral aos jogadores
+                dispatch({
+                  type: 'ADD_LIVE_MATCH_EVENT',
+                  text: feedText,
+                  kind: 'narrative',
+                } as any);
+              } else {
+                const presetLabels: Record<string, { name: string; effect: string }> = {
+                  PRESSAO_ALTA: { name: 'Pressão Alta', effect: 'Fadiga aumentará 60% mais rápido. +10% chance de gol.' },
+                  POSSE_CONTROLADA: { name: 'Posse Controlada', effect: '+15% posse de bola. Desgasta o adversário.' },
+                  TRANSICAO_RAPIDA: { name: 'Contra-Ataque', effect: '+30% chance de contra-ataque. +8% chance de gol.' },
+                  BLOCO_BAIXO: { name: 'Bloco Baixo', effect: '+25% defesa. -15% chance de gol.' },
+                  JOGO_DIRETO: { name: 'Jogo Direto', effect: 'Bolas longas. Disputa de segunda bola.' },
+                };
+
+                const preset = presetLabels[presetId] || { name: presetId, effect: 'Ajuste aplicado' };
+                feedText = `🎯 ${preset.name} aplicado`;
+                feedbackDetail = preset.effect;
+
+                dispatch({ type: 'APPLY_COACH_ACTION', presetId, feedText });
+
+                // Adicionar feedback detalhado no feed (Passo 7)
+                setTimeout(() => {
+                  dispatch({
+                    type: 'ADD_LIVE_MATCH_EVENT',
+                    text: `💡 ${feedbackDetail}`,
+                    kind: 'narrative',
+                  } as any);
+                }, 1000);
+              }
+
               setAssistantEvent(null);
+
+              // Mostrar feedback visual temporário (Passo 7)
+              setTacticalFeedback(feedbackDetail);
+              if (tacticalFeedbackTimerRef.current) clearTimeout(tacticalFeedbackTimerRef.current);
+              tacticalFeedbackTimerRef.current = setTimeout(() => {
+                setTacticalFeedback(null);
+              }, 8000);
             }}
             onFormationChange={(formation) => {
               dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formation } as any);

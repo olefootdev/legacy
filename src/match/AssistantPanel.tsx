@@ -34,6 +34,15 @@ export interface AssistantEvent {
   /** Substituições usadas/máximo (halftime). */
   subsUsed?: number;
   subsMax?: number;
+  /** Contexto da partida (min15_check, min70_check). */
+  matchContext?: {
+    minute: number;
+    homeScore: number;
+    awayScore: number;
+    possession: number;
+    shots: number;
+    shotsAgainst: number;
+  };
 }
 
 export interface AssistantPanelProps {
@@ -62,7 +71,7 @@ const STYLE_OPTIONS = [
 type HalftimeTab = 'formacao' | 'estilo' | 'subs';
 
 const HALFTIME_MIN_SECONDS = 15;
-const AUTO_DISMISS_SECONDS = 9; // para eventos não-intervalo
+const AUTO_DISMISS_SECONDS = 15; // aumentado de 9 para 15 segundos
 
 // ─── Componente principal ────────────────────────────────────────────────────
 
@@ -210,6 +219,7 @@ export function AssistantPanel({
               onBom={() => { interact(); onDismiss(); }}
               onRuim={() => { interact(); setStep('ruim_action'); }}
               onApply={(id) => { interact(); onApplyPreset(id); onDismiss(); }}
+              matchContext={event.matchContext}
             />
           )}
 
@@ -247,7 +257,10 @@ export function AssistantPanel({
           )}
 
           {event.kind === 'min70_check' && (
-            <Min70Check onApply={(id) => { interact(); onApplyPreset(id); onDismiss(); }} />
+            <Min70Check
+              onApply={(id) => { interact(); onApplyPreset(id); onDismiss(); }}
+              matchContext={event.matchContext}
+            />
           )}
         </div>
 
@@ -287,56 +300,79 @@ function Min15Check({
   onBom,
   onRuim,
   onApply,
+  matchContext,
 }: {
   step: 'root' | 'ruim_action';
   onBom: () => void;
   onRuim: () => void;
   onApply: (id: string) => void;
+  matchContext?: AssistantEvent['matchContext'];
 }) {
+  const scoreDiff = (matchContext?.homeScore ?? 0) - (matchContext?.awayScore ?? 0);
+  const isWinning = scoreDiff > 0;
+  const isLosing = scoreDiff < 0;
+  const isDraw = scoreDiff === 0;
+
   return (
     <AnimatePresence mode="wait">
-      {step === 'root' ? (
-        <motion.div key="root" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <p className="mb-4 text-sm text-white/80">O que estás achando do jogo?</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={onRuim}
-              className="rounded-lg border border-red-500/30 bg-red-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-red-500/50 hover:bg-red-500/20"
-            >
-              😤 Ruim
-            </button>
-            <button
-              type="button"
-              onClick={onBom}
-              className="rounded-lg border border-green-500/30 bg-green-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-green-500/50 hover:bg-green-500/20"
-            >
-              😎 Bom
-            </button>
+      <motion.div key="root" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        {/* Contexto da partida */}
+        {matchContext && (
+          <div className="mb-4 rounded-lg border border-white/10 bg-black/60 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-bold text-white/50">MINUTO {matchContext.minute}'</span>
+              <span className="text-lg font-black text-neon-yellow">
+                {matchContext.homeScore} - {matchContext.awayScore}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div>
+                <div className="text-white/50">Posse</div>
+                <div className="font-bold text-white">{matchContext.possession}%</div>
+              </div>
+              <div>
+                <div className="text-white/50">Chutes</div>
+                <div className="font-bold text-white">{matchContext.shots}</div>
+              </div>
+              <div>
+                <div className="text-white/50">Sofridos</div>
+                <div className="font-bold text-white">{matchContext.shotsAgainst}</div>
+              </div>
+            </div>
           </div>
-        </motion.div>
-      ) : (
-        <motion.div key="ruim" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-          <p className="mb-4 text-sm text-white/80">O que quer mudar?</p>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: 'PRESSAO_ALTA', label: 'Atacar Mais', icon: '⚔️' },
-              { id: 'PRESSAO_ALTA', label: 'Pressionar', icon: '🔥' },
-              { id: 'POSSE_CONTROLADA', label: 'Melhorar Passes', icon: '🔵' },
-            ].map(({ id, label, icon }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => onApply(id)}
-                className="flex flex-col items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 py-3 text-white transition-all hover:border-neon-yellow/40 hover:bg-black/80"
-              >
-                <span className="text-lg leading-none">{icon}</span>
-                <span className="font-display text-[9px] font-black uppercase leading-tight tracking-wide">{label}</span>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-      )}
+        )}
+
+        <p className="mb-4 text-sm text-white/80">Como está a performance da equipa?</p>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={onRuim}
+            className="flex flex-col items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-red-500/50 hover:bg-red-500/20"
+          >
+            <span className="text-xl">❌</span>
+            <span>Precisa Melhorar</span>
+          </button>
+          <button
+            type="button"
+            onClick={onBom}
+            className="flex flex-col items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
+          >
+            <span className="text-xl">✓</span>
+            <span>Satisfatório</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // Bônus de moral
+              onApply('MORAL_BOOST');
+            }}
+            className="flex flex-col items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 py-3 font-display text-xs font-black uppercase tracking-wide text-white transition-all hover:border-green-500/50 hover:bg-green-500/20"
+          >
+            <span className="text-xl">⚡</span>
+            <span>Excelente</span>
+          </button>
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }
@@ -506,15 +542,42 @@ function HalftimePanel({
   );
 }
 
-function Min70Check({ onApply }: { onApply: (id: string) => void }) {
+function Min70Check({ onApply, matchContext }: { onApply: (id: string) => void; matchContext?: AssistantEvent['matchContext'] }) {
   const options = [
-    { id: 'PRESSAO_ALTA', label: 'Ataca Mais', icon: '⚔️' },
-    { id: 'POSSE_CONTROLADA', label: 'Posse de Bola', icon: '🔵' },
-    { id: 'TRANSICAO_RAPIDA', label: 'Contra-ataque', icon: '⚡' },
-    { id: 'BLOCO_BAIXO', label: 'Defende', icon: '🛡️' },
+    { id: 'PRESSAO_ALTA', label: 'Ataca Mais', icon: '⚔️', desc: '+20% gol, +60% fadiga' },
+    { id: 'POSSE_CONTROLADA', label: 'Posse de Bola', icon: '🔵', desc: '+15% posse, controle' },
+    { id: 'TRANSICAO_RAPIDA', label: 'Contra-ataque', icon: '⚡', desc: '+30% contra, +8% gol' },
+    { id: 'BLOCO_BAIXO', label: 'Defende', icon: '🛡️', desc: '+25% defesa, -15% gol' },
   ];
+
   return (
     <div>
+      {/* Contexto da partida */}
+      {matchContext && (
+        <div className="mb-4 rounded-lg border border-white/10 bg-black/60 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-bold text-white/50">MINUTO {matchContext.minute}'</span>
+            <span className="text-lg font-black text-neon-yellow">
+              {matchContext.homeScore} - {matchContext.awayScore}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div>
+              <div className="text-white/50">Posse</div>
+              <div className="font-bold text-white">{matchContext.possession}%</div>
+            </div>
+            <div>
+              <div className="text-white/50">Chutes</div>
+              <div className="font-bold text-white">{matchContext.shots}</div>
+            </div>
+            <div>
+              <div className="text-white/50">Sofridos</div>
+              <div className="font-bold text-white">{matchContext.shotsAgainst}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <p className="mb-4 text-sm text-white/80">O que fazemos agora?</p>
       <div className="grid grid-cols-4 gap-2">
         {options.map(o => (
@@ -526,6 +589,7 @@ function Min70Check({ onApply }: { onApply: (id: string) => void }) {
           >
             <span className="text-xl leading-none">{o.icon}</span>
             <span className="text-center font-display text-[9px] font-black uppercase leading-tight tracking-wide">{o.label}</span>
+            <span className="text-center text-[7px] leading-tight text-white/50">{o.desc}</span>
           </button>
         ))}
       </div>

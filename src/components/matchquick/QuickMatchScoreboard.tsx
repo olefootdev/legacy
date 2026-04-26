@@ -94,7 +94,7 @@ export function QuickMatchScoreboard({
 
           {/* Nome do time */}
           <p
-            className="text-white/70 uppercase font-display font-bold tracking-wider truncate max-w-full text-right"
+            className="text-white uppercase font-display font-bold tracking-wider truncate max-w-full text-right"
             style={{
               fontSize: 'clamp(11px, 1.8vw, 15px)',
               letterSpacing: '0.18em',
@@ -168,7 +168,7 @@ export function QuickMatchScoreboard({
 
           {/* Nome do time */}
           <p
-            className="text-white/70 uppercase font-display font-bold tracking-wider truncate max-w-full text-left"
+            className="text-white uppercase font-display font-bold tracking-wider truncate max-w-full text-left"
             style={{
               fontSize: 'clamp(11px, 1.8vw, 15px)',
               letterSpacing: '0.18em',
