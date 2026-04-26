@@ -25,13 +25,6 @@ function ActivityIcon({ type, isAI }: { type: MarketActivity['type']; isAI?: boo
   return <Flame className="h-4 w-4 text-orange-400" />;
 }
 
-function ActivityEmoji({ type, profit }: { type: MarketActivity['type']; profit?: number }) {
-  if (type === 'auction_won') return '🏆';
-  if (type === 'sale' && profit && profit > 0) return '💰';
-  if (type === 'purchase') return '🔥';
-  return '⚡';
-}
-
 export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivityFeedProps) {
   const visible = activities.slice(0, maxVisible);
 
@@ -121,11 +114,6 @@ export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivit
                     )}
                   </div>
                 </div>
-
-                {/* Emoji */}
-                <span className="shrink-0 text-lg">
-                  {ActivityEmoji({ type: activity.type, profit: activity.profit })}
-                </span>
               </div>
 
               {/* Timestamp */}
