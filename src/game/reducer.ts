@@ -28,6 +28,13 @@ import {
 import { validateAcademyProspectName } from '@/entities/managerProspectReservedNames';
 import { addBroCents, addOle, friendlyChallengeBroFeeCents, grantEarnedExp } from '@/systems/economy';
 import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics';
+import { updateStreak } from './quickMatchStreak';
+import {
+  generateDailyChallenges,
+  getTodaySeed,
+  shouldResetDailyChallenges,
+  updateChallengeProgress,
+} from './dailyChallenges';
 import { tickRecoveryMatches } from '@/systems/injury';
 import { applyWorldCatchUp } from './worldCatchUp';
 import { mergeWalletIntoFinance } from './financeWalletSync';
@@ -1076,6 +1083,68 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!state.liveMatch) return state;
       const lm = state.liveMatch;
       const homeWin = lm.homeScore > lm.awayScore;
+
+      // Update quick match streak if this was a quick match
+      const quickMatchStreak = lm.mode === 'quick'
+        ? updateStreak(state.quickMatchStreak, homeWin)
+        : state.quickMatchStreak;
+
+      // Apply streak multiplier to rewards for quick matches
+      const streakMultiplier = lm.mode === 'quick' && quickMatchStreak ? quickMatchStreak.multiplier : 1.0;
+
+      // Update daily challenges for quick matches
+      let dailyChallenges = state.dailyChallenges;
+      if (lm.mode === 'quick' && dailyChallenges) {
+        // Check if challenges need reset
+        if (shouldResetDailyChallenges(dailyChallenges.lastResetDate)) {
+          const todaySeed = getTodaySeed();
+          dailyChallenges = {
+            challenges: generateDailyChallenges(todaySeed),
+            lastResetDate: new Date().toISOString(),
+            streak: 0,
+          };
+        }
+
+        // Find first goal minute
+        const firstGoalEvent = lm.events.find((e) => e.kind === 'goal_home');
+        const firstGoalMinute = firstGoalEvent?.minute;
+
+        // Update challenge progress based on match result
+        const matchData = {
+          won: homeWin,
+          homeScore: lm.homeScore,
+          awayScore: lm.awayScore,
+          firstGoalMinute,
+          wasLosingAtHalftime: false, // TODO: track this in match state
+        };
+
+        // Update each challenge type
+        if (homeWin) {
+          dailyChallenges.challenges = updateChallengeProgress(dailyChallenges.challenges, 'win_matches');
+        }
+        if (lm.homeScore > 0) {
+          dailyChallenges.challenges = updateChallengeProgress(dailyChallenges.challenges, 'score_goals', lm.homeScore);
+        }
+        if (homeWin && lm.awayScore === 0) {
+          dailyChallenges.challenges = updateChallengeProgress(dailyChallenges.challenges, 'clean_sheet');
+        }
+        if (homeWin && firstGoalMinute !== undefined && firstGoalMinute <= 15) {
+          dailyChallenges.challenges = updateChallengeProgress(dailyChallenges.challenges, 'quick_goals');
+        }
+        if (homeWin && lm.homeScore - lm.awayScore >= 3) {
+          const challenge = dailyChallenges.challenges.find((c) => c.type === 'dominant_win' && !c.completed);
+          if (challenge && lm.homeScore - lm.awayScore >= challenge.target) {
+            dailyChallenges.challenges = updateChallengeProgress(dailyChallenges.challenges, 'dominant_win');
+          }
+        }
+        if (quickMatchStreak && quickMatchStreak.current >= 3) {
+          const challenge = dailyChallenges.challenges.find((c) => c.type === 'win_streak' && !c.completed);
+          if (challenge && quickMatchStreak.current >= challenge.target) {
+            dailyChallenges.challenges = updateChallengeProgress(dailyChallenges.challenges, 'win_streak');
+          }
+        }
+      }
+
       const oleGainBase = 80 + lm.homeScore * 35 + (homeWin ? 120 : 0);
       const structBonuses = structureMatchExpBonuses({
         structures: state.structures,
@@ -1083,12 +1152,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         isHomeFixture: state.nextFixture.isHome,
         userWin: homeWin,
       });
-      const oleGain = oleGainBase + structBonuses.totalExtra;
+      const oleGain = Math.round((oleGainBase + structBonuses.totalExtra) * streakMultiplier);
       const draw = lm.homeScore === lm.awayScore;
       const staffNote = buildPostMatchStaffInboxItem(state, lm);
       const structExtraLine =
         structBonuses.totalExtra > 0
           ? ` Estruturas: estádio +${structBonuses.stadiumExp} EXP${homeWin ? `, Megaloja +${structBonuses.megastoreExp} EXP` : ''} (apoio efectivo ~${structBonuses.effectiveCrowd.toFixed(1)}%).`
+          : '';
+      const streakBonusLine =
+        streakMultiplier > 1.0
+          ? ` 🔥 Streak de ${quickMatchStreak?.current ?? 0} vitórias: ${streakMultiplier}x multiplicador aplicado!`
           : '';
       const financeNote = makeInboxItem(
         `finance-${Date.now()}`,
@@ -1100,13 +1173,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             ? 'Bónus de jornada creditado. Desfecho desportivo e detalhes ficam no histórico de jogos e na liga — não na caixa de notificações.'
             : draw
               ? 'Jornada contabilizada na competição — tabela e calendário na área de competição.'
-              : 'Jornada contabilizada — segue a preparação no plantel e no staff; placares no histórico de jogos.'}${structExtraLine}`,
+              : 'Jornada contabilizada — segue a preparação no plantel e no staff; placares no histórico de jogos.'}${structExtraLine}${streakBonusLine}`,
           deepLink: '/wallet',
           hideFromHomeFeed: true,
         },
       );
       const nextResult: import('@/entities/types').FormLetter = homeWin ? 'W' : draw ? 'D' : 'L';
       const form = [...state.form.slice(1), nextResult];
+
       // Scout scoring: finalizar bônus de fim de jogo e eleger MVP
       const rawTallies = { ...(lm.scoutTallies ?? {}) };
       finalizeScoutTallies(rawTallies, { homeScore: lm.homeScore, awayScore: lm.awayScore });
@@ -1241,6 +1315,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players,
         playerSeasonLedger,
         playerEvolutionTimeline,
+        quickMatchStreak,
+        dailyChallenges,
       };
     }
     case 'MERGE_PLAYERS': {
@@ -3321,6 +3397,69 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           ),
           ...state.inbox,
         ].slice(0, 14),
+      };
+    }
+    case 'RESET_DAILY_CHALLENGES': {
+      const todaySeed = getTodaySeed();
+      const challenges = generateDailyChallenges(todaySeed);
+      return {
+        ...state,
+        dailyChallenges: {
+          challenges,
+          lastResetDate: new Date().toISOString(),
+          streak: 0,
+        },
+      };
+    }
+    case 'UPDATE_CHALLENGE_PROGRESS': {
+      if (!state.dailyChallenges) return state;
+      const challenges = updateChallengeProgress(
+        state.dailyChallenges.challenges,
+        action.challengeType,
+        action.increment,
+      );
+      return {
+        ...state,
+        dailyChallenges: {
+          ...state.dailyChallenges,
+          challenges,
+        },
+      };
+    }
+    case 'CLAIM_CHALLENGE_REWARD': {
+      if (!state.dailyChallenges) return state;
+      const challenge = state.dailyChallenges.challenges.find((c) => c.id === action.challengeId);
+      if (!challenge || !challenge.completed || challenge.claimed) return state;
+
+      const challenges = state.dailyChallenges.challenges.map((c) =>
+        c.id === action.challengeId ? { ...c, claimed: true } : c,
+      );
+
+      let finance = grantEarnedExp(state.finance, challenge.reward);
+      finance = withExpHistory(finance, challenge.reward, `Desafio: ${challenge.title}`);
+
+      const inbox = [
+        makeInboxItem(
+          `challenge-${Date.now()}`,
+          'FINANCE_EXP_GAIN',
+          'DESAFIOS',
+          `+${challenge.reward} EXP — ${challenge.title}`,
+          {
+            body: `Completaste o desafio "${challenge.title}". Recompensa creditada.`,
+            deepLink: '/wallet',
+          },
+        ),
+        ...state.inbox,
+      ].slice(0, 14);
+
+      return {
+        ...state,
+        finance,
+        inbox,
+        dailyChallenges: {
+          ...state.dailyChallenges,
+          challenges,
+        },
       };
     }
     case 'RESET':

@@ -17,6 +17,8 @@ import {
   type StyleAxisKey,
 } from '@/tactics/playingStyle';
 import { cn } from '@/lib/utils';
+import { CoachCommandInput } from './CoachCommandInput';
+import type { CommandResult } from '@/match/coachCommands';
 
 const SLOT_LABEL_PT: Record<string, string> = {
   gol: 'GR',
@@ -201,22 +203,85 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
   }, [awayRoster, formationScheme]);
 
   return (
-    <div className="mt-5 space-y-5 border-t border-white/10 pt-5">
-      <div className="flex items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 text-neon-yellow" />
-        <h3 className="font-display text-sm font-black uppercase tracking-widest text-white">
-          Controlo ao vivo
-        </h3>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-          {homeShort}
-        </span>
+    <div className="mt-5 space-y-5 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+      {/* Header com design system BVB */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-sm" style={{ background: 'var(--yellow)' }}>
+          <SlidersHorizontal className="h-4 w-4 text-black" />
+        </div>
+        <div className="flex-1">
+          <h3 className="ole-headline text-white" style={{ fontSize: 'var(--text-ui-lg)' }}>
+            Controlo ao vivo
+          </h3>
+          <span
+            className="text-white/50"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '10px',
+              fontWeight: 600,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {homeShort}
+          </span>
+        </div>
       </div>
 
+      {/* Feedback com design system */}
       {feedback ? (
-        <p className="rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-3 py-2 text-center text-xs text-cyan-100">
-          {feedback}
-        </p>
+        <div
+          className="border px-4 py-3 text-center"
+          style={{
+            background: 'rgba(34, 211, 238, 0.1)',
+            borderColor: 'rgba(34, 211, 238, 0.3)',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          <p
+            className="text-cyan-100"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-ui-sm)',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+            }}
+          >
+            {feedback}
+          </p>
+        </div>
       ) : null}
+
+      {/* Comandos Táticos — @ jogador, @@ setor, @@@ time, /skill */}
+      <div
+        className="border p-4 space-y-3"
+        style={{
+          background: 'var(--surface-dark)',
+          borderColor: 'var(--border)',
+          borderRadius: 'var(--radius-sm)',
+        }}
+      >
+        <h4
+          className="text-white"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-ui-md)',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Comandos Táticos
+        </h4>
+        <CoachCommandInput
+          players={homePlayers}
+          playersById={playersById}
+          onCommandExecuted={(result: CommandResult) => {
+            setFeedback(result.message);
+            window.setTimeout(() => setFeedback(null), 3000);
+          }}
+        />
+      </div>
 
       {/* 1. Action Cards — mesmos verbos da voz. Clicar = emitir como se falasse. */}
       <LiveActionCards
@@ -233,12 +298,43 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
         onBumpAxis={bumpAxis}
       />
 
-      {/* 2. Formação */}
-      <div className="space-y-2">
+      {/* 2. Formação - Card com design system */}
+      <div
+        className="border p-4 space-y-3"
+        style={{
+          background: 'var(--surface-dark)',
+          borderColor: 'var(--border)',
+          borderRadius: 'var(--radius-sm)',
+        }}
+      >
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Formação</p>
+          <h4
+            className="text-white"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-ui-md)',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Formação
+          </h4>
           {pendingScheme ? (
-            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+            <span
+              className="border px-2 py-1"
+              style={{
+                background: 'rgba(251, 191, 36, 0.15)',
+                borderColor: 'rgba(251, 191, 36, 0.4)',
+                borderRadius: 'var(--radius-sm)',
+                color: '#fcd34d',
+                fontFamily: 'var(--font-display)',
+                fontSize: '9px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
               Rascunho: {pendingScheme}
             </span>
           ) : null}
@@ -252,14 +348,27 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
                 key={id}
                 type="button"
                 onClick={() => selectFormation(id)}
-                className={cn(
-                  'rounded-lg border px-2.5 py-1.5 font-display text-[11px] font-black tabular-nums transition-colors',
-                  isActive
-                    ? 'border-neon-yellow bg-neon-yellow/12 text-neon-yellow'
+                className="border px-3 py-2 ole-headline tabular-nums transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: isActive
+                    ? 'rgba(253, 225, 0, 0.15)'
                     : isPending
-                      ? 'border-amber-400 bg-amber-400/15 text-amber-200 ring-1 ring-amber-400/50'
-                      : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
-                )}
+                      ? 'rgba(251, 191, 36, 0.2)'
+                      : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: isActive
+                    ? 'var(--yellow)'
+                    : isPending
+                      ? 'rgba(251, 191, 36, 0.5)'
+                      : 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: isActive
+                    ? 'var(--yellow)'
+                    : isPending
+                      ? '#fcd34d'
+                      : '#d1d5db',
+                  fontSize: 'var(--text-ui-xs)',
+                  boxShadow: isPending ? '0 0 0 1px rgba(251, 191, 36, 0.5)' : undefined,
+                }}
               >
                 {id}
               </button>
@@ -270,47 +379,112 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
           type="button"
           onClick={implementFormation}
           disabled={!pendingScheme}
-          className={cn(
-            'inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.15em] transition-colors',
-            pendingScheme
-              ? 'border-neon-yellow bg-neon-yellow text-black hover:bg-white animate-pulse'
-              : 'border-white/10 bg-white/5 text-gray-500 cursor-not-allowed',
-          )}
+          className="inline-flex w-full items-center justify-center gap-2 border px-4 py-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+          style={{
+            background: pendingScheme ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.05)',
+            borderColor: pendingScheme ? 'rgba(0, 0, 0, 0.1)' : 'var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            color: pendingScheme ? '#000' : 'rgba(255, 255, 255, 0.4)',
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-ui-sm)',
+            fontWeight: 900,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            animation: pendingScheme ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : undefined,
+          }}
         >
-          <CheckCircle2 className="h-3.5 w-3.5" />
+          <CheckCircle2 className="h-4 w-4" />
           {pendingScheme ? `Implementar ${pendingScheme}` : 'Implementar'}
         </button>
-        <p className="text-[9px] leading-relaxed text-gray-500">
+        <p
+          className="leading-relaxed"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '10px',
+            color: 'rgba(255, 255, 255, 0.5)',
+          }}
+        >
           {pendingScheme
             ? 'Clica IMPLEMENTAR para o time começar a atuar na nova formação.'
             : 'Selecione uma formação; o time só muda depois de IMPLEMENTAR.'}
         </p>
       </div>
 
-      {/* 4. Substituições */}
-      <div className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-gray-300">
+      {/* 4. Substituições - Card com design system */}
+      <div
+        className="border p-4 space-y-3"
+        style={{
+          background: 'var(--surface-dark)',
+          borderColor: 'var(--border)',
+          borderRadius: 'var(--radius-sm)',
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <UserMinus className="h-3.5 w-3.5 text-neon-yellow" />
-            <UserPlus className="h-3.5 w-3.5 text-neon-yellow" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            <div className="flex items-center gap-1">
+              <UserMinus className="h-4 w-4" style={{ color: 'var(--yellow)' }} />
+              <UserPlus className="h-4 w-4" style={{ color: 'var(--yellow)' }} />
+            </div>
+            <h4
+              className="text-white"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--text-ui-md)',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
               Substituições
-            </span>
+            </h4>
           </div>
-          <span className="text-[10px] font-mono font-bold tabular-nums text-gray-500">
+          <span
+            className="tabular-nums"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: subsLeft > 0 ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.3)',
+            }}
+          >
             {subsLeft}/{maxSubs} restantes
           </span>
         </div>
-        <p className="text-[10px] leading-relaxed text-gray-500">
+        <p
+          className="leading-relaxed"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '11px',
+            color: 'rgba(255, 255, 255, 0.6)',
+          }}
+        >
           Troca um titular por um jogador do banco. O relato da partida regista a alteração.
         </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="flex-1 space-y-1">
-            <span className="text-[9px] font-bold uppercase text-gray-500">Sai (titular)</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex-1 space-y-2">
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: 'rgba(255, 255, 255, 0.5)',
+              }}
+            >
+              Sai (titular)
+            </span>
             <select
               value={subOutId}
               onChange={(e) => setSubOutId(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full border px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderColor: 'var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 'var(--text-ui-sm)',
+              }}
             >
               <option value="">—</option>
               {orderedHome.map((p) => {
@@ -324,12 +498,30 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
               })}
             </select>
           </label>
-          <label className="flex-1 space-y-1">
-            <span className="text-[9px] font-bold uppercase text-gray-500">Entra (banco)</span>
+          <label className="flex-1 space-y-2">
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: 'rgba(255, 255, 255, 0.5)',
+              }}
+            >
+              Entra (banco)
+            </span>
             <select
               value={subInId}
               onChange={(e) => setSubInId(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full border px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderColor: 'var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 'var(--text-ui-sm)',
+              }}
             >
               <option value="">—</option>
               {benchPlayers.map((p) => (
@@ -343,53 +535,193 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
             type="button"
             onClick={doSubstitution}
             disabled={subsLeft <= 0}
-            className="rounded-lg bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wide text-black hover:brightness-110 disabled:pointer-events-none disabled:opacity-35"
+            className="border px-4 py-2 transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-35 disabled:hover:scale-100"
+            style={{
+              background: 'var(--yellow)',
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              borderRadius: 'var(--radius-sm)',
+              color: '#000',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-ui-sm)',
+              fontWeight: 900,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
           >
             Aplicar
           </button>
         </div>
       </div>
 
-      {/* 5. Escalações */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Escalações</p>
+      {/* 5. Escalações - Cards com design system */}
+      <div className="space-y-3">
+        <h4
+          className="text-white"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-ui-md)',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Escalações
+        </h4>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-            <div className="mb-2 flex items-center gap-2 text-neon-yellow">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-display font-black uppercase tracking-wider">{homeShort}</span>
+          {/* Casa - Card amarelo */}
+          <div
+            className="relative overflow-hidden border p-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(253, 225, 0, 0.08) 0%, rgba(253, 225, 0, 0.02) 100%)',
+              borderColor: 'rgba(253, 225, 0, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {/* Faixa lateral amarela */}
+            <div
+              className="absolute left-0 top-0 h-full w-1"
+              style={{ background: 'var(--yellow)' }}
+              aria-hidden
+            />
+            <div className="mb-3 flex items-center gap-2" style={{ color: 'var(--yellow)' }}>
+              <Users className="h-4 w-4" />
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'var(--text-ui-sm)',
+                  fontWeight: 900,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {homeShort}
+              </span>
             </div>
-            <ul className="max-h-48 space-y-1 overflow-y-auto text-[11px]">
+            <ul className="max-h-48 space-y-1.5 overflow-y-auto" style={{ fontSize: 'var(--text-ui-xs)' }}>
               {orderedHome.map((p) => {
                 const ent = playersById[p.playerId];
                 const label = ent?.name ?? p.name;
                 return (
                   <li
                     key={p.playerId}
-                    className="flex justify-between gap-2 rounded border border-white/5 bg-white/[0.03] px-2 py-1"
+                    className="flex justify-between gap-2 border px-2.5 py-2 transition-colors hover:bg-white/5"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.2)',
+                      borderColor: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
                   >
-                    <span className="font-mono tabular-nums text-gray-500">{p.num}</span>
-                    <span className="min-w-0 flex-1 truncate font-bold text-white">{label}</span>
-                    <span className="shrink-0 text-[10px] uppercase text-cyan-400/90">{slotLabel(p.slotId)}</span>
+                    <span
+                      className="tabular-nums"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: 'rgba(253, 225, 0, 0.6)',
+                      }}
+                    >
+                      {p.num}
+                    </span>
+                    <span
+                      className="min-w-0 flex-1 truncate text-white"
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: 'var(--text-ui-xs)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        color: 'rgba(34, 211, 238, 0.8)',
+                      }}
+                    >
+                      {slotLabel(p.slotId)}
+                    </span>
                   </li>
                 );
               })}
             </ul>
           </div>
-          <div className="rounded-xl border border-rose-500/20 bg-rose-950/10 p-3">
-            <div className="mb-2 flex items-center gap-2 text-rose-300">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-display font-black uppercase tracking-wider">{awayShort}</span>
+
+          {/* Visitante - Card vermelho */}
+          <div
+            className="relative overflow-hidden border p-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%)',
+              borderColor: 'rgba(239, 68, 68, 0.25)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {/* Faixa lateral vermelha */}
+            <div
+              className="absolute left-0 top-0 h-full w-1 bg-rose-500"
+              aria-hidden
+            />
+            <div className="mb-3 flex items-center gap-2 text-rose-300">
+              <Users className="h-4 w-4" />
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'var(--text-ui-sm)',
+                  fontWeight: 900,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {awayShort}
+              </span>
             </div>
-            <ul className="max-h-48 space-y-1 overflow-y-auto text-[11px]">
+            <ul className="max-h-48 space-y-1.5 overflow-y-auto" style={{ fontSize: 'var(--text-ui-xs)' }}>
               {awayOrdered.map((r) => (
                 <li
                   key={r.id}
-                  className="flex justify-between gap-2 rounded border border-white/5 bg-black/20 px-2 py-1"
+                  className="flex justify-between gap-2 border px-2.5 py-2 transition-colors hover:bg-white/5"
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    borderColor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                 >
-                  <span className="font-mono tabular-nums text-gray-500">{r.num}</span>
-                  <span className="min-w-0 flex-1 truncate font-bold text-rose-100/90">{r.name}</span>
-                  <span className="shrink-0 text-[10px] uppercase text-rose-400/80">{r.pos}</span>
+                  <span
+                    className="tabular-nums"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: 'rgba(239, 68, 68, 0.6)',
+                    }}
+                  >
+                    {r.num}
+                  </span>
+                  <span
+                    className="min-w-0 flex-1 truncate text-rose-100/90"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: 'var(--text-ui-xs)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {r.name}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(251, 113, 133, 0.8)',
+                    }}
+                  >
+                    {r.pos}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -421,13 +753,13 @@ const ACTION_CARDS: ActionCardDef[] = [
   { id: 'cross',   icon: Swords,    label: 'Cruza mais',     phrase: 'laterais cruza mais', hint: 'Laterais sobem e cruzam pra área.',    tone: 'cross' },
 ];
 
-const TONE_STYLES: Record<ActionCardDef['tone'], string> = {
-  press:   'border-rose-500/40    bg-rose-500/10    text-rose-100    hover:border-rose-400',
-  retreat: 'border-sky-500/40     bg-sky-500/10     text-sky-100     hover:border-sky-400',
-  possess: 'border-violet-500/40  bg-violet-500/10  text-violet-100  hover:border-violet-400',
-  accel:   'border-orange-500/40  bg-orange-500/10  text-orange-100  hover:border-orange-400',
-  attack:  'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow hover:border-neon-yellow',
-  cross:   'border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:border-emerald-400',
+const TONE_STYLES: Record<ActionCardDef['tone'], { bg: string; border: string; text: string; hover: string }> = {
+  press:   { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.4)', text: '#fecaca', hover: 'rgba(239, 68, 68, 0.6)' },
+  retreat: { bg: 'rgba(14, 165, 233, 0.12)', border: 'rgba(14, 165, 233, 0.4)', text: '#bae6fd', hover: 'rgba(14, 165, 233, 0.6)' },
+  possess: { bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.4)', text: '#ddd6fe', hover: 'rgba(139, 92, 246, 0.6)' },
+  accel:   { bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.4)', text: '#fed7aa', hover: 'rgba(249, 115, 22, 0.6)' },
+  attack:  { bg: 'rgba(253, 225, 0, 0.12)', border: 'rgba(253, 225, 0, 0.4)', text: 'var(--yellow)', hover: 'rgba(253, 225, 0, 0.6)' },
+  cross:   { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', text: '#a7f3d0', hover: 'rgba(16, 185, 129, 0.6)' },
 };
 
 function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
@@ -439,37 +771,91 @@ function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
     window.setTimeout(() => setFiredId((cur) => (cur === c.id ? null : cur)), 600);
   };
   return (
-    <div className="space-y-2">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-        Comando rápido
-        <span className="ml-1.5 text-gray-600 normal-case tracking-normal">(ou fala a frase no mic)</span>
-      </p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="space-y-3">
+      {/* Card amarelo de destaque para COMANDO TÉCNICO */}
+      <div
+        className="relative overflow-hidden border p-4"
+        style={{
+          background: 'var(--yellow)',
+          borderColor: 'rgba(0, 0, 0, 0.1)',
+          borderRadius: 'var(--radius-sm)',
+          clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%)',
+        }}
+      >
+        {/* Diagonal accent sutil */}
+        <div
+          className="absolute right-0 top-0 h-24 w-24 bg-black opacity-[0.04] pointer-events-none"
+          style={{ transform: 'skewX(-34deg) translateX(30%)' }}
+          aria-hidden
+        />
+        <div className="relative">
+          <h4 className="ole-headline text-black" style={{ fontSize: 'var(--text-ui-lg)' }}>
+            Comando Técnico
+          </h4>
+          <p
+            className="mt-1 text-black/70"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 'var(--text-body-sm)',
+              lineHeight: '1.5',
+            }}
+          >
+            Clica ou fala no microfone para ajustar a tática em tempo real
+          </p>
+        </div>
+      </div>
+
+      {/* Grid de action cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {ACTION_CARDS.map((c) => {
           const Icon = c.icon;
           const active = firedId === c.id;
+          const style = TONE_STYLES[c.tone];
           return (
             <button
               key={c.id}
               type="button"
               onClick={() => fire(c)}
-              className={cn(
-                'group relative flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all',
-                TONE_STYLES[c.tone],
-                active && 'scale-[0.98] shadow-[0_0_18px_currentColor]',
-              )}
+              className="group relative flex flex-col items-start gap-2 border p-3 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: style.bg,
+                borderColor: style.border,
+                borderRadius: 'var(--radius-sm)',
+                color: style.text,
+                boxShadow: active ? `0 0 20px ${style.hover}` : undefined,
+              }}
               title={`Voz: "${c.phrase}"`}
             >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden />
+              <Icon className="h-5 w-5 shrink-0" aria-hidden />
               <div className="min-w-0 w-full">
-                <p className="truncate font-display text-[11px] font-black uppercase leading-tight tracking-wider">
+                <p
+                  className="truncate leading-tight"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'var(--text-ui-xs)',
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {c.label}
                 </p>
-                <p className="mt-0.5 line-clamp-2 text-[9px] font-normal leading-snug opacity-70">
+                <p
+                  className="mt-1 line-clamp-2 leading-snug opacity-80"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '9px',
+                    fontWeight: 500,
+                  }}
+                >
                   {c.hint}
                 </p>
               </div>
-              <span className="pointer-events-none absolute right-1.5 top-1.5 rounded-sm bg-black/40 px-1 py-0.5 font-mono text-[7px] uppercase opacity-0 backdrop-blur transition-opacity group-hover:opacity-80">
+              {/* Tooltip de voz no hover */}
+              <span
+                className="pointer-events-none absolute right-2 top-2 rounded-sm bg-black/50 px-1.5 py-0.5 font-mono text-[7px] uppercase opacity-0 backdrop-blur transition-opacity group-hover:opacity-90"
+                style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+              >
                 🎤 "{c.phrase}"
               </span>
             </button>
@@ -493,30 +879,50 @@ function LegacyFineTune({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-lg border border-white/5 bg-black/20">
+    <div
+      className="border"
+      style={{
+        background: 'rgba(0, 0, 0, 0.2)',
+        borderColor: 'var(--border)',
+        borderRadius: 'var(--radius-sm)',
+      }}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 transition-colors hover:text-white"
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-gray-400 transition-colors hover:text-white"
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: '11px',
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+        }}
         aria-expanded={open}
       >
         <span>Ajuste fino (presets + estilo)</span>
-        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {open ? (
-        <div className="space-y-2 border-t border-white/5 px-3 pb-3 pt-2">
+        <div className="space-y-3 border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--border)' }}>
           <div className="flex flex-wrap gap-2">
             {QUICK_PRESETS.map(({ id, label }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => onApplyPreset(id)}
-                className={cn(
-                  'rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors',
-                  presetActive === id
-                    ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
-                    : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
-                )}
+                className="border px-3 py-2 transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: presetActive === id ? 'rgba(253, 225, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: presetActive === id ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: presetActive === id ? 'var(--yellow)' : '#d1d5db',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
               >
                 {label}
               </button>
@@ -534,7 +940,16 @@ function LegacyFineTune({
               <button
                 key={b.key}
                 type="button"
-                className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
+                className="border px-2 py-2 transition-all hover:bg-white/10 active:scale-95"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: '#e5e7eb',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                }}
                 onClick={() => onBumpAxis(b.key, b.delta)}
               >
                 {b.label}

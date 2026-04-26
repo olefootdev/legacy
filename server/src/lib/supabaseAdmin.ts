@@ -24,6 +24,20 @@ export function getSupabaseAdmin(): SupabaseClient | null {
     return null;
   }
 
+  // Validar que é service role (não anon key)
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+    if (payload.role !== 'service_role') {
+      console.error('[supabaseAdmin] SUPABASE_SERVICE_ROLE_KEY deve ser service_role, não anon key.');
+      cached = null;
+      return null;
+    }
+  } catch (e) {
+    console.error('[supabaseAdmin] Falha ao decodificar JWT:', e instanceof Error ? e.message : 'unknown');
+    cached = null;
+    return null;
+  }
+
   cached = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

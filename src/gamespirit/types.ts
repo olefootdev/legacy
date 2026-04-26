@@ -40,6 +40,8 @@ export interface SpiritContext {
   homeShort?: string;
   /** Jogadores da casa em campo — para narrativa com dois intervenientes. */
   homePlayers?: PitchPlayerState[];
+  /** Jogadores visitantes em campo — opcional; quando presente habilita awareness real. */
+  awayPlayers?: PitchPlayerState[];
   /** Roster sintético visitante — usado para atribuir golo/cartão a jogador real. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
 

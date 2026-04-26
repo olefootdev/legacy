@@ -28,6 +28,8 @@ import type { ExpExchangeState } from '@/economy/expExchange';
 import type { PlayerSeasonLedgerMap } from '@/team/playerSeasonLedger';
 import type { PlayerEvolutionTimelineMap } from '@/team/playerEvolutionTimeline';
 import type { ShopCatalogItem } from './shopCatalog';
+import type { QuickMatchStreak } from './quickMatchStreak';
+import type { DailyChallengesState } from './dailyChallenges';
 
 export type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
 
@@ -268,6 +270,10 @@ export interface OlefootGameState {
   shopCatalog: ShopCatalogItem[];
   /** Inventário local de consumíveis comprados (`itemId` → quantidade). */
   shopInventory: Record<string, number>;
+  /** Streak de vitórias consecutivas no modo Quick Match. */
+  quickMatchStreak?: QuickMatchStreak;
+  /** Desafios diários com recompensas. */
+  dailyChallenges?: DailyChallengesState;
 }
 
 export type GameAction =
@@ -540,4 +546,7 @@ export type GameAction =
   | { type: 'SHOP_PURCHASE_ITEM'; itemId: string; currency: 'exp' | 'bro' }
   | { type: 'CONSUME_SHOP_ITEM'; itemId: string; playerId?: string }
   | { type: 'ADMIN_SET_SHOP_CATALOG'; items: ShopCatalogItem[] }
-  | { type: 'ADMIN_GRANT_SHOP_ITEM'; itemId: string; qty: number };
+  | { type: 'ADMIN_GRANT_SHOP_ITEM'; itemId: string; qty: number }
+  | { type: 'RESET_DAILY_CHALLENGES' }
+  | { type: 'UPDATE_CHALLENGE_PROGRESS'; challengeType: import('./dailyChallenges').ChallengeType; increment?: number }
+  | { type: 'CLAIM_CHALLENGE_REWARD'; challengeId: string };

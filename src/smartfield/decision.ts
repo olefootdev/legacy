@@ -27,7 +27,7 @@ import {
   isHalfspace,
   laneOf,
 } from '@/match/spatialZones';
-import { getAwarenessContext, type AwarePlayer } from '@/smartfield/awareness';
+import { getAwarenessContext, distance2D, type AwarePlayer } from '@/smartfield/awareness';
 
 // ── Bias por macro-zona ───────────────────────────────────────────
 
@@ -59,6 +59,7 @@ export type ActionKind =
   | 'PASS'
   | 'DRIBBLE'
   | 'PRESS'
+  | 'MID_BLOCK'
   | 'CLEAR'
   | 'HOLD'
   | 'RECOVER_POSITION'
@@ -164,8 +165,16 @@ export function getBestAction(
       };
     }
   }
-  // 9. Pressing → pressionar carrier
+  // 9. Pressing → pressionar carrier (mas se portador tem 3+ aliados perto, recua para mid-block)
   if (isPressZone(z) && !ctx.hasBall && ctx.ballCarrier) {
+    const carrier = ctx.ballCarrier;
+    const carrierMatesNear = allPlayers.filter(
+      (q) => q.team === carrier.team && q.playerId !== carrier.playerId
+        && distance2D(q.x, q.y, carrier.x, carrier.y) < 6,
+    ).length;
+    if (carrierMatesNear >= 3) {
+      return { action: 'MID_BLOCK', confidence: 0.7, reason: 'opp_overload_local' };
+    }
     return {
       action: 'PRESS',
       target: ctx.ballCarrier,

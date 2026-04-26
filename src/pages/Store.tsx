@@ -11,6 +11,7 @@ import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider'
 import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import { trackMissionEvent } from '@/progression/trackEvent';
+import { BackButton } from '@/components/BackButton';
 
 type ShopTab = 'todos' | ShopTabId;
 
@@ -235,6 +236,7 @@ export function Store() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-28 md:pb-12">
+      <BackButton to="/mercado" label="Mercado" />
       {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico (espelha /transfer) ── */}
       <section
         aria-label="Loja Olefoot"

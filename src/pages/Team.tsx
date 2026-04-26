@@ -58,6 +58,7 @@ import { ManagerCreatePlayerModal } from '@/components/ManagerCreatePlayerModal'
 import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
+import { BackButton } from '@/components/BackButton';
 
 type CardPlayer = ReturnType<typeof playerToCardView> & { id: string };
 
@@ -266,7 +267,9 @@ export function Team() {
   };
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 overflow-x-hidden pb-8 md:space-y-8">
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4 md:space-y-8">
+      <BackButton to="/clube" label="Clube" />
       <TeamMeuTimeHeader
         title="Plantel Principal"
         subtitle={
@@ -277,7 +280,7 @@ export function Team() {
           </>
         }
         actions={
-          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 max-w-full">
             <button
               type="button"
               onClick={() => {
@@ -340,7 +343,7 @@ export function Team() {
         `items-stretch` (não `items-start`): em coluna, filhos ocupam 100% da largura útil — evita largura
         “auto” por conteúdo maior que o viewport e overflow cortado à direita no mobile.
       */}
-      <div className="flex w-full min-w-0 max-w-full flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <div className="flex w-full min-w-0 max-w-full flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:gap-8">
         {/* Left: Football Pitch */}
         <div className="h-fit w-full min-w-0 max-w-full shrink-0 lg:sticky lg:top-24 lg:w-1/2">
           <div className="sports-panel relative box-border w-full min-w-0 max-w-full overflow-x-hidden border-white/10 bg-black/40 px-1.5 py-2 sm:px-2 sm:py-2 md:p-4">
@@ -377,23 +380,51 @@ export function Team() {
               <div className="relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden rounded-md border border-white/25 bg-[#0a2e15] shadow-lg shadow-black/40 sm:rounded-lg sm:border-2 sm:shadow-2xl md:rounded-lg md:border-4 md:border-white/20 md:shadow-2xl">
               {/* Força do XI: soma dos OVR dos titulares (canto superior esquerdo do gramado) */}
               <div
-                className="pointer-events-none absolute left-1 top-1 z-20 w-max max-w-[min(88%,15rem)] rounded-md border border-white/20 bg-black/75 px-2 py-1 shadow-lg shadow-black/30 backdrop-blur-[3px] sm:left-1.5 sm:top-1.5 sm:px-2.5 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
+                className="pointer-events-none absolute left-1 top-1 z-20 border border-neon-yellow/30 bg-black/85 px-1.5 py-1 shadow-lg shadow-black/40 backdrop-blur-sm sm:left-1.5 sm:top-1.5 sm:px-2 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  maxWidth: 'calc(100% - 0.5rem)',
+                }}
                 title={
                   startersStrength.count === 0
                     ? 'Escala os titulares para ver a força combinada (soma dos OVR).'
                     : `Força do XI: soma dos OVR dos titulares = ${startersStrength.sum}. Média do XI = ${startersStrength.avg.toFixed(1)}. Escalados: ${startersStrength.count} de ${pitchSlots.length}.`
                 }
               >
-                <p className="font-display text-[7px] font-black uppercase leading-none tracking-[0.2em] text-white/65 sm:text-[8px] md:text-[9px] lg:text-[10px]">
-                  OVERALL
+                <p
+                  className="text-neon-yellow uppercase leading-none"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: 'clamp(6px, 1.5vw, 9px)',
+                    fontWeight: 600,
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  Overall
                 </p>
-                <p className="font-display text-xl font-black tabular-nums leading-none text-neon-yellow sm:text-2xl md:text-3xl lg:text-4xl">
+                <p
+                  className="italic text-neon-yellow tabular-nums leading-none mt-0.5"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(20px, 6vw, 48px)',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
                   {startersStrength.count === 0 ? '—' : startersStrength.sum}
                 </p>
-                <p className="mt-1 font-display text-[6px] font-bold uppercase tabular-nums leading-none text-white/50 sm:text-[7px] md:text-[8px]">
+                <p
+                  className="mt-0.5 text-white/50 uppercase tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: 'clamp(5px, 1.2vw, 8px)',
+                    fontWeight: 600,
+                    letterSpacing: '0.12em',
+                  }}
+                >
                   {startersStrength.count === 0
-                    ? `${pitchSlots.length} posições no XI`
-                    : `méd. ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
+                    ? `${pitchSlots.length} pos`
+                    : `méd ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
                 </p>
               </div>
               {/* Pitch Lines */}
@@ -557,21 +588,19 @@ export function Team() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   className={cn(
-                    'flex bg-dark-gray border border-l-[3px] overflow-hidden h-52 sm:h-60 md:h-64 transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5 group',
+                    'flex bg-dark-gray border border-l-[3px] overflow-hidden transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5 group',
                     player.style === 'neon-yellow'
                       ? 'border-[var(--color-border)] border-l-neon-yellow'
                       : 'border-[var(--color-border)] border-l-white/15',
                   )}
                   style={{ borderRadius: 'var(--radius-md)' }}
                 >
-                  {/* Left + middle: abre ficha temporada */}
+                  {/* Foto — clicável para abrir ficha */}
                   <button
                     type="button"
-                    className="flex min-w-0 flex-1 cursor-pointer text-left [-webkit-tap-highlight-color:transparent]"
+                    className="relative w-32 sm:w-36 md:w-40 flex-shrink-0 overflow-hidden bg-black border-r border-white/8 cursor-pointer [-webkit-tap-highlight-color:transparent]"
                     onClick={() => setSheetPlayerId(player.id)}
                   >
-                  {/* Foto — ocupa todo o espaço, vira fundo do OVR */}
-                  <div className="relative w-36 sm:w-44 md:w-52 flex-shrink-0 overflow-hidden bg-black border-r border-white/8">
                     {/* Tonal background (sutil, atrás da foto) */}
                     <div
                       className={cn(
@@ -591,7 +620,7 @@ export function Team() {
                       aria-hidden
                       className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
                     />
-                    {/* OVR — Moret italic editorial gigante (assinatura /legend, agora com foto de fundo) */}
+                    {/* OVR — Moret italic editorial gigante */}
                     <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
                       <p
                         className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
@@ -605,12 +634,17 @@ export function Team() {
                         {player.ovr}
                       </p>
                     </div>
-                  </div>
+                  </button>
 
-                  {/* Middle: Info + DNA stats em 2x2 */}
-                  <div className="flex-1 px-3 py-3 md:px-4 md:py-3.5 flex flex-col justify-between gap-3 relative min-w-0">
+                  {/* Info completa: header + atributos + botões (tudo em 1 coluna) */}
+                  <div className="flex-1 px-3 py-3 md:px-4 md:py-3.5 flex flex-col gap-3 relative min-w-0">
+                    {/* Header: nome + posição + badges */}
                     <div className="flex items-start justify-between gap-2 min-w-0">
-                      <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left cursor-pointer [-webkit-tap-highlight-color:transparent]"
+                        onClick={() => setSheetPlayerId(player.id)}
+                      >
                         <p
                           className="text-white uppercase truncate"
                           style={{
@@ -639,7 +673,7 @@ export function Team() {
                           ) : null}
                           {player.pos}
                         </p>
-                      </div>
+                      </button>
                       {player.outForMatches > 0 ? (
                         <span
                           className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-danger)] bg-[rgba(255,61,61,0.1)] text-[var(--color-danger)] uppercase px-1.5 py-0.5"
@@ -669,13 +703,13 @@ export function Team() {
                       ) : null}
                     </div>
 
-                    {/* DNA do Campeão — grid 2x2 (mobile-safe, fontes maiores chamando atenção) */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:gap-x-6">
+                    {/* DNA do Campeão — grid 2x2 com mais espaço horizontal */}
+                    <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 md:gap-x-8 md:gap-y-3">
                       {stats.map((s) => {
                         const v = Math.max(0, Math.min(100, s.val));
                         return (
                           <div key={s.label} className="min-w-0">
-                            <div className="flex items-baseline justify-between gap-1.5">
+                            <div className="flex items-baseline justify-between gap-2">
                               <span
                                 className="text-white/55 uppercase"
                                 style={{
@@ -710,46 +744,45 @@ export function Team() {
                         );
                       })}
                     </div>
-                  </div>
-                  </button>
 
-                  {/* Right: ESCALAR (primário) + ANUNCIAR (outline) */}
-                  <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch justify-center gap-1.5 border-l border-white/8 bg-black/20 p-2 sm:w-[7.5rem] md:w-[8.25rem]">
-                    <button
-                      type="button"
-                      onClick={() => handleEscalar(player)}
-                      className="w-full bg-neon-yellow py-2 text-black hover:bg-white transition-colors [-webkit-tap-highlight-color:transparent]"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        letterSpacing: '0.2em',
-                        textTransform: 'uppercase',
-                        borderRadius: 'var(--radius-sm)',
-                      }}
-                    >
-                      Escalar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSaveBanner(null);
-                        setAnnouncePrice('180000');
-                        setAnnouncePlayer(player);
-                      }}
-                      className="flex w-full items-center justify-center gap-1 border border-[var(--color-border)] bg-deep-black py-2 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent]"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        letterSpacing: '0.2em',
-                        textTransform: 'uppercase',
-                        borderRadius: 'var(--radius-sm)',
-                      }}
-                    >
-                      <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
-                      <span>Anunciar</span>
-                    </button>
+                    {/* Botões de ação — abaixo dos atributos, full width */}
+                    <div className="flex items-center gap-2 mt-auto pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleEscalar(player)}
+                        className="flex-1 bg-neon-yellow py-2.5 text-black hover:bg-white transition-colors [-webkit-tap-highlight-color:transparent]"
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          letterSpacing: '0.2em',
+                          textTransform: 'uppercase',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        Escalar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSaveBanner(null);
+                          setAnnouncePrice('180000');
+                          setAnnouncePlayer(player);
+                        }}
+                        className="flex flex-1 items-center justify-center gap-1.5 border border-[var(--color-border)] bg-deep-black py-2.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent]"
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          letterSpacing: '0.2em',
+                          textTransform: 'uppercase',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
+                        <span>Anunciar</span>
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
                 );
@@ -1179,6 +1212,7 @@ export function Team() {
           />
         ) : null}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -1228,17 +1262,28 @@ function PitchPlayer({
           />
         </div>
 
-        <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate rounded border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]">
+        <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]" style={{ borderRadius: 'var(--radius-sm)' }}>
           {player.name}
         </div>
 
         <div
           className={cn(
-            'pointer-events-none absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full text-[6px] font-black shadow-md sm:-right-1 sm:-top-1 sm:size-4 sm:text-[7px] md:-right-2 md:-top-2 md:size-5 md:text-[9px]',
+            'pointer-events-none absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center shadow-md sm:-right-1 sm:-top-1 sm:size-4 md:-right-2 md:-top-2 md:size-5',
             player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
           )}
+          style={{ borderRadius: '9999px' }}
         >
-          {player.ovr}
+          <span
+            className="italic tabular-nums leading-none"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontSize: 'clamp(6px, 1vw, 9px)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {player.ovr}
+          </span>
         </div>
       </button>
 
@@ -1250,7 +1295,8 @@ function PitchPlayer({
         }}
         title={`Retirar ${player.name} do campo`}
         aria-label={`Retirar ${player.name} do campo`}
-        className="absolute -right-1 -top-1 z-20 flex size-4 items-center justify-center rounded-full border border-white/30 bg-red-600 text-white shadow-md transition-transform hover:scale-110 sm:size-5 md:-right-0.5 md:-top-0.5 md:size-6"
+        className="absolute -right-1 -top-1 z-20 flex size-4 items-center justify-center border border-white/30 bg-red-600 text-white shadow-md transition-transform hover:scale-110 sm:size-5 md:-right-0.5 md:-top-0.5 md:size-6"
+        style={{ borderRadius: '9999px' }}
       >
         <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" strokeWidth={2.5} />
       </button>

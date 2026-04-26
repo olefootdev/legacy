@@ -51,6 +51,9 @@ export async function requestGrowthAnalyst(body: {
   | { ok: false; error: string; status?: number; rawAssistant?: string }
 > {
   const base = olefootApiBase();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout (análise mais longa)
+
   try {
     const r = await fetch(`${base}/api/admin/growth-analyst`, {
       method: 'POST',
@@ -59,7 +62,10 @@ export async function requestGrowthAnalyst(body: {
         snapshot: body.snapshot,
         founderNote: body.founderNote?.trim() || undefined,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     const j = (await r.json()) as {
       ok?: boolean;
       error?: string;
@@ -80,6 +86,10 @@ export async function requestGrowthAnalyst(body: {
     }
     return { ok: true, briefing, rawAssistant: raw };
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { ok: false, error: 'Timeout: servidor não respondeu em 30s.' };
+    }
     return {
       ok: false,
       error: e instanceof Error ? e.message : 'Sem ligação ao servidor (olefoot-server + ANTHROPIC_API_KEY).',

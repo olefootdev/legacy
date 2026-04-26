@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { BookOpen, Check, FlaskConical, MapPin, Sparkles, Wand2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { BackButton } from '@/components/BackButton';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import type { PlayingStylePresetId } from '@/tactics/playingStyle';
 import {
@@ -53,6 +54,7 @@ export function TeamAiLabs() {
   if (!trainingCenterHasAiLabs(ctLevel)) {
     return (
       <div className="mx-auto min-w-0 max-w-3xl space-y-5 pb-8">
+        <BackButton to="/clube" label="Clube" />
         <TeamMeuTimeHeader
           title="AI Labs"
           subtitle="O Centro de treinamento precisa estar no nível 2 ou superior para desbloquear o AI Labs. Evolui a estrutura na Cidade do Clube."
@@ -73,6 +75,7 @@ export function TeamAiLabs() {
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-5 pb-8">
+      <BackButton to="/clube" label="Clube" />
       <TeamMeuTimeHeader
         title="AI Labs"
         subtitle="Experimenta visão de jogo ou um clássico; confirmas e o OLE aplica o estilo na tática."

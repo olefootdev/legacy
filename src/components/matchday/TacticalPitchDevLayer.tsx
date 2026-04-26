@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useRef, useState } from 'react';
+import { memo, useDeferredValue, useEffect, useId, useRef, useState } from 'react';
 import type { PitchPlayerState } from '@/engine/types';
 import type { LiveMatchClockPeriod } from '@/engine/types';
 import {

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
+import { ChevronDown } from 'lucide-react';
+import { motion } from 'motion/react';
 
 import { WalletSpotToggle } from './WalletSpotToggle';
 import { TradingViewEmbed } from './TradingViewEmbed';
@@ -11,40 +12,154 @@ export function WalletShell({
   account,
   title,
   subtitle,
+  heroStats,
   children,
 }: {
   account: WalletShellAccount;
   title: string;
   subtitle?: string;
+  heroStats?: { label: string; value: string; highlight?: boolean }[];
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto min-w-0 w-full max-w-3xl space-y-8 pb-28 md:pb-12">
-      <WalletSpotToggle />
+    <div className="min-h-screen bg-deep-black">
+      {/* ── HERO CINEMATOGRÁFICO ──────────────────────────────────── */}
+      <section className="relative w-full overflow-hidden bg-neon-yellow min-h-[78vh] sm:min-h-[88vh]">
+        {/* Camada amarela sólida */}
+        <div className="absolute inset-0 bg-neon-yellow" aria-hidden />
 
-      <header className="relative min-w-0 overflow-x-hidden overflow-y-visible rounded-2xl border border-white/10 px-4 py-4">
-        <GameBannerBackdrop slot="wallet_spot" imageOpacity={0.32} />
-        <div className="relative z-10 space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-neon-yellow/90 font-display font-bold">
-            Wallet Olefoot
-          </p>
-          <h1 className="text-2xl md:text-3xl font-display font-black text-white tracking-tight leading-tight">
-            {title}
-          </h1>
-          {subtitle ? <p className="text-sm text-gray-400 max-w-xl leading-relaxed">{subtitle}</p> : null}
+        {/* Linhas verticais sutis (textura de campo) */}
+        <svg
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          width="100%"
+          height="100%"
+          preserveAspectRatio="none"
+          viewBox="0 0 100 100"
+        >
+          <g stroke="#000" strokeOpacity="0.06" strokeWidth="0.15">
+            <line x1="20" y1="0" x2="20" y2="100" />
+            <line x1="40" y1="0" x2="40" y2="100" />
+            <line x1="60" y1="0" x2="60" y2="100" />
+            <line x1="80" y1="0" x2="80" y2="100" />
+          </g>
+        </svg>
+
+        {/* Conteúdo */}
+        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
+          {/* Top bar */}
+          <div className="flex items-center justify-between gap-3 mb-8 sm:mb-12">
+            <div className="flex-1 max-w-md">
+              <WalletSpotToggle />
+            </div>
+          </div>
+
+          {/* Grid: esquerda + direita */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[50vh]">
+            {/* ── ESQUERDA: Título + Descrição ────────────────────────── */}
+            <div className="space-y-6 sm:space-y-8">
+              {/* Eyebrow */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="flex items-center justify-center gap-3 lg:justify-start"
+              >
+                <span className="h-px w-8 bg-black/40" aria-hidden />
+                <span className="font-display text-[10px] font-bold uppercase tracking-[0.35em] text-black/70">
+                  Wallet Olefoot
+                </span>
+                <span className="h-px w-8 bg-black/40" aria-hidden />
+              </motion.div>
+
+              {/* Título Moret italic */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="ole-headline-italic text-black text-center lg:text-left leading-[0.9]"
+                style={{ fontSize: 'clamp(64px, 14vw, 120px)' }}
+              >
+                {title}
+              </motion.h1>
+
+              {/* Subtítulo */}
+              {subtitle && (
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  className="text-black/70 text-sm sm:text-base leading-relaxed text-center lg:text-left max-w-md mx-auto lg:mx-0"
+                >
+                  {subtitle}
+                </motion.p>
+              )}
+            </div>
+
+            {/* ── DIREITA: Stats grid ──────────────── */}
+            {heroStats && heroStats.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="grid grid-cols-2 gap-3 sm:gap-4"
+              >
+                {heroStats.map((stat, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: 0.5 + i * 0.1 }}
+                    className="bg-black px-4 py-4 text-center"
+                  >
+                    <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
+                      {stat.label}
+                    </p>
+                    <p
+                      className={`ole-headline-italic mt-2 tabular-nums ${
+                        stat.highlight ? 'text-neon-yellow' : 'text-white'
+                      }`}
+                      style={{ fontSize: 'clamp(32px, 5vw, 48px)' }}
+                    >
+                      {stat.value}
+                    </p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </div>
+
+          {/* Scroll cue */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.8 }}
+            className="flex justify-center mt-8 sm:mt-12"
+          >
+            <a
+              href="#wallet-content"
+              className="inline-flex flex-col items-center gap-2 text-black/60 hover:text-black transition group"
+            >
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em]">Ver detalhes</span>
+              <ChevronDown className="w-5 h-5 animate-bounce" />
+            </a>
+          </motion.div>
         </div>
-      </header>
+      </section>
 
-      {children}
+      {/* ── CONTEÚDO PRINCIPAL ────────────────────────────────────── */}
+      <div id="wallet-content" className="mx-auto min-w-0 w-full max-w-3xl space-y-8 px-4 sm:px-8 py-8 sm:py-12 pb-28 md:pb-12">
+        {children}
 
-      {account === 'olexp' ? (
-        <section className="space-y-3 pt-4 border-t border-white/10">
-          <h2 className="text-xs font-display font-bold uppercase tracking-widest text-gray-500">Mercado</h2>
-          <TradingViewEmbed />
-        </section>
-      ) : null}
+        {account === 'olexp' ? (
+          <section className="space-y-3 pt-4 border-t border-white/10">
+            <h2 className="text-xs font-display font-bold uppercase tracking-widest text-gray-500">Mercado</h2>
+            <TradingViewEmbed />
+          </section>
+        ) : null}
 
-      <WalletFaq variant={account} />
+        <WalletFaq variant={account} />
+      </div>
     </div>
   );
 }

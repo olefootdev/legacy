@@ -33,6 +33,7 @@ import { TREATMENT_PLAN_DURATION_H } from '@/systems/medicalTreatment';
 import type { PlayerEntity } from '@/entities/types';
 import type { TrainingPlan } from '@/game/types';
 import { trackMissionEvent } from '@/progression/trackEvent';
+import { BackButton } from '@/components/BackButton';
 
 type IndividualType = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial';
 type CollectiveType = 'formacao' | 'empatia' | 'fisico';
@@ -202,6 +203,7 @@ export function TeamTraining() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-3 pb-14 text-[13px] leading-snug sm:space-y-4 sm:pb-12 md:pb-14">
+      <BackButton to="/clube" label="Clube" />
       <TeamMeuTimeHeader
         title="Treino"
         subtitle="Seleciona o tipo, escolhe jogadores ou grupo e inicia o plano de treino com execução por período."
@@ -416,7 +418,7 @@ export function TeamTraining() {
           Iniciar treino
         </button>
         <button type="button" onClick={completeDueNow} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white">
-          Concluir treinos / tratamentos vencidos
+          Concluir treinos 
         </button>
       </div>
 

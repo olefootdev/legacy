@@ -20,30 +20,48 @@ export function MatchLive() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-deep-black px-5 py-10">
-      <div className="relative w-full max-w-md overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
-        <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
+    <div className="flex min-h-svh items-center justify-center bg-[var(--stadium-night)] px-5 py-10">
+      <div className="relative w-full max-w-md overflow-hidden bg-[var(--surface-dark)] shadow-[0_20px_60px_rgba(0,0,0,0.7)]" style={{ borderRadius: 'var(--radius-sm)' }}>
+        {/* Faixa amarela lateral (assinatura BVB) */}
+        <div className="absolute left-0 top-0 h-full w-1 bg-[var(--yellow)]" aria-hidden />
+
+        {/* Diagonal accent sutil */}
+        <div
+          className="absolute right-0 top-0 h-32 w-32 bg-[var(--yellow)] opacity-[0.04] pointer-events-none"
+          style={{ transform: 'skewX(-34deg) translateX(50%)' }}
+          aria-hidden
+        />
+
         <div className="relative px-6 py-7 pl-7">
-          <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
+          <h2 className="ole-headline text-white uppercase" style={{ fontSize: 'var(--text-display-sm)' }}>
             Olá Manager
           </h2>
-          <p className="mt-4 font-sans text-sm leading-relaxed text-white/80">
+          <p className="mt-4 text-[var(--text-secondary)] leading-relaxed" style={{ fontSize: 'var(--text-body-md)' }}>
             Este modo de jogo está em desenvolvimento, não contabiliza pontos para a liga.
           </p>
           <div className="mt-6 flex flex-col gap-3">
             <button
               type="button"
               onClick={() => setAccepted(true)}
-              className="btn-primary w-full"
+              className="group relative w-full overflow-hidden bg-[var(--yellow)] transition-all hover:shadow-[0_0_20px_rgba(253,225,0,0.3)]"
+              style={{
+                borderRadius: 'var(--radius-sm)',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+              }}
             >
-              <span className="btn-primary-inner justify-center py-1">Jogar Teste</span>
+              <span className="relative z-10 flex items-center justify-center gap-2 px-6 py-3 font-display font-bold uppercase tracking-[0.15em] text-black" style={{ fontSize: 'var(--text-ui-sm)' }}>
+                Jogar Teste
+              </span>
             </button>
             <button
               type="button"
               onClick={() => navigate('/', { replace: true })}
-              className="btn-secondary w-full"
+              className="w-full border border-white/10 bg-white/5 transition-all hover:bg-white/10 hover:border-white/20"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              <span className="btn-secondary-inner justify-center py-1">Ir para Home</span>
+              <span className="flex items-center justify-center gap-2 px-6 py-3 font-display font-bold uppercase tracking-[0.15em] text-white/70" style={{ fontSize: 'var(--text-ui-sm)' }}>
+                Ir para Home
+              </span>
             </button>
           </div>
         </div>

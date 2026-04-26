@@ -93,12 +93,12 @@ matchRoutes.post('/matches/:id/events', async (c) => {
   // Verifica que a partida pertence ao usuário (via home_club owner)
   const { data: match } = await supabaseAdmin
     .from('matches')
-    .select('id, clubs!matches_home_club_id_fkey(owner_id)')
+    .select('id, home_club_id, clubs!inner(owner_id)')
     .eq('id', matchId)
     .maybeSingle();
   if (!match) return c.json({ error: 'Match not found' }, 404);
   const owner = (match as { clubs?: { owner_id?: string } }).clubs?.owner_id;
-  if (owner !== userId) return c.json({ error: 'Forbidden' }, 403);
+  if (!owner || owner !== userId) return c.json({ error: 'Forbidden' }, 403);
 
   const body = await c.req.json<{
     kind?: string;

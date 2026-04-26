@@ -209,12 +209,21 @@ export function MatchdayVersusTitle({
           </span>
         </span>
         <span
+          aria-label="versus"
           className={cn(
-            'shrink-0 font-black italic text-neon-yellow',
+            'shrink-0 italic text-neon-yellow leading-none',
             vsClassName,
           )}
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontWeight: 400,
+            fontSize: '1.85em',
+            letterSpacing: '-0.04em',
+            transform: 'translateY(-0.06em)',
+            textShadow: '0 2px 18px rgba(253,225,0,0.25)',
+          }}
         >
-          vs
+          ×
         </span>
         {/* Metade direita: bloco [nome + brasão] colado ao “vs” */}
         <span className="flex min-w-0 min-h-0 flex-1 justify-start">

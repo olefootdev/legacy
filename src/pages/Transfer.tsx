@@ -11,6 +11,7 @@ import {
   Trophy,
   UserCircle,
   CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ import { trackGrowthCommerce } from '@/admin/platformStore';
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { BackButton } from '@/components/BackButton';
 
 const BIO_MAX_LEN = 250;
 
@@ -586,126 +588,165 @@ export function Transfer() {
     }
   }, [selectedPlayer, genesisListedEntities, oleBal, dispatch, showPurchaseCompleteBanner]);
 
+  type TransferTabKey = 'genesis' | 'legacies' | 'newbies' | 'highlights';
+  const TAB_META: Record<TransferTabKey, { num: string; subtitle: string; eyebrow: string }> = {
+    genesis: { num: '01', subtitle: 'fundadores', eyebrow: 'Cartas Genesis' },
+    legacies: { num: '02', subtitle: 'lendas', eyebrow: 'Hall of Fame' },
+    newbies: { num: '03', subtitle: 'novidades', eyebrow: 'Recém-listadas' },
+    highlights: { num: '04', subtitle: 'destaques', eyebrow: 'Curadoria' },
+  };
+  const tabMeta = TAB_META[marketTab as TransferTabKey] ?? TAB_META.genesis;
+  const tabsList: { id: HeroTab; label: string }[] = [
+    { id: 'genesis', label: 'Genesis' },
+    ...(legacyMarketEnabled ? [{ id: 'legacies' as const, label: 'Legacies' }] : []),
+    { id: 'newbies' as const, label: 'Newbies' },
+    { id: 'highlights' as const, label: 'Highlights' },
+  ];
+
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-6 md:pb-8">
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-white/5 p-1 hide-scrollbar">
-        {([
-          { id: 'genesis', label: 'Genesis', active: 'bg-neon-yellow text-black' },
-          ...(legacyMarketEnabled ? [{ id: 'legacies' as const, label: 'Legacies', active: 'bg-amber-500 text-black' }] : []),
-          { id: 'newbies' as const, label: 'Newbies', active: 'bg-emerald-400 text-black' },
-          { id: 'highlights' as const, label: 'Highlights', active: 'bg-fuchsia-400 text-black' },
-        ] as { id: HeroTab; label: string; active: string }[]).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setMarketTab(t.id)}
-            className={cn(
-              'flex-1 shrink-0 rounded-lg py-2 px-3 text-xs font-bold uppercase tracking-wider transition-colors',
-              marketTab === t.id ? t.active : 'text-gray-400 hover:text-white',
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Hero promocional por aba — arte será substituída pelo designer. */}
-      <TransferHeroSlider
-        tab={marketTab}
-        slides={heroSlidesForTab(marketTab)}
-      />
-
-      {legacyMarketEnabled && marketTab === 'legacies' ? <TransferLegaciesTab /> : null}
-      <div className={marketTab !== 'legacies' ? 'contents' : 'hidden'}>
-      <AnimatePresence>
-        {purchaseCompleteBanner && (
-          <motion.div
-            role="status"
-            aria-live="polite"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-            className="flex items-center justify-between gap-3 rounded-xl border border-neon-green/60 bg-gradient-to-r from-neon-green/25 via-neon-green/15 to-black/80 px-4 py-3 shadow-[0_0_32px_rgba(0,255,102,0.12)] sm:px-5"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <CheckCircle2 className="h-8 w-8 shrink-0 text-neon-green" aria-hidden />
-              <div className="min-w-0">
-                <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-neon-green sm:text-base">
-                  COMPRA CONCLUÍDA
-                </p>
-                <p className="mt-0.5 text-[11px] text-gray-400 sm:text-xs">
-                  Compra imediata registada. Continua a negociar no mercado quando quiseres.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (purchaseBannerHideTimerRef.current) {
-                  clearTimeout(purchaseBannerHideTimerRef.current);
-                  purchaseBannerHideTimerRef.current = null;
-                }
-                setPurchaseCompleteBanner(false);
+      <BackButton to="/mercado" label="Mercado" />
+      {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico ── */}
+      <section
+        aria-label="Mercado de transferências"
+        className="relative w-full overflow-hidden bg-neon-yellow"
+      >
+        {/* Watermark gigante do número da aba — preto sobre amarelo, opacity baixa
+            (assinatura /legend: tipografia como ornamento, não bloco visual). */}
+        <div
+          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+          aria-hidden
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={tabMeta.num}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.04 }}
+              transition={{ duration: 0.4 }}
+              className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.05]"
+              style={{
+                fontSize: 'clamp(180px, 32vw, 460px)',
+                lineHeight: '0.85',
+                letterSpacing: '-0.05em',
               }}
-              className="shrink-0 rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Fechar aviso de compra"
             >
-              <X className="h-5 w-5" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="mb-6 min-w-0 space-y-3">
-        <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
-          <div className="min-w-0 w-full flex-1">
-            <h2 className="min-w-0 break-words text-2xl font-display font-black italic uppercase leading-tight tracking-wider sm:text-3xl lg:text-4xl [overflow-wrap:anywhere]">
-              Mercado de Leilões
-            </h2>
-            <p className="mt-2 w-full min-w-0 max-w-full text-[11px] leading-relaxed text-gray-500 [overflow-wrap:anywhere] break-words sm:max-w-2xl">
-              Cada card tem uma moeda única de lance (EXP ou BRO).{' '}
-              <Link to="/transfer/exchange" className="text-neon-yellow/90 underline-offset-2 hover:underline">
-                Exchange EXP ↔ BRO
-              </Link>
-            </p>
-          </div>
-          <div className="grid min-w-0 w-full max-w-full shrink-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-none sm:flex-row sm:justify-end sm:gap-2 md:w-auto">
-            <button
-              type="button"
-              onClick={() => setShowSearch((s) => !s)}
-              className={cn(
-                'relative flex min-h-11 min-w-0 w-full max-w-full items-center justify-center gap-1.5 rounded-lg border border-white/5 bg-panel px-2 py-2.5 transition-colors min-[400px]:gap-2 min-[400px]:px-3 sm:w-auto sm:min-w-[8.5rem] sm:flex-initial sm:px-4 sm:py-3',
-                showSearch ? 'bg-white/20 ring-1 ring-neon-yellow/40' : 'hover:bg-white/10',
-              )}
-              aria-expanded={showSearch}
-              aria-label={showSearch ? 'Fechar busca' : 'Abrir busca por nome'}
-            >
-              <Search className="h-4 w-4 shrink-0 text-neon-yellow min-[400px]:h-5 min-[400px]:w-5" />
-              <span className="min-w-0 max-w-[min(100%,5.5rem)] truncate text-center font-display text-[10px] font-bold uppercase leading-tight tracking-wide text-white min-[400px]:max-w-none min-[400px]:text-[11px] sm:max-w-[8rem] sm:truncate md:max-w-none">
-                Buscar
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'relative flex min-h-11 min-w-0 w-full max-w-full items-center justify-center gap-1.5 rounded-lg border border-white/5 bg-panel px-2 py-2.5 transition-colors min-[400px]:gap-2 min-[400px]:px-3 sm:w-auto sm:min-w-[8.5rem] sm:flex-initial sm:px-4 sm:py-3',
-                showFilters ? 'bg-white/20' : 'hover:bg-white/10',
-              )}
-              aria-expanded={showFilters}
-              aria-label={showFilters ? 'Fechar filtros' : 'Abrir filtros'}
-            >
-              <Filter className="h-4 w-4 shrink-0 text-neon-yellow min-[400px]:h-5 min-[400px]:w-5" />
-              <span className="min-w-0 max-w-[min(100%,5.5rem)] truncate text-center font-display text-[10px] font-bold uppercase leading-tight tracking-wide text-white min-[400px]:max-w-none min-[400px]:text-[11px] sm:max-w-[8rem] sm:truncate md:max-w-none">
-                Filtros
-              </span>
-            </button>
-          </div>
+              {tabMeta.num}
+            </motion.span>
+          </AnimatePresence>
         </div>
-      </div>
 
-      {/* Busca só por nome (mesmo estado que o campo Nome nos filtros) */}
+        {/* Composição editorial centrada vertical — leveza /legend */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
+        >
+          {/* Eyebrow */}
+          <div
+            className="ole-eyebrow !text-black mb-5 sm:mb-6"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <span className="!text-black">{tabMeta.eyebrow}</span>
+          </div>
+
+          {/* Headline duo: MERCADO + italic dinâmico */}
+          <h1 className="leading-[0.9]">
+            <span
+              className="block font-bold uppercase text-black"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
+                letterSpacing: '0.005em',
+              }}
+            >
+              Mercado
+            </span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={tabMeta.subtitle}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.35 }}
+                className="block italic text-black"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(2.25rem, 7vw, 5rem)',
+                  marginTop: '0.04em',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {tabMeta.subtitle}
+              </motion.span>
+            </AnimatePresence>
+          </h1>
+
+          {/* Régua decorativa (assinatura /legend) */}
+          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+
+          {/* Quote italic — CENTERPIECE editorial (antes ficava escondido no lado dark) */}
+          <AnimatePresence mode="wait">
+            <motion.blockquote
+              key={`q-${marketTab}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.35, delay: 0.05 }}
+              className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
+              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+            >
+              {marketTab === 'genesis' && '“coleção fundadora — supply finito.”'}
+              {marketTab === 'legacies' && '“DNA de quem entrou pra história.”'}
+              {marketTab === 'newbies' && '“acabaram de chegar à arena.”'}
+              {marketTab === 'highlights' && '“o time elegeu — só os tops.”'}
+            </motion.blockquote>
+          </AnimatePresence>
+
+          {/* Subtítulo — dados vivos */}
+          <p
+            className="mt-3 text-black/60 mx-auto max-w-md"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
+              lineHeight: 1.55,
+            }}
+          >
+            {auctionPool.length} cartas disponíveis · saldo {formatExp(oleBal)} EXP
+          </p>
+
+          {/* CTAs — centrados, primário preto sobre amarelo (consistente com /legend) */}
+          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowSearch((v) => !v)}
+              className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <Search className="w-4 h-4" />
+              Buscar carta
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              className="inline-flex items-center gap-2 border border-black/70 bg-transparent px-7 py-3 text-black font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-black/10 transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <Filter className="w-4 h-4" />
+              Filtrar
+            </button>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Painéis Buscar/Filtros — abrem logo abaixo do hero pra dar feedback ao clique */}
       <AnimatePresence>
         {showSearch && (
           <motion.div
@@ -714,7 +755,10 @@ export function Transfer() {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="sports-panel mb-4 flex flex-col gap-3 border-neon-yellow/25 bg-dark-gray p-4">
+            <div
+              className="flex flex-col gap-3 border border-[var(--color-border)] bg-dark-gray p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <label className="sr-only" htmlFor="transfer-search-input">
                   Buscar por nome do jogador
@@ -725,27 +769,39 @@ export function Transfer() {
                     id="transfer-search-input"
                     ref={searchInputRef}
                     type="search"
-                    placeholder="Nome no cartão (ex.: SILVA)…"
+                    placeholder="Nome no cartão (ex.: Silva)…"
                     value={filters.name}
                     onChange={(e) => setFilters({ ...filters, name: e.target.value })}
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') setShowSearch(false);
                     }}
-                    className="w-full rounded-lg border border-white/10 bg-black/50 py-2.5 pl-10 pr-10 font-display font-bold uppercase text-white placeholder:text-gray-500 placeholder:normal-case outline-none focus:border-neon-yellow"
+                    className="w-full border border-[var(--color-border)] bg-black/55 py-2.5 pl-10 pr-10 text-white placeholder:text-white/35 outline-none focus:border-neon-yellow transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '14px',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
                     autoComplete="off"
                   />
                   {filters.name.trim() !== '' && (
                     <button
                       type="button"
                       onClick={() => setFilters({ ...filters, name: '' })}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:bg-white/10 hover:text-white"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-white/40 hover:bg-white/10 hover:text-white"
                       aria-label="Limpar busca"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   )}
                 </div>
-                <p className="min-w-0 max-w-full text-[10px] leading-snug text-gray-500 [overflow-wrap:anywhere] break-words sm:max-w-[220px] sm:shrink-0 sm:pt-2">
+                <p
+                  className="min-w-0 max-w-full text-white/45 [overflow-wrap:anywhere] break-words sm:max-w-[220px] sm:shrink-0 sm:pt-2"
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '11px',
+                    lineHeight: 1.5,
+                  }}
+                >
                   {gridPlayers.length}{' '}
                   {gridPlayers.length === 1 ? 'anúncio listado' : 'anúncios listados'}
                   {nameQueryNorm ? ' · mesmos nomes ordenados por OVR' : ''}
@@ -796,72 +852,68 @@ export function Transfer() {
         )}
       </AnimatePresence>
 
-      {/* Filters Panel */}
       <AnimatePresence>
         {showFilters && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="sports-panel mb-6 grid grid-cols-1 gap-4 border-neon-yellow/30 bg-dark-gray p-4 sm:p-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Posição
-                </label>
-                <select
-                  className="w-full rounded-lg border border-white/10 bg-black/50 p-2 font-display font-bold text-white outline-none focus:border-neon-yellow"
-                  value={filters.pos}
-                  onChange={(e) => setFilters({ ...filters, pos: e.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {POSITIONS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Nacionalidade
-                </label>
-                <select
-                  className="w-full rounded-lg border border-white/10 bg-black/50 p-2 font-display font-bold text-white outline-none focus:border-neon-yellow"
-                  value={filters.nat}
-                  onChange={(e) => setFilters({ ...filters, nat: e.target.value })}
-                >
-                  <option value="">Todas</option>
-                  {NATIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Compra em
-                </label>
-                <select
-                  className="w-full rounded-lg border border-white/10 bg-black/50 p-2 font-display font-bold text-white outline-none focus:border-neon-yellow"
-                  value={filters.currency}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFilters({
-                      ...filters,
-                      currency: v === 'BRO' || v === 'EXP' ? v : '',
-                    });
+            <div
+              className="grid grid-cols-1 gap-4 border border-[var(--color-border)] bg-dark-gray p-4 sm:p-6 sm:grid-cols-2 lg:grid-cols-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              {([
+                { key: 'pos', label: 'Posição', value: filters.pos, options: ['', ...POSITIONS], render: (v: string) => (v === '' ? 'Todas' : v) },
+                { key: 'nat', label: 'Nacionalidade', value: filters.nat, options: ['', ...NATIONS], render: (v: string) => (v === '' ? 'Todas' : v) },
+                { key: 'currency', label: 'Compra em', value: filters.currency, options: ['', 'BRO', 'EXP'], render: (v: string) => (v === '' ? 'Todas' : v) },
+              ] as const).map((f) => (
+                <div key={f.key}>
+                  <label
+                    className="mb-2 block text-[var(--color-neon-yellow)] uppercase"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.22em',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {f.label}
+                  </label>
+                  <select
+                    className="w-full border border-[var(--color-border)] bg-black/55 px-3 py-2 text-white outline-none focus:border-neon-yellow transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '13px',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                    value={f.value}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (f.key === 'currency') {
+                        setFilters({ ...filters, currency: v === 'BRO' || v === 'EXP' ? v : '' });
+                      } else {
+                        setFilters({ ...filters, [f.key]: v });
+                      }
+                    }}
+                  >
+                    {f.options.map((o) => (
+                      <option key={o || 'all'} value={o}>{f.render(o)}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label
+                  className="mb-2 block text-[var(--color-neon-yellow)] uppercase"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    letterSpacing: '0.22em',
+                    fontWeight: 600,
                   }}
                 >
-                  <option value="">Todas</option>
-                  <option value="BRO">BRO</option>
-                  <option value="EXP">EXP</option>
-                </select>
-              </div>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
                   Nome
                 </label>
                 <input
@@ -869,12 +921,25 @@ export function Transfer() {
                   placeholder="Buscar por nome…"
                   value={filters.name}
                   onChange={(e) => setFilters({ ...filters, name: e.target.value })}
-                  className="w-full rounded-lg border border-white/10 bg-black/50 p-2 font-display font-bold uppercase text-white placeholder:text-gray-500 placeholder:normal-case outline-none focus:border-neon-yellow"
+                  className="w-full border border-[var(--color-border)] bg-black/55 px-3 py-2 text-white placeholder:text-white/35 outline-none focus:border-neon-yellow transition-colors"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '13px',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                   autoComplete="off"
                 />
               </div>
               <div className="sm:col-span-2 lg:col-span-3">
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                <label
+                  className="mb-2 block text-[var(--color-neon-yellow)] uppercase"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    letterSpacing: '0.22em',
+                    fontWeight: 600,
+                  }}
+                >
                   Ordenar
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -892,11 +957,19 @@ export function Transfer() {
                         type="button"
                         onClick={() => setFilters({ ...filters, sort: s.id })}
                         className={cn(
-                          'rounded-full border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-colors',
+                          'border px-3 py-1.5 transition-colors',
                           active
                             ? 'border-neon-yellow bg-neon-yellow text-black'
-                            : 'border-white/15 bg-white/5 text-gray-300 hover:bg-white/10',
+                            : 'border-[var(--color-border)] bg-deep-black text-white/65 hover:border-neon-yellow/50 hover:text-white',
                         )}
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          letterSpacing: '0.18em',
+                          textTransform: 'uppercase',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
                       >
                         {s.label}
                       </button>
@@ -905,6 +978,111 @@ export function Transfer() {
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Slider promocional por aba (sobe pra logo abaixo do hero principal) */}
+      <TransferHeroSlider
+        tab={marketTab}
+        slides={heroSlidesForTab(marketTab)}
+      />
+
+      {/* ── TAB BAR scoreboard-tape (abaixo do slider) ───────────────── */}
+      <div className="flex items-stretch gap-0 border-b border-white/10 overflow-x-auto hide-scrollbar">
+        {tabsList.map((t) => {
+          const active = marketTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setMarketTab(t.id)}
+              className={cn(
+                'relative inline-flex items-center gap-2 px-4 sm:px-6 py-3 font-bold uppercase whitespace-nowrap transition-colors',
+                active
+                  ? 'text-neon-yellow'
+                  : 'text-white/45 hover:text-white/85',
+              )}
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                letterSpacing: '0.18em',
+              }}
+            >
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-neon-yellow"
+                />
+              )}
+              <span className={active ? 'pl-2' : ''}>{t.label}</span>
+              {active && (
+                <motion.span
+                  layoutId="tab-underline"
+                  aria-hidden
+                  className="absolute left-0 right-0 -bottom-px h-[2px] bg-neon-yellow"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {legacyMarketEnabled && marketTab === 'legacies' ? <TransferLegaciesTab /> : null}
+      <div className={marketTab !== 'legacies' ? 'contents' : 'hidden'}>
+      <AnimatePresence>
+        {purchaseCompleteBanner && (
+          <motion.div
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="flex items-center justify-between gap-3 border border-l-[3px] border-[var(--color-border)] border-l-[var(--color-success)] bg-dark-gray px-4 py-3.5 sm:px-5"
+            style={{ borderRadius: 'var(--radius-md)' }}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <CheckCircle2 className="h-7 w-7 shrink-0 text-[var(--color-success)]" aria-hidden />
+              <div className="min-w-0">
+                <p
+                  className="text-[var(--color-success)] uppercase"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                  }}
+                >
+                  Compra concluída
+                </p>
+                <p
+                  className="mt-0.5 text-white/55"
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '12px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Compra imediata registada. Continua a negociar no mercado quando quiseres.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (purchaseBannerHideTimerRef.current) {
+                  clearTimeout(purchaseBannerHideTimerRef.current);
+                  purchaseBannerHideTimerRef.current = null;
+                }
+                setPurchaseCompleteBanner(false);
+              }}
+              className="shrink-0 grid h-8 w-8 place-items-center text-white/45 transition-colors hover:bg-white/10 hover:text-white"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+              aria-label="Fechar aviso de compra"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -925,21 +1103,33 @@ export function Transfer() {
             </motion.div>
           ))}
           {gridPlayers.length === 0 && (
-            <div className="col-span-full py-12 text-center font-display text-xl font-bold text-gray-500">
-              Nenhum jogador encontrado com estes filtros.
+            <div className="col-span-full py-16 text-center">
+              <p
+                className="italic text-white/55 mx-auto max-w-md"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(18px, 2.4vw, 24px)',
+                  lineHeight: 1.4,
+                }}
+              >
+                “nenhuma carta atende esses filtros.”
+              </p>
+              <p
+                className="mt-3 text-white/35 uppercase"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Tenta ajustar a busca acima
+              </p>
             </div>
           )}
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Boxes em destaque — seleção por aba. Apresentação maior que o carrossel. */}
-          <TransferFeaturedBoxes
-            title={featuredBoxesConfigForTab(marketTab).title}
-            subtitle={featuredBoxesConfigForTab(marketTab).subtitle}
-            variant={featuredBoxesConfigForTab(marketTab).variant}
-            players={featuredBoxesPlayersForTab(marketTab, auctionPool)}
-            onSelect={setSelectedPlayer}
-          />
+          {/* "Destaques da semana" — primeiro abaixo do menu do slider pra dar peso */}
           {discoveryRails.map((rail) => {
             const Icon = rail.icon;
             const vis = discoveryVisibleCount[rail.id] ?? DISCOVERY_CAROUSEL_INITIAL;
@@ -950,19 +1140,38 @@ export function Transfer() {
             const railHomonymById = homonymRankMapForPlayers(rail.ordered);
             return (
               <section key={rail.id} className="min-w-0 space-y-3">
-                {/* Rail header */}
-                <div className="flex min-w-0 items-center gap-2.5 px-0.5">
-                  <div className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                    isHighlightsRail ? 'bg-neon-yellow/15 shadow-[0_0_12px_rgba(234,255,0,0.15)]' : 'bg-white/5',
-                  )}>
-                    <Icon className="h-4 w-4 text-neon-yellow" aria-hidden />
-                  </div>
+                {/* Rail header — padrão editorial ▍ TÍTULO (assinatura /legend) */}
+                <div className="flex min-w-0 items-center gap-3 px-0.5">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'shrink-0',
+                      isHighlightsRail
+                        ? 'w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]'
+                        : 'w-[3px] h-7 bg-neon-yellow',
+                    )}
+                  />
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-display text-sm font-black uppercase tracking-widest text-white sm:text-base">
+                    <h3
+                      className="text-neon-yellow font-bold uppercase"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '14px',
+                        letterSpacing: '0.18em',
+                      }}
+                    >
                       {rail.title}
                     </h3>
-                    <p className="text-[10px] leading-snug text-gray-500">{rail.hint}</p>
+                    <p
+                      className="text-white/45"
+                      style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '10px',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {rail.hint}
+                    </p>
                   </div>
                   {canMore && (
                     <button
@@ -1033,16 +1242,55 @@ export function Transfer() {
             );
           })}
 
+          {/* Boxes em destaque — apresentação maior que o carrossel; vem APÓS Destaques. */}
+          <TransferFeaturedBoxes
+            title={featuredBoxesConfigForTab(marketTab).title}
+            subtitle={featuredBoxesConfigForTab(marketTab).subtitle}
+            variant={featuredBoxesConfigForTab(marketTab).variant}
+            players={featuredBoxesPlayersForTab(marketTab, auctionPool)}
+            onSelect={setSelectedPlayer}
+          />
+
           {/* Sessão do mercado removida — era apenas um ranking por OVR, sem
               valor informativo novo depois do hero + featured boxes + rails.
               Mantemos o CTA do Exchange, que é decisão real do manager. */}
-          <section id="transfer-exchange-cta" className="min-w-0 scroll-mt-4 border-t border-white/10 pt-8">
-            <div className="flex justify-center px-0.5">
+          <section id="transfer-exchange-cta" className="min-w-0 scroll-mt-4 border-t border-[var(--color-border)] pt-10">
+            <div className="flex flex-col items-center gap-3 px-0.5 text-center">
+              <span
+                className="text-white/45 uppercase"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Câmbio do mercado
+              </span>
+              <h3
+                className="italic text-white"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(22px, 3vw, 32px)',
+                  lineHeight: 1.15,
+                }}
+              >
+                troque <span className="text-neon-yellow">EXP</span> por <span className="text-neon-yellow">BRO</span> a qualquer hora.
+              </h3>
               <Link
                 to="/transfer/exchange"
-                className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-xl border border-neon-yellow/45 bg-gradient-to-r from-neon-yellow/15 via-black/50 to-neon-yellow/10 px-4 py-3 font-display text-xs font-black uppercase tracking-[0.2em] text-neon-yellow shadow-[0_0_24px_rgba(234,255,0,0.12)] transition-colors hover:border-neon-yellow/70 hover:from-neon-yellow/25 sm:text-sm"
+                className="mt-2 inline-flex items-center gap-2 bg-neon-yellow px-7 py-3 text-black hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                }}
               >
-                Exchange EXP ↔ BRO
+                Abrir Exchange
+                <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
           </section>
@@ -1050,19 +1298,41 @@ export function Transfer() {
           {managerAuctionCards.length > 0 ? (
             <section className="min-w-0 space-y-3">
               <div className="flex items-center justify-between gap-2 px-0.5">
-                <div className="min-w-0">
-                  <h3 className="font-display text-sm font-black uppercase tracking-widest text-neon-yellow sm:text-base">
-                    Jogadores anunciados
-                  </h3>
-                  <p className="text-[10px] text-gray-500">
-                    Os teus cards à venda. Clica pra gerir preço ou retirar do mercado.
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span aria-hidden className="w-[3px] h-7 bg-neon-yellow shrink-0" />
+                  <div className="min-w-0">
+                    <h3
+                      className="text-neon-yellow font-bold uppercase"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '14px',
+                        letterSpacing: '0.18em',
+                      }}
+                    >
+                      Jogadores anunciados
+                    </h3>
+                    <p
+                      className="text-white/45"
+                      style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
+                    >
+                      Os teus cards à venda. Clica pra gerir preço ou retirar do mercado.
+                    </p>
+                  </div>
                 </div>
                 <Link
                   to="/team"
-                  className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-white hover:bg-white/10"
+                  className="shrink-0 inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3.5 py-1.5 text-white/80 transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                 >
                   Anunciar mais
+                  <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
               <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">

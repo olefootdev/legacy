@@ -724,7 +724,6 @@ export function Home() {
                 },
                 actions: [
                   { label: 'Ver postgame', href: '/postgame', variant: 'primary' },
-                  { label: 'Histórico', href: '/wallet', variant: 'outline' },
                 ],
                 topLeft: { label: 'Olefoot' },
                 scrollCueTargetId: 'home-below-fold',

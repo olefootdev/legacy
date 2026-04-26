@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react';
-import { isAdminPanelSessionValid } from '@/supabase/adminPanelAuth';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { GameProvider } from './game/GameProvider';
@@ -13,6 +13,10 @@ import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
 import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
+const ClubHub = lazy(() => import('./pages/ClubHub').then((m) => ({ default: m.ClubHub })));
+const CompetitionHub = lazy(() => import('./pages/CompetitionHub').then((m) => ({ default: m.CompetitionHub })));
+const MarketHub = lazy(() => import('./pages/MarketHub').then((m) => ({ default: m.MarketHub })));
+const HelpHub = lazy(() => import('./pages/HelpHub').then((m) => ({ default: m.HelpHub })));
 const Legend = lazy(() => import('./pages/Legend').then((m) => ({ default: m.Legend })));
 const MatchdayPreview = lazy(() => import('./pages/MatchdayPreview').then((m) => ({ default: m.MatchdayPreview })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
@@ -61,8 +65,24 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ defaul
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
 
 function RequireAdmin() {
-  // Sessão do painel é independente do auth do jogo — separar intencionalmente.
-  if (!isAdminPanelSessionValid()) return <Navigate to="/admin/login" replace />;
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const session = await loadAdminPanelSession();
+      setIsValid(session !== null);
+    };
+    void checkSession();
+  }, []);
+
+  if (isValid === null) {
+    return <RouteFallback />;
+  }
+
+  if (!isValid) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
   return <Outlet />;
 }
 
@@ -147,34 +167,72 @@ export default function App() {
           <Route element={<RequireRegistration />}>
           <Route element={<GameShell />}>
             <Route path="/" element={<Home />} />
-            <Route path="/ranking" element={<RankingFull />} />
-            <Route path="/missions" element={<Missions />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/leagues" element={<Leagues />} />
+
+            {/* Hub pages */}
+            <Route path="/clube" element={<ClubHub />} />
+            <Route path="/competicao" element={<CompetitionHub />} />
+            <Route path="/mercado" element={<MarketHub />} />
+            <Route path="/ajuda" element={<HelpHub />} />
+
+            {/* Clube subpages */}
+            <Route path="/clube/elenco" element={<Team />} />
+            <Route path="/clube/treino" element={<TeamTraining />} />
+            <Route path="/clube/staff" element={<TeamStaff />} />
+            <Route path="/clube/academia" element={<YouthProspects />} />
+            <Route path="/clube/estruturas" element={<City />} />
+            <Route path="/clube/ailabs" element={<TeamAiLabs />} />
+            <Route path="/clube/linha-evolutiva" element={<TeamEvolutionLine />} />
+
+            {/* Competição subpages */}
+            <Route path="/competicao/ligas" element={<Leagues />} />
+            <Route path="/competicao/calendario" element={<CalendarPage />} />
+            <Route path="/competicao/ranking" element={<RankingFull />} />
+
+            {/* Mercado subpages */}
+            <Route path="/mercado/transfer" element={<Transfer />} />
+            <Route path="/mercado/exchange" element={<TransferExchange />} />
+            <Route path="/mercado/loja" element={<Store />} />
+
+            {/* Manager subpages */}
             <Route path="/manager" element={<Manager />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
-            <Route path="/profile" element={<Navigate to="/manager" replace />} />
-            <Route path="/config" element={<Config />} />
-            <Route path="/how-to-play" element={<HowToPlay />} />
-            <Route path="/team" element={<Team />} />
-            <Route path="/legend/:id" element={<Legend />} />
-            <Route path="/legend" element={<Legend />} />
-            <Route path="/matchday/preview" element={<MatchdayPreview />} />
-            <Route path="/team/tatica" element={<Navigate to="/team" replace />} />
-            <Route path="/team/treino" element={<TeamTraining />} />
-            <Route path="/team/linha-evolutiva" element={<TeamEvolutionLine />} />
-            <Route path="/team/staff" element={<TeamStaff />} />
-            <Route path="/team/ailabs" element={<TeamAiLabs />} />
-            <Route path="/city" element={<City />} />
-            <Route path="/city/youth-prospects" element={<YouthProspects />} />
-            <Route path="/transfer" element={<Transfer />} />
-            <Route path="/transfer/exchange" element={<TransferExchange />} />
-            <Route path="/store" element={<Store />} />
+            <Route path="/manager/missoes" element={<Missions />} />
+            <Route path="/manager/config" element={<Config />} />
+
+            {/* Ajuda subpages */}
+            <Route path="/ajuda/como-jogar" element={<HowToPlay />} />
+
+            {/* Wallet (mantém estrutura atual) */}
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/wallet/olexp" element={<OlexpTab />} />
             <Route path="/wallet/referrals" element={<ReferralTab />} />
             <Route path="/wallet/gat" element={<GatTab />} />
             <Route path="/wallet/extract" element={<ExtractTab />} />
+
+            {/* Redirects - URLs antigas → novas */}
+            <Route path="/team" element={<Navigate to="/clube/elenco" replace />} />
+            <Route path="/team/tatica" element={<Navigate to="/clube/elenco" replace />} />
+            <Route path="/team/treino" element={<Navigate to="/clube/treino" replace />} />
+            <Route path="/team/staff" element={<Navigate to="/clube/staff" replace />} />
+            <Route path="/team/ailabs" element={<Navigate to="/clube/ailabs" replace />} />
+            <Route path="/team/linha-evolutiva" element={<Navigate to="/clube/linha-evolutiva" replace />} />
+            <Route path="/city" element={<Navigate to="/clube/estruturas" replace />} />
+            <Route path="/city/youth-prospects" element={<Navigate to="/clube/academia" replace />} />
+            <Route path="/transfer" element={<Navigate to="/mercado/transfer" replace />} />
+            <Route path="/transfer/exchange" element={<Navigate to="/mercado/exchange" replace />} />
+            <Route path="/store" element={<Navigate to="/mercado/loja" replace />} />
+            <Route path="/leagues" element={<Navigate to="/competicao/ligas" replace />} />
+            <Route path="/calendar" element={<Navigate to="/competicao/calendario" replace />} />
+            <Route path="/ranking" element={<Navigate to="/competicao/ranking" replace />} />
+            <Route path="/missions" element={<Navigate to="/manager/missoes" replace />} />
+            <Route path="/config" element={<Navigate to="/manager/config" replace />} />
+            <Route path="/how-to-play" element={<Navigate to="/ajuda/como-jogar" replace />} />
+            <Route path="/profile" element={<Navigate to="/manager" replace />} />
+
+            {/* Match pages (mantém estrutura atual) */}
+            <Route path="/legend/:id" element={<Legend />} />
+            <Route path="/legend" element={<Legend />} />
+            <Route path="/matchday/preview" element={<MatchdayPreview />} />
             <Route path="/match/live" element={<MatchLive />} />
             <Route path="/match" element={<LiveMatch />} />
             <Route path="/match/test2d" element={<Navigate to="/match/live" replace />} />

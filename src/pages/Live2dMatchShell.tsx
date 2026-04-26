@@ -5,6 +5,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, Gauge, Home, LayoutGrid, LogOut, Map, RotateCcw, Scan, Tag, Trophy, Zap } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { playerTokenSrc } from '@/lib/playerPortrait';
@@ -35,6 +36,8 @@ import '@/styles/field2d.css';
 import { Live2dPlayerVision } from '@/components/matchday/Live2dPlayerVision';
 import { PlayerVoiceBubble } from '@/components/matchday/PlayerResponseBubble';
 import { LivePlayerInfoPanel } from '@/components/matchday/LivePlayerInfoPanel';
+import { LiveTelemetryPanel } from '@/components/matchday/LiveTelemetryPanel';
+import { generateReport } from '@/match/liveTelemetry';
 import {
   computePitchCameraRig,
   loadLive2dPitchCamera,
@@ -564,15 +567,22 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const usesLive2dTacticalEngine = true;
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
-  const live = useGameStore((s) => s.liveMatch);
-  const playersById = useGameStore((s) => s.players);
-  const lineupIds = useGameStore((s) => s.lineup);
-  const fixture = useGameStore((s) => s.nextFixture);
-  const tacticalMentality = useGameStore((s) => s.manager.tacticalMentality);
-  const defensiveLine = useGameStore((s) => s.manager.defensiveLine);
-  const tempo = useGameStore((s) => s.manager.tempo);
-  const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
-  const staff = useGameStore((s) => s.manager.staff);
+
+  // P7: useShallow consolidates 12 selectors into 1, reducing Zustand subscribers
+  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, staff } = useGameStore(
+    useShallow((s) => ({
+      live: s.liveMatch,
+      playersById: s.players,
+      lineupIds: s.lineup,
+      fixture: s.nextFixture,
+      tacticalMentality: s.manager.tacticalMentality,
+      defensiveLine: s.manager.defensiveLine,
+      tempo: s.manager.tempo,
+      tacticalStyle: s.manager.tacticalStyle,
+      staff: s.manager.staff,
+    }))
+  );
+
   const homeStaffMatch = useMemo(
     () => buildHomeStaffMatchBonuses(staff, { isHomeFixture: fixture.isHome }),
     [staff, fixture.isHome],
@@ -951,6 +961,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   );
   const squadOkForMatch = squadReport.ok || isOfficialSquadGateRelaxedForTests();
 
+  // P8: Preload portraits with <link rel="preload"> + async decoding
   useEffect(() => {
     if (!live?.homePlayers?.length) return;
     const urls = new Set<string>();
@@ -961,11 +972,24 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
         if (u) urls.add(u);
       }
     }
+    const links: HTMLLinkElement[] = [];
     for (const u of urls) {
+      // Preload via <link> for priority hint
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = u;
+      document.head.appendChild(link);
+      links.push(link);
+      // Also trigger Image() for browsers that don't support preload
       const img = new Image();
       img.decoding = 'async';
+      img.loading = 'eager';
       img.src = u;
     }
+    return () => {
+      links.forEach((link) => document.head.removeChild(link));
+    };
   }, [live?.homePlayers, playersById]);
 
   const tacticalPitchFromTruth = useMemo(() => {
@@ -1016,6 +1040,19 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     const stillOnPitch = live.homePlayers.some((p) => p.playerId === selectedPlayer.playerId);
     if (!stillOnPitch) setSelectedPlayer(null);
   }, [live?.homePlayers, selectedPlayer]);
+
+  // Atalho Shift+R para gerar relatório de telemetria
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'R' && e.shiftKey && live?.phase === 'playing') {
+        const report = generateReport();
+        console.log('\n' + report + '\n');
+        console.log('📋 Relatório de telemetria gerado! Copie o texto acima.');
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [live?.phase]);
 
   // Auto-substitution: swap the most fatigued home outfield player during a deadball window.
   const autoSubDoneThisDeadballRef = useRef(false);
@@ -1431,14 +1468,16 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           </div>
           <div
             className="mx-auto w-full max-w-3xl py-0.5 sm:py-1 [perspective:min(1400px,110vw)]"
-            aria-label="Campo: gol à esquerda é da casa, à direita é do visitante; a equipa da casa ataca para a direita e o visitante ataca para a esquerda."
+            aria-label="Campo: gol à esquerda é da casa, à direita é do visitante; o time da casa ataca para a direita e o visitante ataca para a esquerda."
           >
             <div
               className="origin-[50%_100%] transform-gpu will-change-transform"
               style={{
                 transformStyle: 'preserve-3d',
-                transform: `rotateX(${5.5 + pitchCameraRig.rotateXAdd}deg)`,
+                // P4: CSS variables evitam re-render do React quando ballPos muda
+                transform: `rotateX(calc(5.5deg + var(--cam-rotate-x-add, 0deg)))`,
                 transition: prefersReducedMotion ? 'none' : 'transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+                ['--cam-rotate-x-add' as string]: `${pitchCameraRig.rotateXAdd}deg`,
               }}
             >
               <div
@@ -1455,8 +1494,12 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                     prefersReducedMotion ? '' : 'transition-transform duration-300 ease-out',
                   )}
                   style={{
-                    transform: `scale(${pitchCameraRig.scale})`,
-                    transformOrigin: `${pitchCameraRig.originXPct}% ${pitchCameraRig.originYPct}%`,
+                    // P4: CSS variables para scale e origin
+                    transform: `scale(var(--cam-scale, 1))`,
+                    transformOrigin: `var(--cam-origin-x, 50)% var(--cam-origin-y, 100)%`,
+                    ['--cam-scale' as string]: pitchCameraRig.scale,
+                    ['--cam-origin-x' as string]: pitchCameraRig.originXPct,
+                    ['--cam-origin-y' as string]: pitchCameraRig.originYPct,
                   }}
                 >
                   <div className="field-container w-full overflow-visible rounded-lg p-2 sm:p-3">
@@ -1758,6 +1801,9 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           />
         )}
       </AnimatePresence>
+
+      {/* Painel de telemetria ao vivo */}
+      {live?.phase === 'playing' && <LiveTelemetryPanel />}
     </div>
   );
 }

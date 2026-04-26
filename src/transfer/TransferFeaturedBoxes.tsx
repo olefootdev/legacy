@@ -8,7 +8,6 @@
  */
 
 import { motion } from 'motion/react';
-import { Trophy, Sparkles, Gem } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 
@@ -24,51 +23,51 @@ interface TransferFeaturedBoxesProps {
   subtitle?: string;
   players: MockAuctionPlayer[];
   onSelect: (player: MockAuctionPlayer) => void;
-  /** Label do ícone/badge no topo (visual). */
+  /** Variantes visuais — diferenciadas só pelo glow sutil (acento único = neon-yellow). */
   variant?: 'premium' | 'rising' | 'drop';
 }
-
-const VARIANT_STYLES: Record<NonNullable<TransferFeaturedBoxesProps['variant']>, {
-  icon: typeof Trophy;
-  badge: string;
-  glow: string;
-}> = {
-  premium: {
-    icon: Trophy,
-    badge: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40',
-    glow: 'shadow-[0_0_24px_rgba(234,255,0,0.08)]',
-  },
-  rising: {
-    icon: Sparkles,
-    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
-    glow: 'shadow-[0_0_24px_rgba(16,185,129,0.08)]',
-  },
-  drop: {
-    icon: Gem,
-    badge: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/40',
-    glow: 'shadow-[0_0_24px_rgba(217,70,239,0.08)]',
-  },
-};
 
 export function TransferFeaturedBoxes({
   title, subtitle, players, onSelect, variant = 'premium',
 }: TransferFeaturedBoxesProps) {
   if (players.length === 0) return null;
-  const v = VARIANT_STYLES[variant];
-  const Icon = v.icon;
   const shown = players.slice(0, 6);
+  const isPremium = variant === 'premium';
 
   return (
     <section className="min-w-0 space-y-3">
-      <div className="flex min-w-0 items-center gap-2.5 px-0.5">
-        <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border', v.badge)}>
-          <Icon className="h-4 w-4" aria-hidden />
-        </div>
+      {/* Header — padrão editorial ▍ TÍTULO (mesmo de "Destaques da semana") */}
+      <div className="flex min-w-0 items-center gap-3 px-0.5">
+        <span
+          aria-hidden
+          className={cn(
+            'shrink-0 w-[3px] h-7 bg-neon-yellow',
+            isPremium && 'shadow-[0_0_10px_rgba(253,225,0,0.55)]',
+          )}
+        />
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-sm font-black uppercase tracking-widest text-white sm:text-base">
+          <h3
+            className="text-neon-yellow font-bold uppercase"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '14px',
+              letterSpacing: '0.18em',
+            }}
+          >
             {title}
           </h3>
-          {subtitle ? <p className="text-[10px] leading-snug text-gray-500">{subtitle}</p> : null}
+          {subtitle ? (
+            <p
+              className="text-white/45"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '10px',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {subtitle}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -81,10 +80,8 @@ export function TransferFeaturedBoxes({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04, duration: 0.25 }}
-            className={cn(
-              'group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/40 p-0 text-left transition-colors hover:border-white/30',
-              v.glow,
-            )}
+            className="group relative overflow-hidden border border-[var(--color-border)] bg-dark-gray p-0 text-left transition-colors hover:border-neon-yellow/40"
+            style={{ borderRadius: 'var(--radius-md)' }}
           >
             {/* Retrato */}
             <div className="relative h-56 w-full overflow-hidden bg-gradient-to-br from-black to-white/5">
@@ -98,21 +95,50 @@ export function TransferFeaturedBoxes({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
-                  <p className="font-display text-5xl font-black italic text-white/10">
+                  <p
+                    className="italic text-white/15"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: '3rem',
+                      letterSpacing: '-0.03em',
+                    }}
+                  >
                     {p.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                   </p>
                 </div>
               )}
 
-              {/* OVR no canto superior direito */}
-              <div className="absolute right-2 top-2 rounded-md border border-white/20 bg-black/70 px-2 py-0.5 backdrop-blur">
-                <p className="font-mono text-sm font-black text-white">{p.ovr}</p>
+              {/* OVR — Moret italic editorial (tabular nums) */}
+              <div
+                className="absolute right-2 top-2 border border-[var(--color-border)] bg-black/70 px-2.5 py-1 backdrop-blur"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                <p
+                  className="italic text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: '18px',
+                  }}
+                >
+                  {p.ovr}
+                </p>
               </div>
 
-              {/* Tag de marketKind (Genesis, etc) */}
+              {/* Tag Genesis — sistema (border-token + Agency caps) */}
               {p.marketKind === 'genesis' ? (
                 <div className="absolute left-2 top-2">
-                  <span className={cn('rounded-full border px-2 py-0.5 font-display text-[8px] font-black uppercase tracking-widest', v.badge)}>
+                  <span
+                    className="border border-neon-yellow/45 bg-deep-black/65 backdrop-blur text-neon-yellow uppercase px-2 py-0.5"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      letterSpacing: '0.22em',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
                     Genesis
                   </span>
                 </div>
@@ -123,24 +149,64 @@ export function TransferFeaturedBoxes({
             </div>
 
             {/* Info */}
-            <div className="space-y-2 p-3">
+            <div className="space-y-2 p-3.5">
               <div className="min-w-0">
-                <p className="truncate font-display text-sm font-black uppercase tracking-wider text-white">
+                <p
+                  className="truncate text-white uppercase"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                  }}
+                >
                   {p.name}
                 </p>
-                <p className="text-[10px] uppercase tracking-widest text-gray-500">
-                  {p.pos} · {p.nat} {p.style ? `· ${p.style}` : ''}
+                <p
+                  className="text-white/45 uppercase truncate"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  {p.pos} · {p.nat}
+                  {p.style ? ` · ${p.style}` : ''}
                 </p>
               </div>
 
-              <div className="flex items-end justify-between gap-2 border-t border-white/5 pt-2">
-                <div>
-                  <p className="text-[9px] uppercase tracking-wider text-gray-500">Compra imediata</p>
-                  <p className="font-mono text-sm font-black text-white">
+              <div className="flex items-end justify-between gap-2 border-t border-white/5 pt-2.5">
+                <div className="min-w-0">
+                  <p
+                    className="text-white/45 uppercase"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '9px',
+                      letterSpacing: '0.22em',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Compra imediata
+                  </p>
+                  <p
+                    className="italic text-neon-yellow tabular-nums leading-none mt-0.5"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: '15px',
+                    }}
+                  >
                     {formatBuyNow(p)}
                   </p>
                 </div>
-                <p className="text-[10px] text-gray-500">
+                <p
+                  className="text-white/45 shrink-0"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    letterSpacing: '0.04em',
+                  }}
+                >
                   {p.timeLeft}
                 </p>
               </div>

@@ -340,17 +340,20 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
 
   // Teto defensivo: evita valores absurdos injetados via DevTools.
   // Não substitui validação server-side — só protege a lógica do jogo.
-  const MAX_BRO_CENTS = 500_000_000; // 5 milhões BRO
-  const MAX_OLE = 100_000_000;
+  const MAX_BRO_CENTS = 10_000_000; // 100k BRO (mais realista)
+  const MAX_OLE = 10_000_000;       // 10M OLE
+  const MAX_EXP = 50_000_000;       // 50M EXP
   const rawBro = raw.finance?.broCents ?? base.finance.broCents;
   const rawOle = raw.finance?.ole ?? base.finance.ole;
+
+  const rawExp = raw.finance?.expLifetimeEarned ?? 0;
 
   const finance = {
     ...base.finance,
     ...raw.finance,
     broCents: Math.min(MAX_BRO_CENTS, Math.max(0, Number.isFinite(rawBro) ? rawBro : 0)),
     ole: Math.min(MAX_OLE, Math.max(0, Number.isFinite(rawOle) ? rawOle : 0)),
-    expLifetimeEarned: raw.finance?.expLifetimeEarned ?? 0,
+    expLifetimeEarned: Math.min(MAX_EXP, Math.max(0, Number.isFinite(rawExp) ? rawExp : 0)),
     expHistory: raw.finance?.expHistory ?? [],
     companyTreasuryBroCents: raw.finance?.companyTreasuryBroCents ?? base.finance.companyTreasuryBroCents ?? 0,
     friendlyChallengeEscrowBroCents:
@@ -571,8 +574,15 @@ export function loadGameState(): OlefootGameState {
 
 export function saveGameState(state: OlefootGameState): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    /* ignore quota */
+    const serialized = JSON.stringify(state);
+    const sizeKB = new Blob([serialized]).size / 1024;
+
+    if (sizeKB > 4096) { // 4 MB warning
+      console.warn(`[persistence] Save muito grande (${sizeKB.toFixed(0)} KB). Considere limpar histórico.`);
+    }
+
+    localStorage.setItem(KEY, serialized);
+  } catch (e) {
+    console.error('[persistence] Falha ao salvar:', e instanceof Error ? e.message : 'quota exceeded');
   }
 }

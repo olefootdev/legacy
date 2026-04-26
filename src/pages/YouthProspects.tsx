@@ -6,6 +6,7 @@ import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { cn } from '@/lib/utils';
 import { youthAcademyProspectTrainingMultiplier } from '@/clubStructures/benefits';
+import { BackButton } from '@/components/BackButton';
 
 export function YouthProspects() {
   const players = useGameStore((s) => s.players);
@@ -28,6 +29,7 @@ export function YouthProspects() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6 pb-10">
+      <BackButton to="/clube" label="Clube" />
       <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
         <div className="min-w-0">
           <h2 className="text-2xl font-display font-black italic uppercase tracking-wider min-[390px]:text-3xl">

@@ -1228,8 +1228,9 @@ function decideBreakLine(
   profile: PlayerProfile,
 ): OnBallAction {
   const throughBall = pickBestForIntention(passOptions, 'break_line', ctx, reading,
-    p => p.isForward && p.distance < 25 && p.successProb > 0.35);
-  if (throughBall && pick01ForDecision(ctx) < 0.45 + profile.vision * 0.25) {
+    p => p.isForward && p.distance < 25 && p.successProb > 0.30);  // Reduzido de 0.35 para 0.30
+  // Aumentar chance de through ball: era 0.45, agora 0.65 (mais ousado)
+  if (throughBall && pick01ForDecision(ctx) < 0.65 + profile.vision * 0.25) {
     return { type: 'through_ball', option: throughBall };
   }
 
@@ -1267,9 +1268,13 @@ function decideAccelerate(
   }
 
   if (isWide && reading.distToGoal < 25) {
-    if (reading.distToGoal < 18) return { type: 'run_to_byline', targetX: clampX(goalX), targetZ: ctx.self.z };
+    // Aumentar frequência de cruzamentos: era só se distToGoal < 18, agora até 25m
+    if (reading.distToGoal < 22) {  // Aumentado de 18 para 22
+      return { type: 'run_to_byline', targetX: clampX(goalX), targetZ: ctx.self.z };
+    }
     const cz = FIELD_WIDTH / 2 + (pick01ForDecision(ctx) - 0.5) * 14;
-    return pick01ForDecision(ctx) < 0.5
+    // Aumentar chance de cruzamento: era 0.5, agora 0.7 (mais cruzamentos)
+    return pick01ForDecision(ctx) < 0.7
       ? { type: 'low_cross', targetX: goalX - ctx.attackDir * 10, targetZ: cz }
       : { type: 'high_cross', targetX: goalX - ctx.attackDir * 10, targetZ: cz };
   }
@@ -1280,12 +1285,12 @@ function decideAccelerate(
 
   if (reading.threatTrend === 'falling') {
     const throughBall = pickBestForIntention(passOptions, 'accelerate', ctx, reading,
-      p => p.isForward && p.distance < 20 && p.successProb > 0.3);
+      p => p.isForward && p.distance < 20 && p.successProb > 0.25);  // Reduzido de 0.3 para 0.25
     if (throughBall) return { type: 'through_ball', option: throughBall };
   }
 
   const throughBall = pickBestForIntention(passOptions, 'accelerate', ctx, reading,
-    p => p.isForward && p.distance < 20 && p.successProb > 0.35);
+    p => p.isForward && p.distance < 20 && p.successProb > 0.30);  // Reduzido de 0.35 para 0.30
   if (throughBall && profile.vision > 0.5) return { type: 'through_ball', option: throughBall };
 
   return decideProgress(ctx, reading, passOptions, profile);

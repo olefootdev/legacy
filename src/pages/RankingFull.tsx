@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Search, Star, Trophy, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Star, Trophy, TrendingUp, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
-import { formatExp } from '@/systems/economy';
 import { getFullRankingEntries, type RankingEntry } from '@/ranking/worldRanking';
 import type { LeagueScopeRankingEntry } from '@/ranking/leagueScopeRanking';
 import { getLeagueScopeRankingEntries } from '@/ranking/leagueScopeRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { LEAGUE_SCOPE_LABELS } from '@/match/adminLeagues';
+import { BackButton } from '@/components/BackButton';
 
 const PER_PAGE = 25;
 
@@ -20,6 +20,41 @@ const TAB_OPTIONS: { id: RankingTabId; label: string }[] = [
   { id: 'nacional', label: LEAGUE_SCOPE_LABELS.national },
   { id: 'estadual', label: LEAGUE_SCOPE_LABELS.state },
 ];
+
+const TAB_META: Record<RankingTabId, { icon: typeof Trophy; title: string; subtitle: string }> = {
+  mundial: {
+    icon: Trophy,
+    title: 'Global',
+    subtitle: 'Ordenação mundial por saldo EXP.',
+  },
+  nacional: {
+    icon: TrendingUp,
+    title: 'Nacional',
+    subtitle: 'Soma de pontos em competições nacionais.',
+  },
+  estadual: {
+    icon: Award,
+    title: 'Estadual',
+    subtitle: 'Soma de pontos em competições estaduais.',
+  },
+};
+
+/**
+ * Formata números grandes de forma inteligente:
+ * - 1.000.000+ → "10M", "1.5M"
+ * - 100.000+ → "100K", "250K"
+ * - < 100.000 → "99.999", "1.234"
+ */
+function formatExpSmart(n: number): string {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return m >= 10 ? `${Math.floor(m)}M` : `${m.toFixed(1).replace('.', ',')}M`;
+  }
+  if (n >= 100_000) {
+    return `${Math.floor(n / 1000)}K`;
+  }
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
 
 function parseTab(raw: string | null): RankingTabId {
   if (raw === 'estadual' || raw === 'nacional' || raw === 'mundial') return raw;
@@ -39,6 +74,7 @@ export function RankingFull() {
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedTeam, setSelectedTeam] = useState<(RankingEntry | LeagueScopeRankingEntry) & { globalRank: number } | null>(null);
 
   useEffect(() => {
     const heart = searchParams.get('heart');
@@ -117,149 +153,263 @@ export function RankingFull() {
     setPage(1);
   };
 
-  const subtitle =
-    tab === 'mundial'
-      ? `Ordenação global por EXP (saldo). ${filtered.length} time${filtered.length !== 1 ? 's' : ''}${search.trim() ? ' na busca' : ''}.`
-      : `Soma de pontos nas competições ${tab === 'nacional' ? 'nacionais' : 'estaduais'}. ${filtered.length} equipa${filtered.length !== 1 ? 's' : ''}${search.trim() ? ' na busca' : ''}.`;
+  const meta = TAB_META[tab];
+  const Icon = meta.icon;
 
   return (
-    <div className="mx-auto min-w-0 max-w-4xl space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Home
-          </Link>
-        </div>
+    <div className="mx-auto min-w-0 max-w-4xl space-y-6 pb-8">
+      <BackButton to="/competicao" label="Competição" />
+      <div className="flex items-center gap-3">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+          }}
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Olefoot
+        </Link>
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sports-panel p-0 overflow-hidden"
+        className="border border-white/10 bg-dark-gray overflow-hidden"
+        style={{ borderRadius: 'var(--radius-md)' }}
       >
-        <div className="bg-dark-gray p-4 border-b border-white/10 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="ole-eyebrow justify-start mb-2">Ranking</div>
-              <h1 className="ole-headline text-3xl md:text-4xl text-white">
-                RANKING <span className="ole-headline-italic text-neon-yellow">OLE.</span>
-              </h1>
-              <p className="text-[11px] text-gray-500 mt-1">{subtitle}</p>
-            </div>
-            <span className="text-neon-yellow text-xs font-bold uppercase tracking-wider shrink-0">
-              {PER_PAGE} por página
+        {/* Header com hierarquia visual */}
+        <div className="bg-black/40 p-5 md:p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 mb-3">
+            <Icon className="w-5 h-5 text-neon-yellow" />
+            <span
+              className="text-neon-yellow uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.22em',
+              }}
+            >
+              Ranking
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {TAB_OPTIONS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={cn(
-                  'rounded-sm border px-3 py-2 font-display text-[10px] font-black uppercase tracking-wider sm:text-xs',
-                  tab === t.id
-                    ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
-                    : 'border-white/15 text-white/55 hover:border-white/25 hover:text-white/85',
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <h1
+            className="italic text-neon-yellow leading-none mb-3"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {meta.title}
+          </h1>
+          <p
+            className="text-white/55 max-w-md"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '13px',
+              lineHeight: 1.5,
+            }}
+          >
+            {meta.subtitle}
+          </p>
         </div>
 
+        {/* Tabs */}
+        <div className="p-4 border-b border-white/10 flex flex-wrap gap-2">
+          {TAB_OPTIONS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'px-3 py-2 border transition-colors',
+                tab === t.id
+                  ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
+                  : 'border-white/15 text-white/55 hover:border-white/25 hover:text-white/85',
+              )}
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
         <div className="p-3 border-b border-white/10">
           <div className="relative">
             <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               value={search}
               onChange={(e) => setSearchAndResetPage(e.target.value)}
-              placeholder="Buscar por nome do time"
-              className="w-full bg-black/40 border border-white/10 rounded px-9 py-2.5 text-sm"
+              placeholder="Buscar time"
+              className="w-full bg-black/40 border border-white/10 text-white placeholder:text-white/40 px-9 py-2.5 text-sm transition-colors focus:border-neon-yellow/40 focus:outline-none"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                borderRadius: 'var(--radius-sm)',
+              }}
               aria-label="Buscar time no ranking"
             />
           </div>
         </div>
 
-        <div className="divide-y divide-white/5">
-          {pageSlice.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              {tab === 'mundial'
-                ? 'Nenhum time encontrado.'
-                : 'Nenhuma equipa neste âmbito. Configura ligas no /admin ou troca de separador.'}
-            </div>
-          ) : (
-            pageSlice.map((row) => (
-              <div
-                key={`${row.team}-${row.globalRank}`}
-                className="flex items-center gap-3 p-3 hover:bg-white/5 transition-colors"
-              >
-                <div
-                  className={cn(
-                    'w-9 h-9 flex items-center justify-center text-xs font-display font-black rounded-sm shrink-0',
-                    row.globalRank === 1
-                      ? 'bg-[#FFD700] text-black shadow-[0_0_12px_rgba(255,215,0,0.35)]'
-                      : row.globalRank === 2
-                        ? 'bg-[#C0C0C0] text-black'
-                        : row.globalRank === 3
-                          ? 'bg-[#CD7F32] text-black'
-                          : 'bg-white/10 text-white',
-                  )}
-                >
-                  {row.globalRank <= 3 ? <Trophy className="w-4 h-4" /> : `#${row.globalRank}`}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div
-                    className={cn(
-                      'text-sm font-display font-bold truncate',
-                      row.isMe ? 'text-neon-yellow' : 'text-white',
-                    )}
-                  >
-                    {row.team} {row.isMe ? '(Você)' : ''}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    {'exp' in row ? `${formatExp(row.exp)} EXP` : `${row.points} pts`}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toggleFavorite(row.team)}
-                  className={cn(
-                    'p-1.5 rounded border shrink-0',
-                    favorites.has(row.team)
-                      ? 'border-neon-yellow text-neon-yellow'
-                      : 'border-white/10 text-gray-500',
-                  )}
-                  aria-label={favorites.has(row.team) ? 'Remover dos favoritos' : 'Marcar favorito'}
-                >
-                  <Star className={cn('w-4 h-4', favorites.has(row.team) && 'fill-neon-yellow')} />
-                </button>
-              </div>
-            ))
-          )}
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="ole-table">
+            <thead>
+              <tr>
+                <th style={{ width: '3.5rem' }} className="text-center">#</th>
+                <th>Equipe</th>
+                <th style={{ width: '8rem' }} className="text-center">
+                  {tab === 'mundial' ? 'EXP' : 'Pontos'}
+                </th>
+                <th style={{ width: '3rem' }} className="text-center">★</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageSlice.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-12">
+                    <p
+                      className="italic text-white/40"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontSize: '15px',
+                      }}
+                    >
+                      {tab === 'mundial'
+                        ? '"nenhum time encontrado."'
+                        : '"configura ligas no /admin."'}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                pageSlice.map((row) => (
+                  <tr key={`${row.team}-${row.globalRank}`} data-is-user={row.isMe ? 'true' : undefined}>
+                    <td className="text-center">
+                      <span className="ole-table__pos" data-rank={row.globalRank <= 3 ? row.globalRank : undefined}>
+                        #{row.globalRank}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTeam(row)}
+                        className="text-left w-full hover:opacity-80 transition-opacity"
+                      >
+                        <span
+                          className={cn(
+                            'truncate uppercase',
+                            row.isMe ? 'text-neon-yellow' : 'text-white',
+                          )}
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 'clamp(15px, 2vw, 18px)',
+                            fontWeight: 900,
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          {row.team}
+                        </span>
+                        {row.isMe && (
+                          <span
+                            className="ml-2 text-neon-yellow/70"
+                            style={{
+                              fontFamily: 'var(--font-ui)',
+                              fontSize: '10px',
+                              letterSpacing: '0.18em',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            você
+                          </span>
+                        )}
+                      </button>
+                    </td>
+                    <td className="text-center">
+                      <span
+                        className={cn(
+                          'italic tabular-nums',
+                          row.isMe ? 'text-neon-yellow' : 'text-white',
+                        )}
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
+                        {'exp' in row ? formatExpSmart(row.exp) : row.points}
+                      </span>
+                    </td>
+                    <td className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleFavorite(row.team)}
+                        className={cn(
+                          'p-1.5 border shrink-0 transition-colors',
+                          favorites.has(row.team)
+                            ? 'border-neon-yellow text-neon-yellow'
+                            : 'border-white/10 text-gray-500 hover:border-white/20 hover:text-white/70',
+                        )}
+                        style={{ borderRadius: 'var(--radius-sm)' }}
+                        aria-label={favorites.has(row.team) ? 'Remover dos favoritos' : 'Marcar favorito'}
+                      >
+                        <Star className={cn('w-4 h-4', favorites.has(row.team) && 'fill-neon-yellow')} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="p-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 bg-black/30">
-            <p className="text-[11px] text-gray-500 order-2 sm:order-1">
-              Página {safePage} de {totalPages}
-            </p>
-            <div className="flex items-center gap-2 order-1 sm:order-2">
+          <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3 bg-black/30">
+            <span
+              className="text-white/40 tabular-nums"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: '13px',
+                fontStyle: 'italic',
+              }}
+            >
+              {safePage}/{totalPages}
+            </span>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className={cn(
-                  'inline-flex items-center gap-1 px-3 py-2 rounded-sm border text-sm font-display font-bold uppercase tracking-wider transition-colors',
+                  'inline-flex items-center gap-1 px-3 py-2 border transition-colors',
                   safePage <= 1
                     ? 'border-white/10 text-gray-600 cursor-not-allowed'
                     : 'border-white/20 text-white hover:bg-white/10',
                 )}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Anterior
@@ -269,11 +419,19 @@ export function RankingFull() {
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 className={cn(
-                  'inline-flex items-center gap-1 px-3 py-2 rounded-sm border text-sm font-display font-bold uppercase tracking-wider transition-colors',
+                  'inline-flex items-center gap-1 px-3 py-2 border transition-colors',
                   safePage >= totalPages
                     ? 'border-white/10 text-gray-600 cursor-not-allowed'
                     : 'border-white/20 text-white hover:bg-white/10',
                 )}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
                 Seguinte
                 <ChevronRight className="w-4 h-4" />
@@ -282,6 +440,198 @@ export function RankingFull() {
           </div>
         )}
       </motion.div>
+
+      {/* Modal de detalhes do time */}
+      {selectedTeam && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setSelectedTeam(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md border border-white/10 bg-dark-gray overflow-hidden"
+            style={{ borderRadius: 'var(--radius-md)' }}
+          >
+            {/* Header */}
+            <div className="bg-black/40 p-5 border-b border-white/10">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="ole-table__pos"
+                    data-rank={selectedTeam.globalRank <= 3 ? selectedTeam.globalRank : undefined}
+                  >
+                    #{selectedTeam.globalRank}
+                  </span>
+                  {selectedTeam.isMe && (
+                    <span
+                      className="inline-flex items-center gap-1.5 border border-neon-yellow bg-neon-yellow/15 text-neon-yellow px-2 py-1"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      Seu time
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTeam(null)}
+                  className="text-white/50 hover:text-white transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+              <h2
+                className="uppercase text-white leading-tight mb-1"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                  fontWeight: 900,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                {selectedTeam.team}
+              </h2>
+              <p
+                className="text-white/50"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '11px',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {tab === 'mundial' ? 'Ranking Mundial' : tab === 'nacional' ? 'Ranking Nacional' : 'Ranking Estadual'}
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="p-5 space-y-4">
+              {/* EXP/Pontos exato */}
+              <div className="bg-black/40 p-4 border border-white/10" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="w-4 h-4 text-neon-yellow" />
+                  <span
+                    className="text-white/50 uppercase"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.22em',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {tab === 'mundial' ? 'EXP Total' : 'Pontos'}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="italic text-neon-yellow tabular-nums"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontSize: 'clamp(2rem, 6vw, 3rem)',
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {'exp' in selectedTeam
+                      ? selectedTeam.exp.toLocaleString('pt-BR')
+                      : selectedTeam.points.toLocaleString('pt-BR')}
+                  </span>
+                  <span
+                    className="text-white/40 uppercase"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '12px',
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    {'exp' in selectedTeam ? 'EXP' : 'pts'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Diferença para o líder (se não for #1) */}
+              {selectedTeam.globalRank > 1 && (
+                <div className="bg-black/20 p-4 border border-white/8" style={{ borderRadius: 'var(--radius-sm)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-white/50" />
+                    <span
+                      className="text-white/50 uppercase"
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '10px',
+                        letterSpacing: '0.22em',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Diferença para o líder
+                    </span>
+                  </div>
+                  <span
+                    className="italic text-white/70 tabular-nums"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontSize: '18px',
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {(() => {
+                      const leader = withGlobalRank[0];
+                      if (!leader) return '—';
+                      const diff =
+                        'exp' in selectedTeam && 'exp' in leader
+                          ? leader.exp - selectedTeam.exp
+                          : 'points' in selectedTeam && 'points' in leader
+                            ? leader.points - selectedTeam.points
+                            : 0;
+                      return `${diff.toLocaleString('pt-BR')} ${tab === 'mundial' ? 'EXP' : 'pts'}`;
+                    })()}
+                  </span>
+                </div>
+              )}
+
+              {/* Ações */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleFavorite(selectedTeam.team);
+                  }}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-3 border transition-colors',
+                    favorites.has(selectedTeam.team)
+                      ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
+                      : 'border-white/15 text-white/70 hover:border-white/25 hover:text-white',
+                  )}
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                >
+                  <Star className={cn('w-4 h-4', favorites.has(selectedTeam.team) && 'fill-neon-yellow')} />
+                  {favorites.has(selectedTeam.team) ? 'Favoritado' : 'Favoritar'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }

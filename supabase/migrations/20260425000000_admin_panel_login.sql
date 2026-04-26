@@ -85,8 +85,13 @@ begin
   if not public.is_admin() then
     raise exception 'admin required';
   end if;
-  if p_new_password is null or length(p_new_password) < 8 then
-    raise exception 'password must be at least 8 chars';
+  if p_new_password is null or length(p_new_password) < 12 then
+    raise exception 'password must be at least 12 chars';
+  end if;
+
+  -- Validar complexidade da senha
+  if p_new_password !~ '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])' then
+    raise exception 'password must contain uppercase, lowercase, number and special character (@$!%*?&)';
   end if;
 
   insert into public.admin_panel_users (email, password_hash, display_name)

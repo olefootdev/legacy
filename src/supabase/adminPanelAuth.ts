@@ -9,9 +9,15 @@
  */
 
 import { getSupabase } from '@/supabase/client';
+import { encrypt, decrypt } from '@/lib/crypto';
+import { generateCsrfToken } from '@/lib/csrf';
 
 const STORAGE_KEY = 'olefoot_admin_panel_session_v1';
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2h (reduzido de 24h por segurança)
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 min de inatividade
+
+// Chave de criptografia (em produção, vir de VITE_ADMIN_ENCRYPTION_KEY)
+const ENCRYPTION_KEY = import.meta.env.VITE_ADMIN_ENCRYPTION_KEY || 'olefoot-default-key-change-in-production';
 
 export interface AdminPanelSession {
   email: string;
@@ -19,6 +25,9 @@ export interface AdminPanelSession {
   role: string;
   loggedAt: number;
   expiresAt: number;
+  lastActivityAt: number;
+  csrfToken: string;
+  twoFactorEnabled?: boolean;
 }
 
 export interface AdminPanelLoginResult {
@@ -30,25 +39,21 @@ export interface AdminPanelLoginResult {
 export async function adminPanelLogin(email: string, password: string): Promise<AdminPanelLoginResult> {
   const sb = getSupabase();
   if (!sb) return { ok: false, error: 'Supabase não configurado.' };
-  console.log('[adminPanelLogin] enviando', { email, passwordLen: password.length });
-  // DEBUG TEMPORÁRIO: chama a RPC espiã também pra ver o que o server está vendo.
-  try {
-    const dbg = await sb.rpc('admin_panel_login_debug', { p_email: email, p_password: password });
-    console.log('[adminPanelLogin] DEBUG server-side:', dbg);
-  } catch (e) {
-    console.warn('[adminPanelLogin] debug RPC não existe:', e);
-  }
+
+  // SEGURANÇA: Nunca logar senhas ou comprimento de senha
+  console.log('[adminPanelLogin] tentativa de login:', { email });
+
   const { data, error } = await sb.rpc('admin_panel_login', {
     p_email: email,
     p_password: password,
   });
-  console.log('[adminPanelLogin] resposta', { data, error });
+
   if (error) return { ok: false, error: `RPC: ${error.message}` };
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || !row.email) {
     return {
       ok: false,
-      error: `E-mail ou senha incorretos. (data=${JSON.stringify(data)})`,
+      error: 'E-mail ou senha incorretos.',
     };
   }
   const now = Date.now();
@@ -58,25 +63,100 @@ export async function adminPanelLogin(email: string, password: string): Promise<
     role: row.role ?? 'admin',
     loggedAt: now,
     expiresAt: now + SESSION_TTL_MS,
+    lastActivityAt: now,
+    csrfToken: generateCsrfToken(),
+    twoFactorEnabled: row.two_factor_enabled ?? false,
   };
   saveAdminPanelSession(session);
   return { ok: true, session };
 }
 
 export function saveAdminPanelSession(session: AdminPanelSession): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); } catch { /* noop */ }
+  try {
+    const plaintext = JSON.stringify(session);
+    encrypt(plaintext, ENCRYPTION_KEY).then((encrypted) => {
+      localStorage.setItem(STORAGE_KEY, encrypted);
+    }).catch((e) => {
+      console.error('[adminPanelAuth] Failed to encrypt session:', e);
+    });
+  } catch { /* noop */ }
 }
 
-export function loadAdminPanelSession(): AdminPanelSession | null {
+export async function loadAdminPanelSession(): Promise<AdminPanelSession | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as AdminPanelSession;
+    const encrypted = localStorage.getItem(STORAGE_KEY);
+    if (!encrypted) return null;
+
+    // Tentar descriptografar (pode falhar se for sessão antiga não criptografada)
+    let plaintext: string;
+    try {
+      // Sessão criptografada (novo formato)
+      plaintext = await decrypt(encrypted, ENCRYPTION_KEY);
+    } catch {
+      // Fallback: sessão antiga não criptografada (migração)
+      plaintext = encrypted;
+    }
+
+    const parsed = JSON.parse(plaintext) as AdminPanelSession;
     if (!parsed.email || !parsed.expiresAt) return null;
-    if (Date.now() >= parsed.expiresAt) {
+
+    const now = Date.now();
+
+    // Verificar expiração absoluta
+    if (now >= parsed.expiresAt) {
       clearAdminPanelSession();
       return null;
     }
+
+    // Verificar timeout de inatividade
+    const lastActivity = parsed.lastActivityAt || parsed.loggedAt;
+    if (now - lastActivity >= IDLE_TIMEOUT_MS) {
+      clearAdminPanelSession();
+      return null;
+    }
+
+    // Atualizar lastActivityAt
+    parsed.lastActivityAt = now;
+    saveAdminPanelSession(parsed);
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// Tornar função async
+export async function loadAdminPanelSessionAsync(): Promise<AdminPanelSession | null> {
+  try {
+    const encrypted = localStorage.getItem(STORAGE_KEY);
+    if (!encrypted) return null;
+
+    let plaintext: string;
+    try {
+      plaintext = await decrypt(encrypted, ENCRYPTION_KEY);
+    } catch {
+      plaintext = encrypted;
+    }
+
+    const parsed = JSON.parse(plaintext) as AdminPanelSession;
+    if (!parsed.email || !parsed.expiresAt) return null;
+
+    const now = Date.now();
+
+    if (now >= parsed.expiresAt) {
+      clearAdminPanelSession();
+      return null;
+    }
+
+    const lastActivity = parsed.lastActivityAt || parsed.loggedAt;
+    if (now - lastActivity >= IDLE_TIMEOUT_MS) {
+      clearAdminPanelSession();
+      return null;
+    }
+
+    parsed.lastActivityAt = now;
+    saveAdminPanelSession(parsed);
+
     return parsed;
   } catch {
     return null;
@@ -87,6 +167,7 @@ export function clearAdminPanelSession(): void {
   try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
 }
 
-export function isAdminPanelSessionValid(): boolean {
-  return loadAdminPanelSession() !== null;
+export async function isAdminPanelSessionValid(): Promise<boolean> {
+  const session = await loadAdminPanelSession();
+  return session !== null;
 }

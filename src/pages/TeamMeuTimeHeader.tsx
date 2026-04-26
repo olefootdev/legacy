@@ -47,25 +47,59 @@ export function TeamMeuTimeHeader({
 
   return (
     <>
-      {/* ── Banner / título ─────────────────────────────────────── */}
-      <div className="relative rounded-xl overflow-hidden">
-        <GameBannerBackdrop slot="team_header" imageOpacity={0.35} />
-        <div className="relative z-10 px-3 pt-3 pb-3 md:px-4 md:pt-4 md:pb-4">
-          <h2 className="font-display text-2xl font-black italic uppercase tracking-wider md:text-4xl">
+      {/* ── Banner / título — editorial Olefoot ─────────────────── */}
+      <div
+        className="relative overflow-hidden border border-[var(--color-border)]"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        <GameBannerBackdrop slot="team_header" imageOpacity={0.32} />
+        <div className="relative z-10 px-5 sm:px-7 py-6 sm:py-8 flex flex-col items-start gap-3">
+          {/* Eyebrow */}
+          <div
+            className="inline-flex items-center gap-3 text-neon-yellow"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <span aria-hidden className="h-px w-8 bg-neon-yellow/50" />
+            <span
+              className="uppercase font-semibold"
+              style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+            >
+              Olé Football · Meu Time
+            </span>
+          </div>
+          {/* Headline — Moret italic case mixto (assinatura /legend) */}
+          <h2
+            className="italic text-white leading-[1.05] [overflow-wrap:anywhere]"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(1.85rem, 4.5vw, 3rem)',
+              letterSpacing: '-0.015em',
+            }}
+          >
             {title}
           </h2>
+          {/* Régua decorativa */}
+          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
+          {/* Subtítulo */}
           {subtitle != null && (
-            <div className="mt-0.5 text-[10px] font-medium text-gray-400 md:mt-1 md:text-sm">
+            <div
+              className="text-white/65"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '13px',
+                lineHeight: 1.5,
+              }}
+            >
               {subtitle}
             </div>
           )}
-          {actions && <div className="mt-2">{actions}</div>}
+          {actions && <div className="mt-1 w-full">{actions}</div>}
         </div>
       </div>
 
-      {/* ── Tab bar — sticky abaixo do header global do Layout ──── */}
-      {/* top-12 = altura do header mobile (min-h-12); sm:top-14 = header sm */}
-      <div className="sticky top-12 sm:top-14 z-30 -mx-3 sm:-mx-4 lg:-mx-8 bg-deep-black/95 backdrop-blur-md border-b border-white/10 shadow-md">
+      {/* ── Tab bar scoreboard-tape — sticky abaixo do header global ── */}
+      <div className="sticky top-12 sm:top-14 z-30 -mx-3 sm:-mx-4 lg:-mx-8 bg-deep-black/95 backdrop-blur-md border-b border-[var(--color-border)] shadow-md">
         <div className="hide-scrollbar flex gap-0 overflow-x-auto px-3 sm:px-4 lg:px-8">
           {TABS.map((tab) => {
             const active = tabActive(pathname, tab.path);
@@ -75,16 +109,31 @@ export function TeamMeuTimeHeader({
                 type="button"
                 onClick={() => navigate(tab.path)}
                 className={cn(
-                  'shrink-0 whitespace-nowrap border-b-2 px-3 py-3 font-display text-[10px] font-bold uppercase tracking-wider transition-all [-webkit-tap-highlight-color:transparent] sm:px-4 sm:text-xs md:px-5 md:py-3.5 md:text-[11px]',
-                  active
-                    ? 'border-neon-yellow text-neon-yellow'
-                    : 'border-transparent text-gray-500 hover:text-white hover:border-white/30',
+                  'relative shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap px-3 sm:px-5 py-3 transition-colors [-webkit-tap-highlight-color:transparent]',
+                  active ? 'text-neon-yellow' : 'text-white/45 hover:text-white/85',
                 )}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '11px',
+                  letterSpacing: '0.18em',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                }}
               >
-                <span className="flex items-center gap-1.5">
-                  <tab.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  {tab.label}
-                </span>
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-neon-yellow"
+                  />
+                )}
+                <tab.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className={active ? 'pl-0.5' : ''}>{tab.label}</span>
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 right-0 -bottom-px h-[2px] bg-neon-yellow"
+                  />
+                )}
               </button>
             );
           })}

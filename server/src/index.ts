@@ -19,6 +19,17 @@ function corsOrigins(): string | string[] {
   const raw = process.env.CORS_ORIGIN?.trim();
   if (raw) {
     const list = raw.split(',').map((s) => s.trim()).filter(Boolean);
+
+    // Validar que são URLs válidas
+    for (const origin of list) {
+      try {
+        new URL(origin);
+      } catch {
+        console.error(`[olefoot-server] FATAL: CORS_ORIGIN inválido: ${origin}`);
+        process.exit(1);
+      }
+    }
+
     return list.length === 1 ? list[0]! : list;
   }
   if (process.env.NODE_ENV === 'production') {

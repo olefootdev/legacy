@@ -42,8 +42,8 @@ export interface MatchdayHeroData {
   };
   stats: { label: string; value: string }[];
   highlight: {
-    /** Nome do time (vai no título grande em Moret italic). */
-    teamName: string;    name: string;
+    /** Nome do jogador (vai no título grande em Moret italic). */
+    name: string;
     /** Número decorativo gigante atrás (camisa, OVR, etc.). 1-3 dígitos. */
     number: number;
     quote: string;
@@ -90,7 +90,7 @@ export const MOCK_MATCHDAY: MatchdayHeroData = {
     { label: 'Escanteios', value: '3' },
   ],
   highlight: {
-    teamName: 'Flamengo',    name: 'Gabriel Barbosa',
+    name: 'Gabriel Barbosa',
     number: 9,
     quote: 'Dois gols em 15 minutos. A camisa 9 pesou quando precisou pesar.',
   },
@@ -200,28 +200,32 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
         </div>
 
         {/* Scoreboard */}
-        <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-3 sm:gap-5 mb-10 sm:mb-14">
+        <div className="grid grid-cols-[auto_auto_auto] items-end gap-3 sm:gap-5 mb-10 sm:mb-14 justify-center">
           {/* Casa */}
-          <CrestCircle
-            short={data.home.short}
-            variant="onYellow"
-            crestUrl={data.home.crestUrl}
-            alt={data.home.name}
-          />
-          <div className="min-w-0">
-            <h2
-              className="ole-headline text-black leading-[0.85] uppercase truncate"
-              style={{ fontSize: 'clamp(24px, 4.5vw, 56px)' }}
-            >
-              {data.home.name}
-            </h2>
-            {data.home.form ? (
-              <FormPills form={data.home.form} variant="onYellow" />
-            ) : data.home.sublabel ? (
-              <p className="mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-black/70 truncate">
-                {data.home.sublabel}
-              </p>
-            ) : null}
+          <div className="flex flex-col items-center gap-2 min-w-0">
+            <CrestCircle
+              short={data.home.short}
+              variant="onYellow"
+              crestUrl={data.home.crestUrl}
+              alt={data.home.name}
+            />
+            <div className="text-center min-w-0 w-full">
+              <h2
+                className="ole-headline text-black leading-[0.85] uppercase"
+                style={{ fontSize: 'clamp(20px, 3.5vw, 40px)' }}
+              >
+                {data.home.name}
+              </h2>
+              {data.home.form ? (
+                <div className="flex justify-center mt-1.5">
+                  <FormPills form={data.home.form} variant="onYellow" />
+                </div>
+              ) : data.home.sublabel ? (
+                <p className="mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] text-black/70">
+                  {data.home.sublabel}
+                </p>
+              ) : null}
+            </div>
           </div>
 
           {/* Score / vs em Moret italic gigante */}
@@ -274,40 +278,44 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           </div>
 
           {/* Visitante */}
-          <div className="text-right min-w-0">
-            <h2
-              className={`ole-headline ${rightTextStrong} leading-[0.85] uppercase truncate`}
-              style={{ fontSize: 'clamp(24px, 4.5vw, 56px)' }}
-            >
-              {data.away.name}
-            </h2>
-            {data.away.form ? (
-              <FormPills form={data.away.form} variant={solid ? 'onYellow' : 'onDark'} align="right" />
-            ) : data.away.sublabel ? (
-              <p className={`mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${rightTextSoft} text-right truncate`}>
-                {data.away.sublabel}
-              </p>
-            ) : null}
-          </div>
-          {data.away.crestUrl?.trim() ? (
-            <img
-              src={data.away.crestUrl}
-              alt={data.away.name}
-              className="w-12 h-12 sm:w-16 sm:h-16 object-contain shrink-0"
-              referrerPolicy="no-referrer"
-              draggable={false}
-            />
-          ) : (
-            <div
-              className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center shrink-0 ${rightCrestRing} ${rightCrestBg}`}
-            >
-              <span
-                className={`font-display font-black uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+          <div className="flex flex-col items-center gap-2 min-w-0">
+            {data.away.crestUrl?.trim() ? (
+              <img
+                src={data.away.crestUrl}
+                alt={data.away.name}
+                className="w-12 h-12 sm:w-16 sm:h-16 object-contain shrink-0"
+                referrerPolicy="no-referrer"
+                draggable={false}
+              />
+            ) : (
+              <div
+                className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[2.5px] grid place-items-center shrink-0 ${rightCrestRing} ${rightCrestBg}`}
               >
-                {data.away.short}
-              </span>
+                <span
+                  className={`font-display font-black uppercase ${rightCrestText} text-[11px] sm:text-[14px] tracking-[0.06em]`}
+                >
+                  {data.away.short}
+                </span>
+              </div>
+            )}
+            <div className="text-center min-w-0 w-full">
+              <h2
+                className={`ole-headline ${rightTextStrong} leading-[0.85] uppercase`}
+                style={{ fontSize: 'clamp(20px, 3.5vw, 40px)' }}
+              >
+                {data.away.name}
+              </h2>
+              {data.away.form ? (
+                <div className="flex justify-center mt-1.5">
+                  <FormPills form={data.away.form} variant={solid ? 'onYellow' : 'onDark'} align="center" />
+                </div>
+              ) : data.away.sublabel ? (
+                <p className={`mt-1.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] ${rightTextSoft}`}>
+                  {data.away.sublabel}
+                </p>
+              ) : null}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Stats strip */}

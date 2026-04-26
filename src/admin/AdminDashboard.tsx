@@ -46,67 +46,150 @@ import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
 import { AdminCreatePlayerAgentsPanel } from './panels/AdminCreatePlayerAgentsPanel';
 import { AdminGlobalPanel } from './panels/AdminGlobalPanel';
 import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
+import { AdminSkillsPanel } from './panels/AdminSkillsPanel';
+import { AdminSecurityPanel } from './panels/AdminSecurityPanel';
+import { AdminBroadcastPanel } from './panels/AdminBroadcastPanel';
+import { AdminLaunchPanel } from './panels/AdminLaunchPanel';
+import { AdminPlatformConfigPanel } from './panels/AdminPlatformConfigPanel';
 
 type TabId =
   | 'overview'
   | 'growth'
-  | 'financeiro'
   | 'usuarios'
+  | 'audit'
+  | 'economia'
+  | 'jogadores'
+  | 'ia'
   | 'leagues'
+  | 'sistema';
+
+type SubTabId =
+  | 'financeiro'
   | 'shop'
   | 'market'
-  | 'legacy'
-  | 'global'
-  | 'audit'
-  | 'profanity'
-  | 'learnedPhrases'
-  | 'createPlayerAgents'
   | 'prospectArt'
   | 'playerEvolution'
+  | 'genesisPortraits'
+  | 'legacy'
+  | 'skills'
   | 'gameSpirit'
-  | 'genesisPortraits';
+  | 'createPlayerAgents'
+  | 'profanity'
+  | 'learnedPhrases'
+  | 'global'
+  | 'security'
+  | 'platformConfig'
+  | 'broadcast'
+  | 'launch';
 
-const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
+const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: { id: SubTabId; label: string }[] }[] = [
   { id: 'overview', label: 'Resumo', icon: LayoutDashboard },
   { id: 'growth', label: 'Growth', icon: LineChart },
-  { id: 'financeiro', label: 'Financeiro', icon: Banknote },
-  { id: 'global', label: 'Global', icon: Rocket },
-  { id: 'audit', label: 'Auditoria', icon: FileClock },
-  { id: 'shop', label: 'Loja', icon: ShoppingBag },
-  { id: 'market', label: 'Market', icon: Shield },
-  { id: 'legacy', label: 'Legacy DNA', icon: Crown },
-  { id: 'profanity', label: 'Linguagem', icon: ShieldAlert },
-  { id: 'learnedPhrases', label: 'Frases aprendidas', icon: BookOpen },
   { id: 'usuarios', label: 'Usuários', icon: Users },
-  { id: 'gameSpirit', label: 'Game Spirit', icon: Brain },
-  { id: 'createPlayerAgents', label: 'Agency', icon: Brain },
-  { id: 'prospectArt', label: 'Academy players', icon: Brush },
-  { id: 'playerEvolution', label: 'Evolução', icon: TrendingUp },
+  { id: 'audit', label: 'Auditoria', icon: FileClock },
+  {
+    id: 'economia',
+    label: 'Economia',
+    icon: Banknote,
+    subTabs: [
+      { id: 'financeiro', label: 'Financeiro' },
+      { id: 'shop', label: 'Loja' },
+      { id: 'market', label: 'Market' },
+    ],
+  },
+  {
+    id: 'jogadores',
+    label: 'Jogadores',
+    icon: Users,
+    subTabs: [
+      { id: 'prospectArt', label: 'Academy' },
+      { id: 'playerEvolution', label: 'Evolução' },
+      { id: 'genesisPortraits', label: 'Fotos Genesis' },
+      { id: 'legacy', label: 'Legacy DNA' },
+      { id: 'skills', label: 'Skills' },
+    ],
+  },
+  {
+    id: 'ia',
+    label: 'IA & Moderação',
+    icon: Brain,
+    subTabs: [
+      { id: 'gameSpirit', label: 'Game Spirit' },
+      { id: 'createPlayerAgents', label: 'Agency' },
+      { id: 'profanity', label: 'Linguagem' },
+      { id: 'learnedPhrases', label: 'Frases aprendidas' },
+    ],
+  },
   { id: 'leagues', label: 'Ligas', icon: Trophy },
-  { id: 'genesisPortraits', label: 'Fotos Genesis', icon: Camera },
+  {
+    id: 'sistema',
+    label: 'Sistema',
+    icon: Rocket,
+    subTabs: [
+      { id: 'global', label: 'Global' },
+      { id: 'security', label: 'Segurança' },
+      { id: 'platformConfig', label: 'Plataforma' },
+      { id: 'broadcast', label: 'Broadcast' },
+      { id: 'launch', label: 'Launch' },
+    ],
+  },
 ];
 
 /** Hash na URL pode usar alias (ex.: #academy-players; #academia-art mantém compat.). */
-const HASH_TO_TAB: Record<string, TabId> = {
+const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
   'academy-players': 'prospectArt',
   'academia-art': 'prospectArt',
   'game-spirit': 'gameSpirit',
   'genesis-portraits': 'genesisPortraits',
   evolution: 'playerEvolution',
+  financeiro: 'financeiro',
+  shop: 'shop',
+  market: 'market',
+  legacy: 'legacy',
+  skills: 'skills',
+  profanity: 'profanity',
+  learnedPhrases: 'learnedPhrases',
+  createPlayerAgents: 'createPlayerAgents',
+  global: 'global',
+  security: 'security',
+  platformConfig: 'platformConfig',
+  broadcast: 'broadcast',
+  launch: 'launch',
 };
 
-function readHashTab(): TabId {
+function readHashTab(): { tab: TabId; subTab: SubTabId | null } {
   const h = (typeof window !== 'undefined' && window.location.hash.replace(/^#/, '')) || '';
   const alias = HASH_TO_TAB[h];
-  if (alias) return alias;
-  if (TABS.some((t) => t.id === h)) return h as TabId;
-  return 'overview';
+  const target = alias || h;
+
+  // Check if it's a main tab
+  const mainTab = TABS.find((t) => t.id === target);
+  if (mainTab) return { tab: mainTab.id, subTab: null };
+
+  // Check if it's a subtab
+  for (const tab of TABS) {
+    if (tab.subTabs) {
+      const subTab = tab.subTabs.find((st) => st.id === target);
+      if (subTab) return { tab: tab.id, subTab: subTab.id };
+    }
+  }
+
+  return { tab: 'overview', subTab: null };
 }
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const adminSession = loadAdminPanelSession();
-  const [tab, setTab] = useState<TabId>(readHashTab);
+  const [adminSession, setAdminSession] = useState<ReturnType<typeof loadAdminPanelSession> extends Promise<infer T> ? T : never>(null);
+  const [tab, setTab] = useState<TabId>(() => readHashTab().tab);
+  const [subTab, setSubTab] = useState<SubTabId | null>(() => readHashTab().subTab);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      const session = await loadAdminPanelSession();
+      setAdminSession(session);
+    };
+    void loadSession();
+  }, []);
 
   const signOutAdminPanel = () => {
     clearAdminPanelSession();
@@ -118,18 +201,25 @@ export function AdminDashboard() {
   const platformAg = useMemo(() => computePlatformAggregate(platform), [platform]);
 
   useEffect(() => {
-    const onHash = () => setTab(readHashTab());
+    const onHash = () => {
+      const { tab: newTab, subTab: newSubTab } = readHashTab();
+      setTab(newTab);
+      setSubTab(newSubTab);
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const setHashTab = (id: TabId) => {
-    if (id === 'prospectArt') window.location.hash = 'academy-players';
-    else if (id === 'gameSpirit') window.location.hash = 'game-spirit';
-    else if (id === 'genesisPortraits') window.location.hash = 'genesis-portraits';
-    else if (id === 'playerEvolution') window.location.hash = 'evolution';
-    else window.location.hash = id;
-    setTab(id);
+  const setHashTab = (id: TabId, subId?: SubTabId) => {
+    if (subId) {
+      window.location.hash = subId;
+      setTab(id);
+      setSubTab(subId);
+    } else {
+      window.location.hash = id;
+      setTab(id);
+      setSubTab(null);
+    }
   };
 
   return (
@@ -148,29 +238,42 @@ export function AdminDashboard() {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setHashTab(t.id)}
-                  className={cn(
-                    'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-colors',
-                    active ? 'bg-neon-yellow text-black' : 'text-white/50 hover:bg-white/10 hover:text-white',
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {t.label}
-                </button>
+                <div key={t.id} className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setHashTab(t.id)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-colors',
+                      active ? 'bg-neon-yellow text-black' : 'text-white/50 hover:bg-white/10 hover:text-white',
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {t.label}
+                  </button>
+                  {active && t.subTabs ? (
+                    <div className="ml-6 flex flex-col gap-0.5">
+                      {t.subTabs.map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setHashTab(t.id, st.id)}
+                          className={cn(
+                            'rounded px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide transition-colors',
+                            subTab === st.id
+                              ? 'bg-neon-yellow/20 text-neon-yellow'
+                              : 'text-white/40 hover:bg-white/5 hover:text-white/70',
+                          )}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </nav>
           <div className="mt-auto hidden flex-col gap-2 p-3 md:flex">
-            <Link
-              to="/admin/testes"
-              className="flex items-center gap-2 rounded-lg border border-neon-yellow/25 bg-neon-yellow/10 px-3 py-2 text-xs font-bold text-neon-yellow/90 hover:bg-neon-yellow/15"
-            >
-              <Beaker className="h-4 w-4" />
-              Área de testes
-            </Link>
             <Link
               to="/"
               className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-white/60 hover:bg-white/10 hover:text-white"
@@ -209,12 +312,6 @@ export function AdminDashboard() {
               </div>
               <div className="flex flex-wrap items-center gap-2 md:hidden">
                 <Link
-                  to="/admin/testes"
-                  className="rounded-lg border border-neon-yellow/25 bg-neon-yellow/10 px-3 py-2 text-xs font-bold text-neon-yellow/90 hover:bg-neon-yellow/15"
-                >
-                  Testes
-                </Link>
-                <Link
                   to="/"
                   className="rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/10"
                 >
@@ -228,21 +325,38 @@ export function AdminDashboard() {
             <div className="mx-auto min-w-0 w-full max-w-6xl">
               {tab === 'overview' ? <AdminOverviewPanel /> : null}
               {tab === 'growth' ? <AdminGrowthPanel /> : null}
-              {tab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
-              {tab === 'global' ? <AdminGlobalPanel /> : null}
-              {tab === 'audit' ? <AdminAuditLogPanel /> : null}
-              {tab === 'shop' ? <AdminShopPanel /> : null}
-              {tab === 'market' ? <AdminMarketPanel /> : null}
-              {tab === 'legacy' ? <AdminLegacyPanel /> : null}
-              {tab === 'profanity' ? <AdminProfanityPanel /> : null}
-              {tab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}
               {tab === 'usuarios' ? <AdminUsuariosPanel /> : null}
+              {tab === 'audit' ? <AdminAuditLogPanel /> : null}
               {tab === 'leagues' ? <AdminLeaguesPanel /> : null}
-              {tab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
-              {tab === 'genesisPortraits' ? <AdminGenesisPortraitsPanel /> : null}
-              {tab === 'createPlayerAgents' ? <AdminCreatePlayerAgentsPanel /> : null}
-              {tab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
-              {tab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
+
+              {/* Economia group */}
+              {tab === 'economia' && subTab === 'financeiro' ? <AdminFinanceiroPanel /> : null}
+              {tab === 'economia' && subTab === 'shop' ? <AdminShopPanel /> : null}
+              {tab === 'economia' && subTab === 'market' ? <AdminMarketPanel /> : null}
+              {tab === 'economia' && !subTab ? <AdminFinanceiroPanel /> : null}
+
+              {/* Jogadores group */}
+              {tab === 'jogadores' && subTab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
+              {tab === 'jogadores' && subTab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
+              {tab === 'jogadores' && subTab === 'genesisPortraits' ? <AdminGenesisPortraitsPanel /> : null}
+              {tab === 'jogadores' && subTab === 'legacy' ? <AdminLegacyPanel /> : null}
+              {tab === 'jogadores' && subTab === 'skills' ? <AdminSkillsPanel /> : null}
+              {tab === 'jogadores' && !subTab ? <AdminProspectArtPanel /> : null}
+
+              {/* IA & Moderação group */}
+              {tab === 'ia' && subTab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
+              {tab === 'ia' && subTab === 'createPlayerAgents' ? <AdminCreatePlayerAgentsPanel /> : null}
+              {tab === 'ia' && subTab === 'profanity' ? <AdminProfanityPanel /> : null}
+              {tab === 'ia' && subTab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}
+              {tab === 'ia' && !subTab ? <AdminGameSpiritPanel /> : null}
+
+              {/* Sistema group */}
+              {tab === 'sistema' && subTab === 'global' ? <AdminGlobalPanel /> : null}
+              {tab === 'sistema' && subTab === 'security' ? <AdminSecurityPanel /> : null}
+              {tab === 'sistema' && subTab === 'platformConfig' ? <AdminPlatformConfigPanel /> : null}
+              {tab === 'sistema' && subTab === 'broadcast' ? <AdminBroadcastPanel /> : null}
+              {tab === 'sistema' && subTab === 'launch' ? <AdminLaunchPanel /> : null}
+              {tab === 'sistema' && !subTab ? <AdminGlobalPanel /> : null}
             </div>
           </main>
         </div>

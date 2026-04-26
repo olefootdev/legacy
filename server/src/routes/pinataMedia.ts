@@ -98,6 +98,17 @@ pinataMediaRoutes.post('/api/media/pinata/upload', async (c) => {
     console.log('[pinata-upload] auth=upload-token (admin/dev, sem JWT Supabase)');
   }
 
+  // Validar tamanho antes de parsear (previne DoS via uploads gigantes)
+  const contentLength = Number(c.req.header('content-length') ?? 0);
+  const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB
+
+  if (contentLength > MAX_UPLOAD_SIZE) {
+    return c.json<PinataUploadApiResponse>(
+      { ok: false, error: 'Arquivo muito grande (máx. 10 MB).', uploadStatus: 'error' },
+      413,
+    );
+  }
+
   let body: Record<string, string | File>;
   try {
     body = (await c.req.parseBody()) as Record<string, string | File>;

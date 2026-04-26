@@ -44,6 +44,7 @@ import {
   uiPercentToWorld,
   worldToUiPercent,
 } from './field';
+import { initTelemetry, trackAction } from '@/match/liveTelemetry';
 import {
   buildRefereeDispositionMaps,
   scanCausalLogConfusion,
@@ -449,6 +450,9 @@ export class TacticalSimLoop {
   private fanFrustration: FanFrustrationSystem | null = null;
 
   constructor() {
+    // Inicializar telemetria ao vivo
+    initTelemetry();
+
     this.ballVehicle.boundingRadius = 0.42;
     this.ballVehicle.maxSpeed = 48;
     this.ballVehicle.maxForce = 200;
@@ -2681,7 +2685,9 @@ export class TacticalSimLoop {
       const dz = ag.vehicle.position.z - ballZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       const others = allV.filter((v) => v !== ag.vehicle);
-      applySteeringForPhase(ag, this.ballVehicle, others, modeHomeEffective, dist, homeHasBall);
+      const ballUI = worldToUiPercent(ballX, ballZ);
+      const playerUI = worldToUiPercent(ag.vehicle.position.x, ag.vehicle.position.z);
+      applySteeringForPhase(ag, this.ballVehicle, others, modeHomeEffective, dist, homeHasBall, ballUI.ux, playerUI.ux);
     }
     for (const ag of this.awayAgents) {
       if (gkWideFreeze && this.gkRestart && ag.id !== this.gkRestart.gkId) {
@@ -2692,7 +2698,9 @@ export class TacticalSimLoop {
       const dz = ag.vehicle.position.z - ballZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
       const others = allV.filter((v) => v !== ag.vehicle);
-      applySteeringForPhase(ag, this.ballVehicle, others, modeAwayEffective, dist, awayHasBall);
+      const ballUI = worldToUiPercent(ballX, ballZ);
+      const playerUI = worldToUiPercent(ag.vehicle.position.x, ag.vehicle.position.z);
+      applySteeringForPhase(ag, this.ballVehicle, others, modeAwayEffective, dist, awayHasBall, ballUI.ux, playerUI.ux);
     }
 
     for (const ag of this.homeAgents) {
@@ -3299,6 +3307,13 @@ export class TacticalSimLoop {
     L: ReturnType<typeof createCausalBatch>,
   ) {
     if (this.simState.carrierId !== ag.id) return;
+
+    // Track ação para telemetria
+    const minute = this.matchClock.state.minute;
+    const uiPos = worldToUiPercent(ag.vehicle.position.x, ag.vehicle.position.z);
+    const zone = `${uiPos.ux.toFixed(0)},${uiPos.uy.toFixed(0)}`;
+    const isForward = (action as any).option?.isForward;
+    trackAction(action.type, minute, ag.id, zone, { isForward });
 
     if (
       mode === 'reforming'

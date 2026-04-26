@@ -132,6 +132,9 @@ export function setArriveTarget(binding: AgentBinding, x: number, z: number, mod
  * KEY RULE: when the team HAS the ball, players must NEVER pursue it.
  * They follow their off-ball decision target (arrive) and maintain spread
  * (separation). Only the defending team pursues the ball.
+ *
+ * ZONE AWARENESS: defenders respect their tactical zone — zagueiros don't chase
+ * the ball into midfield, laterais don't abandon their wing.
  */
 export function applySteeringForPhase(
   binding: AgentBinding,
@@ -140,6 +143,8 @@ export function applySteeringForPhase(
   mode: AgentMode,
   distToBall: number,
   teamHasBall: boolean,
+  ballX?: number,
+  playerX?: number,
 ) {
   binding.pursuit.evader = ballVehicle;
   binding.obstacle.obstacles = others;
@@ -176,6 +181,30 @@ export function applySteeringForPhase(
   }
 
   const forwardLine = binding.slotId === 'ata' || binding.slotId === 'pe' || binding.slotId === 'pd';
+  const defensiveLine = binding.slotId === 'zag1' || binding.slotId === 'zag2' || binding.slotId === 'zag3';
+  const lateralLine = binding.slotId === 'le' || binding.slotId === 'ld';
+
+  // ZONE AWARENESS: zagueiros só pressionam no terço defensivo (< 38 no eixo 0–100).
+  // Se a bola está no meio-campo ou ataque adversário, mantêm posição via arrive.
+  const ballInDefensiveThird = ballX !== undefined && ballX < 38;
+  const ballInMidfield = ballX !== undefined && ballX >= 38 && ballX < 68;
+  const playerInDefensiveThird = playerX !== undefined && playerX < 38;
+
+  // Zagueiros: só perseguem bola no terço defensivo OU se já estão perto dela.
+  if (defensiveLine && !ballInDefensiveThird && distToBall > 15) {
+    binding.pursuit.weight = 0;
+    binding.arrive.weight = 1.2;
+    binding.separation.weight = 0.92;
+    return;
+  }
+
+  // Laterais: reduzem pursuit quando a bola está longe da sua ala (evita abandono de posição).
+  if (lateralLine && ballInMidfield && distToBall > 20) {
+    binding.pursuit.weight = 0.08;
+    binding.arrive.weight = 1.1;
+    binding.separation.weight = 0.88;
+    return;
+  }
 
   // DEFENDING: pressing — rampa por distância para não pôr meia-equipa em pursuit forte à volta da bola.
   if (mode === 'pressing' && distToBall < 22) {

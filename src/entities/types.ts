@@ -135,6 +135,8 @@ export interface PlayerEntity {
   legacyTeamBooster?: Record<string, number>;
   /** Atributos que este legacy ensina aos jogadores da mesma posição no elenco. */
   legacyTaughtAttributes?: string[];
+  /** IDs de Coach Skills equipadas (ex.: ['skl_lateral_overlap_cross']). Max 3 skills ativas. */
+  skills?: string[];
 }
 
 export interface OpponentStub {

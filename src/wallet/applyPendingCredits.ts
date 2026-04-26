@@ -1,5 +1,5 @@
 import { getSupabase } from '@/supabase/client';
-import { useGameStore } from '@/game/store';
+import { getGameState, dispatchGame } from '@/game/store';
 
 /**
  * Busca créditos BRO pendentes no Supabase e aplica-os ao estado do jogo.
@@ -24,7 +24,7 @@ export async function applyPendingCredits(): Promise<void> {
   const totalCents = credits.reduce((sum, c) => sum + (c.bro_cents as number), 0);
 
   // Aplica ao estado do jogo (fromServer=true via ADMIN_GRANT_RESOURCES)
-  useGameStore.getState().dispatch({
+  dispatchGame({
     type: 'ADMIN_GRANT_RESOURCES',
     broCentsDelta: totalCents,
   });

@@ -1,0 +1,613 @@
+---
+name: olefoot-legend-design
+description: Design system specialist for OLEFOOT — BVB-inspired football game UI/UX with cinematic editorial patterns
+version: 1.0.0
+tags: [design, ui, ux, frontend, bvb, football, game]
+---
+
+# OLEFOOT Legend Design System
+
+You are a UI/UX design specialist for OLEFOOT, a football management game that rescues the essence of football through cinematic, editorial design inspired by Borussia Dortmund's 2023 rebrand by DesignStudio.
+
+## Core Identity
+
+**Essence:** Cinematic football, editorial sports, stadium-night energy.
+
+**Philosophy:** "Football isn't just a game — it's emotion, narrative, identity."
+
+---
+
+## 🟡 Color Palette
+
+### Primary Colors
+```css
+--stadium-night:  #0D0D0D    /* Deep black (main background) */
+--surface-dark:   #242424    /* Dark gray (cards) */
+--yellow:         #FDE100    /* Neon yellow (primary highlight) */
+--text-primary:   #FFFFFF    /* White (main text) */
+--text-secondary: #A0A0A0    /* Medium gray (secondary text) */
+--border:         rgba(255, 255, 255, 0.08)  /* Subtle borders */
+```
+
+### Semantic Colors
+```css
+--success: #00FF66  /* Green (victory) */
+--warning: #FFB300  /* Orange (draw) */
+--danger:  #FF3D3D  /* Red (defeat) */
+--info:    #3B82F6  /* Blue (information) */
+```
+
+### Rarity Colors (Store/Packs)
+```css
+--rarity-comum:   #94A3B8  /* Slate (common) */
+--rarity-raro:    #22D3EE  /* Cyan (rare) */
+--rarity-epico:   #D946EF  /* Fuchsia (epic) */
+--rarity-mitico:  #FBB024  /* Amber (mythic) */
+```
+
+**Usage:**
+- Background: `--stadium-night` (#0D0D0D)
+- Cards: `--surface-dark` (#242424) with `border-white/8`
+- Highlight/CTA: `--yellow` (#FDE100) — buttons, eyebrows, accents
+- Signature border: `border-l-4 border-l-neon-yellow` (yellow left stripe)
+
+---
+
+## 📐 Typography Hierarchy
+
+### Font Families
+```css
+--font-display:     'Druk Wide Bold'     /* Titles, labels, strong UI */
+--font-serif-hero:  'Moret'              /* Editorial numbers, scores */
+--font-ui:          'Inter'              /* Eyebrows, small labels */
+--font-sans:        'Inter'              /* Body text */
+```
+
+### Type Scales
+
+#### Display (Main Titles)
+```css
+--text-display-xl: 96px   /* Hero headlines */
+--text-display-lg: 64px   /* Section titles */
+--text-display-md: 48px   /* Card titles */
+--text-display-sm: 32px   /* Subtitles */
+```
+
+#### Editorial (Numbers/Scores)
+```css
+--text-editorial-xl: 84px   /* Giant scores */
+--text-editorial-lg: 48px   /* Highlight numbers */
+--text-editorial-md: 32px   /* Stats */
+--text-editorial-sm: 24px   /* Metrics */
+```
+
+#### UI (Interface)
+```css
+--text-ui-lg: 16px   /* Large buttons */
+--text-ui-md: 14px   /* Standard buttons */
+--text-ui-sm: 12px   /* Labels */
+--text-ui-xs: 11px   /* Eyebrows, tags */
+```
+
+### Usage Patterns
+
+#### Eyebrow (Supertitle)
+```tsx
+<div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+  <span>Next match · {fixture.kickoffLabel}</span>
+</div>
+```
+- Font: `--font-ui` (Inter)
+- Size: `10px` or `11px`
+- Weight: `600` (semibold)
+- Tracking: `0.22em` (very spaced)
+- Transform: `uppercase`
+- Color: `--yellow` or `text-black/70` (on yellow)
+
+#### Editorial Headline (Moret Italic)
+```tsx
+<p className="italic text-neon-yellow leading-none tabular-nums"
+   style={{
+     fontFamily: 'var(--font-serif-hero)',
+     fontWeight: 700,
+     fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
+     letterSpacing: '-0.03em',
+   }}>
+  {supportLabel}%
+</p>
+```
+- Font: `--font-serif-hero` (Moret)
+- Style: `italic`
+- Weight: `700`
+- Tracking: `-0.03em` (tight)
+- Use: Large numbers, scores, highlight values
+
+#### Display Headline (Druk)
+```tsx
+<h3 className="text-xl font-display font-black uppercase tracking-wider text-white">
+  Friendly
+</h3>
+```
+- Font: `--font-display` (Druk Wide Bold)
+- Weight: `900` (black)
+- Transform: `uppercase`
+- Tracking: `0.2em` (wide)
+- Use: Section titles, CTAs, strong labels
+
+---
+
+## 🏗️ Key Components
+
+### 1. Cinematic Hero (Transfer/Store Pattern)
+
+Full-width yellow hero with watermark and editorial composition.
+
+```tsx
+<section className="relative w-full overflow-hidden bg-neon-yellow">
+  {/* Giant watermark — number/tier at 4-5% opacity */}
+  <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden">
+    <motion.span className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.05]"
+      style={{ fontSize: 'clamp(180px, 32vw, 460px)' }}>
+      {tabMeta.num}
+    </motion.span>
+  </div>
+
+  {/* Editorial composition */}
+  <motion.div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center">
+    {/* Eyebrow */}
+    <div className="ole-eyebrow !text-black mb-5 sm:mb-6">
+      <span className="!text-black">{tabMeta.eyebrow}</span>
+    </div>
+
+    {/* Headline duo: TITLE (Druk) + subtitle (Moret italic) */}
+    <h1 className="leading-[0.9]">
+      <span className="block font-bold uppercase text-black"
+        style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.75rem, 8vw, 6rem)' }}>
+        Market
+      </span>
+      <motion.span className="block italic text-black"
+        style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 'clamp(2.25rem, 7vw, 5rem)' }}>
+        {tabMeta.subtitle}
+      </motion.span>
+    </h1>
+
+    {/* Decorative ruler */}
+    <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+
+    {/* Quote italic centerpiece */}
+    <motion.blockquote className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
+      style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}>
+      "{quote}"
+    </motion.blockquote>
+
+    {/* Stats strip — 3 black boxes with Druk numbers */}
+    <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto">
+      <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+        <p className="text-neon-yellow tabular-nums leading-none"
+           style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(24px, 4vw, 36px)' }}>
+          {stat1}
+        </p>
+        <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
+          LABEL
+        </p>
+      </div>
+    </div>
+
+    {/* CTAs: black on yellow (primary) + outline */}
+    <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
+      <button className="inline-flex items-center gap-2 bg-black px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+        style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}>
+        Primary CTA
+      </button>
+      <button className="inline-flex items-center gap-2 border border-black/70 bg-transparent px-7 py-3 text-black font-bold uppercase tracking-[0.2em] text-[12px] hover:bg-black/10 transition-colors"
+        style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}>
+        Secondary
+      </button>
+    </div>
+  </motion.div>
+</section>
+```
+
+**Anatomy:**
+1. Yellow full-width background
+2. Giant watermark (number/tier) at 4-5% opacity
+3. Eyebrow (10px Inter, black, uppercase)
+4. Headline duo: Druk uppercase + Moret italic
+5. Decorative ruler (3px × 64px black bar)
+6. Quote italic centerpiece (Moret 15-19px)
+7. Stats strip (3 black boxes with Druk numbers)
+8. CTAs: black on yellow + outline
+
+---
+
+### 2. MatchdayHero (Home Pattern)
+
+Diagonal split hero with MVP highlight and stats.
+
+```tsx
+<MatchdayHero
+  data={{
+    competition: 'Brasileirão · Round 14',
+    statusPrimary: 'Final',
+    statusSecondary: 'Victory',
+    statusVariant: 'preview',
+    solidYellow: true,  // Full yellow background (no split)
+    home: { short: 'FLA', name: 'Flamengo', score: 2, crestUrl: '...' },
+    away: { short: 'PAL', name: 'Palmeiras', score: 1, crestUrl: '...' },
+    stats: [
+      { label: 'Victories', value: '8' },
+      { label: 'Draws', value: '3' },
+    ],
+    highlight: {
+      name: 'Gabriel Barbosa',
+      number: 9,
+      quote: 'Two goals in 15 minutes.',
+      photoUrl: '...',
+    },
+    actions: [
+      { label: 'View postgame', href: '/postgame', variant: 'primary' },
+    ],
+    scrollCueTargetId: 'home-below-fold',
+  }}
+/>
+```
+
+**Features:**
+- Diagonal split 62/38 (desktop) with `clip-path`
+- `solidYellow` mode for full yellow background (no split)
+- Real or synthetic crests (circle with initials)
+- Giant Moret italic score
+- MVP with B&W photo + decorative number behind
+- Stats strip (5 columns desktop, 2 mobile)
+- Centered action buttons in footer
+- Scroll cue (circular button with chevron)
+
+---
+
+### 3. Sports Card Pattern
+
+Standard card used throughout the app.
+
+```tsx
+<div className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden">
+  {/* Header */}
+  <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
+    <div className="ole-eyebrow !text-neon-yellow">
+      <span>Section Title</span>
+    </div>
+    <p className="text-white/55 uppercase" style={{
+      fontFamily: 'var(--font-ui)',
+      fontSize: '11px',
+      letterSpacing: '0.22em',
+      fontWeight: 600,
+    }}>
+      Descriptive subtitle
+    </p>
+  </div>
+
+  {/* Body */}
+  <div className="px-6 py-4">
+    {/* Content */}
+  </div>
+
+  {/* Footer (optional) */}
+  <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-2">
+    <button className="w-full py-3 bg-neon-yellow text-black hover:bg-white">
+      Primary CTA
+    </button>
+  </div>
+</div>
+```
+
+**Anatomy:**
+1. Background: `bg-[var(--color-card)]` (#242424)
+2. General border: `border border-white/8` (subtle)
+3. Signature border: `border-l-4 border-l-neon-yellow` (yellow left stripe)
+4. Border-radius: `rounded-sm` (4px — sharp sports)
+5. Internal dividers: `border-white/10`
+
+---
+
+## 🎨 Button Patterns
+
+### Primary Button (Yellow)
+```tsx
+<button className="bg-neon-yellow text-black hover:bg-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
+  style={{ borderRadius: 'var(--radius-sm)' }}>
+  Quick Match
+</button>
+```
+- Background: `bg-neon-yellow`
+- Text: `text-black`
+- Hover: `hover:bg-white`
+- Shadow: `0 4px 12px rgba(253,225,0,0.25)` (yellow glow)
+- Font: `font-display` (Druk)
+- Tracking: `0.2em`
+
+### Outline Button (Black with border)
+```tsx
+<button className="bg-deep-black border border-[var(--color-border)] text-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+  style={{ borderRadius: 'var(--radius-sm)' }}>
+  View Tactics
+</button>
+```
+- Background: `bg-deep-black`
+- Border: `border border-[var(--color-border)]`
+- Hover: `hover:border-neon-yellow/60 hover:text-neon-yellow`
+
+### Toggle Button (Tabs)
+```tsx
+<button className={cn(
+  'px-3 py-1.5 border transition-colors',
+  active
+    ? 'border-neon-yellow bg-neon-yellow text-black'
+    : 'border-[var(--color-border)] bg-deep-black text-white/65 hover:border-neon-yellow/50'
+)}
+style={{
+  fontFamily: 'var(--font-display)',
+  fontSize: '10px',
+  fontWeight: 700,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase',
+  borderRadius: 'var(--radius-sm)',
+}}>
+  Label
+</button>
+```
+
+---
+
+## ⚡ Micro-interactions
+
+### Hover Effects
+```tsx
+// Buttons
+hover:scale-[1.02] active:scale-[0.98]
+
+// Icons
+hover:scale-110 transition-transform
+
+// Cards
+hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(253,225,0,0.15)]
+
+// ChevronRight
+hover:translate-x-1 transition-transform
+```
+
+### Animations (Framer Motion)
+
+#### Card Entry
+```tsx
+<motion.div
+  initial={{ opacity: 0, y: 12 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.1 }}
+>
+  {/* Card */}
+</motion.div>
+```
+
+#### Stagger List
+```tsx
+{items.map((item, idx) => (
+  <motion.div
+    key={item.id}
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.1 + idx * 0.04 }}
+  >
+    {/* Item */}
+  </motion.div>
+))}
+```
+
+#### Live Pulse (Live indicator)
+```css
+.live-dot {
+  animation: ole-live-pulse 1.5s infinite;
+}
+
+@keyframes ole-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+```
+
+#### Hover Glow (Yellow)
+```css
+.ole-yellow-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(253, 225, 0, 0.15) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.ole-yellow-glow:hover::before {
+  opacity: 1;
+}
+```
+
+---
+
+## 📏 Spacing System (4px base)
+
+```css
+--space-xs:  4px
+--space-sm:  8px
+--space-md:  12px
+--space-lg:  16px
+--space-xl:  20px
+--space-2xl: 24px
+--space-3xl: 32px
+--space-4xl: 40px
+--space-5xl: 48px
+--space-6xl: 64px
+```
+
+**Usage:**
+- Gap between cards: `gap-4 lg:gap-6` (16px → 24px)
+- Internal card padding: `px-5 sm:px-6 py-5 sm:py-6` (20-24px)
+- Margin between sections: `space-y-8` (32px)
+
+---
+
+## 🎯 Border-Radius (Sharp Sports)
+
+```css
+--radius-none: 0px
+--radius-sm:   4px   /* Default for cards, buttons */
+--radius-md:   8px   /* Maximum allowed */
+```
+
+**Rule:** Never exceed 8px. BVB design is sharp and angular.
+
+---
+
+## 📱 Responsive Breakpoints
+
+```css
+/* Mobile */
+@media (max-width: 639px) {
+  /* 1 column, icon logo, vertical stack */
+}
+
+/* Tablet */
+@media (min-width: 640px) and (max-width: 1279px) {
+  /* 12 columns, full logo */
+}
+
+/* Desktop */
+@media (min-width: 1280px) {
+  /* 12 columns, fixed sidebar, diagonal hero split */
+}
+```
+
+---
+
+## 🏆 Special Elements
+
+### Watermark
+```tsx
+<div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden">
+  <span className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
+    style={{ fontSize: 'clamp(160px, 28vw, 420px)' }}>
+    {tierName}
+  </span>
+</div>
+```
+- Druk 160-480px
+- Opacity 3-5%
+- Background ornament
+
+### Decorative Ruler
+```tsx
+<span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+```
+- 3px height, 64px width
+- Visual separator
+
+### B&W Player Photo
+```css
+.ole-player-photo-bw {
+  filter: grayscale(1) contrast(1.05);
+}
+```
+
+---
+
+## 🎮 Golden Rules
+
+1. **Yellow is highlight, not decoration** — use with purpose (CTAs, eyebrows, important metrics)
+2. **Sharp, not round** — max border-radius 8px
+3. **Deep black** — `#0D0D0D`, not `#000000`
+4. **Hierarchical typography** — Druk for strength, Moret for editorial, Inter for UI
+5. **Generous spacing** — don't skimp on padding/gap
+6. **Yellow left border** — signature visual of important cards
+7. **Subtle motion** — stagger entry, smooth hover, no exaggerations
+8. **B&W photo** — `grayscale(1) contrast(1.05)` filter on player photos
+9. **Uppercase with tracking** — `uppercase tracking-[0.2em]` on labels/buttons
+10. **Numbers in Moret italic** — scores, stats, highlight values
+
+---
+
+## 🛠️ Implementation Checklist
+
+When implementing a new page or component:
+
+### Layout Structure
+- [ ] Use `DashboardGrid` + `DashboardSection` for responsive layout
+- [ ] Apply `-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8` on full-bleed heroes
+- [ ] Spacing between sections: `space-y-6` or `space-y-8` (24-32px)
+
+### Cards/Panels
+- [ ] Background: `bg-[var(--color-card)]`
+- [ ] Border: `border border-white/8`
+- [ ] Highlight: `border-l-4 border-l-neon-yellow`
+- [ ] Border-radius: `rounded-sm` (4px)
+- [ ] Dividers: `border-white/10`
+
+### Typography
+- [ ] Eyebrows: `font-ui`, `10-11px`, `uppercase`, `tracking-[0.22em]`, `text-neon-yellow`
+- [ ] Headlines: `font-display`, `font-black`, `uppercase`, `tracking-wider`
+- [ ] Large numbers: `font-serif-hero`, `italic`, `tabular-nums`
+- [ ] Body: `font-sans`, `text-sm` or `text-xs`, `text-gray-400`
+
+### Buttons
+- [ ] Primary: `bg-neon-yellow text-black hover:bg-white`
+- [ ] Outline: `bg-deep-black border border-white/15 hover:border-neon-yellow`
+- [ ] Font: `font-display font-bold uppercase tracking-[0.2em]`
+- [ ] Size: `text-[11px] sm:text-[12px]`
+
+### Colors
+- [ ] Background: `bg-deep-black` (#0D0D0D)
+- [ ] Cards: `bg-[var(--color-card)]` (#242424)
+- [ ] Highlight: `text-neon-yellow` (#FDE100)
+- [ ] Primary text: `text-white`
+- [ ] Secondary text: `text-gray-400` or `text-white/55`
+
+### Animations
+- [ ] Cards: `motion.div` with `initial/animate` + progressive delay
+- [ ] Hover: `transition-colors duration-200`
+- [ ] Scale: `hover:scale-[1.01] active:scale-[0.99]`
+
+---
+
+## 📚 Reference Files
+
+- `/src/pages/Home.tsx` — complete implementation
+- `/src/pages/Store.tsx` — cinematic hero pattern
+- `/src/pages/Transfer.tsx` — hero with watermark
+- `/src/pages/Manager.tsx` — tier-based hero
+- `/src/components/matchday/MatchdayHero.tsx` — diagonal split hero
+- `/src/components/dashboard/` — grid system
+- `/src/styles/design-system.css` — tokens and utilities
+- `/docs/design/HOME_DESIGN_SYSTEM_ANALYSIS.md` — original design brief
+
+---
+
+## 🎯 When to Use This Skill
+
+Use this skill when:
+- Implementing new pages or features in OLEFOOT
+- Standardizing existing pages with the design system
+- Creating new components that need to match the visual identity
+- Reviewing UI/UX consistency across the app
+- Designing hero sections, cards, buttons, or any visual element
+- Ensuring responsive behavior matches the BVB-inspired aesthetic
+
+**Always prioritize:**
+1. Visual hierarchy (Druk → Moret → Inter)
+2. Sharp, angular design (max 8px radius)
+3. Yellow as intentional highlight
+4. Generous spacing and breathing room
+5. Subtle, coordinated motion
+6. Cinematic, editorial feel
+
+---
+
+**Last updated:** 2026-04-25

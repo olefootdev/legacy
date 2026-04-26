@@ -67,8 +67,11 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
   const slide = slides[index]!;
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
-      <div className="relative h-[200px] sm:h-[260px] md:h-[320px]">
+    <section
+      className="relative overflow-hidden border border-[var(--color-border)] bg-deep-black"
+      style={{ borderRadius: 'var(--radius-md)' }}
+    >
+      <div className="relative h-[220px] sm:h-[280px] md:h-[340px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${tab}-${index}`}
@@ -91,43 +94,82 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
                 'flex h-full w-full items-center justify-center bg-gradient-to-br',
                 theme.from, theme.via, theme.to,
               )}>
-                <p className={cn(
-                  'font-display text-4xl font-black italic uppercase tracking-[0.3em] opacity-60 sm:text-6xl',
-                  theme.accent,
-                )}>
-                  {theme.label}
+                {/* Fallback label em Moret italic case mixto (era Agency uppercase fake italic) */}
+                <p
+                  className="text-neon-yellow/35 italic select-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(2.5rem, 7vw, 5rem)',
+                    letterSpacing: '-0.01em',
+                    lineHeight: 1,
+                  }}
+                >
+                  {theme.label.charAt(0) + theme.label.slice(1).toLowerCase()}
                 </p>
               </div>
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
+            {/* Gradientes mais leves — não engole imagem, deixa cor respirar */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-transparent to-transparent" />
 
-            <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-8">
+            <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-7 md:p-9">
+              {/* TAG — padrão ▍ + SF Pro caps (consistente com /legend e Transfer rails) */}
               {slide.tag ? (
-                <span className={cn(
-                  'mb-2 inline-block w-fit rounded-full border px-2.5 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.25em]',
-                  'border-white/20 bg-black/40 backdrop-blur', theme.accent,
-                )}>
-                  {slide.tag}
-                </span>
+                <div
+                  className="mb-3 inline-flex items-center gap-2.5 w-fit"
+                  style={{ fontFamily: 'var(--font-ui)' }}
+                >
+                  <span aria-hidden className="block w-[3px] h-4 bg-neon-yellow" />
+                  <span
+                    className="text-neon-yellow uppercase font-semibold"
+                    style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                  >
+                    {slide.tag}
+                  </span>
+                </div>
               ) : null}
-              <h2 className="font-display text-xl font-black italic uppercase leading-tight tracking-wider text-white sm:text-3xl md:text-4xl [overflow-wrap:anywhere]">
+
+              {/* TÍTULO — Moret italic case mixto (carrega a emoção) */}
+              <h2
+                className="italic text-white leading-[1.05] [overflow-wrap:anywhere] max-w-2xl"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontWeight: 400,
+                  fontSize: 'clamp(1.65rem, 4.2vw, 3rem)',
+                  letterSpacing: '-0.015em',
+                }}
+              >
                 {slide.title}
               </h2>
-              <p className="mt-1.5 max-w-xl text-[11px] leading-relaxed text-gray-300 sm:text-sm">
+
+              {/* TEXTO — SF Pro UI, mais peso editorial que o Inter genérico antes */}
+              <p
+                className="mt-2 max-w-xl text-white/75"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 'clamp(12px, 1.1vw, 14px)',
+                  lineHeight: 1.55,
+                }}
+              >
                 {slide.subtitle}
               </p>
+
+              {/* CTA — primário amarelo afiado, padrão sistema */}
               {slide.ctaLabel && slide.onCta ? (
                 <button
                   type="button"
                   onClick={slide.onCta}
-                  className={cn(
-                    'mt-3 inline-flex w-fit items-center gap-1.5 rounded-lg px-3.5 py-2 font-display text-[10px] font-black uppercase tracking-[0.25em] transition-colors sm:text-[11px]',
-                    'bg-white text-black hover:bg-neon-yellow',
-                  )}
+                  className="mt-4 inline-flex w-fit items-center gap-2 bg-neon-yellow px-5 py-2.5 text-black font-bold uppercase hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '11px',
+                    letterSpacing: '0.2em',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                 >
                   {slide.ctaLabel}
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               ) : null}
             </div>
@@ -140,7 +182,8 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
               type="button"
               onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
               aria-label="Slide anterior"
-              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/15 bg-black/50 p-1.5 text-white/70 backdrop-blur transition-colors hover:border-white/40 hover:text-white sm:left-3"
+              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-black/55 text-white/70 backdrop-blur transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -148,12 +191,14 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
               type="button"
               onClick={() => setIndex((i) => (i + 1) % slides.length)}
               aria-label="Próximo slide"
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/15 bg-black/50 p-1.5 text-white/70 backdrop-blur transition-colors hover:border-white/40 hover:text-white sm:right-3"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 grid h-8 w-8 place-items-center border border-[var(--color-border)] bg-black/55 text-white/70 backdrop-blur transition-colors hover:border-neon-yellow/60 hover:text-neon-yellow"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 sm:bottom-3">
+            {/* Pagination dots: ativo amarelo, inativo branco translucido */}
+            <div className="absolute bottom-3 right-4 z-10 flex gap-1.5">
               {slides.map((_, i) => (
                 <button
                   key={i}
@@ -161,8 +206,8 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
                   onClick={() => setIndex(i)}
                   aria-label={`Ir para slide ${i + 1}`}
                   className={cn(
-                    'h-1.5 rounded-full transition-all',
-                    i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/60',
+                    'h-[3px] transition-all',
+                    i === index ? 'w-8 bg-neon-yellow' : 'w-2 bg-white/30 hover:bg-white/60',
                   )}
                 />
               ))}

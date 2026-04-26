@@ -55,14 +55,28 @@ export interface ValuationResult {
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const r = await fetch(`${olefootApiBase()}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const j = (await r.json()) as { ok: boolean; error?: string } & Record<string, unknown>;
-  if (!j.ok) throw new Error(j.error ?? `HTTP ${r.status}`);
-  return j as unknown as T;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout (agentes AI)
+
+  try {
+    const r = await fetch(`${olefootApiBase()}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const j = (await r.json()) as { ok: boolean; error?: string } & Record<string, unknown>;
+    if (!j.ok) throw new Error(j.error ?? `HTTP ${r.status}`);
+    return j as unknown as T;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Timeout: servidor não respondeu em 30s.');
+    }
+    throw e;
+  }
 }
 
 export async function runScoutAgent(input: {

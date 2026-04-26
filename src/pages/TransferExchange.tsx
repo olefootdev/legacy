@@ -11,6 +11,7 @@ import {
   EXP_EXCHANGE_MIN_LOT,
 } from '@/economy/expExchange';
 import type { ExpExchangeOrder } from '@/economy/expExchange';
+import { BackButton } from '@/components/BackButton';
 
 function broInputToCents(s: string): number | null {
   const t = s.replace(',', '.').trim();
@@ -89,135 +90,336 @@ export function TransferExchange() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl space-y-6 pb-10">
-      <div className="flex flex-wrap items-center gap-3">
+      <BackButton to="/mercado" label="Mercado" />
+      {/* Top bar — back link compacto (assinatura /legend) */}
+      <div className="flex items-center justify-between">
         <Link
           to="/transfer"
-          className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider text-white transition-colors hover:bg-white/10"
+          className="inline-flex items-center gap-2 text-white/65 hover:text-neon-yellow transition-colors"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+          }}
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Mercado
         </Link>
-        <h1 className="font-display text-xl font-black uppercase tracking-wide text-white sm:text-2xl">
-          Exchange EXP ↔ BRO
+        <span
+          className="text-white/35 uppercase"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '10px',
+            letterSpacing: '0.22em',
+          }}
+        >
+          Olé Football · Exchange
+        </span>
+      </div>
+
+      {/* Mini-hero editorial — eyebrow + headline duo + régua */}
+      <header className="text-center pt-2 pb-2">
+        <div className="ole-eyebrow !text-neon-yellow mb-4">
+          <span>Câmbio do mercado</span>
+        </div>
+        <h1 className="leading-[0.95]">
+          <span
+            className="block font-bold uppercase text-white"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(2.25rem, 6vw, 3.5rem)',
+              letterSpacing: '0.005em',
+            }}
+          >
+            EXP <span className="text-neon-yellow">↔</span> BRO
+          </span>
+          <span
+            className="block italic text-neon-yellow mt-1"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 400,
+              fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            câmbio paralelo
+          </span>
         </h1>
-      </div>
-
-      <p className="text-[11px] leading-relaxed text-gray-500 sm:text-xs">
-        Anuncia lotes de EXP pelo preço em BRO (referência USDT). Ordens da rede são preenchidas na hora; anúncios do teu
-        clube ficam visíveis até cancelares ou até outro manager comprar quando a ligação P2P estiver activa.
-      </p>
-
-      <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/40 p-4">
-        <div>
-          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Saldo EXP</div>
-          <div className="mt-1 font-display text-lg font-black text-neon-yellow">{formatExp(ole)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Saldo BRO</div>
-          <div className="mt-1 font-display text-lg font-black text-white">{formatBroFromCents(broCents)}</div>
-        </div>
-      </div>
-
-      <section className="sports-panel space-y-4 border border-neon-yellow/25 bg-dark-gray p-4 sm:p-5">
-        <div className="flex items-center gap-2">
-          <ArrowLeftRight className="h-5 w-5 text-neon-yellow" aria-hidden />
-          <h2 className="font-display text-sm font-black uppercase tracking-wide text-white">Anunciar venda de EXP</h2>
-        </div>
-        <p className="text-[10px] text-gray-500">
-          O montante em EXP é reservado logo após anunciar. Cancelar devolve o EXP ao saldo.
+        <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
+        <p
+          className="mx-auto mt-5 max-w-xl text-white/55"
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '13px',
+            lineHeight: 1.55,
+          }}
+        >
+          Anuncia lotes de EXP pelo preço em BRO (referência USDT). Ordens da rede são preenchidas na hora;
+          anúncios do teu clube ficam visíveis até cancelares ou até outro manager comprar.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-gray-400" htmlFor="ex-exp">
-              Quantidade EXP
-            </label>
-            <input
-              id="ex-exp"
-              type="number"
-              min={EXP_EXCHANGE_MIN_LOT}
-              max={EXP_EXCHANGE_MAX_LOT}
-              value={expDraft}
-              onChange={(e) => setExpDraft(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-3 py-2 font-display text-sm font-bold text-white"
-            />
+      </header>
+
+      {/* Saldos — números editoriais (Moret italic) */}
+      <div
+        className="grid grid-cols-2 divide-x divide-[var(--color-border)] border border-[var(--color-border)] bg-dark-gray"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        {([
+          { label: 'Saldo EXP', value: formatExp(ole), accent: true },
+          { label: 'Saldo BRO', value: formatBroFromCents(broCents), accent: false },
+        ] as const).map((s) => (
+          <div key={s.label} className="px-5 py-4">
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {s.label}
+            </p>
+            <p
+              className={cn('mt-1.5 italic tabular-nums leading-none', s.accent ? 'text-neon-yellow' : 'text-white')}
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(1.6rem, 3.5vw, 2.25rem)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {s.value}
+            </p>
           </div>
-          <div>
-            <label className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-gray-400" htmlFor="ex-bro">
-              Preço pedido (BRO)
-            </label>
-            <input
-              id="ex-bro"
-              type="text"
-              inputMode="decimal"
-              placeholder="ex.: 12,50"
-              value={broDraft}
-              onChange={(e) => setBroDraft(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-3 py-2 font-display text-sm font-bold text-white placeholder:text-gray-600"
-            />
+        ))}
+      </div>
+
+      <section
+        className="space-y-4 border border-[var(--color-border)] bg-dark-gray p-5 sm:p-6"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        {/* Section header — padrão ▍ TÍTULO */}
+        <div className="flex items-center gap-3">
+          <span aria-hidden className="w-[3px] h-7 bg-neon-yellow shrink-0" />
+          <div className="min-w-0">
+            <h2
+              className="text-neon-yellow uppercase"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+              }}
+            >
+              Anunciar venda de EXP
+            </h2>
+            <p
+              className="mt-0.5 text-white/45"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', lineHeight: 1.5 }}
+            >
+              O montante em EXP é reservado logo após anunciar. Cancelar devolve ao saldo.
+            </p>
           </div>
+          <ArrowLeftRight className="h-4 w-4 text-white/30 ml-auto shrink-0" aria-hidden />
         </div>
-        {announceErr ? <p className="text-[11px] text-red-300">{announceErr}</p> : null}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            {
+              id: 'ex-exp',
+              label: 'Quantidade EXP',
+              value: expDraft,
+              setValue: setExpDraft,
+              type: 'number' as const,
+              extra: { min: EXP_EXCHANGE_MIN_LOT, max: EXP_EXCHANGE_MAX_LOT },
+              placeholder: '',
+            },
+            {
+              id: 'ex-bro',
+              label: 'Preço pedido (BRO)',
+              value: broDraft,
+              setValue: setBroDraft,
+              type: 'text' as const,
+              extra: { inputMode: 'decimal' as const },
+              placeholder: 'ex.: 12,50',
+            },
+          ]).map((f) => (
+            <div key={f.id}>
+              <label
+                className="mb-1.5 block text-[var(--color-neon-yellow)] uppercase"
+                htmlFor={f.id}
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.22em',
+                  fontWeight: 600,
+                }}
+              >
+                {f.label}
+              </label>
+              <input
+                id={f.id}
+                type={f.type}
+                value={f.value}
+                placeholder={f.placeholder}
+                onChange={(e) => f.setValue(e.target.value)}
+                className="w-full border border-[var(--color-border)] bg-black/55 px-3 py-2 text-white placeholder:text-white/30 outline-none focus:border-neon-yellow transition-colors"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '14px',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+                {...(f.extra as Record<string, unknown>)}
+              />
+            </div>
+          ))}
+        </div>
+
+        {announceErr ? (
+          <p
+            className="text-[var(--color-danger)]"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
+          >
+            {announceErr}
+          </p>
+        ) : null}
+
         <button
           type="button"
           onClick={tryOpenAnnounceConfirm}
-          className="w-full rounded-lg border border-neon-yellow/50 bg-neon-yellow/15 py-3 font-display text-xs font-black uppercase tracking-wider text-neon-yellow transition-colors hover:bg-neon-yellow/25"
+          className="w-full bg-neon-yellow py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            borderRadius: 'var(--radius-sm)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          }}
         >
-          PUBLICAR ORDEM
+          Publicar ordem
         </button>
       </section>
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-sm font-black uppercase tracking-wide text-white">
-            Livro de EXP anunciado
-          </h2>
-          <p className="mt-1 text-[11px] text-gray-500">
-            Ofertas dos managers vendendo EXP em troca de BRO. Cada linha mostra
-            <strong className="text-neon-yellow"> quanto EXP</strong> está à venda e
-            <strong className="text-white"> por quanto BRO</strong> no total. Compra só com saldo BRO suficiente.
-          </p>
+      <section className="space-y-4">
+        {/* Section header — padrão ▍ TÍTULO */}
+        <div className="flex items-center gap-3">
+          <span aria-hidden className="w-[3px] h-7 bg-neon-yellow shrink-0" />
+          <div className="min-w-0">
+            <h2
+              className="text-neon-yellow uppercase"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+              }}
+            >
+              Livro de EXP
+            </h2>
+            <p
+              className="mt-0.5 text-white/45"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', lineHeight: 1.5 }}
+            >
+              Ofertas vendendo EXP em troca de BRO. Compra só com saldo BRO suficiente.
+            </p>
+          </div>
         </div>
+
         <ul className="space-y-2">
           {sortedOrders.map((o) => {
             const isOwnPlayer = o.kind === 'player' && o.sellerClubId === club.id;
             const isOtherPlayer = o.kind === 'player' && o.sellerClubId !== club.id;
             const canBuyNpc = o.kind === 'npc';
             const expPerBro = o.broCents > 0 ? Math.round(o.expAmount / (o.broCents / 100)) : 0;
+            const tagMeta = isOwnPlayer
+              ? { label: 'Teu clube', cls: 'border-[var(--color-success)] text-[var(--color-success)]' }
+              : o.kind === 'npc'
+                ? { label: 'NPC', cls: 'border-[var(--color-border)] text-white/55' }
+                : { label: 'Rival', cls: 'border-neon-yellow/45 text-neon-yellow' };
             return (
               <li
                 key={o.id}
-                className="flex min-w-0 flex-col gap-2 rounded-xl border border-white/10 bg-black/35 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex min-w-0 flex-col gap-3 border border-[var(--color-border)] bg-dark-gray p-4 transition-colors hover:border-neon-yellow/30 sm:flex-row sm:items-center sm:justify-between"
+                style={{ borderRadius: 'var(--radius-md)' }}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-display text-sm font-black uppercase text-white truncate">{o.teamName}</span>
-                    {isOwnPlayer ? (
-                      <span className="shrink-0 rounded border border-neon-green/50 bg-neon-green/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-neon-green">
-                        Teu clube
-                      </span>
-                    ) : o.kind === 'npc' ? (
-                      <span className="shrink-0 rounded border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-400">
-                        Oferta NPC
-                      </span>
-                    ) : (
-                      <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-cyan-200">
-                        Clube rival
-                      </span>
-                    )}
+                    <span
+                      className="truncate text-white uppercase"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      {o.teamName}
+                    </span>
+                    <span
+                      className={cn('shrink-0 inline-flex items-center border px-2 py-0.5 uppercase', tagMeta.cls)}
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        letterSpacing: '0.2em',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      {tagMeta.label}
+                    </span>
                   </div>
-                  <div className="mt-1.5 grid grid-cols-3 gap-2 text-[11px]">
-                    <div>
-                      <p className="text-[9px] uppercase tracking-wider text-gray-500">Vendendo</p>
-                      <p className="font-mono font-bold text-neon-yellow">{formatExp(o.expAmount)} EXP</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] uppercase tracking-wider text-gray-500">Pede</p>
-                      <p className="font-mono font-bold text-white">{formatBroFromCents(o.broCents)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] uppercase tracking-wider text-gray-500">Taxa</p>
-                      <p className="font-mono text-gray-400">{expPerBro.toLocaleString('pt-BR')} EXP/BRO</p>
-                    </div>
+                  <div className="mt-2 grid grid-cols-3 gap-3">
+                    {([
+                      { label: 'Vendendo', value: `${formatExp(o.expAmount)}`, suffix: 'EXP', accent: true, muted: false },
+                      { label: 'Pede', value: formatBroFromCents(o.broCents), suffix: '', accent: false, muted: false },
+                      { label: 'Taxa', value: expPerBro.toLocaleString('pt-BR'), suffix: 'EXP/BRO', accent: false, muted: true },
+                    ] as const).map((c) => (
+                      <div key={c.label}>
+                        <p
+                          className="text-white/45 uppercase"
+                          style={{
+                            fontFamily: 'var(--font-ui)',
+                            fontSize: '9px',
+                            letterSpacing: '0.22em',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {c.label}
+                        </p>
+                        <p
+                          className={cn(
+                            'mt-1 italic tabular-nums leading-none',
+                            c.accent ? 'text-neon-yellow' : c.muted ? 'text-white/65' : 'text-white',
+                          )}
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontWeight: 600,
+                            fontSize: '15px',
+                            letterSpacing: '-0.01em',
+                          }}
+                        >
+                          {c.value}
+                          {c.suffix ? (
+                            <span
+                              className="ml-1 not-italic text-white/45"
+                              style={{
+                                fontFamily: 'var(--font-ui)',
+                                fontSize: '9px',
+                                letterSpacing: '0.18em',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {c.suffix}
+                            </span>
+                          ) : null}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
@@ -225,7 +427,15 @@ export function TransferExchange() {
                     <button
                       type="button"
                       onClick={() => dispatch({ type: 'EXP_EXCHANGE_CANCEL_SELL', orderId: o.id })}
-                      className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 font-display text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/10"
+                      className="border border-[var(--color-border)] bg-deep-black px-4 py-2 text-white/75 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
                     >
                       Cancelar
                     </button>
@@ -236,18 +446,36 @@ export function TransferExchange() {
                       onClick={() => setBuyTarget(o)}
                       disabled={broCents < o.broCents}
                       className={cn(
-                        'rounded-lg border px-4 py-2 font-display text-[10px] font-black uppercase tracking-wider',
+                        'px-5 py-2 transition-all',
                         broCents < o.broCents
-                          ? 'cursor-not-allowed border-white/10 bg-white/5 text-gray-600'
-                          : 'border-neon-green/50 bg-neon-green/20 text-neon-green hover:bg-neon-green/30',
+                          ? 'cursor-not-allowed border border-[var(--color-border)] bg-white/5 text-white/30'
+                          : 'bg-neon-yellow text-black hover:bg-white hover:scale-[1.02] active:scale-[0.98]',
                       )}
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
                       title={broCents < o.broCents ? 'Saldo BRO insuficiente' : 'Comprar EXP'}
                     >
                       Comprar
                     </button>
                   ) : null}
                   {isOtherPlayer ? (
-                    <span className="self-center rounded border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-bold uppercase text-gray-500">
+                    <span
+                      className="self-center inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/45 uppercase"
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '9px',
+                        letterSpacing: '0.22em',
+                        fontWeight: 600,
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      <span aria-hidden className="w-1 h-1 rounded-full bg-rose-500 live-dot" />
                       P2P · em breve
                     </span>
                   ) : null}
@@ -256,13 +484,31 @@ export function TransferExchange() {
             );
           })}
         </ul>
+
         {sortedOrders.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-black/30 py-8 text-center">
-            <p className="font-display text-sm font-bold uppercase tracking-wider text-white/70">
-              Livro vazio
+          <div
+            className="border border-[var(--color-border)] bg-dark-gray py-12 text-center"
+            style={{ borderRadius: 'var(--radius-md)' }}
+          >
+            <p
+              className="italic text-white/55 mx-auto max-w-md"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(18px, 2.4vw, 22px)',
+                lineHeight: 1.4,
+              }}
+            >
+              “livro vazio — anuncia o primeiro lote.”
             </p>
-            <p className="mt-1 text-[11px] text-gray-500">
-              Nenhuma oferta de EXP no momento. Use o formulário acima pra anunciar o teu EXP em troca de BRO.
+            <p
+              className="mt-3 text-white/35 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.22em',
+              }}
+            >
+              Use o formulário acima
             </p>
           </div>
         ) : null}
@@ -287,26 +533,49 @@ export function TransferExchange() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="max-h-[min(32rem,85dvh)] w-full max-w-md overflow-y-auto overscroll-y-contain rounded-2xl border border-neon-yellow/45 bg-[#0d0d0d] p-5 shadow-[0_0_40px_rgba(234,255,0,0.14)] [-webkit-overflow-scrolling:touch]"
+              className="max-h-[min(32rem,85dvh)] w-full max-w-md overflow-y-auto overscroll-y-contain border border-[var(--color-border)] bg-deep-black p-6 [-webkit-overflow-scrolling:touch]"
+              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
             >
-              <div className="mb-4 flex items-start justify-between gap-2">
-                <h3 id="ex-announce-title" className="font-display text-base font-black uppercase text-neon-yellow">
-                  Confirmar anúncio
-                </h3>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className="w-[3px] h-7 bg-neon-yellow shrink-0" />
+                  <h3
+                    id="ex-announce-title"
+                    className="text-neon-yellow uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    Confirmar anúncio
+                  </h3>
+                </div>
                 <button
                   type="button"
                   onClick={() => setAnnouncePending(null)}
-                  className="rounded-lg p-1 text-gray-500 hover:bg-white/10 hover:text-white"
+                  className="grid h-8 w-8 place-items-center text-white/45 hover:bg-white/10 hover:text-white transition-colors"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
                   aria-label="Fechar"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-sm leading-relaxed text-gray-300">
-                Você está anunciando{' '}
-                <span className="font-display font-bold text-neon-yellow">{formatExp(announcePending.expAmount)}</span>{' '}
+              <p
+                className="italic text-white/85"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(17px, 2.2vw, 21px)',
+                  lineHeight: 1.45,
+                }}
+              >
+                Anunciando{' '}
+                <span className="not-italic text-neon-yellow tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                  {formatExp(announcePending.expAmount)}
+                </span>{' '}
                 EXP por{' '}
-                <span className="font-display font-bold text-white">
+                <span className="not-italic text-white tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
                   {(announcePending.broCents / 100).toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -314,15 +583,27 @@ export function TransferExchange() {
                 </span>{' '}
                 BRO.
               </p>
-              <p className="mt-2 text-[11px] text-gray-500">
+              <p
+                className="mt-3 text-white/45"
+                style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', lineHeight: 1.5 }}
+              >
                 O EXP fica reservado até venderes ou cancelares o anúncio.
               </p>
               <button
                 type="button"
                 onClick={confirmAnnounce}
-                className="mt-5 w-full rounded-xl border border-neon-yellow/55 bg-neon-yellow py-3 font-display text-sm font-black uppercase tracking-wider text-black transition-colors hover:bg-white"
+                className="mt-6 w-full bg-neon-yellow py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                }}
               >
-                CONFIRMAR ANÚNCIO
+                Confirmar anúncio
               </button>
             </motion.div>
           </div>
@@ -348,39 +629,91 @@ export function TransferExchange() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="max-h-[min(32rem,85dvh)] w-full max-w-md overflow-y-auto overscroll-y-contain rounded-2xl border border-neon-green/40 bg-[#0d0d0d] p-5 shadow-[0_0_40px_rgba(0,255,102,0.12)] [-webkit-overflow-scrolling:touch]"
+              className="max-h-[min(32rem,85dvh)] w-full max-w-md overflow-y-auto overscroll-y-contain border border-[var(--color-border)] bg-deep-black p-6 [-webkit-overflow-scrolling:touch]"
+              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
             >
-              <div className="mb-4 flex items-start justify-between gap-2">
-                <h3 id="ex-buy-title" className="font-display text-base font-black uppercase text-white">
-                  Confirmar compra
-                </h3>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className="w-[3px] h-7 bg-neon-yellow shrink-0" />
+                  <h3
+                    id="ex-buy-title"
+                    className="text-neon-yellow uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    Confirmar compra
+                  </h3>
+                </div>
                 <button
                   type="button"
                   onClick={() => setBuyTarget(null)}
-                  className="rounded-lg p-1 text-gray-500 hover:bg-white/10 hover:text-white"
+                  className="grid h-8 w-8 place-items-center text-white/45 hover:bg-white/10 hover:text-white transition-colors"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
                   aria-label="Fechar"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-sm text-gray-400">
-                <span className="font-bold text-white">{buyTarget.teamName}</span> — recebes{' '}
-                <span className="text-neon-yellow">{formatExp(buyTarget.expAmount)} EXP</span> por{' '}
-                <span className="text-white">{formatBroFromCents(buyTarget.broCents)}</span>.
+              <p
+                className="italic text-white/85"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(17px, 2.2vw, 21px)',
+                  lineHeight: 1.45,
+                }}
+              >
+                <span
+                  className="not-italic text-white block uppercase mb-1"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  {buyTarget.teamName}
+                </span>
+                Recebes{' '}
+                <span className="not-italic text-neon-yellow tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                  {formatExp(buyTarget.expAmount)} EXP
+                </span>{' '}
+                por{' '}
+                <span className="not-italic text-white tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                  {formatBroFromCents(buyTarget.broCents)}
+                </span>
+                .
               </p>
               {broCents < buyTarget.broCents ? (
-                <p className="mt-3 text-[11px] text-red-300">Saldo BRO insuficiente.</p>
+                <p
+                  className="mt-3 text-[var(--color-danger)]"
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
+                >
+                  Saldo BRO insuficiente.
+                </p>
               ) : null}
               <button
                 type="button"
                 onClick={confirmBuy}
                 disabled={broCents < buyTarget.broCents}
                 className={cn(
-                  'mt-5 w-full rounded-xl py-3 font-display text-sm font-black uppercase tracking-wider',
+                  'mt-6 w-full py-3 transition-all',
                   broCents < buyTarget.broCents
-                    ? 'cursor-not-allowed bg-white/10 text-gray-500'
-                    : 'bg-neon-green text-black hover:bg-white',
+                    ? 'cursor-not-allowed bg-white/8 text-white/30'
+                    : 'bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995]',
                 )}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                }}
               >
                 Confirmar compra
               </button>

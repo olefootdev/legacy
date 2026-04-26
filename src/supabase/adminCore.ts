@@ -1,4 +1,6 @@
 import { getSupabase } from '@/supabase/client';
+import { loadAdminPanelSession } from './adminPanelAuth';
+import { addCsrfHeader } from '@/lib/csrf';
 
 export type UserStatus = 'active' | 'suspended' | 'banned';
 
@@ -71,10 +73,20 @@ export type PlatformConfigRow = {
 export async function adminSetUserStatus(userId: string, status: UserStatus): Promise<boolean> {
   const sb = getSupabase();
   if (!sb) return false;
+
+  const session = await loadAdminPanelSession();
+  if (!session?.csrfToken) {
+    console.error('[adminCore] CSRF token missing');
+    return false;
+  }
+
   const { data, error } = await sb.rpc('admin_set_user_status', {
     p_user_id: userId,
     p_status: status,
+    p_admin_email: session.email,
+    p_csrf_token: session.csrfToken,
   });
+
   if (error) {
     console.error('[adminCore] set_user_status:', error.message);
     return false;

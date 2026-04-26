@@ -80,14 +80,16 @@ export function AdminLogin() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 pl-9 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/50 focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
-                placeholder="a senha criada via SQL"
+                placeholder="mínimo 12 caracteres"
                 required
-                minLength={6}
+                minLength={12}
+                pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$"
+                title="Mínimo 12 caracteres: maiúscula, minúscula, número e símbolo especial"
               />
             </div>
             <p className="mt-1.5 text-[10px] leading-snug text-white/35">
-              ⚠️ Esta senha é <strong className="text-white/60">separada</strong> da senha do jogo.
-              Se o Chrome auto-preencheu, apaga e digita a senha correta manualmente.
+              ⚠️ Senha forte: mín. 12 caracteres com maiúscula, minúscula, número e símbolo (@$!%*?&).
+              Esta senha é <strong className="text-white/60">separada</strong> da senha do jogo.
             </p>
           </label>
 

@@ -7,6 +7,7 @@ import { getStaffUpgradeCost, maxStaffSlotsByLevel, STAFF_LABELS, STAFF_ROLE_IDS
 import { STAFF_BENEFIT_SUMMARY } from '@/systems/staffBenefits';
 import type { StaffRoleId } from '@/game/types';
 import { cn } from '@/lib/utils';
+import { BackButton } from '@/components/BackButton';
 
 const COLLECTIVE_GROUPS = ['defensivo', 'criativo', 'ataque'] as const;
 
@@ -90,6 +91,7 @@ export function TeamStaff() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6 pb-8">
+      <BackButton to="/clube" label="Clube" />
       <TeamMeuTimeHeader
         title="Staff"
         subtitle="Profissionais contratados, evolução e orientação ativa por jogador da academia."

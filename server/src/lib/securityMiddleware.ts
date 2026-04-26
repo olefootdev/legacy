@@ -13,7 +13,7 @@ function isAllowedOrigin(origin: string): boolean {
 }
 
 /**
- * CSRF: rejeita POSTs cross-origin sem Origin válida ou sem X-Requested-With.
+ * CSRF: rejeita POSTs cross-origin sem Origin válida.
  * Browsers sempre enviam Origin em cross-origin requests; fetch de mesmo site envia-a também.
  */
 export async function csrfGuard(c: Context, next: Next) {
@@ -21,10 +21,15 @@ export async function csrfGuard(c: Context, next: Next) {
     return next();
   }
   const origin = c.req.header('origin');
-  const xrw = c.req.header('x-requested-with');
 
-  if (xrw === 'XMLHttpRequest') return next(); // trusted programmatic fetch
-  if (origin && isAllowedOrigin(origin)) return next();
+  // Rejeitar se não houver Origin (browsers sempre enviam em cross-origin)
+  if (!origin) {
+    return c.json({ error: 'Forbidden: missing origin' }, 403);
+  }
+
+  if (isAllowedOrigin(origin)) {
+    return next();
+  }
 
   return c.json({ error: 'Forbidden' }, 403);
 }

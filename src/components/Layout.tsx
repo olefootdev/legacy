@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { HeaderOtzStrip } from '@/components/HeaderOtzStrip';
 import { TrainerAvatarHeaderControl } from '@/components/TrainerAvatarHeaderControl';
 import { getGameState, useGameStore } from '@/game/store';
+import { formatExp } from '@/systems/economy';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayName';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
@@ -30,25 +31,18 @@ import { AssistantWidget } from '@/components/AssistantWidget';
 
 const mainNavItems = [
   { icon: Home, label: 'HOME', path: '/' },
-  { icon: Users, label: 'TIME', path: '/team' },
-  { icon: ArrowRightLeft, label: 'MERCADO', path: '/transfer' },
+  { icon: Users, label: 'CLUBE', path: '/clube' },
+  { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
+  { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
-];
-
-const drawerNavItems = [
-  { icon: Home, label: 'HOME', path: '/' },
-  { icon: Target, label: 'MISSÕES', path: '/missions' },
-  { icon: Calendar, label: 'CALENDÁRIO', path: '/calendar' },
-  { icon: ShoppingBag, label: 'LOJA', path: '/store' },
-  { icon: Trophy, label: 'LIGAS', path: '/leagues' },
-  { icon: GraduationCap, label: 'COMO JOGAR', path: '/how-to-play' },
-  { icon: Settings, label: 'CONFIG', path: '/config' },
+  { icon: GraduationCap, label: 'AJUDA', path: '/ajuda' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const oleBalance = useGameStore((s) => s.finance.ole);
   const localManagerFirst = useGameStore((s) => s.userSettings?.managerProfile?.firstName?.trim() ?? '');
   const [remoteManagerFirst, setRemoteManagerFirst] = useState<string | null>(null);
 
@@ -141,17 +135,17 @@ export function Layout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans lg:flex-row">
+    <div className="flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans lg:flex-row">
 
       {/* Desktop Sidebar — visible only at ≥1024px */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
         <div className="flex items-center mb-10 p-6 pb-0">
-          <img src="/test-pitch/olefoot-logo-game.svg" alt="Olefoot" className="h-10 w-auto" />
+          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-3 w-auto" />
         </div>
 
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
           {mainNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
               <Link
                 key={item.path}
@@ -164,26 +158,6 @@ export function Layout({ children }: { children: ReactNode }) {
                 {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
                 <item.icon className={cn('w-5 h-5', isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors')} />
                 <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
-              </Link>
-            );
-          })}
-
-          <div className="my-3 border-t border-white/10" />
-
-          {drawerNavItems.filter((d) => d.path !== '/').map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex items-center gap-4 px-4 py-2.5 transition-all duration-200 group relative',
-                  isActive ? 'text-white' : 'text-gray-600 hover:text-white',
-                )}
-              >
-                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
-                <item.icon className={cn('w-4 h-4', isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors')} />
-                <span className="font-display font-bold tracking-wider text-sm">{item.label}</span>
               </Link>
             );
           })}
@@ -204,7 +178,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main
         className={cn(
-          'flex w-full min-w-0 flex-1 flex-col lg:ml-64',
+          'flex w-full max-w-[100vw] min-w-0 flex-1 flex-col overflow-x-hidden lg:ml-64',
           isQuickMatchRoute
             ? 'h-[100dvh] min-h-0 lg:h-auto lg:min-h-screen'
             : isImmersiveMatchRoute
@@ -212,42 +186,62 @@ export function Layout({ children }: { children: ReactNode }) {
               : 'min-h-0',
         )}
       >
-        {/* Top Header */}
+        {/* Top Header — 3 zonas: [hamburger mobile] · [LOGO centro] · [ação rápida] */}
+        {/* IMPORTANTE: Logo SEMPRE visível em todas as páginas e subpáginas */}
         <header
-          className={cn(
-            'sticky top-0 z-40 flex min-h-12 shrink-0 flex-row items-center justify-between gap-2 border-b border-white/10 bg-deep-black/90 px-3 py-2 backdrop-blur-md supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top,0px))] sm:min-h-14 sm:gap-3 sm:px-4',
-            isQuickMatchRoute && 'hidden lg:flex',
-          )}
+          className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] min-h-14 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-deep-black px-4 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top,0px))] sm:min-h-16 sm:px-6"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            {/* Hamburger — only below lg */}
+          {/* Esquerda — hamburger (só abaixo de lg; desktop tem sidebar) */}
+          <div className="flex justify-start">
             <button
               type="button"
-              className="shrink-0 text-white transition-colors hover:text-neon-yellow lg:hidden"
+              className="shrink-0 grid place-items-center text-white transition-colors hover:text-neon-yellow lg:hidden"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Abrir menu"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-6 w-6" strokeWidth={2.25} />
             </button>
-            <TrainerAvatarHeaderControl />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-neon-yellow sm:text-[10px]">
-                Bem-vindo
-              </span>
-              <span className="truncate font-display text-xs font-bold tracking-wider text-white sm:text-sm">
-                {coachGreetingLine}
-              </span>
-            </div>
           </div>
 
-          <div className="flex shrink-0 items-center">
-            {getPageAction(location.pathname)}
+          {/* Centro — Logo Olefoot SEMPRE CENTRALIZADA no topmenu */}
+          {/* Apenas ícone amarelo */}
+          <div className="justify-self-center flex items-center justify-center">
+            <Link
+              to="/"
+              className="flex items-center justify-center"
+              aria-label="Olefoot — início"
+            >
+              <img src="/brand/olefoot-icone-yellow-01.svg" alt="Olefoot" className="h-8 w-8 sm:h-9 sm:w-9" />
+            </Link>
+          </div>
+
+          {/* Direita — botão rápido: saldo da wallet (link pra /wallet) */}
+          <div className="flex justify-end">
+            <Link
+              to="/wallet"
+              className="inline-flex items-center gap-2 border border-[var(--color-border)] bg-deep-black px-3 py-2 text-white/80 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors lg:px-4"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+              aria-label={`Wallet · saldo ${formatExp(oleBalance)} EXP`}
+            >
+              <Wallet className="h-4 w-4" strokeWidth={2.25} />
+              <span className="text-neon-yellow tabular-nums">{formatExp(oleBalance)}</span>
+              <span className="hidden sm:inline text-white/55" style={{ letterSpacing: '0.18em' }}>
+                EXP
+              </span>
+            </Link>
           </div>
         </header>
 
         <div
           className={cn(
-            'flex w-full min-w-0 max-w-full flex-1 flex-col overflow-x-hidden',
+            'flex w-full min-w-0 max-w-[100vw] flex-1 flex-col overflow-x-hidden',
             isQuickMatchRoute &&
               'min-h-0 overflow-y-auto [-webkit-overflow-scrolling:touch] lg:overflow-visible',
             location.pathname === '/match' || location.pathname === '/match/live'
@@ -282,7 +276,7 @@ export function Layout({ children }: { children: ReactNode }) {
               className="fixed top-0 left-0 bottom-0 w-72 bg-deep-black border-r border-white/10 z-[70] lg:hidden flex flex-col"
             >
               <div className="flex items-center justify-between p-5 border-b border-white/10">
-                <img src="/test-pitch/olefoot-logo-game.svg" alt="Olefoot" className="h-9 w-auto" />
+                <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-3 w-auto" />
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -294,8 +288,8 @@ export function Layout({ children }: { children: ReactNode }) {
               </div>
 
               <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-4">
-                {[...mainNavItems, ...drawerNavItems.filter((d) => d.path !== '/')].map((item) => {
-                  const isActive = location.pathname === item.path;
+                {mainNavItems.map((item) => {
+                  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
                   return (
                     <Link
                       key={item.path}
@@ -332,8 +326,8 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Mobile Bottom Nav — hidden at lg+ */}
       {!hideMobileBottomNav && (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around border-t border-white/10 bg-[#0a0a0a] pb-safe">
-          {mainNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
+          {mainNavItems.slice(0, 5).map((item) => {
+            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
               <Link
                 key={item.path}

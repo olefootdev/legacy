@@ -12,16 +12,17 @@ export function bodyLimit(maxBytes = 32_768) {
 }
 
 /**
- * Sanitiza um string de input destinado a prompts OpenAI:
+ * Sanitiza um string de input destinado a prompts Anthropic:
  * - Trunca ao limite
- * - Remove sequências de controlo e tentativas de injeção de prompt óbvias
+ * - Remove sequências de controlo e tentativas de injeção de prompt
  */
 export function sanitizePrompt(raw: string, maxLen: number): string {
   return raw
     .slice(0, maxLen)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')  // caracteres de controlo
-    .replace(/\bignore (all )?(previous|above|prior) instructions?\b/gi, '[blocked]')
-    .replace(/\bsystem prompt\b/gi, '[blocked]')
+    .replace(/\b(ignore|disregard|forget|override|bypass)\s+(all\s+)?(previous|above|prior|earlier)\s+(instructions?|prompts?|rules?)\b/gi, '[blocked]')
+    .replace(/\b(system|assistant|user)\s+(prompt|message|role)\b/gi, '[blocked]')
+    .replace(/\b(reveal|show|print|output)\s+(your|the)\s+(prompt|instructions?|system)\b/gi, '[blocked]')
     .trim();
 }
 

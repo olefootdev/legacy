@@ -60,14 +60,23 @@ export async function uploadImageToPinataViaServer(
   if (meta.mimeType) fd.set('mimeType', meta.mimeType);
 
   const base = olefootApiBase();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout (upload de imagem)
+
   let res: Response;
   try {
     res = await fetch(`${base}/api/media/pinata/upload`, {
       method: 'POST',
       headers: authHeaders,
       body: fd,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { ok: false, error: 'Timeout: upload não completou em 60s.' };
+    }
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[pinataUploadClient] fetch', msg);
     return { ok: false, error: 'Sem ligação ao olefoot-server (URL ou rede).' };

@@ -16,6 +16,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
+import { BackButton } from '@/components/BackButton';
 import { cn } from '@/lib/utils';
 import type { TrainingPlan } from '@/game/types';
 import {
@@ -197,6 +198,7 @@ export function Calendar() {
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-5 pb-28 md:pb-12">
+      <BackButton to="/competicao" label="Competição" />
       {/* ── HERO ─────────────────────────────────────────────────── */}
       {!squad.ok ? (
         <motion.section

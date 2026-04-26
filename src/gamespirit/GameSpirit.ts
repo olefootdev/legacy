@@ -28,6 +28,7 @@ import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum'
 import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
+import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
 
 function dist(a: PitchPoint, b: PitchPoint): number {
   const dx = a.x - b.x;
@@ -216,10 +217,22 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   const m = ctx.test2dTickModifiers;
   const st = ctx.live2dStagnationTicks ?? 0;
 
-  // Awareness local: quantos adversários cercam a bola e há colega livre adiantado?
-  const oppsNear = ctx.ball ? countOpponentsWithin(ctx.ball, ctx.awayPlayers, 8) : 0;
+  // URGÊNCIA POR PLACAR/TEMPO: times perdendo nos minutos finais atacam mais
+  const scoreDiff = ctx.homeScore - ctx.awayScore;
+  const lateGame = ctx.minute >= 75;
+  const desperateTime = ctx.minute >= 85;
+  const urgencyByContext =
+    (scoreDiff < 0 && desperateTime) ? 0.35 :  // Perdendo nos acréscimos → urgência máxima
+    (scoreDiff < 0 && lateGame) ? 0.22 :       // Perdendo após 75' → urgência alta
+    (scoreDiff < -1 && ctx.minute >= 65) ? 0.14 : // Perdendo por 2+ após 65' → urgência moderada
+    (scoreDiff > 0 && lateGame) ? -0.18 :      // Vencendo no final → menos risco
+    0;
+
+  // Awareness local: adversários no raio 8 + colega livre adiantado.
+  // Sem ctx.awayPlayers, cai pra `nearbyOpponentDist` como proxy de pressão.
+  const oppsNear = ctx.awayPlayers ? countOpponentsWithin(ctx.ball, ctx.awayPlayers, 8) : 0;
+  const underPressure = ctx.awayPlayers ? oppsNear >= 2 : ctx.nearbyOpponentDist < 8;
   const freeFwd = findFreeForwardTeammate(ctx.onBall, ctx.homePlayers, ctx.awayPlayers, 'home');
-  const underPressure = oppsNear >= 2;
 
   /** live2d: após N recycles seguidos, obrigar avanço (condução/passe longo). */
   if (ctx.possession === 'home' && st >= 2) {
@@ -256,25 +269,33 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       momentumBias +
       zoneShotBias +
       awarenessShotBias +
-      passOverShot;
+      passOverShot +
+      urgencyByContext;  // Urgência por placar/tempo
     return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
   }
   // Build-up: só joga longo (clear) se realmente sem opção curta.
-  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && Math.random() < 0.22) return 'clear';
+  // Urgência: quando perdendo no final, evita clear (prefere progress mesmo sem colega livre).
+  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && urgencyByContext <= 0 && Math.random() < 0.22) return 'clear';
   if (ctx.possession === 'home' && style.verticality > 0.72 && freeFwd) return 'progress';
   if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < 0.24) return 'progress';
-  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && Math.random() < 0.28) return 'recycle';
+  // Urgência: quando perdendo, reduz recycle (prefere avançar mesmo sob pressão moderada).
+  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && urgencyByContext <= 0 && Math.random() < 0.28) return 'recycle';
   /** Sem remate “milagre” do meio-campo: em desespero só remata quem já chegou à zona final. */
   if (ctx.possession === 'home' && losingHome && ctx.minute > 70) {
-    return crowded && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')
+    // Urgência extrema: aceita chute mesmo sem estar tão aglomerado.
+    const urgentShot = desperateTime && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid');
+    return (crowded || urgentShot) && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')
       ? 'shot'
       : 'progress';
   }
   if (ctx.possession === 'away' && ctx.ballZone === 'def') return 'clear';
   if (ctx.possession === 'home' && ctx.ballZone === 'mid') {
     if (freeFwd) return 'progress';
-    if (underPressure) return 'recycle';
-    if (Math.random() > 0.65) return 'progress';
+    // Urgência: quando perdendo no final, reduz recycle sob pressão (prefere arriscar).
+    if (underPressure && urgencyByContext <= 0.14) return 'recycle';
+    // Urgência: quando perdendo, aumenta chance de progress no meio-campo.
+    const progressThreshold = urgencyByContext > 0 ? 0.45 : 0.65;
+    if (Math.random() > progressThreshold) return 'progress';
   }
   const base: ProposedAction = freeFwd ? 'progress' : (Math.random() > 0.72 ? 'progress' : 'recycle');
 
@@ -592,6 +613,7 @@ export function gameSpiritTick(
   nowMs: number = Date.now(),
 ): SpiritOutcome {
   const L = createCausalBatch(ctx.minute, causalSeqStart);
+  tickSkillCooldowns();
 
   if (ctx.possession === 'home' && !ctx.onBall) {
     const nb = { x: 44 + Math.random() * 12, y: 30 + Math.random() * 40 };
@@ -623,8 +645,25 @@ export function gameSpiritTick(
     ? isFinalThird(ballZi) || isBox(ballZi) || isCreationZone(ballZi)
     : ctx.ballZone === 'att';
   const danger01 = ballZi ? dangerToOppGoal01(ctx.ball.x, ctx.ball.y, 'home') : 0.5;
+  // Perfil do defensor mais próximo: fairPlay alto reduz, aggression alto aumenta.
+  // Sem ctx.awayPlayers, mult fica neutro (1.0).
+  const nearestDefender = (ctx.awayPlayers ?? [])
+    .map((p) => ({ p, d: dist(ctx.ball, { x: p.x, y: p.y }) }))
+    .sort((a, b) => a.d - b.d)[0]?.p;
+  const fairPlay = (nearestDefender?.attributes as any)?.fairPlay ?? 60;
+  const aggression = (nearestDefender?.attributes as any)?.aggression ?? 50;
+  const profileMult = Math.max(0.55, Math.min(1.65, 1 + (aggression - 50) / 100 - (fairPlay - 60) / 120));
   // Boost da prob de falta perigosa quando bola está mais perto do gol.
-  const dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 0.6);
+  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 0.6) * profileMult;
+  // SkillEngine — DEFEND: zagueiro habilidoso reduz prob da falta (tackle limpo).
+  if (nearestDefender) {
+    const defendRes = resolveSkills({
+      player: nearestDefender,
+      type: 'DEFEND',
+      zone: ctx.ballZoneInfo,
+    });
+    if (defendRes.fired) dangerousFoulProbAdj *= (1 - defendRes.finalEffect);
+  }
   if (
     ctx.possession === 'home' &&
     inAttackingArea &&
@@ -731,13 +770,26 @@ export function gameSpiritTick(
           shooterId,
           zone: ctx.ballZone,
           minute: ctx.minute,
-          target: spiritShotTargetUI('home'),
+          target: spiritShotTargetUI('home', ctx.onBall),
           ...(fromCorner ? { strike: 'header' as const } : fromFreeKick ? { strike: 'placed' as const } : {}),
         },
       });
 
+      // SkillEngine: resolve skill apropriada (SHOOT/HEADER/FREEKICK) — máx 1 por evento.
+      const shotSkillType = fromCorner ? 'HEADER' : fromFreeKick ? 'FREEKICK' : 'SHOOT';
+      const skillRes = ctx.onBall
+        ? resolveSkills({
+            player: ctx.onBall,
+            type: shotSkillType,
+            zone: ctx.ballZoneInfo,
+            legacyTeamBooster: ctx.legacyTeamBooster,
+          })
+        : null;
+      const adjustedShotSkill = skillRes
+        ? Math.min(1, shotSkill * skillRes.modifier)
+        : shotSkill;
       const weights = adjustHomeShotWeights(DEFAULT_HOME_SHOT_WEIGHTS, {
-        shotSkill01: shotSkill,
+        shotSkill01: adjustedShotSkill,
         zoneAtt: ctx.ballZone === 'att',
         zoneMid: ctx.ballZone === 'mid',
         denseNearBall: ctx.homeDensityNearBall >= 4,
@@ -1107,7 +1159,7 @@ export function gameSpiritTick(
             shooterId: awayShooterId,
             zone: awayZone,
             minute: ctx.minute,
-            target: spiritShotTargetUI('away'),
+            target: spiritShotTargetUI('away', ctx.awayPlayers?.find((p) => p.playerId === awayShooterId)),
           },
         });
         L.push({
@@ -1143,7 +1195,7 @@ export function gameSpiritTick(
             shooterId: awayShooterId,
             zone: awayZone,
             minute: ctx.minute,
-            target: spiritShotTargetUI('away'),
+            target: spiritShotTargetUI('away', ctx.awayPlayers?.find((p) => p.playerId === awayShooterId)),
           },
         });
         L.push({

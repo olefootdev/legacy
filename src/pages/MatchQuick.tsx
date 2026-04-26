@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Home, LogOut, Plus, Trophy, RotateCcw } from 'lucide-react';
+import { Home, LogOut, Plus, Trophy, RotateCcw, X } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
@@ -25,6 +25,10 @@ import { GOAL_SCORER_OVERLAY_MS } from '@/gamespirit/spiritStateMachine';
 import { fetchKeyMomentNarration } from '@/match/narrativeKeyMomentClient';
 import { PenaltyKickModal } from '@/match/PenaltyKickModal';
 import { AssistantPanel, AssistantFab, type AssistantEvent } from '@/match/AssistantPanel';
+import { StreakBar } from '@/components/match/StreakBar';
+import { MomentumBar } from '@/components/match/MomentumBar';
+import { InstantRewards } from '@/components/match/InstantRewards';
+import { NearMissOverlay, NearMissMotivation, useNearMissDetection, detectShotNearMiss } from '@/components/match/NearMissSystem';
 import {
   MatchdayVersusWithClock,
   MatchdayLineupColumnTitle,
@@ -32,6 +36,13 @@ import {
 } from '@/components/matchday/MatchdayVersusTitle';
 import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
 import { trackMissionEvent } from '@/progression/trackEvent';
+import { QuickMatchHero } from '@/components/matchquick/QuickMatchHero';
+import { QuickMatchScoreboard } from '@/components/matchquick/QuickMatchScoreboard';
+import { QuickMatchFeed } from '@/components/matchquick/QuickMatchFeed';
+import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
+import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
+import { QuickMatchSummary } from '@/components/matchquick/QuickMatchSummary';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 
 const FIRST_HALF_MS = 45_000;
 const HALFTIME_MS = 15_000;
@@ -157,6 +168,7 @@ interface EndSummary {
   homeScore: number;
   awayScore: number;
   events: { id: string; text: string }[];
+  result: 'win' | 'draw' | 'loss';
 }
 
 interface QuickAwayPlayer {
@@ -220,6 +232,7 @@ export function MatchQuick() {
   const lineupIds = useGameStore((s) => s.lineup);
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
+  const quickMatchStreak = useGameStore((s) => s.quickMatchStreak);
 
   const [session, setSession] = useState(0);
   const [halfTimeUi, setHalfTimeUi] = useState(false);
@@ -250,6 +263,11 @@ export function MatchQuick() {
   const tacticalFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEmotionalMinuteRef = useRef<number>(-1);
   const processedNarrativeEventIdRef = useRef<Set<string>>(new Set());
+
+  // Near-Miss System
+  const { nearMissEvent, triggerNearMiss, clearNearMiss } = useNearMissDetection();
+  const [showNearMissMotivation, setShowNearMissMotivation] = useState(false);
+  const lastShotPreviewRef = useRef<string | null>(null);
 
   // sync ref for use inside interval
   useEffect(() => { secondYellowAlertRef.current = secondYellowAlert; }, [secondYellowAlert]);
@@ -894,12 +912,34 @@ export function MatchQuick() {
       homeScore: live.homeScore,
       awayScore: live.awayScore,
       events: live.events.map((e) => ({ id: e.id, text: e.text })),
+      result: live.homeScore > live.awayScore ? 'win' : live.homeScore < live.awayScore ? 'loss' : 'draw',
     });
     dispatch({ type: 'FINALIZE_MATCH' });
     trackMissionEvent('fast_match_completed');
     if (live.homeScore > live.awayScore) trackMissionEvent('match_won');
     if (live.homeScore > 0) trackMissionEvent('goal_scored', live.homeScore);
+
+    // Show near-miss motivation for close losses
+    const scoreDiff = live.awayScore - live.homeScore;
+    if (scoreDiff > 0 && scoreDiff <= 2) {
+      setTimeout(() => {
+        setShowNearMissMotivation(true);
+      }, 1500);
+    }
   }, [live, dispatch]);
+
+  // Detect near-miss events from shot previews
+  useEffect(() => {
+    if (!live?.lastShotPreview) return;
+    const shotId = `${live.lastShotPreview.ts}`;
+    if (lastShotPreviewRef.current === shotId) return;
+    lastShotPreviewRef.current = shotId;
+
+    const nearMiss = detectShotNearMiss(live.lastShotPreview.probs);
+    if (nearMiss) {
+      triggerNearMiss(nearMiss.type, nearMiss.message, nearMiss.intensity);
+    }
+  }, [live?.lastShotPreview, triggerNearMiss]);
 
   const squadReport = useMemo(
     () => evaluateOfficialSquad(lineupIds, playersById),
@@ -1199,91 +1239,175 @@ export function MatchQuick() {
 
   return (
     <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-52 md:flex-none">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Link to="/" className="text-xs font-bold text-gray-500 hover:text-neon-yellow">
+      {/* Streak Bar */}
+      <StreakBar streak={quickMatchStreak} />
+
+      {/* Top bar — chrome editorial Olefoot */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-white/65 hover:text-neon-yellow transition-colors"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+          }}
+        >
           ← Home
         </Link>
-        <div className="flex flex-col items-center gap-2">
+
+        {/* Centro — eyebrow + logo + sub */}
+        <div className="flex flex-col items-center gap-3 flex-1 min-w-0">
+          <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+            <span>Partida rápida</span>
+          </div>
           <img
             src="/brand/olefoot-logo-2.svg"
             alt="Partida rápida"
-            className="h-[72px] sm:h-[96px] md:h-[120px] mx-auto"
+            className="h-[64px] sm:h-[88px] md:h-[108px]"
+            draggable={false}
           />
           {soundEnabled ? (
-            <div className="mt-1">
-              {!soundStarted ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const a = audioRef.current ?? new Audio('/test-pitch/quick-match-sound.mp3');
-                    a.loop = true;
-                    a.volume = 0.75;
-                    audioRef.current = a;
-                    void a.play().then(() => setSoundStarted(true)).catch(() => {
-                      // user gesture required: try again on click will work
-                      setSoundStarted(false);
-                    });
-                  }}
-                  className="text-[10px] font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-neon-yellow text-black"
-                >
-                  Tocar som
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const a = audioRef.current;
-                    if (a) {
-                      try {
-                        a.loop = false;
-                        a.pause();
-                        a.currentTime = 0;
-                      } catch (e) {}
-                    }
+            !soundStarted ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const a = audioRef.current ?? new Audio('/test-pitch/quick-match-sound.mp3');
+                  a.loop = true;
+                  a.volume = 0.75;
+                  audioRef.current = a;
+                  void a.play().then(() => setSoundStarted(true)).catch(() => {
                     setSoundStarted(false);
-                  }}
-                  className="text-[10px] font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-white/20 text-gray-200"
-                >
-                  Parar som
-                </button>
-              )}
-            </div>
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 bg-neon-yellow px-4 py-2 text-black hover:bg-white transition-colors"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                Tocar som
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const a = audioRef.current;
+                  if (a) {
+                    try {
+                      a.loop = false;
+                      a.pause();
+                      a.currentTime = 0;
+                    } catch (e) {}
+                  }
+                  setSoundStarted(false);
+                }}
+                className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-4 py-2 text-white/80 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                Parar som
+              </button>
+            )
           ) : null}
         </div>
-        {showBoard && live?.phase === 'playing' && quickPreStart === null && (
+
+        {/* Sair (durante jogo) */}
+        {showBoard && live?.phase === 'playing' && quickPreStart === null ? (
           <button
             type="button"
             onClick={() => setForfeitOpen(true)}
-            className="text-[10px] font-display font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 border border-[var(--color-danger)] bg-[rgba(255,61,61,0.08)] px-3 py-1.5 text-[var(--color-danger)] hover:bg-[rgba(255,61,61,0.16)] transition-colors"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              borderRadius: 'var(--radius-sm)',
+            }}
           >
             <LogOut className="w-3.5 h-3.5" />
-            Sair do jogo
+            Sair
           </button>
+        ) : (
+          <span className="w-12" aria-hidden /> /* spacer pra equilibrar com o ← Home */
         )}
       </div>
 
       {showBoard && !live && (
-        <div className="glass-panel p-6 border border-white/10 space-y-3">
+        <div
+          className="border border-[var(--color-border)] border-l-[3px] border-l-[var(--color-warning)] bg-dark-gray p-6 sm:p-7"
+          style={{ borderRadius: 'var(--radius-md)' }}
+        >
           {!squadOkForMatch ? (
-            <>
-              <p className="font-display font-black text-sm uppercase tracking-wide text-amber-200">
-                Plantel incompleto
-              </p>
-              <p className="text-sm text-gray-300 leading-relaxed">
-                São necessários 11 titulares disponíveis e pelo menos 5 no banco para entrar em campo.
+            <div className="flex flex-col items-start gap-4">
+              <div className="ole-eyebrow !text-[var(--color-warning)] !justify-start">
+                <span>Plantel incompleto</span>
+              </div>
+              <p
+                className="italic text-white/85"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
+                  lineHeight: 1.4,
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                Precisas de <span className="not-italic text-neon-yellow tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>11 titulares</span> e pelo menos <span className="not-italic text-neon-yellow tabular-nums" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>5 no banco</span> pra entrar em campo.
               </p>
               {squadReport.reason ? (
-                <p className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-500">{squadReport.reason}</p>
+                <p
+                  className="border border-[var(--color-border)] bg-deep-black px-3 py-2 text-white/55 max-w-full"
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '12px',
+                    lineHeight: 1.5,
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                >
+                  {squadReport.reason}
+                </p>
               ) : null}
               <Link
                 to="/team"
-                className="inline-flex w-full justify-center rounded-xl bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wide text-black sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 bg-neon-yellow px-7 py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                }}
               >
                 Ajustar plantel
               </Link>
-            </>
+            </div>
           ) : (
-            <p className="py-8 text-center text-sm text-gray-400">A preparar a partida…</p>
+            <p
+              className="italic text-white/55 text-center py-6"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(15px, 2vw, 18px)',
+                lineHeight: 1.4,
+              }}
+            >
+              “a preparar a partida…”
+            </p>
           )}
         </div>
       )}
@@ -1304,27 +1428,69 @@ export function MatchQuick() {
               initial={{ scale: 0.96, y: 8 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 8 }}
-              className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 border border-red-500/60 shadow-[0_0_40px_rgba(239,68,68,0.2)]"
+              className="w-full max-w-sm border border-[var(--color-border)] border-l-[3px] border-l-[var(--color-danger)] bg-deep-black p-6"
+              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="forfeit-quick-title" className="font-display font-black text-xl text-white text-center uppercase tracking-wide">
-                Sair do jogo?
-              </h2>
-              <p className="text-sm text-gray-400 text-center mt-4 leading-relaxed">
-                Você perde por <span className="text-red-400 font-display font-black text-lg">5×0</span>. O resultado
-                entra na liga e no histórico.
+              <div className="flex items-center gap-3 mb-4">
+                <span aria-hidden className="w-[3px] h-7 bg-[var(--color-danger)] shrink-0" />
+                <h2
+                  id="forfeit-quick-title"
+                  className="text-[var(--color-danger)] uppercase"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  Sair do jogo?
+                </h2>
+              </div>
+              <p
+                className="italic text-white/85"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(16px, 2.2vw, 19px)',
+                  lineHeight: 1.45,
+                }}
+              >
+                Você perde por{' '}
+                <span
+                  className="not-italic text-[var(--color-danger)] tabular-nums"
+                  style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+                >
+                  5×0
+                </span>
+                . O resultado entra na liga e no histórico.
               </p>
               <div className="mt-6 flex flex-col gap-2">
                 <button
                   type="button"
-                  className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-display font-black uppercase tracking-wider text-sm transition-colors"
+                  className="w-full py-3 bg-[var(--color-danger)] hover:bg-white hover:text-[var(--color-danger)] text-white transition-colors"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                   onClick={confirmForfeitQuick}
                 >
                   Confirmar desistência
                 </button>
                 <button
                   type="button"
-                  className="w-full py-3 rounded-xl border border-white/20 text-gray-300 font-bold text-sm hover:bg-white/5 transition-colors"
+                  className="w-full py-3 border border-[var(--color-border)] bg-deep-black text-white/75 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                   onClick={() => setForfeitOpen(false)}
                 >
                   Cancelar
@@ -1352,39 +1518,67 @@ export function MatchQuick() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.92, y: 8 }}
               transition={{ type: 'spring', stiffness: 480, damping: 32 }}
-              className="w-full max-w-sm bg-zinc-900 border border-amber-400 rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(251,191,36,0.25)]"
+              className="w-full max-w-sm border border-[var(--color-warning)] bg-deep-black overflow-hidden"
+              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 24px 64px rgba(0,0,0,0.65)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
-              <div className="bg-amber-400 px-6 py-4 flex items-center gap-3">
+              {/* Header amarelo (cor do cartão — semântico) */}
+              <div className="bg-[var(--color-warning)] px-5 py-4 flex items-center gap-3">
                 <div className="flex gap-1 shrink-0">
-                  <span className="inline-block w-5 h-7 rounded-[3px] bg-amber-500 shadow-inner" />
-                  <span className="inline-block w-5 h-7 rounded-[3px] bg-amber-500 shadow-inner" />
+                  <span className="inline-block w-5 h-7 rounded-[2px] bg-amber-500 shadow-inner" />
+                  <span className="inline-block w-5 h-7 rounded-[2px] bg-amber-500 shadow-inner" />
                 </div>
-                <div>
-                  <p className="font-display font-black text-xs uppercase tracking-widest text-amber-900">
-                    Segundo Amarelo
+                <div className="min-w-0">
+                  <p
+                    className="text-amber-900 uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.22em',
+                    }}
+                  >
+                    Segundo amarelo
                   </p>
-                  <p className="font-display font-black text-xl text-black leading-tight uppercase tracking-wide">
+                  <p
+                    className="text-black uppercase truncate"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '18px',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      lineHeight: 1.05,
+                    }}
+                  >
                     {secondYellowAlert.playerNum} {secondYellowAlert.playerName}
                   </p>
                 </div>
               </div>
 
               {/* Body */}
-              <div className="px-6 pt-5 pb-4 space-y-4">
-                <p className="text-sm text-zinc-300 leading-relaxed">
-                  O VAR está a rever o lance. Tens{' '}
-                  <span className="font-display font-black text-amber-400 text-base tabular-nums">
+              <div className="px-5 pt-5 pb-5 space-y-4">
+                <p
+                  className="italic text-white/85"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: '15px',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  VAR a rever o lance. Tens{' '}
+                  <span
+                    className="not-italic text-[var(--color-warning)] tabular-nums"
+                    style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '18px' }}
+                  >
                     {yellowCountdown}s
                   </span>{' '}
-                  para decidir — se não agires, o árbitro mostrará o vermelho.
+                  pra decidir — se não agires, vem o vermelho.
                 </p>
 
                 {/* Countdown bar */}
-                <div className="w-full h-1.5 rounded-full bg-zinc-700 overflow-hidden">
+                <div className="w-full h-[3px] bg-white/10 overflow-hidden">
                   <motion.div
-                    className="h-full rounded-full bg-amber-400"
+                    className="h-full bg-[var(--color-warning)]"
                     animate={{ width: `${(yellowCountdown / 5) * 100}%` }}
                     transition={{ duration: 0.2, ease: 'linear' }}
                   />
@@ -1394,16 +1588,32 @@ export function MatchQuick() {
                   <button
                     type="button"
                     onClick={handleYellowSubstituteNow}
-                    className="w-full py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-display font-black uppercase tracking-wider text-sm transition-colors"
+                    className="w-full py-3 bg-[var(--color-warning)] hover:bg-white text-black transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
                   >
-                    Substituir agora — salvar o jogador
+                    Substituir agora
                   </button>
                   <button
                     type="button"
                     onClick={handleYellowWaitVar}
-                    className="w-full py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 font-display font-black uppercase tracking-wider text-sm transition-colors"
+                    className="w-full py-3 border border-[var(--color-border)] bg-deep-black text-white/75 hover:border-[var(--color-warning)] hover:text-[var(--color-warning)] transition-colors"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
                   >
-                    Aguardar VAR — risco de vermelho
+                    Aguardar VAR
                   </button>
                 </div>
               </div>
@@ -1505,58 +1715,161 @@ export function MatchQuick() {
               )}
             </AnimatePresence>
           </motion.div>
-          {/* Força dos times — soma dos overalls, atualiza a cada sub/expulsão */}
-          <div className="w-full max-w-[min(100%,44rem)] mx-auto mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <div className="flex flex-col items-start gap-0.5">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Força — Casa</span>
+          {/* Força dos times — Moret italic, padrão DNA do Campeão */}
+          <div className="w-full max-w-[min(100%,44rem)] mx-auto mt-2 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+            <div className="flex flex-col items-start gap-1">
+              <span
+                className="text-white/45 uppercase"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.22em',
+                  fontWeight: 600,
+                }}
+              >
+                Força · Casa
+              </span>
               <motion.span
                 key={homeForce}
-                initial={{ scale: 1.15, color: '#eaff00' }}
-                animate={{ scale: 1, color: '#eaff00' }}
+                initial={{ scale: 1.15 }}
+                animate={{ scale: 1 }}
                 transition={{ duration: 0.4 }}
-                className="font-display font-black text-2xl text-neon-yellow tabular-nums"
+                className="italic text-neon-yellow tabular-nums leading-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontWeight: 700,
+                  fontSize: 'clamp(24px, 3.5vw, 32px)',
+                  letterSpacing: '-0.02em',
+                }}
               >
                 {homeForce || '—'}
               </motion.span>
             </div>
-            <div className="flex flex-col items-center gap-1 text-[9px] text-gray-600 font-bold uppercase tracking-wider">
-              <span>vs</span>
+            <div className="flex flex-col items-center gap-1">
+              <span
+                className="italic text-white/40"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontWeight: 400,
+                  fontSize: 'clamp(16px, 2.2vw, 22px)',
+                  lineHeight: 1,
+                }}
+              >
+                vs
+              </span>
               <div className="flex flex-col gap-0.5 text-center">
                 {(live.sentOffPlayerIds ?? []).length > 0 && (
-                  <span className="text-red-400">{(live.sentOffPlayerIds ?? []).length} exp.</span>
+                  <span
+                    className="text-[var(--color-danger)] uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    {(live.sentOffPlayerIds ?? []).length} exp.
+                  </span>
                 )}
                 {awaySentOffRows.length > 0 && (
-                  <span className="text-red-400/70">{awaySentOffRows.length} exp. vis.</span>
+                  <span
+                    className="text-[var(--color-danger)]/70 uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    {awaySentOffRows.length} exp. vis.
+                  </span>
                 )}
               </div>
             </div>
-            <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Força — Vis.</span>
+            <div className="flex flex-col items-end gap-1">
+              <span
+                className="text-white/45 uppercase"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.22em',
+                  fontWeight: 600,
+                }}
+              >
+                Força · Vis.
+              </span>
               <motion.span
                 key={awayForce}
                 initial={{ scale: 1.15 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.4 }}
-                className="font-display font-black text-2xl text-white tabular-nums"
+                className="italic text-white tabular-nums leading-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontWeight: 700,
+                  fontSize: 'clamp(24px, 3.5vw, 32px)',
+                  letterSpacing: '-0.02em',
+                }}
               >
                 {awayForce || '—'}
               </motion.span>
             </div>
           </div>
+          {/* Score editorial — Moret italic gigante (assinatura Olefoot) */}
           <div
             className={cn(
-              'flex justify-center items-center gap-8 font-display font-black text-5xl transition-opacity',
+              'flex justify-center items-center transition-opacity',
               quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1'
                 ? 'opacity-35'
                 : 'opacity-100',
             )}
           >
-            <span className="text-neon-yellow">{displayHomeScore}</span>
-            <span className="text-gray-600 text-3xl">–</span>
-            <span className="text-white">{displayAwayScore}</span>
+            <span
+              className="italic text-neon-yellow tabular-nums leading-none"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(56px, 12vw, 112px)',
+                letterSpacing: '-0.04em',
+              }}
+            >
+              {displayHomeScore}
+            </span>
+            <span
+              className="italic text-white/40 leading-none mx-2 sm:mx-3"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 400,
+                fontSize: 'clamp(40px, 8vw, 76px)',
+              }}
+            >
+              –
+            </span>
+            <span
+              className="italic text-white tabular-nums leading-none"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(56px, 12vw, 112px)',
+                letterSpacing: '-0.04em',
+              }}
+            >
+              {displayAwayScore}
+            </span>
           </div>
           {quickPreStart === null ? (
-            <div className="space-y-2 pt-1">
+            <div className="w-full max-w-[min(100%,44rem)] mx-auto pt-4">
+              <MomentumBar
+                momentum={momentumPressure}
+                homeShort={live.homeShort}
+                awayShort={live.awayShort}
+                homeColor="#FDE047"
+                awayColor="#FFFFFF"
+              />
+            </div>
+          ) : null}
+          {quickPreStart === null ? (
+            <div className="space-y-2 pt-1 hidden">
               <p className="text-[9px] font-bold uppercase tracking-wider text-center text-gray-500">
                 Momento — pressão em direção à baliza adversária
               </p>
@@ -1713,18 +2026,40 @@ export function MatchQuick() {
       {showBoard && live && (
         <div>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1.5 sm:gap-3 md:gap-4 items-start w-full">
-            <div className="space-y-2 min-w-0">
-              <div className="flex items-center justify-between border-b border-neon-yellow/30 pb-2 gap-2">
-                <MatchdayLineupColumnTitle
-                  side="home"
-                  name={live.homeName ?? club.name}
-                  className="text-xs text-neon-yellow"
-                />
-                <span className="text-[9px] text-gray-500 shrink-0">Casa</span>
+            <div className="space-y-3 min-w-0">
+              {/* Header da coluna — ▍ TÍTULO */}
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden className="shrink-0 w-[3px] h-5 bg-neon-yellow" />
+                  <span
+                    className="text-neon-yellow uppercase truncate"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    {live.homeName ?? club.name}
+                  </span>
+                </div>
+                <span
+                  className="shrink-0 text-white/45 uppercase"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '9px',
+                    letterSpacing: '0.22em',
+                    fontWeight: 600,
+                  }}
+                >
+                  Casa
+                </span>
               </div>
-              <div className="flex flex-col gap-1.5 sm:gap-2">
+              <div className="flex flex-col gap-2">
                 {homeRanked.map(({ player: p, impact }, idx) => {
                   const top = idx < 3;
+                  const isSelected = selected?.playerId === p.playerId;
+                  const isTired = p.fatigue >= 68;
                   return (
                     <motion.button
                       key={p.playerId}
@@ -1734,52 +2069,104 @@ export function MatchQuick() {
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                       onClick={() => setSelected(p)}
                       className={cn(
-                        'w-full text-left glass-panel p-1.5 sm:p-3 border flex items-center justify-between gap-1 sm:gap-2 rounded-lg',
-                        selected?.playerId === p.playerId
-                          ? 'border-neon-yellow bg-neon-yellow/10'
-                          : p.fatigue >= 68
-                            ? 'border-orange-400/60 bg-orange-950/20'
+                        'w-full text-left bg-dark-gray border border-l-[3px] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 transition-colors hover:border-neon-yellow/40',
+                        isSelected
+                          ? 'border-[var(--color-border)] border-l-neon-yellow bg-neon-yellow/[0.08]'
+                          : isTired
+                            ? 'border-[var(--color-border)] border-l-[var(--color-warning)]'
                             : top
-                              ? 'border-neon-yellow/50 bg-neon-yellow/[0.06] shadow-[0_0_14px_rgba(234,255,0,0.12)]'
-                              : 'border-white/10',
+                              ? 'border-[var(--color-border)] border-l-neon-yellow'
+                              : 'border-[var(--color-border)] border-l-white/15',
                       )}
+                      style={{ borderRadius: 'var(--radius-md)' }}
                     >
-                      <span className="text-[9px] font-display font-black text-gray-500 w-4 shrink-0 tabular-nums">
+                      <span
+                        className="shrink-0 italic tabular-nums leading-none w-5 text-center"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: '15px',
+                          color: top ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.35)',
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
                         {idx + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-[10px] sm:text-sm text-white truncate flex items-center min-w-0">
-                          <span className="truncate">
+                        <div className="flex items-center min-w-0">
+                          <span
+                            className="truncate text-white uppercase"
+                            style={{
+                              fontFamily: 'var(--font-display)',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              letterSpacing: '0.04em',
+                            }}
+                          >
                             {p.num} {p.name}
                           </span>
                           <PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />
                         </div>
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <div className="text-[8px] sm:text-[10px] text-gray-500 truncate flex items-center gap-1.5">
-                            <span>{p.pos}</span>
-                            <span className="text-white/30">•</span>
-                            <span className={cn(
-                              'font-bold tabular-nums',
-                              p.fatigue >= 80 ? 'text-red-400' : p.fatigue >= 60 ? 'text-orange-400' : 'text-gray-400',
-                            )}>
-                              {Math.round(p.fatigue)}% CANSAÇO
-                            </span>
-                          </div>
-                          {/* Barra de cansaço */}
-                          <div className="h-1 w-full max-w-[4rem] rounded-full bg-white/10 overflow-hidden">
-                            <div
-                              className={cn(
-                                'h-full rounded-full transition-all duration-700',
-                                p.fatigue >= 80 ? 'bg-red-500' : p.fatigue >= 60 ? 'bg-orange-400' : 'bg-emerald-500',
-                              )}
-                              style={{ width: `${Math.min(100, p.fatigue)}%` }}
-                            />
-                          </div>
+                        <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                          <span
+                            className="text-white/45 uppercase"
+                            style={{
+                              fontFamily: 'var(--font-ui)',
+                              fontSize: '9px',
+                              letterSpacing: '0.22em',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {p.pos}
+                          </span>
+                          <span
+                            className={cn(
+                              'tabular-nums',
+                              p.fatigue >= 80
+                                ? 'text-[var(--color-danger)]'
+                                : p.fatigue >= 60
+                                  ? 'text-[var(--color-warning)]'
+                                  : 'text-white/55',
+                            )}
+                            style={{
+                              fontFamily: 'var(--font-ui)',
+                              fontSize: '9px',
+                              letterSpacing: '0.18em',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {Math.round(p.fatigue)}% cansaço
+                          </span>
+                        </div>
+                        {/* Barra de cansaço (DNA-style) */}
+                        <div className="mt-1 h-[2px] bg-white/8 overflow-hidden max-w-[6rem]">
+                          <div
+                            className={cn(
+                              'h-full transition-all duration-700',
+                              p.fatigue >= 80
+                                ? 'bg-[var(--color-danger)]'
+                                : p.fatigue >= 60
+                                  ? 'bg-[var(--color-warning)]'
+                                  : 'bg-[var(--color-success)]',
+                            )}
+                            style={{ width: `${Math.min(100, p.fatigue)}%` }}
+                            aria-hidden
+                          />
                         </div>
                       </div>
-                      <div className="text-[9px] sm:text-xs font-display font-bold text-neon-yellow shrink-0 tabular-nums">
+                      {/* Impact score — Moret italic editorial */}
+                      <span
+                        className="shrink-0 italic text-neon-yellow tabular-nums leading-none"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: 'clamp(16px, 2vw, 20px)',
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
                         {impact.toFixed(2)}
-                      </div>
+                      </span>
                     </motion.button>
                   );
                 })}
@@ -1789,23 +2176,58 @@ export function MatchQuick() {
                     layout="position"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                    className="w-full glass-panel p-2.5 sm:p-3 border border-red-500/35 bg-red-950/20 flex items-center justify-between gap-2 rounded-lg opacity-90"
+                    className="w-full bg-dark-gray border border-l-[3px] border-[var(--color-border)] border-l-[var(--color-danger)] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 opacity-85"
+                    style={{ borderRadius: 'var(--radius-md)' }}
                   >
-                    <span className="text-[10px] font-display font-black text-red-400/80 w-5 shrink-0 text-center">—</span>
+                    <span
+                      className="shrink-0 italic tabular-nums leading-none w-5 text-center text-[var(--color-danger)]/65"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                      }}
+                    >
+                      —
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-xs sm:text-sm text-red-100/95 truncate flex items-center gap-2 min-w-0">
-                        <span className="truncate">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="truncate text-white/85 uppercase"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                          }}
+                        >
                           {row.num} {row.name}
                         </span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-red-400 shrink-0">Expulso</span>
+                        <span
+                          className="shrink-0 text-[var(--color-danger)] uppercase"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            letterSpacing: '0.22em',
+                          }}
+                        >
+                          Expulso
+                        </span>
                       </div>
-                      <div className="text-[9px] sm:text-[10px] text-red-300/70">{row.pos}</div>
+                      <div
+                        className="mt-0.5 text-white/45 uppercase"
+                        style={{
+                          fontFamily: 'var(--font-ui)',
+                          fontSize: '9px',
+                          letterSpacing: '0.22em',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {row.pos}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <RedCardIcon />
-                      <span className="text-[10px] sm:text-xs font-display font-bold text-red-300/90 tabular-nums w-8 text-right">
-                        —
-                      </span>
                     </div>
                   </motion.div>
                 ))}
@@ -1827,16 +2249,36 @@ export function MatchQuick() {
               <div className="hidden sm:block w-px flex-1 min-h-6 bg-gradient-to-b from-neon-yellow/25 via-transparent to-transparent" />
             </div>
 
-            <div className="space-y-2 min-w-0">
-              <div className="flex items-center justify-between border-b border-white/20 pb-2 gap-2">
-                <MatchdayLineupColumnTitle
-                  side="away"
-                  name={live.awayName ?? fixture.opponent.name}
-                  className="text-xs text-gray-300"
-                />
-                <span className="text-[9px] text-gray-500 shrink-0 text-right">Visitante (IA)</span>
+            <div className="space-y-3 min-w-0">
+              {/* Header da coluna — ▍ TÍTULO */}
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden className="shrink-0 w-[3px] h-5 bg-white/35" />
+                  <span
+                    className="text-white/85 uppercase truncate"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    {live.awayName ?? fixture.opponent.name}
+                  </span>
+                </div>
+                <span
+                  className="shrink-0 text-white/45 uppercase text-right"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '9px',
+                    letterSpacing: '0.22em',
+                    fontWeight: 600,
+                  }}
+                >
+                  Vis. (IA)
+                </span>
               </div>
-              <div className="flex flex-col gap-1.5 sm:gap-2">
+              <div className="flex flex-col gap-2">
                 {awayRanked.map((p, idx) => {
                   const top = idx < 3;
                   return (
@@ -1846,27 +2288,64 @@ export function MatchQuick() {
                       initial={false}
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                       className={cn(
-                        'w-full glass-panel p-2.5 sm:p-3 border flex items-center justify-between gap-2 rounded-lg',
+                        'w-full bg-dark-gray border border-l-[3px] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3',
                         top
-                          ? 'border-white/35 bg-white/[0.04] shadow-[0_0_12px_rgba(255,255,255,0.06)]'
-                          : 'border-white/10',
+                          ? 'border-[var(--color-border)] border-l-white/45'
+                          : 'border-[var(--color-border)] border-l-white/10',
                       )}
+                      style={{ borderRadius: 'var(--radius-md)' }}
                     >
-                      <span className="text-[9px] font-display font-black text-gray-500 w-4 shrink-0 tabular-nums">
+                      <span
+                        className="shrink-0 italic tabular-nums leading-none w-5 text-center"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: '15px',
+                          color: top ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)',
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
                         {idx + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-[10px] sm:text-sm text-white truncate flex items-center min-w-0">
-                          <span className="truncate">
+                        <div className="flex items-center min-w-0">
+                          <span
+                            className="truncate text-white uppercase"
+                            style={{
+                              fontFamily: 'var(--font-display)',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              letterSpacing: '0.04em',
+                            }}
+                          >
                             {p.num} {p.name}
                           </span>
                           <PlayerEventStrip badges={awayEventBadges.get(p.id) ?? []} />
                         </div>
-                        <div className="text-[8px] sm:text-[10px] text-gray-500 truncate">{p.pos}</div>
+                        <span
+                          className="text-white/45 uppercase block mt-0.5"
+                          style={{
+                            fontFamily: 'var(--font-ui)',
+                            fontSize: '9px',
+                            letterSpacing: '0.22em',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {p.pos}
+                        </span>
                       </div>
-                      <div className="text-[9px] sm:text-xs font-display font-bold text-gray-200 shrink-0 tabular-nums">
+                      {/* Impact score — Moret italic */}
+                      <span
+                        className="shrink-0 italic text-white/85 tabular-nums leading-none"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: 'clamp(16px, 2vw, 20px)',
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
                         {p.impact.toFixed(2)}
-                      </div>
+                      </span>
                     </motion.div>
                   );
                 })}
@@ -1876,23 +2355,58 @@ export function MatchQuick() {
                     layout="position"
                     initial={false}
                     transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                    className="w-full glass-panel p-2.5 sm:p-3 border border-red-500/35 bg-red-950/20 flex items-center justify-between gap-2 rounded-lg opacity-90"
+                    className="w-full bg-dark-gray border border-l-[3px] border-[var(--color-border)] border-l-[var(--color-danger)] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 opacity-85"
+                    style={{ borderRadius: 'var(--radius-md)' }}
                   >
-                    <span className="text-[10px] font-display font-black text-red-400/80 w-5 shrink-0 text-center">—</span>
+                    <span
+                      className="shrink-0 italic tabular-nums leading-none w-5 text-center text-[var(--color-danger)]/65"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                      }}
+                    >
+                      —
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-xs sm:text-sm text-red-100/95 truncate flex items-center gap-2 min-w-0">
-                        <span className="truncate">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="truncate text-white/85 uppercase"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                          }}
+                        >
                           {row.num} {row.name}
                         </span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-red-400 shrink-0">Expulso</span>
+                        <span
+                          className="shrink-0 text-[var(--color-danger)] uppercase"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            letterSpacing: '0.22em',
+                          }}
+                        >
+                          Expulso
+                        </span>
                       </div>
-                      <div className="text-[9px] sm:text-[10px] text-red-300/70">{row.pos}</div>
+                      <div
+                        className="mt-0.5 text-white/45 uppercase"
+                        style={{
+                          fontFamily: 'var(--font-ui)',
+                          fontSize: '9px',
+                          letterSpacing: '0.22em',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {row.pos}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <RedCardIcon />
-                      <span className="text-[10px] sm:text-xs font-display font-bold text-red-300/90 tabular-nums w-8 text-right">
-                        —
-                      </span>
                     </div>
                   </motion.div>
                 ))}
@@ -2050,30 +2564,49 @@ export function MatchQuick() {
             className="fixed bottom-[5.5rem] left-0 right-0 z-[80] p-3 sm:p-4 md:bottom-4"
             aria-live="polite"
           >
-            <div className="mx-auto max-w-lg bg-black border border-zinc-800 rounded-2xl overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.95)]">
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-zinc-800 border-b border-zinc-700">
+            <div
+              className="mx-auto max-w-lg bg-deep-black border border-[var(--color-border)] overflow-hidden"
+              style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 -8px 40px rgba(0,0,0,0.95)' }}
+            >
+              {/* Header — scoreboard tape style */}
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-dark-gray border-b border-[var(--color-border)]">
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <p className="font-display font-black text-[10px] uppercase tracking-widest text-zinc-300">
-                    Momento do Treinador
+                  <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 live-dot" />
+                  <p
+                    className="text-neon-yellow uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      letterSpacing: '0.22em',
+                    }}
+                  >
+                    Momento do treinador
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className="text-[10px] text-zinc-500 font-medium">
+                  <p
+                    className="text-white/55 truncate"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
                     {coachMoment.awayScore > coachMoment.homeScore
-                      ? `Estás a perder ${coachMoment.homeScore}–${coachMoment.awayScore}`
+                      ? `A perder ${coachMoment.homeScore}–${coachMoment.awayScore}`
                       : coachMoment.awayScore === coachMoment.homeScore
-                        ? `Empate ${coachMoment.homeScore}–${coachMoment.awayScore} — pressão adversária`
+                        ? `Empate ${coachMoment.homeScore}–${coachMoment.awayScore}`
                         : `${coachMoment.homeScore}–${coachMoment.awayScore}`}
                   </p>
                   <button
                     type="button"
                     onClick={dismissCoachMoment}
-                    className="text-zinc-500 hover:text-zinc-200 transition-colors text-lg leading-none"
+                    className="grid h-7 w-7 place-items-center text-white/45 hover:text-neon-yellow transition-colors"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
                     aria-label="Fechar"
                   >
-                    ×
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -2179,8 +2712,14 @@ export function MatchQuick() {
 
       {summary && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          <div className="glass-panel p-6 border border-neon-yellow/20 text-center">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">Fim de jogo</p>
+          {/* Resumo editorial — eyebrow + score + frase */}
+          <div
+            className="border border-[var(--color-border)] border-l-[3px] border-l-neon-yellow bg-dark-gray px-6 py-7 text-center"
+            style={{ borderRadius: 'var(--radius-md)' }}
+          >
+            <div className="ole-eyebrow !text-neon-yellow mb-4">
+              <span>Fim de jogo</span>
+            </div>
             <MatchdayResultScores
               homeShort={summary.homeShort}
               awayShort={summary.awayShort}
@@ -2191,38 +2730,153 @@ export function MatchQuick() {
               awaySeed={fixture.opponent.id}
               className="text-2xl sm:text-3xl"
             />
-            <p className="text-xs text-gray-500 mt-2">Liga e elenco atualizados</p>
-          </div>
-          <div className="glass-panel p-4 border border-white/10 max-h-36 overflow-y-auto">
-            {summary.events.slice(0, 15).map((e) => (
-              <p key={e.id} className="text-[11px] text-gray-400 py-0.5">
-                {e.text}
-              </p>
-            ))}
-          </div>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              className="btn-primary w-full flex justify-center"
-              onClick={() => setSession((s) => s + 1)}
+            <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
+            <p
+              className="italic text-white/60 mt-4"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(14px, 1.7vw, 17px)',
+                lineHeight: 1.4,
+              }}
             >
-              <span className="btn-primary-inner flex items-center gap-2">
-                <RotateCcw className="w-4 h-4" /> Jogar novamente
-              </span>
-            </button>
+              “liga e elenco atualizados.”
+            </p>
+          </div>
+
+          {/* Eventos da partida */}
+          <div
+            className="border border-[var(--color-border)] bg-dark-gray p-4 max-h-44 overflow-y-auto"
+            style={{ borderRadius: 'var(--radius-md)' }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <span aria-hidden className="w-[3px] h-5 bg-neon-yellow shrink-0" />
+              <h3
+                className="text-neon-yellow uppercase"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                }}
+              >
+                Lances do jogo
+              </h3>
+            </div>
+            <div className="space-y-1">
+              {summary.events.slice(0, 15).map((e) => (
+                <p
+                  key={e.id}
+                  className="text-white/65"
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '12px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {e.text}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col gap-2">
+            {summary.result === 'loss' ? (
+              <>
+                {/* Quick Rematch destacado para derrotas */}
+                <motion.button
+                  type="button"
+                  initial={{ scale: 0.95 }}
+                  animate={{ scale: 1 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-4 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 transition-all relative overflow-hidden group"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    borderRadius: 'var(--radius-sm)',
+                    boxShadow: '0 8px 32px rgba(220, 38, 38, 0.4)',
+                  }}
+                  onClick={() => setSession((s) => s + 1)}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-white/20"
+                    animate={{
+                      x: ['-100%', '100%'],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                  <RotateCcw className="w-5 h-5 relative z-10" />
+                  <span className="relative z-10">Revanche imediata</span>
+                </motion.button>
+                <p
+                  className="text-center text-red-400/80 -mt-1 mb-1"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: '13px',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  "Não desistas. Tenta outra vez."
+                </p>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="w-full py-3 inline-flex items-center justify-center gap-2 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                }}
+                onClick={() => setSession((s) => s + 1)}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Jogar novamente
+              </button>
+            )}
             <button
               type="button"
-              className="w-full py-3 rounded-xl border border-white/20 font-bold text-sm flex items-center justify-center gap-2"
+              className="w-full py-3 inline-flex items-center justify-center gap-2 border border-[var(--color-border)] bg-deep-black text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
               onClick={() => navigate('/leagues')}
             >
-              <Trophy className="w-4 h-4 text-neon-yellow" /> Ir para Liga
+              <Trophy className="w-4 h-4" />
+              Ir para Liga
             </button>
             <button
               type="button"
-              className="w-full py-3 rounded-xl border border-white/20 font-bold text-sm flex items-center justify-center gap-2"
+              className="w-full py-3 inline-flex items-center justify-center gap-2 border border-[var(--color-border)] bg-deep-black text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
               onClick={() => navigate('/')}
             >
-              <Home className="w-4 h-4" /> Home
+              <Home className="w-4 h-4" />
+              Home
             </button>
           </div>
         </motion.div>
@@ -2260,6 +2914,14 @@ export function MatchQuick() {
 
       {/* Espaçador de segurança — garante rolagem confortável acima da nav bar */}
       <div className="h-24 shrink-0" aria-hidden />
+
+      {/* Near-Miss System */}
+      <NearMissOverlay event={nearMissEvent} onDismiss={clearNearMiss} />
+      <NearMissMotivation
+        visible={showNearMissMotivation}
+        scoreDiff={summary ? summary.awayScore - summary.homeScore : 0}
+        onClose={() => setShowNearMissMotivation(false)}
+      />
     </div>
   );
 }

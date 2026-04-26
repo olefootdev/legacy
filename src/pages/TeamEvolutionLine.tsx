@@ -7,6 +7,7 @@ import { overallFromAttributes } from '@/entities/player';
 import { PLAYER_SEASON_ATTR_KEYS, PLAYER_SEASON_ATTR_LABELS } from '@/team/playerSeasonLedger';
 import type { PlayerEvolutionPoint } from '@/team/playerEvolutionTimeline';
 import type { PlayerAttributes } from '@/entities/types';
+import { BackButton } from '@/components/BackButton';
 
 const LEDGER_METRICS = [
   { key: 'goals', label: 'Golos (cum.)' },
@@ -281,6 +282,7 @@ export function TeamEvolutionLine() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-4 pb-12 text-[13px] leading-snug sm:pb-10">
+      <BackButton to="/clube" label="Clube" />
       <TeamMeuTimeHeader
         title="Linha evolutiva"
         subtitle="Evolução de atributos e totais de jogo ao longo do tempo. Compara com outro jogador do plantel ou usa uma carta do mercado EXP como referência (atributos)."

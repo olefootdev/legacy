@@ -48,6 +48,8 @@ export interface PitchPlayerState {
   strongFoot?: import('@/entities/types').PlayerStrongFoot;
   /** Arquétipo de jogador (profissional/novo_talento/lenda/meme/ai_plus) */
   archetype?: import('@/entities/types').PlayerArchetype;
+  /** IDs de Coach Skills equipadas (carregadas do PlayerEntity) */
+  skillIds?: string[];
 }
 
 export type GoalBuildUp = 'positional' | 'counter';
@@ -56,7 +58,7 @@ export interface MatchEventEntry {
   id: string;
   minute: number;
   text: string;
-  kind: 'narrative' | 'goal_home' | 'goal_away' | 'whistle' | 'sub' | 'yellow_home' | 'red_home' | 'yellow_away' | 'red_away' | 'injury_home' | 'penalty_start' | 'penalty_result';
+  kind: 'narrative' | 'goal_home' | 'goal_away' | 'whistle' | 'sub' | 'yellow_home' | 'red_home' | 'yellow_away' | 'red_away' | 'injury_home' | 'penalty_start' | 'penalty_result' | 'shot_home' | 'shot_away';
   /**
    * Ao vivo 2D (`test2d`): destaque no feed de “aprendizagem” / feedback tático (acerto vs erro).
    * Só o motor táctico preenche; restantes modos ignoram na UI.

@@ -456,7 +456,9 @@ export function Cadastro() {
                 className={inputClass}
                 value={clubName}
                 onChange={(e) => setClubName(e.target.value)}
+                maxLength={10}
               />
+              <p className="mt-1 text-[10px] text-white/40">Máximo 10 caracteres</p>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-white/65">Iniciais</span>

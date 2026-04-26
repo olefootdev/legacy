@@ -17,6 +17,7 @@ import {
   User,
   Shield,
 } from 'lucide-react';
+import { BackButton } from '@/components/BackButton';
 import {
   useCallback,
   useEffect,
@@ -203,6 +204,9 @@ export function Config() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
+      <div className="px-3 sm:px-4 lg:px-8">
+        <BackButton to="/manager" label="Manager" />
+      </div>
       {/* ── HERO BVB — amarelo full + watermark + Agency caps + Moret italic ── */}
       <section
         aria-label="Configurações"

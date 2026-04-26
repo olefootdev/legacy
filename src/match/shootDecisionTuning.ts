@@ -4,17 +4,22 @@
 
 /**
  * Zona mínima para candidatura a remate.
- * Removido 'attacking_third' — antes qualquer posição no último terço (~30m do gol)
- * autorizava chute. Agora só a grande área do adversário dispara auto-eligibilidade;
- * fora dela, o fallback por distância decide (e a distância foi apertada).
+ * Inclui 'attacking_third' para permitir chutes de fora da área quando há espaço.
+ * Jogadores com boa finalização e sem pressão podem chutar de ~25-28m.
  */
-export const SHOOT_MIN_ZONE_TAGS = ['opp_box'] as const;
+export const SHOOT_MIN_ZONE_TAGS = ['opp_box', 'attacking_third'] as const;
 
 /**
  * Raio máximo ao gol (m) para candidatura mesmo fora do `opp_box`.
- * 22m ≈ entrada da grande área. Abaixo disso cai pro passe.
+ * 28m permite chutes de meia-distância (era 22m, muito conservador).
  */
-export const SHOOT_MAX_DIST_TO_GOAL_M = 22;
+export const SHOOT_MAX_DIST_TO_GOAL_M = 28;
+
+/**
+ * Distância mínima para considerar chute de longa distância (fora da área).
+ * Chutes entre 22-28m são "long range" e têm xG reduzido mas são permitidos.
+ */
+export const SHOOT_LONG_RANGE_MIN_DIST = 22;
 
 /** Piso: score(shoot) >= score(pass_safe) * F + epsilon (quando elegível) */
 export const SHOOT_SCORE_VS_PASS_SAFE_FACTOR = 0.62;

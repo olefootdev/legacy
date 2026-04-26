@@ -546,7 +546,19 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
         : 1;
     const pullFactor = (BALL_PULL[p.role] ?? 0.06) * ballPullScale * pullDampBuild * boxRaidBoost;
     const centralBand = ball.x > 36 && ball.x < 64;
-    const pullDamp = centralBand ? 0.5 : 1;
+    // Densidade local no alvo (próprios + adversários em raio 8): se >2, amortece pull
+    // independente de faixa — evita aglomeração no flanco quando 3+ jogadores convergem.
+    let localDensity = 0;
+    for (const q of players) {
+      if (q.playerId === p.playerId) continue;
+      if (Math.hypot(q.x - tx, q.y - ty) < 8) localDensity += 1;
+    }
+    if (opponentPositions) {
+      for (const q of opponentPositions) {
+        if (Math.hypot(q.x - tx, q.y - ty) < 8) localDensity += 1;
+      }
+    }
+    const pullDamp = localDensity > 2 ? 0.3 : (centralBand ? 0.5 : 1);
     tx += (ball.x - tx) * pullFactor * pullDamp;
     ty += (ball.y - ty) * pullFactor * pullDamp;
 

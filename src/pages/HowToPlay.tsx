@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
+import { BackButton } from '@/components/BackButton';
 
 type Step = {
   icon: typeof Users;
@@ -95,6 +96,9 @@ export function HowToPlay() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 pb-8 overflow-x-hidden">
+      <div className="px-3 sm:px-4 lg:px-8">
+        <BackButton to="/ajuda" label="Ajuda" />
+      </div>
       {/* ── HERO BVB — amarelo full + watermark + Agency + Moret italic ── */}
       <section
         aria-label="Como jogar"

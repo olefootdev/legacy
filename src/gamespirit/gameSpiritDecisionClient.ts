@@ -35,12 +35,18 @@ export async function requestGameSpiritDecision(
     return { error: 'GameSpirit desativado pelo admin (feature flag).', status: 503 };
   }
   const base = olefootApiBase();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
   try {
     const r = await fetch(`${base}/api/gamespirit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ context: body }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     const j = (await r.json()) as GameSpiritDecisionResponse & { error?: string };
     if (!r.ok || typeof j.error === 'string') {
       return { error: j.error ?? `HTTP ${r.status}`, status: r.status };
@@ -58,6 +64,10 @@ export async function requestGameSpiritDecision(
       narration: j.narration,
     };
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === 'AbortError') {
+      return { error: 'Timeout: servidor não respondeu em 15s.' };
+    }
     return {
       error: e instanceof Error ? e.message : 'Sem ligação ao servidor (olefoot-server na porta 4000?).',
     };

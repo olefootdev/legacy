@@ -11,6 +11,8 @@ import {
   Users,
   Coins,
   X,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +28,7 @@ import {
   CITY_QUICK_TRAINING_COST_EXP,
   CITY_QUICK_TRAINING_DURATION_H,
 } from '@/game/cityQuickConstants';
+import { BackButton } from '@/components/BackButton';
 import { maxSlotsByTrainingCenter } from '@/systems/trainingPlans';
 import {
   megastoreAwayConfidenceBonusPoints,
@@ -39,9 +42,8 @@ import {
   trainingCenterMaxConcurrentCollectivePlans,
   youthAcademyProspectTrainingMultiplier,
 } from '@/clubStructures/benefits';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
-import { STRUCTURE_TO_BANNER_SLOT } from '@/ui/banners';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
+import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 
 type CityStructDef = {
   uiId: string;
@@ -217,26 +219,20 @@ export function City() {
   const structuresState = useGameStore((s) => s.structures);
   const finance = useGameStore((s) => s.finance);
   const crowd = useGameStore((s) => s.crowd);
+  const clubName = useGameStore((s) => s.club.name);
 
-  const [selected, setSelected] = useState(CITY_STRUCTURE_DEFS[0]!);
+  const [selected, setSelected] = useState<CityStructDef | null>(null);
   const [quickPendingId, setQuickPendingId] = useState<ClubStructureId | null>(null);
 
-  const level = levelOf(structuresState, selected.structureId);
-  const stats = useMemo(() => selected.statsForLevel(level), [selected, level]);
-  const upgrade = useMemo(
-    () => upgradeLine(selected.structureId, level, finance.ole, finance.broCents),
-    [selected.structureId, level, finance.ole, finance.broCents],
+  const stadiumLevel = levelOf(structuresState, 'stadium');
+  const stadiumUpgrade = useMemo(
+    () => upgradeLine('stadium', stadiumLevel, finance.ole, finance.broCents),
+    [stadiumLevel, finance.ole, finance.broCents],
   );
 
   const canQuickMedical = finance.ole >= CITY_QUICK_MEDICAL_COST_EXP;
   const canQuickStore = finance.ole >= CITY_QUICK_STORE_COST_EXP;
   const canQuickTraining = finance.ole >= CITY_QUICK_TRAINING_COST_EXP;
-
-  const handleUpgrade = () => {
-    if (!upgrade.hasUpgrade || !upgrade.canAfford) return;
-    dispatch({ type: 'UPGRADE_STRUCTURE', structureId: selected.structureId });
-    trackMissionEvent('structure_upgraded');
-  };
 
   const runQuickAction = (id: ClubStructureId) => {
     if (id === 'stadium') {
@@ -268,16 +264,6 @@ export function City() {
     }
   };
 
-  const openQuickConfirm = () => {
-    if (quickDisabled) return;
-    setQuickPendingId(selected.structureId);
-  };
-
-  const stadiumUpgradeForModal = useMemo(() => {
-    const lvl = levelOf(structuresState, 'stadium');
-    return upgradeLine('stadium', lvl, finance.ole, finance.broCents);
-  }, [structuresState, finance.ole, finance.broCents]);
-
   const quickConfirmCopy = useMemo(() => {
     if (!quickPendingId) return null;
     const def = CITY_STRUCTURE_DEFS.find((d) => d.structureId === quickPendingId);
@@ -287,7 +273,7 @@ export function City() {
     let confirmBlocked = false;
 
     if (quickPendingId === 'stadium') {
-      const up = stadiumUpgradeForModal;
+      const up = stadiumUpgrade;
       if (!up.hasUpgrade) {
         lines.push('Não há próximo nível disponível para o estádio.');
         confirmBlocked = true;
@@ -329,7 +315,7 @@ export function City() {
     return { title, lines, costExpLine, confirmBlocked };
   }, [
     quickPendingId,
-    stadiumUpgradeForModal,
+    stadiumUpgrade,
     structuresState,
     canQuickTraining,
     canQuickMedical,
@@ -337,197 +323,227 @@ export function City() {
     crowd.supportPercent,
   ]);
 
-  const quickDisabled =
-    selected.structureId === 'stadium'
-      ? !upgrade.hasUpgrade || !upgrade.canAfford
-      : selected.structureId === 'training_center'
-        ? !canQuickTraining
-        : selected.structureId === 'medical_dept'
-          ? !canQuickMedical
-          : selected.structureId === 'megastore'
-            ? !canQuickStore
-            : false;
-
-  const quickHint =
-    selected.structureId === 'stadium'
-      ? 'Mesmo fluxo que “Evoluir estrutura”: paga EXP ou BRO conforme o nível.'
-      : selected.structureId === 'training_center'
-        ? `Gasta ${CITY_QUICK_TRAINING_COST_EXP} EXP e abre plano físico coletivo (~${CITY_QUICK_TRAINING_DURATION_H}h). Respeita slots do CT.`
-        : selected.structureId === 'medical_dept'
-          ? `Gasta ${CITY_QUICK_MEDICAL_COST_EXP} EXP para reduzir fadiga e risco de lesão em todo o plantel.`
-          : selected.structureId === 'megastore'
-            ? `Gasta ${CITY_QUICK_STORE_COST_EXP} EXP, credita +${CITY_QUICK_STORE_BRO_GAIN_CENTS / 100} BRO e aumenta ligeiramente o apoio da torcida (atual ${crowd.supportPercent.toFixed(1)}%).`
-            : 'Abre o olheiro da categoria de base.';
-
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-5 pb-2 sm:space-y-6 sm:pb-0">
-      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <h2 className="font-display text-2xl font-black italic uppercase tracking-wider sm:text-3xl md:text-4xl">
-          Cidade do Clube
-        </h2>
-        <div className="text-right space-y-1">
-          <div className="text-neon-yellow font-display font-black text-xl">{formatExp(finance.ole)} EXP</div>
-          <div className="text-sm text-white font-display font-bold">{formatBroFromCents(finance.broCents)}</div>
-          <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Tesouraria · Apoio {crowd.supportPercent.toFixed(1)}%</div>
-        </div>
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4">
+        <BackButton to="/clube" label="Clube" />
       </div>
+      {/* Header com navegação integrada */}
+      <TeamMeuTimeHeader
+        title="Cidade do Clube"
+        subtitle={
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <span>Estruturas, evolução e ações rápidas para o desenvolvimento do clube.</span>
+            <div className="flex items-center gap-3 text-xs flex-wrap">
+              <span className="text-neon-yellow font-display font-black">{formatExp(finance.ole)} EXP</span>
+              <span className="text-white/40">·</span>
+              <span className="text-white/70 font-display font-bold">{formatBroFromCents(finance.broCents)}</span>
+              <span className="text-white/40">·</span>
+              <span className="text-white/60">Apoio {crowd.supportPercent.toFixed(1)}%</span>
+            </div>
+          </div>
+        }
+      />
 
-      <div className="sports-panel relative overflow-hidden bg-black/80 p-3 sm:p-6 md:p-8">
-        <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 space-y-6">
+        {/* Hero Principal — Estádio */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="ole-card overflow-hidden w-full max-w-full min-w-0"
+        >
+        {/* Header com foto placeholder */}
+        <div className="relative h-48 sm:h-64 bg-gradient-to-br from-neon-yellow/20 to-deep-black overflow-hidden">
+          {/* Placeholder para foto do estádio */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Building2 className="w-32 h-32 text-neon-yellow/20" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/60 to-transparent" />
 
-        {/* Mobile: largura máx. + proporção menos alta que 1:1 para libertar espaço vertical ao painel / CTAs; desktop mantém 16:9. */}
-        <div className="relative z-10 mx-auto grid w-full min-w-0 max-w-[min(100%,19.5rem)] grid-cols-3 grid-rows-3 gap-2 aspect-[5/6] sm:max-w-2xl sm:gap-3 sm:aspect-square md:max-w-4xl md:gap-8 md:aspect-[16/9]">
-          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ strokeDasharray: '8 8' }}>
-            <line x1="50%" y1="50%" x2="16.6%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-            <line x1="50%" y1="50%" x2="83.3%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-            <line x1="50%" y1="50%" x2="16.6%" y2="83.3%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-            <line x1="50%" y1="50%" x2="83.3%" y2="83.3%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-          </svg>
-
-          <div className="col-start-2 row-start-2 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[0]!} level={levelOf(structuresState, 'stadium')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-1 row-start-1 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[3]!} level={levelOf(structuresState, 'youth_academy')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-3 row-start-1 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[4]!} level={levelOf(structuresState, 'megastore')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-1 row-start-3 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[1]!} level={levelOf(structuresState, 'training_center')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-3 row-start-3 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[2]!} level={levelOf(structuresState, 'medical_dept')} selected={selected} onSelect={setSelected} />
+          {/* Info sobreposta */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <div className="ole-eyebrow !text-neon-yellow mb-2">ESTÁDIO</div>
+                <h1 className="ole-headline text-3xl sm:text-4xl md:text-5xl">
+                  {clubName}<span className="ole-headline-italic text-neon-yellow">.</span>
+                </h1>
+                <p className="text-sm text-[var(--text-secondary)] mt-2">
+                  Capacidade: {stadiumCapacityByLevel(stadiumLevel).toLocaleString('pt-BR')} lugares
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-neon-yellow font-display font-black text-2xl sm:text-3xl">
+                  NÍVEL {stadiumLevel}
+                </div>
+                <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider">
+                  {stadiumLevel}/{MAX_LEVEL}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <AnimatePresence mode="wait">
-        {selected && (
-          <motion.div
-            key={selected.uiId}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+        {/* Stats e ações */}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="bg-black/40 p-3 rounded border border-white/5">
+              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-1">Capacidade</div>
+              <div className="font-display font-bold text-lg text-white">
+                {stadiumCapacityByLevel(stadiumLevel).toLocaleString('pt-BR')}
+              </div>
+            </div>
+            <div className="bg-black/40 p-3 rounded border border-white/5">
+              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-1">EXP/Torcedor</div>
+              <div className="font-display font-bold text-lg text-neon-yellow">
+                {stadiumExpPerSpectatorByLevel(stadiumLevel)}
+              </div>
+            </div>
+            <div className="bg-black/40 p-3 rounded border border-white/5 col-span-2 sm:col-span-1">
+              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-1">Próximo nível</div>
+              <div className={cn(
+                "font-display font-bold text-lg",
+                stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford ? "text-neon-yellow" : "text-gray-500"
+              )}>
+                {stadiumUpgrade.title}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={!stadiumUpgrade.hasUpgrade || !stadiumUpgrade.canAfford}
+            onClick={() => setQuickPendingId('stadium')}
             className={cn(
-              'sports-panel overflow-x-hidden border-2 p-0 transition-colors duration-500',
-              selected.border,
+              'w-full py-3 font-display font-black uppercase tracking-wider text-sm -skew-x-6 transition-all border',
+              stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford
+                ? 'bg-neon-yellow text-black border-neon-yellow hover:brightness-110'
+                : 'bg-white/5 text-gray-500 border-white/10 cursor-not-allowed',
             )}
           >
-            <div
+            <span className="skew-x-6 flex items-center justify-center gap-2">
+              <ArrowUpCircle className="w-5 h-5" />
+              Expandir Arquibancada
+            </span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Grid de estruturas menores */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-full min-w-0">
+        {CITY_STRUCTURE_DEFS.slice(1).map((struct) => {
+          const level = levelOf(structuresState, struct.structureId);
+          const upgrade = upgradeLine(struct.structureId, level, finance.ole, finance.broCents);
+          const canQuick =
+            struct.structureId === 'training_center' ? canQuickTraining :
+            struct.structureId === 'medical_dept' ? canQuickMedical :
+            struct.structureId === 'megastore' ? canQuickStore :
+            true;
+
+          return (
+            <motion.div
+              key={struct.uiId}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
               className={cn(
-                'relative flex items-center justify-between overflow-hidden border-b border-white/10 p-4 sm:p-6',
-                selected.bg,
+                'ole-card overflow-hidden border-l-4 transition-all hover:shadow-lg w-full max-w-full min-w-0',
+                struct.border
               )}
             >
-              <GameBannerBackdrop slot={STRUCTURE_TO_BANNER_SLOT[selected.structureId]} className="z-0" />
-              <div
-                className="pointer-events-none absolute inset-0 z-[1] opacity-30 mix-blend-overlay"
-                style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '4px 4px' }}
-              />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <h3 className="font-display font-black text-3xl uppercase italic tracking-wider text-white drop-shadow-md">{selected.name}</h3>
-                  <span className="bg-black/80 px-2 py-1 rounded text-xs font-bold border border-white/20 text-white">
-                    NÍVEL {level}
-                  </span>
+              {/* Header com placeholder de foto */}
+              <div className={cn('relative h-32 overflow-hidden', struct.bg)}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <struct.icon className={cn('w-20 h-20 opacity-20', struct.color)} />
                 </div>
-                <p className="text-gray-300 max-w-xl text-sm font-medium">{selected.desc}</p>
-              </div>
-              <selected.icon className={cn('w-20 h-20 opacity-20 absolute right-6 -bottom-4 rotate-12', selected.color)} />
-            </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-deep-black/80 to-transparent" />
 
-            <div className="grid grid-cols-1 gap-4 bg-dark-gray p-4 pb-6 sm:gap-6 sm:p-6 sm:pb-8 md:grid-cols-3">
-              <div className="space-y-4">
-                <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <Activity className="w-4 h-4" /> Status atual
-                </h4>
-                <div className="space-y-2">
-                  {stats.map((s, i) => (
-                    <div key={i} className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/5">
-                      <span className="text-gray-400 text-sm font-medium">{s.label}</span>
-                      <span className="font-display font-bold text-lg text-white text-right">{s.value}</span>
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <h3 className="font-display font-black text-lg uppercase tracking-wide text-white">
+                        {struct.name}
+                      </h3>
+                    </div>
+                    <div className={cn('font-display font-black text-xl', struct.color)}>
+                      N{level}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Conteúdo */}
+              <div className="p-4 space-y-3 w-full max-w-full min-w-0">
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed break-words">
+                  {struct.desc}
+                </p>
+
+                {/* Stats principais */}
+                <div className="space-y-2 w-full max-w-full min-w-0">
+                  {struct.statsForLevel(level).slice(0, 2).map((stat, i) => (
+                    <div key={i} className="flex justify-between items-center text-xs gap-2 min-w-0">
+                      <span className="text-[var(--text-secondary)] truncate">{stat.label}</span>
+                      <span className="font-display font-bold text-white shrink-0">{stat.value}</span>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <ArrowUpCircle className="w-4 h-4" /> Próximo nível
-                </h4>
-                <div className="bg-black/40 p-4 rounded-lg border border-white/5 space-y-3">
-                  <div className="flex justify-between text-sm items-center gap-2">
-                    <span className="text-gray-400 font-medium">Custo</span>
-                    <span
-                      className={cn(
-                        'font-display font-bold text-lg text-right',
-                        upgrade.hasUpgrade && upgrade.canAfford ? 'text-neon-yellow' : 'text-gray-500',
-                      )}
-                    >
-                      {upgrade.title}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-500 leading-snug">{upgrade.subtitle}</p>
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-400 font-medium">Tempo</span>
-                    <span className="text-white font-display font-bold">Imediato</span>
-                  </div>
+                {/* Ações */}
+                <div className="flex gap-2 pt-2 w-full max-w-full min-w-0">
                   <button
                     type="button"
                     disabled={!upgrade.hasUpgrade || !upgrade.canAfford}
-                    onClick={handleUpgrade}
+                    onClick={() => {
+                      dispatch({ type: 'UPGRADE_STRUCTURE', structureId: struct.structureId });
+                      trackMissionEvent('structure_upgraded');
+                    }}
                     className={cn(
-                      'w-full mt-2 py-2.5 font-display font-bold uppercase tracking-wider text-sm -skew-x-6 transition-colors border',
+                      'flex-1 py-2 text-xs font-display font-bold uppercase tracking-wider transition-colors border rounded min-w-0',
                       upgrade.hasUpgrade && upgrade.canAfford
-                        ? 'bg-neon-yellow text-black border-neon-yellow hover:brightness-110'
-                        : 'bg-white/5 text-gray-500 border-white/10 cursor-not-allowed',
+                        ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                        : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
                     )}
                   >
-                    <span className="skew-x-6 block">Evoluir estrutura</span>
+                    <TrendingUp className="w-3 h-3 inline mr-1" />
+                    <span className="hidden xs:inline">Evoluir</span>
+                    <span className="xs:hidden">↑</span>
                   </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <Zap className="w-4 h-4" /> Ação rápida
-                </h4>
-                <div className="flex min-h-0 flex-col justify-start pt-1 sm:pt-2">
                   <button
                     type="button"
-                    disabled={quickDisabled}
-                    onClick={openQuickConfirm}
+                    disabled={!canQuick}
+                    onClick={() => setQuickPendingId(struct.structureId)}
                     className={cn(
-                      'w-full touch-manipulation py-4 text-black font-display font-black uppercase tracking-wider text-base -skew-x-6 transition-all shadow-lg sm:py-5 sm:text-lg',
-                      quickDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'hover:scale-[1.02]',
-                      selected.structureId === 'stadium' ? 'bg-neon-yellow hover:shadow-[0_0_20px_rgba(228,255,0,0.4)]' :
-                      selected.structureId === 'training_center' ? 'bg-neon-green hover:shadow-[0_0_20px_rgba(0,255,102,0.4)]' :
-                      selected.structureId === 'medical_dept' ? 'bg-red-500 text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]' :
-                      selected.structureId === 'youth_academy' ? 'bg-blue-400 hover:shadow-[0_0_20px_rgba(96,165,250,0.4)]' :
-                      'bg-purple-400 hover:shadow-[0_0_20px_rgba(192,132,252,0.4)]',
+                      'flex-1 py-2 text-xs font-display font-bold uppercase tracking-wider transition-colors border rounded min-w-0',
+                      canQuick
+                        ? cn('text-black border-transparent', struct.bg.replace('/10', ''), 'hover:brightness-110')
+                        : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
                     )}
                   >
-                    <span className="skew-x-6 flex items-center justify-center gap-3">
-                      <selected.actionIcon className="w-6 h-6" />
-                      {selected.action}
-                    </span>
+                    <struct.actionIcon className="w-3 h-3 inline mr-1" />
+                    <span className="hidden xs:inline">Ação</span>
+                    <span className="xs:hidden">⚡</span>
                   </button>
-                  <p className="text-center text-[11px] text-gray-500 mt-3 font-medium px-2 leading-relaxed">{quickHint}</p>
                 </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
+                {/* Link para detalhes */}
+                {struct.structureId === 'youth_academy' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/city/youth-prospects')}
+                    className="w-full text-xs text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1 pt-2 min-w-0"
+                  >
+                    <span className="truncate">Ver promessas</span>
+                    <ChevronRight className="w-3 h-3 shrink-0" />
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+      </div>
+
+      {/* Modal de confirmação */}
       <AnimatePresence>
         {quickPendingId && quickConfirmCopy && (
           <motion.div
@@ -553,7 +569,7 @@ export function City() {
                   id="city-quick-confirm-title"
                   className="pr-2 font-display text-sm font-black uppercase tracking-wider text-white md:text-base"
                 >
-                  Confirmar ação rápida
+                  Confirmar ação
                 </h3>
                 <button
                   type="button"
@@ -608,62 +624,5 @@ export function City() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function StructureNode({
-  struct,
-  level,
-  selected,
-  onSelect,
-}: {
-  struct: CityStructDef;
-  level: number;
-  selected: CityStructDef;
-  onSelect: (s: CityStructDef) => void;
-}) {
-  const isSelected = selected.uiId === struct.uiId;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(struct)}
-      className={cn(
-        'relative z-10 flex flex-col items-center gap-2 transition-all duration-300 sm:gap-3',
-        isSelected ? 'z-20 scale-105 sm:scale-110' : 'opacity-60 hover:z-20 hover:scale-[1.03] hover:opacity-100 sm:hover:scale-105',
-      )}
-    >
-      {isSelected && (
-        <div className={cn('absolute top-4 w-20 h-20 blur-2xl rounded-full opacity-50', struct.bg.replace('/10', ''))} />
-      )}
-
-      <div
-        className={cn(
-          'w-20 h-20 md:w-28 md:h-28 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden transition-colors duration-300 shadow-xl',
-          isSelected ? cn(struct.border, 'bg-dark-gray') : 'border-white/20 bg-black/80',
-        )}
-      >
-        <div className={cn('absolute inset-0 opacity-20 transition-opacity', struct.bg, isSelected ? 'opacity-30' : 'group-hover:opacity-20')} />
-        <div
-          className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '4px 4px' }}
-        />
-
-        <struct.icon className={cn('w-10 h-10 md:w-12 md:h-12 relative z-10 transition-colors', isSelected ? struct.color : 'text-white')} />
-
-        <div className="absolute bottom-1.5 right-1.5 bg-black/90 px-1.5 py-0.5 rounded text-[9px] font-bold border border-white/20 text-white z-10">
-          {level}
-        </div>
-      </div>
-
-      <span
-        className={cn(
-          'font-display font-bold uppercase tracking-wider text-xs md:text-sm text-center max-w-[100px] md:max-w-[120px] leading-tight drop-shadow-md transition-colors',
-          isSelected ? struct.color : 'text-white',
-        )}
-      >
-        {struct.name}
-      </span>
-    </button>
   );
 }

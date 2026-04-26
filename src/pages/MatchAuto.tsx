@@ -5,7 +5,6 @@ import { Loader2, Home, LogOut, Trophy, RotateCcw } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes } from '@/entities/player';
-import { MatchdayResultScores } from '@/components/matchday/MatchdayVersusTitle';
 
 type UiPhase = 'analyzing' | 'result';
 
@@ -273,49 +272,50 @@ export function MatchAuto() {
       {phase === 'result' && summary && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <div className="glass-panel p-6 border border-white/10 text-center">
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">Resultado</p>
-            <MatchdayResultScores
-              homeShort={summary.homeShort}
-              awayShort={summary.awayShort}
-              homeName={summary.homeName}
-              awayName={summary.awayName}
-              homeScore={summary.homeScore}
-              awayScore={summary.awayScore}
-              awaySeed={fixture.opponent.id}
-              className="text-3xl sm:text-4xl"
-            />
+            <div className="ole-eyebrow mb-4">RESULTADO</div>
+            <div className="ole-scoreboard mb-2">
+              {summary.homeScore}
+              <span className="ole-scoreboard__separator">×</span>
+              {summary.awayScore}
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] mt-3">
+              {summary.homeShort} vs {summary.awayShort}
+            </p>
             <p className="text-xs text-gray-500 mt-2">
               vs {fixture.opponent.name} • Liga e elenco já atualizados
             </p>
           </div>
 
           <div className="glass-panel p-5 border border-white/10">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Titulares (OVR)</h3>
+            <div className="ole-eyebrow mb-3">TITULARES</div>
             <div className="flex flex-wrap gap-2">
               {starters.slice(0, 11).map(({ slot, p, ovr }) => (
                 <span
                   key={slot}
                   className="text-[10px] font-bold px-2 py-1 rounded bg-white/5 border border-white/10 text-gray-300"
                 >
-                  {p.num} {p.name} <span className="text-neon-yellow">{ovr}</span>
+                  {p.num} {p.name} <span className="ole-attr" data-tier={ovr >= 80 ? 'elite' : ovr >= 65 ? 'good' : ovr >= 50 ? 'avg' : 'weak'}>{ovr}</span>
                 </span>
               ))}
             </div>
           </div>
 
           <div className="glass-panel p-5 border border-white/10">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Destaques (stats)</h3>
+            <div className="ole-eyebrow mb-3">DESTAQUES</div>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {Object.entries(topStats)
                 .sort((a, b) => (b[1]?.rating ?? 0) - (a[1]?.rating ?? 0))
                 .slice(0, 8)
                 .map(([id, st]) => {
                   const name = playersById[id]?.name ?? id;
+                  const rating = st.rating ?? 6.4;
+                  const tier = rating >= 8 ? 'elite' : rating >= 6.5 ? 'good' : rating >= 5 ? 'avg' : 'weak';
                   return (
                     <div key={id} className="flex justify-between text-xs text-gray-300">
                       <span>{name}</span>
-                      <span className="text-neon-yellow">
-                        Nota {(st.rating ?? 6.4).toFixed(1)} • {st.passesOk}/{st.passesAttempt} pas • {st.tackles} des
+                      <span>
+                        <span className="ole-attr" data-tier={tier}>Nota {rating.toFixed(1)}</span>
+                        <span className="text-gray-500"> • {st.passesOk}/{st.passesAttempt} pas • {st.tackles} des</span>
                       </span>
                     </div>
                   );
@@ -324,7 +324,7 @@ export function MatchAuto() {
           </div>
 
           <div className="glass-panel p-5 border border-white/10">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Eventos</h3>
+            <div className="ole-eyebrow mb-3">EVENTOS</div>
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {summary.events.slice(0, 18).map((e) => (
                 <p key={e.id} className="text-[11px] text-gray-400 leading-snug">

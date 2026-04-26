@@ -110,14 +110,16 @@ export function ManagerPro() {
         <button
           type="button"
           onClick={() => navigate('/manager')}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+          className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/10 bg-black text-white/70 hover:bg-white/10 hover:text-white"
           aria-label="Voltar"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[10px] font-bold uppercase tracking-widest text-cyan-300/80">Manager · PRO</p>
-          <h1 className="font-display text-xl font-black uppercase tracking-tight text-white md:text-2xl">
+          <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300">
+            MANAGER · PRO
+          </div>
+          <h1 className="ole-headline-italic text-cyan-400 mt-1" style={{ fontSize: 'clamp(32px, 6vw, 48px)' }}>
             Vendas dos teus cards
           </h1>
         </div>
@@ -128,7 +130,7 @@ export function ManagerPro() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-3 rounded-xl border border-amber-500/35 bg-amber-500/[0.08] p-4"
+          className="flex items-start gap-3 border border-amber-500/35 bg-amber-500/[0.08] p-4"
         >
           <Lock className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
           <div className="min-w-0 flex-1">
@@ -147,7 +149,7 @@ export function ManagerPro() {
             {vStatus !== 'pending' ? (
               <Link
                 to="/config"
-                className="mt-2 inline-flex items-center gap-1.5 rounded border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-amber-100 hover:bg-amber-500/25"
+                className="mt-2 inline-flex items-center gap-1.5 border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-amber-100 hover:bg-amber-500/25"
               >
                 <ShieldCheck className="h-3.5 w-3.5" /> {vStatus === 'rejected' ? 'Reenviar verificação' : 'Verificar conta'}
                 <ChevronRight className="h-3 w-3" />
@@ -194,49 +196,49 @@ export function ManagerPro() {
         <Link
           to="/wallet"
           className={cn(
-            'flex items-center gap-3 rounded-xl border p-4 transition',
+            'group flex items-center gap-3 border p-5 transition-all hover:scale-[1.01]',
             verified
-              ? 'border-cyan-500/40 bg-gradient-to-br from-cyan-500/10 to-black/40 hover:bg-cyan-500/15'
-              : 'border-white/10 bg-white/[0.02] opacity-60 pointer-events-none',
+              ? 'border-cyan-500/40 bg-black hover:border-cyan-500/60'
+              : 'border-white/10 bg-black opacity-60 pointer-events-none',
           )}
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/20">
-            <Download className="h-5 w-5 text-cyan-200" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-cyan-500/20">
+            <Download className="h-6 w-6 text-cyan-200" strokeWidth={2.5} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-xs font-black uppercase tracking-wider text-white">
+            <p className="font-display text-sm font-black uppercase tracking-wide text-white">
               Sacar para Wallet
             </p>
             <p className="mt-0.5 text-[11px] text-white/55">
               {verified ? 'Converte saldo em BRO' : 'Disponível após verificação'}
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-white/40" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-transform group-hover:translate-x-1" />
         </Link>
 
         <Link
           to="/city/youth-prospects"
-          className="flex items-center gap-3 rounded-xl border border-neon-yellow/25 bg-gradient-to-br from-neon-yellow/5 to-black/40 p-4 transition hover:bg-neon-yellow/10"
+          className="group flex items-center gap-3 border border-neon-yellow/40 bg-black p-5 transition-all hover:scale-[1.01] hover:border-neon-yellow/60"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neon-yellow/20">
-            <TrendingUp className="h-5 w-5 text-neon-yellow" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-neon-yellow/20">
+            <TrendingUp className="h-6 w-6 text-neon-yellow" strokeWidth={2.5} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-xs font-black uppercase tracking-wider text-white">
+            <p className="font-display text-sm font-black uppercase tracking-wide text-white">
               Criar novo card
             </p>
             <p className="mt-0.5 text-[11px] text-white/55">
               Mais cards na academia = mais vendas possíveis
             </p>
           </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-white/40" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-white/40 transition-transform group-hover:translate-x-1" />
         </Link>
       </div>
 
       {/* ── Meus cards ─────────────────────────────────────────── */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <section className="border border-white/10 bg-black/40 p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-widest text-white/80">
+          <h3 className="flex items-center gap-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/80">
             <Trophy className="h-3.5 w-3.5 text-cyan-300" />
             Meus cards ({totalCards})
           </h3>
@@ -244,7 +246,7 @@ export function ManagerPro() {
             <button
               type="button"
               disabled
-              className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
+              className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
               title="Em breve"
             >
               <Search className="h-3 w-3" /> Buscar
@@ -252,7 +254,7 @@ export function ManagerPro() {
             <button
               type="button"
               disabled
-              className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
+              className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
               title="Em breve"
             >
               <Filter className="h-3 w-3" /> Filtrar
@@ -261,7 +263,7 @@ export function ManagerPro() {
         </div>
 
         {totalCards === 0 ? (
-          <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-center">
+          <div className="border border-dashed border-white/10 bg-black/20 p-6 text-center">
             <p className="text-sm text-white/80">Ainda não criaste nenhum card e nada vinculado pelo Admin.</p>
             <Link
               to="/city/youth-prospects"
@@ -279,12 +281,12 @@ export function ManagerPro() {
               return (
                 <li
                   key={`${c.source}:${c.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 border border-cyan-500/20 bg-cyan-500/[0.04] px-3 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-display text-sm font-bold text-white">
                       {c.name}
-                      <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
+                      <span className="ml-2 bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
                         {c.source}
                       </span>
                     </p>
@@ -296,7 +298,7 @@ export function ManagerPro() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="rounded bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                    <span className="bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
                       0 vendas
                     </span>
                     <ChevronRight className="h-4 w-4 text-white/30" />
@@ -307,12 +309,12 @@ export function ManagerPro() {
             {academyCards.map((p) => (
               <li
                 key={`academy:${p.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2.5"
+                className="flex items-center justify-between gap-3 border border-white/10 bg-black/30 px-3 py-2.5"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-display text-sm font-bold text-white">
                     {p.name}
-                    <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
+                    <span className="ml-2 bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
                       academy
                     </span>
                   </p>
@@ -322,7 +324,7 @@ export function ManagerPro() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                  <span className="bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
                     0 vendas
                   </span>
                   <ChevronRight className="h-4 w-4 text-white/30" />
@@ -334,9 +336,9 @@ export function ManagerPro() {
       </section>
 
       {/* ── Histórico de vendas ────────────────────────────────── */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <section className="border border-white/10 bg-black/40 p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-widest text-white/80">
+          <h3 className="flex items-center gap-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/80">
             <Activity className="h-3.5 w-3.5 text-cyan-300" />
             Histórico de vendas ({proPayouts.length})
           </h3>
@@ -347,7 +349,7 @@ export function ManagerPro() {
           ) : null}
         </div>
         {proPayouts.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-center">
+          <div className="border border-dashed border-white/10 bg-black/20 p-6 text-center">
             <p className="text-sm text-white/80">Sem vendas ainda.</p>
             <p className="mt-1 text-[11px] text-white/45">
               Quando alguém comprar um card teu, a venda aparece aqui em tempo real.
@@ -361,7 +363,7 @@ export function ManagerPro() {
                 <li
                   key={p.id}
                   className={cn(
-                    'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition',
+                    'flex items-center justify-between gap-3 border px-3 py-2 transition',
                     isFlash
                       ? 'border-neon-green/50 bg-neon-green/10 shadow-[0_0_12px_rgba(0,255,128,0.18)]'
                       : 'border-white/10 bg-black/30',
@@ -386,8 +388,8 @@ export function ManagerPro() {
       </section>
 
       {/* ── Como funciona ──────────────────────────────────────── */}
-      <section className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-4">
-        <h3 className="font-display text-xs font-black uppercase tracking-widest text-cyan-200">
+      <section className="border border-cyan-500/20 bg-cyan-950/20 p-4">
+        <h3 className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
           Como o PRO funciona
         </h3>
         <ul className="mt-2 space-y-1.5 text-[12px] text-white/75">
@@ -425,10 +427,10 @@ function KpiCard({
   tone: 'cyan' | 'emerald' | 'yellow' | 'fuchsia';
 }) {
   const tones: Record<typeof tone, string> = {
-    cyan: 'border-cyan-500/25 from-cyan-500/5',
-    emerald: 'border-emerald-500/25 from-emerald-500/5',
-    yellow: 'border-neon-yellow/25 from-neon-yellow/5',
-    fuchsia: 'border-fuchsia-500/25 from-fuchsia-500/5',
+    cyan: 'border-cyan-500/25 bg-black',
+    emerald: 'border-emerald-500/25 bg-black',
+    yellow: 'border-neon-yellow/25 bg-black',
+    fuchsia: 'border-fuchsia-500/25 bg-black',
   };
   const valueClass: Record<typeof tone, string> = {
     cyan: 'text-cyan-200',
@@ -437,9 +439,11 @@ function KpiCard({
     fuchsia: 'text-fuchsia-300',
   };
   return (
-    <div className={cn('rounded-xl border bg-gradient-to-br to-black/40 p-3', tones[tone])}>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">{label}</p>
-      <p className={cn('mt-1 font-display text-xl font-black', valueClass[tone])}>{value}</p>
+    <div className={cn('border p-3', tones[tone])}>
+      <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">{label}</p>
+      <p className={cn('mt-1 ole-headline-italic tabular-nums', valueClass[tone])} style={{ fontSize: 'clamp(24px, 4vw, 32px)' }}>
+        {value}
+      </p>
       <p className="mt-1 text-[10px] text-white/45">{footer}</p>
     </div>
   );
