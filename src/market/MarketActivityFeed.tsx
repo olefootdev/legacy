@@ -100,15 +100,26 @@ export function MarketActivityFeed({ activities, maxVisible = 5 }: MarketActivit
                     </span>
                   </p>
 
-                  {/* Preço */}
-                  <p className="mt-1 text-xs font-bold text-neon-yellow">
-                    {formatPrice(activity.price, activity.currency)}
+                  {/* Preço em Moret */}
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span
+                      className="text-neon-yellow"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontStyle: 'italic',
+                        fontSize: '1.125rem',
+                        letterSpacing: '-0.01em',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {formatPrice(activity.price, activity.currency)}
+                    </span>
                     {activity.profit && activity.profit > 0 && (
-                      <span className="ml-2 text-emerald-400">
+                      <span className="text-[10px] font-bold text-emerald-400">
                         +{formatPrice(activity.profit, activity.currency)} lucro
                       </span>
                     )}
-                  </p>
+                  </div>
                 </div>
 
                 {/* Emoji */}
