@@ -13,8 +13,10 @@
  *   - Subtítulo: text-soft, leading-snug abaixo
  *   - rightLabel (opcional): pill outline no canto direito
  *   - Sem ícone, sem badge colorido — minimalismo BVB
+ *   - variant='moret': Título em Moret italic com glow pulsante para seções premium
  */
 
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 interface StoreSectionHeadlineProps {
@@ -25,6 +27,8 @@ interface StoreSectionHeadlineProps {
   /** Click handler na pílula. Se omitido, pill é só informativa. */
   onRightClick?: () => void;
   className?: string;
+  /** Variante visual: 'default' (Agency FB) ou 'moret' (Moret italic para seções premium) */
+  variant?: 'default' | 'moret';
 }
 
 export function StoreSectionHeadline({
@@ -33,7 +37,58 @@ export function StoreSectionHeadline({
   rightLabel,
   onRightClick,
   className,
+  variant = 'default',
 }: StoreSectionHeadlineProps) {
+  if (variant === 'moret') {
+    return (
+      <header className={cn('flex items-start justify-between gap-3 px-0.5', className)}>
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          {/* Barra vertical com glow */}
+          <motion.span
+            animate={{
+              boxShadow: [
+                '0 0 10px rgba(253,225,0,0.4)',
+                '0 0 20px rgba(253,225,0,0.7)',
+                '0 0 10px rgba(253,225,0,0.4)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+            aria-hidden
+            className="block w-[3px] h-10 bg-neon-yellow shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            {/* Título em Moret italic */}
+            <h2
+              className="text-neon-yellow leading-tight"
+              style={{
+                fontFamily: 'var(--font-serif-hero)', // Moret
+                fontStyle: 'italic',
+                fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="mt-1 text-[11px] sm:text-[12px] leading-snug text-text-soft">
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+        {rightLabel && (
+          <button
+            type="button"
+            onClick={onRightClick}
+            className="shrink-0 inline-flex items-center border border-neon-yellow/40 hover:border-neon-yellow hover:bg-neon-yellow/10 text-neon-yellow px-3 py-1.5 font-display font-bold uppercase tracking-[0.18em] text-[10px] sm:text-[11px] rounded-sm transition-colors"
+          >
+            {rightLabel}
+          </button>
+        )}
+      </header>
+    );
+  }
+
   return (
     <header className={cn('flex items-start justify-between gap-3 px-0.5', className)}>
       <div className="flex items-start gap-3 min-w-0 flex-1">

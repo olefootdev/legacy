@@ -12,6 +12,11 @@ import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
+import { LegendaryBadge } from '@/store/LegendaryBadge';
+import { PremiumPriceReveal } from '@/store/PremiumPriceReveal';
+import { MythicPackHero } from '@/store/MythicPackHero';
+import { StoreViewToggle, type StoreViewMode } from '@/store/StoreViewToggle';
+import { StoreItemList } from '@/store/StoreItemList';
 
 type ShopTab = 'todos' | ShopTabId;
 
@@ -142,6 +147,7 @@ export function Store() {
   const inventory = useGameStore((s) => s.shopInventory);
 
   const [tab, setTab] = useState<ShopTab>('todos');
+  const [viewMode, setViewMode] = useState<StoreViewMode>('grid');
   const [confirmItem, setConfirmItem] = useState<ShopCatalogItem | null>(null);
   const [purchaseOutcome, setPurchaseOutcome] = useState<StorePurchaseOutcome | null>(null);
   const [purchaseErr, setPurchaseErr] = useState<string | null>(null);
@@ -372,12 +378,16 @@ export function Store() {
         </motion.div>
       </section>
 
+      {/* Card Edição Limitada — sempre visível */}
+      <MythicPackHero />
+
       {/* Hero promocional por aba — arte substituída pelo designer em /public/store-heroes/ */}
       <TransferHeroSlider
         tab={TAB_TO_HERO[tab]}
         slides={heroSlidesForStoreTab(tab)}
       />
 
+      {/* Slider de abas */}
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -403,94 +413,107 @@ export function Store() {
         ))}
       </div>
 
-      {/* Boxes em destaque — 3 BOOSTERS GRANDES */}
-      <StoreFeaturedBoxes
-        title="Boosters em Destaque"
-        subtitle="Os 3 boosters mais poderosos para turbinar seu time"
-        variant="boosters"
-        items={featuredItemsForStoreTab('boosters', catalog).slice(0, 3)}
-        onSelect={(item) => { setPurchaseErr(null); setConfirmItem(item); }}
-      />
+      {/* Header com toggle de visualização */}
+      <div className="flex items-start justify-between gap-4">
+        <StoreSectionHeadline
+          variant="moret"
+          title={tab === 'todos' ? 'Raros da Semana' : `Todos os ${TAB_META[tab].eyebrow}`}
+          subtitle={`${filtered.length} ${filtered.length === 1 ? 'item disponível' : 'itens disponíveis'}.`}
+        />
+        <StoreViewToggle mode={viewMode} onChange={setViewMode} />
+      </div>
 
-      <StoreSectionHeadline
-        title="Todos os Boosters"
-        subtitle={`${filtered.length} ${filtered.length === 1 ? 'booster disponível' : 'boosters disponíveis'} para melhorar seu desempenho.`}
-      />
-
-      {/* Grid de boosters menores - 4 por linha em desktop, compactos */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((item, index) => {
-          const rs = rarityStyles(item.rarity);
-          const Icon = shopItemIcon(item.iconKey);
-          const inv = inventory[item.id] ?? 0;
-          return (
-            <motion.article
-              key={item.id}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.02, type: 'spring', stiffness: 380, damping: 28 }}
-              className={cn(
-                'group relative overflow-hidden rounded-lg border bg-deep-black cursor-pointer',
-                rs.border,
-                'hover:scale-[1.03] transition-all',
-              )}
-              onClick={() => { setPurchaseErr(null); setConfirmItem(item); }}
-            >
-              {/* Ícone e raridade */}
-              <div className="relative aspect-square flex items-center justify-center bg-gradient-to-br from-white/5 to-black/60 border-b border-white/5">
-                <Icon className="h-12 w-12 text-white/30 transition group-hover:text-white/50" aria-hidden />
-                <span
+      {/* Visualização dinâmica: Grid ou Lista */}
+      {viewMode === 'list' ? (
+        <StoreItemList
+          items={filtered}
+          inventory={inventory}
+          onSelect={(item) => { setPurchaseErr(null); setConfirmItem(item); }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((item, index) => {
+            const rs = rarityStyles(item.rarity);
+            const Icon = shopItemIcon(item.iconKey);
+            const inv = inventory[item.id] ?? 0;
+            const handleSelect = () => { setPurchaseErr(null); setConfirmItem(item); };
+            return (
+              <PremiumPriceReveal
+                key={item.id}
+                item={item}
+                onSelect={handleSelect}
+              >
+                <motion.article
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.02, type: 'spring', stiffness: 380, damping: 28 }}
                   className={cn(
-                    'absolute top-2 right-2 rounded px-1.5 py-0.5 font-display text-[7px] font-black uppercase tracking-widest',
-                    rs.labelClass,
+                    'group relative overflow-hidden rounded-lg border bg-deep-black cursor-pointer',
+                    rs.border,
+                    'hover:scale-[1.03] transition-all',
+                    rs.glow,
                   )}
                 >
-                  {rs.label}
-                </span>
-              </div>
+                  {/* Badge Lendário para itens míticos/featured */}
+                  <LegendaryBadge rarity={item.rarity} featured={item.featured} />
 
-              {/* Info compacta */}
-              <div className="p-2.5">
-                <h3 className="font-display text-xs font-black uppercase tracking-tight text-white line-clamp-1 mb-1">
-                  {item.title}
-                </h3>
-                <p className="text-[9px] leading-snug text-gray-500 line-clamp-2 mb-2">
-                  {item.blurb}
-                </p>
-
-                {/* Preços compactos */}
-                <div className="flex flex-wrap gap-1">
-                  {item.priceBroCents != null && item.priceBroCents > 0 ? (
-                    <span className="rounded border border-cyan-500/30 bg-cyan-950/50 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-200">
-                      {formatBro(item.priceBroCents)} BRO
+                  {/* Ícone e raridade */}
+                  <div className="relative aspect-square flex items-center justify-center bg-gradient-to-br from-white/5 to-black/60 border-b border-white/5">
+                    <Icon className="h-20 w-20 text-white/30 transition group-hover:text-white/50 group-hover:scale-110 duration-500" aria-hidden />
+                    <span
+                      className={cn(
+                        'absolute top-2 right-2 rounded px-2 py-1 font-display text-[8px] font-black uppercase tracking-widest',
+                        rs.labelClass,
+                      )}
+                    >
+                      {rs.label}
                     </span>
-                  ) : null}
-                  {item.priceExp != null && item.priceExp > 0 ? (
-                    <span className="rounded border border-neon-yellow/30 bg-neon-yellow/5 px-1.5 py-0.5 font-mono text-[9px] font-bold text-neon-yellow">
-                      {item.priceExp.toLocaleString('pt-BR')} EXP
-                    </span>
-                  ) : null}
-                </div>
+                  </div>
 
-                {/* Inventário se houver */}
-                {item.consumable && inv > 0 ? (
-                  <p className="mt-1.5 text-[8px] font-bold uppercase tracking-wide text-emerald-300/90">
-                    {inv}× no inventário
-                  </p>
-                ) : null}
-              </div>
+                  {/* Info compacta */}
+                  <div className="p-4">
+                    <h3 className="font-display text-sm font-black uppercase tracking-tight text-white line-clamp-1 mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-[10px] leading-snug text-gray-500 line-clamp-2 mb-3">
+                      {item.blurb}
+                    </p>
 
-              {/* Hover overlay */}
-              <div
-                className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
-                style={{
-                  background: 'linear-gradient(125deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)',
-                }}
-              />
-            </motion.article>
-          );
-        })}
-      </div>
+                    {/* Preços compactos */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.priceBroCents != null && item.priceBroCents > 0 ? (
+                        <span className="rounded-lg border border-cyan-500/30 bg-cyan-950/50 px-2 py-1 font-mono text-[10px] font-bold text-cyan-200">
+                          {formatBro(item.priceBroCents)} BRO
+                        </span>
+                      ) : null}
+                      {item.priceExp != null && item.priceExp > 0 ? (
+                        <span className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-1 font-mono text-[10px] font-bold text-neon-yellow">
+                          {item.priceExp.toLocaleString('pt-BR')} EXP
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {/* Inventário se houver */}
+                    {item.consumable && inv > 0 ? (
+                      <p className="mt-2 text-[9px] font-bold uppercase tracking-wide text-emerald-300/90">
+                        {inv}× no inventário
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Hover overlay */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
+                    style={{
+                      background: 'linear-gradient(125deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)',
+                    }}
+                  />
+                </motion.article>
+              </PremiumPriceReveal>
+            );
+          })}
+        </div>
+      )}
 
       {/* CTA de Depositar Agora */}
       <motion.div
@@ -551,20 +574,46 @@ export function Store() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              className="relative w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/35 bg-panel shadow-[0_0_48px_rgba(234,255,0,0.12)]"
+              className={cn(
+                "relative w-full max-w-md overflow-hidden rounded-md border bg-panel",
+                confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico'
+                  ? 'border-amber-400/35 shadow-[0_0_48px_rgba(251,191,36,0.2)]'
+                  : 'border-neon-yellow/35 shadow-[0_0_48px_rgba(234,255,0,0.12)]'
+              )}
               role="dialog"
               aria-modal="true"
               aria-labelledby="store-checkout-title"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-2 border-b border-white/10 px-4 py-3">
-                <div className="min-w-0">
+              <div className={cn(
+                "flex items-start justify-between gap-2 border-b px-4 py-4",
+                confirmItem.rarity === 'mitico' ? 'border-amber-400/20 bg-gradient-to-r from-amber-950/30 to-transparent' : 'border-white/10'
+              )}>
+                <div className="min-w-0 flex-1">
                   <p className="font-display text-[9px] font-bold uppercase tracking-widest text-neon-yellow/90">
                     Confirmar compra
                   </p>
-                  <h2 id="store-checkout-title" className="mt-1 font-display text-lg font-black text-white">
-                    {confirmItem.title}
-                  </h2>
+
+                  {/* Nome do item em Moret se for raro+ */}
+                  {(confirmItem.rarity === 'mitico' || confirmItem.rarity === 'epico') ? (
+                    <h2
+                      id="store-checkout-title"
+                      className="mt-2 bg-gradient-to-r from-amber-100 via-white to-amber-100 bg-clip-text text-transparent"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)', // Moret
+                        fontStyle: 'italic',
+                        fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
+                        letterSpacing: '-0.01em',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {confirmItem.title}
+                    </h2>
+                  ) : (
+                    <h2 id="store-checkout-title" className="mt-1 font-display text-lg font-black text-white">
+                      {confirmItem.title}
+                    </h2>
+                  )}
                 </div>
                 <button
                   type="button"
