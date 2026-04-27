@@ -34,7 +34,7 @@ export function HelpHub() {
   const [showAssistant, setShowAssistant] = useState(false);
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10 pb-24">
+    <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10 px-3 sm:px-4 lg:px-8 pb-24 sm:pb-32">
       {/* ── HERO BVB — amarelo + watermark + tipografia épica ── */}
       <section
         aria-label="Ajuda"
@@ -195,12 +195,12 @@ export function HelpHub() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-[var(--color-card)] border border-white/8 rounded-sm p-6"
+        className="bg-[var(--color-card)] border border-white/8 rounded-sm p-6 mb-8"
       >
-        <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white/70 mb-4">
+        <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white/70 mb-6">
           Tópicos populares
         </h2>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Link to="/how-to-play" className="block p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-neon-yellow/40 rounded transition-all">
             <div className="flex items-center justify-between">
               <span className="text-white font-display font-bold">Como começar no Olefoot?</span>

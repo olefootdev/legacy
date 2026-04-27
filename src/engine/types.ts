@@ -192,6 +192,11 @@ export interface LiveMatchSnapshot {
 
   /** Ledger de fatores de impacto (casa), append-only por evento. */
   homeImpactLedger?: ImpactLedgerEntry[];
+
+  /** Flag indicando se a partida é competitiva (conta pontos para ranking). */
+  isCompetitive?: boolean;
+  /** Tipo de adversário: 'bot' ou 'human'. Usado para determinar se pontos de ranking são válidos. */
+  opponentType?: 'bot' | 'human';
   /** Capitão — amplifica só fatores individuais (ver `impactRules.ts`). */
   homeCaptainPlayerId?: string;
   /** Timestamp de quando as forças dos times foram recalculadas (após substituição). */

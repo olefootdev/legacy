@@ -99,6 +99,16 @@ import {
 import { createInitialWalletState } from '@/wallet/initial';
 import { createInitialCompetitiveRanking, updateCompetitiveRanking } from './competitiveRanking';
 import {
+  handleInitGlobalLeagueMVP,
+  handleRegisterGlobalTeam,
+  handleStartGlobalPlayoffRound,
+  handleFinishGlobalPlayoffRound,
+  handleStartGlobalLeagueRound,
+  handleFinishGlobalLeagueRound,
+  handleApplyPromotionRelegation,
+  handleResetGlobalLeagueMVP,
+} from './globalLeagueMVPReducer';
+import {
   createOlexpPosition,
   claimOlexpPrincipal,
   accrueOlexpDaily,
@@ -1477,6 +1487,29 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         inbox = [trophyNote, ...inbox].slice(0, 14);
       }
 
+      // Atualizar ranking competitivo se a partida for competitiva contra humano
+      let competitiveRanking = state.competitiveRanking;
+      if (lm.isCompetitive && lm.opponentType === 'human') {
+        const current = competitiveRanking ?? createInitialCompetitiveRanking();
+        competitiveRanking = updateCompetitiveRanking(current, lm.homeScore, lm.awayScore);
+
+        // Adicionar notificação de ranking
+        const pointsGained = homeWin ? 3 : draw ? 1 : 0;
+        if (pointsGained > 0) {
+          const rankingNote = makeInboxItem(
+            `ranking-${Date.now()}`,
+            'FINANCE_EXP_GAIN',
+            'RANKING',
+            `+${pointsGained} pontos no ranking competitivo!`,
+            {
+              body: `Partida competitiva: ${homeWin ? 'Vitória' : 'Empate'} contra adversário humano. Total: ${competitiveRanking.points} pontos (${competitiveRanking.wins}V ${competitiveRanking.draws}E ${competitiveRanking.losses}D).`,
+              deepLink: '/ranking',
+            },
+          );
+          inbox = [rankingNote, ...inbox].slice(0, 14);
+        }
+      }
+
       return {
         ...state,
         finance,
@@ -1492,6 +1525,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         quickMatchStreak,
         dailyChallenges,
         streakChallenges,
+        competitiveRanking,
       };
     }
     case 'MERGE_PLAYERS': {
@@ -3324,6 +3358,144 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         olefootLeague: updated,
       };
     }
+
+    case 'CREATE_GLOBAL_ROUND': {
+      if (!state.olefootLeague) return state;
+      const { createScheduledRound } = require('@/match/globalRoundScheduler');
+      const newRound = createScheduledRound(state.olefootLeague, action.scheduledKickoffMs);
+      return {
+        ...state,
+        globalLeague: {
+          ...(state.globalLeague ?? { recentRounds: [], roundIntervalMs: 3600000, commandWindowMs: 600000 }),
+          currentRound: newRound,
+          nextScheduledMs: action.scheduledKickoffMs,
+        },
+      };
+    }
+
+    case 'START_COMMAND_WINDOW': {
+      if (!state.globalLeague?.currentRound) return state;
+      return {
+        ...state,
+        globalLeague: {
+          ...state.globalLeague,
+          currentRound: {
+            ...state.globalLeague.currentRound,
+            status: 'pre_match',
+          },
+        },
+      };
+    }
+
+    case 'START_GLOBAL_ROUND': {
+      if (!state.globalLeague?.currentRound) return state;
+      const { simulateGlobalRound } = require('@/match/globalMatchSimulator');
+      const kickoffMs = Date.now();
+      const { updatedFixtures, allEvents, highlights } = simulateGlobalRound(
+        state.globalLeague.currentRound.fixtures,
+        kickoffMs
+      );
+
+      return {
+        ...state,
+        globalLeague: {
+          ...state.globalLeague,
+          currentRound: {
+            ...state.globalLeague.currentRound,
+            status: 'live',
+            actualKickoffMs: kickoffMs,
+            fixtures: updatedFixtures.map(f => ({
+              ...f,
+              status: 'live' as const,
+              currentMinute: 0,
+              scoreHome: 0,
+              scoreAway: 0,
+            })),
+            highlights,
+          },
+        },
+      };
+    }
+
+    case 'UPDATE_LIVE_ROUND': {
+      if (!state.globalLeague?.currentRound || state.globalLeague.currentRound.status !== 'live') {
+        return state;
+      }
+      const { GLOBAL_MATCH_CONSTANTS } = require('@/match/globalMatch');
+      const currentRound = state.globalLeague.currentRound;
+      const elapsed = action.nowMs - (currentRound.actualKickoffMs ?? 0);
+      const currentMinute = Math.floor(elapsed / GLOBAL_MATCH_CONSTANTS.GAME_MINUTE_MS);
+
+      const liveFixtures = currentRound.fixtures.map(f => {
+        const revealedEvents = f.events.filter(e => e.minute <= currentMinute);
+        const scoreHome = revealedEvents.filter(e => e.type === 'goal' && e.side === 'home').length;
+        const scoreAway = revealedEvents.filter(e => e.type === 'goal' && e.side === 'away').length;
+
+        return {
+          ...f,
+          currentMinute,
+          scoreHome,
+          scoreAway,
+          status: 'live' as const,
+        };
+      });
+
+      return {
+        ...state,
+        globalLeague: {
+          ...state.globalLeague,
+          currentRound: {
+            ...currentRound,
+            fixtures: liveFixtures,
+          },
+        },
+      };
+    }
+
+    case 'FINISH_GLOBAL_ROUND': {
+      if (!state.globalLeague?.currentRound || !state.olefootLeague) return state;
+      const currentRound = state.globalLeague.currentRound;
+
+      // Finalizar rodada
+      const finishedRound = {
+        ...currentRound,
+        status: 'finished' as const,
+        finishedAtMs: action.nowMs,
+      };
+
+      // Atualizar OLEFOOT LIGA com os resultados
+      const { finalizeRound } = require('@/match/olefootLeague');
+      const updatedLeague = finalizeRound(
+        state.olefootLeague,
+        currentRound.roundNumber,
+        currentRound.fixtures
+      );
+
+      return {
+        ...state,
+        globalLeague: {
+          ...state.globalLeague,
+          currentRound: finishedRound,
+        },
+        olefootLeague: updatedLeague,
+      };
+    }
+
+    case 'ADVANCE_GLOBAL_ROUND': {
+      if (!state.globalLeague || !state.olefootLeague) return state;
+      const { autoAdvanceRound } = require('@/match/globalRoundScheduler');
+      const { globalLeague, olefootLeague } = autoAdvanceRound(
+        state.globalLeague,
+        state.olefootLeague,
+        action.nowMs
+      );
+
+      return {
+        ...state,
+        globalLeague,
+        olefootLeague,
+      };
+    }
     case 'UPDATE_COMPETITIVE_RANKING': {
       if (!action.isCompetitive) return state;
 
@@ -3483,6 +3655,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ? { ...pl, adminMarketTag: action.collectionId }
         : { ...pl, adminMarketTag: undefined };
       return { ...state, players: { ...state.players, [action.playerId]: patched } };
+    }
+    case 'ADMIN_SET_COACH': {
+      return { ...state, coach: action.coach };
+    }
+    case 'ADMIN_REMOVE_COACH': {
+      return { ...state, coach: undefined };
     }
     case 'ADMIN_GRANT_SHOP_ITEM': {
       const item = state.shopCatalog.find((x) => x.id === action.itemId);
@@ -3770,6 +3948,23 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
 
+    case 'COACH_ADD_MESSAGE': {
+      if (!state.manager.coach) return state;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            conversationContext: [
+              ...state.manager.coach.conversationContext,
+              action.message,
+            ].slice(-50), // Mantém últimas 50 mensagens
+          },
+        },
+      };
+    }
+
     case 'COACH_EXECUTE_ACTION': {
       if (!state.manager.coach) return state;
 
@@ -3891,6 +4086,37 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
+
+    // Global League MVP Actions
+    case 'INIT_GLOBAL_LEAGUE_MVP':
+      return handleInitGlobalLeagueMVP(state);
+
+    case 'REGISTER_GLOBAL_TEAM':
+      return handleRegisterGlobalTeam(
+        state,
+        action.managerId,
+        action.clubName,
+        action.clubShort,
+        action.overall
+      );
+
+    case 'START_GLOBAL_PLAYOFF_ROUND':
+      return handleStartGlobalPlayoffRound(state, action.roundNumber);
+
+    case 'FINISH_GLOBAL_PLAYOFF_ROUND':
+      return handleFinishGlobalPlayoffRound(state, action.roundNumber, action.finishedFixtures);
+
+    case 'START_GLOBAL_LEAGUE_ROUND':
+      return handleStartGlobalLeagueRound(state, action.roundNumber);
+
+    case 'FINISH_GLOBAL_LEAGUE_ROUND':
+      return handleFinishGlobalLeagueRound(state, action.roundNumber, action.finishedFixtures);
+
+    case 'APPLY_GLOBAL_PROMOTION_RELEGATION':
+      return handleApplyPromotionRelegation(state);
+
+    case 'RESET_GLOBAL_LEAGUE_MVP':
+      return handleResetGlobalLeagueMVP(state);
 
     default:
       return state;

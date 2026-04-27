@@ -1,16 +1,15 @@
 /**
- * QuickMatchHalftime — Painel de intervalo cinematográfico.
+ * QuickMatchHalftime — Painel de intervalo otimizado e direto.
  *
  * Padrão visual:
- * - Eyebrow "INTERVALO" com traços laterais
  * - Placar parcial em Moret italic
- * - Stats do 1º tempo em grid (Agency FB bold)
- * - Botão "Retomar" amarelo primário
- * - Countdown automático (15s)
+ * - Stats essenciais do 1º tempo (apenas 3 principais)
+ * - Botão "Iniciar 2º Tempo" amarelo primário
+ * - Countdown reduzido (5s) - clique retoma imediatamente
  */
 
 import { motion } from 'motion/react';
-import { ChevronRight } from 'lucide-react';
+import { Play } from 'lucide-react';
 
 interface QuickMatchHalftimeProps {
   homeShort: string;
@@ -34,6 +33,9 @@ export function QuickMatchHalftime({
   countdown,
   onForceEnd,
 }: QuickMatchHalftimeProps) {
+  // Mostrar apenas os 3 stats mais importantes
+  const topStats = stats.slice(0, 3);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -41,27 +43,32 @@ export function QuickMatchHalftime({
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9998] flex items-center justify-center bg-deep-black/95 backdrop-blur-md px-4"
     >
-      <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
-        {/* Eyebrow */}
-        <div className="flex items-center justify-center gap-3">
-          <span aria-hidden className="h-px w-12 bg-neon-yellow/40" />
+      <div className="w-full max-w-xl space-y-6">
+        {/* Eyebrow compacto */}
+        <div className="flex items-center justify-center gap-2">
+          <span aria-hidden className="h-px w-8 bg-neon-yellow/40" />
           <span
-            className="text-neon-yellow uppercase tracking-[0.35em] text-[11px] font-medium"
-            style={{ fontFamily: 'var(--font-ui)' }}
+            className="text-neon-yellow uppercase tracking-[0.35em] font-medium"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '10px',
+            }}
           >
             Intervalo
           </span>
-          <span aria-hidden className="h-px w-12 bg-neon-yellow/40" />
+          <span aria-hidden className="h-px w-8 bg-neon-yellow/40" />
         </div>
 
-        {/* Placar parcial */}
-        <div className="flex items-center justify-center gap-4 sm:gap-8">
+        {/* Placar compacto */}
+        <div className="flex items-center justify-center gap-6">
           {/* Casa */}
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
             <p
-              className="text-white/55 uppercase font-display font-bold tracking-wider"
+              className="text-white/55 uppercase tracking-wider"
               style={{
-                fontSize: 'clamp(11px, 1.5vw, 14px)',
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 700,
                 letterSpacing: '0.18em',
               }}
             >
@@ -72,7 +79,7 @@ export function QuickMatchHalftime({
               style={{
                 fontFamily: 'var(--font-serif-hero)',
                 fontStyle: 'italic',
-                fontSize: 'clamp(48px, 10vw, 80px)',
+                fontSize: 'clamp(40px, 8vw, 64px)',
                 fontWeight: 700,
                 letterSpacing: '-0.03em',
               }}
@@ -87,64 +94,70 @@ export function QuickMatchHalftime({
             style={{
               fontFamily: 'var(--font-serif-hero)',
               fontStyle: 'italic',
-              fontSize: 'clamp(28px, 5vw, 40px)',
+              fontSize: 'clamp(24px, 4vw, 32px)',
             }}
           >
             –
           </span>
 
           {/* Visitante */}
-          <div className="flex flex-col items-start gap-2">
-            <p
-              className="text-white/55 uppercase font-display font-bold tracking-wider"
-              style={{
-                fontSize: 'clamp(11px, 1.5vw, 14px)',
-                letterSpacing: '0.18em',
-              }}
-            >
-              {awayShort}
-            </p>
+          <div className="flex items-center gap-3">
             <span
               className="leading-none text-white tabular-nums"
               style={{
                 fontFamily: 'var(--font-serif-hero)',
                 fontStyle: 'italic',
-                fontSize: 'clamp(48px, 10vw, 80px)',
+                fontSize: 'clamp(40px, 8vw, 64px)',
                 fontWeight: 700,
                 letterSpacing: '-0.03em',
               }}
             >
               {awayScore}
             </span>
+            <p
+              className="text-white/55 uppercase tracking-wider"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.18em',
+              }}
+            >
+              {awayShort}
+            </p>
           </div>
         </div>
 
-        {/* Stats do 1º tempo */}
-        {stats.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {stats.map((s) => (
+        {/* Stats essenciais (apenas 3) */}
+        {topStats.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            {topStats.map((s) => (
               <div
                 key={s.label}
-                className="border border-white/10 bg-black/60 px-3 py-3 text-center backdrop-blur-sm sm:px-4 sm:py-4"
+                className="border border-white/10 bg-black/60 px-3 py-2.5 text-center backdrop-blur-sm"
                 style={{ borderRadius: 'var(--radius-sm)' }}
               >
                 <p
-                  className="mb-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-white/45 sm:text-[10px]"
-                  style={{ fontFamily: 'var(--font-ui)' }}
+                  className="mb-1 uppercase tracking-[0.18em] text-white/45"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                  }}
                 >
                   {s.label}
                 </p>
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1.5">
                   <span
                     className="font-display font-black leading-none tabular-nums text-neon-yellow"
-                    style={{ fontSize: 'clamp(18px, 3vw, 24px)' }}
+                    style={{ fontSize: 'clamp(16px, 2.5vw, 20px)' }}
                   >
                     {s.homeValue}
                   </span>
-                  <span className="text-xs text-white/25">×</span>
+                  <span className="text-[10px] text-white/25">×</span>
                   <span
                     className="font-display font-black leading-none tabular-nums text-white"
-                    style={{ fontSize: 'clamp(18px, 3vw, 24px)' }}
+                    style={{ fontSize: 'clamp(16px, 2.5vw, 20px)' }}
                   >
                     {s.awayValue}
                   </span>
@@ -154,30 +167,30 @@ export function QuickMatchHalftime({
           </div>
         )}
 
-        {/* Botão retomar + countdown */}
-        <div className="flex flex-col items-center gap-3">
+        {/* Botão CTA grande + countdown */}
+        <div className="flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={onForceEnd}
-            className="inline-flex items-center gap-2 border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-3 text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98]"
+            className="inline-flex items-center gap-3 border-2 border-neon-yellow bg-neon-yellow px-8 py-4 text-black shadow-[0_0_30px_rgba(253,224,71,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(253,224,71,0.6)] active:scale-95"
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '12px',
-              fontWeight: 700,
+              fontSize: '13px',
+              fontWeight: 900,
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            Retomar agora
-            <ChevronRight className="w-4 h-4" />
+            <Play className="w-5 h-5 fill-current" />
+            Iniciar 2º Tempo
           </button>
 
           <p
-            className="text-xs text-white/45"
+            className="text-[11px] text-white/40"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
-            Retoma automaticamente em <span className="font-bold tabular-nums text-neon-yellow">{countdown}s</span>
+            Inicia automaticamente em <span className="font-bold tabular-nums text-neon-yellow">{countdown}s</span>
           </p>
         </div>
       </div>

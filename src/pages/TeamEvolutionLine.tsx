@@ -281,12 +281,13 @@ export function TeamEvolutionLine() {
   }, [roster, timeline]);
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-4 pb-12 text-[13px] leading-snug sm:pb-10">
-      <BackButton to="/clube" label="Clube" />
-      <TeamMeuTimeHeader
-        title="Linha evolutiva"
-        subtitle="Evolução de atributos e totais de jogo ao longo do tempo. Compara com outro jogador do plantel ou usa uma carta do mercado EXP como referência (atributos)."
-      />
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-12">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4 text-[13px] leading-snug">
+        <BackButton to="/clube" label="Clube" />
+        <TeamMeuTimeHeader
+          title="Linha evolutiva"
+          subtitle="Evolução de atributos e totais de jogo ao longo do tempo. Compara com outro jogador do plantel ou usa uma carta do mercado EXP como referência (atributos)."
+        />
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -559,6 +560,7 @@ export function TeamEvolutionLine() {
         Os pontos são gravados após cada jogo finalizado e após treinos concluídos (incl. sessão leve). MVP detalhado
         pode ser acrescentado quando o motor expuser esse dado por jogo.
       </p>
+    </div>
     </div>
   );
 }

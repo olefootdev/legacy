@@ -226,7 +226,7 @@ export function City() {
   const [quickPendingId, setQuickPendingId] = useState<ClubStructureId | null>(null);
   const [upgradeModalState, setUpgradeModalState] = useState<{
     structureId: ClubStructureId;
-    phase: 'confirm' | 'loading' | 'success';
+    phase: 'confirm' | 'loading' | 'success' | 'insufficient';
   } | null>(null);
 
   const stadiumLevel = levelOf(structuresState, 'stadium');
@@ -412,10 +412,9 @@ export function City() {
                   Capacidade
                 </p>
                 <p
-                  className="text-neon-yellow tabular-nums leading-none"
+                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 900,
+                    fontWeight: 700,
                     fontSize: 'clamp(16px, 3vw, 24px)',
                   }}
                 >
@@ -427,10 +426,9 @@ export function City() {
                   EXP/Torcedor
                 </p>
                 <p
-                  className="text-neon-yellow tabular-nums leading-none"
+                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 900,
+                    fontWeight: 700,
                     fontSize: 'clamp(16px, 3vw, 24px)',
                   }}
                 >
@@ -442,10 +440,9 @@ export function City() {
                   Nível
                 </p>
                 <p
-                  className="text-white tabular-nums leading-none"
+                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
                   style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 900,
+                    fontWeight: 700,
                     fontSize: 'clamp(16px, 3vw, 24px)',
                   }}
                 >
@@ -550,15 +547,18 @@ export function City() {
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
-                    disabled={!upgrade.hasUpgrade || !upgrade.canAfford}
                     onClick={() => {
-                      setUpgradeModalState({ structureId: struct.structureId, phase: 'confirm' });
+                      if (!upgrade.hasUpgrade || !upgrade.canAfford) {
+                        setUpgradeModalState({ structureId: struct.structureId, phase: 'insufficient' });
+                      } else {
+                        setUpgradeModalState({ structureId: struct.structureId, phase: 'confirm' });
+                      }
                     }}
                     className={cn(
                       'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
                       upgrade.hasUpgrade && upgrade.canAfford
                         ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-                        : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
+                        : 'bg-white/5 text-gray-600 border-white/5 hover:bg-white/10',
                     )}
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
@@ -755,7 +755,7 @@ export function City() {
                         transition={{ delay: 0.3 }}
                         className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-neon-yellow"
                       >
-                        Evoluído com Sucesso!
+                        Sucesso!
                       </motion.h3>
 
                       <motion.p
@@ -775,6 +775,59 @@ export function City() {
                         className="w-full rounded-lg bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] transition-all hover:brightness-110"
                       >
                         Continuar
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Fase 4: Saldo Insuficiente */}
+                {upgradeModalState.phase === 'insufficient' && (
+                  <>
+                    <div className="p-12 text-center">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20 border-2 border-red-500"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                        >
+                          <X className="h-10 w-10 text-red-500" strokeWidth={3} />
+                        </motion.div>
+                      </motion.div>
+
+                      <motion.h3
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-red-500"
+                      >
+                        Saldo Insuficiente
+                      </motion.h3>
+
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-sm text-gray-400"
+                      >
+                        {cost?.currency === 'exp'
+                          ? `Precisas de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
+                          : `Precisas de ${formatBroFromCents(cost?.amount ?? 0)} BRO para evoluir ${def?.name}`
+                        }
+                      </motion.p>
+                    </div>
+
+                    <div className="border-t border-white/10 bg-black/30 p-6">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-white/20"
+                      >
+                        Fechar
                       </button>
                     </div>
                   </>

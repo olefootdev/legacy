@@ -21,6 +21,7 @@ import {
   CheckCircle,
   Sparkles,
   Users,
+  Copy,
   type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +36,8 @@ import { CAREER_TIERS, computeCareerTier, nextCareerTier, tierProgress01 } from 
 import { TrophyCard } from '@/components/cards/TrophyCard';
 import { CareerTierBadge } from '@/components/CareerTierBadge';
 import { SmartShortcut } from '@/components/cards/SmartShortcut';
+import { normalizeWalletState } from '@/wallet/initial';
+import { inviteLinkForCode } from '@/wallet/referralCode';
 
 const MISSION_TROPHY_KINDS = new Set(['onboarding', 'achievement', 'special']);
 
@@ -67,7 +70,15 @@ export function Manager() {
   const missionRuntime = useProgressionStore((s) => s.missions);
 
   const [drawer, setDrawer] = useState<DrawerKind>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
   const navigate = useNavigate();
+
+  const wallet = useMemo(
+    () => normalizeWalletState(finance.wallet ?? undefined),
+    [finance.wallet],
+  );
+  const myReferralCode = wallet.myReferralCode ?? '';
+  const inviteLink = myReferralCode ? inviteLinkForCode(myReferralCode) : '';
 
   useEffect(() => {
     ensureResets();
@@ -117,6 +128,13 @@ export function Manager() {
 
   const squadSize = Object.keys(players).length;
   const broDisplay = formatBroDisplay(finance.broCents);
+
+  function handleCopyInviteLink() {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink).catch(() => {});
+    setCopiedInvite(true);
+    setTimeout(() => setCopiedInvite(false), 2000);
+  }
 
   /** Smart shortcuts (sugestão C): 2-3 atalhos contextuais. */
   const shortcuts = useMemo(() => {
@@ -294,27 +312,53 @@ export function Manager() {
             </motion.blockquote>
           </AnimatePresence>
 
-          {/* Subtítulo — dados vivos */}
-          <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
-              lineHeight: 1.55,
-            }}
-          >
-            {formatExp(expLifetime)} EXP acumulado · {squadSize} jogadores · {social.friends.length} amigos
-          </p>
+          {/* Link de indicação com botão de copiar */}
+          <div className="mt-3 mx-auto max-w-md">
+            {inviteLink ? (
+              <div className="inline-flex items-center gap-2 bg-black/10 border border-black/20 px-3 py-2 rounded-sm">
+                <span
+                  className="font-mono text-black/70 truncate max-w-[200px] sm:max-w-xs"
+                  style={{
+                    fontSize: 'clamp(0.75rem, 1vw, 0.85rem)',
+                  }}
+                >
+                  {inviteLink}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyInviteLink}
+                  className="shrink-0 p-1.5 bg-black/80 hover:bg-black rounded-sm transition-colors"
+                  aria-label="Copiar link de indicação"
+                >
+                  {copiedInvite ? (
+                    <CheckCircle className="w-4 h-4 text-neon-yellow" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-neon-yellow" />
+                  )}
+                </button>
+              </div>
+            ) : (
+              <p
+                className="text-black/60"
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
+                  lineHeight: 1.55,
+                }}
+              >
+                {formatExp(expLifetime)} EXP acumulado · {squadSize} jogadores · {social.friends.length} amigos
+              </p>
+            )}
+          </div>
 
           {/* Stats strip — 3 métricas principais */}
           <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="text-neon-yellow tabular-nums leading-none truncate"
+                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
@@ -327,10 +371,9 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="text-emerald-300 tabular-nums leading-none truncate"
+                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
@@ -343,10 +386,9 @@ export function Manager() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="text-white tabular-nums leading-none truncate"
+                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
@@ -374,7 +416,7 @@ export function Manager() {
             </button>
             <button
               type="button"
-              onClick={() => setDrawer('network')}
+              onClick={() => navigate('/manager/network')}
               className="inline-flex items-center justify-center gap-2 border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-black/10 transition-colors"
               style={{
                 fontFamily: 'var(--font-display)',
@@ -435,7 +477,7 @@ export function Manager() {
         {/* Network */}
         <motion.button
           type="button"
-          onClick={() => setDrawer('network')}
+          onClick={() => navigate('/manager/network')}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}

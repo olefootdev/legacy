@@ -8,6 +8,7 @@ import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import type { PitchPlayerState } from '@/engine/types';
 import { roleFromPos } from '@/engine/pitchFromLineup';
 import type { OpponentStub } from '@/entities/types';
+import type { FormationSchemeId } from '@/match-engine/types';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { hashStringSeed } from '@/match/seededRng';
@@ -20,11 +21,14 @@ import {
   userParticipatesInChallenge,
 } from '@/supabase/friendlyChallenges';
 import { GoalScorerOverlay } from '@/match/GoalScorerOverlay';
+import { QuickGoalCelebration } from '@/components/matchquick/QuickGoalCelebration';
 import { pickGoalOverlayStoryline } from '@/match/goalOverlayNarration';
 import { GOAL_SCORER_OVERLAY_MS } from '@/gamespirit/spiritStateMachine';
 import { fetchKeyMomentNarration } from '@/match/narrativeKeyMomentClient';
 import { PenaltyKickModal } from '@/match/PenaltyKickModal';
-import { AssistantPanel, AssistantFab, type AssistantEvent } from '@/match/AssistantPanel';
+import { SubstitutionOverlay } from '@/components/matchquick/SubstitutionOverlay';
+import { RedCardOverlay } from '@/components/matchquick/RedCardOverlay';
+import { AssistantAI } from '@/components/matchquick/AssistantAI';
 import { StreakBar } from '@/components/match/StreakBar';
 import { MomentumBar } from '@/components/match/MomentumBar';
 import { InstantRewards } from '@/components/match/InstantRewards';
@@ -56,12 +60,12 @@ import {
   buildSetPieceMoment,
 } from '@/match/quickInteractiveMoments';
 import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
-import { shouldAutoSwitchIntensity } from '@/match/quickTacticalIntensity';
+import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import { buildHeatmapFromEvents } from '@/match/quickMatchHeatmap';
 
 const FIRST_HALF_MS = 45_000;
-const HALFTIME_MS = 15_000;
+const HALFTIME_MS = 10_000;
 const MINUTES_PER_HALF = 45;
 const MS_PER_MINUTE = Math.round(FIRST_HALF_MS / MINUTES_PER_HALF);
 const GOAL_FREEZE_MS = 2_000;
@@ -163,11 +167,13 @@ function momentumPressure01(
   spiritMomentum?: { home: number; away: number } | null,
 ): number {
   const bx = (Math.min(92, Math.max(8, ballX)) - 50) / 50;
-  const base = possession === 'home' ? 0.74 : 0.26;
+  // Início neutro: 0.5 (50/50) + ajustes por posição da bola e narrativa
+  const base = 0.5;
+  const possessionBias = possession === 'home' ? 0.08 : -0.08;
   const narrative = spiritMomentum
     ? (spiritMomentum.home - spiritMomentum.away) * 0.12
     : 0;
-  return Math.min(0.96, Math.max(0.04, base + bx * 0.26 + narrative));
+  return Math.min(0.96, Math.max(0.04, base + possessionBias + bx * 0.26 + narrative));
 }
 
 interface EndSummary {
@@ -246,6 +252,12 @@ export function MatchQuick() {
   const quickMatchIntensity = useGameStore((s) => s.quickMatchIntensity);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
 
+  // Brasão do time do coração
+  const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
+
+  const [fcGate, setFcGate] = useState<'off' | 'pending' | 'ok' | 'fail'>('off');
+  const fcSeedRef = useRef<number | undefined>(undefined);
+
   const [session, setSession] = useState(0);
   const [halfTimeUi, setHalfTimeUi] = useState(false);
   const [summary, setSummary] = useState<EndSummary | null>(null);
@@ -296,15 +308,87 @@ export function MatchQuick() {
   const injurySubOpenForRef = useRef<string | null>(null);
   const [preGoalActive, setPreGoalActive] = useState(false);
   const [goalScorerRevealDone, setGoalScorerRevealDone] = useState(false);
+  const [goalCelebrationKey, setGoalCelebrationKey] = useState<string | null>(null);
+  const [goalCelebrationActive, setGoalCelebrationActive] = useState(false);
+
+  // Novos overlays de substituição e cartão vermelho
+  const [substitutionOverlay, setSubstitutionOverlay] = useState<{
+    playerOut: { name: string; number: number; position: string };
+    playerIn: { name: string; number: number; position: string };
+    reason: 'injury' | 'tactical' | 'red_card';
+  } | null>(null);
+  const [redCardOverlay, setRedCardOverlay] = useState<{
+    player: { name: string; number: number; position: string };
+    reason: 'second_yellow' | 'direct_red' | 'violent_conduct';
+  } | null>(null);
+  const substitutionOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const redCardOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Callbacks para o AssistantAI
+  const handleSubstitution = (outPlayerId: string, inPlayerId: string, reason: 'injury' | 'tactical') => {
+    const outPlayer = playersById[outPlayerId];
+    const inPlayer = playersById[inPlayerId];
+    if (!outPlayer || !inPlayer) return;
+
+    // Mostrar overlay de substituição
+    setSubstitutionOverlay({
+      playerOut: {
+        name: outPlayer.name,
+        number: outPlayer.num,
+        position: outPlayer.pos,
+      },
+      playerIn: {
+        name: inPlayer.name,
+        number: inPlayer.num,
+        position: inPlayer.pos,
+      },
+      reason,
+    });
+
+    // Pausar o relógio por 3 segundos
+    freezeUntilRef.current = Date.now() + 3000;
+
+    // Executar a substituição no reducer
+    dispatch({
+      type: 'QUICK_SUBSTITUTE',
+      outPlayerId,
+      inPlayerId,
+      slotId: outPlayer.pos,
+    });
+
+    // Auto-clear após 3 segundos
+    if (substitutionOverlayTimerRef.current) clearTimeout(substitutionOverlayTimerRef.current);
+    substitutionOverlayTimerRef.current = setTimeout(() => {
+      setSubstitutionOverlay(null);
+    }, 3000);
+  };
+
+  const handleTacticalChange = (command: string) => {
+    // Aplicar mudança tática via reducer
+    dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: command as any });
+
+    // Feedback visual
+    const feedMap: Record<string, string> = {
+      PRESSAO_ALTA: 'Treinador manda pressionar alto — equipe avança as linhas e aumenta a intensidade.',
+      TRANSICAO_RAPIDA: 'Instrução: transição rápida após recuperar a bola — menos toques, mais velocidade.',
+      JOGO_DIRETO: 'Equipe adota jogo direto — bolas longas e disputa de segunda bola.',
+      BLOCO_BAIXO: 'Time recua o bloco — linhas defensivas fechadas, menos espaço ao adversário.',
+      POSSE_CONTROLADA: 'Instrução de posse controlada — construção paciente pelo meio.',
+      CRIATIVO_LIVRE: 'Liberdade tática para o ataque — menos rigidez, mais improviso.',
+      JOGO_PELAS_LATERAIS: 'Equipe busca as laterais — amplitude e cruzamentos na área.',
+      balanced: 'Retorno ao equilíbrio tático — bloco organizado, transições controladas.',
+    };
+    const feedText = feedMap[command] || `Tática alterada para ${command}`;
+    if (live?.phase === 'playing') {
+      dispatch({ type: 'ADD_LIVE_MATCH_EVENT', text: feedText, kind: 'narrative' });
+    }
+  };
 
   // Animações de eventos
   const [scoreShakeKey, setScoreShakeKey] = useState(0);
-  const [gloveVisible, setGloveVisible] = useState(false);
   const lastShakeEventIdRef = useRef<string | null>(null);
   const [quickPreStart, setQuickPreStart] = useState<QuickPreStartPhase>('ready');
   const preKickoffTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [fcGate, setFcGate] = useState<'off' | 'pending' | 'ok' | 'fail'>('off');
-  const fcSeedRef = useRef<number | undefined>(undefined);
   const soundEnabled = useGameStore((s) => s.userSettings.soundEnabled);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [soundStarted, setSoundStarted] = useState(false);
@@ -482,9 +566,56 @@ export function MatchQuick() {
           const lowPossession = possession < 35;
           const noShots = shots === 0 && lm.minute >= 15;
 
-          // REMOVIDO: Min 15 check (usuário já tem controles de intensidade tática)
-          // REMOVIDO: Triggers inteligentes de tática (redundante com controles sempre visíveis)
-          // REMOVIDO: Min 70 check (usuário já tem controles de intensidade tática)
+          // Min 15: Análise tática inicial
+          if (lm.minute === 15 && !shown.has('min15_check')) {
+            shown.add('min15_check');
+            lastAssistantShownMsRef.current = now;
+            setAssistantEvent({
+              kind: 'min15_check',
+              matchContext: {
+                minute: lm.minute,
+                homeScore: lm.homeScore,
+                awayScore: lm.awayScore,
+                possession,
+                shots,
+                shotsAgainst,
+              },
+            });
+          }
+
+          // Situação crítica: perdendo por 2+ gols
+          if (isLosingBadly && lm.minute >= 20 && !shown.has('losing_badly')) {
+            shown.add('losing_badly');
+            lastAssistantShownMsRef.current = now;
+            setAssistantEvent({
+              kind: 'min15_check',
+              matchContext: {
+                minute: lm.minute,
+                homeScore: lm.homeScore,
+                awayScore: lm.awayScore,
+                possession,
+                shots,
+                shotsAgainst,
+              },
+            });
+          }
+
+          // Min 70: Ajuste final
+          if (lm.minute === 70 && !shown.has('min70_check')) {
+            shown.add('min70_check');
+            lastAssistantShownMsRef.current = now;
+            setAssistantEvent({
+              kind: 'min70_check',
+              matchContext: {
+                minute: lm.minute,
+                homeScore: lm.homeScore,
+                awayScore: lm.awayScore,
+                possession,
+                shots,
+                shotsAgainst,
+              },
+            });
+          }
         }
         // ─────────────────────────────────────────────────────────────────
 
@@ -520,7 +651,7 @@ export function MatchQuick() {
           lm.minute,
           lm.homeScore,
           lm.awayScore,
-          quickMatchIntensity?.current ?? 'balanced',
+          (quickMatchIntensity?.current ?? 'balanced') as TacticalIntensityLevel,
         );
         if (autoIntensity) {
           dispatch({ type: 'SET_TACTICAL_INTENSITY', level: autoIntensity });
@@ -630,9 +761,6 @@ export function MatchQuick() {
     if (!isSave) return;
     lastShakeEventIdRef.current = top.id;
     setScoreShakeKey((k) => k + 1);
-    setGloveVisible(true);
-    const timer = setTimeout(() => setGloveVisible(false), 1400);
-    return () => clearTimeout(timer);
   }, [live?.events]);
 
   useEffect(() => {
@@ -662,7 +790,16 @@ export function MatchQuick() {
     lastSeenGoalEventIdRef.current = top.id;
     freezeUntilRef.current = Date.now() + GOAL_FREEZE_MS;
     setMomentumAnimKey(top.id);
-  }, [live?.events, live?.phase, live?.mode, preGoalActive]);
+
+    // Ativar celebração de gol
+    setGoalCelebrationKey(top.id);
+    setGoalCelebrationActive(true);
+
+    // Limpar spiritOverlay de gol para não conflitar com a celebração
+    if (live.spiritOverlay?.kind === 'goal') {
+      dispatch({ type: 'DISMISS_SPIRIT_OVERLAY' });
+    }
+  }, [live?.events, live?.phase, live?.mode, preGoalActive, live?.spiritOverlay?.kind, dispatch]);
 
   /** Após pré-golo: 3s com cartão do marcador, depois painel narrativo (total = autoDismissMs). */
   useEffect(() => {
@@ -831,6 +968,54 @@ export function MatchQuick() {
     };
   }, [secondYellowAlert?.playerId, dispatch]);
 
+  // Detectar cartões vermelhos e mostrar overlay
+  const lastRedCardEventIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!live || live.phase !== 'playing' || isBlockingNonQuickMatch(live)) return;
+    const events = live.events ?? [];
+
+    // Procurar evento de cartão vermelho mais recente
+    const redCardEvent = events.find(ev => ev.kind === 'red_home' || ev.kind === 'red_away');
+    if (!redCardEvent || redCardEvent.id === lastRedCardEventIdRef.current) return;
+
+    lastRedCardEventIdRef.current = redCardEvent.id;
+
+    // Só mostrar overlay para cartões vermelhos do time da casa
+    if (redCardEvent.kind === 'red_home' && redCardEvent.playerId) {
+      const pitchPlayer = pitch.find(p => p.playerId === redCardEvent.playerId);
+      const entity = playersById[redCardEvent.playerId];
+
+      if (pitchPlayer || entity) {
+        // Determinar motivo do cartão vermelho
+        const reason: 'second_yellow' | 'direct_red' | 'violent_conduct' =
+          redCardEvent.text?.toLowerCase().includes('segundo') || redCardEvent.text?.toLowerCase().includes('amarelo')
+            ? 'second_yellow'
+            : redCardEvent.text?.toLowerCase().includes('violenta') || redCardEvent.text?.toLowerCase().includes('agressão')
+            ? 'violent_conduct'
+            : 'direct_red';
+
+        // Mostrar overlay de cartão vermelho
+        setRedCardOverlay({
+          player: {
+            name: pitchPlayer?.name ?? entity?.name ?? 'Jogador',
+            number: pitchPlayer?.num ?? entity?.num ?? 0,
+            position: pitchPlayer?.pos ?? entity?.pos ?? '',
+          },
+          reason,
+        });
+
+        // Pausar o relógio por 3 segundos
+        freezeUntilRef.current = Date.now() + 3000;
+
+        // Auto-clear após 3 segundos
+        if (redCardOverlayTimerRef.current) clearTimeout(redCardOverlayTimerRef.current);
+        redCardOverlayTimerRef.current = setTimeout(() => {
+          setRedCardOverlay(null);
+        }, 3000);
+      }
+    }
+  }, [live?.events, live?.phase, live?.mode, pitch, playersById]);
+
   useEffect(() => {
     setSubPickId('');
   }, [selected?.playerId]);
@@ -902,7 +1087,7 @@ export function MatchQuick() {
         } as any);
 
         // Feedback no feed
-        const feedText = `🚑 Lesão grave! ${injuredPlayer?.name} sai. ${bestSub.name} entra no lugar.`;
+        const feedText = `Lesão grave! ${injuredPlayer?.name} sai. ${bestSub.name} entra no lugar.`;
         dispatch({
           type: 'ADD_LIVE_MATCH_EVENT',
           text: feedText,
@@ -913,7 +1098,7 @@ export function MatchQuick() {
         return;
       } else {
         // Sem substitutos: jogador sai e time fica com 10
-        const feedText = `🚑 Lesão grave! ${injuredPlayer?.name} sai. Sem substitutos disponíveis.`;
+        const feedText = `Lesão grave! ${injuredPlayer?.name} sai. Sem substitutos disponíveis.`;
         dispatch({
           type: 'ADD_LIVE_MATCH_EVENT',
           text: feedText,
@@ -1092,7 +1277,7 @@ export function MatchQuick() {
 
     // Near-Miss: apenas para casos MUITO próximos (intensidade alta)
     const nearMiss = detectShotNearMiss(live.lastShotPreview.probs);
-    if (nearMiss && nearMiss.intensity >= 0.8) {
+    if (nearMiss && typeof nearMiss.intensity === 'number' && nearMiss.intensity >= 0.8) {
       triggerNearMiss(nearMiss.type, nearMiss.message, nearMiss.intensity);
     }
   }, [live?.lastShotPreview, triggerNearMiss]);
@@ -1292,8 +1477,9 @@ export function MatchQuick() {
   const clockFrozen =
     quickPreStart !== null ||
     halfTimeUi ||
-    !!(live?.spiritOverlay) ||
+    (!goalCelebrationActive && !!(live?.spiritOverlay)) ||
     preGoalActive ||
+    goalCelebrationActive ||
     Date.now() < freezeUntilRef.current;
   const matchClock = (
     <div className="flex flex-col items-center gap-1.5">
@@ -1357,8 +1543,9 @@ export function MatchQuick() {
   };
 
   const dismissCoachMoment = () => {
-    if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
-    setCoachMoment(null);
+    // TODO: Implementar quando coachMoment for adicionado
+    // if (coachMomentDismissRef.current) clearTimeout(coachMomentDismissRef.current);
+    // setCoachMoment(null);
   };
 
   const COACH_ACTION_FEED: Record<string, string> = {
@@ -1387,6 +1574,7 @@ export function MatchQuick() {
     setSelected(null);
   };
 
+  // Early returns após todos os hooks
   if (fcParam && fcGate === 'pending') {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
@@ -1396,7 +1584,6 @@ export function MatchQuick() {
     );
   }
 
-  // Verificação de segurança: aguarda inicialização do live match
   if (!live) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
@@ -1777,36 +1964,10 @@ export function MatchQuick() {
               scoreboardCountdownSec={null}
               rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
             />
-            <AnimatePresence>
-              {gloveVisible && (
-                <motion.span
-                  key="glove"
-                  initial={{ opacity: 0, scale: 0.4, y: 8 }}
-                  animate={{ opacity: 1, scale: 1.5, y: -8 }}
-                  exit={{ opacity: 0, scale: 0.9, y: -24 }}
-                  transition={{ duration: 0.38 }}
-                  className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-3xl"
-                  style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.6))' }}
-                >
-                  🧤
-                </motion.span>
-              )}
-            </AnimatePresence>
           </motion.div>
           {/* Força dos times — Moret italic, padrão DNA do Campeão */}
           <div className="w-full max-w-[min(100%,44rem)] mx-auto mt-2 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
             <div className="flex flex-col items-start gap-1">
-              <span
-                className="text-white/45 uppercase"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.22em',
-                  fontWeight: 600,
-                }}
-              >
-                Força · Casa
-              </span>
               <motion.span
                 key={homeForce}
                 initial={{ scale: 1.15 }}
@@ -1865,17 +2026,6 @@ export function MatchQuick() {
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span
-                className="text-white/45 uppercase"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.22em',
-                  fontWeight: 600,
-                }}
-              >
-                Força · Vis.
-              </span>
               <motion.span
                 key={awayForce}
                 initial={{ scale: 1.15 }}
@@ -1949,12 +2099,12 @@ export function MatchQuick() {
               {live?.phase === 'playing' && !halfTimeUi && !live.activeInteractiveMoment && !summary && (
                 <div className="mt-4">
                   <QuickTacticalIntensityControls
-                    current={quickMatchIntensity?.current ?? 'balanced'}
+                    current={(quickMatchIntensity?.current ?? 'balanced') as TacticalIntensityLevel}
                     onChange={(level) => dispatch({ type: 'SET_TACTICAL_INTENSITY', level })}
                     disabled={false}
                   />
                   <div className="mt-2">
-                    <QuickTacticalIntensityInfo level={quickMatchIntensity?.current ?? 'balanced'} />
+                    <QuickTacticalIntensityInfo level={(quickMatchIntensity?.current ?? 'balanced') as TacticalIntensityLevel} />
                   </div>
                 </div>
               )}
@@ -2513,7 +2663,7 @@ export function MatchQuick() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-black/90"
+          className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-4 bg-black/90 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sub-quick-title"
@@ -2524,7 +2674,8 @@ export function MatchQuick() {
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="w-full max-w-md bg-black rounded-2xl overflow-hidden border border-zinc-800 shadow-[0_0_50px_rgba(0,0,0,0.95)]"
+            className="w-full max-w-md bg-deep-black overflow-hidden border border-neon-yellow/30 shadow-[0_0_40px_rgba(253,224,71,0.2)]"
+            style={{ borderRadius: 'var(--radius-md)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header colorido por tipo */}
@@ -2532,29 +2683,76 @@ export function MatchQuick() {
               const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
               const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
               return (
-                <div className={cn('px-5 py-4 flex items-center justify-between gap-3', isGrave ? 'bg-red-700' : 'bg-amber-500')}>
+                <div className={cn('px-5 py-4 flex items-center justify-between gap-3 border-b', isGrave ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30')}>
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{isGrave ? '🚑' : '⚠️'}</span>
+                    <div className={cn('flex h-12 w-12 items-center justify-center rounded-lg border', isGrave ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30')}>
+                      <span className={cn('text-2xl font-bold', isGrave ? 'text-red-400' : 'text-amber-400')}>!</span>
+                    </div>
                     <div>
-                      <p className={cn('font-display font-black text-xs uppercase tracking-widest', isGrave ? 'text-red-200' : 'text-amber-900')}>
+                      <p
+                        className={cn('uppercase tracking-[0.18em]', isGrave ? 'text-red-400' : 'text-amber-400')}
+                        style={{
+                          fontFamily: 'var(--font-ui)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                        }}
+                      >
                         {isGrave ? 'Lesão grave' : 'Lesão leve'}
                       </p>
-                      <p className={cn('font-display font-black text-lg leading-tight', isGrave ? 'text-white' : 'text-black')}>
+                      <p
+                        className={cn('leading-tight uppercase', isGrave ? 'text-white' : 'text-white')}
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontStyle: 'italic',
+                          fontWeight: 700,
+                          fontSize: '18px',
+                          letterSpacing: '0.01em',
+                        }}
+                      >
                         {selected.num} {selected.name}
                       </p>
                     </div>
                   </div>
-                  <div className={cn('font-display font-black text-3xl tabular-nums', isGrave ? 'text-red-200' : 'text-amber-900')}>
+                  <div
+                    className={cn('tabular-nums', isGrave ? 'text-red-400' : 'text-amber-400')}
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 900,
+                      fontSize: '32px',
+                    }}
+                  >
                     {injurySubCountdown}s
                   </div>
                 </div>
               );
             })() : (
-              <div className="bg-zinc-800 px-5 py-4 flex items-center gap-3 border-b border-zinc-700">
-                <span className="text-2xl">🔄</span>
+              <div className="bg-neon-yellow/5 px-5 py-4 flex items-center gap-3 border-b border-neon-yellow/20">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-neon-yellow/10 border border-neon-yellow/30">
+                  <span className="text-2xl font-bold text-neon-yellow">↔</span>
+                </div>
                 <div>
-                  <p className="font-display font-black text-xs uppercase tracking-widest text-zinc-400">Substituição</p>
-                  <p className="font-display font-black text-lg text-white leading-tight">{selected.num} {selected.name} sai</p>
+                  <p
+                    className="text-neon-yellow uppercase tracking-[0.18em]"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Substituição
+                  </p>
+                  <p
+                    className="text-white leading-tight uppercase"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontStyle: 'italic',
+                      fontWeight: 700,
+                      fontSize: '18px',
+                      letterSpacing: '0.01em',
+                    }}
+                  >
+                    {selected.num} {selected.name} sai
+                  </p>
                 </div>
               </div>
             )}
@@ -2564,7 +2762,14 @@ export function MatchQuick() {
                 const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
                 const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
                 return (
-                  <p className="text-sm leading-relaxed" style={{ color: isGrave ? '#fca5a5' : '#fcd34d' }}>
+                  <p
+                    className="leading-relaxed"
+                    style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: '13px',
+                      color: isGrave ? '#fca5a5' : '#fcd34d',
+                    }}
+                  >
                     {isGrave
                       ? `Lesão grave — ${selected.name} não pode continuar. Escolhe o substituto obrigatoriamente.`
                       : `Lesão leve — podes substituir ou arriscar que ${selected.name} continue em campo.`}
@@ -2573,13 +2778,25 @@ export function MatchQuick() {
               })() : null}
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                <label
+                  className="block text-white/50 uppercase tracking-[0.18em] mb-2"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                  }}
+                >
                   Entra (banco)
                 </label>
                 <select
                   value={subPickId}
                   onChange={(e) => setSubPickId(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                  className="w-full bg-black/60 border border-white/15 px-3 py-2.5 text-white focus:border-neon-yellow focus:outline-none transition-colors"
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '13px',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                 >
                   <option value="">— Escolher jogador —</option>
                   {benchCards.map((c) => (
@@ -2591,7 +2808,13 @@ export function MatchQuick() {
               </div>
 
               {live?.quickInjurySub && benchCards.length === 0 ? (
-                <p className="text-sm text-red-300">
+                <p
+                  className="text-red-400"
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '13px',
+                  }}
+                >
                   Não há jogadores elegíveis no banco. Termina a partida ou joga com menos.
                 </p>
               ) : null}
@@ -2600,7 +2823,13 @@ export function MatchQuick() {
                 <button
                   type="button"
                   disabled={!subPickId}
-                  className="w-full py-3 rounded-xl bg-neon-yellow text-black font-display font-black uppercase tracking-wider text-sm disabled:opacity-40 disabled:pointer-events-none"
+                  className="w-full py-3 bg-neon-yellow text-black uppercase tracking-[0.2em] disabled:opacity-40 disabled:pointer-events-none hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    borderRadius: 'var(--radius-sm)',
+                  }}
                   onClick={() => {
                     if (!subPickId) return;
                     dispatch({ type: 'MATCH_SUBSTITUTE', outPlayerId: selected.playerId, inPlayerId: subPickId });
@@ -2618,7 +2847,13 @@ export function MatchQuick() {
                   return (
                     <button
                       type="button"
-                      className="w-full py-3 rounded-xl bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 text-amber-300 font-display font-black uppercase tracking-wider text-sm transition-colors"
+                      className="w-full py-3 bg-black/60 hover:bg-black/80 border border-amber-500/40 text-amber-400 uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        borderRadius: 'var(--radius-sm)',
+                      }}
                       onClick={() => {
                         dispatch({ type: 'CANCEL_QUICK_INJURY_SUB' });
                         setSelected(null);
@@ -2632,7 +2867,13 @@ export function MatchQuick() {
                 {!live?.quickInjurySub ? (
                   <button
                     type="button"
-                    className="w-full py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-300 font-bold text-sm transition-colors"
+                    className="w-full py-3 bg-black/60 hover:bg-black/80 border border-white/15 text-white/70 hover:text-white transition-all"
+                    style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-sm)',
+                    }}
                     onClick={() => setSelected(null)}
                   >
                     Cancelar
@@ -2843,7 +3084,12 @@ export function MatchQuick() {
               style={{ borderRadius: 'var(--radius-md)' }}
             >
               <QuickMatchHeatmapPanel
-                heatmap={buildHeatmapFromEvents(live.events, 60)}
+                heatmap={buildHeatmapFromEvents(
+                  live.events,
+                  60,
+                  live.homePlayers,
+                  (lineupIds?.formation ?? '4-3-3') as FormationSchemeId
+                )}
                 homeColor="#fbbf24"
                 awayColor="#ef4444"
               />
@@ -2953,6 +3199,39 @@ export function MatchQuick() {
         </motion.div>
       )}
 
+      {/* ─── Celebração de Gol ─────────────────────────────────────────── */}
+      {live && goalCelebrationKey && (
+        <QuickGoalCelebration
+          triggerKey={goalCelebrationKey}
+          scorerName={(() => {
+            const lastGoal = live.events?.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
+            if (lastGoal?.playerId) {
+              const player = playersById[lastGoal.playerId];
+              return player?.name || 'Jogador';
+            }
+            return 'Gol!';
+          })()}
+          scorerPortrait={(() => {
+            const lastGoal = live.events?.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
+            if (lastGoal?.playerId) {
+              const player = playersById[lastGoal.playerId];
+              return player ? playerPortraitSrc(player, 256, 256) : null;
+            }
+            return null;
+          })()}
+          narrative={(() => {
+            const lastGoal = live.events?.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
+            return lastGoal?.text || 'Estufou as redes!';
+          })()}
+          onDismiss={() => {
+            setGoalCelebrationActive(false);
+            setGoalCelebrationKey(null);
+            // Limpar freeze para garantir que o jogo retome imediatamente
+            freezeUntilRef.current = 0;
+          }}
+        />
+      )}
+
       {/* ─── Penalty Kick Modal ─────────────────────────────────────────── */}
       {live?.penalty?.stage === 'kick' && live?.phase === 'playing' && live?.penalty && (
         <PenaltyKickModal
@@ -2994,6 +3273,45 @@ export function MatchQuick() {
               choiceId,
             });
           }}
+        />
+      )}
+
+      {/* ─── Overlays de Substituição e Cartão Vermelho ─────────────────── */}
+      <AnimatePresence>
+        {substitutionOverlay && (
+          <SubstitutionOverlay
+            playerOut={substitutionOverlay.playerOut}
+            playerIn={substitutionOverlay.playerIn}
+            reason={substitutionOverlay.reason}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {redCardOverlay && (
+          <RedCardOverlay
+            player={redCardOverlay.player}
+            reason={redCardOverlay.reason}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ─── Assistente AI ─────────────────────────────────────────────── */}
+      {live?.phase === 'playing' && !halfTimeUi && !summary && (
+        <AssistantAI
+          onSubstitution={handleSubstitution}
+          onTacticalChange={handleTacticalChange}
+          availablePlayers={pitch.map(p => ({
+            id: p.playerId,
+            name: p.name,
+            position: p.pos,
+            fatigue: p.fatigue,
+          }))}
+          benchPlayers={benchCards.map(c => ({
+            id: c.id,
+            name: c.name,
+            position: c.pos,
+          }))}
         />
       )}
 

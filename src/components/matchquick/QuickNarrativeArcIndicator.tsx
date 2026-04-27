@@ -34,15 +34,15 @@ export function QuickNarrativeArcIndicator({ arc, intensity }: Props) {
   const getArcIcon = () => {
     switch (arc) {
       case 'late_drama':
-        return '🔥';
+        return '↑';
       case 'collapse':
-        return '⚠️';
+        return '↓';
       case 'underdog_fight':
-        return '💪';
+        return '↗';
       case 'dominant_control':
-        return '👑';
+        return '▲';
       default:
-        return '⚽';
+        return '●';
     }
   };
 

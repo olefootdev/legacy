@@ -1,11 +1,11 @@
 import type { AgentMode } from '@/agents/yukaAgents';
 
 /** Virtual m/s on pitch (see `FIELD_LENGTH` in `field.ts`). */
-export const SPEED_WALK_BASE = 2.35;
+export const SPEED_WALK_BASE = 7.05;
 /** Corrida leve (jog): entre marcha e sprint. */
-export const SPEED_JOG_BASE = 3.08;
+export const SPEED_JOG_BASE = 9.24;
 /** Corrida acelerada (sprint): onde o atributo velocidade mais separa jogadores. */
-export const SPEED_SPRINT_BASE = 4.38;
+export const SPEED_SPRINT_BASE = 13.14;
 
 /** Walk: `v_walk = SPEED_WALK_BASE * lerp(1, SPEED_WALK_MAX_MULT, speedAttr01)`. */
 export const SPEED_WALK_MAX_MULT = 1.74;
@@ -20,7 +20,7 @@ export const SPEED_RUN_BASE = SPEED_SPRINT_BASE;
 export const SPEED_RUN_MAX_MULT = SPEED_SPRINT_MAX_MULT;
 
 /** Hard cap on `Vehicle.maxSpeed` for integrator stability. */
-export const V_MAX_ABSOLUTE = 19.0;
+export const V_MAX_ABSOLUTE = 57.0;
 
 /**
  * effort01 smoothing (0 = andar dominante, 1 = sprint dominante).

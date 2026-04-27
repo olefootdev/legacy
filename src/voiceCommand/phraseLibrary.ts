@@ -1,7 +1,7 @@
 /**
  * OLEFOOT — Phrase Library Integration
  *
- * Integra a tabela `learned_phrases` do Supabase com o parser de voz.
+ * Integra a tabela `football_vocabulary` do Supabase com o parser de voz.
  * Carrega frases do vocabulário do futebol e faz matching fuzzy com comandos de voz.
  */
 
@@ -11,12 +11,17 @@ import type { VoiceIntent } from './types';
 export interface LearnedPhrase {
   id: string;
   phrase: string;
+  stem: string;
   intent: VoiceIntent;
-  category: string;
-  confidence: number;
-  language: string;
+  canonical_phrase: string;
+  confirm_count: number;
+  region?: string;
+  language_type?: string;
+  context?: string;
+  formality_level?: number;
   is_active: boolean;
-  usage_count: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 let cachedPhrases: LearnedPhrase[] = [];
@@ -37,10 +42,10 @@ export async function loadPhraseLibrary(): Promise<LearnedPhrase[]> {
   if (!sb) return [];
 
   const { data, error } = await sb
-    .from('learned_phrases')
+    .from('football_vocabulary')
     .select('*')
     .eq('is_active', true)
-    .order('confidence', { ascending: false });
+    .order('confirm_count', { ascending: false });
 
   if (error) {
     console.error('[phraseLibrary] Erro ao carregar frases:', error);
@@ -121,7 +126,9 @@ export async function matchPhrase(
 
   for (const phrase of phrases) {
     const sim = similarity(inputNorm, phrase.phrase);
-    const adjustedSim = sim * phrase.confidence; // ajusta pela confiança da frase
+    // Usa confirm_count como peso de confiança (normalizado)
+    const confidence = Math.min(phrase.confirm_count / 10, 1.0);
+    const adjustedSim = sim * (0.7 + confidence * 0.3); // 70% similaridade + 30% confiança
 
     if (adjustedSim >= threshold) {
       if (!bestMatch || adjustedSim > bestMatch.similarity) {
@@ -149,7 +156,8 @@ export async function matchPhrases(
 
   for (const phrase of phrases) {
     const sim = similarity(inputNorm, phrase.phrase);
-    const adjustedSim = sim * phrase.confidence;
+    const confidence = Math.min(phrase.confirm_count / 10, 1.0);
+    const adjustedSim = sim * (0.7 + confidence * 0.3);
 
     if (adjustedSim >= threshold) {
       matches.push({ phrase, similarity: adjustedSim });
@@ -168,7 +176,8 @@ export async function incrementPhraseUsage(phraseId: string): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;
 
-  const { error } = await sb.rpc('increment_phrase_usage', {
+  // Incrementa confirm_count na tabela football_vocabulary
+  const { error } = await sb.rpc('increment_vocabulary_usage', {
     p_phrase_id: phraseId,
   });
 

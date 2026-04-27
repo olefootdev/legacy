@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from 'react';
 import { getSupabase } from '@/supabase/client';
-import { Sparkles, User, Target, BookOpen, DollarSign, Play, Check, Copy, Image as ImageIcon, Upload } from 'lucide-react';
+import { Sparkles, User, Target, BookOpen, DollarSign, Play, Check, Copy, Image as ImageIcon, Upload, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   runScoutAgent,
@@ -26,6 +26,7 @@ import {
 } from '@/admin/createPlayerAgentsClient';
 import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
 import { PlayerLinkEditor, DEFAULT_LINK_VALUE, type PlayerLinkEditorValue } from '@/admin/components/PlayerLinkEditor';
+import { getAllActiveCollections, addCollection, collectionIdExists } from '@/supabase/playerCollections';
 
 type Stage = 'scout' | 'attributes' | 'bio' | 'valuation';
 
@@ -64,6 +65,7 @@ export function AdminCreatePlayerAgentsPanel() {
   const [collections, setCollections] = useState<string[]>(['genesis']);
   const [selectedCollection, setSelectedCollection] = useState('genesis');
   const [newCollection, setNewCollection] = useState('');
+  const [savingCollection, setSavingCollection] = useState(false);
 
   // Fontes de pesquisa (até 3 links).
   const [link1, setLink1] = useState('');
@@ -71,18 +73,64 @@ export function AdminCreatePlayerAgentsPanel() {
   const [link3, setLink3] = useState('');
 
   useEffect(() => {
-    const sb = getSupabase();
-    if (!sb) return;
-    void sb
-      .from('genesis_market_players')
-      .select('collection_id')
-      .limit(500)
-      .then(({ data }) => {
-        if (!data) return;
-        const uniq = Array.from(new Set(data.map((r) => (r as { collection_id: string | null }).collection_id).filter((x): x is string => !!x)));
-        if (uniq.length > 0) setCollections(uniq);
-      });
+    loadCollections();
   }, []);
+
+  const loadCollections = async () => {
+    const data = await getAllActiveCollections();
+    if (data.length > 0) {
+      setCollections(data.map((c) => c.collection_id));
+    }
+  };
+
+  const saveNewCollection = async () => {
+    const collectionId = newCollection.trim();
+    if (!collectionId) {
+      alert('Digite um nome para a coleção');
+      return;
+    }
+
+    // Validar formato (apenas letras, números, hífen e underscore)
+    if (!/^[a-z0-9_-]+$/i.test(collectionId)) {
+      alert('Nome da coleção deve conter apenas letras, números, hífen e underscore');
+      return;
+    }
+
+    setSavingCollection(true);
+    try {
+      // Verificar se já existe
+      const exists = await collectionIdExists(collectionId);
+      if (exists) {
+        alert('Esta coleção já existe!');
+        setSavingCollection(false);
+        return;
+      }
+
+      // Criar nova coleção
+      const result = await addCollection({
+        collection_id: collectionId,
+        name: collectionId.charAt(0).toUpperCase() + collectionId.slice(1),
+        description: `Coleção ${collectionId}`,
+        is_active: true,
+      });
+
+      if (result) {
+        // Recarregar lista de coleções
+        await loadCollections();
+        // Selecionar a nova coleção
+        setSelectedCollection(collectionId);
+        setNewCollection('');
+        alert('✅ Coleção salva com sucesso!');
+      } else {
+        alert('❌ Erro ao salvar coleção');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar coleção:', err);
+      alert('❌ Erro ao salvar coleção');
+    } finally {
+      setSavingCollection(false);
+    }
+  };
 
   const effectiveCollection = selectedCollection === '__new__' ? newCollection.trim() : selectedCollection;
   const collectionContext = `Coleção: ${effectiveCollection || '(indefinida)'}, ${RARITY_OPTIONS.find((r) => r.value === targetRarity)?.label ?? 'raridade a definir'}`;
@@ -313,12 +361,27 @@ export function AdminCreatePlayerAgentsPanel() {
               <option value="__new__">+ Nova coleção…</option>
             </select>
             {selectedCollection === '__new__' ? (
-              <input
-                value={newCollection}
-                onChange={(e) => setNewCollection(e.target.value.trim())}
-                placeholder="id da coleção (ex: temporada2, lendas-br)"
-                className="mt-1.5 w-full rounded-lg border border-cyan-400/40 bg-black/50 px-3 py-2 text-sm text-white"
-              />
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  value={newCollection}
+                  onChange={(e) => setNewCollection(e.target.value.trim())}
+                  placeholder="id da coleção (ex: temporada2, lendas-br)"
+                  className="flex-1 rounded-lg border border-cyan-400/40 bg-black/50 px-3 py-2 text-sm text-white"
+                />
+                <button
+                  onClick={saveNewCollection}
+                  disabled={savingCollection || !newCollection.trim()}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all',
+                    savingCollection || !newCollection.trim()
+                      ? 'cursor-not-allowed border border-gray-600 bg-gray-800 text-gray-500'
+                      : 'border border-cyan-400/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25'
+                  )}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {savingCollection ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
             ) : null}
           </label>
         </div>

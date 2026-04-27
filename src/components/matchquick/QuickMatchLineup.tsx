@@ -30,8 +30,8 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
       {badges.map((b, i) => {
         if (b === 'goal')
           return (
-            <span key={`g-${i}`} title="Gol" className="text-[11px] sm:text-xs leading-none">
-              ⚽
+            <span key={`g-${i}`} title="Gol" className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-neon-yellow text-black text-[8px] font-bold leading-none">
+              G
             </span>
           );
         if (b === 'yellow')
@@ -66,8 +66,7 @@ function PlayerEventBadges({ badges }: { badges: QuickEventBadge[] }) {
 
 function FatiguePercentage({ fatigue }: { fatigue: number }) {
   const pct = Math.min(100, Math.max(0, Math.round(fatigue)));
-  const color =
-    pct >= 80 ? 'text-red-400' : pct >= 65 ? 'text-amber-400' : pct >= 40 ? 'text-neon-yellow' : 'text-emerald-400';
+  const color = pct >= 80 ? 'text-red-500' : pct >= 65 ? 'text-neon-yellow' : 'text-white/50';
   return (
     <span
       className={cn('tabular-nums leading-none font-bold', color)}
@@ -155,10 +154,13 @@ export function QuickMatchLineup({
                   {/* Linha 1: Nome + OVR */}
                   <div className="flex items-baseline justify-between gap-2">
                     <p
-                      className="text-white uppercase font-display font-bold truncate leading-tight flex-1 min-w-0"
+                      className="text-white uppercase truncate leading-tight flex-1 min-w-0"
                       style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontStyle: 'italic',
+                        fontWeight: 700,
                         fontSize: 'clamp(14px, 2.8vw, 16px)',
-                        letterSpacing: '0.04em',
+                        letterSpacing: '0.02em',
                       }}
                     >
                       {p.name}
@@ -234,10 +236,13 @@ export function QuickMatchLineup({
                 {/* Linha 1: Nome + Cartão */}
                 <div className="flex items-baseline justify-between gap-2">
                   <p
-                    className="text-red-300 uppercase font-display font-bold truncate leading-tight flex-1 min-w-0"
+                    className="text-red-300 uppercase truncate leading-tight flex-1 min-w-0"
                     style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontStyle: 'italic',
+                      fontWeight: 700,
                       fontSize: 'clamp(14px, 2.8vw, 16px)',
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.02em',
                     }}
                   >
                     {p.name}

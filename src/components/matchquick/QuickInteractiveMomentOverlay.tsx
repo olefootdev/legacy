@@ -122,7 +122,10 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
 
           {/* Choices */}
           <div className="space-y-3 p-6">
-            {moment.choices.map((choice) => (
+            {moment.choices.map((choice) => {
+              const isRecommended = moment.choices.every(c => choice.successChance >= c.successChance);
+              const shouldPulse = countdown <= 1 && !selected && isRecommended;
+              return (
               <motion.button
                 key={choice.id}
                 onClick={() => handleChoice(choice.id)}
@@ -136,6 +139,7 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
                     : selected
                       ? 'border-white/10 bg-black/20 opacity-40'
                       : 'border-white/10 bg-black/40 hover:border-neon-yellow/40 hover:bg-black/60',
+                  shouldPulse && 'animate-pulse border-neon-yellow/60 shadow-[0_0_16px_rgba(253,224,71,0.25)]'
                 )}
               >
                 {selected === choice.id && (
@@ -169,7 +173,8 @@ export function QuickInteractiveMomentOverlay({ moment, onChoice }: Props) {
                   </div>
                 </div>
               </motion.button>
-            ))}
+            );
+            })}
           </div>
 
           {/* Timeout warning */}

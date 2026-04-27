@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Sparkles,
   Megaphone,
-  LineChart,
   Heart,
   Info,
   Scale,
@@ -873,19 +872,7 @@ export function Team() {
 
                       {/* Middle: Info */}
                       <div className="relative flex-1 p-2 md:p-3 flex flex-col justify-center min-w-0">
-                        <button
-                          type="button"
-                          title="Ver ficha e temporada"
-                          aria-label={`Estatísticas e temporada — ${player.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSheetPlayerId(player.id);
-                          }}
-                          className="absolute right-2 top-2 z-[1] rounded border border-white/15 bg-black/60 p-1.5 text-neon-yellow/90 transition-colors hover:bg-neon-yellow/15 hover:text-neon-yellow"
-                        >
-                          <LineChart className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                        <div className="flex items-center gap-1.5 pr-10">
+                        <div className="flex items-center gap-1.5">
                           {player.countryFlagEmoji ? (
                             <span className="shrink-0 text-base leading-none" title={player.country ?? undefined} aria-hidden>
                               {player.countryFlagEmoji}

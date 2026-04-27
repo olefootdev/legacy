@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Trophy, Calendar, TrendingUp, History, Target, Medal, Flag } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Trophy, Calendar, TrendingUp, Globe, Target, Medal, Flag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { formatExp } from '@/systems/economy';
@@ -42,7 +42,7 @@ export function CompetitionHub() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.04 }}
               transition={{ duration: 0.4 }}
-              className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.04]"
+              className="font-serif-hero font-black tabular-nums whitespace-nowrap text-black/[0.04]"
               style={{
                 fontSize: 'clamp(180px, 32vw, 460px)',
                 lineHeight: '0.85',
@@ -153,10 +153,9 @@ export function CompetitionHub() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="text-emerald-300 tabular-nums leading-none truncate"
+                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
@@ -169,10 +168,9 @@ export function CompetitionHub() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="text-amber-300 tabular-nums leading-none truncate"
+                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
@@ -185,10 +183,9 @@ export function CompetitionHub() {
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
                  style={{ borderRadius: 'var(--radius-sm)' }}>
               <p
-                className="text-red-300 tabular-nums leading-none truncate"
+                className="font-serif-hero text-neon-yellow tabular-nums leading-none truncate"
                 style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
@@ -339,34 +336,34 @@ export function CompetitionHub() {
           </Link>
         </motion.div>
 
-        {/* Card 4: Histórico */}
+        {/* Card 4: Liga Global */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           <Link
-            to="/wallet"
+            to="/liga-global/registro"
             className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
           >
             <div className="p-6 flex flex-col gap-4">
               <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-purple-400/10 border border-purple-400/20">
-                  <History className="w-6 h-6 text-purple-400" />
+                <div className="p-3 rounded bg-neon-yellow/10 border border-neon-yellow/20">
+                  <Globe className="w-6 h-6 text-neon-yellow" />
                 </div>
                 <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-purple-400/70"
+                  className="text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70"
                   style={{ fontFamily: 'var(--font-ui)' }}
                 >
-                  Partidas
+                  Global
                 </span>
               </div>
               <div>
                 <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Histórico
+                  Liga Global
                 </h3>
                 <p className="text-sm text-white/55 leading-relaxed">
-                  Todas as partidas disputadas, placares e recompensas. Revê o teu percurso.
+                  Competição mundial com 32 times. Playoffs, divisões e promoção/rebaixamento.
                 </p>
               </div>
               <div className="mt-auto pt-2">
@@ -377,7 +374,7 @@ export function CompetitionHub() {
                     borderRadius: 'var(--radius-sm)',
                   }}
                 >
-                  Ver histórico
+                  Entrar na liga
                 </span>
               </div>
             </div>

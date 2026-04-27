@@ -10,7 +10,7 @@ import type {
   PastResult,
   PlayerEntity,
 } from '@/entities/types';
-import type { InboxItem } from './inboxTypes';
+import type { InboxItem, InboxCategory } from './inboxTypes';
 import type { ClubStructuresState, ClubStructureId } from '@/clubStructures/types';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import type { LeagueSeasonState } from '@/match/leagueSeason';
@@ -36,6 +36,7 @@ import type { CompetitiveRankingState } from './competitiveRanking';
 import type { CoachAgent } from '@/coach/types';
 
 export type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
+export type { InboxItem, InboxCategory } from './inboxTypes';
 
 export interface SavedTacticPlan {
   id: string;
@@ -290,6 +291,8 @@ export interface OlefootGameState {
   globalLeague?: GlobalLeagueState;
   /** Estado da OLEFOOT LIGA (sistema completo de liga com tabela e múltiplas rodadas). */
   olefootLeague?: import('@/match/olefootLeague').OlefootLeagueState;
+  /** Estado da Liga Global MVP (sistema de playoffs + divisões + promoção/rebaixamento). */
+  globalLeagueMVP?: import('@/match/globalLeagueMVP').GlobalLeagueMVPState;
 }
 
 export type GameAction =
@@ -472,6 +475,7 @@ export type GameAction =
   | { type: 'COACH_REJECT_ACTION'; actionId: string }
   | { type: 'COACH_EXECUTE_ACTION'; actionId: string }
   | { type: 'COACH_CLEAR_EXECUTED_ACTIONS' }
+  | { type: 'COACH_ADD_MESSAGE'; message: import('@/coach/types').ConversationMessage }
   | { type: 'ADMIN_UPSERT_LEAGUE'; league: AdminLeagueConfig }
   | { type: 'ADMIN_REMOVE_LEAGUE'; id: string }
   | { type: 'ADMIN_SET_PRIMARY_LEAGUE'; id: string }
@@ -503,6 +507,13 @@ export type GameAction =
   | { type: 'SET_OLEFOOT_LEAGUE'; payload: import('@/match/olefootLeague').OlefootLeagueState }
   | { type: 'FINALIZE_OLEFOOT_ROUND'; roundNumber: number; fixtures: import('@/match/globalMatch').GlobalFixture[] }
   | { type: 'ADVANCE_OLEFOOT_ROUND' }
+  /** Match Global Scheduler: Ciclo de vida automático das rodadas */
+  | { type: 'CREATE_GLOBAL_ROUND'; scheduledKickoffMs: number }
+  | { type: 'START_COMMAND_WINDOW' }
+  | { type: 'START_GLOBAL_ROUND' }
+  | { type: 'UPDATE_LIVE_ROUND'; nowMs: number }
+  | { type: 'FINISH_GLOBAL_ROUND'; nowMs: number }
+  | { type: 'ADVANCE_GLOBAL_ROUND'; nowMs: number }
   /** Partida Rápida Competitiva: Atualiza ranking após partida */
   | { type: 'UPDATE_COMPETITIVE_RANKING'; homeScore: number; awayScore: number; isCompetitive: boolean }
   | { type: 'ADMIN_SET_MANAGER_PROSPECT_CONFIG'; createCostExp: number }
@@ -544,6 +555,8 @@ export type GameAction =
   | { type: 'ADMIN_SET_UI_BANNER'; slot: BannerSlotId; entry: UiBannerEntry }
   | { type: 'ADMIN_SET_PLAYER_LISTED'; playerId: string; listed: boolean }
   | { type: 'ADMIN_SET_PLAYER_COLLECTION'; playerId: string; collectionId: string | undefined }
+  | { type: 'ADMIN_SET_COACH'; coach: import('@/coach/types').CoachAgent }
+  | { type: 'ADMIN_REMOVE_COACH' }
   | {
       type: 'CREATE_MANAGER_PROSPECT';
       payload: import('@/entities/managerProspect').ManagerProspectCreatePayload;
@@ -594,4 +607,15 @@ export type GameAction =
   | { type: 'ADMIN_GRANT_SHOP_ITEM'; itemId: string; qty: number }
   | { type: 'RESET_DAILY_CHALLENGES' }
   | { type: 'UPDATE_CHALLENGE_PROGRESS'; challengeType: import('./dailyChallenges').ChallengeType; increment?: number }
-  | { type: 'CLAIM_CHALLENGE_REWARD'; challengeId: string };
+  | { type: 'CLAIM_CHALLENGE_REWARD'; challengeId: string }
+  // Global League MVP Actions
+  | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
+  | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
+  | { type: 'START_GLOBAL_PLAYOFF_ROUND'; roundNumber: number }
+  | { type: 'UPDATE_GLOBAL_PLAYOFF_LIVE'; nowMs: number }
+  | { type: 'FINISH_GLOBAL_PLAYOFF_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }
+  | { type: 'START_GLOBAL_LEAGUE_ROUND'; roundNumber: number }
+  | { type: 'UPDATE_GLOBAL_LEAGUE_LIVE'; nowMs: number }
+  | { type: 'FINISH_GLOBAL_LEAGUE_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }
+  | { type: 'APPLY_GLOBAL_PROMOTION_RELEGATION' }
+  | { type: 'RESET_GLOBAL_LEAGUE_MVP' };

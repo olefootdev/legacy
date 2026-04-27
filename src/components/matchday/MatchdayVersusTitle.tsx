@@ -183,14 +183,20 @@ export function MatchdayVersusTitle({
   const seed = awaySeed ?? fallbackAway;
 
   const nameText =
-    'min-w-0 max-w-full whitespace-normal break-words text-pretty not-italic text-white [word-spacing:normal]';
+    'min-w-0 max-w-full whitespace-normal break-words text-pretty text-white [word-spacing:normal]';
 
   return (
     <h2
       className={cn(
-        'font-display font-black uppercase leading-snug tracking-normal',
+        'uppercase leading-snug tracking-normal',
         className,
       )}
+      style={{
+        fontFamily: 'var(--font-serif-hero)',
+        fontStyle: 'italic',
+        fontWeight: 700,
+        letterSpacing: '0.01em',
+      }}
     >
       <span className="flex w-full min-w-0 items-center justify-center gap-1 px-0.5 sm:gap-1.5 sm:px-1 md:gap-3">
         {/* Metade esquerda: bloco [brasão + nome] junto ao “vs”, sem esticar o nome e isolar o brasão */}
@@ -324,10 +330,14 @@ export function MatchdayVersusWithClock({
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.quick} /> : null}
         <span
-          className={cn(
-            'min-w-0 truncate text-end font-display font-bold leading-tight text-white',
-            'text-[11px] min-[380px]:text-xs sm:text-sm md:text-base lg:text-lg',
-          )}
+          className="min-w-0 truncate text-end leading-tight text-white uppercase"
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: 'clamp(11px, 2.2vw, 18px)',
+            letterSpacing: '0.01em',
+          }}
         >
           {homeLabel}
         </span>
@@ -348,10 +358,14 @@ export function MatchdayVersusWithClock({
       </div>
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-start gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         <span
-          className={cn(
-            'min-w-0 truncate text-start font-display font-bold leading-tight text-gray-200',
-            'text-[11px] min-[380px]:text-xs sm:text-sm md:text-base lg:text-lg',
-          )}
+          className="min-w-0 truncate text-start leading-tight text-gray-200 uppercase"
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: 'clamp(11px, 2.2vw, 18px)',
+            letterSpacing: '0.01em',
+          }}
         >
           {awayLabel}
         </span>

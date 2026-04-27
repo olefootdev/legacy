@@ -79,9 +79,16 @@ export function useLive2dTacticalSim(opts: {
 
       const snap = loop.getSnapshot();
       truthRef.current = snap;
-      if (snap.players.length > 0) {
+
+      // BUG FIX #2: Sempre atualizar lastGoodTruthRef se snapshot válido
+      // Evita fallback infinito quando snap.players.length === 0 temporariamente
+      if (snap && snap.players && snap.players.length > 0) {
+        lastGoodTruthRef.current = snap;
+      } else if (!lastGoodTruthRef.current) {
+        // Primeira vez sem jogadores: criar snapshot vazio válido
         lastGoodTruthRef.current = snap;
       }
+
       carrierRef.current = loop.getSimState().carrierId;
       fatigueRef.current = {
         ids: loop.getCriticallyFatiguedHomeIds(30),

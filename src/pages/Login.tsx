@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket } from 'lucide-react';
+import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
@@ -62,6 +62,7 @@ export function Login() {
   const [mode, setMode] = useState<'landing' | 'form' | 'forgot'>('landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forgotSent, setForgotSent] = useState(false);
@@ -111,7 +112,16 @@ export function Login() {
     try {
       const r = await signInWithEmail(email, password);
       if (!r.ok) {
-        setError(r.error ?? 'Falha ao entrar.');
+        // Mensagens de erro mais específicas
+        let errorMsg = r.error ?? 'Falha ao entrar.';
+        if (errorMsg.includes('Invalid login credentials')) {
+          errorMsg = 'E-mail ou senha incorretos. Verifica os dados e tenta novamente.';
+        } else if (errorMsg.includes('Email not confirmed')) {
+          errorMsg = 'E-mail não confirmado. Verifica tua caixa de entrada.';
+        } else if (errorMsg.includes('User not found')) {
+          errorMsg = 'Conta não encontrada. Verifica o e-mail ou cadastra-te.';
+        }
+        setError(errorMsg);
         return;
       }
       // Hidrata managerProfile do Supabase pro Zustand local.
@@ -452,15 +462,29 @@ export function Login() {
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Senha</span>
-                    <input
-                      type="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 pr-10 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </label>
                   {error ? (
                     <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">

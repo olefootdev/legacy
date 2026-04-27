@@ -177,11 +177,11 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0, opacity: 0 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 left-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-neon-yellow to-amber-400 text-black shadow-[0_0_30px_rgba(253,225,0,0.6)] transition-all hover:scale-110 hover:shadow-[0_0_40px_rgba(253,225,0,0.8)]"
+        className="fixed bottom-20 left-4 z-50 flex h-12 w-12 sm:h-14 sm:w-14 sm:bottom-6 sm:left-6 items-center justify-center rounded-full bg-gradient-to-br from-neon-yellow to-amber-400 text-black shadow-[0_0_30px_rgba(253,225,0,0.6)] transition-all hover:scale-110 hover:shadow-[0_0_40px_rgba(253,225,0,0.8)]"
         aria-label="Abrir assistente IA"
       >
-        <MessageCircle className="h-7 w-7" strokeWidth={2.5} />
-        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-400 text-[9px] font-bold text-black">
+        <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.5} />
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-cyan-400 text-[8px] sm:text-[9px] font-bold text-black">
           IA
         </span>
       </motion.button>
@@ -201,7 +201,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className={cn('fixed bottom-6 left-6 z-50', isDragging && 'cursor-grabbing')}
+        className={cn('fixed bottom-20 left-4 sm:bottom-6 sm:left-6 z-50', isDragging && 'cursor-grabbing')}
       >
         <button
           onPointerDown={(e) => {
@@ -251,7 +251,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       className={cn(
-        'fixed bottom-6 left-6 z-50 flex h-[600px] w-full max-w-md flex-col',
+        'fixed bottom-20 left-2 right-2 sm:bottom-6 sm:left-6 sm:right-auto z-50 flex h-[70vh] max-h-[600px] sm:h-[600px] w-auto sm:w-full sm:max-w-md flex-col',
         isDragging && 'cursor-grabbing',
       )}
     >
@@ -399,7 +399,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
               <Zap className="h-3 w-3" />
               Perguntas rápidas
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
               {QUICK_QUESTIONS.slice(0, 4).map((q, i) => (
                 <button
                   key={i}

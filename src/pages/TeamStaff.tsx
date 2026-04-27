@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Check, ChevronDown, Crosshair, Lightbulb, Shield, Sparkles, UserCog, Users, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { Check, ChevronDown, Crosshair, Lightbulb, Shield, Sparkles, UserCog, Users, Zap, Bot, MessageCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { getStaffUpgradeCost, maxStaffSlotsByLevel, STAFF_LABELS, STAFF_ROLE_IDS } from '@/systems/staff';
 import { STAFF_BENEFIT_SUMMARY } from '@/systems/staffBenefits';
 import type { StaffRoleId } from '@/game/types';
 import { cn } from '@/lib/utils';
 import { BackButton } from '@/components/BackButton';
+import { useTrackScreen } from '@/progression/trackEvent';
 
 const COLLECTIVE_GROUPS = ['defensivo', 'criativo', 'ataque'] as const;
 
@@ -18,10 +19,27 @@ function collectiveGroupIcon(g: (typeof COLLECTIVE_GROUPS)[number]) {
 }
 
 export function TeamStaff() {
+  useTrackScreen('screen_team');
   const dispatch = useGameDispatch();
+  const navigate = useNavigate();
   const manager = useGameStore((s) => s.manager);
   const players = useGameStore((s) => s.players);
   const finance = useGameStore((s) => s.finance);
+  const coach = manager?.coach;
+
+  // Se não houver coach, retorna erro
+  if (!coach) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-8">
+        <BackButton to="/clube" label="Clube" />
+        <div className="sports-panel p-6 text-center">
+          <Bot className="w-12 h-12 mx-auto text-gray-500 mb-4" />
+          <p className="text-gray-400">Coach não disponível</p>
+        </div>
+      </div>
+    );
+  }
+
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, StaffRoleId[]>>({});
   const [appliedFlash, setAppliedFlash] = useState<string | null>(null);
@@ -90,14 +108,220 @@ export function TeamStaff() {
   };
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-6 pb-8">
-      <BackButton to="/clube" label="Clube" />
-      <TeamMeuTimeHeader
-        title="Staff"
-        subtitle="Profissionais contratados, evolução e orientação ativa por jogador da academia."
-      />
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+        <BackButton to="/clube" label="Clube" />
 
-      <div className="sports-panel p-5">
+        {/* ── HERO EDITORIAL — amarelo com watermark cinematográfico ── */}
+        <section
+          aria-label="Staff"
+          className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm"
+        >
+          {/* Watermark gigante — STAFF */}
+          <div
+            className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+            aria-hidden
+          >
+            <AnimatePresence mode="wait">
+              <motion.span
+                key="staff"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.04 }}
+                transition={{ duration: 0.4 }}
+                className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
+                style={{
+                  fontSize: 'clamp(120px, 24vw, 360px)',
+                  lineHeight: '0.85',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                STAFF
+              </motion.span>
+            </AnimatePresence>
+          </div>
+
+          {/* Composição editorial centrada */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
+          >
+            {/* Eyebrow */}
+            <div
+              className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6 truncate"
+            >
+              <span className="text-black">Gestão do clube · Profissionais</span>
+            </div>
+
+            {/* Headline duo: STAFF + coach */}
+            <h1 className="leading-[0.9]">
+              <span
+                className="block font-bold uppercase text-black"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(2.75rem, 8vw, 6rem)',
+                  letterSpacing: '0.005em',
+                }}
+              >
+                Staff
+              </span>
+              {coach && (
+                <motion.span
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.1 }}
+                  className="block italic text-black"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(2.25rem, 7vw, 5rem)',
+                    marginTop: '0.04em',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {coach.name}
+                </motion.span>
+              )}
+            </h1>
+
+            {/* Régua decorativa */}
+            <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+
+            {/* Ícone Coach */}
+            {coach && (
+              <div className="mt-8 flex justify-center">
+                <div className="group/coach relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                     style={{ borderRadius: 'var(--radius-sm)' }}>
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Bot className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
+                  </div>
+                  <span className="absolute bottom-1 right-1 bg-black px-1.5 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-neon-yellow"
+                        style={{ borderRadius: 'var(--radius-sm)' }}>
+                    {coach.personality}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Quote italic — CENTERPIECE editorial */}
+            {coach && (
+              <motion.blockquote
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.15 }}
+                className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
+                style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+              >
+                "assistente técnico inteligente — conhece todo o sistema e aprende contigo."
+              </motion.blockquote>
+            )}
+
+            {/* Subtítulo — dados vivos */}
+            <p
+              className="mt-3 text-black/60 mx-auto max-w-md"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'clamp(0.85rem, 1vw, 0.95rem)',
+                lineHeight: 1.55,
+              }}
+            >
+              {Object.keys(manager.staff.roles).length} profissionais contratados
+              {coach && ` · ${coach.memory.managerInstructions.filter(i => i.active).length} instruções ativas`}
+              {' · '}rep {coach?.reputation ?? 50}/100
+            </p>
+          </motion.div>
+        </section>
+
+        {/* Coach Agent Card */}
+        {coach && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="sports-panel p-6 bg-gradient-to-br from-violet-500/10 via-transparent to-transparent border-violet-500/20"
+          >
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-neon-yellow to-violet-500 p-0.5">
+                  <div className="w-full h-full rounded-full bg-deep-black flex items-center justify-center">
+                    <Bot className="w-8 h-8 text-neon-yellow" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-display font-black uppercase tracking-wider text-white text-xl">
+                    {coach.name}
+                  </h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {coach.personality} · Reputação {coach.reputation}/100
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-violet-400 font-medium">
+                      Assistente Técnico Inteligente
+                    </span>
+                    {coach.memory.managerInstructions.filter(i => i.active).length > 0 && (
+                      <span className="text-xs bg-neon-yellow/20 text-neon-yellow px-2 py-0.5 rounded">
+                        {coach.memory.managerInstructions.filter(i => i.active).length} instruções ativas
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/coach/chat')}
+                className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-3 rounded-lg text-sm font-bold uppercase hover:bg-neon-yellow/90 transition-all hover:scale-105"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Conversar
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
+                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Tático</div>
+                <div className="text-white text-2xl font-black">{coach.tactical}<span className="text-sm text-gray-500">/20</span></div>
+              </div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
+                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Motivação</div>
+                <div className="text-white text-2xl font-black">{coach.motivation}<span className="text-sm text-gray-500">/20</span></div>
+              </div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
+                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Disciplina</div>
+                <div className="text-white text-2xl font-black">{coach.discipline}<span className="text-sm text-gray-500">/20</span></div>
+              </div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
+                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Ataque</div>
+                <div className="text-white text-2xl font-black">{coach.attacking}<span className="text-sm text-gray-500">/20</span></div>
+              </div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
+                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Defesa</div>
+                <div className="text-white text-2xl font-black">{coach.defending}<span className="text-sm text-gray-500">/20</span></div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-violet-500/10 to-transparent border border-violet-500/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-violet-400 shrink-0 mt-0.5" />
+                <div className="text-sm text-gray-300 leading-relaxed">
+                  <p className="mb-2">
+                    <span className="text-violet-400 font-bold">Conhece todo o sistema:</span> treinos (individual/coletivo), staff (7 roles), estruturas e economia.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Conversa com o coach para ensinar tuas preferências. Ele aprende e adapta as sugestões ao teu estilo de gestão. Pode sugerir e executar ações com tua aprovação.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Stats Overview */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="sports-panel p-5"
+        >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="bg-black/40 border border-white/10 rounded p-3 text-xs">
             <div className="text-gray-500 uppercase font-bold">Slots por role</div>
@@ -113,10 +337,15 @@ export function TeamStaff() {
             <div className="text-white text-lg font-black">{(finance.broCents / 100).toFixed(2)}</div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="sports-panel p-5">
-        <h3 className="font-display font-black uppercase tracking-wider mb-3">Profissionais contratados</h3>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="sports-panel p-5"
+      >
+        <h3 className="font-display font-black uppercase tracking-wider mb-4 text-lg">Profissionais contratados</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {STAFF_ROLE_IDS.map((id) => {
             const level = manager.staff.roles[id] ?? 1;
@@ -148,12 +377,17 @@ export function TeamStaff() {
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="sports-panel p-5 space-y-3">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="sports-panel p-5 space-y-3"
+      >
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h3 className="font-display font-black uppercase tracking-wider flex items-center gap-2">
-            <UserCog className="w-4 h-4" /> Buff ativo por jogador
+          <h3 className="font-display font-black uppercase tracking-wider flex items-center gap-2 text-lg">
+            <UserCog className="w-5 h-5" /> Buff ativo por jogador
           </h3>
           <span className="text-[10px] uppercase tracking-wider text-gray-500">
             Só jogadores da academia · cada role aceita {perRoleCap} atleta(s)
@@ -295,11 +529,16 @@ export function TeamStaff() {
             })}
           </div>
         )}
-      </div>
+      </motion.div>
 
-      <div className="sports-panel p-5 space-y-4">
-        <h3 className="font-display font-black uppercase tracking-wider flex items-center gap-2">
-          <Users className="w-4 h-4" /> Orientação coletiva
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="sports-panel p-5 space-y-4"
+      >
+        <h3 className="font-display font-black uppercase tracking-wider flex items-center gap-2 text-lg">
+          <Users className="w-5 h-5" /> Orientação coletiva
         </h3>
         <div className="flex flex-wrap gap-2">
           {COLLECTIVE_GROUPS.map((g) => {
@@ -335,7 +574,8 @@ export function TeamStaff() {
             );
           })}
         </div>
-      </div>
+      </motion.div>
+    </div>
     </div>
   );
 }

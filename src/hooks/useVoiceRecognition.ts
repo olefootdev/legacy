@@ -67,6 +67,8 @@ export interface VoiceRecognitionOptions {
   onStart?: () => void;
   /** Chamado quando captura termina (natural, stop, timeout ou erro). */
   onEnd?: () => void;
+  /** Chamado durante transcrição (texto parcial). */
+  onInterim?: (interimText: string) => void;
 }
 
 export interface VoiceRecognitionApi {
@@ -76,6 +78,10 @@ export interface VoiceRecognitionApi {
   /** Transcript em progresso (enquanto fala). */
   interim: string;
   supported: boolean;
+  /** Permissão de microfone concedida. */
+  hasPermission: boolean;
+  /** Solicita permissão de microfone. */
+  requestPermission: () => Promise<boolean>;
   start: () => void;
   stop: () => void;
   reset: () => void;
@@ -85,6 +91,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
   const [state, setState] = useState<VoiceState>('idle');
   const [transcript, setTranscript] = useState('');
   const [interim, setInterim] = useState('');
+  const [hasPermission, setHasPermission] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const autoStopRef = useRef<number | null>(null);
   const finalTranscriptRef = useRef('');
@@ -94,6 +101,62 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
   // Mantém callbacks em ref pra não reiniciar recognition a cada render.
   const optsRef = useRef(opts);
   optsRef.current = opts;
+
+  // Verifica permissão de microfone ao montar
+  useEffect(() => {
+    if (!supported) return;
+
+    // Verifica se já tem permissão
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName }).then((result) => {
+        setHasPermission(result.state === 'granted');
+
+        // Monitora mudanças de permissão
+        result.onchange = () => {
+          setHasPermission(result.state === 'granted');
+        };
+      }).catch(() => {
+        // Fallback: assume que não tem permissão
+        setHasPermission(false);
+      });
+    }
+  }, [supported]);
+
+  // Solicita permissão de microfone
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    console.log('[voice] requestPermission() chamado');
+
+    if (!supported) {
+      console.log('[voice] Não suportado');
+      optsRef.current.onError?.('Reconhecimento de voz não suportado neste browser');
+      return false;
+    }
+
+    try {
+      console.log('[voice] Chamando getUserMedia...');
+      // Solicita acesso ao microfone via getUserMedia
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[voice] getUserMedia sucesso!', stream);
+
+      // Para o stream imediatamente (só precisamos da permissão)
+      stream.getTracks().forEach(track => track.stop());
+
+      setHasPermission(true);
+      return true;
+    } catch (err) {
+      console.error('[voice] Permissão de microfone negada:', err);
+
+      const errorMsg = err instanceof Error && err.name === 'NotAllowedError'
+        ? 'Permissão de microfone negada. Clique no ícone de cadeado na barra de endereço e permita o acesso ao microfone.'
+        : err instanceof Error && err.name === 'NotFoundError'
+        ? 'Nenhum microfone encontrado. Conecte um microfone e tente novamente.'
+        : 'Não foi possível acessar o microfone. Verifique as permissões do browser.';
+
+      optsRef.current.onError?.(errorMsg);
+      setHasPermission(false);
+      return false;
+    }
+  }, [supported]);
 
   const clearAutoStop = () => {
     if (autoStopRef.current !== null) {
@@ -121,13 +184,28 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     lastConfidenceRef.current = 0;
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
+    console.log('[voice] start() chamado', { hasPermission });
+
     const SR = getSpeechRecognition();
     if (!SR) {
+      console.log('[voice] SpeechRecognition não disponível');
       optsRef.current.onError?.('Reconhecimento de voz não suportado neste browser');
       setState('error');
       return;
     }
+
+    // Verifica se tem permissão antes de iniciar
+    if (!hasPermission) {
+      console.log('[voice] Sem permissão, solicitando...');
+      const granted = await requestPermission();
+      console.log('[voice] Permissão concedida?', granted);
+      if (!granted) {
+        setState('error');
+        return;
+      }
+    }
+
     // Reset de estado pra nova captura.
     finalTranscriptRef.current = '';
     lastConfidenceRef.current = 0;
@@ -160,16 +238,26 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
       finalTranscriptRef.current = finalText;
       setTranscript(finalText);
       setInterim(interimText);
+
+      // Callback de interim para preview
+      if (interimText && optsRef.current.onInterim) {
+        optsRef.current.onInterim(finalText + interimText);
+      }
     };
     r.onerror = (e) => {
       const msg = e.error === 'no-speech' ? 'Não ouvi nada — segura e fala mais perto' :
                   e.error === 'audio-capture' ? 'Microfone não disponível' :
-                  e.error === 'not-allowed' ? 'Permissão de microfone negada' :
+                  e.error === 'not-allowed' ? 'Permissão de microfone negada. Clique no ícone de cadeado e permita o acesso.' :
                   e.error === 'network' ? 'Sem rede pra transcrever' :
                   `Erro no reconhecimento: ${e.error}`;
       optsRef.current.onError?.(msg);
       setState('error');
       clearAutoStop();
+
+      // Se erro de permissão, atualiza estado
+      if (e.error === 'not-allowed') {
+        setHasPermission(false);
+      }
     };
     r.onend = () => {
       clearAutoStop();
@@ -215,7 +303,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     autoStopRef.current = window.setTimeout(() => {
       stop();
     }, maxMs);
-  }, [stop]);
+  }, [stop, hasPermission, requestPermission]);
 
   // Limpa ao desmontar.
   useEffect(() => {
@@ -225,5 +313,5 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     };
   }, []);
 
-  return { state, transcript, interim, supported, start, stop, reset };
+  return { state, transcript, interim, supported, hasPermission, requestPermission, start, stop, reset };
 }

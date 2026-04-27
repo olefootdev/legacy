@@ -665,8 +665,8 @@ export function gameSpiritTick(
   const fairPlay = (nearestDefender?.attributes as any)?.fairPlay ?? 60;
   const aggression = (nearestDefender?.attributes as any)?.aggression ?? 50;
   const profileMult = Math.max(0.55, Math.min(1.65, 1 + (aggression - 50) / 100 - (fairPlay - 60) / 120));
-  // Boost da prob de falta perigosa quando bola está mais perto do gol.
-  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 0.6) * profileMult;
+  // Boost da prob de falta perigosa quando bola está mais perto do gol. Aumentado 67%: 0.6 → 1.0
+  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 1.0) * profileMult;
   // SkillEngine — DEFEND: zagueiro habilidoso reduz prob da falta (tackle limpo).
   if (nearestDefender) {
     const defendRes = resolveSkills({

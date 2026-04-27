@@ -226,7 +226,7 @@ export function QuickMatchSummary({
           <button
             type="button"
             onClick={onNewMatch}
-            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow transition-colors"
+            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow hover:scale-[1.02] active:scale-[0.98] transition-all"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '11px',
@@ -242,7 +242,7 @@ export function QuickMatchSummary({
 
           <Link
             to="/"
-            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow transition-colors"
+            className="inline-flex items-center gap-2 bg-deep-black border border-white/15 text-white px-5 py-3 hover:border-neon-yellow hover:text-neon-yellow hover:scale-[1.02] active:scale-[0.98] transition-all"
             style={{
               fontFamily: 'var(--font-display)',
               fontSize: '11px',

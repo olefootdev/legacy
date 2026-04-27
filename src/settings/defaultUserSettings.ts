@@ -9,6 +9,12 @@ export const defaultUserSettings: UserSettings = {
   trainerAvatarDataUrl: null,
   managerCrestPngDataUrl: null,
   managerProfile: undefined,
-  /** Preenchido no step 3 do Cadastro; `null` enquanto o manager não escolhe. */
-  favoriteRealTeam: null,
+  /** Preenchido no step 3 do Cadastro; Real Madrid como padrão para testes. */
+  favoriteRealTeam: {
+    id: 541,
+    name: 'Real Madrid',
+    logo: 'https://media.api-sports.io/football/teams/541.png',
+    country: 'Spain',
+    league: 'La Liga',
+  },
 };

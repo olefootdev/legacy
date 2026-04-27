@@ -22,12 +22,15 @@ export interface GameSignUpInput {
   formationScheme: FormationSchemeId;
   /** Código de indicação normalizado (6-8 chars A–Z/0–9) ou null. */
   referredByCode?: string | null;
+  /** Perfil do usuário: apaixonado, novo_talento, atleta_atuacao, profissional, midia, ex_jogador */
+  userProfile?: string | null;
 }
 
 export interface OnboardingPayload {
   managerProfile: NonNullable<UserSettings['managerProfile']>;
   favoriteRealTeam: UserSettings['favoriteRealTeam'];
   formationScheme: FormationSchemeId;
+  userProfile?: string | null;
 }
 
 export async function signUpWithEmail(input: GameSignUpInput): Promise<{ ok: boolean; error?: string }> {
@@ -47,6 +50,7 @@ export async function signUpWithEmail(input: GameSignUpInput): Promise<{ ok: boo
       managerProfile: input.managerProfile,
       favoriteRealTeam: input.favoriteRealTeam,
       formationScheme: input.formationScheme,
+      userProfile: input.userProfile ?? null,
     },
     referredByCode: input.referredByCode ?? null,
   });

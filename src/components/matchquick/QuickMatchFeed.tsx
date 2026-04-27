@@ -78,14 +78,18 @@ export function QuickMatchFeed({
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
             <div className="flex items-start gap-2">
-              {/* Minuto */}
+              {/* Minuto — destaque extra para gols/cartões */}
               {ev.minute != null && (
                 <span
-                  className="shrink-0 text-neon-yellow tabular-nums font-bold"
+                  className={cn(
+                    'shrink-0 tabular-nums font-bold',
+                    (ev.kind === 'goal_home' || ev.kind === 'goal_away' || ev.kind === 'red_home' || ev.kind === 'red_away') ? 'text-neon-yellow' : 'text-neon-yellow/70'
+                  )}
                   style={{
                     fontFamily: 'var(--font-display)',
-                    fontSize: '11px',
+                    fontSize: (ev.kind === 'goal_home' || ev.kind === 'goal_away' || ev.kind === 'red_home' || ev.kind === 'red_away') ? '12px' : '11px',
                     letterSpacing: '0.04em',
+                    fontWeight: (ev.kind === 'goal_home' || ev.kind === 'goal_away' || ev.kind === 'red_home' || ev.kind === 'red_away') ? 900 : 700,
                   }}
                 >
                   {ev.minute}'

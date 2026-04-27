@@ -141,7 +141,7 @@ export function AssistantPanel({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: '100%', opacity: 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-      className="fixed bottom-[5rem] left-0 right-0 z-[90] px-3 sm:px-4 md:bottom-4"
+      className="fixed bottom-16 left-2 right-2 sm:bottom-[5rem] sm:left-0 sm:right-0 z-[90] sm:px-3 md:px-4 md:bottom-4"
     >
       <div className="mx-auto max-w-lg overflow-hidden rounded-xl border border-neon-yellow/30 bg-deep-black shadow-[0_0_40px_rgba(253,224,71,0.2)]">
 
@@ -482,13 +482,13 @@ function HalftimePanel({
       <AnimatePresence mode="wait">
         {tab === 'formacao' && (
           <motion.div key="formacao" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 xs:grid-cols-4 gap-2">
               {formations.map(f => (
                 <button
                   key={f}
                   type="button"
                   onClick={() => onFormation(f)}
-                  className={`rounded-lg py-3 text-xs font-display font-black transition-all ${
+                  className={`rounded-lg py-2.5 sm:py-3 text-[10px] xs:text-xs font-display font-black transition-all ${
                     f === selected
                       ? 'border-2 border-neon-yellow bg-neon-yellow text-black'
                       : 'border border-white/20 bg-black/60 text-white hover:border-neon-yellow/40 hover:bg-black/80'
@@ -502,21 +502,21 @@ function HalftimePanel({
         )}
         {tab === 'estilo' && (
           <motion.div key="estilo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 xs:grid-cols-3 gap-2">
               {styleOptions.map(s => (
                 <button
                   key={s.id + s.label}
                   type="button"
                   onClick={() => onStyle(s.id)}
-                  className={`flex flex-col items-center gap-1.5 rounded-lg border py-3 transition-all ${
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border py-2.5 sm:py-3 transition-all ${
                     pendingStyle === s.id
                       ? 'border-neon-yellow bg-neon-yellow/10 text-neon-yellow'
                       : 'border-white/20 bg-black/60 text-white hover:border-neon-yellow/40 hover:bg-black/80'
                   }`}
                 >
                   <span className="text-base leading-none">{s.icon}</span>
-                  <span className="text-center font-display text-[9px] font-black uppercase leading-tight tracking-wide">{s.label}</span>
-                  <span className="text-center text-[8px] leading-tight text-white/50">{s.desc}</span>
+                  <span className="text-center font-display text-[8px] xs:text-[9px] font-black uppercase leading-tight tracking-wide">{s.label}</span>
+                  <span className="text-center text-[7px] xs:text-[8px] leading-tight text-white/50">{s.desc}</span>
                 </button>
               ))}
             </div>
@@ -579,16 +579,16 @@ function Min70Check({ onApply, matchContext }: { onApply: (id: string) => void; 
       )}
 
       <p className="mb-4 text-sm text-white/80">O que fazemos agora?</p>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 xs:grid-cols-4 gap-2">
         {options.map(o => (
           <button
             key={o.label}
             type="button"
             onClick={() => onApply(o.id)}
-            className="flex flex-col items-center gap-2 rounded-lg border border-white/20 bg-black/60 py-3 text-white transition-all hover:border-neon-yellow/40 hover:bg-black/80"
+            className="flex flex-col items-center gap-2 rounded-lg border border-white/20 bg-black/60 py-2.5 sm:py-3 text-white transition-all hover:border-neon-yellow/40 hover:bg-black/80"
           >
             <span className="text-xl leading-none">{o.icon}</span>
-            <span className="text-center font-display text-[9px] font-black uppercase leading-tight tracking-wide">{o.label}</span>
+            <span className="text-center font-display text-[8px] xs:text-[9px] font-black uppercase leading-tight tracking-wide">{o.label}</span>
             <span className="text-center text-[7px] leading-tight text-white/50">{o.desc}</span>
           </button>
         ))}
@@ -616,7 +616,7 @@ export function AssistantFab({ hasPending, onClick }: { hasPending: boolean; onC
         repeat: Infinity,
         ease: 'easeInOut',
       } : {}}
-      className="fixed bottom-[5.5rem] right-3 z-[85] flex h-14 w-14 items-center justify-center rounded-full border-2 bg-deep-black shadow-2xl transition-all hover:scale-110 md:bottom-6"
+      className="fixed bottom-[5.5rem] right-3 z-[85] flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border-2 bg-deep-black shadow-2xl transition-all hover:scale-110 md:bottom-6"
       style={{
         borderColor: hasPending ? 'rgb(253, 224, 71)' : 'rgba(255, 255, 255, 0.1)',
       }}

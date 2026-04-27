@@ -61,11 +61,12 @@ export function TeamTactics() {
   };
 
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-6 pb-8">
-      <TeamMeuTimeHeader
-        title="Tática"
-        subtitle="Escolha um preset e salve suas táticas favoritas para usar em partidas e treinos."
-      />
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-5xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+        <TeamMeuTimeHeader
+          title="Tática"
+          subtitle="Escolha um preset e salve suas táticas favoritas para usar em partidas e treinos."
+        />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5">
         <h3 className="font-display font-black uppercase tracking-wider text-lg mb-4">Presets</h3>
@@ -159,6 +160,7 @@ export function TeamTactics() {
           </span>
         </div>
       </motion.div>
+    </div>
     </div>
   );
 }

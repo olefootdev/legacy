@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, UserPlus, X, Zap, Trophy, Shield } from 'lucide-react';
+import { Search, UserPlus, X, Zap, Trophy, Shield, Star, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { formatExp } from '@/systems/economy';
 
 type FriendlyMode = 'quick' | 'penalty';
 type BetCurrency = 'BRO' | 'EXP';
+type MatchType = 'competitive' | 'friendly';
 
 interface QuickSearchModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
   const finance = useGameStore((s) => s.finance);
 
   const [mode, setMode] = useState<FriendlyMode>('quick');
+  const [matchType, setMatchType] = useState<MatchType>('friendly');
   const [betCurrency, setBetCurrency] = useState<BetCurrency>('BRO');
   const [betInput, setBetInput] = useState('10');
   const [searching, setSearching] = useState(false);
@@ -49,9 +51,18 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
   const handleConfirm = () => {
     if (!opponent) return;
 
-    // TODO: integrar com reducer para debitar aposta e criar partida
+    // TODO: integrar com reducer para debitar aposta e criar partida com flag competitiva
+    // Dispatch para criar partida com metadados de ranking
+    const isHumanOpponent = opponent.type !== 'bot';
+    const shouldCountForRanking = matchType === 'competitive' && isHumanOpponent;
+
     // Por enquanto, navega direto para a partida
+    // Em produção, dispatch({ type: 'CREATE_FRIENDLY_MATCH', ... }) antes de navegar
     const path = mode === 'penalty' ? '/match/penalty' : '/match/quick';
+
+    // TODO: Passar metadados via state ou query params
+    // navigate(path, { state: { isCompetitive: matchType === 'competitive', opponentType: opponent.type } });
+
     navigate(path);
     onClose();
   };
@@ -87,6 +98,50 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
             </div>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-6">
+              {/* Tipo de partida: Competitivo / Amistoso */}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
+                  Tipo de partida
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMatchType('competitive')}
+                    className={cn(
+                      'py-3 rounded text-xs font-display font-bold uppercase border transition-all',
+                      matchType === 'competitive'
+                        ? 'bg-neon-yellow text-black border-neon-yellow shadow-[0_0_12px_rgba(253,224,71,0.3)]'
+                        : 'border-white/15 text-gray-400 hover:border-white/30',
+                    )}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <Star className="w-4 h-4" />
+                      <span>Competitivo</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchType('friendly')}
+                    className={cn(
+                      'py-3 rounded text-xs font-display font-bold uppercase border transition-all',
+                      matchType === 'friendly'
+                        ? 'bg-neon-yellow text-black border-neon-yellow shadow-[0_0_12px_rgba(253,224,71,0.3)]'
+                        : 'border-white/15 text-gray-400 hover:border-white/30',
+                    )}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>Amistoso</span>
+                    </div>
+                  </button>
+                </div>
+                {matchType === 'competitive' && (
+                  <p className="mt-2 text-[10px] text-neon-yellow/80 leading-snug">
+                    ⭐ Partida competitiva conta pontos para o ranking quando jogada contra time humano
+                  </p>
+                )}
+              </div>
+
               {/* Modo de partida */}
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
@@ -218,13 +273,32 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     </div>
                   </div>
 
-                  <div className="border-t border-white/10 pt-3 flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wider text-gray-500">Prêmio</span>
-                    <span className="text-sm font-display font-bold text-neon-yellow">
-                      {betCurrency === 'BRO'
-                        ? `${(betBroCents / 100).toFixed(2)} BRO`
-                        : `${betExp} EXP`}
-                    </span>
+                  <div className="border-t border-white/10 pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Tipo</span>
+                      <span className={cn(
+                        "text-xs font-display font-bold uppercase px-2 py-0.5 rounded",
+                        matchType === 'competitive'
+                          ? 'bg-neon-yellow/20 text-neon-yellow'
+                          : 'bg-white/5 text-gray-400'
+                      )}>
+                        {matchType === 'competitive' ? '⭐ Competitivo' : 'Amistoso'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500">Prêmio</span>
+                      <span className="text-sm font-display font-bold text-neon-yellow">
+                        {betCurrency === 'BRO'
+                          ? `${(betBroCents / 100).toFixed(2)} BRO`
+                          : `${betExp} EXP`}
+                      </span>
+                    </div>
+                    {matchType === 'competitive' && opponent.type !== 'bot' && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-neon-yellow/70 bg-neon-yellow/5 px-2 py-1.5 rounded">
+                        <Star className="w-3 h-3 shrink-0" />
+                        <span>Partida vale pontos no ranking</span>
+                      </div>
+                    )}
                   </div>
 
                   <button

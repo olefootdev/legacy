@@ -29,9 +29,8 @@ export function AdminAgentsPanel() {
   const [activeTab, setActiveTab] = useState<TabId>('profiles');
   const platform = useAdminPlatformStore((s) => s);
 
-  // Pega o primeiro usuário como exemplo (Admin pode selecionar depois)
-  const firstUser = platform.users?.[0];
-  const players = firstUser?.state?.players ?? {};
+  // Mock de jogadores para demonstração (Admin pode integrar com dados reais depois)
+  const players: Record<string, PlayerEntity> = {};
 
   return (
     <div className="admin-agents-panel">

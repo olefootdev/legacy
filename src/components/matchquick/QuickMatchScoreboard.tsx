@@ -34,8 +34,6 @@ interface QuickMatchScoreboardProps {
   msPerMinute: number;
   /** Shake animation quando defesa espetacular */
   scoreShakeKey?: number;
-  /** Ícone de luva quando defesa */
-  gloveVisible?: boolean;
 }
 
 export function QuickMatchScoreboard({
@@ -56,7 +54,6 @@ export function QuickMatchScoreboard({
   phase,
   msPerMinute,
   scoreShakeKey = 0,
-  gloveVisible = false,
 }: QuickMatchScoreboardProps) {
   const homePressurePct = Math.round(momentumPressure * 100);
   const awayPressurePct = 100 - homePressurePct;
@@ -94,10 +91,13 @@ export function QuickMatchScoreboard({
 
           {/* Nome do time */}
           <p
-            className="text-white uppercase font-display font-bold tracking-wider truncate max-w-full text-right"
+            className="text-white uppercase truncate max-w-full text-right"
             style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
               fontSize: 'clamp(11px, 1.8vw, 15px)',
-              letterSpacing: '0.18em',
+              letterSpacing: '0.02em',
             }}
           >
             {homeName ?? homeShort}
@@ -109,7 +109,7 @@ export function QuickMatchScoreboard({
             style={{
               fontFamily: 'var(--font-serif-hero)',
               fontStyle: 'italic',
-              fontSize: 'clamp(64px, 14vw, 108px)',
+              fontSize: 'clamp(48px, 14vw, 108px)',
               fontWeight: 700,
               letterSpacing: '-0.03em',
             }}
@@ -118,7 +118,7 @@ export function QuickMatchScoreboard({
           </span>
         </div>
 
-        {/* Separador — com ícone de luva quando defesa */}
+        {/* Separador */}
         <div className="relative flex flex-col items-center gap-2 shrink-0">
           <span
             className="leading-none text-white/35 select-none"
@@ -130,18 +130,6 @@ export function QuickMatchScoreboard({
           >
             –
           </span>
-          {gloveVisible && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 10 }}
-              className="absolute top-1/2 -translate-y-1/2 text-3xl sm:text-4xl"
-              role="img"
-              aria-label="Defesa"
-            >
-              🧤
-            </motion.span>
-          )}
         </div>
 
         {/* Visitante */}
@@ -168,10 +156,13 @@ export function QuickMatchScoreboard({
 
           {/* Nome do time */}
           <p
-            className="text-white uppercase font-display font-bold tracking-wider truncate max-w-full text-left"
+            className="text-white uppercase truncate max-w-full text-left"
             style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
               fontSize: 'clamp(11px, 1.8vw, 15px)',
-              letterSpacing: '0.18em',
+              letterSpacing: '0.02em',
             }}
           >
             {awayName ?? awayShort}
@@ -183,7 +174,7 @@ export function QuickMatchScoreboard({
             style={{
               fontFamily: 'var(--font-serif-hero)',
               fontStyle: 'italic',
-              fontSize: 'clamp(64px, 14vw, 108px)',
+              fontSize: 'clamp(48px, 14vw, 108px)',
               fontWeight: 700,
               letterSpacing: '-0.03em',
             }}

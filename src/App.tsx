@@ -12,6 +12,7 @@ import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
 import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
 import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
+import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const ClubHub = lazy(() => import('./pages/ClubHub').then((m) => ({ default: m.ClubHub })));
@@ -48,6 +49,8 @@ const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ de
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
 const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
 const OlefootLeague = lazy(() => import('./pages/OlefootLeague').then((m) => ({ default: m.default })));
+const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
+const GlobalLeaguePlayoffs = lazy(() => import('./pages/GlobalLeaguePlayoffs').then((m) => ({ default: m.default })));
 const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m.default })));
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
@@ -161,6 +164,11 @@ function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; 
   );
 }
 
+function GlobalSchedulerMount() {
+  useGlobalRoundScheduler();
+  return null;
+}
+
 export default function App() {
   return (
     <GameProvider>
@@ -168,6 +176,7 @@ export default function App() {
         <FriendlyChallengeLayer />
         <UserSettingsEffects />
         <WorldClock />
+        <GlobalSchedulerMount />
         <WelcomeGenesisPackHydrate />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
@@ -220,8 +229,8 @@ export default function App() {
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<RequireRegistration />}>
-          <Route element={<GameShell />}>
-            <Route path="/" element={<Home />} />
+            <Route element={<GameShell />}>
+              <Route path="/" element={<Home />} />
 
             {/* Hub pages */}
             <Route path="/clube" element={<ClubHub />} />
@@ -310,8 +319,10 @@ export default function App() {
             <Route path="/match/global" element={<MatchGlobal />} />
             <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
             <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
+            <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />
+            <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
             <Route path="/postgame" element={<Postgame />} />
-          </Route>
+            </Route>
           </Route>
           <Route
             path="/:inviteCode"

@@ -75,6 +75,10 @@ export function QuickTacticalIntensityControls({ current, onChange, disabled }: 
 export function QuickTacticalIntensityInfo({ level }: { level: TacticalIntensityLevel }) {
   const preset = TACTICAL_INTENSITY_PRESETS[level];
 
+  if (!preset) {
+    return null;
+  }
+
   return (
     <motion.div
       key={level}

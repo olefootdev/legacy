@@ -204,30 +204,6 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
 
   return (
     <div className="mt-5 space-y-5 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
-      {/* Header com design system BVB */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-sm" style={{ background: 'var(--yellow)' }}>
-          <SlidersHorizontal className="h-4 w-4 text-black" />
-        </div>
-        <div className="flex-1">
-          <h3 className="ole-headline text-white" style={{ fontSize: 'var(--text-ui-lg)' }}>
-            Controlo ao vivo
-          </h3>
-          <span
-            className="text-white/50"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: '10px',
-              fontWeight: 600,
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {homeShort}
-          </span>
-        </div>
-      </div>
-
       {/* Feedback com design system */}
       {feedback ? (
         <div
@@ -252,50 +228,12 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
         </div>
       ) : null}
 
-      {/* Comandos Táticos — @ jogador, @@ setor, @@@ time, /skill */}
-      <div
-        className="border p-4 space-y-3"
-        style={{
-          background: 'var(--surface-dark)',
-          borderColor: 'var(--border)',
-          borderRadius: 'var(--radius-sm)',
-        }}
-      >
-        <h4
-          className="text-white"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'var(--text-ui-md)',
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Comandos Táticos
-        </h4>
-        <CoachCommandInput
-          players={homePlayers}
-          playersById={playersById}
-          onCommandExecuted={(result: CommandResult) => {
-            setFeedback(result.message);
-            window.setTimeout(() => setFeedback(null), 3000);
-          }}
-        />
-      </div>
-
       {/* 1. Action Cards — mesmos verbos da voz. Clicar = emitir como se falasse. */}
       <LiveActionCards
         onFire={(label) => {
           setFeedback(`📨 "${label}"`);
           window.setTimeout(() => setFeedback(null), 2000);
         }}
-      />
-
-      {/* Ajuste fino legado — mantido escondido pra ajustes táticos detalhados. */}
-      <LegacyFineTune
-        presetActive={presetActive}
-        onApplyPreset={applyPreset}
-        onBumpAxis={bumpAxis}
       />
 
       {/* 2. Formação - Card com design system */}
@@ -552,182 +490,6 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
           </button>
         </div>
       </div>
-
-      {/* 5. Escalações - Cards com design system */}
-      <div className="space-y-3">
-        <h4
-          className="text-white"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'var(--text-ui-md)',
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Escalações
-        </h4>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {/* Casa - Card amarelo */}
-          <div
-            className="relative overflow-hidden border p-4"
-            style={{
-              background: 'linear-gradient(135deg, rgba(253, 225, 0, 0.08) 0%, rgba(253, 225, 0, 0.02) 100%)',
-              borderColor: 'rgba(253, 225, 0, 0.3)',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            {/* Faixa lateral amarela */}
-            <div
-              className="absolute left-0 top-0 h-full w-1"
-              style={{ background: 'var(--yellow)' }}
-              aria-hidden
-            />
-            <div className="mb-3 flex items-center gap-2" style={{ color: 'var(--yellow)' }}>
-              <Users className="h-4 w-4" />
-              <span
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 'var(--text-ui-sm)',
-                  fontWeight: 900,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {homeShort}
-              </span>
-            </div>
-            <ul className="max-h-48 space-y-1.5 overflow-y-auto" style={{ fontSize: 'var(--text-ui-xs)' }}>
-              {orderedHome.map((p) => {
-                const ent = playersById[p.playerId];
-                const label = ent?.name ?? p.name;
-                return (
-                  <li
-                    key={p.playerId}
-                    className="flex justify-between gap-2 border px-2.5 py-2 transition-colors hover:bg-white/5"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      borderColor: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: 'var(--radius-sm)',
-                    }}
-                  >
-                    <span
-                      className="tabular-nums"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: 'rgba(253, 225, 0, 0.6)',
-                      }}
-                    >
-                      {p.num}
-                    </span>
-                    <span
-                      className="min-w-0 flex-1 truncate text-white"
-                      style={{
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: 'var(--text-ui-xs)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {label}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        color: 'rgba(34, 211, 238, 0.8)',
-                      }}
-                    >
-                      {slotLabel(p.slotId)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          {/* Visitante - Card vermelho */}
-          <div
-            className="relative overflow-hidden border p-4"
-            style={{
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%)',
-              borderColor: 'rgba(239, 68, 68, 0.25)',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            {/* Faixa lateral vermelha */}
-            <div
-              className="absolute left-0 top-0 h-full w-1 bg-rose-500"
-              aria-hidden
-            />
-            <div className="mb-3 flex items-center gap-2 text-rose-300">
-              <Users className="h-4 w-4" />
-              <span
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 'var(--text-ui-sm)',
-                  fontWeight: 900,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {awayShort}
-              </span>
-            </div>
-            <ul className="max-h-48 space-y-1.5 overflow-y-auto" style={{ fontSize: 'var(--text-ui-xs)' }}>
-              {awayOrdered.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex justify-between gap-2 border px-2.5 py-2 transition-colors hover:bg-white/5"
-                  style={{
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderColor: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  <span
-                    className="tabular-nums"
-                    style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: 'rgba(239, 68, 68, 0.6)',
-                    }}
-                  >
-                    {r.num}
-                  </span>
-                  <span
-                    className="min-w-0 flex-1 truncate text-rose-100/90"
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: 'var(--text-ui-xs)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {r.name}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase',
-                      color: 'rgba(251, 113, 133, 0.8)',
-                    }}
-                  >
-                    {r.pos}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
   );
 });
@@ -772,39 +534,6 @@ function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
   };
   return (
     <div className="space-y-3">
-      {/* Card amarelo de destaque para COMANDO TÉCNICO */}
-      <div
-        className="relative overflow-hidden border p-4"
-        style={{
-          background: 'var(--yellow)',
-          borderColor: 'rgba(0, 0, 0, 0.1)',
-          borderRadius: 'var(--radius-sm)',
-          clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%)',
-        }}
-      >
-        {/* Diagonal accent sutil */}
-        <div
-          className="absolute right-0 top-0 h-24 w-24 bg-black opacity-[0.04] pointer-events-none"
-          style={{ transform: 'skewX(-34deg) translateX(30%)' }}
-          aria-hidden
-        />
-        <div className="relative">
-          <h4 className="ole-headline text-black" style={{ fontSize: 'var(--text-ui-lg)' }}>
-            Comando Técnico
-          </h4>
-          <p
-            className="mt-1 text-black/70"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: 'var(--text-body-sm)',
-              lineHeight: '1.5',
-            }}
-          >
-            Clica ou fala no microfone para ajustar a tática em tempo real
-          </p>
-        </div>
-      </div>
-
       {/* Grid de action cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {ACTION_CARDS.map((c) => {

@@ -67,16 +67,18 @@ import {
   TEST2D_REPULSION_FORCE,
 } from '@/match/tacticalSpacingTuning';
 
+import { applySpeedBoostToTokenLerp } from '@/match/liveMatchSpeedBoost';
+
 /* ── Constants ──────────────────────────────────────────────────────── */
 
 /** Minimum distance (engine units 0-100) between two teammates before repulsion kicks in. */
 const MIN_SPACING = TEST2D_MIN_SPACING_ENGINE_UNITS;
 /** Repulsion strength when spacing violation detected. */
 const REPULSION_FORCE = TEST2D_REPULSION_FORCE;
-/** How fast players lerp toward their target each tick (0 = frozen, 1 = instant). */
-const MOVE_LERP = 0.18;
-/** Extra lerp boost for the player on the ball (carrier). */
-const CARRIER_LERP_BOOST = 0.08;
+/** How fast players lerp toward their target each tick (0 = frozen, 1 = instant). SPEED BOOST aplicado. */
+const MOVE_LERP = applySpeedBoostToTokenLerp(0.18);
+/** Extra lerp boost for the player on the ball (carrier). SPEED BOOST aplicado. */
+const CARRIER_LERP_BOOST = applySpeedBoostToTokenLerp(0.08);
 /** Tiny per-tick noise for alive feeling (much less than the old ±1). */
 const MICRO_NOISE = 0.3;
 /** Ball influence factor per role — how much a player is pulled toward ball beyond formation. */
@@ -720,21 +722,39 @@ function applySpacingRepulsion(
   targets: { playerId: string; tx: number; ty: number }[],
   minDist: number = MIN_SPACING,
 ): void {
-  for (let i = 0; i < targets.length; i++) {
-    for (let j = i + 1; j < targets.length; j++) {
-      const a = targets[i]!;
-      const b = targets[j]!;
-      const d = dist(a.tx, a.ty, b.tx, b.ty);
-      if (d < minDist && d > 0.01) {
-        const overlap = minDist - d;
-        const push = (overlap / d) * REPULSION_FORCE;
-        const dx = (a.tx - b.tx) * push;
-        const dy = (a.ty - b.ty) * push;
-        a.tx = clamp(a.tx + dx, 3, 97);
-        a.ty = clamp(a.ty + dy, 4, 96);
-        b.tx = clamp(b.tx - dx, 3, 97);
-        b.ty = clamp(b.ty - dy, 4, 96);
+  // BUG FIX #5: Limitar iterações para evitar oscilação infinita quando 3+ jogadores no mesmo ponto
+  const MAX_ITERATIONS = 2;
+  const OSCILLATION_THRESHOLD = 0.01; // Se movimento < 0.01, considerar estável
+
+  for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+    let maxMovement = 0;
+
+    for (let i = 0; i < targets.length; i++) {
+      for (let j = i + 1; j < targets.length; j++) {
+        const a = targets[i]!;
+        const b = targets[j]!;
+        const d = dist(a.tx, a.ty, b.tx, b.ty);
+
+        if (d < minDist && d > 0.01) {
+          const overlap = minDist - d;
+          const push = (overlap / d) * REPULSION_FORCE;
+          const dx = (a.tx - b.tx) * push;
+          const dy = (a.ty - b.ty) * push;
+
+          // Rastrear movimento máximo para detectar oscilação
+          maxMovement = Math.max(maxMovement, Math.abs(dx), Math.abs(dy));
+
+          a.tx = clamp(a.tx + dx, 3, 97);
+          a.ty = clamp(a.ty + dy, 4, 96);
+          b.tx = clamp(b.tx - dx, 3, 97);
+          b.ty = clamp(b.ty - dy, 4, 96);
+        }
       }
+    }
+
+    // Se movimento muito pequeno, sistema está estável — parar iteração
+    if (maxMovement < OSCILLATION_THRESHOLD) {
+      break;
     }
   }
 }

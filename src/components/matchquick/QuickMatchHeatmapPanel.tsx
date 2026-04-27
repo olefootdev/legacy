@@ -1,11 +1,11 @@
 /**
- * Sprint 3: Heatmap Tático Pós-Jogo
- * Visualização em Canvas 2D com zonas de calor e momentos-chave
+ * Heatmap Tático Inteligente
+ * Visualização profissional com grid estruturado, zonas de influência e setas de visão
  */
 
 import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, Target, Shield } from 'lucide-react';
+import { TrendingUp, Target, Shield, Eye, Activity } from 'lucide-react';
 import type { QuickMatchHeatmap } from '@/match/quickMatchHeatmap';
 import { drawHeatmap } from '@/match/quickMatchHeatmap';
 import { cn } from '@/lib/utils';
@@ -27,52 +27,80 @@ export function QuickMatchHeatmapPanel({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.scale(dpr, dpr);
+    // Redesenha quando o canvas muda de tamanho
+    const resizeObserver = new ResizeObserver(() => {
       drawHeatmap(canvas, heatmap, homeColor, awayColor);
-    }
+    });
+
+    resizeObserver.observe(canvas);
+    drawHeatmap(canvas, heatmap, homeColor, awayColor);
+
+    return () => resizeObserver.disconnect();
   }, [heatmap, homeColor, awayColor]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <TrendingUp className="w-5 h-5 text-blue-400" />
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-          Análise Tática
-        </h3>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Eye className="w-5 h-5 text-neon-yellow" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            Visão Tática
+          </h3>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-white/50">
+          <Activity className="w-3.5 h-3.5" />
+          <span>{heatmap.playerPositions.length} jogadores</span>
+        </div>
       </div>
 
       {/* Canvas Heatmap */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative rounded-xl overflow-hidden border-2 border-white/20 bg-black/40"
+        className="relative rounded-lg overflow-hidden border border-white/10 bg-[#0a0f1a]"
       >
         <canvas
           ref={canvasRef}
-          className="w-full h-48"
-          style={{ imageRendering: 'crisp-edges' }}
+          className="w-full h-64"
+          style={{ display: 'block' }}
         />
 
-        {/* Legend */}
+        {/* Legend - Compacta e organizada */}
         <div className="absolute top-2 right-2 space-y-1">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/60 backdrop-blur-sm">
-            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-            <span className="text-xs text-white">Golo</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur-sm border border-white/10">
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 ring-2 ring-white" />
+            <span className="text-[10px] text-white font-medium">Gol</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/60 backdrop-blur-sm">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-xs text-white">Defesa</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur-sm border border-white/10">
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+            <span className="text-[10px] text-white font-medium">Chute</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/60 backdrop-blur-sm">
-            <div className="w-3 h-3 rounded-full bg-blue-400" />
-            <span className="text-xs text-white">Chute</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur-sm border border-white/10">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+            <span className="text-[10px] text-white font-medium">Defesa</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur-sm border border-white/10">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+            <span className="text-[10px] text-white font-medium">Passe</span>
+          </div>
+        </div>
+
+        {/* Info: Raio de ação */}
+        <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/70 backdrop-blur-sm border border-white/10">
+          <div className="flex items-center gap-1.5">
+            <svg width="16" height="16" viewBox="0 0 16 16" className="text-neon-yellow">
+              <circle
+                cx="8"
+                cy="8"
+                r="5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+                strokeDasharray="2 2"
+              />
+              <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+            </svg>
+            <span className="text-[10px] text-white font-medium">Raio de ação</span>
           </div>
         </div>
       </motion.div>
@@ -131,9 +159,9 @@ export function QuickMatchHeatmapPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className={cn(
-          'p-3 rounded-lg border-2',
-          'bg-gradient-to-r from-blue-500/10 to-purple-500/10',
-          'border-blue-500/30',
+          'p-3 rounded-lg border',
+          'bg-gradient-to-r from-neon-yellow/5 to-neon-yellow/10',
+          'border-neon-yellow/20',
         )}
       >
         <div className="grid grid-cols-3 gap-4 text-center">

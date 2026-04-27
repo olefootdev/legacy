@@ -90,7 +90,16 @@ export function PlayerCard({
         {/* Info + OVR */}
         <div className="flex flex-col justify-between p-3 pr-3">
           <div>
-            <h3 className="ole-player-card__name text-[18px] sm:text-[22px] leading-tight pr-12">
+            <h3
+              className="ole-player-card__name leading-tight pr-12"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontStyle: 'italic',
+                fontWeight: 700,
+                fontSize: 'clamp(18px, 4vw, 22px)',
+                letterSpacing: '0.01em',
+              }}
+            >
               {name}
             </h3>
             {meta ? (

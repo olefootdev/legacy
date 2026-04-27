@@ -168,34 +168,43 @@ export async function persistPlayers(
   const sb = getSupabase();
   if (!sb) return;
   const resolvedClubId = await resolvePersistClubId(sb, clubId);
-  if (!resolvedClubId) return;
-  for (const p of players) {
+  if (!resolvedClubId) {
+    console.warn('[matchPersistence] persistPlayers: sem club_id resolvido, ignorando persistência.');
+    return;
+  }
+
+  // Filtrar apenas jogadores com UUID válido
+  const validPlayers = players.filter(p => {
     if (!isUuidString(p.id)) {
       console.warn('[matchPersistence] persistPlayers: id de jogador não é UUID, ignorado:', p.id);
-      continue;
+      return false;
     }
-    try {
-      await sb.from('players').upsert(
-        {
-          id: p.id,
-          club_id: resolvedClubId,
-          name: p.name,
-          num: p.num,
-          pos: p.pos,
-          archetype: p.archetype,
-          zone: p.zone,
-          behavior: p.behavior,
-          attributes: p.attributes,
-          fatigue: p.fatigue,
-          injury_risk: p.injuryRisk,
-          evolution_xp: p.evolutionXp,
-          out_for_matches: p.outForMatches,
-        } as never,
-        { onConflict: 'id' },
-      );
-    } catch {
-      // non-critical
-    }
+    return true;
+  });
+
+  if (validPlayers.length === 0) return;
+
+  // Batch upsert em vez de loop sequencial - muito mais rápido
+  try {
+    const payload = validPlayers.map(p => ({
+      id: p.id,
+      club_id: resolvedClubId,
+      name: p.name,
+      num: p.num,
+      pos: p.pos,
+      archetype: p.archetype,
+      zone: p.zone,
+      behavior: p.behavior,
+      attributes: p.attributes,
+      fatigue: p.fatigue,
+      injury_risk: p.injuryRisk,
+      evolution_xp: p.evolutionXp,
+      out_for_matches: p.outForMatches,
+    }));
+
+    await sb.from('players').upsert(payload as never, { onConflict: 'id' });
+  } catch (e) {
+    console.warn('[matchPersistence] persistPlayers batch error:', e);
   }
 }
 

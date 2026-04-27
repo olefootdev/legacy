@@ -20,7 +20,7 @@ import type {
  *   Amarelos:  3–5 total      (CARD_PROB_HOME 3.5% + CARD_PROB_AWAY 2.5% → ~3.4)
  *   Vermelhos: ~0.15/jogo     (6% de cada cartão → ~1 a cada 7 jogos)
  *   Lesões:    ~0.3/jogo      (fatigue >72, 6%)
- *   Penalties:  ~0.5/jogo      (DANGEROUS_FOUL × PENALTY_FROM_FOUL × ticks att)
+ *   Penalties:  ~0.625/jogo   (DANGEROUS_FOUL × PENALTY_FROM_FOUL × ticks att - aumentado 25%)
  */
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
@@ -35,11 +35,11 @@ export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> =
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
- *  Distribui entre leve, grave e agressiva conforme narrativa. */
-export const DANGEROUS_FOUL_PROB = 0.045;
+ *  Aumentado 60% para mais emoção: 4.5% → 5.625% → 7.2% */
+export const DANGEROUS_FOUL_PROB = 0.072;
 /** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
- *  Reduzido para metade do original (0.15) pra calibrar quantidade de pênaltis em partida rápida. */
-export const PENALTY_FROM_FOUL_PROB = 0.075;
+ *  Aumentado 60% para mais pênaltis: 7.5% → 9.375% → 15% */
+export const PENALTY_FROM_FOUL_PROB = 0.15;
 
 /** Duração do cartão do marcador na partida rápida; `autoDismissMs` do golo = isto + narrativa (só timer, sem 2.º overlay). */
 export const GOAL_SCORER_OVERLAY_MS = 3000;

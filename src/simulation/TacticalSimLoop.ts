@@ -44,7 +44,6 @@ import {
   uiPercentToWorld,
   worldToUiPercent,
 } from './field';
-import { initTelemetry, trackAction } from '@/match/liveTelemetry';
 import {
   buildRefereeDispositionMaps,
   scanCausalLogConfusion,
@@ -58,6 +57,11 @@ import {
   emitPhaseIfChanged,
 } from '@/match/events/emitFromEngineBridge';
 import type { SimulationMatchPhase } from '@/match/events/matchSimulationContract';
+import {
+  applySpeedBoostToPlayerMaxSpeed,
+  applySpeedBoostToBallVelocity,
+  getActiveSpeedBoostConfig,
+} from '@/match/liveMatchSpeedBoost';
 
 import {
   MatchClock,
@@ -450,12 +454,11 @@ export class TacticalSimLoop {
   private fanFrustration: FanFrustrationSystem | null = null;
 
   constructor() {
-    // Inicializar telemetria ao vivo
-    initTelemetry();
-
+    // SPEED BOOST: Bola mais rápida para ações mais dinâmicas
+    const speedConfig = getActiveSpeedBoostConfig();
     this.ballVehicle.boundingRadius = 0.42;
-    this.ballVehicle.maxSpeed = 48;
-    this.ballVehicle.maxForce = 200;
+    this.ballVehicle.maxSpeed = applySpeedBoostToBallVelocity(144);
+    this.ballVehicle.maxForce = 600;
     this.ballVehicle.mass = 0.3;
     // Fan frustration system: provides events that can nudge player behaviour
     try {
@@ -849,7 +852,11 @@ export class TacticalSimLoop {
     if (!changed) return false;
 
     const { oldAg, hp, outId, inId } = changed;
-    const maxSpeed = 14 + manager.tempo * 0.04;
+    // SPEED BOOST: Jogadores mais rápidos (base + tempo + boost)
+    const baseMaxSpeed = 14 + manager.tempo * 0.04;
+    const velocidadeAttr = hp.attributes?.velocidade ?? 50;
+    const maxSpeed = applySpeedBoostToPlayerMaxSpeed(baseMaxSpeed, velocidadeAttr);
+
     const prof = profileForSlot(oldAg.slotId, hp.role);
     let attrs = normalizeMatchAttributes(hp.attributes);
     const coachMul = manager.homeStaffMatch?.coachAttrMulHome ?? 1;
@@ -3313,7 +3320,7 @@ export class TacticalSimLoop {
     const uiPos = worldToUiPercent(ag.vehicle.position.x, ag.vehicle.position.z);
     const zone = `${uiPos.ux.toFixed(0)},${uiPos.uy.toFixed(0)}`;
     const isForward = (action as any).option?.isForward;
-    trackAction(action.type, minute, ag.id, zone, { isForward });
+    // trackAction removido (telemetria desativada)
 
     if (
       mode === 'reforming'

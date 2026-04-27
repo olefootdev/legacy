@@ -1,10 +1,11 @@
 /**
  * Assistente interativo do Olefoot — design BVB com tutorial passo a passo.
  * Componente flutuante que guia o usuário através das funcionalidades do jogo.
+ * Agora com funcionalidade de arrastar para reposicionar.
  */
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useDragControls, PanInfo } from 'motion/react';
 import {
   HelpCircle,
   X,
@@ -19,6 +20,7 @@ import {
   ShoppingBag,
   PlayCircle,
   CheckCircle2,
+  Move,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -179,6 +181,10 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragControls = useDragControls();
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
   const currentStep = TUTORIAL_STEPS[currentStepIndex];
   const progress = ((currentStepIndex + 1) / TUTORIAL_STEPS.length) * 100;
@@ -193,17 +199,31 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         const data = JSON.parse(saved);
         setCompletedSteps(new Set(data.completed || []));
         setCurrentStepIndex(data.currentIndex || 0);
+        if (data.position) {
+          setPosition(data.position);
+        }
       } catch (e) {
         console.warn('Failed to load assistant progress', e);
       }
     }
   }, []);
 
-  const saveProgress = (index: number, completed: Set<string>) => {
+  const saveProgress = (index: number, completed: Set<string>, pos?: { x: number; y: number }) => {
     localStorage.setItem(
       'olefoot_assistant_progress',
-      JSON.stringify({ currentIndex: index, completed: Array.from(completed) }),
+      JSON.stringify({
+        currentIndex: index,
+        completed: Array.from(completed),
+        position: pos || position,
+      }),
     );
+  };
+
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    setIsDragging(false);
+    const newPosition = { x: info.offset.x, y: info.offset.y };
+    setPosition(newPosition);
+    saveProgress(currentStepIndex, completedSteps, newPosition);
   };
 
   const handleNext = () => {
@@ -248,10 +268,10 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0, opacity: 0 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-neon-yellow text-black shadow-[0_0_30px_rgba(253,225,0,0.6)] transition-all hover:scale-110 hover:shadow-[0_0_40px_rgba(253,225,0,0.8)]"
+        className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 z-50 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-neon-yellow text-black shadow-[0_0_30px_rgba(253,225,0,0.6)] transition-all hover:scale-110 hover:shadow-[0_0_40px_rgba(253,225,0,0.8)]"
         aria-label="Abrir assistente"
       >
-        <HelpCircle className="h-7 w-7" strokeWidth={2.5} />
+        <HelpCircle className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.5} />
       </motion.button>
     );
   }
@@ -262,7 +282,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
-        className="fixed bottom-6 right-6 z-50"
+        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50"
       >
         <button
           onClick={() => setIsMinimized(false)}
@@ -288,62 +308,83 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
   const StepIcon = currentStep.icon;
 
   return (
-    <motion.div
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 100, opacity: 0 }}
-      className="fixed bottom-6 right-6 z-50 w-full max-w-md"
-    >
-      <div className="relative overflow-hidden rounded-lg border-2 border-neon-yellow/40 bg-deep-black shadow-[0_0_40px_rgba(253,225,0,0.4)]">
-        {/* Watermark decorativo */}
-        <div
-          className="pointer-events-none absolute right-0 top-0 select-none opacity-[0.03]"
-          aria-hidden
-        >
-          <span
-            className="font-display font-black uppercase text-white"
-            style={{
-              fontSize: '180px',
-              lineHeight: '0.85',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            ?
-          </span>
-        </div>
+    <>
+      {/* Constraints container - área onde o assistente pode ser arrastado */}
+      <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-50" />
 
-        {/* Header */}
-        <div className="relative z-10 flex items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-yellow/20 border-2 border-neon-yellow/40">
-              <HelpCircle className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
+      <motion.div
+        drag
+        dragControls={dragControls}
+        dragListener={false}
+        dragMomentum={false}
+        dragElastic={0}
+        dragConstraints={constraintsRef}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={handleDragEnd}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        style={{ x: position.x, y: position.y }}
+        className={cn(
+          'fixed z-50 w-full max-w-md pointer-events-auto px-4',
+          'bottom-20 right-0 sm:bottom-6 sm:right-6',
+          isDragging && 'cursor-grabbing'
+        )}
+      >
+        <div className="relative overflow-hidden rounded-lg border-2 border-neon-yellow/40 bg-deep-black shadow-[0_0_40px_rgba(253,225,0,0.4)]">
+          {/* Watermark decorativo */}
+          <div
+            className="pointer-events-none absolute right-0 top-0 select-none opacity-[0.03]"
+            aria-hidden
+          >
+            <span
+              className="font-display font-black uppercase text-white"
+              style={{
+                fontSize: '180px',
+                lineHeight: '0.85',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              ?
+            </span>
+          </div>
+
+          {/* Header com handle para arrastar */}
+          <div
+            className="relative z-10 flex items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur-sm cursor-grab active:cursor-grabbing"
+            onPointerDown={(e) => dragControls.start(e)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-yellow/20 border-2 border-neon-yellow/40">
+                <HelpCircle className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="font-display text-sm font-black uppercase tracking-wider text-neon-yellow flex items-center gap-2">
+                  Assistente Olefoot
+                  <Move className="h-3 w-3 text-neon-yellow/60" />
+                </h3>
+                <p className="text-[10px] text-white/50">
+                  Passo {currentStepIndex + 1} de {TUTORIAL_STEPS.length} • Arraste para mover
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-display text-sm font-black uppercase tracking-wider text-neon-yellow">
-                Assistente Olefoot
-              </h3>
-              <p className="text-[10px] text-white/50">
-                Passo {currentStepIndex + 1} de {TUTORIAL_STEPS.length}
-              </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Minimizar"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleClose}
+                className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsMinimized(true)}
-              className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Minimizar"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleClose}
-              className="rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Fechar"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
 
         {/* Progress bar */}
         <div className="relative h-1 bg-white/5">
@@ -471,5 +512,6 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
         </div>
       </div>
     </motion.div>
+    </>
   );
 }

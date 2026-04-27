@@ -3,11 +3,13 @@
  * Resolução contestada (tetos de passe/chute, QA de posse): ver `actionResolutionTuning.ts`.
  */
 
+import { applySpeedBoostToDecisionTick, applySpeedBoostToDeliberation } from './liveMatchSpeedBoost';
+
 /** Cooldown anti devolução ao ex-portador após desarme (ms de tempo de simulação ≈ world.simTime em s — usamos segundos no loop) */
 export const POSSESSION_LOCK_SEC = 0.5;
 
-/** Intervalo mínimo entre replanejamentos completos de decisão (≈ 12.5 Hz) */
-export const DECISION_TICK_MS = 72;
+/** Intervalo mínimo entre replanejamentos completos de decisão (≈ 12.5 Hz) — SPEED BOOST aplicado */
+export const DECISION_TICK_MS = applySpeedBoostToDecisionTick(72);
 
 /** Peso 0–1: quanto fair play baixo aumenta “agressividade” em disputas (efeito marginal no desarme) */
 export const FAIRPLAY_FOUL_BIAS = 0.12;
@@ -45,24 +47,25 @@ export const LIVE2D_ENERGY_HALO_UI_MS = 25_000;
 export const LIVE2D_FATIGUE_ALERT_THRESHOLD = 60;
 
 // ---------------------------------------------------------------------------
-// Deliberation after ball reception
+// Deliberation after ball reception — SPEED BOOST aplicado
 // ---------------------------------------------------------------------------
 
 /** @deprecated Janela antiga em sub-segundo; o motor usa `RECEPTION_THINK_*` + `receptionThinkMode`. Mantido para docs/ferramentas. */
-export const DELIBERATION_BASE_SEC = 0.12;
+export const DELIBERATION_BASE_SEC = applySpeedBoostToDeliberation(0.12);
 /** @deprecated Ver `RECEPTION_THINK_MIN_SEC`. */
-export const DELIBERATION_MIN_SEC = 0.03;
+export const DELIBERATION_MIN_SEC = applySpeedBoostToDeliberation(0.03);
 /** @deprecated Ver `RECEPTION_THINK_MAX_SEC`. */
-export const DELIBERATION_MAX_SEC = 0.28;
+export const DELIBERATION_MAX_SEC = applySpeedBoostToDeliberation(0.28);
 /** Pressure radius (m) for counting nearby opponents during deliberation */
 export const DELIBERATION_PRESSURE_RADIUS = 8;
 
 /**
  * Modo cognitivo ao receber a bola (antes de passe/chute/condução):
  * rápido (instinto), moderado (ler o jogo), lento (risco/genialidade).
+ * SPEED BOOST: Decisões mais rápidas para mais ações por minuto.
  */
-export const RECEPTION_THINK_FAST_SEC = 1;
-export const RECEPTION_THINK_MODERATE_SEC = 2;
-export const RECEPTION_THINK_SLOW_SEC = 3;
-export const RECEPTION_THINK_MIN_SEC = 0.35;
-export const RECEPTION_THINK_MAX_SEC = 3.5;
+export const RECEPTION_THINK_FAST_SEC = applySpeedBoostToDeliberation(1);
+export const RECEPTION_THINK_MODERATE_SEC = applySpeedBoostToDeliberation(2);
+export const RECEPTION_THINK_SLOW_SEC = applySpeedBoostToDeliberation(3);
+export const RECEPTION_THINK_MIN_SEC = applySpeedBoostToDeliberation(0.35);
+export const RECEPTION_THINK_MAX_SEC = applySpeedBoostToDeliberation(3.5);

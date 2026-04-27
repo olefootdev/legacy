@@ -134,8 +134,9 @@ export function AdminFootballVocabularyPanel() {
       }
 
       const { data, error } = await supabase
-        .from('learned_phrases')
+        .from('football_vocabulary')
         .select('*')
+        .eq('is_active', true)
         .order('confirm_count', { ascending: false });
 
       if (error) throw error;
@@ -165,7 +166,7 @@ export function AdminFootballVocabularyPanel() {
         return;
       }
 
-      const { error } = await supabase.from('learned_phrases').insert({
+      const { error } = await supabase.from('football_vocabulary').insert({
         phrase: newEntry.phrase,
         stem,
         intent: newEntry.intent,
@@ -175,6 +176,7 @@ export function AdminFootballVocabularyPanel() {
         language_type: newEntry.language_type || 'popular',
         context: newEntry.context || 'torcida',
         formality_level: newEntry.formality_level || 3,
+        is_active: true,
       });
 
       if (error) throw error;
@@ -210,7 +212,7 @@ export function AdminFootballVocabularyPanel() {
       }
 
       const { error } = await supabase
-        .from('learned_phrases')
+        .from('football_vocabulary')
         .delete()
         .eq('id', id);
 

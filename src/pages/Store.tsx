@@ -346,7 +346,7 @@ export function Store() {
               lineHeight: 1.55,
             }}
           >
-            saldo {expDisplay} EXP · {broDisplay} BRO
+            saldo <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{expDisplay}</span> EXP · <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{broDisplay}</span> BRO
           </p>
 
           {/* CTAs — primary preto sobre amarelo + outline preto */}
@@ -482,12 +482,12 @@ export function Store() {
                     {/* Preços compactos */}
                     <div className="flex flex-wrap gap-1.5">
                       {item.priceBroCents != null && item.priceBroCents > 0 ? (
-                        <span className="rounded-lg border border-cyan-500/30 bg-cyan-950/50 px-2 py-1 font-mono text-[10px] font-bold text-cyan-200">
+                        <span className="rounded-lg border border-cyan-500/30 bg-cyan-950/50 px-2 py-1 text-sm font-bold text-cyan-200" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
                           {formatBro(item.priceBroCents)} BRO
                         </span>
                       ) : null}
                       {item.priceExp != null && item.priceExp > 0 ? (
-                        <span className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-1 font-mono text-[10px] font-bold text-neon-yellow">
+                        <span className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-1 text-sm font-bold text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
                           {item.priceExp.toLocaleString('pt-BR')} EXP
                         </span>
                       ) : null}
@@ -551,11 +551,6 @@ export function Store() {
           }}
         />
       </motion.div>
-
-      <p className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-center text-[10px] leading-relaxed text-gray-500">
-        Catálogo editável no <strong className="text-gray-400">Admin → Loja</strong>. Itens consumíveis aplicam efeitos
-        reais no save (plantel, torcida, mercado NPC, EXP).
-      </p>
 
       <AnimatePresence>
         {confirmItem ? (
@@ -651,12 +646,12 @@ export function Store() {
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Preço</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {checkoutPrices?.bro ? (
-                      <span className="rounded-lg border border-cyan-500/35 bg-cyan-950/50 px-3 py-2 font-mono text-sm font-bold text-cyan-100">
+                      <span className="rounded-lg border border-cyan-500/35 bg-cyan-950/50 px-3 py-2 text-sm font-bold text-cyan-100" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
                         {checkoutPrices.bro}
                       </span>
                     ) : null}
                     {checkoutPrices?.exp ? (
-                      <span className="rounded-lg border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-2 font-mono text-sm font-bold text-neon-yellow">
+                      <span className="rounded-lg border border-neon-yellow/35 bg-neon-yellow/10 px-3 py-2 text-sm font-bold text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
                         {checkoutPrices.exp}
                       </span>
                     ) : null}
@@ -665,9 +660,9 @@ export function Store() {
                     ) : null}
                   </div>
                   <p className="mt-3 text-[10px] leading-relaxed text-gray-600">
-                    Saldo: <span className="text-neon-yellow">{expDisplay} EXP</span>
+                    Saldo: <span className="text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{expDisplay} EXP</span>
                     <span className="mx-1.5 text-white/20">·</span>
-                    <span className="text-cyan-200">{broDisplay} BRO</span>
+                    <span className="text-cyan-200" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>{broDisplay} BRO</span>
                   </p>
                   {purchaseErr ? (
                     <div className="mt-3 space-y-2 rounded-lg border border-rose-500/25 bg-rose-950/30 p-3">

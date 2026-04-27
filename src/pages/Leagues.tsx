@@ -90,11 +90,11 @@ function StandingsBlock({
       <table className="ole-table">
         <thead>
           <tr>
-            <th style={{ width: '3rem' }} className="text-center">#</th>
-            <th>Equipe</th>
-            <th style={{ width: '3rem' }} className="text-center">J</th>
-            <th style={{ width: '3.5rem' }} className="text-center">PTS</th>
-            <th style={{ width: '3.5rem' }} className="text-center">SG</th>
+            <th style={{ width: '2.5rem' }} className="text-center px-1 sm:px-2">#</th>
+            <th className="px-2 sm:px-3">Equipe</th>
+            <th style={{ width: '2.5rem' }} className="text-center px-1 sm:px-2">J</th>
+            <th style={{ width: '3rem' }} className="text-center px-1 sm:px-2">PTS</th>
+            <th style={{ width: '3rem' }} className="text-center px-1 sm:px-2">SG</th>
           </tr>
         </thead>
         <tbody>
@@ -108,27 +108,27 @@ function StandingsBlock({
             const rank = idx + 1;
             return (
               <tr key={row.teamId} data-is-user={isOle ? 'true' : undefined}>
-                <td className="text-center">
+                <td className="text-center px-1 sm:px-2">
                   <span className="ole-table__pos" data-rank={rank <= 3 ? rank : undefined}>
-                    {rank <= 3 ? <Trophy className="w-4 h-4" /> : rank}
+                    {rank <= 3 ? <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <span className="font-serif-hero text-xs sm:text-sm tabular-nums">{rank}</span>}
                   </span>
                 </td>
-                <td>
-                  <div className="flex min-w-0 items-center gap-2 md:gap-3">
+                <td className="px-2 sm:px-3">
+                  <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 md:gap-3">
                     {isOle && supporterCrestUrl ? (
                       <img
                         src={supporterCrestUrl}
                         alt=""
-                        className="h-6 w-6 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] md:h-7 md:w-7"
+                        className="h-5 w-5 shrink-0 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:h-6 sm:w-6 md:h-7 md:w-7"
                       />
                     ) : (
                       <Shield
-                        className={cn('h-4 w-4 shrink-0 md:h-5 md:w-5', isOle ? 'text-neon-yellow' : 'text-gray-600')}
+                        className={cn('h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5', isOle ? 'text-neon-yellow' : 'text-gray-600')}
                       />
                     )}
                     <span
                       className={cn(
-                        'min-w-0 truncate font-display text-sm font-bold tracking-wide md:text-base',
+                        'min-w-0 truncate font-display text-xs font-bold tracking-wide sm:text-sm md:text-base',
                         isOle ? 'text-neon-yellow' : 'text-white',
                       )}
                     >
@@ -136,28 +136,28 @@ function StandingsBlock({
                     </span>
                   </div>
                 </td>
-                <td className="text-center">
+                <td className="text-center px-1 sm:px-2">
                   <span
                     className={cn(
-                      'font-display text-sm font-bold tabular-nums md:text-base',
+                      'font-serif-hero text-xs font-bold tabular-nums sm:text-sm md:text-base',
                       isOle ? 'text-neon-yellow' : 'text-white',
                     )}
                   >
                     {row.played}
                   </span>
                 </td>
-                <td className="text-center">
+                <td className="text-center px-1 sm:px-2">
                   <span
                     className={cn(
-                      'font-display text-sm font-bold tabular-nums md:text-base',
+                      'font-serif-hero text-xs font-bold tabular-nums sm:text-sm md:text-base',
                       isOle ? 'text-neon-yellow' : 'text-white',
                     )}
                   >
                     {row.points}
                   </span>
                 </td>
-                <td className="text-center">
-                  <span className="font-display text-sm tabular-nums text-gray-500 md:text-base">
+                <td className="text-center px-1 sm:px-2">
+                  <span className="font-serif-hero text-xs tabular-nums text-gray-500 sm:text-sm md:text-base">
                     {sgLabel}
                   </span>
                 </td>
@@ -541,28 +541,28 @@ export function Leagues() {
                   </div>
                 </div>
 
-                <div className="grid w-full min-w-0 grid-cols-3 gap-1.5 sm:w-auto sm:max-w-md sm:justify-self-stretch sm:gap-2 md:max-w-lg md:gap-3 lg:max-w-xl">
-                  <div className="min-w-0 border border-white/5 bg-black/40 px-1.5 py-2 text-center sm:p-3 md:px-4 md:py-4">
+                <div className="grid w-full min-w-0 grid-cols-3 gap-2 sm:w-auto sm:max-w-md sm:justify-self-stretch sm:gap-2.5 md:max-w-lg md:gap-3 lg:max-w-xl">
+                  <div className="min-w-0 border border-white/5 bg-black/40 px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
                     <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
                       Posição
                     </div>
-                    <div className="truncate font-display text-lg font-black tabular-nums text-neon-yellow sm:text-xl md:text-2xl">
+                    <div className="truncate font-serif-hero text-xl font-black tabular-nums text-neon-yellow sm:text-2xl md:text-3xl">
                       {userPosition}º
                     </div>
                   </div>
-                  <div className="min-w-0 border border-white/5 bg-black/40 px-1.5 py-2 text-center sm:p-3 md:px-4 md:py-4">
+                  <div className="min-w-0 border border-white/5 bg-black/40 px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
                     <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
                       Pontos
                     </div>
-                    <div className="truncate font-display text-lg font-black tabular-nums text-white sm:text-xl md:text-2xl">
+                    <div className="truncate font-serif-hero text-xl font-black tabular-nums text-white sm:text-2xl md:text-3xl">
                       {rowMatchingClub(sorted, club.name, club.shortName)?.points ?? '—'}
                     </div>
                   </div>
-                  <div className="min-w-0 border border-white/5 bg-black/40 px-1.5 py-2 text-center sm:p-3 md:px-4 md:py-4">
+                  <div className="min-w-0 border border-white/5 bg-black/40 px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
                     <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
                       Jogos
                     </div>
-                    <div className="truncate font-display text-lg font-black tabular-nums text-white sm:text-xl md:text-2xl">
+                    <div className="truncate font-serif-hero text-xl font-black tabular-nums text-white sm:text-2xl md:text-3xl">
                       {rowMatchingClub(sorted, club.name, club.shortName)?.played ?? '—'}
                     </div>
                   </div>

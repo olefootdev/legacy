@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect, type MouseEvent } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, GripVertical } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { usePlatformConfig } from '@/admin/platformConfigStore';
 
@@ -87,7 +87,7 @@ const ROUTE_TIPS: Array<{ match: RegExp; tip: Tip }> = [
 ];
 
 /** Rotas onde o assistente NÃO aparece (partidas, fluxos imersivos). */
-const HIDE_ON = [/^\/match\//, /^\/postgame/, /^\/cadastro/, /^\/admin/];
+const HIDE_ON = [/^\/match\//, /^\/postgame/, /^\/cadastro/, /^\/admin/, /^\/coach\/chat/];
 
 export function AssistantWidget() {
   const location = useLocation();
@@ -95,6 +95,9 @@ export function AssistantWidget() {
   const managerProfile = useGameStore((s) => s.userSettings.managerProfile);
   const tutorialStep = useGameStore((s) => s.userSettings.tutorialStep);
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
 
   const hidden = useMemo(
     () => HIDE_ON.some((r) => r.test(location.pathname)),
@@ -117,12 +120,51 @@ export function AssistantWidget() {
   if (!enabled || !managerProfile || hidden) return null;
   if (typeof tutorialStep === 'number' && tutorialStep >= 0) return null;
 
+  const handleMouseDown = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: position.x,
+      initialY: position.y,
+    };
+  };
+
+  const handleMouseMove = (e: globalThis.MouseEvent) => {
+    if (!isDragging || !dragRef.current) return;
+
+    const deltaX = e.clientX - dragRef.current.startX;
+    const deltaY = e.clientY - dragRef.current.startY;
+
+    setPosition({
+      x: dragRef.current.initialX + deltaX,
+      y: dragRef.current.initialY + deltaY,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    dragRef.current = null;
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging]);
+
   if (!open) {
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-[9997] inline-flex items-center gap-2 rounded-full border border-violet-500/50 bg-violet-950/90 px-3 py-2 text-[11px] font-bold text-violet-100 shadow-xl backdrop-blur transition-colors hover:bg-violet-900/95"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-violet-500/50 bg-violet-950/90 px-3 py-2 text-[11px] font-bold text-violet-100 shadow-xl backdrop-blur transition-colors hover:bg-violet-900/95"
       >
         <Sparkles className="h-4 w-4 text-violet-300" />
         Assistente
@@ -131,12 +173,26 @@ export function AssistantWidget() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[9997] flex justify-center px-3 pb-3 pointer-events-none sm:inset-auto sm:bottom-4 sm:right-4 sm:px-0 sm:pb-0">
-      <div className="pointer-events-auto w-full max-w-sm rounded-2xl border border-violet-500/50 bg-gradient-to-br from-violet-950/95 via-black/95 to-black/95 p-4 shadow-[0_20px_60px_rgba(139,92,246,0.25)] backdrop-blur">
+    <div
+      className="fixed z-40 pointer-events-auto"
+      style={{
+        bottom: position.y === 0 ? '1rem' : 'auto',
+        right: position.x === 0 ? '1rem' : 'auto',
+        top: position.y !== 0 ? `calc(50% + ${position.y}px)` : 'auto',
+        left: position.x !== 0 ? `calc(50% + ${position.x}px)` : 'auto',
+        transform: position.x !== 0 || position.y !== 0 ? 'translate(-50%, -50%)' : 'none',
+      }}
+    >
+      <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-sm rounded-2xl border border-violet-500/50 bg-gradient-to-br from-violet-950/95 via-black/95 to-black/95 p-3 sm:p-4 shadow-[0_20px_60px_rgba(139,92,246,0.25)] backdrop-blur">
         <div className="mb-2 flex items-start gap-2">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500/20 text-violet-300">
-            <Sparkles className="h-4 w-4" />
-          </div>
+          <button
+            type="button"
+            onMouseDown={handleMouseDown}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500/20 text-violet-300 cursor-move hover:bg-violet-500/30 transition-colors"
+            title="Arrastar"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
           <div className="min-w-0 flex-1">
             <span className="font-display text-[9px] font-bold uppercase tracking-widest text-violet-300/80">
               Assistente

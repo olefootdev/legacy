@@ -44,7 +44,6 @@ import { AdminLegacyPanel } from './panels/AdminLegacyPanel';
 import { AdminProfanityPanel } from './panels/AdminProfanityPanel';
 import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
 import { AdminFootballVocabularyPanel } from './panels/AdminFootballVocabularyPanel';
-import { AdminVoiceLibraryPanel } from './panels/AdminVoiceLibraryPanel';
 import { AdminCreatePlayerAgentsPanel } from './panels/AdminCreatePlayerAgentsPanel';
 import { AdminGlobalPanel } from './panels/AdminGlobalPanel';
 import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
@@ -55,6 +54,7 @@ import { AdminLaunchPanel } from './panels/AdminLaunchPanel';
 import { AdminPlatformConfigPanel } from './panels/AdminPlatformConfigPanel';
 import { AdminAgentsPanel } from './AdminAgentsPanel';
 import { AdminCreativePanel } from './AdminCreativePanel';
+import { AdminCoachAgentsPanel } from './panels/AdminCoachAgentsPanel';
 
 type TabId =
   | 'overview'
@@ -80,9 +80,9 @@ type SubTabId =
   | 'gameSpirit'
   | 'createPlayerAgents'
   | 'agents'
+  | 'coachAgents'
   | 'profanity'
   | 'learnedPhrases'
-  | 'voiceLibrary'
   | 'footballVocabulary'
   | 'global'
   | 'security'
@@ -125,8 +125,8 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
       { id: 'gameSpirit', label: 'Game Spirit' },
       { id: 'createPlayerAgents', label: 'Agency' },
       { id: 'agents', label: 'Agentes Offline' },
+      { id: 'coachAgents', label: 'Coach Agents' },
       { id: 'profanity', label: 'Linguagem' },
-      { id: 'voiceLibrary', label: 'Biblioteca de Voz' },
       { id: 'learnedPhrases', label: 'Frases aprendidas' },
       { id: 'footballVocabulary', label: 'Vocabulário de Futebol' },
     ],
@@ -160,10 +160,10 @@ const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
   legacy: 'legacy',
   skills: 'skills',
   profanity: 'profanity',
-  voiceLibrary: 'voiceLibrary',
   learnedPhrases: 'learnedPhrases',
   footballVocabulary: 'footballVocabulary',
   createPlayerAgents: 'createPlayerAgents',
+  coachAgents: 'coachAgents',
   global: 'global',
   security: 'security',
   platformConfig: 'platformConfig',
@@ -362,8 +362,8 @@ export function AdminDashboard() {
               {tab === 'ia' && subTab === 'gameSpirit' ? <AdminGameSpiritPanel /> : null}
               {tab === 'ia' && subTab === 'createPlayerAgents' ? <AdminCreatePlayerAgentsPanel /> : null}
               {tab === 'ia' && subTab === 'agents' ? <AdminAgentsPanel /> : null}
+              {tab === 'ia' && subTab === 'coachAgents' ? <AdminCoachAgentsPanel /> : null}
               {tab === 'ia' && subTab === 'profanity' ? <AdminProfanityPanel /> : null}
-              {tab === 'ia' && subTab === 'voiceLibrary' ? <AdminVoiceLibraryPanel /> : null}
               {tab === 'ia' && subTab === 'learnedPhrases' ? <AdminLearnedPhrasesPanel /> : null}
               {tab === 'ia' && subTab === 'footballVocabulary' ? <AdminFootballVocabularyPanel /> : null}
               {tab === 'ia' && !subTab ? <AdminGameSpiritPanel /> : null}

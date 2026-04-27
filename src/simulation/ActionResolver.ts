@@ -245,9 +245,9 @@ function opponentGoalkeeper(opponents: AgentSnapshot[]): AgentSnapshot | null {
 function shotPower01FromStrike(strike: ShotStrikeProfile, carrier: AgentSnapshot): number {
   const fin = carrier.finalizacao / 100;
   const str = carrier.fisico / 100;
-  if (strike === 'power') return Math.min(1, 0.52 + str * 0.32 + fin * 0.1);
-  if (strike === 'weak') return Math.min(1, 0.3 + str * 0.12 + fin * 0.22);
-  return Math.min(1, 0.42 + str * 0.2 + fin * 0.24);
+  if (strike === 'power') return Math.min(3, (0.52 + str * 0.32 + fin * 0.1) * 3);
+  if (strike === 'weak') return Math.min(3, (0.3 + str * 0.12 + fin * 0.22) * 3);
+  return Math.min(3, (0.42 + str * 0.2 + fin * 0.24) * 3);
 }
 
 /** 0–1: capacidade defensiva do GR (marc./tático/físico/vel.). */

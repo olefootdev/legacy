@@ -13,6 +13,7 @@ import { narrativeMomentRoutes } from './routes/narrativeMoment.js';
 import { marketRoutes } from './routes/market.js';
 import { voiceRoutes } from './routes/voice.js';
 import { assistantRoutes } from './routes/assistant.js';
+import { coachRoutes } from './routes/coach.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 
 const app = new Hono();
@@ -65,6 +66,7 @@ app.route('/', narrativeMomentRoutes);
 app.route('/', marketRoutes);
 app.route('/api/voice', voiceRoutes);
 app.route('/api/assistant', assistantRoutes);
+app.route('/api/coach', coachRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 

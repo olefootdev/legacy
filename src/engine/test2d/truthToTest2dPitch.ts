@@ -88,10 +88,20 @@ export function truthSnapshotToTest2dPitch(args: {
       });
     } else {
       const slot = awaySlotFromSimId(tp.id);
-      const idx = slot != null ? SLOT_TO_AWAY_ROSTER_INDEX[slot] : undefined;
-      const roster = idx !== undefined ? awayRoster[idx] : undefined;
+      // BUG FIX #4: Validar slot antes de acessar SLOT_TO_AWAY_ROSTER_INDEX
+      const idx = slot != null && slot in SLOT_TO_AWAY_ROSTER_INDEX
+        ? SLOT_TO_AWAY_ROSTER_INDEX[slot]
+        : undefined;
+      const roster = idx !== undefined && idx < awayRoster.length ? awayRoster[idx] : undefined;
       const role = slot ? roleFromSlotId(slot) : 'mid';
       const awaySeed = roster?.num ?? (idx !== undefined ? idx + 1 : 1);
+
+      // Validar que temos dados mínimos antes de adicionar
+      if (!roster && !tp.id) {
+        console.warn('[truthToTest2dPitch] Jogador visitante inválido ignorado:', tp);
+        continue;
+      }
+
       awayPitch.push({
         playerId: roster?.id ?? tp.id,
         slotId: slot ?? 'mc1',

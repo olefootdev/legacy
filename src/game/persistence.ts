@@ -40,6 +40,7 @@ import { sanitizePlayerEvolutionTimeline } from '@/team/playerEvolutionTimeline'
 import { hydrateLegacyGenesisContract } from '@/playerContracts/playerContracts';
 import { defaultShopCatalog, normalizeShopCatalog } from './shopCatalog';
 import { generateMissingAgentProfiles } from '@/agents/agentProfileLoader';
+import { createDefaultCoachAgent } from '@/coach/defaultCoach';
 
 const KEY = 'olefoot-game-v1';
 
@@ -408,6 +409,8 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
           };
         })()
       : base.manager.staff,
+    // Migração do coach: se não existir no save, cria um novo
+    coach: raw.manager?.coach ?? createDefaultCoachAgent(),
   };
 
   const userSettings = {

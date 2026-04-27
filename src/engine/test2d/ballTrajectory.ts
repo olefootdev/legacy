@@ -31,14 +31,14 @@ export interface BallTrajectoryState {
 
 /** How much progress (0–1) each tick advances per trajectory kind. */
 const SPEED_TABLE: Record<BallTrajectoryKind, number> = {
-  pass_short: 0.85,
-  pass_long: 0.55,
-  cross: 0.60,
-  shot: 0.90,
-  carry: 0.40,
-  loose: 0.70,
-  gk_restart: 0.45,
-  kickoff: 0.30,
+  pass_short: 2.55,
+  pass_long: 1.65,
+  cross: 1.80,
+  shot: 2.70,
+  carry: 1.20,
+  loose: 2.10,
+  gk_restart: 1.35,
+  kickoff: 0.90,
 };
 
 /**
@@ -97,6 +97,14 @@ export function computeBallTrajectory(
       to: { ...ballTo },
       kind,
       progress01: 0,
+    };
+  }
+
+  // BUG FIX #3: Se bola parada (distância ~0), forçar progress = 1 para evitar loop infinito
+  if (totalDist < 0.5) {
+    return {
+      ...prev,
+      progress01: 1,
     };
   }
 

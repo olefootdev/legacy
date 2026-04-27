@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Shield, Heart, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { User, Shield, Heart, ArrowRight, ArrowLeft, Check, Sparkles, Trophy, Users, Briefcase, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -17,6 +17,14 @@ import { syncProfileManagerFirstName } from '@/supabase/profileDisplayName';
 import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
 import type { FavoriteRealTeamRef } from '@/game/types';
 import { signUpWithEmail, checkEmailExists } from '@/supabase/auth';
+
+type UserProfile =
+  | 'apaixonado'
+  | 'novo_talento'
+  | 'atleta_atuacao'
+  | 'profissional'
+  | 'midia'
+  | 'ex_jogador';
 
 const FORMATION_OPTIONS: FormationSchemeId[] = [
   '4-3-3',
@@ -304,6 +312,7 @@ export function Cadastro() {
 
   const [favoriteTeam, setFavoriteTeam] = useState<FavoriteRealTeamRef | null>(null);
   const [leagueBucketId, setLeagueBucketId] = useState<string>('brasil');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const [finishBusy, setFinishBusy] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
@@ -346,7 +355,7 @@ export function Cadastro() {
     phoneE164.length >= 8;
 
   const step2Valid = clubName.trim().length > 0 && initials.trim().length > 0;
-  const step3Valid = !!favoriteTeam;
+  const step3Valid = !!favoriteTeam && !!userProfile;
 
   const goNext = () => {
     if (step === 1 && step1Valid) setStep(2);
@@ -378,6 +387,7 @@ export function Cadastro() {
         clubShort: sn,
         formationScheme,
         referredByCode: normalizeReferralCode(referrerCode),
+        userProfile: userProfile ?? null,
       });
       if (!signUp.ok) {
         setFinishError(signUp.error ?? 'Falha ao criar conta.');
@@ -597,58 +607,86 @@ export function Cadastro() {
               </p>
             </label>
             <div>
-              <span className="mb-1 block text-xs font-medium text-white/65">Telefone</span>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                <select
-                  className={cn(inputClass, 'sm:max-w-[180px]')}
-                  value={dialOption.iso2}
-                  onChange={(e) => {
-                    const o = COUNTRY_DIAL_OPTIONS.find((x) => x.iso2 === e.target.value);
-                    if (o) {
-                      setDialOption(o);
-                      if (o.iso2 !== 'BR') {
-                        setBrazilState('');
-                        setDdd('');
-                      }
-                    }
-                  }}
-                >
-                  {COUNTRY_DIAL_OPTIONS.map((c) => (
-                    <option key={c.iso2} value={c.iso2}>
-                      {isoToFlag(c.iso2)} {c.name} {c.dial}
-                    </option>
-                  ))}
-                </select>
-                {dialOption.iso2 === 'OTHER' && (
-                  <input
-                    className={inputClass}
-                    placeholder="Código país (ex. 352)"
-                    value={customDialDigits}
-                    onChange={(e) => setCustomDialDigits(e.target.value)}
-                    inputMode="numeric"
-                  />
-                )}
-                {dialOption.iso2 === 'BR' ? (
-                  <>
+              <span className="mb-2 block text-xs font-medium text-white/65">Telefone</span>
+              <div className="space-y-2.5">
+                {/* Linha 1: DDI + DDD */}
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[10px] font-medium text-white/50">DDI (País)</label>
                     <select
-                      className={cn(inputClass, 'sm:max-w-[100px]')}
-                      value={brazilState}
+                      className={inputClass}
+                      value={dialOption.iso2}
                       onChange={(e) => {
-                        setBrazilState(e.target.value);
-                        setBrazilCity('');
-                        setDdd('');
+                        const o = COUNTRY_DIAL_OPTIONS.find((x) => x.iso2 === e.target.value);
+                        if (o) {
+                          setDialOption(o);
+                          if (o.iso2 !== 'BR') {
+                            setBrazilState('');
+                            setDdd('');
+                          }
+                        }
                       }}
                     >
-                      <option value="">UF</option>
-                      {BRAZIL_STATES_DDD.map((s) => (
-                        <option key={s.state} value={s.state}>
-                          {s.state}
+                      {COUNTRY_DIAL_OPTIONS.map((c) => (
+                        <option key={c.iso2} value={c.iso2}>
+                          {isoToFlag(c.iso2)} {c.name} {c.dial}
                         </option>
                       ))}
                     </select>
-                    {brazilState && (
+                  </div>
+                  {dialOption.iso2 === 'OTHER' && (
+                    <div className="w-28">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">Código</label>
+                      <input
+                        className={inputClass}
+                        placeholder="ex. 352"
+                        value={customDialDigits}
+                        onChange={(e) => setCustomDialDigits(e.target.value)}
+                        inputMode="numeric"
+                      />
+                    </div>
+                  )}
+                  {dialOption.iso2 === 'BR' ? (
+                    <div className="w-20">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">UF</label>
                       <select
-                        className={cn(inputClass, 'flex-1 sm:min-w-[160px]')}
+                        className={inputClass}
+                        value={brazilState}
+                        onChange={(e) => {
+                          setBrazilState(e.target.value);
+                          setBrazilCity('');
+                          setDdd('');
+                        }}
+                      >
+                        <option value="">--</option>
+                        {BRAZIL_STATES_DDD.map((s) => (
+                          <option key={s.state} value={s.state}>
+                            {s.state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : dialOption.iso2 !== 'OTHER' ? (
+                    <div className="w-24">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">DDD</label>
+                      <input
+                        className={inputClass}
+                        placeholder="DDD"
+                        value={ddd}
+                        onChange={(e) => setDdd(e.target.value)}
+                        inputMode="numeric"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Linha 2: Cidade + Número */}
+                <div className="flex gap-2">
+                  {dialOption.iso2 === 'BR' && brazilState ? (
+                    <div className="flex-1">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">Cidade/Região</label>
+                      <select
+                        className={inputClass}
                         value={brazilCity}
                         onChange={(e) => {
                           setBrazilCity(e.target.value);
@@ -659,42 +697,94 @@ export function Cadastro() {
                           }
                         }}
                       >
-                        <option value="">Cidade/Região</option>
+                        <option value="">Selecione</option>
                         {BRAZIL_STATES_DDD.find((s) => s.state === brazilState)?.cities.map((c) => (
                           <option key={c.name} value={c.name}>
                             {c.name}
                           </option>
                         ))}
                       </select>
-                    )}
-                  </>
-                ) : dialOption.iso2 !== 'OTHER' ? (
-                  <input
-                    className={cn(inputClass, 'sm:max-w-[88px]')}
-                    placeholder="DDD"
-                    value={ddd}
-                    onChange={(e) => setDdd(e.target.value)}
-                    inputMode="numeric"
-                  />
-                ) : null}
-                <input
-                  className={inputClass}
-                  placeholder="Número"
-                  value={localPhone}
-                  onChange={(e) => setLocalPhone(e.target.value)}
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                />
+                    </div>
+                  ) : null}
+                  <div className={dialOption.iso2 === 'BR' && brazilState ? 'flex-1' : 'w-full'}>
+                    <label className="mb-1 block text-[10px] font-medium text-white/50">Número</label>
+                    <input
+                      className={inputClass}
+                      placeholder="Número do telefone"
+                      value={localPhone}
+                      onChange={(e) => setLocalPhone(e.target.value)}
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                    />
+                  </div>
+                </div>
               </div>
               {phoneE164 ? (
-                <p className="mt-1 font-mono text-[10px] text-white/40">Seu telefone é {phoneE164}</p>
+                <p className="mt-1.5 font-mono text-[10px] text-white/40">Seu telefone é {phoneE164}</p>
               ) : null}
             </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="mt-8 space-y-4">
+          <div className="mt-8 space-y-6">
+            {/* Seleção de perfil */}
+            <div>
+              <p className="mb-3 text-center font-display text-base font-bold uppercase tracking-wide text-white">
+                Qual seu perfil?
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {[
+                  { id: 'apaixonado' as const, label: 'Apaixonado por futebol', icon: Heart, color: 'rose' },
+                  { id: 'novo_talento' as const, label: 'Novo talento', icon: Sparkles, color: 'cyan' },
+                  { id: 'atleta_atuacao' as const, label: 'Atleta em atuação', icon: Trophy, color: 'amber' },
+                  { id: 'profissional' as const, label: 'Profissional', icon: Briefcase, color: 'blue' },
+                  { id: 'midia' as const, label: 'Mídia', icon: Mic, color: 'purple' },
+                  { id: 'ex_jogador' as const, label: 'Ex-Jogador', icon: Star, color: 'yellow' },
+                ].map((profile) => {
+                  const Icon = profile.icon;
+                  const selected = userProfile === profile.id;
+                  return (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      onClick={() => setUserProfile(profile.id)}
+                      className={cn(
+                        'flex flex-col items-center gap-2 rounded-lg border bg-black/30 p-3 transition-all',
+                        selected
+                          ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
+                          : 'border-white/10 hover:border-white/30',
+                      )}
+                      aria-pressed={selected}
+                    >
+                      <div className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                        selected ? 'border-neon-yellow/70 bg-neon-yellow/20' : 'border-white/20 bg-white/5',
+                      )}>
+                        <Icon className={cn('h-5 w-5', selected ? 'text-neon-yellow' : 'text-white/60')} />
+                      </div>
+                      <span className={cn(
+                        'text-center text-[11px] font-bold leading-tight',
+                        selected ? 'text-neon-yellow' : 'text-white/75',
+                      )}>
+                        {profile.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {userProfile === 'ex_jogador' && (
+                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+                  <p className="text-center text-[11px] text-amber-200/90">
+                    ⭐ Entraremos em contato para validar seu perfil de ex-jogador
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Divisor */}
+            <div className="border-t border-white/10" />
+
             <div>
               <p className="mb-1 text-center font-display text-sm font-bold uppercase tracking-wide text-white">
                 Escolhe o teu time do coração

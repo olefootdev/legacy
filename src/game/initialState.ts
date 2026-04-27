@@ -18,6 +18,7 @@ import { pickHomeCaptainPlayerId } from '@/match/impactRules';
 import { grantEarnedExp } from '@/systems/economy';
 import { createInitialExpExchangeState } from '@/economy/expExchange';
 import { defaultShopCatalog } from './shopCatalog';
+import { createDefaultCoachAgent } from '@/coach/defaultCoach';
 
 function startingExpBonusForTests(): number {
   const raw = import.meta.env.VITE_STARTING_EXP;
@@ -89,6 +90,7 @@ export function createInitialGameState(): OlefootGameState {
       trainingPlans: [],
       treatmentPlans: [],
       staff: createInitialStaffState(),
+      coach: createDefaultCoachAgent(),
     },
     lastWorldRealMs: Date.now(),
     clubLogistics: { lastTripKm: 0 },
@@ -124,6 +126,7 @@ export function defaultLiveMatchShell(
   travelKm: number,
   homeFormationScheme: FormationSchemeId,
   displayNames?: { homeName: string; awayName: string },
+  competitiveMetadata?: { isCompetitive: boolean; opponentType: 'bot' | 'human' },
 ): LiveMatchSnapshot {
   return {
     mode: 'test2d',
@@ -167,5 +170,7 @@ export function defaultLiveMatchShell(
     spiritBuildupGkTicksRemaining: 0,
     spiritMomentumClamp01: null,
     preGoalHint: null,
+    isCompetitive: competitiveMetadata?.isCompetitive ?? false,
+    opponentType: competitiveMetadata?.opponentType ?? 'bot',
   };
 }

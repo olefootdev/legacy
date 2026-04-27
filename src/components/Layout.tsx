@@ -30,7 +30,7 @@ import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayNa
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { AssistantWidget } from '@/components/AssistantWidget';
-import { BugReportButton } from '@/components/BugReportButton';
+import { CoachActionApproval } from '@/components/CoachActionApproval';
 
 const mainNavItems = [
   { icon: Home, label: 'HOME', path: '/' },
@@ -252,7 +252,7 @@ export function Layout({ children }: { children: ReactNode }) {
               ? ''
               : isQuickMatchRoute
                 ? 'lg:py-8'
-                : 'py-3 pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))] sm:py-4 lg:py-8',
+                : 'pt-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:pt-8 lg:pt-10 lg:pb-8',
           )}
         >
           {children}
@@ -260,7 +260,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
       <TutorialOverlay />
       <AssistantWidget />
-      <BugReportButton />
+      <CoachActionApproval />
 
       {/* Mobile / Tablet Drawer — slides in below lg */}
       <AnimatePresence>

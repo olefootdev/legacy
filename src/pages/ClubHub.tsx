@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, GraduationCap, Building2, Dumbbell, ChevronRight } from 'lucide-react';
+import { Users, GraduationCap, Building2, Dumbbell, ChevronRight, UserCog } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
@@ -18,6 +18,13 @@ const quickActions = [
     description: 'Desenvolver habilidades',
     href: '/team/treino',
     color: 'emerald-400',
+  },
+  {
+    icon: UserCog,
+    label: 'Staff',
+    description: 'Profissionais e coach',
+    href: '/team/staff',
+    color: 'violet-400',
   },
   {
     icon: GraduationCap,

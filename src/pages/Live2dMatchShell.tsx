@@ -4,19 +4,20 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, Gauge, Home, LayoutGrid, LogOut, Map, RotateCcw, Scan, Tag, Trophy, Zap } from 'lucide-react';
+import { AlertTriangle, Gauge, Home, LayoutGrid, LogOut, RotateCcw, Scan, Tag, Trophy, Zap } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { playerTokenSrc } from '@/lib/playerPortrait';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
-import { MatchdayResultScores, MatchdayVersusWithClock } from '@/components/matchday/MatchdayVersusTitle';
+import { MatchdayResultScores } from '@/components/matchday/MatchdayVersusTitle';
 import { GoalTakeover } from '@/components/matchday/GoalTakeover';
 import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
 import { LiveMatchManagerPanel } from '@/components/matchday/LiveMatchManagerPanel';
-import { VoiceCommandPanel } from '@/components/matchday/VoiceCommandPanel';
 import { LiveStatsPanel } from '@/components/matchday/LiveStatsPanel';
 import { PitchNarrationOverlay } from '@/components/matchday/PitchNarrationOverlay';
+import { CoachCommandInput } from '@/components/matchday/CoachCommandInput';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import type { LiveMatchSnapshot, LiveMatchClockPeriod, PitchPlayerState } from '@/engine/types';
 import { interpolateBallPosition, type BallTrajectoryState } from '@/engine/test2d/ballTrajectory';
 import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
@@ -26,18 +27,20 @@ import { tryAutoAttachFromWindow } from '@/bridge/babylonPlayerVisualsIntegratio
 import { buildHomeStaffMatchBonuses, buildActivePlayerStaffBoosts } from '@/systems/staffBenefits';
 import { cn } from '@/lib/utils';
 import {
-  TacticalPitchDevLayer,
-  loadTacticalLayerPref,
   loadZoneView18Pref,
-  saveTacticalLayerPref,
   saveZoneView18Pref,
 } from '@/components/matchday/TacticalPitchDevLayer';
+import {
+  calculateTacticalRadius,
+  calculatePassConnections,
+  calculatePlayerAwareness,
+  type PassConnection,
+  type PlayerAwareness,
+} from '@/match/tacticalAwareness';
 import '@/styles/field2d.css';
 import { Live2dPlayerVision } from '@/components/matchday/Live2dPlayerVision';
 import { PlayerVoiceBubble } from '@/components/matchday/PlayerResponseBubble';
 import { LivePlayerInfoPanel } from '@/components/matchday/LivePlayerInfoPanel';
-import { LiveTelemetryPanel } from '@/components/matchday/LiveTelemetryPanel';
-import { generateReport } from '@/match/liveTelemetry';
 import {
   computePitchCameraRig,
   loadLive2dPitchCamera,
@@ -49,26 +52,12 @@ import {
   fetchFriendlyChallengeById,
   userParticipatesInChallenge,
 } from '@/supabase/friendlyChallenges';
-import { MomentumVisualBar } from '@/components/matchday/MomentumVisualBar';
-import { LiveStatsComparison } from '@/components/matchday/LiveStatsComparison';
-import { useLiveMatchStats } from '@/hooks/useLiveMatchStats';
-import { MomentumShiftOverlay } from '@/components/matchday/MomentumShiftOverlay';
 import { MomentumFieldEffect } from '@/components/matchday/MomentumFieldEffect';
-import { useStatsHistory } from '@/hooks/useStatsHistory';
-import { useStatHighlights } from '@/hooks/useStatHighlights';
-import { useThrottle } from '@/hooks/useThrottle';
 import { InteractiveMomentOverlay } from '@/components/matchday/InteractiveMomentOverlay';
 import { SpecialEventOverlay } from '@/components/matchday/SpecialEventOverlay';
-import { SkillVisualEffect, useSkillVisuals } from '@/components/matchday/SkillVisualEffect';
-import { SubstitutionSuggestionPanel } from '@/components/matchday/SubstitutionSuggestionPanel';
-import { TacticalMinimap, useTacticalAnalysis } from '@/components/matchday/TacticalMinimap';
-import { MatchChallengesPanel, ChallengeCompletedNotification } from '@/components/matchday/MatchChallengesPanel';
-import { detectAllSubstitutionSuggestions } from '@/match/smartSubstitutions';
-import { MATCH_CHALLENGES, checkCompletedChallenges, calculateChallengeProgress } from '@/match/matchChallenges';
+import { useSkillVisuals } from '@/components/matchday/SkillVisualEffect';
 import type { InteractiveMoment, InteractiveMomentOption } from '@/match/interactiveMoments';
 import type { SpecialEvent } from '@/match/specialEvents';
-import type { SubstitutionSuggestion } from '@/match/smartSubstitutions';
-import type { MatchChallenge } from '@/match/matchChallenges';
 
 const LIVE_MATCH_ENGINE_MODE = 'test2d' as const;
 
@@ -109,17 +98,22 @@ function Live2dPlayerFatigueAlert({
   playerId: string;
   fatigue: number;
 }) {
-  const latestRef = useRef(fatigue);
-  latestRef.current = fatigue;
-  const [shownFatigue, setShownFatigue] = useState(() => Math.round(fatigue));
+  // BUG FIX #6: Validar fatigue para evitar NaN propagation
+  const safeFatigue = Number.isFinite(fatigue) ? fatigue : 0;
+  const latestRef = useRef(safeFatigue);
+  latestRef.current = safeFatigue;
+  const [shownFatigue, setShownFatigue] = useState(() => Math.round(safeFatigue));
 
   useEffect(() => {
-    setShownFatigue(Math.round(fatigue));
-  }, [playerId]);
+    setShownFatigue(Math.round(safeFatigue));
+  }, [playerId, safeFatigue]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setShownFatigue(Math.round(latestRef.current));
+      const current = latestRef.current;
+      if (Number.isFinite(current)) {
+        setShownFatigue(Math.round(current));
+      }
     }, LIVE2D_ENERGY_HALO_UI_MS);
     return () => window.clearInterval(id);
   }, []);
@@ -227,6 +221,9 @@ type HomePlayerTokenProps = {
   distBallPct: number;
   showEnergyMap: boolean;
   showNames: boolean;
+  showActionRadius: boolean;
+  role?: string;
+  awareness?: PlayerAwareness;
   onSelect?: (p: PitchPlayerState) => void;
 };
 
@@ -251,6 +248,10 @@ function homePlayerTokenPropsEqual(a: HomePlayerTokenProps, b: HomePlayerTokenPr
     a.distBallPct === b.distBallPct &&
     a.showEnergyMap === b.showEnergyMap &&
     a.showNames === b.showNames &&
+    a.showActionRadius === b.showActionRadius &&
+    a.role === b.role &&
+    a.awareness?.isIsolated === b.awareness?.isIsolated &&
+    a.awareness?.supportQuality === b.awareness?.supportQuality &&
     a.p.fatigue === b.p.fatigue &&
     a.onSelect === b.onSelect
   );
@@ -270,10 +271,19 @@ const Test2dHomePlayerToken = memo(function Test2dHomePlayerToken({
   distBallPct,
   showEnergyMap,
   showNames,
+  showActionRadius,
+  role,
+  awareness,
   onSelect,
 }: HomePlayerTokenProps) {
   const left = pitchPlanePercent(p.x) + nudge.dx;
   const top = pitchPlanePercent(p.y) + nudge.dy;
+
+  // Calcula raio tático avançado
+  const tacticalRadius = showActionRadius && role
+    ? calculateTacticalRadius(p, role)
+    : null;
+
   // P1: animate transform only (composite-only, no layout/paint).
   const motionCss =
     reducedMotion || TOKEN_MOVE_MS <= 0
@@ -307,6 +317,28 @@ const Test2dHomePlayerToken = memo(function Test2dHomePlayerToken({
           onBall={onBall}
           distBallPct={distBallPct}
         />
+      ) : null}
+      {showActionRadius && tacticalRadius ? (
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            width: `${tacticalRadius.radiusCqw * 2}cqw`,
+            height: `${tacticalRadius.radiusCqw * 2}cqh`,
+            zIndex: 0,
+          }}
+          title={`${p.name} - ${role} - Raio: ${Math.round(tacticalRadius.radiusMeters)}m${awareness?.isIsolated ? ' (ISOLADO)' : ''}`}
+        >
+          <div
+            className={cn(
+              'h-full w-full rounded-full border border-dashed transition-all duration-300',
+              awareness?.isIsolated && 'ring-2 ring-red-500/40 animate-pulse',
+            )}
+            style={{
+              borderColor: `${tacticalRadius.color}${Math.round(tacticalRadius.opacity * 255).toString(16).padStart(2, '0')}`,
+              backgroundColor: `${tacticalRadius.color}${Math.round(tacticalRadius.opacity * 0.15 * 255).toString(16).padStart(2, '0')}`,
+            }}
+          />
+        </div>
       ) : null}
       <div className="relative inline-flex h-[1.584rem] w-[1.584rem] shrink-0 items-center justify-center sm:h-[2.076rem] sm:w-[2.076rem]">
         <PlayerVoiceBubble playerId={p.playerId} />
@@ -372,6 +404,10 @@ function awayPlayerTokenPropsEqual(a: AwayPlayerTokenProps, b: AwayPlayerTokenPr
     a.distBallPct === b.distBallPct &&
     a.showEnergyMap === b.showEnergyMap &&
     a.showNames === b.showNames &&
+    a.showActionRadius === b.showActionRadius &&
+    a.role === b.role &&
+    a.awareness?.isIsolated === b.awareness?.isIsolated &&
+    a.awareness?.supportQuality === b.awareness?.supportQuality &&
     a.p.fatigue === b.p.fatigue
   );
 }
@@ -389,9 +425,18 @@ const Test2dAwayPlayerToken = memo(function Test2dAwayPlayerToken({
   distBallPct,
   showEnergyMap,
   showNames,
+  showActionRadius,
+  role,
+  awareness,
 }: AwayPlayerTokenProps) {
   const left = pitchPlanePercent(p.x) + nudge.dx;
   const top = pitchPlanePercent(p.y) + nudge.dy;
+
+  // Calcula raio tático avançado
+  const tacticalRadius = showActionRadius && role
+    ? calculateTacticalRadius(p, role)
+    : null;
+
   // P1: animate transform only (composite-only, no layout/paint).
   const motionCss =
     reducedMotion || TOKEN_MOVE_MS <= 0
@@ -419,6 +464,28 @@ const Test2dAwayPlayerToken = memo(function Test2dAwayPlayerToken({
           onBall={onBall}
           distBallPct={distBallPct}
         />
+      ) : null}
+      {showActionRadius && tacticalRadius ? (
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            width: `${tacticalRadius.radiusCqw * 2}cqw`,
+            height: `${tacticalRadius.radiusCqw * 2}cqh`,
+            zIndex: 0,
+          }}
+          title={`${p.name} - ${role} - Raio: ${Math.round(tacticalRadius.radiusMeters)}m${awareness?.isIsolated ? ' (ISOLADO)' : ''}`}
+        >
+          <div
+            className={cn(
+              'h-full w-full rounded-full border border-dashed transition-all duration-300',
+              awareness?.isIsolated && 'ring-2 ring-red-500/40 animate-pulse',
+            )}
+            style={{
+              borderColor: `${tacticalRadius.color}${Math.round(tacticalRadius.opacity * 255).toString(16).padStart(2, '0')}`,
+              backgroundColor: `${tacticalRadius.color}${Math.round(tacticalRadius.opacity * 0.15 * 255).toString(16).padStart(2, '0')}`,
+            }}
+          />
+        </div>
       ) : null}
       <div className="relative inline-flex h-[1.584rem] w-[1.584rem] shrink-0 items-center justify-center sm:h-[2.076rem] sm:w-[2.076rem]">
         <PlayerVoiceBubble playerId={p.playerId} />
@@ -589,7 +656,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const dispatch = useGameDispatch();
 
   // P7: useShallow consolidates 12 selectors into 1, reducing Zustand subscribers
-  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, staff } = useGameStore(
+  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, staff, tacticalObedience, managerRelationByPlayer } = useGameStore(
     useShallow((s) => ({
       live: s.liveMatch,
       playersById: s.players,
@@ -600,8 +667,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       tempo: s.manager.tempo,
       tacticalStyle: s.manager.tacticalStyle,
       staff: s.manager.staff,
+      tacticalObedience: s.tacticalObedience,
+      managerRelationByPlayer: s.managerRelationByPlayer,
     }))
   );
+
+  // Brasão do time do coração
+  const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
 
   const homeStaffMatch = useMemo(
     () => buildHomeStaffMatchBonuses(staff, { isHomeFixture: fixture.isHome }),
@@ -632,25 +704,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const [preGoalActive, setPreGoalActive] = useState(false);
   const [, setMomentumAnimKey] = useState<string | null>(null);
   const [goalTakeoverKey, setGoalTakeoverKey] = useState<string | null>(null);
-  const [tacticalDevLayer, setTacticalDevLayer] = useState(loadTacticalLayerPref);
+  const [goalCelebrationActive, setGoalCelebrationActive] = useState(false);
   const [zoneView18, setZoneView18] = useState(loadZoneView18Pref);
   const [pitchCameraMode, setPitchCameraMode] = useState<Live2dPitchCameraMode>(() => loadLive2dPitchCamera());
   const [energyMapOn, setEnergyMapOn] = useState(loadLive2dEnergyMapPref);
   const [namesOn, setNamesOn] = useState(loadLive2dNamesPref);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PitchPlayerState | null>(null);
-
-  // Fase 1 — Quick Wins: Stats ao vivo + Melhorias
-  const liveStats = useLiveMatchStats(live);
-  const throttledStats = useThrottle(liveStats, 1000); // Melhoria #10: throttle 1s
-  const statsHistory = useStatsHistory(throttledStats, live?.minute); // Melhoria #3: histórico
-
-  // Melhoria #8: Stat Highlights (toasts)
-  const showToast = useCallback((message: string, type: 'success' | 'info' | 'warning') => {
-    console.log(`[${type.toUpperCase()}] ${message}`);
-  }, []);
-
-  useStatHighlights(throttledStats, showToast);
 
   // Fase 2 — Core Gameplay: Momentos Interativos + Skills + Eventos Especiais
   const [interactiveMoment, setInteractiveMoment] = useState<InteractiveMoment | null>(null);
@@ -666,25 +726,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     console.log('[Interactive Moment] Timeout - IA decide');
     setInteractiveMoment(null);
   }, []);
-
-  // Fase 3 — Polish: Substituições + Desafios + Mini-mapa
-  const [dismissedSubstitutions, setDismissedSubstitutions] = useState<Set<string>>(new Set());
-  const [completedChallengeIds, setCompletedChallengeIds] = useState<Set<string>>(new Set());
-  const [lastCompletedChallenge, setLastCompletedChallenge] = useState<MatchChallenge | null>(null);
-
-  useEffect(() => {
-    if (!live) return;
-
-    const newlyCompleted = checkCompletedChallenges(live, throttledStats, completedChallengeIds);
-
-    if (newlyCompleted.length > 0) {
-      const challenge = newlyCompleted[0]!;
-      setCompletedChallengeIds(prev => new Set(prev).add(challenge.id));
-      setLastCompletedChallenge(challenge);
-
-      console.log(`[Challenge] Completado: ${challenge.title} - +${challenge.reward.ole} OLE`);
-    }
-  }, [live, throttledStats, completedChallengeIds]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -706,7 +747,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const truthSnapRef = useRef(truthSnap);
   truthSnapRef.current = truthSnap;
 
-  // CORREÇÃO ERRO CRÍTICO #1: tacticalPitchFromTruth precisa estar após useLive2dTacticalSim
   const tacticalPitchFromTruth = useMemo(() => {
     if (!usesLive2dTacticalEngine || !truthSnap?.players?.length || !live?.homePlayers?.length) {
       return null;
@@ -718,64 +758,41 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     });
   }, [usesLive2dTacticalEngine, truthSnap, live?.homePlayers, live?.awayRoster]);
 
-  // Pitch players (usado em substituições e renderização)
   const pitch = tacticalPitchFromTruth?.homePitch ?? live?.homePlayers ?? [];
-
-  // Detecta sugestões de substituição
-  const substitutionSuggestions = useMemo(() => {
-    if (!live || !pitch || pitch.length === 0) return [];
-
-    const bench = Object.values(playersById).filter(p => {
-      const lineupPlayerIds = Object.values(lineupIds ?? {});
-      return !lineupPlayerIds.includes(p.id);
-    });
-
-    const scoreDiff = (live.homeScore ?? 0) - (live.awayScore ?? 0);
-    const momentum = live.spiritMomentum ?? { home: 50, away: 50 };
-
-    return detectAllSubstitutionSuggestions(
-      pitch,
-      bench,
-      live.minute ?? 0,
-      scoreDiff,
-      momentum
-    ).filter(s => !dismissedSubstitutions.has(s.id));
-  }, [live, pitch, playersById, lineupIds, dismissedSubstitutions]);
-
-  const handleAcceptSubstitution = useCallback((suggestion: SubstitutionSuggestion) => {
-    console.log('[Substitution] Aceita:', suggestion.playerOut.name, '→', suggestion.playerIn.name);
-    // TODO: Aplicar substituição via dispatch
-    setDismissedSubstitutions(prev => new Set(prev).add(suggestion.id));
-  }, []);
-
-  const handleDismissSubstitution = useCallback((suggestionId: string) => {
-    setDismissedSubstitutions(prev => new Set(prev).add(suggestionId));
-  }, []);
-
-  // Análise tática (mini-mapa)
-  const { heatmap, pattern } = useTacticalAnalysis(live);
 
   // Penalty bridge — TacticalSimLoop detecta falta dentro da grande área e dispara o modal via reducer.
   useEffect(() => {
     const loop = tacticalLive2dLoopRef.current;
     if (!loop) return;
     loop.setOnPenaltyAwarded((info) => {
-      // Resolve o batedor via gameState (evita capturar valores que ainda não foram declarados).
+      // BUG FIX #7: Validação defensiva completa para penalty award
       const st = getGameState();
+      if (!st || !st.players || !st.lineup) {
+        console.error('[Penalty] Estado inválido:', st);
+        return;
+      }
+
       let takerName = info.takerName;
       let takerId = info.takerId;
+
       if (info.attackingSide === 'home') {
         const p = st.players[info.victimId];
         if (p) {
           takerName = p.name;
           takerId = p.id;
         } else {
-          // Fallback: melhor finalizador entre os titulares.
-          const lineup = Object.values(st.lineup ?? {}) as string[];
-          const candidate = lineup
+          // Fallback: melhor finalizador entre os titulares
+          const lineup = Object.values(st.lineup ?? {}).filter((id): id is string => typeof id === 'string');
+          const candidates = lineup
             .map((pid) => st.players[pid])
-            .filter(Boolean)
-            .sort((a, b) => (b!.attrs.finalizacao ?? 0) - (a!.attrs.finalizacao ?? 0))[0];
+            .filter((pl): pl is NonNullable<typeof pl> => pl != null && pl.attrs?.finalizacao != null);
+
+          if (candidates.length === 0) {
+            console.error('[Penalty] Nenhum batedor válido encontrado');
+            return;
+          }
+
+          const candidate = candidates.sort((a, b) => (b.attrs.finalizacao ?? 0) - (a.attrs.finalizacao ?? 0))[0];
           if (candidate) {
             takerName = candidate.name;
             takerId = candidate.id;
@@ -788,6 +805,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           takerId = ro.id;
         }
       }
+
+      // Validar que temos batedor válido antes de disparar
+      if (!takerId || !takerName) {
+        console.error('[Penalty] Batedor inválido:', { takerId, takerName });
+        return;
+      }
+
       dispatch({
         type: 'AWARD_LIVE_PENALTY',
         attackingSide: info.attackingSide,
@@ -1018,6 +1042,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     freezeUntilRef.current = Date.now() + GOAL_FREEZE_MS;
     setMomentumAnimKey(top.id);
     setGoalTakeoverKey(top.id);
+    setGoalCelebrationActive(true); // Pausa o relógio durante a celebração
   }, [live?.events, live?.phase, live?.mode, preGoalActive]);
 
   useEffect(() => {
@@ -1057,22 +1082,30 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     if (live.phase !== 'postgame' || finalizedRef.current) return;
     finalizedRef.current = true;
 
-    // CORREÇÃO ERRO CRÍTICO #2: Garantir que live ainda existe antes de dispatch
+    // BUG FIX #1: Validação defensiva completa antes de finalizar
     const currentLive = getGameState().liveMatch;
-    if (!currentLive) return;
+    if (!currentLive) {
+      console.error('[Live2dMatchShell] FINALIZE_MATCH abortado: liveMatch é null');
+      return;
+    }
+
+    // Validar campos obrigatórios
+    if (!currentLive.homeShort || !currentLive.awayShort) {
+      console.error('[Live2dMatchShell] FINALIZE_MATCH abortado: times inválidos', currentLive);
+      return;
+    }
 
     setSummary({
       homeShort: currentLive.homeShort,
       awayShort: currentLive.awayShort,
       homeName: currentLive.homeName,
       awayName: currentLive.awayName,
-      homeScore: currentLive.homeScore,
-      awayScore: currentLive.awayScore,
-      events: currentLive.events.map((e) => ({ id: e.id, text: e.text })),
+      homeScore: currentLive.homeScore ?? 0,
+      awayScore: currentLive.awayScore ?? 0,
+      events: (currentLive.events ?? []).map((e) => ({ id: e.id, text: e.text })),
     });
-  dispatch({ type: 'FINALIZE_MATCH' });
-  // move to postgame screen
-  navigate('/postgame');
+    dispatch({ type: 'FINALIZE_MATCH' });
+    navigate('/postgame');
   }, [live, dispatch, navigate]);
 
   const squadReport = useMemo(
@@ -1151,18 +1184,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     if (!stillOnPitch) setSelectedPlayer(null);
   }, [live?.homePlayers, selectedPlayer]);
 
-  // Atalho Shift+R para gerar relatório de telemetria
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'R' && e.shiftKey && live?.phase === 'playing') {
-        const report = generateReport();
-        console.log('\n' + report + '\n');
-        console.log('📋 Relatório de telemetria gerado! Copie o texto acima.');
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [live?.phase]);
 
   // Auto-substitution: swap the most fatigued home outfield player during a deadball window.
   const autoSubDoneThisDeadballRef = useRef(false);
@@ -1247,6 +1268,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     halfTimeUi ||
     !!(live?.spiritOverlay) ||
     preGoalActive ||
+    goalCelebrationActive ||
     tacticalKickoffHoldCountdown > 0 ||
     Date.now() < freezeUntilRef.current;
   const displayHomeScore =
@@ -1270,7 +1292,15 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
 
   return (
     <div className="flex w-full min-h-0 flex-1 flex-col space-y-3 sm:space-y-4 py-4 sm:py-6 px-2 sm:px-4 pb-20 sm:pb-24 md:flex-none">
-      <GoalTakeover triggerKey={goalTakeoverKey} disabled={prefersReducedMotion} />
+      <GoalTakeover
+        triggerKey={goalTakeoverKey}
+        disabled={prefersReducedMotion}
+        onDismiss={() => {
+          setGoalCelebrationActive(false);
+          setGoalTakeoverKey(null);
+          freezeUntilRef.current = 0;
+        }}
+      />
 
       {/* Fase 2 — Core Gameplay: Overlays */}
       <InteractiveMomentOverlay
@@ -1446,63 +1476,115 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             </div>
           ) : null}
 
-          <MatchdayVersusWithClock
-            homeShort={live.homeShort}
-            awayShort={live.awayShort}
-            homeName={live.homeName}
-            awayName={live.awayName}
-            awaySeed={fixture.opponent.id}
-            clock={
-              <LiveMatchClockDisplay
-                elapsedSec={live?.footballElapsedSec ?? 0}
-                frozen={clockFrozen}
-                phase={live?.phase}
-                msPerMinute={MS_PER_MINUTE}
-                tacticalLoopRef={tacticalLive2dEnabled ? tacticalLive2dLoopRef : undefined}
-              />
-            }
-            scoreboardCountdownSec={scoreboardCountdownSec}
-            rowClassName="w-full max-w-[min(100%,44rem)] mx-auto"
-          />
-          <div
-            className={cn(
-              'flex justify-center items-center gap-5 sm:gap-8 font-display font-black text-4xl sm:text-5xl transition-opacity',
-              quickPreStart === 'ready' || typeof quickPreStart === 'number' || quickPreStart === 'kickoff' || tacticalKickoffHoldCountdown > 0
-                ? 'opacity-35'
-                : 'opacity-100',
-            )}
-          >
-            <span className="text-neon-yellow">{displayHomeScore}</span>
-            <span className="text-gray-600 text-2xl sm:text-3xl">–</span>
-            <span className="text-white">{displayAwayScore}</span>
+          {/* Placar estilo Quick Match — brasões + nomes + Moret italic */}
+          <div className="w-full max-w-3xl mx-auto mb-4">
+            <div className="relative flex items-center justify-center gap-6 sm:gap-8">
+              {/* Casa */}
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 justify-end">
+                {/* Brasão */}
+                {homeCrestUrl ? (
+                  <img
+                    src={homeCrestUrl}
+                    alt={live.homeName ?? live.homeShort}
+                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                    referrerPolicy="no-referrer"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-neon-yellow bg-deep-black grid place-items-center shrink-0">
+                    <span className="font-display font-black uppercase text-neon-yellow text-sm tracking-wider">
+                      {live.homeShort}
+                    </span>
+                  </div>
+                )}
+
+                {/* Score + Nome */}
+                <div className="flex flex-col items-center gap-1">
+                  {/* Score */}
+                  <span
+                    className="leading-none text-neon-yellow tabular-nums"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontStyle: 'italic',
+                      fontSize: 'clamp(44px, 12vw, 80px)',
+                      fontWeight: 700,
+                      letterSpacing: '-0.03em',
+                    }}
+                  >
+                    {displayHomeScore}
+                  </span>
+
+                  {/* Nome do time */}
+                  <p
+                    className="text-white uppercase truncate max-w-full text-center"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontStyle: 'italic',
+                      fontWeight: 700,
+                      fontSize: 'clamp(10px, 1.6vw, 13px)',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {live.homeName ?? live.homeShort}
+                  </p>
+                </div>
+              </div>
+
+              {/* Relógio no meio */}
+              <div className="flex flex-col items-center shrink-0">
+                <LiveMatchClockDisplay
+                  elapsedSec={live?.footballElapsedSec ?? 0}
+                  frozen={clockFrozen}
+                  phase={live?.phase}
+                  msPerMinute={MS_PER_MINUTE}
+                  tacticalLoopRef={tacticalLive2dEnabled ? tacticalLive2dLoopRef : undefined}
+                />
+              </div>
+
+              {/* Visitante */}
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1 justify-start">
+                {/* Score + Nome */}
+                <div className="flex flex-col items-center gap-1">
+                  {/* Score */}
+                  <span
+                    className="leading-none text-white tabular-nums"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontStyle: 'italic',
+                      fontSize: 'clamp(44px, 12vw, 80px)',
+                      fontWeight: 700,
+                      letterSpacing: '-0.03em',
+                    }}
+                  >
+                    {displayAwayScore}
+                  </span>
+
+                  {/* Nome do time */}
+                  <p
+                    className="text-white uppercase truncate max-w-full text-center"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontStyle: 'italic',
+                      fontWeight: 700,
+                      fontSize: 'clamp(10px, 1.6vw, 13px)',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {live.awayName ?? live.awayShort}
+                  </p>
+                </div>
+
+                {/* Brasão */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-white/40 bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-white text-sm tracking-wider">
+                    {live.awayShort}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Fase 1 — Quick Win #2: Barra de Momentum Visual + Melhorias */}
-          {live.spiritMomentum && (
-            <MomentumVisualBar
-              momentum={live.spiritMomentum}
-              homeShort={live.homeShort}
-              awayShort={live.awayShort}
-              className="mx-auto w-full max-w-md"
-            />
-          )}
-
-          {/* Fase 1 — Quick Win #8: Stats ao Vivo + Melhoria #3 (Gráfico) */}
-          <div className="mx-auto w-full max-w-md">
-            <LiveStatsComparison
-              stats={throttledStats}
-              homeShort={live.homeShort}
-              awayShort={live.awayShort}
-              statsHistory={statsHistory}
-            />
-          </div>
-
-          {/* Melhoria #7: Momentum Shift Overlay */}
-          <MomentumShiftOverlay
-            momentum={live.spiritMomentum}
-            homeShort={live.homeShort}
-            awayShort={live.awayShort}
-          />
+          {/* Toolbar de controles do campo */}
           <div
             className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-0.5 pb-0.5 sm:pb-1"
             role="toolbar"
@@ -1511,39 +1593,18 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             {(
               [
                 {
-                  key: 'tactical',
-                  Icon: Map,
-                  title: 'Campo tático: terços, áreas, corredores e direção de ataque',
-                  ariaPressed: tacticalDevLayer,
-                  active: tacticalDevLayer,
-                  activeClass: 'border-cyan-400/60 bg-cyan-500/15 text-cyan-100',
+                  key: 'zone18',
+                  Icon: LayoutGrid,
+                  title: 'Raio de ação dos jogadores e zonas de influência',
+                  ariaPressed: zoneView18,
+                  active: zoneView18,
+                  activeClass: 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100',
                   onClick: () => {
-                    const next = !tacticalDevLayer;
-                    setTacticalDevLayer(next);
-                    saveTacticalLayerPref(next);
-                    if (!next) {
-                      setZoneView18(false);
-                      saveZoneView18Pref(false);
-                    }
+                    const next = !zoneView18;
+                    setZoneView18(next);
+                    saveZoneView18Pref(next);
                   },
                 },
-                ...(tacticalDevLayer
-                  ? [
-                      {
-                        key: 'zone18',
-                        Icon: LayoutGrid,
-                        title: 'Grelha 18 zonas (3×6); perspetiva = equipa com posse',
-                        ariaPressed: zoneView18,
-                        active: zoneView18,
-                        activeClass: 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100',
-                        onClick: () => {
-                          const next = !zoneView18;
-                          setZoneView18(next);
-                          saveZoneView18Pref(next);
-                        },
-                      },
-                    ]
-                  : []),
                 {
                   key: 'cam-drone',
                   Icon: Scan,
@@ -1652,7 +1713,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                   }}
                 >
                   <div className="field-container w-full overflow-visible rounded-lg p-2 sm:p-3">
-                  <div className={cn('field', tacticalDevLayer && 'show-zones')}>
+                  <div className="field">
                     {/* Melhoria #9: Efeito Visual no Campo quando Momentum Extremo */}
                     <MomentumFieldEffect momentum={live.spiritMomentum} />
 
@@ -1702,20 +1763,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                       <div className="zone-box-left" aria-hidden />
                       <div className="zone-box-right" aria-hidden />
                     </div>
-                    {tacticalDevLayer ? (
-                      <TacticalPitchDevLayer
-                        homeShort={live.homeShort}
-                        awayShort={live.awayShort}
-                        homePlayers={pitch}
-                        awayPlayers={awayPitch}
-                        clockPeriod={live.clockPeriod}
-                        possession={live.possession}
-                        showZoneView={zoneView18}
-                        zonePerspectiveTeam={live.possession}
-                        pitchTokenNudges={tokenSeparation}
-                        ballPercent={ballPos}
-                      />
-                    ) : null}
                     <div
                       className="field-tokens-layer"
                       style={{
@@ -1750,6 +1797,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                               distBallPct={dBallA}
                               showEnergyMap={energyMapOn}
                               showNames={namesOn}
+                              showActionRadius={zoneView18}
                             />
                           </Fragment>
                         );
@@ -1781,6 +1829,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                               distBallPct={dBallH}
                               showEnergyMap={energyMapOn}
                               showNames={namesOn}
+                              showActionRadius={zoneView18}
                               onSelect={handleSelectPlayer}
                             />
                           </Fragment>
@@ -1851,28 +1900,23 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           </div>
 
           {live.phase === 'playing' && quickPreStart === null ? (
-            <div className="space-y-1.5">
-              <p className="rounded-lg border border-cyan-500/25 bg-cyan-950/25 px-2 sm:px-3 py-1.5 sm:py-2 text-center text-[8px] sm:text-[10px] font-display font-bold uppercase tracking-widest text-cyan-100/90">
-                {live.possession === 'home' ? (
-                  <>
-                    {live.homeShort} — posse · ataca o gol visitante (→)
-                  </>
-                ) : (
-                  <>
-                    {live.awayShort} — posse · ataca o gol da casa (←)
-                  </>
-                )}
-              </p>
-              <p className="text-center text-[8px] sm:text-[9px] leading-snug text-gray-500/95">
-                Placar e lances vêm do motor ao vivo. Sliders e estilo no painel influenciam as decisões no
-                relvado.
-              </p>
-            </div>
-          ) : null}
-
-          {live.phase === 'playing' && quickPreStart === null ? (
             <>
-              <VoiceCommandPanel />
+              {/* Comando Técnico — push-to-talk + texto + mentions */}
+              <div className="glass-panel p-3 sm:p-4 border border-white/10">
+                <CoachCommandInput
+                  players={pitch}
+                  playersById={playersById}
+                  ballCarrierId={live.ballCarrier?.playerId}
+                  side="home"
+                  minute={live.minute}
+                  teamObedience={tacticalObedience}
+                  managerRelationByPlayer={managerRelationByPlayer}
+                  onCommandExecuted={(result) => {
+                    console.log('[voice] Comando executado:', result);
+                  }}
+                />
+              </div>
+
               <LiveMatchManagerPanel
                 homeShort={live.homeShort}
                 awayShort={live.awayShort}
@@ -1954,8 +1998,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
         )}
       </AnimatePresence>
 
-      {/* Painel de telemetria ao vivo */}
-      {live?.phase === 'playing' && <LiveTelemetryPanel />}
     </div>
   );
 }
