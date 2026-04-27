@@ -34,7 +34,7 @@ web/match-pitch/.env.*
 !web/match-pitch/.env.example
 
 # Espelho opcional / checkout local de outro repo — não versionar (evita gitlink quebrado)
-legacy/
+/legacy/
 
 # Supabase CLI (estado local / branches)
 supabase/.temp
