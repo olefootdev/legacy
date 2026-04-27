@@ -4,7 +4,13 @@
  */
 
 import type { Context } from 'hono';
+// Cross-tree imports: o server reusa código compilado da pasta /src do front
+// (committed .js + .d.ts em src/gamespirit/ e src/engine/). Type-check ignora
+// porque o tsconfig do server exclui ../src; o runtime resolve via path
+// relativo ao dist/ no container.
+// @ts-expect-error cross-tree runtime import
 import { gameSpiritTick, buildSpiritContext } from '../../../src/gamespirit/GameSpirit.js';
+// @ts-expect-error cross-tree runtime import — tipos abaixo resolvidos como any
 import type { PitchPlayerState, PossessionSide } from '../../../src/engine/types.js';
 
 interface MatchTickRequest {
