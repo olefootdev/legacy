@@ -121,14 +121,14 @@ export class GlobalMatchRealtimeClient {
       return false;
     }
 
-    const { error } = await this.channel.send({
+    const status = await this.channel.send({
       type: 'broadcast',
       event: 'global_event',
       payload: message,
     });
 
-    if (error) {
-      console.error('[GlobalMatchRealtime] Erro ao enviar broadcast:', error);
+    if (status !== 'ok') {
+      console.error('[GlobalMatchRealtime] Falha ao enviar broadcast:', status);
       return false;
     }
 

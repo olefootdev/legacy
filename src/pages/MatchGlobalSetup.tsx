@@ -74,13 +74,14 @@ function generateFixturesForRound(teams: MockTeam[], roundNumber: number): Globa
 
         fixtures.push({
           id: newGlobalFixtureId(),
+          roundId: `round_${roundNumber}`,
           homeTeamId: home.id,
           homeTeamName: home.name,
           homeOverall: home.overall,
           awayTeamId: away.id,
           awayTeamName: away.name,
           awayOverall: away.overall,
-          division,
+          division: String(division),
           scoreHome: 0,
           scoreAway: 0,
           currentMinute: 0,
@@ -118,6 +119,8 @@ export default function MatchGlobalSetup() {
         },
         recentRounds: [],
         nextScheduledMs: Date.now(),
+        roundIntervalMs: 60 * 60 * 1000,
+        commandWindowMs: 5 * 60 * 1000,
       },
     });
 

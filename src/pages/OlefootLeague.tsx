@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useGameStore, useGameDispatch } from '@/game/store';
+import { useGameStore, useGameDispatch, getGameState } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -439,7 +439,7 @@ export default function OlefootLeague() {
         });
 
         // Buscar estado atualizado do store
-        const currentLeague = useGameStore.getState().olefootLeague;
+        const currentLeague = getGameState().olefootLeague;
         if (!currentLeague) return;
 
         const updatedRounds = currentLeague.rounds.map((r) => {

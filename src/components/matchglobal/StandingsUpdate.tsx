@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Minus, Trophy, TrendingUp, TrendingDown } from 'lucide-react';
-import type { GlobalLeagueTeam } from '../../game/types';
+import type { GlobalTeam as GlobalLeagueTeam } from '../../match/globalLeagueMVP';
 
 interface StandingsUpdateProps {
   isOpen: boolean;
@@ -121,7 +121,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                       const change = getPositionChange(team);
                       return (
                         <motion.div
-                          key={team.teamId}
+                          key={team.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: div.division * 0.1 + idx * 0.05 }}
@@ -138,7 +138,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                           {/* Team Name */}
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-sm font-bold text-white truncate">
-                              {team.name}
+                              {team.clubName}
                             </span>
                             {change !== 0 && (
                               <span className={`text-xs font-mono ${change > 0 ? 'text-neon-green' : 'text-red-400'}`}>
@@ -149,7 +149,7 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
 
                           {/* Stats */}
                           <div className="text-center text-sm font-mono text-gray-300">
-                            {team.played}
+                            {team.matchesPlayed}
                           </div>
                           <div className="text-center text-sm font-mono text-neon-green">
                             {team.wins}

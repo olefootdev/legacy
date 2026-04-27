@@ -2,7 +2,8 @@
  * Reducer handlers para Global League MVP
  */
 
-import type { OlefootGameState, InboxItem } from './types';
+import type { OlefootGameState, InboxItem, InboxCategory } from './types';
+import type { InboxMessageType } from './inboxTypes';
 import type { GlobalFixture } from '@/match/globalMatch';
 import {
   createGlobalLeagueMVP,
@@ -14,24 +15,30 @@ import {
 } from '@/match/globalLeagueMVP';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
 
-/** Helper para criar item de inbox */
+/**
+ * Helper para criar item de inbox da Liga Global. As notificações da Liga
+ * caem todas em category=COMPETIÇÃO; o `tag` mantém o rótulo visual ("LIGA
+ * GLOBAL") que os callers passam. messageType é livre (analytics) e cast.
+ */
 function makeInboxItem(
   id: string,
-  kind: string,
-  category: string,
+  messageType: string,
+  tag: string,
   title: string,
   body?: string,
   options?: { deepLink?: string; colorClass?: string }
 ): InboxItem {
+  const now = new Date();
   return {
     id,
-    kind,
-    category,
+    messageType: messageType as InboxMessageType,
+    category: 'COMPETIÇÃO' as InboxCategory,
+    tag,
     title,
     body,
+    timeLabel: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     deepLink: options?.deepLink,
-    colorClass: options?.colorClass,
-    createdAt: new Date().toISOString(),
+    colorClass: options?.colorClass ?? 'text-white',
   };
 }
 
