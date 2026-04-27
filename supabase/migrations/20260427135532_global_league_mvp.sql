@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS global_league_teams (
 
   -- Divisão atual
   division INTEGER,
-  position INTEGER,
+  "position" INTEGER,
   previous_position INTEGER,
 
   -- Estatísticas dos Playoffs
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS global_league_teams (
   registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-  -- Índices
+  -- Constraints
   CONSTRAINT valid_division CHECK (division IS NULL OR (division >= 1 AND division <= 3)),
   CONSTRAINT valid_overall CHECK (overall >= 40 AND overall <= 99)
 );
@@ -57,12 +57,12 @@ CREATE TABLE IF NOT EXISTS global_league_rounds (
   id TEXT PRIMARY KEY,
   season_id TEXT NOT NULL,
   round_number INTEGER NOT NULL,
-  round_type TEXT NOT NULL, -- 'playoff' | 'league'
-  phase TEXT, -- 'round_1' | 'round_2' | 'round_3' (para playoffs)
+  round_type TEXT NOT NULL,
+  phase TEXT,
   is_returning BOOLEAN DEFAULT FALSE,
 
   -- Status
-  status TEXT NOT NULL DEFAULT 'scheduled', -- 'scheduled' | 'live' | 'finished'
+  status TEXT NOT NULL DEFAULT 'scheduled',
 
   -- Timestamps
   scheduled_kickoff_ms BIGINT NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS global_league_fixtures (
   current_minute INTEGER DEFAULT 0,
 
   -- Status
-  status TEXT NOT NULL DEFAULT 'scheduled', -- 'scheduled' | 'live' | 'finished'
+  status TEXT NOT NULL DEFAULT 'scheduled',
 
   -- Timestamps
   kickoff_ms BIGINT,
@@ -130,14 +130,14 @@ CREATE TABLE IF NOT EXISTS global_league_events (
   fixture_id TEXT NOT NULL REFERENCES global_league_fixtures(id) ON DELETE CASCADE,
 
   -- Tipo de evento
-  event_type TEXT NOT NULL, -- 'goal' | 'yellow_card' | 'red_card' | 'injury' | 'substitution' | 'pressure' | 'miss'
+  event_type TEXT NOT NULL,
 
   -- Detalhes
   minute INTEGER NOT NULL,
-  side TEXT NOT NULL, -- 'home' | 'away'
+  side TEXT NOT NULL,
   player_name TEXT,
   player_id TEXT,
-  text TEXT NOT NULL,
+  "text" TEXT NOT NULL,
   highlight BOOLEAN DEFAULT FALSE,
 
   -- Timestamp
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS global_league_state (
   id TEXT PRIMARY KEY DEFAULT 'current',
   season_id TEXT NOT NULL,
   season_name TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'waiting_teams', -- 'waiting_teams' | 'playoffs' | 'active' | 'season_ended'
+  status TEXT NOT NULL DEFAULT 'waiting_teams',
 
   -- Configurações
   min_teams_required INTEGER DEFAULT 32,
@@ -201,21 +201,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Aplicar trigger em todas as tabelas
+DROP TRIGGER IF EXISTS update_global_teams_updated_at ON global_league_teams;
 CREATE TRIGGER update_global_teams_updated_at
   BEFORE UPDATE ON global_league_teams
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_global_rounds_updated_at ON global_league_rounds;
 CREATE TRIGGER update_global_rounds_updated_at
   BEFORE UPDATE ON global_league_rounds
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_global_fixtures_updated_at ON global_league_fixtures;
 CREATE TRIGGER update_global_fixtures_updated_at
   BEFORE UPDATE ON global_league_fixtures
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_global_state_updated_at ON global_league_state;
 CREATE TRIGGER update_global_state_updated_at
   BEFORE UPDATE ON global_league_state
   FOR EACH ROW
@@ -270,7 +274,7 @@ SELECT
   goals_against,
   goal_difference,
   recent_form,
-  position,
+  "position",
   previous_position,
   ROW_NUMBER() OVER (
     PARTITION BY division
@@ -312,7 +316,7 @@ RETURNS TABLE (
   id TEXT,
   club_name TEXT,
   points INTEGER,
-  position INTEGER
+  team_position INTEGER
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -320,10 +324,10 @@ BEGIN
     t.id,
     t.club_name,
     t.points,
-    t.position
+    t."position" as team_position
   FROM global_league_teams t
   WHERE t.division = div
-  ORDER BY t.position ASC;
+  ORDER BY t."position" ASC;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -358,6 +362,21 @@ ALTER TABLE global_league_rounds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE global_league_fixtures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE global_league_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE global_league_state ENABLE ROW LEVEL SECURITY;
+
+-- Remover políticas antigas se existirem
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_teams;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_rounds;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_fixtures;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_events;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_state;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_teams;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_teams;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_rounds;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_rounds;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_fixtures;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_fixtures;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_events;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_state;
 
 -- Política: Todos podem ler
 CREATE POLICY "Allow public read access" ON global_league_teams FOR SELECT USING (true);
