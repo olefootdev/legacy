@@ -4088,6 +4088,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
 
     // Global League MVP Actions
+    case 'HYDRATE_GLOBAL_LEAGUE_MVP':
+      return { ...state, globalLeagueMVP: action.payload };
+
     case 'INIT_GLOBAL_LEAGUE_MVP':
       return handleInitGlobalLeagueMVP(state);
 

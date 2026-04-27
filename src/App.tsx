@@ -4,7 +4,8 @@ import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { GameProvider } from './game/GameProvider';
-import { useGameStore } from './game/store';
+import { useGameStore, useGameDispatch } from './game/store';
+import { loadGlobalLeagueFromSupabase } from './supabase/globalLeague';
 import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHydrate';
 import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
 import { WelcomeGenesisPackHydrate } from './game/WelcomeGenesisPackHydrate';
@@ -169,6 +170,22 @@ function GlobalSchedulerMount() {
   return null;
 }
 
+function GlobalLeagueHydrator() {
+  const dispatch = useGameDispatch();
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const remote = await loadGlobalLeagueFromSupabase();
+      if (cancelled || !remote) return;
+      dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: remote });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
+  return null;
+}
+
 export default function App() {
   return (
     <GameProvider>
@@ -176,6 +193,7 @@ export default function App() {
         <FriendlyChallengeLayer />
         <UserSettingsEffects />
         <WorldClock />
+        <GlobalLeagueHydrator />
         <GlobalSchedulerMount />
         <WelcomeGenesisPackHydrate />
         <GenesisCatalogPortraitsHydrate />

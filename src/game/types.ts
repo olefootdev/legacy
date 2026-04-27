@@ -609,6 +609,7 @@ export type GameAction =
   | { type: 'UPDATE_CHALLENGE_PROGRESS'; challengeType: import('./dailyChallenges').ChallengeType; increment?: number }
   | { type: 'CLAIM_CHALLENGE_REWARD'; challengeId: string }
   // Global League MVP Actions
+  | { type: 'HYDRATE_GLOBAL_LEAGUE_MVP'; payload: import('@/match/globalLeagueMVP').GlobalLeagueMVPState }
   | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
   | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
   | { type: 'START_GLOBAL_PLAYOFF_ROUND'; roundNumber: number }
