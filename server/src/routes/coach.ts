@@ -22,7 +22,7 @@ coachRoutes.post('/api/coach/chat', rateLimit(60), async (c) => {
       return c.json({ ok: false, error: 'Campos obrigatórios: coach, teamContext, userMessage' }, 400);
     }
 
-    const sanitizedMessage = sanitizePrompt(userMessage);
+    const sanitizedMessage = sanitizePrompt(userMessage, 2000);
 
     // Monta system prompt completo
     const systemPrompt = buildCoachSystemPrompt(coach, teamContext);

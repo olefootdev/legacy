@@ -37,7 +37,9 @@ marketRoutes.post('/api/market/buy', rateLimit(20), async (c) => {
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ ok: false, error: 'Serviço indisponível.' }, 503);
 
-  const body = await c.req.json<{ genesis_catalog_id?: string }>().catch(() => ({}));
+  const body = await c.req
+    .json<{ genesis_catalog_id?: string }>()
+    .catch(() => ({} as { genesis_catalog_id?: string }));
   const genesisId = body.genesis_catalog_id?.trim();
   if (!genesisId) return c.json({ ok: false, error: 'genesis_catalog_id obrigatório.' }, 400);
 
