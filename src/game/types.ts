@@ -612,6 +612,7 @@ export type GameAction =
   | { type: 'HYDRATE_GLOBAL_LEAGUE_MVP'; payload: import('@/match/globalLeagueMVP').GlobalLeagueMVPState }
   | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
   | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
+  | { type: 'ADMIN_START_GLOBAL_PLAYOFFS' }
   | { type: 'START_GLOBAL_PLAYOFF_ROUND'; roundNumber: number }
   | { type: 'UPDATE_GLOBAL_PLAYOFF_LIVE'; nowMs: number }
   | { type: 'FINISH_GLOBAL_PLAYOFF_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }

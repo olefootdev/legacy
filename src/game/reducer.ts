@@ -101,6 +101,7 @@ import { createInitialCompetitiveRanking, updateCompetitiveRanking } from './com
 import {
   handleInitGlobalLeagueMVP,
   handleRegisterGlobalTeam,
+  handleAdminStartGlobalPlayoffs,
   handleStartGlobalPlayoffRound,
   handleFinishGlobalPlayoffRound,
   handleStartGlobalLeagueRound,
@@ -4102,6 +4103,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         action.clubShort,
         action.overall
       );
+
+    case 'ADMIN_START_GLOBAL_PLAYOFFS':
+      return handleAdminStartGlobalPlayoffs(state);
 
     case 'START_GLOBAL_PLAYOFF_ROUND':
       return handleStartGlobalPlayoffRound(state, action.roundNumber);

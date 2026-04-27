@@ -11,6 +11,7 @@ import {
   finalizePlayoffRound,
   finalizeLeagueRound,
   applyPromotionRelegation,
+  adminStartPlayoffs,
   type GlobalLeagueMVPState,
 } from '@/match/globalLeagueMVP';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
@@ -73,7 +74,6 @@ export function handleRegisterGlobalTeam(
   const teamsCount = updatedLeague.teams.length;
   const minTeams = updatedLeague.minTeamsRequired;
 
-  // Notificar cadastro bem-sucedido
   const notifications: InboxItem[] = [
     makeInboxItem(
       `global_registered_${Date.now()}`,
@@ -85,16 +85,16 @@ export function handleRegisterGlobalTeam(
     ),
   ];
 
-  // Se atingiu 32 times, notificar início dos playoffs
-  if (updatedLeague.status === 'playoffs' && state.globalLeagueMVP.status === 'waiting_teams') {
+  // Quando atingir o mínimo, avisa que admin pode iniciar os playoffs.
+  if (teamsCount === minTeams && state.globalLeagueMVP.status === 'waiting_teams') {
     notifications.push(
       makeInboxItem(
-        `playoffs_start_${Date.now()}`,
-        'PLAYOFFS_START',
+        `playoffs_ready_${Date.now()}`,
+        'PLAYOFFS_READY',
         'LIGA GLOBAL',
-        '🏆 Playoffs Iniciados!',
-        'Os playoffs da Liga Global começaram! 6 rodadas para definir as divisões.',
-        { deepLink: '/liga-global/playoffs', colorClass: 'text-neon-yellow' }
+        '🏆 Pronto para iniciar playoffs',
+        `Os ${minTeams} times necessários foram cadastrados. Aguardando comando do admin para iniciar os playoffs.`,
+        { deepLink: '/admin', colorClass: 'text-neon-yellow' }
       )
     );
   }
@@ -103,6 +103,28 @@ export function handleRegisterGlobalTeam(
     ...state,
     globalLeagueMVP: updatedLeague,
     inbox: [...notifications, ...state.inbox].slice(0, 14),
+  };
+}
+
+/** Admin: iniciar manualmente os playoffs (gera 6 rodadas de ida/volta). */
+export function handleAdminStartGlobalPlayoffs(state: OlefootGameState): OlefootGameState {
+  if (!state.globalLeagueMVP) return state;
+  const updatedLeague = adminStartPlayoffs(state.globalLeagueMVP);
+  if (updatedLeague === state.globalLeagueMVP) return state; // no-op (já em playoffs ou sem times)
+
+  const notification = makeInboxItem(
+    `playoffs_start_${Date.now()}`,
+    'PLAYOFFS_START',
+    'LIGA GLOBAL',
+    '🏆 Playoffs Iniciados!',
+    `Playoffs da Liga Global iniciados! ${updatedLeague.teams.length} times disputam 6 rodadas.`,
+    { deepLink: '/liga-global/playoffs', colorClass: 'text-neon-yellow' }
+  );
+
+  return {
+    ...state,
+    globalLeagueMVP: updatedLeague,
+    inbox: [notification, ...state.inbox].slice(0, 14),
   };
 }
 

@@ -10,6 +10,7 @@ import { persistGlobalLeagueSnapshot } from '@/supabase/globalLeague';
 const GLOBAL_LEAGUE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'INIT_GLOBAL_LEAGUE_MVP',
   'REGISTER_GLOBAL_TEAM',
+  'ADMIN_START_GLOBAL_PLAYOFFS',
   'START_GLOBAL_PLAYOFF_ROUND',
   'FINISH_GLOBAL_PLAYOFF_ROUND',
   'START_GLOBAL_LEAGUE_ROUND',

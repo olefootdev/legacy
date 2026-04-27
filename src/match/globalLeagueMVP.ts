@@ -165,7 +165,7 @@ export function createGlobalLeagueMVP(): GlobalLeagueMVPState {
   };
 }
 
-/** Registrar novo time */
+/** Registrar novo time. NÃO inicia playoffs automaticamente — admin controla. */
 export function registerTeam(
   league: GlobalLeagueMVPState,
   managerId: string,
@@ -173,23 +173,32 @@ export function registerTeam(
   clubShort: string,
   overall: number
 ): GlobalLeagueMVPState {
-  // Verificar se já está cadastrado
   if (league.teams.some(t => t.managerId === managerId)) {
     return league;
   }
 
   const newTeam = createGlobalTeam(managerId, clubName, clubShort, overall);
-  const updatedTeams = [...league.teams, newTeam];
+  return {
+    ...league,
+    teams: [...league.teams, newTeam],
+    lastUpdated: Date.now(),
+  };
+}
 
-  // Se atingiu 32 times, iniciar playoffs
-  const shouldStartPlayoffs = updatedTeams.length >= league.minTeamsRequired && league.status === 'waiting_teams';
+/**
+ * Disparado pelo admin: gera rodadas de playoff a partir dos times registrados
+ * e move o status para 'playoffs'. Falha (no-op) se status != 'waiting_teams'
+ * ou se não há times suficientes.
+ */
+export function adminStartPlayoffs(league: GlobalLeagueMVPState): GlobalLeagueMVPState {
+  if (league.status !== 'waiting_teams') return league;
+  if (league.teams.length < league.minTeamsRequired) return league;
 
   return {
     ...league,
-    teams: updatedTeams,
-    status: shouldStartPlayoffs ? 'playoffs' : league.status,
-    playoffRounds: shouldStartPlayoffs ? generatePlayoffRounds(updatedTeams) : league.playoffRounds,
-    currentPlayoffRound: shouldStartPlayoffs ? 1 : league.currentPlayoffRound,
+    status: 'playoffs',
+    playoffRounds: generatePlayoffRounds(league.teams),
+    currentPlayoffRound: 1,
     lastUpdated: Date.now(),
   };
 }

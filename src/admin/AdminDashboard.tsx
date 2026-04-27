@@ -46,6 +46,7 @@ import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
 import { AdminFootballVocabularyPanel } from './panels/AdminFootballVocabularyPanel';
 import { AdminCreatePlayerAgentsPanel } from './panels/AdminCreatePlayerAgentsPanel';
 import { AdminGlobalPanel } from './panels/AdminGlobalPanel';
+import { AdminOlefootLigaPanel } from './panels/AdminOlefootLigaPanel';
 import { AdminAuditLogPanel } from './panels/AdminAuditLogPanel';
 import { AdminSkillsPanel } from './panels/AdminSkillsPanel';
 import { AdminSecurityPanel } from './panels/AdminSecurityPanel';
@@ -85,6 +86,7 @@ type SubTabId =
   | 'learnedPhrases'
   | 'footballVocabulary'
   | 'global'
+  | 'olefootLiga'
   | 'security'
   | 'platformConfig'
   | 'broadcast'
@@ -139,6 +141,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     icon: Rocket,
     subTabs: [
       { id: 'global', label: 'Global' },
+      { id: 'olefootLiga', label: 'Olefoot Liga' },
       { id: 'security', label: 'Segurança' },
       { id: 'platformConfig', label: 'Plataforma' },
       { id: 'broadcast', label: 'Broadcast' },
@@ -370,6 +373,7 @@ export function AdminDashboard() {
 
               {/* Sistema group */}
               {tab === 'sistema' && subTab === 'global' ? <AdminGlobalPanel /> : null}
+              {tab === 'sistema' && subTab === 'olefootLiga' ? <AdminOlefootLigaPanel /> : null}
               {tab === 'sistema' && subTab === 'security' ? <AdminSecurityPanel /> : null}
               {tab === 'sistema' && subTab === 'platformConfig' ? <AdminPlatformConfigPanel /> : null}
               {tab === 'sistema' && subTab === 'broadcast' ? <AdminBroadcastPanel /> : null}
