@@ -1,9 +1,13 @@
 // deno-lint-ignore-file no-explicit-any
 // Olefoot — global-league-tick
 // Edge Function chamada periodicamente por pg_cron (default: a cada 1min).
+// verify_jwt=false: a função é um webhook idempotente; o único efeito possível
+// é avançar uma rodada que já estava agendada. Auth real para escrita no DB
+// vem do SUPABASE_SERVICE_ROLE_KEY (env do projeto, não exposto).
+//
 // Verifica se há rodadas com scheduled_kickoff_ms <= now e status='scheduled',
 // simula seus fixtures, persiste eventos + placares, atualiza estatísticas dos
-// times e marca a rodada como finished. Cria a próxima rodada se aplicável.
+// times e marca a rodada como finished.
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
