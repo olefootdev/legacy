@@ -30,6 +30,7 @@ import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayNa
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { AssistantWidget } from '@/components/AssistantWidget';
+import { BugReportButton } from '@/components/BugReportButton';
 
 const mainNavItems = [
   { icon: Home, label: 'HOME', path: '/' },
@@ -142,7 +143,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar — visible only at ≥1024px */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
         <div className="flex items-center mb-10 p-6 pb-0">
-          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-2.5 w-auto" />
+          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-1.5 w-auto" />
         </div>
 
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
@@ -259,6 +260,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
       <TutorialOverlay />
       <AssistantWidget />
+      <BugReportButton />
 
       {/* Mobile / Tablet Drawer — slides in below lg */}
       <AnimatePresence>
@@ -279,7 +281,7 @@ export function Layout({ children }: { children: ReactNode }) {
               className="fixed top-0 left-0 bottom-0 w-72 bg-deep-black border-r border-white/10 z-[70] lg:hidden flex flex-col"
             >
               <div className="flex items-center justify-between p-5 border-b border-white/10">
-                <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-2.5 w-auto" />
+                <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-1.5 w-auto" />
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
