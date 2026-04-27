@@ -28,8 +28,12 @@ import type { ExpExchangeState } from '@/economy/expExchange';
 import type { PlayerSeasonLedgerMap } from '@/team/playerSeasonLedger';
 import type { PlayerEvolutionTimelineMap } from '@/team/playerEvolutionTimeline';
 import type { ShopCatalogItem } from './shopCatalog';
+import type { CoachAction } from '@/coach/types';
 import type { QuickMatchStreak } from './quickMatchStreak';
 import type { DailyChallengesState } from './dailyChallenges';
+import type { GlobalLeagueState } from '@/match/globalMatch';
+import type { CompetitiveRankingState } from './competitiveRanking';
+import type { CoachAgent } from '@/coach/types';
 
 export type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
 
@@ -235,6 +239,8 @@ export interface OlefootGameState {
     /** Planos de tratamento do departamento médico (slots por nível da estrutura). */
     treatmentPlans: TreatmentPlan[];
     staff: StaffState;
+    /** Coach Agent: assistente técnico que conhece todo o sistema e aprende com o manager */
+    coach?: CoachAgent;
   };
   /** Último instante real usado para simulação contínua */
   lastWorldRealMs: number;
@@ -272,12 +278,18 @@ export interface OlefootGameState {
   shopInventory: Record<string, number>;
   /** Streak de vitórias consecutivas no modo Quick Match. */
   quickMatchStreak?: QuickMatchStreak;
+  /** Ranking competitivo da Partida Rápida (modo ranqueado). */
+  competitiveRanking?: CompetitiveRankingState;
   /** Desafios diários com recompensas. */
   dailyChallenges?: DailyChallengesState;
   /** Desafios semanais de streak (Sprint 3). */
   streakChallenges?: import('@/match/quickStreakChallenges').StreakChallengesState;
   /** Intensidade tática atual na partida rápida (Sprint 2). */
   quickMatchIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityState;
+  /** Estado da Liga Global (Match Global — rodadas automáticas simultâneas). */
+  globalLeague?: GlobalLeagueState;
+  /** Estado da OLEFOOT LIGA (sistema completo de liga com tabela e múltiplas rodadas). */
+  olefootLeague?: import('@/match/olefootLeague').OlefootLeagueState;
 }
 
 export type GameAction =
@@ -454,6 +466,12 @@ export type GameAction =
   /** Substitui o estado por um save importado (JSON). Validação mínima em `persistence`. */
   | { type: 'IMPORT_GAME_STATE'; state: OlefootGameState }
   | { type: 'RESET' }
+  // Coach Agent Actions
+  | { type: 'COACH_ADD_PENDING_ACTION'; action: CoachAction }
+  | { type: 'COACH_APPROVE_ACTION'; actionId: string }
+  | { type: 'COACH_REJECT_ACTION'; actionId: string }
+  | { type: 'COACH_EXECUTE_ACTION'; actionId: string }
+  | { type: 'COACH_CLEAR_EXECUTED_ACTIONS' }
   | { type: 'ADMIN_UPSERT_LEAGUE'; league: AdminLeagueConfig }
   | { type: 'ADMIN_REMOVE_LEAGUE'; id: string }
   | { type: 'ADMIN_SET_PRIMARY_LEAGUE'; id: string }
@@ -480,6 +498,13 @@ export type GameAction =
   | { type: 'ADMIN_SIMULATE_FIAT_WITHDRAWAL'; broCents: number; note?: string }
   /** Forçar KYC OLEXP no save (testes Admin). */
   | { type: 'ADMIN_SET_WALLET_KYC'; kycOlexpDone: boolean }
+  /** Match Global: Define o estado da liga global */
+  | { type: 'SET_GLOBAL_LEAGUE_STATE'; payload: import('@/match/globalMatch').GlobalLeagueState }
+  | { type: 'SET_OLEFOOT_LEAGUE'; payload: import('@/match/olefootLeague').OlefootLeagueState }
+  | { type: 'FINALIZE_OLEFOOT_ROUND'; roundNumber: number; fixtures: import('@/match/globalMatch').GlobalFixture[] }
+  | { type: 'ADVANCE_OLEFOOT_ROUND' }
+  /** Partida Rápida Competitiva: Atualiza ranking após partida */
+  | { type: 'UPDATE_COMPETITIVE_RANKING'; homeScore: number; awayScore: number; isCompetitive: boolean }
   | { type: 'ADMIN_SET_MANAGER_PROSPECT_CONFIG'; createCostExp: number }
   | { type: 'ADMIN_MARK_PROSPECT_ART_FULFILLED'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_SET_PHOTO'; requestId: string; portraitUrl: string }

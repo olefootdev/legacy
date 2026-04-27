@@ -22,11 +22,9 @@ const Legend = lazy(() => import('./pages/Legend').then((m) => ({ default: m.Leg
 const MatchdayPreview = lazy(() => import('./pages/MatchdayPreview').then((m) => ({ default: m.MatchdayPreview })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
-const TeamEvolutionLine = lazy(() =>
-  import('./pages/TeamEvolutionLine').then((m) => ({ default: m.TeamEvolutionLine })),
-);
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
 const TeamAiLabs = lazy(() => import('./pages/TeamAiLabs').then((m) => ({ default: m.TeamAiLabs })));
+const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default: m.CoachChat })));
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
 const City = lazy(() => import('./pages/City').then((m) => ({ default: m.City })));
 const Transfer = lazy(() => import('./pages/Transfer').then((m) => ({ default: m.Transfer })));
@@ -47,6 +45,9 @@ const MatchLive = lazy(() => import('./pages/MatchLive').then((m) => ({ default:
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
+const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
+const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
+const OlefootLeague = lazy(() => import('./pages/OlefootLeague').then((m) => ({ default: m.default })));
 const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m.default })));
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
@@ -232,10 +233,10 @@ export default function App() {
             <Route path="/clube/elenco" element={<Team />} />
             <Route path="/clube/treino" element={<TeamTraining />} />
             <Route path="/clube/staff" element={<TeamStaff />} />
+            <Route path="/coach/chat" element={<CoachChat />} />
             <Route path="/clube/academia" element={<YouthProspects />} />
             <Route path="/clube/estruturas" element={<City />} />
             <Route path="/clube/ailabs" element={<TeamAiLabs />} />
-            <Route path="/clube/linha-evolutiva" element={<TeamEvolutionLine />} />
 
             {/* Competição subpages */}
             <Route path="/competicao/ligas" element={<Leagues />} />
@@ -272,7 +273,6 @@ export default function App() {
             <Route path="/team/treino" element={<Navigate to="/clube/treino" replace />} />
             <Route path="/team/staff" element={<Navigate to="/clube/staff" replace />} />
             <Route path="/team/ailabs" element={<Navigate to="/clube/ailabs" replace />} />
-            <Route path="/team/linha-evolutiva" element={<Navigate to="/clube/linha-evolutiva" replace />} />
             <Route path="/city" element={<Navigate to="/clube/estruturas" replace />} />
             <Route path="/city/youth-prospects" element={<Navigate to="/clube/academia" replace />} />
             <Route path="/transfer" element={<Navigate to="/mercado/transfer" replace />} />
@@ -307,6 +307,9 @@ export default function App() {
               }
             />
             <Route path="/match/penalty" element={<MatchPenalty />} />
+            <Route path="/match/global" element={<MatchGlobal />} />
+            <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
+            <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
             <Route path="/postgame" element={<Postgame />} />
           </Route>
           </Route>

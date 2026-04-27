@@ -19,7 +19,7 @@ import {
   Users,
   UsersRound,
 } from 'lucide-react';
-import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { EditorialHero } from '@/components/EditorialHero';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { maxSlotsByTrainingCenter, resolveGroupPlayerIds } from '@/systems/trainingPlans';
 import { overallFromAttributes } from '@/entities/player';
@@ -202,12 +202,26 @@ export function TeamTraining() {
   };
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-3 pb-14 text-[13px] leading-snug sm:space-y-4 sm:pb-12 md:pb-14">
-      <BackButton to="/clube" label="Clube" />
-      <TeamMeuTimeHeader
-        title="Treino"
-        subtitle="Seleciona o tipo, escolhe jogadores ou grupo e inicia o plano de treino com execução por período."
-      />
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-14">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+        <BackButton to="/clube" label="Clube" />
+
+        <EditorialHero
+          watermark="TREINO"
+          eyebrow="Gestão do clube · Desenvolvimento"
+          title="Treino"
+          subtitle="Evolução contínua"
+          quote="seleciona o tipo, escolhe jogadores ou grupo e inicia o plano de treino com execução por período"
+          stats={`${running.length} planos ativos · ${completedPlans.length} concluídos · ${slots} slots disponíveis`}
+          icon={
+            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                 style={{ borderRadius: 'var(--radius-sm)' }}>
+              <div className="flex h-full w-full items-center justify-center">
+                <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
+              </div>
+            </div>
+          }
+        />
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-3 p-3 pb-4 sm:p-4 sm:pb-5">
         <div className="flex flex-wrap gap-1.5">
@@ -565,6 +579,7 @@ export function TeamTraining() {
         className="h-[max(1.5rem,min(3dvh,2.25rem))] shrink-0 sm:h-8 md:h-10"
         aria-hidden
       />
+    </div>
     </div>
   );
 }

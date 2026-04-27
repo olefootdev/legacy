@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { BookOpen, Check, FlaskConical, MapPin, Sparkles, Wand2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { EditorialHero } from '@/components/EditorialHero';
 import { BackButton } from '@/components/BackButton';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import type { PlayingStylePresetId } from '@/tactics/playingStyle';
@@ -53,33 +53,62 @@ export function TeamAiLabs() {
 
   if (!trainingCenterHasAiLabs(ctLevel)) {
     return (
-      <div className="mx-auto min-w-0 max-w-3xl space-y-5 pb-8">
-        <BackButton to="/clube" label="Clube" />
-        <TeamMeuTimeHeader
-          title="AI Labs"
-          subtitle="O Centro de treinamento precisa estar no nível 2 ou superior para desbloquear o AI Labs. Evolui a estrutura na Cidade do Clube."
-        />
-        <div className="sports-panel border border-white/10 p-6">
-          <h2 className="font-display text-xl font-black uppercase tracking-wider">Laboratório indisponível</h2>
-          <Link
-            to="/city"
-            className="mt-4 inline-flex items-center gap-2 rounded bg-neon-yellow px-4 py-2 text-sm font-bold text-black"
-          >
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-            Ir para Cidade
-          </Link>
+      <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+        <div className="mx-auto min-w-0 max-w-3xl space-y-6 px-3 sm:px-4 lg:px-8">
+          <BackButton to="/clube" label="Clube" />
+
+          <EditorialHero
+            watermark="AI LABS"
+            eyebrow="Gestão do clube · Inteligência Artificial"
+            title="AI Labs"
+            subtitle="Bloqueado"
+            quote="o centro de treinamento precisa estar no nível 2 ou superior para desbloquear o AI Labs"
+            icon={
+              <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 opacity-50"
+                   style={{ borderRadius: 'var(--radius-sm)' }}>
+                <div className="flex h-full w-full items-center justify-center">
+                  <FlaskConical className="h-12 w-12 sm:h-14 sm:w-14 text-black/40" aria-hidden />
+                </div>
+              </div>
+            }
+          />
+
+          <div className="sports-panel border border-white/10 p-6">
+            <h2 className="font-display text-xl font-black uppercase tracking-wider">Laboratório indisponível</h2>
+            <Link
+              to="/city"
+              className="mt-4 inline-flex items-center gap-2 rounded bg-neon-yellow px-4 py-2 text-sm font-bold text-black"
+            >
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+              Ir para Cidade
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-3xl space-y-5 pb-8">
-      <BackButton to="/clube" label="Clube" />
-      <TeamMeuTimeHeader
-        title="AI Labs"
-        subtitle="Experimenta visão de jogo ou um clássico; confirmas e o OLE aplica o estilo na tática."
-      />
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-3xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+        <BackButton to="/clube" label="Clube" />
+
+        <EditorialHero
+          watermark="AI LABS"
+          eyebrow="Gestão do clube · Inteligência Artificial"
+          title="AI Labs"
+          subtitle="Visão de jogo"
+          quote="experimenta visão de jogo ou um clássico; confirmas e o OLE aplica o estilo na tática"
+          stats={favorite?.name ? `Time do coração: ${favorite.name}` : 'Laboratório de táticas inteligentes'}
+          icon={
+            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                 style={{ borderRadius: 'var(--radius-sm)' }}>
+              <div className="flex h-full w-full items-center justify-center">
+                <FlaskConical className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
+              </div>
+            </div>
+          }
+        />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -222,6 +251,7 @@ export function TeamAiLabs() {
       <p className="text-center text-[9px] text-gray-600">
         Referências históricas são inspiração pública aproximada — afinas tudo em Tática e Treino.
       </p>
+    </div>
     </div>
   );
 }

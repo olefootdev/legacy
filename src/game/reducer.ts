@@ -9,6 +9,7 @@ import { rehydrateGameState } from './persistence';
 import { awayStartingElevenFromSquad, buildDefaultLineup, mergeLineupWithDefaults } from '@/entities/lineup';
 import { normalizeFixture, normalizeOpponentStub } from '@/entities/team';
 import { overallFromAttributes } from '@/entities/player';
+import type { PlayerEntity } from '@/entities/types';
 import {
   buildManagerCreatedPlayerEntity,
   buildNpcManagerProspectSnapshot,
@@ -42,6 +43,7 @@ import { applySquadTraining } from '@/systems/training';
 import { buyOlePack } from '@/systems/market';
 import type { MatchEventEntry } from '@/engine/types';
 import { computeMatchMvp, finalizeScoutTallies } from '@/gamespirit/scoutScoring';
+import { clearNarrativeHistory } from '@/gamespirit/narrativeVariation';
 import {
   ledgerTouchMarketAfterMatch,
   marketBroSnapshotFromPlayers,
@@ -95,6 +97,7 @@ import {
   STADIUM_UPGRADE_CROWD_DELTA,
 } from './cityQuickConstants';
 import { createInitialWalletState } from '@/wallet/initial';
+import { createInitialCompetitiveRanking, updateCompetitiveRanking } from './competitiveRanking';
 import {
   createOlexpPosition,
   claimOlexpPrincipal,
@@ -317,6 +320,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return { ...state, lineup };
     }
     case 'START_LIVE_MATCH': {
+      // Limpar histórico de narrativa ao iniciar nova partida
+      clearNarrativeHistory();
+
       let st = state;
       if (st.liveMatch?.phase === 'postgame') {
         st = gameReducer(st, { type: 'FINALIZE_MATCH' });
@@ -3285,6 +3291,50 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const w = walletOf(state);
       return syncWalletToFinance(state, { ...w, kycOlexpDone: action.kycOlexpDone });
     }
+    case 'SET_GLOBAL_LEAGUE_STATE': {
+      return {
+        ...state,
+        globalLeague: action.payload,
+      };
+    }
+
+    case 'SET_OLEFOOT_LEAGUE': {
+      return {
+        ...state,
+        olefootLeague: action.payload,
+      };
+    }
+
+    case 'FINALIZE_OLEFOOT_ROUND': {
+      if (!state.olefootLeague) return state;
+      const { finalizeRound } = require('@/match/olefootLeague');
+      const updated = finalizeRound(state.olefootLeague, action.roundNumber, action.fixtures);
+      return {
+        ...state,
+        olefootLeague: updated,
+      };
+    }
+
+    case 'ADVANCE_OLEFOOT_ROUND': {
+      if (!state.olefootLeague) return state;
+      const { advanceToNextRound } = require('@/match/olefootLeague');
+      const updated = advanceToNextRound(state.olefootLeague);
+      return {
+        ...state,
+        olefootLeague: updated,
+      };
+    }
+    case 'UPDATE_COMPETITIVE_RANKING': {
+      if (!action.isCompetitive) return state;
+
+      const current = state.competitiveRanking ?? createInitialCompetitiveRanking();
+      const updated = updateCompetitiveRanking(current, action.homeScore, action.awayScore);
+
+      return {
+        ...state,
+        competitiveRanking: updated,
+      };
+    }
     case 'ADMIN_SET_MANAGER_PROSPECT_CONFIG': {
       const createCostExp = Math.max(0, Math.min(50_000_000, Math.round(action.createCostExp)));
       return {
@@ -3669,6 +3719,179 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
     case 'RESET':
       return createInitialGameState();
+
+    // ============================================================================
+    // Coach Agent Actions
+    // ============================================================================
+
+    case 'COACH_ADD_PENDING_ACTION': {
+      if (!state.manager.coach) return state;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            pendingActions: [...state.manager.coach.pendingActions, action.action],
+          },
+        },
+      };
+    }
+
+    case 'COACH_APPROVE_ACTION': {
+      if (!state.manager.coach) return state;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            pendingActions: state.manager.coach.pendingActions.map((a) =>
+              a.id === action.actionId ? { ...a, status: 'approved' as const } : a
+            ),
+          },
+        },
+      };
+    }
+
+    case 'COACH_REJECT_ACTION': {
+      if (!state.manager.coach) return state;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            pendingActions: state.manager.coach.pendingActions.map((a) =>
+              a.id === action.actionId ? { ...a, status: 'rejected' as const } : a
+            ),
+          },
+        },
+      };
+    }
+
+    case 'COACH_EXECUTE_ACTION': {
+      if (!state.manager.coach) return state;
+
+      const coachAction = state.manager.coach.pendingActions.find((a) => a.id === action.actionId);
+      if (!coachAction || coachAction.status !== 'approved') return state;
+
+      let newState = state;
+
+      // Executa a ação baseado no tipo
+      switch (coachAction.type) {
+        case 'start_training': {
+          const data = coachAction.data as any;
+          const plan = {
+            id: `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            mode: data.mode,
+            trainingType: data.trainingType,
+            playerIds: data.playerIds,
+            group: data.group,
+            startedAt: new Date().toISOString(),
+            endAt: new Date(Date.now() + data.durationHours * 60 * 60 * 1000).toISOString(),
+            status: 'running' as const,
+          };
+          newState = {
+            ...newState,
+            manager: {
+              ...newState.manager,
+              trainingPlans: [...newState.manager.trainingPlans, plan],
+            },
+          };
+          break;
+        }
+
+        case 'upgrade_staff': {
+          const data = coachAction.data as any;
+          const result = tryUpgradeStaffRole(newState.manager.staff, newState.finance, data.roleId);
+          if (result.ok) {
+            newState = {
+              ...newState,
+              finance: result.finance,
+              manager: {
+                ...newState.manager,
+                staff: result.staff,
+              },
+            };
+          }
+          break;
+        }
+
+        case 'assign_staff': {
+          const data = coachAction.data as any;
+          newState = {
+            ...newState,
+            manager: {
+              ...newState.manager,
+              staff: {
+                ...newState.manager.staff,
+                assignedByPlayer: {
+                  ...newState.manager.staff.assignedByPlayer,
+                  [data.playerId]: data.roleIds,
+                },
+              },
+            },
+          };
+          break;
+        }
+
+        case 'start_treatment': {
+          const data = coachAction.data as any;
+          const treatmentPlan = {
+            id: `treat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            playerId: data.playerId,
+            startedAt: new Date().toISOString(),
+            endAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            status: 'running' as const,
+          };
+          newState = {
+            ...newState,
+            manager: {
+              ...newState.manager,
+              treatmentPlans: [...(newState.manager.treatmentPlans || []), treatmentPlan],
+            },
+          };
+          break;
+        }
+      }
+
+      // Marca ação como executada
+      return {
+        ...newState,
+        manager: {
+          ...newState.manager,
+          coach: {
+            ...newState.manager.coach!,
+            pendingActions: newState.manager.coach!.pendingActions.map((a) =>
+              a.id === action.actionId ? { ...a, status: 'executed' as const } : a
+            ),
+          },
+        },
+      };
+    }
+
+    case 'COACH_CLEAR_EXECUTED_ACTIONS': {
+      if (!state.manager.coach) return state;
+      const now = Date.now();
+      const oneHourAgo = now - 60 * 60 * 1000;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            pendingActions: state.manager.coach.pendingActions.filter(
+              (a) =>
+                a.status === 'pending' ||
+                a.status === 'approved' ||
+                a.createdAt > oneHourAgo
+            ),
+          },
+        },
+      };
+    }
+
     default:
       return state;
   }

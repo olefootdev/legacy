@@ -29,6 +29,7 @@ import {
   CITY_QUICK_TRAINING_DURATION_H,
 } from '@/game/cityQuickConstants';
 import { BackButton } from '@/components/BackButton';
+import { EditorialHero } from '@/components/EditorialHero';
 import { maxSlotsByTrainingCenter } from '@/systems/trainingPlans';
 import {
   megastoreAwayConfidenceBonusPoints,
@@ -327,24 +328,29 @@ export function City() {
     crowd.supportPercent,
   ]);
 
+  const totalStructures = CITY_STRUCTURE_DEFS.length;
+  const totalLevel = Object.values(structuresState).reduce((sum, lvl) => sum + (lvl || 1), 0);
+
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden px-3 sm:px-4 lg:px-6">
       <div className="w-full max-w-6xl min-w-0 mx-auto">
         <BackButton to="/clube" label="Clube" />
       </div>
-      {/* Header com navegação integrada */}
+
+      {/* Hero Editorial */}
       <div className="w-full max-w-6xl min-w-0 mx-auto">
-        <TeamMeuTimeHeader
+        <EditorialHero
+          watermark="ESTRUTURAS"
+          eyebrow="Gestão do clube · Infraestrutura"
           title="Cidade do Clube"
-          subtitle={
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <span>Estruturas, evolução e ações rápidas para o desenvolvimento do clube.</span>
-              <div className="flex items-center gap-3 text-xs flex-wrap">
-                <span className="text-neon-yellow font-display font-black">{formatExp(finance.ole)} EXP</span>
-                <span className="text-white/40">·</span>
-                <span className="text-white/70 font-display font-bold">{formatBroFromCents(finance.broCents)}</span>
-                <span className="text-white/40">·</span>
-                <span className="text-white/60">Apoio {crowd.supportPercent.toFixed(1)}%</span>
+          subtitle={clubName}
+          quote="estruturas, evolução e ações rápidas para o desenvolvimento do clube"
+          stats={`${formatExp(finance.ole)} EXP · ${formatBroFromCents(finance.broCents)} · Apoio ${crowd.supportPercent.toFixed(1)}% · ${totalStructures} estruturas · Nível total ${totalLevel}`}
+          icon={
+            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                 style={{ borderRadius: 'var(--radius-sm)' }}>
+              <div className="flex h-full w-full items-center justify-center">
+                <Building2 className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
               </div>
             </div>
           }
