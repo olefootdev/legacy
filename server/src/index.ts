@@ -18,28 +18,42 @@ import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 
 const app = new Hono();
 
-function corsOrigins(): string | string[] {
+/**
+ * Retorna um matcher de origin: dado o Origin do request, devolve a string
+ * autorizada (echo) ou null. Aceita lista CORS_ORIGIN separada por vírgulas
+ * OU vírgulas + espaços OU newlines (Railway às vezes guarda multi-line).
+ * Usar função (em vez de array) é mais robusto contra encoding do host.
+ */
+function buildOriginMatcher(): (origin: string) => string | null {
   const raw = process.env.CORS_ORIGIN?.trim();
-  if (raw) {
-    const list = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  let list: string[];
 
-    // Validar que são URLs válidas
+  if (raw) {
+    list = raw
+      .split(/[,\n\r]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     for (const origin of list) {
       try {
         new URL(origin);
       } catch {
-        console.error(`[olefoot-server] FATAL: CORS_ORIGIN inválido: ${origin}`);
+        console.error(`[olefoot-server] FATAL: CORS_ORIGIN entry inválida: ${JSON.stringify(origin)}`);
         process.exit(1);
       }
     }
+  } else {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[olefoot-server] FATAL: CORS_ORIGIN não definido em produção. A encerrar.');
+      process.exit(1);
+    }
+    list = ['http://localhost:5173', 'http://localhost:5180'];
+  }
 
-    return list.length === 1 ? list[0]! : list;
-  }
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[olefoot-server] FATAL: CORS_ORIGIN não definido em produção. A encerrar.');
-    process.exit(1);
-  }
-  return ['http://localhost:5173', 'http://localhost:5180'];
+  console.log(`[olefoot-server] CORS allow-list (${list.length}): ${list.join(' | ')}`);
+
+  const set = new Set(list);
+  return (origin: string) => (set.has(origin) ? origin : null);
 }
 
 app.use('*', securityHeaders);
@@ -51,7 +65,7 @@ app.use('*', csrfGuard);
 app.use(
   '*',
   cors({
-    origin: corsOrigins(),
+    origin: buildOriginMatcher(),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'X-Olefoot-Pinata-Upload-Token'],
   }),

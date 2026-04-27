@@ -1,7 +1,7 @@
 import type { Context, Next } from 'hono';
 
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '')
-  .split(',')
+  .split(/[,\n\r]+/)
   .map((s) => s.trim())
   .filter(Boolean);
 
