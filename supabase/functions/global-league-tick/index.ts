@@ -24,7 +24,10 @@ interface FixtureRow {
   away_overall: number;
   score_home: number;
   score_away: number;
+  current_minute?: number;
   status: string;
+  kickoff_ms?: number | null;
+  finished_at_ms?: number | null;
 }
 
 interface RoundRow {
@@ -271,7 +274,7 @@ Deno.serve(async (_req: Request) => {
   for (const t of (preTeams as TeamRow[] | null) ?? []) teamById.set(t.id, t);
 
   // 5. Simula
-  const fixturesUpdated: Partial<FixtureRow>[] = [];
+  const fixturesUpdated: FixtureRow[] = [];
   const eventsToInsert: Record<string, unknown>[] = [];
   const teamDelta = new Map<string, { gf: number; ga: number }>();
   const newInjuries = new Map<string, { modifier: number; rounds: number }>();
@@ -283,8 +286,10 @@ Deno.serve(async (_req: Request) => {
     const effAway = away ? effectiveOverall(away) : fx.away_overall;
 
     const sim = simulateFixture(fx, effHome, effAway, now);
+    // Importante: spread completo. upsert com Partial falha porque o INSERT path
+    // do ON CONFLICT precisa de todos os NOT NULL (round_id, home_team_id, etc).
     fixturesUpdated.push({
-      id: fx.id,
+      ...fx,
       score_home: sim.score_home,
       score_away: sim.score_away,
       status: 'finished',
