@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { GameProvider } from './game/GameProvider';
 import { useGameStore, useGameDispatch } from './game/store';
 import { loadGlobalLeagueFromSupabase } from './supabase/globalLeague';
+import { subscribeGlobalLeagueChanges } from './supabase/globalLeagueRealtime';
 import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHydrate';
 import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
 import { WelcomeGenesisPackHydrate } from './game/WelcomeGenesisPackHydrate';
@@ -174,13 +175,21 @@ function GlobalLeagueHydrator() {
   const dispatch = useGameDispatch();
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+
+    const rehydrate = async () => {
       const remote = await loadGlobalLeagueFromSupabase();
       if (cancelled || !remote) return;
       dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: remote });
-    })();
+    };
+
+    void rehydrate();
+    const unsubscribe = subscribeGlobalLeagueChanges(() => {
+      void rehydrate();
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [dispatch]);
   return null;
