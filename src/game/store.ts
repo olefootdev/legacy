@@ -5,6 +5,18 @@ import { gameReducer } from './reducer';
 import { loadGameState, saveGameState } from './persistence';
 import { insertMatch } from '@/supabase/matchPersistence';
 import { isSupabaseConfigured } from '@/supabase/client';
+import { persistGlobalLeagueSnapshot } from '@/supabase/globalLeague';
+
+const GLOBAL_LEAGUE_PERSIST_ACTIONS = new Set<GameAction['type']>([
+  'INIT_GLOBAL_LEAGUE_MVP',
+  'REGISTER_GLOBAL_TEAM',
+  'START_GLOBAL_PLAYOFF_ROUND',
+  'FINISH_GLOBAL_PLAYOFF_ROUND',
+  'START_GLOBAL_LEAGUE_ROUND',
+  'FINISH_GLOBAL_LEAGUE_ROUND',
+  'APPLY_GLOBAL_PROMOTION_RELEGATION',
+  'RESET_GLOBAL_LEAGUE_MVP',
+]);
 
 type Listener = () => void;
 
@@ -41,6 +53,11 @@ export function dispatchGame(action: GameAction): void {
     }
   }
   saveGameState(state);
+
+  if (GLOBAL_LEAGUE_PERSIST_ACTIONS.has(action.type) && state.globalLeagueMVP) {
+    void persistGlobalLeagueSnapshot(state.globalLeagueMVP);
+  }
+
   emit();
 }
 
