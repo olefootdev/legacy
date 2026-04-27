@@ -54,6 +54,7 @@ const Leagues = lazy(() => import('./pages/Leagues').then((m) => ({ default: m.L
 const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
+const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
@@ -62,6 +63,12 @@ const AdminDashboard = lazy(() =>
 );
 const AdminTestesHub = lazy(() =>
   import('./admin/AdminTestesHub').then((m) => ({ default: m.AdminTestesHub })),
+);
+const AdminBetaTesters = lazy(() =>
+  import('./admin/AdminBetaTesters').then((m) => ({ default: m.AdminBetaTesters })),
+);
+const RedeemInvite = lazy(() =>
+  import('./pages/RedeemInvite').then((m) => ({ default: m.RedeemInvite })),
 );
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
 const Cadastro = lazy(() => import('./pages/Cadastro').then((m) => ({ default: m.Cadastro })));
@@ -189,7 +196,23 @@ export default function App() {
                 </Suspense>
               }
             />
+            <Route
+              path="/admin/beta-testers"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AdminBetaTesters />
+                </Suspense>
+              }
+            />
           </Route>
+          <Route
+            path="/redeem"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <RedeemInvite />
+              </Suspense>
+            }
+          />
           <Route element={<RedirectIfRegistered />}>
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
@@ -228,6 +251,7 @@ export default function App() {
             {/* Manager subpages */}
             <Route path="/manager" element={<Manager />} />
             <Route path="/manager/mensagens" element={<ManagerMessages />} />
+            <Route path="/manager/network" element={<ManagerNetwork />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
             <Route path="/manager/missoes" element={<Missions />} />
             <Route path="/manager/config" element={<Config />} />

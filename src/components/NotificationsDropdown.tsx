@@ -1,10 +1,50 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, X, ChevronRight, Trophy, Users, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useGameStore } from '@/game/store';
-import { isHiddenFromHomeInboxFeed, type InboxItem } from '@/game/inboxTypes';
+import { useGameDispatch, useGameStore } from '@/game/store';
+import {
+  isHiddenFromHomeInboxFeed,
+  type InboxCategory,
+  type InboxItem,
+  type InboxMessageType,
+} from '@/game/inboxTypes';
+import { useNotificationsSync } from '@/hooks/useNotificationsSync';
+import type { NotificationRow } from '@/supabase/notifications';
+
+const VALID_CATEGORIES: InboxCategory[] = [
+  'PLANTEL',
+  'TREINO',
+  'STAFF',
+  'FINANCEIRO',
+  'CLUBE',
+  'COMPETIÇÃO',
+  'MISSÃO',
+  'TORCIDA',
+  'EMPRESA',
+  'CONTA',
+];
+
+function notificationRowToInbox(row: NotificationRow): InboxItem {
+  const upper = row.category.toUpperCase();
+  const category: InboxCategory = (VALID_CATEGORIES as string[]).includes(upper)
+    ? (upper as InboxCategory)
+    : 'CONTA';
+  const created = new Date(row.created_at);
+  return {
+    id: `srv:${row.id}`,
+    messageType: 'COMPANY_ANNOUNCEMENT' as InboxMessageType,
+    category,
+    tag: category,
+    title: row.title,
+    body: row.message ?? undefined,
+    timeLabel: created.toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' }),
+    read: row.read,
+    deepLink: row.link ?? undefined,
+    colorClass: 'text-neon-yellow',
+  };
+}
 
 interface NotificationItemProps {
   notification: InboxItem;
@@ -85,6 +125,22 @@ export function NotificationsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inbox = useGameStore((s) => s.inbox);
+  const dispatch = useGameDispatch();
+
+  const mergeRows = useCallback(
+    (rows: NotificationRow[]) => {
+      for (const r of rows.slice().reverse()) {
+        dispatch({ type: 'INBOX_PREPEND', item: notificationRowToInbox(r) });
+      }
+    },
+    [dispatch],
+  );
+  const mergeOne = useCallback(
+    (row: NotificationRow) => dispatch({ type: 'INBOX_PREPEND', item: notificationRowToInbox(row) }),
+    [dispatch],
+  );
+
+  useNotificationsSync({ onNotifications: mergeRows, onIncoming: mergeOne });
 
   // Filtra notificações visíveis
   const notifications = inbox
