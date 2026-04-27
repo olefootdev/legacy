@@ -63,6 +63,13 @@ interface TeamRow {
   goals_against: number;
   goal_difference: number;
   recent_form: ('W' | 'D' | 'L')[];
+  injury_modifier: number;
+  injury_rounds_remaining: number;
+}
+
+function effectiveOverall(team: TeamRow): number {
+  const mod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
+  return Math.max(40, team.overall + mod);
 }
 
 const ROUND_INTERVAL_MS = 60 * 60 * 1000; // 1 hora entre rodadas
@@ -82,9 +89,14 @@ function poissonGoals(expected: number): number {
   return k - 1;
 }
 
-function simulateFixture(fixture: FixtureRow, kickoffMs: number) {
+function simulateFixture(
+  fixture: FixtureRow,
+  effHomeOverall: number,
+  effAwayOverall: number,
+  kickoffMs: number,
+) {
   const homeAdvantage = 3;
-  const diff = (fixture.home_overall + homeAdvantage) - fixture.away_overall;
+  const diff = (effHomeOverall + homeAdvantage) - effAwayOverall;
   const homeExpected = Math.max(0.2, 1.4 + diff / 22);
   const awayExpected = Math.max(0.2, 1.4 - diff / 22);
 
@@ -130,15 +142,16 @@ function simulateFixture(fixture: FixtureRow, kickoffMs: number) {
   }
 
   // Lesão: 8% chance por jogo
+  let injured_side: 'home' | 'away' | null = null;
   if (Math.random() < 0.08) {
-    const side = Math.random() < 0.5 ? 'home' : 'away';
+    injured_side = Math.random() < 0.5 ? 'home' : 'away';
     const minute = Math.floor(10 + Math.random() * 80);
     events.push({
-      id: `evt_${fixture.id}_${side}_inj_${kickoffMs}`,
+      id: `evt_${fixture.id}_${injured_side}_inj_${kickoffMs}`,
       fixture_id: fixture.id,
       event_type: 'injury',
       minute,
-      side,
+      side: injured_side,
       text: '🚑 Jogador lesionado',
       highlight: false,
       timestamp_ms: kickoffMs + minute * 1000,
@@ -151,6 +164,7 @@ function simulateFixture(fixture: FixtureRow, kickoffMs: number) {
     score_home: homeGoals,
     score_away: awayGoals,
     events,
+    injured_side,
   };
 }
 
@@ -243,13 +257,32 @@ Deno.serve(async (_req: Request) => {
     });
   }
 
-  // 4. Simula
+  // 4. Pre-fetch dos times participantes (precisamos do overall efetivo com lesões)
+  const teamIds = new Set<string>();
+  for (const fx of fixtures as FixtureRow[]) {
+    teamIds.add(fx.home_team_id);
+    teamIds.add(fx.away_team_id);
+  }
+  const { data: preTeams } = await supabase
+    .from('global_league_teams')
+    .select('*')
+    .in('id', Array.from(teamIds));
+  const teamById = new Map<string, TeamRow>();
+  for (const t of (preTeams as TeamRow[] | null) ?? []) teamById.set(t.id, t);
+
+  // 5. Simula
   const fixturesUpdated: Partial<FixtureRow>[] = [];
   const eventsToInsert: Record<string, unknown>[] = [];
   const teamDelta = new Map<string, { gf: number; ga: number }>();
+  const newInjuries = new Map<string, { modifier: number; rounds: number }>();
 
   for (const fx of fixtures as FixtureRow[]) {
-    const sim = simulateFixture(fx, now);
+    const home = teamById.get(fx.home_team_id);
+    const away = teamById.get(fx.away_team_id);
+    const effHome = home ? effectiveOverall(home) : fx.home_overall;
+    const effAway = away ? effectiveOverall(away) : fx.away_overall;
+
+    const sim = simulateFixture(fx, effHome, effAway, now);
     fixturesUpdated.push({
       id: fx.id,
       score_home: sim.score_home,
@@ -269,9 +302,20 @@ Deno.serve(async (_req: Request) => {
     awayAcc.gf += sim.score_away;
     awayAcc.ga += sim.score_home;
     teamDelta.set(fx.away_team_id, awayAcc);
+
+    if (sim.injured_side) {
+      const injuredId = sim.injured_side === 'home' ? fx.home_team_id : fx.away_team_id;
+      const modifier = -(2 + Math.floor(Math.random() * 3)); // -2, -3 ou -4
+      const rounds = 1 + Math.floor(Math.random() * 2);     // 1 ou 2
+      const existing = newInjuries.get(injuredId);
+      newInjuries.set(injuredId, {
+        modifier: existing && existing.modifier < modifier ? existing.modifier : modifier,
+        rounds: existing && existing.rounds > rounds ? existing.rounds : rounds,
+      });
+    }
   }
 
-  // 5. Persiste fixtures + events
+  // 6. Persiste fixtures + events
   if (fixturesUpdated.length > 0) {
     await supabase.from('global_league_fixtures').upsert(fixturesUpdated as any, { onConflict: 'id' });
   }
@@ -279,31 +323,44 @@ Deno.serve(async (_req: Request) => {
     await supabase.from('global_league_events').upsert(eventsToInsert as any, { onConflict: 'id' });
   }
 
-  // 6. Atualiza estatísticas dos times
-  if (teamDelta.size > 0) {
-    const ids = Array.from(teamDelta.keys());
-    const { data: teamRows } = await supabase
-      .from('global_league_teams')
-      .select('*')
-      .in('id', ids);
+  // 7. Atualiza estatísticas + decremento de lesões pré-existentes + aplica novas lesões
+  if (teamById.size > 0) {
+    const updated = Array.from(teamById.values()).map((t) => {
+      const d = teamDelta.get(t.id);
+      let next = d ? updateTeamRow(t, d.gf, d.ga, isPlayoff) : t;
 
-    if (teamRows) {
-      const updated = (teamRows as TeamRow[]).map((t) => {
-        const d = teamDelta.get(t.id);
-        if (!d) return t;
-        return updateTeamRow(t, d.gf, d.ga, isPlayoff);
-      });
-      await supabase.from('global_league_teams').upsert(updated as any, { onConflict: 'id' });
-    }
+      // Decrementa lesão que estava ativa entrando neste tick
+      if (next.injury_rounds_remaining > 0) {
+        const remaining = next.injury_rounds_remaining - 1;
+        next = {
+          ...next,
+          injury_rounds_remaining: remaining,
+          injury_modifier: remaining === 0 ? 0 : next.injury_modifier,
+        };
+      }
+
+      // Aplica nova lesão sofrida nesta rodada (toma o pior modifier + maior duração)
+      const fresh = newInjuries.get(next.id);
+      if (fresh) {
+        next = {
+          ...next,
+          injury_modifier: next.injury_modifier < fresh.modifier ? next.injury_modifier : fresh.modifier,
+          injury_rounds_remaining: next.injury_rounds_remaining > fresh.rounds ? next.injury_rounds_remaining : fresh.rounds,
+        };
+      }
+
+      return next;
+    });
+    await supabase.from('global_league_teams').upsert(updated as any, { onConflict: 'id' });
   }
 
-  // 7. Marca rodada como finished
+  // 8. Marca rodada como finished
   await supabase
     .from('global_league_rounds')
     .update({ status: 'finished', finished_at_ms: now + SIM_DURATION_MS })
     .eq('id', round.id);
 
-  // 8. Atualiza state singleton (current_*_round)
+  // 9. Atualiza state singleton (current_*_round)
   const stateUpdate: Record<string, unknown> = {};
   if (isPlayoff) {
     stateUpdate.current_playoff_round = round.round_number + 1;
