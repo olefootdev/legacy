@@ -1,6 +1,69 @@
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+
+/**
+ * Dígito animado: quando o valor muda, o número novo "cai" de cima com bounce,
+ * o placar pulsa com scale + glow amarelo, e o fundo pisca verde por 1s.
+ */
+function AnimatedScore({ value, side }: { value: number; side: 'home' | 'away' }) {
+  const prev = useRef(value);
+  const [flash, setFlash] = useState(false);
+  const [key, setKey] = useState(0);
+
+  useEffect(() => {
+    if (value !== prev.current) {
+      prev.current = value;
+      setKey((k) => k + 1);
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 900);
+      return () => clearTimeout(t);
+    }
+  }, [value]);
+
+  return (
+    <span className="relative inline-flex items-center justify-center">
+      {/* fundo verde que pisca no gol */}
+      <AnimatePresence>
+        {flash && (
+          <motion.span
+            key="flash"
+            initial={{ opacity: 0.85, scale: 1.6 }}
+            animate={{ opacity: 0, scale: 2.4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
+            className={cn(
+              'pointer-events-none absolute inset-0 rounded-full',
+              side === 'home' ? 'bg-emerald-400/60' : 'bg-emerald-400/40',
+            )}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* número com pulse + glow */}
+      <motion.span
+        key={key}
+        initial={{ y: -28, opacity: 0, scale: 0.7 }}
+        animate={
+          flash
+            ? { y: 0, opacity: 1, scale: [0.7, 1.35, 0.95, 1.08, 1], textShadow: ['0 0 0px #FFE600', '0 0 18px #FFE600', '0 0 6px #FFE600', '0 0 0px #FFE600'] }
+            : { y: 0, opacity: 1, scale: 1 }
+        }
+        transition={{ type: 'spring', stiffness: 420, damping: 18 }}
+        className="relative tabular-nums text-neon-yellow"
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {value}
+      </motion.span>
+    </span>
+  );
+}
 
 function hueFromSeed(seed: string): number {
   let h = 2166136261;
@@ -24,6 +87,12 @@ const crestSize = {
     'h-7 w-7 min-h-7 min-w-7 max-h-7 max-w-7 object-contain shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] min-[400px]:h-9 min-[400px]:w-9 min-[400px]:min-h-9 min-[400px]:min-w-9 min-[400px]:max-h-9 min-[400px]:max-w-9 sm:h-10 sm:w-10 sm:min-h-10 sm:min-w-10 sm:max-h-10 sm:max-w-10 md:h-11 md:w-11 md:min-h-11 md:min-w-11 md:max-h-11 md:max-w-11',
   /** Banner matchday — compacto para caber nomes completos na mesma linha (brasão largo limitado). */
   lg: 'h-[1.3rem] w-auto max-h-[1.45rem] max-w-[min(2.85rem,14vw)] object-contain object-left shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:h-[1.5rem] sm:max-h-[1.65rem] sm:max-w-[min(3.35rem,16vw)] md:h-[1.7rem] md:max-h-[1.9rem] md:max-w-[min(4rem,14vw)] lg:h-[1.85rem] lg:max-h-[2.05rem] lg:max-w-[min(4.75rem,11vw)]',
+  /**
+   * Título “OLE … vs …” no banner da Home — brasões maiores para aproveitar logos HD (ex.: API-Sports ~150px).
+   * `object-contain` + teto de largura evita esmagar nomes longos em mobile.
+   */
+  banner:
+    'h-9 w-auto max-h-9 max-w-[min(3.25rem,18vw)] object-contain object-center shrink-0 drop-shadow-[0_3px_10px_rgba(0,0,0,0.55)] sm:h-10 sm:max-h-10 sm:max-w-[min(3.75rem,16vw)] md:h-11 md:max-h-11 md:max-w-[min(4.25rem,14vw)] lg:h-12 lg:max-h-12 lg:max-w-[min(4.75rem,12vw)] xl:h-[3.25rem] xl:max-h-[3.35rem] xl:max-w-[min(5.25rem,11vw)]',
 } as const;
 
 /** Brasão sintético do adversário (IA). */
@@ -34,18 +103,20 @@ export function AwayCrestBadge({
 }: {
   seed: string;
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'quick';
+  size?: 'sm' | 'md' | 'lg' | 'quick' | 'banner';
 }) {
   const hue = hueFromSeed(seed || 'away');
   const letter = (seed.trim().charAt(0) || '?').toUpperCase();
   const box =
     size === 'sm'
       ? 'h-8 w-8 min-w-8 text-[11px]'
-      : size === 'lg'
-        ? 'h-[1.2rem] w-[1.2rem] min-w-[1.2rem] text-[9px] sm:h-[1.4rem] sm:w-[1.4rem] sm:min-w-[1.4rem] sm:text-[10px] md:h-[1.55rem] md:w-[1.55rem] md:min-w-[1.55rem] md:text-[11px] lg:h-[1.7rem] lg:w-[1.7rem] lg:min-w-[1.7rem] lg:text-xs'
-        : size === 'quick'
-          ? 'h-7 w-7 min-w-7 text-[10px] min-[400px]:h-8 min-[400px]:w-8 min-[400px]:min-w-8 min-[400px]:text-[11px] sm:h-10 sm:w-10 sm:min-w-10 sm:text-xs md:h-11 md:w-11 md:min-w-11'
-          : 'h-10 w-10 min-w-10 text-xs sm:h-11 sm:w-11 sm:min-w-11';
+      : size === 'banner'
+        ? 'h-9 w-9 min-w-9 text-xs sm:h-10 sm:w-10 sm:min-w-10 sm:text-sm md:h-11 md:w-11 md:min-w-11 md:text-sm lg:h-12 lg:w-12 lg:min-w-12 lg:text-base xl:h-[3.25rem] xl:w-[3.25rem] xl:min-w-[3.25rem] xl:text-lg'
+        : size === 'lg'
+          ? 'h-[1.2rem] w-[1.2rem] min-w-[1.2rem] text-[9px] sm:h-[1.4rem] sm:w-[1.4rem] sm:min-w-[1.4rem] sm:text-[10px] md:h-[1.55rem] md:w-[1.55rem] md:min-w-[1.55rem] md:text-[11px] lg:h-[1.7rem] lg:w-[1.7rem] lg:min-w-[1.7rem] lg:text-xs'
+          : size === 'quick'
+            ? 'h-7 w-7 min-w-7 text-[10px] min-[400px]:h-8 min-[400px]:w-8 min-[400px]:min-w-8 min-[400px]:text-[11px] sm:h-10 sm:w-10 sm:min-w-10 sm:text-xs md:h-11 md:w-11 md:min-w-11'
+            : 'h-10 w-10 min-w-10 text-xs sm:h-11 sm:w-11 sm:min-w-11';
   return (
     <span
       className={cn(
@@ -73,11 +144,19 @@ function AwayCrestOrPhoto({
   seed: string;
   imageUrl?: string | null;
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'quick';
+  size?: 'sm' | 'md' | 'lg' | 'quick' | 'banner';
 }) {
   const u = imageUrl?.trim();
   if (u) {
-    return <img src={u} alt="" className={cn(crestSize[size], className)} />;
+    return (
+      <img
+        src={u}
+        alt=""
+        className={cn(crestSize[size], className)}
+        draggable={false}
+        decoding="async"
+      />
+    );
   }
   return <AwayCrestBadge seed={seed} size={size} className={className} />;
 }
@@ -104,36 +183,59 @@ export function MatchdayVersusTitle({
   const seed = awaySeed ?? fallbackAway;
 
   const nameText =
-    'min-w-0 max-w-full whitespace-normal break-words text-pretty not-italic text-white [word-spacing:normal]';
+    'min-w-0 max-w-full whitespace-normal break-words text-pretty text-white [word-spacing:normal]';
 
   return (
     <h2
       className={cn(
-        'font-display font-black uppercase leading-snug tracking-normal',
+        'uppercase leading-snug tracking-normal',
         className,
       )}
+      style={{
+        fontFamily: 'var(--font-serif-hero)',
+        fontStyle: 'italic',
+        fontWeight: 700,
+        letterSpacing: '0.01em',
+      }}
     >
       <span className="flex w-full min-w-0 items-center justify-center gap-1 px-0.5 sm:gap-1.5 sm:px-1 md:gap-3">
         {/* Metade esquerda: bloco [brasão + nome] junto ao “vs”, sem esticar o nome e isolar o brasão */}
         <span className="flex min-w-0 min-h-0 flex-1 justify-end">
           <span className="flex max-w-full min-w-0 items-center justify-end gap-1 sm:gap-1.5 md:gap-2">
-            {crest ? <img src={crest} alt="" className={cn(crestSize.lg, 'shrink-0')} /> : null}
+            {crest ? (
+              <img
+                src={crest}
+                alt=""
+                className={cn(crestSize.banner, 'shrink-0')}
+                draggable={false}
+                decoding="async"
+              />
+            ) : null}
             <span className={cn(nameText, 'text-end')}>{homeName}</span>
           </span>
         </span>
         <span
+          aria-label="versus"
           className={cn(
-            'shrink-0 font-black italic text-neon-yellow',
+            'shrink-0 italic text-neon-yellow leading-none',
             vsClassName,
           )}
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontWeight: 400,
+            fontSize: '1.85em',
+            letterSpacing: '-0.04em',
+            transform: 'translateY(-0.06em)',
+            textShadow: '0 2px 18px rgba(253,225,0,0.25)',
+          }}
         >
-          vs
+          ×
         </span>
         {/* Metade direita: bloco [nome + brasão] colado ao “vs” */}
         <span className="flex min-w-0 min-h-0 flex-1 justify-start">
           <span className="flex max-w-full min-w-0 items-center justify-start gap-1 sm:gap-1.5 md:gap-2">
             <span className={cn(nameText, 'text-start')}>{awayName}</span>
-            <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="lg" className="shrink-0" />
+            <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="banner" className="shrink-0" />
           </span>
         </span>
       </span>
@@ -180,6 +282,7 @@ export function MatchdayVersusInline({
 
 /**
  * Barra com relógio (partida rápida) — nomes completos opcionais, logos maiores.
+ * `scoreboardCountdownSec`: contagem 10→1 por baixo do cronómetro (só 1–10).
  */
 export function MatchdayVersusWithClock({
   homeShort,
@@ -188,6 +291,7 @@ export function MatchdayVersusWithClock({
   awayName,
   awaySeed,
   clock,
+  scoreboardCountdownSec,
   rowClassName,
   showTeamCrests = true,
 }: {
@@ -196,7 +300,9 @@ export function MatchdayVersusWithClock({
   homeName?: string;
   awayName?: string;
   awaySeed?: string;
-  clock: string;
+  clock: string | ReactNode;
+  /** Segundos restantes (1–10) por baixo do relógio oficial, em amarelo; omitir fora desse intervalo. */
+  scoreboardCountdownSec?: number | null;
   rowClassName?: string;
   /** Quando falso, só nomes/siglas (ex.: partida rápida sem brasões). */
   showTeamCrests?: boolean;
@@ -207,6 +313,11 @@ export function MatchdayVersusWithClock({
   const seed = awaySeed ?? fallbackAway;
   const homeLabel = homeName?.trim() || homeShort;
   const awayLabel = awayName?.trim() || awayShort;
+  const showRibbonCountdown =
+    typeof scoreboardCountdownSec === 'number'
+    && scoreboardCountdownSec >= 1
+    && scoreboardCountdownSec <= 10
+    && Number.isInteger(scoreboardCountdownSec);
 
   return (
     <div
@@ -219,23 +330,42 @@ export function MatchdayVersusWithClock({
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-end gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.quick} /> : null}
         <span
-          className={cn(
-            'min-w-0 truncate text-end font-display font-bold leading-tight text-white',
-            'text-[11px] min-[380px]:text-xs sm:text-sm md:text-base lg:text-lg',
-          )}
+          className="min-w-0 truncate text-end leading-tight text-white uppercase"
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: 'clamp(11px, 2.2vw, 18px)',
+            letterSpacing: '0.01em',
+          }}
         >
           {homeLabel}
         </span>
       </div>
-      <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-tight text-gray-300 min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-xs sm:text-sm">
-        {clock}
-      </span>
+      <div className="flex shrink-0 flex-col items-center justify-center gap-0 leading-none">
+        <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] tabular-nums tracking-tight text-gray-300 min-[400px]:px-2 min-[400px]:py-1 min-[400px]:text-xs sm:text-sm">
+          {clock}
+        </span>
+        {showRibbonCountdown ? (
+          <span
+            className="mt-0.5 font-display text-[10px] font-black tabular-nums tracking-tight text-neon-yellow min-[400px]:text-xs sm:text-sm"
+            aria-live="polite"
+            aria-label={`Contagem regressiva: ${scoreboardCountdownSec} segundos`}
+          >
+            {scoreboardCountdownSec}
+          </span>
+        ) : null}
+      </div>
       <div className="flex min-w-0 flex-1 basis-0 items-center justify-start gap-1 min-[360px]:gap-1.5 sm:gap-2 md:gap-3">
         <span
-          className={cn(
-            'min-w-0 truncate text-start font-display font-bold leading-tight text-gray-200',
-            'text-[11px] min-[380px]:text-xs sm:text-sm md:text-base lg:text-lg',
-          )}
+          className="min-w-0 truncate text-start leading-tight text-gray-200 uppercase"
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: 'clamp(11px, 2.2vw, 18px)',
+            letterSpacing: '0.01em',
+          }}
         >
           {awayLabel}
         </span>
@@ -335,9 +465,9 @@ export function MatchdayResultScores({
         {showTeamCrests && crest ? <img src={crest} alt="" className={crestSize.md} /> : null}
         <span className="text-center leading-tight [overflow-wrap:anywhere]">{homeLabel}</span>
       </span>
-      <span className="shrink-0 tabular-nums text-neon-yellow">{homeScore}</span>
-      <span className="shrink-0 text-gray-600">–</span>
-      <span className="shrink-0 tabular-nums text-neon-yellow">{awayScore}</span>
+      <AnimatedScore value={homeScore} side="home" />
+      <span className="shrink-0 ole-scoreboard__separator">–</span>
+      <AnimatedScore value={awayScore} side="away" />
       <span className="inline-flex max-w-[min(100%,16rem)] flex-row-reverse items-center gap-2 sm:max-w-[min(100%,20rem)] sm:gap-2.5">
         {showTeamCrests ? <AwayCrestOrPhoto seed={seed} imageUrl={awayCrestUrl} size="md" /> : null}
         <span className="text-center leading-tight [overflow-wrap:anywhere]">{awayLabel}</span>

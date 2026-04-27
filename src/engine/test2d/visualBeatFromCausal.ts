@@ -6,6 +6,8 @@
 import type { PitchPoint } from '@/engine/types';
 import type { CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import type { PitchPlayerState } from '@/engine/types';
+import { FIELD_LENGTH, FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
+import { sfGetGoalContext, sfGetPostZone, sfSnapshot } from '@/smartfield/smartfieldBridge';
 
 export type Test2dVisualBeatKind =
   | 'goal_home'
@@ -19,6 +21,9 @@ const DUR_GOAL_MS = 1_400;
 const DUR_SAVE_MS = 950;
 const DUR_BLOCK_MS = 750;
 const DUR_WIDE_MS = 1_050;
+
+/** Metade da boca em coordenadas UI 0–100 (largura) — remates “ao lado” ficam logo fora do poste, não na banda. */
+const GOAL_MOUTH_HALF_UY = (GOAL_MOUTH_HALF_WIDTH_M / FIELD_WIDTH) * 100;
 
 function findPlayer(players: PitchPlayerState[] | undefined, id: string): PitchPlayerState | undefined {
   return players?.find((p) => p.playerId === id);
@@ -87,11 +92,23 @@ export function visualBeatGeometryFromCausalBatch(
   const strike = attempt.payload.strike;
 
   if (out === 'goal' || out === 'post_in') {
-    const ballTo = target
-      ? { x: target.x, y: target.y }
-      : side === 'home'
-        ? { x: 97, y: 48 + Math.random() * 8 }
-        : { x: 3, y: 48 + Math.random() * 8 };
+    let ballTo: PitchPoint;
+    if (target) {
+      ballTo = { x: target.x, y: target.y };
+    } else {
+      const attackDir: 1 | -1 = side === 'home' ? 1 : -1;
+      const sf = sfSnapshot();
+      const goal = attackDir === 1 ? sf.goals.east : sf.goals.west;
+      const goalUx = (goal.goal_line_x / FIELD_LENGTH) * 100;
+      const nearPostUy = (goal.near_post.z / FIELD_WIDTH) * 100;
+      const farPostUy = (goal.far_post.z / FIELD_WIDTH) * 100;
+      const goalCenterUy = (nearPostUy + farPostUy) / 2;
+      const spread = (farPostUy - nearPostUy) * 0.35;
+      ballTo = {
+        x: side === 'home' ? Math.min(99, goalUx - 0.5) : Math.max(1, goalUx + 0.5),
+        y: goalCenterUy + (Math.random() - 0.5) * spread,
+      };
+    }
     const durGoal =
       strike === 'power' ? DUR_GOAL_MS + 180 : strike === 'weak' ? DUR_GOAL_MS - 220 : DUR_GOAL_MS;
     return {
@@ -104,9 +121,15 @@ export function visualBeatGeometryFromCausalBatch(
   }
 
   if (out === 'save') {
-    const ballTo = side === 'home'
-      ? { x: 11, y: 46 + Math.random() * 10 }
-      : { x: 89, y: 46 + Math.random() * 10 };
+    const attackDir: 1 | -1 = side === 'home' ? 1 : -1;
+    const sf = sfSnapshot();
+    const goal = attackDir === 1 ? sf.goals.east : sf.goals.west;
+    const penaltySpotUx = (goal.penalty_spot.x / FIELD_LENGTH) * 100;
+    const goalCenterUy = (goal.center.z / FIELD_WIDTH) * 100;
+    const ballTo = {
+      x: side === 'home' ? penaltySpotUx : penaltySpotUx,
+      y: goalCenterUy + (Math.random() - 0.5) * 10,
+    };
     const durSave =
       strike === 'power' ? DUR_SAVE_MS + 120 : strike === 'weak' ? DUR_SAVE_MS - 180 : DUR_SAVE_MS;
     return {
@@ -131,11 +154,20 @@ export function visualBeatGeometryFromCausalBatch(
   }
 
   if (out === 'wide' || out === 'post_out' || out === 'miss' || out === 'miss_far') {
+    const pastPostUy = GOAL_MOUTH_HALF_UY + 0.9 + Math.random() * 2.4;
+    const sign = Math.random() < 0.5 ? -1 : 1;
     const ballTo = target
-      ? { x: Math.min(99, target.x + (side === 'home' ? 2 : -2)), y: Math.min(94, Math.max(6, target.y + (Math.random() * 20 - 10))) }
-      : side === 'home'
-        ? { x: 99, y: 12 + Math.random() * 20 }
-        : { x: 1, y: 12 + Math.random() * 20 };
+      ? {
+          x: Math.min(99.2, Math.max(0.8, target.x + (side === 'home' ? 0.9 : -0.9))),
+          y: Math.min(96, Math.max(4, target.y + sign * pastPostUy)),
+        }
+      : (() => {
+          const aimY = 50 + (Math.random() - 0.5) * 4;
+          return {
+            x: side === 'home' ? 98.6 : 1.4,
+            y: Math.min(96, Math.max(4, aimY + sign * pastPostUy)),
+          };
+        })();
     const durWide =
       strike === 'power' ? DUR_WIDE_MS + 200 : strike === 'weak' ? DUR_WIDE_MS - 150 : DUR_WIDE_MS;
     return {

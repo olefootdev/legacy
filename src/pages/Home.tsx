@@ -1,16 +1,55 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus } from 'lucide-react';
+import { Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus, TrendingUp } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp, FRIENDLY_CHALLENGE_BRO_FEE_RATE, friendlyChallengeBroFeeCents } from '@/systems/economy';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
+import {
+  createFriendlyChallenge,
+  FRIENDLY_CHALLENGE_TTL_SEC,
+  markFriendlyChallengeExpiredIfNeeded,
+  searchClubsForFriendly,
+  subscribeFriendlyChallengeUpdates,
+  unsubscribeChannel,
+  updateFriendlyChallengeStatus,
+  type ClubSearchHit,
+  type FriendlyChallengeRow,
+} from '@/supabase/friendlyChallenges';
 import type { PastResult, PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import { isHiddenFromHomeInboxFeed, type InboxItem } from '@/game/inboxTypes';
-import { buildHomeRankingPreview, getFullRankingEntries } from '@/ranking/worldRanking';
+import {
+  buildHomeRankingPreview,
+  filterOpponentRankingMatches,
+  getFullRankingEntries,
+  type RankingEntry,
+} from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
-import { MatchdayVersusTitle } from '@/components/matchday/MatchdayVersusTitle';
+import { playerPortraitSrc } from '@/lib/playerPortrait';
+import { MatchdayHero } from '@/components/matchday/MatchdayHero';
+import { DashboardGrid, DashboardSection } from '@/components/dashboard';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+import { MarketActivityFeed } from '@/market/MarketActivityFeed';
+import { generateMockActivities } from '@/market/socialTrade';
+import { FriendlyMatchBox } from '@/components/home/FriendlyMatchBox';
+
+/**
+ * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
+ * sem histórico), mostra o MOCK editorial pra reconstrução visual ficar
+ * "viva". Em produção, o fallback ESTREIA limpo é exibido.
+ */
+const HOME_HERO_DEV_MOCK = import.meta.env.DEV;
+/**
+ * Brasões usados só em DEV pra preview do hero/banner.
+ * Origem: api-sports media (mesmo CDN que o save real consome via
+ * src/settings/brazilianClubs.ts — Flamengo id=127, Palmeiras id=121).
+ */
+const DEV_HOME_CREST = 'https://media.api-sports.io/football/teams/127.png';
+const DEV_AWAY_CREST = 'https://media.api-sports.io/football/teams/121.png';
+import { useTrackScreen } from '@/progression/trackEvent';
 
 const HOME_NOTIF_VISIBLE_COUNT = 5;
 
@@ -60,15 +99,11 @@ function InboxBodyText({ text }: { text: string }) {
   return <p className="text-xs text-gray-400 mt-1 leading-relaxed">{parts}</p>;
 }
 
-function pickHomeHighlight(players: Record<string, PlayerEntity>): {
-  id: string;
-  name: string;
-  ovr: number;
-} {
+function pickHighlightFromRoster(players: Record<string, PlayerEntity>): PlayerEntity | null {
   const list = Object.values(players);
   const outfield = list.filter((p) => p.pos.toUpperCase() !== 'GOL');
   const candidates = outfield.length ? outfield : list;
-  if (!candidates.length) return { id: '', name: '—', ovr: 70 };
+  if (!candidates.length) return null;
   let best = candidates[0]!;
   let bestOvr = overallFromAttributes(best.attrs);
   for (const p of candidates) {
@@ -78,7 +113,7 @@ function pickHomeHighlight(players: Record<string, PlayerEntity>): {
       bestOvr = o;
     }
   }
-  return { id: best.id, name: best.name, ovr: bestOvr };
+  return best;
 }
 
 function starsForOvr(ovr: number): number {
@@ -115,6 +150,7 @@ function resultOutcomeMeta(result: PastResult['result']) {
 }
 
 export function Home() {
+  useTrackScreen('screen_home');
   const dispatch = useGameDispatch();
   const navigate = useNavigate();
   const finance = useGameStore((s) => s.finance);
@@ -124,17 +160,87 @@ export function Home() {
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+  const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
+  const awayCrestUrl = useGameStore(
+    (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
+  );
 
-  const homeHighlight = useMemo(() => pickHomeHighlight(players), [players]);
-  const awayHighlight = useMemo(() => {
-    const h = fixture.opponent.highlightPlayer;
-    if (h) return { name: h.name, ovr: h.ovr, imgSeed: `${fixture.opponent.id}-star` };
+  // Adiciona notificação de boas-vindas na primeira visita
+  useEffect(() => {
+    const hasWelcomeNotification = inbox.some(
+      (item) => item.category === 'STAFF' && item.title.includes('Bem-vindo')
+    );
+
+    if (!hasWelcomeNotification) {
+      const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
+      const supportLabel = roundedSupport.toLocaleString('pt-BR', {
+        minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
+        maximumFractionDigits: 1,
+      });
+
+      dispatch({
+        type: 'INBOX_PUSH',
+        item: {
+          category: 'STAFF',
+          title: 'Bem-vindo ao Olefoot! ⚽',
+          body: 'Seu clube está pronto para dominar o mundo do futebol. Explore o mercado, treine seus jogadores e conquiste títulos. A jornada começa agora!',
+          timestamp: new Date().toISOString(),
+          read: false,
+        },
+      });
+
+      // Adiciona mais algumas notificações de exemplo
+      dispatch({
+        type: 'INBOX_PUSH',
+        item: {
+          category: 'COMPETIÇÃO',
+          title: 'Próxima partida agendada',
+          body: `**${club.name}** enfrenta **${fixture.opponent.name}** em breve. Prepare sua tática e escale o melhor time!`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min atrás
+          read: false,
+          link: '/match/quick',
+        },
+      });
+
+      dispatch({
+        type: 'INBOX_PUSH',
+        item: {
+          category: 'TORCIDA',
+          title: 'Apoio da torcida crescendo',
+          body: `A torcida está com **${supportLabel}%** de confiança no time. Continue vencendo para aumentar o apoio!`,
+          timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1h atrás
+          read: false,
+        },
+      });
+    }
+  }, [dispatch, inbox.length, club.name, fixture.opponent.name, crowd.supportPercent]);
+
+  const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
+  const homeHighlight = useMemo(() => {
+    if (!homeHighlightBest) {
+      return {
+        id: '',
+        name: '—',
+        ovr: 70,
+        imageSrc: 'https://picsum.photos/seed/home-placeholder/400/520',
+      };
+    }
+    const ovr = homeHighlightBest.mintOverall ?? overallFromAttributes(homeHighlightBest.attrs);
     return {
-      name: 'DESTAQUE',
-      ovr: fixture.opponent.strength,
-      imgSeed: fixture.opponent.id,
+      id: homeHighlightBest.id,
+      name: homeHighlightBest.name,
+      ovr,
+      imageSrc: playerPortraitSrc(
+        { name: homeHighlightBest.name, portraitUrl: homeHighlightBest.portraitUrl },
+        400,
+        520,
+      ),
     };
-  }, [fixture.opponent]);
+  }, [homeHighlightBest]);
+
+  // awayHighlight removido — destaque agora é único (homeHighlight) no padrão
+  // /matchday/preview com número OVR gigante decorativo. Se voltar a precisar
+  // do duo casa × visitante, recuperar via git history.
   const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
   const supportLabel = roundedSupport.toLocaleString('pt-BR', {
     minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
@@ -143,18 +249,190 @@ export function Home() {
   const [searchTeam, setSearchTeam] = useState('');
   const { favorites, toggleFavorite } = useRankingFavorites();
   const [amistosoOpen, setAmistosoOpen] = useState(false);
-  const [opponentName, setOpponentName] = useState('');
-  const [opponentId, setOpponentId] = useState('');
-  const [friendlyMode, setFriendlyMode] = useState<'auto' | 'quick'>('quick');
+  const [hasOnlineSession, setHasOnlineSession] = useState(false);
+  const [opponentQuery, setOpponentQuery] = useState('');
+  const [amistosoOnlineHits, setAmistosoOnlineHits] = useState<ClubSearchHit[]>([]);
+  const [amistosoOfflineHits, setAmistosoOfflineHits] = useState<RankingEntry[]>([]);
+  const [amistosoLookupMessage, setAmistosoLookupMessage] = useState<string | null>(null);
+  const [selectedOnlineOpponent, setSelectedOnlineOpponent] = useState<ClubSearchHit | null>(null);
+  const [selectedOfflineOpponent, setSelectedOfflineOpponent] = useState<RankingEntry | null>(null);
+  const [amistosoSearchBusy, setAmistosoSearchBusy] = useState(false);
+  const [waitingChallenge, setWaitingChallenge] = useState<{
+    id: string;
+    expiresAt: string;
+    opponentName: string;
+    mode: 'live' | 'quick' | 'penalty';
+    betCurrency: 'BRO' | 'EXP';
+    prizeBroUnits: number;
+    prizeExp: number;
+  } | null>(null);
+  const [waitTick, setWaitTick] = useState(0);
+  const waitChannelRef = useRef<RealtimeChannel | null>(null);
+  const refundedChallengeIdsRef = useRef<Set<string>>(new Set());
+  const [friendlyMode, setFriendlyMode] = useState<'quick' | 'penalty'>('quick');
   const [betCurrency, setBetCurrency] = useState<'BRO' | 'EXP'>('BRO');
   const [betInput, setBetInput] = useState('10');
   const [notifTab, setNotifTab] = useState<HomeNotifTab>('ALL');
   const [notifShowAll, setNotifShowAll] = useState(false);
   const notificacoesRef = useRef<HTMLDivElement>(null);
 
+  // Social Trade: atividades do mercado
+  const [marketActivities] = useState(() => generateMockActivities(10));
+
   useEffect(() => {
     setNotifShowAll(false);
   }, [notifTab]);
+
+  useEffect(() => {
+    if (!amistosoOpen) {
+      setOpponentQuery('');
+      setAmistosoOnlineHits([]);
+      setAmistosoOfflineHits([]);
+      setAmistosoLookupMessage(null);
+      setSelectedOnlineOpponent(null);
+      setSelectedOfflineOpponent(null);
+      setWaitingChallenge(null);
+      unsubscribeChannel(waitChannelRef.current);
+      waitChannelRef.current = null;
+    }
+  }, [amistosoOpen]);
+
+  useEffect(() => {
+    if (!amistosoOpen) return;
+    void (async () => {
+      const sb = getSupabase();
+      if (!sb) {
+        setHasOnlineSession(false);
+        return;
+      }
+      const { data } = await sb.auth.getUser();
+      setHasOnlineSession(!!data.user);
+    })();
+  }, [amistosoOpen]);
+
+  const useOnlineInviteFlow = isSupabaseConfigured() && hasOnlineSession;
+
+  const refundChallengeOnce = (challengeId: string, fn: () => void) => {
+    if (refundedChallengeIdsRef.current.has(challengeId)) return;
+    refundedChallengeIdsRef.current.add(challengeId);
+    fn();
+  };
+
+  const refundWaitingStake = (meta: {
+    id: string;
+    opponentName: string;
+    mode: 'live' | 'quick' | 'penalty';
+    betCurrency: 'BRO' | 'EXP';
+    prizeBroUnits: number;
+    prizeExp: number;
+  }) => {
+    refundChallengeOnce(meta.id, () => {
+    if (meta.betCurrency === 'BRO') {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: meta.opponentName,
+        mode: meta.mode,
+        currency: 'BRO',
+        prizeAmount: meta.prizeBroUnits,
+      });
+    } else {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: meta.opponentName,
+        mode: meta.mode,
+        currency: 'EXP',
+        prizeAmount: meta.prizeExp,
+      });
+    }
+    });
+  };
+
+  const refundFromChallengeRow = (row: FriendlyChallengeRow) => {
+    refundChallengeOnce(row.id, () => {
+    const name = row.challenged_club_name;
+    if (row.bet_currency === 'BRO' && row.bet_bro_cents != null && row.bet_bro_cents > 0) {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: name,
+        mode: row.mode,
+        currency: 'BRO',
+        prizeAmount: row.bet_bro_cents / 100,
+      });
+    } else if (row.bet_currency === 'EXP' && row.bet_exp != null && row.bet_exp > 0) {
+      dispatch({
+        type: 'REFUND_FRIENDLY_CHALLENGE',
+        opponentName: name,
+        mode: row.mode,
+        currency: 'EXP',
+        prizeAmount: row.bet_exp,
+      });
+    }
+    });
+  };
+
+  useEffect(() => {
+    if (!waitingChallenge) return;
+    const id = waitingChallenge.id;
+    const sb = getSupabase();
+    if (!sb) return;
+    try {
+      waitChannelRef.current = subscribeFriendlyChallengeUpdates(id, (row: FriendlyChallengeRow) => {
+        if (row.status === 'accepted') {
+          unsubscribeChannel(waitChannelRef.current);
+          waitChannelRef.current = null;
+          setWaitingChallenge(null);
+          setAmistosoOpen(false);
+          const path = (row.mode as string) === 'penalty' ? '/match/penalty' : '/match/quick';
+          navigate(`${path}?fc=${encodeURIComponent(id)}`);
+        } else if (row.status === 'declined' || row.status === 'expired' || row.status === 'cancelled') {
+          unsubscribeChannel(waitChannelRef.current);
+          waitChannelRef.current = null;
+          refundFromChallengeRow(row);
+          setWaitingChallenge(null);
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      unsubscribeChannel(waitChannelRef.current);
+      waitChannelRef.current = null;
+    };
+  }, [waitingChallenge?.id, navigate, dispatch]);
+
+  useEffect(() => {
+    if (!waitingChallenge) return;
+    const iv = window.setInterval(() => setWaitTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [waitingChallenge?.id]);
+
+  const expireHandledIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!waitingChallenge) {
+      expireHandledIdRef.current = null;
+      return;
+    }
+    if (expireHandledIdRef.current === waitingChallenge.id) return;
+    const leftMs = new Date(waitingChallenge.expiresAt).getTime() - Date.now();
+    if (leftMs > 0) return;
+    expireHandledIdRef.current = waitingChallenge.id;
+    const meta = waitingChallenge;
+    void (async () => {
+      await markFriendlyChallengeExpiredIfNeeded(meta.id);
+      const sb = getSupabase();
+      if (sb) {
+        const { data } = await sb.from('friendly_challenges').select('status').eq('id', meta.id).maybeSingle();
+        const st = (data as { status?: string } | null)?.status;
+        if (st === 'pending') {
+          await updateFriendlyChallengeStatus(meta.id, 'expired');
+        }
+      }
+      refundWaitingStake({ id: meta.id, ...meta });
+      unsubscribeChannel(waitChannelRef.current);
+      waitChannelRef.current = null;
+      setWaitingChallenge(null);
+    })();
+  }, [waitingChallenge, waitTick, dispatch]);
 
   const homeFeedInbox = useMemo(
     () => inbox.filter((i) => !isHiddenFromHomeInboxFeed(i)),
@@ -171,7 +449,7 @@ export function Home() {
     [filteredInbox, notifShowAll],
   );
 
-  const scrollToNotificacoes = () => {
+  const scrollToMarketFeed = () => {
     notificacoesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -183,13 +461,14 @@ export function Home() {
   const feeBroCents = betBroCents > 0 ? friendlyChallengeBroFeeCents(betBroCents) : 0;
   const totalBroCents = betBroCents + feeBroCents;
 
-  const startFriendly = () => {
-    const name = opponentName.trim();
-    const oid = opponentId.trim();
-    if (!name || !oid) {
-      alert('Preencha o nome do time e o ID do adversário.');
+  const startOfflineFriendly = () => {
+    const row = selectedOfflineOpponent;
+    if (!row) {
+      alert('Busque e selecione um time no ranking local.');
       return;
     }
+    const name = row.team;
+    const oid = row.entryId;
     if (betCurrency === 'BRO') {
       if (betBroCents < 1) {
         alert('Informe um valor de prêmio em BRO válido.');
@@ -227,13 +506,138 @@ export function Home() {
       });
     }
     setAmistosoOpen(false);
-    navigate(friendlyMode === 'auto' ? '/match/auto' : '/match/quick');
+    navigate(friendlyMode === 'penalty' ? '/match/penalty' : '/match/quick');
+  };
+
+  const cancelWaitingChallenge = async () => {
+    if (!waitingChallenge) return;
+    await updateFriendlyChallengeStatus(waitingChallenge.id, 'cancelled');
+    refundWaitingStake({ id: waitingChallenge.id, ...waitingChallenge });
+    unsubscribeChannel(waitChannelRef.current);
+    waitChannelRef.current = null;
+    setWaitingChallenge(null);
+  };
+
+  const sendOnlineFriendlyChallenge = async () => {
+    const hit = selectedOnlineOpponent;
+    if (!hit) {
+      alert('Busque e selecione um clube com conta online.');
+      return;
+    }
+    if (betCurrency === 'BRO') {
+      if (betBroCents < 1) {
+        alert('Informe um valor de prêmio em BRO válido.');
+        return;
+      }
+      if (finance.broCents < totalBroCents) {
+        alert('Saldo BRO insuficiente para prêmio + taxa de 5% (feeChallenger).');
+        return;
+      }
+    } else {
+      const exp = Math.max(1, Math.round(parseFloat(betInput.replace(',', '.')) || 0));
+      if (Number.isNaN(exp) || exp < 1) {
+        alert('Informe um valor inteiro de EXP para o prêmio.');
+        return;
+      }
+      if (finance.ole < exp) {
+        alert('Saldo EXP insuficiente.');
+        return;
+      }
+    }
+    const created = await createFriendlyChallenge({
+      challengedClubId: hit.club_id,
+      challengedClubName: hit.name,
+      challengerClubName: club.name,
+      mode: friendlyMode,
+      betCurrency,
+      betBroCents: betCurrency === 'BRO' ? betBroCents : null,
+      betExp:
+        betCurrency === 'EXP'
+          ? Math.max(1, Math.round(parseFloat(betInput.replace(',', '.')) || 0))
+          : null,
+    });
+    if ('error' in created) {
+      alert(created.error);
+      return;
+    }
+    const expVal = Math.max(1, Math.round(parseFloat(betInput.replace(',', '.')) || 0));
+    if (betCurrency === 'BRO') {
+      dispatch({
+        type: 'START_FRIENDLY_CHALLENGE',
+        opponentName: hit.name,
+        opponentId: hit.club_id,
+        mode: friendlyMode,
+        currency: 'BRO',
+        prizeAmount: betBroCents / 100,
+      });
+    } else {
+      dispatch({
+        type: 'START_FRIENDLY_CHALLENGE',
+        opponentName: hit.name,
+        opponentId: hit.club_id,
+        mode: friendlyMode,
+        currency: 'EXP',
+        prizeAmount: expVal,
+      });
+    }
+    const expiresAt = new Date(Date.now() + FRIENDLY_CHALLENGE_TTL_SEC * 1000).toISOString();
+    refundedChallengeIdsRef.current.delete(created.id);
+    setWaitingChallenge({
+      id: created.id,
+      expiresAt,
+      opponentName: hit.name,
+      mode: friendlyMode,
+      betCurrency,
+      prizeBroUnits: betBroCents / 100,
+      prizeExp: expVal,
+    });
   };
 
   const fullSorted = useMemo(
-    () => getFullRankingEntries(club.name, finance.ole),
-    [club.name, finance.ole],
+    () => getFullRankingEntries(club.name, finance.ole, club.id),
+    [club.name, finance.ole, club.id],
   );
+
+  const lookupAmistosoOpponent = () => {
+    const q = opponentQuery.trim();
+    if (!q) {
+      setAmistosoOfflineHits([]);
+      setAmistosoOnlineHits([]);
+      setAmistosoLookupMessage('Digite o nome (ou parte) do time e toque em Buscar time.');
+      return;
+    }
+    if (useOnlineInviteFlow) {
+      setAmistosoSearchBusy(true);
+      void (async () => {
+        const hits = await searchClubsForFriendly(q);
+        setAmistosoSearchBusy(false);
+        setAmistosoOnlineHits(hits);
+        setAmistosoLookupMessage(
+          hits.length ? null : 'Nenhum clube online encontrado. Tente outro termo (mín. 2 letras).',
+        );
+      })();
+      return;
+    }
+    const hits = filterOpponentRankingMatches(fullSorted, q, 12);
+    setAmistosoOfflineHits(hits);
+    setAmistosoLookupMessage(
+      hits.length ? null : 'Nenhum time encontrado no ranking local. Tente outro termo.',
+    );
+  };
+
+  const pickOnlineOpponent = (hit: ClubSearchHit) => {
+    setSelectedOnlineOpponent(hit);
+    setOpponentQuery(hit.name);
+    setAmistosoOnlineHits([]);
+    setAmistosoLookupMessage(null);
+  };
+
+  const pickOfflineOpponent = (row: RankingEntry) => {
+    setSelectedOfflineOpponent(row);
+    setOpponentQuery(row.team);
+    setAmistosoOfflineHits([]);
+    setAmistosoLookupMessage(null);
+  };
 
   const ranking = useMemo(
     () => buildHomeRankingPreview(fullSorted, searchTeam, favorites),
@@ -241,230 +645,343 @@ export function Home() {
   );
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-8">
-      {/* Header Mobile */}
-      <div className="mb-6 flex min-w-0 items-center justify-between gap-2 md:hidden">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-neon-yellow font-display text-xl font-bold text-black -skew-x-6">
-            <span className="skew-x-6">O</span>
-          </div>
-          <h1 className="truncate font-display text-xl font-black italic tracking-widest min-[360px]:text-2xl">
-            OLEFOOT
-          </h1>
-        </div>
-        <Link
-          to="/wallet"
-          className="flex max-w-[min(100%,11rem)] shrink-0 items-center gap-2 border border-white/10 bg-[#111] px-2 py-1.5 min-[360px]:px-3"
-        >
-          <span className="truncate text-xs font-display font-bold tracking-wider text-neon-yellow min-[360px]:text-sm">
-            {formatExp(finance.ole)} EXP
-          </span>
-        </Link>
-      </div>
-
-      {/* Next Game Banner — duelo destaques + matchday */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative isolate overflow-hidden bg-[#111] border border-white/10"
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
+      <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6 sm:space-y-8">
+      {/* HERO PRINCIPAL — Matchday Hero do ÚLTIMO JOGO (placar real + MVP) */}
+      <section
+        aria-label="Último jogo"
+        className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-6"
       >
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(180deg, rgba(9,9,9,0.5) 0%, rgba(9,9,9,0.68) 50%, rgba(9,9,9,0.78) 100%), url(/banners/presets/fundo-div-home.jpg)',
-          }}
-        />
-        <div
-          className="absolute inset-0 z-[1] opacity-[0.18] pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(#fff 1.5px, transparent 1.5px)', backgroundSize: '14px 14px' }}
-        />
-        <div className="absolute left-1/2 top-[42%] z-[1] -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] h-64 bg-neon-yellow/25 blur-[80px] rounded-full pointer-events-none" />
+        {(() => {
+          const last5 = results.slice(0, 5);
+          const wins = last5.filter((r) => r.result === 'win').length;
+          const draws = last5.filter((r) => r.result === 'draw').length;
+          const losses = last5.filter((r) => r.result === 'loss').length;
+          const lastMatch = results[0];
+          const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
 
-        <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-6 md:px-10 md:py-8 flex flex-col gap-5 lg:gap-6">
-          {/* Cabeçalho: matchday + horário + duelo (nomes completos + brasões) */}
-          <div className="text-center space-y-2.5">
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-              <span className="bg-neon-yellow text-black font-display font-bold px-2.5 py-1 text-xs sm:text-sm tracking-widest -skew-x-6 uppercase">
-                Matchday
-              </span>
-              <span className="text-gray-400 font-display tracking-widest text-xs sm:text-sm uppercase">
-                {fixture.kickoffLabel}
-              </span>
-            </div>
-            <MatchdayVersusTitle
-              homeName={club.name}
-              awayName={fixture.opponent.name}
-              awaySeed={fixture.opponent.id}
-              className="text-[clamp(0.75rem,2.85vw+0.35rem,1.125rem)] sm:text-[clamp(1.05rem,2.4vw+0.5rem,1.65rem)] md:text-[2rem] lg:text-[2.35rem]"
-              vsClassName="text-[0.9em] sm:text-[0.95em] md:text-[1em]"
+          // Sem histórico → estado "antes da estreia" (coerente com o tema
+          // do hero: ÚLTIMA partida; aqui não houve nenhuma ainda).
+          if (!lastMatch) {
+            return (
+              <MatchdayHero
+                data={{
+                  competition: 'Sem jogos disputados',
+                  statusPrimary: 'Estreia',
+                  statusSecondary: 'Aguardando',
+                  statusVariant: 'preview',
+                  solidYellow: true,
+                  home: {
+                    short: homeShort,
+                    name: club.name,
+                    score: 0,
+                    crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
+                  },
+                  away: {
+                    short: '—',
+                    name: 'Adversário',
+                    score: 0,
+                    crestUrl: HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null,
+                  },
+                  stats: [
+                    { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
+                    { label: 'Vitórias', value: '0' },
+                    { label: 'Empates', value: '0' },
+                    { label: 'Derrotas', value: '0' },
+                    { label: 'Ranking', value: '—' },
+                  ],
+                  highlight: {
+                    name: homeHighlight.name,
+                    number: homeHighlight.ovr,
+                    quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. Pronto para a primeira partida.`,
+                    photoUrl: homeHighlight.imageSrc,
+                  },
+                  actions: [
+                    { label: 'Ver elenco', href: '/team', variant: 'primary' },
+                  ],
+                  topLeft: { label: 'Olefoot' },
+                  scrollCueTargetId: 'home-below-fold',
+                }}
+              />
+            );
+          }
+
+          // ── Modo RESULTADO (último jogo) ────────────────────────────
+          const awayShort = lastMatch.away.slice(0, 3).toUpperCase();
+
+          // Calcular ranking e variação percentual
+          const currentRanking = 1; // TODO: pegar do sistema de ranking real
+          const previousRanking = 1; // TODO: pegar do histórico de ranking
+          const rankingChange = previousRanking > 0
+            ? Math.round(((previousRanking - currentRanking) / previousRanking) * 100)
+            : 0;
+          const rankingChangeStr = rankingChange > 0
+            ? `+${rankingChange}%`
+            : rankingChange < 0
+              ? `${rankingChange}%`
+              : '0%';
+
+          // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
+          const mvp = lastMatch.scoutMvp;
+          // Ignora MVP se for o fallback 'Equipe' (sem playerId válido)
+          const isValidMvp = mvp && mvp.playerId && mvp.name !== 'Equipe';
+          const mvpEntity = isValidMvp ? players[mvp.playerId] : null;
+          const mvpOvr = mvpEntity
+            ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs)
+            : homeHighlight.ovr;
+          const mvpName = isValidMvp ? mvp.name : homeHighlight.name;
+          const mvpQuote = isValidMvp ? mvp.headline : `OVR ${mvpOvr} · jogador de impacto.`;
+          const mvpPhoto = mvpEntity
+            ? playerPortraitSrc(
+                { name: mvpEntity.name, portraitUrl: mvpEntity.portraitUrl },
+                400,
+                520,
+              )
+            : homeHighlight.imageSrc;
+
+          return (
+            <MatchdayHero
+              data={{
+                competition: lastMatch.status || 'Último jogo',
+                statusPrimary: 'Final',
+                statusSecondary:
+                  lastMatch.result === 'win'
+                    ? 'Vitória'
+                    : lastMatch.result === 'draw'
+                      ? 'Empate'
+                      : 'Derrota',
+                statusVariant: 'preview',
+                solidYellow: true,
+                home: {
+                  short: homeShort,
+                  name: lastMatch.home || club.name,
+                  score: lastMatch.scoreHome,
+                  crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
+                },
+                away: {
+                  short: awayShort,
+                  name: lastMatch.away,
+                  score: lastMatch.scoreAway,
+                  crestUrl: awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null),
+                },
+                stats: [
+                  { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
+                  { label: 'Ranking', value: rankingChangeStr },
+                  { label: 'Vitórias', value: `${wins}` },
+                  { label: 'Empates', value: `${draws}` },
+                  { label: 'Derrotas', value: `${losses}` },
+                ],
+                highlight: {
+                  name: mvpName,
+                  number: mvpOvr,
+                  quote: mvpQuote,
+                  photoUrl: mvpPhoto,
+                },
+                actions: results.length === 0
+                  ? [
+                      {
+                        label: 'Sem jogos registrados',
+                        href: '#',
+                        variant: 'secondary' as const,
+                        disabled: true
+                      },
+                    ]
+                  : [
+                      { label: 'Ver postgame', href: '/postgame', variant: 'primary' as const },
+                    ],
+                topLeft: { label: 'Olefoot' },
+                scrollCueTargetId: 'home-below-fold',
+              }}
             />
-            <p className="text-gray-400 text-sm font-medium tracking-wide">
-              {fixture.venue} · {fixture.competition}
+          );
+        })()}
+      </section>
+
+      <DashboardGrid id="home-below-fold">
+      {/* PRÓXIMA PARTIDA — wide */}
+      {fixture?.opponent ? (
+        <DashboardSection
+          size="wide"
+          ariaLabel="Próxima partida"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
+        >
+          <div className="w-full max-w-full min-w-0 px-3 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
+            {/* Eyebrow centralizado */}
+            <div
+              className="ole-eyebrow !text-neon-yellow"
+              style={{ fontFamily: 'var(--font-ui)' }}
+            >
+              <span>Próxima partida · {fixture.kickoffLabel}</span>
+            </div>
+
+            {/* Duelo: [crest] CASA × VISITANTE [crest] — brasões reais quando houver
+                (em DEV, fallback nos crests Wikimedia pra preview) */}
+            {(() => {
+              const renderHomeCrest = homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null);
+              const renderAwayCrest = awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null);
+              return (
+            <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-full min-w-0">
+              {renderHomeCrest ? (
+                <img
+                  src={renderHomeCrest}
+                  alt={club.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                  referrerPolicy="no-referrer"
+                  draggable={false}
+                />
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
+                    {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <span
+                className="text-neon-yellow/85 leading-none select-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontStyle: 'italic',
+                  fontSize: 'clamp(28px, 4.5vw, 44px)',
+                  letterSpacing: '-0.04em',
+                  transform: 'translateY(-0.04em)',
+                }}
+              >
+                ×
+              </span>
+              {renderAwayCrest ? (
+                <img
+                  src={renderAwayCrest}
+                  alt={fixture.opponent.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                  referrerPolicy="no-referrer"
+                  draggable={false}
+                />
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
+                  <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
+                    {(fixture.opponent.shortName ?? fixture.opponent.name)
+                      .slice(0, 3)
+                      .toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+              );
+            })()}
+
+            {/* Liga + Estádio — abaixo dos ícones, centralizado */}
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {fixture.competition} · {fixture.venue}
             </p>
-          </div>
 
-          {/* Duelo: destaque casa × destaque visitante — fotos centralizadas (largura explícita: evita colapso com flex + items-center) */}
-          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-10 w-full">
-            {/* Casa */}
-            <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
-              <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/15 shadow-lg bg-dark-gray">
-                <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(`${homeHighlight.id || homeHighlight.name}-home`)}/400/520`}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover object-top"
-                  referrerPolicy="no-referrer"
-                />
-                <div
-                  className="absolute left-2.5 top-2.5 z-20 flex h-9 w-[2.1rem] items-center justify-center bg-neon-yellow text-black font-display font-black text-sm shadow-[0_0_16px_rgba(234,255,0,0.4)]"
-                  style={{
-                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                  }}
-                >
-                  {homeHighlight.ovr}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent pointer-events-none z-[1]" />
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-12 flex flex-col items-center text-center gap-0.5">
-                  <span className="text-neon-yellow font-display font-bold text-[9px] sm:text-[10px] tracking-[0.2em] uppercase">
-                    Destaque
-                  </span>
-                  <p className="text-white font-display font-black text-xs sm:text-sm uppercase tracking-wide truncate max-w-full w-full leading-tight">
-                    {homeHighlight.name}
-                  </p>
-                  <div className="flex gap-0.5 justify-center mt-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          'w-3 h-3 sm:w-3.5 sm:h-3.5',
-                          i < starsForOvr(homeHighlight.ovr) ? 'text-amber-400 fill-amber-400' : 'text-white/15',
-                        )}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Visitante */}
-            <div className="flex flex-col items-center shrink-0 w-[min(100%,200px)] sm:w-[200px]">
-              <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-white/15 shadow-lg bg-dark-gray">
-                <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(awayHighlight.imgSeed)}/400/520`}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover object-top"
-                  referrerPolicy="no-referrer"
-                />
-                <div
-                  className="absolute left-2.5 top-2.5 z-20 flex h-9 w-[2.1rem] items-center justify-center bg-neon-yellow text-black font-display font-black text-sm shadow-[0_0_16px_rgba(234,255,0,0.4)]"
-                  style={{
-                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                  }}
-                >
-                  {awayHighlight.ovr}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent pointer-events-none z-[1]" />
-                <div className="absolute bottom-0 left-0 right-0 z-10 px-3 pb-3 pt-12 flex flex-col items-center text-center gap-0.5">
-                  <span className="text-neon-yellow font-display font-bold text-[9px] sm:text-[10px] tracking-[0.2em] uppercase">
-                    Destaque
-                  </span>
-                  <p className="text-white font-display font-black text-xs sm:text-sm uppercase tracking-wide truncate max-w-full w-full leading-tight">
-                    {awayHighlight.name}
-                  </p>
-                  <div className="flex gap-0.5 justify-center mt-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          'w-3 h-3 sm:w-3.5 sm:h-3.5',
-                          i < starsForOvr(awayHighlight.ovr) ? 'text-amber-400 fill-amber-400' : 'text-white/15',
-                        )}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Ações */}
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 pt-2 border-t border-white/10">
-            <div className="flex flex-col gap-3 w-full lg:max-w-md">
-              <Link to="/match/live" className="w-full">
-                <button type="button" className="btn-primary w-full text-lg sm:text-xl py-3.5 sm:py-4">
-                  <span className="btn-primary-inner">
-                    <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-black shrink-0" />
-                    IR PARA O JOGO
-                  </span>
-                </button>
+            {/* Ações centralizadas */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1">
+              <Link
+                to="/match/quick"
+                className="bg-neon-yellow text-black hover:bg-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                Partida rápida
               </Link>
-              <div className="flex items-center justify-center lg:justify-start gap-2">
-                <Link
-                  to="/match/quick"
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-center text-xs font-display font-bold uppercase tracking-wider text-gray-300 hover:border-white/20 hover:text-white transition-colors"
-                >
-                  Partida Rápida
-                </Link>
-                <Link
-                  to="/match/auto"
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-center text-xs font-display font-bold uppercase tracking-wider text-gray-300 hover:border-white/20 hover:text-white transition-colors"
-                >
-                  Automático
-                </Link>
-              </div>
+              <Link
+                to="/team"
+                className="bg-deep-black border border-[var(--color-border)] text-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                Ver táticas
+              </Link>
             </div>
-            <Link to="/team/tatica" className="w-full lg:w-auto lg:min-w-[200px]">
-              <button type="button" className="btn-secondary w-full py-3">
-                <span className="btn-secondary-inner">TÁTICAS</span>
-              </button>
-            </Link>
           </div>
-        </div>
-      </motion.div>
+        </DashboardSection>
+      ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Torcidômetro - Industrial Style */}
-        <motion.div 
+        {/* Apoio da Torcida — sm */}
+        <DashboardSection size="sm">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="sports-panel panel-accent p-6"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <h3 className="font-display font-bold text-xl text-gray-400 uppercase tracking-wider">Apoio da Torcida</h3>
-              <div className="text-4xl font-display font-black text-white mt-1">{supportLabel}<span className="text-2xl text-neon-yellow">%</span></div>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 flex flex-col items-center text-center gap-4">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Apoio da torcida</span>
             </div>
-            <Activity className="w-8 h-8 text-neon-yellow opacity-50 mb-1" />
+            {/* Valor central — Moret italic editorial */}
+            <p
+              className="italic text-neon-yellow leading-none tabular-nums"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {supportLabel}
+              <span
+                className="ml-1 text-white/45 not-italic"
+                style={{ fontFamily: 'var(--font-display)', fontSize: '0.55em' }}
+              >
+                %
+              </span>
+            </p>
+            {/* Barra */}
+            <div className="w-full h-2 bg-dark-gray overflow-hidden relative" style={{ borderRadius: 'var(--radius-sm)' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${roundedSupport}%` }}
+                transition={{ duration: 1, delay: 0.5 }}
+                className="absolute top-0 left-0 h-full bg-neon-yellow"
+              />
+            </div>
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {crowd.moodLabel}
+            </p>
           </div>
-          <div className="h-2 bg-dark-gray overflow-hidden relative skew-x-[-10deg]">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${roundedSupport}%` }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="absolute top-0 left-0 h-full bg-neon-yellow"
-            />
-          </div>
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-4">Status: {crowd.moodLabel}</p>
         </motion.div>
+        </DashboardSection>
 
-        {/* Últimos resultados — alinhado ao bloco industrial da grelha (Torcidômetro / Amistoso) */}
+        {/* Últimos resultados — md (lista alta) */}
+        <DashboardSection size="md">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="sports-panel panel-accent p-0 overflow-hidden flex flex-col min-h-[300px]"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden flex flex-col min-h-[300px]"
         >
-          <div className="flex justify-between items-end gap-3 px-6 pt-6 pb-4 border-b border-white/10">
-            <div className="min-w-0">
-              <h3 className="font-display font-bold text-xl text-gray-400 uppercase tracking-wider">Últimos resultados</h3>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">
-                {results.length > 0
-                  ? `${Math.min(5, results.length)} últimos · o teu percurso`
-                  : 'Histórico vazio'}
-              </p>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Últimos resultados</span>
             </div>
-            <Trophy className="w-8 h-8 text-neon-yellow opacity-50 shrink-0 mb-0.5" />
+            <p
+              className="text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {results.length > 0
+                ? `${Math.min(5, results.length)} últimos · o teu percurso`
+                : 'Histórico vazio'}
+            </p>
           </div>
 
           <div className="px-6 py-4 flex-1 flex flex-col gap-2">
@@ -553,33 +1070,30 @@ export function Home() {
             )}
           </div>
 
-          <div className="px-6 pb-6 pt-2">
+          <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-2">
             <button
               type="button"
-              onClick={scrollToNotificacoes}
-              className="w-full py-2.5 border border-white/10 bg-dark-gray text-[10px] font-display font-bold uppercase tracking-widest text-gray-400 hover:text-neon-yellow hover:border-neon-yellow/25 transition-colors"
+              onClick={scrollToMarketFeed}
+              className="w-full py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              }}
             >
-              Ver notificações ↓
+              Ver atividades do mercado ↓
             </button>
           </div>
         </motion.div>
+        </DashboardSection>
 
-        {/* Create Game */}
-        <motion.button
-          type="button"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          onClick={() => setAmistosoOpen(true)}
-          className="sports-panel p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:border-neon-yellow transition-colors group w-full"
-        >
-          <div className="w-16 h-16 bg-dark-gray border border-white/10 flex items-center justify-center mb-4 -skew-x-6 group-hover:bg-neon-yellow transition-colors">
-            <Zap className="w-8 h-8 text-white group-hover:text-black skew-x-6 transition-colors" />
-          </div>
-          <h3 className="font-display font-bold text-2xl uppercase tracking-wider">Amistoso</h3>
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">Desafie Rivais</p>
-        </motion.button>
-      </div>
+        {/* Amistoso — sm */}
+        <FriendlyMatchBox />
+      </DashboardGrid>
 
       <AnimatePresence>
         {amistosoOpen && (
@@ -592,7 +1106,10 @@ export function Home() {
             >
               <button
                 type="button"
-                onClick={() => setAmistosoOpen(false)}
+                onClick={() => {
+                  if (waitingChallenge) void cancelWaitingChallenge();
+                  setAmistosoOpen(false);
+                }}
                 className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-gray-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
@@ -602,110 +1119,221 @@ export function Home() {
                 <p className="mt-2 text-sm leading-snug text-gray-300">Mostre que você é o melhor no jogo</p>
               </div>
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain p-6">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-1.5">Buscar (Time, ID)</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    <input
-                      value={opponentName}
-                      onChange={(e) => setOpponentName(e.target.value)}
-                      placeholder="Nome do time"
-                      className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      value={opponentId}
-                      onChange={(e) => setOpponentId(e.target.value)}
-                      placeholder="ID do adversário"
-                      className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Modo de partida</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFriendlyMode('auto')}
-                      className={cn(
-                        'py-2.5 rounded text-xs font-display font-bold uppercase border',
-                        friendlyMode === 'auto' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
+                {waitingChallenge ? (
+                  <div className="space-y-4 py-2 text-center">
+                    <p className="text-sm font-bold text-white">À espera de {waitingChallenge.opponentName}</p>
+                    <p className="text-[11px] text-gray-500">
+                      O adversário tem {FRIENDLY_CHALLENGE_TTL_SEC}s para aceitar (ambos online). Quando aceitar, a
+                      partida abre automaticamente.
+                    </p>
+                    <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-4 border-neon-yellow/40 font-display text-3xl font-black text-neon-yellow">
+                      {Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(waitingChallenge.expiresAt).getTime() - Date.now()) / 1000,
+                        ),
                       )}
-                    >
-                      Partida Automática
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFriendlyMode('quick')}
-                      className={cn(
-                        'py-2.5 rounded text-xs font-display font-bold uppercase border',
-                        friendlyMode === 'quick' ? 'bg-neon-yellow text-black border-neon-yellow' : 'border-white/15 text-gray-400',
-                      )}
-                    >
-                      Partida Rápida
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Bet (prêmio do vencedor)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setBetCurrency('BRO')}
-                        className={cn(
-                          'px-2 py-1 rounded text-[10px] font-bold uppercase',
-                          betCurrency === 'BRO' ? 'bg-white text-black' : 'bg-white/5 text-gray-500',
-                        )}
-                      >
-                        BRO
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBetCurrency('EXP')}
-                        className={cn(
-                          'px-2 py-1 rounded text-[10px] font-bold uppercase',
-                          betCurrency === 'EXP' ? 'bg-neon-yellow text-black' : 'bg-white/5 text-gray-500',
-                        )}
-                      >
-                        EXP
-                      </button>
+                      s
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => void cancelWaitingChallenge()}
+                      className="w-full border border-white/15 py-2.5 text-xs font-bold uppercase text-gray-400 hover:bg-white/5"
+                    >
+                      Cancelar convite
+                    </button>
                   </div>
-                  <input
-                    value={betInput}
-                    onChange={(e) => setBetInput(e.target.value)}
-                    placeholder={betCurrency === 'BRO' ? 'Ex.: 10,50' : 'Ex.: 500'}
-                    className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
-                  />
-                  {betCurrency === 'BRO' && betBroCents > 0 && (
-                    <div className="mt-2 text-[11px] text-gray-500 space-y-1 border border-white/10 rounded p-2 bg-black/30">
-                      <div className="flex justify-between">
-                        <span>Prêmio ao vencedor</span>
-                        <span className="text-white font-bold">{(betBroCents / 100).toFixed(2)} BRO</span>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-1.5">
+                        {useOnlineInviteFlow ? 'Buscar clube (conta online)' : 'Buscar adversário (ranking local)'}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          value={opponentQuery}
+                          onChange={(e) => {
+                            setOpponentQuery(e.target.value);
+                            setAmistosoOnlineHits([]);
+                            setAmistosoOfflineHits([]);
+                            setAmistosoLookupMessage(null);
+                            setSelectedOnlineOpponent(null);
+                            setSelectedOfflineOpponent(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              lookupAmistosoOpponent();
+                            }
+                          }}
+                          placeholder={useOnlineInviteFlow ? 'Nome do clube (mín. 2 letras)' : 'Nome do time'}
+                          className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
+                        />
+                        <button
+                          type="button"
+                          disabled={amistosoSearchBusy}
+                          onClick={() => void lookupAmistosoOpponent()}
+                          className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded border border-neon-yellow/50 bg-neon-yellow/10 px-3 py-2 text-[11px] font-display font-bold uppercase tracking-wide text-neon-yellow hover:bg-neon-yellow/20 disabled:opacity-40"
+                        >
+                          <Search className="h-4 w-4" />
+                          <span className="hidden min-[380px]:inline">Buscar time</span>
+                        </button>
                       </div>
-                      <div className="flex justify-between text-neon-yellow/90">
-                        <span>Taxa plataforma ({Math.round(FRIENDLY_CHALLENGE_BRO_FEE_RATE * 100)}% · feeChallenger)</span>
-                        <span className="font-bold">{(feeBroCents / 100).toFixed(2)} BRO</span>
+                      <p className="mt-1.5 text-[10px] text-gray-600 leading-snug">
+                        {useOnlineInviteFlow
+                          ? 'Só aparecem clubes com perfil Supabase. Seleciona um resultado — não precisas de ID.'
+                          : 'Sem sessão online: ranking local Olefoot. Ao enviar, entras logo em campo (sem convite).'}
+                      </p>
+                      {amistosoLookupMessage ? (
+                        <p className="mt-2 text-[11px] text-amber-200/90">{amistosoLookupMessage}</p>
+                      ) : null}
+                      {useOnlineInviteFlow && selectedOnlineOpponent ? (
+                        <p className="mt-2 text-xs text-neon-yellow">
+                          Selecionado: <strong>{selectedOnlineOpponent.name}</strong>
+                        </p>
+                      ) : null}
+                      {!useOnlineInviteFlow && selectedOfflineOpponent ? (
+                        <p className="mt-2 text-xs text-neon-yellow">
+                          Selecionado: <strong>{selectedOfflineOpponent.team}</strong>
+                        </p>
+                      ) : null}
+                      {useOnlineInviteFlow && amistosoOnlineHits.length > 0 ? (
+                        <ul className="mt-2 max-h-40 overflow-y-auto rounded border border-white/10 divide-y divide-white/5">
+                          {amistosoOnlineHits.map((hit) => (
+                            <li key={hit.club_id}>
+                              <button
+                                type="button"
+                                onClick={() => pickOnlineOpponent(hit)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-white/5"
+                              >
+                                <span className="min-w-0 truncate font-display font-bold text-white">{hit.name}</span>
+                                <span className="shrink-0 text-[10px] text-gray-500">{hit.short_name}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {!useOnlineInviteFlow && amistosoOfflineHits.length > 0 ? (
+                        <ul className="mt-2 max-h-40 overflow-y-auto rounded border border-white/10 divide-y divide-white/5">
+                          {amistosoOfflineHits.map((row) => (
+                            <li key={row.entryId}>
+                              <button
+                                type="button"
+                                onClick={() => pickOfflineOpponent(row)}
+                                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-white/5"
+                              >
+                                <span className="min-w-0 truncate font-display font-bold text-white">{row.team}</span>
+                                <span className="shrink-0 text-[10px] text-gray-500">{formatExp(row.exp)} EXP</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
+                        Modo de partida
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFriendlyMode('quick')}
+                          className={cn(
+                            'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                            friendlyMode === 'quick'
+                              ? 'bg-neon-yellow text-black border-neon-yellow'
+                              : 'border-white/15 text-gray-400',
+                          )}
+                        >
+                          Partida Rápida
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFriendlyMode('penalty')}
+                          className={cn(
+                            'py-2.5 rounded text-xs font-display font-bold uppercase border',
+                            friendlyMode === 'penalty'
+                              ? 'bg-neon-yellow text-black border-neon-yellow'
+                              : 'border-white/15 text-gray-400',
+                          )}
+                        >
+                          Disputa Penalty
+                        </button>
                       </div>
-                      <div className="flex justify-between pt-1 border-t border-white/10 font-bold text-white">
-                        <span>Total debitado</span>
-                        <span>{(totalBroCents / 100).toFixed(2)} BRO</span>
-                      </div>
-                      <p className="text-[10px] text-gray-600 pt-1">
-                        A taxa credita a tesouraria da empresa (destino final configurável no Admin).
+                      <p className="mt-2 text-[10px] text-gray-500 leading-snug">
+                        Partida Rápida segue as regras oficiais da liga. Disputa Penalty é uma disputa de 5 cobranças.
                       </p>
                     </div>
-                  )}
-                  {betCurrency === 'EXP' && (
-                    <p className="text-[10px] text-gray-600 mt-2">Desafios em EXP não cobram taxa de plataforma neste fluxo.</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={startFriendly}
-                  className="w-full btn-primary py-3"
-                >
-                  <span className="btn-primary-inner">Criar desafio e jogar</span>
-                </button>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                          Bet (prêmio do vencedor)
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setBetCurrency('BRO')}
+                            className={cn(
+                              'px-2 py-1 rounded text-[10px] font-bold uppercase',
+                              betCurrency === 'BRO' ? 'bg-white text-black' : 'bg-white/5 text-gray-500',
+                            )}
+                          >
+                            BRO
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBetCurrency('EXP')}
+                            className={cn(
+                              'px-2 py-1 rounded text-[10px] font-bold uppercase',
+                              betCurrency === 'EXP' ? 'bg-neon-yellow text-black' : 'bg-white/5 text-gray-500',
+                            )}
+                          >
+                            EXP
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        value={betInput}
+                        onChange={(e) => setBetInput(e.target.value)}
+                        placeholder={betCurrency === 'BRO' ? 'Ex.: 10,50' : 'Ex.: 500'}
+                        className="w-full bg-black/40 border border-white/15 rounded px-3 py-2 text-sm"
+                      />
+                      {betCurrency === 'BRO' && betBroCents > 0 && (
+                        <div className="mt-2 text-[11px] text-gray-500 space-y-1 border border-white/10 rounded p-2 bg-black/30">
+                          <div className="flex justify-between">
+                            <span>Prêmio ao vencedor</span>
+                            <span className="text-white font-bold">{(betBroCents / 100).toFixed(2)} BRO</span>
+                          </div>
+                          <div className="flex justify-between text-neon-yellow/90">
+                            <span>Taxa plataforma ({Math.round(FRIENDLY_CHALLENGE_BRO_FEE_RATE * 100)}% · feeChallenger)</span>
+                            <span className="font-bold">{(feeBroCents / 100).toFixed(2)} BRO</span>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-white/10 font-bold text-white">
+                            <span>Total debitado</span>
+                            <span>{(totalBroCents / 100).toFixed(2)} BRO</span>
+                          </div>
+                          <p className="text-[10px] text-gray-600 pt-1">
+                            A taxa credita a tesouraria da empresa (destino final configurável no Admin).
+                          </p>
+                        </div>
+                      )}
+                      {betCurrency === 'EXP' && (
+                        <p className="text-[10px] text-gray-600 mt-2">
+                          Desafios em EXP não cobram taxa de plataforma neste fluxo.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void (useOnlineInviteFlow ? sendOnlineFriendlyChallenge() : startOfflineFriendly())}
+                      className="w-full btn-primary py-3"
+                    >
+                      <span className="btn-primary-inner">
+                        {useOnlineInviteFlow ? 'Enviar desafio' : 'Criar desafio e jogar'}
+                      </span>
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>
@@ -713,21 +1341,19 @@ export function Home() {
       </AnimatePresence>
 
       {/* Ranking + Notificações */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ranking OLE */}
-        <motion.div 
+      <DashboardGrid>
+        {/* Ranking OLE — md */}
+        <DashboardSection size="md">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="sports-panel p-0"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-dark-gray p-4">
-            <h3 className="min-w-0 truncate font-display text-lg font-bold uppercase tracking-wider min-[390px]:text-xl">
-              Ranking OLE
-            </h3>
-            <span className="shrink-0 text-right text-[10px] font-bold uppercase tracking-wider text-neon-yellow min-[390px]:text-xs">
-              Top 10 por EXP
-            </span>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Ranking OLE · Top 10 por EXP</span>
+            </div>
           </div>
           <div className="p-3 border-b border-white/10">
             <div className="relative">
@@ -769,138 +1395,73 @@ export function Home() {
               </div>
             ))}
           </div>
-          <div className="p-3 border-t border-white/10 bg-black/20">
+          <div className="p-4 sm:p-5 border-t border-white/10 bg-black/20">
             <Link
               to="/ranking"
-              className="flex w-full items-center justify-center gap-2 py-3 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow font-display font-black uppercase text-sm tracking-wider hover:bg-neon-yellow/20 transition-colors"
+              className="flex w-full items-center justify-center gap-2 py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              }}
             >
               Ver ranking completo
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
         </motion.div>
+        </DashboardSection>
 
-        {/* Notificações — inbox operacional (não placares) */}
+        {/* Atividades do Mercado — md */}
+        <DashboardSection size="md">
         <motion.div
           ref={notificacoesRef}
-          id="notificacoes"
+          id="market-feed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="sports-panel p-0 scroll-mt-24"
+          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden scroll-mt-24"
         >
-          <div className="bg-dark-gray p-4 border-b border-white/10 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-              <div>
-                <h3 className="font-display font-bold text-xl uppercase tracking-wider">Notificações</h3>
-                <p className="text-[10px] text-gray-500 mt-1 max-w-md">
-                  Staff, torcida, jogadores e competição. Placares e histórico de jogos ficam na liga e no histórico de partidas.
-                </p>
-              </div>
+          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-3">
+            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+              <span>Atividades do Mercado</span>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
-              {HOME_NOTIF_TABS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setNotifTab(key)}
-                  className={cn(
-                    'px-2.5 py-1 text-[10px] font-display font-bold uppercase tracking-wider border transition-colors',
-                    notifTab === key
-                      ? 'border-neon-yellow text-neon-yellow bg-neon-yellow/10'
-                      : 'border-white/10 text-gray-400 hover:border-white/20',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+            <p
+              className="text-white/55 max-w-md mx-auto"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '11px',
+                lineHeight: 1.5,
+              }}
+            >
+              Compras, vendas e leilões recentes. Fique por dentro das movimentações dos outros managers e clubes IA.
+            </p>
+            <div className="flex gap-2 justify-center pt-1">
+              <Link
+                to="/manager/mensagens"
+                className="rounded-full border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neon-yellow transition-all hover:bg-neon-yellow/20"
+              >
+                Ver Mensagens
+              </Link>
+              <Link
+                to="/transfer"
+                className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
+              >
+                Ir para Mercado
+              </Link>
             </div>
           </div>
 
-          <div className="divide-y divide-white/5">
-            {filteredInbox.length === 0 ? (
-              <div className="p-6 text-center text-sm text-gray-500 space-y-2">
-                <p>Nada nesta categoria na HOME.</p>
-                <p className="text-[11px] text-gray-600 max-w-sm mx-auto leading-relaxed">
-                  Recompensas de EXP e relatórios de staff após cada partida não aparecem aqui — ficam registados na carteira e no fluxo do plantel; o desfecho desportivo está no histórico de jogos.
-                </p>
-              </div>
-            ) : (
-              <>
-                {inboxPanelList.map((news) => (
-                  <div
-                    key={news.id}
-                    className={cn(
-                      'flex items-start gap-4 p-4 hover:bg-white/5 transition-colors',
-                      news.read && 'opacity-70',
-                      news.kind === 'friend_invite' && 'border-l-2 border-fuchsia-500/70 bg-fuchsia-500/[0.06]',
-                    )}
-                  >
-                    <div className="text-gray-500 font-display font-bold text-sm w-12 text-right shrink-0 pt-0.5">
-                      {news.timeLabel}
-                    </div>
-                    <div className="w-1 min-h-[2.5rem] bg-dark-gray relative shrink-0 rounded-sm">
-                      <div className={cn('absolute inset-0', news.colorClass.replace('text-', 'bg-'))} style={{ opacity: 0.5 }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className={cn('text-[10px] font-bold uppercase tracking-widest', news.colorClass)}>{news.tag}</span>
-                        {news.advisorLabel ? (
-                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">{news.advisorLabel}</span>
-                        ) : null}
-                      </div>
-                      <h4 className="font-bold text-md mt-0.5">{news.title}</h4>
-                      {news.body ? <InboxBodyText text={news.body} /> : null}
-                      {news.deepLink && news.kind !== 'friend_invite' ? (
-                        <Link
-                          to={news.deepLink}
-                          className="inline-flex items-center gap-1 mt-2 text-[10px] font-display font-bold uppercase tracking-wider text-neon-yellow/90 hover:text-neon-yellow"
-                        >
-                          Abrir
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </Link>
-                      ) : null}
-                      {news.kind === 'friend_invite' && (
-                        <Link
-                          to="/profile#rede-manager"
-                          className="inline-flex items-center gap-1 mt-2 text-[10px] font-display font-bold uppercase tracking-wider text-fuchsia-400 hover:text-fuchsia-300"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                          Ver solicitações no perfil
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {filteredInbox.length > HOME_NOTIF_VISIBLE_COUNT && (
-                  <div className="p-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-black/20">
-                    <p className="text-[11px] text-gray-500">
-                      A mostrar {notifShowAll ? filteredInbox.length : HOME_NOTIF_VISIBLE_COUNT} de {filteredInbox.length}{' '}
-                      nesta categoria.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setNotifShowAll((v) => !v)}
-                      className="text-[10px] font-display font-bold uppercase tracking-widest text-neon-yellow hover:text-white transition-colors inline-flex items-center gap-1"
-                    >
-                      {notifShowAll ? (
-                        <>
-                          Mostrar menos
-                          <ChevronRight className="w-3.5 h-3.5 rotate-[-90deg]" />
-                        </>
-                      ) : (
-                        <>
-                          Ler tudo
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
+          <div className="px-5 sm:px-6 py-5">
+            <MarketActivityFeed activities={marketActivities} maxVisible={5} />
           </div>
         </motion.div>
+        </DashboardSection>
+      </DashboardGrid>
       </div>
     </div>
   );

@@ -4,11 +4,13 @@ import type { PlayerEntity } from '@/entities/types';
 
 /**
  * Modo automático (`/match/auto`): mesma pipeline que a partida rápida — `runMatchMinute` →
- * `buildSpiritContext` + `gameSpiritTick` (OLEFOOT). Probabilidade de tick ligeiramente
- * abaixo da rápida só para ganhar tempo de CPU; **não** se desliga o GameSpirit (isso
- * aplica-se à Partida ao vivo `test2d` com motor tático + `SIM_SYNC`).
+ * `buildSpiritContext` + `gameSpiritTick` (OLEFOOT). Tick um pouco abaixo da rápida para CPU;
+ * lesões/cartões extra desligados em `runMatchMinute` quando `mode === 'auto'` para caber em ~10s.
  */
-const AUTO_MATCH_SPIRIT_TICK_PROB = 0.56;
+const AUTO_MATCH_SPIRIT_TICK_PROB = 0.54;
+
+/** Minutos por batch na resolução automática (menos overhead JS entre apitos). */
+const AUTO_MINUTES_PER_BATCH = 5;
 
 export function runMatchMinuteBulk(
   input: RunMinuteInput & { steps: number },
@@ -37,17 +39,32 @@ export function advanceMatchToPostgame(input: RunMinuteInput): {
   let snapshot = simInput.snapshot;
   const merged: Record<string, PlayerEntity> = {};
   let guard = 0;
-  while (snapshot.phase === 'playing' && snapshot.minute < 90 && guard < 120) {
+  const maxGuard = isAutoAdvance ? 22 : 120;
+  while (snapshot.phase === 'playing' && snapshot.minute < 90 && guard < maxGuard) {
     guard += 1;
     const roster = simInput.homeRoster.map((r) => merged[r.id] ?? r);
-    const out = runMatchMinute({
-      ...simInput,
-      snapshot,
-      homeRoster: roster,
-      skipEvent: simInput.skipEvent,
-    });
-    snapshot = out.snapshot;
-    Object.assign(merged, out.updatedPlayers);
+    if (isAutoAdvance) {
+      const steps = Math.min(AUTO_MINUTES_PER_BATCH, 90 - snapshot.minute);
+      if (steps <= 0) break;
+      const out = runMatchMinuteBulk({
+        ...simInput,
+        snapshot,
+        homeRoster: roster,
+        skipEvent: simInput.skipEvent,
+        steps,
+      });
+      snapshot = out.snapshot;
+      Object.assign(merged, out.updatedPlayers);
+    } else {
+      const out = runMatchMinute({
+        ...simInput,
+        snapshot,
+        homeRoster: roster,
+        skipEvent: simInput.skipEvent,
+      });
+      snapshot = out.snapshot;
+      Object.assign(merged, out.updatedPlayers);
+    }
   }
   if (snapshot.minute >= 90 && snapshot.phase === 'playing') {
     snapshot = {

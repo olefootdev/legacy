@@ -20,7 +20,7 @@ import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
   assert.ok(p.spiritBuildupGkTicksRemaining >= 1);
 }
 
-// Golo: overlay 3s + barra no extremo do marcador durante flash
+// Gol: overlay 3s + barra no extremo do marcador durante flash
 {
   const { overlay, spiritMomentumClamp01 } = createGoalOverlay({
     nowMs: 1_700_000,
@@ -32,7 +32,7 @@ import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
   assert.equal(spiritMomentumClamp01, 0.98);
 }
 
-// Penálti: estágios avançam banner → walk → kick; kick não avança sem resolve
+// Penalty: estágios avançam banner → walk → kick; kick não avança sem resolve
 {
   let s = advancePenaltyStage({ stage: 'banner', side: 'home', takerName: 'X' });
   assert.equal(s.stage, 'walk');
@@ -42,7 +42,7 @@ import { crowdSpiritFromSupport } from '@/systems/crowdSpirit';
   assert.equal(same.stage, 'kick');
 }
 
-// Desfecho de penálti reprodutível com rng
+// Desfecho de penalty reprodutível com rng
 {
   assert.equal(rollPenaltyOutcome(0.01), 'goal');
   assert.equal(rollPenaltyOutcome(0.55), 'save');

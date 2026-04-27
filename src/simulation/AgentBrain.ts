@@ -81,7 +81,12 @@ export class AgentBrain {
 
     const urgencyBoost = ctx.scoreDiff < 0 && ctx.minute > 70 ? 0.08 : 0;
 
-    if (distToGoal < 22 && shot.xG > 0.06 + urgencyBoost) {
+    const arch = ctx.self.archetype;
+    const shotRangeBonus = arch === 'lenda' ? 5 : arch === 'meme' ? 8 : 0;
+    const shotXgThresholdDelta = arch === 'lenda' ? -0.02 : arch === 'meme' ? -0.03 : 0;
+    const dribbleSkillThreshold = arch === 'meme' ? 40 : arch === 'novo_talento' ? 48 : 55;
+
+    if (distToGoal < 22 + shotRangeBonus && shot.xG > 0.06 + urgencyBoost + shotXgThresholdDelta) {
       if (nearPressure < 3 || shot.xG > 0.12) {
         return { type: 'shoot' };
       }
@@ -108,7 +113,7 @@ export class AgentBrain {
       }
     }
 
-    if (nearPressure < 2 && ctx.self.drible > 55) {
+    if (nearPressure < 2 && ctx.self.drible > dribbleSkillThreshold) {
       const dribX = ctx.self.x + attackDir * (6 + Math.random() * 8);
       const dribZ = ctx.self.z + (Math.random() - 0.5) * 6;
       return {

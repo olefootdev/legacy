@@ -23,6 +23,11 @@ export interface TurnoverPickContext {
   stealZ: number;
   /** Optional; only used for tests / telemetry */
   reason?: TurnoverReason;
+  /**
+   * Ao vivo 2D (`test2d`): ocasionalmente prefere condução/drible a mais um passe seguro,
+   * para o feed mostrar mais “jogo vivo” (sem alterar testes que não passam esta flag).
+   */
+  livelyTurnoverFeed?: boolean;
 }
 
 const W_SAFETY = 1.15;
@@ -229,6 +234,14 @@ export function pickPlayAfterTurnover(
     }
   }
   if (bestS && bestSU >= SAFE_MIN) {
+    if (
+      ctx.livelyTurnoverFeed
+      && pressure < 0.52
+      && ctx.rng() < 0.14
+    ) {
+      const c = carryAwayFromSteal(carrier, opponents, stealX, stealZ, attackDir);
+      return { type: 'progressive_dribble', targetX: c.x, targetZ: c.z };
+    }
     return mapPassType(carrier, bestS, 'safe', attackDir);
   }
 

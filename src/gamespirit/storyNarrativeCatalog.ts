@@ -82,7 +82,7 @@ export const PRESS_LINES = [
 
 export const SHAPE_LINES = [
   `Bloco compacto: não há espaços entre linhas.`,
-  `Equipa recua cinco metros e reorganiza.`,
+  `Equipe recua cinco metros e reorganiza.`,
   `Meio-campo a fechar corredores — jogo de paciência.`,
 ];
 

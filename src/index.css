@@ -1,14 +1,59 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
+/* Fontes locais (prioridade) + Google Fonts (fallback) */
+@import "./styles/fonts.css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:ital,wght@0,500;0,700;1,500;1,700&family=Montserrat:ital,wght@0,400;0,600;0,800;1,800;1,900&display=swap');
 @import "tailwindcss";
+@import "./styles/design-system.css";
+@import "./styles/mobile-responsive.css";
 
 @theme {
-  --color-neon-yellow: #E4FF00;
+  /* Cores — alinhadas ao olefoot.com */
+  --color-neon-yellow: #FDE100;
+  --color-neon-yellow-dark: #C9B000;
   --color-neon-green: #00FF66;
-  --color-deep-black: #090909;
-  --color-dark-gray: #151515;
-  --color-panel: #111111;
-  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --color-deep-black: #0D0D0D;
+  --color-dark-gray: #1A1A1A;
+  --color-panel: #1A1A1A;
+  --color-card: #242424;
+  --color-card-hi: #2E2E2E;
+  --color-text-soft: #A0A0A0;
+  --color-text-muted: #555555;
+
+  /* Tipografia — alinhada ao site */
+  --font-sans: "Inter", "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Agency FB", "AgencyFB", Impact, "Oswald", ui-sans-serif, sans-serif;
+  --font-serif-hero: "Moret", Georgia, "Times New Roman", serif;
+  --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", ui-sans-serif, sans-serif;
+
+  /* === Escala tipográfica (Brief v2) === */
+  --text-xs:     11px;
+  --text-sm:     13px;
+  --text-base:   15px;
+  --text-lg:     18px;
+  --text-xl:     22px;
+  --text-2xl:    32px;
+  --text-3xl:    48px;
+  --text-hero:   80px;
+  --text-score:  96px;
+  --text-rating: 56px;
+
+  /* === Cores semânticas (NÃO substituem --color-neon-green da marca) === */
+  --color-success: #00C851;
+  --color-warning: #FFB300;
+  --color-danger:  #FF3D3D;
+  --color-info:    #2979FF;
+
+  /* === Tokens da brief de design (Fase 2 — refactor da home) === */
+  --color-border: rgba(255,255,255,0.08);
+  --color-text-on-accent: #000000;
+  --color-accent-rgb: 253,225,0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+
+  /* === Threshold de atributos (Football Manager) === */
+  --attr-elite: #00FF66;  /* 80+   */
+  --attr-good:  #FDE100;  /* 65–79 */
+  --attr-avg:   #FFB300;  /* 50–64 */
+  --attr-weak:  #FF3D3D;  /* <50   */
 }
 
 @layer utilities {
@@ -55,6 +100,197 @@
   .momentum-bar-goal-flash {
     animation: momentum-goal-flash 2s ease-in-out;
   }
+
+  /* === Olefoot identity utilities (Design Brief Fase 1) === */
+  .ole-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 border border-neon-yellow/60 text-neon-yellow uppercase tracking-[0.18em] text-[11px] font-medium;
+    font-family: var(--font-ui);
+  }
+  .ole-tag-solid {
+    @apply bg-neon-yellow text-black border-transparent;
+  }
+
+  .ole-eyebrow {
+    @apply flex items-center justify-center gap-3 text-neon-yellow uppercase tracking-[0.35em] text-[10px] font-medium;
+    font-family: var(--font-ui);
+  }
+  .ole-eyebrow::before,
+  .ole-eyebrow::after {
+    content: "";
+    @apply h-px w-8 bg-neon-yellow/40;
+  }
+
+  .ole-headline {
+    font-family: var(--font-display);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+  .ole-headline-italic {
+    font-family: var(--font-serif-hero);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+  }
+
+  .ole-card {
+    @apply bg-[var(--color-card)] border border-white/8 rounded-md;
+  }
+  .ole-card-accent {
+    @apply bg-[var(--color-card)] border border-white/8 rounded-md border-l-4 border-l-neon-yellow;
+  }
+  .ole-card-hover {
+    @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)];
+  }
+
+  .btn-on-yellow {
+    @apply bg-black text-neon-yellow font-display font-bold uppercase tracking-wider px-6 py-2 -skew-x-6 hover:bg-deep-black transition-all;
+  }
+
+  /* === Scoreboard (Brief v2 COMP-01) === */
+  .ole-scoreboard {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: var(--text-score);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .ole-scoreboard__separator {
+    color: var(--color-text-muted);
+    font-size: 0.5em;
+    padding: 0 0.3em;
+  }
+  .ole-scoreboard--live { color: var(--color-neon-yellow); }
+  .ole-scoreboard__minute {
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-neon-yellow);
+  }
+
+  /* === Atributo com tier (Brief v2 COMP-03) === */
+  .ole-attr {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+  .ole-attr[data-tier="elite"] { color: var(--attr-elite); }
+  .ole-attr[data-tier="good"]  { color: var(--attr-good); }
+  .ole-attr[data-tier="avg"]   { color: var(--attr-avg); }
+  .ole-attr[data-tier="weak"]  { color: var(--attr-weak); }
+
+  /* === Player Card "carta colecionável" (Brief v2 COMP-02 + NFT-frame BVB-vibe) === */
+  .ole-player-card {
+    background: linear-gradient(180deg, var(--color-card-hi) 0%, var(--color-card) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .ole-player-card::before {
+    /* Glow amarelo no topo — assinatura de "carta esportiva" */
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 30%;
+    background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(253,225,0,0.18) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ole-player-card__overall {
+    font-family: var(--font-serif-hero);
+    font-style: italic;
+    font-weight: 700;
+    font-size: calc(var(--text-rating) * 1.05);
+    color: var(--color-neon-yellow);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.65);
+  }
+  .ole-player-card__position {
+    font-family: var(--font-ui);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-neon-yellow);
+  }
+  .ole-player-card__photo { aspect-ratio: 3/4; object-fit: cover; }
+  .ole-player-card__photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(13,13,13,0.95) 100%);
+    pointer-events: none;
+  }
+  .ole-player-card__name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+  }
+
+  /* === Goal Takeover (Brief v2 COMP-04) === */
+  .ole-goal-takeover {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--color-neon-yellow);
+    display: grid; place-items: center;
+    pointer-events: none;
+    animation: ole-goal-takeover 1.2s ease-in-out forwards;
+  }
+  .ole-goal-takeover__text {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(80px, 18vw, 240px);
+    line-height: 0.85;
+    text-transform: uppercase;
+    color: #000;
+    text-align: center;
+  }
+  .ole-goal-takeover__italic {
+    font-family: var(--font-serif-hero);
+    font-style: italic;
+    font-size: 0.4em;
+    font-weight: 400;
+    display: block;
+    margin-top: 0.1em;
+    color: #000;
+  }
+
+  /* === Tabela esportiva (Brief v2 COMP-05) === */
+  .ole-table thead th {
+    font-family: var(--font-ui);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-text-soft);
+    background: var(--color-panel);
+    position: sticky; top: 0;
+  }
+  .ole-table tbody tr:nth-child(odd)  { background: var(--color-deep-black); }
+  .ole-table tbody tr:nth-child(even) { background: var(--color-card); }
+  .ole-table tbody tr:hover           { background: var(--color-card-hi); }
+  .ole-table__pos[data-rank="1"] { color: #FFD700; font-weight: 900; }
+  .ole-table__pos[data-rank="2"] { color: #C0C0C0; font-weight: 900; }
+  .ole-table__pos[data-rank="3"] { color: #CD7F32; font-weight: 900; }
+  .ole-table__form-pill {
+    width: 18px; height: 18px; border-radius: 9999px;
+    display: inline-block; font-size: 10px; font-weight: 700;
+    line-height: 18px; text-align: center;
+  }
+  .ole-table__form-pill[data-r="V"] { background: var(--attr-elite); color: #000; }
+  .ole-table__form-pill[data-r="E"] { background: var(--attr-avg);   color: #000; }
+  .ole-table__form-pill[data-r="D"] { background: var(--attr-weak);  color: #fff; }
+}
+
+@keyframes ole-goal-takeover {
+  0%   { opacity: 0; transform: scale(0.96); }
+  10%  { opacity: 1; transform: scale(1);    }
+  85%  { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(1.02); }
 }
 
 @keyframes shimmer {
@@ -85,19 +321,31 @@
 
 html {
   overflow-x: hidden;
-  max-width: 100%;
+  max-width: 100vw;
+  width: 100%;
+  position: relative;
 }
 
 #root {
   min-height: 100dvh;
   min-width: 0;
-  max-width: 100%;
+  max-width: 100vw;
+  width: 100%;
   overflow-x: hidden;
+  position: relative;
 }
 
 body {
-  @apply bg-deep-black text-white font-sans antialiased overflow-x-hidden;
+  @apply bg-deep-black text-white font-sans antialiased;
   background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #090909 70%);
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  position: relative;
+  /* Previne zoom no mobile ao focar inputs */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Evita que media e gráficos estourem o eixo X em qualquer página */
@@ -107,6 +355,19 @@ body {
   canvas {
     max-width: 100%;
     height: auto;
+  }
+
+  /* Previne overflow horizontal em todos os elementos */
+  * {
+    max-width: 100%;
+  }
+
+  /* Exceções para elementos que precisam de largura específica */
+  input,
+  textarea,
+  select,
+  button {
+    max-width: none;
   }
 }
 
@@ -126,4 +387,26 @@ html[data-graphic-quality='low'] {
 
 html[data-graphic-quality='low'] .sports-panel::after {
   opacity: 0.012;
+}
+
+/* Rotação do sprite da bola na partida ao vivo. Respeita reduce-motion via override acima. */
+@keyframes olefoot-ball-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Tombo/rolamento — rotação 360° com leve oscilação (eixos compostos) pra dar sensação
+   de bola tumbando no campo, nunca no mesmo plano. */
+@keyframes olefoot-ball-tumble {
+  0%   { transform: rotate(0deg)    scale(1);    }
+  25%  { transform: rotate(120deg)  scale(1.04); }
+  50%  { transform: rotate(200deg)  scale(0.97); }
+  75%  { transform: rotate(300deg)  scale(1.02); }
+  100% { transform: rotate(360deg)  scale(1);    }
+}
+
+/* Pulso de escala/brilho em chutes — sensação de pancada. */
+@keyframes olefoot-ball-pulse {
+  from { filter: drop-shadow(0 0 10px rgba(253,225,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+  to   { filter: drop-shadow(0 0 18px rgba(253,225,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
 }

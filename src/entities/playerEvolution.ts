@@ -1,6 +1,10 @@
 import type { PlayerAttributes, PlayerEntity } from './types';
 import { overallFromAttributes } from './player';
 import { MANAGER_PROSPECT_EVOLVED_MAX_OVR, scaleAttrsToMaxOvr } from './managerProspect';
+import { evolvePositionKnowledgePostMatch } from '@/gamespirit/legacy/positionKnowledgeTypes';
+import type { PositionActionKey, KnowledgeZoneKey } from '@/gamespirit/legacy/positionKnowledgeTypes';
+
+/** Pilar 3 (evolução pós-jogo / tectos): mapa de rastreio em `@/lib/veracityPillarsMap`. */
 
 /** Jogadores Admin / campeões: crescimento máximo de OVR acima do valor na criação (mint). */
 export const ADMIN_OVR_GROWTH_MAX = 15;
@@ -119,9 +123,47 @@ export function applyMatchPerformanceEvolution(
   if (outcome === 'loss') swing -= 1;
   swing = Math.max(-5, Math.min(6, swing));
   const xpGain = Math.max(0, Math.round((4 + Math.max(0, swing)) * rate));
+
+  // Evolui positionKnowledge pós-partida de forma determinística (zero tokens)
+  let updatedKnowledge = player.positionKnowledge;
+  if (updatedKnowledge && updatedKnowledge.sessionsCompleted > 0 && stat) {
+    // Inferir a ação dominante pelo perfil de stats do jogador nesta partida
+    const zone = playerDominantZoneFromStat(player.pos, stat);
+    const action = playerDominantActionFromStat(stat, swing);
+    if (zone && action) {
+      updatedKnowledge = evolvePositionKnowledgePostMatch(updatedKnowledge, outcome, action, zone);
+    }
+  }
+
   return {
     ...player,
     attrs: bumpAttrsBySwing(player.attrs, swing),
     evolutionXp: Math.max(0, (player.evolutionXp ?? 0) + xpGain),
+    ...(updatedKnowledge ? { positionKnowledge: updatedKnowledge } : {}),
   };
+}
+
+/** Deriva zona dominante a partir da posição do jogador (sem tokens). */
+function playerDominantZoneFromStat(pos: string, _stat: HomePlayerStatRow): KnowledgeZoneKey | undefined {
+  const p = pos.toUpperCase();
+  if (p === 'GOL' || p === 'ZAG' || p === 'LE' || p === 'LD') return 'def';
+  if (p === 'VOL' || p === 'MC' || p === 'MEI') return 'mid';
+  if (p === 'PE' || p === 'PD' || p === 'ATA') return 'att';
+  return 'mid';
+}
+
+/** Deriva ação dominante a partir das estatísticas (sem tokens). */
+function playerDominantActionFromStat(stat: HomePlayerStatRow, swing: number): PositionActionKey | undefined {
+  if (!stat) return undefined;
+  // Rating alto + tackles = press
+  if (stat.tackles >= 4 && stat.rating >= 7.0) return 'press';
+  // Alta taxa de passe = recycle/progress
+  if (stat.passesAttempt > 8) {
+    const acc = stat.passesOk / stat.passesAttempt;
+    return acc >= 0.75 ? 'progress' : 'recycle';
+  }
+  // Swing positivo em vitória = shot (atacante/meia)
+  if (swing >= 2 && stat.rating >= 7.5) return 'shot';
+  // Default: progress
+  return 'progress';
 }

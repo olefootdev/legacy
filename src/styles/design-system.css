@@ -1,0 +1,325 @@
+/**
+ * Olefoot Design System v1.0 — alias layer.
+ *
+ * NÃO duplica tokens já definidos em src/index.css (.ole-* utilities,
+ * --color-neon-yellow, --color-deep-black, etc.). Este arquivo:
+ *
+ *   1. Mapeia o vocabulário do brief (--stadium-night, --yellow, --surface-dark…)
+ *      para os tokens já existentes do tema. Permite código novo usar a
+ *      nomenclatura do brief sem quebrar o que já consome a antiga.
+ *
+ *   2. Adiciona escalas tipográficas e clip-paths que ainda não existiam
+ *      (--text-display-*, --text-editorial-*, .clip-angular-*).
+ *
+ *   3. Adiciona keyframes auxiliares específicos do brief (.live-dot pulse,
+ *      .pack-glow).
+ *
+ * Importado em src/index.css logo após o @theme.
+ */
+
+:root {
+  /* ── Aliases de cor (BVB-style names) ────────────────────────── */
+  --stadium-night:  var(--color-deep-black);   /* #0D0D0D */
+  --surface-dark:   var(--color-card);         /* #242424 */
+  --yellow:         var(--color-neon-yellow);  /* #FDE100 */
+  --text-primary:   #FFFFFF;
+  --text-secondary: var(--color-text-soft);    /* #A0A0A0 */
+  --border:         rgba(255, 255, 255, 0.08);
+
+  /* Semânticos (já existem como --color-success/warning/danger no @theme) */
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger:  var(--color-danger);
+  --info:    var(--color-info);
+
+  /* ── Escala de spacing (4px base) ─────────────────────────────── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 40px;
+  --space-5xl: 48px;
+  --space-6xl: 64px;
+
+  /* Border-radius máximo permitido = 8px (sharp esportivo) */
+  --radius-none: 0px;
+  --radius-sm:   4px;
+  --radius-md:   8px;
+
+  /* ── Tipografia: escalas do brief ─────────────────────────────── */
+  --text-display-xl: 96px;
+  --text-display-lg: 64px;
+  --text-display-md: 48px;
+  --text-display-sm: 32px;
+
+  --text-editorial-xl: 84px;
+  --text-editorial-lg: 48px;
+  --text-editorial-md: 32px;
+  --text-editorial-sm: 24px;
+
+  --text-ui-lg: 16px;
+  --text-ui-md: 14px;
+  --text-ui-sm: 12px;
+  --text-ui-xs: 11px;
+
+  --text-body-lg: 15px;
+  --text-body-md: 13px;
+  --text-body-sm: 12px;
+
+  /* Diagonal de 34° (assinatura BVB) */
+  --angle: 34deg;
+}
+
+/* ── Utilitários ──────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Clip-paths angulares */
+  .clip-angular-btn {
+    clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  }
+  .clip-angular-card {
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - 16px),
+      calc(100% - 16px) 100%,
+      0 100%
+    );
+  }
+  .clip-angular-badge {
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  }
+  .clip-diagonal-section {
+    /* Hero matchday split: 62/38 com inclinação */
+    clip-path: polygon(0 0, 62% 0, 38% 100%, 0% 100%);
+  }
+  .clip-diagonal-right {
+    /* Mirror: seção diagonal preta à direita (Legend page) */
+    clip-path: polygon(20% 0, 100% 0%, 100% 100%, 0% 100%);
+  }
+
+  /* Diagonal accent decorativo (background opacity 6%) */
+  .diagonal-accent {
+    position: absolute;
+    background: var(--yellow);
+    opacity: 0.06;
+    transform: skewX(calc(-1 * var(--angle))) rotate(8deg);
+    pointer-events: none;
+  }
+
+  /* Pulsing live indicator */
+  .live-dot {
+    animation: ole-live-pulse 1.5s infinite;
+  }
+
+  /* Glow amarelo (pack hover, hero cards) */
+  .ole-yellow-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at center,
+      rgba(253, 225, 0, 0.15) 0%,
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .ole-yellow-glow:hover::before {
+    opacity: 1;
+  }
+
+  /* Watermark gigante (Home hero) — usado via componente Headline */
+  .ole-watermark {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(160px, 32vw, 480px);
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+    color: currentColor;
+    opacity: 0.03;
+    pointer-events: none;
+    user-select: none;
+    text-transform: uppercase;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Foto de jogador em cinza estética BVB */
+  .ole-player-photo-bw {
+    filter: grayscale(1) contrast(1.05);
+  }
+
+  /* Diagonal divider 3px vertical (player card) */
+  .ole-y-divider-3 {
+    background: var(--yellow);
+    width: 3px;
+  }
+
+  /**
+   * Hero diagonal split (BVB cartaz) — utility responsiva.
+   * Mobile  (<640px): banda dark fica como sliver fino no canto inf-direito
+   *                   (yellow ocupa 92% topo, 75% base). Headline respira.
+   * Tablet  (≥640px): split menos agressivo (75% topo, 50% base).
+   * Desktop (≥1024px): split editorial original (62% topo, 38% base).
+   */
+  .ole-hero-split {
+    clip-path: polygon(0 0, 92% 0, 75% 100%, 0% 100%);
+  }
+  @media (min-width: 640px) {
+    .ole-hero-split {
+      clip-path: polygon(0 0, 75% 0, 50% 100%, 0% 100%);
+    }
+  }
+  @media (min-width: 1024px) {
+    .ole-hero-split {
+      clip-path: polygon(0 0, 62% 0, 38% 100%, 0% 100%);
+    }
+  }
+
+  /* Esconde scrollbar mas mantém funcionalidade de scroll */
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
+  }
+
+  /* Scroll suave e snap para navegação por seções */
+  .scroll-smooth-snap {
+    scroll-behavior: smooth;
+    scroll-snap-type: y proximity;
+  }
+  .scroll-snap-section {
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
+}
+
+@keyframes ole-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+/* ── Tabelas de classificação (Football Manager style) ────────── */
+.ole-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ole-table thead th {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  background: var(--color-card);
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ole-table thead th.text-center {
+  text-align: center;
+}
+
+.ole-table tbody tr:nth-child(odd) {
+  background: var(--color-deep-black);
+}
+
+.ole-table tbody tr:nth-child(even) {
+  background: var(--color-card);
+}
+
+.ole-table tbody tr:hover {
+  background: var(--color-card-hi);
+}
+
+.ole-table tbody td {
+  padding: 0.875rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Posição com destaque top 3 */
+.ole-table__pos {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+}
+
+.ole-table__pos[data-rank="1"] {
+  color: #FFD700;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+}
+
+.ole-table__pos[data-rank="2"] {
+  color: #C0C0C0;
+}
+
+.ole-table__pos[data-rank="3"] {
+  color: #CD7F32;
+}
+
+/* Pills de forma recente (V/E/D) */
+.ole-table__form-pill {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0 1px;
+}
+
+.ole-table__form-pill[data-r="V"] {
+  background: var(--attr-elite, #00FF66);
+  color: #000;
+}
+
+.ole-table__form-pill[data-r="E"] {
+  background: var(--attr-avg, #FFB300);
+  color: #000;
+}
+
+.ole-table__form-pill[data-r="D"] {
+  background: var(--attr-weak, #FF3D3D);
+  color: #fff;
+}
+
+/* Linha do usuário destacada */
+.ole-table tbody tr[data-is-user="true"] {
+  background: rgba(253, 225, 0, 0.05) !important;
+  border-left: 3px solid var(--color-neon-yellow);
+}
+
+.ole-table tbody tr[data-is-user="true"]:hover {
+  background: rgba(253, 225, 0, 0.08) !important;
+}

@@ -11,6 +11,8 @@ import {
   Users,
   Coins,
   X,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -26,9 +28,23 @@ import {
   CITY_QUICK_TRAINING_COST_EXP,
   CITY_QUICK_TRAINING_DURATION_H,
 } from '@/game/cityQuickConstants';
+import { BackButton } from '@/components/BackButton';
+import { EditorialHero } from '@/components/EditorialHero';
 import { maxSlotsByTrainingCenter } from '@/systems/trainingPlans';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
-import { STRUCTURE_TO_BANNER_SLOT } from '@/ui/banners';
+import {
+  megastoreAwayConfidenceBonusPoints,
+  megastoreHomeConfidenceBonusPoints,
+  medicalDeptRecoverySpeedBonusPercent,
+  medicalDeptTreatmentSlots,
+  stadiumCapacityByLevel,
+  stadiumExpPerSpectatorByLevel,
+  trainingCenterAttributeGainMultiplier,
+  trainingCenterHasAiLabs,
+  trainingCenterMaxConcurrentCollectivePlans,
+  youthAcademyProspectTrainingMultiplier,
+} from '@/clubStructures/benefits';
+import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
+import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 
 type CityStructDef = {
   uiId: string;
@@ -58,8 +74,12 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     actionIcon: Users,
     statsForLevel: (lvl) => [
       {
-        label: 'Capacidade (aprox.)',
-        value: `${(22000 + (lvl - 1) * 8500).toLocaleString('pt-BR')} lugares`,
+        label: 'Capacidade',
+        value: `${stadiumCapacityByLevel(lvl).toLocaleString('pt-BR')} lugares`,
+      },
+      {
+        label: 'EXP / assistente (casa)',
+        value: `${stadiumExpPerSpectatorByLevel(lvl)}`,
       },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
@@ -76,7 +96,19 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     action: 'Treino Intensivo',
     actionIcon: Zap,
     statsForLevel: (lvl) => [
-      { label: 'Slots de plano', value: String(maxSlotsByTrainingCenter(lvl)) },
+      { label: 'Slots por tipo de treino', value: String(maxSlotsByTrainingCenter(lvl)) },
+      {
+        label: 'Colectivos simultâneos',
+        value: String(trainingCenterMaxConcurrentCollectivePlans(lvl)),
+      },
+      {
+        label: 'AI Labs',
+        value: trainingCenterHasAiLabs(lvl) ? 'Desbloqueado' : 'Bloqueado',
+      },
+      {
+        label: 'Booster atributos',
+        value: `${Math.round((trainingCenterAttributeGainMultiplier(lvl) - 1) * 100)}%`,
+      },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
@@ -92,7 +124,11 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     action: 'Mutirão de Cura',
     actionIcon: Activity,
     statsForLevel: (lvl) => [
-      { label: 'Cobertura', value: `Nível ${lvl}` },
+      { label: 'Slots de tratamento', value: String(medicalDeptTreatmentSlots(lvl)) },
+      {
+        label: 'Velocidade recuperação',
+        value: `+${medicalDeptRecoverySpeedBonusPercent(lvl)}%`,
+      },
       { label: 'Mutirão (EXP)', value: `${CITY_QUICK_MEDICAL_COST_EXP} EXP` },
     ],
   },
@@ -108,7 +144,10 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     action: 'Buscar Promessas',
     actionIcon: Users,
     statsForLevel: (lvl) => [
-      { label: 'Potencial de scouting', value: `Nível ${lvl}` },
+      {
+        label: 'Booster treino (promessas)',
+        value: `${Math.round((youthAcademyProspectTrainingMultiplier(lvl) - 1) * 100)}%`,
+      },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
@@ -120,11 +159,19 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     color: 'text-purple-400',
     bg: 'bg-purple-400/10',
     border: 'border-purple-400',
-    desc: 'Merchandising e campanhas relâmpago convertem EXP em BRO e reforçam o apoio da torcida.',
+    desc: 'Reforça o apoio em casa e fora; em vitórias, converte confiança da torcida em EXP extra.',
     action: 'Campanha de Vendas',
     actionIcon: Coins,
     statsForLevel: (lvl) => [
       { label: 'Campanha (EXP → BRO)', value: `${CITY_QUICK_STORE_COST_EXP} → +${CITY_QUICK_STORE_BRO_GAIN_CENTS / 100} BRO` },
+      {
+        label: 'Apoio em casa',
+        value: `+${megastoreHomeConfidenceBonusPoints(lvl)} pts`,
+      },
+      {
+        label: 'Apoio fora',
+        value: lvl >= 4 ? `+${megastoreAwayConfidenceBonusPoints(lvl)} pts` : '—',
+      },
       { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
@@ -167,30 +214,30 @@ function upgradeLine(
 }
 
 export function City() {
+  useTrackScreen('screen_city');
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const structuresState = useGameStore((s) => s.structures);
   const finance = useGameStore((s) => s.finance);
   const crowd = useGameStore((s) => s.crowd);
+  const clubName = useGameStore((s) => s.club.name);
 
-  const [selected, setSelected] = useState(CITY_STRUCTURE_DEFS[0]!);
+  const [selected, setSelected] = useState<CityStructDef | null>(null);
   const [quickPendingId, setQuickPendingId] = useState<ClubStructureId | null>(null);
+  const [upgradeModalState, setUpgradeModalState] = useState<{
+    structureId: ClubStructureId;
+    phase: 'confirm' | 'loading' | 'success' | 'insufficient';
+  } | null>(null);
 
-  const level = levelOf(structuresState, selected.structureId);
-  const stats = useMemo(() => selected.statsForLevel(level), [selected, level]);
-  const upgrade = useMemo(
-    () => upgradeLine(selected.structureId, level, finance.ole, finance.broCents),
-    [selected.structureId, level, finance.ole, finance.broCents],
+  const stadiumLevel = levelOf(structuresState, 'stadium');
+  const stadiumUpgrade = useMemo(
+    () => upgradeLine('stadium', stadiumLevel, finance.ole, finance.broCents),
+    [stadiumLevel, finance.ole, finance.broCents],
   );
 
   const canQuickMedical = finance.ole >= CITY_QUICK_MEDICAL_COST_EXP;
   const canQuickStore = finance.ole >= CITY_QUICK_STORE_COST_EXP;
   const canQuickTraining = finance.ole >= CITY_QUICK_TRAINING_COST_EXP;
-
-  const handleUpgrade = () => {
-    if (!upgrade.hasUpgrade || !upgrade.canAfford) return;
-    dispatch({ type: 'UPGRADE_STRUCTURE', structureId: selected.structureId });
-  };
 
   const runQuickAction = (id: ClubStructureId) => {
     if (id === 'stadium') {
@@ -198,11 +245,13 @@ export function City() {
       const up = upgradeLine('stadium', lvl, finance.ole, finance.broCents);
       if (!up.hasUpgrade || !up.canAfford) return;
       dispatch({ type: 'UPGRADE_STRUCTURE', structureId: 'stadium' });
+      trackMissionEvent('structure_upgraded');
       return;
     }
     if (id === 'training_center') {
       if (!canQuickTraining) return;
       dispatch({ type: 'CITY_QUICK_TRAINING_INTENSIVO' });
+      trackMissionEvent('training_session');
       return;
     }
     if (id === 'medical_dept') {
@@ -220,16 +269,6 @@ export function City() {
     }
   };
 
-  const openQuickConfirm = () => {
-    if (quickDisabled) return;
-    setQuickPendingId(selected.structureId);
-  };
-
-  const stadiumUpgradeForModal = useMemo(() => {
-    const lvl = levelOf(structuresState, 'stadium');
-    return upgradeLine('stadium', lvl, finance.ole, finance.broCents);
-  }, [structuresState, finance.ole, finance.broCents]);
-
   const quickConfirmCopy = useMemo(() => {
     if (!quickPendingId) return null;
     const def = CITY_STRUCTURE_DEFS.find((d) => d.structureId === quickPendingId);
@@ -239,7 +278,7 @@ export function City() {
     let confirmBlocked = false;
 
     if (quickPendingId === 'stadium') {
-      const up = stadiumUpgradeForModal;
+      const up = stadiumUpgrade;
       if (!up.hasUpgrade) {
         lines.push('Não há próximo nível disponível para o estádio.');
         confirmBlocked = true;
@@ -281,7 +320,7 @@ export function City() {
     return { title, lines, costExpLine, confirmBlocked };
   }, [
     quickPendingId,
-    stadiumUpgradeForModal,
+    stadiumUpgrade,
     structuresState,
     canQuickTraining,
     canQuickMedical,
@@ -289,196 +328,517 @@ export function City() {
     crowd.supportPercent,
   ]);
 
-  const quickDisabled =
-    selected.structureId === 'stadium'
-      ? !upgrade.hasUpgrade || !upgrade.canAfford
-      : selected.structureId === 'training_center'
-        ? !canQuickTraining
-        : selected.structureId === 'medical_dept'
-          ? !canQuickMedical
-          : selected.structureId === 'megastore'
-            ? !canQuickStore
-            : false;
-
-  const quickHint =
-    selected.structureId === 'stadium'
-      ? 'Mesmo fluxo que “Evoluir estrutura”: paga EXP ou BRO conforme o nível.'
-      : selected.structureId === 'training_center'
-        ? `Gasta ${CITY_QUICK_TRAINING_COST_EXP} EXP e abre plano físico coletivo (~${CITY_QUICK_TRAINING_DURATION_H}h). Respeita slots do CT.`
-        : selected.structureId === 'medical_dept'
-          ? `Gasta ${CITY_QUICK_MEDICAL_COST_EXP} EXP para reduzir fadiga e risco de lesão em todo o plantel.`
-          : selected.structureId === 'megastore'
-            ? `Gasta ${CITY_QUICK_STORE_COST_EXP} EXP, credita +${CITY_QUICK_STORE_BRO_GAIN_CENTS / 100} BRO e aumenta ligeiramente o apoio da torcida (atual ${crowd.supportPercent.toFixed(1)}%).`
-            : 'Abre o olheiro da categoria de base.';
+  const totalStructures = CITY_STRUCTURE_DEFS.length;
+  const totalLevel = Object.values(structuresState).reduce((sum, lvl) => sum + (lvl || 1), 0);
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl space-y-6">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-display text-2xl font-black italic uppercase tracking-wider sm:text-3xl md:text-4xl">
-          Cidade do Clube
-        </h2>
-        <div className="text-right space-y-1">
-          <div className="text-neon-yellow font-display font-black text-xl">{formatExp(finance.ole)} EXP</div>
-          <div className="text-sm text-white font-display font-bold">{formatBroFromCents(finance.broCents)}</div>
-          <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Tesouraria · Apoio {crowd.supportPercent.toFixed(1)}%</div>
-        </div>
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden px-3 sm:px-4 lg:px-6">
+      <div className="w-full max-w-6xl min-w-0 mx-auto">
+        <BackButton to="/clube" label="Clube" />
       </div>
 
-      <div className="sports-panel relative overflow-hidden bg-black/80 p-4 sm:p-6 md:p-8">
-        <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
-
-        <div className="relative z-10 mx-auto grid aspect-square w-full min-w-0 max-w-4xl grid-cols-3 grid-rows-3 gap-2 sm:gap-4 md:aspect-[16/9] md:gap-8">
-          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ strokeDasharray: '8 8' }}>
-            <line x1="50%" y1="50%" x2="16.6%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-            <line x1="50%" y1="50%" x2="83.3%" y2="16.6%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-            <line x1="50%" y1="50%" x2="16.6%" y2="83.3%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-            <line x1="50%" y1="50%" x2="83.3%" y2="83.3%" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
-          </svg>
-
-          <div className="col-start-2 row-start-2 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[0]!} level={levelOf(structuresState, 'stadium')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-1 row-start-1 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[3]!} level={levelOf(structuresState, 'youth_academy')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-3 row-start-1 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[4]!} level={levelOf(structuresState, 'megastore')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-1 row-start-3 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[1]!} level={levelOf(structuresState, 'training_center')} selected={selected} onSelect={setSelected} />
-          </div>
-          <div className="col-start-3 row-start-3 flex justify-center items-center z-10">
-            <StructureNode struct={CITY_STRUCTURE_DEFS[2]!} level={levelOf(structuresState, 'medical_dept')} selected={selected} onSelect={setSelected} />
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence mode="wait">
-        {selected && (
-          <motion.div
-            key={selected.uiId}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={cn(
-              'sports-panel max-h-[min(88dvh,calc(100dvh-9rem))] overflow-x-hidden overflow-y-auto border-2 p-0 transition-colors duration-500 sm:max-h-none sm:overflow-y-visible',
-              selected.border,
-            )}
-          >
-            <div
-              className={cn(
-                'relative flex items-center justify-between overflow-hidden border-b border-white/10 p-4 sm:p-6',
-                selected.bg,
-              )}
-            >
-              <GameBannerBackdrop slot={STRUCTURE_TO_BANNER_SLOT[selected.structureId]} className="z-0" />
-              <div
-                className="pointer-events-none absolute inset-0 z-[1] opacity-30 mix-blend-overlay"
-                style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '4px 4px' }}
-              />
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <h3 className="font-display font-black text-3xl uppercase italic tracking-wider text-white drop-shadow-md">{selected.name}</h3>
-                  <span className="bg-black/80 px-2 py-1 rounded text-xs font-bold border border-white/20 text-white">
-                    NÍVEL {level}
-                  </span>
-                </div>
-                <p className="text-gray-300 max-w-xl text-sm font-medium">{selected.desc}</p>
+      {/* Hero Editorial */}
+      <div className="w-full max-w-6xl min-w-0 mx-auto">
+        <EditorialHero
+          watermark="ESTRUTURAS"
+          eyebrow="Gestão do clube · Infraestrutura"
+          title="Cidade do Clube"
+          subtitle={clubName}
+          quote="estruturas, evolução e ações rápidas para o desenvolvimento do clube"
+          stats={`${formatExp(finance.ole)} EXP · ${formatBroFromCents(finance.broCents)} · Apoio ${crowd.supportPercent.toFixed(1)}% · ${totalStructures} estruturas · Nível total ${totalLevel}`}
+          icon={
+            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                 style={{ borderRadius: 'var(--radius-sm)' }}>
+              <div className="flex h-full w-full items-center justify-center">
+                <Building2 className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
               </div>
-              <selected.icon className={cn('w-20 h-20 opacity-20 absolute right-6 -bottom-4 rotate-12', selected.color)} />
+            </div>
+          }
+        />
+      </div>
+
+      <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6">
+        {/* Hero Principal — Estádio */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 w-full max-w-full min-w-0"
+          style={{ borderRadius: 'var(--radius-sm)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
+        >
+          {/* Watermark gigante */}
+          <div
+            className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+            aria-hidden
+          >
+            <Building2
+              className="text-black/[0.04]"
+              style={{ width: 'clamp(200px, 40vw, 500px)', height: 'clamp(200px, 40vw, 500px)' }}
+              strokeWidth={1}
+            />
+          </div>
+
+          {/* Conteúdo */}
+          <div className="relative z-10 p-6 sm:p-8">
+            {/* Eyebrow */}
+            <div className="inline-flex items-center gap-3 text-black/85 mb-3">
+              <span aria-hidden className="h-px w-8 bg-black/60" />
+              <span className="uppercase font-semibold text-[10px] tracking-[0.22em]">
+                Estrutura Principal
+              </span>
+              <span aria-hidden className="h-px w-8 bg-black/60" />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 bg-dark-gray p-4 sm:gap-6 sm:p-6 md:grid-cols-3">
-              <div className="space-y-4">
-                <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <Activity className="w-4 h-4" /> Status atual
-                </h4>
-                <div className="space-y-2">
-                  {stats.map((s, i) => (
-                    <div key={i} className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/5">
-                      <span className="text-gray-400 text-sm font-medium">{s.label}</span>
-                      <span className="font-display font-bold text-lg text-white text-right">{s.value}</span>
+            {/* Título */}
+            <h2
+              className="italic text-black leading-none mb-2"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Estádio
+            </h2>
+
+            <p className="text-black/70 text-sm sm:text-base mb-6 max-w-2xl">
+              O coração do clube. Cada nível reforça capacidade, receita em dias de jogo e o ambiente para a torcida.
+            </p>
+
+            {/* Stats strip */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
+                  Capacidade
+                </p>
+                <p
+                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                  }}
+                >
+                  {(stadiumCapacityByLevel(stadiumLevel) / 1000).toFixed(0)}k
+                </p>
+              </div>
+              <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
+                  EXP/Torcedor
+                </p>
+                <p
+                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                  }}
+                >
+                  {stadiumExpPerSpectatorByLevel(stadiumLevel)}
+                </p>
+              </div>
+              <div className="bg-black px-3 py-3 sm:px-4 sm:py-4 text-center" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] sm:text-[10px] text-white/65 uppercase tracking-[0.18em] mb-1.5">
+                  Nível
+                </p>
+                <p
+                  className="font-serif-hero text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                  }}
+                >
+                  {stadiumLevel}/{MAX_LEVEL}
+                </p>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <button
+              type="button"
+              disabled={!stadiumUpgrade.hasUpgrade || !stadiumUpgrade.canAfford}
+              onClick={() => setQuickPendingId('stadium')}
+              className={cn(
+                'w-full px-5 py-3 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-all flex items-center justify-center gap-2',
+                stadiumUpgrade.hasUpgrade && stadiumUpgrade.canAfford
+                  ? 'bg-black text-neon-yellow hover:bg-deep-black shadow-[0_4px_12px_rgba(0,0,0,0.4)]'
+                  : 'bg-black/60 text-black/40 cursor-not-allowed',
+              )}
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              <ArrowUpCircle className="w-4 h-4" />
+              {stadiumUpgrade.hasUpgrade ? `Expandir · ${stadiumUpgrade.title}` : 'Nível Máximo'}
+            </button>
+          </div>
+        </motion.div>
+
+      {/* Grid de estruturas menores */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-full min-w-0">
+        {CITY_STRUCTURE_DEFS.slice(1).map((struct, idx) => {
+          const level = levelOf(structuresState, struct.structureId);
+          const upgrade = upgradeLine(struct.structureId, level, finance.ole, finance.broCents);
+          const canQuick =
+            struct.structureId === 'training_center' ? canQuickTraining :
+            struct.structureId === 'medical_dept' ? canQuickMedical :
+            struct.structureId === 'megastore' ? canQuickStore :
+            true;
+
+          return (
+            <motion.div
+              key={struct.uiId}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + idx * 0.05 }}
+              className="relative isolate overflow-hidden bg-panel border border-white/10 w-full max-w-full min-w-0 hover:border-white/20 transition-all"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              {/* Watermark do ícone */}
+              <div
+                className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+                aria-hidden
+              >
+                <struct.icon
+                  className={cn('opacity-[0.03]', struct.color)}
+                  style={{ width: 'clamp(120px, 30vw, 200px)', height: 'clamp(120px, 30vw, 200px)' }}
+                  strokeWidth={1}
+                />
+              </div>
+
+              {/* Conteúdo */}
+              <div className="relative z-10 p-5 sm:p-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'flex h-12 w-12 shrink-0 items-center justify-center border-2 transition-transform hover:scale-110',
+                        struct.bg,
+                        struct.border
+                      )}
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      <struct.icon className={cn('h-6 w-6', struct.color)} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-base font-black uppercase tracking-wider text-white">
+                        {struct.name}
+                      </h3>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                        Nível {level}/{MAX_LEVEL}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Descrição */}
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  {struct.desc}
+                </p>
+
+                {/* Stats principais */}
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  {struct.statsForLevel(level).slice(0, 2).map((stat, i) => (
+                    <div key={i} className="flex justify-between items-center text-xs gap-2">
+                      <span className="text-gray-500 uppercase tracking-wider text-[10px]">{stat.label}</span>
+                      <span className={cn('font-display font-bold', struct.color)}>{stat.value}</span>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <ArrowUpCircle className="w-4 h-4" /> Próximo nível
-                </h4>
-                <div className="bg-black/40 p-4 rounded-lg border border-white/5 space-y-3">
-                  <div className="flex justify-between text-sm items-center gap-2">
-                    <span className="text-gray-400 font-medium">Custo</span>
-                    <span
-                      className={cn(
-                        'font-display font-bold text-lg text-right',
-                        upgrade.hasUpgrade && upgrade.canAfford ? 'text-neon-yellow' : 'text-gray-500',
-                      )}
-                    >
-                      {upgrade.title}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-500 leading-snug">{upgrade.subtitle}</p>
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-400 font-medium">Tempo</span>
-                    <span className="text-white font-display font-bold">Imediato</span>
-                  </div>
+                {/* Ações */}
+                <div className="flex gap-2 pt-2">
                   <button
                     type="button"
-                    disabled={!upgrade.hasUpgrade || !upgrade.canAfford}
-                    onClick={handleUpgrade}
+                    onClick={() => {
+                      if (!upgrade.hasUpgrade || !upgrade.canAfford) {
+                        setUpgradeModalState({ structureId: struct.structureId, phase: 'insufficient' });
+                      } else {
+                        setUpgradeModalState({ structureId: struct.structureId, phase: 'confirm' });
+                      }
+                    }}
                     className={cn(
-                      'w-full mt-2 py-2.5 font-display font-bold uppercase tracking-wider text-sm -skew-x-6 transition-colors border',
+                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
                       upgrade.hasUpgrade && upgrade.canAfford
-                        ? 'bg-neon-yellow text-black border-neon-yellow hover:brightness-110'
-                        : 'bg-white/5 text-gray-500 border-white/10 cursor-not-allowed',
+                        ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                        : 'bg-white/5 text-gray-600 border-white/5 hover:bg-white/10',
                     )}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    <span className="skew-x-6 block">Evoluir estrutura</span>
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    Evoluir
                   </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-bold text-gray-500 uppercase tracking-wider text-xs flex items-center gap-2">
-                  <Zap className="w-4 h-4" /> Ação rápida
-                </h4>
-                <div className="h-full flex flex-col justify-start pt-2">
                   <button
                     type="button"
-                    disabled={quickDisabled}
-                    onClick={openQuickConfirm}
+                    disabled={!canQuick}
+                    onClick={() => setQuickPendingId(struct.structureId)}
                     className={cn(
-                      'w-full py-5 text-black font-display font-black uppercase tracking-wider text-lg -skew-x-6 transition-all shadow-lg',
-                      quickDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'hover:scale-[1.02]',
-                      selected.structureId === 'stadium' ? 'bg-neon-yellow hover:shadow-[0_0_20px_rgba(228,255,0,0.4)]' :
-                      selected.structureId === 'training_center' ? 'bg-neon-green hover:shadow-[0_0_20px_rgba(0,255,102,0.4)]' :
-                      selected.structureId === 'medical_dept' ? 'bg-red-500 text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]' :
-                      selected.structureId === 'youth_academy' ? 'bg-blue-400 hover:shadow-[0_0_20px_rgba(96,165,250,0.4)]' :
-                      'bg-purple-400 hover:shadow-[0_0_20px_rgba(192,132,252,0.4)]',
+                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
+                      canQuick
+                        ? cn('border-transparent hover:brightness-110', struct.bg.replace('/10', '/90'), 'text-black')
+                        : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
                     )}
+                    style={{ borderRadius: 'var(--radius-sm)' }}
                   >
-                    <span className="skew-x-6 flex items-center justify-center gap-3">
-                      <selected.actionIcon className="w-6 h-6" />
-                      {selected.action}
-                    </span>
+                    <struct.actionIcon className="w-3.5 h-3.5" />
+                    {struct.action.split(' ')[0]}
                   </button>
-                  <p className="text-center text-[11px] text-gray-500 mt-3 font-medium px-2 leading-relaxed">{quickHint}</p>
                 </div>
+
+                {/* Link para detalhes */}
+                {struct.structureId === 'youth_academy' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/clube/academia')}
+                    className="w-full text-xs text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1 pt-2 transition-colors"
+                  >
+                    <span>Ver promessas</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          );
+        })}
+      </div>
+      </div>
+
+      {/* Modal de Upgrade (Evoluir) com 3 fases */}
+      <AnimatePresence>
+        {upgradeModalState && (() => {
+          const def = CITY_STRUCTURE_DEFS.find((d) => d.structureId === upgradeModalState.structureId);
+          const level = levelOf(structuresState, upgradeModalState.structureId);
+          const upgrade = upgradeLine(upgradeModalState.structureId, level, finance.ole, finance.broCents);
+          const cost = getNextUpgradeCost(upgradeModalState.structureId, level, DEFAULT_BRO_PRICES_CENTS);
+
+          const handleConfirm = () => {
+            setUpgradeModalState({ ...upgradeModalState, phase: 'loading' });
+            setTimeout(() => {
+              dispatch({ type: 'UPGRADE_STRUCTURE', structureId: upgradeModalState.structureId });
+              trackMissionEvent('structure_upgraded');
+              setUpgradeModalState({ ...upgradeModalState, phase: 'success' });
+            }, 3000);
+          };
+
+          const handleClose = () => {
+            setUpgradeModalState(null);
+          };
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              onClick={upgradeModalState.phase === 'success' ? handleClose : undefined}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-deep-black via-dark-gray to-deep-black shadow-2xl"
+              >
+                {/* Fase 1: Confirmação */}
+                {upgradeModalState.phase === 'confirm' && (
+                  <>
+                    <div className="border-b border-white/10 bg-black/40 p-6">
+                      <div className="flex items-center gap-3 mb-3">
+                        {def && <def.icon className={cn('h-8 w-8', def.color)} strokeWidth={2} />}
+                        <h3 className="font-display text-xl font-black uppercase tracking-wider text-white">
+                          Evoluir {def?.name}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-gray-400">
+                        Confirme a evolução da estrutura para o próximo nível
+                      </p>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                      {/* Custo em Moret */}
+                      <div className="rounded-lg border border-neon-yellow/20 bg-neon-yellow/5 p-4 text-center">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70">
+                          Custo da Evolução
+                        </p>
+                        <p
+                          className="text-neon-yellow"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontStyle: 'italic',
+                            fontSize: '2rem',
+                            letterSpacing: '-0.02em',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {cost?.currency === 'exp' ? formatExp(cost.amount) : formatBroFromCents(cost?.amount ?? 0)}
+                        </p>
+                      </div>
+
+                      {/* Benefícios */}
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Benefícios do Nível {level + 1}
+                        </p>
+                        <ul className="space-y-2 text-sm text-gray-300">
+                          {def?.statsForLevel(level + 1).slice(0, 3).map((stat, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <span className="h-1 w-1 rounded-full bg-neon-yellow" />
+                              <span className="text-gray-400">{stat.label}:</span>
+                              <span className="font-bold text-white">{stat.value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 border-t border-white/10 bg-black/30 p-6">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="flex-1 rounded-lg border border-white/20 px-4 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-white/5"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirm}
+                        disabled={!upgrade.canAfford}
+                        className={cn(
+                          'flex-1 rounded-lg px-4 py-3 font-display text-sm font-black uppercase tracking-wider transition-all',
+                          upgrade.canAfford
+                            ? 'bg-neon-yellow text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] hover:brightness-110'
+                            : 'cursor-not-allowed bg-white/10 text-gray-500',
+                        )}
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Fase 2: Loading (3 segundos) */}
+                {upgradeModalState.phase === 'loading' && (
+                  <div className="p-12 text-center">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      className="mx-auto mb-6 h-16 w-16 rounded-full border-4 border-neon-yellow/20 border-t-neon-yellow"
+                    />
+                    <p className="font-display text-lg font-bold uppercase tracking-wider text-white">
+                      Evoluindo...
+                    </p>
+                    <p className="mt-2 text-sm text-gray-400">
+                      Aplicando melhorias na estrutura
+                    </p>
+                  </div>
+                )}
+
+                {/* Fase 3: Sucesso */}
+                {upgradeModalState.phase === 'success' && (
+                  <>
+                    <div className="p-12 text-center">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-neon-yellow"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                        >
+                          <TrendingUp className="h-10 w-10 text-black" strokeWidth={3} />
+                        </motion.div>
+                      </motion.div>
+
+                      <motion.h3
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-neon-yellow"
+                      >
+                        Sucesso!
+                      </motion.h3>
+
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-sm text-gray-400"
+                      >
+                        {def?.name} agora está no nível {level + 1}
+                      </motion.p>
+                    </div>
+
+                    <div className="border-t border-white/10 bg-black/30 p-6">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="w-full rounded-lg bg-neon-yellow px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] transition-all hover:brightness-110"
+                      >
+                        Continuar
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Fase 4: Saldo Insuficiente */}
+                {upgradeModalState.phase === 'insufficient' && (
+                  <>
+                    <div className="p-12 text-center">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20 border-2 border-red-500"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                        >
+                          <X className="h-10 w-10 text-red-500" strokeWidth={3} />
+                        </motion.div>
+                      </motion.div>
+
+                      <motion.h3
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="mb-2 font-display text-2xl font-black uppercase tracking-wider text-red-500"
+                      >
+                        Saldo Insuficiente
+                      </motion.h3>
+
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-sm text-gray-400"
+                      >
+                        {cost?.currency === 'exp'
+                          ? `Precisas de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
+                          : `Precisas de ${formatBroFromCents(cost?.amount ?? 0)} BRO para evoluir ${def?.name}`
+                        }
+                      </motion.p>
+                    </div>
+
+                    <div className="border-t border-white/10 bg-black/30 p-6">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 font-display text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-white/20"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
+      {/* Modal de confirmação (ações rápidas) */}
       <AnimatePresence>
         {quickPendingId && quickConfirmCopy && (
           <motion.div
@@ -504,7 +864,7 @@ export function City() {
                   id="city-quick-confirm-title"
                   className="pr-2 font-display text-sm font-black uppercase tracking-wider text-white md:text-base"
                 >
-                  Confirmar ação rápida
+                  Confirmar ação
                 </h3>
                 <button
                   type="button"
@@ -559,62 +919,5 @@ export function City() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function StructureNode({
-  struct,
-  level,
-  selected,
-  onSelect,
-}: {
-  struct: CityStructDef;
-  level: number;
-  selected: CityStructDef;
-  onSelect: (s: CityStructDef) => void;
-}) {
-  const isSelected = selected.uiId === struct.uiId;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(struct)}
-      className={cn(
-        'relative z-10 flex flex-col items-center gap-2 transition-all duration-300 sm:gap-3',
-        isSelected ? 'z-20 scale-105 sm:scale-110' : 'opacity-60 hover:z-20 hover:scale-[1.03] hover:opacity-100 sm:hover:scale-105',
-      )}
-    >
-      {isSelected && (
-        <div className={cn('absolute top-4 w-20 h-20 blur-2xl rounded-full opacity-50', struct.bg.replace('/10', ''))} />
-      )}
-
-      <div
-        className={cn(
-          'w-20 h-20 md:w-28 md:h-28 rounded-2xl border-2 flex items-center justify-center relative overflow-hidden transition-colors duration-300 shadow-xl',
-          isSelected ? cn(struct.border, 'bg-dark-gray') : 'border-white/20 bg-black/80',
-        )}
-      >
-        <div className={cn('absolute inset-0 opacity-20 transition-opacity', struct.bg, isSelected ? 'opacity-30' : 'group-hover:opacity-20')} />
-        <div
-          className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '4px 4px' }}
-        />
-
-        <struct.icon className={cn('w-10 h-10 md:w-12 md:h-12 relative z-10 transition-colors', isSelected ? struct.color : 'text-white')} />
-
-        <div className="absolute bottom-1.5 right-1.5 bg-black/90 px-1.5 py-0.5 rounded text-[9px] font-bold border border-white/20 text-white z-10">
-          {level}
-        </div>
-      </div>
-
-      <span
-        className={cn(
-          'font-display font-bold uppercase tracking-wider text-xs md:text-sm text-center max-w-[100px] md:max-w-[120px] leading-tight drop-shadow-md transition-colors',
-          isSelected ? struct.color : 'text-white',
-        )}
-      >
-        {struct.name}
-      </span>
-    </button>
   );
 }

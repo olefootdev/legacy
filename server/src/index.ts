@@ -2,27 +2,89 @@ import 'dotenv/config';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { csrfGuard, securityHeaders } from './lib/securityMiddleware.js';
+import { bodyLimit } from './lib/inputGuards.js';
 import { gameSpiritRoutes } from './routes/gameSpirit.js';
 import { healthRoutes } from './routes/health.js';
 import { matchRoutes } from './routes/matches.js';
+import { pinataMediaRoutes } from './routes/pinataMedia.js';
+import { positionCoachRoutes } from './routes/positionCoach.js';
+import { narrativeMomentRoutes } from './routes/narrativeMoment.js';
+import { marketRoutes } from './routes/market.js';
+import { voiceRoutes } from './routes/voice.js';
+import { assistantRoutes } from './routes/assistant.js';
+import { coachRoutes } from './routes/coach.js';
+import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 
 const app = new Hono();
+
+/**
+ * Retorna um matcher de origin: dado o Origin do request, devolve a string
+ * autorizada (echo) ou null. Aceita lista CORS_ORIGIN separada por vírgulas
+ * OU vírgulas + espaços OU newlines (Railway às vezes guarda multi-line).
+ * Usar função (em vez de array) é mais robusto contra encoding do host.
+ */
+function buildOriginMatcher(): (origin: string) => string | null {
+  const raw = process.env.CORS_ORIGIN?.trim();
+  let list: string[];
+
+  if (raw) {
+    list = raw
+      .split(/[,\n\r]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    for (const origin of list) {
+      try {
+        new URL(origin);
+      } catch {
+        console.error(`[olefoot-server] FATAL: CORS_ORIGIN entry inválida: ${JSON.stringify(origin)}`);
+        process.exit(1);
+      }
+    }
+  } else {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[olefoot-server] FATAL: CORS_ORIGIN não definido em produção. A encerrar.');
+      process.exit(1);
+    }
+    list = ['http://localhost:5173', 'http://localhost:5180'];
+  }
+
+  console.log(`[olefoot-server] CORS allow-list (${list.length}): ${list.join(' | ')}`);
+
+  const set = new Set(list);
+  return (origin: string) => (set.has(origin) ? origin : null);
+}
+
+app.use('*', securityHeaders);
+// Voice routes precisam de limite maior (áudio até 25MB)
+app.use('/api/voice/transcribe', bodyLimit(26 * 1024 * 1024)); // 26 MB para áudio
+app.use('*', bodyLimit(65_536)); // 64 KB máximo por request padrão
+app.use('*', csrfGuard);
 
 app.use(
   '*',
   cors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    origin: buildOriginMatcher(),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Olefoot-Pinata-Upload-Token'],
   }),
 );
 
 app.route('/', healthRoutes);
 app.route('/', matchRoutes);
 app.route('/', gameSpiritRoutes);
+app.route('/', pinataMediaRoutes);
+app.route('/', positionCoachRoutes);
+app.route('/', narrativeMomentRoutes);
+app.route('/', marketRoutes);
+app.route('/api/voice', voiceRoutes);
+app.route('/api/assistant', assistantRoutes);
+app.route('/api/coach', coachRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 
 serve({ fetch: app.fetch, port }, () => {
   console.log(`[olefoot-server] listening on http://localhost:${port}`);
+  getSupabaseAdmin(); // aciona validação de conectividade no startup
 });

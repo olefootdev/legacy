@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Download,
   Pencil,
@@ -17,6 +17,13 @@ import {
   useAdminPlatformDispatch,
   useAdminPlatformStore,
 } from '@/admin/platformStore';
+import {
+  adminSetUserStatus,
+  adminListProfiles,
+  adminListTopReferrers,
+  type AdminProfileRow,
+  type AdminTopReferrerRow,
+} from '@/supabase/adminCore';
 
 function newUserTemplate(): AdminPlatformUser {
   const now = new Date().toISOString();
@@ -39,11 +46,60 @@ function newUserTemplate(): AdminPlatformUser {
   };
 }
 
+function profileToPlatformUser(p: AdminProfileRow): AdminPlatformUser {
+  return {
+    id: p.id,
+    displayName: p.display_name ?? '(sem nome)',
+    clubName: p.club_name ?? '(sem clube)',
+    clubShort: p.club_short ?? '—',
+    broCents: 0,
+    spotBroCents: 0,
+    spotExpBalance: 0,
+    ole: 0,
+    olexpPrincipalLockedCents: 0,
+    olexpYieldAccruedCents: 0,
+    gatPositionsCount: 0,
+    ledgerEntriesCount: 0,
+    createdAtIso: p.created_at,
+    updatedAtIso: p.updated_at,
+    status: 'active',
+    notes: p.onboarding_data ? 'Cadastro completo no Supabase' : undefined,
+  };
+}
+
 export function AdminUsuariosPanel() {
   const platform = useAdminPlatformStore((s) => s);
   const dispatch = useAdminPlatformDispatch();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<AdminPlatformUser>>({});
+  const [syncing, setSyncing] = useState(false);
+  const [syncErr, setSyncErr] = useState<string | null>(null);
+  const [referralCodes, setReferralCodes] = useState<Record<string, string>>({});
+  const [topReferrers, setTopReferrers] = useState<AdminTopReferrerRow[]>([]);
+
+  const refreshFromSupabase = async () => {
+    setSyncing(true);
+    setSyncErr(null);
+    try {
+      const [rows, top] = await Promise.all([adminListProfiles(), adminListTopReferrers(20)]);
+      const users = rows.map(profileToPlatformUser);
+      const codes: Record<string, string> = {};
+      for (const r of rows) if (r.referred_by_code) codes[r.id] = r.referred_by_code;
+      dispatch({ type: 'REPLACE_USERS', users });
+      setReferralCodes(codes);
+      setTopReferrers(top);
+    } catch (e) {
+      setSyncErr(e instanceof Error ? e.message : 'Falha ao sincronizar.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Hydrate na primeira montagem.
+  useEffect(() => {
+    void refreshFromSupabase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sorted = useMemo(
     () => [...platform.users].sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso)),
@@ -120,24 +176,70 @@ export function AdminUsuariosPanel() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (window.confirm('Repor lista demo + tesouraria padrão?')) {
-                dispatch({ type: 'RESET_SEED' });
-              }
-            }}
-            className="flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold uppercase text-amber-200 hover:bg-amber-500/10"
+            onClick={() => void refreshFromSupabase()}
+            disabled={syncing}
+            className="flex items-center gap-2 rounded-lg border border-cyan-500/40 px-3 py-2 text-xs font-bold uppercase text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4" />
-            Repor demo
+            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+            {syncing ? 'Sincronizando…' : 'Sincronizar Supabase'}
           </button>
+          {syncErr ? (
+            <span className="text-[10px] text-rose-300">{syncErr}</span>
+          ) : null}
         </div>
       </div>
 
+      {topReferrers.length > 0 ? (
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-display text-xs font-black uppercase tracking-wider text-white/80">
+              Top Indicações (por código)
+            </h4>
+            <span className="text-[10px] text-white/40">{topReferrers.length} códigos ativos</span>
+          </div>
+          <div className="ole-scroll-x">
+            <table className="w-full min-w-[520px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/40">
+                  <th className="px-3 py-2">Código</th>
+                  <th className="px-3 py-2">Cadastros</th>
+                  <th className="px-3 py-2">Primeiro</th>
+                  <th className="px-3 py-2">Último</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topReferrers.map((r) => (
+                  <tr key={r.referred_by_code} className="border-b border-white/5">
+                    <td className="px-3 py-2 font-mono font-bold text-neon-yellow">
+                      {r.referred_by_code}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-white">{r.referred_count}</td>
+                    <td className="px-3 py-2 text-[10px] text-white/50">
+                      {new Date(r.first_referral_at).toLocaleString('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </td>
+                    <td className="px-3 py-2 text-[10px] text-white/50">
+                      {new Date(r.last_referral_at).toLocaleString('pt-BR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
       <div className="ole-scroll-x rounded-xl border border-white/10">
-        <table className="w-full min-w-[960px] text-left text-xs">
+        <table className="w-full min-w-[1040px] text-left text-xs">
           <thead>
             <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/40">
               <th className="px-3 py-2">Utilizador / Clube</th>
+              <th className="px-3 py-2">Indicado por</th>
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">BRO</th>
               <th className="px-3 py-2">SPOT</th>
@@ -161,6 +263,15 @@ export function AdminUsuariosPanel() {
                       {u.email ? <div className="text-[10px] text-white/35">{u.email}</div> : null}
                     </div>
                   </div>
+                </td>
+                <td className="px-3 py-2">
+                  {referralCodes[u.id] ? (
+                    <span className="rounded bg-neon-yellow/10 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow">
+                      {referralCodes[u.id]}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-white/25">—</span>
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <span
@@ -265,14 +376,25 @@ export function AdminUsuariosPanel() {
                 Estado
                 <select
                   value={(draft.status as AdminPlatformUserStatus) ?? 'active'}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, status: e.target.value as AdminPlatformUserStatus }))
-                  }
+                  onChange={(e) => {
+                    const next = e.target.value as AdminPlatformUserStatus;
+                    setDraft((d) => ({ ...d, status: next }));
+                    const userId = draft.id ?? editingId;
+                    if (userId) {
+                      void adminSetUserStatus(userId, next).then((ok) => {
+                        if (!ok) console.error('[admin] adminSetUserStatus falhou');
+                      });
+                    }
+                  }}
                   className="mt-1 w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white"
                 >
                   <option value="active">active</option>
                   <option value="suspended">suspended</option>
+                  <option value="banned">banned</option>
                 </select>
+                <p className="mt-1 text-[9px] text-white/40">
+                  <strong>banned</strong> bloqueia RLS no Supabase (usuário é deslogado no próximo boot).
+                </p>
               </label>
               <label className="block text-[10px] font-bold uppercase text-white/40">
                 Notas internas

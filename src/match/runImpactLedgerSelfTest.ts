@@ -25,7 +25,7 @@ const mkPitch = (ids: string[], gkId: string): PitchPlayerState[] =>
     role: id === gkId ? 'gk' : 'mid',
   }));
 
-// Golo equipa: todos em campo ×1.10
+// Gol equipe: todos em campo ×1.10
 {
   const L: ImpactLedgerEntry[] = [];
   appendTeamGoalScoredHome(L, 12, ['a', 'b', 'c']);

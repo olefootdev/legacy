@@ -81,6 +81,8 @@ export function pitchPlayersFromLineup(
       role: roleFromPos(p.pos),
       attributes: matchAttributesFromPlayerEntity(p),
       cognitiveArchetype: behaviorToCognitiveArchetype(p.behavior),
+      strongFoot: p.strongFoot,
+      archetype: p.archetype,
     });
   }
   return out;

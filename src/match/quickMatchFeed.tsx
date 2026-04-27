@@ -57,7 +57,17 @@ export function renderQuickFeedRichText(
     const cls = best.side === 'home' ? opts.homeClassName : opts.awayClassName;
     const slice = text.slice(best.start, best.end);
     parts.push(
-      <span key={key++} className={cn('font-bold', cls)}>
+      <span
+        key={key++}
+        className={cn('font-bold', cls)}
+        style={{
+          fontFamily: 'var(--font-serif-hero)',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          fontSize: '15px',
+          letterSpacing: '0.01em',
+        }}
+      >
         {slice}
       </span>,
     );

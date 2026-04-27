@@ -1,29 +1,36 @@
+import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Brain, ChevronLeft } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Dumbbell,
+  Flame,
+  Orbit,
+  Save,
+  Scale,
+  Shield,
+  Sparkles,
+  StretchHorizontal,
+  Zap,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import {
   STYLE_PRESETS,
-  totalStylePoints,
-  redistributeStylePoints,
-  type TeamTacticalStyle,
+  PRESET_LABEL_PT,
   type PlayingStylePresetId,
-  type StyleAxisKey,
 } from '@/tactics/playingStyle';
 
-const AXES: Array<{ key: StyleAxisKey; label: string; left: string; right: string }> = [
-  { key: 'buildUp', label: 'Construção', left: 'Posicional/curta', right: 'Direta/longa' },
-  { key: 'width', label: 'Amplitude', left: 'Estreito', right: 'Amplo' },
-  { key: 'verticality', label: 'Verticalidade', left: 'Circulação', right: 'Progressão imediata' },
-  { key: 'chanceCreation', label: 'Criação', left: 'Central/entrelinhas', right: 'Cruzamentos/alas' },
-  { key: 'shootingProfile', label: 'Perfil de chute', left: 'Prioriza dentro da área', right: 'Aceita longa distância' },
-  { key: 'defensiveBlock', label: 'Bloco defensivo', left: 'Linha alta', right: 'Bloco baixo' },
-  { key: 'pressing', label: 'Pressão', left: 'Baixa', right: 'Alta/Gegen' },
-  { key: 'compactness', label: 'Compactação', left: 'Solto', right: 'Muito compacto' },
-  { key: 'riskTaking', label: 'Risco', left: 'Seguro', right: 'Agressivo' },
-  { key: 'velocidade', label: 'Velocidade', left: 'Jogo pausado', right: 'Transições rápidas' },
-];
+const PRESET_ICONS: Record<PlayingStylePresetId, LucideIcon> = {
+  balanced: Scale,
+  POSSE_CONTROLADA: Orbit,
+  PRESSAO_ALTA: Flame,
+  TRANSICAO_RAPIDA: Zap,
+  BLOCO_BAIXO: Shield,
+  JOGO_PELAS_LATERAIS: StretchHorizontal,
+  JOGO_DIRETO: ArrowUpRight,
+  CRIATIVO_LIVRE: Sparkles,
+};
 
 export function TeamTactics() {
   const dispatch = useGameDispatch();
@@ -37,16 +44,6 @@ export function TeamTactics() {
     () => manager.activeMatchTacticId ?? savedTactics[0]?.id ?? null,
     [manager.activeMatchTacticId, savedTactics],
   );
-
-  const pointsTotal = totalStylePoints(current);
-
-  const setAxis = (key: StyleAxisKey, nextPoints: number) => {
-    const next = redistributeStylePoints(current, key, nextPoints);
-    dispatch({
-      type: 'SET_MANAGER_SLIDERS',
-      partial: { tacticalStyle: { ...next, presetId: undefined } },
-    });
-  };
 
   const applyPreset = (presetId: PlayingStylePresetId) => {
     dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId });
@@ -64,31 +61,19 @@ export function TeamTactics() {
   };
 
   return (
-    <div className="mx-auto min-w-0 max-w-5xl space-y-6 pb-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-display text-2xl font-black uppercase tracking-wider min-[390px]:text-3xl">
-            <Brain className="h-7 w-7 shrink-0 text-neon-yellow" />
-            Meu Time / Tática
-          </h2>
-          <p className="mt-1 text-sm text-gray-400">
-            Distribua <b>100 pontos</b> entre os 10 eixos. O motor usa a proporção de cada eixo nas decisões.
-          </p>
-        </div>
-        <Link
-          to="/team"
-          className="flex shrink-0 items-center gap-2 self-start rounded bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20 sm:self-auto"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Voltar
-        </Link>
-      </div>
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-5xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+        <TeamMeuTimeHeader
+          title="Tática"
+          subtitle="Escolha um preset e salve suas táticas favoritas para usar em partidas e treinos."
+        />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5">
         <h3 className="font-display font-black uppercase tracking-wider text-lg mb-4">Presets</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {(Object.keys(STYLE_PRESETS) as PlayingStylePresetId[]).map((id) => {
             const active = (current.presetId ?? 'balanced') === id;
+            const Icon = PRESET_ICONS[id];
             return (
               <button
                 key={id}
@@ -96,52 +81,16 @@ export function TeamTactics() {
                 onClick={() => applyPreset(id)}
                 className={
                   active
-                    ? 'bg-neon-yellow text-black font-bold py-2 px-3 rounded uppercase text-xs tracking-wider'
-                    : 'bg-white/5 border border-white/10 hover:bg-white/10 text-white py-2 px-3 rounded uppercase text-xs tracking-wider'
+                    ? 'flex items-start gap-2 rounded bg-neon-yellow px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-black'
+                    : 'flex items-start gap-2 rounded border border-white/10 bg-white/5 px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-white hover:bg-white/10'
                 }
               >
-                {id.replaceAll('_', ' ')}
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                <span className="min-w-0 leading-snug">{PRESET_LABEL_PT[id]}</span>
               </button>
             );
           })}
         </div>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5 space-y-5">
-        <div className="flex justify-between items-center flex-wrap gap-2">
-          <h3 className="font-display font-black uppercase tracking-wider text-lg">Eixos do estilo</h3>
-          <div className="text-xs font-bold uppercase tracking-wider">
-            <span className={pointsTotal === 100 ? 'text-neon-yellow' : 'text-red-400'}>
-              Total: {pointsTotal}/100 pontos
-            </span>
-            {current.presetId === undefined && (
-              <span className="text-gray-500 ml-2 font-normal normal-case">(personalizado)</span>
-            )}
-          </div>
-        </div>
-        {AXES.map((axis) => {
-          const value = Math.max(0, Math.round(Number(current[axis.key as keyof TeamTacticalStyle]) || 0));
-          return (
-            <div key={axis.key}>
-              <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                <span>{axis.label}</span>
-                <span className="text-neon-yellow">{value} pts</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={value}
-                onChange={(e) => setAxis(axis.key, Number(e.target.value))}
-                className="w-full accent-neon-yellow h-1 bg-black appearance-none cursor-pointer rounded-full"
-              />
-              <div className="flex justify-between text-[10px] text-gray-600 font-bold mt-1">
-                <span>{axis.left}</span>
-                <span>{axis.right}</span>
-              </div>
-            </div>
-          );
-        })}
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-5 space-y-4">
@@ -157,8 +106,9 @@ export function TeamTactics() {
             type="button"
             onClick={handleSave}
             disabled={!tacticName.trim()}
-            className="bg-neon-yellow text-black font-bold uppercase tracking-wider text-xs px-4 py-2 rounded disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded bg-neon-yellow px-4 py-2 text-xs font-bold uppercase tracking-wider text-black disabled:opacity-40"
           >
+            <Save className="h-4 w-4 shrink-0" aria-hidden />
             Salvar
           </button>
         </div>
@@ -200,8 +150,9 @@ export function TeamTactics() {
             type="button"
             onClick={handleStartTraining}
             disabled={!selectedSavedId}
-            className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold uppercase tracking-wider text-xs px-4 py-2 rounded disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 disabled:opacity-40"
           >
+            <Dumbbell className="h-4 w-4 shrink-0" aria-hidden />
             Treinar
           </button>
           <span className="text-xs text-gray-500 self-center">
@@ -209,6 +160,7 @@ export function TeamTactics() {
           </span>
         </div>
       </motion.div>
+    </div>
     </div>
   );
 }

@@ -40,6 +40,8 @@ export interface SpiritContext {
   homeShort?: string;
   /** Jogadores da casa em campo — para narrativa com dois intervenientes. */
   homePlayers?: PitchPlayerState[];
+  /** Jogadores visitantes em campo — opcional; quando presente habilita awareness real. */
+  awayPlayers?: PitchPlayerState[];
   /** Roster sintético visitante — usado para atribuir golo/cartão a jogador real. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
 
@@ -61,6 +63,57 @@ export interface SpiritContext {
    * para narração reativa sem o Spirit “decidir” o resultado antes da simulação.
    */
   motorTelemetryTail?: readonly MotorTelemetryRecord[];
+
+  /**
+   * Conhecimento de posição do jogador com a bola (positionKnowledge do PlayerEntity).
+   * Lido localmente do estado do jogador — zero tokens, zero chamadas externas.
+   * Injetado por `buildSpiritContext` quando o jogador tem DNA de lenda treinado.
+   */
+  onBallKnowledge?: import('@/gamespirit/legacy/positionKnowledgeTypes').PositionKnowledge;
+  /** Ticks restantes de cooldown pós-pênalti (bloqueia novo pênalti enquanto > 0). */
+  penaltyCooldownTicks?: number;
+  /**
+   * Booster agregado dos jogadores LegacyDNA titulares em campo.
+   * Soma dos `legacyTeamBooster` de cada legacy presente em `homePlayers` (XI inicial).
+   * Consumido por moral de time, posse, defesa/ataque etc.
+   */
+  legacyTeamBooster?: Record<string, number>;
+
+  /**
+   * Momentum acumulado entre ticks (-1..+1 por lado).
+   * Injetado pelo caller; o tick atualiza e retorna novo valor em `spiritMeta.momentum`.
+   */
+  momentum?: import('@/gamespirit/momentum').MomentumState;
+
+  /**
+   * Awareness espacial granular (SmartField) na posição da bola.
+   * Acessa pelo lado em posse (espelho automático para 'away').
+   * Consumido por `pickAction`, handler de falta perigosa, e Skills.
+   */
+  ballZoneInfo?: import('@/match/spatialZones').ZoneInfo;
+  /**
+   * Hint de ação posicional (SmartField) computado em `runMatchMinute`
+   * via `getBestAction`. Quando definido, `pickAction` prefere SHOOT/PASS/
+   * CROSS antes do fallback heurístico.
+   */
+  smartfieldActionHint?: import('@/smartfield/decision').ActionKind | null;
+
+  /**
+   * Escanteio pendente desde o tick anterior — força cabeçada nessa posse.
+   * Consumido/limpo no tick corrente via `spiritMeta.pendingCornerForSide = null`.
+   */
+  pendingCornerForSide?: PossessionSide | null;
+
+  /**
+   * Falta perigosa pendente (cobrança direta). Próximo tick força `shot` tipo `placed`.
+   */
+  pendingFreeKickForSide?: PossessionSide | null;
+
+  /**
+   * Intensidade tática escolhida pelo jogador (Quick Match).
+   * Modifica chances de gol, fadiga, contra-ataques, pressão e defesa.
+   */
+  tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */
@@ -71,6 +124,18 @@ export interface SpiritSnapshotMeta {
   spiritBuildupGkTicksRemaining?: number;
   spiritMomentumClamp01?: number | null;
   preGoalHint?: import('@/engine/types').PreGoalHint | null;
+  /** Momentum atualizado com os eventos deste tick. */
+  momentum?: import('@/gamespirit/momentum').MomentumState;
+  /** Set/limpa hint de escanteio entre ticks. `null` = consumido. */
+  pendingCornerForSide?: PossessionSide | null;
+  /** Set/limpa hint de cobrança de falta (chute direto). `null` = consumido. */
+  pendingFreeKickForSide?: PossessionSide | null;
+  /** Probabilidades agregadas do tiro neste tick (pra barra de transparência). */
+  lastShotPreview?: {
+    side: PossessionSide;
+    ts: number;
+    probs: { goal: number; save: number; out: number };
+  } | null;
 }
 
 export interface SpiritOutcome {

@@ -83,7 +83,8 @@ function idealStrategicFromContext(
   }
 
   if (reading.lineOfSightScore < 0.41 && reading.space.canConductForward) {
-    if (posAff < 0.62 || reading.pressureBand === 'high' || reading.pressureBand === 'critical') {
+    // `critical` já foi tratado acima (linha ~64).
+    if (posAff < 0.62 || reading.pressureBand === 'high') {
       return 'dribble';
     }
   }

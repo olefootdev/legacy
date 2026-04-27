@@ -3,7 +3,7 @@
  * `tacticalDisorg01` = desorganização da defesa adversária (0–1), aumenta ligeiramente crit.
  * Usado em ActionResolver — RNG separado por sufixo de seed para determinismo.
  */
-import type { AgentSnapshot } from '@/simulation/InteractionResolver';
+import type { AgentSnapshot, PassOption } from '@/simulation/InteractionResolver';
 import type { RngDraw } from '@/match/rngDraw';
 
 export type ActionExecutionTier =

@@ -1,9 +1,16 @@
 import { FIELD_LENGTH, FIELD_WIDTH } from './field';
 import { FAIRPLAY_FOUL_BIAS } from '@/match/matchSimulationTuning';
+import {
+  SHOT_CROWD_SCAN_RADIUS_M,
+  SHOT_CROWD_PEN_FAR,
+  SHOT_CROWD_PEN_CLOSE_MIN,
+  SHOT_CROWD_TAPER_DIST_M,
+} from '@/match/shootDecisionTuning';
 import type { MatchCognitiveArchetype } from '@/match/playerInMatch';
 import type { RngDraw } from '@/match/rngDraw';
 import { rngFromMathRandom } from '@/match/rngDraw';
 import { ACTION_SOFT_CAP_PASS } from '@/match/actionResolutionTuning';
+import type { PlayerArchetype, PlayerStrongFoot } from '@/entities/types';
 
 export interface AgentSnapshot {
   id: string;
@@ -31,6 +38,13 @@ export interface AgentSnapshot {
   /** 0.55–1.2 multiplicador de execução em runtime */
   confidenceRuntime?: number;
   stamina?: number;
+  strongFoot?: PlayerStrongFoot;
+  archetype?: PlayerArchetype;
+  /**
+   * Direção que o jogador está olhando (rad, convenção `atan2(vx, vz)` — mesmo eixo
+   * da seta de visão tática). Usado para penalizar passes pra trás / fora do cone.
+   */
+  heading?: number;
 }
 
 export interface PassOption {
@@ -67,6 +81,91 @@ export interface ShotChance {
   angle: number;
   /** Raw xG 0-1 */
   xG: number;
+}
+
+/**
+ * Weak-foot penalty multiplier (0.7–1.0).
+ * `both` → 1 (no penalty). Single-footed players have a % chance of using
+ * the weak foot based on ball-z position relative to their body orientation,
+ * resulting in reduced accuracy / power.
+ *
+ * The RNG roll is optional — when not provided we use a deterministic spatial
+ * heuristic: if the ball arrives from a side that forces the weak foot the
+ * penalty always applies (keeping sim deterministic when no extra RNG seed is
+ * available).
+ */
+export function weakFootMultiplier(
+  agent: AgentSnapshot,
+  ballZ: number,
+  rng?: { nextUnit(): number },
+): number {
+  const foot = agent.strongFoot;
+  if (!foot || foot === 'both') return 1;
+  const isRight = foot === 'right';
+  const bodyCenter = agent.z;
+  const ballOnWeakSide = isRight
+    ? ballZ < bodyCenter - 1.2
+    : ballZ > bodyCenter + 1.2;
+  if (!ballOnWeakSide && (!rng || rng.nextUnit() > 0.22)) return 1;
+  const skill01 = agent.drible / 100;
+  return 0.72 + skill01 * 0.14;
+}
+
+/** Bónus do preparador mental (Casa) na execução técnica. */
+export interface MentalStaffExecutionBoost {
+  execAdd01: number;
+  clutchProb: number;
+}
+
+/**
+ * Archetype execution modifier (multiplier on key attribute rolls).
+ * - `profissional`: consistent → floors bad rolls (+3% base, never <0.88×)
+ * - `lenda`: clutch gene → +6% on high-pressure actions
+ * - `novo_talento`: high variance → ±8% swing
+ * - `meme`: chaotic → ±14% swing
+ * - `ai_plus`: slight global boost +4%
+ * - undefined / default → 1 (neutral)
+ */
+export function archetypeExecutionMultiplier(
+  agent: AgentSnapshot,
+  pressure01: number,
+  rng: { nextUnit(): number },
+  mental?: MentalStaffExecutionBoost | null,
+): number {
+  const arch = agent.archetype;
+  let mult = 1;
+  if (arch) {
+    switch (arch) {
+      case 'profissional':
+        mult = Math.max(0.94, 1 + 0.03 - rng.nextUnit() * 0.02);
+        break;
+      case 'lenda':
+        mult = 1 + 0.03 + pressure01 * 0.06;
+        break;
+      case 'novo_talento': {
+        const swing = (rng.nextUnit() - 0.5) * 0.16;
+        mult = 1 + swing;
+        break;
+      }
+      case 'meme': {
+        const swing = (rng.nextUnit() - 0.5) * 0.28;
+        mult = 1 + swing;
+        break;
+      }
+      case 'ai_plus':
+        mult = 1.04;
+        break;
+      default:
+        mult = 1;
+    }
+  }
+  if (mental && mental.execAdd01 > 0) {
+    mult = Math.min(1.14, mult + mental.execAdd01);
+    if (pressure01 >= 0.5 && mental.clutchProb > 0 && rng.nextUnit() < mental.clutchProb) {
+      mult = Math.min(1.16, mult + 0.042);
+    }
+  }
+  return mult;
 }
 
 /** Pressão 0–1 a partir da distância ao adversário mais próximo */
@@ -211,9 +310,10 @@ export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponent
 
   let nearOppCount = 0;
   for (const o of opponents) {
-    if (Math.hypot(o.x - carrier.x, o.z - carrier.z) < 4) nearOppCount++;
+    if (Math.hypot(o.x - carrier.x, o.z - carrier.z) < SHOT_CROWD_SCAN_RADIUS_M) nearOppCount++;
   }
-  const crowdPen = dist < 16 ? 0.021 : 0.026;
+  const taperT = Math.min(1, Math.max(0, (dist - 6) / (SHOT_CROWD_TAPER_DIST_M - 6)));
+  const crowdPen = SHOT_CROWD_PEN_CLOSE_MIN + (SHOT_CROWD_PEN_FAR - SHOT_CROWD_PEN_CLOSE_MIN) * taperT;
   xG -= nearOppCount * crowdPen;
 
   const press = nearestOpponentPressure01(carrier, opponents);
@@ -235,11 +335,13 @@ export function resolveTackle(
   dist: number,
   rng: RngDraw = rngFromMathRandom(),
 ): boolean {
-  if (dist > 2.5) return false;
+  /** Raio comum com `TacticalSimLoop.resolveTackles` (contacto válido para desarme / falta). */
+  if (dist > 2.65) return false;
+  const defArchBonus = archetypeExecutionMultiplier(defender, 0.5, rng);
   const defPower =
-    defender.marcacao / 100
+    (defender.marcacao / 100
     + defender.fisico / 100 * 0.32
-    + defender.velocidade / 100 * 0.16;
+    + defender.velocidade / 100 * 0.16) * defArchBonus;
   const carrPower = carrier.drible / 100 + carrier.velocidade / 100 * 0.26;
   let base = 0.2 + (defPower - carrPower) * 0.36;
   const fp = defender.fairPlay / 100;
@@ -256,6 +358,7 @@ export function resolvePassLanding(
   carrier: AgentSnapshot,
   pressure01: number,
   rng: RngDraw = rngFromMathRandom(),
+  staffPassAdd01 = 0,
 ): { x: number; z: number; completed: boolean; roll: number; pSuccess: number } {
   const skill = option.isLong
     ? carrier.passeLongo * 0.75 + carrier.passeCurto * 0.25
@@ -268,6 +371,7 @@ export function resolvePassLanding(
   pOk -= pressure01 * (0.14 - comp * 0.08);
   /** Passe técnico (curto/longo) reduz risco bruto de perda, além de mental/conf sob pressão */
   pOk += (skill / 100 - 0.62) * 0.09;
+  pOk += staffPassAdd01;
   pOk = Math.max(0.08, Math.min(ACTION_SOFT_CAP_PASS, pOk));
 
   const roll = rng.nextUnit();
@@ -293,18 +397,6 @@ export function resolvePassLanding(
   };
 }
 
-/** Resolve shot outcome (legado: alvo + resultado num único espaço). Preferir ActionResolver.resolveShot.) */
-export function resolveShotOutcome(
-  xG: number,
-  rng: RngDraw = rngFromMathRandom(),
-): 'goal' | 'save' | 'miss' | 'block' {
-  const roll = rng.nextUnit();
-  if (roll < xG) return 'goal';
-  if (roll < xG + 0.25) return 'save';
-  if (roll < xG + 0.5) return 'block';
-  return 'miss';
-}
-
 export function pointToSegmentDist(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
   const abx = bx - ax;
   const abz = bz - az;
@@ -317,4 +409,26 @@ export function pointToSegmentDist(px: number, pz: number, ax: number, az: numbe
   const projX = ax + t * abx;
   const projZ = az + t * abz;
   return Math.hypot(px - projX, pz - projZ);
+}
+
+/** Distância à linha de passe + parâmetro `t` em [0,1] ao longo do segmento passador→alvo (anticipação na linha). */
+export function passInterceptLineMetrics(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): { dist: number; t: number } {
+  const abx = bx - ax;
+  const abz = bz - az;
+  const apx = px - ax;
+  const apz = pz - az;
+  const abLenSq = abx * abx + abz * abz;
+  if (abLenSq < 0.001) return { dist: Math.hypot(apx, apz), t: 0 };
+  let t = (apx * abx + apz * abz) / abLenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projX = ax + t * abx;
+  const projZ = az + t * abz;
+  return { dist: Math.hypot(px - projX, pz - projZ), t };
 }

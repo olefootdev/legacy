@@ -1,21 +1,42 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { GameProvider } from './game/GameProvider';
-import { useGameStore } from './game/store';
+import { useGameStore, useGameDispatch } from './game/store';
+import { loadGlobalLeagueFromSupabase } from './supabase/globalLeague';
+import { subscribeGlobalLeagueChanges } from './supabase/globalLeagueRealtime';
+import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHydrate';
+import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
+import { WelcomeGenesisPackHydrate } from './game/WelcomeGenesisPackHydrate';
 import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
+import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
 import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
+import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
+const ClubHub = lazy(() => import('./pages/ClubHub').then((m) => ({ default: m.ClubHub })));
+const CompetitionHub = lazy(() => import('./pages/CompetitionHub').then((m) => ({ default: m.CompetitionHub })));
+const MarketHub = lazy(() => import('./pages/MarketHub').then((m) => ({ default: m.MarketHub })));
+const HelpHub = lazy(() => import('./pages/HelpHub').then((m) => ({ default: m.HelpHub })));
+const Legend = lazy(() => import('./pages/Legend').then((m) => ({ default: m.Legend })));
+const MatchdayPreview = lazy(() => import('./pages/MatchdayPreview').then((m) => ({ default: m.MatchdayPreview })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
-const TeamTactics = lazy(() => import('./pages/TeamTactics').then((m) => ({ default: m.TeamTactics })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
 const TeamAiLabs = lazy(() => import('./pages/TeamAiLabs').then((m) => ({ default: m.TeamAiLabs })));
+const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default: m.CoachChat })));
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
 const City = lazy(() => import('./pages/City').then((m) => ({ default: m.City })));
 const Transfer = lazy(() => import('./pages/Transfer').then((m) => ({ default: m.Transfer })));
+const TransferExchange = lazy(() =>
+  import('./pages/TransferExchange').then((m) => ({ default: m.TransferExchange })),
+);
+const LiveAuctionsPage = lazy(() =>
+  import('./pages/LiveAuctionsPage').then((m) => ({ default: m.LiveAuctionsPage })),
+);
 const Store = lazy(() => import('./pages/Store').then((m) => ({ default: m.Store })));
 const Wallet = lazy(() => import('./pages/Wallet').then((m) => ({ default: m.Wallet })));
 const OlexpTab = lazy(() => import('./pages/wallet/OlexpTab').then((m) => ({ default: m.OlexpTab })));
@@ -26,18 +47,62 @@ const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default:
 const MatchLive = lazy(() => import('./pages/MatchLive').then((m) => ({ default: m.MatchLive })));
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
+const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
+const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
+const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
+const OlefootLeague = lazy(() => import('./pages/OlefootLeague').then((m) => ({ default: m.default })));
+const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
+const GlobalLeaguePlayoffs = lazy(() => import('./pages/GlobalLeaguePlayoffs').then((m) => ({ default: m.default })));
+const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m.default })));
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
 const Leagues = lazy(() => import('./pages/Leagues').then((m) => ({ default: m.Leagues })));
-const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
+const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
+const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
+const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
+const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
 const AdminDashboard = lazy(() =>
   import('./admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })),
 );
+const AdminTestesHub = lazy(() =>
+  import('./admin/AdminTestesHub').then((m) => ({ default: m.AdminTestesHub })),
+);
+const AdminBetaTesters = lazy(() =>
+  import('./admin/AdminBetaTesters').then((m) => ({ default: m.AdminBetaTesters })),
+);
+const RedeemInvite = lazy(() =>
+  import('./pages/RedeemInvite').then((m) => ({ default: m.RedeemInvite })),
+);
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
 const Cadastro = lazy(() => import('./pages/Cadastro').then((m) => ({ default: m.Cadastro })));
+const ResetPassword = lazy(() => import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
+const AdminLogin = lazy(() => import('./pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const ReferralLanding = lazy(() => import('./pages/ReferralLanding').then((m) => ({ default: m.ReferralLanding })));
+
+function RequireAdmin() {
+  const [isValid, setIsValid] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const session = await loadAdminPanelSession();
+      setIsValid(session !== null);
+    };
+    void checkSession();
+  }, []);
+
+  if (isValid === null) {
+    return <RouteFallback />;
+  }
+
+  if (!isValid) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return <Outlet />;
+}
 
 function RequireRegistration() {
   const hasProfile = useGameStore((s) => !!s.userSettings?.managerProfile);
@@ -75,18 +140,113 @@ function RouteFallback() {
   );
 }
 
+function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  console.error('MatchQuick Error:', error);
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+      <p className="font-display text-sm font-bold uppercase tracking-wider text-red-500">Erro na Partida Rápida</p>
+      <pre className="max-w-2xl overflow-auto rounded bg-black/50 p-4 text-left text-xs text-white/80">
+        {error.message}
+        {'\n\n'}
+        {error.stack}
+      </pre>
+      <button
+        onClick={resetErrorBoundary}
+        className="mt-4 rounded bg-neon-yellow px-6 py-2 font-display text-xs font-bold uppercase tracking-wider text-black hover:bg-white transition-colors"
+      >
+        Tentar novamente
+      </button>
+      <a
+        href="/"
+        className="text-sm text-white/60 hover:text-neon-yellow transition-colors"
+      >
+        ← Voltar para Home
+      </a>
+    </div>
+  );
+}
+
+function GlobalSchedulerMount() {
+  useGlobalRoundScheduler();
+  return null;
+}
+
+function GlobalLeagueHydrator() {
+  const dispatch = useGameDispatch();
+  useEffect(() => {
+    let cancelled = false;
+
+    const rehydrate = async () => {
+      const remote = await loadGlobalLeagueFromSupabase();
+      if (cancelled || !remote) return;
+      dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: remote });
+    };
+
+    void rehydrate();
+    const unsubscribe = subscribeGlobalLeagueChanges(() => {
+      void rehydrate();
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [dispatch]);
+  return null;
+}
+
 export default function App() {
   return (
     <GameProvider>
       <Router>
+        <FriendlyChallengeLayer />
         <UserSettingsEffects />
         <WorldClock />
+        <GlobalLeagueHydrator />
+        <GlobalSchedulerMount />
+        <WelcomeGenesisPackHydrate />
+        <GenesisCatalogPortraitsHydrate />
+        <GenesisTestSquadsHydrate />
         <Routes>
           <Route
-            path="/admin"
+            path="/admin/login"
             element={
               <Suspense fallback={<RouteFallback />}>
-                <AdminDashboard />
+                <AdminLogin />
+              </Suspense>
+            }
+          />
+          <Route element={<RequireAdmin />}>
+            <Route
+              path="/admin"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AdminDashboard />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/testes"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AdminTestesHub />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/beta-testers"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AdminBetaTesters />
+                </Suspense>
+              }
+            />
+          </Route>
+          <Route
+            path="/redeem"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <RedeemInvite />
               </Suspense>
             }
           />
@@ -94,36 +254,102 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
           </Route>
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<RequireRegistration />}>
-          <Route element={<GameShell />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/ranking" element={<RankingFull />} />
-            <Route path="/missions" element={<Missions />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/leagues" element={<Leagues />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/config" element={<Config />} />
-            <Route path="/team" element={<Team />} />
-            <Route path="/team/tatica" element={<TeamTactics />} />
-            <Route path="/team/treino" element={<TeamTraining />} />
-            <Route path="/team/staff" element={<TeamStaff />} />
-            <Route path="/team/ailabs" element={<TeamAiLabs />} />
-            <Route path="/city" element={<City />} />
-            <Route path="/city/youth-prospects" element={<YouthProspects />} />
-            <Route path="/transfer" element={<Transfer />} />
-            <Route path="/store" element={<Store />} />
+            <Route element={<GameShell />}>
+              <Route path="/" element={<Home />} />
+
+            {/* Hub pages */}
+            <Route path="/clube" element={<ClubHub />} />
+            <Route path="/competicao" element={<CompetitionHub />} />
+            <Route path="/mercado" element={<MarketHub />} />
+            <Route path="/ajuda" element={<HelpHub />} />
+
+            {/* Clube subpages */}
+            <Route path="/clube/elenco" element={<Team />} />
+            <Route path="/clube/treino" element={<TeamTraining />} />
+            <Route path="/clube/staff" element={<TeamStaff />} />
+            <Route path="/coach/chat" element={<CoachChat />} />
+            <Route path="/clube/academia" element={<YouthProspects />} />
+            <Route path="/clube/estruturas" element={<City />} />
+            <Route path="/clube/ailabs" element={<TeamAiLabs />} />
+
+            {/* Competição subpages */}
+            <Route path="/competicao/ligas" element={<Leagues />} />
+            <Route path="/competicao/calendario" element={<CalendarPage />} />
+            <Route path="/competicao/ranking" element={<RankingFull />} />
+
+            {/* Mercado subpages */}
+            <Route path="/mercado/transfer" element={<Transfer />} />
+            <Route path="/mercado/exchange" element={<TransferExchange />} />
+            <Route path="/mercado/leiloes" element={<LiveAuctionsPage />} />
+            <Route path="/mercado/loja" element={<Store />} />
+
+            {/* Manager subpages */}
+            <Route path="/manager" element={<Manager />} />
+            <Route path="/manager/mensagens" element={<ManagerMessages />} />
+            <Route path="/manager/network" element={<ManagerNetwork />} />
+            <Route path="/manager/pro" element={<ManagerPro />} />
+            <Route path="/manager/missoes" element={<Missions />} />
+            <Route path="/manager/config" element={<Config />} />
+
+            {/* Ajuda subpages */}
+            <Route path="/ajuda/como-jogar" element={<HowToPlay />} />
+
+            {/* Wallet (mantém estrutura atual) */}
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/wallet/olexp" element={<OlexpTab />} />
             <Route path="/wallet/referrals" element={<ReferralTab />} />
             <Route path="/wallet/gat" element={<GatTab />} />
             <Route path="/wallet/extract" element={<ExtractTab />} />
+
+            {/* Redirects - URLs antigas → novas */}
+            <Route path="/team" element={<Navigate to="/clube/elenco" replace />} />
+            <Route path="/team/tatica" element={<Navigate to="/clube/elenco" replace />} />
+            <Route path="/team/treino" element={<Navigate to="/clube/treino" replace />} />
+            <Route path="/team/staff" element={<Navigate to="/clube/staff" replace />} />
+            <Route path="/team/ailabs" element={<Navigate to="/clube/ailabs" replace />} />
+            <Route path="/city" element={<Navigate to="/clube/estruturas" replace />} />
+            <Route path="/city/youth-prospects" element={<Navigate to="/clube/academia" replace />} />
+            <Route path="/transfer" element={<Navigate to="/mercado/transfer" replace />} />
+            <Route path="/transfer/exchange" element={<Navigate to="/mercado/exchange" replace />} />
+            <Route path="/store" element={<Navigate to="/mercado/loja" replace />} />
+            <Route path="/leagues" element={<Navigate to="/competicao/ligas" replace />} />
+            <Route path="/calendar" element={<Navigate to="/competicao/calendario" replace />} />
+            <Route path="/ranking" element={<Navigate to="/competicao/ranking" replace />} />
+            <Route path="/missions" element={<Navigate to="/manager/missoes" replace />} />
+            <Route path="/config" element={<Navigate to="/manager/config" replace />} />
+            <Route path="/how-to-play" element={<Navigate to="/ajuda/como-jogar" replace />} />
+            <Route path="/profile" element={<Navigate to="/manager" replace />} />
+
+            {/* Match pages (mantém estrutura atual) */}
+            <Route path="/legend/:id" element={<Legend />} />
+            <Route path="/legend" element={<Legend />} />
+            <Route path="/matchday/preview" element={<MatchdayPreview />} />
             <Route path="/match/live" element={<MatchLive />} />
             <Route path="/match" element={<LiveMatch />} />
             <Route path="/match/test2d" element={<Navigate to="/match/live" replace />} />
             <Route path="/match/ultralive2d" element={<Navigate to="/match/live" replace />} />
             <Route path="/match/auto" element={<MatchAuto />} />
-            <Route path="/match/quick" element={<MatchQuick />} />
-          </Route>
+            <Route
+              path="/match/quick"
+              element={
+                <ErrorBoundary
+                  FallbackComponent={MatchQuickErrorFallback}
+                  onReset={() => window.location.href = '/match/quick'}
+                >
+                  <MatchQuick />
+                </ErrorBoundary>
+              }
+            />
+            <Route path="/match/penalty" element={<MatchPenalty />} />
+            <Route path="/match/global" element={<MatchGlobal />} />
+            <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
+            <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
+            <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />
+            <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
+            <Route path="/postgame" element={<Postgame />} />
+            </Route>
           </Route>
           <Route
             path="/:inviteCode"

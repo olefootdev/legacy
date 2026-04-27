@@ -1,0 +1,249 @@
+/**
+ * Mobile Responsiveness Audit & Fixes
+ *
+ * PROBLEMA IDENTIFICADO:
+ * Algumas páginas não têm limitadores de largura adequados nos containers,
+ * causando overflow horizontal em telas pequenas (mobile).
+ *
+ * SOLUÇÕES APLICADAS:
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+   1. CONTAINERS PRINCIPAIS - Garantir max-width e min-w-0
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Padrão para todas as páginas principais */
+.page-container {
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  overflow-x: hidden;
+}
+
+@media (min-width: 640px) {
+  .page-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   2. CARDS E PANELS - Prevenir overflow
+   ═══════════════════════════════════════════════════════════════ */
+
+.ole-card,
+.ole-card-accent,
+.sports-panel,
+.glass-panel {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   3. GRIDS RESPONSIVOS - Garantir colapso em mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Grid padrão: 1 coluna mobile, 2+ desktop */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    gap: 1.5rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   4. TABELAS - Scroll horizontal seguro
+   ═══════════════════════════════════════════════════════════════ */
+
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.ole-table {
+  min-width: 100%;
+  width: max-content;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   5. FLEX CONTAINERS - Prevenir estouro
+   ═══════════════════════════════════════════════════════════════ */
+
+.flex-safe {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flex-safe > * {
+  min-width: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   6. IMAGENS E MEDIA - Sempre contidas
+   ═══════════════════════════════════════════════════════════════ */
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   7. TEXTO - Quebra de linha adequada
+   ═══════════════════════════════════════════════════════════════ */
+
+.text-safe {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* Exceção para código/mono */
+code,
+pre,
+.font-mono {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   8. MODAIS E OVERLAYS - Sempre dentro da viewport
+   ═══════════════════════════════════════════════════════════════ */
+
+.modal-content {
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  width: 100%;
+  margin: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 640px) {
+  .modal-content {
+    max-width: 32rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   9. SCROLL HORIZONTAL CONTROLADO - Carrosséis
+   ═══════════════════════════════════════════════════════════════ */
+
+.carousel-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.carousel-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   10. STICKY ELEMENTS - Não forçar largura
+   ═══════════════════════════════════════════════════════════════ */
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  max-width: 100vw;
+  z-index: 30;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   11. FORMS E INPUTS - Prevenir zoom no iOS
+   ═══════════════════════════════════════════════════════════════ */
+
+input,
+textarea,
+select {
+  font-size: 16px; /* Previne zoom automático no iOS */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: inherit;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   12. SAFE AREA INSETS - Suporte para notch/island
+   ═══════════════════════════════════════════════════════════════ */
+
+.safe-area-padding {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHECKLIST DE IMPLEMENTAÇÃO
+   ═══════════════════════════════════════════════════════════════
+
+   Para cada nova página/componente:
+
+   ✅ Container principal tem: w-full max-w-[100vw] min-w-0
+   ✅ Padding responsivo: px-4 sm:px-6 lg:px-8
+   ✅ Cards/panels têm: max-w-full min-w-0
+   ✅ Grids colapsam para 1 coluna no mobile
+   ✅ Tabelas em wrapper com overflow-x-auto
+   ✅ Flex containers têm min-w-0 nos filhos
+   ✅ Imagens têm max-w-full
+   ✅ Texto longo tem break-word
+   ✅ Modais respeitam viewport
+   ✅ Carrosséis têm scroll horizontal controlado
+   ✅ Sticky elements não forçam largura
+   ✅ Inputs têm font-size: 16px no mobile
+   ✅ Safe area insets aplicados onde necessário
+
+   ═══════════════════════════════════════════════════════════════ */

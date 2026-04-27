@@ -10,9 +10,11 @@ import type {
   DecisionContext,
   PressureBand,
   SpatialBand,
+  LaneCorridorRead,
+  LocalTargetConfidence,
 } from './types';
 import { computeProgressToGoal, computeLineOfSight } from '@/match/goalContext';
-import type { TeamSide, MatchHalf } from '@/match/fieldZones';
+import { isInsideOppPenaltyArea, type TeamSide, type MatchHalf } from '@/match/fieldZones';
 
 // ---------------------------------------------------------------------------
 // Pressure
@@ -117,6 +119,62 @@ export function scanSpace(
 
 function angleBetween(ax: number, az: number, bx: number, bz: number): number {
   return Math.atan2(bz - az, bx - ax);
+}
+
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
+
+/** Corridor / packing near the ball along attack direction (soft “sensor”, not robot flags). */
+export function scanLaneBehindBall(
+  self: AgentSnapshot,
+  opponents: AgentSnapshot[],
+  ballX: number,
+  ballZ: number,
+  attackDir: 1 | -1,
+): LaneCorridorRead {
+  const MAX_D = 17;
+  let minD = MAX_D;
+  let bestLat = 14;
+  for (const o of opponents) {
+    const forward = (o.x - ballX) * attackDir;
+    const lat = Math.abs(o.z - ballZ);
+    if (forward > 0.4 && forward < MAX_D && lat < 10) {
+      minD = Math.min(minD, forward);
+      bestLat = Math.min(bestLat, lat);
+    }
+  }
+  const widthM = Math.max(3, 13 - bestLat * 0.55);
+  void self;
+  return { widthM, depthM: minD };
+}
+
+/** Distance + forward-cone falloff for “how well I read” ball / carrier (no hard π/4 cut). */
+export function scanLocalTargetConfidence(
+  self: AgentSnapshot,
+  ballX: number,
+  ballZ: number,
+  attackDir: 1 | -1,
+  carrier: AgentSnapshot | null | undefined,
+): LocalTargetConfidence {
+  const toBx = ballX - self.x;
+  const toBz = ballZ - self.z;
+  const distBall = Math.hypot(toBx, toBz);
+  const lenB = distBall || 1;
+  const forwardDotB = (toBx * attackDir) / lenB;
+  const coneBall = clamp01((forwardDotB + 0.28) / 1.2);
+  const ball01 = clamp01(1 - distBall / 50) * (0.3 + 0.7 * coneBall);
+
+  let carrier01 = 0;
+  if (carrier) {
+    const toCx = carrier.x - self.x;
+    const toCz = carrier.z - self.z;
+    const lenC = Math.hypot(toCx, toCz) || 1;
+    const forwardDotC = (toCx * attackDir) / lenC;
+    const coneC = clamp01((forwardDotC + 0.28) / 1.2);
+    carrier01 = clamp01(1 - Math.hypot(toCx, toCz) / 50) * (0.3 + 0.7 * coneC);
+  }
+  return { ball01, carrier01 };
 }
 
 export function scanTeammates(
@@ -265,6 +323,29 @@ export function buildContextReading(ctx: DecisionContext): ContextReading {
   const progressToGoal = computeProgressToGoal(ctx.self.x, side, half);
   const lineOfSightScore = computeLineOfSight(ctx.self.x, ctx.self.z, goalX, goalZ, ctx.opponents);
 
+  const laneBehindBall = scanLaneBehindBall(
+    ctx.self,
+    ctx.opponents,
+    ctx.ballX,
+    ctx.ballZ,
+    ctx.attackDir,
+  );
+  const carrierSnap =
+    ctx.carrierId == null
+      ? undefined
+      : [...ctx.teammates, ctx.self, ...ctx.opponents].find((p) => p.id === ctx.carrierId);
+  const localTargetConfidence = scanLocalTargetConfidence(
+    ctx.self,
+    ctx.ballX,
+    ctx.ballZ,
+    ctx.attackDir,
+    carrierSnap,
+  );
+  const wingSpace01 = {
+    left: clamp01(space.lateralSpaceLeft / 10),
+    right: clamp01(space.lateralSpaceRight / 10),
+  };
+
   return {
     pressure,
     space,
@@ -284,5 +365,12 @@ export function buildContextReading(ctx: DecisionContext): ContextReading {
     threatTrend: ctx.threatTrend,
     pressureBand: pressureReadingToBand(pressure),
     spatialBand: spatialBandFromContext(fieldZone, distToGoal, ctx.threatLevel),
+    laneBehindBall,
+    wingSpace01,
+    localTargetConfidence,
+    inOppPenaltyArea: isInsideOppPenaltyArea(
+      { x: ctx.self.x, z: ctx.self.z },
+      { team: side, half },
+    ),
   };
 }

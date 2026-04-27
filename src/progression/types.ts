@@ -22,6 +22,10 @@ export type MissionEvent =
   | 'screen_city'
   | 'screen_transfer'
   | 'screen_store'
+  | 'screen_club_hub'
+  | 'screen_competition_hub'
+  | 'screen_market_hub'
+  | 'screen_help_hub'
   | 'match_started'
   | 'match_completed'
   | 'match_won'
@@ -52,6 +56,11 @@ export interface MissionDef {
   progressMode?: 'sum' | 'distinct';
   /** Missões com troféu aparecem no perfil quando resgatadas (onboarding, achievement, special). */
   trophy?: MissionTrophyMeta;
+  /**
+   * Tier mínimo de carreira (1=Fraldinha, 2=Juvenil, … 8=Lenda) em que a missão aparece.
+   * Default = 1 (visível a todos). Veja `src/systems/careerTiers.ts`.
+   */
+  minTier?: number;
 }
 
 export interface MissionRuntimeState {

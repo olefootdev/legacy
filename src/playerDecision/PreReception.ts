@@ -44,9 +44,12 @@ export function resolvePreReception(ctx: DecisionContext): PreReceptionResult {
     if (pt === 'proteger_bola' && (reading.pressure.intensity === 'high' || reading.pressure.intensity === 'extreme')) {
       intent = 'adjust_body_safety';
     }
+    if (pt === 'atacar_espaco' && receiveFree && reading.space.canConductForward && intent === 'scan_shoulder') {
+      intent = 'adjust_body_forward';
+    }
   }
   const bodyAngle = computeBodyAngle(ctx, reading, intent, backToGoalShaped);
-  const anticipated = anticipateAction(reading, profile, receiveFree);
+  const anticipated = anticipateAction(ctx, reading, profile, receiveFree);
 
   return { intent, bodyAngle, receiveFree, anticipatedAction: anticipated };
 }
@@ -143,42 +146,100 @@ function computeBodyAngle(
   }
 }
 
+function passOptionFromTeammate(reading: ContextReading): OnBallAction | null {
+  if (!reading.bestTeammate) return null;
+  const t = reading.bestTeammate.snapshot;
+  const ad = reading.attackDirection;
+  const gx = ad === 1 ? FIELD_LENGTH : 0;
+  return {
+    type: 'short_pass_safety',
+    option: {
+      targetId: t.id,
+      targetX: t.x,
+      targetZ: t.z,
+      distance: reading.bestTeammate.distance,
+      successProb: 0.7,
+      isForward: reading.bestTeammate.isForward,
+      isLong: false,
+      progressionGain: 0,
+      spaceAtTarget: 5,
+      linesBroken: 0,
+      threatDepth01: passTargetThreatDepth01(t.x, ad),
+      distToOppGoal: Math.hypot(gx - t.x, FIELD_WIDTH / 2 - t.z),
+      sectorVacancy01: 0.5,
+    },
+  };
+}
+
+/**
+ * Ação mentalmente ensaiada antes do toque — alinhada ao `prethinkingIntent` quando existe;
+ * a execução real ainda passa por domínio e `decideOnBall`.
+ */
 function anticipateAction(
+  ctx: DecisionContext,
   reading: ContextReading,
   profile: DecisionContext['profile'],
   receiveFree: boolean,
 ): OnBallAction | null {
-  if (!receiveFree && profile.firstTouchPlay > 0.6 && reading.bestTeammate) {
-    const t = reading.bestTeammate.snapshot;
+  const pt = ctx.prethinking?.prethinkingIntent;
+
+  if (pt === 'passe_rapido' || pt === 'tabela') {
+    const p = passOptionFromTeammate(reading);
+    if (p && reading.bestTeammate && (pt === 'tabela' || reading.bestTeammate.isOpen || profile.firstTouchPlay > 0.4)) {
+      if (pt === 'tabela' && reading.bestTeammate.isForward) {
+        const t = reading.bestTeammate.snapshot;
+        const ad = reading.attackDirection;
+        const gx = ad === 1 ? FIELD_LENGTH : 0;
+        return {
+          type: 'one_two',
+          option: {
+            targetId: t.id,
+            targetX: t.x,
+            targetZ: t.z,
+            distance: reading.bestTeammate.distance,
+            successProb: 0.68,
+            isForward: true,
+            isLong: false,
+            progressionGain: 0.12,
+            spaceAtTarget: reading.bestTeammate.closestOppDist,
+            linesBroken: 0,
+            threatDepth01: passTargetThreatDepth01(t.x, ad),
+            distToOppGoal: Math.hypot(gx - t.x, FIELD_WIDTH / 2 - t.z),
+            sectorVacancy01: 0.55,
+          },
+        };
+      }
+      return p;
+    }
+  }
+
+  if (pt === 'finalizar_rapido' && (reading.fieldZone === 'opp_box' || reading.fieldZone === 'att_third') && reading.lineOfSightScore > 0.35) {
+    return { type: 'shoot' };
+  }
+
+  if (pt === 'atacar_espaco' && receiveFree) {
     const ad = reading.attackDirection;
-    const gx = ad === 1 ? FIELD_LENGTH : 0;
+    const depth = 8 + reading.space.forwardSpaceDepth * 0.35;
+    const tx = ctx.self.x + ad * depth;
+    const tz = ctx.self.z + (reading.space.lateralSpaceRight > reading.space.lateralSpaceLeft ? 2.2 : -2.2);
     return {
-      type: 'short_pass_safety',
-      option: {
-        targetId: t.id,
-        targetX: t.x,
-        targetZ: t.z,
-        distance: reading.bestTeammate.distance,
-        successProb: 0.7,
-        isForward: reading.bestTeammate.isForward,
-        isLong: false,
-        progressionGain: 0,
-        spaceAtTarget: 5,
-        linesBroken: 0,
-        threatDepth01: passTargetThreatDepth01(t.x, ad),
-        distToOppGoal: Math.hypot(gx - t.x, FIELD_WIDTH / 2 - t.z),
-        sectorVacancy01: 0.5,
-      },
+      type: 'progressive_dribble',
+      targetX: Math.max(4, Math.min(FIELD_LENGTH - 4, tx)),
+      targetZ: Math.max(4, Math.min(FIELD_WIDTH - 4, tz)),
     };
+  }
+
+  if (!receiveFree && profile.firstTouchPlay > 0.6 && reading.bestTeammate) {
+    return passOptionFromTeammate(reading);
   }
 
   if (receiveFree && reading.space.canConductForward && profile.dribbleTendency > 0.5) {
     return {
       type: 'aggressive_carry',
       targetX: reading.attackDirection === 1
-        ? Math.min(105, reading.attackDirection * 10 + 0) // placeholder
-        : 0,
-      targetZ: 0,
+        ? Math.min(FIELD_LENGTH - 5, ctx.self.x + 12)
+        : Math.max(5, ctx.self.x - 12),
+      targetZ: Math.max(4, Math.min(FIELD_WIDTH - 4, ctx.self.z)),
     };
   }
 

@@ -37,11 +37,26 @@ export interface MatchTruthPlayer {
   x: number;
   y: number;
   z: number;
+  /**
+   * Body orientation on XZ (rad), smoothed — not raw per-frame velocity noise.
+   * Same convention as historical `Math.atan2(vx, vz)` on the tactical plane.
+   */
   heading?: number;
+  /** Alias of `heading` for consumers that expect an explicit facing field. */
+  facingYaw?: number;
   speed?: number;
   role: string;
   /** Número da camisa (label na entidade). */
   shirtNumber?: number;
+  /**
+   * Resistência em jogo no motor tático (22–100). Opcional: quando presente, a UI pode derivar
+   * fadiga/energia alinhada ao sim em tempo real (`test2d`).
+   */
+  matchStamina?: number;
+  /** Optional discrete locomotion state for animation: walk|jog|sprint */
+  locomotionState?: 'walk' | 'jog' | 'sprint';
+  /** Optional short intention for visual overlays: e.g. { type: 'support', targetX, targetZ, confidence } */
+  intent?: { type: string; targetX?: number; targetZ?: number; confidence?: number };
 }
 
 export interface MatchTruthSnapshot {
@@ -56,6 +71,13 @@ export interface MatchTruthSnapshot {
   cameraCues?: CameraCue[];
   /** Kits por lado — enviado no primeiro snapshot ou quando muda. */
   kits?: { home: TeamKit; away: TeamKit };
+  /**
+   * Contagem regressiva (segundos inteiros restantes) antes do pontapé de saída do 2.º tempo,
+   * com equipas já na formação de saída e trocadas de campo.
+   */
+  secondHalfResumeCountdownSec?: number;
+  /** Antes do primeiro passe após o apito (bola morta no centro, dois jogadores da equipa que sai). */
+  matchOpeningKickoffCountdownSec?: number;
 }
 
 export function serializeMatchTruth(s: MatchTruthSnapshot): string {

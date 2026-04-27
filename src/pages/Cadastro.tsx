@@ -1,26 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { User, Shield, Heart, ArrowRight, ArrowLeft, Check, Sparkles, Trophy, Users, Briefcase, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { useSportsDataStore, type SportsClub, type SportsLeague } from '@/admin/sportsDataStore';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
-import { Search } from 'lucide-react';
 import {
   clearPendingReferrerCode,
   readPendingReferrerCode,
   normalizeReferralCode,
 } from '@/wallet/referralCode';
+import { PRESET_LABEL_PT } from '@/tactics/playingStyle';
+import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
+import { syncProfileManagerFirstName } from '@/supabase/profileDisplayName';
+import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
+import type { FavoriteRealTeamRef } from '@/game/types';
+import { signUpWithEmail, checkEmailExists } from '@/supabase/auth';
 
-const FORMATION_STYLE_LABELS: Record<string, string> = {
-  balanced: 'Equilibrado',
-  tiki_positional: 'Posse de bola / Posicional',
-  vertical_transition: 'Transição vertical',
-  wide_crossing: 'Jogo aberto / Cruzamentos',
-  low_block_counter: 'Bloco baixo / Contra-ataque',
-  direct_long_ball: 'Jogo direto / Bola longa',
-};
+type UserProfile =
+  | 'apaixonado'
+  | 'novo_talento'
+  | 'atleta_atuacao'
+  | 'profissional'
+  | 'midia'
+  | 'ex_jogador';
 
 const FORMATION_OPTIONS: FormationSchemeId[] = [
   '4-3-3',
@@ -30,6 +34,238 @@ const FORMATION_OPTIONS: FormationSchemeId[] = [
   '4-5-1',
   '5-3-2',
   '3-4-3',
+];
+
+const BRAZIL_STATES_DDD = [
+  {
+    state: 'AC',
+    name: 'Acre',
+    cities: [
+      { name: 'Rio Branco e região', ddd: '68' },
+    ]
+  },
+  {
+    state: 'AL',
+    name: 'Alagoas',
+    cities: [
+      { name: 'Maceió e região', ddd: '82' },
+    ]
+  },
+  {
+    state: 'AP',
+    name: 'Amapá',
+    cities: [
+      { name: 'Macapá e região', ddd: '96' },
+    ]
+  },
+  {
+    state: 'AM',
+    name: 'Amazonas',
+    cities: [
+      { name: 'Manaus', ddd: '92' },
+      { name: 'Interior', ddd: '97' },
+    ]
+  },
+  {
+    state: 'BA',
+    name: 'Bahia',
+    cities: [
+      { name: 'Salvador', ddd: '71' },
+      { name: 'Feira de Santana', ddd: '75' },
+      { name: 'Vitória da Conquista', ddd: '77' },
+      { name: 'Ilhéus e Itabuna', ddd: '73' },
+      { name: 'Juazeiro', ddd: '74' },
+    ]
+  },
+  {
+    state: 'CE',
+    name: 'Ceará',
+    cities: [
+      { name: 'Fortaleza', ddd: '85' },
+      { name: 'Juazeiro do Norte e Crato', ddd: '88' },
+    ]
+  },
+  {
+    state: 'DF',
+    name: 'Distrito Federal',
+    cities: [
+      { name: 'Brasília', ddd: '61' },
+    ]
+  },
+  {
+    state: 'ES',
+    name: 'Espírito Santo',
+    cities: [
+      { name: 'Vitória', ddd: '27' },
+      { name: 'Cachoeiro de Itapemirim', ddd: '28' },
+    ]
+  },
+  {
+    state: 'GO',
+    name: 'Goiás',
+    cities: [
+      { name: 'Goiânia', ddd: '62' },
+      { name: 'Rio Verde', ddd: '64' },
+    ]
+  },
+  {
+    state: 'MA',
+    name: 'Maranhão',
+    cities: [
+      { name: 'São Luís', ddd: '98' },
+      { name: 'Imperatriz', ddd: '99' },
+    ]
+  },
+  {
+    state: 'MT',
+    name: 'Mato Grosso',
+    cities: [
+      { name: 'Cuiabá', ddd: '65' },
+      { name: 'Rondonópolis e Sinop', ddd: '66' },
+    ]
+  },
+  {
+    state: 'MS',
+    name: 'Mato Grosso do Sul',
+    cities: [
+      { name: 'Campo Grande e região', ddd: '67' },
+    ]
+  },
+  {
+    state: 'MG',
+    name: 'Minas Gerais',
+    cities: [
+      { name: 'Belo Horizonte', ddd: '31' },
+      { name: 'Juiz de Fora', ddd: '32' },
+      { name: 'Governador Valadares', ddd: '33' },
+      { name: 'Uberlândia', ddd: '34' },
+      { name: 'Poços de Caldas e Varginha', ddd: '35' },
+      { name: 'Divinópolis e Pará de Minas', ddd: '37' },
+      { name: 'Montes Claros', ddd: '38' },
+    ]
+  },
+  {
+    state: 'PA',
+    name: 'Pará',
+    cities: [
+      { name: 'Belém', ddd: '91' },
+      { name: 'Santarém', ddd: '93' },
+      { name: 'Marabá', ddd: '94' },
+    ]
+  },
+  {
+    state: 'PB',
+    name: 'Paraíba',
+    cities: [
+      { name: 'João Pessoa e região', ddd: '83' },
+    ]
+  },
+  {
+    state: 'PR',
+    name: 'Paraná',
+    cities: [
+      { name: 'Curitiba', ddd: '41' },
+      { name: 'Ponta Grossa', ddd: '42' },
+      { name: 'Londrina', ddd: '43' },
+      { name: 'Maringá', ddd: '44' },
+      { name: 'Foz do Iguaçu', ddd: '45' },
+      { name: 'Francisco Beltrão e Pato Branco', ddd: '46' },
+    ]
+  },
+  {
+    state: 'PE',
+    name: 'Pernambuco',
+    cities: [
+      { name: 'Recife', ddd: '81' },
+      { name: 'Caruaru e Petrolina', ddd: '87' },
+    ]
+  },
+  {
+    state: 'PI',
+    name: 'Piauí',
+    cities: [
+      { name: 'Teresina', ddd: '86' },
+      { name: 'Parnaíba e Picos', ddd: '89' },
+    ]
+  },
+  {
+    state: 'RJ',
+    name: 'Rio de Janeiro',
+    cities: [
+      { name: 'Rio de Janeiro', ddd: '21' },
+      { name: 'Campos dos Goytacazes', ddd: '22' },
+      { name: 'Volta Redonda e Petrópolis', ddd: '24' },
+    ]
+  },
+  {
+    state: 'RN',
+    name: 'Rio Grande do Norte',
+    cities: [
+      { name: 'Natal e região', ddd: '84' },
+    ]
+  },
+  {
+    state: 'RS',
+    name: 'Rio Grande do Sul',
+    cities: [
+      { name: 'Porto Alegre', ddd: '51' },
+      { name: 'Pelotas e Rio Grande', ddd: '53' },
+      { name: 'Caxias do Sul', ddd: '54' },
+      { name: 'Santa Maria', ddd: '55' },
+    ]
+  },
+  {
+    state: 'RO',
+    name: 'Rondônia',
+    cities: [
+      { name: 'Porto Velho e região', ddd: '69' },
+    ]
+  },
+  {
+    state: 'RR',
+    name: 'Roraima',
+    cities: [
+      { name: 'Boa Vista e região', ddd: '95' },
+    ]
+  },
+  {
+    state: 'SC',
+    name: 'Santa Catarina',
+    cities: [
+      { name: 'Joinville e Blumenau', ddd: '47' },
+      { name: 'Florianópolis', ddd: '48' },
+      { name: 'Chapecó e Criciúma', ddd: '49' },
+    ]
+  },
+  {
+    state: 'SP',
+    name: 'São Paulo',
+    cities: [
+      { name: 'São Paulo', ddd: '11' },
+      { name: 'São José dos Campos', ddd: '12' },
+      { name: 'Santos', ddd: '13' },
+      { name: 'Bauru', ddd: '14' },
+      { name: 'Sorocaba', ddd: '15' },
+      { name: 'Ribeirão Preto', ddd: '16' },
+      { name: 'São José do Rio Preto', ddd: '17' },
+      { name: 'Presidente Prudente', ddd: '18' },
+      { name: 'Campinas', ddd: '19' },
+    ]
+  },
+  {
+    state: 'SE',
+    name: 'Sergipe',
+    cities: [
+      { name: 'Aracaju e região', ddd: '79' },
+    ]
+  },
+  {
+    state: 'TO',
+    name: 'Tocantins',
+    cities: [
+      { name: 'Palmas e região', ddd: '63' },
+    ]
+  },
 ];
 
 function digitsOnly(s: string): string {
@@ -61,8 +297,11 @@ export function Cadastro() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [dialOption, setDialOption] = useState<CountryDialOption>(COUNTRY_DIAL_OPTIONS[0]);
   const [customDialDigits, setCustomDialDigits] = useState('');
+  const [brazilState, setBrazilState] = useState<string>('');
+  const [brazilCity, setBrazilCity] = useState<string>('');
   const [ddd, setDdd] = useState('');
   const [localPhone, setLocalPhone] = useState('');
   const [referrerCode, setReferrerCode] = useState('');
@@ -71,34 +310,33 @@ export function Cadastro() {
   const [initials, setInitials] = useState('');
   const [formationScheme, setFormationScheme] = useState<FormationSchemeId>('4-3-3');
 
-  const leagues = useSportsDataStore((s) => s.leagues);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
-  const [selectedClub, setSelectedClub] = useState<SportsClub | null>(null);
-  const [searchQ, setSearchQ] = useState('');
+  const [favoriteTeam, setFavoriteTeam] = useState<FavoriteRealTeamRef | null>(null);
+  const [leagueBucketId, setLeagueBucketId] = useState<string>('brasil');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  const hasData = leagues.length > 0;
+  const [finishBusy, setFinishBusy] = useState(false);
+  const [emailTaken, setEmailTaken] = useState(false);
+  const [emailChecking, setEmailChecking] = useState(false);
 
   useEffect(() => {
     const p = readPendingReferrerCode();
     if (p) setReferrerCode(p);
   }, []);
 
-  const selectedLeague = useMemo(
-    () => leagues.find((l) => l.id === selectedLeagueId) ?? null,
-    [leagues, selectedLeagueId],
-  );
-
-  const filteredClubs = useMemo(() => {
-    if (!selectedLeague) return [];
-    const q = searchQ.trim().toLowerCase();
-    if (!q) return selectedLeague.clubs;
-    return selectedLeague.clubs.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.short_name.toLowerCase().includes(q) ||
-        c.city.toLowerCase().includes(q),
-    );
-  }, [selectedLeague, searchQ]);
+  useEffect(() => {
+    setEmailTaken(false);
+    if (!simpleEmailOk(email)) return;
+    setEmailChecking(true);
+    const t = setTimeout(async () => {
+      const taken = await checkEmailExists(email);
+      setEmailTaken(taken);
+      setEmailChecking(false);
+    }, 450);
+    return () => {
+      clearTimeout(t);
+      setEmailChecking(false);
+    };
+  }, [email]);
 
   const dialDigits = useMemo(() => {
     if (dialOption.iso2 === 'OTHER') return digitsOnly(customDialDigits);
@@ -111,85 +349,189 @@ export function Cadastro() {
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     simpleEmailOk(email) &&
+    !emailTaken &&
+    !emailChecking &&
+    password.length >= 6 &&
     phoneE164.length >= 8;
 
   const step2Valid = clubName.trim().length > 0 && initials.trim().length > 0;
-
-  const step3Valid = !hasData || selectedClub !== null;
+  const step3Valid = !!favoriteTeam && !!userProfile;
 
   const goNext = () => {
     if (step === 1 && step1Valid) setStep(2);
     else if (step === 2 && step2Valid) setStep(3);
   };
 
-  const finish = () => {
-    if (!step3Valid) return;
+  const [finishError, setFinishError] = useState<string | null>(null);
+
+  const finish = async () => {
+    if (!step3Valid || finishBusy) return;
+    setFinishError(null);
+    setFinishBusy(true);
     const sn = initials.trim().toUpperCase().slice(0, 6);
-    dispatch({
-      type: 'SET_USER_SETTINGS',
-      partial: {
-        managerProfile: {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-          phoneE164,
-        },
-        ...(selectedClub
-          ? {
-              favoriteRealTeam: {
-                id: 0,
-                name: selectedClub.name,
-                logo: selectedClub.logo_url ?? null,
-              },
-            }
-          : {}),
-      },
-    });
-    clearPendingReferrerCode();
-    const refNorm = normalizeReferralCode(referrerCode);
-    if (refNorm) {
-      dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: refNorm });
-    }
-    dispatch({
-      type: 'ADMIN_PATCH_CLUB',
-      partial: { name: clubName.trim(), shortName: sn },
-    });
-    const tacticalDefaults = FORMATION_TACTICAL_DEFAULTS[formationScheme];
-    dispatch({
-      type: 'SET_MANAGER_SLIDERS',
-      partial: {
+    try {
+      // Supabase signup ANTES de alterar o save local. Se der erro (email já
+      // existente, senha fraca, etc), não quebramos o estado local.
+      const managerProfile = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phoneE164,
+      };
+      const signUp = await signUpWithEmail({
+        email: email.trim(),
+        password,
+        managerProfile,
+        favoriteRealTeam: favoriteTeam,
+        clubName: clubName.trim(),
+        clubShort: sn,
         formationScheme,
-        tacticalMentality: tacticalDefaults.tacticalMentality,
-        defensiveLine: tacticalDefaults.defensiveLine,
-        tempo: tacticalDefaults.tempo,
-        tacticalStyle: tacticalDefaults.style,
-      },
-    });
-    dispatch({ type: 'SET_LINEUP', lineup: { ...lineup }, formationScheme });
-    navigate('/');
+        referredByCode: normalizeReferralCode(referrerCode),
+        userProfile: userProfile ?? null,
+      });
+      if (!signUp.ok) {
+        setFinishError(signUp.error ?? 'Falha ao criar conta.');
+        return;
+      }
+      dispatch({
+        type: 'SET_USER_SETTINGS',
+        partial: {
+          managerProfile,
+          favoriteRealTeam: favoriteTeam,
+        },
+      });
+      clearPendingReferrerCode();
+      const refNorm = normalizeReferralCode(referrerCode);
+      if (refNorm) {
+        dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: refNorm });
+      }
+      dispatch({
+        type: 'ADMIN_PATCH_CLUB',
+        partial: { name: clubName.trim(), shortName: sn },
+      });
+      const tacticalDefaults = FORMATION_TACTICAL_DEFAULTS[formationScheme];
+      dispatch({
+        type: 'SET_MANAGER_SLIDERS',
+        partial: {
+          formationScheme,
+          tacticalMentality: tacticalDefaults.tacticalMentality,
+          defensiveLine: tacticalDefaults.defensiveLine,
+          tempo: tacticalDefaults.tempo,
+          tacticalStyle: tacticalDefaults.style,
+        },
+      });
+      dispatch({ type: 'SET_LINEUP', lineup: { ...lineup }, formationScheme });
+
+      const welcome = await tryGrantWelcomeGenesisPack();
+      if (welcome.ok === false) {
+        const ignorable =
+          welcome.reason === 'already_granted' || welcome.reason === 'squad_not_empty';
+        if (!ignorable) console.warn('[Cadastro] welcome genesis pack:', welcome.reason);
+      }
+
+      await syncProfileManagerFirstName(firstName.trim());
+
+      navigate('/');
+    } finally {
+      setFinishBusy(false);
+    }
   };
 
   return (
-    <div className="flex min-h-svh w-full min-w-0 flex-col items-center justify-center bg-deep-black px-4 py-10 sm:px-6">
-      <div className="sports-panel w-full min-w-0 max-w-lg rounded-xl p-6 sm:p-8">
-        <h1 className="font-display text-center text-2xl font-bold uppercase tracking-wide text-white">Cadastro</h1>
-        <p className="mt-2 text-center font-sans text-xs text-white/55">
-          Agora vamos escolher o seu time do coração.
-        </p>
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-deep-black">
+      {/* Background layers */}
+      <div
+        className="absolute inset-0 z-0 scale-105 bg-cover bg-[center_22%] bg-no-repeat sm:bg-center"
+        style={{ backgroundImage: 'url(/login-hero.png)' }}
+        aria-hidden
+      />
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/88 via-black/35 to-black/90" aria-hidden />
+      <div className="absolute inset-0 z-0 bg-gradient-to-t from-black via-black/50 to-black/25 opacity-[0.96]" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_95%_60%_at_50%_75%,rgba(0,0,0,0.65),transparent_52%)]"
+        aria-hidden
+      />
 
-        <div className="mt-6 flex justify-center gap-2" aria-hidden>
-          {([1, 2, 3] as const).map((n) => (
-            <div
-              key={n}
-              className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full font-display text-xs font-bold',
-                step === n ? 'bg-neon-yellow text-black' : 'bg-white/10 text-white/50',
-              )}
-            >
-              {n}
-            </div>
-          ))}
+      {/* Header */}
+      <header role="banner" className="relative z-[100] w-full shrink-0 bg-transparent px-4 pb-2 pt-5 sm:px-6 sm:pb-3 sm:pt-6 md:px-8">
+        <div className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-3">
+          <Link to="/login" className="flex min-w-0 flex-1 items-center gap-3" aria-label="Olefoot">
+            <img
+              src="/test-pitch/olefoot-logo-game.svg"
+              alt="Olefoot"
+              width={260}
+              height={72}
+              decoding="async"
+              fetchPriority="high"
+              className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.75)] sm:h-12 sm:max-h-[3.25rem]"
+            />
+          </Link>
+          <span className="shrink-0 rounded-full border border-white/20 bg-black/35 px-4 py-2 font-display text-[9px] font-bold uppercase tracking-[0.28em] text-white/95 sm:px-5 sm:text-[10px] sm:tracking-[0.32em]">
+            Cadastro
+          </span>
         </div>
+      </header>
+
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-6 sm:px-8 sm:pb-8 md:px-10">
+        <div className="min-h-[8vh] shrink-0 sm:min-h-[10vh]" aria-hidden />
+
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
+          <div
+            className={cn(
+              'relative overflow-hidden rounded-xl border border-white/[0.12]',
+              'bg-gradient-to-br from-black/60 via-black/50 to-black/70',
+              'shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_20px_50px_rgba(0,0,0,0.6)]',
+              'backdrop-blur-xl p-6 sm:p-8',
+            )}
+          >
+            <div className="absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b from-neon-yellow via-neon-yellow/80 to-neon-yellow/60" aria-hidden />
+
+            {/* Step indicator */}
+            <div className="mb-8 flex items-center justify-center gap-2">
+              {([1, 2, 3] as const).map((n) => {
+                const Icon = n === 1 ? User : n === 2 ? Shield : Heart;
+                const isActive = step === n;
+                const isComplete = step > n;
+                return (
+                  <div key={n} className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all',
+                        isActive
+                          ? 'border-neon-yellow bg-neon-yellow text-black shadow-[0_0_16px_rgba(253,224,71,0.4)]'
+                          : isComplete
+                            ? 'border-neon-yellow/60 bg-neon-yellow/20 text-neon-yellow'
+                            : 'border-white/20 bg-white/5 text-white/40',
+                      )}
+                    >
+                      {isComplete ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                    </div>
+                    {n < 3 && (
+                      <div
+                        className={cn(
+                          'h-0.5 w-8 transition-colors',
+                          step > n ? 'bg-neon-yellow/60' : 'bg-white/10',
+                        )}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Step title */}
+            <div className="mb-6 text-center">
+              <h1 className="font-serif-hero text-[clamp(1.8rem,6vw,2.4rem)] font-normal italic leading-tight text-white">
+                {step === 1 && 'Crie sua conta'}
+                {step === 2 && 'Monte seu clube'}
+                {step === 3 && 'Escolha seu time'}
+              </h1>
+              <p className="mt-2 font-sans text-sm text-white/65">
+                {step === 1 && 'Dados pessoais e credenciais de acesso'}
+                {step === 2 && 'Nome, iniciais e formação tática'}
+                {step === 3 && 'Selecione o time do coração'}
+              </p>
+            </div>
 
         {step === 1 && (
           <div className="mt-8 space-y-4">
@@ -221,6 +563,31 @@ export function Cadastro() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                aria-invalid={emailTaken || undefined}
+              />
+              {simpleEmailOk(email) && emailChecking ? (
+                <p className="mt-1 text-[11px] text-white/45">Verificando…</p>
+              ) : null}
+              {emailTaken ? (
+                <p className="mt-1 text-[11px] text-rose-300">
+                  ✗ E-mail já cadastrado.{' '}
+                  <Link to="/login" className="underline decoration-rose-300/50 hover:text-rose-200">
+                    Fazer login
+                  </Link>
+                </p>
+              ) : null}
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-white/65">
+                Senha <span className="text-white/35">(mín. 6 chars — usada pra entrar de qualquer dispositivo)</span>
+              </span>
+              <input
+                type="password"
+                className={inputClass}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={6}
               />
             </label>
             <label className="block">
@@ -240,51 +607,291 @@ export function Cadastro() {
               </p>
             </label>
             <div>
-              <span className="mb-1 block text-xs font-medium text-white/65">Telefone</span>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                <select
-                  className={cn(inputClass, 'sm:max-w-[200px]')}
-                  value={dialOption.iso2}
-                  onChange={(e) => {
-                    const o = COUNTRY_DIAL_OPTIONS.find((x) => x.iso2 === e.target.value);
-                    if (o) setDialOption(o);
-                  }}
-                >
-                  {COUNTRY_DIAL_OPTIONS.map((c) => (
-                    <option key={c.iso2} value={c.iso2}>
-                      {isoToFlag(c.iso2)} {c.name} ({c.dial})
-                    </option>
-                  ))}
-                </select>
-                {dialOption.iso2 === 'OTHER' && (
-                  <input
-                    className={inputClass}
-                    placeholder="Código país (ex. 352)"
-                    value={customDialDigits}
-                    onChange={(e) => setCustomDialDigits(e.target.value)}
-                    inputMode="numeric"
-                  />
-                )}
-                <input
-                  className={cn(inputClass, 'sm:max-w-[88px]')}
-                  placeholder="DDD"
-                  value={ddd}
-                  onChange={(e) => setDdd(e.target.value)}
-                  inputMode="numeric"
-                />
-                <input
-                  className={inputClass}
-                  placeholder="Número"
-                  value={localPhone}
-                  onChange={(e) => setLocalPhone(e.target.value)}
-                  inputMode="tel"
-                  autoComplete="tel-national"
-                />
+              <span className="mb-2 block text-xs font-medium text-white/65">Telefone</span>
+              <div className="space-y-2.5">
+                {/* Linha 1: DDI + DDD */}
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[10px] font-medium text-white/50">DDI (País)</label>
+                    <select
+                      className={inputClass}
+                      value={dialOption.iso2}
+                      onChange={(e) => {
+                        const o = COUNTRY_DIAL_OPTIONS.find((x) => x.iso2 === e.target.value);
+                        if (o) {
+                          setDialOption(o);
+                          if (o.iso2 !== 'BR') {
+                            setBrazilState('');
+                            setDdd('');
+                          }
+                        }
+                      }}
+                    >
+                      {COUNTRY_DIAL_OPTIONS.map((c) => (
+                        <option key={c.iso2} value={c.iso2}>
+                          {isoToFlag(c.iso2)} {c.name} {c.dial}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {dialOption.iso2 === 'OTHER' && (
+                    <div className="w-28">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">Código</label>
+                      <input
+                        className={inputClass}
+                        placeholder="ex. 352"
+                        value={customDialDigits}
+                        onChange={(e) => setCustomDialDigits(e.target.value)}
+                        inputMode="numeric"
+                      />
+                    </div>
+                  )}
+                  {dialOption.iso2 === 'BR' ? (
+                    <div className="w-20">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">UF</label>
+                      <select
+                        className={inputClass}
+                        value={brazilState}
+                        onChange={(e) => {
+                          setBrazilState(e.target.value);
+                          setBrazilCity('');
+                          setDdd('');
+                        }}
+                      >
+                        <option value="">--</option>
+                        {BRAZIL_STATES_DDD.map((s) => (
+                          <option key={s.state} value={s.state}>
+                            {s.state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : dialOption.iso2 !== 'OTHER' ? (
+                    <div className="w-24">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">DDD</label>
+                      <input
+                        className={inputClass}
+                        placeholder="DDD"
+                        value={ddd}
+                        onChange={(e) => setDdd(e.target.value)}
+                        inputMode="numeric"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Linha 2: Cidade + Número */}
+                <div className="flex gap-2">
+                  {dialOption.iso2 === 'BR' && brazilState ? (
+                    <div className="flex-1">
+                      <label className="mb-1 block text-[10px] font-medium text-white/50">Cidade/Região</label>
+                      <select
+                        className={inputClass}
+                        value={brazilCity}
+                        onChange={(e) => {
+                          setBrazilCity(e.target.value);
+                          const state = BRAZIL_STATES_DDD.find((s) => s.state === brazilState);
+                          const city = state?.cities.find((c) => c.name === e.target.value);
+                          if (city) {
+                            setDdd(city.ddd);
+                          }
+                        }}
+                      >
+                        <option value="">Selecione</option>
+                        {BRAZIL_STATES_DDD.find((s) => s.state === brazilState)?.cities.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className={dialOption.iso2 === 'BR' && brazilState ? 'flex-1' : 'w-full'}>
+                    <label className="mb-1 block text-[10px] font-medium text-white/50">Número</label>
+                    <input
+                      className={inputClass}
+                      placeholder="Número do telefone"
+                      value={localPhone}
+                      onChange={(e) => setLocalPhone(e.target.value)}
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                    />
+                  </div>
+                </div>
               </div>
               {phoneE164 ? (
-                <p className="mt-1 font-mono text-[10px] text-white/40">Seu telefone é {phoneE164}</p>
+                <p className="mt-1.5 font-mono text-[10px] text-white/40">Seu telefone é {phoneE164}</p>
               ) : null}
             </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="mt-8 space-y-6">
+            {/* Seleção de perfil */}
+            <div>
+              <p className="mb-3 text-center font-display text-base font-bold uppercase tracking-wide text-white">
+                Qual seu perfil?
+              </p>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {[
+                  { id: 'apaixonado' as const, label: 'Apaixonado por futebol', icon: Heart, color: 'rose' },
+                  { id: 'novo_talento' as const, label: 'Novo talento', icon: Sparkles, color: 'cyan' },
+                  { id: 'atleta_atuacao' as const, label: 'Atleta em atuação', icon: Trophy, color: 'amber' },
+                  { id: 'profissional' as const, label: 'Profissional', icon: Briefcase, color: 'blue' },
+                  { id: 'midia' as const, label: 'Mídia', icon: Mic, color: 'purple' },
+                  { id: 'ex_jogador' as const, label: 'Ex-Jogador', icon: Star, color: 'yellow' },
+                ].map((profile) => {
+                  const Icon = profile.icon;
+                  const selected = userProfile === profile.id;
+                  return (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      onClick={() => setUserProfile(profile.id)}
+                      className={cn(
+                        'flex flex-col items-center gap-2 rounded-lg border bg-black/30 p-3 transition-all',
+                        selected
+                          ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
+                          : 'border-white/10 hover:border-white/30',
+                      )}
+                      aria-pressed={selected}
+                    >
+                      <div className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                        selected ? 'border-neon-yellow/70 bg-neon-yellow/20' : 'border-white/20 bg-white/5',
+                      )}>
+                        <Icon className={cn('h-5 w-5', selected ? 'text-neon-yellow' : 'text-white/60')} />
+                      </div>
+                      <span className={cn(
+                        'text-center text-[11px] font-bold leading-tight',
+                        selected ? 'text-neon-yellow' : 'text-white/75',
+                      )}>
+                        {profile.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {userProfile === 'ex_jogador' && (
+                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+                  <p className="text-center text-[11px] text-amber-200/90">
+                    ⭐ Entraremos em contato para validar seu perfil de ex-jogador
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Divisor */}
+            <div className="border-t border-white/10" />
+
+            <div>
+              <p className="mb-1 text-center font-display text-sm font-bold uppercase tracking-wide text-white">
+                Escolhe o teu time do coração
+              </p>
+              <p className="text-center text-[11px] text-white/50">
+                13 ligas disponíveis. O escudo aparece ao lado do nome do teu clube nas telas do jogo.
+              </p>
+            </div>
+
+            {/* Seleção Brasil em destaque (1 card cheio no topo) */}
+            <button
+              type="button"
+              onClick={() => setFavoriteTeam(SELECAO_BRASIL)}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg border bg-black/30 p-3 transition-colors',
+                favoriteTeam?.id === SELECAO_BRASIL.id
+                  ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
+                  : 'border-white/10 hover:border-white/30',
+              )}
+              aria-pressed={favoriteTeam?.id === SELECAO_BRASIL.id}
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/60">
+                {SELECAO_BRASIL.logo ? (
+                  <img
+                    src={SELECAO_BRASIL.logo}
+                    alt={SELECAO_BRASIL.name}
+                    className="h-9 w-9 object-contain"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="font-display text-sm font-bold text-white">🇧🇷 Seleção Brasil</p>
+                <p className="text-[10px] text-white/50">Time do coração dos que torcem pela pátria.</p>
+              </div>
+            </button>
+
+            {/* Chips de ligas */}
+            <div className="flex flex-wrap gap-1.5 border-t border-white/5 pt-3">
+              {LEAGUE_BUCKETS.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setLeagueBucketId(b.id)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors',
+                    leagueBucketId === b.id
+                      ? 'border-neon-yellow/60 bg-neon-yellow/15 text-neon-yellow'
+                      : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/25 hover:text-white',
+                  )}
+                >
+                  <span className="mr-1">{b.flag}</span>
+                  {b.label.split(' — ')[1] ?? b.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Grid de clubes da liga selecionada */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {(LEAGUE_BUCKETS.find((b) => b.id === leagueBucketId)?.teams ?? []).map((c) => {
+                const selected = favoriteTeam?.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setFavoriteTeam(c)}
+                    className={cn(
+                      'group flex flex-col items-center gap-1 rounded-lg border bg-black/30 p-2 transition-colors',
+                      selected
+                        ? 'border-neon-yellow bg-neon-yellow/10 shadow-[0_0_16px_rgba(234,255,0,0.2)]'
+                        : 'border-white/10 hover:border-white/30',
+                    )}
+                    aria-pressed={selected}
+                  >
+                    <div className={cn(
+                      'flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border',
+                      selected ? 'border-neon-yellow/70 bg-black' : 'border-white/20 bg-black/60',
+                    )}>
+                      {c.logo ? (
+                        <img
+                          src={c.logo}
+                          alt={c.name}
+                          className="h-9 w-9 object-contain"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                        />
+                      ) : null}
+                    </div>
+                    <span className={cn(
+                      'line-clamp-2 text-center text-[10px] font-bold leading-tight',
+                      selected ? 'text-neon-yellow' : 'text-white/75',
+                    )}>
+                      {c.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {favoriteTeam ? (
+              <p className="text-center text-[11px] text-neon-yellow/80">
+                💛 {favoriteTeam.name} selecionado
+              </p>
+            ) : null}
           </div>
         )}
 
@@ -296,7 +903,9 @@ export function Cadastro() {
                 className={inputClass}
                 value={clubName}
                 onChange={(e) => setClubName(e.target.value)}
+                maxLength={10}
               />
+              <p className="mt-1 text-[10px] text-white/40">Máximo 10 caracteres</p>
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-white/65">Iniciais</span>
@@ -323,179 +932,71 @@ export function Cadastro() {
               <p className="mt-1 text-[10px] text-white/40">
                 Estilo tático:{' '}
                 <span className="text-neon-yellow/70">
-                  {FORMATION_STYLE_LABELS[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
+                  {PRESET_LABEL_PT[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
                 </span>
               </p>
             </label>
           </div>
         )}
 
-        {step === 3 && (
-          <div className="mt-8 space-y-4">
-            {!hasData ? (
-              <div className="rounded-lg border border-dashed border-white/15 p-6 text-center">
-                <p className="text-sm text-white/50">Nenhuma liga cadastrada ainda.</p>
-                <p className="mt-1 text-xs text-white/30">
-                  O administrador pode importar dados em Admin → Sports Data.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Seleção de liga */}
-                <div>
-                  <span className="mb-2 block text-xs font-medium text-white/65">Escolha a liga</span>
-                  <div className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-2">
-                    {leagues.map((league) => (
-                      <button
-                        key={league.id}
-                        type="button"
-                        className={cn(
-                          'rounded-md px-3 py-2.5 text-left text-sm transition',
-                          selectedLeagueId === league.id
-                            ? 'bg-neon-yellow/20 text-white'
-                            : 'text-white/80 hover:bg-white/5',
-                        )}
-                        onClick={() => {
-                          setSelectedLeagueId(league.id);
-                          setSelectedClub(null);
-                          setSearchQ('');
-                        }}
-                      >
-                        <span className="font-medium">{league.name}</span>
-                        <span className="ml-2 text-white/40 text-xs">
-                          {league.country} · {league.clubs.length} clubes
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Seleção de clube */}
-                {selectedLeague && (
-                  <div>
-                    <span className="mb-2 block text-xs font-medium text-white/65">
-                      Escolha seu time — {selectedLeague.name}
-                    </span>
-                    {selectedLeague.clubs.length > 8 && (
-                      <div className="relative mb-2">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30 pointer-events-none" />
-                        <input
-                          className={cn(inputClass, 'pl-9')}
-                          placeholder="Filtrar clube…"
-                          value={searchQ}
-                          onChange={(e) => setSearchQ(e.target.value)}
-                        />
-                      </div>
-                    )}
-                    <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-lg border border-white/10 bg-black/30 p-2">
-                      {filteredClubs.map((club) => (
-                        <ClubRow
-                          key={club.id}
-                          club={club}
-                          selected={selectedClub?.id === club.id}
-                          onPick={() => setSelectedClub(club)}
-                        />
-                      ))}
-                      {filteredClubs.length === 0 && (
-                        <p className="px-2 py-3 text-center text-sm text-white/45">Nenhum clube encontrado.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Clube selecionado */}
-                {selectedClub && (
-                  <div className="flex items-center gap-3 rounded-lg border border-neon-yellow/25 bg-neon-yellow/5 p-3">
-                    {selectedClub.logo_url ? (
-                      <img
-                        src={selectedClub.logo_url}
-                        alt=""
-                        className="h-12 w-12 shrink-0 object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-white/10 font-display text-sm font-bold text-white/50">
-                        {selectedClub.short_name.slice(0, 3)}
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-white">Time do coração</p>
-                      <p className="text-sm text-white/70">{selectedClub.name}</p>
-                      {selectedClub.city && (
-                        <p className="text-[10px] text-white/40">{selectedClub.city}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+        {finishError ? (
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <span className="text-rose-400">✗</span>
+            <span>{finishError}</span>
           </div>
-        )}
+        ) : null}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
           {step > 1 ? (
-            <button type="button" className="btn-secondary order-2 sm:order-1" onClick={() => setStep((s) => (s === 2 ? 1 : 2))}>
-              <span className="btn-secondary-inner justify-center">Voltar</span>
+            <button
+              type="button"
+              className="group flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 py-3 font-display text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98] sm:order-1"
+              onClick={() => setStep((step - 1) as 1 | 2 | 3)}
+            >
+              Voltar
             </button>
           ) : (
-            <Link to="/login" className="btn-secondary order-2 sm:order-1 text-center">
-              <span className="btn-secondary-inner justify-center">Cancelar</span>
+            <Link
+              to="/login"
+              className="group flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 py-3 font-display text-sm font-bold uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98] sm:order-1"
+            >
+              Cancelar
             </Link>
           )}
           {step < 3 ? (
             <button
               type="button"
-              className={cn('btn-primary order-1 sm:order-2', (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '')}
+              className={cn(
+                'group flex items-center justify-center rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-3 font-display text-sm font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98] sm:order-2',
+                (step === 1 && !step1Valid) || (step === 2 && !step2Valid) ? 'pointer-events-none opacity-40' : '',
+              )}
               disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
               onClick={goNext}
             >
-              <span className="btn-primary-inner justify-center">Continuar</span>
+              Continuar
             </button>
           ) : (
             <button
               type="button"
-              className={cn('btn-primary order-1 sm:order-2', !step3Valid ? 'pointer-events-none opacity-40' : '')}
-              disabled={!step3Valid}
-              onClick={finish}
+              className={cn(
+                'group flex items-center justify-center rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-3 font-display text-sm font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98] sm:order-2',
+                !step3Valid || finishBusy ? 'pointer-events-none opacity-40' : '',
+              )}
+              disabled={!step3Valid || finishBusy}
+              onClick={() => void finish()}
             >
-              <span className="btn-primary-inner justify-center">Concluir</span>
+              {finishBusy ? 'Preparando plantel…' : 'Concluir'}
             </button>
           )}
         </div>
+        </div>
       </div>
     </div>
-  );
+
+    <footer className="relative z-10 mx-auto mt-6 max-w-md text-center text-[10px] text-white/35 sm:text-[11px]">
+      Olefoot © 2026 · Todos os direitos reservados
+    </footer>
+  </div>
+);
 }
 
-function ClubRow({
-  club,
-  selected,
-  onPick,
-}: {
-  key?: string;
-  club: SportsClub;
-  selected: boolean;
-  onPick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition',
-        selected ? 'bg-neon-yellow/20 text-white' : 'text-white/85 hover:bg-white/5',
-      )}
-    >
-      {club.logo_url ? (
-        <img src={club.logo_url} alt="" className="h-8 w-8 shrink-0 object-contain" />
-      ) : (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-white/10 font-display text-[10px] font-bold text-white/40">
-          {club.short_name.slice(0, 3)}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{club.name}</span>
-        {club.city && <span className="block truncate text-[10px] text-white/40">{club.city}</span>}
-      </div>
-    </button>
-  );
-}

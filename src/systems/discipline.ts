@@ -4,7 +4,8 @@ export type DisciplineOutcome = 'none' | 'yellow' | 'red';
 
 /**
  * Cartões no jogo — mesmo pipeline de persistência que lesões (`outForMatches` no vermelho).
- * Amarelo: penaliza confiança. Vermelho: expulsão + 3 jogos de suspensão (via outForMatches).
+ * Amarelo: penaliza confiança. Vermelho: expulsão + 1 jogo de suspensão (via `outForMatches`;
+ * cada `FINALIZE_MATCH` / jornada simulada corre `tickRecoveryMatches` e decrementa 1).
  */
 export function rollMatchDiscipline(player: PlayerEntity): {
   outcome: DisciplineOutcome;
@@ -32,7 +33,7 @@ export function rollMatchDiscipline(player: PlayerEntity): {
     if (secondYellow) {
       return {
         outcome: 'red',
-        player: { ...next, outForMatches: Math.max(next.outForMatches, 3) },
+        player: { ...next, outForMatches: Math.max(next.outForMatches, 1) },
         narrative,
       };
     }
@@ -48,7 +49,7 @@ export function rollMatchDiscipline(player: PlayerEntity): {
         confianca: Math.max(0, player.attrs.confianca - 10),
         fairPlay: Math.max(0, player.attrs.fairPlay - 12),
       },
-      outForMatches: Math.max(player.outForMatches, 3),
+      outForMatches: Math.max(player.outForMatches, 1),
     },
     narrative: `${player.name} recebe vermelho direto; o relvado fica em polvorosa.`,
   };

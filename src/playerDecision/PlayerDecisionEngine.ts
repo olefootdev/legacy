@@ -8,20 +8,21 @@ import type {
   OffBallAction,
   PreReceptionResult,
   ReceptionResult,
-  DecisionSpeed,
+  ReceptionThinkMode,
 } from './types';
 import { resolvePreReception } from './PreReception';
 import { resolveReception } from './Reception';
-import { decideOnBall, computeDecisionSpeed, decisionDelaySec, carryScanAction } from './OnBallDecision';
+import { decideOnBall, carryScanAction } from './OnBallDecision';
+import {
+  computeReceptionThinkMode,
+  mapReceptionThinkToDecisionSpeed,
+  receptionThinkBaseSec,
+} from './receptionThinkMode';
 import { decideOffBall } from './OffBallDecision';
 import { buildContextReading, identifyFieldZone, scanPressure } from './ContextScanner';
-import {
-  DECISION_TICK_MS,
-  DELIBERATION_BASE_SEC,
-  DELIBERATION_MIN_SEC,
-  DELIBERATION_MAX_SEC,
-} from '@/match/matchSimulationTuning';
-import type { PrethinkingState } from './types';
+import { offBallReplanIntervalSec } from './offBallHysteresis';
+import { DECISION_TICK_MS, RECEPTION_THINK_MIN_SEC, RECEPTION_THINK_MAX_SEC } from '@/match/matchSimulationTuning';
+import type { PrethinkingIntent, PrethinkingState } from './types';
 import {
   buildPrethinkingState,
   computePrethinkingSpeed,
@@ -60,12 +61,13 @@ export class PlayerDecisionEngine {
   private lastDecisionTime = 0;
   private deliberationDuration = 0;
   private deliberationCarryAction: OnBallAction | null = null;
+  /** Último modo cognitivo ao tomar a bola (debug / feed). */
+  lastBallThinkMode: ReceptionThinkMode | null = null;
   /** Intenção antecipada + velocidade cognitiva; invalidada quando o lance muda. */
   private prethinking: PrethinkingState | null = null;
   private lastPrethinkingSimTime = -1e9;
+  private lastPrethinkingIntent: PrethinkingIntent | null = null;
 
-  /** Very short cooldown — off-ball players re-evaluate frequently */
-  private static readonly OFF_BALL_COOLDOWN = 0.14;
   /** Executing lasts just long enough to commit to an action */
   private static readonly EXECUTING_DURATION = 0.10;
   /** Re-plan cap: decisions cached between physics ticks */
@@ -75,12 +77,18 @@ export class PlayerDecisionEngine {
     this.profile = profile;
   }
 
+  /** Expose current prethinking state for external systems (render, analytics) */
+  public getPrethinkingState() {
+    return this.prethinking;
+  }
+
   /**
    * Sim loop forced an on-ball action the same frame as a turnover (tackle / loose pickup).
    * Keeps phase consistent so the next tick does not treat the carrier as off-ball pressing.
    */
   syncAfterTurnoverImmediateAction(action: OnBallAction, simTime: number) {
     this.prethinking = null;
+    this.lastPrethinkingIntent = null;
     this.scanCarryAction = null;
     this.phase = 'executing';
     this.phaseTimer = 0;
@@ -148,7 +156,7 @@ export class PlayerDecisionEngine {
 
     switch (this.phase) {
       case 'pre_receiving':
-        return this.tickPreReceiving(x, dt);
+        return this.tickPreReceiving(x, dt, simTime);
       case 'receiving':
         return this.tickReceiving(x, dt, simTime);
       case 'deliberating':
@@ -177,8 +185,9 @@ export class PlayerDecisionEngine {
     if (!stale && simTime - this.lastPrethinkingSimTime < interval) {
       return;
     }
-    this.prethinking = buildPrethinkingState(ctx, simTime, speedNow);
+    this.prethinking = buildPrethinkingState(ctx, simTime, speedNow, this.lastPrethinkingIntent);
     this.lastPrethinkingSimTime = simTime;
+    this.lastPrethinkingIntent = this.prethinking?.prethinkingIntent ?? null;
   }
 
   private withPrethinkingCtx(ctx: DecisionContext): DecisionContext {
@@ -209,32 +218,20 @@ export class PlayerDecisionEngine {
    */
   private enterDeliberation(ctx: DecisionContext, simTime: number) {
     const reading = buildContextReading(ctx);
-    const mental01 = (ctx.self.mentalidade ?? 70) / 100;
-    const conf01 = (ctx.self.confianca ?? 70) / 100;
-    const pressure = reading.pressure;
+    const thinkMode = computeReceptionThinkMode(ctx, reading);
+    this.lastBallThinkMode = thinkMode;
+    let dur = receptionThinkBaseSec(thinkMode);
 
-    let dur = DELIBERATION_BASE_SEC;
-    dur -= mental01 * 0.04;
-    dur -= conf01 * 0.03;
-    if (pressure.intensity === 'extreme') dur *= 0.35;
-    else if (pressure.intensity === 'high') dur *= 0.55;
-    else if (pressure.intensity === 'none') dur *= 1.3;
-    if (pressure.closingSpeed > 6.5 && pressure.nearestOpponentDist < 8) dur *= 0.42;
-    else if (pressure.closingSpeed > 4.2 && pressure.nearestOpponentDist < 6) dur *= 0.72;
-    if (reading.fieldZone === 'own_box' || reading.fieldZone === 'def_third') dur *= 1.15;
-    if (reading.fieldZone === 'opp_box') dur *= 0.6;
-
-    // Pre-scanned first-touch receptions: player already anticipated action,
-    // so deliberation is shorter — but never zero (the player still processes).
+    // Primeiro toque já antecipado — menos “pensar”, mantém no mínimo configurável.
     const recType = this.reception?.type;
     if (recType === 'first_touch_pass' || recType === 'first_touch_shot') {
-      dur *= 0.4;
+      dur *= 0.38;
     } else if (recType === 'oriented_forward' || recType === 'let_run') {
-      dur *= 0.6;
+      dur *= 0.62;
     }
 
-    dur = Math.max(DELIBERATION_MIN_SEC, Math.min(DELIBERATION_MAX_SEC, dur));
     dur *= prethinkingDeliberationFactor(ctx);
+    dur = Math.max(RECEPTION_THINK_MIN_SEC, Math.min(RECEPTION_THINK_MAX_SEC, dur));
 
     this.phase = 'deliberating';
     this.phaseTimer = 0;
@@ -275,11 +272,25 @@ export class PlayerDecisionEngine {
 
     this.phase = 'scanning';
     this.phaseTimer = 0;
-    const speed = computeDecisionSpeed(reading, ctx.profile, ctx.decisionExecutionBoost01);
-    const baseDelay = decisionDelaySec(speed, ctx.roll01 ?? Math.random);
+    const thinkMode = computeReceptionThinkMode(ctx, reading);
+    this.lastBallThinkMode = thinkMode;
+    let delaySec = receptionThinkBaseSec(thinkMode) * prethinkingScanDelayFactor(ctx);
+    // modulate by emotional runtime when available: pressure increases hesitation, confidence reduces it
+    try {
+      const emo = (ctx as any).playerEmotional as { pressure?: number; confidence?: number; tiltLevel?: number } | undefined;
+      if (emo) {
+        const pressureFactor = 1 + Math.max(0, (emo.pressure || 0) - 40) / 220; // small increase when pressure high
+        const confFactor = 1 - Math.max(0, (emo.confidence || 60) - 60) / 520; // slight decrease if confident
+        const tiltFactor = 1 - Math.max(0, (emo.tiltLevel || 0) - 10) / 900; // tilt reduces some deliberation
+        delaySec = delaySec * pressureFactor * confFactor * tiltFactor;
+      }
+    } catch (e) {
+      // ignore
+    }
+    delaySec = Math.max(RECEPTION_THINK_MIN_SEC * 0.5, Math.min(RECEPTION_THINK_MAX_SEC, delaySec));
     this.timing = {
-      speed,
-      delaySec: Math.max(0.02, baseDelay * prethinkingScanDelayFactor(ctx)),
+      speed: mapReceptionThinkToDecisionSpeed(thinkMode),
+      delaySec,
       elapsed: 0,
     };
     this.scanCarryAction = carryScanAction(ctx, reading);
@@ -343,12 +354,12 @@ export class PlayerDecisionEngine {
    * PRE-RECEIVING: The player is moving toward the ball or adjusting body.
    * Always produces a movement action (pre_receiving intent or off-ball).
    */
-  private tickPreReceiving(ctx: DecisionContext, dt: number): PlayerAction {
+  private tickPreReceiving(ctx: DecisionContext, dt: number, simTime: number): PlayerAction {
     this.phaseTimer += dt;
 
     if (!ctx.isReceiver) {
       // Ball went elsewhere — immediately do off-ball movement
-      return this.produceOffBall(ctx);
+      return this.produceOffBall(ctx, simTime, true);
     }
 
     if (this.preReception) {
@@ -360,7 +371,7 @@ export class PlayerDecisionEngine {
     }
 
     // Fallback: move toward ball
-    return this.produceOffBall(ctx);
+    return this.produceOffBall(ctx, simTime, false);
   }
 
   /**
@@ -405,7 +416,7 @@ export class PlayerDecisionEngine {
     this.phaseTimer += dt;
 
     if (!ctx.isCarrier) {
-      return this.produceOffBall(ctx);
+      return this.produceOffBall(ctx, simTime, false);
     }
 
     // Instinct clear: opponent too close — abort deliberation and decide NOW
@@ -472,7 +483,7 @@ export class PlayerDecisionEngine {
     }
 
     // Non-carrier in scanning (shouldn't happen normally, but safety)
-    return this.produceOffBall(ctx);
+    return this.produceOffBall(ctx, simTime, false);
   }
 
   /**
@@ -492,7 +503,7 @@ export class PlayerDecisionEngine {
     }
 
     // Fallback: produce contextual movement
-    return this.produceOffBall(ctx);
+    return this.produceOffBall(ctx, simTime, false);
   }
 
   /**
@@ -534,12 +545,12 @@ export class PlayerDecisionEngine {
 
     if (this.currentOffBall) {
       if (this.phaseTimer > PlayerDecisionEngine.EXECUTING_DURATION) {
-        return this.produceOffBall(ctx);
+        return this.produceOffBall(ctx, simTime, false);
       }
       return { kind: 'off_ball', action: this.currentOffBall };
     }
 
-    return this.produceOffBall(ctx);
+    return this.produceOffBall(ctx, simTime, false);
   }
 
   /**
@@ -547,21 +558,14 @@ export class PlayerDecisionEngine {
    * have contextual movement — they never stand still waiting for a command.
    */
   private tickAlive(ctx: DecisionContext, simTime: number): PlayerAction {
-    // Re-evaluate frequently
-    if (simTime - this.lastDecisionTime > PlayerDecisionEngine.OFF_BALL_COOLDOWN || !this.currentOffBall) {
-      this.currentOffBall = decideOffBall(ctx);
-      this.lastDecisionTime = simTime;
-    }
-
-    if (this.currentOffBall) {
+    if (
+      this.currentOffBall
+      && simTime - this.lastDecisionTime < offBallReplanIntervalSec(ctx)
+    ) {
       this.phase = 'executing';
       return { kind: 'off_ball', action: this.currentOffBall };
     }
-
-    // Absolute last resort — should never reach here
-    this.currentOffBall = decideOffBall(ctx);
-    this.lastDecisionTime = simTime;
-    return { kind: 'off_ball', action: this.currentOffBall };
+    return this.produceOffBall(ctx, simTime, false);
   }
 
   // ===================================================================
@@ -572,25 +576,25 @@ export class PlayerDecisionEngine {
    * Produce an off-ball action immediately. Called whenever the player
    * needs contextual movement and isn't the carrier.
    */
-  private produceOffBall(ctx: DecisionContext): PlayerAction {
+  private produceOffBall(ctx: DecisionContext, simTime: number, force: boolean): PlayerAction {
+    if (
+      !force
+      && this.currentOffBall
+      && simTime - this.lastDecisionTime < offBallReplanIntervalSec(ctx)
+    ) {
+      this.phase = 'executing';
+      return { kind: 'off_ball', action: this.currentOffBall };
+    }
     this.currentOffBall = decideOffBall(ctx);
     this.phase = 'executing';
     this.phaseTimer = 0;
+    this.lastDecisionTime = simTime;
     return { kind: 'off_ball', action: this.currentOffBall };
   }
 }
 
 function isOnBallPhase(phase: DecisionPhase): boolean {
   return phase === 'scanning' || phase === 'deciding' || phase === 'executing' || phase === 'receiving' || phase === 'pre_receiving' || phase === 'deliberating';
-}
-
-function nearestOpponentDist(ctx: DecisionContext): number {
-  let min = Infinity;
-  for (const o of ctx.opponents) {
-    const d = Math.hypot(o.x - ctx.self.x, o.z - ctx.self.z);
-    if (d < min) min = d;
-  }
-  return min;
 }
 
 function isCarryAction(action: OnBallAction): boolean {

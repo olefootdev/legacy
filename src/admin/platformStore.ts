@@ -3,18 +3,29 @@ import type { OlefootGameState } from '@/game/types';
 import type {
   AdminPlatformState,
   AdminPlatformUser,
+  CashflowExpenseCategory,
+  CashflowExpenseLine,
   FiatPipelineStatus,
+  GrowthCommerceLine,
+  GrowthCommerceKind,
+  GrowthDailyPulseRow,
   PlatformLedgerLine,
   PlatformOlexpCustodyStatus,
   PlatformOlexpPosition,
 } from './platformTypes';
 import { emptyPlatformState } from './platformTypes';
-import { seedPlatformUsers, seedPlatformOlexpPositions } from './platformSeed';
+import {
+  seedGrowthCommerceLines,
+  seedGrowthDailyPulse,
+  seedPlatformLedger,
+  seedPlatformOlexpPositions,
+  seedPlatformUsers,
+} from './platformSeed';
 import { normalizeWalletState } from '@/wallet/initial';
 import type { OlexpPlanId } from '@/wallet/types';
 import { getPlan } from '@/wallet/olexp';
 
-const KEY = 'olefoot-admin-platform-v1';
+const KEY = 'olefoot-admin-platform-v2'; // bumped v1→v2 pra invalidar caches com dados mockados
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -27,6 +38,7 @@ export type AdminPlatformAction =
   | { type: 'ADD_USER'; user: AdminPlatformUser }
   | { type: 'UPDATE_USER'; id: string; patch: Partial<AdminPlatformUser> }
   | { type: 'REMOVE_USER'; id: string }
+  | { type: 'REPLACE_USERS'; users: AdminPlatformUser[] }
   | { type: 'RESET_SEED'; treasuryCents?: number; escrowCents?: number }
   | { type: 'SET_TREASURY'; broCents: number }
   | { type: 'SET_ESCROW'; broCents: number }
@@ -56,7 +68,21 @@ export type AdminPlatformAction =
       note?: string;
     }
   | { type: 'ACTIVATE_OLEXP_CUSTODY'; positionId: string }
-  | { type: 'REJECT_OLEXP_CUSTODY'; positionId: string };
+  | { type: 'REJECT_OLEXP_CUSTODY'; positionId: string }
+  | {
+      type: 'ADD_CASHFLOW_EXPENSE';
+      expense: Omit<CashflowExpenseLine, 'id' | 'createdAt'> & { id?: string };
+    }
+  | { type: 'REMOVE_CASHFLOW_EXPENSE'; id: string }
+  | { type: 'SET_GROWTH_BRO_CENTS_PER_BRL'; value: number | null }
+  | {
+      type: 'PUSH_GROWTH_COMMERCE_LINE';
+      kind: import('./platformTypes').GrowthCommerceKind;
+      revenueBroCents: number;
+      grossBroCents?: number;
+      userId?: string;
+      label?: string;
+    };
 
 let state: AdminPlatformState = loadInitial();
 
@@ -65,10 +91,15 @@ function loadInitial(): AdminPlatformState {
     const raw = localStorage.getItem(KEY);
     if (!raw) {
       const s = emptyPlatformState();
-      s.users = seedPlatformUsers();
-      s.platformTreasuryBroCents = 125_600;
-      s.platformEscrowBroCents = 48_000;
-      s.platformOlexpPositions = seedPlatformOlexpPositions();
+      // Tudo zerado pro deploy de testes online. Valores sobem organicamente
+      // conforme os managers reais usam o jogo (wallet, OLEXP, ledger, etc).
+      s.users = [];
+      s.platformTreasuryBroCents = 0;
+      s.platformEscrowBroCents = 0;
+      s.platformOlexpPositions = [];
+      s.platformLedger = [];
+      s.growthCommerceLines = [];
+      s.growthDailyPulse = [];
       return applyOlexpAggregatesToUsers(s);
     }
     const p = JSON.parse(raw) as AdminPlatformState;
@@ -76,10 +107,13 @@ function loadInitial(): AdminPlatformState {
     return hydrateDefaults(p);
   } catch {
     const s = emptyPlatformState();
-    s.users = seedPlatformUsers();
-    s.platformTreasuryBroCents = 125_600;
-    s.platformEscrowBroCents = 48_000;
-    s.platformOlexpPositions = seedPlatformOlexpPositions();
+    s.users = [];
+    s.platformTreasuryBroCents = 0;
+    s.platformEscrowBroCents = 0;
+    s.platformOlexpPositions = [];
+    s.platformLedger = [];
+    s.growthCommerceLines = [];
+    s.growthDailyPulse = [];
     return applyOlexpAggregatesToUsers(s);
   }
 }
@@ -116,6 +150,76 @@ function addDaysPlatform(iso: string, days: number): string {
   const x = new Date(`${iso}T12:00:00.000Z`);
   x.setUTCDate(x.getUTCDate() + days);
   return x.toISOString().slice(0, 10);
+}
+
+const GROWTH_COMMERCE_KINDS: GrowthCommerceKind[] = ['store_item', 'transfer_player', 'bundle'];
+
+function normalizeGrowthCommerceLine(raw: unknown, fallbackId: string): GrowthCommerceLine {
+  const r = raw as Partial<GrowthCommerceLine>;
+  const kind = GROWTH_COMMERCE_KINDS.includes(r.kind as GrowthCommerceKind)
+    ? (r.kind as GrowthCommerceKind)
+    : 'store_item';
+  return {
+    id: typeof r.id === 'string' && r.id ? r.id : fallbackId,
+    createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
+    kind,
+    revenueBroCents: Math.max(0, Math.round(Number(r.revenueBroCents) || 0)),
+    grossBroCents:
+      r.grossBroCents != null ? Math.max(0, Math.round(Number(r.grossBroCents) || 0)) : undefined,
+    userId: typeof r.userId === 'string' ? r.userId : undefined,
+    label: typeof r.label === 'string' ? r.label : undefined,
+  };
+}
+
+const CASHFLOW_CATEGORIES: CashflowExpenseCategory[] = [
+  'pessoas',
+  'infra',
+  'marketing',
+  'legal',
+  'ferramentas',
+  'impostos',
+  'outro',
+];
+
+function normalizeCashflowExpense(raw: unknown, fallbackId: string): CashflowExpenseLine {
+  const r = raw as Partial<CashflowExpenseLine>;
+  const cat = CASHFLOW_CATEGORIES.includes(r.category as CashflowExpenseCategory)
+    ? (r.category as CashflowExpenseCategory)
+    : 'outro';
+  const date =
+    typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
+      ? r.date
+      : new Date().toISOString().slice(0, 10);
+  const endDate =
+    typeof r.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.endDate)
+      ? r.endDate
+      : undefined;
+  const recurring = r.recurring === true;
+  return {
+    id: typeof r.id === 'string' && r.id ? r.id : fallbackId,
+    date,
+    label: typeof r.label === 'string' && r.label.trim() ? r.label.trim() : 'Gasto',
+    category: cat,
+    amountBrlCents: Math.max(0, Math.round(Number(r.amountBrlCents) || 0)),
+    note: typeof r.note === 'string' ? r.note.trim() || undefined : undefined,
+    recurring: recurring || undefined,
+    endDate: recurring ? endDate : undefined,
+    createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
+  };
+}
+
+function normalizeGrowthDailyPulseRow(raw: unknown, _idx: number): GrowthDailyPulseRow {
+  const r = raw as Partial<GrowthDailyPulseRow>;
+  const today = new Date().toISOString().slice(0, 10);
+  const date =
+    typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : today;
+  return {
+    date: date || today,
+    bannerImpressions: Math.max(0, Math.round(Number(r.bannerImpressions) || 0)),
+    ctaClicks: Math.max(0, Math.round(Number(r.ctaClicks) || 0)),
+    attributedSignups:
+      r.attributedSignups != null ? Math.max(0, Math.round(Number(r.attributedSignups) || 0)) : undefined,
+  };
 }
 
 function normalizePlatformOlexp(raw: unknown, fallbackId: string): PlatformOlexpPosition {
@@ -172,6 +276,18 @@ function hydrateDefaults(raw: Partial<AdminPlatformState>): AdminPlatformState {
   const platformLedger = ledgerRaw.map((row, i) => normalizeLedgerLine(row, `legacy-${i}`));
   const posRaw = Array.isArray(raw.platformOlexpPositions) ? raw.platformOlexpPositions : [];
   const platformOlexpPositions = posRaw.map((row, i) => normalizePlatformOlexp(row, `olexp-legacy-${i}`));
+  const gcRaw = Array.isArray(raw.growthCommerceLines) ? raw.growthCommerceLines : [];
+  const growthCommerceLines = gcRaw.map((row, i) => normalizeGrowthCommerceLine(row, `gc-legacy-${i}`));
+  const pulseRaw = Array.isArray(raw.growthDailyPulse) ? raw.growthDailyPulse : [];
+  const growthDailyPulse = pulseRaw.map((row, i) => normalizeGrowthDailyPulseRow(row, i));
+  const cfRaw = Array.isArray(raw.growthCashflowExpenses) ? raw.growthCashflowExpenses : [];
+  const growthCashflowExpenses = cfRaw.map((row, i) => normalizeCashflowExpense(row, `cf-legacy-${i}`));
+  const growthBroCentsPerBrlRaw = raw.growthBroCentsPerBrl;
+  const parsedFx = Number(growthBroCentsPerBrlRaw);
+  const growthBroCentsPerBrl =
+    growthBroCentsPerBrlRaw != null && Number.isFinite(parsedFx) && parsedFx > 0
+      ? Math.round(parsedFx)
+      : undefined;
   let merged: AdminPlatformState = {
     ...base,
     ...raw,
@@ -179,6 +295,10 @@ function hydrateDefaults(raw: Partial<AdminPlatformState>): AdminPlatformState {
     users: Array.isArray(raw.users) ? raw.users : base.users,
     platformLedger,
     platformOlexpPositions,
+    growthCommerceLines,
+    growthDailyPulse,
+    growthCashflowExpenses,
+    growthBroCentsPerBrl,
     platformTreasuryBroCents: Number(raw.platformTreasuryBroCents) || 0,
     platformEscrowBroCents: Number(raw.platformEscrowBroCents) || 0,
   };
@@ -215,6 +335,22 @@ export function dispatchAdminPlatform(action: AdminPlatformAction): void {
   state = platformReducer(state, action);
   persist();
   emit();
+}
+
+/** Registra compra/transação de jogo no Growth da plataforma (fire-and-forget). */
+export function trackGrowthCommerce(
+  kind: import('./platformTypes').GrowthCommerceKind,
+  revenueBroCents: number,
+  opts?: { grossBroCents?: number; userId?: string; label?: string },
+): void {
+  dispatchAdminPlatform({
+    type: 'PUSH_GROWTH_COMMERCE_LINE',
+    kind,
+    revenueBroCents,
+    grossBroCents: opts?.grossBroCents,
+    userId: opts?.userId,
+    label: opts?.label,
+  });
 }
 
 function pushLedger(
@@ -299,10 +435,13 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
       return hydrateDefaults(action.state);
     case 'RESET_SEED': {
       const next = emptyPlatformState();
-      next.users = seedPlatformUsers();
-      next.platformTreasuryBroCents = action.treasuryCents ?? 125_600;
-      next.platformEscrowBroCents = action.escrowCents ?? 48_000;
-      next.platformOlexpPositions = seedPlatformOlexpPositions();
+      next.users = [];
+      next.platformTreasuryBroCents = action.treasuryCents ?? 0;
+      next.platformEscrowBroCents = action.escrowCents ?? 0;
+      next.platformOlexpPositions = [];
+      next.platformLedger = [];
+      next.growthCommerceLines = [];
+      next.growthDailyPulse = [];
       return applyOlexpAggregatesToUsers(next);
     }
     case 'SET_TREASURY':
@@ -319,6 +458,8 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
     }
     case 'REMOVE_USER':
       return { ...s, users: s.users.filter((u) => u.id !== action.id) };
+    case 'REPLACE_USERS':
+      return { ...s, users: action.users };
     case 'IMPORT_SESSION_USER': {
       const g = action.game;
       const w = normalizeWalletState(g.finance.wallet);
@@ -473,6 +614,42 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
     case 'REJECT_OLEXP_CUSTODY': {
       const platformOlexpPositions = s.platformOlexpPositions.filter((p) => p.id !== action.positionId);
       return applyOlexpAggregatesToUsers({ ...s, platformOlexpPositions });
+    }
+    case 'ADD_CASHFLOW_EXPENSE': {
+      const id = action.expense.id ?? uid();
+      const row = normalizeCashflowExpense(
+        { ...action.expense, id, createdAt: new Date().toISOString() },
+        id,
+      );
+      return {
+        ...s,
+        growthCashflowExpenses: [row, ...(s.growthCashflowExpenses ?? [])].slice(0, 500),
+      };
+    }
+    case 'REMOVE_CASHFLOW_EXPENSE':
+      return {
+        ...s,
+        growthCashflowExpenses: (s.growthCashflowExpenses ?? []).filter((x) => x.id !== action.id),
+      };
+    case 'SET_GROWTH_BRO_CENTS_PER_BRL': {
+      if (action.value == null || action.value <= 0) {
+        const next = { ...s };
+        delete next.growthBroCentsPerBrl;
+        return next;
+      }
+      return { ...s, growthBroCentsPerBrl: Math.round(action.value) };
+    }
+    case 'PUSH_GROWTH_COMMERCE_LINE': {
+      const line: import('./platformTypes').GrowthCommerceLine = {
+        id: uid(),
+        createdAt: new Date().toISOString(),
+        kind: action.kind,
+        revenueBroCents: action.revenueBroCents,
+        grossBroCents: action.grossBroCents,
+        userId: action.userId,
+        label: action.label,
+      };
+      return { ...s, growthCommerceLines: [line, ...s.growthCommerceLines].slice(0, 1000) };
     }
     default:
       return s;

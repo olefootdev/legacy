@@ -6,7 +6,7 @@ export interface MatchInterruptOverlayProps {
   kind: SpiritOverlayKind;
   title: string;
   lines: string[];
-  /** Contagem regressiva grande (intervalo); omitir para golo/penálti. */
+  /** Contagem regressiva grande (intervalo); omitir para golo/penalty. */
   countdown?: number | null;
   className?: string;
   /**

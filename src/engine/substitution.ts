@@ -37,14 +37,38 @@ export function applySubstitution(input: {
   if (!incoming || !outgoing) return { snapshot, error: 'Jogador não encontrado.' };
   if (incoming.outForMatches > 0) return { snapshot, error: 'Jogador indisponível (lesão ou suspensão).' };
 
+  const pendingInjury = snapshot.quickInjurySub;
+  const injurySubOut =
+    pendingInjury &&
+    pendingInjury.outPlayerId === outPlayerId &&
+    snapshot.mode === 'quick';
+
   const onPitch = new Set(snapshot.homePlayers.map((p) => p.playerId));
-  if (!onPitch.has(outPlayerId)) return { snapshot, error: 'Titular não está em campo.' };
+  if (!onPitch.has(outPlayerId) && !injurySubOut) {
+    return { snapshot, error: 'Titular não está em campo.' };
+  }
   if (onPitch.has(inPlayerId)) return { snapshot, error: 'Jogador já está em campo.' };
 
   const slot = findSlotForPlayer(snapshot.matchLineupBySlot, outPlayerId);
   if (!slot) return { snapshot, error: 'Posição não encontrada.' };
 
-  const outPs = snapshot.homePlayers.find((p) => p.playerId === outPlayerId);
+  const outPs = injurySubOut
+    ? ({
+        playerId: outPlayerId,
+        slotId: pendingInjury!.slotId,
+        name: pendingInjury!.name,
+        x: pendingInjury!.x,
+        y: pendingInjury!.y,
+        num: outgoing.num,
+        pos: outgoing.pos,
+        fatigue: Math.round(outgoing.fatigue),
+        role: roleFromPos(outgoing.pos),
+        attributes: matchAttributesFromPlayerEntity(outgoing),
+        cognitiveArchetype: behaviorToCognitiveArchetype(outgoing.behavior),
+        strongFoot: outgoing.strongFoot,
+        archetype: outgoing.archetype,
+      } satisfies PitchPlayerState)
+    : snapshot.homePlayers.find((p) => p.playerId === outPlayerId);
   if (!outPs) return { snapshot, error: 'Estado de campo inconsistente.' };
 
   const newPitch: PitchPlayerState = {
@@ -59,9 +83,13 @@ export function applySubstitution(input: {
     role: roleFromPos(incoming.pos),
     attributes: matchAttributesFromPlayerEntity(incoming),
     cognitiveArchetype: behaviorToCognitiveArchetype(incoming.behavior),
+    strongFoot: incoming.strongFoot,
+    archetype: incoming.archetype,
   };
 
-  const homePlayers = snapshot.homePlayers.map((p) => (p.playerId === outPlayerId ? newPitch : p));
+  const homePlayers = injurySubOut
+    ? [...snapshot.homePlayers, newPitch]
+    : snapshot.homePlayers.map((p) => (p.playerId === outPlayerId ? newPitch : p));
   const matchLineupBySlot = { ...snapshot.matchLineupBySlot, [slot]: inPlayerId };
 
   const ev: MatchEventEntry = {
@@ -89,6 +117,7 @@ export function applySubstitution(input: {
       substitutionsUsed: snapshot.substitutionsUsed + 1,
       events,
       homeStats,
+      quickInjurySub: injurySubOut ? null : snapshot.quickInjurySub,
     },
   };
 }

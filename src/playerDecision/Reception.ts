@@ -1,5 +1,5 @@
 import type { DecisionContext, ReceptionType, ReceptionResult, PressureReading } from './types';
-import { scanPressure, identifyFieldZone } from './ContextScanner';
+import { scanPressure, identifyFieldZone, buildContextReading } from './ContextScanner';
 import { pick01ForDecision } from './decisionRng';
 import { prethinkingReceptionSuccessPenalty } from './prethinking';
 
@@ -35,6 +35,19 @@ function chooseReceptionType(
 
   const pi = ctx.prethinking?.prethinkingIntent;
   const conv = ctx.prethinking?.conviction01 ?? 0.55;
+  const reading = buildContextReading(ctx);
+
+  if (pi === 'tabela' && reading.bestTeammate?.isForward && pick01ForDecision(ctx) < 0.48 + profile.firstTouchPlay * 0.3) {
+    if (pressure.intensity !== 'extreme' || profile.firstTouchPlay > 0.48) return 'first_touch_pass';
+  }
+  if (
+    pi === 'finalizar_rapido'
+    && inAttHalf
+    && reading.lineOfSightScore > 0.4
+    && pick01ForDecision(ctx) < 0.35 + conv * 0.25
+  ) {
+    if (pressure.intensity === 'none' || pressure.intensity === 'low') return 'first_touch_shot';
+  }
   if (pi === 'passe_rapido' && pick01ForDecision(ctx) < 0.52 + profile.firstTouchPlay * 0.28) {
     if (pressure.intensity !== 'extreme' || profile.firstTouchPlay > 0.5) return 'first_touch_pass';
   }
@@ -137,6 +150,9 @@ function rollReceptionSuccess(
 
   const skill = drible * 0.15 + composure * 0.1;
   let prob = Math.max(0.15, Math.min(0.98, baseSuccess - pressurePenalty + skill));
+  // Ball control difficulty reduces reception probability (heavier / slippery balls)
+  const ballDifficulty = ctx.ballControlDifficulty ?? 0;
+  prob -= ballDifficulty * 0.12;
   prob -= prethinkingReceptionSuccessPenalty(ctx);
   prob = Math.max(0.12, prob);
   return pick01ForDecision(ctx) < prob;

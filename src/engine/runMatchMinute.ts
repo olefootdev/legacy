@@ -1,11 +1,23 @@
-import type { LiveMatchSnapshot, MatchEventEntry, PitchPlayerState, PossessionSide } from './types';
+import type {
+  LiveMatchClockPeriod,
+  LiveMatchSnapshot,
+  MatchEventEntry,
+  PitchPlayerState,
+  PossessionSide,
+} from './types';
+import type { MatchHalf } from '@/match/fieldZones';
 import { buildSpiritContext, gameSpiritTick } from '@/gamespirit/GameSpirit';
+import { getBestAction } from '@/smartfield/decision';
 import type { PlayerEntity } from '@/entities/types';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import { applyMatchMinuteFatigue } from '@/systems/fatigue';
-import { rollMatchInjury } from '@/systems/injury';
+import { rollMatchInjuryWithSeverity, INJURY_LABEL_PT, type InjurySeverity } from '@/systems/injury';
+import type { InboxItem } from '@/game/inboxTypes';
+import { makeInboxItem } from '@/game/inboxItem';
+import type { StaffRunMatchMinuteEffects } from '@/systems/staffBenefits';
 import { rollMatchDiscipline } from '@/systems/discipline';
 import { applyRedCardAutoSub } from './redCardAutoSub';
+import { findSlotForPlayer } from './substitution';
 import {
   appendCausalEntries,
   scoreDeltaFromEvents,
@@ -23,6 +35,7 @@ import {
   shouldRunSpiritPlayTick,
   tickBuildupGk,
 } from '@/gamespirit/spiritStateMachine';
+import { applyScoutEvent, type ScoutTally } from '@/gamespirit/scoutScoring';
 import { computeTacticalPositions, buildAwayPitchPlayers } from './test2d/tacticalPositioning';
 import { computeBallTrajectory, type BallTrajectoryState } from './test2d/ballTrajectory';
 import { visualBeatGeometryFromCausalBatch } from './test2d/visualBeatFromCausal';
@@ -30,6 +43,12 @@ import { isLive2dPitchMode } from './ultralive2d/live2dMode';
 import { teamMovementKnobsFromHomePitch } from './ultralive2d/applyAttrsToMovement';
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function liveMatchHalfFromClock(clock: LiveMatchClockPeriod | undefined, minute: number): MatchHalf {
+  if (clock === 'second_half') return 2;
+  if (clock === 'first_half' || clock === 'halftime') return 1;
+  return minute >= 46 ? 2 : 1;
 }
 
 function nearestToBall(players: PitchPlayerState[], ball: { x: number; y: number }): PitchPlayerState | undefined {
@@ -60,8 +79,8 @@ function jitterPlayers(players: PitchPlayerState[], ball: { x: number; y: number
         : { x: (ball.x - p.x) * 0.03, y: (ball.y - p.y) * 0.03 };
     return {
       ...p,
-      x: Math.min(96, Math.max(4, p.x + pull.x + (Math.random() * 2 - 1))),
-      y: Math.min(92, Math.max(8, p.y + pull.y + (Math.random() * 2 - 1))),
+      x: Math.min(96, Math.max(4, p.x + pull.x + (Math.random() * 0.6 - 0.3))),
+      y: Math.min(92, Math.max(8, p.y + pull.y + (Math.random() * 0.6 - 0.3))),
     };
   });
 }
@@ -89,16 +108,22 @@ export interface RunMinuteInput {
   /** Roster visitante sintético — para cartões/golos com playerId real. */
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
   skipEvent?: boolean;
+  /** Intensidade tática escolhida pelo jogador (Quick Match). */
+  tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
   /**
    * Probabilidade por minuto de correr um tick GameSpirit (fora de live2d).
    * Predefinido 0.62; modo automático usa valor mais baixo via matchBulk.
    */
   spiritTickProb?: number;
+  /** Efeitos cumulativos do staff Casa (preparador físico + nutrição) na fadiga/lesão por minuto. */
+  staffMatchEffects?: StaffRunMatchMinuteEffects | null;
 }
 
 export interface RunMinuteOutput {
   snapshot: LiveMatchSnapshot;
   updatedPlayers: Record<string, PlayerEntity>;
+  /** Itens a prefixar no inbox do save; hoje só usado pra lesões fortes/gravíssimas. */
+  newInboxItems?: InboxItem[];
 }
 
 /**
@@ -107,7 +132,7 @@ export interface RunMinuteOutput {
  * - Cartões amarelos: 3–5 total (~2–3 home, ~1–2 away).
  * - Cartões vermelhos: ~0.15 (raro, 1 a cada ~7 jogos).
  * - Lesões: ~0.3 (raro; fadiga >72 ou fatigue spike em minutos de desarme).
- * - Penáltis: ~0.5 (DANGEROUS_FOUL_PROB × PENALTY_FROM_FOUL_PROB × ticks em att).
+ * - Penalties: ~0.5 (DANGEROUS_FOUL_PROB × PENALTY_FROM_FOUL_PROB × ticks em att).
  */
 
 /** Avança 1 minuto de jogo: GameSpirit + log causal + fadiga + eventos UI. */
@@ -116,6 +141,16 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   if (s.phase !== 'playing') {
     return { snapshot: s, updatedPlayers: {} };
   }
+
+  /** Partida rápida: relógio parado até o manager resolver a substituição por lesão. */
+  if (s.mode === 'quick' && s.quickInjurySub) {
+    return { snapshot: s, updatedPlayers: {} };
+  }
+
+  let quickInjurySub: LiveMatchSnapshot['quickInjurySub'] = s.quickInjurySub ?? null;
+
+  /** Partida automática: corta cartões/lesões sintéticos por minuto (GameSpirit mantém-se). */
+  const autoSimSlim = s.mode === 'auto';
 
   /** Partida ao vivo 2D: feed sem narrativa minuto-a-minuto; desfechos ancorados ao causal antes do texto. */
   const live2dSilentSpiritFeed = s.mode === 'test2d';
@@ -132,13 +167,24 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   const homeStats = { ...s.homeStats };
   let causalLog = s.causalLog;
   let impactLedger = [...(s.homeImpactLedger ?? [])];
+  const scoutTallies: Record<string, ScoutTally> = { ...(s.scoutTallies ?? {}) };
 
   let spiritPhase = s.spiritPhase ?? 'open_play';
   let spiritOverlay = s.spiritOverlay ?? null;
   let penalty = s.penalty ?? null;
   let spiritBuildupGkTicksRemaining = s.spiritBuildupGkTicksRemaining ?? 0;
+  let spiritPenaltyCooldownTicks = Math.max(0, (s.spiritPenaltyCooldownTicks ?? 0) - 1);
   let spiritMomentumClamp01 = s.spiritMomentumClamp01 ?? null;
+  let spiritMomentum: { home: number; away: number } = s.spiritMomentum ?? { home: 0, away: 0 };
+  let pendingCornerForSide: 'home' | 'away' | null = s.pendingCornerForSide ?? null;
+  let pendingFreeKickForSide: 'home' | 'away' | null = s.pendingFreeKickForSide ?? null;
+  let lastShotPreview = s.lastShotPreview ?? null;
   let preGoalHint = s.preGoalHint ?? null;
+
+  // Expira preview antigo (> 3.5s desde o tiro) para desaparecer na UI.
+  if (lastShotPreview && Date.now() - lastShotPreview.ts > 3500) {
+    lastShotPreview = null;
+  }
 
   if (spiritMomentumClamp01 === 0.5 && !spiritOverlay) {
     spiritMomentumClamp01 = null;
@@ -155,6 +201,24 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   const onBall =
     possession === 'home' ? nearestToBall(s.homePlayers, ball) : undefined;
+
+  // ── SmartField: pré-decide a ação do portador antes de invocar o Spirit ───
+  // `getBestAction` consulta a hierarquia de zonas (goalmouth>six_yard>box>...).
+  // Quando a confiança é alta (≥0.7), o `Decision.action` vira um hint que o
+  // pickAction do Spirit prefere sobre o seu fallback heurístico. Não-destrutivo:
+  // se confiança baixa ou faltar dado, o Spirit segue seu fluxo normal.
+  let spiritActionHint: import('@/smartfield/decision').ActionKind | null = null;
+  if (possession === 'home' && onBall && s.homePlayers.length > 0) {
+    const tagged = s.homePlayers.map((p) => ({ ...p, team: 'home' as const }));
+    const carrierAware = { ...onBall, team: 'home' as const };
+    const decision = getBestAction(carrierAware, tagged, 'home', {
+      hasBall: true,
+      isFreeKick: false,
+    });
+    if (decision.confidence >= 0.7) {
+      spiritActionHint = decision.action;
+    }
+  }
 
   let awayRoster = s.awayRoster ?? input.awayRoster;
 
@@ -210,6 +274,12 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       awayRoster,
       test2dTickModifiers,
       live2dStagnationTicks: live2dPitchEarly ? (s.live2dDecisionStagnationTicks ?? 0) : undefined,
+      penaltyCooldownTicks: s.spiritPenaltyCooldownTicks ?? 0,
+      momentum: s.spiritMomentum ?? { home: 0, away: 0 },
+      pendingCornerForSide: s.pendingCornerForSide ?? null,
+      pendingFreeKickForSide: s.pendingFreeKickForSide ?? null,
+      smartfieldActionHint: spiritActionHint,
+      tacticalIntensity: input.tacticalIntensity,
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());
@@ -233,10 +303,29 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       appendTeamGoalScoredHome(impactLedger, minute, s.homePlayers.map((p) => p.playerId));
       if (goalScorerHomeId) {
         appendGoalScorerHome(impactLedger, minute, goalScorerHomeId, s.homeCaptainPlayerId);
+        const scorer = s.homePlayers.find(p => p.playerId === goalScorerHomeId);
+        if (scorer) {
+          const isDecisive = minute >= 70 && Math.abs(homeScore - 1 - awayScore) <= 1;
+          applyScoutEvent({
+            tallies: scoutTallies, playerId: goalScorerHomeId,
+            name: scorer.name, pos: scorer.role ?? 'FWD',
+            kind: 'goal', minute, rng: Math.random(),
+            context: { homeScore, awayScore, isDecisiveGoal: isDecisive },
+          });
+        }
       }
     }
     if (goalAway) {
       appendTeamGoalConcededHome(impactLedger, minute, s.homePlayers);
+      // GK da casa sofre gol
+      const gk = s.homePlayers.find(p => p.role === 'gk');
+      if (gk) {
+        applyScoutEvent({
+          tallies: scoutTallies, playerId: gk.playerId,
+          name: gk.name, pos: 'GK',
+          kind: 'goalConceded', minute, rng: Math.random(),
+        });
+      }
     }
 
     const ev: MatchEventEntry = {
@@ -268,13 +357,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           const nm = goalScorerHomeId
             ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
             : undefined;
-          ev.text = nm ? `${minute}' — Golo: ${nm}.` : `${minute}' — Golo (casa).`;
+          ev.text = nm ? `${minute}' — Gol: ${nm}.` : `${minute}' — Gol (casa).`;
           ev.kind = 'goal_home';
           ev.playerId = goalScorerHomeId;
         } else if (beatGeom.kind === 'goal_away') {
           const aid = out.goalScorerPlayerId;
           const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-          ev.text = nm ? `${minute}' — Golo: ${nm} (visitante).` : `${minute}' — Golo (visitante).`;
+          ev.text = nm ? `${minute}' — Gol: ${nm} (visitante).` : `${minute}' — Gol (visitante).`;
           ev.kind = 'goal_away';
           ev.playerId = aid;
         } else if (beatGeom.kind === 'shot_save') {
@@ -301,13 +390,13 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         const nm = goalScorerHomeId
           ? input.homeRoster.find((p) => p.id === goalScorerHomeId)?.name
           : undefined;
-        ev.text = nm ? `${minute}' — Golo: ${nm}.` : `${minute}' — Golo (casa).`;
+        ev.text = nm ? `${minute}' — Gol: ${nm}.` : `${minute}' — Gol (casa).`;
         events.unshift(ev);
         if (events.length > 40) events.pop();
       } else if (goalAway) {
         const aid = out.goalScorerPlayerId;
         const nm = aid ? awayRoster?.find((p) => p.id === aid)?.name : undefined;
-        ev.text = nm ? `${minute}' — Golo: ${nm} (visitante).` : `${minute}' — Golo (visitante).`;
+        ev.text = nm ? `${minute}' — Gol: ${nm} (visitante).` : `${minute}' — Gol (visitante).`;
         events.unshift(ev);
         if (events.length > 40) events.pop();
       }
@@ -324,6 +413,10 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         tackles: 0,
         km: 0,
         rating: 6.4,
+        shotsOn: 0,
+        shotsOff: 0,
+        saves: 0,
+        dribblesOk: 0,
       };
       homeStats[sid] = {
         passesOk: cur.passesOk + (out.statDeltas.passesOk ?? 0),
@@ -331,7 +424,78 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         tackles: cur.tackles + (out.statDeltas.tackles ?? 0),
         km: cur.km + (out.statDeltas.km ?? 0),
         rating: cur.rating,
+        shotsOn: cur.shotsOn ?? 0,
+        shotsOff: cur.shotsOff ?? 0,
+        saves: cur.saves ?? 0,
+        dribblesOk: cur.dribblesOk ?? 0,
       };
+      // Scout: passe incompleto
+      if ((out.statDeltas.passesAttempt ?? 0) > (out.statDeltas.passesOk ?? 0)) {
+        const incomplete = (out.statDeltas.passesAttempt ?? 0) - (out.statDeltas.passesOk ?? 0);
+        const pl = s.homePlayers.find(p => p.playerId === sid);
+        if (pl) {
+          for (let i = 0; i < incomplete; i++) {
+            applyScoutEvent({ tallies: scoutTallies, playerId: sid, name: pl.name, pos: pl.role ?? 'MID', kind: 'incompletePass', minute, rng: Math.random() });
+          }
+        }
+      }
+      // Scout: desarme
+      if ((out.statDeltas.tackles ?? 0) > 0) {
+        const pl = s.homePlayers.find(p => p.playerId === sid);
+        if (pl) {
+          for (let i = 0; i < (out.statDeltas.tackles ?? 0); i++) {
+            applyScoutEvent({ tallies: scoutTallies, playerId: sid, name: pl.name, pos: pl.role ?? 'DEF', kind: 'tackle', minute, rng: Math.random() });
+          }
+        }
+      }
+    }
+
+    // Scout + homeStats: eventos de remate pelo log causal (casa atacando)
+    for (const ce of out.causalEvents) {
+      if (ce.type !== 'shot_result' || !('payload' in ce)) continue;
+      const p = (ce as any).payload;
+      const shooterId: string | undefined = p?.shooterId;
+      const outcome: string | undefined = p?.outcome;
+      const side: 'home' | 'away' | undefined = p?.side;
+      if (!shooterId || !outcome) continue;
+
+      // HOME atacando: contabiliza chutes do jogador da casa.
+      if (side === 'home') {
+        const pl = s.homePlayers.find(q => q.playerId === shooterId);
+        if (pl) {
+          const cur = homeStats[shooterId] ?? {
+            passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, rating: 6.4,
+            shotsOn: 0, shotsOff: 0, saves: 0, dribblesOk: 0,
+          };
+          const onTarget = outcome === 'goal' || outcome === 'save' || outcome === 'post_in' || outcome === 'block';
+          homeStats[shooterId] = {
+            ...cur,
+            shotsOn: (cur.shotsOn ?? 0) + (onTarget ? 1 : 0),
+            shotsOff: (cur.shotsOff ?? 0) + (onTarget ? 0 : 1),
+          };
+          if (!goalHome) {
+            let kind: Parameters<typeof applyScoutEvent>[0]['kind'] | null = null;
+            if (outcome === 'save' || outcome === 'block') kind = 'shotSaved';
+            else if (outcome === 'post_in' || outcome === 'post_out') kind = 'shotPost';
+            else if (outcome === 'wide' || outcome === 'miss') kind = 'shotWide';
+            if (kind) applyScoutEvent({ tallies: scoutTallies, playerId: shooterId, name: pl.name, pos: pl.role ?? 'FWD', kind, minute, rng: Math.random() });
+          }
+        }
+      }
+
+      // AWAY atacando + save/block: goleiro da casa fez defesa.
+      if (side === 'away' && (outcome === 'save' || outcome === 'block')) {
+        const gk = s.homePlayers.find(q => q.role === 'gk');
+        if (gk) {
+          const cur = homeStats[gk.playerId] ?? {
+            passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, rating: 6.4,
+            shotsOn: 0, shotsOff: 0, saves: 0, dribblesOk: 0,
+          };
+          homeStats[gk.playerId] = { ...cur, saves: (cur.saves ?? 0) + 1 };
+          const isClutch = minute >= 75 && Math.abs(homeScore - awayScore) <= 1;
+          applyScoutEvent({ tallies: scoutTallies, playerId: gk.playerId, name: gk.name, pos: 'GK', kind: 'difficultSave', minute, rng: Math.random(), context: { homeScore, awayScore, isClutchSave: isClutch } });
+        }
+      }
     }
 
     if (out.narrative.includes('Recuperação')) {
@@ -357,6 +521,10 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         spiritBuildupGkTicksRemaining = sm.spiritBuildupGkTicksRemaining;
       }
       if (sm.spiritMomentumClamp01 !== undefined) spiritMomentumClamp01 = sm.spiritMomentumClamp01;
+      if (sm.momentum !== undefined) spiritMomentum = sm.momentum;
+      if (sm.pendingCornerForSide !== undefined) pendingCornerForSide = sm.pendingCornerForSide;
+      if (sm.pendingFreeKickForSide !== undefined) pendingFreeKickForSide = sm.pendingFreeKickForSide;
+      if (sm.lastShotPreview !== undefined) lastShotPreview = sm.lastShotPreview;
       if (sm.preGoalHint !== undefined) preGoalHint = sm.preGoalHint;
     }
 
@@ -401,7 +569,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   // Initialize away pitch players on first tick for live2d
   if (isLive2dPitch && !awayPitchPlayers && awayRoster?.length) {
-    const awayScheme = s.homeFormationScheme ?? '4-3-3';
+    const awayScheme = s.awayFormationScheme ?? s.homeFormationScheme ?? '4-3-3';
     awayPitchPlayers = buildAwayPitchPlayers(awayRoster, awayScheme);
   }
 
@@ -409,12 +577,14 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   if (isLive2dPitch) {
     const formation = s.homeFormationScheme ?? '4-3-3';
+    const awayFormation = s.awayFormationScheme ?? '4-3-3';
     const mgr = {
       tacticalMentality: input.tacticalMentality,
       defensiveLine: 50,
       tempo: 50,
     };
     const kickoffShapeRelax01 = Math.min(1, s.minute / 7);
+    const matchHalf = liveMatchHalfFromClock(s.clockPeriod, s.minute);
 
     // Away opponent positions for pressure calculation
     const oppPositions = awayPitchPlayers?.map((p) => ({ x: p.x, y: p.y }));
@@ -434,6 +604,9 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       live2dSpeedMult,
       pressTowardBall01: possession === 'away' ? 0.4 : undefined,
       kickoffShapeRelax01,
+      matchHalf,
+      voiceCommands: s.voiceCommands,
+      nowMs: Date.now(),
     });
 
     // Compute away team tactical positions
@@ -444,7 +617,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         ball,
         possession,
         side: 'away',
-        formation,
+        formation: awayFormation,
         spiritPhase,
         actionKind: spiritActionKind,
         manager: { tacticalMentality: 55, defensiveLine: 50, tempo: 50 },
@@ -453,6 +626,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         live2dSpeedMult,
         pressTowardBall01: possession === 'home' ? 0.42 : undefined,
         kickoffShapeRelax01,
+        matchHalf,
       });
     }
 
@@ -467,19 +641,46 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   } else {
     homePlayers = jitterPlayers(s.homePlayers, ball, possession);
   }
-  let injuredThisMinute: { id: string; name: string } | null = null;
+  const staffFx = input.staffMatchEffects;
+  const fatigueGainMul = staffFx?.fatigueGainMul ?? 1;
+  const injStressMul = staffFx?.injuryStressMul ?? 1;
+  const injGrowthMul = staffFx?.injuryRiskGrowthMul ?? 1;
+
+  let injuredThisMinute: { id: string; name: string; severity?: InjurySeverity } | null = null;
+  const injuryInboxItems: InboxItem[] = [];
   for (const hp of homePlayers) {
     const pl = input.homeRoster.find((p) => p.id === hp.playerId);
     if (pl) {
       const plEnt = updatedPlayers[pl.id] ?? pl;
       const preOut = plEnt.outForMatches;
-      let next = applyMatchMinuteFatigue(plEnt, shouldTick ? 1.1 : 0.75);
+      let next = applyMatchMinuteFatigue(plEnt, shouldTick ? 1.1 : 0.75, fatigueGainMul);
       const injuryIntensity = shouldTick ? 1.1 : 0.6;
-      if (shouldTick && next.fatigue > 72 && Math.random() < 0.06 * autoSimBoost) {
-        next = rollMatchInjury(next, injuryIntensity);
+      // Lesões por fadiga só após minuto 20 — jogadores não se machucam logo de início por causa de fadiga acumulada
+      let injuredSeverity: InjurySeverity | undefined;
+      if (!autoSimSlim && shouldTick && minute > 20 && next.fatigue > 72 && Math.random() < 0.06 * autoSimBoost) {
+        const res = rollMatchInjuryWithSeverity(next, injuryIntensity, { stressMul: injStressMul, riskGrowthMul: injGrowthMul });
+        next = res.player;
+        if (res.injured) injuredSeverity = res.severity;
       }
       if (next.outForMatches > preOut) {
-        injuredThisMinute = { id: hp.playerId, name: hp.name };
+        injuredThisMinute = { id: hp.playerId, name: hp.name, severity: injuredSeverity };
+        // Inbox: só notifica lesões forte/gravíssima (leve é ruído demais).
+        if (injuredSeverity === 'forte' || injuredSeverity === 'gravissima') {
+          const games = next.outForMatches;
+          injuryInboxItems.push(
+            makeInboxItem(
+              `injury-${hp.playerId}-${minute}-${Date.now().toString(36)}`,
+              'PLAYER_INJURY',
+              'PLANTEL',
+              `${INJURY_LABEL_PT[injuredSeverity]} — ${hp.name}`,
+              {
+                body: `${hp.name} cai com dores aos ${minute}' e fica ${games} jogos fora (amistosos + liga). Departamento médico pode acelerar a recuperação.`,
+                deepLink: '/team',
+                timeLabel: `${minute}'`,
+              },
+            ),
+          );
+        }
       }
       updatedPlayers[pl.id] = next;
       hp.fatigue = Math.round(next.fatigue);
@@ -496,7 +697,137 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     };
     events.unshift(injEv);
     if (events.length > 40) events.pop();
+
     const mergedPlayers: Record<string, PlayerEntity> = { ...input.allPlayers, ...updatedPlayers };
+    const outPs = homePlayers.find((p) => p.playerId === injuredThisMinute.id);
+    const injuredSlot = findSlotForPlayer(matchLineupBySlot, injuredThisMinute.id);
+
+    if (s.mode === 'quick' && outPs && injuredSlot) {
+      // remove injured player from pitch and create quick-injury substitution prompt
+      homePlayers = homePlayers.filter((p) => p.playerId !== injuredThisMinute.id);
+      quickInjurySub = {
+        outPlayerId: injuredThisMinute.id,
+        slotId: outPs.slotId,
+        x: outPs.x,
+        y: outPs.y,
+        name: injuredThisMinute.name,
+      };
+
+      // If the injury was caused by a recent foul, find the fouler in the causal log and
+      // apply a red card to them (quick match => immediate expulsion, no auto-sub for away).
+      if (causalLog && causalLog.entries && causalLog.entries.length > 0) {
+        for (let i = causalLog.entries.length - 1; i >= 0; i--) {
+          const e = causalLog.entries[i] as any;
+          if (e.type === 'foul_committed' && e.payload && e.payload.victimId === injuredThisMinute.id) {
+            const foulerId: string | undefined = e.payload.foulerId;
+            const foulerSide: any = e.payload.foulerSide;
+            if (foulerId) {
+              // create red event for the fouler
+              const redKind = foulerSide === 'home' ? 'red_home' : 'red_away';
+              const redEv: MatchEventEntry = {
+                id: uid(),
+                minute,
+                text: `${minute}' — ${mergedPlayers[foulerId]?.name ?? 'Jogador'} expulso por falta que causou lesão.`,
+                kind: redKind,
+                playerId: foulerId,
+              };
+              events.unshift(redEv);
+              if (events.length > 40) events.pop();
+
+              // apply removal depending on side
+              if (foulerSide === 'home') {
+                // remove fouler from homePlayers and matchLineupBySlot
+                homePlayers = homePlayers.filter((p) => p.playerId !== foulerId);
+                const slotForFouler = findSlotForPlayer(matchLineupBySlot, foulerId);
+                if (slotForFouler) {
+                  const newLineup = { ...matchLineupBySlot };
+                  delete newLineup[slotForFouler];
+                  matchLineupBySlot = newLineup;
+                }
+                const sentOff = [...(s.sentOffPlayerIds ?? []), foulerId];
+                // persist sentOffPlayerIds on snapshot via spiritOverlay below
+                // set visual overlay for red card
+                if (!spiritOverlay) {
+                  spiritOverlay = redCardBannerOverlay({
+                    minute,
+                    side: 'home',
+                    playerName: mergedPlayers[foulerId]?.name,
+                    homeShort: s.homeShort,
+                    awayShort: s.awayShort,
+                    startedAtMs: Date.now(),
+                  });
+                }
+              } else {
+                // away: remove from awayRoster (quick mode has no auto-sub for away)
+                if (awayRoster && awayRoster.length > 0) {
+                  awayRoster = awayRoster.filter((p) => p.id !== foulerId);
+                }
+                if (!spiritOverlay) {
+                  spiritOverlay = redCardBannerOverlay({
+                    minute,
+                    side: 'away',
+                    playerName: mergedPlayers[foulerId]?.name,
+                    homeShort: s.homeShort,
+                    awayShort: s.awayShort,
+                    startedAtMs: Date.now(),
+                  });
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      const engineSimPhaseNow =
+        causalLog && causalLog.entries.length > 0
+          ? lastEnginePhaseFromEntries(causalLog.entries)
+          : s.engineSimPhase ?? 'LIVE';
+      return {
+        snapshot: {
+          ...s,
+          minute,
+          footballElapsedSec,
+          homeScore,
+          awayScore,
+          possession,
+          ball,
+          engineSimPhase: engineSimPhaseNow,
+          onBallPlayerId: possession === 'home' ? nearestToBall(homePlayers, ball)?.playerId : undefined,
+          homePlayers,
+          events: [...events],
+          homeStats,
+          causalLog,
+          matchLineupBySlot,
+          substitutionsUsed,
+          homeImpactLedger: impactLedger,
+          scoutTallies,
+          spiritPhase,
+          spiritOverlay,
+          penalty,
+          spiritBuildupGkTicksRemaining,
+          spiritPenaltyCooldownTicks,
+          spiritMomentumClamp01,
+          preGoalHint,
+          awayRoster,
+          quickInjurySub,
+          ...(isLive2dPitch
+            ? {
+                awayPitchPlayers,
+                spiritActionKind,
+                ballTrajectory,
+                test2dVisualBeat,
+                ultralive2dStagedPlay,
+                test2dHomePossessionPhase:
+                  possession === 'home' ? 'in_possession' : 'out_of_possession',
+                live2dDecisionStagnationTicks,
+              }
+            : {}),
+        },
+        updatedPlayers,
+      };
+    }
+
     const partialSnap: LiveMatchSnapshot = {
       ...s,
       minute,
@@ -513,10 +844,12 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       substitutionsUsed,
       phase: s.phase,
       homeImpactLedger: impactLedger,
+      scoutTallies,
       spiritPhase,
       spiritOverlay,
       penalty,
       spiritBuildupGkTicksRemaining,
+      spiritPenaltyCooldownTicks,
       spiritMomentumClamp01,
     };
     const injSub = applyRedCardAutoSub({
@@ -525,6 +858,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       sentOffId: injuredThisMinute.id,
       minute,
     });
+    quickInjurySub = null;
     if (injSub.events.length > 0) {
       homePlayers = injSub.snapshot.homePlayers;
       matchLineupBySlot = { ...injSub.snapshot.matchLineupBySlot };
@@ -551,7 +885,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
   // Away card: ~2.5% per tick → ~1.4 amarelos/90'
   const CARD_PROB_AWAY = 0.025;
 
-  if (shouldTick && Math.random() < CARD_PROB_HOME * autoSimBoost && homePlayers.length > 0) {
+  if (!autoSimSlim && shouldTick && Math.random() < CARD_PROB_HOME * autoSimBoost && homePlayers.length > 0) {
     const hp = homePlayers[Math.floor(Math.random() * homePlayers.length)]!;
     const basePl = updatedPlayers[hp.playerId] ?? input.homeRoster.find((p) => p.id === hp.playerId);
     if (basePl && basePl.outForMatches <= 0) {
@@ -567,6 +901,12 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           playerId: basePl.id,
         };
         appendCardHome(impactLedger, minute, basePl.id, disc.outcome === 'yellow', s.homeCaptainPlayerId);
+        applyScoutEvent({
+          tallies: scoutTallies, playerId: basePl.id,
+          name: basePl.name, pos: basePl.pos ?? 'MID',
+          kind: disc.outcome === 'yellow' ? 'yellowCard' : 'redCard',
+          minute, rng: Math.random(),
+        });
         events.unshift(dev);
         if (events.length > 40) events.pop();
         if (disc.outcome === 'red') {
@@ -587,10 +927,12 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
             substitutionsUsed,
             phase: s.phase,
             homeImpactLedger: impactLedger,
+            scoutTallies,
             spiritPhase,
             spiritOverlay,
             penalty,
             spiritBuildupGkTicksRemaining,
+            spiritPenaltyCooldownTicks,
             spiritMomentumClamp01,
           };
           const sub = applyRedCardAutoSub({
@@ -620,7 +962,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     }
   }
 
-  if (shouldTick && Math.random() < CARD_PROB_AWAY * autoSimBoost && awayRoster && awayRoster.length > 0) {
+  if (!autoSimSlim && shouldTick && Math.random() < CARD_PROB_AWAY * autoSimBoost && awayRoster && awayRoster.length > 0) {
     const roster = awayRoster;
     const pick = roster[Math.floor(Math.random() * roster.length)]!;
     const isRed = Math.random() < 0.06;
@@ -673,13 +1015,20 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     matchLineupBySlot,
     substitutionsUsed,
     homeImpactLedger: impactLedger,
+    scoutTallies,
     spiritPhase,
     spiritOverlay,
     penalty,
     spiritBuildupGkTicksRemaining,
+    spiritPenaltyCooldownTicks,
     spiritMomentumClamp01,
+    spiritMomentum,
+    pendingCornerForSide,
+    pendingFreeKickForSide,
+    lastShotPreview,
     preGoalHint,
     awayRoster,
+    quickInjurySub,
     // live2d pitch fields
     ...(isLive2dPitch
       ? {
@@ -695,5 +1044,5 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       : {}),
   };
 
-  return { snapshot: nextSnap, updatedPlayers };
+  return { snapshot: nextSnap, updatedPlayers, newInboxItems: injuryInboxItems.length > 0 ? injuryInboxItems : undefined };
 }

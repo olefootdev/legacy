@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ChevronLeft, FlaskConical } from 'lucide-react';
+import { BookOpen, Check, FlaskConical, MapPin, Sparkles, Wand2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { EditorialHero } from '@/components/EditorialHero';
+import { BackButton } from '@/components/BackButton';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import type { PlayingStylePresetId } from '@/tactics/playingStyle';
 import {
@@ -11,20 +13,14 @@ import {
   type AiLabsMode,
   type AiLabsProposal,
 } from '@/ailabs/aiLabsCore';
+import { trainingCenterHasAiLabs } from '@/clubStructures/benefits';
 
 const MAX_CHARS = 250;
-
-const TEAM_NAV = [
-  { to: '/team', label: 'Elenco' },
-  { to: '/team/tatica', label: 'Tática' },
-  { to: '/team/treino', label: 'Treino' },
-  { to: '/team/staff', label: 'Staff' },
-  { to: '/team/ailabs', label: 'AI Labs' },
-];
 
 export function TeamAiLabs() {
   const dispatch = useGameDispatch();
   const favorite = useGameStore((s) => s.userSettings?.favoriteRealTeam);
+  const ctLevel = useGameStore((s) => s.structures.training_center ?? 1);
   const oleProposal = useMemo(() => oleSuggestionFromFavoriteTeam(favorite?.name), [favorite?.name]);
 
   const [mode, setMode] = useState<AiLabsMode>('livre');
@@ -55,42 +51,64 @@ export function TeamAiLabs() {
     }, 650);
   };
 
-  return (
-    <div className="mx-auto min-w-0 max-w-3xl space-y-5 pb-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-display text-2xl font-black uppercase tracking-wider min-[390px]:text-3xl">
-            <FlaskConical className="h-7 w-7 shrink-0 text-neon-yellow" />
-            Meu Time / AI Labs
-          </h2>
-          <p className="mt-1 text-xs text-gray-400">
-            Experimenta visão de jogo ou um clássico; confirmas e o OLE aplica o estilo na tática.
-          </p>
-        </div>
-        <Link
-          to="/team"
-          className="flex shrink-0 items-center gap-2 self-start rounded bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20 sm:self-auto"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Voltar
-        </Link>
-      </div>
+  if (!trainingCenterHasAiLabs(ctLevel)) {
+    return (
+      <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+        <div className="mx-auto min-w-0 max-w-3xl space-y-6 px-3 sm:px-4 lg:px-8">
+          <BackButton to="/clube" label="Clube" />
 
-      <nav className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
-        {TEAM_NAV.map((l) => (
-          <Link
-            key={l.to}
-            to={l.to}
-            className={
-              l.to === '/team/ailabs'
-                ? 'rounded border border-neon-yellow bg-neon-yellow/15 px-2 py-1 text-neon-yellow'
-                : 'rounded border border-white/10 bg-black/30 px-2 py-1 text-gray-400 hover:text-white'
+          <EditorialHero
+            watermark="AI LABS"
+            eyebrow="Gestão do clube · Inteligência Artificial"
+            title="AI Labs"
+            subtitle="Bloqueado"
+            quote="o centro de treinamento precisa estar no nível 2 ou superior para desbloquear o AI Labs"
+            icon={
+              <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 opacity-50"
+                   style={{ borderRadius: 'var(--radius-sm)' }}>
+                <div className="flex h-full w-full items-center justify-center">
+                  <FlaskConical className="h-12 w-12 sm:h-14 sm:w-14 text-black/40" aria-hidden />
+                </div>
+              </div>
             }
-          >
-            {l.label}
-          </Link>
-        ))}
-      </nav>
+          />
+
+          <div className="sports-panel border border-white/10 p-6">
+            <h2 className="font-display text-xl font-black uppercase tracking-wider">Laboratório indisponível</h2>
+            <Link
+              to="/city"
+              className="mt-4 inline-flex items-center gap-2 rounded bg-neon-yellow px-4 py-2 text-sm font-bold text-black"
+            >
+              <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+              Ir para Cidade
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-3xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+        <BackButton to="/clube" label="Clube" />
+
+        <EditorialHero
+          watermark="AI LABS"
+          eyebrow="Gestão do clube · Inteligência Artificial"
+          title="AI Labs"
+          subtitle="Visão de jogo"
+          quote="experimenta visão de jogo ou um clássico; confirmas e o OLE aplica o estilo na tática"
+          stats={favorite?.name ? `Time do coração: ${favorite.name}` : 'Laboratório de táticas inteligentes'}
+          icon={
+            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
+                 style={{ borderRadius: 'var(--radius-sm)' }}>
+              <div className="flex h-full w-full items-center justify-center">
+                <FlaskConical className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
+              </div>
+            </div>
+          }
+        />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -106,8 +124,9 @@ export function TeamAiLabs() {
             <button
               type="button"
               onClick={loadOleCard}
-              className="mt-2 rounded border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-white/20"
+              className="mt-2 inline-flex items-center gap-1.5 rounded border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-white/20"
             >
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-neon-yellow" aria-hidden />
               Ver sugestão
             </button>
           </div>
@@ -124,10 +143,11 @@ export function TeamAiLabs() {
             }}
             className={
               mode === 'livre'
-                ? 'rounded-lg border border-neon-yellow bg-neon-yellow/15 px-3 py-2 text-[10px] font-bold uppercase text-neon-yellow'
-                : 'rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold uppercase text-gray-400 hover:border-white/30'
+                ? 'inline-flex items-center gap-1.5 rounded-lg border border-neon-yellow bg-neon-yellow/15 px-3 py-2 text-[10px] font-bold uppercase text-neon-yellow'
+                : 'inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold uppercase text-gray-400 hover:border-white/30'
             }
           >
+            <Wand2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Visão livre
           </button>
           <button
@@ -138,10 +158,11 @@ export function TeamAiLabs() {
             }}
             className={
               mode === 'classico'
-                ? 'rounded-lg border border-neon-yellow bg-neon-yellow/15 px-3 py-2 text-[10px] font-bold uppercase text-neon-yellow'
-                : 'rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold uppercase text-gray-400 hover:border-white/30'
+                ? 'inline-flex items-center gap-1.5 rounded-lg border border-neon-yellow bg-neon-yellow/15 px-3 py-2 text-[10px] font-bold uppercase text-neon-yellow'
+                : 'inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold uppercase text-gray-400 hover:border-white/30'
             }
           >
+            <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Inspirado num clássico
           </button>
         </div>
@@ -171,8 +192,9 @@ export function TeamAiLabs() {
           type="button"
           onClick={runPreview}
           disabled={text.trim().length < 4}
-          className="w-full rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 py-2.5 text-xs font-black uppercase tracking-wide text-neon-yellow hover:bg-neon-yellow/20 disabled:pointer-events-none disabled:opacity-40"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-neon-yellow/40 bg-neon-yellow/10 py-2.5 text-xs font-black uppercase tracking-wide text-neon-yellow hover:bg-neon-yellow/20 disabled:pointer-events-none disabled:opacity-40"
         >
+          <FlaskConical className="h-4 w-4 shrink-0" aria-hidden />
           Pedir plano
         </button>
 
@@ -208,15 +230,17 @@ export function TeamAiLabs() {
               <button
                 type="button"
                 onClick={() => setProposal(null)}
-                className="flex-1 rounded-lg border border-white/20 py-2 text-xs font-bold uppercase text-gray-300 hover:bg-white/10"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/20 py-2 text-xs font-bold uppercase text-gray-300 hover:bg-white/10"
               >
+                <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={confirmApply}
-                className="flex-1 rounded-lg bg-neon-yellow py-2 text-xs font-black uppercase text-black hover:bg-neon-yellow/90"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neon-yellow py-2 text-xs font-black uppercase text-black hover:bg-neon-yellow/90"
               >
+                <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Confirmar e aplicar
               </button>
             </div>
@@ -227,6 +251,7 @@ export function TeamAiLabs() {
       <p className="text-center text-[9px] text-gray-600">
         Referências históricas são inspiração pública aproximada — afinas tudo em Tática e Treino.
       </p>
+    </div>
     </div>
   );
 }

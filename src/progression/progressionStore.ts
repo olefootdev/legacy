@@ -129,12 +129,9 @@ export const useProgressionStore = create<Store>((set, get) => ({
         return { ...s, ...r };
       }
       claimedOk = true;
-      const reward = def.rewardExp;
       return {
         ...s,
         ...r,
-        expBalance: s.expBalance + reward,
-        expLifetimeEarned: s.expLifetimeEarned + reward,
         missions: {
           ...r.missions,
           [missionId]: { ...ms, claimed: true },

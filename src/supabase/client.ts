@@ -15,6 +15,8 @@ export function getSupabase(): SupabaseClient | null {
   return _client;
 }
 
+export const supabase = getSupabase();
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }

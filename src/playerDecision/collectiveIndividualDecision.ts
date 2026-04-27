@@ -195,12 +195,12 @@ export function buildPlayerState(ctx: DecisionContext, pressure01: number): Play
 
 /** Peso do deslocamento “ideal” vs âncora de slot (forma dinâmica) — reduz colapso na bola. */
 const COLLECTIVE_ANCHOR_BLEND: Record<TacticalRole, number> = {
-  zagueiro: 0.84,
-  lateral: 0.9,
-  volante: 0.74,
-  meia: 0.58,
-  ponta: 0.48,
-  atacante: 0.52,
+  zagueiro: 0.88,
+  lateral: 0.92,
+  volante: 0.8,
+  meia: 0.66,
+  ponta: 0.56,
+  atacante: 0.54,
   goleiro: 1,
 };
 
@@ -228,6 +228,11 @@ export function getCollectiveTarget(player: AgentSnapshot, ctx: DecisionContext)
     priorityCollapse = true;
   }
 
+  const teamHasBall = ctx.possession === side;
+  const ballOnLeftWing = ballZ < FIELD_WIDTH * 0.35;
+  const ballOnRightWing = ballZ > FIELD_WIDTH * 0.65;
+  const ballInAttThird = ctx.teamPhase === 'attack';
+
   switch (role) {
     case 'zagueiro':
       target.x = ownGoalX + ad * 14;
@@ -244,23 +249,39 @@ export function getCollectiveTarget(player: AgentSnapshot, ctx: DecisionContext)
       target.z = ctx.slotZ + (ballZ - ctx.slotZ) * 0.25;
       priorities.push('conectar_setores', 'linha_de_passe', 'entrelinhas');
       break;
-    case 'ponta':
-      target.x = ballX + ad * 10;
+    case 'ponta': {
+      const baseAdvance = teamHasBall && ballInAttThird ? 14 : 10;
+      target.x = ballX + ad * baseAdvance;
       target.z = player.z < FIELD_WIDTH / 2 ? 6 : FIELD_WIDTH - 6;
       priorities.push('alongar_campo', 'atacar_corredor');
       break;
-    case 'atacante':
-      target.x = ballX + ad * 14;
+    }
+    case 'atacante': {
+      const strikerAdvance = teamHasBall && ballInAttThird ? 16 : 14;
+      target.x = ballX + ad * strikerAdvance;
       target.z = FIELD_WIDTH / 2 + (player.z - FIELD_WIDTH / 2) * 0.25;
       priorities.push('profundidade', 'atacar_espaco', 'area');
       break;
-    case 'lateral':
-      target.x = ctx.teamPhase === 'transition_def'
-        ? ctx.slotX
-        : ctx.slotX + ad * 6;
+    }
+    case 'lateral': {
+      const isLeftBack = ctx.slotZ < FIELD_WIDTH / 2;
+      const ballOnMyWing = isLeftBack ? ballOnLeftWing : ballOnRightWing;
+      let lateralAdvance = 6;
+      if (teamHasBall && ballOnMyWing && ballInAttThird) {
+        lateralAdvance = 22;
+        priorities.push('sobreposicao', 'cruzamento');
+      } else if (teamHasBall && ballOnMyWing) {
+        lateralAdvance = 14;
+        priorities.push('apoio_ala');
+      } else if (ctx.teamPhase === 'transition_def') {
+        lateralAdvance = 0;
+        priorities.push('recomposicao');
+      }
+      target.x = ctx.slotX + ad * lateralAdvance;
       target.z = ctx.slotZ;
       priorities.push('equilibrio_largura_recomposicao');
       break;
+    }
     case 'goleiro':
     default:
       target.x = ownGoalX + ad * 3;

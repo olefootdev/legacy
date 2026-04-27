@@ -134,9 +134,14 @@ export function emitCausalMatchEvent(
     case 'foul_committed':
       bus.emit({
         kind: 'EngineNarrativeLine',
-        text: ev.payload.dangerous
-          ? `${ev.payload.minute}' — Falta dura (${ev.payload.kind}) — tensão no lance.`
-          : `${ev.payload.minute}' — Falta (${ev.payload.kind}) — jogo parado.`,
+        text:
+          ev.payload.kind === 'gk_box_clump'
+            ? `${ev.payload.minute}' — Falta do guarda-redes na pequena área; árbitro reorganiza o lance.`
+            : ev.payload.kind === 'attacker_box_clump_on_gk'
+              ? `${ev.payload.minute}' — Falta do atacante sobre o GR na área; jogo recomeça com a defesa.`
+              : ev.payload.dangerous
+              ? `${ev.payload.minute}' — Falta dura (${ev.payload.kind}) — tensão no lance.`
+              : `${ev.payload.minute}' — Falta (${ev.payload.kind}) — jogo parado.`,
         minute: ev.payload.minute,
         at: simTime,
       });

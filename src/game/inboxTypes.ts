@@ -71,6 +71,7 @@ export type InboxMessageType =
   | 'STRUCTURE_UPGRADE_FAIL'
   | 'WALLET_OLEXP'
   | 'WALLET_OLEXP_FAIL'
+  | 'WALLET_TRANSFER_FAIL'
   | 'WALLET_CLAIM_FAIL'
   | 'WALLET_SPONSOR_FAIL'
   | 'WALLET_GAT_FAIL'
@@ -80,7 +81,8 @@ export type InboxMessageType =
   | 'SOCIAL_FRIEND_ACCEPTED'
   | 'SOCIAL_INVITE_SENT'
   | 'SOCIAL_INVITE_ACCEPTED_NOTICE'
-  | 'STAFF_ADVICE';
+  | 'STAFF_ADVICE'
+  | 'ADMIN_BROADCAST';
 
 export type SuggestedActionKind = 'OPEN_TRAINING' | 'APPLY_PRESET';
 

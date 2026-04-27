@@ -1,10 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Users,
-  Brain,
-  Dumbbell,
-  UserPlus,
   X,
   Save,
   Shield,
@@ -12,28 +8,71 @@ import {
   Check,
   AlertCircle,
   Sparkles,
-  FlaskConical,
   Megaphone,
+  Heart,
+  Info,
+  Scale,
+  Orbit,
+  Flame,
+  Zap,
+  StretchHorizontal,
+  ArrowUpRight,
+  Target,
+  Crosshair,
 } from 'lucide-react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import { FORMATION_SCHEME_LIST, SCHEME_LINE_GROUPS, pitchUiSlots } from '@/match-engine/formations/catalog';
+import {
+  PRESET_LABEL_PT,
+  PRESET_DESCRIPTION_PT,
+  type PlayingStylePresetId,
+} from '@/tactics/playingStyle';
+
+const PRESET_IDS: readonly PlayingStylePresetId[] = [
+  'balanced',
+  'POSSE_CONTROLADA',
+  'PRESSAO_ALTA',
+  'TRANSICAO_RAPIDA',
+  'BLOCO_BAIXO',
+  'JOGO_PELAS_LATERAIS',
+  'JOGO_DIRETO',
+  'CRIATIVO_LIVRE',
+];
+
+const PRESET_ICONS: Record<PlayingStylePresetId, LucideIcon> = {
+  balanced: Scale,
+  POSSE_CONTROLADA: Orbit,
+  PRESSAO_ALTA: Flame,
+  TRANSICAO_RAPIDA: Zap,
+  BLOCO_BAIXO: Shield,
+  JOGO_PELAS_LATERAIS: StretchHorizontal,
+  JOGO_DIRETO: ArrowUpRight,
+  CRIATIVO_LIVRE: Sparkles,
+};
 import { suggestBestLineup } from '@/team/suggestBestLineup';
-import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 import { ManagerCreatePlayerModal } from '@/components/ManagerCreatePlayerModal';
+import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
+import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
+import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
+import { BackButton } from '@/components/BackButton';
 
 type CardPlayer = ReturnType<typeof playerToCardView> & { id: string };
 
 export function Team() {
+  useTrackScreen('screen_team');
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useGameDispatch();
   const playersById = useGameStore((s) => s.players);
   const lineupSaved = useGameStore((s) => s.lineup);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
+  const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
+  const currentPresetId: PlayingStylePresetId = tacticalStyle?.presetId ?? 'balanced';
+  const favoriteRealTeam = useGameStore((s) => s.userSettings.favoriteRealTeam);
 
   const maxOvr = useMemo(() => {
     const vals = Object.values(playersById);
@@ -55,11 +94,16 @@ export function Team() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [formationModalOpen, setFormationModalOpen] = useState(false);
+  const [pendingFormation, setPendingFormation] = useState(formationScheme);
+  const [pendingPreset, setPendingPreset] = useState<PlayingStylePresetId>(currentPresetId);
+  const [presetInfoId, setPresetInfoId] = useState<PlayingStylePresetId | null>(null);
   const [createProspectOpen, setCreateProspectOpen] = useState(false);
   /** Feedback visível no painel (substitui alert nativo). */
   const [saveBanner, setSaveBanner] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const [announcePlayer, setAnnouncePlayer] = useState<CardPlayer | null>(null);
   const [announcePrice, setAnnouncePrice] = useState('180000');
+  /** Ficha temporada / evolução (clique no token ou no cartão). */
+  const [sheetPlayerId, setSheetPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (lineupDirty) {
@@ -84,6 +128,22 @@ export function Team() {
   const lineupPlayerIds = Object.values(lineup)
     .filter((p): p is CardPlayer => Boolean(p))
     .map((p) => p.id);
+
+  /** Soma dos OVR dos titulares (força combinada do XI) + média para leitura rápida. */
+  const startersStrength = useMemo(() => {
+    const starters = pitchSlots
+      .map((s) => lineup[s.id])
+      .filter((p): p is CardPlayer => Boolean(p));
+    if (!starters.length) return { sum: 0, avg: 0, count: 0, full: false };
+    const sum = starters.reduce((acc, p) => acc + p.ovr, 0);
+    const avg = sum / starters.length;
+    return {
+      sum,
+      avg,
+      count: starters.length,
+      full: starters.length === pitchSlots.length,
+    };
+  }, [lineup, pitchSlots]);
   const availablePlayers = rosterCards.filter((p) => {
     const ent = playersById[p.id];
     return (
@@ -173,6 +233,7 @@ export function Team() {
         .map(([slot, pl]) => [slot, pl.id]),
     ) as Record<string, string>;
     dispatch({ type: 'SET_LINEUP', lineup: ids, formationScheme });
+    trackMissionEvent('lineup_saved');
     setLineupDirty(false);
     setTimeout(() => {
       setIsSaving(false);
@@ -206,97 +267,103 @@ export function Team() {
     });
   };
 
-  const tabs = [
-    { id: 'elenco', label: 'ELENCO', icon: Users },
-    { id: 'tatica', label: 'TÁTICA', icon: Brain },
-    { id: 'treino', label: 'TREINO', icon: Dumbbell },
-    { id: 'staff', label: 'STAFF', icon: UserPlus },
-    { id: 'ailabs', label: 'AI LABS', icon: FlaskConical },
-  ];
-
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 overflow-x-hidden pb-8 md:space-y-8">
-      {/* Header & Tabs */}
-      <div className="relative rounded-xl">
-        <GameBannerBackdrop slot="team_header" imageOpacity={0.35} />
-        <div className="relative z-10 flex min-w-0 flex-col items-start justify-between gap-3 px-1 pb-1 md:flex-row md:items-end md:gap-4 md:px-2 md:pb-2">
-          <div className="min-w-0">
-            <h2 className="text-2xl md:text-4xl font-display font-black italic uppercase tracking-wider">Plantel Principal</h2>
-            <p className="text-[10px] md:text-sm text-gray-400 font-medium mt-0.5 md:mt-1">
-              Temporada 2026 •{' '}
-              <span className="text-white/90 font-semibold">{formationScheme}</span>
-              <span className="text-gray-500"> tático</span>
-            </p>
-            <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFormationModalOpen(true)}
-                className="inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-display font-bold uppercase tracking-widest text-neon-yellow/90 hover:text-neon-yellow border border-neon-yellow/25 bg-neon-yellow/5 hover:bg-neon-yellow/10 px-2 py-1 rounded-sm -skew-x-6 transition-colors"
-              >
-                <span className="skew-x-6 inline-flex items-center gap-1">
-                  <LayoutGrid className="w-3 h-3 shrink-0 opacity-90" />
-                  Escolher formação
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreateProspectOpen(true)}
-                className="inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-display font-bold uppercase tracking-widest text-white/90 hover:text-white border border-white/20 bg-white/5 hover:bg-white/10 px-2 py-1 rounded-sm -skew-x-6 transition-colors"
-              >
-                <span className="skew-x-6 inline-flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 shrink-0 text-neon-yellow opacity-90" />
-                  Criar jogador
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <div className="hide-scrollbar flex min-w-0 w-full gap-2 overflow-x-auto pb-2 md:w-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  if (tab.id === 'elenco') navigate('/team');
-                  if (tab.id === 'tatica') navigate('/team/tatica');
-                  if (tab.id === 'treino') navigate('/team/treino');
-                  if (tab.id === 'staff') navigate('/team/staff');
-                  if (tab.id === 'ailabs') navigate('/team/ailabs');
+    <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
+      <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4 md:space-y-8">
+      <BackButton to="/clube" label="Clube" />
+      <TeamMeuTimeHeader
+        title="Plantel Principal"
+        subtitle={
+          <>
+            Temporada 2026 •{' '}
+            <span className="font-semibold text-white/90">{formationScheme}</span>
+            <span className="text-gray-500"> tático</span>
+          </>
+        }
+        actions={
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 max-w-full">
+            <button
+              type="button"
+              onClick={() => {
+                setPendingFormation(formationScheme);
+                setPendingPreset(currentPresetId);
+                setPresetInfoId(null);
+                setFormationModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 bg-neon-yellow px-3 py-1.5 text-black hover:bg-white transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Escolher formação
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateProspectOpen(true)}
+              className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Criar jogador
+            </button>
+            {favoriteRealTeam?.name ? (
+              <Link
+                to="/ranking?tab=nacional&heart=1"
+                className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
                 }}
-                className={cn(
-                  'shrink-0 whitespace-nowrap border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wider transition-all [-webkit-tap-highlight-color:transparent] -skew-x-6 sm:px-4 sm:text-xs md:px-6 md:py-2 md:text-sm',
-                  (tab.id === 'elenco' && location.pathname === '/team')
-                    || (tab.id === 'tatica' && location.pathname === '/team/tatica')
-                    || (tab.id === 'treino' && location.pathname === '/team/treino')
-                    || (tab.id === 'staff' && location.pathname === '/team/staff')
-                    || (tab.id === 'ailabs' && location.pathname === '/team/ailabs')
-                    ? "bg-neon-yellow text-black border-neon-yellow"
-                    : "bg-dark-gray text-gray-400 border-white/10 hover:bg-white/10 hover:text-white"
-                )}
               >
-                <span className="skew-x-6 block flex items-center gap-2">
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </span>
-              </button>
-            ))}
+                <Heart className="h-3.5 w-3.5" />
+                Ranking · {favoriteRealTeam.name}
+              </Link>
+            ) : null}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/*
         `items-stretch` (não `items-start`): em coluna, filhos ocupam 100% da largura útil — evita largura
         “auto” por conteúdo maior que o viewport e overflow cortado à direita no mobile.
       */}
-      <div className="flex w-full min-w-0 max-w-full flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+      <div className="flex w-full min-w-0 max-w-full flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:gap-8">
         {/* Left: Football Pitch */}
         <div className="h-fit w-full min-w-0 max-w-full shrink-0 lg:sticky lg:top-24 lg:w-1/2">
           <div className="sports-panel relative box-border w-full min-w-0 max-w-full overflow-x-hidden border-white/10 bg-black/40 px-1.5 py-2 sm:px-2 sm:py-2 md:p-4">
             {/* Largura do relvado: sempre ≤ largura do painel; `mx-auto` centra o bloco no ecrã estreito. */}
             <div className="mx-auto w-full min-w-0 max-w-[min(100%,17.5rem)] md:max-w-md">
               <div className="mb-2 flex w-full min-w-0 items-center justify-between gap-2 px-0.5 sm:mb-3 md:mb-4 md:px-0">
-                <h3 className="flex min-w-0 flex-1 items-center gap-1 font-display text-xs font-black uppercase tracking-wider sm:gap-1.5 sm:text-sm md:gap-2 md:text-base lg:text-lg">
-                  <Shield className="h-3.5 w-3.5 shrink-0 text-neon-yellow sm:h-4 sm:w-4 md:h-[1.1rem] md:w-[1.1rem] lg:h-5 lg:w-5" aria-hidden />
-                  <span className="min-w-0 truncate">Titulares</span>
+                <h3 className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <span aria-hidden className="shrink-0 w-[3px] h-5 sm:h-6 bg-neon-yellow" />
+                  <span
+                    className="min-w-0 truncate text-neon-yellow uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      letterSpacing: '0.18em',
+                    }}
+                  >
+                    Titulares
+                  </span>
                 </h3>
                 <button
                   type="button"
@@ -312,6 +379,55 @@ export function Team() {
 
               {/* Pitch: `min-w-0` + `max-w-full` garantem que a caixa de aspeto nunca força overflow horizontal. */}
               <div className="relative aspect-[68/105] w-full min-w-0 max-w-full overflow-hidden rounded-md border border-white/25 bg-[#0a2e15] shadow-lg shadow-black/40 sm:rounded-lg sm:border-2 sm:shadow-2xl md:rounded-lg md:border-4 md:border-white/20 md:shadow-2xl">
+              {/* Força do XI: soma dos OVR dos titulares (canto superior esquerdo do gramado) */}
+              <div
+                className="pointer-events-none absolute left-1 top-1 z-20 border border-neon-yellow/30 bg-black/85 px-1.5 py-1 shadow-lg shadow-black/40 backdrop-blur-sm sm:left-1.5 sm:top-1.5 sm:px-2 sm:py-1.5 md:left-2 md:top-2 md:px-3 md:py-2"
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  maxWidth: 'calc(100% - 0.5rem)',
+                }}
+                title={
+                  startersStrength.count === 0
+                    ? 'Escala os titulares para ver a força combinada (soma dos OVR).'
+                    : `Força do XI: soma dos OVR dos titulares = ${startersStrength.sum}. Média do XI = ${startersStrength.avg.toFixed(1)}. Escalados: ${startersStrength.count} de ${pitchSlots.length}.`
+                }
+              >
+                <p
+                  className="text-neon-yellow uppercase leading-none"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: 'clamp(6px, 1.5vw, 9px)',
+                    fontWeight: 600,
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  Overall
+                </p>
+                <p
+                  className="italic text-neon-yellow tabular-nums leading-none mt-0.5"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(20px, 6vw, 48px)',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {startersStrength.count === 0 ? '—' : startersStrength.sum}
+                </p>
+                <p
+                  className="mt-0.5 text-white/50 uppercase tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: 'clamp(5px, 1.2vw, 8px)',
+                    fontWeight: 600,
+                    letterSpacing: '0.12em',
+                  }}
+                >
+                  {startersStrength.count === 0
+                    ? `${pitchSlots.length} pos`
+                    : `méd ${Math.round(startersStrength.avg)} · ${startersStrength.count}/${pitchSlots.length}`}
+                </p>
+              </div>
               {/* Pitch Lines */}
               <div className="absolute inset-0 pointer-events-none opacity-40">
                 {/* Grass pattern */}
@@ -347,7 +463,11 @@ export function Team() {
               {pitchSlots.map((slot) => (
                 <div key={slot.id} className="absolute -translate-x-1/2 -translate-y-1/2 z-10" style={{ top: slot.top, left: slot.left }}>
                   {lineup[slot.id] ? (
-                    <PitchPlayer player={lineup[slot.id]} onRemove={() => handleRemove(slot.id)} />
+                    <PitchPlayer
+                      player={lineup[slot.id]}
+                      onOpenSheet={() => setSheetPlayerId(lineup[slot.id]!.id)}
+                      onRemove={() => handleRemove(slot.id)}
+                    />
                   ) : (
                     <div 
                       onClick={() => setSelectedSlotId(slot.id)}
@@ -401,32 +521,67 @@ export function Team() {
               )}
             </AnimatePresence>
 
-            {/* Save: sem skew no xs — skew + overflow-x-hidden do painel cortava a direita em mobile. */}
-            <button 
+            {/* Save — primário sistema (sharp 4px, sem skew, sombra base) */}
+            <button
               onClick={handleSave}
               disabled={isSaving}
-              className="mt-2 box-border w-full min-w-0 max-w-full bg-neon-yellow py-2 font-display text-xs font-black uppercase tracking-wider text-black transition-all [-webkit-tap-highlight-color:transparent] hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:mt-3 sm:-skew-x-6 sm:py-2.5 sm:text-sm md:mt-4 md:py-4 md:text-lg"
+              className="mt-3 box-border inline-flex w-full items-center justify-center gap-2 bg-neon-yellow py-3 text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neon-yellow disabled:hover:scale-100 [-webkit-tap-highlight-color:transparent]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              }}
             >
-              <span className="flex items-center justify-center gap-1.5 sm:skew-x-6 sm:gap-2">
-                <Save className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                {isSaving ? 'Salvando...' : 'Salvar Titulares'}
-              </span>
+              <Save className="h-4 w-4 shrink-0" />
+              {isSaving ? 'Salvando…' : 'Salvar titulares'}
             </button>
           </div>
         </div>
 
         {/* Right: Available Players (Horizontal Cards) */}
         <div className="flex min-w-0 w-full max-w-full flex-col gap-4 lg:w-1/2">
-          <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
-            <h3 className="min-w-0 truncate font-display text-base font-black uppercase tracking-wider text-gray-400 sm:text-lg">
-              Jogadores Disponíveis
-            </h3>
-            <span className="shrink-0 text-xs font-bold text-gray-500">{availablePlayers.length} Reservas</span>
+          <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span aria-hidden className="shrink-0 w-[3px] h-7 bg-neon-yellow" />
+              <h3
+                className="min-w-0 truncate text-neon-yellow uppercase"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  letterSpacing: '0.18em',
+                }}
+              >
+                Jogadores disponíveis
+              </h3>
+            </div>
+            <span
+              className="shrink-0 text-white/55 uppercase"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {availablePlayers.length} {availablePlayers.length === 1 ? 'reserva' : 'reservas'}
+            </span>
           </div>
           
-          <div className="space-y-3 lg:overflow-y-auto lg:pr-2 lg:max-h-[calc(100vh-16rem)]">
+          <div className="space-y-3 lg:overflow-y-auto lg:pr-2 lg:max-h-[calc(100vh-16rem)] pb-[max(3rem,env(safe-area-inset-bottom,0px))]">
             <AnimatePresence>
-              {availablePlayers.map((player) => (
+              {availablePlayers.map((player) => {
+                const stats = [
+                  { label: 'PAC', val: player.pac },
+                  { label: 'SHO', val: player.sho },
+                  { label: 'PAS', val: player.pas },
+                  { label: 'FAT', val: player.fatigue },
+                ];
+                return (
                 <motion.div
                   key={player.id}
                   layout
@@ -434,95 +589,222 @@ export function Team() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   className={cn(
-                    "flex bg-dark-gray border rounded-xl overflow-hidden h-24 md:h-28 transition-all hover:border-white/40 group",
-                    player.style === 'neon-yellow' ? 'border-neon-yellow/50' : 'border-white/10'
+                    'flex bg-dark-gray border border-l-[3px] overflow-hidden transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5 group',
+                    player.style === 'neon-yellow'
+                      ? 'border-[var(--color-border)] border-l-neon-yellow'
+                      : 'border-[var(--color-border)] border-l-white/15',
                   )}
+                  style={{ borderRadius: 'var(--radius-md)' }}
                 >
-                  {/* Left: Image & OVR */}
-                  <div className="w-20 md:w-24 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 md:pt-4 border-r border-white/5">
-                    <div className={cn(
-                      "absolute inset-0 opacity-20",
-                      player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
-                    )} />
-                    <img 
-                      src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 200, 300)} 
-                      alt={player.name} 
-                      className="w-[80%] h-[90%] object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300" 
-                      referrerPolicy="no-referrer"
-                      style={{ maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)' }}
+                  {/* Foto — clicável para abrir ficha */}
+                  <button
+                    type="button"
+                    className="relative w-32 sm:w-36 md:w-40 flex-shrink-0 overflow-hidden bg-black border-r border-white/8 cursor-pointer [-webkit-tap-highlight-color:transparent]"
+                    onClick={() => setSheetPlayerId(player.id)}
+                  >
+                    {/* Tonal background (sutil, atrás da foto) */}
+                    <div
+                      className={cn(
+                        'absolute inset-0',
+                        player.style === 'neon-yellow' ? 'bg-neon-yellow/10' : 'bg-white/5',
+                      )}
+                      aria-hidden
                     />
-                    <div className={cn(
-                      "absolute top-1 left-1 md:top-2 md:left-2 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-black drop-shadow-md",
-                      player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-black/80 text-white border border-white/20'
-                    )}>
-                      {player.ovr}
+                    <img
+                      src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
+                      alt={player.name}
+                      className="absolute inset-0 h-full w-full object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300"
+                      referrerPolicy="no-referrer"
+                    />
+                    {/* Gradient pra leitura do OVR sobre a foto */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
+                    />
+                    {/* OVR — Moret italic editorial gigante */}
+                    <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
+                      <p
+                        className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: 'clamp(38px, 5.5vw, 56px)',
+                          letterSpacing: '-0.04em',
+                        }}
+                      >
+                        {player.ovr}
+                      </p>
                     </div>
-                  </div>
+                  </button>
 
-                  {/* Middle: Info */}
-                  <div className="flex-1 p-2 md:p-3 flex flex-col justify-center relative min-w-0">
-                    <div className="absolute top-2 right-2 md:right-3 flex max-w-[calc(100%-3rem)] items-center gap-1 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-black/40 px-1.5 md:px-2 py-0.5 md:py-1 rounded">
-                      {player.countryFlagEmoji ? (
-                        <span className="text-sm leading-none" title={player.country ?? undefined} aria-hidden>
-                          {player.countryFlagEmoji}
+                  {/* Info completa: header + atributos + botões (tudo em 1 coluna) */}
+                  <div className="flex-1 px-3 py-3 md:px-4 md:py-3.5 flex flex-col gap-3 relative min-w-0">
+                    {/* Header: nome + posição + badges */}
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left cursor-pointer [-webkit-tap-highlight-color:transparent]"
+                        onClick={() => setSheetPlayerId(player.id)}
+                      >
+                        <p
+                          className="text-white uppercase truncate"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 800,
+                            fontSize: 'clamp(17px, 2.2vw, 22px)',
+                            letterSpacing: '0.03em',
+                            lineHeight: 1.05,
+                          }}
+                        >
+                          {player.name}
+                        </p>
+                        <p
+                          className="text-white/50 uppercase mt-0.5"
+                          style={{
+                            fontFamily: 'var(--font-ui)',
+                            fontSize: '10px',
+                            letterSpacing: '0.22em',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {player.countryFlagEmoji ? (
+                            <span className="mr-1.5 not-italic" title={player.country ?? undefined} aria-hidden>
+                              {player.countryFlagEmoji}
+                            </span>
+                          ) : null}
+                          {player.pos}
+                        </p>
+                      </button>
+                      {player.outForMatches > 0 ? (
+                        <span
+                          className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-danger)] bg-[rgba(255,61,61,0.1)] text-[var(--color-danger)] uppercase px-1.5 py-0.5"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            letterSpacing: '0.18em',
+                            borderRadius: 'var(--radius-sm)',
+                          }}
+                        >
+                          Fora {player.outForMatches}j
+                        </span>
+                      ) : player.injuryRisk >= 70 ? (
+                        <span
+                          className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-warning)] bg-[rgba(255,179,0,0.1)] text-[var(--color-warning)] uppercase px-1.5 py-0.5"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            letterSpacing: '0.18em',
+                            borderRadius: 'var(--radius-sm)',
+                          }}
+                        >
+                          Risco {player.injuryRisk}
                         </span>
                       ) : null}
-                      <span>{player.pos}</span>
                     </div>
-                    <div className="font-display font-black text-lg md:text-xl italic uppercase tracking-wider text-white leading-none mb-1 truncate pr-8">
-                      {player.name}
-                    </div>
-                    
-                    {/* Stats */}
-                    <div className="flex gap-2 md:gap-4 mt-1 md:mt-3">
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">PAC</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.pac}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">SHO</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.sho}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">PAS</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.pas}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] md:text-[9px] text-gray-500 font-bold uppercase">FAT</span>
-                        <span className="text-xs md:text-sm font-display font-bold text-white leading-none">{player.fatigue}</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Right: ESCALAR + ANUNCIAR (mercado EXP — mesmo fluxo que /transfer) */}
-                  <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch justify-center gap-1.5 border-l border-white/5 bg-black/20 p-1.5 sm:w-[7.5rem] md:w-[8.25rem] md:p-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEscalar(player)}
-                      className="w-full rounded-sm bg-white/10 py-2 font-display text-[9px] font-bold uppercase tracking-wider text-white transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow hover:text-black sm:py-2.5 sm:text-[10px] sm:max-md:-skew-x-6 md:text-[11px]"
-                    >
-                      <span className="block sm:max-md:skew-x-6">Escalar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSaveBanner(null);
-                        setAnnouncePrice('180000');
-                        setAnnouncePlayer(player);
-                      }}
-                      className="flex w-full items-center justify-center gap-1 rounded-sm border border-neon-yellow/35 bg-neon-yellow/10 py-2 font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow/20 sm:py-2.5 sm:text-[10px] md:text-[11px]"
-                    >
-                      <Megaphone className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
-                      <span>Anunciar</span>
-                    </button>
+                    {/* DNA do Campeão — grid 2x2 com mais espaço horizontal */}
+                    <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 md:gap-x-8 md:gap-y-3">
+                      {stats.map((s) => {
+                        const v = Math.max(0, Math.min(100, s.val));
+                        return (
+                          <div key={s.label} className="min-w-0">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span
+                                className="text-white/55 uppercase"
+                                style={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.22em',
+                                }}
+                              >
+                                {s.label}
+                              </span>
+                              <span
+                                className="italic text-neon-yellow tabular-nums leading-none"
+                                style={{
+                                  fontFamily: 'var(--font-serif-hero)',
+                                  fontWeight: 700,
+                                  fontSize: 'clamp(18px, 2vw, 22px)',
+                                  letterSpacing: '-0.02em',
+                                }}
+                              >
+                                {s.val}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 h-[3px] bg-white/8 overflow-hidden">
+                              <div
+                                className="h-full bg-neon-yellow transition-all duration-500"
+                                style={{ width: `${v}%` }}
+                                aria-hidden
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Botões de ação — abaixo dos atributos, full width */}
+                    <div className="flex items-center gap-2 mt-auto pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleEscalar(player)}
+                        className="flex-1 bg-neon-yellow py-2.5 text-black hover:bg-white transition-colors [-webkit-tap-highlight-color:transparent]"
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          letterSpacing: '0.2em',
+                          textTransform: 'uppercase',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        Escalar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSaveBanner(null);
+                          setAnnouncePrice('180000');
+                          setAnnouncePlayer(player);
+                        }}
+                        className="flex flex-1 items-center justify-center gap-1.5 border border-[var(--color-border)] bg-deep-black py-2.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent]"
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          letterSpacing: '0.2em',
+                          textTransform: 'uppercase',
+                          borderRadius: 'var(--radius-sm)',
+                        }}
+                      >
+                        <Megaphone className="h-3 w-3 shrink-0" aria-hidden />
+                        <span>Anunciar</span>
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
             
             {availablePlayers.length === 0 && (
-              <div className="text-center py-12 text-gray-500 font-display font-bold text-xl">
-                Sem reservas aqui — titulares completos ou jogadores no mercado EXP.
+              <div
+                className="text-center py-12 border border-[var(--color-border)] bg-dark-gray"
+                style={{ borderRadius: 'var(--radius-md)' }}
+              >
+                <p
+                  className="italic text-white/55 mx-auto max-w-md px-6"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(16px, 2.2vw, 20px)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  “sem reservas — titulares completos ou jogadores no mercado.”
+                </p>
               </div>
             )}
           </div>
@@ -545,7 +827,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
+              className="my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl max-h-[min(85dvh,calc(100dvh-6rem))] sm:max-h-[80vh]"
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-xl text-white flex items-center gap-2">
@@ -568,7 +850,7 @@ export function Team() {
                       onClick={() => handleEscalarToSlot(player, selectedSlot.id)}
                     >
                       {/* Left: Image & OVR */}
-                      <div className="w-16 md:w-20 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 border-r border-white/5">
+                      <div className="w-20 sm:w-24 md:w-28 relative bg-black/60 flex-shrink-0 flex items-end justify-center pt-2 border-r border-white/5">
                         <div className={cn(
                           "absolute inset-0 opacity-20",
                           player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
@@ -589,14 +871,14 @@ export function Team() {
                       </div>
 
                       {/* Middle: Info */}
-                      <div className="flex-1 p-2 md:p-3 flex flex-col justify-center relative min-w-0">
-                        <div className="flex items-center gap-1.5 pr-2">
+                      <div className="relative flex-1 p-2 md:p-3 flex flex-col justify-center min-w-0">
+                        <div className="flex items-center gap-1.5">
                           {player.countryFlagEmoji ? (
                             <span className="shrink-0 text-base leading-none" title={player.country ?? undefined} aria-hidden>
                               {player.countryFlagEmoji}
                             </span>
                           ) : null}
-                          <div className="min-w-0 flex-1 font-display font-black text-base md:text-lg italic uppercase tracking-wider text-white leading-none truncate">
+                          <div className="min-w-0 flex-1 font-display font-black text-lg sm:text-xl md:text-2xl uppercase tracking-wide text-white leading-none truncate">
                             {player.name}
                           </div>
                         </div>
@@ -664,12 +946,12 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 12 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
+              className="my-auto flex w-full max-w-lg flex-col overflow-hidden rounded-md border border-white/10 bg-dark-gray shadow-2xl max-h-[min(88dvh,calc(100dvh-6rem))] sm:max-h-[85vh]"
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
                 <h3 className="font-display font-black uppercase tracking-wider text-sm md:text-base text-white flex items-center gap-2">
                   <LayoutGrid className="w-5 h-5 text-neon-yellow shrink-0" />
-                  Formações disponíveis
+                  Formação e Tática
                 </h3>
                 <button
                   type="button"
@@ -680,38 +962,140 @@ export function Team() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-3 md:p-4 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {FORMATION_SCHEME_LIST.map((id) => {
-                  const groups = SCHEME_LINE_GROUPS[id];
-                  const linesLabel = `${groups.def.length}-${groups.mid.length}-${groups.att.length}`;
-                  const selected = formationScheme === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => {
-                        dispatch({ type: 'SET_MANAGER_SLIDERS', partial: { formationScheme: id } });
-                        setFormationModalOpen(false);
-                      }}
-                      className={cn(
-                        'relative text-left rounded-lg border px-3 py-2.5 transition-colors',
-                        selected
-                          ? 'border-neon-yellow bg-neon-yellow/15 text-white'
-                          : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5 text-white',
-                      )}
-                    >
-                      {selected && (
-                        <span className="absolute top-1.5 right-1.5 text-neon-yellow">
-                          <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                        </span>
-                      )}
-                      <span className="font-display font-black text-sm tracking-tight block pr-5">{id}</span>
-                      <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 block">
-                        Linhas {linesLabel}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="p-3 md:p-4 overflow-y-auto space-y-5">
+                <section>
+                  <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
+                    1. Formação
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {FORMATION_SCHEME_LIST.map((id) => {
+                      const groups = SCHEME_LINE_GROUPS[id];
+                      const linesLabel = `${groups.def.length}-${groups.mid.length}-${groups.att.length}`;
+                      const selected = pendingFormation === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setPendingFormation(id)}
+                          className={cn(
+                            'relative text-left rounded-lg border px-3 py-2.5 transition-colors',
+                            selected
+                              ? 'border-neon-yellow bg-neon-yellow/15 text-white'
+                              : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5 text-white',
+                          )}
+                        >
+                          {selected && (
+                            <span className="absolute top-1.5 right-1.5 text-neon-yellow">
+                              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                            </span>
+                          )}
+                          <span className="font-display font-black text-sm tracking-tight block pr-5">{id}</span>
+                          <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 block">
+                            Linhas {linesLabel}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="font-display font-black text-[10px] tracking-widest text-white/60 uppercase mb-2">
+                    2. Tática
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {PRESET_IDS.map((id) => {
+                      const Icon = PRESET_ICONS[id];
+                      const selected = pendingPreset === id;
+                      return (
+                        <div
+                          key={id}
+                          className={cn(
+                            'relative rounded-lg border transition-colors',
+                            selected
+                              ? 'border-neon-yellow bg-neon-yellow/15'
+                              : 'border-white/10 bg-black/30 hover:border-white/25 hover:bg-white/5',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setPendingPreset(id)}
+                            className="w-full flex items-start gap-2 px-3 py-2.5 text-left"
+                          >
+                            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-neon-yellow/90" aria-hidden />
+                            <span className="min-w-0 pr-6">
+                              <span className="block font-display font-black text-[11px] uppercase tracking-wider text-white leading-tight">
+                                {PRESET_LABEL_PT[id]}
+                              </span>
+                            </span>
+                            {selected ? (
+                              <Check className="absolute top-1.5 right-7 w-3.5 h-3.5 text-neon-yellow" strokeWidth={3} />
+                            ) : null}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPresetInfoId((cur) => (cur === id ? null : id));
+                            }}
+                            aria-label={`Info ${PRESET_LABEL_PT[id]}`}
+                            className="absolute top-1 right-1 p-1 text-white/40 hover:text-neon-yellow transition-colors"
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {presetInfoId ? (
+                    <div className="mt-3 rounded-lg border border-neon-yellow/25 bg-neon-yellow/5 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 font-display font-black text-[11px] uppercase tracking-wider text-neon-yellow">
+                          <Info className="w-3.5 h-3.5" />
+                          {PRESET_LABEL_PT[presetInfoId]}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPresetInfoId(null)}
+                          className="text-white/40 hover:text-white"
+                          aria-label="Fechar info"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[11px] text-white/80 leading-relaxed">
+                        {PRESET_DESCRIPTION_PT[presetInfoId]}
+                      </p>
+                    </div>
+                  ) : null}
+                </section>
+              </div>
+              <div className="border-t border-white/10 bg-black/40 p-3 md:p-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormationModalOpen(false)}
+                  className="rounded border border-white/15 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingFormation !== formationScheme) {
+                      dispatch({
+                        type: 'SET_MANAGER_SLIDERS',
+                        partial: { formationScheme: pendingFormation },
+                      });
+                    }
+                    if (pendingPreset !== currentPresetId) {
+                      dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: pendingPreset });
+                    }
+                    setFormationModalOpen(false);
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white"
+                >
+                  <Check className="w-4 h-4" /> Aplicar formação e tática
+                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -733,7 +1117,7 @@ export function Team() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 16 }}
               onClick={(e) => e.stopPropagation()}
-              className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-neon-yellow/25 bg-dark-gray shadow-2xl"
+              className="my-auto w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/25 bg-dark-gray shadow-2xl"
               role="dialog"
               aria-modal="true"
               aria-labelledby="announce-market-title"
@@ -799,50 +1183,112 @@ export function Team() {
       </AnimatePresence>
 
       <ManagerCreatePlayerModal open={createProspectOpen} onClose={() => setCreateProspectOpen(false)} />
+
+      <AnimatePresence>
+        {sheetPlayerId ? (
+          <TeamPlayerSeasonSheet
+            playerId={sheetPlayerId}
+            onClose={() => setSheetPlayerId(null)}
+            onAnnounceSale={(pid) => {
+              const pl = playersById[pid];
+              if (!pl) return;
+              const card: CardPlayer = { ...playerToCardView(pl, maxOvr), id: pl.id };
+              setSheetPlayerId(null);
+              setSaveBanner(null);
+              setAnnouncePrice('180000');
+              setAnnouncePlayer(card);
+            }}
+          />
+        ) : null}
+      </AnimatePresence>
+      </div>
     </div>
   );
 }
 
-function PitchPlayer({ player, onRemove }: { player: any, onRemove: () => void }) {
+function PitchPlayer({
+  player,
+  onOpenSheet,
+  onRemove,
+}: {
+  player: CardPlayer;
+  onOpenSheet: () => void;
+  onRemove: () => void;
+}) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0, opacity: 0 }}
-      onClick={onRemove} 
-      className="relative group cursor-pointer flex flex-col items-center"
+      className="relative flex flex-col items-center"
     >
-      <div className={cn(
-        'relative size-7 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-8 md:size-12 md:border-2',
-        player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white'
-      )}>
-        {player.countryFlagEmoji ? (
+      <button
+        type="button"
+        onClick={onOpenSheet}
+        className="group/token relative flex cursor-pointer flex-col items-center [-webkit-tap-highlight-color:transparent]"
+        aria-label={`Ver estatísticas e temporada — ${player.name}`}
+      >
+        <div
+          className={cn(
+            'relative size-7 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-8 md:size-12 md:border-2',
+            player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white',
+          )}
+        >
+          {player.countryFlagEmoji ? (
+            <span
+              className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[1px] text-[7px] leading-none sm:text-[8px] md:text-[11px]"
+              title={player.country ?? undefined}
+              aria-hidden
+            >
+              {player.countryFlagEmoji}
+            </span>
+          ) : null}
+          <img
+            src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
+            alt=""
+            className="h-full w-full object-cover object-top"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]" style={{ borderRadius: 'var(--radius-sm)' }}>
+          {player.name}
+        </div>
+
+        <div
+          className={cn(
+            'pointer-events-none absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center shadow-md sm:-right-1 sm:-top-1 sm:size-4 md:-right-2 md:-top-2 md:size-5',
+            player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
+          )}
+          style={{ borderRadius: '9999px' }}
+        >
           <span
-            className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[1px] text-[7px] leading-none sm:text-[8px] md:text-[11px]"
-            title={player.country ?? undefined}
-            aria-hidden
+            className="italic tabular-nums leading-none"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontSize: 'clamp(6px, 1vw, 9px)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+            }}
           >
-            {player.countryFlagEmoji}
+            {player.ovr}
           </span>
-        ) : null}
-        <img src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)} alt={player.name} className="h-full w-full object-cover object-top" referrerPolicy="no-referrer" />
-      </div>
-      
-      <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate rounded border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]">
-        {player.name}
-      </div>
-      
-      <div className={cn(
-        'absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full text-[6px] font-black shadow-md sm:-right-1 sm:-top-1 sm:size-4 sm:text-[7px] md:-right-2 md:-top-2 md:size-5 md:text-[9px]',
-        player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black'
-      )}>
-        {player.ovr}
-      </div>
-      
-      {/* Hover overlay to remove */}
-      <div className="absolute left-0 top-0 flex size-7 items-center justify-center rounded-full bg-red-500/80 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 sm:size-8 md:size-12">
-        <X className="h-3 w-3 text-white sm:h-3.5 sm:w-3.5 md:h-5 md:w-5" />
-      </div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        title={`Retirar ${player.name} do campo`}
+        aria-label={`Retirar ${player.name} do campo`}
+        className="absolute -right-1 -top-1 z-20 flex size-4 items-center justify-center border border-white/30 bg-red-600 text-white shadow-md transition-transform hover:scale-110 sm:size-5 md:-right-0.5 md:-top-0.5 md:size-6"
+        style={{ borderRadius: '9999px' }}
+      >
+        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" strokeWidth={2.5} />
+      </button>
     </motion.div>
   );
 }

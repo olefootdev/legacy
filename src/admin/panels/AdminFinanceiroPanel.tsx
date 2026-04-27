@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Vault,
+  Wallet,
   XCircle,
 } from 'lucide-react';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -43,6 +44,7 @@ import {
   useAdminPlatformStore,
 } from '@/admin/platformStore';
 import type { FiatPipelineStatus, PlatformLedgerLine } from '@/admin/platformTypes';
+import { getSupabase } from '@/supabase/client';
 
 function broInputToCents(s: string): number | null {
   const t = s.replace(',', '.').trim();
@@ -174,7 +176,7 @@ function canCompleteWithdrawalLine(
   return u != null && u.spotBroCents >= c;
 }
 
-type Sub = 'visao' | 'depositos_saques' | 'olexp' | 'extrato';
+type Sub = 'visao' | 'depositos_saques' | 'olexp' | 'extrato' | 'creditar';
 
 export function AdminFinanceiroPanel() {
   const gameDispatch = useGameDispatch();
@@ -219,6 +221,44 @@ export function AdminFinanceiroPanel() {
   const [custodyNote, setCustodyNote] = useState('');
   const [treasuryEdit, setTreasuryEdit] = useState('');
   const [escrowEdit, setEscrowEdit] = useState('');
+
+  // Creditar BRO via Supabase (depósito confirmado)
+  const [creditUserId, setCreditUserId] = useState('');
+  const [creditBro, setCreditBro] = useState('');
+  const [creditReason, setCreditReason] = useState('');
+  const [creditStatus, setCreditStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
+  const [creditMsg, setCreditMsg] = useState('');
+
+  const handleCreditBro = async () => {
+    const cents = broInputToCents(creditBro);
+    if (!creditUserId.trim() || !cents) {
+      setCreditStatus('err');
+      setCreditMsg('user_id e valor BRO são obrigatórios.');
+      return;
+    }
+    const sb = getSupabase();
+    if (!sb) {
+      setCreditStatus('err');
+      setCreditMsg('Supabase não configurado.');
+      return;
+    }
+    setCreditStatus('loading');
+    const { error } = await sb.from('wallet_credits').insert({
+      user_id: creditUserId.trim(),
+      bro_cents: cents,
+      reason: creditReason.trim() || 'Depósito confirmado pelo admin',
+    });
+    if (error) {
+      setCreditStatus('err');
+      setCreditMsg(error.message);
+    } else {
+      setCreditStatus('ok');
+      setCreditMsg(`✓ ${formatBroFromCents(cents)} BRO creditados. O jogador receberá ao próximo login.`);
+      setCreditUserId('');
+      setCreditBro('');
+      setCreditReason('');
+    }
+  };
 
   const [accrualDate, setAccrualDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [ledgerType, setLedgerType] = useState<WalletLedgerType | ''>('');
@@ -425,6 +465,7 @@ export function AdminFinanceiroPanel() {
         {subNav('depositos_saques', 'Depósitos & saques', Landmark)}
         {subNav('olexp', 'Custódia OLEXP', Vault)}
         {subNav('extrato', 'Extrato & filtros', Filter)}
+        {subNav('creditar', 'Creditar BRO', Wallet)}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1363,6 +1404,69 @@ export function AdminFinanceiroPanel() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {sub === 'creditar' && (
+        <div className="space-y-4">
+          <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
+            <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-yellow/90">
+              Creditar BRO — depósito confirmado
+            </h3>
+            <p className="text-[11px] text-white/45">
+              Insere um crédito na tabela <code>wallet_credits</code> do Supabase.
+              O jogador recebe o saldo na próxima vez que abrir o jogo.
+            </p>
+
+            <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
+              User ID (UUID do Supabase)
+              <input
+                type="text"
+                value={creditUserId}
+                onChange={(e) => setCreditUserId(e.target.value)}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 font-mono text-xs text-white placeholder:text-white/20"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
+              Valor BRO
+              <input
+                type="text"
+                value={creditBro}
+                onChange={(e) => setCreditBro(e.target.value)}
+                placeholder="ex: 50.00"
+                className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/20"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
+              Motivo (opcional)
+              <input
+                type="text"
+                value={creditReason}
+                onChange={(e) => setCreditReason(e.target.value)}
+                placeholder="ex: Depósito PIX R$50 — comprovante #123"
+                className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/20"
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => { void handleCreditBro(); }}
+              disabled={creditStatus === 'loading'}
+              className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-yellow-300 disabled:opacity-50"
+            >
+              {creditStatus === 'loading' ? 'A processar…' : 'Emitir crédito BRO'}
+            </button>
+
+            {creditStatus === 'ok' && (
+              <p className="text-xs font-bold text-green-400">{creditMsg}</p>
+            )}
+            {creditStatus === 'err' && (
+              <p className="text-xs font-bold text-red-400">{creditMsg}</p>
+            )}
+          </section>
         </div>
       )}
     </div>

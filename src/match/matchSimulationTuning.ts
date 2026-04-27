@@ -3,20 +3,23 @@
  * Resolução contestada (tetos de passe/chute, QA de posse): ver `actionResolutionTuning.ts`.
  */
 
+import { applySpeedBoostToDecisionTick, applySpeedBoostToDeliberation } from './liveMatchSpeedBoost';
+
 /** Cooldown anti devolução ao ex-portador após desarme (ms de tempo de simulação ≈ world.simTime em s — usamos segundos no loop) */
 export const POSSESSION_LOCK_SEC = 0.5;
 
-/** Intervalo mínimo entre replanejamentos completos de decisão (≈ 11 Hz) */
-export const DECISION_TICK_MS = 80;
+/** Intervalo mínimo entre replanejamentos completos de decisão (≈ 12.5 Hz) — SPEED BOOST aplicado */
+export const DECISION_TICK_MS = applySpeedBoostToDecisionTick(72);
 
 /** Peso 0–1: quanto fair play baixo aumenta “agressividade” em disputas (efeito marginal no desarme) */
 export const FAIRPLAY_FOUL_BIAS = 0.12;
 
-/** Fadiga base por segundo em intensidade média (0–100 stamina) */
-export const FATIGUE_RATE_BASE = 2.8;
+/** Fadiga base por segundo em intensidade média (0–100 stamina).
+ *  Calibrado para partida de ~6 min reais (180s/metade): jogadores notam cansaço no 2.º tempo. */
+export const FATIGUE_RATE_BASE = 1.4;
 
 /** Recuperação de stamina por segundo quando longe da bola e baixa intensidade */
-export const STAMINA_RECOVERY_BASE = 1.1;
+export const STAMINA_RECOVERY_BASE = 0.9;
 
 /** Multiplicador máximo de execução técnica vindo da confiança em runtime */
 export const CONFIDENCE_EXECUTION_CAP = 0.14;
@@ -32,17 +35,37 @@ export const LAST_ACTIONS_MAX = 5;
 export const DECISION_DEBUG_TOP_N = 3;
 
 /** Throttle mínimo entre `SIM_SYNC` só por mudança de feed (evita 60 dispatch/s; mantém remates/faltas visíveis). */
-export const LIVE_SIM_SYNC_THROTTLE_MS = 72;
+export const LIVE_SIM_SYNC_THROTTLE_MS = 100;
+
+/** Ao vivo 2D: cadência do alerta de fadiga na UI (amostra sem mudar o DOM a cada frame). */
+export const LIVE2D_ENERGY_HALO_UI_MS = 25_000;
+
+/**
+ * Fadiga 0–100: acima ou igual a este valor mostra o pin de alerta no token (partida ao vivo 2D).
+ * Alinhado ao tier vermelho antigo (energia abaixo de ~40%).
+ */
+export const LIVE2D_FATIGUE_ALERT_THRESHOLD = 60;
 
 // ---------------------------------------------------------------------------
-// Deliberation after ball reception
+// Deliberation after ball reception — SPEED BOOST aplicado
 // ---------------------------------------------------------------------------
 
-/** Base deliberation window (sim seconds) when receiving ball. Modified by mentalidade/confianca/pressure. */
-export const DELIBERATION_BASE_SEC = 0.12;
-/** Minimum deliberation (extreme urgency / instinct clear) */
-export const DELIBERATION_MIN_SEC = 0.03;
-/** Maximum deliberation (low pressure, deep position, slow thinker) */
-export const DELIBERATION_MAX_SEC = 0.28;
+/** @deprecated Janela antiga em sub-segundo; o motor usa `RECEPTION_THINK_*` + `receptionThinkMode`. Mantido para docs/ferramentas. */
+export const DELIBERATION_BASE_SEC = applySpeedBoostToDeliberation(0.12);
+/** @deprecated Ver `RECEPTION_THINK_MIN_SEC`. */
+export const DELIBERATION_MIN_SEC = applySpeedBoostToDeliberation(0.03);
+/** @deprecated Ver `RECEPTION_THINK_MAX_SEC`. */
+export const DELIBERATION_MAX_SEC = applySpeedBoostToDeliberation(0.28);
 /** Pressure radius (m) for counting nearby opponents during deliberation */
 export const DELIBERATION_PRESSURE_RADIUS = 8;
+
+/**
+ * Modo cognitivo ao receber a bola (antes de passe/chute/condução):
+ * rápido (instinto), moderado (ler o jogo), lento (risco/genialidade).
+ * SPEED BOOST: Decisões mais rápidas para mais ações por minuto.
+ */
+export const RECEPTION_THINK_FAST_SEC = applySpeedBoostToDeliberation(1);
+export const RECEPTION_THINK_MODERATE_SEC = applySpeedBoostToDeliberation(2);
+export const RECEPTION_THINK_SLOW_SEC = applySpeedBoostToDeliberation(3);
+export const RECEPTION_THINK_MIN_SEC = applySpeedBoostToDeliberation(0.35);
+export const RECEPTION_THINK_MAX_SEC = applySpeedBoostToDeliberation(3.5);

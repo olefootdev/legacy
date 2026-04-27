@@ -47,9 +47,11 @@ export function WalletFaq({ variant }: { variant: WalletShellAccount }) {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section className="space-y-3 pt-6 border-t border-white/10">
-      <h2 className="text-xs font-display font-bold uppercase tracking-widest text-gray-500">Perguntas frequentes</h2>
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md divide-y divide-white/5 overflow-hidden">
+    <section className="space-y-4 pt-6 border-t border-white/10">
+      <h2 className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
+        Perguntas frequentes
+      </h2>
+      <div className="border border-white/10 bg-black/40 divide-y divide-white/5 overflow-hidden">
         {items.map((item, i) => {
           const isOpen = open === i;
           return (
@@ -57,9 +59,11 @@ export function WalletFaq({ variant }: { variant: WalletShellAccount }) {
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-white/[0.04] transition-colors"
+                className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-white/[0.04] transition-colors"
               >
-                <span className="text-sm font-medium text-white pr-2">{item.q}</span>
+                <span className="ole-headline-italic text-white pr-2" style={{ fontSize: 'clamp(14px, 2vw, 16px)' }}>
+                  {item.q}
+                </span>
                 <ChevronDown
                   className={cn('w-4 h-4 shrink-0 text-neon-yellow transition-transform', isOpen && 'rotate-180')}
                 />
@@ -73,7 +77,7 @@ export function WalletFaq({ variant }: { variant: WalletShellAccount }) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <p className="px-4 pb-4 text-xs text-gray-400 leading-relaxed">{item.a}</p>
+                    <p className="px-5 pb-4 text-sm text-gray-400 leading-relaxed">{item.a}</p>
                   </motion.div>
                 ) : null}
               </AnimatePresence>

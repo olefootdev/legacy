@@ -102,6 +102,7 @@ export function trainingWindowLabelForCalendarSlot(hhmm: string): string {
 
 function isAvailableForOfficialMatch(p: PlayerEntity | undefined): boolean {
   if (!p) return false;
+  if (p.contractExpired === true) return false;
   return (p.outForMatches ?? 0) <= 0;
 }
 

@@ -4,6 +4,15 @@
  * Importar em páginas de teste: import '@/styles/field2d.css';
  */
 
+@keyframes vision-pulse {
+  0%, 100% { opacity: var(--vp-op-from); transform: translateY(-50%) scaleX(var(--vp-sx-from)); }
+  50%      { opacity: var(--vp-op-to);   transform: translateY(-50%) scaleX(var(--vp-sx-to)); }
+}
+@keyframes vision-glow {
+  0%, 100% { opacity: var(--vg-op-from); }
+  50%      { opacity: var(--vg-op-to); }
+}
+
 /* =============================================================================
    VARIÁVEIS (referência métrica; valores em % derivados de 1050×680)
    ============================================================================= */
@@ -26,10 +35,10 @@
   justify-content: center;
   width: 100%;
   max-width: 100%;
-  padding: clamp(0.5rem, 2vw, 1.25rem);
+  padding: clamp(0.25rem, 2vw, 1.25rem);
   box-sizing: border-box;
   background: radial-gradient(ellipse 85% 70% at 50% 40%, #1c2230 0%, #0a0c10 72%, #050608 100%);
-  border-radius: 14px;
+  border-radius: clamp(8px, 2vw, 14px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 24px 64px rgba(0, 0, 0, 0.55);
@@ -196,7 +205,7 @@
   border-right: none;
 }
 
-/* Arco do perímetro: r = 91,5m centrado na marca de penálti; clip à parte exterior à grande área */
+/* Arco do perímetro: r = 91,5m centrado na marca de penalty; clip à parte exterior à grande área */
 .pitch-overlay .penalty-arc {
   position: absolute;
   width: calc(100% * 183 / 1050);
@@ -221,7 +230,7 @@
   clip-path: inset(0 80.054% 0 0);
 }
 
-/* Marca de penálti: 11m = 110px da linha de fundo */
+/* Marca de penalty: 11m = 110px da linha de fundo */
 .pitch-overlay .penalty-spot {
   position: absolute;
   top: 50%;
@@ -323,7 +332,7 @@
 /* Rede: malha + perspetiva lateral, presa ao caixote */
 .pitch-overlay .goal-net {
   position: absolute;
-  inset: 5px 4px 5px 6px;
+  inset: clamp(2px, 1vw, 5px) clamp(2px, 0.8vw, 4px) clamp(2px, 1vw, 5px) clamp(3px, 1.2vw, 6px);
   opacity: 0.42;
   box-sizing: border-box;
   background-image:
@@ -488,8 +497,8 @@
  * Marca central:       Ø ~8 px
  * Grande área:         profundidade 165 px (16,5 m) × altura 403 px (40,3 m)
  * Pequena área:        55 px × 183 px (5,5 m × 18,3 m)
- * Marca de penálti:    110 px (11 m) das linhas de fundo, y = 340
- * Arco da área:        r = 91,5 px, centrado na marca de penálti
+ * Marca de penalty:    110 px (11 m) das linhas de fundo, y = 340
+ * Arco da área:        r = 91,5 px, centrado na marca de penalty
  * Escanteio:           r = 10 px (1 m)
  * Gol (boca):          ~73 px altura (7,32 m), profundidade visual ~24 px (~2,4 m)
  * Listras verticais:   ciclo ~105 px (10,5 m) alternadas

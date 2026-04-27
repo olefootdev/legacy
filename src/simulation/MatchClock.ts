@@ -25,9 +25,9 @@ export interface MatchClockState {
 }
 
 /** Durações em segundos de simulação (1 unidade = 1 s de `dt` com multiplier 1). */
-export const FIRST_HALF_DURATION_SEC = 90;
+export const FIRST_HALF_DURATION_SEC = 180;
 export const HALFTIME_DURATION_SEC = 15;
-export const SECOND_HALF_DURATION_SEC = 90;
+export const SECOND_HALF_DURATION_SEC = 180;
 
 function displayMinuteFirstHalf(periodElapsed: number): number {
   if (periodElapsed <= 0) return 0;

@@ -88,7 +88,7 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
     id: 'overview',
     title: 'Visão geral',
     lead:
-      'GameSpirit é a camada de decisão e narrativa do OLEFOOT: no modo quick governa posse, bola, fases, overlays e penáltis; no ao vivo (roteiro) gera beats e textos sem vazar resultado no pré-jogo. Integra com o log causal, Redux e (em 3D) apenas consome snapshots.',
+  'GameSpirit é a camada de decisão e narrativa do OLEFOOT: no modo quick governa posse, bola, fases, overlays e penalties; no ao vivo (roteiro) gera beats e textos sem vazar resultado no pré-jogo. Integra com o log causal, Redux e (em 3D) apenas consome snapshots.',
     modules: [
       {
         file: 'src/gamespirit/types.ts',
@@ -98,7 +98,7 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
       {
         file: 'src/engine/types.ts',
         title: 'Tipos do engine',
-        blurb: 'Importa contratos GameSpirit (penálti, overlay, spiritPhase) no snapshot de partida.',
+  blurb: 'Importa contratos GameSpirit (penalty, overlay, spiritPhase) no snapshot de partida.',
       },
       {
         file: 'docs/MATCH_CAUSAL_PIPELINE.md',
@@ -111,12 +111,12 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
     id: 'quick',
     title: 'Motor minuto a minuto (quick)',
     lead:
-      'gameSpiritTick consome contexto tático (estilo de jogo, mentalidade, zonas) e devolve narrativa + patches de posse/bola + meta (fase, overlay, penálti). spiritStateMachine concentra probabilidades de remate, faltas, cartões e durações de UI.',
+  'gameSpiritTick consome contexto tático (estilo de jogo, mentalidade, zonas) e devolve narrativa + patches de posse/bola + meta (fase, overlay, penalty). spiritStateMachine concentra probabilidades de remate, faltas, cartões e durações de UI.',
     modules: [
       {
         file: 'src/gamespirit/GameSpirit.ts',
         title: 'gameSpiritTick',
-        blurb: 'Escolha de ação, narração via templates/seed, golo, sequências de penálti e integração crowd.',
+  blurb: 'Escolha de ação, narração via templates/seed, golo, sequências de penalty e integração crowd.',
       },
       {
         file: 'src/gamespirit/spiritStateMachine.ts',
@@ -236,7 +236,7 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
     id: 'rules',
     title: 'Regras, fases & overlays',
     lead:
-      'spiritSnapshotTypes define fases (open_play, penalty, …), overlays (golo, intervalo, penálti, vermelho) e estado do penálti. Constantes de tempo (ex. GOAL_SCORER_OVERLAY_MS) vivem na state machine.',
+  'spiritSnapshotTypes define fases (open_play, penalty, …), overlays (golo, intervalo, penalty, vermelho) e estado do penalty. Constantes de tempo (ex. GOAL_SCORER_OVERLAY_MS) vivem na state machine.',
     modules: [
       {
         file: 'src/gamespirit/spiritSnapshotTypes.ts',
@@ -251,7 +251,7 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
       {
         file: 'src/pages/MatchQuick.tsx',
         title: 'Partida rápida',
-        blurb: 'Integra overlays de golo/penálti e constantes da state machine.',
+  blurb: 'Integra overlays de golo/penalty e constantes da state machine.',
       },
     ],
   },
@@ -280,14 +280,14 @@ export const GAME_SPIRIT_SECTIONS: GameSpiritSection[] = [
   },
   {
     id: 'admin',
-    title: 'Admin & Gemini',
+    title: 'Admin & OpenAI',
     lead:
-      'playerFromPrompt: GameSpirit como intérprete de prompt → ficha de jogador (JSON). createPlayerIntegrationReference: passos do wizard e contrato de resposta. Configuração: GEMINI_API_KEY no .env.',
+      'playerFromPrompt: GameSpirit como intérprete de prompt → ficha de jogador (JSON) via olefoot-server. createPlayerIntegrationReference: passos do wizard e contrato de resposta. OPENAI_API_KEY em server/.env; VITE_OLEFOOT_API_URL no cliente.',
     modules: [
       {
         file: 'src/gamespirit/admin/playerFromPrompt.ts',
         title: 'interpretPlayerPromptGameSpirit',
-        blurb: 'Gemini + merge com contexto fixo (nome, pos, país, tipo, raridade, pé).',
+        blurb: 'POST /api/admin/player-from-prompt + merge com contexto fixo (nome, pos, país, tipo, raridade, pé).',
       },
       {
         file: 'src/gamespirit/admin/createPlayerIntegrationReference.ts',

@@ -19,6 +19,10 @@ secrets/
 # NPM — ficheiros .npmrc podem conter token de registry
 .npmrc
 
+# Arquivo consolidado temporário de bootstrap Supabase — gerado por cat migrations/
+supabase/CONSOLIDATED_BOOTSTRAP.sql
+supabase/SEED_GENESIS_WITH_PORTRAITS.sql
+
 # Mobile / Expo
 mobile/.env
 mobile/.env.*
@@ -30,7 +34,7 @@ web/match-pitch/.env.*
 !web/match-pitch/.env.example
 
 # Espelho opcional / checkout local de outro repo — não versionar (evita gitlink quebrado)
-legacy/
+/legacy/
 
 # Supabase CLI (estado local / branches)
 supabase/.temp
@@ -52,3 +56,10 @@ GoogleService-Info.plist
 .turbo
 .vercel
 *.tsbuildinfo
+
+# Python cache
+**/__pycache__/
+*.pyc
+
+# MCP per-user config
+.mcp.json

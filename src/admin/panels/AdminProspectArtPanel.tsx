@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Brush, CheckCircle2, ClipboardCopy, ExternalLink } from 'lucide-react';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
+import { isSupabaseConfigured } from '@/supabase/client';
+import { registerAcademyManagerListing } from '@/supabase/academyManagers';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { PORTRAIT_STYLE_REGION_LABELS } from '@/entities/managerProspect';
 import type { PlayerEntity } from '@/entities/types';
@@ -28,6 +30,8 @@ function stepLabel(step: ManagerProspectArtRequest['playerCreationStep']): strin
 function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntity | undefined }) {
   const dispatch = useGameDispatch();
   const [draft, setDraft] = useState(r.draftPortraitUrl ?? '');
+  const [launchPriceExp, setLaunchPriceExp] = useState('500000');
+  const [remoteError, setRemoteError] = useState<string | null>(null);
   useEffect(() => {
     setDraft(r.draftPortraitUrl ?? '');
   }, [r.id, r.draftPortraitUrl]);
@@ -58,6 +62,11 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
               {stepLabel(r.playerCreationStep)}
             </span>
           </div>
+          {remoteError ? (
+            <div className="mt-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-[11px] text-red-300">
+              <span className="font-bold text-red-200">Supabase:</span> {remoteError}
+            </div>
+          ) : null}
           <div className="mt-1 font-mono text-[11px] text-white/45">
             playerId: <span className="text-neon-yellow/90">{r.playerId}</span>
             <span className="mx-2 text-white/20">·</span>
@@ -134,23 +143,76 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
             >
               Aprovar
             </button>
+            <label className="flex min-w-[140px] flex-col gap-0.5 text-[9px] font-bold uppercase text-white/45">
+              Preço EXP (mercado)
+              <input
+                type="text"
+                inputMode="numeric"
+                value={launchPriceExp}
+                onChange={(e) => setLaunchPriceExp(e.target.value)}
+                disabled={r.playerCreationStep !== 'approved'}
+                className="rounded border border-white/15 bg-black/50 px-2 py-1 font-mono text-[11px] text-white outline-none focus:border-neon-yellow disabled:opacity-40"
+              />
+            </label>
             <button
               type="button"
               disabled={r.playerCreationStep !== 'approved'}
-              onClick={() => dispatch({ type: 'ADMIN_PLAYER_CREATION_LAUNCH', requestId: r.id })}
+              onClick={() => {
+                const pe = Math.round(Number(launchPriceExp.replace(/\s/g, '') || '500000'));
+                dispatch({ type: 'ADMIN_PLAYER_CREATION_LAUNCH', requestId: r.id, priceExp: pe });
+                const s = getGameState();
+                const row = (s.managerProspectArtQueue ?? []).find((x) => x.id === r.id);
+                if (!row?.marketListingId || !row.marketListedAtIso || row.marketPriceExp == null) return;
+                const launched = s.players[r.playerId];
+                if (!launched) return;
+                if (isSupabaseConfigured()) {
+                  setRemoteError(null);
+                  void registerAcademyManagerListing({
+                    localClubId: s.club.id,
+                    listingId: row.marketListingId,
+                    gamePlayerId: r.playerId,
+                    artRequestId: r.id,
+                    priceExp: row.marketPriceExp,
+                    listedAtIso: row.marketListedAtIso,
+                    player: launched,
+                  })
+                    .then((res) => {
+                      if (!res.ok) {
+                        console.error('[academy_managers] registo remoto falhou:', res);
+                        const msg =
+                          (res as { error?: string } | undefined)?.error ?? 'erro desconhecido';
+                        setRemoteError(`Registo remoto falhou: ${msg}`);
+                      }
+                    })
+                    .catch((err) => {
+                      console.error('[academy_managers] registo remoto erro:', err);
+                      setRemoteError(
+                        err instanceof Error ? err.message : 'Falha de rede ao registar no Supabase.',
+                      );
+                    });
+                }
+              }}
               className={cn(
                 'rounded-lg border border-emerald-500/50 bg-emerald-500/15 px-3 py-1.5 text-[10px] font-bold uppercase text-emerald-200 hover:bg-emerald-500/25',
                 r.playerCreationStep !== 'approved' && 'pointer-events-none opacity-40',
               )}
             >
-              Lançar no jogo
+              Lançar + mercado
             </button>
           </div>
         </div>
       ) : (
-        <div className="mt-3 flex items-center gap-2 text-[11px] text-emerald-300/90">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Retrato aplicado ao jogador no save.
+        <div className="mt-3 flex flex-col gap-1 text-[11px] text-emerald-300/90">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            Retrato aplicado; jogador listado no mercado EXP (save).
+          </div>
+          {r.marketListingId ? (
+            <div className="font-mono text-[10px] text-white/50">
+              listing: {r.marketListingId}
+              {r.marketPriceExp != null ? ` · ${formatExp(r.marketPriceExp)}` : null}
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -191,11 +253,12 @@ export function AdminProspectArtPanel() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-xl font-black uppercase tracking-tight text-neon-yellow">
-            Player Creation (Academia OLE)
+            Academy players (Academia OLE)
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-white/55">
             Demandas geradas quando o manager cria um jogador na Academia: o atleta já existe no plantel com
-            atributos; aqui tratas só do retrato e do fluxo de validação.
+            atributos; aqui tratas do retrato, validação e lançamento no mercado EXP + registo em Supabase (
+            <span className="font-mono text-white/70">academy_managers</span>).
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-black/40 p-3">
@@ -206,12 +269,15 @@ export function AdminProspectArtPanel() {
       <div className="grid gap-3 rounded-xl border border-white/10 bg-black/30 p-4 text-sm text-white/70 md:grid-cols-2">
         <div>
           <p className="font-display text-[10px] font-black uppercase tracking-wide text-neon-yellow">
-            Player Creation (esta tab)
+            Academy players (esta tab)
           </p>
           <ul className="mt-2 list-inside list-disc space-y-1 text-[11px] leading-relaxed">
             <li>Pedido automático após criar na Academia OLE.</li>
             <li>Origem + aparência já vão no prompt; tu colas a imagem, validas, aprovas e lanças no save.</li>
-            <li>«Lançar no jogo» grava o retrato no jogador existente (não cria carta nova).</li>
+            <li>
+              «Lançar + mercado» aplica o retrato, lista no mercado EXP (como anunciar plantel) e envia snapshot do
+              motor para a tabela remota.
+            </li>
           </ul>
         </div>
         <div>
@@ -277,7 +343,9 @@ export function AdminProspectArtPanel() {
       ) : (
         <ul className="space-y-4">
           {rows.map((r) => (
-            <ArtQueueRow key={r.id} r={r} pl={players[r.playerId]} />
+            <Fragment key={r.id}>
+              <ArtQueueRow r={r} pl={players[r.playerId]} />
+            </Fragment>
           ))}
         </ul>
       )}

@@ -1,4 +1,4 @@
-import type { CardCollection, ClubEntity } from '@/entities/types';
+import type { CardCollection, ClubEntity, PlayerEntity } from '@/entities/types';
 import type {
   ManagerProspectArtRequest,
   ManagerProspectConfig,
@@ -7,10 +7,10 @@ import type {
   PlayerCreationStep,
 } from './types';
 import type { ManagerProspectHeritageBrief, ManagerProspectPortraitStyleRegion } from '@/entities/managerProspect';
-import { buildNpcManagerProspectSnapshot, PORTRAIT_STYLE_REGION_LABELS } from '@/entities/managerProspect';
+import { PORTRAIT_STYLE_REGION_LABELS } from '@/entities/managerProspect';
 import { createInitialGameState } from './initialState';
 import { normalizeFixture } from '@/entities/team';
-import { mergeLineupWithDefaults } from '@/entities/lineup';
+import { buildDefaultLineup, mergeLineupWithDefaults } from '@/entities/lineup';
 import { createInitialWalletState, normalizeWalletState } from '@/wallet/initial';
 import { createInitialLeagueSeason } from '@/match/leagueSeason';
 import { createInitialStaffState } from '@/systems/staff';
@@ -33,8 +33,52 @@ import {
   type LeagueScheduleState,
   type ScheduledLeagueFixture,
 } from '@/match/leagueSchedule';
+import type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
+import { seedNpcExpExchangeOrders } from '@/economy/expExchange';
+import { sanitizePlayerSeasonLedger } from '@/team/playerSeasonLedger';
+import { sanitizePlayerEvolutionTimeline } from '@/team/playerEvolutionTimeline';
+import { hydrateLegacyGenesisContract } from '@/playerContracts/playerContracts';
+import { defaultShopCatalog, normalizeShopCatalog } from './shopCatalog';
+import { generateMissingAgentProfiles } from '@/agents/agentProfileLoader';
+import { createDefaultCoachAgent } from '@/coach/defaultCoach';
 
 const KEY = 'olefoot-game-v1';
+
+/** Escalação só com ids que existem no plantel; preenche slots em falta. */
+function sanitizeLineupForRoster(
+  saved: Record<string, string>,
+  playersById: Record<string, PlayerEntity>,
+): Record<string, string> {
+  const base = buildDefaultLineup(playersById);
+  const kept: Record<string, string> = {};
+  for (const [slot, pid] of Object.entries(saved)) {
+    if (playersById[pid]) kept[slot] = pid;
+  }
+  return { ...base, ...kept };
+}
+
+function hydrateExpExchange(raw: unknown, base: ExpExchangeState): ExpExchangeState {
+  if (!raw || typeof raw !== 'object') return base;
+  const r = raw as { npcOrders?: unknown; playerOrders?: unknown };
+  const isOrder = (o: unknown): o is ExpExchangeOrder => {
+    if (!o || typeof o !== 'object') return false;
+    const x = o as Record<string, unknown>;
+    return (
+      typeof x.id === 'string' &&
+      (x.kind === 'npc' || x.kind === 'player') &&
+      typeof x.teamName === 'string' &&
+      typeof x.expAmount === 'number' &&
+      Number.isFinite(x.expAmount) &&
+      typeof x.broCents === 'number' &&
+      Number.isFinite(x.broCents) &&
+      typeof x.createdAtIso === 'string'
+    );
+  };
+  const npcRaw = Array.isArray(r.npcOrders) ? r.npcOrders.filter(isOrder) : [];
+  const playerRaw = Array.isArray(r.playerOrders) ? r.playerOrders.filter(isOrder) : [];
+  const npcOrders = npcRaw.length ? npcRaw : seedNpcExpExchangeOrders(8);
+  return { npcOrders, playerOrders: playerRaw };
+}
 
 function hydrateManagerProspectMarket(
   raw: ManagerProspectMarketState | undefined,
@@ -51,26 +95,7 @@ function hydrateManagerProspectMarket(
           typeof (l as { priceExp?: number }).priceExp === 'number',
       )
     : base.ownListings;
-  const npcRaw = raw?.npcOffers;
-  let npcOffers = Array.isArray(npcRaw)
-    ? npcRaw.filter(
-        (o) =>
-          o &&
-          typeof o === 'object' &&
-          typeof (o as { listingId?: string }).listingId === 'string' &&
-          typeof (o as { priceExp?: number }).priceExp === 'number' &&
-          (o as { snapshot?: { id?: string } }).snapshot?.id,
-      )
-    : base.npcOffers;
-  if (!npcOffers.length) {
-    const seed = 'hydrate';
-    npcOffers = Array.from({ length: 5 }, (_, i) => ({
-      listingId: `npc_lst_${seed}_${i}`,
-      snapshot: buildNpcManagerProspectSnapshot(seed, i),
-      priceExp: 88_000 + ((i * 41_000) % 310_000),
-    }));
-  }
-  return { ownListings, npcOffers };
+  return { ownListings, npcOffers: [] };
 }
 
 function hydrateManagerProspectConfig(
@@ -180,6 +205,12 @@ function hydrateManagerProspectArtQueue(raw: unknown, cap = 200): ManagerProspec
         : o.draftPortraitUrl === null
           ? null
           : undefined;
+    const marketListingId = typeof o.marketListingId === 'string' ? o.marketListingId : undefined;
+    const marketListedAtIso = typeof o.marketListedAtIso === 'string' ? o.marketListedAtIso : undefined;
+    const marketPriceExp =
+      typeof o.marketPriceExp === 'number' && Number.isFinite(o.marketPriceExp)
+        ? o.marketPriceExp
+        : undefined;
     out.push({
       id: o.id,
       playerId: o.playerId,
@@ -191,6 +222,9 @@ function hydrateManagerProspectArtQueue(raw: unknown, cap = 200): ManagerProspec
       visualBrief,
       heritage,
       draftPortraitUrl,
+      ...(marketListingId ? { marketListingId } : {}),
+      ...(marketListedAtIso ? { marketListedAtIso } : {}),
+      ...(marketPriceExp != null ? { marketPriceExp } : {}),
     });
     if (out.length >= cap) break;
   }
@@ -244,20 +278,33 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   const base = createInitialGameState();
   const players: OlefootGameState['players'] = { ...base.players };
   for (const [id, p] of Object.entries(raw.players ?? {})) {
-    players[id] = clampPlayerToEvolutionCap(
-      ensureMintOverall({
-        ...p,
-        outForMatches: p.outForMatches ?? 0,
-      }),
+    players[id] = hydrateLegacyGenesisContract(
+      clampPlayerToEvolutionCap(
+        ensureMintOverall({
+          ...p,
+          outForMatches: p.outForMatches ?? 0,
+        }),
+      ),
     );
   }
+  for (const id of Object.keys(players)) {
+    if (!id.startsWith('genesis-')) delete players[id];
+  }
+  const lineup = sanitizeLineupForRoster(raw.lineup ?? {}, players);
   const rawFsEarly = raw.manager?.formationScheme;
   const resolvedFormationScheme: FormationSchemeId =
     rawFsEarly && rawFsEarly in FORMATION_BASES ? rawFsEarly : base.manager.formationScheme;
 
   let liveMatch = raw.liveMatch;
   if (liveMatch) {
-    const lu = mergeLineupWithDefaults(raw.lineup ?? {}, players);
+    const rosterIds = new Set(Object.keys(players));
+    const invalidateLive =
+      Object.values(liveMatch.matchLineupBySlot ?? {}).some((pid) => pid && !rosterIds.has(pid)) ||
+      (liveMatch.homePlayers ?? []).some((hp) => !rosterIds.has(hp.playerId));
+    if (invalidateLive) liveMatch = null;
+  }
+  if (liveMatch) {
+    const lu = mergeLineupWithDefaults(lineup, players);
     const lmFs = liveMatch.homeFormationScheme;
     const homeFormationScheme: FormationSchemeId =
       lmFs && lmFs in FORMATION_BASES ? lmFs : resolvedFormationScheme;
@@ -293,10 +340,22 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   const walletMerged = rawWallet ? normalizeWalletState(rawWallet) : createInitialWalletState();
   const wallet = mergeSwapKycIntoWallet(walletMerged);
 
+  // Teto defensivo: evita valores absurdos injetados via DevTools.
+  // Não substitui validação server-side — só protege a lógica do jogo.
+  const MAX_BRO_CENTS = 10_000_000; // 100k BRO (mais realista)
+  const MAX_OLE = 10_000_000;       // 10M OLE
+  const MAX_EXP = 50_000_000;       // 50M EXP
+  const rawBro = raw.finance?.broCents ?? base.finance.broCents;
+  const rawOle = raw.finance?.ole ?? base.finance.ole;
+
+  const rawExp = raw.finance?.expLifetimeEarned ?? 0;
+
   const finance = {
     ...base.finance,
     ...raw.finance,
-    expLifetimeEarned: raw.finance?.expLifetimeEarned ?? 0,
+    broCents: Math.min(MAX_BRO_CENTS, Math.max(0, Number.isFinite(rawBro) ? rawBro : 0)),
+    ole: Math.min(MAX_OLE, Math.max(0, Number.isFinite(rawOle) ? rawOle : 0)),
+    expLifetimeEarned: Math.min(MAX_EXP, Math.max(0, Number.isFinite(rawExp) ? rawExp : 0)),
     expHistory: raw.finance?.expHistory ?? [],
     companyTreasuryBroCents: raw.finance?.companyTreasuryBroCents ?? base.finance.companyTreasuryBroCents ?? 0,
     friendlyChallengeEscrowBroCents:
@@ -321,15 +380,37 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
     activeMatchTacticId: raw.manager?.activeMatchTacticId ?? base.manager.activeMatchTacticId,
     activeTrainingTacticId: raw.manager?.activeTrainingTacticId ?? base.manager.activeTrainingTacticId,
     trainingPlans: raw.manager?.trainingPlans ?? base.manager.trainingPlans,
+    treatmentPlans: (() => {
+      const rawPlans = raw.manager?.treatmentPlans;
+      if (!Array.isArray(rawPlans)) return base.manager.treatmentPlans;
+      return rawPlans
+        .filter(
+          (t) =>
+            t &&
+            typeof t === 'object' &&
+            typeof (t as { playerId?: string }).playerId === 'string' &&
+            Boolean(players[(t as { playerId: string }).playerId]),
+        )
+        .slice(0, 40);
+    })(),
     staff: raw.manager?.staff
-      ? {
-          ...createInitialStaffState(),
-          ...raw.manager.staff,
-          roles: { ...createInitialStaffState().roles, ...(raw.manager.staff.roles ?? {}) },
-          assignedByPlayer: raw.manager.staff.assignedByPlayer ?? {},
-          assignedCollective: raw.manager.staff.assignedCollective ?? createInitialStaffState().assignedCollective,
-        }
+      ? (() => {
+          const abp = { ...(raw.manager!.staff!.assignedByPlayer ?? {}) };
+          for (const pid of Object.keys(abp)) {
+            if (!players[pid]) delete abp[pid];
+          }
+          return {
+            ...createInitialStaffState(),
+            ...raw.manager!.staff!,
+            roles: { ...createInitialStaffState().roles, ...(raw.manager!.staff!.roles ?? {}) },
+            assignedByPlayer: abp,
+            assignedCollective:
+              raw.manager!.staff!.assignedCollective ?? createInitialStaffState().assignedCollective,
+          };
+        })()
       : base.manager.staff,
+    // Migração do coach: se não existir no save, cria um novo
+    coach: raw.manager?.coach ?? createDefaultCoachAgent(),
   };
 
   const userSettings = {
@@ -356,16 +437,66 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
 
   const rawState = raw as OlefootGameState;
 
+  let nextFixture = normalizeFixture(rawState.nextFixture);
+  const ga = nextFixture.opponent?.genesisAwayPlayers;
+  if (ga?.length) {
+    const clean = ga.filter((p) => p?.id?.startsWith('genesis-'));
+    if (clean.length !== ga.length) {
+      nextFixture = normalizeFixture({
+        ...nextFixture,
+        opponent: {
+          ...nextFixture.opponent,
+          genesisAwayPlayers: clean.length > 0 ? clean : undefined,
+        },
+      });
+    }
+  }
+
+  const managerProspectMarketHydrated = hydrateManagerProspectMarket(
+    (raw as Partial<OlefootGameState>).managerProspectMarket,
+    base.managerProspectMarket,
+  );
+  const managerProspectMarket = {
+    ...managerProspectMarketHydrated,
+    ownListings: managerProspectMarketHydrated.ownListings.filter((l) => players[l.playerId]),
+  };
+
+  const playerSeasonLedger = sanitizePlayerSeasonLedger(
+    (raw as Partial<OlefootGameState>).playerSeasonLedger,
+    new Set(Object.keys(players)),
+  );
+
+  const playerEvolutionTimeline = sanitizePlayerEvolutionTimeline(
+    (raw as Partial<OlefootGameState>).playerEvolutionTimeline,
+    new Set(Object.keys(players)),
+  );
+
+  const rawShopCat = (raw as Partial<OlefootGameState>).shopCatalog;
+  let shopCatalog =
+    Array.isArray(rawShopCat) && rawShopCat.length > 0 ? normalizeShopCatalog(rawShopCat) : defaultShopCatalog();
+  if (!shopCatalog.length) shopCatalog = defaultShopCatalog();
+
+  const shopInventory: Record<string, number> = {};
+  const rawInv = (raw as Partial<OlefootGameState>).shopInventory;
+  if (rawInv && typeof rawInv === 'object') {
+    for (const [k, v] of Object.entries(rawInv)) {
+      if (!k || typeof k !== 'string') continue;
+      const n = Math.round(Number(v));
+      if (Number.isFinite(n) && n > 0) shopInventory[k] = Math.min(9999, n);
+    }
+  }
+
   return {
     ...base,
     ...raw,
     cardCollections,
     players,
+    lineup,
     liveMatch,
     finance,
     leagueSeason,
     manager,
-    nextFixture: normalizeFixture(rawState.nextFixture),
+    nextFixture,
     lastWorldRealMs: raw.lastWorldRealMs ?? Date.now(),
     clubLogistics: raw.clubLogistics ?? base.clubLogistics,
     structures: raw.structures ?? base.structures,
@@ -388,17 +519,19 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       return next;
     })(),
     uiBanners: hydrateUiBanners((raw as { uiBanners?: unknown }).uiBanners),
-    managerProspectMarket: hydrateManagerProspectMarket(
-      (raw as Partial<OlefootGameState>).managerProspectMarket,
-      base.managerProspectMarket,
-    ),
+    managerProspectMarket,
     managerProspectConfig: hydrateManagerProspectConfig(
       (raw as Partial<OlefootGameState>).managerProspectConfig,
       base.managerProspectConfig,
     ),
     managerProspectArtQueue: hydrateManagerProspectArtQueue(
       (raw as Partial<OlefootGameState>).managerProspectArtQueue,
-    ),
+    ).filter((r) => players[r.playerId]),
+    expExchange: hydrateExpExchange((raw as Partial<OlefootGameState>).expExchange, base.expExchange),
+    playerSeasonLedger,
+    playerEvolutionTimeline,
+    shopCatalog,
+    shopInventory,
   };
 }
 
@@ -445,8 +578,15 @@ export function loadGameState(): OlefootGameState {
 
 export function saveGameState(state: OlefootGameState): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    /* ignore quota */
+    const serialized = JSON.stringify(state);
+    const sizeKB = new Blob([serialized]).size / 1024;
+
+    if (sizeKB > 4096) { // 4 MB warning
+      console.warn(`[persistence] Save muito grande (${sizeKB.toFixed(0)} KB). Considere limpar histórico.`);
+    }
+
+    localStorage.setItem(KEY, serialized);
+  } catch (e) {
+    console.error('[persistence] Falha ao salvar:', e instanceof Error ? e.message : 'quota exceeded');
   }
 }

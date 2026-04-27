@@ -9,7 +9,7 @@
 ## O que é público no bundle
 
 - Prefixos **`VITE_`** (Vite) e **`EXPO_PUBLIC_`** (Expo) expõem valores no cliente. **Não** colocar service role, API keys privadas ou tokens de utilizador aí.
-- **`GEMINI_API_KEY`** na raiz é lida pelo build Vite para alguns fluxos de Admin: em produção, o ideal é mover chamadas para o backend (`server/`) com rate limit e auth.
+- **Admin Create Player** chama o olefoot-server (`VITE_OLEFOOT_API_URL`); **`OPENAI_API_KEY`** fica só em `server/.env`. Em produção, convém rate limit e auth no endpoint.
 
 ## Supabase
 

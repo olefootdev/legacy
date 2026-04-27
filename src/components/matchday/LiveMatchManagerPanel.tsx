@@ -1,5 +1,9 @@
-import { useMemo, useState } from 'react';
-import { LayoutGrid, SlidersHorizontal, UserMinus, UserPlus, Users } from 'lucide-react';
+import { memo, useEffect, useMemo, useState } from 'react';
+import {
+  CheckCircle2, SlidersHorizontal, UserMinus, UserPlus, Users,
+  Shield, Zap, Clock, Flame, Crosshair, Swords, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import { issueManagerCommand } from '@/voiceCommand/managerCommandBus';
 import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
@@ -7,11 +11,14 @@ import { FORMATION_SCHEME_LIST, slotsForScheme } from '@/match-engine/formations
 import type { FormationSchemeId } from '@/match-engine/types';
 import {
   STYLE_PRESETS,
+  PRESET_LABEL_PT,
   redistributeStylePoints,
   type PlayingStylePresetId,
   type StyleAxisKey,
 } from '@/tactics/playingStyle';
 import { cn } from '@/lib/utils';
+import { CoachCommandInput } from './CoachCommandInput';
+import type { CommandResult } from '@/match/coachCommands';
 
 const SLOT_LABEL_PT: Record<string, string> = {
   gol: 'GR',
@@ -29,18 +36,20 @@ const SLOT_LABEL_PT: Record<string, string> = {
 
 const QUICK_PRESETS: { id: PlayingStylePresetId; label: string }[] = [
   { id: 'balanced', label: 'Equilíbrio' },
-  { id: 'vertical_transition', label: 'Transição' },
-  { id: 'wide_crossing', label: 'Largura / cruz.' },
-  { id: 'low_block_counter', label: 'Bloco + contra' },
-  { id: 'direct_long_ball', label: 'Jogo direto' },
-  { id: 'tiki_positional', label: 'Posicional' },
+  { id: 'POSSE_CONTROLADA', label: 'Posse' },
+  { id: 'PRESSAO_ALTA', label: 'Pressão' },
+  { id: 'TRANSICAO_RAPIDA', label: 'Transição' },
+  { id: 'BLOCO_BAIXO', label: 'Bloco' },
+  { id: 'JOGO_PELAS_LATERAIS', label: 'Alas' },
+  { id: 'JOGO_DIRETO', label: 'Direto' },
+  { id: 'CRIATIVO_LIVRE', label: 'Criativo' },
 ];
 
 function slotLabel(slotId: string): string {
   return SLOT_LABEL_PT[slotId] ?? slotId.toUpperCase();
 }
 
-export function LiveMatchManagerPanel({
+export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
   homeShort,
   awayShort,
   homePlayers,
@@ -54,9 +63,6 @@ export function LiveMatchManagerPanel({
   playersById: Record<string, PlayerEntity>;
 }) {
   const dispatch = useGameDispatch();
-  const tacticalMentality = useGameStore((s) => s.manager.tacticalMentality);
-  const defensiveLine = useGameStore((s) => s.manager.defensiveLine);
-  const tempo = useGameStore((s) => s.manager.tempo);
   const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
   const liveMatch = useGameStore((s) => s.liveMatch);
@@ -65,6 +71,15 @@ export function LiveMatchManagerPanel({
   const [subOutId, setSubOutId] = useState('');
   const [subInId, setSubInId] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
+  /** Formação selecionada pelo treinador mas ainda NÃO aplicada — aguarda IMPLEMENTAR. */
+  const [pendingScheme, setPendingScheme] = useState<FormationSchemeId | null>(null);
+
+  // Se a formação em vigor mudar por fora (ex.: meio-tempo), descarta pendente resolvido.
+  useEffect(() => {
+    if (pendingScheme && pendingScheme === formationScheme) {
+      setPendingScheme(null);
+    }
+  }, [formationScheme, pendingScheme]);
 
   const orderedHome = useMemo(() => {
     const order = slotsForScheme(formationScheme);
@@ -89,13 +104,9 @@ export function LiveMatchManagerPanel({
   const subsUsed = liveMatch?.substitutionsUsed ?? 0;
   const subsLeft = Math.max(0, maxSubs - subsUsed);
 
-  const setSlider = (partial: { tacticalMentality?: number; defensiveLine?: number; tempo?: number }) => {
-    dispatch({ type: 'SET_MANAGER_SLIDERS', partial });
-  };
-
   const applyPreset = (presetId: PlayingStylePresetId) => {
     dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId });
-    setFeedback(`Padrão aplicado: ${presetId.replaceAll('_', ' ')}`);
+    setFeedback(`Padrão: ${PRESET_LABEL_PT[presetId]}`);
     window.setTimeout(() => setFeedback(null), 2400);
   };
 
@@ -111,11 +122,23 @@ export function LiveMatchManagerPanel({
     window.setTimeout(() => setFeedback(null), 2000);
   };
 
-  const applyFormation = (scheme: FormationSchemeId) => {
-    if (scheme === formationScheme) return;
-    dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: scheme });
-    setFeedback(`Formação: ${scheme}`);
+  const selectFormation = (scheme: FormationSchemeId) => {
+    if (scheme === formationScheme) {
+      // Clicar novamente na atual cancela o rascunho pendente.
+      setPendingScheme(null);
+      return;
+    }
+    setPendingScheme(scheme);
+    setFeedback(`Rascunho: ${scheme} — clica IMPLEMENTAR`);
     window.setTimeout(() => setFeedback(null), 2600);
+  };
+
+  const implementFormation = () => {
+    if (!pendingScheme) return;
+    dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formationScheme: pendingScheme });
+    setFeedback(`Implementado: ${pendingScheme} — time atuando na nova formação`);
+    setPendingScheme(null);
+    window.setTimeout(() => setFeedback(null), 3000);
   };
 
   const doSubstitution = () => {
@@ -180,191 +203,226 @@ export function LiveMatchManagerPanel({
   }, [awayRoster, formationScheme]);
 
   return (
-    <div className="mt-5 space-y-5 border-t border-white/10 pt-5">
-      <div className="flex items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 text-neon-yellow" />
-        <h3 className="font-display text-sm font-black uppercase tracking-widest text-white">
-          Controlo ao vivo
-        </h3>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-          {homeShort}
-        </span>
-      </div>
-
+    <div className="mt-5 space-y-5 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+      {/* Feedback com design system */}
       {feedback ? (
-        <p className="rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-3 py-2 text-center text-xs text-cyan-100">
-          {feedback}
-        </p>
+        <div
+          className="border px-4 py-3 text-center"
+          style={{
+            background: 'rgba(34, 211, 238, 0.1)',
+            borderColor: 'rgba(34, 211, 238, 0.3)',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          <p
+            className="text-cyan-100"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-ui-sm)',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+            }}
+          >
+            {feedback}
+          </p>
+        </div>
       ) : null}
 
-      {/* 1. Padrão de jogo */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Padrão de jogo</p>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_PRESETS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => applyPreset(id)}
-              className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors',
-                presetActive === id
-                  ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow'
-                  : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Ajuste fino (estilo)</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('pressing', 6)}
-          >
-            + Pressão
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('width', 6)}
-          >
-            + Largura
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('verticality', 6)}
-          >
-            + Vertical
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('riskTaking', 5)}
-          >
-            + Risco
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('compactness', 6)}
-          >
-            + Compac.
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-[10px] font-bold text-gray-200 hover:bg-white/10"
-            onClick={() => bumpAxis('defensiveBlock', 5)}
-          >
-            Bloco recua
-          </button>
-        </div>
-      </div>
+      {/* 1. Action Cards — mesmos verbos da voz. Clicar = emitir como se falasse. */}
+      <LiveActionCards
+        onFire={(label) => {
+          setFeedback(`📨 "${label}"`);
+          window.setTimeout(() => setFeedback(null), 2000);
+        }}
+      />
 
-      {/* 2. Formação */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Formação</p>
-        <div className="flex flex-wrap gap-2">
-          {FORMATION_SCHEME_LIST.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => applyFormation(id)}
-              className={cn(
-                'rounded-lg border px-2.5 py-1.5 font-display text-[11px] font-black tabular-nums transition-colors',
-                formationScheme === id
-                  ? 'border-neon-yellow bg-neon-yellow/12 text-neon-yellow'
-                  : 'border-white/15 bg-white/5 text-gray-300 hover:border-white/25 hover:bg-white/10',
-              )}
+      {/* 2. Formação - Card com design system */}
+      <div
+        className="border p-4 space-y-3"
+        style={{
+          background: 'var(--surface-dark)',
+          borderColor: 'var(--border)',
+          borderRadius: 'var(--radius-sm)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h4
+            className="text-white"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-ui-md)',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Formação
+          </h4>
+          {pendingScheme ? (
+            <span
+              className="border px-2 py-1"
+              style={{
+                background: 'rgba(251, 191, 36, 0.15)',
+                borderColor: 'rgba(251, 191, 36, 0.4)',
+                borderRadius: 'var(--radius-sm)',
+                color: '#fcd34d',
+                fontFamily: 'var(--font-display)',
+                fontSize: '9px',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
             >
-              {id}
-            </button>
-          ))}
+              Rascunho: {pendingScheme}
+            </span>
+          ) : null}
         </div>
-        <p className="text-[9px] leading-relaxed text-gray-500">
-          Mantém os 11 em campo; só altera o desenho tático e as coordenadas no relvado.
+        <div className="flex flex-wrap gap-2">
+          {FORMATION_SCHEME_LIST.map((id) => {
+            const isActive = formationScheme === id && pendingScheme === null;
+            const isPending = pendingScheme === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => selectFormation(id)}
+                className="border px-3 py-2 ole-headline tabular-nums transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: isActive
+                    ? 'rgba(253, 225, 0, 0.15)'
+                    : isPending
+                      ? 'rgba(251, 191, 36, 0.2)'
+                      : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: isActive
+                    ? 'var(--yellow)'
+                    : isPending
+                      ? 'rgba(251, 191, 36, 0.5)'
+                      : 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: isActive
+                    ? 'var(--yellow)'
+                    : isPending
+                      ? '#fcd34d'
+                      : '#d1d5db',
+                  fontSize: 'var(--text-ui-xs)',
+                  boxShadow: isPending ? '0 0 0 1px rgba(251, 191, 36, 0.5)' : undefined,
+                }}
+              >
+                {id}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={implementFormation}
+          disabled={!pendingScheme}
+          className="inline-flex w-full items-center justify-center gap-2 border px-4 py-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+          style={{
+            background: pendingScheme ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.05)',
+            borderColor: pendingScheme ? 'rgba(0, 0, 0, 0.1)' : 'var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            color: pendingScheme ? '#000' : 'rgba(255, 255, 255, 0.4)',
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-ui-sm)',
+            fontWeight: 900,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            animation: pendingScheme ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : undefined,
+          }}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          {pendingScheme ? `Implementar ${pendingScheme}` : 'Implementar'}
+        </button>
+        <p
+          className="leading-relaxed"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '10px',
+            color: 'rgba(255, 255, 255, 0.5)',
+          }}
+        >
+          {pendingScheme
+            ? 'Clica IMPLEMENTAR para o time começar a atuar na nova formação.'
+            : 'Selecione uma formação; o time só muda depois de IMPLEMENTAR.'}
         </p>
       </div>
 
-      {/* 3. Comportamento de equipa */}
-      <div className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-4">
-        <div className="flex items-center gap-2 text-gray-300">
-          <LayoutGrid className="h-3.5 w-3.5 text-neon-yellow" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-            Comportamento de equipa
-          </span>
-        </div>
-        <label className="block space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-            <span>Mentalidade</span>
-            <span className="tabular-nums text-white">{Math.round(tacticalMentality)}</span>
-          </div>
-          <input
-            type="range"
-            min={25}
-            max={95}
-            value={tacticalMentality}
-            onChange={(e) => setSlider({ tacticalMentality: Number(e.target.value) })}
-            className="w-full accent-neon-yellow"
-          />
-        </label>
-        <label className="block space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-            <span>Linha defensiva</span>
-            <span className="tabular-nums text-white">{Math.round(defensiveLine)}</span>
-          </div>
-          <input
-            type="range"
-            min={20}
-            max={85}
-            value={defensiveLine}
-            onChange={(e) => setSlider({ defensiveLine: Number(e.target.value) })}
-            className="w-full accent-cyan-400"
-          />
-        </label>
-        <label className="block space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-            <span>Ritmo / transições</span>
-            <span className="tabular-nums text-white">{Math.round(tempo)}</span>
-          </div>
-          <input
-            type="range"
-            min={30}
-            max={92}
-            value={tempo}
-            onChange={(e) => setSlider({ tempo: Number(e.target.value) })}
-            className="w-full accent-amber-400"
-          />
-        </label>
-      </div>
-
-      {/* 4. Substituições */}
-      <div className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-gray-300">
+      {/* 4. Substituições - Card com design system */}
+      <div
+        className="border p-4 space-y-3"
+        style={{
+          background: 'var(--surface-dark)',
+          borderColor: 'var(--border)',
+          borderRadius: 'var(--radius-sm)',
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <UserMinus className="h-3.5 w-3.5 text-neon-yellow" />
-            <UserPlus className="h-3.5 w-3.5 text-neon-yellow" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            <div className="flex items-center gap-1">
+              <UserMinus className="h-4 w-4" style={{ color: 'var(--yellow)' }} />
+              <UserPlus className="h-4 w-4" style={{ color: 'var(--yellow)' }} />
+            </div>
+            <h4
+              className="text-white"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'var(--text-ui-md)',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
               Substituições
-            </span>
+            </h4>
           </div>
-          <span className="text-[10px] font-mono font-bold tabular-nums text-gray-500">
+          <span
+            className="tabular-nums"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: subsLeft > 0 ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.3)',
+            }}
+          >
             {subsLeft}/{maxSubs} restantes
           </span>
         </div>
-        <p className="text-[10px] leading-relaxed text-gray-500">
+        <p
+          className="leading-relaxed"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '11px',
+            color: 'rgba(255, 255, 255, 0.6)',
+          }}
+        >
           Troca um titular por um jogador do banco. O relato da partida regista a alteração.
         </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="flex-1 space-y-1">
-            <span className="text-[9px] font-bold uppercase text-gray-500">Sai (titular)</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex-1 space-y-2">
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: 'rgba(255, 255, 255, 0.5)',
+              }}
+            >
+              Sai (titular)
+            </span>
             <select
               value={subOutId}
               onChange={(e) => setSubOutId(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white"
+              className="w-full border px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderColor: 'var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 'var(--text-ui-sm)',
+              }}
             >
               <option value="">—</option>
               {orderedHome.map((p) => {
@@ -378,12 +436,30 @@ export function LiveMatchManagerPanel({
               })}
             </select>
           </label>
-          <label className="flex-1 space-y-1">
-            <span className="text-[9px] font-bold uppercase text-gray-500">Entra (banco)</span>
+          <label className="flex-1 space-y-2">
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                color: 'rgba(255, 255, 255, 0.5)',
+              }}
+            >
+              Entra (banco)
+            </span>
             <select
               value={subInId}
               onChange={(e) => setSubInId(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-black/60 px-2 py-2 text-xs text-white"
+              className="w-full border px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderColor: 'var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 'var(--text-ui-sm)',
+              }}
             >
               <option value="">—</option>
               {benchPlayers.map((p) => (
@@ -397,59 +473,220 @@ export function LiveMatchManagerPanel({
             type="button"
             onClick={doSubstitution}
             disabled={subsLeft <= 0}
-            className="rounded-lg bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wide text-black hover:brightness-110 disabled:pointer-events-none disabled:opacity-35"
+            className="border px-4 py-2 transition-all hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-35 disabled:hover:scale-100"
+            style={{
+              background: 'var(--yellow)',
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              borderRadius: 'var(--radius-sm)',
+              color: '#000',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-ui-sm)',
+              fontWeight: 900,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
           >
             Aplicar
           </button>
         </div>
       </div>
+    </div>
+  );
+});
 
-      {/* 5. Escalações */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Escalações</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-            <div className="mb-2 flex items-center gap-2 text-neon-yellow">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-display font-black uppercase tracking-wider">{homeShort}</span>
-            </div>
-            <ul className="max-h-48 space-y-1 overflow-y-auto text-[11px]">
-              {orderedHome.map((p) => {
-                const ent = playersById[p.playerId];
-                const label = ent?.name ?? p.name;
-                return (
-                  <li
-                    key={p.playerId}
-                    className="flex justify-between gap-2 rounded border border-white/5 bg-white/[0.03] px-2 py-1"
-                  >
-                    <span className="font-mono tabular-nums text-gray-500">{p.num}</span>
-                    <span className="min-w-0 flex-1 truncate font-bold text-white">{label}</span>
-                    <span className="shrink-0 text-[10px] uppercase text-cyan-400/90">{slotLabel(p.slotId)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          <div className="rounded-xl border border-rose-500/20 bg-rose-950/10 p-3">
-            <div className="mb-2 flex items-center gap-2 text-rose-300">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-display font-black uppercase tracking-wider">{awayShort}</span>
-            </div>
-            <ul className="max-h-48 space-y-1 overflow-y-auto text-[11px]">
-              {awayOrdered.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex justify-between gap-2 rounded border border-white/5 bg-black/20 px-2 py-1"
+// ─── Action Cards — espelho dos intents de voz ─────────────────────────────
+
+interface ActionCardDef {
+  id: string;
+  icon: typeof Shield;
+  label: string;
+  /** Frase enviada pra pipeline de voz (mesmo parser usado em VoiceCommandPanel). */
+  phrase: string;
+  hint: string;
+  tone: 'press' | 'retreat' | 'possess' | 'accel' | 'attack' | 'cross';
+}
+
+const ACTION_CARDS: ActionCardDef[] = [
+  { id: 'press',   icon: Flame,     label: 'Pressiona alto', phrase: 'pressiona alto',    hint: 'Linha sobe, marca no campo adversário.', tone: 'press' },
+  { id: 'retreat', icon: Shield,    label: 'Recua bloco',    phrase: 'recua',             hint: 'Bloco baixo, compacta atrás da bola.',   tone: 'retreat' },
+  { id: 'possess', icon: Clock,     label: 'Mata o jogo',    phrase: 'mata o jogo',       hint: 'Posse segura, ritmo baixo.',             tone: 'possess' },
+  { id: 'accel',   icon: Zap,       label: 'Acelera',        phrase: 'pisa no acelerador', hint: 'Transição rápida, sem pensar duas vezes.', tone: 'accel' },
+  { id: 'invade',  icon: Crosshair, label: 'Invade área',    phrase: 'invade a area',     hint: 'Atacantes atacam a grande área.',        tone: 'attack' },
+  { id: 'cross',   icon: Swords,    label: 'Cruza mais',     phrase: 'laterais cruza mais', hint: 'Laterais sobem e cruzam pra área.',    tone: 'cross' },
+];
+
+const TONE_STYLES: Record<ActionCardDef['tone'], { bg: string; border: string; text: string; hover: string }> = {
+  press:   { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.4)', text: '#fecaca', hover: 'rgba(239, 68, 68, 0.6)' },
+  retreat: { bg: 'rgba(14, 165, 233, 0.12)', border: 'rgba(14, 165, 233, 0.4)', text: '#bae6fd', hover: 'rgba(14, 165, 233, 0.6)' },
+  possess: { bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.4)', text: '#ddd6fe', hover: 'rgba(139, 92, 246, 0.6)' },
+  accel:   { bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.4)', text: '#fed7aa', hover: 'rgba(249, 115, 22, 0.6)' },
+  attack:  { bg: 'rgba(253, 225, 0, 0.12)', border: 'rgba(253, 225, 0, 0.4)', text: 'var(--yellow)', hover: 'rgba(253, 225, 0, 0.6)' },
+  cross:   { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.4)', text: '#a7f3d0', hover: 'rgba(16, 185, 129, 0.6)' },
+};
+
+function LiveActionCards({ onFire }: { onFire: (label: string) => void }) {
+  const [firedId, setFiredId] = useState<string | null>(null);
+  const fire = (c: ActionCardDef) => {
+    issueManagerCommand(c.phrase, 'touch');
+    setFiredId(c.id);
+    onFire(c.label);
+    window.setTimeout(() => setFiredId((cur) => (cur === c.id ? null : cur)), 600);
+  };
+  return (
+    <div className="space-y-3">
+      {/* Grid de action cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {ACTION_CARDS.map((c) => {
+          const Icon = c.icon;
+          const active = firedId === c.id;
+          const style = TONE_STYLES[c.tone];
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => fire(c)}
+              className="group relative flex flex-col items-start gap-2 border p-3 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: style.bg,
+                borderColor: style.border,
+                borderRadius: 'var(--radius-sm)',
+                color: style.text,
+                boxShadow: active ? `0 0 20px ${style.hover}` : undefined,
+              }}
+              title={`Voz: "${c.phrase}"`}
+            >
+              <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              <div className="min-w-0 w-full">
+                <p
+                  className="truncate leading-tight"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'var(--text-ui-xs)',
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
                 >
-                  <span className="font-mono tabular-nums text-gray-500">{r.num}</span>
-                  <span className="min-w-0 flex-1 truncate font-bold text-rose-100/90">{r.name}</span>
-                  <span className="shrink-0 text-[10px] uppercase text-rose-400/80">{r.pos}</span>
-                </li>
-              ))}
-            </ul>
+                  {c.label}
+                </p>
+                <p
+                  className="mt-1 line-clamp-2 leading-snug opacity-80"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '9px',
+                    fontWeight: 500,
+                  }}
+                >
+                  {c.hint}
+                </p>
+              </div>
+              {/* Tooltip de voz no hover */}
+              <span
+                className="pointer-events-none absolute right-2 top-2 rounded-sm bg-black/50 px-1.5 py-0.5 font-mono text-[7px] uppercase opacity-0 backdrop-blur transition-opacity group-hover:opacity-90"
+                style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+              >
+                🎤 "{c.phrase}"
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Ajuste fino legado (collapsed por padrão) ─────────────────────────────
+
+function LegacyFineTune({
+  presetActive,
+  onApplyPreset,
+  onBumpAxis,
+}: {
+  presetActive: PlayingStylePresetId | undefined;
+  onApplyPreset: (id: PlayingStylePresetId) => void;
+  onBumpAxis: (key: StyleAxisKey, delta: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className="border"
+      style={{
+        background: 'rgba(0, 0, 0, 0.2)',
+        borderColor: 'var(--border)',
+        borderRadius: 'var(--radius-sm)',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-gray-400 transition-colors hover:text-white"
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: '11px',
+          fontWeight: 600,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+        }}
+        aria-expanded={open}
+      >
+        <span>Ajuste fino (presets + estilo)</span>
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {open ? (
+        <div className="space-y-3 border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_PRESETS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onApplyPreset(id)}
+                className="border px-3 py-2 transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: presetActive === id ? 'rgba(253, 225, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: presetActive === id ? 'var(--yellow)' : 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: presetActive === id ? 'var(--yellow)' : '#d1d5db',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {([
+              { key: 'pressing' as StyleAxisKey, label: '+ Pressão',  delta: 6 },
+              { key: 'width' as StyleAxisKey,    label: '+ Largura',  delta: 6 },
+              { key: 'verticality' as StyleAxisKey, label: '+ Vertical', delta: 6 },
+              { key: 'riskTaking' as StyleAxisKey, label: '+ Risco',   delta: 5 },
+              { key: 'compactness' as StyleAxisKey, label: '+ Compac.', delta: 6 },
+              { key: 'defensiveBlock' as StyleAxisKey, label: 'Bloco recua', delta: 5 },
+            ]).map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                className="border px-2 py-2 transition-all hover:bg-white/10 active:scale-95"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: '#e5e7eb',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                }}
+                onClick={() => onBumpAxis(b.key, b.delta)}
+              >
+                {b.label}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

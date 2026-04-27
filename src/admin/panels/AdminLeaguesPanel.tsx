@@ -1,11 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Plus, Save, Star, Trash2, ChevronDown, ChevronUp, Shuffle } from 'lucide-react';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import type { AdminLeagueConfig, KnockoutBracketSize, LeagueFormat, LeagueStandingRow } from '@/match/adminLeagues';
+import type {
+  AdminLeagueConfig,
+  KnockoutBracketSize,
+  LeagueFormat,
+  LeagueScope,
+  LeagueStandingRow,
+} from '@/match/adminLeagues';
 import {
   generateKnockoutRounds,
   KNOCKOUT_BRACKET_SIZES,
   LEAGUE_FORMAT_LABELS,
+  LEAGUE_SCOPE_LABELS,
   newTeamId,
   sortStandings,
 } from '@/match/adminLeagues';
@@ -69,7 +76,9 @@ export function AdminLeaguesPanel() {
           Cria e edita competições persistidas no save. A liga <strong className="text-white/80">principal</strong>{' '}
           sincroniza cartão e tabela com <code className="text-neon-yellow/80">leagueSeason</code> quando a opção
           está ativa. Inclui uma equipa com o nome do clube actual (
-          <span className="text-white">{club.name}</span>) para destacar na UI.
+          <span className="text-white">{club.name}</span>) para destacar na UI. Competições{' '}
+          <strong className="text-white/80">mundiais</strong> não aparecem em <code className="text-white/60">/leagues</code>
+          .
         </p>
         <button
           type="button"
@@ -108,6 +117,9 @@ export function AdminLeaguesPanel() {
                     <span className="rounded border border-white/15 px-2 py-0.5 text-[9px] font-bold uppercase text-white/50">
                       {LEAGUE_FORMAT_LABELS[d.format]}
                     </span>
+                    <span className="rounded border border-neon-green/30 bg-neon-green/10 px-2 py-0.5 text-[9px] font-bold uppercase text-neon-green/90">
+                      {LEAGUE_SCOPE_LABELS[d.scope]}
+                    </span>
                   </div>
                   <p className="text-xs text-white/40">
                     {d.division} · {d.standings.length} equipas
@@ -119,7 +131,7 @@ export function AdminLeaguesPanel() {
 
               {open ? (
                 <div className="space-y-4 border-t border-white/10 p-4">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-white/40">
                       Nome
                       <input
@@ -135,6 +147,22 @@ export function AdminLeaguesPanel() {
                         onChange={(e) => setDraft(lg.id, { ...d, division: e.target.value })}
                         className="mt-1 w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
                       />
+                    </label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-white/40">
+                      Âmbito
+                      <select
+                        value={d.scope}
+                        onChange={(e) =>
+                          setDraft(lg.id, { ...d, scope: e.target.value as LeagueScope })
+                        }
+                        className="mt-1 w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
+                      >
+                        {(Object.keys(LEAGUE_SCOPE_LABELS) as LeagueScope[]).map((s) => (
+                          <option key={s} value={s}>
+                            {LEAGUE_SCOPE_LABELS[s]}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-white/40">
                       Formato
@@ -338,7 +366,7 @@ export function AdminLeaguesPanel() {
                           <thead>
                             <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
                               <th className="px-2 py-2">#</th>
-                              <th className="px-2 py-2">Equipa</th>
+                              <th className="px-2 py-2">Equipe</th>
                               <th className="px-2 py-2">J</th>
                               <th className="px-2 py-2">PTS</th>
                               <th className="px-2 py-2">GF</th>

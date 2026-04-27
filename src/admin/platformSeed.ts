@@ -1,4 +1,10 @@
-import type { AdminPlatformUser, PlatformOlexpPosition } from './platformTypes';
+import type {
+  AdminPlatformUser,
+  GrowthCommerceLine,
+  GrowthDailyPulseRow,
+  PlatformLedgerLine,
+  PlatformOlexpPosition,
+} from './platformTypes';
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -56,83 +62,146 @@ export function seedPlatformOlexpPositions(): PlatformOlexpPosition[] {
   ];
 }
 
-function u(p: Omit<AdminPlatformUser, 'createdAtIso' | 'updatedAtIso'>): AdminPlatformUser {
-  const now = new Date().toISOString();
-  return { ...p, createdAtIso: now, updatedAtIso: now };
+function userWithTimeline(
+  p: Omit<AdminPlatformUser, 'createdAtIso' | 'updatedAtIso'>,
+  createdDaysAgo: number,
+  updatedDaysAgo = 0,
+): AdminPlatformUser {
+  const now = new Date();
+  const c = new Date(now);
+  c.setUTCDate(c.getUTCDate() - createdDaysAgo);
+  const u = new Date(now);
+  u.setUTCDate(u.getUTCDate() - updatedDaysAgo);
+  return { ...p, createdAtIso: c.toISOString(), updatedAtIso: u.toISOString() };
 }
 
-/** Utilizadores de demonstração para o painel plataforma (valores fictícios). */
+function isoAtUtcNoon(daysFromToday: number): string {
+  const x = new Date();
+  x.setUTCDate(x.getUTCDate() + daysFromToday);
+  return `${x.toISOString().slice(0, 10)}T14:30:00.000Z`;
+}
+
+/** Ledger demo: depósitos e alguns saques ao longo de ~90 dias (ids estáveis de utilizadores seed). */
+export function seedPlatformLedger(): PlatformLedgerLine[] {
+  const rows: PlatformLedgerLine[] = [];
+  let i = 0;
+  const push = (partial: Omit<PlatformLedgerLine, 'id' | 'createdAt'> & { createdAt?: string }) => {
+    rows.push({
+      id: `seed_led_${++i}`,
+      createdAt: partial.createdAt ?? new Date().toISOString(),
+      kind: partial.kind,
+      broCentsDelta: partial.broCentsDelta,
+      target: partial.target,
+      note: partial.note,
+      flowStatus: partial.flowStatus,
+    });
+  };
+
+  // Janela de histórico: últimos 88 dias com alguns buracos
+  for (let d = 88; d >= 0; d -= 1) {
+    if (d % 11 === 0) continue;
+    if (d % 7 === 3) {
+      push({
+        createdAt: isoAtUtcNoon(-d),
+        kind: 'fiat_deposit',
+        broCentsDelta: 120_000 + (d % 5) * 15_000,
+        target: 'usr_demo_1',
+        flowStatus: 'completed',
+        note: 'PIX demo',
+      });
+    }
+    if (d % 9 === 2) {
+      push({
+        createdAt: isoAtUtcNoon(-d + 1),
+        kind: 'fiat_deposit',
+        broCentsDelta: 80_000,
+        target: 'usr_demo_2',
+        flowStatus: 'completed',
+      });
+    }
+    if (d % 13 === 1) {
+      push({
+        createdAt: isoAtUtcNoon(-d),
+        kind: 'fiat_deposit',
+        broCentsDelta: 55_000 + (d % 4) * 10_000,
+        target: 'usr_demo_3',
+        flowStatus: 'completed',
+      });
+    }
+    if (d === 40) {
+      push({
+        createdAt: isoAtUtcNoon(-d),
+        kind: 'fiat_deposit',
+        broCentsDelta: 500_000,
+        target: 'treasury',
+        flowStatus: 'completed',
+        note: 'Aporte tesouraria',
+      });
+    }
+    if (d === 22) {
+      push({
+        createdAt: isoAtUtcNoon(-d),
+        kind: 'fiat_withdrawal',
+        broCentsDelta: -35_000,
+        target: 'usr_demo_3',
+        flowStatus: 'completed',
+      });
+    }
+  }
+
+  return rows;
+}
+
+export function seedGrowthCommerceLines(): GrowthCommerceLine[] {
+  const lines: GrowthCommerceLine[] = [];
+  let n = 0;
+  for (let d = 75; d >= 0; d -= 1) {
+    if (d % 4 !== 0) continue;
+    lines.push({
+      id: `seed_gc_${++n}`,
+      createdAt: isoAtUtcNoon(-d),
+      kind: d % 12 === 0 ? 'transfer_player' : 'store_item',
+      revenueBroCents: 2_500 + (d % 7) * 400,
+      grossBroCents: 18_000 + (d % 5) * 5_000,
+      userId: d % 3 === 0 ? 'usr_demo_1' : d % 3 === 1 ? 'usr_demo_2' : 'usr_demo_3',
+      label: d % 12 === 0 ? 'Taxa mercado' : 'Consumível / boost',
+    });
+  }
+  for (let d = 30; d >= 0; d -= 10) {
+    lines.push({
+      id: `seed_gc_${++n}`,
+      createdAt: isoAtUtcNoon(-d),
+      kind: 'bundle',
+      revenueBroCents: 15_000,
+      grossBroCents: 120_000,
+      userId: 'usr_demo_1',
+      label: 'Pack temporada',
+    });
+  }
+  return lines;
+}
+
+export function seedGrowthDailyPulse(): GrowthDailyPulseRow[] {
+  const rows: GrowthDailyPulseRow[] = [];
+  for (let d = 89; d >= 0; d -= 1) {
+    const x = new Date();
+    x.setUTCDate(x.getUTCDate() - d);
+    const date = x.toISOString().slice(0, 10);
+    const base = 800 + (d % 17) * 120;
+    const impressions = base + (d % 5) * 200;
+    const ctaClicks = Math.max(12, Math.round(impressions * (0.045 + (d % 10) * 0.002)));
+    const attributedSignups = Math.max(0, Math.round(ctaClicks * (0.08 + (d % 7) * 0.01)));
+    rows.push({ date, bannerImpressions: impressions, ctaClicks, attributedSignups });
+  }
+  return rows;
+}
+
+/**
+ * Utilizadores da plataforma — lista vazia por default.
+ * Populado via fetch real do Supabase (`profiles` + `auth.users`) ao montar
+ * o painel admin. Histórico com 4 users demo (OLE FC Neo, Phoenix United,
+ * Dragões FC, WOLVES) permanece no git.
+ */
 export function seedPlatformUsers(): AdminPlatformUser[] {
-  return [
-    u({
-      id: 'usr_demo_1',
-      externalId: 'ext_mgr_001',
-      displayName: 'Carlos Manager',
-      email: 'carlos.manager@exemplo.com',
-      country: 'BR',
-      clubName: 'OLE FC Neo',
-      clubShort: 'OLE',
-      broCents: 1_250_000,
-      spotBroCents: 890_000,
-      spotExpBalance: 12_400,
-      ole: 45_200,
-      olexpPrincipalLockedCents: 500_000,
-      olexpYieldAccruedCents: 18_200,
-      gatPositionsCount: 2,
-      ledgerEntriesCount: 48,
-      status: 'active',
-      notes: 'Conta verificada — alto engajamento.',
-    }),
-    u({
-      id: 'usr_demo_2',
-      externalId: 'ext_mgr_002',
-      displayName: 'Ana Treinadora',
-      email: 'ana.t@exemplo.com',
-      country: 'BR',
-      clubName: 'Phoenix United',
-      clubShort: 'PHX',
-      broCents: 320_000,
-      spotBroCents: 310_000,
-      spotExpBalance: 2_100,
-      ole: 12_800,
-      olexpPrincipalLockedCents: 0,
-      olexpYieldAccruedCents: 0,
-      gatPositionsCount: 0,
-      ledgerEntriesCount: 15,
-      status: 'active',
-    }),
-    u({
-      id: 'usr_demo_3',
-      displayName: 'João Silva',
-      email: 'joao.s@exemplo.com',
-      country: 'PT',
-      clubName: 'Dragões FC',
-      clubShort: 'DRG',
-      broCents: 45_500,
-      spotBroCents: 45_500,
-      spotExpBalance: 0,
-      ole: 8_900,
-      olexpPrincipalLockedCents: 300_000,
-      olexpYieldAccruedCents: 4_500,
-      gatPositionsCount: 1,
-      ledgerEntriesCount: 22,
-      status: 'active',
-    }),
-    u({
-      id: 'usr_demo_4',
-      displayName: 'Equipa Wolves (bot)',
-      clubName: 'WOLVES',
-      clubShort: 'WLF',
-      broCents: 10_000,
-      spotBroCents: 10_000,
-      spotExpBalance: 0,
-      ole: 2_000,
-      olexpPrincipalLockedCents: 0,
-      olexpYieldAccruedCents: 0,
-      gatPositionsCount: 0,
-      ledgerEntriesCount: 3,
-      status: 'suspended',
-      notes: 'Conta suspensa — revisão AML simulada.',
-    }),
-  ];
+  return [];
 }

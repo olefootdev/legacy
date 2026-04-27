@@ -5,9 +5,13 @@ import { Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { cn } from '@/lib/utils';
+import { youthAcademyProspectTrainingMultiplier } from '@/clubStructures/benefits';
+import { BackButton } from '@/components/BackButton';
 
 export function YouthProspects() {
   const players = useGameStore((s) => s.players);
+  const youthLvl = useGameStore((s) => s.structures.youth_academy ?? 1);
+  const prospectTrainMult = youthAcademyProspectTrainingMultiplier(youthLvl);
   const [query, setQuery] = useState('');
   const [pos, setPos] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -25,6 +29,7 @@ export function YouthProspects() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6 pb-10">
+      <BackButton to="/clube" label="Clube" />
       <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
         <div className="min-w-0">
           <h2 className="text-2xl font-display font-black italic uppercase tracking-wider min-[390px]:text-3xl">
@@ -39,6 +44,14 @@ export function YouthProspects() {
           <ArrowLeft className="w-4 h-4" />
           Cidade
         </Link>
+      </div>
+
+      <div className="sports-panel border border-blue-400/20 bg-blue-500/5 p-3 text-xs text-gray-300">
+        <span className="font-bold text-blue-200 uppercase tracking-wider">Categoria de base nível {youthLvl}</span>
+        {' — '}
+        Booster de ganho de atributos em treinos para promessas (
+        <span className="text-neon-yellow font-bold">+{Math.round((prospectTrainMult - 1) * 100)}%</span>
+        ).
       </div>
 
       <div className="sports-panel p-4 grid grid-cols-1 md:grid-cols-3 gap-3">

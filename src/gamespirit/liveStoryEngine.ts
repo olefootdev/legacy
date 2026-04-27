@@ -175,7 +175,7 @@ export function stepLiveStoryEngine(input: {
           newEvents.push({
             id: uid(),
             minute: displayMinute,
-            text: `${displayMinute}' — Golo dos visitantes. Silêncio na arena.`,
+            text: `${displayMinute}' — Gol dos visitantes. Silêncio na arena.`,
             kind: 'goal_away',
           });
           spiritPendingRestartSide = 'away';

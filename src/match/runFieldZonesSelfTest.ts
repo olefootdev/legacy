@@ -3,10 +3,14 @@
  * npx tsx src/match/runFieldZonesSelfTest.ts
  */
 import {
+  defendingTeamAtGoalEnd,
   getAttackingGoalX,
   getDefendingGoalX,
   getSideAttackDir,
   getThird,
+  goalAreaEndContainingBall,
+  isInsideGoalAreaAtEnd,
+  penaltyAreaEndContainingBall,
   isInsideOwnPenaltyArea,
   depthFromOwnGoal,
   type PitchPosition,
@@ -37,6 +41,15 @@ function main() {
   const mid: PitchPosition = { x: 52, z: 34 };
   assert(getThird(mid, { team: 'home', half: 1 }) === 'middle', 'midfield third h1');
   assert(depthFromOwnGoal(mid.x, 'home', 1) > 30, 'depth from own goal h1');
+
+  const inWestGa: PitchPosition = { x: 3, z: 34 };
+  assert(isInsideGoalAreaAtEnd(inWestGa, 'west'), 'west goal area');
+  assert(!isInsideGoalAreaAtEnd(inWestGa, 'east'), 'not east ga');
+  assert(goalAreaEndContainingBall(3, 34) === 'west', 'ball end west ga');
+  assert(defendingTeamAtGoalEnd('west', 1) === 'home', 'home defends west h1');
+
+  assert(penaltyAreaEndContainingBall(10, 34) === 'west', 'ball in west PA');
+  assert(penaltyAreaEndContainingBall(99, 34) === 'east', 'ball in east PA');
 
   console.log('fieldZones self-test: ok');
 }

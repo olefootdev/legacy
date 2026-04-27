@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 
-/** Redireciona `/match` → `/match/live` (MVP único). */
+/** Redireciona `/match` → partida rápida (modo oficial para a liga). */
 export function LiveMatch() {
-  return <Navigate to="/match/live" replace />;
+  return <Navigate to="/match/quick" replace />;
 }

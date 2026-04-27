@@ -1,0 +1,128 @@
+/**
+ * Fontes locais do Olefoot
+ *
+ * Este arquivo define as fontes hospedadas localmente no projeto
+ * para garantir que funcionem em todos os navegadores, mesmo offline.
+ *
+ * IMPORTANTE: As fontes devem ser baixadas e colocadas em /public/fonts/
+ *
+ * Para baixar as fontes:
+ * 1. Inter: https://fonts.google.com/specimen/Inter
+ * 2. Oswald: https://fonts.google.com/specimen/Oswald
+ * 3. Montserrat: https://fonts.google.com/specimen/Montserrat
+ *
+ * Formatos necessários: woff2 (moderno, melhor compressão)
+ */
+
+/* Inter — Fonte principal do corpo de texto */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Inter-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Inter-Bold.woff2') format('woff2');
+}
+
+/* Oswald — Fonte display para títulos e números */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Oswald-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/Oswald-Bold.woff2') format('woff2');
+}
+
+/* Montserrat — Fonte alternativa para destaques */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Montserrat-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Montserrat-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/Montserrat-ExtraBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/Montserrat-ExtraBoldItalic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/Montserrat-BlackItalic.woff2') format('woff2');
+}
+
+/**
+ * Fallback para quando as fontes não carregarem
+ * Usa fontes de sistema que são visualmente similares
+ */
+.fonts-fallback {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: Impact, "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/**
+ * Estado de carregamento — evita FOUT (Flash of Unstyled Text)
+ */
+.fonts-loading body {
+  opacity: 0.98;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.fonts-loaded body {
+  opacity: 1;
+}

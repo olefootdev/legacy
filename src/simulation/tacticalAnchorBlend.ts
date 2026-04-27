@@ -174,6 +174,40 @@ function clampPullFromAnchor(
 }
 
 /**
+ * Reduz o puxão de volta à âncora (slot) para ações em que o alvo tático deve
+ * prevalecer — evita ioiô “avança à bola / recua à formação” quando a decisão
+ * pede apoio, profundidade ou pressão.
+ */
+export function anchorPullScaleForOffBallAction(
+  actionType: string,
+  teamHasBall: boolean,
+  isPressingCarrier: boolean,
+): number {
+  if (isPressingCarrier) return 1;
+  if (actionType === 'move_to_slot' || actionType === 'idle') return 1;
+  if (teamHasBall) {
+    // Mais peso na formação com posse: menos “ímã” coletivo para a bola (menos corrida inútil).
+    return 0.46; // attackers commit slightly more to target when in possession
+  }
+  const commitDefense = new Set<string>([
+    'press_carrier',
+    'delay_press',
+    'close_passing_lane',
+    'mark_man',
+    'mark_zone',
+    'recover_behind_ball',
+    'defensive_cover',
+    'cover_central',
+  ]);
+  if (commitDefense.has(actionType)) return 0.52;
+  // For generic attacking/support actions prefer a bit more commitment to space.
+  if (actionType === 'attack_depth' || actionType === 'open_width' || actionType === 'offer_short_line' || actionType === 'offer_diagonal_line' || actionType === 'overlap_run' || actionType === 'infiltrate') {
+    return 0.62;
+  }
+  return 0.88;
+}
+
+/**
  * @param desired — alvo vindo da decisão off-ball (passe, apoio, pressão…)
  * @param anchor — posição-base dinâmica do slot (MatchEngine + clamp de papel)
  * @param self — posição atual do jogador
@@ -185,7 +219,7 @@ export function blendOffBallDestination(
   self: { x: number; z: number },
   ball: { x: number; z: number },
   radii: TacticalMovementRadii,
-  opts?: { isPressingCarrier?: boolean },
+  opts?: { isPressingCarrier?: boolean; anchorPullScale?: number },
 ): { x: number; z: number } {
   let r = radii;
   if (opts?.isPressingCarrier) {
@@ -197,25 +231,54 @@ export function blendOffBallDestination(
     };
   }
 
+  const pullScale = opts?.anchorPullScale ?? 1;
+  const maxDev =
+    pullScale < 1
+      ? r.maxDeviationInAction * (1.05 + (1 - pullScale) * 0.35)
+      : r.maxDeviationInAction;
+
   const dSelfBall = Math.hypot(self.x - ball.x, self.z - ball.z);
   const px = desired.x;
   const pz = desired.z;
 
   if (dSelfBall <= r.actionRadius) {
-    return clampPullFromAnchor({ x: px, z: pz }, anchor, r.maxDeviationInAction);
+    return clampPullFromAnchor({ x: px, z: pz }, anchor, maxDev);
   }
 
   if (dSelfBall <= r.supportRadius) {
     const span = r.supportRadius - r.actionRadius;
-    const u = span > 0.01 ? (dSelfBall - r.actionRadius) / span : 1;
-    const wDesired = 0.62 * (1 - u) + 0.15;
+    const uRaw = span > 0.01 ? (dSelfBall - r.actionRadius) / span : 1;
+    const u = uRaw * uRaw * (3 - 2 * uRaw);
+    const wDesired = 0.62 * (1 - u) + 0.14 + (pullScale < 1 ? 0.12 * (1 - pullScale) : 0);
     const bx = anchor.x + (px - anchor.x) * wDesired;
     const bz = anchor.z + (pz - anchor.z) * wDesired;
     return clampToPitch(bx, bz, 1);
   }
 
-  const pull = r.returnBias;
+  const pull = Math.min(0.94, r.returnBias * pullScale);
   const bx = anchor.x + (px - anchor.x) * (1 - pull);
   const bz = anchor.z + (pz - anchor.z) * (1 - pull);
   return clampToPitch(bx, bz, 1);
+}
+
+/**
+ * Amplify returnBias for players who committed far forward and lost possession.
+ * `overlapDepth` = how far (m) beyond the anchor the player currently is along X.
+ * When the team *doesn't* have the ball and the player is > threshold from anchor,
+ * returnBias increases smoothly to pull them back faster.
+ */
+export function scaleRadiiForOverlapReturn(
+  r: TacticalMovementRadii,
+  overlapDepthM: number,
+  teamHasBall: boolean,
+): TacticalMovementRadii {
+  if (teamHasBall || overlapDepthM < 12) return r;
+  const excess = Math.min(30, overlapDepthM - 12);
+  const urgency = excess / 30;
+  return {
+    actionRadius: r.actionRadius * (1 - urgency * 0.18),
+    supportRadius: r.supportRadius * (1 - urgency * 0.12),
+    returnBias: Math.min(0.96, r.returnBias + urgency * 0.22),
+    maxDeviationInAction: r.maxDeviationInAction * (1 - urgency * 0.24),
+  };
 }

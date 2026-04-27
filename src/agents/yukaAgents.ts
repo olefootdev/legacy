@@ -9,6 +9,7 @@ import {
   type GameEntity,
 } from 'yuka';
 import { clampToPitch } from '@/simulation/field';
+import { YUKA_BOUNDING_RADIUS_M, YUKA_SEPARATION_NEIGHBOR_RADIUS_M } from '@/match/tacticalSpacingTuning';
 
 export type AgentMode = 'reforming' | 'in_play' | 'pressing';
 
@@ -23,13 +24,18 @@ export interface AgentBinding {
   pursuit: PursuitBehavior;
   wander: WanderBehavior;
   obstacle: ObstacleAvoidanceBehavior;
+  /**
+   * Smoothed body facing on XZ (rad), aligned with `MatchTruthPlayer.heading` / `facingYaw`.
+   * Updated after physics — not snapped each frame to velocity noise.
+   */
+  bodyYaw: number;
 }
 
 function makeVehicle(maxSpeed: number): Vehicle {
   const v = new Vehicle();
   v.maxSpeed = maxSpeed;
   v.maxForce = 140;
-  v.boundingRadius = 1.1;
+  v.boundingRadius = YUKA_BOUNDING_RADIUS_M;
   v.mass = 1;
   v.updateOrientation = false;
   return v;
@@ -61,9 +67,55 @@ export function createAgentBinding(
   vehicle.steering.add(obstacle);
   vehicle.steering.add(separation);
   vehicle.steering.add(pursuit);
-  vehicle.steering.add(wander);
   vehicle.steering.add(arrive);
-  return { id, slotId, side, role, vehicle, arrive, separation, pursuit, wander, obstacle };
+  return {
+    id,
+    slotId,
+    side,
+    role,
+    vehicle,
+    arrive,
+    separation,
+    pursuit,
+    wander,
+    obstacle,
+    bodyYaw: 0,
+  };
+}
+
+const BODY_YAW_MAX_TURN_RAD_PER_SEC = 5.2;
+const BODY_YAW_SPEED_BLEND = 0.22;
+
+function wrapAnglePi(a: number): number {
+  let x = a;
+  while (x > Math.PI) x -= Math.PI * 2;
+  while (x < -Math.PI) x += Math.PI * 2;
+  return x;
+}
+
+/**
+ * Integrate smoothed facing: velocity when moving; movement intent (arrive target) when slow.
+ * Convention matches historical snapshot: `Math.atan2(vx, vz)` for motion-driven facing.
+ */
+export function stepAgentBodyYaw(binding: AgentBinding, dt: number): void {
+  const vx = binding.vehicle.velocity.x;
+  const vz = binding.vehicle.velocity.z;
+  const speed = Math.hypot(vx, vz);
+  const px = binding.vehicle.position.x;
+  const pz = binding.vehicle.position.z;
+  const tx = binding.arrive.target.x;
+  const tz = binding.arrive.target.z;
+  const desiredMotion = Math.atan2(vx, vz);
+  const desiredIntent = Math.atan2(tx - px, tz - pz);
+  const w = Math.min(1, speed / BODY_YAW_SPEED_BLEND);
+  let desired = desiredIntent;
+  if (w > 0.02) {
+    desired = desiredMotion * w + desiredIntent * (1 - w);
+  }
+  const delta = wrapAnglePi(desired - binding.bodyYaw);
+  const maxStep = BODY_YAW_MAX_TURN_RAD_PER_SEC * dt;
+  binding.bodyYaw += Math.max(-maxStep, Math.min(maxStep, delta));
+  binding.bodyYaw = wrapAnglePi(binding.bodyYaw);
 }
 
 export function setArriveTarget(binding: AgentBinding, x: number, z: number, mode: AgentMode) {
@@ -75,10 +127,14 @@ export function setArriveTarget(binding: AgentBinding, x: number, z: number, mod
 
 /**
  * Steering weights by phase and possession context.
+ * Neighbor radius / bounding radius: `@/match/tacticalSpacingTuning` (aligned with test2d repulsion).
  *
  * KEY RULE: when the team HAS the ball, players must NEVER pursue it.
  * They follow their off-ball decision target (arrive) and maintain spread
  * (separation). Only the defending team pursues the ball.
+ *
+ * ZONE AWARENESS: defenders respect their tactical zone — zagueiros don't chase
+ * the ball into midfield, laterais don't abandon their wing.
  */
 export function applySteeringForPhase(
   binding: AgentBinding,
@@ -87,6 +143,8 @@ export function applySteeringForPhase(
   mode: AgentMode,
   distToBall: number,
   teamHasBall: boolean,
+  ballX?: number,
+  playerX?: number,
 ) {
   binding.pursuit.evader = ballVehicle;
   binding.obstacle.obstacles = others;
@@ -100,27 +158,53 @@ export function applySteeringForPhase(
     return;
   }
 
-  binding.obstacle.weight = 0.32;
+  binding.obstacle.weight = 0.15;
 
   // Guarda-redes: sem perseguição à bola através do campo — só chega com arrive ao alvo seguro.
   if (binding.role === 'gk' || binding.slotId === 'gol') {
     binding.pursuit.weight = 0;
     binding.wander.weight = 0;
-    binding.arrive.weight = mode === 'reforming' ? 1.35 : 1;
-    binding.separation.weight = mode === 'reforming' ? 0.4 : 0.95;
+    // `mode` já exclui `reforming` (ramo acima devolve cedo).
+    binding.arrive.weight = 1;
+    binding.separation.weight = 0.95;
     return;
   }
 
-  // ATTACKING: team with ball — ZERO pursuit, strong separation to maintain shape
+  // ATTACKING: team with ball — arrive domina; separação mais leve evita “dança”
+  // com o alvo tático quando vários apoios convergem ao mesmo corredor.
   if (teamHasBall) {
     binding.pursuit.weight = 0;
-    binding.wander.weight = 0.02;
+    binding.wander.weight = 0;
     binding.arrive.weight = 1;
-    binding.separation.weight = 1.0;
+    binding.separation.weight = 0.74;
     return;
   }
 
   const forwardLine = binding.slotId === 'ata' || binding.slotId === 'pe' || binding.slotId === 'pd';
+  const defensiveLine = binding.slotId === 'zag1' || binding.slotId === 'zag2' || binding.slotId === 'zag3';
+  const lateralLine = binding.slotId === 'le' || binding.slotId === 'ld';
+
+  // ZONE AWARENESS: zagueiros só pressionam no terço defensivo (< 38 no eixo 0–100).
+  // Se a bola está no meio-campo ou ataque adversário, mantêm posição via arrive.
+  const ballInDefensiveThird = ballX !== undefined && ballX < 38;
+  const ballInMidfield = ballX !== undefined && ballX >= 38 && ballX < 68;
+  const playerInDefensiveThird = playerX !== undefined && playerX < 38;
+
+  // Zagueiros: só perseguem bola no terço defensivo OU se já estão perto dela.
+  if (defensiveLine && !ballInDefensiveThird && distToBall > 15) {
+    binding.pursuit.weight = 0;
+    binding.arrive.weight = 1.2;
+    binding.separation.weight = 0.92;
+    return;
+  }
+
+  // Laterais: reduzem pursuit quando a bola está longe da sua ala (evita abandono de posição).
+  if (lateralLine && ballInMidfield && distToBall > 20) {
+    binding.pursuit.weight = 0.08;
+    binding.arrive.weight = 1.1;
+    binding.separation.weight = 0.88;
+    return;
+  }
 
   // DEFENDING: pressing — rampa por distância para não pôr meia-equipa em pursuit forte à volta da bola.
   if (mode === 'pressing' && distToBall < 22) {
@@ -136,28 +220,26 @@ export function applySteeringForPhase(
         aw = Math.min(0.95, aw + 0.1);
       }
       binding.pursuit.weight = pw;
-      binding.wander.weight = 0;
       binding.arrive.weight = aw;
       binding.separation.weight = forwardLine ? 1.06 : 1.02;
       return;
     }
   }
 
-  if (distToBall < 13) {
-    binding.pursuit.weight = forwardLine ? 0.11 : 0.28;
-  } else if (distToBall < 22) {
-    binding.pursuit.weight = forwardLine ? 0.05 : 0.12;
+  // Defensive without pressing: only the closest non-forward player gets light pursuit.
+  // Everyone else holds tactical position via arrive — no random chasing.
+  if (distToBall < 10 && !forwardLine) {
+    binding.pursuit.weight = 0.18;
   } else {
     binding.pursuit.weight = 0;
   }
 
-  binding.wander.weight = distToBall > 26 ? 0.05 : 0.025;
-  binding.arrive.weight = forwardLine ? 1.06 : 1;
+  binding.arrive.weight = 1;
   binding.separation.weight = forwardLine ? 0.94 : 0.88;
 }
 
 export function rebuildNeighbors(team: AgentBinding[]) {
-  const R = 7.5;
+  const R = YUKA_SEPARATION_NEIGHBOR_RADIUS_M;
   const R2 = R * R;
   for (const a of team) {
     a.vehicle.neighbors.length = 0;

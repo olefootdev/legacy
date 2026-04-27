@@ -20,7 +20,7 @@ import type {
  *   Amarelos:  3–5 total      (CARD_PROB_HOME 3.5% + CARD_PROB_AWAY 2.5% → ~3.4)
  *   Vermelhos: ~0.15/jogo     (6% de cada cartão → ~1 a cada 7 jogos)
  *   Lesões:    ~0.3/jogo      (fatigue >72, 6%)
- *   Penáltis:  ~0.5/jogo      (DANGEROUS_FOUL × PENALTY_FROM_FOUL × ticks att)
+ *   Penalties:  ~0.625/jogo   (DANGEROUS_FOUL × PENALTY_FROM_FOUL × ticks att - aumentado 25%)
  */
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
@@ -34,9 +34,11 @@ export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> =
   miss_far: 0.22,
 };
 
-/** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate. */
-export const DANGEROUS_FOUL_PROB = 0.045;
-/** Dado falta perigosa, prob. de penálti (senão livre / bola parada só narrativa). */
+/** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
+ *  Aumentado 60% para mais emoção: 4.5% → 5.625% → 7.2% */
+export const DANGEROUS_FOUL_PROB = 0.072;
+/** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
+ *  Aumentado 60% para mais pênaltis: 7.5% → 9.375% → 15% */
 export const PENALTY_FROM_FOUL_PROB = 0.15;
 
 /** Duração do cartão do marcador na partida rápida; `autoDismissMs` do golo = isto + narrativa (só timer, sem 2.º overlay). */
@@ -116,6 +118,96 @@ export function rollHomeShotLogicalOutcome(
   return pickByWeights(rng, weights);
 }
 
+/**
+ * Subtype do `save` — resolve o que o goleiro faz ao pegar o remate.
+ * - hold: defende e segura (posse do defensor).
+ * - parry_forward: espalma pra frente, vira rebote (atacante pode chegar na sobra).
+ * - parry_corner: espalma pro lado/linha de fundo → escanteio.
+ * - error_goal: falha do GR → vira gol adversário (modulado por gkSkill01).
+ *
+ * gkSkill01 0..1 vem do nível do goleiro adversário (quanto maior, menos falha).
+ */
+export type GkSaveSubtype = 'hold' | 'parry_forward' | 'parry_corner' | 'error_goal';
+
+/**
+ * Roubada de bola (tackle) — quando o time ativa marcação / desarme no portador adversário.
+ * Saídas:
+ *   - `clean`: rouba sem falta. Inicia contra-ataque.
+ *   - `foul_soft`: rouba com falta "forte" (dividida pesada). Árbitro para o jogo; adversário reinicia na bola parada.
+ *   - `foul_hard`: falta grave / agressiva. Reinício para o adversário + risco de cartão e de lesão no atacante.
+ *   - `miss`: erro crítico — o marcador passa batido. Atacante segue com a bola.
+ *
+ * Modulado por `tacticalMentality` (time agressivo erra menos mas comete mais faltas duras)
+ * e `fairPlay01` (jogador com fairPlay alto comete menos agressivas).
+ */
+export type TackleOutcome = 'clean' | 'foul_soft' | 'foul_hard' | 'miss';
+
+export function rollTackleOutcome(
+  rng: number,
+  opts: {
+    tacticalMentality?: number;
+    fairPlay01?: number;
+    /** Desarme do defensor (0-100). Sobe pClean, desce pMiss. */
+    defenderMarcacao?: number;
+    /** Velocidade do defensor (0-100). Pequeno bônus em pClean. */
+    defenderVelocidade?: number;
+    /** Drible do carregador (0-100). Contrapeso: sobe pMiss. */
+    attackerDrible?: number;
+  } = {},
+): TackleOutcome {
+  const mentality = Math.min(100, Math.max(0, opts.tacticalMentality ?? 50));
+  const fairPlay = Math.min(1, Math.max(0, opts.fairPlay01 ?? 0.7));
+  const aggressive = (mentality - 50) / 100; // -0.5..+0.5
+
+  // Vantagem líquida do duelo desarme vs drible (−1..+1).
+  const defSkill01 = (((opts.defenderMarcacao ?? 50) + (opts.defenderVelocidade ?? 50) * 0.45) / 145);
+  const atkSkill01 = (opts.attackerDrible ?? 50) / 100;
+  const edge = Math.max(-1, Math.min(1, defSkill01 - atkSkill01));
+
+  let pClean = 0.46 + aggressive * 0.08 + edge * 0.18;
+  let pMiss = 0.25 - aggressive * 0.10 - edge * 0.12;
+  let pFoulHard = 0.10 + aggressive * 0.12 - (fairPlay - 0.5) * 0.08 - Math.max(0, edge) * 0.04;
+  let pFoulSoft = 1 - pClean - pMiss - pFoulHard;
+
+  pClean = Math.max(0.2, Math.min(0.72, pClean));
+  pMiss = Math.max(0.06, Math.min(0.42, pMiss));
+  pFoulHard = Math.max(0.03, Math.min(0.28, pFoulHard));
+  pFoulSoft = Math.max(0.06, 1 - pClean - pMiss - pFoulHard);
+
+  let t = Math.max(0, Math.min(1, rng));
+  if (t < pClean) return 'clean';
+  t -= pClean;
+  if (t < pMiss) return 'miss';
+  t -= pMiss;
+  if (t < pFoulSoft) return 'foul_soft';
+  void pFoulHard;
+  return 'foul_hard';
+}
+
+export function rollGkSaveSubtype(rng: number, gkSkill01: number, gkFatigue01 = 0): GkSaveSubtype {
+  const skill = Math.min(1, Math.max(0, gkSkill01));
+  const fat = Math.min(1, Math.max(0, gkFatigue01));
+  // Fadiga > 70% amplifica erros até +15%.
+  const fatiguePenalty = Math.max(0, fat - 0.7) * 0.5;
+  // Falha do goleiro: cai muito se skill alto. Base ~7% em GK fraco, ~1.2% em GK elite.
+  const pError = Math.min(0.32, Math.max(0.012, 0.07 * (1 - skill)) + fatiguePenalty);
+  // Segurou: base 48% + bônus skill até 78%, levemente reduzido por fadiga.
+  const pHold = Math.max(0.3, 0.48 + skill * 0.3 - fat * 0.08);
+  // Espalma pro escanteio: 12–17% (pouco sensível a skill).
+  const pParryCorner = 0.17 - skill * 0.05;
+  // Resto = espalma pra frente (rebote).
+  const pParryForward = Math.max(0, 1 - pError - pHold - pParryCorner);
+
+  let t = Math.max(0, Math.min(1, rng));
+  if (t < pError) return 'error_goal';
+  t -= pError;
+  if (t < pHold) return 'hold';
+  t -= pHold;
+  if (t < pParryCorner) return 'parry_corner';
+  void pParryForward;
+  return 'parry_forward';
+}
+
 /** Mapeia desfecho lógico → `shot_result.outcome` no log causal. */
 export function causalOutcomeFromHomeShot(out: HomeShotLogicalOutcome): 'goal' | 'post_in' | 'save' | 'block' | 'wide' | 'post_out' | 'miss' {
   if (out === 'miss_far') return 'miss';
@@ -123,8 +215,8 @@ export function causalOutcomeFromHomeShot(out: HomeShotLogicalOutcome): 'goal' |
 }
 
 /**
- * Após remate da casa (não golo): posse e bola coerentes com saída de baliza / reinício.
- * Golo: posse para quem sofreu (saída); bola ao centro; fase celebração (overlay trata pausa).
+ * Após remate da casa (não gol): posse e bola coerentes com saída de baliza / reinício.
+ * Gol: posse para quem sofreu (saída); bola ao centro; fase celebração (overlay trata pausa).
  */
 export function patchAfterHomeShot(
   outcome: HomeShotLogicalOutcome,
@@ -183,7 +275,7 @@ export function createGoalOverlay(input: {
   return {
     overlay: {
       kind: 'goal',
-      title: 'Golo!',
+      title: 'Gol!',
       lines: [input.narrativeLine],
       startedAtMs: input.nowMs,
       autoDismissMs: GOAL_SCORER_OVERLAY_MS + GOAL_NARRATIVE_OVERLAY_MS,
@@ -231,7 +323,7 @@ export function penaltyNarrativeLine(
     case 'post_in':
       return `A trave ajuda: a bola picota por dentro — golo para ${takerName}!`;
     case 'save':
-      return `${keeperHint} voa e defende o penálti de ${takerName}!`;
+  return `${keeperHint} voa e defende o penalty de ${takerName}!`;
     case 'post_out':
       return `${takerName} acerta na trave; a bola salta para fora.`;
     case 'miss_wide':
@@ -239,7 +331,7 @@ export function penaltyNarrativeLine(
     case 'miss_far':
       return `${takerName} envia por cima da grelha.`;
     default:
-      return 'Penálti resolvido.';
+  return 'Penalty resolvido.';
   }
 }
 
@@ -252,7 +344,7 @@ export function penaltyOverlayForStage(
   autoMs: number,
   extraLine?: string,
 ): SpiritOverlay {
-  const baseTitle = 'Penálti';
+  const baseTitle = 'Penalty';
   switch (stage) {
     case 'banner':
       return {

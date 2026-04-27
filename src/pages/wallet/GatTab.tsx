@@ -1,15 +1,18 @@
 import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Gem, Info, History } from 'lucide-react';
+import { Gem, Info, History, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 
 import { gatSummary } from '@/wallet/gat';
-import { GAT_CATEGORY_LABELS, GAT_DURATION_MONTHS, GAT_TIER_SUMMARY_PT } from '@/wallet/constants';
+import { GAT_CATEGORY_LABELS, GAT_DURATION_MONTHS } from '@/wallet/constants';
 import { queryLedger } from '@/wallet/ledger';
 import { createInitialWalletState } from '@/wallet/initial';
 import type { GatPosition } from '@/wallet/types';
 import { WalletShell } from './WalletShell';
+import { formatBroDisplay } from '@/systems/economy';
+import { olexpSummary } from '@/wallet/olexp';
+import { referralSummary } from '@/wallet/referral';
 
 function formatLedgerDate(iso: string): string {
   try {
@@ -73,6 +76,8 @@ export function GatTab() {
 
   const summary = gatSummary(wallet);
   const rewardEntries = queryLedger(wallet, { type: 'GAT_REWARD' });
+  const olexp = olexpSummary({ ...wallet, spotBroCents: finance.broCents });
+  const ref = referralSummary(wallet);
 
   const sortedPositions = useMemo(() => {
     return [...wallet.gatPositions].sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
@@ -84,33 +89,39 @@ export function GatTab() {
 
   const programFootnote = `Recompensa diária em EXP (dias corridos) sobre a base em BRO, por faixa; +1% da base em EXP por nível de referral (até 3). Duração ${GAT_DURATION_MONTHS} meses por posição. Não é saldo em custódia.`;
 
+  const heroStats = [
+    { label: 'Saldo BRO', value: formatBroDisplay(finance.broCents).primary, highlight: true },
+    { label: 'Em OLEXP', value: `${(olexp.totalPrincipal / 100).toFixed(2)}`, highlight: false },
+    { label: 'GAT EXP', value: `${summary.totalAccrued.toLocaleString('pt-BR')}`, highlight: false },
+    { label: 'Indicações', value: `${ref.directReferrals}`, highlight: false },
+  ];
+
   return (
     <WalletShell
       account="gat"
       title="Game Assets Treasury"
-      subtitle={`Treasury em EXP: taxa diária por faixa sobre a base em BRO + referral GAT 1%/nível (EXP). ${GAT_TIER_SUMMARY_PT} Crédito automático no teu saldo EXP.`}
+      subtitle="Game Assets Treasury (GAT) é o motor de crescimento em EXP dentro da OLEFOOT. Ao alocar teus ativos em BRO, você ativa uma taxa diária progressiva conforme a faixa: de 1 a 100 BRO rende 1,5% ao dia, de 101 a 300 rende 2,5%, de 301 a 999 rende 3,5% e acima de 1000 BRO atinge 5,5% ao dia, tudo convertido automaticamente em EXP. Além disso, o sistema de referral GAT distribui 1% por nível, até três níveis, também em EXP."
+      heroStats={heroStats}
     >
-      {/* Mesmo design system da Conta OLEXP — cartão principal glass */}
+      {/* Box principal EXP — identidade BVB com diagonal accent */}
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-transparent p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl md:p-8"
+        className="group relative overflow-hidden bg-black border-2 border-amber-400/30 p-6 md:p-8"
       >
-        <div
-          className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl"
-          aria-hidden
-        />
-        <div className="relative space-y-6">
+        {/* Diagonal accent amarelo */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 transform rotate-12 translate-x-12 -translate-y-12 group-hover:bg-amber-400/15 transition-colors" aria-hidden />
+
+        <div className="relative z-10 space-y-6">
           <div>
             <p className="mb-1 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">
               EXP (rewards GAT acumulados)
             </p>
             <p className="font-display text-3xl font-black tracking-tight text-amber-100 md:text-4xl">{rewardPrimary}</p>
             <p className="mt-2 max-w-sm text-[10px] leading-relaxed text-gray-500">{programFootnote}</p>
-            <p className="mt-2 max-w-lg text-[10px] leading-relaxed text-gray-600">{GAT_TIER_SUMMARY_PT}</p>
           </div>
-          <div className="grid grid-cols-1 gap-4 border-t border-white/10 pt-2 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/5 bg-black/30 px-4 py-3">
+          <div className="grid grid-cols-1 gap-4 border-t-2 border-white/10 pt-4 sm:grid-cols-2">
+            <div className="bg-black/40 border-2 border-white/10 px-4 py-3">
               <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">Base elegível</p>
               <p className="font-display text-xl font-bold text-white">
                 {(summary.totalBase / 100).toLocaleString('pt-BR', {
@@ -121,7 +132,7 @@ export function GatTab() {
               </p>
               <p className="mt-1 text-[10px] text-gray-600">Soma do BRO que gerou posições GAT</p>
             </div>
-            <div className="flex flex-col justify-center rounded-2xl border border-white/5 bg-black/30 px-4 py-3">
+            <div className="flex flex-col justify-center bg-black/40 border-2 border-white/10 px-4 py-3">
               <p className="text-[10px] leading-relaxed text-gray-500">
                 <span className="font-bold text-white">{summary.positionCount}</span> posição(ões) ·{' '}
                 <span className="font-bold text-emerald-300/90">{summary.activeCount}</span> ativa(s). Compras elegíveis
@@ -131,6 +142,47 @@ export function GatTab() {
           </div>
         </div>
       </motion.div>
+
+      {/* Grelha 2x2 de ações principais — padrão BVB SPOT */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <motion.button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('gat-positions');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+          className="group relative overflow-hidden bg-black border-2 border-white/10 p-5 sm:p-6 text-left transition-all hover:border-neon-yellow/60 hover:border-amber-400/40 hover:bg-amber-500/5"
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-neon-yellow/5 transform rotate-12 translate-x-8 -translate-y-8 group-hover:bg-neon-yellow/10 transition-colors" aria-hidden />
+          <div className="relative z-10">
+            <Gem className="w-6 h-6 sm:w-7 sm:h-7 text-neon-yellow mb-4" strokeWidth={2.5} />
+            <div className="font-display font-black text-base sm:text-lg uppercase tracking-wide text-white mb-1">
+              Posições
+            </div>
+            <div className="text-[11px] text-gray-500 uppercase tracking-wider">{summary.activeCount} ativa(s)</div>
+          </div>
+        </motion.button>
+
+        <motion.button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('gat-history');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+          className="group relative overflow-hidden bg-black border-2 border-white/10 p-5 sm:p-6 text-left transition-all hover:border-neon-yellow/60 hover:border-cyan-400/30 hover:bg-cyan-500/5"
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-neon-yellow/5 transform rotate-12 translate-x-8 -translate-y-8 group-hover:bg-neon-yellow/10 transition-colors" aria-hidden />
+          <div className="relative z-10">
+            <History className="w-6 h-6 sm:w-7 sm:h-7 text-neon-yellow mb-4" strokeWidth={2.5} />
+            <div className="font-display font-black text-base sm:text-lg uppercase tracking-wide text-white mb-1">
+              Histórico
+            </div>
+            <div className="text-[11px] text-gray-500 uppercase tracking-wider">Rewards GAT</div>
+          </div>
+        </motion.button>
+      </div>
 
       {/* Aviso — peso visual alinhado ao bloco KYC / glass OLEXP */}
       <motion.div
@@ -224,57 +276,6 @@ export function GatTab() {
           </div>
         )}
       </div>
-
-      {/* Extrato recente — espelho do bloco OLEXP */}
-      <motion.div
-        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md md:p-6"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wider text-white">
-            <History className="h-4 w-4 text-gray-400" />
-            Histórico de rewards
-          </h3>
-          <button
-            type="button"
-            onClick={() => navigate('/wallet/extract')}
-            className="font-display text-[10px] font-bold uppercase tracking-wider text-neon-yellow hover:underline"
-          >
-            Ver extrato
-          </button>
-        </div>
-        {rewardEntries.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum reward GAT registrado.</p>
-        ) : (
-          <div className="space-y-2">
-            {rewardEntries
-              .slice(-15)
-              .reverse()
-              .map((e) => (
-                <div
-                  key={e.id}
-                  className="flex items-center justify-between rounded-xl border border-white/5 bg-black/25 p-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`shrink-0 rounded px-2 py-0.5 text-[9px] font-bold ${ledgerBadgeColor(e.type)}`}
-                    >
-                      {e.type}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-white">{e.source}</div>
-                      <div className="text-[10px] text-gray-500">{formatLedgerDate(e.createdAt)}</div>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-sm font-bold text-neon-green">
-                    {e.currency === 'EXP' ? fmtExp(e.amount) : fmtBroCents(e.amount)}
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
-      </motion.div>
     </WalletShell>
   );
 }

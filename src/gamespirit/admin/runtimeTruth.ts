@@ -23,13 +23,13 @@ export const GAME_SPIRIT_WIRING_TABLE: WiringRow[] = [
     id: 'tick_quick',
     nome: 'gameSpiritTick + runMatchMinute',
     status: 'motor',
-    fact: 'Partida rápida (quick) chama isto a cada minuto; posse, bola, narrativa curta, golos/penáltis autoritativos.',
+  fact: 'Partida rápida (quick) chama isto a cada minuto; posse, bola, narrativa curta, golos/penalties autoritativos.',
   },
   {
     id: 'state_machine',
     nome: 'spiritStateMachine',
     status: 'motor',
-    fact: 'Probabilidades de remate, faltas perigosas, penálti derivado de falta, overlays de tempo (golo, vermelho).',
+  fact: 'Probabilidades de remate, faltas perigosas, penalty derivado de falta, overlays de tempo (golo, vermelho).',
   },
   {
     id: 'templates_quick',
@@ -62,10 +62,10 @@ export const GAME_SPIRIT_WIRING_TABLE: WiringRow[] = [
     fact: 'Forças setoriais por papel (gk/def/mid/attack) e matriz de duelos; pré-jogo sem vencedor.',
   },
   {
-    id: 'gemini_player',
-    nome: 'interpretPlayerPromptGameSpirit (Gemini)',
+    id: 'openai_create_player',
+    nome: 'interpretPlayerPromptGameSpirit (OpenAI no servidor)',
     status: 'motor',
-    fact: 'Só Create Player no Admin; precisa GEMINI_API_KEY no build Vite.',
+    fact: 'Create Player no Admin: POST /api/admin/player-from-prompt; OPENAI_API_KEY em server/.env e VITE_OLEFOOT_API_URL a apontar para o olefoot-server.',
   },
   {
     id: 'admin_kb',
@@ -82,8 +82,8 @@ export const GAME_SPIRIT_WIRING_TABLE: WiringRow[] = [
   {
     id: 'openai',
     nome: 'OpenAI (Admin → olefoot-server)',
-    status: 'codigo_sem_ui',
-    fact: 'POST /api/game-spirit/teach no servidor (Hono); OPENAI_API_KEY no server/.env. O motor de jogo não consome isto ainda — só estrutura o teu ensino para a biblioteca local.',
+    status: 'motor',
+    fact: 'POST /api/game-spirit/teach e POST /api/gamespirit; OPENAI_API_KEY só em server/.env. Com `VITE_OLEFOOT_GAMESPIRIT_PHASE1=true`, o TacticalSimLoop agenda pedidos nos gatilhos receção/portador, enviesa prethinking e empurra narração curta para `simState.events` — nunca no loop por frame.',
   },
 ];
 
@@ -101,18 +101,6 @@ export function statusLabelPt(s: WiringStatus): string {
       return 'Não ligado / precisa config';
     default:
       return s;
-  }
-}
-
-export function clientGeminiConfigured(): boolean {
-  try {
-    const k =
-      typeof process !== 'undefined' && process.env && typeof process.env.GEMINI_API_KEY === 'string'
-        ? process.env.GEMINI_API_KEY
-        : '';
-    return k.trim().length > 0;
-  } catch {
-    return false;
   }
 }
 

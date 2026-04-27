@@ -5,6 +5,11 @@
  */
 
 import { createPlayer } from '@/entities/player';
+import {
+  contractFieldsAdminLifetime,
+  contractFieldsForManagerProspectTier,
+  type ManagerProspectContractGames,
+} from '@/playerContracts/playerContracts';
 import type {
   PlayerArchetype,
   PlayerAttributes,
@@ -15,7 +20,7 @@ import type {
   PlayerStrongFoot,
 } from '@/entities/types';
 
-const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'] as const;
+import { requestAdminPlayerFromPrompt } from '@/gamespirit/admin/gameSpiritTeachClient';
 
 function clamp(n: number, min: number, max: number): number {
   if (!Number.isFinite(n)) return min;
@@ -59,7 +64,7 @@ export interface PlayerPromptLockedContext {
   strongFoot?: PlayerStrongFoot;
   creatorType?: PlayerCreatorType;
   rarity?: PlayerRarity;
-  /** Resumo humano para o Gemini (coleção / fornecimento); não vai para o JSON do modelo. */
+  /** Resumo humano para o modelo (coleção / fornecimento); não vai para o JSON do modelo. */
   collectionSummary?: string;
 }
 
@@ -109,6 +114,64 @@ function normalizeStrongFoot(raw: string | undefined): PlayerStrongFoot | undefi
   return undefined;
 }
 
+/** Aceita número ou string numérica vinda do JSON do modelo. */
+function toAttrNumber(v: unknown): number | undefined {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const n = Number(v.trim().replace(',', '.'));
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+/** Mapeia chaves comuns em PT/EN (modelos variam) → PlayerAttributes. */
+const ATTR_ALIASES: Record<string, keyof PlayerAttributes> = {
+  passe: 'passe',
+  pass: 'passe',
+  passing: 'passe',
+  marcacao: 'marcacao',
+  marking: 'marcacao',
+  defesa: 'marcacao',
+  defense: 'marcacao',
+  velocidade: 'velocidade',
+  pace: 'velocidade',
+  speed: 'velocidade',
+  drible: 'drible',
+  dribble: 'drible',
+  dribbling: 'drible',
+  finalizacao: 'finalizacao',
+  finalização: 'finalizacao',
+  finishing: 'finalizacao',
+  shot: 'finalizacao',
+  shooting: 'finalizacao',
+  fisico: 'fisico',
+  físico: 'fisico',
+  physical: 'fisico',
+  tatico: 'tatico',
+  tático: 'tatico',
+  tactical: 'tatico',
+  mentalidade: 'mentalidade',
+  mentality: 'mentalidade',
+  confianca: 'confianca',
+  confiança: 'confianca',
+  confidence: 'confianca',
+  fairplay: 'fairPlay',
+  fair_play: 'fairPlay',
+  fairPlay: 'fairPlay',
+  marcação: 'marcacao',
+};
+
+function normalizeAttrsSource(parsed: Record<string, unknown>): Record<string, unknown> | null {
+  const a =
+    parsed.attrs ??
+    parsed.attributes ??
+    parsed.atributos ??
+    parsed.stats ??
+    parsed.ficha;
+  if (a && typeof a === 'object' && !Array.isArray(a)) return a as Record<string, unknown>;
+  return null;
+}
+
 function clampAttrs(partial: Partial<PlayerAttributes> | undefined): Partial<PlayerAttributes> {
   if (!partial || typeof partial !== 'object') return {};
   const keys: (keyof PlayerAttributes)[] = [
@@ -125,10 +188,60 @@ function clampAttrs(partial: Partial<PlayerAttributes> | undefined): Partial<Pla
   ];
   const out: Partial<PlayerAttributes> = {};
   for (const k of keys) {
-    const v = partial[k];
-    if (typeof v === 'number') out[k] = clamp(Math.round(v), 40, 99);
+    const v = toAttrNumber(partial[k]);
+    if (v !== undefined) out[k] = clamp(Math.round(v), 40, 99);
   }
   return out;
+}
+
+function resolveAttrColumnKey(rawKey: string): keyof PlayerAttributes | undefined {
+  const nk = rawKey.trim().toLowerCase().replace(/\s+/g, '_');
+  return ATTR_ALIASES[nk] ?? ATTR_ALIASES[rawKey.trim()];
+}
+
+/** Extrai attrs do JSON do modelo, incluindo chaves alternativas e strings numéricas. */
+function extractAttrsFromParsed(parsed: Record<string, unknown>): Partial<PlayerAttributes> {
+  const src = normalizeAttrsSource(parsed);
+  const bag: Record<string, unknown> = {};
+  const rows = src ?? parsed;
+  for (const [rawKey, val] of Object.entries(rows)) {
+    if (src == null) {
+      const skip = new Set([
+        'archetype',
+        'behavior',
+        'quemSouEu',
+        'bio',
+        'num',
+        'fatigue',
+        'injuryRisk',
+        'evolutionXp',
+        'outForMatches',
+        'spiritNotes',
+        'name',
+        'pos',
+        'country',
+        'strongFoot',
+        'creatorType',
+        'rarity',
+        'attrs',
+        'attributes',
+        'atributos',
+        'stats',
+        'ficha',
+      ]);
+      if (skip.has(rawKey)) continue;
+    }
+    const key = resolveAttrColumnKey(rawKey);
+    if (key) bag[key] = val;
+  }
+  return clampAttrs(bag as Partial<PlayerAttributes>);
+}
+
+/** Modelos por vezes embrulham o JSON num objeto extra. */
+function unwrapModelJson(parsed: Record<string, unknown>): Record<string, unknown> {
+  const inner = parsed.player ?? parsed.jogador ?? parsed.result ?? parsed.data ?? parsed.payload;
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) return inner as Record<string, unknown>;
+  return parsed;
 }
 
 function stripJsonFence(text: string): string {
@@ -138,33 +251,6 @@ function stripJsonFence(text: string): string {
   }
   return t.trim();
 }
-
-function getGeminiKey(): string {
-  const k =
-    typeof process !== 'undefined' && process.env && typeof process.env.GEMINI_API_KEY === 'string'
-      ? process.env.GEMINI_API_KEY
-      : '';
-  return (k || '').trim();
-}
-
-/** JSON que o Gemini deve devolver (nome/posição já fixados no cliente). */
-const SYSTEM_INSTRUCTION = `És o GameSpirit de OLEFOOT. O administrador JÁ definiu nome, posição, país, tipo de jogador, raridade e pé bom noutro ecrã.
-Recebes um prompt sobre atributos, estilo de jogo e personalidade (“quem sou eu”) e devolves APENAS um objeto JSON válido (sem markdown), com esta forma:
-
-{
-  "archetype": string opcional — um de: profissional, novo_talento, lenda, meme, ai_plus,
-  "behavior": string opcional — um de: equilibrado, ofensivo, defensivo, criativo,
-  "attrs": objeto opcional com números 40–99: passe, marcacao, velocidade, drible, finalizacao, fisico, tatico, mentalidade, confianca, fairPlay,
-  "quemSouEu": string opcional — texto em primeira pessoa ou biografia curta do jogador,
-  "num": number opcional 1–99 só se o prompt mencionar número da camisa,
-  "fatigue": number opcional 0–100,
-  "injuryRisk": number opcional 0–100,
-  "evolutionXp": number opcional ≥0,
-  "outForMatches": number opcional ≥0,
-  "spiritNotes": string opcional — 1–2 frases em português sobre o que inferiste
-}
-
-NÃO incluas "name", "pos", "country", "strongFoot", "creatorType" nem "rarity" no JSON — isso já está fixo. Omite chaves que não consigas inferir.`;
 
 export type InterpretPlayerPromptResult =
   | { ok: true; draft: GameSpiritPlayerDraft }
@@ -192,7 +278,7 @@ function mergeLockedWithParsed(
     bio: quem || undefined,
     archetype: typeof parsed.archetype === 'string' ? parsed.archetype : undefined,
     behavior: typeof parsed.behavior === 'string' ? parsed.behavior : undefined,
-    attrs: clampAttrs(parsed.attrs as Partial<PlayerAttributes>),
+    attrs: extractAttrsFromParsed(parsed),
     fatigue: typeof parsed.fatigue === 'number' ? clamp(parsed.fatigue, 0, 100) : undefined,
     injuryRisk: typeof parsed.injuryRisk === 'number' ? clamp(parsed.injuryRisk, 0, 100) : undefined,
     evolutionXp: typeof parsed.evolutionXp === 'number' ? Math.max(0, Math.round(parsed.evolutionXp)) : undefined,
@@ -203,21 +289,32 @@ function mergeLockedWithParsed(
 }
 
 /**
+ * Converte o JSON devolvido pelo olefoot-server (OpenAI) em `GameSpiritPlayerDraft`.
+ */
+export function parsePlayerPromptAssistantJson(
+  locked: PlayerPromptLockedContext,
+  assistantText: string,
+): InterpretPlayerPromptResult {
+  try {
+    const parsed = JSON.parse(stripJsonFence(assistantText)) as Record<string, unknown>;
+    const draft = mergeLockedWithParsed(locked, unwrapModelJson(parsed));
+    return { ok: true, draft };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : 'JSON do modelo inválido.',
+    };
+  }
+}
+
+/**
  * Interpreta o prompt (atributos / estilo / quem sou eu) dados o contexto fixo.
+ * Usa POST `/api/admin/player-from-prompt` no olefoot-server (OPENAI_API_KEY em `server/.env`).
  */
 export async function interpretPlayerPromptGameSpirit(
   userPrompt: string,
   locked: PlayerPromptLockedContext,
 ): Promise<InterpretPlayerPromptResult> {
-  const apiKey = getGeminiKey();
-  if (!apiKey) {
-    return {
-      ok: false,
-      error:
-        'GEMINI_API_KEY não configurada. Adiciona a chave ao ficheiro .env na raiz do projecto (variável GEMINI_API_KEY) e reinicia o servidor Vite.',
-    };
-  }
-
   const trimmed = userPrompt.trim();
   if (!trimmed) {
     return { ok: false, error: 'Escreve um prompt com atributos, estilo de jogo e quem sou eu.' };
@@ -230,46 +327,36 @@ export async function interpretPlayerPromptGameSpirit(
     return { ok: false, error: 'Posição em falta (passo 2).' };
   }
 
-  const colLine = locked.collectionSummary?.trim()
-    ? `- Coleção / fornecimento: ${locked.collectionSummary.trim()}\n`
-    : '';
-  const ctxBlock = `Dados já fixados pelo admin (não alteres):\n- Nome: ${locked.name.trim()}\n- Posição: ${normalizePos(locked.pos)}\n- País: ${locked.country?.trim() || '—'}\n- Tipo de jogador: ${locked.creatorType ?? '—'}\n- Raridade: ${locked.rarity ?? '—'}\n- Pé bom: ${locked.strongFoot ?? '—'}\n${colLine}`;
+  const server = await requestAdminPlayerFromPrompt({
+    userPrompt: trimmed,
+    locked: {
+      name: locked.name.trim(),
+      pos: locked.pos.trim(),
+      country: locked.country?.trim(),
+      strongFoot: locked.strongFoot,
+      creatorType: locked.creatorType,
+      rarity: locked.rarity,
+      collectionSummary: locked.collectionSummary?.trim(),
+    },
+  });
 
-  try {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey });
-
-    let lastErr: string | undefined;
-    for (const model of MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: `${ctxBlock}\nPrompt do administrador (atributos, estilo, quem sou eu):\n---\n${trimmed}\n---\nResponde só com o JSON definido nas instruções.`,
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-            responseMimeType: 'application/json',
-            temperature: 0.35,
-          },
-        });
-        const text = response.text;
-        if (!text) {
-          lastErr = 'Resposta vazia do modelo.';
-          continue;
-        }
-        const parsed = JSON.parse(stripJsonFence(text)) as Record<string, unknown>;
-        const draft = mergeLockedWithParsed(locked, parsed);
-        return { ok: true, draft };
-      } catch (e) {
-        lastErr = e instanceof Error ? e.message : String(e);
-      }
-    }
-    return { ok: false, error: lastErr ?? 'Falha ao contactar o modelo.' };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  if (server.ok === false) {
+    const hint =
+      server.status === 503
+        ? ' Configura OPENAI_API_KEY em server/.env e corre npm run dev:server na raiz do projecto.'
+        : '';
+    return { ok: false, error: `${server.error}${hint}` };
   }
+
+  return parsePlayerPromptAssistantJson(locked, server.rawAssistant);
 }
 
 export { normalizeStrongFoot };
+
+/** Contrato ao gravar jogador pelo Admin (vitalício só para catálogo/admin). */
+export type AdminPlayerContractChoice =
+  | { lifetime: true }
+  | { matches: ManagerProspectContractGames };
 
 export function buildPlayerEntityFromDraft(
   draft: GameSpiritPlayerDraft,
@@ -281,8 +368,17 @@ export function buildPlayerEntityFromDraft(
     listedOnMarket?: boolean;
     collectionId?: string;
     cardSupply?: number;
+    /** Omitir = 70 jogos (amistosos + oficiais). */
+    adminContract?: AdminPlayerContractChoice;
   },
 ): PlayerEntity {
+  const ac = opts.adminContract;
+  const contract =
+    ac && 'lifetime' in ac && (ac as { lifetime?: boolean }).lifetime === true
+      ? contractFieldsAdminLifetime()
+      : contractFieldsForManagerProspectTier(
+          ((ac && 'matches' in ac ? ac.matches : 70) as ManagerProspectContractGames),
+        );
   return createPlayer({
     id: opts.id,
     num: opts.num,
@@ -305,5 +401,6 @@ export function buildPlayerEntityFromDraft(
     cardSupply: opts.cardSupply,
     bio: draft.bio,
     listedOnMarket: opts.listedOnMarket,
+    ...contract,
   });
 }

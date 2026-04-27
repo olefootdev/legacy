@@ -54,6 +54,12 @@ export type DecisionPhase =
   | 'executing'
   | 'recovering';
 
+/**
+ * “Cabeça” ao tomar a bola — dura a janela de deliberação / scan antes da decisão:
+ * rápido (1s), moderado (2s), lento (3s).
+ */
+export type ReceptionThinkMode = 'fast' | 'moderate' | 'slow';
+
 // ---------------------------------------------------------------------------
 // Context reading — what the player perceives
 // ---------------------------------------------------------------------------
@@ -86,7 +92,24 @@ export interface SpaceReading {
   canConductLateral: boolean;
 }
 
+/** Corridor behind / around the ball along the attack axis (local “sensor” abstraction). */
+export interface LaneCorridorRead {
+  /** Approximate lateral room (m) for a support corridor near the ball. */
+  widthM: number;
+  /** Depth (m) along attack before the first opponent compresses the lane. */
+  depthM: number;
+}
+
+/** Soft visibility / confidence 0–1 (no hard robot cone — smooth falloff). */
+export interface LocalTargetConfidence {
+  ball01: number;
+  /** Set when a carrier exists; else 0. */
+  carrier01: number;
+}
+
 export type TeamPhase = 'buildup' | 'progression' | 'attack' | 'transition_def' | 'transition_att';
+
+export type { TeamCollectiveState } from './teamCollectiveState';
 
 export type FieldZone = 'own_box' | 'def_third' | 'def_mid' | 'mid' | 'att_mid' | 'att_third' | 'opp_box';
 
@@ -120,6 +143,14 @@ export interface ContextReading {
   threatTrend: 'rising' | 'stable' | 'falling';
   pressureBand: PressureBand;
   spatialBand: SpatialBand;
+  /** Support lane near the ball — width / depth for `getSupportOptions`-style logic. */
+  laneBehindBall: LaneCorridorRead;
+  /** Normalized wing room 0–1 from lateral scan. */
+  wingSpace01: { left: number; right: number };
+  /** How “readable” ball and carrier are from self position (soft cone + distance). */
+  localTargetConfidence: LocalTargetConfidence;
+  /** Geometrically inside opponent penalty area (IFAB 16.5 m), regardless of `fieldZone` label. */
+  inOppPenaltyArea: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -334,13 +365,28 @@ export interface PrethinkingState {
   ballX: number;
   ballZ: number;
   pressureIntensity: PressureReading['intensity'];
+  /** Distância ao adversário mais próximo no momento do snapshot (invalidação se mudar muito). */
+  nearestOppDist: number;
   /** 0–1: força do compromisso com a intenção (ajuste fino na execução). */
   conviction01: number;
+  /** Evita intenção “travada” ao mudar o papel no lance (ex.: passa a ser alvo de passe). */
+  snapIsReceiver: boolean;
+  snapIsCarrier: boolean;
+  /** Ameaça percebida no snapshot — jogada que acelera ou esfria força re-leitura. */
+  threatLevel01: number;
 }
 
 // ---------------------------------------------------------------------------
 // Decision context (superset of old BrainContext)
 // ---------------------------------------------------------------------------
+
+/** Resposta recente da Fase 1 (OpenAI via servidor); TTL em tempo real. */
+export interface GameSpiritPhase1Hint {
+  decision: string;
+  narration: string;
+  confidence: number;
+  expiresAtMs: number;
+}
 
 export interface DecisionContext {
   self: AgentSnapshot;
@@ -383,6 +429,10 @@ export interface DecisionContext {
   carrierJustChanged: boolean;
   /** Which lateral sector the ball is in */
   ballSector: BallSector;
+  /** SMARTFIELD: gameplay-oriented subzone id for the player's position (e.g. 'creation_center', 'box_left'). */
+  sfSubzone?: string | null;
+  /** SMARTFIELD: gameplay-oriented subzone id for the ball position. */
+  sfBallSubzone?: string | null;
   /** 0–1: current goal threat for the attacking team */
   threatLevel: number;
   /** Is the threat rising, stable, or falling? */
@@ -418,4 +468,23 @@ export interface DecisionContext {
    * GameSpirit: `spiritMomentumClamp01` do live match (0–1). Só enviesa tendências de intenção, não decide ações.
    */
   gameSpiritHomeMomentum01?: number | null;
+  /** Optional physics and match helpers provided by the sim loop (non-critical) */
+  ballMass?: number;
+  ballDrag?: number;
+  ballControlDifficulty?: number;
+  /** 'fast'|'normal'|'slow' - influencer da velocidade de decisão */
+  matchRhythm?: 'fast' | 'normal' | 'slow';
+  /** global timeScale applied for highlights/slow-motion (1 = real-time) */
+  timeScale?: number;
+  /**
+   * GameSpirit Fase 1: sugestão assíncrona (decisão + confiança) preenchida pelo `TacticalSimLoop` quando disponível.
+   */
+  gameSpiritPhase1Hint?: GameSpiritPhase1Hint | null;
+  /**
+   * Shared collective state for the player's team: phase, line positions, compactness, support.
+   * Derived once per team per tick in the sim loop — all agents on the same team share the same instance.
+   */
+  collective?: import('./teamCollectiveState').TeamCollectiveState | null;
+  /** Voice command bias — quando há comando ativo no portador, enviesa scores do macroTilt. */
+  voiceBias?: import('@/voiceCommand/commandQueue').CommandDecisionBias;
 }

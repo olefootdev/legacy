@@ -1,10 +1,57 @@
+/**
+ * Estilos de jogo canónicos (treino + partida). Referências de futebol real são guia de desenho, não simulação 1:1.
+ * IDs legados (`tiki_positional`, …) migram em `canonicalizePresetId` / `migrateTacticalStyle`.
+ */
 export type PlayingStylePresetId =
   | 'balanced'
-  | 'tiki_positional'
-  | 'vertical_transition'
-  | 'wide_crossing'
-  | 'low_block_counter'
-  | 'direct_long_ball';
+  | 'POSSE_CONTROLADA'
+  | 'PRESSAO_ALTA'
+  | 'TRANSICAO_RAPIDA'
+  | 'BLOCO_BAIXO'
+  | 'JOGO_PELAS_LATERAIS'
+  | 'JOGO_DIRETO'
+  | 'CRIATIVO_LIVRE';
+
+/** Saves e integrações antigas → preset atual. */
+export const LEGACY_PLAYING_STYLE_PRESET_MAP: Record<string, PlayingStylePresetId> = {
+  tiki_positional: 'POSSE_CONTROLADA',
+  vertical_transition: 'TRANSICAO_RAPIDA',
+  wide_crossing: 'JOGO_PELAS_LATERAIS',
+  low_block_counter: 'BLOCO_BAIXO',
+  direct_long_ball: 'JOGO_DIRETO',
+};
+
+/** Rótulos PT para UI, OLE Labs e cadastro. */
+export const PRESET_LABEL_PT: Record<PlayingStylePresetId, string> = {
+  balanced: 'Equilíbrio',
+  POSSE_CONTROLADA: 'Jogadas pelo Meio',
+  PRESSAO_ALTA: 'Pressão Alta',
+  TRANSICAO_RAPIDA: 'Transição Rápida',
+  BLOCO_BAIXO: 'Contra-Ataque',
+  JOGO_PELAS_LATERAIS: 'Jogada Lateral',
+  JOGO_DIRETO: 'Jogo Vertical',
+  CRIATIVO_LIVRE: 'Jogo Criativo',
+};
+
+/** Descrição curta — tooltip / popover no card da tática. */
+export const PRESET_DESCRIPTION_PT: Record<PlayingStylePresetId, string> = {
+  balanced:
+    'Equilíbrio entre ataque e defesa. Não prioriza lados do campo — reage ao jogo sem extremos. Ideal pra manager ainda descobrindo o seu estilo.',
+  POSSE_CONTROLADA:
+    'Construção pelo meio com toques curtos. Paciência na saída de bola e prioridade aos médios. Exige jogadores técnicos no centro.',
+  PRESSAO_ALTA:
+    'Recupera a bola no campo adversário. Linha avançada, desgaste físico alto. Funciona melhor com plantel fresco e laterais velozes.',
+  TRANSICAO_RAPIDA:
+    'Poucos toques até a finalização. Ataca no erro do rival, verticalidade máxima. Pede pontas rápidos e um atacante frio.',
+  BLOCO_BAIXO:
+    'Linhas recuadas, compactação defensiva e contra-ataque fulminante. Defende primeiro, explora espaços nas costas do adversário.',
+  JOGO_PELAS_LATERAIS:
+    'Amplitude total, saídas pelos alas e cruzamentos na área. Pede laterais ofensivos e centroavante forte no jogo aéreo.',
+  JOGO_DIRETO:
+    'Bola longa para a frente, briga pela segunda bola. Menos posse, mais verticalidade. Depende de atacante pivô e meio-campo intenso.',
+  CRIATIVO_LIVRE:
+    'Menos rigidez posicional, mais improviso. Dá liberdade ao camisa 10 e aceita risco nas decisões. Brilha com jogadores de flair.',
+};
 
 /** Chaves dos eixos (pontos 0–100; soma = 100 no estado persistido). */
 export const STYLE_AXIS_KEYS = [
@@ -58,21 +105,37 @@ export const STYLE_PRESETS: Record<PlayingStylePresetId, TeamTacticalStyle> = {
     riskTaking: 10,
     velocidade: 10,
   },
-  tiki_positional: {
-    presetId: 'tiki_positional',
-    buildUp: 5,
-    width: 11,
-    verticality: 6,
-    chanceCreation: 8,
+  /** Posse, meio protagonista, menos bola longa; ritmo mais paciente. */
+  POSSE_CONTROLADA: {
+    presetId: 'POSSE_CONTROLADA',
+    buildUp: 4,
+    width: 12,
+    verticality: 5,
+    chanceCreation: 11,
     shootingProfile: 7,
-    defensiveBlock: 10,
-    pressing: 14,
-    compactness: 17,
-    riskTaking: 8,
-    velocidade: 14,
+    defensiveBlock: 9,
+    pressing: 12,
+    compactness: 20,
+    riskTaking: 7,
+    velocidade: 13,
   },
-  vertical_transition: {
-    presetId: 'vertical_transition',
+  /** Perdeu → pressiona; bloco curto; linha mais alta (risco nas costas). */
+  PRESSAO_ALTA: {
+    presetId: 'PRESSAO_ALTA',
+    buildUp: 7,
+    width: 9,
+    verticality: 12,
+    chanceCreation: 7,
+    shootingProfile: 6,
+    defensiveBlock: 5,
+    pressing: 18,
+    compactness: 15,
+    riskTaking: 11,
+    velocidade: 12,
+  },
+  /** Recuperou → verticalidade e velocidade até finalizar. */
+  TRANSICAO_RAPIDA: {
+    presetId: 'TRANSICAO_RAPIDA',
     buildUp: 8,
     width: 10,
     verticality: 15,
@@ -84,21 +147,9 @@ export const STYLE_PRESETS: Record<PlayingStylePresetId, TeamTacticalStyle> = {
     riskTaking: 11,
     velocidade: 11,
   },
-  wide_crossing: {
-    presetId: 'wide_crossing',
-    buildUp: 6,
-    width: 17,
-    verticality: 10,
-    chanceCreation: 18,
-    shootingProfile: 8,
-    defensiveBlock: 8,
-    pressing: 10,
-    compactness: 7,
-    riskTaking: 8,
-    velocidade: 8,
-  },
-  low_block_counter: {
-    presetId: 'low_block_counter',
+  /** Bloco recuado, marcação, saída rápida no erro adversário. */
+  BLOCO_BAIXO: {
+    presetId: 'BLOCO_BAIXO',
     buildUp: 6,
     width: 5,
     verticality: 12,
@@ -110,8 +161,23 @@ export const STYLE_PRESETS: Record<PlayingStylePresetId, TeamTacticalStyle> = {
     riskTaking: 10,
     velocidade: 9,
   },
-  direct_long_ball: {
-    presetId: 'direct_long_ball',
+  /** Largura, alas e cruzamentos; ST em remate. */
+  JOGO_PELAS_LATERAIS: {
+    presetId: 'JOGO_PELAS_LATERAIS',
+    buildUp: 6,
+    width: 17,
+    verticality: 10,
+    chanceCreation: 18,
+    shootingProfile: 8,
+    defensiveBlock: 8,
+    pressing: 10,
+    compactness: 7,
+    riskTaking: 8,
+    velocidade: 8,
+  },
+  /** Ligação rápida defesa–ataque, menos construção longa. */
+  JOGO_DIRETO: {
+    presetId: 'JOGO_DIRETO',
     buildUp: 15,
     width: 8,
     verticality: 14,
@@ -123,7 +189,29 @@ export const STYLE_PRESETS: Record<PlayingStylePresetId, TeamTacticalStyle> = {
     riskTaking: 11,
     velocidade: 14,
   },
+  /** Mais criação e risco, menos compactação defensiva “engessada”. */
+  CRIATIVO_LIVRE: {
+    presetId: 'CRIATIVO_LIVRE',
+    buildUp: 8,
+    width: 10,
+    verticality: 10,
+    chanceCreation: 14,
+    shootingProfile: 8,
+    defensiveBlock: 9,
+    pressing: 9,
+    compactness: 8,
+    riskTaking: 12,
+    velocidade: 12,
+  },
 };
+
+export function canonicalizePresetId(raw: unknown): PlayingStylePresetId {
+  if (typeof raw !== 'string' || !raw) return 'balanced';
+  const migrated = LEGACY_PLAYING_STYLE_PRESET_MAP[raw];
+  if (migrated) return migrated;
+  if (raw in STYLE_PRESETS) return raw as PlayingStylePresetId;
+  return 'balanced';
+}
 
 export type StyleActionId =
   | 'pass_safe'
@@ -141,17 +229,6 @@ export interface StyleDefenseIntent {
   markBias: 'central' | 'wings' | 'balanced';
   funnel: 'inside' | 'outside' | 'balanced';
 }
-
-export const STYLE_ACTION_MATRIX: Record<StyleActionId, number> = {
-  pass_safe: 0,
-  pass_progressive: 0,
-  pass_long: 0,
-  cross: 0,
-  dribble: 0,
-  shoot: 0,
-  clearance: 0,
-  hold: 0,
-};
 
 export const STYLE_DEFENSE_MATRIX = {
   lineScale: 16,
@@ -193,8 +270,8 @@ export function redistributeStylePoints(style: TeamTacticalStyle, key: StyleAxis
   const next: TeamTacticalStyle = { ...cur, [key]: v };
 
   if (targetOther <= 0) {
-    for (const k of others) (next as Record<string, number>)[k] = 0;
-    (next as Record<string, number>)[key] = 100;
+    for (const k of others) next[k] = 0;
+    next[key] = 100;
     return next;
   }
 
@@ -204,7 +281,7 @@ export function redistributeStylePoints(style: TeamTacticalStyle, key: StyleAxis
     for (const k of others) {
       let add = each + (rem > 0 ? 1 : 0);
       if (rem > 0) rem--;
-      (next as Record<string, number>)[k] = add;
+      next[k] = add;
     }
     return next;
   }
@@ -215,10 +292,10 @@ export function redistributeStylePoints(style: TeamTacticalStyle, key: StyleAxis
     const prev = Math.max(0, Math.round(Number(cur[k]) || 0));
     const share = Math.round((prev / oldOtherSum) * targetOther);
     const assign = Math.min(targetOther - allocated, Math.max(0, share));
-    (next as Record<string, number>)[k] = assign;
+    next[k] = assign;
     allocated += assign;
   }
-  (next as Record<string, number>)[others[others.length - 1]!] = targetOther - allocated;
+  next[others[others.length - 1]!] = targetOther - allocated;
   return next;
 }
 
@@ -237,7 +314,7 @@ export function migrateTacticalStyle(raw: Partial<TeamTacticalStyle> | undefined
   const max = finite.length ? Math.max(0, ...finite) : 0;
   const sumFinite = finite.reduce((acc, n) => acc + (n > 0 ? n : 0), 0);
 
-  const presetId = (o.presetId as PlayingStylePresetId | undefined) ?? balanced.presetId;
+  const presetId = canonicalizePresetId(o.presetId);
 
   // Legado: valores por eixo em 0..1 (tipicamente soma < 25)
   if (max <= 1.05 && sumFinite < 28) {

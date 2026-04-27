@@ -7,13 +7,17 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "verify-anthropic": "tsx scripts/verify-anthropic.ts",
+    "generate-narratives": "tsx scripts/generate-narrative-catalog.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@hono/node-server": "^1.13.8",
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^16.4.7",
-    "hono": "^4.7.6"
+    "hono": "^4.7.6",
+    "openai": "^6.34.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -9,7 +9,7 @@
  * — amplifica o desvio em relação a 1 (ganhos e penalizações individuais).
  * Não se aplica a fatores de equipa inteira (+10% golo, −10% sofrido, etc.).
  *
- * **Golo sofrido — política B (defeito):** linha + meio + ataque −10% (×0,90);
+ * **Gol sofrido — política B (defeito):** linha + meio + ataque −10% (×0,90);
  * guarda-redes recebe **apenas** ×0,85 (−15%) neste evento, **sem** acumular o −10% global
  * (substitui o fator de equipa para o GR naquele golo).
  *
@@ -26,14 +26,14 @@ export const CAPTAIN_INDIVIDUAL_GAIN = 1.5;
 /** Máx. contagens do mesmo tipo de anti-spam por minuto e por jogador (ex.: desarmes). */
 export const ANTI_SPAM_MAX_PER_MINUTE = 3;
 
-/** Golo a favor da equipa: todos em campo +10%. */
+/** Gol a favor da equipe: todos em campo +10%. */
 export const TEAM_GOAL_SCORED = 1.1;
 
-/** Golo sofrido: campo (não-GR) −10%. */
+/** Gol sofrido: campo (não-GR) −10%. */
 export const TEAM_GOAL_CONCEDED_FIELD = 0.9;
 
 /**
- * Golo sofrido: GR — política B — −15% (×0,85), **em substituição** do −10% de equipa
+ * Gol sofrido: GR — política B — −15% (×0,85), **em substituição** do −10% de equipe
  * para esse evento (não multiplicar 0,9×0,85).
  */
 export const TEAM_GOAL_CONCEDED_GK_POLICY_B = 0.85;

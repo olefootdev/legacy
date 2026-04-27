@@ -1,3 +1,4 @@
+import { OUTSIDE_WEST_PENALTY_MIN_X_M } from '@/match/fieldZones';
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import type { MatchTruthPhase } from '@/bridge/matchTruthSchema';
 import type { PossessionSide } from '@/engine/types';
@@ -27,19 +28,56 @@ function presetThrowInHome(ballX: number, ballZ: number): PresetMap {
   return m;
 }
 
-function presetCornerHome(): PresetMap {
+/**
+ * Escanteio — atacante (HOME ataca, corner em x≈FIELD_LENGTH).
+ * Aglomera ~70% do time dentro da grande área do adversário (x ≥ 88.5) com 3-4
+ * bem na pequena área (x ≥ 99.5) prontos pro cabeceio. Cobrador na bandeirinha,
+ * 1 segurança no meio-campo pra contra-ataque, GR na própria meta.
+ */
+function presetCornerHome(ballZ: number): PresetMap {
   const m = new Map<string, { x: number; z: number }>();
-  m.set('gol', { x: 5, z: FIELD_WIDTH / 2 });
-  m.set('zag1', { x: 12, z: 18 });
-  m.set('zag2', { x: 12, z: FIELD_WIDTH - 18 });
-  m.set('le', { x: 20, z: 10 });
-  m.set('ld', { x: 20, z: FIELD_WIDTH - 10 });
-  m.set('vol', { x: 26, z: FIELD_WIDTH / 2 });
-  m.set('mc1', { x: 34, z: 22 });
-  m.set('mc2', { x: 34, z: FIELD_WIDTH - 22 });
-  m.set('pe', { x: 88, z: 8 });
-  m.set('pd', { x: 88, z: FIELD_WIDTH - 8 });
-  m.set('ata', { x: 96, z: FIELD_WIDTH / 2 });
+  const nearSide = ballZ < FIELD_WIDTH / 2;
+  // Cobrador o mais perto possível da bandeirinha.
+  const takerZ = nearSide ? 2 : FIELD_WIDTH - 2;
+  const GOAL_Z = FIELD_WIDTH / 2;
+
+  m.set('gol', { x: 5, z: GOAL_Z });                   // GR protege contra-ataque
+  m.set('zag2', { x: 48, z: GOAL_Z });                  // Segurança no meio-campo
+  m.set('le', { x: FIELD_LENGTH - 1.5, z: takerZ });    // Cobrador do canto
+  m.set('vol', { x: 82, z: GOAL_Z });                   // Rebote na entrada da área
+  // Grande área + borda da pequena área (8 jogadores dentro da grande área):
+  m.set('ld', { x: 91, z: nearSide ? 16 : FIELD_WIDTH - 16 }); // Curta alternativa
+  m.set('mc1', { x: 94, z: GOAL_Z - 10 });
+  m.set('mc2', { x: 94, z: GOAL_Z + 10 });
+  m.set('zag1', { x: 99, z: GOAL_Z });                  // Referência zagueiro-surpresa
+  m.set('pe', { x: 101, z: GOAL_Z - 6 });               // Primeiro pau
+  m.set('pd', { x: 101, z: GOAL_Z + 6 });               // Segundo pau
+  m.set('ata', { x: 103, z: GOAL_Z });                  // Na pequena área, referência central
+  return m;
+}
+
+/**
+ * Escanteio — defensor (HOME defende, corner do AWAY entra do lado x≈0).
+ * Todos na própria grande área (x ≤ 16.5) marcando; GR na linha, 2 homens na pequena
+ * área protegendo traves, 1 segurança adiantado pra sair em contra-ataque.
+ */
+function presetCornerDefendingHome(ballZ: number): PresetMap {
+  const m = new Map<string, { x: number; z: number }>();
+  const nearSide = ballZ < FIELD_WIDTH / 2;
+  const GOAL_Z = FIELD_WIDTH / 2;
+
+  m.set('gol', { x: 1.2, z: GOAL_Z });                  // Na linha
+  m.set('zag1', { x: 5.5, z: GOAL_Z - 3 });             // Primeiro pau
+  m.set('zag2', { x: 5.5, z: GOAL_Z + 3 });             // Segundo pau
+  // Marcação homem-a-homem + zona na grande área (8 dentro):
+  m.set('le', { x: 6, z: nearSide ? 4 : FIELD_WIDTH - 4 }); // Primeiro poste curto
+  m.set('ld', { x: 9, z: GOAL_Z - 10 });
+  m.set('mc1', { x: 9, z: GOAL_Z + 10 });
+  m.set('vol', { x: 12, z: GOAL_Z });                   // Miolo da área
+  m.set('mc2', { x: 14, z: GOAL_Z - 8 });
+  m.set('pe', { x: 14, z: GOAL_Z + 8 });
+  m.set('pd', { x: 17, z: GOAL_Z });                    // Entrada da área (rebote)
+  m.set('ata', { x: 42, z: GOAL_Z });                   // Lançado pra contra-ataque
   return m;
 }
 
@@ -52,13 +90,15 @@ function presetGoalKickHome(): PresetMap {
   const gkx = 3.5;
   const gkz = FIELD_WIDTH / 2;
   m.set('gol', { x: gkx, z: gkz });
-  // Short triangle around GK channel
-  m.set('zag1', { x: 12, z: FIELD_WIDTH * 0.28 });
-  m.set('zag2', { x: 12, z: FIELD_WIDTH * 0.72 });
-  m.set('vol', { x: 16, z: gkz });
-  // Lateral escape hatches
-  m.set('le', { x: 20, z: 9 });
-  m.set('ld', { x: 20, z: FIELD_WIDTH - 9 });
+  /** Jogadores de campo fora da grande área (GR repõe com organização). */
+  const out = OUTSIDE_WEST_PENALTY_MIN_X_M;
+  // Segunda linha encostada à linha da grande área (triângulo curto fora da área)
+  m.set('zag1', { x: out + 0.35, z: FIELD_WIDTH * 0.28 });
+  m.set('zag2', { x: out + 0.35, z: FIELD_WIDTH * 0.72 });
+  m.set('vol', { x: out + 4.5, z: gkz });
+  // Laterais um pouco mais à frente
+  m.set('le', { x: out + 7.5, z: 9 });
+  m.set('ld', { x: out + 7.5, z: FIELD_WIDTH - 9 });
   // Midfield split for second line
   m.set('mc1', { x: 32, z: FIELD_WIDTH * 0.38 });
   m.set('mc2', { x: 32, z: FIELD_WIDTH * 0.62 });
@@ -78,7 +118,7 @@ export function applyFormationPreset(
     case 'throw_in':
       return presetThrowInHome(ballX, ballZ);
     case 'corner_kick':
-      return presetCornerHome();
+      return presetCornerHome(ballZ);
     case 'goal_kick':
       return presetGoalKickHome();
     default:
@@ -144,6 +184,29 @@ export function buildSetPieceTeamMaps(
   restartingPresetHomeCoords: PresetMap,
 ): { home: PresetMap; away: PresetMap } {
   const minD = minDistForPhase(phase);
+
+  // Escanteio: defensor tem preset PRÓPRIO (aglomera na sua área), não é espelho do atacante.
+  if (phase === 'corner_kick') {
+    const attackerAsHome = clonePreset(restartingPresetHomeCoords);
+    const defenderAsHome = presetCornerDefendingHome(ballZ);
+
+    if (restartingSide === 'home') {
+      // HOME ataca (x alto), AWAY defende a própria área (x alto = mirror do defendingHome)
+      const away = enforceMinDistFromBall(
+        mirrorPresetToAway(defenderAsHome),
+        ballX,
+        ballZ,
+        minD,
+      );
+      return { home: attackerAsHome, away };
+    }
+
+    // AWAY ataca (x baixo = mirror do atacante), HOME defende a própria área (x baixo)
+    const away = mirrorPresetToAway(attackerAsHome);
+    const home = enforceMinDistFromBall(defenderAsHome, ballX, ballZ, minD);
+    return { home, away };
+  }
+
   const mirrorAway = mirrorPresetToAway(restartingPresetHomeCoords);
 
   if (restartingSide === 'home') {
