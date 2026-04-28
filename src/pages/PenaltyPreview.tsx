@@ -105,7 +105,7 @@ export function PenaltyPreview() {
     setPhase('reveal');
     const guess = Math.floor(Math.random() * 9) as SlotIndex;
     setKeeperSlot(guess);
-    window.setTimeout(() => setPhase('result'), 1800);
+    window.setTimeout(() => setPhase('result'), 1000);
   }
 
   function nextShooter() {
@@ -407,8 +407,17 @@ export function PenaltyPreview() {
 
         {/* Bola Legacy Tech — asset oficial */}
         {phase === 'pick' && <LegacyBall cx={400} cy={475} size={36} />}
+        {phase === 'reveal' && pickRect && (
+          <LegacyBallFlying
+            from={{ x: 400, y: 475 }}
+            to={{ x: pickRect.cx, y: pickRect.cy }}
+            startSize={36}
+            endSize={26}
+            durationMs={650}
+          />
+        )}
         {phase === 'result' && pickRect && (
-          <LegacyBall cx={pickRect.cx} cy={pickRect.cy} size={32} spin />
+          <LegacyBall cx={pickRect.cx} cy={pickRect.cy} size={26} />
         )}
 
         {/* Selo de fase */}
@@ -518,36 +527,116 @@ export function PenaltyPreview() {
   );
 }
 
-// Bola Legacy Tech — asset oficial preto/dourado
-function LegacyBall({
-  cx,
-  cy,
-  size,
-  spin = false,
-}: {
-  cx: number;
-  cy: number;
-  size: number;
-  spin?: boolean;
-}) {
+// Bola Legacy Tech — estática (na marca ou no slot)
+function LegacyBall({ cx, cy, size }: { cx: number; cy: number; size: number }) {
   const half = size / 2;
   return (
     <g>
-      {/* Sombra projetada no chão (elipse achatada) */}
-      <ellipse cx={cx} cy={cy + half * 0.85} rx={half * 0.85} ry={half * 0.18} fill="#000" opacity="0.25" />
-      {/* Asset oficial */}
+      <ellipse
+        cx={cx}
+        cy={cy + half * 0.85}
+        rx={half * 0.85}
+        ry={half * 0.18}
+        fill="#000"
+        opacity="0.25"
+      />
       <image
         href="/assets/legacy-ball.png"
         x={cx - half}
         y={cy - half}
         width={size}
         height={size}
-        style={{
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
-          transformOrigin: `${cx}px ${cy}px`,
-          animation: spin ? 'olefoot-ball-tumble 0.6s ease-out' : undefined,
-        }}
+        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}
       />
+    </g>
+  );
+}
+
+// Bola voando — interpolação rAF com arco parabólico + rotação + shrink (perspectiva)
+function LegacyBallFlying({
+  from,
+  to,
+  startSize,
+  endSize,
+  durationMs,
+}: {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  startSize: number;
+  endSize: number;
+  durationMs: number;
+}) {
+  const [t, setT] = useState(0); // 0..1
+  const rafRef = useRef<number | null>(null);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    function tick(now: number) {
+      if (startRef.current == null) startRef.current = now;
+      const elapsed = now - startRef.current;
+      const next = Math.min(1, elapsed / durationMs);
+      setT(next);
+      if (next < 1) rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      startRef.current = null;
+    };
+  }, [durationMs, from.x, from.y, to.x, to.y]);
+
+  // Easing ease-out cubic — bola desacelera ao chegar
+  const eased = 1 - Math.pow(1 - t, 3);
+
+  // Trajetória parabólica: ponto de controle acima do midpoint
+  // Quanto mais distante o slot, maior o pico
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  const peakOffset = Math.min(110, 60 + dist * 0.15);
+  const midX = (from.x + to.x) / 2;
+  const peakY = Math.min(from.y, to.y) - peakOffset;
+
+  // Bezier quadrática: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
+  const u = 1 - eased;
+  const x = u * u * from.x + 2 * u * eased * midX + eased * eased * to.x;
+  const y = u * u * from.y + 2 * u * eased * peakY + eased * eased * to.y;
+
+  // Tamanho shrinks linearmente (efeito perspectiva — bola "afasta" indo pro fundo do gol)
+  const size = startSize + (endSize - startSize) * eased;
+  const half = size / 2;
+
+  // Rotação: 540° na trajetória (1.5 voltas)
+  const rotation = eased * 540;
+
+  // Sombra no chão é projetada no Y do ponto de partida (chão), não na bola
+  // Vai diminuindo conforme a bola sobe (separa visualmente)
+  const heightAboveGround = from.y - y;
+  const shadowOpacity = Math.max(0.05, 0.25 - heightAboveGround / 600);
+  const shadowScale = 1 - heightAboveGround / 400;
+
+  return (
+    <g>
+      {/* Sombra dinâmica no chão */}
+      <ellipse
+        cx={x}
+        cy={from.y + half * 0.5}
+        rx={half * 0.85 * shadowScale}
+        ry={half * 0.18 * shadowScale}
+        fill="#000"
+        opacity={shadowOpacity}
+      />
+      {/* Bola */}
+      <g transform={`translate(${x}, ${y}) rotate(${rotation})`}>
+        <image
+          href="/assets/legacy-ball.png"
+          x={-half}
+          y={-half}
+          width={size}
+          height={size}
+          style={{
+            filter: `drop-shadow(0 ${2 + heightAboveGround / 30}px ${4 + heightAboveGround / 20}px rgba(0,0,0,0.4))`,
+          }}
+        />
+      </g>
     </g>
   );
 }
