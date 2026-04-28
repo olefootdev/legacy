@@ -7,6 +7,7 @@ import {
   Wallet,
   Target,
   Trophy,
+  Crown,
   User,
   Settings,
   Bell,
@@ -32,10 +33,20 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { AssistantWidget } from '@/components/AssistantWidget';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 
-const mainNavItems = [
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  path: string;
+  /** Item editorial — usa Moret italic neon-yellow + ícone amarelo
+   *  permanente (sem depender do estado active). */
+  accent?: boolean;
+};
+
+const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Users, label: 'CLUBE', path: '/clube' },
   { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
+  { icon: Crown, label: 'MEMORÁVEIS', path: '/legend', accent: true },
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
@@ -154,18 +165,46 @@ export function Layout({ children }: { children: ReactNode }) {
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
           {mainNavItems.map((item) => {
             const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isAccent = item.accent === true;
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
                   'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
-                  isActive ? 'text-white' : 'text-gray-500 hover:text-white',
+                  isAccent
+                    ? 'text-neon-yellow'
+                    : isActive
+                      ? 'text-white'
+                      : 'text-gray-500 hover:text-white',
                 )}
               >
                 {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
-                <item.icon className={cn('w-5 h-5', isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors')} />
-                <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+                <item.icon
+                  className={cn(
+                    'w-5 h-5',
+                    isAccent
+                      ? 'text-neon-yellow'
+                      : isActive
+                        ? 'text-neon-yellow'
+                        : 'group-hover:text-neon-yellow transition-colors',
+                  )}
+                />
+                {isAccent ? (
+                  <span
+                    className="italic text-neon-yellow leading-none"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: '24px',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                  </span>
+                ) : (
+                  <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+                )}
               </Link>
             );
           })}
@@ -305,6 +344,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-4">
                 {mainNavItems.map((item) => {
                   const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  const isAccent = item.accent === true;
                   return (
                     <Link
                       key={item.path}
@@ -312,12 +352,39 @@ export function Layout({ children }: { children: ReactNode }) {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
                         'flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative',
-                        isActive ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5',
+                        isAccent
+                          ? 'text-neon-yellow hover:bg-neon-yellow/[0.06]'
+                          : isActive
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-500 hover:text-white hover:bg-white/5',
                       )}
                     >
                       {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r" />}
-                      <item.icon className={cn('w-5 h-5', isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors')} />
-                      <span className="font-display font-bold tracking-wider">{item.label}</span>
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5',
+                          isAccent
+                            ? 'text-neon-yellow'
+                            : isActive
+                              ? 'text-neon-yellow'
+                              : 'group-hover:text-neon-yellow transition-colors',
+                        )}
+                      />
+                      {isAccent ? (
+                        <span
+                          className="italic text-neon-yellow leading-none"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontWeight: 700,
+                            fontSize: '22px',
+                            letterSpacing: '-0.01em',
+                          }}
+                        >
+                          {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                        </span>
+                      ) : (
+                        <span className="font-display font-bold tracking-wider">{item.label}</span>
+                      )}
                     </Link>
                   );
                 })}
@@ -352,6 +419,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {mainNavItems.slice(0, 5).map((item) => {
             const isActive =
               location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isAccent = item.accent === true;
             return (
               <Link
                 key={item.path}
@@ -359,12 +427,14 @@ export function Layout({ children }: { children: ReactNode }) {
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'group relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2.5 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.94]',
-                  isActive
-                    ? 'text-neon-yellow bg-neon-yellow/[0.05]'
-                    : 'text-white/45 hover:text-white/85',
+                  isAccent
+                    ? 'text-neon-yellow'
+                    : isActive
+                      ? 'text-neon-yellow bg-neon-yellow/[0.05]'
+                      : 'text-white/45 hover:text-white/85',
                 )}
               >
-                {/* Rail amarelo top (assinatura Legacy Tech, mais visível) */}
+                {/* Rail amarelo top (assinatura Legacy Tech) */}
                 {isActive ? (
                   <span
                     aria-hidden
@@ -374,21 +444,37 @@ export function Layout({ children }: { children: ReactNode }) {
                 <item.icon
                   className={cn(
                     'h-5 w-5 shrink-0 transition-transform duration-200',
-                    isActive
+                    isAccent
                       ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
-                      : 'group-hover:scale-110',
+                      : isActive
+                        ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
+                        : 'group-hover:scale-110',
                   )}
-                  strokeWidth={isActive ? 2.5 : 2}
+                  strokeWidth={isActive || isAccent ? 2.5 : 2}
                 />
-                <span
-                  className="max-w-full truncate text-center font-display font-black uppercase leading-none"
-                  style={{
-                    fontSize: '10px',
-                    letterSpacing: '0.22em',
-                  }}
-                >
-                  {item.label}
-                </span>
+                {isAccent ? (
+                  <span
+                    className="max-w-full truncate text-center italic text-neon-yellow leading-none"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                  </span>
+                ) : (
+                  <span
+                    className="max-w-full truncate text-center font-display font-black uppercase leading-none"
+                    style={{
+                      fontSize: '10px',
+                      letterSpacing: '0.22em',
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}
