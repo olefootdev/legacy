@@ -33,6 +33,7 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { AssistantWidget } from '@/components/AssistantWidget';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
+import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
 
 type NavItem = {
   icon: typeof Home;
@@ -42,6 +43,11 @@ type NavItem = {
    *  permanente (sem depender do estado active). */
   accent?: boolean;
 };
+
+/** Bola do botão JOGAR — ícone-only (sem fundo) — versão de teste atual.
+ *  Asset: public/test-botao-01-01.svg. Fundo amarelo é tile CSS controlada
+ *  separadamente (BOTÃO e ÍCONE escalam de forma independente). */
+const JOGAR_BALL_SRC = '/test-botao-01-01.svg';
 
 const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
@@ -53,14 +59,30 @@ const mainNavItems: NavItem[] = [
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
 ];
 
-/** Bottom nav (mobile <lg) — 5 itens, ordem própria.
- *  MEMORÁVEIS fica só no menu lateral (drawer). MANAGER assume o slot central. */
-const bottomNavItems: NavItem[] = [
-  { icon: Home, label: 'HOME', path: '/' },
-  { icon: Users, label: 'CLUBE', path: '/clube' },
-  { icon: User, label: 'MANAGER', path: '/manager' },
-  { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
-  { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
+/** Bottom nav (mobile <lg) — 5 slots fixos.
+ *  Slot central é especial: JOGAR (BOLA) abre o MatchModeBottomSheet
+ *  em vez de navegar. Modelado como `kind: 'action'` (sem path).
+ *  Itens normais são `kind: 'link'` com `path` obrigatório. */
+type BottomNavLink = {
+  kind: 'link';
+  icon: typeof Home;
+  label: string;
+  path: string;
+};
+type BottomNavAction = {
+  kind: 'action';
+  label: string;
+  /** Identificador interno — Layout decide o handler pelo id. */
+  actionId: 'open-match-modes';
+};
+type BottomNavItem = BottomNavLink | BottomNavAction;
+
+const bottomNavItems: BottomNavItem[] = [
+  { kind: 'link', icon: Home, label: 'HOME', path: '/' },
+  { kind: 'link', icon: Users, label: 'CLUBE', path: '/clube' },
+  { kind: 'action', label: 'JOGAR', actionId: 'open-match-modes' },
+  { kind: 'link', icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
+  { kind: 'link', icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
 ];
 
 /** Item secundário — mora no rodapé do menu lateral, perto do SAIR.
@@ -72,6 +94,7 @@ const secondaryNavItems: NavItem[] = [
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [matchModeSheetOpen, setMatchModeSheetOpen] = useState(false);
   const oleBalance = useGameStore((s) => s.finance.ole);
   const totalManagers = useTotalManagers();
   const localManagerFirst = useGameStore((s) => s.userSettings?.managerProfile?.firstName?.trim() ?? '');
@@ -550,21 +573,61 @@ export function Layout({ children }: { children: ReactNode }) {
             className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-yellow/55 to-transparent"
           />
           {bottomNavItems.map((item) => {
+            // Slot ACTION (JOGAR) — tile amarela MAIOR que os vizinhos
+            // (h-14 vs h-12) com o ícone v2 da marca em h-7 w-7 idêntico
+            // aos demais ícones do nav. Tile e ícone controlados separados.
+            if (item.kind === 'action') {
+              return (
+                <button
+                  key={item.actionId}
+                  type="button"
+                  aria-label={item.label}
+                  aria-haspopup="dialog"
+                  aria-expanded={matchModeSheetOpen}
+                  onClick={() => setMatchModeSheetOpen(true)}
+                  className={cn(
+                    'group relative flex min-h-16 min-w-0 flex-1 items-center justify-center px-1 py-1.5 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.96]',
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'relative flex h-14 w-full items-center justify-center rounded-xl',
+                      // Fundo amarelo sofisticado — sem borda preta, gradiente
+                      // contido e halo sutil (low-opacity, raio menor).
+                      'bg-gradient-to-b from-[#FFEB3D] to-neon-yellow',
+                      'shadow-[0_2px_10px_rgba(253,225,0,0.18)]',
+                      'transition-all duration-200',
+                      'group-hover:shadow-[0_3px_14px_rgba(253,225,0,0.28)]',
+                      'group-hover:brightness-105 group-active:scale-[0.97]',
+                    )}
+                  >
+                    <img
+                      src={JOGAR_BALL_SRC}
+                      alt=""
+                      draggable={false}
+                      className="h-9 w-9 object-contain"
+                    />
+                  </span>
+                </button>
+              );
+            }
+
+            // Slot LINK normal
             const isActive =
               location.pathname === item.path || location.pathname.startsWith(item.path + '/');
-            const isAccent = item.accent === true;
+            const Icon = item.icon;
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'group relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2.5 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.94]',
-                  isAccent
-                    ? 'text-neon-yellow'
-                    : isActive
-                      ? 'text-neon-yellow bg-neon-yellow/[0.05]'
-                      : 'text-white/45 hover:text-white/85',
+                  'group relative flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center px-1 py-3 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.94]',
+                  isActive
+                    ? 'text-neon-yellow bg-neon-yellow/[0.05]'
+                    : 'text-white/55 hover:text-white/90',
                 )}
               >
                 {/* Rail amarelo top (assinatura Legacy Tech) */}
@@ -574,45 +637,26 @@ export function Layout({ children }: { children: ReactNode }) {
                     className="absolute left-1/2 top-0 h-[3px] w-10 -translate-x-1/2 bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.55)]"
                   />
                 ) : null}
-                <item.icon
+                <Icon
                   className={cn(
-                    'h-5 w-5 shrink-0 transition-transform duration-200',
-                    isAccent
-                      ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
-                      : isActive
-                        ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
-                        : 'group-hover:scale-110',
+                    'h-7 w-7 shrink-0 transition-transform duration-200',
+                    isActive
+                      ? 'drop-shadow-[0_0_8px_rgba(253,225,0,0.55)]'
+                      : 'group-hover:scale-110',
                   )}
-                  strokeWidth={isActive || isAccent ? 2.5 : 2}
+                  strokeWidth={isActive ? 2.5 : 2}
                 />
-                {isAccent ? (
-                  <span
-                    className="max-w-full truncate text-center italic text-neon-yellow leading-none"
-                    style={{
-                      fontFamily: 'var(--font-serif-hero)',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
-                  </span>
-                ) : (
-                  <span
-                    className="max-w-full truncate text-center font-display font-black uppercase leading-none"
-                    style={{
-                      fontSize: '10px',
-                      letterSpacing: '0.22em',
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                )}
               </Link>
             );
           })}
         </nav>
       )}
+
+      {/* Bottom sheet de modos de partida (acionado pelo slot JOGAR) */}
+      <MatchModeBottomSheet
+        open={matchModeSheetOpen}
+        onClose={() => setMatchModeSheetOpen(false)}
+      />
     </div>
   );
 }
