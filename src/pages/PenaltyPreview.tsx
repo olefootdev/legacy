@@ -744,13 +744,13 @@ export function PenaltyPreview() {
         <div className="flex gap-3">
           <button
             onClick={nextShooter}
-            className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
+            className="bg-black text-neon-yellow px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
           >
-            Próximo batedor
+            Próximo
           </button>
           <button
             onClick={fullReset}
-            className="bg-transparent border-2 border-black text-black px-6 py-3 font-display font-bold uppercase tracking-wider hover:bg-black hover:text-neon-yellow transition-all"
+            className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-black hover:text-neon-yellow transition-all"
           >
             Reiniciar
           </button>
