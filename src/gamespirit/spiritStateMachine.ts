@@ -35,11 +35,11 @@ export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> =
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
- *  Aumentado 60% para mais emoção: 4.5% → 5.625% → 7.2% */
-export const DANGEROUS_FOUL_PROB = 0.072;
+ *  Histórico: 4.5% → 5.625% → 7.2% → 12% (Sprint P1: +66% pra dar mais pênaltis no live). */
+export const DANGEROUS_FOUL_PROB = 0.12;
 /** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
- *  Aumentado 60% para mais pênaltis: 7.5% → 9.375% → 15% */
-export const PENALTY_FROM_FOUL_PROB = 0.15;
+ *  Histórico: 7.5% → 9.375% → 15% → 30% (Sprint P1: +100% pra emoção do novo PenaltyShoot). */
+export const PENALTY_FROM_FOUL_PROB = 0.3;
 
 /** Duração do cartão do marcador na partida rápida; `autoDismissMs` do golo = isto + narrativa (só timer, sem 2.º overlay). */
 export const GOAL_SCORER_OVERLAY_MS = 3000;
