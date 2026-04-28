@@ -390,6 +390,17 @@ export function decideOnBallWithIntention(
       pass_safe: -egoBias * 0.14,
     };
   })() : {}),
+  // Sprint L5 — Moral coletiva afeta o tipo de risco assumido
+  //   moral abalada (<25): chutes desesperados, +shoot
+  //   moral alta (>75):    pode segurar mais, hold ball
+  //   moral neutra:        sem efeito
+  ...(ctx.self.teamMorale != null ? (() => {
+    const m = ctx.self.teamMorale;
+    if (m < 25) return { shoot: 0.18, pass_safe: -0.08 };
+    if (m < 40) return { shoot: 0.08, pass_safe: -0.04 };
+    if (m >= 75) return { shoot: 0.06, pass_safe: 0.06 }; // confiante: ousa mas segura quando vale
+    return {};
+  })() : {}),
   // Prefer finish if requested by the nudge
   ...( (ctx as any)._nudgePreferFinish ? { shoot: 0.35 } : {} ),
   // Voice command bias — treinador mandou algo específico pro portador

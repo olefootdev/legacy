@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PressingControls } from './PressingControls';
 import { MarkingAssignmentsControls } from './MarkingAssignmentsControls';
+import { TeamMoraleBadge } from './TeamMoraleBadge';
 import { CoachCommandInput } from './CoachCommandInput';
 import type { CommandResult } from '@/match/coachCommands';
 
@@ -689,6 +690,9 @@ function LegacyFineTune({
           </div>
         </div>
       ) : null}
+
+      {/* Sprint L5 — Moral coletiva (visualização) */}
+      <TeamMoraleBadge />
 
       {/* Sprint L4 — Prensa contextual */}
       <PressingControls />

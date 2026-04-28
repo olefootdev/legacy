@@ -50,6 +50,10 @@ export interface AgentSnapshot {
   loyalty?: number;
   bigGameMentality?: number;
   ego?: number;
+  /** Sprint L5 — Moral coletiva do time deste jogador (0-100). */
+  teamMorale?: number;
+  /** Sprint L5 — Pressão psicológica coletiva (0-100). */
+  teamPressure?: number;
 }
 
 export interface PassOption {
