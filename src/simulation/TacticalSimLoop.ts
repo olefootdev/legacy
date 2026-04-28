@@ -196,6 +196,7 @@ import {
 
 import { sfGetSubzone, sfShapeCorrection, sfRoleFromSlot } from '@/smartfield/smartfieldBridge';
 import { deriveTeamCollectiveState, computeLineCohesionDelta, type TeamCollectiveState } from '@/playerDecision/teamCollectiveState';
+import { deriveTeamMorale, type TeamMoraleState } from '@/playerDecision/teamMorale';
 import FanFrustrationSystem, { FrustrationRulesRegistry } from '@/match/fanFrustration/FanFrustrationSystem';
 import { createSeededRng, hashTurnoverSeed, pickPlayAfterTurnover } from './pickPlayAfterTurnover';
 import {
@@ -486,6 +487,10 @@ export class TacticalSimLoop {
   private passChainCount: Record<PossessionSide, number> = { home: 0, away: 0 };
   private homeCollective: TeamCollectiveState | null = null;
   private awayCollective: TeamCollectiveState | null = null;
+  /** Sprint L5 — Moral coletiva por time (recomputada periodicamente). */
+  private homeMorale: TeamMoraleState | null = null;
+  private awayMorale: TeamMoraleState | null = null;
+  private moraleLastComputedTick = -10;
   // Rhythm and visual focus
   private matchRhythm: 'fast' | 'normal' | 'slow' = 'normal';
   private timeScale: number = 1;
@@ -1859,6 +1864,8 @@ export class TacticalSimLoop {
       loyalty: p.loyalty,
       bigGameMentality: p.bigGameMentality,
       ego: p.ego,
+      teamMorale: a.side === 'home' ? this.homeMorale?.confidence : this.awayMorale?.confidence,
+      teamPressure: a.side === 'home' ? this.homeMorale?.pressure : this.awayMorale?.pressure,
       cognitiveArchetype: a.cognitiveArchetype,
       confidenceRuntime: a.matchRuntime.confidenceRuntime,
       stamina: a.matchRuntime.stamina,
@@ -2631,6 +2638,31 @@ export class TacticalSimLoop {
       awaySnaps, homeSnaps, ballX, ballZ, attackDirAway, awayHasBall,
       this.simState.carrierId, this.passChainCount.away,
     );
+
+    // Sprint L5 — Moral coletiva. Recomputa a cada ~2 segundos simulados.
+    const tickK = Math.floor(this.world.simTime * 60);
+    if (tickK - this.moraleLastComputedTick >= 120) {
+      this.moraleLastComputedTick = tickK;
+      const minute = this.simState.minute;
+      const homeFatigue =
+        this.homeAgents.reduce((acc, a) => acc + (100 - a.matchRuntime.stamina), 0) /
+        Math.max(1, this.homeAgents.length);
+      const awayFatigue =
+        this.awayAgents.reduce((acc, a) => acc + (100 - a.matchRuntime.stamina), 0) /
+        Math.max(1, this.awayAgents.length);
+      this.homeMorale = deriveTeamMorale({
+        scoreDelta: this.simState.homeScore - this.simState.awayScore,
+        minute,
+        avgFatigue: homeFatigue,
+        hasPossession: homeHasBall,
+      });
+      this.awayMorale = deriveTeamMorale({
+        scoreDelta: this.simState.awayScore - this.simState.homeScore,
+        minute,
+        avgFatigue: awayFatigue,
+        hasPossession: awayHasBall,
+      });
+    }
 
     this.runAgentDecisions(
       this.homeAgents, homeSnaps, awaySnaps, dynamicHomeForAgents, presetHome, structuralByPlayer,
