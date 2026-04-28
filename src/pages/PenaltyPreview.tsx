@@ -47,7 +47,7 @@ const SHOOTOUT_ROUNDS = 5;
 
 type ShotResult = 'goal' | 'save' | 'pending';
 type Phase = 'pick' | 'charging' | 'reveal' | 'result';
-type Outcome = 'goal' | 'save' | 'over-bar' | 'post' | 'wide';
+type Outcome = 'goal' | 'save' | 'weak-save' | 'over-bar' | 'post' | 'wide';
 
 function slotRect(idx: SlotIndex) {
   const col = idx % SLOT_COLS;
@@ -178,16 +178,20 @@ export function PenaltyPreview() {
 
     // ── Resolução com posição final coerente ──
     const target = slotRect(slot);
+    const slotCol = slot % SLOT_COLS;
+
+    // 0. CHUTE FRACO — erro do manager (não carregou a barra)
+    // Identificação imediata: bola dribla devagar pro slot, goleiro pega sem dificuldade
+    if (finalPower < POWER_SWEET_LOW) {
+      setOutcome('weak-save');
+      setLanding({ x: target.cx, y: target.cy });
+      window.setTimeout(() => setPhase('result'), 950);
+      return;
+    }
 
     // Drift baseado em finalização + força fora da zona doce
-    // Quanto pior o atributo, maior o desvio. Força extrema também desvia.
     const finishingFactor = 1 - finishingRating / 100; // 0..1
-    const powerWobble =
-      finalPower < POWER_SWEET_LOW
-        ? 0.6 // chute fraco oscila
-        : finalPower > POWER_SWEET_HIGH
-          ? 0.9 // chute forte demais é instável
-          : 0.25; // zona doce, drift mínimo
+    const powerWobble = finalPower > POWER_SWEET_HIGH ? 0.9 : 0.25;
     const driftMag = (finishingFactor + powerWobble) * 28;
     const driftX = (Math.random() - 0.5) * 2 * driftMag;
     const driftY = (Math.random() - 0.5) * 2 * driftMag;
@@ -196,11 +200,25 @@ export function PenaltyPreview() {
     let finalY = target.cy + driftY;
     let result: Outcome;
 
-    // 1. Por cima do travessão (força > 88%)
+    // 1. Pancada (força > 88%) — manager perde controle direcional
+    // Bola sai pelo lado correspondente ao slot, não sempre por cima
     if (finalPower > POWER_SWEET_HIGH) {
-      result = 'over-bar';
-      finalX = target.cx + driftX * 0.4;
-      finalY = GOAL.y - 50 - Math.random() * 30;
+      if (slotCol === 0) {
+        // Aimed left + pancada → sai pela lateral esquerda
+        result = 'wide';
+        finalX = GOAL.x - 40 - Math.random() * 50;
+        finalY = target.cy + (Math.random() - 0.5) * 40;
+      } else if (slotCol === 2) {
+        // Aimed right + pancada → sai pela lateral direita
+        result = 'wide';
+        finalX = GOAL.x + GOAL.w + 40 + Math.random() * 50;
+        finalY = target.cy + (Math.random() - 0.5) * 40;
+      } else {
+        // Aimed center + pancada → por cima do travessão
+        result = 'over-bar';
+        finalX = target.cx + driftX * 0.4;
+        finalY = GOAL.y - 50 - Math.random() * 30;
+      }
       setOutcome(result);
       setLanding({ x: finalX, y: finalY });
       window.setTimeout(() => setPhase('result'), 950);
@@ -245,17 +263,7 @@ export function PenaltyPreview() {
       return;
     }
 
-    // 4. Dentro do gol — força fraca sempre vai no goleiro
-    if (finalPower < POWER_SWEET_LOW) {
-      result = 'save';
-      // Bola lenta, posição final no slot escolhido (goleiro pega ali)
-      setOutcome(result);
-      setLanding({ x: target.cx, y: target.cy });
-      window.setTimeout(() => setPhase('result'), 950);
-      return;
-    }
-
-    // 5. Goleiro acertou o slot? Defesa.
+    // 4. Goleiro acertou o slot? Defesa.
     if (slot === guess) {
       result = 'save';
     } else {
@@ -327,6 +335,7 @@ export function PenaltyPreview() {
     if (outcome === 'over-bar') return 'POR CIMA!';
     if (outcome === 'post') return 'NA TRAVE!';
     if (outcome === 'wide') return 'PRA FORA!';
+    if (outcome === 'weak-save') return 'CHUTE FRACO!';
     return 'DEFENDIDA';
   })();
 
@@ -612,7 +621,9 @@ export function PenaltyPreview() {
                   ? '— TRAVE —'
                   : outcome === 'wide'
                     ? '— PRA FORA —'
-                    : '— DEFESA —')}
+                    : outcome === 'weak-save'
+                      ? '— ERRO · FRACO —'
+                      : '— DEFESA —')}
         </text>
       </svg>
 
