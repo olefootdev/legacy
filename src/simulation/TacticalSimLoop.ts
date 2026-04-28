@@ -346,6 +346,8 @@ interface TacticalManagerParams {
     zone: 'high' | 'mid' | 'low';
     intensity: number; // 0-100
   };
+  /** Sprint L4 — Marcações individuais designadas (homePlayerId → opponentPlayerId). */
+  markingAssignments?: Record<string, string>;
 }
 
 type ShotPlanKind = 'goal' | 'miss_wide' | 'hold' | 'parry' | 'block_rebound';
@@ -3120,6 +3122,12 @@ export class TacticalSimLoop {
         tacticalWidth: 50,
         tacticalTempo: manager.tempo,
         tacticalStyle: manager.tacticalStyle,
+        // Sprint L4 — pressing context + marking
+        pressingZone: manager.pressing?.zone,
+        pressingIntensity: manager.pressing?.intensity,
+        markingAssignment: side === 'home'
+          ? manager.markingAssignments?.[(ag as any).playerId ?? ag.id]
+          : undefined,
         stamina: ag.matchRuntime.stamina,
         decisionDebug: DECISION_DEBUG,
         profile: ag.profile,

@@ -419,6 +419,11 @@ export interface DecisionContext {
   tacticalWidth?: number;
   tacticalTempo?: number;
   tacticalStyle?: TeamTacticalStyle;
+  /** Sprint L4 — Configuração contextual de pressing (zona + intensity 0-100). */
+  pressingZone?: 'high' | 'mid' | 'low';
+  pressingIntensity?: number;
+  /** Sprint L4 — Adversário designado pra marcação individual (homeId → oppId). */
+  markingAssignment?: string;
   stamina?: number;
   decisionDebug?: boolean;
   profile: PlayerProfile;

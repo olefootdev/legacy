@@ -51,6 +51,21 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
   const reading = buildContextReading(ctx);
   const teamHasBall = ctx.possession === ctx.self.side;
 
+  // ── Sprint L4: marcação individual designada pelo manager ──
+  // Quando time perde a posse e há assignment, jogador marca o adversário designado.
+  if (!teamHasBall && ctx.markingAssignment && ctx.self.role !== 'gk') {
+    const target = ctx.opponents.find((o) => o.id === ctx.markingAssignment);
+    if (target) {
+      // Mantém posição entre o adversário e o gol
+      return {
+        type: 'mark_man',
+        targetId: target.id,
+        targetX: target.x,
+        targetZ: target.z,
+      };
+    }
+  }
+
   if (ctx.self.role === 'gk') {
     const gkDuel = evaluateGoalkeeperPositionDuel(ctx, reading);
     const half = ctx.clockHalf ?? 1;

@@ -18,6 +18,7 @@ import {
 } from '@/tactics/playingStyle';
 import { cn } from '@/lib/utils';
 import { PressingControls } from './PressingControls';
+import { MarkingAssignmentsControls } from './MarkingAssignmentsControls';
 import { CoachCommandInput } from './CoachCommandInput';
 import type { CommandResult } from '@/match/coachCommands';
 
@@ -691,6 +692,13 @@ function LegacyFineTune({
 
       {/* Sprint L4 — Prensa contextual */}
       <PressingControls />
+
+      {/* Sprint L4 Fase 2 — Marcação individual */}
+      <MarkingAssignmentsControls
+        homePlayers={homePlayers}
+        awayRoster={awayRoster}
+        playersById={playersById}
+      />
     </div>
   );
 }

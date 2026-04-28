@@ -248,6 +248,8 @@ export interface OlefootGameState {
       /** Intensidade base 0-100. */
       intensity: number;
     };
+    /** Sprint L4 — Marcação individual: jogador da casa (id) → adversário designado (id). */
+    markingAssignments?: Record<string, string>;
     savedTactics: SavedTacticPlan[];
     activeMatchTacticId: string | null;
     activeTrainingTacticId: string | null;
@@ -409,6 +411,14 @@ export type GameAction =
         intensity: number;
       }>;
     }
+  /** Sprint L4 — Designa/remove marcação individual. opponentId === null remove. */
+  | {
+      type: 'SET_MARKING_ASSIGNMENT';
+      homePlayerId: string;
+      opponentId: string | null;
+    }
+  /** Sprint L4 — Limpa todas as marcações individuais. */
+  | { type: 'CLEAR_MARKING_ASSIGNMENTS' }
   | {
       /** Injeta comando de voz num jogador da casa. */
       type: 'VOICE_COMMAND_ISSUED';
