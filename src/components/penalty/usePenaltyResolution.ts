@@ -16,27 +16,64 @@ import type {
 
 /**
  * Decide para qual slot o goleiro vai mergulhar.
- * Sprint P1 mantém random com leve bias por tendency. Sprint P2 vai usar
- * readingRating + positioningRating pra "ler" o batedor de verdade.
+ *
+ * Modelo Sprint P2:
+ *   1. **Reading roll**: probabilidade de "ler" o batedor = readingRating/100 ajustado.
+ *      Se passa, GK escolhe a coluna correta (lado certo) com bias da tendency.
+ *   2. **Positioning roll**: dado que leu a coluna, prob. de acertar a linha = positioningRating/100.
+ *      Se passa: slot exato. Se falha: slot adjacente na mesma coluna.
+ *   3. Se NÃO leu: GK chuta numa coluna baseada em tendency (ou random),
+ *      linha aleatória.
+ *
+ * Resultado: goleiros "Manuel Neuer" (reading 90, positioning 88) acertam slot
+ * exato ~60% das vezes. Goleiros "amador" (reading 50, positioning 50) caem
+ * pra ~25%. A diferença vira ATIVO de gestão.
  */
-export function chooseKeeperSlot(keeper: PenaltyKeeper, _shooterSlot: SlotIndex): SlotIndex {
-  const r = Math.random();
+export function chooseKeeperSlot(keeper: PenaltyKeeper, shooterSlot: SlotIndex): SlotIndex {
+  const SLOT_COLS = 3;
+  const shooterCol = (shooterSlot % SLOT_COLS) as 0 | 1 | 2;
+  const shooterRow = Math.floor(shooterSlot / SLOT_COLS) as 0 | 1 | 2;
 
-  if (keeper.tendency === 'left' && r < 0.45) {
-    // Goleiro com tendência ao lado esquerdo: vai mais pra cols 0
-    const rows = [0, 3, 6] as const;
-    return rows[Math.floor(Math.random() * 3)] as SlotIndex;
-  }
-  if (keeper.tendency === 'right' && r < 0.45) {
-    const rows = [2, 5, 8] as const;
-    return rows[Math.floor(Math.random() * 3)] as SlotIndex;
-  }
-  if (keeper.tendency === 'center' && r < 0.45) {
-    const rows = [1, 4, 7] as const;
-    return rows[Math.floor(Math.random() * 3)] as SlotIndex;
+  // ── 1. Reading roll: chance de ler a coluna correta ──
+  // readingRating 100 = ~85% lê | 50 = ~42% lê | 30 = ~25%
+  const readingRoll = Math.random();
+  const readingThreshold = 0.15 + (keeper.readingRating / 100) * 0.7;
+  const readsCorrectly = readingRoll < readingThreshold;
+
+  let chosenCol: 0 | 1 | 2;
+
+  if (readsCorrectly) {
+    chosenCol = shooterCol;
+  } else {
+    // Não leu: cai na tendência (se houver) ou aleatório
+    if (keeper.tendency === 'left') chosenCol = 0;
+    else if (keeper.tendency === 'center') chosenCol = 1;
+    else if (keeper.tendency === 'right') chosenCol = 2;
+    else chosenCol = Math.floor(Math.random() * 3) as 0 | 1 | 2;
   }
 
-  return Math.floor(Math.random() * 9) as SlotIndex;
+  // ── 2. Positioning roll: dado a coluna, acertar a linha ──
+  // positioningRating 100 = ~80% acerta linha | 50 = ~40% | 30 = ~24%
+  const positioningRoll = Math.random();
+  const positioningThreshold = 0.1 + (keeper.positioningRating / 100) * 0.7;
+  const acertaLinha = readsCorrectly && positioningRoll < positioningThreshold;
+
+  let chosenRow: 0 | 1 | 2;
+  if (acertaLinha) {
+    chosenRow = shooterRow;
+  } else {
+    // Erra a linha: cai numa adjacente (se leu coluna) ou totalmente aleatória
+    if (readsCorrectly) {
+      // Leu coluna mas não a linha: ±1 da linha do batedor
+      const drift = Math.random() < 0.5 ? -1 : 1;
+      const r = shooterRow + drift;
+      chosenRow = (r < 0 ? 1 : r > 2 ? 1 : r) as 0 | 1 | 2;
+    } else {
+      chosenRow = Math.floor(Math.random() * 3) as 0 | 1 | 2;
+    }
+  }
+
+  return (chosenRow * SLOT_COLS + chosenCol) as SlotIndex;
 }
 
 export interface ResolvePenaltyInput {
