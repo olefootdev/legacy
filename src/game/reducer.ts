@@ -2919,6 +2919,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       return syncWalletToFinance(state, result.state);
     }
+    case 'WALLET_SYNC_REFERRAL_CODE': {
+      const w = walletOf(state);
+      const norm = String(action.code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!norm || norm === w.myReferralCode) return state;
+      return syncWalletToFinance(state, { ...w, myReferralCode: norm });
+    }
     case 'WALLET_SET_SPONSOR': {
       const w = walletOf(state);
       const result = walletRegisterSponsor(w, action.sponsorId);

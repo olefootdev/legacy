@@ -4,6 +4,7 @@ import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket, Eye, 
 import { cn } from '@/lib/utils';
 import { useGameDispatch } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
+import { fetchMyReferralCode } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
 
@@ -205,6 +206,15 @@ export function Login() {
           tacticalStyle: tacticalDefaults.style,
         },
       });
+      // Sincroniza código de indicação autoritativo do servidor.
+      try {
+        const serverCode = await fetchMyReferralCode();
+        if (serverCode) {
+          dispatch({ type: 'WALLET_SYNC_REFERRAL_CODE', code: serverCode });
+        }
+      } catch (e) {
+        console.warn('[Login] referral code sync skipped', e);
+      }
       // Se plantel vazio (novo dispositivo), tenta re-aplicar welcome pack.
       const welcome = await tryGrantWelcomeGenesisPack();
       if (welcome.ok === false) {

@@ -1594,6 +1594,356 @@ export type Database = {
         }
         Relationships: []
       }
+      global_league_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          fixture_id: string
+          highlight: boolean | null
+          id: string
+          minute: number
+          player_id: string | null
+          player_name: string | null
+          side: string
+          text: string
+          timestamp_ms: number
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          fixture_id: string
+          highlight?: boolean | null
+          id: string
+          minute: number
+          player_id?: string | null
+          player_name?: string | null
+          side: string
+          text: string
+          timestamp_ms: number
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          fixture_id?: string
+          highlight?: boolean | null
+          id?: string
+          minute?: number
+          player_id?: string | null
+          player_name?: string | null
+          side?: string
+          text?: string
+          timestamp_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_league_events_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "global_league_fixtures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_league_fixtures: {
+        Row: {
+          away_overall: number
+          away_team_id: string
+          away_team_name: string
+          created_at: string | null
+          current_minute: number | null
+          division: string
+          finished_at_ms: number | null
+          home_overall: number
+          home_team_id: string
+          home_team_name: string
+          id: string
+          kickoff_ms: number | null
+          round_id: string
+          score_away: number | null
+          score_home: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          away_overall: number
+          away_team_id: string
+          away_team_name: string
+          created_at?: string | null
+          current_minute?: number | null
+          division: string
+          finished_at_ms?: number | null
+          home_overall: number
+          home_team_id: string
+          home_team_name: string
+          id: string
+          kickoff_ms?: number | null
+          round_id: string
+          score_away?: number | null
+          score_home?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          away_overall?: number
+          away_team_id?: string
+          away_team_name?: string
+          created_at?: string | null
+          current_minute?: number | null
+          division?: string
+          finished_at_ms?: number | null
+          home_overall?: number
+          home_team_id?: string
+          home_team_name?: string
+          id?: string
+          kickoff_ms?: number | null
+          round_id?: string
+          score_away?: number | null
+          score_home?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_league_fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "global_league_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "v_division_standings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "v_playoff_standings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "global_league_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "v_division_standings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "v_playoff_standings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "global_league_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_league_fixtures_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "v_upcoming_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_league_rounds: {
+        Row: {
+          actual_kickoff_ms: number | null
+          created_at: string | null
+          finished_at_ms: number | null
+          id: string
+          is_returning: boolean | null
+          phase: string | null
+          round_number: number
+          round_type: string
+          scheduled_kickoff_ms: number
+          season_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_kickoff_ms?: number | null
+          created_at?: string | null
+          finished_at_ms?: number | null
+          id: string
+          is_returning?: boolean | null
+          phase?: string | null
+          round_number: number
+          round_type: string
+          scheduled_kickoff_ms: number
+          season_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_kickoff_ms?: number | null
+          created_at?: string | null
+          finished_at_ms?: number | null
+          id?: string
+          is_returning?: boolean | null
+          phase?: string | null
+          round_number?: number
+          round_type?: string
+          scheduled_kickoff_ms?: number
+          season_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      global_league_state: {
+        Row: {
+          created_at: string | null
+          current_league_round: number | null
+          current_playoff_round: number | null
+          id: string
+          min_teams_required: number | null
+          promotion_percentage: number | null
+          relegation_percentage: number | null
+          season_id: string
+          season_name: string
+          status: string
+          teams_per_division: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_league_round?: number | null
+          current_playoff_round?: number | null
+          id?: string
+          min_teams_required?: number | null
+          promotion_percentage?: number | null
+          relegation_percentage?: number | null
+          season_id: string
+          season_name: string
+          status?: string
+          teams_per_division?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_league_round?: number | null
+          current_playoff_round?: number | null
+          id?: string
+          min_teams_required?: number | null
+          promotion_percentage?: number | null
+          relegation_percentage?: number | null
+          season_id?: string
+          season_name?: string
+          status?: string
+          teams_per_division?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      global_league_teams: {
+        Row: {
+          club_name: string
+          club_short: string
+          division: number | null
+          draws: number | null
+          goal_difference: number | null
+          goals_against: number | null
+          goals_for: number | null
+          id: string
+          injury_modifier: number
+          injury_rounds_remaining: number
+          losses: number | null
+          manager_id: string
+          matches_played: number | null
+          overall: number
+          playoff_draws: number | null
+          playoff_goals_against: number | null
+          playoff_goals_for: number | null
+          playoff_losses: number | null
+          playoff_matches_played: number | null
+          playoff_points: number | null
+          playoff_wins: number | null
+          points: number | null
+          position: number | null
+          previous_position: number | null
+          recent_form: Json | null
+          registered_at: string | null
+          updated_at: string | null
+          wins: number | null
+        }
+        Insert: {
+          club_name: string
+          club_short: string
+          division?: number | null
+          draws?: number | null
+          goal_difference?: number | null
+          goals_against?: number | null
+          goals_for?: number | null
+          id: string
+          injury_modifier?: number
+          injury_rounds_remaining?: number
+          losses?: number | null
+          manager_id: string
+          matches_played?: number | null
+          overall: number
+          playoff_draws?: number | null
+          playoff_goals_against?: number | null
+          playoff_goals_for?: number | null
+          playoff_losses?: number | null
+          playoff_matches_played?: number | null
+          playoff_points?: number | null
+          playoff_wins?: number | null
+          points?: number | null
+          position?: number | null
+          previous_position?: number | null
+          recent_form?: Json | null
+          registered_at?: string | null
+          updated_at?: string | null
+          wins?: number | null
+        }
+        Update: {
+          club_name?: string
+          club_short?: string
+          division?: number | null
+          draws?: number | null
+          goal_difference?: number | null
+          goals_against?: number | null
+          goals_for?: number | null
+          id?: string
+          injury_modifier?: number
+          injury_rounds_remaining?: number
+          losses?: number | null
+          manager_id?: string
+          matches_played?: number | null
+          overall?: number
+          playoff_draws?: number | null
+          playoff_goals_against?: number | null
+          playoff_goals_for?: number | null
+          playoff_losses?: number | null
+          playoff_matches_played?: number | null
+          playoff_points?: number | null
+          playoff_wins?: number | null
+          points?: number | null
+          position?: number | null
+          previous_position?: number | null
+          recent_form?: Json | null
+          registered_at?: string | null
+          updated_at?: string | null
+          wins?: number | null
+        }
+        Relationships: []
+      }
       launch_counters: {
         Row: {
           id: number
@@ -1863,6 +2213,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      manager_squad: {
+        Row: {
+          formation_scheme: string | null
+          lineup: Json
+          players: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          formation_scheme?: string | null
+          lineup?: Json
+          players?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          formation_scheme?: string | null
+          lineup?: Json
+          players?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       manager_voice_commands: {
         Row: {
@@ -2392,6 +2766,7 @@ export type Database = {
           id: string
           onboarding_data: Json | null
           onboarding_status: string
+          referral_code: string
           referred_by_code: string | null
           sports_club_id: string | null
           status: string
@@ -2412,6 +2787,7 @@ export type Database = {
           id: string
           onboarding_data?: Json | null
           onboarding_status?: string
+          referral_code: string
           referred_by_code?: string | null
           sports_club_id?: string | null
           status?: string
@@ -2432,6 +2808,7 @@ export type Database = {
           id?: string
           onboarding_data?: Json | null
           onboarding_status?: string
+          referral_code?: string
           referred_by_code?: string | null
           sports_club_id?: string | null
           status?: string
@@ -2811,10 +3188,73 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_division_standings: {
+        Row: {
+          calculated_position: number | null
+          club_name: string | null
+          club_short: string | null
+          division: number | null
+          draws: number | null
+          goal_difference: number | null
+          goals_against: number | null
+          goals_for: number | null
+          id: string | null
+          losses: number | null
+          manager_id: string | null
+          matches_played: number | null
+          overall: number | null
+          points: number | null
+          position: number | null
+          previous_position: number | null
+          recent_form: Json | null
+          wins: number | null
+        }
+        Relationships: []
+      }
+      v_playoff_standings: {
+        Row: {
+          club_name: string | null
+          club_short: string | null
+          id: string | null
+          manager_id: string | null
+          overall: number | null
+          playoff_draws: number | null
+          playoff_goal_difference: number | null
+          playoff_goals_against: number | null
+          playoff_goals_for: number | null
+          playoff_losses: number | null
+          playoff_matches_played: number | null
+          playoff_points: number | null
+          playoff_position: number | null
+          playoff_wins: number | null
+        }
+        Relationships: []
+      }
+      v_upcoming_rounds: {
+        Row: {
+          finished_fixtures: number | null
+          id: string | null
+          round_number: number | null
+          round_type: string | null
+          scheduled_kickoff_ms: number | null
+          season_id: string | null
+          status: string | null
+          total_fixtures: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_add_profanity: { Args: { p_word: string }; Returns: boolean }
+      admin_approve_beta_tester: {
+        Args: { p_notes?: string; p_tester_id: string }
+        Returns: {
+          email: string
+          id: string
+          invite_code: string
+          status: string
+        }[]
+      }
       admin_broadcast_stats: {
         Args: { p_limit?: number }
         Returns: {
@@ -2833,6 +3273,14 @@ export type Database = {
       admin_insert_narrative_batch: {
         Args: { p_templates: Json }
         Returns: string
+      }
+      admin_invite_beta_tester: {
+        Args: { p_email: string; p_notes?: string; p_source?: string }
+        Returns: {
+          email: string
+          id: string
+          invite_code: string
+        }[]
       }
       admin_list_profiles: {
         Args: never
@@ -2953,6 +3401,10 @@ export type Database = {
         }
       }
       admin_remove_profanity: { Args: { p_word: string }; Returns: boolean }
+      admin_revoke_beta_access: {
+        Args: { p_reason?: string; p_tester_id: string }
+        Returns: boolean
+      }
       admin_send_broadcast: {
         Args: {
           p_body: string
@@ -3097,6 +3549,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      generate_beta_invite_code: { Args: never; Returns: string }
+      generate_referral_code: { Args: never; Returns: string }
+      get_division_teams: {
+        Args: { div: number }
+        Returns: {
+          club_name: string
+          id: string
+          points: number
+          team_position: number
+        }[]
+      }
+      get_league_stats: {
+        Args: never
+        Returns: {
+          teams_in_league: number
+          teams_in_playoffs: number
+          total_goals: number
+          total_matches: number
+          total_teams: number
+        }[]
+      }
       get_manager_learned_phrases: {
         Args: { p_limit?: number; p_user_id?: string }
         Returns: {
@@ -3185,6 +3658,17 @@ export type Database = {
           total_sales: number
         }[]
       }
+      get_my_referral_code: { Args: never; Returns: string }
+      get_my_referrals: {
+        Args: never
+        Returns: {
+          club_name: string
+          club_short: string
+          created_at: string
+          display_name: string
+          id: string
+        }[]
+      }
       get_my_status: { Args: never; Returns: string }
       get_my_verification: {
         Args: never
@@ -3240,6 +3724,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      increment_vocabulary_usage: {
+        Args: { p_phrase_id: string }
+        Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
       log_admin_action: {
@@ -3304,6 +3792,7 @@ export type Database = {
         }
         Returns: string
       }
+      redeem_beta_invite: { Args: { p_invite_code: string }; Returns: boolean }
       save_onboarding_profile: {
         Args: {
           p_club_name: string

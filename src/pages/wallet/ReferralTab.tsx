@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Users, Copy, CheckCircle, Link2, User, Send } from 'lucide-react';
+import { ArrowLeft, Users, Copy, CheckCircle, Link2, User, Send, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameDispatch, useGameStore } from '@/game/store';
 
@@ -8,7 +8,17 @@ import { referralSummary } from '@/wallet/referral';
 import { queryLedger } from '@/wallet/ledger';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode, normalizeReferralCode } from '@/wallet/referralCode';
+import { fetchMyReferralCode, fetchMyReferrals, type ReferredProfile } from '@/supabase/referrals';
 import { PeerBroSendModal } from './PeerBroSendModal';
+
+function formatRelative(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return iso.slice(0, 16);
+  }
+}
 
 function formatLedgerDate(iso: string): string {
   try {
@@ -34,7 +44,27 @@ export function ReferralTab() {
   const [peerOpen, setPeerOpen] = useState(false);
 
   const summary = referralSummary(wallet);
-  const myCode = wallet.myReferralCode ?? '';
+  // Servidor é autoritativo. Cache local (wallet.myReferralCode) usado só
+  // como fallback enquanto o fetch não retornou.
+  const [serverCode, setServerCode] = useState<string | null>(null);
+  const [referrals, setReferrals] = useState<ReferredProfile[]>([]);
+  const [loadingReferrals, setLoadingReferrals] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [code, list] = await Promise.all([fetchMyReferralCode(), fetchMyReferrals()]);
+      if (cancelled) return;
+      setServerCode(code);
+      setReferrals(list);
+      setLoadingReferrals(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const myCode = serverCode ?? wallet.myReferralCode ?? '';
   const shareUrl = myCode ? inviteLinkForCode(myCode) : '';
 
   const oleEntries = queryLedger(wallet, { type: 'REFERRAL_OLE_GAME' });
@@ -182,43 +212,78 @@ export function ReferralTab() {
         </div>
       )}
 
-      {/* Summary tree */}
+      {/* Indicados diretos — servidor autoritativo */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         className="glass-panel p-5 space-y-4"
       >
-        <h3 className="font-bold">Rede — 3 Níveis</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-blue-300" />
+            Os teus indicados
+          </h3>
+          <span className="text-2xl font-display font-black text-white tabular-nums">
+            {loadingReferrals ? '…' : referrals.length}
+          </span>
+        </div>
+
+        {loadingReferrals ? (
+          <p className="text-xs text-gray-500">A carregar a tua rede…</p>
+        ) : referrals.length === 0 ? (
+          <p className="text-xs text-gray-500">
+            Ainda ninguém entrou usando o teu código. Partilha o link acima — assim que alguém criar
+            conta com ele, aparece aqui.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {referrals.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/5"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-white font-medium truncate">
+                    {r.displayName ?? r.clubName ?? 'Manager'}
+                  </div>
+                  <div className="text-[10px] text-gray-500 flex items-center gap-2">
+                    {r.clubShort && (
+                      <span className="font-mono uppercase tracking-widest">{r.clubShort}</span>
+                    )}
+                    {r.clubShort && <span>•</span>}
+                    <span>{formatRelative(r.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="shrink-0 text-[10px] text-blue-300 uppercase tracking-wider font-bold">
+                  Nível 1
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Comissões acumuladas por nível (carteira local) */}
+        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-white/5">
           {[1, 2, 3].map((level) => {
-            const count = wallet.referralTree.filter((n) => {
-              if (level === 1) return n.sponsorId === 'self';
-              return false;
-            }).length;
             const broEarn = summary.byLevelBroCents[level] ?? 0;
             const gatExp = summary.gatByLevelExp[level] ?? 0;
             return (
               <div
                 key={level}
-                className="bg-white/5 rounded-xl p-4 text-center border border-white/5"
+                className="bg-white/5 rounded-xl p-3 text-center border border-white/5"
               >
-                <div className="text-xs text-gray-400 mb-1">Nível {level}</div>
-                <div className="text-lg font-bold text-white">{level === 1 ? count : '—'}</div>
-                <div className="text-[10px] text-blue-300 mt-1">
+                <div className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wider">Nv. {level}</div>
+                <div className="text-[10px] text-blue-300">
                   +{(broEarn / 100).toFixed(2)} BRO
                 </div>
                 {gatExp > 0 ? (
-                  <div className="text-[10px] text-violet-300 mt-0.5">+{gatExp.toLocaleString('pt-BR')} EXP GAT</div>
+                  <div className="text-[10px] text-violet-300 mt-0.5">+{gatExp.toLocaleString('pt-BR')} EXP</div>
                 ) : (
-                  <div className="text-[10px] text-gray-600 mt-0.5">GAT: —</div>
+                  <div className="text-[10px] text-gray-600 mt-0.5">—</div>
                 )}
               </div>
             );
           })}
-        </div>
-        <div className="flex justify-between text-sm pt-3 border-t border-white/5">
-          <span className="text-gray-400">Indicados diretos</span>
-          <span className="text-white font-bold">{summary.directReferrals}</span>
         </div>
       </motion.div>
 
