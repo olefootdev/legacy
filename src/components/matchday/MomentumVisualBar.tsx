@@ -29,28 +29,29 @@ function getMomentumStreak(value: number): MomentumStreak {
 }
 
 function getStreakColor(streak: MomentumStreak): string {
+  // Cores via tokens semânticos do design system (Olefoot Broadcast)
   switch (streak) {
     case 'fire':
-      return 'bg-red-500';
+      return 'bg-[var(--color-momentum-fire)]';
     case 'hot':
-      return 'bg-orange-500';
+      return 'bg-[var(--color-momentum-warm)]';
     case 'cold':
-      return 'bg-blue-400';
+      return 'bg-[var(--color-momentum-cool)]';
     default:
-      return 'bg-yellow-500';
+      return 'bg-[var(--color-neon-yellow)]';
   }
 }
 
 function getStreakGlow(streak: MomentumStreak): string {
   switch (streak) {
     case 'fire':
-      return 'shadow-[0_0_30px_rgba(239,68,68,0.6)]';
+      return 'shadow-[0_0_30px_rgba(255,61,0,0.55)]';
     case 'hot':
-      return 'shadow-[0_0_20px_rgba(251,146,60,0.4)]';
+      return 'shadow-[0_0_22px_rgba(255,179,0,0.42)]';
     case 'cold':
-      return 'shadow-[0_0_15px_rgba(96,165,250,0.3)]';
+      return 'shadow-[0_0_18px_rgba(74,144,226,0.35)]';
     default:
-      return '';
+      return 'shadow-[0_0_18px_rgba(253,225,0,0.32)]';
   }
 }
 

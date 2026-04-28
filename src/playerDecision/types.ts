@@ -424,6 +424,22 @@ export interface DecisionContext {
   pressingIntensity?: number;
   /** Sprint L4 — Adversário designado pra marcação individual (homeId → oppId). */
   markingAssignment?: string;
+  /**
+   * Bloco B — Fase ofensiva derivada de posse + zona da bola (perspectiva do time deste agente).
+   * Em `final_third`/`box_entry`, atacantes ganham autoridade pra romper slot e correr pra área.
+   * Em `build_up`, comportamento mantém disciplina de slot.
+   */
+  attackPhase?: 'build_up' | 'progression' | 'final_third' | 'box_entry';
+  /**
+   * Q3 — Cobrador de bola parada. Quando definido, OnBallDecision avalia
+   * chute direto / cruzamento conforme distância e atributos, em vez de
+   * cair em passe seguro.
+   */
+  setPieceContext?: {
+    kind: 'free_kick' | 'corner' | 'throw_in' | 'goal_kick';
+    /** Distância (m) até o gol do oponente. */
+    distanceToGoal: number;
+  };
   stamina?: number;
   decisionDebug?: boolean;
   profile: PlayerProfile;

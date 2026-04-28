@@ -323,3 +323,189 @@
 .ole-table tbody tr[data-is-user="true"]:hover {
   background: rgba(253, 225, 0, 0.08) !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+ * F1 — OLEFOOT BROADCAST PRIMITIVES
+ * ════════════════════════════════════════════════════════════════════
+ * Lower-third, letterbox, scan-ring, fatigue-ring, carrier aura,
+ * keyframes broadcast (goal-flash, lower-third-in, letterbox-in,
+ * scan-ring-rotate). Use SOMENTE em /match/live e overlays de
+ * transmissão. */
+
+/* ── Lower-third (banda de transmissão) ─────────────────────────── */
+.ole-lt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--lt-height);
+  padding: 0 24px 0 20px;
+  background: var(--lt-bg);
+  border-left: var(--lt-accent-w) solid var(--color-neon-yellow);
+  transform: skewX(var(--lt-skew));
+  font-family: var(--font-display);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+.ole-lt > * {
+  transform: skewX(calc(-1 * var(--lt-skew)));
+}
+.ole-lt[data-tone="goal"] {
+  border-left-color: var(--color-event-goal);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), var(--glow-goal-soft);
+}
+.ole-lt[data-tone="card-yellow"] { border-left-color: var(--color-event-card-yellow); }
+.ole-lt[data-tone="card-red"] {
+  border-left-color: var(--color-event-card-red);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), var(--glow-card-red);
+}
+.ole-lt[data-tone="foul"] { border-left-color: var(--color-event-foul); }
+.ole-lt[data-tone="save"] { border-left-color: var(--color-event-save); }
+.ole-lt[data-tone="sub"] { border-left-color: var(--color-event-substitution); }
+
+/* Animação de entrada do lower-third (esquerda → posição). */
+@keyframes ole-lt-in {
+  0%   { opacity: 0; transform: skewX(var(--lt-skew)) translateX(-120%); }
+  60%  { opacity: 1; transform: skewX(var(--lt-skew)) translateX(8px); }
+  100% { opacity: 1; transform: skewX(var(--lt-skew)) translateX(0); }
+}
+@keyframes ole-lt-out {
+  0%   { opacity: 1; transform: skewX(var(--lt-skew)) translateX(0); }
+  100% { opacity: 0; transform: skewX(var(--lt-skew)) translateX(-12%); }
+}
+.ole-lt[data-state="entering"] { animation: ole-lt-in var(--dur-trans) var(--ease-broadcast) both; }
+.ole-lt[data-state="exiting"]  { animation: ole-lt-out var(--dur-trans) var(--ease-broadcast-in) both; }
+
+/* ── Letterbox cinema (bandas pretas top+bottom) ────────────────── */
+.ole-letterbox {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: var(--letterbox-h);
+  background: #000;
+  z-index: 350;
+  pointer-events: none;
+}
+.ole-letterbox--top    { top: 0; transform: translateY(-100%); }
+.ole-letterbox--bottom { bottom: 0; transform: translateY(100%); }
+@keyframes ole-letterbox-in-top    { to { transform: translateY(0); } }
+@keyframes ole-letterbox-in-bottom { to { transform: translateY(0); } }
+.ole-letterbox--top[data-state="active"]    { animation: ole-letterbox-in-top var(--dur-trans) var(--ease-broadcast) forwards; }
+.ole-letterbox--bottom[data-state="active"] { animation: ole-letterbox-in-bottom var(--dur-trans) var(--ease-broadcast) forwards; }
+
+/* ── Goal flash (scoreboard pulsa yellow → branco) ───────────────── */
+@keyframes ole-goal-flash {
+  0%, 100% { background-color: transparent; box-shadow: none; }
+  20%      { background-color: rgba(253, 225, 0, 0.95); box-shadow: var(--glow-goal); }
+  60%      { background-color: rgba(255, 255, 255, 0.85); box-shadow: var(--glow-goal-soft); }
+}
+.ole-goal-flash { animation: ole-goal-flash 600ms var(--ease-broadcast); }
+
+/* ── Player token primitives ────────────────────────────────────── */
+/* Anel de fadiga: conic-gradient ao redor do token. Aplica via wrapper. */
+.ole-fatigue-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  /* var(--fatigue01) é 0..1 (1 = 100% energia). Definido inline. */
+  background: conic-gradient(
+    var(--color-success) calc(var(--fatigue01, 1) * 360deg),
+    rgba(255, 255, 255, 0.10) 0
+  );
+  pointer-events: none;
+  mask: radial-gradient(circle, transparent 60%, #000 62%, #000 100%);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%, #000 100%);
+}
+.ole-fatigue-ring[data-tone="warn"]   { background: conic-gradient(var(--color-warning) calc(var(--fatigue01, 1) * 360deg), rgba(255,255,255,0.10) 0); }
+.ole-fatigue-ring[data-tone="danger"] { background: conic-gradient(var(--color-danger)  calc(var(--fatigue01, 1) * 360deg), rgba(255,255,255,0.10) 0); }
+
+/* Aura do carrier (jogador com bola) — pulse contínuo. */
+@keyframes ole-carrier-aura {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(253, 225, 0, 0.55), 0 0 14px rgba(253, 225, 0, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(253, 225, 0, 0.0),  0 0 20px rgba(253, 225, 0, 0.55); }
+}
+.ole-carrier-aura {
+  border-radius: 50%;
+  animation: ole-carrier-aura 1.4s var(--ease-broadcast) infinite;
+}
+.ole-carrier-aura[data-side="away"] {
+  animation-name: ole-carrier-aura-away;
+}
+@keyframes ole-carrier-aura-away {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 42, 0.55), 0 0 14px rgba(225, 29, 42, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(225, 29, 42, 0.0),  0 0 20px rgba(225, 29, 42, 0.55); }
+}
+
+/* Scan-ring (jogador selecionado) — anel rotacionando 1.5s. */
+@keyframes ole-scan-ring {
+  to { transform: rotate(360deg); }
+}
+.ole-scan-ring {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: var(--color-neon-yellow);
+  border-right-color: rgba(253, 225, 0, 0.4);
+  pointer-events: none;
+  animation: ole-scan-ring 1.5s linear infinite;
+}
+
+/* ── Cinematic backdrop (campo escurece para overlay event-driven) ─ */
+.ole-cinema-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 13, 13, 0.55);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-trans) var(--ease-broadcast);
+  z-index: 50;
+}
+.ole-cinema-dim[data-state="active"] { opacity: 1; }
+
+/* ── Goal hero text — entrada cinemática ─────────────────────────── */
+@keyframes ole-goal-text-in {
+  0%   { opacity: 0; transform: translateY(40%) scale(0.92); }
+  60%  { opacity: 1; transform: translateY(-4%) scale(1.04); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ole-goal-text-out {
+  to { opacity: 0; transform: translateY(-12%) scale(1.02); }
+}
+.ole-goal-hero-text {
+  font-family: var(--font-serif-hero);
+  font-style: italic;
+  font-weight: 900;
+  font-size: clamp(72px, 14vw, 160px);
+  color: var(--color-event-goal);
+  text-shadow: 0 0 32px rgba(253, 225, 0, 0.65), 0 0 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.ole-goal-hero-text[data-state="entering"] { animation: ole-goal-text-in 700ms var(--ease-broadcast) both; }
+.ole-goal-hero-text[data-state="exiting"]  { animation: ole-goal-text-out 420ms var(--ease-broadcast-in) both; }
+
+/* ── Broadcast bug (header skewed scoreboard) ──────────────────────── */
+.ole-broadcast-bug {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 14px 0 10px;
+  background: linear-gradient(90deg, rgba(13,13,13,0.95) 0%, rgba(13,13,13,0.78) 100%);
+  border-left: 3px solid var(--color-neon-yellow);
+  transform: skewX(var(--lt-skew));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+.ole-broadcast-bug > * { transform: skewX(calc(-1 * var(--lt-skew))); }
+
+/* ── Ticker (rolling stats na bottom bar) ──────────────────────────── */
+.ole-ticker-item {
+  opacity: 0;
+  animation: ole-ticker-cycle 6s var(--ease-broadcast) infinite;
+}
+@keyframes ole-ticker-cycle {
+  0%, 5%   { opacity: 0; transform: translateY(8px); }
+  10%, 90% { opacity: 1; transform: translateY(0); }
+  95%, 100%{ opacity: 0; transform: translateY(-8px); }
+}

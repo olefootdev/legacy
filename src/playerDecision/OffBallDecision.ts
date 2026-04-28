@@ -238,6 +238,59 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
   // ANTI-SWARM: if too many teammates are already forward, stay anchored
   // to maintain team structure instead of joining the pile.
   // -----------------------------------------------------------------------
+  // Bloco B — Invasão de área em final_third/box_entry para atacantes/pontas/laterais
+  // Quebra a disciplina de slot quando o ataque está no terço final, para ampliar
+  // ocupação da área e padrões de cruzamento. Não aplicável a defensores/volantes.
+  const phase = ctx.attackPhase;
+  const isAttackerLike =
+    role === 'attack'
+    || slot.includes('pe') || slot.includes('pd')
+    || slot.includes('le') || slot.includes('ld')
+    || slot.includes('mei') || slot.includes('am');
+  if ((phase === 'box_entry' || phase === 'final_third') && isAttackerLike) {
+    const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
+    const inBoxCount = countTeammatesInBox(ctx);
+    // Cap: até 4 jogadores na área pra evitar enxame absurdo
+    if (inBoxCount < 4) {
+      // Atacantes centrais → infiltram a pequena área
+      if (role === 'attack') {
+        const lateralOffset = ctx.self.z < FIELD_WIDTH / 2 ? -1 : 1;
+        return applySpacingToAction(ctx, {
+          type: 'infiltrate',
+          targetX: clamp(goalX - ctx.attackDir * (5 + pick01ForDecision(ctx) * 5), 3, FIELD_LENGTH - 3),
+          targetZ: clamp(FIELD_WIDTH / 2 + lateralOffset * (3 + pick01ForDecision(ctx) * 6), 8, FIELD_WIDTH - 8),
+        });
+      }
+      // Pontas → atacam segundo poste / linha de fundo
+      if (slot.includes('pe') || slot.includes('pd')) {
+        const isLeft = slot.includes('pe') || ctx.self.z < FIELD_WIDTH / 2;
+        const wideZ = isLeft ? 6 + pick01ForDecision(ctx) * 6 : FIELD_WIDTH - 6 - pick01ForDecision(ctx) * 6;
+        return applySpacingToAction(ctx, {
+          type: 'attack_depth',
+          targetX: clamp(goalX - ctx.attackDir * (4 + pick01ForDecision(ctx) * 6), 3, FIELD_LENGTH - 3),
+          targetZ: wideZ,
+        });
+      }
+      // Laterais em final_third → linha de cruzamento (overlap forçado)
+      if ((slot.includes('le') || slot.includes('ld')) && phase === 'box_entry') {
+        const isLeft = slot.includes('le') || ctx.self.z < FIELD_WIDTH / 2;
+        return applySpacingToAction(ctx, {
+          type: 'overlap_run',
+          targetX: clamp(goalX - ctx.attackDir * (10 + pick01ForDecision(ctx) * 8), 8, FIELD_LENGTH - 8),
+          targetZ: isLeft ? 2 + pick01ForDecision(ctx) * 4 : FIELD_WIDTH - 2 - pick01ForDecision(ctx) * 4,
+        });
+      }
+      // Meia ofensivo → entra na meia-lua / segunda onda
+      if (slot.includes('mei') || slot.includes('am')) {
+        return applySpacingToAction(ctx, {
+          type: 'attack_depth',
+          targetX: clamp(goalX - ctx.attackDir * (14 + pick01ForDecision(ctx) * 6), 5, FIELD_LENGTH - 5),
+          targetZ: clamp(FIELD_WIDTH / 2 + (pick01ForDecision(ctx) - 0.5) * 12, 10, FIELD_WIDTH - 10),
+        });
+      }
+    }
+  }
+
   if (shouldAnchorToSlot(ctx)) {
     const anchor = enforceSpacing(ctx, ctx.slotX, ctx.slotZ);
     return { type: 'move_to_slot', targetX: anchor.x, targetZ: anchor.z };
@@ -1210,6 +1263,19 @@ function enforceSpacing(
  * Count teammates already in the attacking third.
  * Used to prevent mass convergence.
  */
+/** Bloco B — Conta colegas dentro da grande área adversária (cap pra evitar enxame). */
+function countTeammatesInBox(ctx: DecisionContext): number {
+  const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
+  let count = 0;
+  for (const t of ctx.teammates) {
+    if (t.id === ctx.self.id) continue;
+    const depthFromGoal = Math.abs(goalX - t.x);
+    const widthFromCenter = Math.abs(t.z - FIELD_WIDTH / 2);
+    if (depthFromGoal < 16.5 && widthFromCenter < 20.16) count++;
+  }
+  return count;
+}
+
 function countTeammatesInAttackingThird(ctx: DecisionContext): number {
   const threshold = ctx.attackDir === 1
     ? FIELD_LENGTH * 0.7

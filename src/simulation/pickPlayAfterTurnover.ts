@@ -204,22 +204,45 @@ export function pickPlayAfterTurnover(
     }
   }
 
+  // Bloco D — Counter-attack: detecta colegas correndo à frente da bola.
+  // Quando há atacantes em campo aberto após turnover, prioriza enfiada longa.
+  const attackersAhead: typeof teammates = [];
+  for (const t of teammates) {
+    if (t.id === carrier.id) continue;
+    const aheadByAttackDir = attackDir === 1
+      ? t.x > carrier.x + 6
+      : t.x < carrier.x - 6;
+    if (!aheadByAttackDir) continue;
+    // Espaço à frente: nenhum adversário muito próximo
+    let oppNearby = 0;
+    for (const o of opponents) {
+      if (Math.hypot(o.x - t.x, o.z - t.z) < 6) oppNearby++;
+    }
+    if (oppNearby <= 1) attackersAhead.push(t);
+  }
+  const counterAttackOn = attackersAhead.length >= 1 && pressure < 0.5;
+
   const progressiveCandidates = passOpts.filter(
     (o) =>
-      o.successProb >= 0.4
+      o.successProb >= (counterAttackOn ? 0.30 : 0.4)
       && (o.isForward || o.linesBroken >= 1 || o.progressionGain > 0.07)
       && o.spaceAtTarget > 3.2,
   );
   let bestP: PassOption | null = null;
   let bestPU = PROGRESSIVE_MIN - 1;
   for (const o of progressiveCandidates) {
-    const u = progressiveUtility(o, mentality, risk, rng);
+    let u = progressiveUtility(o, mentality, risk, rng);
+    // Boost se o passe vai pra colega que está correndo na frente
+    if (counterAttackOn && attackersAhead.some((a) => a.id === o.targetId)) {
+      u += 0.18;
+    }
     if (u > bestPU) {
       bestPU = u;
       bestP = o;
     }
   }
-  if (bestP && bestPU >= PROGRESSIVE_MIN) {
+  const progressiveMin = counterAttackOn ? PROGRESSIVE_MIN - 0.10 : PROGRESSIVE_MIN;
+  if (bestP && bestPU >= progressiveMin) {
     return mapPassType(carrier, bestP, 'progressive', attackDir);
   }
 

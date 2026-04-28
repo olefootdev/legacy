@@ -107,17 +107,36 @@ function LiveStatsPanelInner() {
 
   return (
     <div
-      className="rounded-lg border border-cyan-500/30 bg-cyan-950/20 px-2 sm:px-3 py-2 sm:py-2.5"
+      className="px-2.5 sm:px-3 py-2.5"
       aria-label="Estatísticas da partida em tempo real"
+      style={{
+        background: 'rgba(13,13,13,0.78)',
+        border: '1px solid var(--color-divider-soft)',
+        borderTop: '2px solid var(--color-event-save)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+      }}
     >
-      <header className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-cyan-200">
-          <BarChart3 className="h-3 w-3" />
-          <span className="text-[9px] sm:text-[10px] font-display font-bold uppercase tracking-widest">
-            Estatísticas ao vivo · {live.homeShort ?? 'CASA'}
+      <header className="mb-2.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <BarChart3 className="h-3 w-3" style={{ color: 'var(--color-event-save)' }} />
+          <span
+            className="font-ui font-bold uppercase"
+            style={{
+              color: 'var(--color-event-save)',
+              fontSize: '9px',
+              letterSpacing: '0.32em',
+            }}
+          >
+            Stats ao vivo · {live.homeShort ?? 'Casa'}
           </span>
         </div>
-        <span className="font-mono text-[9px] font-bold text-cyan-100/60">{live.minute}'</span>
+        <span
+          className="font-display font-black tabular-nums leading-none"
+          style={{ color: 'rgba(255,255,255,0.55)', fontSize: '11px' }}
+        >
+          {live.minute}'
+        </span>
       </header>
 
       <div className="grid grid-cols-4 gap-1.5">
@@ -137,8 +156,11 @@ function LiveStatsPanelInner() {
         />
       </div>
 
-      <p className="mt-2 text-center text-[8px] text-cyan-100/40">
-        Atualização a cada tick · {km} km percorridos · {Object.keys(live.homeStats ?? {}).length} ativos
+      <p
+        className="mt-2 text-center font-ui"
+        style={{ color: 'rgba(255,255,255,0.32)', fontSize: '9px', letterSpacing: '0.18em' }}
+      >
+        {km} km · {Object.keys(live.homeStats ?? {}).length} ativos · tick contínuo
       </p>
     </div>
   );

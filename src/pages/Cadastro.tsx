@@ -17,6 +17,7 @@ import { syncProfileManagerFirstName } from '@/supabase/profileDisplayName';
 import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
 import type { FavoriteRealTeamRef } from '@/game/types';
 import { signUpWithEmail, checkEmailExists } from '@/supabase/auth';
+import { fetchMyReferralCode } from '@/supabase/referrals';
 
 type UserProfile =
   | 'apaixonado'
@@ -407,6 +408,15 @@ export function Cadastro() {
       const refNorm = normalizeReferralCode(referrerCode);
       if (refNorm) {
         dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: refNorm });
+      }
+      // Sincroniza código de indicação gerado pelo servidor (trigger DB).
+      try {
+        const serverCode = await fetchMyReferralCode();
+        if (serverCode) {
+          dispatch({ type: 'WALLET_SYNC_REFERRAL_CODE', code: serverCode });
+        }
+      } catch (e) {
+        console.warn('[Cadastro] referral code sync skipped', e);
       }
       dispatch({
         type: 'ADMIN_PATCH_CLUB',
