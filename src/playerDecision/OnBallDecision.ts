@@ -261,6 +261,41 @@ export function decideOnBallWithIntention(
   }
   const shot = evaluateShot(ctx.self, ctx.attackDir, ctx.opponents);
 
+  // Q3 — Cobrador de falta direta: avalia chute direto / cruzamento conforme
+  // distância ao gol e atributos. Cap de probabilidade de chute (não vira shoot
+  // sempre — em ângulos ruins ou longe demais, prefere cruzar/passar).
+  if (ctx.setPieceContext?.kind === 'free_kick') {
+    const sp = ctx.setPieceContext;
+    if (sp.distanceToGoal <= 32) {
+      const fin = ctx.self.finalizacao / 100;
+      const passLong = ctx.self.passeLongo / 100;
+      // Distância ótima 18-24m, cai depois.
+      const distFactor = sp.distanceToGoal < 18
+        ? 0.85
+        : sp.distanceToGoal < 24
+          ? 1.0
+          : Math.max(0.30, 1 - (sp.distanceToGoal - 24) / 12);
+      // Ângulo: penaliza chute muito lateral.
+      const goalZCenter = FIELD_WIDTH / 2;
+      const lateralOff = Math.abs(ctx.self.z - goalZCenter);
+      const angleFactor = lateralOff < 14 ? 1.0 : Math.max(0.25, 1 - (lateralOff - 14) / 22);
+      const directShotP = 0.18 + fin * 0.50 + passLong * 0.10;
+      const finalP = directShotP * distFactor * angleFactor;
+      if (pick01ForDecision(ctx) < finalP) {
+        return sp.distanceToGoal > 22 ? { type: 'shoot_long_range' } : { type: 'shoot' };
+      }
+      // Falta lateral em final third → cruzamento ao invés de passe seguro.
+      if (sp.distanceToGoal < 28 && lateralOff > 16) {
+        const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
+        const cz = FIELD_WIDTH / 2 + (pick01ForDecision(ctx) - 0.5) * 16;
+        return pick01ForDecision(ctx) < 0.55
+          ? { type: 'high_cross', targetX: goalX - ctx.attackDir * 8, targetZ: cz }
+          : { type: 'low_cross', targetX: goalX - ctx.attackDir * 10, targetZ: cz };
+      }
+    }
+    // Falas longas/seguras: cai pro fluxo normal (passe), mas com flag.
+  }
+
   // Bloco C — Pattern de 1 toque: recém-recebeu bola sob pressão alta
   // Quando o jogador acaba de virar carrier (passe acabou de chegar) e há
   // pressão de adversário próximo, libera bola rápido pra colega seguro.
@@ -617,8 +652,24 @@ export function carryScanAction(ctx: DecisionContext, reading: ContextReading): 
 function forwardChannelClearance(ctx: DecisionContext): OnBallAction {
   const ad = ctx.attackDir;
   const longX = clampX(ctx.self.x + ad * (36 + pick01ForDecision(ctx) * 10));
-  const toWide = ctx.self.z < FIELD_WIDTH / 2;
-  const tz = clampZ((toWide ? 10 : FIELD_WIDTH - 10) + (pick01ForDecision(ctx) - 0.5) * 16);
+  // Q2 — Chutão deixa de ser pra "lateral genérica". Mira o setor com mais
+  // colegas à frente (densidade de aliados nos próximos ~30m), não cego.
+  const candidates = [10, 22, 34, FIELD_WIDTH - 34, FIELD_WIDTH - 22, FIELD_WIDTH - 10];
+  let bestZ = ctx.self.z < FIELD_WIDTH / 2 ? 12 : FIELD_WIDTH - 12;
+  let bestScore = -Infinity;
+  for (const cz of candidates) {
+    let score = 0;
+    for (const t of ctx.teammates) {
+      if (t.id === ctx.self.id) continue;
+      const dxT = (t.x - longX) * ad;       // colega à frente do alvo X
+      if (dxT > -8 && dxT < 18) {
+        const dzT = Math.abs(t.z - cz);
+        if (dzT < 14) score += 1 - dzT / 14;
+      }
+    }
+    if (score > bestScore) { bestScore = score; bestZ = cz; }
+  }
+  const tz = clampZ(bestZ + (pick01ForDecision(ctx) - 0.5) * 4);
   return { type: 'clearance', targetX: longX, targetZ: tz };
 }
 
@@ -686,12 +737,26 @@ function tryBackToGoalAttackPlay(
   if (!isReceivingBackToGoalShaped(ctx, reading)) return null;
 
   const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
+  const goalZ = FIELD_WIDTH / 2;
   const carrierDistGoal = reading.distToGoal;
 
   if (ctx.self.role === 'attack') {
     const finishUrgency = 0.028;
     if (canShoot(reading, shot.xG, finishUrgency, profile, { ctx, passOptions })) {
       return retShoot(reading, ctx, reading.distToGoal > 21);
+    }
+    // Q4 — Não pode chutar agora mas tem xG decente em zona de finalização:
+    // PIVOTA pro gol em vez de cair em passe pra trás. Próximo tick, com
+    // heading correto, canShoot recebe inputs melhores.
+    if (
+      carrierDistGoal < 24
+      && shot.xG >= 0.04
+      && reading.pressure.opponentsInZone <= 3
+      && reading.pressure.nearestOpponentDist > 1.2
+    ) {
+      const turnTowardX = clampX(ctx.self.x + ctx.attackDir * 4);
+      const turnTowardZ = clampZ(ctx.self.z + (goalZ - ctx.self.z) * 0.5);
+      return { type: 'turn_on_marker', targetX: turnTowardX, targetZ: turnTowardZ };
     }
     if (
       shot.xG > 0.014
@@ -1039,7 +1104,12 @@ function canShoot(
 
   const threshold = 0.042 - urgency - profile.riskAppetite * 0.045 - threatBonus - tierBonus;
 
-  // Dentro da área: limiar baixo, mas não “só porque estou perto” se o passe eleva muito mais a ameaça.
+  // Q1 — Close-range absoluto (pequena área): chuta SEMPRE com xG mínimo.
+  // Bypassa shouldDeferBoxAutoShot — nessa zona, atacante não devia "passar por
+  // segurança"; chute é a decisão correta.
+  if (reading.distToGoal < 9 && xG > 0.04) return true;
+
+  // Dentro da área: limiar baixo, mas só pode deferir pra passe quando dist > 9m.
   if ((reading.fieldZone === 'opp_box' || reading.inOppPenaltyArea) && reading.distToGoal < 19 && xG > 0.017) {
     if (opt && shouldDeferBoxAutoShot(opt.ctx, reading, opt.passOptions, xG)) {
       /* continua para as regras seguintes */

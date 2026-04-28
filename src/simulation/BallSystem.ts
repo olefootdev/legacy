@@ -155,6 +155,11 @@ export class BallSystem {
     this.lastTouchPlayerId = playerId;
   }
 
+  /** Q5 — Acessor pra Q5 (intercepção contínua). */
+  getLastTouchPlayerId(): string | null {
+    return this.lastTouchPlayerId;
+  }
+
   setOnThrowIn(cb: (info: { outSide: 'left' | 'right' | 'top' | 'bottom' | 'unknown'; lastTouchPlayerId?: string; x: number; z: number; timestamp: number }) => void) {
     this.onThrowInCallback = cb;
   }

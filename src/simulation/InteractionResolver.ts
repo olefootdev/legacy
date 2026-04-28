@@ -310,9 +310,10 @@ export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponent
   const finAttr = carrier.finalizacao / 100;
   const mental = (carrier.mentalidade + carrier.confianca) / 200;
   let xG = 0.05 + finAttr * 0.22 + mental * 0.05;
-  if (dist < 8) xG += 0.18;
-  else if (dist < 14) xG += 0.12;
-  else if (dist < 20) xG += 0.06;
+  // Q1 — Atacantes não chutavam dentro da área. Aumenta peso da proximidade.
+  if (dist < 8) xG += 0.30;
+  else if (dist < 14) xG += 0.20;
+  else if (dist < 20) xG += 0.08;
   else if (dist > 30) xG -= 0.04;
 
   if (angle > Math.PI * 0.35) xG -= 0.06;
@@ -328,12 +329,19 @@ export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponent
   const press = nearestOpponentPressure01(carrier, opponents);
   const confRun = carrier.confidenceRuntime ?? 1;
   xG *= 0.88 + confRun * 0.14;
-  xG *= 1 - press * (0.22 - mental * 0.1);
+  // Q1 — Em close-range, pressão deixa de ser penalidade (close-range é decisão).
+  // Pressão ainda corta xG fora da área, mas não sufoca chute na pequena área.
+  if (dist < 14) {
+    xG *= 1 - press * 0.06;
+  } else {
+    xG *= 1 - press * (0.22 - mental * 0.1);
+  }
 
   const st = carrier.stamina ?? 85;
   if (st < 45) xG *= 0.88 + st / 500;
 
-  xG = Math.max(0.01, Math.min(0.38, xG));
+  // Q1 — cap do xG sobe pra permitir chutes claros refletirem confiança real.
+  xG = Math.max(0.01, Math.min(0.55, xG));
   return { distance: dist, angle, xG };
 }
 
@@ -395,11 +403,21 @@ export function resolvePassLanding(
       pSuccess: pOk,
     };
   }
-  const missDir = rng.nextUnit() * Math.PI * 2;
-  const missDist = 4 + rng.nextUnit() * 8;
+  // Q2 — passe falhado não cai mais em cone radial uniforme (que jogava bola
+  // pra zona morta atrás do passador). Bias na direção do alvo + pequeno desvio
+  // perpendicular, simulando passe que "saiu fraco/forte" ou foi cortado.
+  const dx = option.targetX - carrier.x;
+  const dz = option.targetZ - carrier.z;
+  const totalDist = Math.hypot(dx, dz) || 1;
+  // 70-110% do caminho (passe pode parar antes ou passar do alvo)
+  const along = 0.70 + rng.nextUnit() * 0.40;
+  // Desvio perpendicular pequeno (até ~3.5m para cada lado)
+  const perpMag = (rng.nextUnit() - 0.5) * 7;
+  const perpX = -dz / totalDist;
+  const perpZ = dx / totalDist;
   return {
-    x: (carrier.x + option.targetX) / 2 + Math.cos(missDir) * missDist,
-    z: (carrier.z + option.targetZ) / 2 + Math.sin(missDir) * missDist,
+    x: carrier.x + dx * along + perpX * perpMag,
+    z: carrier.z + dz * along + perpZ * perpMag,
     completed: false,
     roll,
     pSuccess: pOk,

@@ -421,6 +421,8 @@ export class TacticalSimLoop {
   private initialized = false;
   // Deadball / throw-in state
   private deadBallUntil = -1;
+  /** Q3 — Cobrador da bola parada atual (free kick). Populado quando há falta. */
+  private pendingFreeKickTakerId: string | null = null;
   private pendingThrowIn: { fetcherId: string; x: number; z: number; restartType: 'throw_in' | 'corner_kick' | 'goal_kick' } | null = null;
   /** Callback opcional disparado quando uma falta acontece dentro da grande área (pênalti). */
   private onPenaltyAwardedCallback: ((info: {
@@ -430,6 +432,12 @@ export class TacticalSimLoop {
     victimId: string;
     takerName: string;
     takerId: string;
+    minute: number;
+  }) => void) | null = null;
+  /** Q6 — Callback para escanteio (abre SetPieceModal). */
+  private onCornerAwardedCallback: ((info: {
+    side: PossessionSide;
+    cornerSide: 'left' | 'right';
     minute: number;
   }) => void) | null = null;
   private prevClockPeriod: MatchClockPeriod | null = null;
@@ -834,6 +842,15 @@ export class TacticalSimLoop {
         const live = this.liveRef;
         const restartName = restartingSide === 'home' ? (live?.homeShort ?? 'Casa') : (live?.awayShort ?? 'Fora');
         pushSimEvent(this.simState, `${m}' — Canto para o ${restartName}!`, 'whistle');
+        // Q6 — Dispara modal interativo de set-piece (apenas para o time da casa,
+        // visitante mantém fluxo automático do engine).
+        if (restartingSide === 'home' && this.onCornerAwardedCallback) {
+          this.onCornerAwardedCallback({
+            side: 'home',
+            cornerSide: ballZ < FIELD_WIDTH / 2 ? 'left' : 'right',
+            minute: m,
+          });
+        }
       } else {
         // Attacking team put it out (or unknown) → goal kick for defenders
         restartType = 'goal_kick';
@@ -2271,7 +2288,10 @@ export class TacticalSimLoop {
       this.simState.phase = 'live';
       // If FSM just returned from a set piece, clear any remaining deadball window so play resumes.
       const wasSetPiece = fsmPhaseBefore === 'throw_in' || fsmPhaseBefore === 'corner_kick' || fsmPhaseBefore === 'goal_kick';
-      if (wasSetPiece) this.deadBallUntil = -1;
+      if (wasSetPiece) {
+        this.deadBallUntil = -1;
+        this.pendingFreeKickTakerId = null;
+      }
     } else if (fsmPhaseAfter === 'goal_restart') {
       this.simState.phase = 'goal_restart';
     } else if (fsmPhaseAfter === 'kickoff') {
@@ -2750,6 +2770,68 @@ export class TacticalSimLoop {
       this.finalizePassInterceptFlight(L);
     }
 
+    // Q5 — Intercepção contínua frame-by-frame. Antes, bola atravessava o
+    // campo passando por adversários sem encostar (intercept era reativo no
+    // start). Agora a cada tick em flight, varre defensores próximos da bola
+    // (raio dinâmico baseado em altura: bola alta = mais difícil cabecear).
+    if (
+      this.ballSys.state.mode === 'flight'
+      && this.ballSys.state.flight
+      && (this.ballSys.state.flight.kind === 'pass' || this.ballSys.state.flight.kind === 'clearance')
+      && !this.pendingPassIntercept
+    ) {
+      const bx = this.ballSys.state.x;
+      const bz = this.ballSys.state.z;
+      const bh = this.ballSys.state.height;
+      // Raio: 2.0m no chão, sobe para 3.2m em alturas até 1.8m, depois decai
+      // (bola muito alta — quase impossível parar a não ser GR).
+      const reachR = bh < 0.4 ? 2.0 : bh < 1.8 ? 2.0 + (bh - 0.4) / 1.4 * 1.2 : Math.max(1.2, 3.2 - (bh - 1.8) * 1.2);
+      // Não intercepta o destinatário pretendido (recipientId no pass) nem
+      // o passador (lastTouchPlayerId).
+      const flight = this.ballSys.state.flight;
+      const recipientId = (flight as { recipientId?: string }).recipientId;
+      const passerId = this.ballSys.getLastTouchPlayerId();
+      let interceptor: AgentEx | null = null;
+      let bestDist = reachR;
+      for (const ag of [...this.homeAgents, ...this.awayAgents]) {
+        if (ag.id === recipientId || ag.id === passerId) continue;
+        const dx = ag.vehicle.position.x - bx;
+        const dz = ag.vehicle.position.z - bz;
+        const d = Math.hypot(dx, dz);
+        if (d < bestDist) {
+          // GK ganha bonus de raio dentro da própria área
+          bestDist = d;
+          interceptor = ag;
+        }
+      }
+      if (interceptor) {
+        // Probabilidade de capturar: ~85% para perto, escala com marcacao + velocidade
+        const sn = this.toAgentSnapshot(interceptor);
+        const skill = (sn.marcacao + sn.velocidade) / 200;
+        const captureP = 0.55 + skill * 0.40;
+        const tickKey = Math.floor(this.world.simTime * 60);
+        const rng = rngFromSeed(this.simState.simulationSeed, `flight_intercept:${interceptor.id}:${tickKey}`);
+        if (rng.nextUnit() < captureP) {
+          // Captura: bola pra defensor, ganha posse imediatamente.
+          this.ballSys.giveTo(interceptor.id, interceptor.vehicle.position.x, interceptor.vehicle.position.z);
+          this.simState.possession = interceptor.side;
+          this.simState.carrierId = interceptor.id;
+          this.pendingPassIntercept = null;
+          L.push({
+            type: 'possession_change',
+            payload: { to: interceptor.side, reason: 'flight_intercept' },
+          });
+          pushSimEvent(
+            this.simState,
+            `${this.simState.minute}' — Interceptação no ar — bola dominada.`,
+            'narrative',
+            this.isTest2dLiveFeed() ? 'good' : undefined,
+            this.isTest2dLiveFeed() ? interceptor.id : undefined,
+          );
+        }
+      }
+    }
+
     if (this.ballSys.state.mode === 'loose' && !ballStoppedRestart) {
       this.pickUpLooseBall(L, manager, slotTargetFor);
     }
@@ -3197,6 +3279,16 @@ export class TacticalSimLoop {
           : undefined,
         // Bloco B — fase ofensiva derivada da posição da bola na perspectiva deste agente
         attackPhase: computeAttackPhase(ballXDec, ballZDec, attackDir),
+        // Q3 — Se este jogador é o cobrador de bola parada, expõe contexto pra
+        // OnBallDecision avaliar chute direto / cruzamento em vez de passe seguro.
+        setPieceContext: (() => {
+          if (ag.id !== this.pendingFreeKickTakerId) return undefined;
+          if (this.deadBallUntil <= this.world.simTime) return undefined;
+          const goalX = attackDir === 1 ? FIELD_LENGTH : 0;
+          const goalZ = FIELD_WIDTH / 2;
+          const distanceToGoal = Math.hypot(goalX - ballXDec, goalZ - ballZDec);
+          return { kind: 'free_kick' as const, distanceToGoal };
+        })(),
         stamina: ag.matchRuntime.stamina,
         decisionDebug: DECISION_DEBUG,
         profile: ag.profile,
@@ -4495,6 +4587,11 @@ export class TacticalSimLoop {
     this.onPenaltyAwardedCallback = cb;
   }
 
+  /** Q6 — Subscribe a corner award (abre SetPieceModal interativo). */
+  public setOnCornerAwarded(cb: typeof this.onCornerAwardedCallback): void {
+    this.onCornerAwardedCallback = cb;
+  }
+
   private appendLiveDisciplineAfterFoul(
     L: ReturnType<typeof createCausalBatch>,
     foulRng: RngDraw,
@@ -4614,6 +4711,8 @@ export class TacticalSimLoop {
       this.ballSys.setDeadAt(ballX, ballZ);
       this.simState.possession = victimSide;
       this.simState.carrierId = taker.id;
+      // Q3 — marca cobrador para OnBallDecision avaliar chute direto.
+      this.pendingFreeKickTakerId = taker.id;
       // 3 segundos de dead ball — árbitro pausa, narração flutua.
       this.deadBallUntil = this.world.simTime + 3;
       pushSimEvent(this.simState, `${m}' — Falta ${foulSeverity === 'ugly' ? 'dura' : foulSeverity === 'firm' ? 'cometida' : 'leve'} — jogo parado 3s. Reinício ${victimSide === 'home' ? (this.liveRef?.homeShort ?? 'Casa') : (this.liveRef?.awayShort ?? 'Fora')}.`, 'whistle');
@@ -5010,14 +5109,16 @@ export class TacticalSimLoop {
       const tackleRng = rngFromSeed(this.simState.simulationSeed, `tackle:${def.id}:${carrier.id}:${tickK}`);
       const tackleSucceeded = resolveTackle(defSnap, carrierSnap, dist, tackleRng);
       if (!tackleSucceeded) {
-        // Bloco A — Reckless foul: tackle falhou + defensor agressivo + contato próximo → falta.
-        // Evita "bug visual" de defensores passando pelo carrier sem consequência.
-        if (dist < 2.0) {
+        // Bloco A + Q3 — Reckless foul: relaxado pra acontecer mais. Hoje
+        // dist<2m + aggr>55 era combo raro. Agora dist<3m + aggr>40 e prob
+        // base maior. Fair play fraco também sobe consideravelmente.
+        if (dist < 3.0) {
           const aggr = defSnap.aggressiveness ?? 50;
           const fp = defSnap.fairPlay / 100;
+          // Probabilidade base maior + threshold mais permissivo.
           const recklessP = Math.max(
             0,
-            ((aggr - 55) / 100) * 0.18 + (0.55 - fp) * 0.14,
+            ((aggr - 40) / 100) * 0.28 + (0.55 - fp) * 0.22,
           );
           if (recklessP > 0.001) {
             const recklessRng = rngFromSeed(

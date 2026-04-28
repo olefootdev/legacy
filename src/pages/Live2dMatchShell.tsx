@@ -844,8 +844,19 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
         minute: info.minute,
       });
     });
+    // Q6 — Escanteio: dispara AWARD_SET_PIECE (abre LiveSetPieceManager).
+    loop.setOnCornerAwarded((info) => {
+      if (info.side !== 'home') return;
+      dispatch({
+        type: 'AWARD_SET_PIECE',
+        mode: 'corner',
+        side: 'home',
+        cornerSide: info.cornerSide,
+      });
+    });
     return () => {
       loop.setOnPenaltyAwarded(null);
+      loop.setOnCornerAwarded(null);
     };
   }, [tacticalLive2dLoopRef, dispatch]);
 

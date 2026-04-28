@@ -430,6 +430,16 @@ export interface DecisionContext {
    * Em `build_up`, comportamento mantém disciplina de slot.
    */
   attackPhase?: 'build_up' | 'progression' | 'final_third' | 'box_entry';
+  /**
+   * Q3 — Cobrador de bola parada. Quando definido, OnBallDecision avalia
+   * chute direto / cruzamento conforme distância e atributos, em vez de
+   * cair em passe seguro.
+   */
+  setPieceContext?: {
+    kind: 'free_kick' | 'corner' | 'throw_in' | 'goal_kick';
+    /** Distância (m) até o gol do oponente. */
+    distanceToGoal: number;
+  };
   stamina?: number;
   decisionDebug?: boolean;
   profile: PlayerProfile;
