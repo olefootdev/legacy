@@ -591,19 +591,8 @@ export function PenaltyPreview() {
         {(phase === 'pick' || phase === 'charging') && (
           <LegacyBall cx={SPOT.x} cy={SPOT.y} size={BALL_SIZE_MARCA} jitter={phase === 'charging'} />
         )}
-        {phase === 'reveal' && landing && (
-          <LegacyBallFlying
-            from={SPOT}
-            to={landing}
-            startSize={BALL_SIZE_MARCA}
-            endSize={BALL_SIZE_FLY_END}
-            durationMs={shotPower > POWER_SWEET_HIGH ? 320 : shotPower > POWER_SWEET_LOW ? 380 : 520}
-            power={shotPower}
-            endRotation={finalRotation}
-          />
-        )}
-        {/* Rastro técnico permanente — fica do voo até o próximo batedor */}
-        {phase === 'result' && landing && (
+        {/* Rastro único e contínuo — aparece no chute e fica até o próximo batedor */}
+        {(phase === 'reveal' || phase === 'result') && landing && (
           <line
             x1={SPOT.x}
             y1={SPOT.y}
@@ -617,12 +606,26 @@ export function PenaltyPreview() {
             opacity="0.92"
           />
         )}
+        {phase === 'reveal' && landing && (
+          <LegacyBallFlying
+            from={SPOT}
+            to={landing}
+            startSize={BALL_SIZE_MARCA}
+            endSize={BALL_SIZE_FLY_END}
+            durationMs={shotPower > POWER_SWEET_HIGH ? 320 : shotPower > POWER_SWEET_LOW ? 380 : 520}
+            power={shotPower}
+            endRotation={finalRotation}
+          />
+        )}
         {phase === 'result' && landing && (
           <LegacyBall
             cx={landing.x}
             cy={landing.y}
             size={BALL_SIZE_RESULT}
             rotation={finalRotation}
+            showShadow={
+              outcome !== 'goal' && outcome !== 'post' && outcome !== 'over-bar'
+            }
           />
         )}
 
@@ -774,24 +777,28 @@ function LegacyBall({
   size,
   jitter = false,
   rotation = 0,
+  showShadow = true,
 }: {
   cx: number;
   cy: number;
   size: number;
   jitter?: boolean;
   rotation?: number;
+  showShadow?: boolean;
 }) {
   const half = size / 2;
   return (
     <g>
-      <ellipse
-        cx={cx}
-        cy={cy + half * 0.85}
-        rx={half * 0.85}
-        ry={half * 0.18}
-        fill="#000"
-        opacity="0.3"
-      />
+      {showShadow && (
+        <ellipse
+          cx={cx}
+          cy={cy + half * 0.85}
+          rx={half * 0.85}
+          ry={half * 0.18}
+          fill="#000"
+          opacity="0.3"
+        />
+      )}
       <g transform={`translate(${cx}, ${cy}) rotate(${rotation})`}>
         <image
           href="/assets/legacy-ball.png"
@@ -883,19 +890,7 @@ function LegacyBallFlying({
         opacity={shadowOpacity}
       />
 
-      {/* Rastro retro técnico — linha preta sólida grossa do spot até a bola */}
-      {eased > 0.04 && eased < 0.98 && (
-        <line
-          x1={from.x}
-          y1={from.y}
-          x2={x}
-          y2={y}
-          stroke="#000"
-          strokeWidth={power > POWER_SWEET_HIGH ? 4.5 : power > POWER_SWEET_LOW ? 3.5 : 2.5}
-          strokeLinecap="round"
-          opacity={0.92}
-        />
-      )}
+      {/* (linha do rastro renderizada no parent — única e contínua) */}
 
       {/* Bola */}
       <g transform={`translate(${x}, ${y}) rotate(${rotation})`}>
