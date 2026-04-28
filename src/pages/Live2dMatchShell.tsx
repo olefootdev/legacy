@@ -17,6 +17,7 @@ import { LiveMatchManagerPanel } from '@/components/matchday/LiveMatchManagerPan
 import { LiveStatsPanel } from '@/components/matchday/LiveStatsPanel';
 import { PitchNarrationOverlay } from '@/components/matchday/PitchNarrationOverlay';
 import { CoachCommandInput } from '@/components/matchday/CoachCommandInput';
+import { PenaltyKickModalV2 } from '@/match/PenaltyKickModalV2';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import type { LiveMatchSnapshot, LiveMatchClockPeriod, PitchPlayerState } from '@/engine/types';
 import { interpolateBallPosition, type BallTrajectoryState } from '@/engine/test2d/ballTrajectory';
@@ -1063,6 +1064,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       }
       if (cur.kind === 'penalty') {
         const p = st?.penalty;
+        // No live (test2d), o modal interativo trata o kick — não auto-resolver aqui.
+        // Apenas auto-resolve em modos não-interativos (auto), ou avança outros stages.
+        const isInteractiveMode = live?.mode === 'test2d' || live?.mode === 'quick';
+        if (p?.stage === 'kick' && isInteractiveMode) {
+          // Modal vai disparar penalty_resolve via onResolve
+          return;
+        }
         if (p?.stage === 'kick') {
           dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve' } });
         } else if (p?.stage === 'result') {
@@ -1301,6 +1309,30 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           freezeUntilRef.current = 0;
         }}
       />
+
+      {/* Penalty interativo no live (test2d) — pausa o pitch via overlay full-screen */}
+      {live?.penalty?.stage === 'kick' && live?.phase === 'playing' && live?.penalty && (
+        <PenaltyKickModalV2
+          key={`penalty-${live.penalty.takerId ?? live.penalty.takerName ?? 'anon'}`}
+          penalty={live.penalty}
+          homePlayers={live.homePlayers ?? []}
+          opponentStrength={fixture?.opponent?.strength ?? 50}
+          takerReady={Boolean(live.penalty.takerId)}
+          homeScore={live.homeScore}
+          awayScore={live.awayScore}
+          homeShort={live.homeShort ?? ''}
+          awayShort={live.awayShort ?? fixture?.opponent?.shortName ?? ''}
+          minute={live.minute ?? 0}
+          onPickTaker={(playerId, name) => {
+            dispatch({ type: 'PENALTY_SET_TAKER', playerId, name } as any);
+          }}
+          onResolve={(rng) => {
+            window.setTimeout(() => {
+              dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve', rng } });
+            }, 800);
+          }}
+        />
+      )}
 
       {/* Fase 2 — Core Gameplay: Overlays */}
       <InteractiveMomentOverlay

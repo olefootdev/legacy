@@ -358,8 +358,9 @@ export default function App() {
                 </ErrorBoundary>
               }
             />
-            <Route path="/match/penalty" element={<MatchPenalty />} />
-            <Route path="/match/penalty-v2" element={<MatchPenaltyV2 />} />
+            <Route path="/match/penalty" element={<MatchPenaltyV2 />} />
+            <Route path="/match/penalty-legacy" element={<MatchPenalty />} />
+            <Route path="/match/penalty-v2" element={<Navigate to="/match/penalty" replace />} />
             <Route path="/match/global" element={<MatchGlobal />} />
             <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
             <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
