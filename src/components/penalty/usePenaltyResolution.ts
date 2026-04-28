@@ -17,60 +17,54 @@ import type {
 /**
  * Decide para qual slot o goleiro vai mergulhar.
  *
- * Modelo Sprint P2:
- *   1. **Reading roll**: probabilidade de "ler" o batedor = readingRating/100 ajustado.
- *      Se passa, GK escolhe a coluna correta (lado certo) com bias da tendency.
- *   2. **Positioning roll**: dado que leu a coluna, prob. de acertar a linha = positioningRating/100.
- *      Se passa: slot exato. Se falha: slot adjacente na mesma coluna.
- *   3. Se NÃO leu: GK chuta numa coluna baseada em tendency (ou random),
- *      linha aleatória.
+ * Modelo Sprint P2 (calibrado pra ser justo contra humano):
+ *   - Reading: chance de ler a COLUNA correta. Cap em ~50% mesmo pra Neuer.
+ *   - Positioning: dado coluna, chance de acertar a LINHA. Cap em ~45%.
+ *   - Lucky escape: mesmo com slot exato, chute "no ângulo" tem 15% de chance
+ *     de entrar (top-corner vibe — goleiro toca mas não segura).
  *
- * Resultado: goleiros "Manuel Neuer" (reading 90, positioning 88) acertam slot
- * exato ~60% das vezes. Goleiros "amador" (reading 50, positioning 50) caem
- * pra ~25%. A diferença vira ATIVO de gestão.
+ * Taxas reais de defesa esperadas:
+ *   GK 95/95 (elite): ~25% saves
+ *   GK 80/80 (top):   ~18% saves
+ *   GK 60/60 (médio): ~12% saves
+ *   GK 40/40 (fraco): ~7%  saves
+ *
+ * Mais 15-25% de drift natural do batedor (trave/fora/over-bar/weak)
+ * → taxa global de gol fica em ~60-75% — coerente com pênalti real.
  */
 export function chooseKeeperSlot(keeper: PenaltyKeeper, shooterSlot: SlotIndex): SlotIndex {
   const SLOT_COLS = 3;
   const shooterCol = (shooterSlot % SLOT_COLS) as 0 | 1 | 2;
   const shooterRow = Math.floor(shooterSlot / SLOT_COLS) as 0 | 1 | 2;
 
-  // ── 1. Reading roll: chance de ler a coluna correta ──
-  // readingRating 100 = ~85% lê | 50 = ~42% lê | 30 = ~25%
-  const readingRoll = Math.random();
-  const readingThreshold = 0.15 + (keeper.readingRating / 100) * 0.7;
-  const readsCorrectly = readingRoll < readingThreshold;
+  // ── 1. Reading: chance de ler a coluna ──
+  // 100 → 50% | 70 → 38% | 50 → 30% | 30 → 22%
+  const readingChance = 0.15 + (keeper.readingRating / 100) * 0.35;
+  const readsCorrectly = Math.random() < readingChance;
 
   let chosenCol: 0 | 1 | 2;
-
   if (readsCorrectly) {
     chosenCol = shooterCol;
   } else {
-    // Não leu: cai na tendência (se houver) ou aleatório
-    if (keeper.tendency === 'left') chosenCol = 0;
-    else if (keeper.tendency === 'center') chosenCol = 1;
-    else if (keeper.tendency === 'right') chosenCol = 2;
+    // Não leu: chuta numa coluna. Tendency tem efeito leve (50% chance), senão random.
+    const tendBias = Math.random();
+    if (keeper.tendency === 'left' && tendBias < 0.5) chosenCol = 0;
+    else if (keeper.tendency === 'center' && tendBias < 0.5) chosenCol = 1;
+    else if (keeper.tendency === 'right' && tendBias < 0.5) chosenCol = 2;
     else chosenCol = Math.floor(Math.random() * 3) as 0 | 1 | 2;
   }
 
-  // ── 2. Positioning roll: dado a coluna, acertar a linha ──
-  // positioningRating 100 = ~80% acerta linha | 50 = ~40% | 30 = ~24%
-  const positioningRoll = Math.random();
-  const positioningThreshold = 0.1 + (keeper.positioningRating / 100) * 0.7;
-  const acertaLinha = readsCorrectly && positioningRoll < positioningThreshold;
+  // ── 2. Positioning: dado coluna, acertar linha. Cap ~45% ──
+  // 100 → 45% | 70 → 35% | 50 → 28% | 30 → 22%
+  const positioningChance = 0.15 + (keeper.positioningRating / 100) * 0.3;
+  const acertaLinha = readsCorrectly && Math.random() < positioningChance;
 
   let chosenRow: 0 | 1 | 2;
   if (acertaLinha) {
     chosenRow = shooterRow;
   } else {
-    // Erra a linha: cai numa adjacente (se leu coluna) ou totalmente aleatória
-    if (readsCorrectly) {
-      // Leu coluna mas não a linha: ±1 da linha do batedor
-      const drift = Math.random() < 0.5 ? -1 : 1;
-      const r = shooterRow + drift;
-      chosenRow = (r < 0 ? 1 : r > 2 ? 1 : r) as 0 | 1 | 2;
-    } else {
-      chosenRow = Math.floor(Math.random() * 3) as 0 | 1 | 2;
-    }
+    // Linha aleatória dentro da coluna (não bias adjacente — mais imprevisível)
+    chosenRow = Math.floor(Math.random() * 3) as 0 | 1 | 2;
   }
 
   return (chosenRow * SLOT_COLS + chosenCol) as SlotIndex;
@@ -218,7 +212,15 @@ export function resolvePenalty(input: ResolvePenaltyInput): PenaltyShootResult {
   }
 
   // ── 5. DEFESA / 6. GOL ──
-  const outcome: PenaltyOutcome = slot === keeperSlot ? 'save' : 'goal';
+  // Lucky escape: chute na zona doce + slot de canto → 15% de chance de entrar
+  // mesmo com goleiro no slot certo (ele toca mas não segura, "no ângulo")
+  const slotIsCorner =
+    slot === 0 || slot === 2 || slot === 6 || slot === 8;
+  const inSweetZone = power >= POWER_SWEET_LOW && power <= POWER_SWEET_HIGH;
+  const luckyEscape = slot === keeperSlot && slotIsCorner && inSweetZone && Math.random() < 0.15;
+
+  const outcome: PenaltyOutcome =
+    slot === keeperSlot && !luckyEscape ? 'save' : 'goal';
   return {
     outcome,
     pickedSlot: slot,

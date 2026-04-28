@@ -162,7 +162,11 @@ export function MatchPenaltyV2() {
     setTimeout(() => {
       // Adversário bate (resolução headless usando resolvePenalty)
       const aiSlot = Math.floor(Math.random() * 9) as SlotIndex;
-      const aiPower = 0.4 + Math.random() * 0.5; // 40-90%
+      // Distribuição mais humana de força:
+      //   ~15% chutes fracos (< 32%, sempre saved)
+      //   ~70% chutes na sweet zone (32-88%)
+      //   ~15% chutes pancada (> 88%, drift pra fora)
+      const aiPower = 0.18 + Math.random() * 0.78;
       const aiShooter: PenaltyShooter = {
         id: 'opp-shooter',
         displayName: `Batedor ${opponentShort}`,
