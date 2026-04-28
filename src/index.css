@@ -72,6 +72,58 @@
   --radius-card: 14px;
   --radius-card-lg: 20px;
   --radius-pill: 999px;
+
+  /* === F1 — OLEFOOT BROADCAST: Live Match foundation (Apr/2026) ===
+   * Cores semânticas de eventos, glows tipados, easings/durations cinematográficos
+   * e primitivos de "lower-third" (banda de transmissão).
+   * Uso exclusivo: /match/live e overlays de transmissão. */
+
+  /* Cores de evento — exclusivas para feedback de momento da partida. */
+  --color-event-goal:        #FDE100;
+  --color-event-card-yellow: #F5C518;
+  --color-event-card-red:    #E11D2A;
+  --color-event-foul:        #C9700B;
+  --color-event-save:        #00C2FF;
+  --color-event-substitution: #00C851;
+
+  /* Cores de equipe (default — competição override por liga). */
+  --color-team-home:         #FDE100;
+  --color-team-away:         #E11D2A;
+
+  /* Momentum bar — escala bipolar. */
+  --color-momentum-fire:     #FF3D00;
+  --color-momentum-warm:     #FFB300;
+  --color-momentum-neutral:  rgba(255, 255, 255, 0.30);
+  --color-momentum-cool:     #4A90E2;
+  --color-momentum-cold:     #2979FF;
+
+  /* Glows tipados — uma cor por evento, não inventar. */
+  --glow-goal:               0 0 48px 4px rgba(253, 225, 0, 0.55);
+  --glow-goal-soft:          0 0 24px rgba(253, 225, 0, 0.32);
+  --glow-foul:               0 0 24px rgba(201, 112, 11, 0.40);
+  --glow-save:               0 0 32px rgba(0, 194, 255, 0.40);
+  --glow-card-red:           0 0 28px rgba(225, 29, 42, 0.45);
+  --glow-card-yellow:        0 0 24px rgba(245, 197, 24, 0.40);
+  --glow-team-home:          0 0 20px rgba(253, 225, 0, 0.40);
+  --glow-team-away:          0 0 20px rgba(225, 29, 42, 0.40);
+
+  /* Easings cinematográficos — uma curva pra tudo. */
+  --ease-broadcast: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-broadcast-in: cubic-bezier(0.64, 0, 0.78, 0);
+
+  /* Três durações canônicas. Não usar valores arbitrários. */
+  --dur-micro:      180ms;
+  --dur-trans:      420ms;
+  --dur-cinematic:  1200ms;
+
+  /* Lower-third — primitivo de broadcast. */
+  --lt-height:      56px;
+  --lt-bg:          linear-gradient(90deg, #0D0D0D 0%, rgba(13,13,13,0.88) 60%, rgba(13,13,13,0.55) 100%);
+  --lt-accent-w:    4px;
+  --lt-skew:        -6deg;
+
+  /* Letterbox cinema — bandas pretas para zoom dramático. */
+  --letterbox-h:    72px;
 }
 
 @layer utilities {

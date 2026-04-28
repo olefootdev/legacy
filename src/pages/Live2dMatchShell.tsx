@@ -340,11 +340,28 @@ const Test2dHomePlayerToken = memo(function Test2dHomePlayerToken({
       <div className="relative inline-flex h-[1.584rem] w-[1.584rem] shrink-0 items-center justify-center sm:h-[2.076rem] sm:w-[2.076rem]">
         <PlayerVoiceBubble playerId={p.playerId} />
         {showEnergyMap ? <Live2dPlayerFatigueAlert playerId={p.playerId} fatigue={p.fatigue} /> : null}
+        {/* F2 — Anel de fadiga (conic) ao redor do token. Cor varia por banda. */}
+        {(() => {
+          const fatigue01 = Math.max(0, Math.min(1, 1 - (p.fatigue ?? 0) / 100));
+          const tone = fatigue01 > 0.55 ? undefined : fatigue01 > 0.30 ? 'warn' : 'danger';
+          return (
+            <div
+              className="ole-fatigue-ring"
+              data-tone={tone}
+              style={{ ['--fatigue01' as never]: fatigue01 }}
+              aria-hidden
+            />
+          );
+        })()}
+        {/* F2 — Aura do carrier — substitui shadow estática por pulse contínuo. */}
+        {onBall && !reducedMotion && (
+          <div className="ole-carrier-aura absolute inset-0 pointer-events-none" aria-hidden />
+        )}
         <div
           className={cn(
             'relative z-[1] flex h-full w-full items-center justify-center overflow-hidden rounded-full border-[1.5px] bg-black/55 transition-shadow',
             onBall
-              ? 'border-neon-yellow ring-[1.5px] ring-neon-yellow/50 shadow-[0_0_12px_rgba(253,225,0,0.35)]'
+              ? 'border-neon-yellow'
               : 'border-white/75 shadow-[0_3px_9px_rgba(0,0,0,0.5)]',
             onSelect && 'hover:ring-2 hover:ring-cyan-400/50 hover:shadow-[0_0_14px_rgba(34,211,238,0.3)]',
           )}
@@ -487,11 +504,32 @@ const Test2dAwayPlayerToken = memo(function Test2dAwayPlayerToken({
       <div className="relative inline-flex h-[1.584rem] w-[1.584rem] shrink-0 items-center justify-center sm:h-[2.076rem] sm:w-[2.076rem]">
         <PlayerVoiceBubble playerId={p.playerId} />
         {showEnergyMap ? <Live2dPlayerFatigueAlert playerId={p.playerId} fatigue={p.fatigue} /> : null}
+        {/* F2 — Anel de fadiga */}
+        {(() => {
+          const fatigue01 = Math.max(0, Math.min(1, 1 - (p.fatigue ?? 0) / 100));
+          const tone = fatigue01 > 0.55 ? undefined : fatigue01 > 0.30 ? 'warn' : 'danger';
+          return (
+            <div
+              className="ole-fatigue-ring"
+              data-tone={tone}
+              style={{ ['--fatigue01' as never]: fatigue01 }}
+              aria-hidden
+            />
+          );
+        })()}
+        {/* F2 — Aura do carrier (cor da equipe visitante) */}
+        {onBall && !reducedMotion && (
+          <div
+            className="ole-carrier-aura absolute inset-0 pointer-events-none"
+            data-side="away"
+            aria-hidden
+          />
+        )}
         <div
           className={cn(
             'relative z-[1] flex h-full w-full items-center justify-center rounded-full border-[1.5px] text-[6px] sm:text-[7px] font-black tabular-nums shadow-[0_3px_9px_rgba(0,0,0,0.55)]',
             onBall
-              ? 'border-rose-300 bg-gradient-to-b from-rose-700/95 to-rose-950/90 text-white ring-[1.5px] ring-rose-400/40'
+              ? 'border-rose-300 bg-gradient-to-b from-rose-700/95 to-rose-950/90 text-white'
               : 'border-rose-400/90 bg-gradient-to-b from-rose-900/95 to-black/80 text-rose-50',
           )}
           title={`${p.num} ${p.name} (visitante)`}
