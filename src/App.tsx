@@ -1,6 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
+import { lazyRetry } from '@/lib/lazyRetry';
 import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
+const lazy = lazyRetry; // Bug fix: tela preta na 1ª carga (chunk failure após deploy)
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { GameProvider } from './game/GameProvider';
@@ -178,6 +180,65 @@ function GlobalSchedulerMount() {
   return null;
 }
 
+/**
+ * Bug fix: tela preta na 1ª carga.
+ * Boundary raiz pra capturar qualquer erro não tratado (ChunkLoadError,
+ * ReferenceError em hot path, etc.). Mostra mensagem visível com botão
+ * "Recarregar" — substitui o branco/preto que o React produz quando a
+ * árvore desmonta sem fallback.
+ */
+function RootErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  console.error('[RootErrorBoundary]', error);
+  const isChunkErr =
+    /Failed to fetch dynamically imported module/i.test(error.message)
+    || /Loading chunk/i.test(error.message)
+    || /ChunkLoadError/i.test(error.message)
+    || error.name === 'ChunkLoadError';
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-5 px-6 text-center"
+      style={{ background: 'var(--color-deep-black, #0D0D0D)' }}
+    >
+      <div
+        className="font-display font-black uppercase"
+        style={{ color: 'var(--color-neon-yellow, #FDE100)', fontSize: 'clamp(24px, 5vw, 36px)', letterSpacing: '0.04em' }}
+      >
+        {isChunkErr ? 'Atualizando o jogo' : 'Algo deu errado'}
+      </div>
+      <p
+        className="max-w-md leading-relaxed"
+        style={{ color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-ui)', fontSize: '14px' }}
+      >
+        {isChunkErr
+          ? 'Estamos a carregar a versão mais recente. Recarrega a página pra continuar.'
+          : 'Recarrega a página. Se persistir, contacta o suporte.'}
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          resetErrorBoundary();
+          if (typeof window !== 'undefined') window.location.reload();
+        }}
+        className="-skew-x-6 px-7 py-3 font-display font-black uppercase tracking-[0.18em] transition-all"
+        style={{
+          background: 'var(--color-neon-yellow, #FDE100)',
+          color: '#000',
+          fontSize: '14px',
+          boxShadow: '4px 4px 0 rgba(255,255,255,0.16)',
+        }}
+      >
+        <span className="skew-x-6 inline-block">Recarregar</span>
+      </button>
+      {!isChunkErr && (
+        <details className="mt-3 max-w-md text-left" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px' }}>
+          <summary className="cursor-pointer">Detalhes técnicos</summary>
+          <pre className="mt-2 overflow-auto rounded bg-black/40 p-3 text-[10px]">{error.message}</pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function GlobalLeagueHydrator() {
   const dispatch = useGameDispatch();
   useEffect(() => {
@@ -204,8 +265,9 @@ function GlobalLeagueHydrator() {
 
 export default function App() {
   return (
-    <GameProvider>
-      <Router>
+    <ErrorBoundary FallbackComponent={RootErrorFallback}>
+      <GameProvider>
+        <Router>
         <FriendlyChallengeLayer />
         <UserSettingsEffects />
         <WorldClock />
@@ -380,7 +442,8 @@ export default function App() {
             }
           />
         </Routes>
-      </Router>
-    </GameProvider>
+        </Router>
+      </GameProvider>
+    </ErrorBoundary>
   );
 }
