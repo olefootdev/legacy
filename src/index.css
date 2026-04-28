@@ -428,3 +428,12 @@ html[data-graphic-quality='low'] .sports-panel::after {
   from { filter: drop-shadow(0 0 10px rgba(253,225,0,0.6)) drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
   to   { filter: drop-shadow(0 0 18px rgba(253,225,0,1))   drop-shadow(0 0 8px rgba(255,255,255,0.85)); }
 }
+
+/* Vibração da bola durante carregamento de força no pênalti */
+@keyframes penalty-ball-jitter {
+  0%   { transform: translate(0, 0) rotate(-1deg); }
+  25%  { transform: translate(-1.5px, 1px) rotate(0.5deg); }
+  50%  { transform: translate(1.5px, -1px) rotate(-0.5deg); }
+  75%  { transform: translate(-1px, 1.5px) rotate(1deg); }
+  100% { transform: translate(0, 0) rotate(-1deg); }
+}
