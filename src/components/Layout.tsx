@@ -348,6 +348,9 @@ export function Layout({ children }: { children: ReactNode }) {
               : isQuickMatchRoute
                 ? 'lg:py-8'
                 : 'pt-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:pt-8 lg:pt-10 lg:pb-8',
+            location.pathname !== '/match' &&
+              location.pathname !== '/match/live' &&
+              'min-[1440px]:max-w-[1184px] min-[1440px]:mx-auto',
           )}
         >
           {children}
