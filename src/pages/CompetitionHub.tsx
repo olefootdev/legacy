@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom';
-import { Trophy, Calendar, TrendingUp, Globe, Target, Medal, Flag } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { formatExp } from '@/systems/economy';
+import { HubSectionCard } from '@/components/ui/HubSectionCard';
 
 export function CompetitionHub() {
   useTrackScreen('screen_competition_hub');
@@ -199,187 +199,48 @@ export function CompetitionHub() {
         </motion.div>
       </section>
 
-      {/* CARD HEROES — padrão /store: 4 cards com botões amarelos */}
+      {/* Cards de seção — Sprint B Legacy Tech */}
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Card 1: Ligas */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Link
-            to="/competicao/ligas"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-neon-yellow/10 border border-neon-yellow/20">
-                  <Trophy className="w-6 h-6 text-neon-yellow" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Competições
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Ligas
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Competições ativas e classificação. Acompanha a tua posição na tabela e os próximos adversários.
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Ver ligas
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-
-        {/* Card 2: Calendário */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Link
-            to="/competicao/calendario"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-blue-400/10 border border-blue-400/20">
-                  <Calendar className="w-6 h-6 text-blue-400" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-blue-400/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Agenda
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Calendário
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  {fixture?.opponent ? `Próximo: ${fixture.opponent.name} · ${fixture.kickoffLabel}` : 'Sem partidas agendadas no momento.'}
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Ver calendário
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-
-        {/* Card 3: Ranking */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Link
-            to="/competicao/ranking"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-emerald-400/10 border border-emerald-400/20">
-                  <TrendingUp className="w-6 h-6 text-emerald-400" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-emerald-400/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Mundial
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Ranking
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Posição mundial por EXP. Compara o teu desempenho com outros managers e clubes.
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Ver ranking
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-
-        {/* Card 4: Liga Global */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Link
-            to="/liga-global/registro"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-neon-yellow/10 border border-neon-yellow/20">
-                  <Globe className="w-6 h-6 text-neon-yellow" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Global
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Liga Global
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Competição mundial com 32 times. Playoffs, divisões e promoção/rebaixamento.
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Entrar na liga
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
+        <HubSectionCard
+          to="/competicao/ligas"
+          eyebrow="Competições"
+          title="Ligas"
+          description="Competições ativas e classificação. Acompanha a tua posição na tabela e os próximos adversários."
+          cta="Ver ligas"
+          rail="bg-neon-yellow"
+          delay={0.1}
+        />
+        <HubSectionCard
+          to="/competicao/calendario"
+          eyebrow="Agenda"
+          title="Calendário"
+          description={
+            fixture?.opponent
+              ? `Próximo: ${fixture.opponent.name} · ${fixture.kickoffLabel}`
+              : 'Sem partidas agendadas no momento.'
+          }
+          cta="Ver calendário"
+          rail="bg-cyan-300"
+          delay={0.2}
+        />
+        <HubSectionCard
+          to="/competicao/ranking"
+          eyebrow="Mundial"
+          title="Ranking"
+          description="Posição mundial por EXP. Compara o teu desempenho com outros managers e clubes."
+          cta="Ver ranking"
+          rail="bg-emerald-400"
+          delay={0.3}
+        />
+        <HubSectionCard
+          to="/liga-global/registro"
+          eyebrow="Global"
+          title="Liga Global"
+          description="Competição mundial com 32 times. Playoffs, divisões e promoção/rebaixamento."
+          cta="Entrar na liga"
+          rail="bg-fuchsia-400"
+          delay={0.4}
+        />
       </section>
     </div>
   );

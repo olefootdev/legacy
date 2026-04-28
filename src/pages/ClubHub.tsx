@@ -1,44 +1,57 @@
-import { Link } from 'react-router-dom';
-import { Users, GraduationCap, Building2, Dumbbell, ChevronRight, UserCog } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { HubSectionCard } from '@/components/ui/HubSectionCard';
+import { StatTile } from '@/components/ui/StatTile';
 
-const quickActions = [
+/** Sprint B Legacy Tech: rail colorido por categoria, sem ícones soltos. */
+const quickActions: Array<{
+  eyebrow: string;
+  title: string;
+  description: string;
+  cta: string;
+  href: string;
+  rail: string;
+}> = [
   {
-    icon: Users,
-    label: 'Elenco',
-    description: 'Gerir jogadores e formação',
+    eyebrow: 'Plantel',
+    title: 'Elenco',
+    description: 'Gerir jogadores, formação tática e escalação titular.',
+    cta: 'Abrir elenco',
     href: '/team',
-    color: 'neon-yellow',
+    rail: 'bg-neon-yellow',
   },
   {
-    icon: Dumbbell,
-    label: 'Treino',
-    description: 'Desenvolver habilidades',
+    eyebrow: 'Desenvolvimento',
+    title: 'Treino',
+    description: 'Sessões individuais e coletivas. Evoluir físico, técnico e tático.',
+    cta: 'Programar treino',
     href: '/team/treino',
-    color: 'emerald-400',
+    rail: 'bg-emerald-400',
   },
   {
-    icon: UserCog,
-    label: 'Staff',
-    description: 'Profissionais e coach',
+    eyebrow: 'Comissão',
+    title: 'Staff',
+    description: 'Profissionais, coach assistente e atribuições.',
+    cta: 'Gerir staff',
     href: '/team/staff',
-    color: 'violet-400',
+    rail: 'bg-violet-400',
   },
   {
-    icon: GraduationCap,
-    label: 'Academia',
-    description: 'Jovens promessas',
+    eyebrow: 'Categorias de base',
+    title: 'Academia',
+    description: 'Jovens promessas, scouting e desenvolvimento de longo prazo.',
+    cta: 'Ver promessas',
     href: '/city/youth-prospects',
-    color: 'cyan-400',
+    rail: 'bg-cyan-400',
   },
   {
-    icon: Building2,
-    label: 'Estruturas',
-    description: 'Instalações do clube',
+    eyebrow: 'Infraestrutura',
+    title: 'Estruturas',
+    description: 'Instalações do clube, upgrades e impacto no rendimento.',
+    cta: 'Visitar estruturas',
     href: '/city',
-    color: 'fuchsia-400',
+    rail: 'bg-fuchsia-400',
   },
 ];
 
@@ -134,70 +147,39 @@ export function ClubHub() {
         </motion.div>
       </section>
 
-      {/* Quick Actions Grid */}
+      {/* Quick Actions — Sprint B Legacy Tech: rail colorido + título grande + CTA texto-claro */}
       <section>
-        <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white/70 mb-4 px-1">
+        <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
           Acesso rápido
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {quickActions.map((action, i) => (
-            <motion.div
+            <HubSectionCard
               key={action.href}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Link
-                to={action.href}
-                className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm p-6 transition-all hover:scale-[1.01]"
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded bg-${action.color}/10 border border-${action.color}/20`}>
-                    <action.icon className={`w-6 h-6 text-${action.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display font-bold text-white text-lg mb-1 group-hover:text-neon-yellow transition-colors">
-                      {action.label}
-                    </h3>
-                    <p className="text-sm text-white/55">{action.description}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-neon-yellow transition-colors" />
-                </div>
-              </Link>
-            </motion.div>
+              to={action.href}
+              eyebrow={action.eyebrow}
+              title={action.title}
+              description={action.description}
+              cta={action.cta}
+              rail={action.rail}
+              delay={i * 0.08}
+            />
           ))}
         </div>
       </section>
 
-      {/* Stats Overview */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="bg-[var(--color-card)] border border-white/8 rounded-sm p-6"
-      >
-        <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white/70 mb-4">
+      {/* Visão geral — StatTiles editoriais */}
+      <section>
+        <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
           Visão geral
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="text-3xl font-display font-black text-neon-yellow mb-1">{playerCount}</div>
-            <div className="text-xs text-white/55 uppercase tracking-wider">Jogadores</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-display font-black text-white mb-1">—</div>
-            <div className="text-xs text-white/55 uppercase tracking-wider">Staff</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-display font-black text-white mb-1">—</div>
-            <div className="text-xs text-white/55 uppercase tracking-wider">Academia</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-display font-black text-white mb-1">—</div>
-            <div className="text-xs text-white/55 uppercase tracking-wider">Estruturas</div>
-          </div>
+          <StatTile value={playerCount} label="Jogadores" tone="accent" />
+          <StatTile value="—" label="Staff" />
+          <StatTile value="—" label="Academia" />
+          <StatTile value="—" label="Estruturas" />
         </div>
-      </motion.section>
+      </section>
     </div>
   );
 }

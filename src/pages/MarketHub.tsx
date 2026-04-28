@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { ArrowRightLeft, Repeat2, ShoppingBag, Wallet } from 'lucide-react';
+import { ArrowRightLeft, Wallet } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { HubSectionCard } from '@/components/ui/HubSectionCard';
 
 export function MarketHub() {
   useTrackScreen('screen_market_hub');
@@ -100,142 +101,35 @@ export function MarketHub() {
         </motion.div>
       </section>
 
-      {/* CARD HEROES — padrão /store: 3 cards com botões amarelos */}
+      {/* CARDS DE SE\u00c7\u00c3O \u2014 Sprint B: trilho lateral + t\u00edtulo editorial + CTA texto-claro */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Card 1: Transfer Market */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Link
-            to="/mercado/transfer"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-neon-yellow/10 border border-neon-yellow/20">
-                  <ArrowRightLeft className="w-6 h-6 text-neon-yellow" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-neon-yellow/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Jogadores
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Transfer Market
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Comprar e vender jogadores no mercado global. Negocia com outros clubes e monta o plantel ideal.
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Explorar mercado
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-
-        {/* Card 2: Exchange */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Link
-            to="/mercado/exchange"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-blue-400/10 border border-blue-400/20">
-                  <Repeat2 className="w-6 h-6 text-blue-400" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-blue-400/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Câmbio
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Exchange
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Câmbio paralelo EXP ↔ BRO. Anuncia lotes de EXP ou compra ofertas de outros managers.
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Ver ofertas
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-
-        {/* Card 3: Loja */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Link
-            to="/mercado/loja"
-            className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm overflow-hidden transition-all hover:scale-[1.01]"
-          >
-            <div className="p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="p-3 rounded bg-purple-400/10 border border-purple-400/20">
-                  <ShoppingBag className="w-6 h-6 text-purple-400" />
-                </div>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest text-purple-400/70"
-                  style={{ fontFamily: 'var(--font-ui)' }}
-                >
-                  Itens
-                </span>
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-white text-xl mb-2 group-hover:text-neon-yellow transition-colors">
-                  Loja
-                </h3>
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Packs de jogadores, boosters de partida e itens especiais. Tudo num só lugar.
-                </p>
-              </div>
-              <div className="mt-auto pt-2">
-                <span
-                  className="inline-flex items-center gap-2 bg-neon-yellow text-black px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[11px] group-hover:bg-white transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  Abrir loja
-                </span>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
+        <HubSectionCard
+          to="/mercado/transfer"
+          eyebrow="Jogadores"
+          title="Transfer Market"
+          description="Comprar e vender jogadores no mercado global. Negocia com outros clubes e monta o plantel ideal."
+          cta="Explorar mercado"
+          rail="bg-neon-yellow"
+          delay={0.1}
+        />
+        <HubSectionCard
+          to="/mercado/exchange"
+          eyebrow="Câmbio"
+          title="Exchange"
+          description="Câmbio paralelo EXP ↔ BRO. Anuncia lotes de EXP ou compra ofertas de outros managers."
+          cta="Ver ofertas"
+          rail="bg-cyan-300"
+          delay={0.2}
+        />
+        <HubSectionCard
+          to="/mercado/loja"
+          eyebrow="Itens"
+          title="Loja"
+          description="Packs de jogadores, boosters de partida e itens especiais. Tudo num só lugar."
+          cta="Abrir loja"
+          rail="bg-fuchsia-400"
+          delay={0.3}
+        />
       </section>
     </div>
   );

@@ -437,108 +437,124 @@ export function Manager() {
 
       {/* ── SEÇÕES PRINCIPAIS ────────────────────────────────────── */}
       <section className="space-y-4">
-        {/* Carreira */}
+        {/* Carreira — Sprint B-2 Legacy Tech */}
         <motion.button
           type="button"
           onClick={() => setDrawer('career')}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="group w-full text-left bg-panel border border-white/10 hover:border-neon-yellow/40 rounded-sm p-5 sm:p-6 transition-all hover:shadow-[0_0_24px_rgba(253,225,0,0.12)]"
+          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
+          style={{
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--color-panel-elevated)',
+            boxShadow: 'var(--shadow-card)',
+          }}
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-neon-yellow/15 border-2 border-neon-yellow/40 rounded-sm transition-transform group-hover:scale-110">
-                {(() => {
-                  const Icon = TIER_ICONS[currentTier.id] ?? TrendingUp;
-                  return <Icon className="h-7 w-7 text-neon-yellow" strokeWidth={2.5} />;
-                })()}
-              </div>
-              <div>
-                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white mb-1">
-                  Carreira
-                </h3>
-                <p className="text-xs text-gray-400">
-                  {currentTier.name} · {formatExp(expLifetime)} EXP
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-neon-yellow/60 transition-transform group-hover:translate-x-1" />
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
+          <div className="relative flex flex-col gap-3 p-6 pl-7">
+            <span
+              className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
+              style={{ fontFamily: 'var(--font-ui)' }}
+            >
+              Progressão · Tier
+            </span>
+            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
+              Carreira
+            </h3>
+            <p className="text-[13px] leading-relaxed text-white/55">
+              <span className="font-bold text-white/90">{currentTier.name}</span> · {formatExp(expLifetime)} EXP acumulado
+              {nextTier ? (
+                <> · próximo <span className="text-neon-yellow">{nextTier.name}</span></>
+              ) : null}
+            </p>
+            <span
+              className="mt-2 inline-flex w-fit items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              Ver carreira
+            </span>
           </div>
-          {nextTier && (
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">
-                Próximo: {nextTier.name}
-              </p>
-            </div>
-          )}
         </motion.button>
 
-        {/* Network */}
+        {/* Network — Sprint B-2 Legacy Tech */}
         <motion.button
           type="button"
           onClick={() => navigate('/manager/network')}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="group w-full text-left bg-panel border border-white/10 hover:border-fuchsia-500/40 rounded-sm p-5 sm:p-6 transition-all hover:shadow-[0_0_24px_rgba(217,70,239,0.12)]"
+          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
+          style={{
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--color-panel-elevated)',
+            boxShadow: 'var(--shadow-card)',
+          }}
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-fuchsia-500/15 border-2 border-fuchsia-500/40 rounded-sm transition-transform group-hover:scale-110">
-                <Network className="h-7 w-7 text-fuchsia-300" strokeWidth={2.5} />
-              </div>
-              <div>
-                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white mb-1">
-                  Network
-                </h3>
-                <p className="text-xs text-gray-400">
-                  {social.friends.length} amigo{social.friends.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-fuchsia-400" />
+          <div className="relative flex flex-col gap-3 p-6 pl-7">
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
+                style={{ fontFamily: 'var(--font-ui)' }}
+              >
+                Comunidade · Amigos
+              </span>
               {social.incoming.length > 0 && (
-                <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-2 font-display text-[11px] font-black text-white">
-                  {social.incoming.length}
+                <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-rose-500 px-2.5 py-1 font-display text-[10px] font-black tracking-[0.18em] text-white">
+                  {social.incoming.length} pedido{social.incoming.length > 1 ? 's' : ''}
                 </span>
               )}
-              <ChevronRight className="h-5 w-5 text-fuchsia-300/60 transition-transform group-hover:translate-x-1" />
             </div>
+            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
+              Network
+            </h3>
+            <p className="text-[13px] leading-relaxed text-white/55">
+              <span className="font-bold text-white/90">{social.friends.length}</span> amigo{social.friends.length !== 1 ? 's' : ''} ativos · convites e desafios entre managers.
+            </p>
+            <span
+              className="mt-2 inline-flex w-fit items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              Abrir network
+            </span>
           </div>
-          {social.incoming.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">
-                {social.incoming.length} solicitaç{social.incoming.length > 1 ? 'ões' : 'ão'} pendente{social.incoming.length > 1 ? 's' : ''}
-              </p>
-            </div>
-          )}
         </motion.button>
 
-        {/* PRO */}
+        {/* PRO — Sprint B-2 Legacy Tech */}
         <motion.button
           type="button"
           onClick={() => navigate('/manager/pro')}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="group w-full text-left bg-panel border border-white/10 hover:border-white/30 rounded-sm p-5 sm:p-6 transition-all hover:shadow-[0_0_24px_rgba(255,255,255,0.08)]"
+          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
+          style={{
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--color-panel-elevated)',
+            boxShadow: 'var(--shadow-card)',
+          }}
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center bg-white/10 border-2 border-white/20 rounded-sm transition-transform group-hover:scale-110">
-                <ShieldCheck className="h-7 w-7 text-white/80" strokeWidth={2.5} />
-              </div>
-              <div>
-                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white mb-1">
-                  PRO
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Acompanhamento e vendas
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-white/60 transition-transform group-hover:translate-x-1" />
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-white/45" />
+          <div className="relative flex flex-col gap-3 p-6 pl-7">
+            <span
+              className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
+              style={{ fontFamily: 'var(--font-ui)' }}
+            >
+              Carreira PRO
+            </span>
+            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
+              PRO
+            </h3>
+            <p className="text-[13px] leading-relaxed text-white/55">
+              Acompanhamento, vendas e indicadores avançados de performance do clube.
+            </p>
+            <span
+              className="mt-2 inline-flex w-fit items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              Abrir PRO
+            </span>
           </div>
         </motion.button>
       </section>

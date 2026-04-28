@@ -4,7 +4,7 @@
  * Auto-dismiss em 5s ou ao clicar no CTA
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 
@@ -34,30 +34,49 @@ export function QuickGoalCelebration({
   const [visible, setVisible] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
 
+  // Ref pra estabilizar onDismiss e evitar reset dos timers a cada render do pai.
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
   useEffect(() => {
     if (disabled || triggerKey == null) return;
 
     setVisible(true);
     setShowCTA(false);
 
-    // Mostrar CTA após 2s
-    const ctaTimer = window.setTimeout(() => setShowCTA(true), 2000);
+    // Mostrar CTA após 1.2s (era 2s — antecipado pra dar saída mais rápida)
+    const ctaTimer = window.setTimeout(() => setShowCTA(true), 1200);
 
-    // Auto-dismiss após 5s
+    // Auto-dismiss após 5s — timer estável (deps só dependem do triggerKey)
     const dismissTimer = window.setTimeout(() => {
       setVisible(false);
-      onDismiss();
+      onDismissRef.current();
     }, 5000);
 
     return () => {
       clearTimeout(ctaTimer);
       clearTimeout(dismissTimer);
     };
-  }, [triggerKey, disabled, onDismiss]);
+  }, [triggerKey, disabled]);
+
+  // ESC fecha
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setVisible(false);
+        onDismissRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible]);
 
   const handleDismiss = () => {
     setVisible(false);
-    onDismiss();
+    onDismissRef.current();
   };
 
   if (!visible) return null;
@@ -70,12 +89,29 @@ export function QuickGoalCelebration({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3 }}
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-deep-black"
+        onClick={handleDismiss}
+        role="button"
+        tabIndex={0}
+        aria-label="Fechar celebração de gol"
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-deep-black cursor-pointer"
       >
+        {/* Hint discreto no topo */}
+        <p
+          className="absolute top-6 left-1/2 -translate-x-1/2 text-white/40 uppercase pointer-events-none"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '10px',
+            letterSpacing: '0.28em',
+            fontWeight: 700,
+          }}
+        >
+          Toque pra continuar · ESC
+        </p>
         <motion.div
           initial={{ scale: 0.8, y: 30 }}
           animate={{ scale: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          onClick={(e) => e.stopPropagation()}
           className="flex flex-col items-center gap-6 px-4"
         >
           {/* GOL em Moret italic amarelo */}

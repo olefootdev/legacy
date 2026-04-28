@@ -154,7 +154,6 @@ export function RankingFull() {
   };
 
   const meta = TAB_META[tab];
-  const Icon = meta.icon;
 
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-6 pb-8">
@@ -166,37 +165,42 @@ export function RankingFull() {
         className="border border-white/10 bg-dark-gray overflow-hidden"
         style={{ borderRadius: 'var(--radius-md)' }}
       >
-        {/* Header com hierarquia visual */}
-        <div className="bg-black/40 p-5 md:p-6 border-b border-white/10">
-          <div className="flex items-center gap-3 mb-3">
-            <Icon className="w-5 h-5 text-neon-yellow" />
+        {/* Header — Sprint B-3 Legacy Tech: eyebrow + headline duo + régua */}
+        <div className="bg-black/40 p-6 md:p-8 border-b border-[var(--color-divider-yellow)]">
+          <div
+            className="font-display font-bold uppercase text-neon-yellow/80 mb-3"
+            style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+          >
+            OLE Football · Ranking
+          </div>
+          <h1 className="leading-[0.92]">
             <span
-              className="text-neon-yellow uppercase"
+              className="block font-bold uppercase text-white"
               style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-                fontWeight: 600,
-                letterSpacing: '0.22em',
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2rem, 5.5vw, 3.5rem)',
+                letterSpacing: '0.005em',
               }}
             >
               Ranking
             </span>
-          </div>
-          <h1
-            className="italic text-neon-yellow leading-none mb-3"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontSize: 'clamp(2.5rem, 6vw, 4rem)',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {meta.title}
+            <span
+              className="block italic text-neon-yellow mt-1"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {meta.title}
+            </span>
           </h1>
+          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-5" />
           <p
-            className="text-white/55 max-w-md"
+            className="text-white/55 max-w-md mt-4"
             style={{
-              fontFamily: 'var(--font-ui)',
+              fontFamily: 'var(--font-sans)',
               fontSize: '13px',
               lineHeight: 1.5,
             }}

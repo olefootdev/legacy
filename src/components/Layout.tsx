@@ -7,6 +7,7 @@ import {
   Wallet,
   Target,
   Trophy,
+  Crown,
   User,
   Settings,
   Bell,
@@ -31,21 +32,38 @@ import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { AssistantWidget } from '@/components/AssistantWidget';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
+import { useTotalManagers } from '@/hooks/useTotalManagers';
 
-const mainNavItems = [
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  path: string;
+  /** Item editorial — usa Moret italic neon-yellow + ícone amarelo
+   *  permanente (sem depender do estado active). */
+  accent?: boolean;
+};
+
+const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Users, label: 'CLUBE', path: '/clube' },
   { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
+  { icon: Crown, label: 'MEMORÁVEIS', path: '/legend', accent: true },
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
-  { icon: GraduationCap, label: 'AJUDA', path: '/ajuda' },
+];
+
+/** Item secundário — mora no rodapé do menu lateral, perto do SAIR.
+ *  Renderizado em Inter regular (não vira item principal "perdido"). */
+const secondaryNavItems: NavItem[] = [
+  { icon: GraduationCap, label: 'Como jogar', path: '/ajuda' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const oleBalance = useGameStore((s) => s.finance.ole);
+  const totalManagers = useTotalManagers();
   const localManagerFirst = useGameStore((s) => s.userSettings?.managerProfile?.firstName?.trim() ?? '');
   const [remoteManagerFirst, setRemoteManagerFirst] = useState<string | null>(null);
 
@@ -143,28 +161,105 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar — visible only at ≥1024px */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
         <div className="flex items-center mb-10 p-6 pb-0">
-          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-1.5 w-auto" />
+          <img
+            src="/brand/olefoot-yellow-01.svg"
+            alt="Olefoot"
+            className="w-auto"
+            style={{ height: '24px' }}
+          />
         </div>
 
         <nav className="flex-1 overflow-y-auto space-y-1 px-4">
           {mainNavItems.map((item) => {
             const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isAccent = item.accent === true;
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
                   'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
-                  isActive ? 'text-white' : 'text-gray-500 hover:text-white',
+                  isAccent
+                    ? 'text-neon-yellow'
+                    : isActive
+                      ? 'text-white'
+                      : 'text-gray-500 hover:text-white',
                 )}
               >
                 {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
-                <item.icon className={cn('w-5 h-5', isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors')} />
-                <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+                <item.icon
+                  className={cn(
+                    'w-5 h-5',
+                    isAccent
+                      ? 'text-neon-yellow'
+                      : isActive
+                        ? 'text-neon-yellow'
+                        : 'group-hover:text-neon-yellow transition-colors',
+                  )}
+                />
+                {isAccent ? (
+                  <span
+                    className="italic text-neon-yellow leading-none"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: '24px',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                  </span>
+                ) : (
+                  <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+                )}
               </Link>
             );
           })}
         </nav>
+
+        {/* Bloco secundário: link "| Como jogar" em Inter regular,
+            visual de footer link (não compete com nav principal) */}
+        <div className="px-8 pt-1 pb-2">
+          {secondaryNavItems.map((item) => {
+            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'inline-flex items-center gap-2 transition-colors',
+                  isActive ? 'text-white' : 'text-white/55 hover:text-neon-yellow',
+                )}
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                <span aria-hidden className="text-white/35">|</span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Status do jogo — Inter regular, sem display caps */}
+        <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
+          <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
+            Status do jogo
+          </p>
+          <p
+            className="text-white mt-1"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+          >
+            Somos:{' '}
+            <span className="text-neon-yellow font-semibold tabular-nums">
+              {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+            </span>{' '}
+            {totalManagers === 1 ? 'clube' : 'clubes'}
+          </p>
+        </div>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
           <button
@@ -281,7 +376,12 @@ export function Layout({ children }: { children: ReactNode }) {
               className="fixed top-0 left-0 bottom-0 w-72 bg-deep-black border-r border-white/10 z-[70] lg:hidden flex flex-col"
             >
               <div className="flex items-center justify-between p-5 border-b border-white/10">
-                <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="h-1.5 w-auto" />
+                <img
+                  src="/brand/olefoot-yellow-01.svg"
+                  alt="Olefoot"
+                  className="w-auto"
+                  style={{ height: '22px' }}
+                />
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -295,6 +395,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-4">
                 {mainNavItems.map((item) => {
                   const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  const isAccent = item.accent === true;
                   return (
                     <Link
                       key={item.path}
@@ -302,16 +403,86 @@ export function Layout({ children }: { children: ReactNode }) {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
                         'flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative',
-                        isActive ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5',
+                        isAccent
+                          ? 'text-neon-yellow hover:bg-neon-yellow/[0.06]'
+                          : isActive
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-500 hover:text-white hover:bg-white/5',
                       )}
                     >
                       {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r" />}
-                      <item.icon className={cn('w-5 h-5', isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors')} />
-                      <span className="font-display font-bold tracking-wider">{item.label}</span>
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5',
+                          isAccent
+                            ? 'text-neon-yellow'
+                            : isActive
+                              ? 'text-neon-yellow'
+                              : 'group-hover:text-neon-yellow transition-colors',
+                        )}
+                      />
+                      {isAccent ? (
+                        <span
+                          className="italic text-neon-yellow leading-none"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontWeight: 700,
+                            fontSize: '22px',
+                            letterSpacing: '-0.01em',
+                          }}
+                        >
+                          {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                        </span>
+                      ) : (
+                        <span className="font-display font-bold tracking-wider">{item.label}</span>
+                      )}
                     </Link>
                   );
                 })}
               </nav>
+
+              {/* Link "| Como jogar" em Inter regular */}
+              <div className="px-8 pt-1 pb-2">
+                {secondaryNavItems.map((item) => {
+                  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        'inline-flex items-center gap-2 transition-colors',
+                        isActive ? 'text-white' : 'text-white/55 hover:text-neon-yellow',
+                      )}
+                      style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        letterSpacing: '0.01em',
+                      }}
+                    >
+                      <span aria-hidden className="text-white/35">|</span>
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
+                  Status do jogo
+                </p>
+                <p
+                  className="text-white mt-1"
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+                >
+                  Somos:{' '}
+                  <span className="text-neon-yellow font-semibold tabular-nums">
+                    {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+                  </span>{' '}
+                  {totalManagers === 1 ? 'clube' : 'clubes'}
+                </p>
+              </div>
 
               <div className="p-5 border-t border-white/10 bg-[#0a0a0a]">
                 <button
@@ -328,25 +499,76 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Mobile Bottom Nav — hidden at lg+ */}
+      {/* Mobile Bottom Nav — Legacy Tech (hidden at lg+) */}
       {!hideMobileBottomNav && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around border-t border-white/10 bg-[#0a0a0a] pb-safe">
+        <nav
+          aria-label="Navegação principal"
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around bg-deep-black/95 backdrop-blur pb-safe"
+        >
+          {/* Régua amarela editorial no topo (gradient sutil) */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-yellow/55 to-transparent"
+          />
           {mainNavItems.slice(0, 5).map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isActive =
+              location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isAccent = item.accent === true;
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 transition-all [-webkit-tap-highlight-color:transparent]',
-                  isActive ? 'text-neon-yellow' : 'text-gray-500',
+                  'group relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2.5 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.94]',
+                  isAccent
+                    ? 'text-neon-yellow'
+                    : isActive
+                      ? 'text-neon-yellow bg-neon-yellow/[0.05]'
+                      : 'text-white/45 hover:text-white/85',
                 )}
               >
-                {isActive && <div className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-neon-yellow" />}
-                <item.icon className="h-5 w-5 shrink-0" />
-                <span className="max-w-full truncate text-center text-[8px] font-display font-bold leading-tight tracking-wider min-[360px]:text-[9px]">
-                  {item.label}
-                </span>
+                {/* Rail amarelo top (assinatura Legacy Tech) */}
+                {isActive ? (
+                  <span
+                    aria-hidden
+                    className="absolute left-1/2 top-0 h-[3px] w-10 -translate-x-1/2 bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.55)]"
+                  />
+                ) : null}
+                <item.icon
+                  className={cn(
+                    'h-5 w-5 shrink-0 transition-transform duration-200',
+                    isAccent
+                      ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
+                      : isActive
+                        ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
+                        : 'group-hover:scale-110',
+                  )}
+                  strokeWidth={isActive || isAccent ? 2.5 : 2}
+                />
+                {isAccent ? (
+                  <span
+                    className="max-w-full truncate text-center italic text-neon-yellow leading-none"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {item.label.charAt(0) + item.label.slice(1).toLowerCase()}
+                  </span>
+                ) : (
+                  <span
+                    className="max-w-full truncate text-center font-display font-black uppercase leading-none"
+                    style={{
+                      fontSize: '10px',
+                      letterSpacing: '0.22em',
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}

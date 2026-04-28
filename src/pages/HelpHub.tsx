@@ -1,31 +1,42 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, HelpCircle, BookOpen, ChevronRight, Sparkles, PlayCircle } from 'lucide-react';
+import { ChevronRight, Sparkles, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { OlefootAssistant } from '@/components/assistant/OlefootAssistant';
+import { HubSectionCard } from '@/components/ui/HubSectionCard';
 
-const quickActions = [
+const quickActions: Array<{
+  eyebrow: string;
+  title: string;
+  description: string;
+  cta: string;
+  href: string;
+  rail: string;
+}> = [
   {
-    icon: GraduationCap,
-    label: 'Como jogar',
-    description: 'Guia completo do jogo',
+    eyebrow: 'Onboarding',
+    title: 'Como jogar',
+    description: 'Guia completo do jogo. Do cadastro à primeira vitória.',
+    cta: 'Ler guia',
     href: '/how-to-play',
-    color: 'neon-yellow',
+    rail: 'bg-neon-yellow',
   },
   {
-    icon: HelpCircle,
-    label: 'FAQ',
-    description: 'Perguntas frequentes',
+    eyebrow: 'Suporte',
+    title: 'FAQ',
+    description: 'Perguntas frequentes sobre Wallet, mercado e partidas.',
+    cta: 'Ver perguntas',
     href: '/wallet/faq',
-    color: 'cyan-400',
+    rail: 'bg-cyan-400',
   },
   {
-    icon: BookOpen,
-    label: 'Tutoriais',
-    description: 'Aprenda passo a passo',
+    eyebrow: 'Aprendizado',
+    title: 'Tutoriais',
+    description: 'Sequência de tutoriais visuais para dominar cada sistema.',
+    cta: 'Começar tutorial',
     href: '/how-to-play',
-    color: 'emerald-400',
+    rail: 'bg-emerald-400',
   },
 ];
 
@@ -155,37 +166,23 @@ export function HelpHub() {
         </div>
       </motion.section>
 
-      {/* Quick Actions Grid */}
+      {/* Quick Actions — Sprint B Legacy Tech */}
       <section>
-        <h2 className="text-sm font-display font-bold uppercase tracking-wider text-white/70 mb-4 px-1">
+        <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
           Acesso rápido
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quickActions.map((action, i) => (
-            <motion.div
+            <HubSectionCard
               key={action.href}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Link
-                to={action.href}
-                className="group block bg-[var(--color-card)] border border-white/8 hover:border-neon-yellow/40 rounded-sm p-6 transition-all hover:scale-[1.01]"
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded bg-${action.color}/10 border border-${action.color}/20`}>
-                    <action.icon className={`w-6 h-6 text-${action.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-display font-bold text-white text-lg mb-1 group-hover:text-neon-yellow transition-colors">
-                      {action.label}
-                    </h3>
-                    <p className="text-sm text-white/55">{action.description}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-neon-yellow transition-colors" />
-                </div>
-              </Link>
-            </motion.div>
+              to={action.href}
+              eyebrow={action.eyebrow}
+              title={action.title}
+              description={action.description}
+              cta={action.cta}
+              rail={action.rail}
+              delay={i * 0.08}
+            />
           ))}
         </div>
       </section>

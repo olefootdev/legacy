@@ -1,13 +1,18 @@
 /**
- * UI de Registro na Liga Global MVP
- * Mostra contador X/32 times e permite cadastro
+ * /liga-global/registro — registro de manager na OLEFOOT LIGA (MVP global).
+ *
+ * Sprint B-4 Legacy Tech: header padrão Ranking (eyebrow + headline duo + régua),
+ * cards com trilho lateral colorido (sem ícones soltos), MORET serif para números,
+ * lista de times cadastrados ordenada por overall.
  */
 
-import { motion } from 'framer-motion';
-import { Users, Trophy, TrendingUp, CheckCircle, Clock } from 'lucide-react';
-import { useGameStore, useGameDispatch } from '@/game/store';
+import { useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
+import { BackButton } from '@/components/BackButton';
+import { cn } from '@/lib/utils';
 
 export default function GlobalLeagueRegistration() {
   const dispatch = useGameDispatch();
@@ -18,249 +23,401 @@ export default function GlobalLeagueRegistration() {
   const players = useGameStore((s) => s.players);
   const userSettings = useGameStore((s) => s.userSettings);
 
-  // Calcular overall do time (média dos 11 melhores)
-  const teamOverall = Math.round(
-    Object.values(players)
-      .map(p => overallFromAttributes(p.attributes))
+  /** Overall do XI (média dos 11 melhores). Usa `attrs` (campo correto do PlayerEntity). */
+  const teamOverall = useMemo(() => {
+    const ovrs = Object.values(players)
+      .map((p) => overallFromAttributes(p.attrs))
       .sort((a, b) => b - a)
-      .slice(0, 11)
-      .reduce((sum, ovr) => sum + ovr, 0) / 11
-  );
+      .slice(0, 11);
+    if (!ovrs.length) return 0;
+    return Math.round(ovrs.reduce((sum, o) => sum + o, 0) / ovrs.length);
+  }, [players]);
 
+  const squadSize = Object.keys(players).length;
   const managerId = userSettings.managerProfile?.email || 'guest';
-  const isRegistered = globalLeagueMVP?.teams.some(t => t.managerId === managerId);
-  const teamsCount = globalLeagueMVP?.teams.length || 0;
-  const minTeams = globalLeagueMVP?.minTeamsRequired || 32;
-  const progress = (teamsCount / minTeams) * 100;
+  const isRegistered = Boolean(globalLeagueMVP?.teams.some((t) => t.managerId === managerId));
+  const teamsCount = globalLeagueMVP?.teams.length ?? 0;
+  const minTeams = globalLeagueMVP?.minTeamsRequired ?? 32;
+  const status = globalLeagueMVP?.status ?? 'waiting_teams';
+  const remaining = Math.max(0, minTeams - teamsCount);
+  const progress = Math.min(100, (teamsCount / minTeams) * 100);
+
+  const sortedTeams = useMemo(
+    () => [...(globalLeagueMVP?.teams ?? [])].sort((a, b) => b.overall - a.overall),
+    [globalLeagueMVP?.teams],
+  );
 
   const handleRegister = () => {
     if (!globalLeagueMVP) {
       dispatch({ type: 'INIT_GLOBAL_LEAGUE_MVP' });
     }
-
     dispatch({
       type: 'REGISTER_GLOBAL_TEAM',
       managerId,
       clubName: club.name,
-      clubShort: club.short,
+      clubShort: club.shortName,
       overall: teamOverall,
     });
   };
 
+  const canRegister = !isRegistered && squadSize > 0 && status === 'waiting_teams';
+
+  const statusBadge =
+    status === 'waiting_teams'
+      ? { label: 'Cadastros abertos', tone: 'text-neon-yellow border-neon-yellow/40 bg-neon-yellow/10' }
+      : status === 'playoffs'
+        ? { label: 'Playoffs em curso', tone: 'text-fuchsia-300 border-fuchsia-400/40 bg-fuchsia-500/10' }
+        : status === 'league_active'
+          ? { label: 'Liga em curso', tone: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10' }
+          : { label: 'Temporada encerrada', tone: 'text-white/65 border-white/15 bg-white/[0.03]' };
+
   return (
-    <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
-      {/* Hero */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
-        <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden">
-          <motion.span
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="font-serif-hero font-black text-black/[0.04]"
-            style={{
-              fontSize: 'clamp(180px, 32vw, 460px)',
-              lineHeight: '0.85',
-              letterSpacing: '-0.05em',
-            }}
-          >
-            {teamsCount}
-          </motion.span>
-        </div>
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 pb-10">
+      <BackButton to="/competicao/ligas" label="Ligas" />
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
-        >
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6">
-            <span>Liga Global · Temporada 2026</span>
-          </div>
-
-          <h1 className="leading-[0.9]">
+      {/* ── HEADER editorial padrão Ranking ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="border border-white/10 bg-dark-gray overflow-hidden"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        <div className="bg-black/40 p-6 md:p-8 border-b border-[var(--color-divider-yellow)]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div
+                className="font-display font-bold uppercase text-neon-yellow/85 mb-3"
+                style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+              >
+                Liga Global · Temporada 2026
+              </div>
+              <h1 className="leading-[0.92]">
+                <span
+                  className="block font-bold uppercase text-white"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'clamp(2rem, 5.5vw, 3.5rem)',
+                    letterSpacing: '0.005em',
+                  }}
+                >
+                  OLEFOOT LIGA
+                </span>
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={teamsCount}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.35 }}
+                    className="block italic text-neon-yellow mt-1"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {teamsCount}/{minTeams} times
+                  </motion.span>
+                </AnimatePresence>
+              </h1>
+            </div>
             <span
-              className="block font-bold uppercase text-black"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Registro Aberto
-            </span>
-            <motion.span
-              key={teamsCount}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="block italic text-black"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                marginTop: '0.04em',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {teamsCount}/{minTeams} times
-            </motion.span>
-          </h1>
-
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-
-          {/* Progress Bar */}
-          <div className="mt-8 max-w-md mx-auto">
-            <div className="h-3 bg-black/20 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5 }}
-                className="h-full bg-black"
-              />
-            </div>
-            <p className="mt-2 text-xs text-black/70">
-              {minTeams - teamsCount} times restantes para iniciar playoffs
-            </p>
-          </div>
-
-          {/* Status */}
-          <div className="mt-8 flex justify-center">
-            <div className="inline-flex items-center gap-2 bg-black px-4 py-2 rounded-sm">
-              {isRegistered ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-neon-yellow" />
-                  <span className="font-display text-xs font-bold uppercase tracking-wider text-neon-yellow">
-                    Cadastrado
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4 text-white/70" />
-                  <span className="font-display text-xs font-bold uppercase tracking-wider text-white/70">
-                    Aguardando
-                  </span>
-                </>
+              className={cn(
+                'inline-flex items-center rounded-[var(--radius-pill)] border px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em]',
+                statusBadge.tone,
               )}
-            </div>
+            >
+              {statusBadge.label}
+            </span>
           </div>
-        </motion.div>
+
+          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-5" />
+
+          <p
+            className="text-white/55 max-w-md mt-4"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
+          >
+            Competição mundial OLE: 32 times disputam playoffs, depois divididos em 3 divisões com promoção e
+            rebaixamento contínuos.
+          </p>
+
+          {/* Progress bar (só durante cadastros) */}
+          {status === 'waiting_teams' ? (
+            <div className="mt-6 max-w-md">
+              <div className="h-2 overflow-hidden rounded-full bg-white/8">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.6 }}
+                  className="h-full bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.4)]"
+                />
+              </div>
+              <p className="mt-2 text-[12px] text-white/55">
+                {remaining > 0
+                  ? `Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`
+                  : 'Quórum atingido — playoffs prestes a começar.'}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </motion.div>
+
+      {/* ── 3 cards de regras (trilho lateral, sem ícones) ── */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <RuleCard
+          rail="bg-neon-yellow"
+          eyebrow="Fase 1"
+          title="Playoffs"
+          description="3 rodadas ida e volta — 6 jogos para definir as divisões."
+          delay={0.1}
+        />
+        <RuleCard
+          rail="bg-cyan-300"
+          eyebrow="Estrutura"
+          title="3 Divisões"
+          description="~11 times por divisão, baseado no desempenho dos playoffs."
+          delay={0.2}
+        />
+        <RuleCard
+          rail="bg-emerald-400"
+          eyebrow="Ciclo"
+          title="Promoção & Descenso"
+          description="Top 10% sobem, bottom 10% descem a cada temporada."
+          delay={0.3}
+        />
       </section>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-panel border border-white/10 rounded-sm p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-neon-yellow/10 border border-neon-yellow/20 rounded-sm">
-              <Trophy className="w-5 h-5 text-neon-yellow" />
-            </div>
-            <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
-              Playoffs
-            </h3>
-          </div>
-          <p className="text-xs text-white/60 leading-relaxed">
-            3 rodadas ida/volta (6 jogos) para definir as divisões
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-panel border border-white/10 rounded-sm p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-400/10 border border-blue-400/20 rounded-sm">
-              <Users className="w-5 h-5 text-blue-400" />
-            </div>
-            <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
-              3 Divisões
-            </h3>
-          </div>
-          <p className="text-xs text-white/60 leading-relaxed">
-            ~11 times por divisão baseado no desempenho nos playoffs
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-panel border border-white/10 rounded-sm p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-emerald-400/10 border border-emerald-400/20 rounded-sm">
-              <TrendingUp className="w-5 h-5 text-emerald-400" />
-            </div>
-            <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
-              Promoção
-            </h3>
-          </div>
-          <p className="text-xs text-white/60 leading-relaxed">
-            Top 10% sobem, bottom 10% descem a cada temporada
-          </p>
-        </motion.div>
-      </div>
-
-      {/* Seu Time */}
-      {!isRegistered && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+      {/* ── Card "Seu Time" ── */}
+      {!isRegistered ? (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-panel border border-neon-yellow/20 rounded-sm p-6"
+          className="relative isolate overflow-hidden border border-[var(--color-divider-yellow-strong)]"
+          style={{
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--color-panel-elevated)',
+            boxShadow: 'var(--shadow-card-hover)',
+          }}
         >
-          <h3 className="font-display text-base font-bold uppercase tracking-wider text-white mb-4">
-            Seu Time
-          </h3>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="font-display text-lg font-bold text-white">{club.name}</p>
-              <p className="text-xs text-white/60 mt-1">{club.city}</p>
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
+          <div className="relative p-6 md:p-7 pl-7 md:pl-8">
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
+              <div className="min-w-0">
+                <div
+                  className="font-display font-bold uppercase text-neon-yellow/80 mb-2"
+                  style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+                >
+                  Seu Time
+                </div>
+                <h3
+                  className="font-display text-[24px] font-black uppercase tracking-tight text-white leading-tight"
+                >
+                  {club.name}
+                </h3>
+                <p className="mt-1 text-[12px] text-white/45 uppercase tracking-[0.22em]">
+                  {club.city ?? '—'} · {squadSize} jogador{squadSize === 1 ? '' : 'es'}
+                </p>
+              </div>
+              <div className="text-right">
+                <p
+                  className="italic tabular-nums leading-none text-neon-yellow"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: 'clamp(40px, 7vw, 56px)',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {teamOverall || '—'}
+                </p>
+                <p className="mt-1 text-[10px] text-white/55 uppercase tracking-[0.22em]">
+                  Overall do XI
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="font-serif-hero text-3xl font-bold text-neon-yellow">{teamOverall}</p>
-              <p className="text-xs text-white/60 uppercase tracking-wider">Overall</p>
+
+            {squadSize === 0 ? (
+              <p className="mb-4 text-[13px] leading-relaxed text-white/55">
+                Cadastra jogadores em <span className="text-neon-yellow">/clube/elenco</span> antes de entrar — a
+                liga calcula o overall do teu XI titular.
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleRegister}
+                disabled={!canRegister}
+                className={cn(
+                  'inline-flex items-center px-6 py-3 font-display text-[12px] font-black uppercase tracking-[0.22em] transition-all',
+                  canRegister
+                    ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] hover:bg-white hover:scale-[1.02] active:scale-[0.98]'
+                    : 'cursor-not-allowed border border-white/15 bg-white/[0.03] text-white/35',
+                )}
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                {squadSize === 0
+                  ? 'Sem elenco'
+                  : status !== 'waiting_teams'
+                    ? 'Cadastros encerrados'
+                    : 'Entrar na Liga Global'}
+              </button>
+              {squadSize === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/clube/elenco')}
+                  className="inline-flex items-center border border-white/20 bg-deep-black px-6 py-3 font-display text-[12px] font-black uppercase tracking-[0.22em] text-white/85 transition-colors hover:border-neon-yellow hover:text-neon-yellow"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  Ir ao Elenco
+                </button>
+              ) : null}
             </div>
           </div>
-          <button
-            onClick={handleRegister}
-            className="w-full bg-neon-yellow text-black px-6 py-3 font-display text-sm font-black uppercase tracking-wider rounded-sm hover:brightness-110 transition-all shadow-[0_4px_16px_rgba(253,225,0,0.3)]"
-          >
-            Entrar na Liga Global
-          </button>
-        </motion.div>
+        </motion.section>
+      ) : (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="relative isolate overflow-hidden border border-emerald-400/30"
+          style={{
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--color-panel-elevated)',
+            boxShadow: 'var(--shadow-card-hover)',
+          }}
+        >
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-emerald-400" />
+          <div className="relative p-6 md:p-7 pl-7 md:pl-8">
+            <div
+              className="font-display font-bold uppercase text-emerald-300/85 mb-2"
+              style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+            >
+              Confirmado
+            </div>
+            <h3 className="font-display text-[22px] font-black uppercase tracking-tight text-white leading-tight">
+              {club.name} está na Liga
+            </h3>
+            <p className="mt-2 text-[13px] leading-relaxed text-white/55">
+              Aguardando os outros managers — quando atingirmos {minTeams} times, os playoffs começam
+              automaticamente.
+            </p>
+          </div>
+        </motion.section>
       )}
 
-      {/* Times Cadastrados */}
-      {teamsCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-panel border border-white/10 rounded-sm p-6"
-        >
-          <h3 className="font-display text-base font-bold uppercase tracking-wider text-white mb-4">
-            Times Cadastrados ({teamsCount})
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-            {globalLeagueMVP?.teams.map((team, index) => (
-              <div
-                key={team.id}
-                className="flex items-center justify-between bg-black/30 px-3 py-2 rounded-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-white/40">#{index + 1}</span>
-                  <span className="font-display text-sm font-bold text-white truncate">
-                    {team.clubName}
+      {/* ── Times cadastrados ── */}
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="border border-white/[0.05] overflow-hidden"
+        style={{
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--color-panel-elevated)',
+          boxShadow: 'var(--shadow-card)',
+        }}
+      >
+        <div className="border-b border-[var(--color-divider-yellow)] p-5 md:p-6 flex items-baseline justify-between gap-3">
+          <h2 className="font-display text-[14px] font-black uppercase tracking-[0.22em] text-white">
+            Times cadastrados
+          </h2>
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
+            {teamsCount} {teamsCount === 1 ? 'manager' : 'managers'}
+          </span>
+        </div>
+        <div className="p-5 md:p-6">
+          {teamsCount === 0 ? (
+            <p className="text-[13px] leading-relaxed text-white/45">
+              Ninguém cadastrado ainda. Sê o primeiro a entrar na competição mundial — basta ter elenco e tática
+              prontos no <span className="text-neon-yellow">Plantel</span>.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1">
+              {sortedTeams.map((team, index) => (
+                <div
+                  key={team.id}
+                  className="flex items-center justify-between border border-white/[0.05] bg-[var(--color-panel-soft)] px-4 py-3"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="shrink-0 font-display text-[12px] font-black tabular-nums text-white/40"
+                      style={{ width: '2rem' }}
+                    >
+                      #{index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-[13px] font-bold uppercase tracking-wide text-white">
+                        {team.clubName}
+                      </p>
+                      <p className="truncate text-[10px] uppercase tracking-[0.22em] text-white/40">
+                        {team.clubShort}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className="shrink-0 italic tabular-nums leading-none text-neon-yellow"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontSize: '22px',
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {team.overall}
                   </span>
                 </div>
-                <span className="font-serif-hero text-sm text-neon-yellow">{team.overall}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.section>
     </div>
+  );
+}
+
+/** Card de regra/explicação — Sprint B-4 Legacy: trilho colorido + texto-claro. */
+function RuleCard({
+  rail,
+  eyebrow,
+  title,
+  description,
+  delay = 0,
+}: {
+  rail: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className="relative isolate overflow-hidden border border-white/[0.05]"
+      style={{
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--color-panel-elevated)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
+      <span aria-hidden className={`absolute left-0 top-0 h-full w-[3px] ${rail}`} />
+      <div className="relative flex h-full flex-col gap-3 p-5 pl-6 sm:p-6 sm:pl-7">
+        <span
+          className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
+          style={{ fontFamily: 'var(--font-ui)' }}
+        >
+          {eyebrow}
+        </span>
+        <h3 className="font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white">
+          {title}
+        </h3>
+        <p className="text-[12px] leading-relaxed text-white/55">{description}</p>
+      </div>
+    </motion.div>
   );
 }

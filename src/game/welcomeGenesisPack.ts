@@ -18,15 +18,24 @@ const WELCOME_PACK_TAG = 'welcomepack';
 const WELCOME_BENCH_COUNT = 9; // 11 starters + 9 bench = 20 total (entrega a lista WP inteira)
 const WELCOME_EXP_GRANT = 500_000; // saldo inicial de EXP pra cada manager que abre o welcome pack
 
-/** Reserva atômica de 1 slot via RPC. Retorna null se Supabase off ou sem auth. */
+/**
+ * Reserva atômica de 1 slot via RPC. Retorna null se Supabase off ou sem auth.
+ *
+ * Usa getSession() (lê do storage local, sincrónico após signUp) em vez de
+ * getUser() (faz round-trip ao server e pode falhar logo depois do signup
+ * por causa de propagação do token).
+ */
 async function claimWelcomePackSlot(): Promise<
   { claimed: boolean; remaining: number } | null
 > {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data: sess } = await sb.auth.getUser();
-  const uid = sess?.user?.id;
-  if (!uid) return null;
+  const { data: sessData } = await sb.auth.getSession();
+  const uid = sessData?.session?.user?.id ?? null;
+  if (!uid) {
+    console.warn('[welcomePack] sem sess\u00e3o ap\u00f3s signup; n\u00e3o foi poss\u00edvel reservar slot.');
+    return null;
+  }
   const { data, error } = await sb.rpc('claim_welcome_pack', { p_manager_id: uid });
   if (error) {
     console.warn('[welcomePack] claim_welcome_pack:', error.message);

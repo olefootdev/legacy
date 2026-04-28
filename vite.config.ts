@@ -19,6 +19,10 @@ export default defineConfig(() => {
       alias: {
         '@': path.join(rootDir, 'src'),
       },
+      // Resolver .tsx/.ts antes de .js. Evita que artefatos compilados
+      // (src/**/*.js não-rastreados gerados por tsc) sejam servidos no
+      // lugar do source TS — produzia "Failed to parse source for import".
+      extensions: ['.mjs', '.mts', '.ts', '.tsx', '.jsx', '.js', '.json'],
     },
     server: {
       // Porta padrão Vite (evita confusão com 5173 vs 3000). strictPort: false tenta a seguinte se ocupada.

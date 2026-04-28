@@ -71,6 +71,7 @@ export function Team() {
   const lineupSaved = useGameStore((s) => s.lineup);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
   const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
+  const club = useGameStore((s) => s.club);
   const currentPresetId: PlayingStylePresetId = tacticalStyle?.presetId ?? 'balanced';
   const favoriteRealTeam = useGameStore((s) => s.userSettings.favoriteRealTeam);
 
@@ -104,6 +105,8 @@ export function Team() {
   const [announcePrice, setAnnouncePrice] = useState('180000');
   /** Ficha temporada / evolução (clique no token ou no cartão). */
   const [sheetPlayerId, setSheetPlayerId] = useState<string | null>(null);
+  /** Sprint B-3: menu de ações ao clicar num token do campo (Substituir/Skill/Anunciar). */
+  const [pitchMenu, setPitchMenu] = useState<{ slotId: string; player: CardPlayer } | null>(null);
 
   useEffect(() => {
     if (lineupDirty) {
@@ -273,70 +276,24 @@ export function Team() {
       <BackButton to="/clube" label="Clube" />
       <TeamMeuTimeHeader
         title="Plantel Principal"
-        subtitle={
-          <>
-            Temporada 2026 •{' '}
-            <span className="font-semibold text-white/90">{formationScheme}</span>
-            <span className="text-gray-500"> tático</span>
-          </>
-        }
-        actions={
-          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 max-w-full">
-            <button
-              type="button"
-              onClick={() => {
-                setPendingFormation(formationScheme);
-                setPendingPreset(currentPresetId);
-                setPresetInfoId(null);
-                setFormationModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 bg-neon-yellow px-3 py-1.5 text-black hover:bg-white transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              Escolher formação
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreateProspectOpen(true)}
-              className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Criar jogador
-            </button>
-            {favoriteRealTeam?.name ? (
-              <Link
-                to="/ranking?tab=nacional&heart=1"
-                className="inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                <Heart className="h-3.5 w-3.5" />
-                Ranking · {favoriteRealTeam.name}
-              </Link>
-            ) : null}
-          </div>
+        customHero={
+          <PlantelHero
+            clubName={club.name}
+            clubShort={club.shortName}
+            formation={formationScheme}
+            squadSize={Object.keys(playersById).length}
+            startersCount={startersStrength.count}
+            startersCap={pitchSlots.length}
+            xiAvgOverall={startersStrength.avg}
+            favoriteRealTeamName={favoriteRealTeam?.name}
+            onChooseFormation={() => {
+              setPendingFormation(formationScheme);
+              setPendingPreset(currentPresetId);
+              setPresetInfoId(null);
+              setFormationModalOpen(true);
+            }}
+            onCreatePlayer={() => setCreateProspectOpen(true)}
+          />
         }
       />
 
@@ -345,11 +302,11 @@ export function Team() {
         “auto” por conteúdo maior que o viewport e overflow cortado à direita no mobile.
       */}
       <div className="flex w-full min-w-0 max-w-full flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:gap-8">
-        {/* Left: Football Pitch */}
-        <div className="h-fit w-full min-w-0 max-w-full shrink-0 lg:sticky lg:top-24 lg:w-1/2">
-          <div className="sports-panel relative box-border w-full min-w-0 max-w-full overflow-x-hidden border-white/10 bg-black/40 px-1.5 py-2 sm:px-2 sm:py-2 md:p-4">
-            {/* Largura do relvado: sempre ≤ largura do painel; `mx-auto` centra o bloco no ecrã estreito. */}
-            <div className="mx-auto w-full min-w-0 max-w-[min(100%,17.5rem)] md:max-w-md">
+        {/* Left: Football Pitch — Sprint B-3: campo maior, tokens mais visíveis */}
+        <div className="h-fit w-full min-w-0 max-w-full shrink-0 lg:sticky lg:top-24 lg:w-[55%]">
+          <div className="sports-panel relative box-border w-full min-w-0 max-w-full overflow-x-hidden border-white/10 bg-black/40 px-2 py-3 sm:px-3 sm:py-4 md:p-5">
+            {/* Largura do relvado bumped (Sprint B-3): mobile 22rem, md 32rem, lg 40rem */}
+            <div className="mx-auto w-full min-w-0 max-w-[min(100%,22rem)] sm:max-w-[28rem] md:max-w-[32rem] lg:max-w-[40rem]">
               <div className="mb-2 flex w-full min-w-0 items-center justify-between gap-2 px-0.5 sm:mb-3 md:mb-4 md:px-0">
                 <h3 className="flex min-w-0 flex-1 items-center gap-2.5">
                   <span aria-hidden className="shrink-0 w-[3px] h-5 sm:h-6 bg-neon-yellow" />
@@ -365,16 +322,27 @@ export function Team() {
                     Titulares
                   </span>
                 </h3>
-                <button
-                  type="button"
-                  onClick={handleSuggestLineup}
-                  title="Sugerir escalação (GameSpirit)"
-                  aria-label="Sugerir escalação (GameSpirit)"
-                  className="inline-flex h-8 shrink-0 touch-manipulation items-center justify-center gap-1 rounded border border-neon-yellow/40 bg-neon-yellow/10 px-2 font-display text-[8px] font-black uppercase leading-none tracking-wider text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow/20 sm:h-8 sm:px-2.5 sm:text-[9px] md:h-9 md:px-3 md:text-[10px]"
-                >
-                  <Sparkles className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" aria-hidden />
-                  <span className="whitespace-nowrap">Sugerir</span>
-                </button>
+                <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSuggestLineup}
+                    title="Sugerir escalação (GameSpirit)"
+                    aria-label="Sugerir escalação"
+                    className="inline-flex h-9 shrink-0 touch-manipulation items-center justify-center rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 font-display text-[10px] font-black uppercase leading-none tracking-[0.2em] text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-neon-yellow/20 sm:px-4 sm:text-[11px]"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  >
+                    Sugerir
+                  </button>
+                  <Link
+                    to="/team/ailabs"
+                    title="Abrir AI Labs"
+                    aria-label="Abrir AI Labs"
+                    className="inline-flex h-9 shrink-0 touch-manipulation items-center justify-center rounded border border-white/20 bg-white/[0.04] px-3 font-display text-[10px] font-black uppercase leading-none tracking-[0.2em] text-white/80 transition-colors [-webkit-tap-highlight-color:transparent] hover:border-neon-yellow/60 hover:text-neon-yellow sm:px-4 sm:text-[11px]"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  >
+                    AI Labs
+                  </Link>
+                </div>
               </div>
 
               {/* Pitch: `min-w-0` + `max-w-full` garantem que a caixa de aspeto nunca força overflow horizontal. */}
@@ -465,20 +433,19 @@ export function Team() {
                   {lineup[slot.id] ? (
                     <PitchPlayer
                       player={lineup[slot.id]}
-                      onOpenSheet={() => setSheetPlayerId(lineup[slot.id]!.id)}
-                      onRemove={() => handleRemove(slot.id)}
+                      onOpenMenu={() => setPitchMenu({ slotId: slot.id, player: lineup[slot.id]! })}
                     />
                   ) : (
-                    <div 
+                    <div
                       onClick={() => setSelectedSlotId(slot.id)}
                       className={cn(
-                        'flex size-7 cursor-pointer items-center justify-center rounded-full border border-dashed backdrop-blur-sm transition-all sm:size-8 md:size-12 md:border-2',
-                        selectedSlotId === slot.id 
-                          ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow shadow-[0_0_15px_rgba(228,255,0,0.3)] sm:scale-110' 
-                          : "border-white/30 bg-black/20 text-white/40 hover:border-white/60 hover:text-white/80"
+                        'flex size-10 cursor-pointer items-center justify-center rounded-full border border-dashed backdrop-blur-sm transition-all sm:size-12 md:size-16 md:border-2',
+                        selectedSlotId === slot.id
+                          ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow shadow-[0_0_18px_rgba(228,255,0,0.35)] sm:scale-110'
+                          : 'border-white/35 bg-black/30 text-white/55 hover:border-white/70 hover:text-white/90',
                       )}
                     >
-                      <span className="font-black text-[7px] sm:text-[8px] md:text-xs">{slot.label}</span>
+                      <span className="font-black text-[10px] sm:text-[11px] md:text-sm">{slot.label}</span>
                     </div>
                   )}
                 </div>
@@ -1201,19 +1168,443 @@ export function Team() {
           />
         ) : null}
       </AnimatePresence>
+
+      {/* Sprint B-3: Menu de ações ao clicar num token do campo */}
+      <AnimatePresence>
+        {pitchMenu ? (
+          <PitchPlayerMenu
+            player={pitchMenu.player}
+            onClose={() => setPitchMenu(null)}
+            onSubstituir={() => {
+              const slotId = pitchMenu.slotId;
+              setPitchMenu(null);
+              handleRemove(slotId);
+              setSelectedSlotId(slotId);
+              setSaveBanner({
+                kind: 'success',
+                text: `Slot ${slotId} liberado. Escolhe um substituto na lista.`,
+              });
+            }}
+            onVerSkill={() => {
+              const pid = pitchMenu.player.id;
+              setPitchMenu(null);
+              setSheetPlayerId(pid);
+            }}
+            onAnunciar={() => {
+              const card = pitchMenu.player;
+              setPitchMenu(null);
+              setAnnouncePrice('180000');
+              setAnnouncePlayer(card);
+            }}
+          />
+        ) : null}
+      </AnimatePresence>
       </div>
     </div>
   );
 }
 
-function PitchPlayer({
+/**
+ * Menu de ações ao clicar num jogador escalado no campo (Sprint B-3).
+ * Centro-bottom no mobile, modal no desktop. Sem ícones soltos — texto-claro.
+ */
+function PitchPlayerMenu({
   player,
-  onOpenSheet,
-  onRemove,
+  onClose,
+  onSubstituir,
+  onVerSkill,
+  onAnunciar,
 }: {
   player: CardPlayer;
-  onOpenSheet: () => void;
-  onRemove: () => void;
+  onClose: () => void;
+  onSubstituir: () => void;
+  onVerSkill: () => void;
+  onAnunciar: () => void;
+}) {
+  return (
+    <motion.div
+      key="pitch-player-menu"
+      role="presentation"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/75 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        className="relative w-full max-w-md overflow-hidden border border-white/[0.05]"
+        style={{
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--color-panel-elevated)',
+          boxShadow: 'var(--shadow-card-hover)',
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pitch-menu-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header com retrato + nome + OVR */}
+        <div className="flex items-center gap-4 border-b border-[var(--color-divider-yellow)] p-5">
+          <div
+            className={cn(
+              'relative size-16 shrink-0 overflow-hidden rounded-full border bg-dark-gray shadow-lg',
+              player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white/40',
+            )}
+          >
+            <img
+              src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
+              alt=""
+              className="h-full w-full object-cover object-top"
+              referrerPolicy="no-referrer"
+            />
+            <span
+              className={cn(
+                'absolute -right-1 -top-1 flex size-7 items-center justify-center shadow-md',
+                player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
+              )}
+              style={{ borderRadius: '9999px' }}
+            >
+              <span
+                className="italic tabular-nums leading-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                }}
+              >
+                {player.ovr}
+              </span>
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+              Posição · {player.pos}
+            </p>
+            <h3
+              id="pitch-menu-title"
+              className="mt-1 truncate font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white"
+            >
+              {player.name}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-full p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+            aria-label="Fechar menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Ações — texto-claro, dominantes */}
+        <div className="flex flex-col gap-2 p-4">
+          <button
+            type="button"
+            onClick={onSubstituir}
+            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-all hover:border-white/15 hover:-translate-y-0.5"
+            style={{
+              borderRadius: 'var(--radius-card)',
+              background: 'var(--color-panel-soft)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-rose-400" />
+            <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
+              <div>
+                <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+                  Tática
+                </p>
+                <p className="font-display text-[16px] font-black uppercase leading-tight tracking-tight text-white transition-colors group-hover/act:text-neon-yellow">
+                  Substituir
+                </p>
+                <p className="mt-0.5 text-[11px] text-white/50">Liberar slot e escolher outro jogador</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={onVerSkill}
+            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-all hover:border-white/15 hover:-translate-y-0.5"
+            style={{
+              borderRadius: 'var(--radius-card)',
+              background: 'var(--color-panel-soft)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-cyan-300" />
+            <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
+              <div>
+                <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+                  Perfil
+                </p>
+                <p className="font-display text-[16px] font-black uppercase leading-tight tracking-tight text-white transition-colors group-hover/act:text-neon-yellow">
+                  Ver skills & temporada
+                </p>
+                <p className="mt-0.5 text-[11px] text-white/50">Atributos, evolução e histórico recente</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={onAnunciar}
+            className="group/act relative w-full overflow-hidden border border-white/[0.05] text-left transition-all hover:border-white/15 hover:-translate-y-0.5"
+            style={{
+              borderRadius: 'var(--radius-card)',
+              background: 'var(--color-panel-soft)',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
+            <div className="flex items-center justify-between gap-3 px-5 py-4 pl-6">
+              <div>
+                <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
+                  Mercado
+                </p>
+                <p className="font-display text-[16px] font-black uppercase leading-tight tracking-tight text-white transition-colors group-hover/act:text-neon-yellow">
+                  Anunciar no mercado
+                </p>
+                <p className="mt-0.5 text-[11px] text-white/50">Listar para venda em EXP</p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/**
+ * Hero do Plantel — Sprint B-3 Legacy Tech.
+ * Espelha o padrão do Manager: amarelo + watermark + headline + stats + CTAs.
+ */
+function PlantelHero({
+  clubName,
+  clubShort,
+  formation,
+  squadSize,
+  startersCount,
+  startersCap,
+  xiAvgOverall,
+  favoriteRealTeamName,
+  onChooseFormation,
+  onCreatePlayer,
+}: {
+  clubName: string;
+  clubShort: string;
+  formation: string;
+  squadSize: number;
+  startersCount: number;
+  startersCap: number;
+  xiAvgOverall: number;
+  favoriteRealTeamName?: string;
+  onChooseFormation: () => void;
+  onCreatePlayer: () => void;
+}) {
+  const watermark = (clubShort?.trim() || clubName.slice(0, 3)).toUpperCase();
+  const xiAvgLabel = startersCount === 0 ? '—' : Math.round(xiAvgOverall).toString();
+  return (
+    <section
+      aria-label="Plantel Principal"
+      className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8"
+    >
+      {/* Watermark gigante: sigla do clube */}
+      <div
+        className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
+        aria-hidden
+      >
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={watermark}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.04 }}
+            transition={{ duration: 0.4 }}
+            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
+            style={{
+              fontSize: 'clamp(140px, 26vw, 460px)',
+              lineHeight: '0.85',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {watermark}
+          </motion.span>
+        </AnimatePresence>
+      </div>
+
+      {/* Composição editorial centrada vertical */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-14 text-center"
+      >
+        {/* Eyebrow */}
+        <div
+          className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black mb-4 sm:mb-6 truncate"
+        >
+          OLE Football · Meu Time · {clubName}
+        </div>
+
+        {/* Headline duo: Plantel + formação italic */}
+        <h1 className="leading-[0.9]">
+          <span
+            className="block font-bold uppercase text-black"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(2.75rem, 8vw, 6rem)',
+              letterSpacing: '0.005em',
+            }}
+          >
+            Plantel
+          </span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={formation}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.35 }}
+              className="block italic text-black"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(2.25rem, 7vw, 5rem)',
+                marginTop: '0.04em',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {formation}
+            </motion.span>
+          </AnimatePresence>
+        </h1>
+
+        {/* Régua decorativa */}
+        <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
+
+        {/* Quote italic — tom Legacy Tech */}
+        <motion.blockquote
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.05 }}
+          className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
+          style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
+        >
+          {startersCount === startersCap && startersCap > 0
+            ? '"escalação completa — pronta para a próxima partida."'
+            : startersCount === 0
+              ? '"comece pelo XI titular — cada nome carrega uma história."'
+              : '"escalação em construção — tática e jogadores em harmonia."'}
+        </motion.blockquote>
+
+        {/* Stats strip — 3 métricas principais */}
+        <div className="mt-8 sm:mt-10 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
+          <div
+            className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <p
+              className="text-neon-yellow tabular-nums leading-none truncate"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                fontSize: 'clamp(20px, 4vw, 36px)',
+              }}
+            >
+              {squadSize}
+            </p>
+            <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
+              Plantel
+            </p>
+          </div>
+          <div
+            className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <p
+              className="text-neon-yellow tabular-nums leading-none truncate"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                fontSize: 'clamp(20px, 4vw, 36px)',
+              }}
+            >
+              {startersCount}
+              <span className="text-white/30 text-[60%]">/{startersCap}</span>
+            </p>
+            <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
+              Titulares
+            </p>
+          </div>
+          <div
+            className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <p
+              className="text-neon-yellow tabular-nums leading-none truncate"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                fontSize: 'clamp(20px, 4vw, 36px)',
+              }}
+            >
+              {xiAvgLabel}
+            </p>
+            <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
+              OVR XI
+            </p>
+          </div>
+        </div>
+
+        {/* CTAs — primário preto sobre amarelo, secundários outline */}
+        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 px-4">
+          <button
+            type="button"
+            onClick={onChooseFormation}
+            className="inline-flex items-center justify-center bg-black px-5 sm:px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+            style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
+          >
+            Escolher formação
+          </button>
+          <button
+            type="button"
+            onClick={onCreatePlayer}
+            className="inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-black/10 transition-colors"
+            style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
+          >
+            Criar jogador
+          </button>
+          {favoriteRealTeamName ? (
+            <Link
+              to="/ranking?tab=nacional&heart=1"
+              className="inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-black/10 transition-colors"
+              style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
+            >
+              Ranking · {favoriteRealTeamName}
+            </Link>
+          ) : null}
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
+function PitchPlayer({
+  player,
+  onOpenMenu,
+}: {
+  player: CardPlayer;
+  /** Sprint B-3: substitui onOpenSheet/onRemove. Abre menu (Substituir/Skill/Anunciar). */
+  onOpenMenu: () => void;
 }) {
   return (
     <motion.div
@@ -1224,19 +1615,20 @@ function PitchPlayer({
     >
       <button
         type="button"
-        onClick={onOpenSheet}
+        onClick={onOpenMenu}
         className="group/token relative flex cursor-pointer flex-col items-center [-webkit-tap-highlight-color:transparent]"
-        aria-label={`Ver estatísticas e temporada — ${player.name}`}
+        aria-label={`Abrir ações para ${player.name}`}
       >
+        {/* Sprint B-3: token ~40% maior */}
         <div
           className={cn(
-            'relative size-7 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-8 md:size-12 md:border-2',
+            'relative size-12 overflow-hidden rounded-full border bg-dark-gray shadow-lg sm:size-14 md:size-16 md:border-2',
             player.style === 'neon-yellow' ? 'border-neon-yellow' : 'border-white',
           )}
         >
           {player.countryFlagEmoji ? (
             <span
-              className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[1px] text-[7px] leading-none sm:text-[8px] md:text-[11px]"
+              className="absolute bottom-0 left-0 z-[5] rounded-sm bg-black/70 px-[2px] text-[9px] leading-none sm:text-[10px] md:text-[12px]"
               title={player.country ?? undefined}
               aria-hidden
             >
@@ -1251,13 +1643,16 @@ function PitchPlayer({
           />
         </div>
 
-        <div className="mt-0.5 max-w-[min(4.5rem,22vw)] truncate border border-white/20 bg-black/90 px-0.5 py-0.5 text-[7px] font-bold text-white drop-shadow-md sm:mt-1 sm:max-w-[5.5rem] sm:px-1 sm:text-[8px] md:max-w-[6.5rem] md:px-1.5 md:text-[10px]" style={{ borderRadius: 'var(--radius-sm)' }}>
+        <div
+          className="mt-1 max-w-[min(5.5rem,24vw)] truncate border border-white/25 bg-black/90 px-1 py-0.5 text-[9px] font-bold text-white drop-shadow-md sm:mt-1.5 sm:max-w-[6.5rem] sm:px-1.5 sm:text-[10px] md:max-w-[7.5rem] md:px-2 md:text-[11px]"
+          style={{ borderRadius: 'var(--radius-sm)' }}
+        >
           {player.name}
         </div>
 
         <div
           className={cn(
-            'pointer-events-none absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center shadow-md sm:-right-1 sm:-top-1 sm:size-4 md:-right-2 md:-top-2 md:size-5',
+            'pointer-events-none absolute -right-1 -top-1 flex size-5 items-center justify-center shadow-md sm:-right-1.5 sm:-top-1.5 sm:size-6 md:-right-2 md:-top-2 md:size-7',
             player.style === 'neon-yellow' ? 'bg-neon-yellow text-black' : 'bg-white text-black',
           )}
           style={{ borderRadius: '9999px' }}
@@ -1266,7 +1661,7 @@ function PitchPlayer({
             className="italic tabular-nums leading-none"
             style={{
               fontFamily: 'var(--font-serif-hero)',
-              fontSize: 'clamp(6px, 1vw, 9px)',
+              fontSize: 'clamp(10px, 1.5vw, 13px)',
               fontWeight: 700,
               letterSpacing: '-0.02em',
             }}
@@ -1274,20 +1669,6 @@ function PitchPlayer({
             {player.ovr}
           </span>
         </div>
-      </button>
-
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        title={`Retirar ${player.name} do campo`}
-        aria-label={`Retirar ${player.name} do campo`}
-        className="absolute -right-1 -top-1 z-20 flex size-4 items-center justify-center border border-white/30 bg-red-600 text-white shadow-md transition-transform hover:scale-110 sm:size-5 md:-right-0.5 md:-top-0.5 md:size-6"
-        style={{ borderRadius: '9999px' }}
-      >
-        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" strokeWidth={2.5} />
       </button>
     </motion.div>
   );

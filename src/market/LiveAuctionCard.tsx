@@ -176,10 +176,20 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
           {/* Divider */}
           <div className="h-px w-2/3 mx-auto mb-3 opacity-50 bg-neon-yellow" />
 
-          {/* Lance atual */}
+          {/* Lance atual — Sprint B-3: MORET serif italic editorial */}
           <div className="mb-3 text-center">
-            <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Lance Atual</p>
-            <p className="text-2xl font-display font-bold text-neon-yellow tabular-nums">
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/55 mb-1">
+              Lance atual
+            </p>
+            <p
+              className="italic tabular-nums leading-none text-neon-yellow"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(28px, 5vw, 36px)',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+              }}
+            >
               {formatPrice(auction.currentBid, 'EXP')}
             </p>
             {auction.currentBidderName && (
@@ -250,14 +260,14 @@ export function LiveAuctionCard({ auction, userId, userName, userBalance }: Live
               onClick={() => setShowBidForm(true)}
               disabled={isWinning}
               className={cn(
-                'flex w-full min-h-11 items-center justify-center rounded-sm px-1.5 py-2.5 text-xs font-bold uppercase leading-tight tracking-wider transition-colors sm:text-sm sm:-skew-x-6 md:text-base',
+                'flex w-full min-h-11 items-center justify-center px-3 py-3 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] transition-all sm:text-[13px]',
                 isWinning
                   ? 'cursor-not-allowed bg-white/5 text-white/30'
-                  : 'bg-neon-yellow text-black hover:bg-white',
+                  : 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] hover:bg-white hover:scale-[1.02] active:scale-[0.98]',
               )}
-              style={{ fontFamily: 'var(--font-sans)' }}
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              <span className="sm:skew-x-6">{isWinning ? 'Você está vencendo' : 'Dar Lance'}</span>
+              {isWinning ? 'Você está vencendo' : 'Dar Lance'}
             </button>
           ) : (
             <motion.div

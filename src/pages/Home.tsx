@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, ChevronRight, Activity, Search, Star, Trophy, X, UserPlus, TrendingUp } from 'lucide-react';
+import { Zap, ChevronRight, Activity, Search, Star, X, UserPlus, TrendingUp } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -32,9 +32,11 @@ import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { DashboardGrid, DashboardSection } from '@/components/dashboard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+import { computeCareerTier } from '@/systems/careerTiers';
 import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { generateMockActivities } from '@/market/socialTrade';
 import { FriendlyMatchBox } from '@/components/home/FriendlyMatchBox';
+import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -160,6 +162,10 @@ export function Home() {
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+  /** Sprint C — Fase A: dados extras pro mini-painel manager. */
+  const playerSeasonLedger = useGameStore((s) => s.playerSeasonLedger);
+  const formGlobal = useGameStore((s) => s.form);
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
   const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const awayCrestUrl = useGameStore(
     (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
@@ -216,32 +222,237 @@ export function Home() {
   }, [dispatch, inbox.length, club.name, fixture.opponent.name, crowd.supportPercent]);
 
   const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
+  /**
+   * Sprint C — Fase A: highlight expandido com inteligência manager.
+   * Gols/assistências do ledger, forma recente do team, delta OVR vs mintOverall,
+   * tag dinâmica baseada em performance, CTA contextual.
+   */
   const homeHighlight = useMemo(() => {
     if (!homeHighlightBest) {
       return {
         id: '',
         name: '—',
         ovr: 70,
+        position: undefined as string | undefined,
         imageSrc: 'https://picsum.photos/seed/home-placeholder/400/520',
+        goalsSeason: undefined as number | undefined,
+        assistsSeason: undefined as number | undefined,
+        mvpsSeason: undefined as number | undefined,
+        recentForm: undefined as Array<'W' | 'D' | 'L'> | undefined,
+        deltaOvr: undefined as number | undefined,
+        tag: undefined as string | undefined,
       };
     }
-    const ovr = homeHighlightBest.mintOverall ?? overallFromAttributes(homeHighlightBest.attrs);
+    const currentOvr = overallFromAttributes(homeHighlightBest.attrs);
+    const mintOvr = homeHighlightBest.mintOverall ?? currentOvr;
+    const deltaOvr = currentOvr - mintOvr;
+
+    const ledger = playerSeasonLedger?.[homeHighlightBest.id];
+    const goalsSeason = ledger?.goals ?? 0;
+    const assistsSeason = ledger?.assists ?? 0;
+    const matchesPlayed = ledger?.matchesPlayed ?? 0;
+    // MVPs da temporada — conta resultados onde o scoutMvp.playerId bate com o destaque
+    const mvpsSeason = (results ?? []).filter(
+      (r) => r.scoutMvp?.playerId === homeHighlightBest.id,
+    ).length;
+
+    // Forma recente do TIME (últimos 5) — proxy para forma do jogador
+    // (até termos forma individual no ledger).
+    const recentForm: Array<'W' | 'D' | 'L'> = (formGlobal ?? [])
+      .slice(0, 5)
+      .map((f) => (f === 'W' || f === 'D' || f === 'L' ? f : 'D'));
+
+    // Tag dinâmica
+    let tag: string | undefined;
+    if (matchesPlayed === 0) {
+      tag = 'Promessa';
+    } else if (goalsSeason >= 5) {
+      tag = 'Artilheiro';
+    } else if (goalsSeason + assistsSeason >= 5) {
+      tag = 'Em forma';
+    } else if (deltaOvr >= 5) {
+      tag = 'Em ascensão';
+    } else if (currentOvr >= 80) {
+      tag = 'Maestro';
+    } else {
+      tag = 'Joia do plantel';
+    }
+
     return {
       id: homeHighlightBest.id,
       name: homeHighlightBest.name,
-      ovr,
+      position: homeHighlightBest.pos,
+      ovr: currentOvr,
       imageSrc: playerPortraitSrc(
         { name: homeHighlightBest.name, portraitUrl: homeHighlightBest.portraitUrl },
         400,
         520,
       ),
+      goalsSeason,
+      assistsSeason,
+      mvpsSeason,
+      recentForm: recentForm.length > 0 ? recentForm : undefined,
+      deltaOvr,
+      tag,
     };
-  }, [homeHighlightBest]);
+  }, [homeHighlightBest, playerSeasonLedger, formGlobal, results]);
 
   // awayHighlight removido — destaque agora é único (homeHighlight) no padrão
   // /matchday/preview com número OVR gigante decorativo. Se voltar a precisar
   // do duo casa × visitante, recuperar via git history.
   const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
+
+  /**
+   * Sprint C Fase D: 4 tiles cinemáticos do mini-painel manager.
+   * Tile #2 mostra POSIÇÃO no ranking global em vez de saldo BRO/EXP.
+   */
+  const managerStatTiles = useMemo(() => {
+    const squadSize = Object.keys(players).length;
+    const ovrXi = (() => {
+      const ovrs = Object.values(players)
+        .map((p) => overallFromAttributes(p.attrs))
+        .sort((a, b) => b - a)
+        .slice(0, 11);
+      if (!ovrs.length) return 0;
+      return Math.round(ovrs.reduce((s, o) => s + o, 0) / ovrs.length);
+    })();
+
+    // Sprint C Fase D: posição global do manager (1-based) — calcula localmente
+    // pra evitar circular dep com fullSorted que é declarado depois.
+    const allRanked = getFullRankingEntries(club.name, finance.ole, club.id);
+    const myRankIdx = allRanked.findIndex((r) => r.isMe);
+    const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
+    const totalManagers = allRanked.length;
+
+    const last5 = (formGlobal ?? []).slice(0, 5);
+    const formStr = last5.length === 0 ? '—' : last5.join('');
+
+    let ligaValue = 'Aguarda';
+    let ligaTone: 'accent' | 'success' | 'warning' | 'muted' = 'muted';
+    if (globalLeagueMVP) {
+      if (globalLeagueMVP.status === 'waiting_teams') {
+        ligaValue = `${globalLeagueMVP.teams.length}/${globalLeagueMVP.minTeamsRequired}`;
+        ligaTone = 'accent';
+      } else if (globalLeagueMVP.status === 'playoffs') {
+        ligaValue = 'Playoffs';
+        ligaTone = 'warning';
+      } else if (globalLeagueMVP.status === 'league_active') {
+        ligaValue = 'Em curso';
+        ligaTone = 'success';
+      } else {
+        ligaValue = 'Encerrada';
+      }
+    }
+
+    return [
+      {
+        label: `Plantel · OVR ${ovrXi || '—'}`,
+        value: String(squadSize),
+        href: '/clube/elenco',
+        tone: 'accent' as const,
+      },
+      {
+        label: totalManagers > 0 ? `Ranking · de ${totalManagers}` : 'Ranking Global',
+        value: myRank ? `#${myRank}` : '—',
+        href: '/competicao/ranking',
+        tone: 'accent' as const,
+      },
+      {
+        label: 'Forma · 5J',
+        value: formStr,
+        href: '/competicao/calendario',
+        tone: 'accent' as const,
+      },
+      {
+        label: 'Olefoot Liga',
+        value: ligaValue,
+        href: '/competicao/ligas',
+        tone: ligaTone,
+      },
+    ];
+  }, [players, club.name, club.id, finance.ole, formGlobal, globalLeagueMVP]);
+
+  /** Sprint C Fase F: sem CTAs no destaque (visual mais limpo). */
+  const highlightCtas = useMemo(
+    () => ({ primary: undefined, secondary: undefined }),
+    [],
+  );
+
+  /**
+   * Sprint C — Fase B: contexto smart do hero (eyebrow + status).
+   * Eyebrow muda dependendo de: tier, próximo jogo, último resultado, streak.
+   * Status compacto reflete o estado atual em 1-2 palavras.
+   */
+  const heroContext = useMemo(() => {
+    const tier = computeCareerTier(finance.expLifetimeEarned ?? finance.ole ?? 0);
+    const expCompact = formatExp(finance.ole);
+    const lastMatch = results[0];
+    const last5 = (formGlobal ?? []).slice(0, 5);
+
+    // Streak detection (consecutivas)
+    const streakWins = (() => {
+      let n = 0;
+      for (const f of last5) {
+        if (f === 'W') n += 1;
+        else break;
+      }
+      return n;
+    })();
+    const streakLosses = (() => {
+      let n = 0;
+      for (const f of last5) {
+        if (f === 'L') n += 1;
+        else break;
+      }
+      return n;
+    })();
+
+    // Próximo jogo iminente?
+    const nowMs = Date.now();
+    const nextKickoffMs = fixture?.opponent?.shortName
+      ? null /* fixture sem timestamp aqui — placeholder */
+      : null;
+
+    let eyebrow: string;
+    let statusPrimary: string;
+    let statusSecondary: string;
+
+    if (!lastMatch && (results.length === 0)) {
+      // Estreia: foco em identidade + saldo
+      eyebrow = `OLE FC · TIER ${tier.id} ${tier.name.toUpperCase()} · ${expCompact} EXP`;
+      statusPrimary = 'Estreia';
+      statusSecondary = 'Aguarda 1º jogo';
+    } else if (streakWins >= 3) {
+      eyebrow = `OLE FC · ${streakWins} VITÓRIAS SEGUIDAS · ${expCompact} EXP`;
+      statusPrimary = 'Invencível';
+      statusSecondary = `${streakWins} jogos`;
+    } else if (streakLosses >= 2) {
+      eyebrow = `OLE FC · RECONSTRUÇÃO · ${expCompact} EXP`;
+      statusPrimary = 'Reconstruir';
+      statusSecondary = 'a partir de hoje';
+    } else if (lastMatch?.result === 'win') {
+      eyebrow = `OLE FC · ÚLTIMO JOGO: VITÓRIA ${lastMatch.scoreHome}-${lastMatch.scoreAway} · ${expCompact} EXP`;
+      statusPrimary = 'Vitória';
+      statusSecondary = 'na última';
+    } else if (lastMatch?.result === 'loss') {
+      eyebrow = `OLE FC · TIER ${tier.id} ${tier.name.toUpperCase()} · PRÓXIMO DESAFIO`;
+      statusPrimary = 'Resposta';
+      statusSecondary = 'no próximo jogo';
+    } else {
+      eyebrow = `OLE FC · TIER ${tier.id} ${tier.name.toUpperCase()} · ${expCompact} EXP`;
+      statusPrimary = lastMatch ? 'Final' : 'Próximo';
+      statusSecondary = lastMatch
+        ? lastMatch.result === 'draw'
+          ? 'Empate'
+          : 'Resultado'
+        : 'em preparação';
+    }
+
+    void nextKickoffMs;
+    void nowMs;
+
+    return { eyebrow, statusPrimary, statusSecondary };
+  }, [finance.ole, finance.expLifetimeEarned, results, formGlobal, fixture]);
   const supportLabel = roundedSupport.toLocaleString('pt-BR', {
     minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
     maximumFractionDigits: 1,
@@ -666,9 +877,9 @@ export function Home() {
             return (
               <MatchdayHero
                 data={{
-                  competition: 'Sem jogos disputados',
-                  statusPrimary: 'Estreia',
-                  statusSecondary: 'Aguardando',
+                  competition: heroContext.eyebrow,
+                  statusPrimary: heroContext.statusPrimary,
+                  statusSecondary: heroContext.statusSecondary,
                   statusVariant: 'preview',
                   solidYellow: true,
                   home: {
@@ -683,22 +894,23 @@ export function Home() {
                     score: 0,
                     crestUrl: HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null,
                   },
-                  stats: [
-                    { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
-                    { label: 'Vitórias', value: '0' },
-                    { label: 'Empates', value: '0' },
-                    { label: 'Derrotas', value: '0' },
-                    { label: 'Ranking', value: '—' },
-                  ],
+                  stats: managerStatTiles,
                   highlight: {
                     name: homeHighlight.name,
                     number: homeHighlight.ovr,
                     quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. Pronto para a primeira partida.`,
                     photoUrl: homeHighlight.imageSrc,
+                    position: homeHighlight.position,
+                    tag: homeHighlight.tag,
+                    goalsSeason: homeHighlight.goalsSeason,
+                    assistsSeason: homeHighlight.assistsSeason,
+                    mvpsSeason: homeHighlight.mvpsSeason,
+                    recentForm: homeHighlight.recentForm,
+                    deltaOvr: homeHighlight.deltaOvr,
+                    ctaPrimary: highlightCtas.primary,
+                    ctaSecondary: highlightCtas.secondary,
                   },
-                  actions: [
-                    { label: 'Ver elenco', href: '/team', variant: 'primary' },
-                  ],
+                  actions: [],
                   topLeft: { label: 'Olefoot' },
                   scrollCueTargetId: 'home-below-fold',
                 }}
@@ -742,14 +954,9 @@ export function Home() {
           return (
             <MatchdayHero
               data={{
-                competition: lastMatch.status || 'Último jogo',
-                statusPrimary: 'Final',
-                statusSecondary:
-                  lastMatch.result === 'win'
-                    ? 'Vitória'
-                    : lastMatch.result === 'draw'
-                      ? 'Empate'
-                      : 'Derrota',
+                competition: heroContext.eyebrow,
+                statusPrimary: heroContext.statusPrimary,
+                statusSecondary: heroContext.statusSecondary,
                 statusVariant: 'preview',
                 solidYellow: true,
                 home: {
@@ -764,31 +971,23 @@ export function Home() {
                   score: lastMatch.scoreAway,
                   crestUrl: awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null),
                 },
-                stats: [
-                  { label: 'Apoio', value: `${Math.round(roundedSupport)}%` },
-                  { label: 'Ranking', value: rankingChangeStr },
-                  { label: 'Vitórias', value: `${wins}` },
-                  { label: 'Empates', value: `${draws}` },
-                  { label: 'Derrotas', value: `${losses}` },
-                ],
+                stats: managerStatTiles,
                 highlight: {
                   name: mvpName,
                   number: mvpOvr,
                   quote: mvpQuote,
                   photoUrl: mvpPhoto,
+                  position: mvpEntity?.pos ?? homeHighlight.position,
+                  tag: homeHighlight.tag,
+                  goalsSeason: homeHighlight.goalsSeason,
+                  assistsSeason: homeHighlight.assistsSeason,
+                  mvpsSeason: homeHighlight.mvpsSeason,
+                  recentForm: homeHighlight.recentForm,
+                  deltaOvr: homeHighlight.deltaOvr,
+                  ctaPrimary: highlightCtas.primary,
+                  ctaSecondary: highlightCtas.secondary,
                 },
-                actions: results.length === 0
-                  ? [
-                      {
-                        label: 'Sem jogos registrados',
-                        href: '#',
-                        variant: 'secondary' as const,
-                        disabled: true
-                      },
-                    ]
-                  : [
-                      { label: 'Ver postgame', href: '/postgame', variant: 'primary' as const },
-                    ],
+                actions: [],
                 topLeft: { label: 'Olefoot' },
                 scrollCueTargetId: 'home-below-fold',
               }}
@@ -957,143 +1156,18 @@ export function Home() {
         </motion.div>
         </DashboardSection>
 
-        {/* Últimos resultados — md (lista alta) */}
-        <DashboardSection size="md">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden flex flex-col min-h-[300px]"
-        >
-          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
-            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-              <span>Últimos resultados</span>
-            </div>
-            <p
-              className="text-white/55 uppercase"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '11px',
-                letterSpacing: '0.22em',
-                fontWeight: 600,
-              }}
-            >
-              {results.length > 0
-                ? `${Math.min(5, results.length)} últimos · o teu percurso`
-                : 'Histórico vazio'}
-            </p>
-          </div>
-
-          <div className="px-6 py-4 flex-1 flex flex-col gap-2">
-            {results.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-white/10 bg-dark-gray/40">
-                <p className="text-sm font-display font-bold text-gray-300 uppercase tracking-wider">Sem jogos ainda</p>
-                <p className="text-[11px] text-gray-600 mt-2 max-w-[220px] leading-relaxed">
-                  Entra em campo — os placares aparecem aqui com estilo de painel desportivo.
-                </p>
-              </div>
-            ) : (
-              results.slice(0, 5).map((match, i) => {
-                const meta = resultOutcomeMeta(match.result);
-                const isUsHome = match.home === club.name;
-                const isUsAway = match.away === club.name;
-                return (
-                  <motion.div
-                    key={`${match.home}-${match.away}-${match.scoreHome}-${match.scoreAway}-${i}`}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.06 + i * 0.05, type: 'spring', stiffness: 380, damping: 28 }}
-                    className={cn(
-                      'group relative flex overflow-hidden border border-white/10 bg-dark-gray',
-                      'hover:border-neon-yellow/30 transition-colors duration-200',
-                    )}
-                  >
-                    <div className={cn('w-1 shrink-0', meta.bar)} aria-hidden />
-                    <div className="flex-1 flex items-stretch min-w-0">
-                      <div className="flex-1 min-w-0 py-2.5 pl-3 pr-1 flex flex-col justify-center items-end text-right">
-                        <span
-                          className={cn(
-                            'font-display font-bold text-[11px] sm:text-xs uppercase tracking-wide truncate w-full',
-                            isUsHome ? 'text-neon-yellow' : 'text-gray-400 group-hover:text-gray-300',
-                          )}
-                        >
-                          {match.home}
-                        </span>
-                        {isUsHome ? (
-                          <span className="text-[9px] font-black text-neon-yellow/70 uppercase tracking-widest mt-0.5">
-                            Casa
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="shrink-0 flex flex-col items-center justify-center px-2 sm:px-3 border-x border-white/10 bg-black/40">
-                        <div className="flex items-center gap-1.5 font-display font-black tabular-nums leading-none">
-                          <span className="text-lg sm:text-xl text-white">{match.scoreHome}</span>
-                          <span className="text-neon-yellow text-sm sm:text-base pb-0.5">:</span>
-                          <span className="text-lg sm:text-xl text-white">{match.scoreAway}</span>
-                        </div>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-600 mt-1">
-                          {match.status}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0 py-2.5 pr-3 pl-1 flex flex-col justify-center items-start text-left">
-                        <span
-                          className={cn(
-                            'font-display font-bold text-[11px] sm:text-xs uppercase tracking-wide truncate w-full',
-                            isUsAway ? 'text-neon-yellow' : 'text-gray-400 group-hover:text-gray-300',
-                          )}
-                        >
-                          {match.away}
-                        </span>
-                        {isUsAway ? (
-                          <span className="text-[9px] font-black text-neon-yellow/70 uppercase tracking-widest mt-0.5">
-                            Fora
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        'shrink-0 w-[3.25rem] sm:w-14 flex flex-col items-center justify-center border-l border-white/10',
-                        meta.side,
-                      )}
-                    >
-                      <span className={cn('font-display font-black text-xl sm:text-2xl leading-none', meta.pill)}>
-                        {meta.label}
-                      </span>
-                      <span className={cn('hidden sm:block text-[8px] font-bold uppercase tracking-wider mt-1 opacity-90', meta.pill)}>
-                        {meta.sub}
-                      </span>
-                    </div>
-                  </motion.div>
-                );
-              })
-            )}
-          </div>
-
-          <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-2">
-            <button
-              type="button"
-              onClick={scrollToMarketFeed}
-              className="w-full py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-              }}
-            >
-              Ver atividades do mercado ↓
-            </button>
-          </div>
-        </motion.div>
-        </DashboardSection>
-
         {/* Amistoso — sm */}
         <FriendlyMatchBox />
       </DashboardGrid>
+
+      {/* Mini-painel inteligente do manager (Sprint C Fase B) — após Amistoso, antes do Ranking */}
+      <HomeManagerFeed
+        players={players}
+        highlightId={homeHighlight.id}
+        highlightName={homeHighlight.name}
+        highlightPosition={homeHighlight.position}
+        expLifetimeEarned={finance.expLifetimeEarned ?? finance.ole ?? 0}
+      />
 
       <AnimatePresence>
         {amistosoOpen && (
@@ -1340,128 +1414,77 @@ export function Home() {
         )}
       </AnimatePresence>
 
-      {/* Ranking + Notificações */}
-      <DashboardGrid>
-        {/* Ranking OLE — md */}
-        <DashboardSection size="md">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
-        >
-          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-2">
-            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-              <span>Ranking OLE · Top 10 por EXP</span>
-            </div>
-          </div>
-          <div className="p-3 border-b border-white/10">
-            <div className="relative">
-              <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                value={searchTeam}
-                onChange={(e) => setSearchTeam(e.target.value)}
-                placeholder="Buscar por nome do time"
-                className="w-full bg-black/40 border border-white/10 rounded px-9 py-2 text-sm"
-              />
-            </div>
-            <p className="text-[10px] text-gray-500 mt-2">Os 5 primeiros são sempre os líderes do ranking mundial.</p>
-          </div>
-          <div className="divide-y divide-white/5">
-            {ranking.map((row) => (
-              <div key={`${row.team}-${row.rank}`} className="flex items-center gap-3 p-3 hover:bg-white/5 transition-colors">
-                <div className={cn(
-                  'w-8 h-8 flex items-center justify-center text-xs font-display font-black rounded',
-                  row.rank <= 3 ? 'bg-neon-yellow text-black' : 'bg-white/10 text-white',
-                )}>
-                  {row.rank <= 3 ? <Trophy className="w-4 h-4" /> : `#${row.rank}`}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className={cn('text-sm font-display font-bold truncate', row.isMe ? 'text-neon-yellow' : 'text-white')}>
-                    {row.team} {row.isMe ? '(Você)' : ''}
-                  </div>
-                  <div className="text-[10px] text-gray-500">{formatExp(row.exp)} EXP</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toggleFavorite(row.team)}
-                  className={cn(
-                    'p-1.5 rounded border',
-                    favorites.has(row.team) ? 'border-neon-yellow text-neon-yellow' : 'border-white/10 text-gray-500',
-                  )}
-                >
-                  <Star className={cn('w-4 h-4', favorites.has(row.team) && 'fill-neon-yellow')} />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="p-4 sm:p-5 border-t border-white/10 bg-black/20">
-            <Link
-              to="/ranking"
-              className="flex w-full items-center justify-center gap-2 py-3 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+      {/* Atividades do Mercado — Sprint C Fase G: editorial direto no fundo, sem card cinza */}
+      <motion.section
+        ref={notificacoesRef}
+        id="market-feed"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="scroll-mt-24 mt-2 sm:mt-4 px-4 sm:px-6 lg:px-8"
+        aria-label="Atividades do Mercado"
+      >
+        {/* Header editorial — eyebrow + MORET headline + régua + subtitle + CTAs */}
+        <header className="flex flex-col items-start gap-3 mb-5 sm:mb-6">
+          <span
+            className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            OLE Football · Comunidade
+          </span>
+          <h2 className="leading-[0.95]">
+            <span
+              className="block font-bold uppercase text-white"
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '12px',
-                fontWeight: 700,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
+                letterSpacing: '0.005em',
               }}
             >
-              Ver ranking completo
-              <ChevronRight className="w-4 h-4" />
+              Atividades
+            </span>
+            <span
+              className="block italic text-neon-yellow mt-0.5"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              do mercado
+            </span>
+          </h2>
+          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-1" />
+          <p
+            className="text-white/55 max-w-md"
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '13px',
+              lineHeight: 1.5,
+            }}
+          >
+            Compras, vendas e leilões recentes — movimentações dos outros managers e clubes IA.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Link
+              to="/manager/mensagens"
+              className="inline-flex items-center rounded-[var(--radius-pill)] border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] text-neon-yellow transition-all hover:bg-neon-yellow/20"
+            >
+              Ver mensagens
+            </Link>
+            <Link
+              to="/transfer"
+              className="inline-flex items-center rounded-[var(--radius-pill)] border border-white/15 bg-white/[0.03] px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/75 transition-all hover:border-white/30 hover:text-white"
+            >
+              Ir para Mercado
             </Link>
           </div>
-        </motion.div>
-        </DashboardSection>
+        </header>
 
-        {/* Atividades do Mercado — md */}
-        <DashboardSection size="md">
-        <motion.div
-          ref={notificacoesRef}
-          id="market-feed"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden scroll-mt-24"
-        >
-          <div className="px-5 sm:px-6 py-5 sm:py-6 border-b border-white/10 flex flex-col items-center text-center gap-3">
-            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-              <span>Atividades do Mercado</span>
-            </div>
-            <p
-              className="text-white/55 max-w-md mx-auto"
-              style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: '11px',
-                lineHeight: 1.5,
-              }}
-            >
-              Compras, vendas e leilões recentes. Fique por dentro das movimentações dos outros managers e clubes IA.
-            </p>
-            <div className="flex gap-2 justify-center pt-1">
-              <Link
-                to="/manager/mensagens"
-                className="rounded-full border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neon-yellow transition-all hover:bg-neon-yellow/20"
-              >
-                Ver Mensagens
-              </Link>
-              <Link
-                to="/transfer"
-                className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
-              >
-                Ir para Mercado
-              </Link>
-            </div>
-          </div>
-
-          <div className="px-5 sm:px-6 py-5">
-            <MarketActivityFeed activities={marketActivities} maxVisible={5} />
-          </div>
-        </motion.div>
-        </DashboardSection>
-      </DashboardGrid>
+        {/* Feed de atividades — cards já têm fundo próprio, ficam soltos no dark */}
+        <MarketActivityFeed activities={marketActivities} maxVisible={5} />
+      </motion.section>
       </div>
     </div>
   );

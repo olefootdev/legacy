@@ -12,6 +12,7 @@
 
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface MatchdayHeroData {
   competition: string;
@@ -40,7 +41,14 @@ export interface MatchdayHeroData {
     sublabel?: string;
     crestUrl?: string | null;
   };
-  stats: { label: string; value: string }[];
+  stats: {
+    label: string;
+    value: string;
+    /** Sprint C: se presente, vira link clicável (mini-painel manager). */
+    href?: string;
+    /** Sprint C: cor de acento opcional pro número (default neon-yellow). */
+    tone?: 'accent' | 'success' | 'warning' | 'danger' | 'muted';
+  }[];
   highlight: {
     /** Nome do jogador (vai no título grande em Moret italic). */
     name: string;
@@ -49,6 +57,24 @@ export interface MatchdayHeroData {
     quote: string;
     /** Foto do jogador (idealmente 4:5 portrait). Recebe filtro P&B BVB. */
     photoUrl?: string;
+    /** Sprint C: tag editorial dinâmica (ex.: "Em forma", "Maestro"). */
+    tag?: string;
+    /** Sprint C: posição/role do jogador (ex.: "MEIA-CAMPISTA"). */
+    position?: string;
+    /** Sprint C: gols na temporada. */
+    goalsSeason?: number;
+    /** Sprint C: assistências na temporada. */
+    assistsSeason?: number;
+    /** Sprint C Fase D: vezes que foi MVP na temporada. */
+    mvpsSeason?: number;
+    /** Sprint C: forma últimos 5 jogos (W/D/L). */
+    recentForm?: Array<'W' | 'D' | 'L'>;
+    /** Sprint C: delta de OVR vs mintOverall (positivo = evoluiu). */
+    deltaOvr?: number;
+    /** Sprint C: CTA principal abaixo do destaque. */
+    ctaPrimary?: { label: string; href?: string; onClick?: () => void };
+    /** Sprint C: CTA secundário. */
+    ctaSecondary?: { label: string; href?: string; onClick?: () => void };
   };
   /** Botões de ação centrados no rodapé. Default = mock buttons. */
   actions?: { label: string; href?: string; onClick?: () => void; variant?: 'primary' | 'outline' }[];
@@ -129,7 +155,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
   const sectionBg = solid ? 'bg-neon-yellow' : 'bg-deep-black';
 
   return (
-    <section className={`relative w-full overflow-hidden ${sectionBg} min-h-[78vh] sm:min-h-[88vh]`}>
+    <section className={`relative w-full overflow-hidden ${sectionBg}`}>
       {/* Camada amarela com clip-path (esq → 62%) — só no modo split */}
       {!solid && (
         <div
@@ -157,7 +183,7 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
       </svg>
 
       {/* Conteúdo */}
-      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
+      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 pt-5 sm:pt-7 pb-16 sm:pb-20">
         {/* Top bar */}
         <div className="flex items-center justify-between gap-3 mb-8 sm:mb-12">
           {data.topLeft?.href ? (
@@ -318,77 +344,88 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
           </div>
         </div>
 
-        {/* Stats strip */}
-        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 md:gap-3 mb-10 sm:mb-14">
+        {/* Stats strip — Sprint C: grade dinâmica (4 ou 5 colunas) + tiles clicáveis */}
+        <div
+          className={cn(
+            'grid gap-1.5 sm:gap-2 md:gap-3 mb-10 sm:mb-14',
+            data.stats.length === 4
+              ? 'grid-cols-2 sm:grid-cols-4'
+              : data.stats.length === 3
+                ? 'grid-cols-3'
+                : 'grid-cols-5',
+          )}
+        >
           {data.stats.map((s, i) => {
-            return (
-              <article key={s.label} className={statsBg(i)}>
+            const toneColor =
+              s.tone === 'success'
+                ? 'text-emerald-300'
+                : s.tone === 'warning'
+                  ? 'text-amber-300'
+                  : s.tone === 'danger'
+                    ? 'text-red-300'
+                    : s.tone === 'muted'
+                      ? 'text-white/65'
+                      : 'text-neon-yellow';
+            const inner = (
+              <>
                 <p
-                  className="text-neon-yellow tabular-nums leading-none italic"
+                  className={cn('tabular-nums leading-none italic', toneColor)}
                   style={{
                     fontFamily: 'var(--font-serif-hero)',
                     fontWeight: 700,
-                    fontSize: 'clamp(20px, 4.2vw, 44px)',
+                    fontSize: 'clamp(22px, 4.4vw, 44px)',
                   }}
                 >
                   {s.value}
                 </p>
-                <p className="mt-1 sm:mt-1.5 text-white/65 uppercase tracking-[0.12em] sm:tracking-[0.18em] text-[8px] sm:text-[9px] md:text-[10px] font-medium">
+                <p className="mt-1 sm:mt-1.5 text-white/65 uppercase tracking-[0.16em] sm:tracking-[0.22em] text-[9px] sm:text-[10px] md:text-[11px] font-bold">
                   {s.label}
                 </p>
+              </>
+            );
+            const baseCls = cn(
+              statsBg(i),
+              s.href && 'cursor-pointer transition-all hover:bg-black/85 hover:-translate-y-0.5',
+            );
+            if (s.href) {
+              return (
+                <Link key={s.label} to={s.href} className={baseCls}>
+                  {inner}
+                </Link>
+              );
+            }
+            return (
+              <article key={s.label} className={baseCls}>
+                {inner}
               </article>
             );
           })}
         </div>
 
-        {/* MVP */}
-        <div className="relative grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-6 items-end pb-4">
-          <div>
-            {/* Eyebrow forçado a preto — sobre o lado amarelo do split fica
-                ilegível em yellow. text-black + linhas pretas via override. */}
-            <div
-              className="flex items-center justify-start gap-3 mb-3 uppercase tracking-[0.35em] text-[10px] font-medium text-black"
-              style={{ fontFamily: 'var(--font-ui)' }}
-            >
-              <span aria-hidden className="h-px w-8 bg-black/40" />
-              <span>★ DESTAQUE DA PARTIDA ★ </span>
-            </div>
-            <h3
-              className="ole-headline-italic text-black leading-[0.85]"
-              style={{ fontSize: 'clamp(48px, 10vw, 96px)' }}
-            >
-              {data.highlight.name.split(' ').slice(0, 1)}
-              <br />
-              {data.highlight.name.split(' ').slice(1).join(' ')}
-            </h3>
-            <blockquote
-              className="ole-headline-italic mt-4 text-black/80 max-w-md leading-snug"
-              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-            >
-              “{data.highlight.quote}”
-            </blockquote>
-          </div>
-
-          {/* Foto + Número gigante decorativo (layered: número atrás, foto na frente) */}
-          <div
-            className="relative h-[220px] sm:h-[280px] md:h-[320px] flex items-center justify-center"
-          >
-            {/* Número decorativo atrás — z-0 */}
+        {/* MVP — Sprint C Fase F: foto cinemática + info CENTRADA verticalmente com a foto */}
+        <div className="relative grid grid-cols-[180px_1fr] sm:grid-cols-[260px_1fr] md:grid-cols-[360px_1fr] gap-5 sm:gap-7 md:gap-9 items-center pb-2">
+          {/* Foto P&B + número decorativo — moldura editorial, ainda maior */}
+          <div className="relative flex items-center justify-center">
+            {/* Número decorativo atrás (oculto em viewports estreitos) */}
             <span
               aria-hidden
-              className="absolute inset-0 flex items-center justify-center leading-none tabular-nums text-neon-yellow/15 select-none pointer-events-none"
+              className="hidden md:flex absolute inset-0 items-center justify-center leading-none tabular-nums text-neon-yellow/15 select-none pointer-events-none"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 900,
-                fontSize: 'clamp(180px, 28vw, 320px)',
+                fontSize: 'clamp(160px, 20vw, 320px)',
                 letterSpacing: '-0.04em',
               }}
             >
               {String(data.highlight.number).padStart(2, '0')}
             </span>
-            {/* Foto P&B (filtro grayscale) — z-10 sobre o número */}
             {data.highlight.photoUrl ? (
-              <div className="relative z-10 h-full aspect-[4/5] max-h-full">
+              <div className="relative z-10 w-full aspect-[4/5]">
+                {/* Spotlight glow editorial atrás da foto */}
+                <div
+                  aria-hidden
+                  className="absolute -inset-3 -z-10 bg-gradient-to-br from-neon-yellow/0 via-neon-yellow/0 to-black/35 blur-2xl"
+                />
                 <img
                   src={data.highlight.photoUrl}
                   alt={data.highlight.name}
@@ -396,60 +433,245 @@ export function MatchdayHero({ data = MOCK_MATCHDAY }: { data?: MatchdayHeroData
                   draggable={false}
                   referrerPolicy="no-referrer"
                 />
-                {/* Borda inferior amarela 3px — assinatura BVB */}
                 <div className="absolute inset-x-0 bottom-0 h-[3px] bg-neon-yellow" aria-hidden />
               </div>
             ) : null}
           </div>
+
+          {/* Info — direita, centrada verticalmente com a foto (Sprint C Fase F) */}
+          <div className="min-w-0 sm:pl-2 flex flex-col gap-4 sm:gap-5">
+            {/* Cabeçalho: Badges + Nome + Posição + Delta */}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
+                <span
+                  className="inline-flex items-center rounded-[var(--radius-pill,9999px)] bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_2px_10px_rgba(0,0,0,0.25)]"
+                >
+                  MVP
+                </span>
+                {data.highlight.tag ? (
+                  <span
+                    className="inline-flex items-center rounded-[var(--radius-pill,9999px)] bg-black px-3 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_2px_10px_rgba(0,0,0,0.25)]"
+                  >
+                    {data.highlight.tag}
+                  </span>
+                ) : null}
+              </div>
+              <h3
+                className="ole-headline-italic text-black leading-[0.88] [overflow-wrap:anywhere]"
+                style={{ fontSize: 'clamp(34px, 7vw, 88px)' }}
+              >
+                {data.highlight.name.split(' ').slice(0, 1)}
+                <br />
+                {data.highlight.name.split(' ').slice(1).join(' ')}
+              </h3>
+              {data.highlight.position ? (
+                <p className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 font-display text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.28em] text-black/75">
+                  <span>{data.highlight.position}</span>
+                  {typeof data.highlight.deltaOvr === 'number' && data.highlight.deltaOvr !== 0 ? (
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-black tracking-[0.18em]',
+                        data.highlight.deltaOvr > 0
+                          ? 'bg-emerald-500/90 text-black'
+                          : 'bg-red-500/90 text-white',
+                      )}
+                    >
+                      {data.highlight.deltaOvr > 0 ? '▲' : '▼'} {Math.abs(data.highlight.deltaOvr)} OVR
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
+
+            {/* Zona 2: Quote (centro vertical, opcional) */}
+            <blockquote
+              className="ole-headline-italic text-black/80 max-w-md leading-snug"
+              style={{ fontSize: 'clamp(14px, 1.9vw, 19px)' }}
+            >
+              “{data.highlight.quote}”
+            </blockquote>
+
+            {/* Mini-stats (gols/assists/mvps/forma) — Sprint C Fase F: sem CTA, sem zona 3 wrapper */}
+            {(typeof data.highlight.goalsSeason === 'number'
+              || typeof data.highlight.assistsSeason === 'number'
+              || typeof data.highlight.mvpsSeason === 'number'
+              || (data.highlight.recentForm && data.highlight.recentForm.length > 0)) ? (
+              <div className="flex flex-wrap items-end gap-5 sm:gap-7">
+                {typeof data.highlight.goalsSeason === 'number' ? (
+                  <div className="min-w-0">
+                    <p
+                      className="italic text-black tabular-nums leading-none"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontWeight: 700,
+                        fontSize: 'clamp(28px, 5vw, 44px)',
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {data.highlight.goalsSeason}
+                    </p>
+                    <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                      Gols
+                    </p>
+                  </div>
+                ) : null}
+                {typeof data.highlight.assistsSeason === 'number' ? (
+                  <div className="min-w-0">
+                    <p
+                      className="italic text-black tabular-nums leading-none"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontWeight: 700,
+                        fontSize: 'clamp(28px, 5vw, 44px)',
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {data.highlight.assistsSeason}
+                    </p>
+                    <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                      Assistências
+                    </p>
+                  </div>
+                ) : null}
+                {typeof data.highlight.mvpsSeason === 'number' ? (
+                  <div className="min-w-0">
+                    <p
+                      className="italic text-black tabular-nums leading-none"
+                      style={{
+                        fontFamily: 'var(--font-serif-hero)',
+                        fontWeight: 700,
+                        fontSize: 'clamp(28px, 5vw, 44px)',
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {data.highlight.mvpsSeason}
+                    </p>
+                    <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                      MVPs
+                    </p>
+                  </div>
+                ) : null}
+                {data.highlight.recentForm && data.highlight.recentForm.length > 0 ? (
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1">
+                      {data.highlight.recentForm.slice(0, 5).map((r, i) => (
+                        <span
+                          key={i}
+                          className={cn(
+                            'inline-flex h-4 w-4 items-center justify-center font-display text-[9px] font-black uppercase',
+                            r === 'W'
+                              ? 'bg-emerald-500 text-black'
+                              : r === 'D'
+                                ? 'bg-amber-400 text-black'
+                                : 'bg-red-500 text-white',
+                          )}
+                          style={{ borderRadius: '3px' }}
+                          title={r === 'W' ? 'Vitória' : r === 'D' ? 'Empate' : 'Derrota'}
+                        >
+                          {r === 'W' ? 'V' : r === 'D' ? 'E' : 'D'}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-black/65">
+                      Forma · 5 jogos
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* CTAs do destaque (Sprint C Fase E: dentro da zona 3) */}
+            {(data.highlight.ctaPrimary || data.highlight.ctaSecondary) ? (
+              <div className="flex flex-wrap gap-2">
+                {data.highlight.ctaPrimary ? (
+                  data.highlight.ctaPrimary.href ? (
+                    <Link
+                      to={data.highlight.ctaPrimary.href}
+                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_4px_14px_rgba(0,0,0,0.3)] transition-all hover:bg-deep-black hover:scale-[1.02]"
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      {data.highlight.ctaPrimary.label}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={data.highlight.ctaPrimary.onClick}
+                      className="inline-flex items-center bg-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-neon-yellow shadow-[0_4px_14px_rgba(0,0,0,0.3)] transition-all hover:bg-deep-black hover:scale-[1.02]"
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      {data.highlight.ctaPrimary.label}
+                    </button>
+                  )
+                ) : null}
+                {data.highlight.ctaSecondary ? (
+                  data.highlight.ctaSecondary.href ? (
+                    <Link
+                      to={data.highlight.ctaSecondary.href}
+                      className="inline-flex items-center border border-black/70 bg-transparent px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-black/10"
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      {data.highlight.ctaSecondary.label}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={data.highlight.ctaSecondary.onClick}
+                      className="inline-flex items-center border border-black/70 bg-transparent px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black transition-colors hover:bg-black/10"
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      {data.highlight.ctaSecondary.label}
+                    </button>
+                  )
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
         </div>
       </div>
 
-      {/* Action buttons + scroll cue (centrado no rodapé) */}
-      <div className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-8 pb-5 sm:pb-7">
-        <div className="mx-auto max-w-6xl flex flex-col items-center gap-3">
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-            {actions.map((a) => {
-              const cls =
-                a.variant === 'primary'
-                  ? 'bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm shadow-[0_4px_12px_rgba(253,225,0,0.25)]'
-                  : 'bg-black border border-white/15 text-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm';
-              if (a.href) {
-                return (
-                  <Link key={a.label} to={a.href} className={cls}>
-                    {a.label}
-                  </Link>
-                );
-              }
-              return (
-                <button key={a.label} type="button" onClick={a.onClick} className={cls}>
-                  {a.label}
-                </button>
-              );
-            })}
+      {/* Action buttons + scroll cue — Sprint C Fase D: só renderiza se houver actions */}
+      {actions.length > 0 || data.scrollCueTargetId ? (
+        <div className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-8 pb-5 sm:pb-7">
+          <div className="mx-auto max-w-6xl flex flex-col items-center gap-3">
+            {actions.length > 0 ? (
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                {actions.map((a) => {
+                  const cls =
+                    a.variant === 'primary'
+                      ? 'bg-neon-yellow text-black hover:bg-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] transition-colors rounded-sm shadow-[0_4px_12px_rgba(253,225,0,0.25)]'
+                      : 'bg-black border border-white/15 text-white px-4 py-2.5 font-display font-bold uppercase tracking-[0.18em] text-[11px] sm:text-[12px] hover:border-neon-yellow hover:text-neon-yellow transition-colors rounded-sm';
+                  if (a.href) {
+                    return (
+                      <Link key={a.label} to={a.href} className={cls}>
+                        {a.label}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <button key={a.label} type="button" onClick={a.onClick} className={cls}>
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {data.scrollCueTargetId ? (
+              <button
+                type="button"
+                aria-label="Mais detalhes"
+                onClick={() => {
+                  const el = document.getElementById(data.scrollCueTargetId!);
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            ) : null}
           </div>
-          {data.scrollCueTargetId ? (
-            <button
-              type="button"
-              aria-label="Mais detalhes"
-              onClick={() => {
-                const el = document.getElementById(data.scrollCueTargetId!);
-                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              aria-label="Mais detalhes"
-              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:bg-neon-yellow transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
-          )}
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }

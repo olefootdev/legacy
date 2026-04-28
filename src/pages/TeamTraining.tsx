@@ -1,24 +1,6 @@
-import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import {
-  Activity,
-  Brain,
-  Check,
-  Clock,
-  Crosshair,
-  Dumbbell,
-  Footprints,
-  Flame,
-  Heart,
-  Layers,
-  LayoutGrid,
-  Lightbulb,
-  Shield,
-  User,
-  Users,
-  UsersRound,
-} from 'lucide-react';
+import { Check, Clock, Dumbbell } from 'lucide-react';
 import { EditorialHero } from '@/components/EditorialHero';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { maxSlotsByTrainingCenter, resolveGroupPlayerIds } from '@/systems/trainingPlans';
@@ -62,26 +44,7 @@ const GROUP_LABEL: Record<GroupType, string> = {
   all: 'Plantel completo',
 };
 
-const INDIVIDUAL_ICONS: Record<IndividualType, LucideIcon> = {
-  fisico: Activity,
-  mental: Brain,
-  tatico: LayoutGrid,
-  atributos: Footprints,
-  especial: Flame,
-};
-
-const COLLECTIVE_ICONS: Record<CollectiveType, LucideIcon> = {
-  formacao: Layers,
-  empatia: Heart,
-  fisico: Dumbbell,
-};
-
-const GROUP_ICONS: Record<GroupType, LucideIcon> = {
-  defensivo: Shield,
-  criativo: Lightbulb,
-  ataque: Crosshair,
-  all: Users,
-};
+// (Sprint B-2: dicionários de ícones removidos — botões agora são texto-claro.)
 
 function trainingTypeLabel(p: TrainingPlan): string {
   return p.mode === 'individual'
@@ -223,18 +186,18 @@ export function TeamTraining() {
           }
         />
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-3 p-3 pb-4 sm:p-4 sm:pb-5">
-        <div className="flex flex-wrap gap-1.5">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-4 p-4 pb-5 sm:p-5 sm:pb-6">
+        {/* Modo: Individual / Coletivo — pílulas Sprint B-2 sem ícones */}
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setMode('individual')}
             className={
               mode === 'individual'
-                ? 'inline-flex items-center gap-1.5 rounded bg-neon-yellow px-3 py-1.5 text-[11px] font-semibold uppercase text-black'
-                : 'inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase text-gray-200'
+                ? 'inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
+                : 'inline-flex items-center rounded-[var(--radius-pill)] border border-white/10 bg-white/[0.03] px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-white/70 transition-all hover:border-neon-yellow/40 hover:text-white'
             }
           >
-            <User className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Individual
           </button>
           <button
@@ -242,82 +205,77 @@ export function TeamTraining() {
             onClick={() => setMode('coletivo')}
             className={
               mode === 'coletivo'
-                ? 'inline-flex items-center gap-1.5 rounded bg-neon-yellow px-3 py-1.5 text-[11px] font-semibold uppercase text-black'
-                : 'inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase text-gray-200'
+                ? 'inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
+                : 'inline-flex items-center rounded-[var(--radius-pill)] border border-white/10 bg-white/[0.03] px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-white/70 transition-all hover:border-neon-yellow/40 hover:text-white'
             }
           >
-            <UsersRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Coletivo
           </button>
         </div>
 
         {mode === 'individual' ? (
-          <div className="space-y-1.5">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Tipo de treino (Individual)</div>
-            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
-              {INDIVIDUAL.map((t) => {
-                const Ic = INDIVIDUAL_ICONS[t];
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setIndividualType(t)}
-                    className={
-                      individualType === t
-                        ? 'inline-flex min-h-[2.5rem] items-center justify-center gap-1.5 rounded bg-neon-yellow px-2 py-1.5 text-center text-[11px] font-semibold uppercase text-black'
-                        : 'inline-flex min-h-[2.5rem] items-center justify-center gap-1.5 rounded border border-white/10 bg-white/5 px-2 py-1.5 text-center text-[11px] font-semibold uppercase text-gray-200'
-                    }
-                  >
-                    <Ic className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span className="leading-tight">{INDIVIDUAL_LABEL[t]}</span>
-                  </button>
-                );
-              })}
+          <div className="space-y-2">
+            <div className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
+              Tipo de treino · Individual
+            </div>
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {INDIVIDUAL.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setIndividualType(t)}
+                  className={
+                    individualType === t
+                      ? 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-3 py-2 text-center font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
+                      : 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-3 py-2 text-center font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-white/75 transition-all hover:border-neon-yellow/40 hover:text-white'
+                  }
+                >
+                  {INDIVIDUAL_LABEL[t]}
+                </button>
+              ))}
             </div>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Tipo de treino (Coletivo)</div>
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
-              {COLLECTIVE.map((t) => {
-                const Ic = COLLECTIVE_ICONS[t];
-                return (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <div className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
+                Tipo de treino · Coletivo
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {COLLECTIVE.map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => setCollectiveType(t)}
                     className={
                       collectiveType === t
-                        ? 'inline-flex items-center justify-center gap-1.5 rounded bg-neon-yellow py-1.5 text-[11px] font-semibold uppercase text-black'
-                        : 'inline-flex items-center justify-center gap-1.5 rounded border border-white/10 bg-white/5 py-1.5 text-[11px] font-semibold uppercase text-gray-200'
+                        ? 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
+                        : 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-white/75 transition-all hover:border-neon-yellow/40 hover:text-white'
                     }
                   >
-                    <Ic className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {COLLECTIVE_LABEL[t]}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-            <div className="pt-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">Grupo</div>
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
-              {GROUPS.map((g) => {
-                const Ic = GROUP_ICONS[g];
-                return (
+            <div className="space-y-2">
+              <div className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">Grupo</div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {GROUPS.map((g) => (
                   <button
                     key={g}
                     type="button"
                     onClick={() => setGroup(g)}
                     className={
                       group === g
-                        ? 'inline-flex items-center justify-center gap-1.5 rounded bg-neon-yellow py-1.5 text-[11px] font-semibold uppercase text-black'
-                        : 'inline-flex items-center justify-center gap-1.5 rounded border border-white/10 bg-white/5 py-1.5 text-[11px] font-semibold uppercase text-gray-200'
+                        ? 'inline-flex min-h-[2.75rem] items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
+                        : 'inline-flex min-h-[2.75rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-white/75 transition-all hover:border-neon-yellow/40 hover:text-white'
                     }
                   >
-                    <Ic className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {GROUP_LABEL[g]}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
             <p className="pt-0.5 text-[10px] text-gray-500">
               Coletivo aplica a todos do grupo acima (não usa a lista manual). Limite de planos colectivos em simultâneo: {maxColl}.
