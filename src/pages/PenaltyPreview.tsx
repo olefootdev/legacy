@@ -76,6 +76,7 @@ export function PenaltyPreview() {
   // Outcome após reveal
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [landing, setLanding] = useState<{ x: number; y: number } | null>(null);
+  const [finalRotation, setFinalRotation] = useState(0);
 
   // Placar simulado da disputa
   const [homeShots, setHomeShots] = useState<ShotResult[]>([
@@ -175,6 +176,10 @@ export function PenaltyPreview() {
 
     const guess = Math.floor(Math.random() * 9) as SlotIndex;
     setKeeperSlot(guess);
+
+    // Rotação final aleatória (consistente com a força) — bola para "jogada"
+    const totalRotation = 540 + finalPower * 540 + Math.random() * 360;
+    setFinalRotation(totalRotation % 360);
 
     // ── Resolução com posição final coerente ──
     const target = slotRect(slot);
@@ -302,6 +307,7 @@ export function PenaltyPreview() {
     setShotPower(0);
     setOutcome(null);
     setLanding(null);
+    setFinalRotation(0);
   }
 
   function fullReset() {
@@ -593,10 +599,31 @@ export function PenaltyPreview() {
             endSize={BALL_SIZE_FLY_END}
             durationMs={shotPower > POWER_SWEET_HIGH ? 320 : shotPower > POWER_SWEET_LOW ? 380 : 520}
             power={shotPower}
+            endRotation={finalRotation}
+          />
+        )}
+        {/* Rastro técnico permanente — fica do voo até o próximo batedor */}
+        {phase === 'result' && landing && (
+          <line
+            x1={SPOT.x}
+            y1={SPOT.y}
+            x2={landing.x}
+            y2={landing.y}
+            stroke="#000"
+            strokeWidth={
+              shotPower > POWER_SWEET_HIGH ? 4.5 : shotPower > POWER_SWEET_LOW ? 3.5 : 2.5
+            }
+            strokeLinecap="round"
+            opacity="0.92"
           />
         )}
         {phase === 'result' && landing && (
-          <LegacyBall cx={landing.x} cy={landing.y} size={BALL_SIZE_RESULT} />
+          <LegacyBall
+            cx={landing.x}
+            cy={landing.y}
+            size={BALL_SIZE_RESULT}
+            rotation={finalRotation}
+          />
         )}
 
         {/* Selo de fase */}
@@ -740,17 +767,19 @@ export function PenaltyPreview() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Bola estática (na marca / no slot final)
+// Bola estática (na marca / no slot final) — aceita rotation pra preservar pose pós-voo
 function LegacyBall({
   cx,
   cy,
   size,
   jitter = false,
+  rotation = 0,
 }: {
   cx: number;
   cy: number;
   size: number;
   jitter?: boolean;
+  rotation?: number;
 }) {
   const half = size / 2;
   return (
@@ -763,18 +792,19 @@ function LegacyBall({
         fill="#000"
         opacity="0.3"
       />
-      <image
-        href="/assets/legacy-ball.png"
-        x={cx - half}
-        y={cy - half}
-        width={size}
-        height={size}
-        style={{
-          filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.45))',
-          animation: jitter ? 'penalty-ball-jitter 0.12s infinite' : undefined,
-          transformOrigin: `${cx}px ${cy}px`,
-        }}
-      />
+      <g transform={`translate(${cx}, ${cy}) rotate(${rotation})`}>
+        <image
+          href="/assets/legacy-ball.png"
+          x={-half}
+          y={-half}
+          width={size}
+          height={size}
+          style={{
+            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.45))',
+            animation: jitter ? 'penalty-ball-jitter 0.12s infinite' : undefined,
+          }}
+        />
+      </g>
     </g>
   );
 }
@@ -788,6 +818,7 @@ function LegacyBallFlying({
   endSize,
   durationMs,
   power,
+  endRotation,
 }: {
   from: { x: number; y: number };
   to: { x: number; y: number };
@@ -795,6 +826,7 @@ function LegacyBallFlying({
   endSize: number;
   durationMs: number;
   power: number;
+  endRotation: number;
 }) {
   const [t, setT] = useState(0);
   const rafRef = useRef<number | null>(null);
@@ -826,9 +858,10 @@ function LegacyBallFlying({
   const size = startSize + (endSize - startSize) * eased;
   const half = size / 2;
 
-  // Rotação dramática conforme força
-  const totalRotation = 540 + power * 540; // até 1080° em chute forte
-  const rotation = eased * totalRotation;
+  // Rotação acumula durante o voo e termina exatamente em endRotation
+  // (assim a bola não "desvira" ao parar — pose persiste no result)
+  const totalSpin = 540 + power * 540 + endRotation;
+  const rotation = eased * totalSpin;
 
   // Sombra projetada no chão (cai pra trás, encolhe)
   const heightAboveGround = from.y - y;
