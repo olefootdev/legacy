@@ -339,12 +339,12 @@ export function PenaltyPreview() {
     if (phase === 'charging') return 'SEGURA… CARREGA…';
     if (phase === 'reveal') return 'CHUTA!';
     // result
-    if (outcome === 'goal') return 'GOOOL!';
+    if (outcome === 'goal') return 'GOOOOOL!';
     if (outcome === 'over-bar') return 'POR CIMA!';
     if (outcome === 'post') return 'NA TRAVE!';
     if (outcome === 'wide') return 'PRA FORA!';
     if (outcome === 'weak-save') return 'CHUTE FRACO!';
-    return 'DEFENDIDA';
+    return 'DEFENDEU!';
   })();
 
   return (
@@ -373,17 +373,23 @@ export function PenaltyPreview() {
           {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
         </div>
 
-        {/* Headline editorial */}
+        {/* Headline editorial — gigante no result pra dar emoção */}
         <h1
           className="ole-headline-italic text-black text-center mt-2"
-          style={{ fontSize: 'clamp(28px, 4vw, 44px)', lineHeight: 1.05 }}
+          style={{
+            fontSize:
+              phase === 'result'
+                ? 'clamp(56px, 10vw, 120px)'
+                : 'clamp(28px, 4vw, 44px)',
+            lineHeight: 1.0,
+          }}
         >
           {headline}
         </h1>
       </div>
 
-      {/* Sub-info */}
-      <div className="flex items-center gap-3 mb-3 text-black/80 text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
+      {/* Sub-info — descida pra dar respiro embaixo do headline */}
+      <div className="flex items-center gap-3 mt-4 mb-3 text-black/80 text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
         <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
           Adrien Ayo · #9
         </span>
@@ -645,17 +651,17 @@ export function PenaltyPreview() {
           {phase === 'charging' && '— CARREGANDO FORÇA —'}
           {phase === 'reveal' && '— BATE —'}
           {phase === 'result' &&
-            (outcome === 'goal'
-              ? '— REDE —'
-              : outcome === 'over-bar'
-                ? '— POR CIMA —'
-                : outcome === 'post'
-                  ? '— TRAVE —'
-                  : outcome === 'wide'
-                    ? '— PRA FORA —'
-                    : outcome === 'weak-save'
-                      ? '— ERRO · FRACO —'
-                      : '— DEFESA —')}
+            (outcome === 'over-bar'
+              ? '— POR CIMA —'
+              : outcome === 'post'
+                ? '— TRAVE —'
+                : outcome === 'wide'
+                  ? '— PRA FORA —'
+                  : outcome === 'weak-save'
+                    ? '— ERRO · FRACO —'
+                    : outcome === 'save'
+                      ? '— DEFESA —'
+                      : '')}
         </text>
       </svg>
 
