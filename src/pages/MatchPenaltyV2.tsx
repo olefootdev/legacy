@@ -385,6 +385,7 @@ export function MatchPenaltyV2() {
       shootoutContext={ctx}
       onResolved={handleHomeShot}
       onNextShooter={handleNextShooter}
+      autoAdvanceMs={5000}
     />
   );
 }
