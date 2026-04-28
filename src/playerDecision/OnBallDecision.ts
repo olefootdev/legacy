@@ -379,6 +379,17 @@ export function decideOnBallWithIntention(
       ...computeContextualGameplayMacroTilt(ctx, reading, passSlice),
       ...goalEvolutionTilt,
       ...duelMacroTiltForCarrier(carrierDuel, reading),
+  // Sprint L2 — Personalidade: ego inclina o jogador a chutar/driblar mais
+  //   ego 90 (Cristiano-tier): +shoot, +dribble_risk, -pass_safe
+  //   ego 30 (cooperativo):    +pass_safe, -shoot
+  ...(ctx.self.ego != null ? (() => {
+    const egoBias = (ctx.self.ego - 50) / 100; // -0.5 .. +0.5
+    return {
+      shoot: egoBias * 0.18,
+      dribble_risk: egoBias * 0.12,
+      pass_safe: -egoBias * 0.14,
+    };
+  })() : {}),
   // Prefer finish if requested by the nudge
   ...( (ctx as any)._nudgePreferFinish ? { shoot: 0.35 } : {} ),
   // Voice command bias — treinador mandou algo específico pro portador

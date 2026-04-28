@@ -36,6 +36,42 @@ export interface MatchPlayerAttributes {
   confianca: number;
 }
 
+/**
+ * Sprint L2 — Personalidade individual do jogador na partida.
+ * Quatro eixos que diferenciam jogadores além dos atributos técnicos.
+ * Modula comportamentos no engine sem alterar atributos base.
+ */
+export interface MatchPlayerPersonality {
+  /** 0-100 — quão agressivo no duelo. Maior = mais faltas táticas / hard tackles. */
+  aggressiveness: number;
+  /** 0-100 — respeito à instrução tática. Menor = drift da formação, decisões individuais. */
+  loyalty: number;
+  /** 0-100 — bonus em jogos decisivos (final, jogo apertado, minutos críticos). */
+  bigGameMentality: number;
+  /** 0-100 — tendência a finalizar de fora vs passar / driblar mais vs simples. */
+  ego: number;
+}
+
+/** Sintetiza personalidade a partir dos atributos existentes do PlayerEntity. */
+export function derivePersonalityFromAttrs(attrs: MatchPlayerAttributes): MatchPlayerPersonality {
+  // aggressiveness: inverso do fair play + bonus de físico
+  const aggressiveness = clampAttr(
+    (100 - attrs.fairPlay) * 0.7 + (attrs.fisico - 50) * 0.3,
+  );
+  // loyalty: tático bruto (jogador disciplinado segue instrução)
+  const loyalty = clampAttr(attrs.tatico);
+  // bigGameMentality: mentalidade pura
+  const bigGameMentality = clampAttr(attrs.mentalidade);
+  // ego: confiança alta = quer a bola, chuta de fora
+  const ego = clampAttr(attrs.confianca * 0.7 + attrs.finalizacao * 0.3);
+
+  return { aggressiveness, loyalty, bigGameMentality, ego };
+}
+
+export function defaultPersonality(): MatchPlayerPersonality {
+  return { aggressiveness: 50, loyalty: 65, bigGameMentality: 60, ego: 55 };
+}
+
 /** Per-subzone memory: tracks success/failure and builds zone confidence. */
 export interface ZoneMemoryEntry {
   successes: number;

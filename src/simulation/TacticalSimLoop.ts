@@ -165,7 +165,9 @@ import {
   awayCognitiveArchetypeForSlot,
   defaultAwayMatchAttributes,
   tickTacticalDiscipline,
+  derivePersonalityFromAttrs,
   type MatchPlayerAttributes,
+  type MatchPlayerPersonality,
   type PlayerMatchRuntime,
   type MatchCognitiveArchetype,
 } from '@/match/playerInMatch';
@@ -284,6 +286,8 @@ interface AgentEx extends AgentBinding {
   decision: PlayerDecisionEngine;
   profile: PlayerProfile;
   matchAttrs: MatchPlayerAttributes;
+  /** Sprint L2 — personalidade derivada dos atributos. Modula comportamento. */
+  personality: MatchPlayerPersonality;
   matchRuntime: PlayerMatchRuntime;
   cognitiveArchetype: MatchCognitiveArchetype;
   /** Esforço locomotor suavizado (0 ≈ andar, 1 ≈ sprint). */
@@ -633,11 +637,13 @@ export class TacticalSimLoop {
           rt.confidenceRuntime = Math.min(1.28, rt.confidenceRuntime + morale);
         }
         const cog: MatchCognitiveArchetype = hp.cognitiveArchetype ?? 'construtor';
+        const personality = derivePersonalityFromAttrs(attrs);
         const agEx: AgentEx = {
           ...base,
           decision: new PlayerDecisionEngine(prof),
           profile: prof,
           matchAttrs: attrs,
+          personality,
           matchRuntime: rt,
           cognitiveArchetype: cog,
           locomotionRunBlendSmoothed: 0.35,
@@ -662,11 +668,13 @@ export class TacticalSimLoop {
         const attrs = defaultAwayMatchAttributes(awayNum);
         const rt = createPlayerMatchRuntimeFromPitch(14, attrs);
         const cog = awayCognitiveArchetypeForSlot(slot);
+        const personality = derivePersonalityFromAttrs(attrs);
         const agEx: AgentEx = {
           ...base,
           decision: new PlayerDecisionEngine(prof),
           profile: prof,
           matchAttrs: attrs,
+          personality,
           matchRuntime: rt,
           cognitiveArchetype: cog,
           locomotionRunBlendSmoothed: 0.35,
@@ -1783,6 +1791,7 @@ export class TacticalSimLoop {
 
   private toAgentSnapshot(a: AgentEx): AgentSnapshot {
     const m = a.matchAttrs;
+    const p = a.personality;
     // Heading a partir da velocidade do veículo (convenção: atan2(vx, vz)).
     // Em parado, omite heading → scorePass usa fallback sem penalidade de cone.
     const vx = a.vehicle.velocity.x;
@@ -1811,6 +1820,10 @@ export class TacticalSimLoop {
       tatico: m.tatico,
       mentalidade: m.mentalidade,
       confianca: m.confianca,
+      aggressiveness: p.aggressiveness,
+      loyalty: p.loyalty,
+      bigGameMentality: p.bigGameMentality,
+      ego: p.ego,
       cognitiveArchetype: a.cognitiveArchetype,
       confidenceRuntime: a.matchRuntime.confidenceRuntime,
       stamina: a.matchRuntime.stamina,
@@ -4879,7 +4892,18 @@ export class TacticalSimLoop {
           `tackle_foul:${def.id}:${carrier.id}:${tickK}`,
         );
         let foulP = TACKLE_FOUL_PROB_BASE + ((100 - defSnap.fairPlay) / 100) * TACKLE_FOUL_FAIRPLAY_WEIGHT;
-        foulP = Math.min(TACKLE_FOUL_PROB_CAP, foulP);
+        // Sprint L2 — Personalidade: agressividade soma até +10pp de prob de falta
+        // (jogador agressivo entra firme mesmo com fair play decente)
+        const aggr = defSnap.aggressiveness ?? 50;
+        foulP += ((aggr - 50) / 100) * 0.10;
+        // Sprint L2 — Big game: nos minutos finais (75'+) a tensão sobe pros mentalmente fortes
+        // bigGameMentality alto = MENOS faltas idiotas em momentos críticos
+        const bgm = defSnap.bigGameMentality ?? 60;
+        const minute = Math.floor(this.world.simTime / 60);
+        if (minute >= 75) {
+          foulP -= ((bgm - 50) / 100) * 0.06; // até -6pp pros mentalmente fortes
+        }
+        foulP = Math.max(0.02, Math.min(TACKLE_FOUL_PROB_CAP, foulP));
         if (foulRng.nextUnit() < foulP) {
           const sevRoll = foulRng.nextUnit();
           const foulSeverity: 'light' | 'firm' | 'ugly' =
