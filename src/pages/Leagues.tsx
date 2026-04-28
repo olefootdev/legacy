@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, TrendingUp, Shield, Plus, ChevronRight } from 'lucide-react';
+import { Trophy, TrendingUp, Shield, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { useGameStore } from '@/game/store';
 import { useMemo, useState } from 'react';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
-import type { AdminLeagueConfig, KnockoutRound, LeagueScope, LeagueStandingRow } from '@/match/adminLeagues';
+import type { AdminLeagueConfig, KnockoutRound, LeagueScope } from '@/match/adminLeagues';
 import { BackButton } from '@/components/BackButton';
 import {
   goalDiff,
@@ -180,61 +181,26 @@ const TAB_META: Record<Exclude<LeagueScope, 'world'>, { num: string; eyebrow: st
   state:    { num: '02', eyebrow: 'Competições · Estadual', subtitle: 'pelo estado.', quote: '“rivalidades regionais — onde tudo começa.”' },
 };
 
-/** Seed de uma liga exemplo (Brasileirão simulado) — 8 times, pontos corridos. */
-function seedExampleLeague(): AdminLeagueConfig {
-  const teams: { name: string; played: number; points: number; gf: number; ga: number }[] = [
-    { name: 'Flamengo',       played: 4, points: 12, gf: 11, ga: 3 },
-    { name: 'Palmeiras',      played: 4, points: 10, gf: 9,  ga: 4 },
-    { name: 'Corinthians',    played: 4, points: 7,  gf: 6,  ga: 5 },
-    { name: 'São Paulo',      played: 4, points: 6,  gf: 5,  ga: 5 },
-    { name: 'Internacional',  played: 4, points: 6,  gf: 7,  ga: 7 },
-    { name: 'Grêmio',         played: 4, points: 4,  gf: 5,  ga: 8 },
-    { name: 'Atlético-MG',    played: 4, points: 3,  gf: 3,  ga: 7 },
-    { name: 'Cruzeiro',       played: 4, points: 1,  gf: 2,  ga: 9 },
-  ];
-  const standings: LeagueStandingRow[] = teams.map((t, i) => ({
-    teamId: `seed-${i}`,
-    name: t.name,
-    played: t.played,
-    points: t.points,
-    goalsFor: t.gf,
-    goalsAgainst: t.ga,
-  }));
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const end = new Date(today.getFullYear(), today.getMonth() + 6, 30).toISOString().slice(0, 10);
-  return {
-    id: `seed-brasileirao-${Date.now()}`,
-    name: 'Brasileirão Olefoot',
-    division: 'Série A',
-    scope: 'national',
-    syncStatsFromSeason: true,
-    form: ['W', 'W', 'D', 'L', 'W'],
-    standings,
-    format: 'round_robin',
-    startDate: start,
-    endDate: end,
-    prizeSummary: 'Champion: 200.000 EXP + troféu nacional',
-  };
-}
-
 export function Leagues() {
   const club = useGameStore((s) => s.club);
   const leagueSeason = useGameStore((s) => s.leagueSeason);
   const form = useGameStore((s) => s.form);
   const adminLeagues = useGameStore((s) => s.adminLeagues);
   const adminPrimaryLeagueId = useGameStore((s) => s.adminPrimaryLeagueId);
-  const dispatch = useGameDispatch();
+  /** Sprint B-4: Liga Global MVP (OLEFOOT LIGA) — sempre visível mesmo sem 32 times. */
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
 
-  const playerLeagues = useMemo(() => adminLeagues.filter(isLeagueVisibleInPlayerApp), [adminLeagues]);
+  /** Sprint B-4: filtra a liga-exemplo Brasileirão (já persistida em saves antigos). */
+  const playerLeagues = useMemo(
+    () =>
+      adminLeagues
+        .filter(isLeagueVisibleInPlayerApp)
+        .filter((l) => !l.id.startsWith('seed-brasileirao-')),
+    [adminLeagues],
+  );
 
   const [scopeTab, setScopeTab] = useState<Exclude<LeagueScope, 'world'>>('national');
   const tabMeta = TAB_META[scopeTab];
-
-  const handleSeedExample = () => {
-    const league = seedExampleLeague();
-    dispatch({ type: 'ADMIN_UPSERT_LEAGUE', league });
-  };
 
   const orderedLeagues = useMemo(() => {
     const inTab = playerLeagues.filter((l) => l.scope === scopeTab);
@@ -248,52 +214,29 @@ export function Leagues() {
   const noOnTab = !isEmpty && !onlyWorld && orderedLeagues.length === 0;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 sm:space-y-10 lg:max-w-5xl xl:max-w-6xl">
-      {/* ── HERO BVB — amarelo + watermark + Agency caps + Moret italic ── */}
-      <section
-        aria-label="Ligas"
-        className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm"
-      >
-        {/* Watermark gigante do número da aba */}
-        <div
-          className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
-          aria-hidden
-        >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={tabMeta.num}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.04 }}
-              transition={{ duration: 0.4 }}
-              className="font-display font-black tabular-nums whitespace-nowrap text-black/[0.05]"
-              style={{
-                fontSize: 'clamp(180px, 32vw, 460px)',
-                lineHeight: '0.85',
-                letterSpacing: '-0.05em',
-              }}
-            >
-              {tabMeta.num}
-            </motion.span>
-          </AnimatePresence>
-        </div>
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 pb-8 lg:max-w-5xl xl:max-w-6xl">
+      <BackButton to="/competicao" label="Competição" />
 
-        {/* Composição editorial */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-10 sm:py-14 text-center"
-        >
-          <div className="ole-eyebrow !text-black mb-5 sm:mb-6" style={{ fontFamily: 'var(--font-ui)' }}>
-            <span className="!text-black">{tabMeta.eyebrow}</span>
+      {/* ── Header — Sprint B-4 Legacy Tech (padrão Ranking) ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="border border-white/10 bg-dark-gray overflow-hidden"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        <div className="bg-black/40 p-6 md:p-8 border-b border-[var(--color-divider-yellow)]">
+          <div
+            className="font-display font-bold uppercase text-neon-yellow/80 mb-3"
+            style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+          >
+            OLE Football · Competições
           </div>
-          <h1 className="leading-[0.9]">
+          <h1 className="leading-[0.92]">
             <span
-              className="block font-bold uppercase text-black"
+              className="block font-bold uppercase text-white"
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2.75rem, 8vw, 6rem)',
+                fontSize: 'clamp(2rem, 5.5vw, 3.5rem)',
                 letterSpacing: '0.005em',
               }}
             >
@@ -306,84 +249,64 @@ export function Leagues() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.35 }}
-                className="block italic text-black"
+                className="block italic text-neon-yellow mt-1"
                 style={{
                   fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(2.25rem, 7vw, 5rem)',
-                  marginTop: '0.04em',
-                  letterSpacing: '-0.01em',
+                  fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em',
                 }}
               >
                 {tabMeta.subtitle}
               </motion.span>
             </AnimatePresence>
           </h1>
-          <span aria-hidden className="mx-auto mt-6 block w-16 h-[3px] bg-black" />
-          <AnimatePresence mode="wait">
-            <motion.blockquote
-              key={`q-${scopeTab}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.35, delay: 0.05 }}
-              className="ole-headline-italic mt-7 sm:mt-9 text-black/85 mx-auto max-w-xl leading-snug"
-              style={{ fontSize: 'clamp(15px, 2vw, 19px)' }}
-            >
-              {tabMeta.quote}
-            </motion.blockquote>
-          </AnimatePresence>
+          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-5" />
           <p
-            className="mt-3 text-black/60 mx-auto max-w-md"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 'clamp(0.85rem, 1vw, 0.95rem)', lineHeight: 1.55 }}
+            className="text-white/55 max-w-md mt-4"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
           >
-            {playerLeagues.length} {playerLeagues.length === 1 ? 'competição visível' : 'competições visíveis'} no save
+            {tabMeta.quote.replace(/“|”/g, '')}
           </p>
+        </div>
 
-          {/* Tabs + CTA "Criar liga exemplo" */}
-          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
-            {PLAYER_SCOPE_TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setScopeTab(t.id)}
-                className={cn(
-                  'inline-flex items-center px-5 py-2.5 font-bold uppercase tracking-[0.2em] text-[12px] transition-all rounded-sm',
-                  scopeTab === t.id
-                    ? 'bg-black text-neon-yellow shadow-[0_8px_24px_rgba(0,0,0,0.25)]'
-                    : 'border border-black/65 bg-transparent text-black hover:bg-black/10',
-                )}
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {t.label}
-              </button>
-            ))}
-            {isEmpty ? (
-              <button
-                type="button"
-                onClick={handleSeedExample}
-                className="inline-flex items-center gap-2 bg-black px-5 py-2.5 text-neon-yellow font-bold uppercase tracking-[0.2em] text-[12px] rounded-sm shadow-[0_8px_24px_rgba(0,0,0,0.25)] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                <Plus className="w-4 h-4" />
-                Criar liga exemplo
-              </button>
-            ) : null}
-          </div>
-        </motion.div>
-      </section>
+        {/* Tabs — pílulas (sem ícones) */}
+        <div className="p-4 border-b border-white/10 flex flex-wrap gap-2">
+          {PLAYER_SCOPE_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setScopeTab(t.id)}
+              className={cn(
+                'inline-flex items-center rounded-[var(--radius-pill)] px-5 py-2 font-display text-[11px] font-black uppercase tracking-[0.22em] transition-all',
+                scopeTab === t.id
+                  ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
+                  : 'border border-white/15 bg-white/[0.03] text-white/65 hover:border-neon-yellow/40 hover:text-white',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
-      <div className="px-3 sm:px-4 lg:px-8">
-        <BackButton to="/competicao" label="Competição" />
-      </div>
+      {/* ── OLEFOOT LIGA (Liga Global MVP) — sempre visível ── */}
+      <OlefootLigaSection
+        teams={globalLeagueMVP?.teams ?? []}
+        status={globalLeagueMVP?.status ?? 'waiting_teams'}
+        minTeamsRequired={globalLeagueMVP?.minTeamsRequired ?? 32}
+      />
 
-      {/* ── Estado vazio (sem ligas no save) ── */}
+      {/* ── Estado vazio (sem ligas extras no save) ── */}
       {isEmpty ? (
-        <section className="bg-panel border border-white/10 rounded-sm p-6 text-center">
+        <section
+          className="border border-white/10 bg-panel p-6 text-center"
+          style={{ borderRadius: 'var(--radius-md)' }}
+        >
           <p className="text-sm text-gray-400 leading-relaxed">
-            Nenhuma competição configurada ainda. Clique em{' '}
-            <span className="text-neon-yellow font-bold">Criar liga exemplo</span> acima pra ver o
-            <strong className="text-white"> Brasileirão Olefoot</strong> em ação, ou crie suas próprias em{' '}
-            <code className="text-neon-yellow">/admin</code>.
+            Sem ligas regionais ou nacionais configuradas no save. A
+            <strong className="text-white"> OLEFOOT LIGA</strong> acima fica sempre disponível, e novas
+            competições podem ser criadas em <code className="text-neon-yellow">/admin</code>.
           </p>
         </section>
       ) : null}
@@ -611,5 +534,207 @@ export function Leagues() {
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * Sprint B-4: bloco da OLEFOOT LIGA (Liga Global MVP) sempre visível em /competicao/ligas.
+ * Exibe times cadastrados ordenados por overall, mesmo antes de atingir 32 times.
+ *
+ * Status:
+ *  - waiting_teams: aguardando 32 cadastros (mostra contador + lista parcial)
+ *  - playoffs: playoffs em curso (link pra bracket)
+ *  - league_active: liga oficial em curso (mostra divisão 1)
+ *  - season_ended: temporada encerrada
+ */
+type OlefootLigaSectionProps = {
+  teams: import('@/match/globalLeagueMVP').GlobalTeam[];
+  status: import('@/match/globalLeagueMVP').GlobalLeagueStatus;
+  minTeamsRequired: number;
+};
+
+function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSectionProps) {
+  const teamsCount = teams.length;
+  const remaining = Math.max(0, minTeamsRequired - teamsCount);
+  const progress = Math.min(100, (teamsCount / minTeamsRequired) * 100);
+
+  // Ordena por overall desc para vitrine antes do início
+  const sortedTeams = useMemo(
+    () => [...teams].sort((a, b) => b.overall - a.overall),
+    [teams],
+  );
+
+  const statusBadge =
+    status === 'waiting_teams'
+      ? { label: 'Aguardando cadastros', tone: 'text-neon-yellow border-neon-yellow/40 bg-neon-yellow/10' }
+      : status === 'playoffs'
+        ? { label: 'Playoffs em curso', tone: 'text-fuchsia-300 border-fuchsia-400/40 bg-fuchsia-500/10' }
+        : status === 'league_active'
+          ? { label: 'Liga em curso', tone: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10' }
+          : { label: 'Temporada encerrada', tone: 'text-white/65 border-white/15 bg-white/[0.03]' };
+
+  const targetRoute =
+    status === 'waiting_teams'
+      ? '/liga-global/registro'
+      : status === 'playoffs'
+        ? '/liga-global/playoffs'
+        : '/match/olefoot-liga';
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative isolate overflow-hidden border border-[var(--color-divider-yellow-strong)]"
+      style={{
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--color-panel-elevated)',
+        boxShadow: 'var(--shadow-card-hover)',
+      }}
+    >
+      {/* Trilho lateral amarelo neon */}
+      <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
+
+      {/* Header */}
+      <div className="border-b border-[var(--color-divider-yellow)] p-6 md:p-7 pl-7 md:pl-8">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div
+              className="font-display font-bold uppercase text-neon-yellow/85 mb-2"
+              style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+            >
+              Liga Global · Temporada 2026
+            </div>
+            <h2 className="leading-[0.95]">
+              <span
+                className="block font-bold uppercase text-white"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
+                  letterSpacing: '0.005em',
+                }}
+              >
+                OLEFOOT LIGA
+              </span>
+              <span
+                className="block italic text-neon-yellow mt-0.5"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(1.25rem, 3.5vw, 2rem)',
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {status === 'waiting_teams'
+                  ? `${teamsCount}/${minTeamsRequired} times`
+                  : status === 'playoffs'
+                    ? 'playoffs'
+                    : status === 'league_active'
+                      ? 'em disputa'
+                      : 'encerrada'}
+              </span>
+            </h2>
+          </div>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-[var(--radius-pill)] border px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em]',
+              statusBadge.tone,
+            )}
+          >
+            {statusBadge.label}
+          </span>
+        </div>
+
+        <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-5" />
+
+        {/* Progress (só na fase de cadastro) */}
+        {status === 'waiting_teams' ? (
+          <div className="mt-5 max-w-md">
+            <div className="h-2 overflow-hidden rounded-full bg-white/8">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.6 }}
+                className="h-full bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.4)]"
+              />
+            </div>
+            <p className="mt-2 text-[12px] text-white/55">
+              {remaining > 0
+                ? `Faltam ${remaining} time${remaining === 1 ? '' : 's'} para iniciar os playoffs.`
+                : 'Quórum atingido — playoffs prestes a começar.'}
+            </p>
+          </div>
+        ) : null}
+
+        <Link
+          to={targetRoute}
+          className="mt-6 inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+          style={{ borderRadius: 'var(--radius-sm)' }}
+        >
+          {status === 'waiting_teams'
+            ? 'Entrar na Liga'
+            : status === 'playoffs'
+              ? 'Ver Playoffs'
+              : status === 'league_active'
+                ? 'Ver Tabela'
+                : 'Ver Resultado'}
+        </Link>
+      </div>
+
+      {/* Lista de times cadastrados */}
+      <div className="p-6 md:p-7 pl-7 md:pl-8">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <h3
+            className="font-display text-[12px] font-black uppercase tracking-[0.24em] text-white/85"
+          >
+            Times cadastrados
+          </h3>
+          <span
+            className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/40"
+          >
+            {teamsCount} {teamsCount === 1 ? 'manager' : 'managers'}
+          </span>
+        </div>
+
+        {teamsCount === 0 ? (
+          <p className="text-[13px] leading-relaxed text-white/45">
+            Ninguém cadastrado ainda. Sê o primeiro a entrar na competição mundial — assim que tiveres
+            elenco e tática prontos, abre <span className="text-neon-yellow">Entrar na Liga</span>.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
+            {sortedTeams.map((team, index) => (
+              <div
+                key={team.id}
+                className="flex items-center justify-between border border-white/[0.05] bg-[var(--color-panel-soft)] px-3 py-2.5"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="shrink-0 font-display text-[11px] font-black tabular-nums text-white/40"
+                    style={{ width: '1.75rem' }}
+                  >
+                    #{index + 1}
+                  </span>
+                  <span className="truncate font-display text-[13px] font-bold uppercase tracking-wide text-white">
+                    {team.clubName}
+                  </span>
+                </div>
+                <span
+                  className="shrink-0 italic tabular-nums leading-none text-neon-yellow"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {team.overall}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.section>
   );
 }

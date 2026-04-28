@@ -10,6 +10,7 @@ import { subscribeGlobalLeagueChanges } from './supabase/globalLeagueRealtime';
 import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHydrate';
 import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
 import { WelcomeGenesisPackHydrate } from './game/WelcomeGenesisPackHydrate';
+import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
 import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
@@ -22,6 +23,9 @@ const CompetitionHub = lazy(() => import('./pages/CompetitionHub').then((m) => (
 const MarketHub = lazy(() => import('./pages/MarketHub').then((m) => ({ default: m.MarketHub })));
 const HelpHub = lazy(() => import('./pages/HelpHub').then((m) => ({ default: m.HelpHub })));
 const Legend = lazy(() => import('./pages/Legend').then((m) => ({ default: m.Legend })));
+const DesignSystemShowcase = lazy(() =>
+  import('./pages/DesignSystemShowcase').then((m) => ({ default: m.DesignSystemShowcase })),
+);
 const MatchdayPreview = lazy(() => import('./pages/MatchdayPreview').then((m) => ({ default: m.MatchdayPreview })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
@@ -205,6 +209,7 @@ export default function App() {
         <GlobalLeagueHydrator />
         <GlobalSchedulerMount />
         <WelcomeGenesisPackHydrate />
+        <ManagerSquadHydrator />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
         <Routes>
@@ -213,6 +218,14 @@ export default function App() {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <AdminLogin />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/design-system"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <DesignSystemShowcase />
               </Suspense>
             }
           />

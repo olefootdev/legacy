@@ -6,6 +6,7 @@ import { loadGameState, saveGameState } from './persistence';
 import { insertMatch } from '@/supabase/matchPersistence';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { persistGlobalLeagueSnapshot } from '@/supabase/globalLeague';
+import { persistManagerSquad } from '@/supabase/managerSquad';
 
 const GLOBAL_LEAGUE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'INIT_GLOBAL_LEAGUE_MVP',
@@ -30,6 +31,52 @@ function emit() {
 
 export function getGameState(): OlefootGameState {
   return state;
+}
+
+/** Substitui slices do estado vindo de hidratação remota (Supabase) sem
+ *  reentrar no reducer. Usado pelo ManagerSquadHydrator no boot. */
+export function applyHydratedSquad(input: {
+  players: Record<string, OlefootGameState['players'][string]>;
+  lineup: Record<string, string>;
+  formationScheme: OlefootGameState['manager']['formationScheme'] | null;
+}): void {
+  state = {
+    ...state,
+    players: input.players,
+    lineup: input.lineup,
+    manager: input.formationScheme
+      ? { ...state.manager, formationScheme: input.formationScheme }
+      : state.manager,
+  };
+  saveGameState(state);
+  emit();
+}
+
+// ─── Debounced manager squad persistence ─────────────────────────────
+let lastPersistedPlayersRef: OlefootGameState['players'] | null = null;
+let lastPersistedLineupRef: OlefootGameState['lineup'] | null = null;
+let lastPersistedFormation: OlefootGameState['manager']['formationScheme'] | null = null;
+let squadPersistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleManagerSquadPersist(): void {
+  if (!isSupabaseConfigured()) return;
+  const sliceChanged =
+    state.players !== lastPersistedPlayersRef ||
+    state.lineup !== lastPersistedLineupRef ||
+    state.manager.formationScheme !== lastPersistedFormation;
+  if (!sliceChanged) return;
+  if (squadPersistTimer) clearTimeout(squadPersistTimer);
+  squadPersistTimer = setTimeout(() => {
+    squadPersistTimer = null;
+    lastPersistedPlayersRef = state.players;
+    lastPersistedLineupRef = state.lineup;
+    lastPersistedFormation = state.manager.formationScheme;
+    void persistManagerSquad({
+      players: state.players,
+      lineup: state.lineup,
+      formationScheme: state.manager.formationScheme,
+    });
+  }, 1500);
 }
 
 export function dispatchGame(action: GameAction): void {
@@ -58,6 +105,8 @@ export function dispatchGame(action: GameAction): void {
   if (GLOBAL_LEAGUE_PERSIST_ACTIONS.has(action.type) && state.globalLeagueMVP) {
     void persistGlobalLeagueSnapshot(state.globalLeagueMVP);
   }
+
+  scheduleManagerSquadPersist();
 
   emit();
 }

@@ -313,6 +313,8 @@ export function Transfer() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [purchaseCompleteBanner, setPurchaseCompleteBanner] = useState(false);
+  /** Sprint B-4: visualização do catálogo "Genesis em foco" — grade ou lista horizontal. */
+  const [genesisViewMode, setGenesisViewMode] = useState<'grid' | 'list'>('grid');
   const purchaseBannerHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<MockAuctionPlayer | null>(null);
   const [discoveryVisibleCount, setDiscoveryVisibleCount] = useState(initialDiscoveryVisibleMap);
@@ -982,7 +984,91 @@ export function Transfer() {
         )}
       </AnimatePresence>
 
-      {/* Slider promocional por aba (sobe pra logo abaixo do hero principal) */}
+      {/* Sprint B-4: ordem padronizada com /loja — DESTAQUES vem antes do SLIDER */}
+      {/* ── DESTAQUES DA SEMANA ─────────────────────────────────────── */}
+      {highlightsOrdered.length > 0 ? (
+        <section className="min-w-0 space-y-3">
+          <div className="flex min-w-0 items-center gap-3 px-0.5">
+            <span
+              aria-hidden
+              className="shrink-0 w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]"
+            />
+            <div className="min-w-0 flex-1">
+              <h3
+                className="text-neon-yellow font-bold uppercase"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '14px',
+                  letterSpacing: '0.18em',
+                }}
+              >
+                Destaques da semana
+              </h3>
+              <p
+                className="text-white/45"
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '10px',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Cartas em destaque pelo overall e buzz do mercado.
+              </p>
+            </div>
+          </div>
+          <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
+            <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-3 bg-gradient-to-r from-deep-black/90 to-transparent sm:w-4 lg:w-8" />
+            <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-16 bg-gradient-to-l from-deep-black/95 via-deep-black/60 to-transparent sm:w-20 lg:w-24" />
+            <div
+              ref={highlightsScrollRef}
+              className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] "
+            >
+              <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
+                {highlightsOrdered.slice(0, highlightsShownLen).map((player, i) => (
+                  <motion.div
+                    key={`hl-${player.id}`}
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.02, duration: 0.18 }}
+                    className="min-w-0 shrink-0 cursor-pointer w-[var(--highlight-card-px,min(200px,calc(100dvw-3rem)))]"
+                    onClick={() => setSelectedPlayer(player)}
+                  >
+                    <PlayerCard
+                      player={player}
+                      listHomonym={homonymRankMapForPlayers(highlightsOrdered).get(player.id)}
+                      carouselStrip
+                    />
+                  </motion.div>
+                ))}
+                <div className="flex items-stretch">
+                  <TransferCarouselVerMaisTile
+                    variant="neon"
+                    topLabel="Destaques da semana"
+                    bottomLabel={
+                      highlightsShownLen < highlightsOrdered.length
+                        ? `+${Math.min(DISCOVERY_CAROUSEL_STEP, highlightsOrdered.length - highlightsShownLen)} neste carril`
+                        : `${highlightsShownLen}/${highlightsOrdered.length}`
+                    }
+                    disabled={highlightsShownLen >= highlightsOrdered.length}
+                    onClick={() => {
+                      if (highlightsShownLen >= highlightsOrdered.length) return;
+                      setDiscoveryVisibleCount((prev) => ({
+                        ...prev,
+                        highlights: Math.min(
+                          highlightsOrdered.length,
+                          (prev.highlights ?? DISCOVERY_CAROUSEL_INITIAL) + DISCOVERY_CAROUSEL_STEP,
+                        ),
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── SLIDER promocional por aba ─────────────────────────────── */}
       <TransferHeroSlider
         tab={marketTab}
         slides={heroSlidesForTab(marketTab)}
@@ -1087,8 +1173,50 @@ export function Transfer() {
         )}
       </AnimatePresence>
 
-      {/* Grelha completa quando há filtros/busca; vitrine em carris quando o catálogo está “aberto”. */}
-      {isFiltered ? (
+      {/* ── GENESIS EM FOCO ─ headline + view toggle (padrão /loja) ── */}
+      <div className="flex flex-wrap items-end justify-between gap-3 px-0.5 pb-3 sm:pb-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="shrink-0 w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]" />
+            <h3
+              className="text-neon-yellow font-bold uppercase"
+              style={{ fontFamily: 'var(--font-display)', fontSize: '14px', letterSpacing: '0.18em' }}
+            >
+              Genesis em foco
+            </h3>
+          </div>
+          <p
+            className="mt-1 ml-[14px] text-white/45"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', lineHeight: 1.5 }}
+          >
+            {gridPlayers.length} {gridPlayers.length === 1 ? 'carta disponível' : 'cartas disponíveis'}
+            {isFiltered ? ' (filtros aplicados)' : ''}
+          </p>
+        </div>
+        {/* View toggle Grid / List — Sprint B-4 */}
+        <div className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-white/10 bg-white/[0.03] p-1">
+          {(['grid', 'list'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setGenesisViewMode(m)}
+              className={cn(
+                'inline-flex items-center rounded-[var(--radius-pill)] px-4 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] transition-all',
+                genesisViewMode === m
+                  ? 'bg-neon-yellow text-black shadow-[0_2px_10px_rgba(253,225,0,0.25)]'
+                  : 'text-white/55 hover:text-white',
+              )}
+              aria-pressed={genesisViewMode === m}
+              aria-label={`Visualização em ${m === 'grid' ? 'grade' : 'lista horizontal'}`}
+            >
+              {m === 'grid' ? 'Grid' : 'List'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Body do catálogo — switch por viewMode (filtros sempre aplicam) */}
+      {genesisViewMode === 'grid' ? (
         <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
           {gridPlayers.map((player, i) => (
             <motion.div
@@ -1128,128 +1256,31 @@ export function Transfer() {
           )}
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* "Destaques da semana" — primeiro abaixo do menu do slider pra dar peso */}
-          {discoveryRails.map((rail) => {
-            const Icon = rail.icon;
-            const vis = discoveryVisibleCount[rail.id] ?? DISCOVERY_CAROUSEL_INITIAL;
-            const shown = rail.ordered.slice(0, vis);
-            const canMore = vis < rail.ordered.length;
-            const nextChunk = Math.min(DISCOVERY_CAROUSEL_STEP, rail.ordered.length - vis);
-            const isHighlightsRail = rail.id === 'highlights';
-            const railHomonymById = homonymRankMapForPlayers(rail.ordered);
-            return (
-              <section key={rail.id} className="min-w-0 space-y-3">
-                {/* Rail header — padrão editorial ▍ TÍTULO (assinatura /legend) */}
-                <div className="flex min-w-0 items-center gap-3 px-0.5">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'shrink-0',
-                      isHighlightsRail
-                        ? 'w-[3px] h-7 bg-neon-yellow shadow-[0_0_10px_rgba(253,225,0,0.55)]'
-                        : 'w-[3px] h-7 bg-neon-yellow',
-                    )}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h3
-                      className="text-neon-yellow font-bold uppercase"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '14px',
-                        letterSpacing: '0.18em',
-                      }}
-                    >
-                      {rail.title}
-                    </h3>
-                    <p
-                      className="text-white/45"
-                      style={{
-                        fontFamily: 'var(--font-sans)',
-                        fontSize: '10px',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      {rail.hint}
-                    </p>
-                  </div>
-                  {canMore && (
-                    <button
-                      type="button"
-                      onClick={() => setDiscoveryVisibleCount((prev) => ({
-                        ...prev,
-                        [rail.id]: Math.min(rail.ordered.length, (prev[rail.id] ?? DISCOVERY_CAROUSEL_INITIAL) + DISCOVERY_CAROUSEL_STEP),
-                      }))}
-                      className="shrink-0 rounded-full border border-white/15 bg-white/5 px-3 py-1 font-display text-[9px] font-bold uppercase tracking-wider text-gray-400 transition-colors hover:border-neon-yellow/40 hover:text-neon-yellow"
-                    >
-                      +{nextChunk} mais
-                    </button>
-                  )}
-                </div>
-
-                {/* Carousel — sem scrollbar, com fade nas bordas */}
-                <div className="relative -mx-3 sm:-mx-4 lg:-mx-8">
-                  {/* fade esquerda */}
-                  <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-3 bg-gradient-to-r from-deep-black/90 to-transparent sm:w-4 lg:w-8" />
-                  {/* fade direita */}
-                  <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-16 bg-gradient-to-l from-deep-black/95 via-deep-black/60 to-transparent sm:w-20 lg:w-24" />
-                  <div
-                    ref={isHighlightsRail ? highlightsScrollRef : undefined}
-                    className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] "
-                  >
-                    <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
-                      {shown.map((player, i) => (
-                        <motion.div
-                          key={`${rail.id}-${player.id}`}
-                          initial={{ opacity: 0, scale: 0.96 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.02, duration: 0.18 }}
-                          className={cn(
-                            'min-w-0 shrink-0 cursor-pointer ',
-                            isHighlightsRail
-                              ? 'w-[var(--highlight-card-px,min(200px,calc(100dvw-3rem)))]'
-                              : 'w-[min(160px,calc(55dvw))] sm:w-40',
-                          )}
-                          onClick={() => setSelectedPlayer(player)}
-                        >
-                          {isHighlightsRail ? (
-                            <PlayerCard player={player} listHomonym={railHomonymById.get(player.id)} carouselStrip />
-                          ) : (
-                            <TransferMarketCompactCard player={player} listHomonym={railHomonymById.get(player.id)} />
-                          )}
-                        </motion.div>
-                      ))}
-                      {/* Ver mais tile */}
-                      <div className="flex  items-stretch">
-                        <TransferCarouselVerMaisTile
-                          variant="neon"
-                          topLabel={rail.title}
-                          bottomLabel={canMore ? `+${nextChunk} neste carril` : `${shown.length}/${rail.ordered.length}`}
-                          disabled={!canMore}
-                          onClick={() => {
-                            if (!canMore) return;
-                            setDiscoveryVisibleCount((prev) => ({
-                              ...prev,
-                              [rail.id]: Math.min(rail.ordered.length, (prev[rail.id] ?? DISCOVERY_CAROUSEL_INITIAL) + DISCOVERY_CAROUSEL_STEP),
-                            }));
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            );
-          })}
-
-          {/* Boxes em destaque — apresentação maior que o carrossel; vem APÓS Destaques. */}
-          <TransferFeaturedBoxes
-            title={featuredBoxesConfigForTab(marketTab).title}
-            subtitle={featuredBoxesConfigForTab(marketTab).subtitle}
-            variant={featuredBoxesConfigForTab(marketTab).variant}
-            players={featuredBoxesPlayersForTab(marketTab, auctionPool)}
-            onSelect={setSelectedPlayer}
-          />
+        <div className="space-y-3 sm:space-y-4">
+          {/* List view: cards horizontais um abaixo do outro (Sprint B-4) */}
+          {gridPlayers.length === 0 && (
+            <div className="py-16 text-center">
+              <p
+                className="italic text-white/55 mx-auto max-w-md"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(18px, 2.4vw, 24px)',
+                  lineHeight: 1.4,
+                }}
+              >
+                “nenhuma carta atende esses filtros.”
+              </p>
+            </div>
+          )}
+          {gridPlayers.map((player, i) => (
+            <TransferRowCard
+              key={player.id}
+              player={player}
+              listHomonym={homonymRankById.get(player.id)}
+              onSelect={() => setSelectedPlayer(player)}
+              delay={i * 0.04}
+            />
+          ))}
 
           {/* Sessão do mercado removida — era apenas um ranking por OVR, sem
               valor informativo novo depois do hero + featured boxes + rails.
@@ -1989,19 +2020,34 @@ function PlayerCard({
             player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
           )} />
 
-          {/* Mini Stats */}
+          {/* Mini Stats — Sprint B-3: MORET serif italic, peso editorial */}
           <div className="grid grid-cols-3 gap-1">
             <div className="text-center">
-              <div className="text-[9px] text-gray-400 font-bold uppercase">PAC</div>
-              <div className="text-sm font-display font-bold text-white">{player.pac}</div>
+              <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAC</div>
+              <div
+                className="mt-0.5 italic tabular-nums leading-none text-white"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
+              >
+                {player.pac}
+              </div>
             </div>
             <div className="text-center border-x border-white/10">
-              <div className="text-[9px] text-gray-400 font-bold uppercase">SHO</div>
-              <div className="text-sm font-display font-bold text-white">{player.sho}</div>
+              <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">SHO</div>
+              <div
+                className="mt-0.5 italic tabular-nums leading-none text-white"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
+              >
+                {player.sho}
+              </div>
             </div>
             <div className="text-center">
-              <div className="text-[9px] text-gray-400 font-bold uppercase">PAS</div>
-              <div className="text-sm font-display font-bold text-white">{player.pas}</div>
+              <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAS</div>
+              <div
+                className="mt-0.5 italic tabular-nums leading-none text-white"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
+              >
+                {player.pas}
+              </div>
             </div>
           </div>
 
@@ -2022,14 +2068,21 @@ function PlayerCard({
                 carouselStrip ? 'items-stretch' : 'sm:justify-between',
               )}
             >
-              <span className="flex shrink-0 items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gray-400 sm:justify-start sm:text-[10px]">
-                <Clock className="h-3 w-3 shrink-0" aria-hidden /> {player.timeLeft}
+              {/* Tempo restante — texto-claro, sem icone Clock */}
+              <span className="flex shrink-0 items-center justify-center gap-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/55 sm:justify-start sm:text-[10px]">
+                Encerra em <span className="text-white/85">{player.timeLeft}</span>
               </span>
+              {/* Lance atual — MORET serif italic, peso editorial */}
               <span
                 className={cn(
-                  'min-w-0 max-w-full break-words text-center font-display text-xs font-bold leading-tight text-neon-green tabular-nums [overflow-wrap:anywhere] sm:text-right sm:text-base md:text-lg',
+                  'min-w-0 max-w-full break-words text-center italic tabular-nums leading-tight text-neon-green [overflow-wrap:anywhere] sm:text-right',
                   carouselStrip ? 'w-full truncate' : 'sm:max-w-[58%]',
                 )}
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(16px, 3vw, 22px)',
+                  fontWeight: 700,
+                }}
                 title={formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
               >
                 {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
@@ -2037,16 +2090,223 @@ function PlayerCard({
             </div>
             <button
               type="button"
-              className="flex w-full min-h-11 max-w-full items-center justify-center gap-1.5 rounded-sm bg-neon-yellow px-1.5 py-2.5 text-xs font-bold uppercase leading-tight tracking-wider text-black transition-colors [-webkit-tap-highlight-color:transparent] hover:bg-white sm:gap-2 sm:py-2 sm:text-sm sm:-skew-x-6 md:text-base"
-              style={{ fontFamily: 'var(--font-sans)' }}
+              className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98] [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              <span className="flex min-w-0 max-w-full items-center justify-center whitespace-normal text-center sm:skew-x-6 sm:whitespace-nowrap">
-                Dar Lance
-              </span>
+              Dar Lance
             </button>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * TransferRowCard — Sprint B-4: card horizontal pra visualização "List".
+ * Foto à esquerda + info-claro à direita + ação dominante.
+ * Pattern espelha o JOGADORES DISPONÍVEIS de Team.tsx.
+ */
+function TransferRowCard({
+  player,
+  listHomonym,
+  onSelect,
+  delay = 0,
+}: {
+  player: MockAuctionPlayer;
+  listHomonym?: { index: number; total: number };
+  onSelect: () => void;
+  delay?: number;
+}) {
+  const isGold = player.category === 'gold';
+  const isNeon = player.style === 'neon-yellow';
+  const railColor = isGold || isNeon ? 'border-l-neon-yellow' : 'border-l-white/15';
+  const stats = [
+    { label: 'PAC', val: player.pac },
+    { label: 'SHO', val: player.sho },
+    { label: 'PAS', val: player.pas },
+  ];
+  const flag = natFlagDisplay(player.nat);
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ delay, duration: 0.22 }}
+      className={cn(
+        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all duration-200 hover:border-neon-yellow/40 hover:-translate-y-0.5',
+        railColor,
+      )}
+      style={{ borderRadius: 'var(--radius-md)' }}
+    >
+      {/* Foto + OVR overlay */}
+      <button
+        type="button"
+        onClick={onSelect}
+        className="relative w-28 sm:w-36 md:w-44 flex-shrink-0 overflow-hidden bg-black border-r border-white/8 cursor-pointer [-webkit-tap-highlight-color:transparent]"
+        aria-label={`Ver ${player.name}`}
+      >
+        <div
+          className={cn(
+            'absolute inset-0',
+            isNeon ? 'bg-neon-yellow/10' : 'bg-white/5',
+          )}
+          aria-hidden
+        />
+        <img
+          src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
+          alt={player.name}
+          className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
+          referrerPolicy="no-referrer"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
+        />
+        {/* OVR — Moret italic gigante editorial */}
+        <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
+          <p
+            className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(36px, 5.5vw, 56px)',
+              letterSpacing: '-0.04em',
+            }}
+          >
+            {player.ovr}
+          </p>
+          <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 drop-shadow-md">
+            {player.pos}
+          </p>
+        </div>
+        {isGold ? (
+          <span
+            className="absolute bottom-2 left-2 z-10 inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_14px_rgba(234,255,0,0.5)]"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            Ouro
+          </span>
+        ) : null}
+      </button>
+
+      {/* Info — header + stats + footer */}
+      <div className="flex min-w-0 flex-1 flex-col gap-3 px-3 py-3 md:px-4 md:py-3.5">
+        {/* Header: nome + nação + raridade */}
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={onSelect}
+            className="min-w-0 flex-1 text-left cursor-pointer [-webkit-tap-highlight-color:transparent]"
+          >
+            <p
+              className="text-white uppercase truncate"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 'clamp(16px, 2.2vw, 22px)',
+                letterSpacing: '0.03em',
+                lineHeight: 1.05,
+              }}
+            >
+              {player.name}
+            </p>
+            <p
+              className="text-white/50 uppercase mt-0.5 truncate"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {flag ? <span className="mr-1.5 not-italic" aria-hidden>{flag}</span> : null}
+              {player.nat?.trim() && player.nat !== '—' ? player.nat : 'Sem nação'}
+              {listHomonym && listHomonym.total > 1 ? (
+                <span className="ml-2 text-neon-yellow/85">
+                  · {listHomonym.index}/{listHomonym.total}
+                </span>
+              ) : null}
+            </p>
+          </button>
+          <span
+            className={cn(
+              'shrink-0 inline-flex items-center border px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]',
+              player.auctionCurrency === 'EXP'
+                ? 'border-neon-yellow/60 bg-black/70 text-neon-yellow'
+                : 'border-white/40 bg-black/70 text-white',
+            )}
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            {player.auctionCurrency}
+          </span>
+        </div>
+
+        {/* Mini-stats — MORET serif italic editorial */}
+        <div className="grid grid-cols-3 gap-3 md:gap-5">
+          {stats.map((s) => (
+            <div key={s.label} className="min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span
+                  className="text-white/55 uppercase"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.22em',
+                  }}
+                >
+                  {s.label}
+                </span>
+                <span
+                  className="italic text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: 'clamp(16px, 1.8vw, 20px)',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {s.val}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer: encerra em + lance + CTA */}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-divider-yellow)] pt-3">
+          <div className="flex min-w-0 flex-col">
+            <span
+              className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50"
+            >
+              Encerra em <span className="text-white/85">{player.timeLeft}</span>
+            </span>
+            <span
+              className="italic tabular-nums leading-tight text-neon-green"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(18px, 2.4vw, 24px)',
+              }}
+            >
+              {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+            className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            Dar Lance
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 }

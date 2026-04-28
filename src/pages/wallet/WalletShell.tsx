@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { WalletSpotToggle } from './WalletSpotToggle';
@@ -47,11 +46,9 @@ export function WalletShell({
 
         {/* Conteúdo */}
         <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 py-5 sm:py-7">
-          {/* Top bar */}
-          <div className="flex items-center justify-between gap-3 mb-8 sm:mb-12">
-            <div className="flex-1 max-w-md">
-              <WalletSpotToggle />
-            </div>
+          {/* Top bar — Sprint B-4: toggle centralizado pílulas arredondadas */}
+          <div className="flex items-center justify-center mb-8 sm:mb-12">
+            <WalletSpotToggle />
           </div>
 
           {/* Grid: esquerda + direita */}
@@ -129,21 +126,7 @@ export function WalletShell({
             )}
           </div>
 
-          {/* Scroll cue */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.8 }}
-            className="flex justify-center mt-8 sm:mt-12"
-          >
-            <a
-              href="#wallet-content"
-              className="inline-flex flex-col items-center gap-2 text-black/60 hover:text-black transition group"
-            >
-              <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em]">Ver detalhes</span>
-              <ChevronDown className="w-5 h-5 animate-bounce" />
-            </a>
-          </motion.div>
+          {/* (Scroll cue "Ver detalhes" removido — desnecessário no hero) */}
         </div>
       </section>
 

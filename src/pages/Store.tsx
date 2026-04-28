@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ShoppingBag, Zap, Sparkles, Wallet, X } from 'lucide-react';
+import { Zap, Sparkles, Wallet, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { ManagerOutcomePanel } from '@/components/manager/ManagerOutcomePanel';
 import { cn } from '@/lib/utils';
-import { shopItemIcon, type ShopCatalogItem, type ShopRarity, type ShopTabId } from '@/game/shopCatalog';
+import type { ShopCatalogItem, ShopRarity, ShopTabId } from '@/game/shopCatalog';
 import { trackGrowthCommerce } from '@/admin/platformStore';
 import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider';
 import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
@@ -24,7 +24,16 @@ type StorePurchaseOutcome =
   | { kind: 'success'; item: ShopCatalogItem; atLabel: string; currency: 'exp' | 'bro' }
   | { kind: 'error'; title: string; message: string };
 
-function rarityStyles(r: ShopRarity): { border: string; glow: string; label: string; labelClass: string } {
+function rarityStyles(r: ShopRarity): {
+  border: string;
+  glow: string;
+  label: string;
+  labelClass: string;
+  /** Cor sólida do trilho lateral (Sprint B). */
+  rail: string;
+  /** Gradiente de fundo do bloco visual superior (Sprint B). */
+  bgWash: string;
+} {
   switch (r) {
     case 'comum':
       return {
@@ -32,6 +41,8 @@ function rarityStyles(r: ShopRarity): { border: string; glow: string; label: str
         glow: 'shadow-[0_0_24px_rgba(148,163,184,0.15)]',
         label: 'COMUM',
         labelClass: 'bg-slate-600/40 text-slate-200',
+        rail: 'bg-slate-400',
+        bgWash: 'bg-gradient-to-br from-slate-700/40 via-slate-900/60 to-black',
       };
     case 'raro':
       return {
@@ -39,6 +50,8 @@ function rarityStyles(r: ShopRarity): { border: string; glow: string; label: str
         glow: 'shadow-[0_0_28px_rgba(34,211,238,0.2)]',
         label: 'RARO',
         labelClass: 'bg-cyan-500/25 text-cyan-200',
+        rail: 'bg-cyan-300',
+        bgWash: 'bg-gradient-to-br from-cyan-700/35 via-cyan-950/50 to-black',
       };
     case 'epico':
       return {
@@ -46,6 +59,8 @@ function rarityStyles(r: ShopRarity): { border: string; glow: string; label: str
         glow: 'shadow-[0_0_32px_rgba(217,70,239,0.25)]',
         label: 'ÉPICO',
         labelClass: 'bg-fuchsia-600/30 text-fuchsia-100',
+        rail: 'bg-fuchsia-400',
+        bgWash: 'bg-gradient-to-br from-fuchsia-700/35 via-fuchsia-950/55 to-black',
       };
     case 'mitico':
       return {
@@ -53,6 +68,8 @@ function rarityStyles(r: ShopRarity): { border: string; glow: string; label: str
         glow: 'shadow-[0_0_40px_rgba(251,191,36,0.35)]',
         label: 'MÍTICO',
         labelClass: 'bg-gradient-to-r from-amber-600/50 to-orange-600/50 text-amber-50',
+        rail: 'bg-amber-400',
+        bgWash: 'bg-gradient-to-br from-amber-700/40 via-amber-950/55 to-black',
       };
     default:
       return {
@@ -60,6 +77,8 @@ function rarityStyles(r: ShopRarity): { border: string; glow: string; label: str
         glow: '',
         label: '',
         labelClass: '',
+        rail: 'bg-white/30',
+        bgWash: 'bg-gradient-to-br from-white/5 to-black/60',
       };
   }
 }
@@ -434,9 +453,10 @@ export function Store() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item, index) => {
             const rs = rarityStyles(item.rarity);
-            const Icon = shopItemIcon(item.iconKey);
             const inv = inventory[item.id] ?? 0;
             const handleSelect = () => { setPurchaseErr(null); setConfirmItem(item); };
+            const broText = item.priceBroCents != null && item.priceBroCents > 0 ? `${formatBro(item.priceBroCents)} BRO` : null;
+            const expText = item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString('pt-BR')} EXP` : null;
             return (
               <PremiumPriceReveal
                 key={item.id}
@@ -448,66 +468,104 @@ export function Store() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.02, type: 'spring', stiffness: 380, damping: 28 }}
                   className={cn(
-                    'group relative overflow-hidden rounded-lg border bg-deep-black cursor-pointer',
-                    rs.border,
-                    'hover:scale-[1.03] transition-all',
+                    'group relative isolate flex h-full cursor-pointer overflow-hidden border border-white/[0.05]',
+                    'transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5',
                     rs.glow,
                   )}
+                  style={{
+                    borderRadius: 'var(--radius-card)',
+                    background: 'var(--color-panel-elevated)',
+                    boxShadow: 'var(--shadow-card)',
+                  }}
                 >
-                  {/* Badge Lendário para itens míticos/featured */}
+                  {/* Trilho lateral colorido (raridade) — texto-claro, sem ícone solto */}
+                  <span
+                    aria-hidden
+                    className={cn('absolute left-0 top-0 h-full w-[3px]', rs.rail)}
+                  />
+
+                  {/* Badge Lendário (já é texto-claro) */}
                   <LegendaryBadge rarity={item.rarity} featured={item.featured} />
 
-                  {/* Ícone e raridade */}
-                  <div className="relative aspect-square flex items-center justify-center bg-gradient-to-br from-white/5 to-black/60 border-b border-white/5">
-                    <Icon className="h-20 w-20 text-white/30 transition group-hover:text-white/50 group-hover:scale-110 duration-500" aria-hidden />
-                    <span
-                      className={cn(
-                        'absolute top-2 right-2 rounded px-2 py-1 font-display text-[8px] font-black uppercase tracking-widest',
-                        rs.labelClass,
-                      )}
-                    >
-                      {rs.label}
-                    </span>
-                  </div>
-
-                  {/* Info compacta */}
-                  <div className="p-4">
-                    <h3 className="font-display text-sm font-black uppercase tracking-tight text-white line-clamp-1 mb-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-[10px] leading-snug text-gray-500 line-clamp-2 mb-3">
-                      {item.blurb}
-                    </p>
-
-                    {/* Preços compactos */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.priceBroCents != null && item.priceBroCents > 0 ? (
-                        <span className="rounded-lg border border-cyan-500/30 bg-cyan-950/50 px-2 py-1 text-sm font-bold text-cyan-200" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
-                          {formatBro(item.priceBroCents)} BRO
-                        </span>
-                      ) : null}
-                      {item.priceExp != null && item.priceExp > 0 ? (
-                        <span className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 px-2 py-1 text-sm font-bold text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic' }}>
-                          {item.priceExp.toLocaleString('pt-BR')} EXP
+                  <div className="relative flex w-full flex-col gap-4 p-5 pl-6">
+                    {/* Eyebrow + raridade */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-1 font-display text-[9px] font-black uppercase tracking-[0.22em]',
+                          rs.labelClass,
+                        )}
+                      >
+                        {rs.label || 'Item'}
+                      </span>
+                      {item.consumable && inv > 0 ? (
+                        <span className="rounded-[var(--radius-pill)] bg-emerald-500/15 px-2.5 py-1 font-display text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                          {inv}× inventário
                         </span>
                       ) : null}
                     </div>
 
-                    {/* Inventário se houver */}
-                    {item.consumable && inv > 0 ? (
-                      <p className="mt-2 text-[9px] font-bold uppercase tracking-wide text-emerald-300/90">
-                        {inv}× no inventário
-                      </p>
-                    ) : null}
+                    {/* Título — peso editorial, mais legível que antes */}
+                    <h3
+                      className="font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white line-clamp-2"
+                      style={{ letterSpacing: '0.005em' }}
+                    >
+                      {item.title}
+                    </h3>
+
+                    {/* Descrição — texto-claro, sem icone */}
+                    <p className="text-[12px] leading-relaxed text-white/55 line-clamp-2">
+                      {item.blurb}
+                    </p>
+
+                    {/* Preço — MORET serif italic, dominante */}
+                    <div className="flex items-baseline gap-3 border-t border-[var(--color-divider-yellow)] pt-3">
+                      {broText ? (
+                        <span
+                          className="text-cyan-200"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontStyle: 'italic',
+                            fontSize: 'clamp(22px, 3vw, 30px)',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {broText}
+                        </span>
+                      ) : null}
+                      {broText && expText ? (
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/30">ou</span>
+                      ) : null}
+                      {expText ? (
+                        <span
+                          className="text-neon-yellow"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontStyle: 'italic',
+                            fontSize: 'clamp(22px, 3vw, 30px)',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {expText}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {/* CTA — botão texto-claro */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelect();
+                      }}
+                      className="mt-auto inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      Comprar
+                    </button>
                   </div>
 
-                  {/* Hover overlay */}
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
-                    style={{
-                      background: 'linear-gradient(125deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)',
-                    }}
-                  />
+                  {/* Wash de raridade — discreto, no fundo */}
+                  <div className={cn('pointer-events-none absolute inset-0 opacity-30 mix-blend-soft-light', rs.bgWash)} aria-hidden />
                 </motion.article>
               </PremiumPriceReveal>
             );

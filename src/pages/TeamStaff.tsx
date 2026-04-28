@@ -9,6 +9,7 @@ import type { StaffRoleId } from '@/game/types';
 import { cn } from '@/lib/utils';
 import { BackButton } from '@/components/BackButton';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { StatTile } from '@/components/ui/StatTile';
 
 const COLLECTIVE_GROUPS = ['defensivo', 'criativo', 'ataque'] as const;
 
@@ -276,27 +277,13 @@ export function TeamStaff() {
               </button>
             </div>
 
+            {/* Atributos do coach — Sprint B-2: StatTiles editoriais */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
-                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Tático</div>
-                <div className="text-white text-2xl font-black">{coach.tactical}<span className="text-sm text-gray-500">/20</span></div>
-              </div>
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
-                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Motivação</div>
-                <div className="text-white text-2xl font-black">{coach.motivation}<span className="text-sm text-gray-500">/20</span></div>
-              </div>
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
-                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Disciplina</div>
-                <div className="text-white text-2xl font-black">{coach.discipline}<span className="text-sm text-gray-500">/20</span></div>
-              </div>
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
-                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Ataque</div>
-                <div className="text-white text-2xl font-black">{coach.attacking}<span className="text-sm text-gray-500">/20</span></div>
-              </div>
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center">
-                <div className="text-gray-500 uppercase font-bold text-[10px] mb-1">Defesa</div>
-                <div className="text-white text-2xl font-black">{coach.defending}<span className="text-sm text-gray-500">/20</span></div>
-              </div>
+              <StatTile value={coach.tactical} label="Tático" tone="accent" hint="0–20" />
+              <StatTile value={coach.motivation} label="Motivação" tone="accent" hint="0–20" />
+              <StatTile value={coach.discipline} label="Disciplina" tone="accent" hint="0–20" />
+              <StatTile value={coach.attacking} label="Ataque" tone="accent" hint="0–20" />
+              <StatTile value={coach.defending} label="Defesa" tone="accent" hint="0–20" />
             </div>
 
             <div className="bg-gradient-to-r from-violet-500/10 to-transparent border border-violet-500/20 rounded-lg p-4">

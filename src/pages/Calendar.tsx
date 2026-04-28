@@ -277,25 +277,29 @@ export function Calendar() {
                 </p>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            {/* CTAs Sprint B-3: texto-claro, sem ícones, padding maior */}
+            <div className="mt-5 flex flex-wrap gap-2">
               {canPlayNow ? (
                 <Link
                   to="/match/quick"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white"
+                  className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
                 >
-                  <Play className="h-3.5 w-3.5" /> Jogar agora
+                  Jogar agora
                 </Link>
               ) : (
                 <Link
                   to="/team"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-neon-yellow px-4 py-2 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-white"
+                  className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
                 >
-                  <Shield className="h-3.5 w-3.5" /> Preparar escalação
+                  Preparar escalação
                 </Link>
               )}
               <Link
                 to="/team/treino"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-white/10"
+                className="inline-flex items-center border border-white/20 bg-deep-black px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-white/85 transition-colors hover:border-neon-yellow hover:text-neon-yellow"
+                style={{ borderRadius: 'var(--radius-sm)' }}
               >
                 Treino
               </Link>

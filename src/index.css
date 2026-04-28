@@ -54,6 +54,24 @@
   --attr-good:  #FDE100;  /* 65–79 */
   --attr-avg:   #FFB300;  /* 50–64 */
   --attr-weak:  #FF3D3D;  /* <50   */
+
+  /* === Sprint A — Legacy Tech tokens (Apr/2026) ===
+   * Aditivos sobre a paleta atual; não substituem nada.
+   * Usar em primitivos novos: LegacyHeader, DataCard, PlayerPortrait, StatTile. */
+  --color-panel-elevated: #1F1F1F;
+  --color-panel-soft: #161616;
+  --color-divider-soft: rgba(255, 255, 255, 0.06);
+  --color-divider-yellow: rgba(253, 225, 0, 0.12);
+  --color-divider-yellow-strong: rgba(253, 225, 0, 0.35);
+
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-glow-yellow: 0 0 32px rgba(253, 225, 0, 0.18);
+  --shadow-glow-yellow-strong: 0 0 56px rgba(253, 225, 0, 0.32);
+
+  --radius-card: 14px;
+  --radius-card-lg: 20px;
+  --radius-pill: 999px;
 }
 
 @layer utilities {
