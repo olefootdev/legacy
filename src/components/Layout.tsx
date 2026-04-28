@@ -53,9 +53,10 @@ const mainNavItems: NavItem[] = [
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
 ];
 
-/** Item secundário — mora no rodapé do menu lateral, perto do SAIR. */
+/** Item secundário — mora no rodapé do menu lateral, perto do SAIR.
+ *  Renderizado em Inter regular (não vira item principal "perdido"). */
 const secondaryNavItems: NavItem[] = [
-  { icon: GraduationCap, label: 'AJUDA', path: '/ajuda' },
+  { icon: GraduationCap, label: 'Como jogar', path: '/ajuda' },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -216,8 +217,9 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {/* Bloco secundário: AJUDA + Status do jogo */}
-        <div className="px-4 pt-2 pb-3 space-y-1">
+        {/* Bloco secundário: link "| Como jogar" em Inter regular,
+            visual de footer link (não compete com nav principal) */}
+        <div className="px-8 pt-1 pb-2">
           {secondaryNavItems.map((item) => {
             const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
@@ -225,20 +227,18 @@ export function Layout({ children }: { children: ReactNode }) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
-                  isActive ? 'text-white' : 'text-gray-500 hover:text-white',
+                  'inline-flex items-center gap-2 transition-colors',
+                  isActive ? 'text-white' : 'text-white/55 hover:text-neon-yellow',
                 )}
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  letterSpacing: '0.01em',
+                }}
               >
-                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
-                <item.icon
-                  className={cn(
-                    'w-5 h-5',
-                    isActive
-                      ? 'text-neon-yellow'
-                      : 'group-hover:text-neon-yellow transition-colors',
-                  )}
-                />
-                <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+                <span aria-hidden className="text-white/35">|</span>
+                {item.label}
               </Link>
             );
           })}
@@ -441,8 +441,8 @@ export function Layout({ children }: { children: ReactNode }) {
                 })}
               </nav>
 
-              {/* AJUDA secundário + Status do jogo */}
-              <div className="px-4 pt-1 pb-2 space-y-1">
+              {/* Link "| Como jogar" em Inter regular */}
+              <div className="px-8 pt-1 pb-2">
                 {secondaryNavItems.map((item) => {
                   const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
                   return (
@@ -451,18 +451,18 @@ export function Layout({ children }: { children: ReactNode }) {
                       to={item.path}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
-                        'flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative',
-                        isActive ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5',
+                        'inline-flex items-center gap-2 transition-colors',
+                        isActive ? 'text-white' : 'text-white/55 hover:text-neon-yellow',
                       )}
+                      style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        letterSpacing: '0.01em',
+                      }}
                     >
-                      {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r" />}
-                      <item.icon
-                        className={cn(
-                          'w-5 h-5',
-                          isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors',
-                        )}
-                      />
-                      <span className="font-display font-bold tracking-wider">{item.label}</span>
+                      <span aria-hidden className="text-white/35">|</span>
+                      {item.label}
                     </Link>
                   );
                 })}
