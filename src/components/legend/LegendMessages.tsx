@@ -64,14 +64,16 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
       className="relative bg-deep-black py-10 sm:py-14"
     >
       <div className="mx-auto max-w-3xl px-5 sm:px-8">
-        {/* Header editorial */}
+        {/* Header editorial — Moret italic pra dar peso emocional */}
         <header className="flex items-center gap-3 mb-6">
-          <span aria-hidden className="w-1 h-7 bg-neon-yellow" />
+          <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
           <h2
-            className="font-display font-black uppercase text-neon-yellow"
+            className="italic text-neon-yellow leading-none"
             style={{
-              fontSize: 'clamp(18px, 2.4vw, 22px)',
-              letterSpacing: '0.18em',
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(28px, 4.5vw, 40px)',
+              letterSpacing: '-0.02em',
             }}
           >
             Mural dos Managers

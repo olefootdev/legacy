@@ -15,15 +15,17 @@
  * Rota pública: game.olefoot.com/legend/{slug}
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Eyebrow } from '@/components/ui';
-import { findLegend } from '@/data/legends';
+import { ALL_LEGEND_SLUGS, findLegend } from '@/data/legends';
 import { useLegendSocial } from '@/hooks/useLegendSocial';
 import { useLegendMeta } from '@/hooks/useLegendMeta';
 import { LegendActions } from '@/components/legend/LegendActions';
 import { LegendMessages } from '@/components/legend/LegendMessages';
+import { LegendSearchBar } from '@/components/legend/LegendSearchBar';
+import { LegendSearchModal } from '@/components/legend/LegendSearchModal';
 import { LegendStoreCTA } from '@/components/legend/LegendStoreCTA';
 
 export function Legend() {
@@ -31,6 +33,7 @@ export function Legend() {
   const navigate = useNavigate();
   const legend = useMemo(() => findLegend(id), [id]);
   const social = useLegendSocial(legend.slug);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // SEO + Open Graph (para divulgação social)
   useLegendMeta(legend);
@@ -73,7 +76,13 @@ export function Legend() {
             </Link>
           </div>
 
-          {/* 1. Eyebrow */}
+          {/* 1. Search bar — galeria de outras lendas */}
+          <LegendSearchBar
+            onOpen={() => setSearchOpen(true)}
+            totalCount={ALL_LEGEND_SLUGS.length}
+          />
+
+          {/* 2. Eyebrow */}
           <Eyebrow align="center" className="!text-black mb-5 sm:mb-6">
             <span className="!text-black">{legend.epithet}</span>
           </Eyebrow>
@@ -157,9 +166,23 @@ export function Legend() {
             </div>
           </div>
 
-          {/* 6. Frase */}
+          {/* 6. Ações — Treinar (centralizado entre foto acima e quote abaixo)
+                + Curtir + Compartilhar */}
+          <div className="mt-9 sm:mt-11">
+            <LegendActions
+              slug={legend.slug}
+              name={legend.name}
+              liked={social.liked}
+              likeCount={social.likeCount}
+              onToggleLike={social.toggleLike}
+              storeHighlightId={legend.storeHighlightId}
+              variant="on-yellow"
+            />
+          </div>
+
+          {/* 7. Frase — fecha o hero */}
           <blockquote
-            className="ole-headline-italic mt-8 sm:mt-10 text-black/85 text-center max-w-2xl mx-auto leading-snug"
+            className="ole-headline-italic mt-9 sm:mt-12 text-black/85 text-center max-w-2xl mx-auto leading-snug"
             style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
           >
             "{legend.quote}"
@@ -172,77 +195,21 @@ export function Legend() {
               — {legend.quoteAuthor}
             </p>
           ) : null}
-
-          {/* 7. Ações: Treinar + Curtir + Compartilhar */}
-          <div className="mt-9 sm:mt-11">
-            <LegendActions
-              slug={legend.slug}
-              name={legend.name}
-              liked={social.liked}
-              likeCount={social.likeCount}
-              onToggleLike={social.toggleLike}
-              storeHighlightId={legend.storeHighlightId}
-              variant="on-yellow"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── ACHIEVEMENTS — 4 mini-cards Moret italic ─────────────────── */}
-      <section className="relative bg-deep-black py-10 sm:py-14">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <header className="flex items-center gap-3 mb-6">
-            <span aria-hidden className="w-1 h-7 bg-neon-yellow" />
-            <h2
-              className="font-display font-black uppercase text-neon-yellow"
-              style={{
-                fontSize: 'clamp(18px, 2.4vw, 22px)',
-                letterSpacing: '0.18em',
-              }}
-            >
-              Números do Mito
-            </h2>
-          </header>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            {legend.achievements.map((a) => (
-              <div
-                key={a.label}
-                className="border border-l-[3px] border-[var(--color-border)] border-l-neon-yellow bg-[var(--color-card)] p-4 sm:p-5"
-                style={{ borderRadius: 'var(--radius-md)' }}
-              >
-                <p
-                  className="italic text-neon-yellow tabular-nums leading-none"
-                  style={{
-                    fontFamily: 'var(--font-serif-hero)',
-                    fontWeight: 700,
-                    fontSize: 'clamp(28px, 4.2vw, 40px)',
-                    letterSpacing: '-0.03em',
-                  }}
-                >
-                  {a.value}
-                </p>
-                <p
-                  className="mt-2 font-display font-bold uppercase text-white/55"
-                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-                >
-                  {a.label}
-                </p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
       {/* ── TRAJETÓRIA — timeline horizontal ──────────────────────── */}
-      <section className="relative bg-deep-black pb-10 sm:pb-14">
+      <section className="relative bg-deep-black py-10 sm:py-14">
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
           <header className="flex items-center gap-3 mb-6">
-            <span aria-hidden className="w-1 h-7 bg-neon-yellow" />
+            <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
             <h2
-              className="font-display font-black uppercase text-neon-yellow"
+              className="italic text-neon-yellow leading-none"
               style={{
-                fontSize: 'clamp(18px, 2.4vw, 22px)',
-                letterSpacing: '0.18em',
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 4.5vw, 40px)',
+                letterSpacing: '-0.02em',
               }}
             >
               Trajetória
@@ -296,12 +263,14 @@ export function Legend() {
         />
         <div className="mx-auto max-w-6xl px-5 sm:px-8 relative">
           <header className="flex items-center gap-3 mb-6">
-            <span aria-hidden className="w-1 h-7 bg-neon-yellow" />
+            <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
             <h2
-              className="font-display font-black uppercase text-neon-yellow"
+              className="italic text-neon-yellow leading-none"
               style={{
-                fontSize: 'clamp(18px, 2.4vw, 22px)',
-                letterSpacing: '0.18em',
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 4.5vw, 40px)',
+                letterSpacing: '-0.02em',
               }}
             >
               DNA do Campeão
@@ -355,12 +324,14 @@ export function Legend() {
         <section className="relative bg-deep-black pb-10 sm:pb-14">
           <div className="mx-auto max-w-3xl px-5 sm:px-8">
             <header className="flex items-center gap-3 mb-6">
-              <span aria-hidden className="w-1 h-7 bg-neon-yellow" />
+              <span aria-hidden className="w-1 h-8 bg-neon-yellow" />
               <h2
-                className="font-display font-black uppercase text-neon-yellow"
+                className="italic text-neon-yellow leading-none"
                 style={{
-                  fontSize: 'clamp(18px, 2.4vw, 22px)',
-                  letterSpacing: '0.18em',
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontWeight: 700,
+                  fontSize: 'clamp(28px, 4.5vw, 40px)',
+                  letterSpacing: '-0.02em',
                 }}
               >
                 A Voz do Esporte
@@ -413,6 +384,13 @@ export function Legend() {
       <LegendStoreCTA
         legendName={legend.name}
         storeHighlightId={legend.storeHighlightId}
+      />
+
+      {/* ── Modal de busca (galeria de outras lendas) ───────────────── */}
+      <LegendSearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        currentSlug={legend.slug}
       />
     </div>
   );

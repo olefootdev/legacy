@@ -3,7 +3,6 @@
  * Reutilizável: passa nome + slug.
  */
 import { Link } from 'react-router-dom';
-import { ChevronRight, Store } from 'lucide-react';
 
 interface LegendStoreCTAProps {
   legendName: string;
@@ -61,16 +60,14 @@ export function LegendStoreCTA({ legendName, storeHighlightId }: LegendStoreCTAP
         <div className="mt-7 flex justify-center">
           <Link
             to={href}
-            className="inline-flex items-center gap-2 bg-black text-neon-yellow px-8 py-4 font-display font-black uppercase shadow-[0_12px_32px_rgba(0,0,0,0.35)] transition-all hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center bg-black text-neon-yellow px-10 py-4 font-display font-black uppercase shadow-[0_12px_32px_rgba(0,0,0,0.35)] transition-all hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              fontSize: '13px',
-              letterSpacing: '0.24em',
+              fontSize: '14px',
+              letterSpacing: '0.32em',
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            <Store className="w-4 h-4" />
-            Ir para a Store
-            <ChevronRight className="w-4 h-4" />
+            Store
           </Link>
         </div>
       </div>
