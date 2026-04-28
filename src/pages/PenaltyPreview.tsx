@@ -31,10 +31,10 @@ const SLOT_ROWS = 3;
 const SLOT_W = GOAL.w / SLOT_COLS;
 const SLOT_H = GOAL.h / SLOT_ROWS;
 
-// Bola gigante na marca (foreground bem próximo)
-const BALL_SIZE_MARCA = 110;
-const BALL_SIZE_FLY_END = 60;
-const BALL_SIZE_RESULT = 60;
+// Bola gigante na marca (foreground bem próximo) — +15%
+const BALL_SIZE_MARCA = 127;
+const BALL_SIZE_FLY_END = 69;
+const BALL_SIZE_RESULT = 69;
 
 // Penalty spot bem para frente (sensação de proximidade)
 const SPOT = { x: VIEW_W / 2, y: 510 };
@@ -848,40 +848,18 @@ function LegacyBallFlying({
         opacity={shadowOpacity}
       />
 
-      {/* Speed lines (motion blur) */}
-      {power > POWER_SWEET_LOW && eased > 0.1 && eased < 0.95 && (
-        <g opacity={trailIntensity * 0.6}>
-          <line
-            x1={from.x}
-            y1={from.y - 6}
-            x2={x}
-            y2={y - 4}
-            stroke="#000"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            opacity={0.3}
-          />
-          <line
-            x1={from.x - 4}
-            y1={from.y}
-            x2={x - 3}
-            y2={y}
-            stroke="#000"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            opacity={0.4}
-          />
-          <line
-            x1={from.x + 4}
-            y1={from.y}
-            x2={x + 3}
-            y2={y}
-            stroke="#000"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            opacity={0.3}
-          />
-        </g>
+      {/* Rastro retro técnico — linha preta sólida grossa do spot até a bola */}
+      {eased > 0.04 && eased < 0.98 && (
+        <line
+          x1={from.x}
+          y1={from.y}
+          x2={x}
+          y2={y}
+          stroke="#000"
+          strokeWidth={power > POWER_SWEET_HIGH ? 4.5 : power > POWER_SWEET_LOW ? 3.5 : 2.5}
+          strokeLinecap="round"
+          opacity={0.92}
+        />
       )}
 
       {/* Bola */}
