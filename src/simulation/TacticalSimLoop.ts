@@ -38,6 +38,7 @@ import { FIELD_SCHEMA_VERSION } from '@/field-schema/constants';
 import {
   CENTER_CIRCLE_RADIUS_M,
   clampToPitch,
+  computeAttackPhase,
   FIELD_LENGTH,
   FIELD_WIDTH,
   GOAL_MOUTH_HALF_WIDTH_M,
@@ -349,6 +350,15 @@ interface TacticalManagerParams {
   };
   /** Sprint L4 — Marcações individuais designadas (homePlayerId → opponentPlayerId). */
   markingAssignments?: Record<string, string>;
+  /**
+   * Bloco D — Modo de linha tática.
+   * - `fixed`: usa `defensiveLine` exato do manager.
+   * - `high`: força linha alta independente do contexto.
+   * - `low`: força linha baixa.
+   * - `reactive`: ajusta dinamicamente — sobe quando time ganha + spirit favorável,
+   *    recua quando perde / pressionado. Default = `fixed`.
+   */
+  defensiveLineMode?: 'fixed' | 'high' | 'low' | 'reactive';
 }
 
 type ShotPlanKind = 'goal' | 'miss_wide' | 'hold' | 'parry' | 'block_rebound';
@@ -2361,9 +2371,34 @@ export class TacticalSimLoop {
     const attackDirHome = getSideAttackDir('home', half);
     const attackDirAway = getSideAttackDir('away', half);
 
+    // Bloco D — Linha tática dinâmica: modula `defensiveLine` por modo + contexto.
+    // Mantém `manager` original via clone raso pra não vazar mutação entre ticks.
+    let effectiveDefensiveLine = manager.defensiveLine;
+    const dlm = manager.defensiveLineMode ?? 'fixed';
+    if (dlm === 'high') {
+      effectiveDefensiveLine = Math.min(100, manager.defensiveLine + 18);
+    } else if (dlm === 'low') {
+      effectiveDefensiveLine = Math.max(0, manager.defensiveLine - 18);
+    } else if (dlm === 'reactive') {
+      const scoreDelta = this.simState.homeScore - this.simState.awayScore;
+      const scoreBias = Math.max(-1, Math.min(1, scoreDelta / 2));
+      const spirit = this.liveRef?.spiritMomentumClamp01 ?? 0.5;
+      // Ganhando + spirit favorável → sobe linha; perdendo → continua avançando pra pressionar.
+      // Spirit baixo + perdendo no fim → recua para não sofrer contra-ataque.
+      const minute = Math.floor(this.world.simTime / 60);
+      const lateAndLosing = minute >= 75 && scoreDelta < 0;
+      const reactiveBias = lateAndLosing
+        ? -8 + scoreBias * 4
+        : (spirit - 0.5) * 24 + scoreBias * 6;
+      effectiveDefensiveLine = Math.max(0, Math.min(100, manager.defensiveLine + reactiveBias));
+    }
+    const effectiveManager = effectiveDefensiveLine !== manager.defensiveLine
+      ? { ...manager, defensiveLine: effectiveDefensiveLine }
+      : manager;
+
     const tactx: TacticalContext = {
-      defensiveLineDepth: manager.defensiveLine,
-      mentality: manager.tacticalMentality,
+      defensiveLineDepth: effectiveManager.defensiveLine,
+      mentality: effectiveManager.tacticalMentality,
       ballX,
       ballZ,
       half,
@@ -2383,7 +2418,7 @@ export class TacticalSimLoop {
       livePossession: this.simState.possession,
       onBallPlayerId: this.simState.carrierId ?? undefined,
       contestCarrierId: this.simState.carrierId,
-      homePlayers, awayPlayers, manager,
+      homePlayers, awayPlayers, manager: effectiveManager,
       homeScheme,
       awayScheme,
     });
@@ -3160,6 +3195,8 @@ export class TacticalSimLoop {
         markingAssignment: side === 'home'
           ? manager.markingAssignments?.[(ag as any).playerId ?? ag.id]
           : undefined,
+        // Bloco B — fase ofensiva derivada da posição da bola na perspectiva deste agente
+        attackPhase: computeAttackPhase(ballXDec, ballZDec, attackDir),
         stamina: ag.matchRuntime.stamina,
         decisionDebug: DECISION_DEBUG,
         profile: ag.profile,
@@ -4971,7 +5008,42 @@ export class TacticalSimLoop {
       const defSnap = this.toAgentSnapshot(def);
       const tickK = Math.floor(this.world.simTime * 60);
       const tackleRng = rngFromSeed(this.simState.simulationSeed, `tackle:${def.id}:${carrier.id}:${tickK}`);
-      if (resolveTackle(defSnap, carrierSnap, dist, tackleRng)) {
+      const tackleSucceeded = resolveTackle(defSnap, carrierSnap, dist, tackleRng);
+      if (!tackleSucceeded) {
+        // Bloco A — Reckless foul: tackle falhou + defensor agressivo + contato próximo → falta.
+        // Evita "bug visual" de defensores passando pelo carrier sem consequência.
+        if (dist < 2.0) {
+          const aggr = defSnap.aggressiveness ?? 50;
+          const fp = defSnap.fairPlay / 100;
+          const recklessP = Math.max(
+            0,
+            ((aggr - 55) / 100) * 0.18 + (0.55 - fp) * 0.14,
+          );
+          if (recklessP > 0.001) {
+            const recklessRng = rngFromSeed(
+              this.simState.simulationSeed,
+              `tackle_reckless:${def.id}:${carrier.id}:${tickK}`,
+            );
+            if (recklessRng.nextUnit() < recklessP) {
+              const sevRoll = recklessRng.nextUnit();
+              const foulSeverity: 'light' | 'firm' | 'ugly' =
+                sevRoll < 0.40 ? 'light' : sevRoll < 0.78 ? 'firm' : 'ugly';
+              this.appendLiveDisciplineAfterFoul(
+                L,
+                recklessRng,
+                def,
+                carrier.id,
+                'reckless_tackle',
+                foulSeverity,
+                carrier,
+              );
+              return;
+            }
+          }
+        }
+        continue;
+      }
+      {
         const foulRng = rngFromSeed(
           this.simState.simulationSeed,
           `tackle_foul:${def.id}:${carrier.id}:${tickK}`,

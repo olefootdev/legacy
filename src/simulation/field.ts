@@ -38,3 +38,27 @@ export function worldToUiPercent(x: number, z: number): { ux: number; uy: number
     uy: (z / FIELD_WIDTH) * 100,
   };
 }
+
+/**
+ * Bloco B — Fase ofensiva da equipa em posse, em função da posição da bola.
+ * Reflete intenção: build_up (defesa+meio-campo defensivo), progression (meio-campo ofensivo),
+ * final_third (ante-câmara), box_entry (entrada na área adversária).
+ *
+ * `attackDir` = +1 quando a equipa ataca para +X, -1 quando ataca para -X.
+ */
+export function computeAttackPhase(
+  ballX: number,
+  ballZ: number,
+  attackDir: 1 | -1,
+): 'build_up' | 'progression' | 'final_third' | 'box_entry' {
+  const along = attackDir === 1 ? ballX : FIELD_LENGTH - ballX;
+  const t = along / FIELD_LENGTH;
+  if (t > 0.84) {
+    const widthFromCenter = Math.abs(ballZ - FIELD_WIDTH / 2);
+    if (widthFromCenter < 20.16) return 'box_entry';
+    return 'final_third';
+  }
+  if (t > 0.66) return 'final_third';
+  if (t > 0.38) return 'progression';
+  return 'build_up';
+}

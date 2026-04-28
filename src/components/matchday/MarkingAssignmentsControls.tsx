@@ -1,6 +1,11 @@
 /**
  * Sprint L4 Fase 2 — Marcação individual.
  * Manager designa um defensor pra marcar um adversário específico.
+ *
+ * Design system Legacy Tech:
+ * — Eyebrow `tracking-[0.35em]` no header
+ * — Linhas com hover sutil + número/nome em font-display
+ * — Select com border que ganha neon-yellow no focus + estado ativo
  */
 import { useGameDispatch, useGameStore } from '@/game/store';
 import type { PitchPlayerState } from '@/engine/types';
@@ -43,14 +48,20 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
   return (
     <div className="space-y-3 border-t border-white/10 pt-4">
       <div className="flex items-center justify-between">
-        <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-white/70">
+        <div
+          className="text-[10px] uppercase tracking-[0.35em] font-bold text-white/55"
+          style={{ fontFamily: 'var(--font-ui)' }}
+        >
           Marcação individual
         </div>
         {hasAny && (
           <button
             type="button"
             onClick={clearAll}
-            className="text-[9px] uppercase tracking-[0.2em] text-red-400 hover:text-red-300"
+            className="text-[9px] uppercase tracking-[0.22em] font-bold transition-colors"
+            style={{ color: 'var(--color-danger)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#FF6B6B')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-danger)')}
           >
             Limpar
           </button>
@@ -58,26 +69,59 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
       </div>
 
       {defendersOnPitch.length === 0 || attackersToMark.length === 0 ? (
-        <div className="text-[10px] text-white/40 italic">
+        <div className="text-[10px] text-white/35 italic">
           Sem dados suficientes pra marcação (defensores ou ataque adversário ausentes).
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {defendersOnPitch.slice(0, 5).map((d) => {
             const currentlyMarking = assignments[d.id];
+            const isActive = !!currentlyMarking;
             return (
               <div
                 key={d.id}
-                className="flex items-center gap-2 text-[10px]"
+                className="flex items-center gap-2 px-2 py-1.5 transition-colors"
+                style={{
+                  background: isActive ? 'rgba(253, 225, 0, 0.06)' : 'transparent',
+                  borderLeft: isActive
+                    ? '2px solid var(--color-neon-yellow)'
+                    : '2px solid transparent',
+                }}
               >
-                <div className="flex-shrink-0 w-24 truncate font-display font-bold uppercase text-white/85 tracking-wider">
-                  #{d.num} {d.name.split(' ')[0]}
+                <div
+                  className="flex-shrink-0 w-24 truncate font-display font-bold uppercase tracking-[0.05em]"
+                  style={{
+                    color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
+                    fontSize: 'var(--text-xs)',
+                  }}
+                >
+                  <span style={{ color: 'var(--color-neon-yellow)' }}>#{d.num}</span>{' '}
+                  {d.name.split(' ')[0]}
                 </div>
-                <span className="text-white/40 text-[9px]">marca</span>
+                <span
+                  className="text-[9px] uppercase tracking-[0.2em]"
+                  style={{ color: 'rgba(255,255,255,0.32)' }}
+                >
+                  marca
+                </span>
                 <select
                   value={currentlyMarking ?? ''}
                   onChange={(e) => setAssignment(d.id, e.target.value || null)}
-                  className="flex-1 bg-zinc-800 border border-zinc-700 text-white text-[10px] px-2 py-1 focus:outline-none focus:border-neon-yellow"
+                  className="flex-1 px-2 py-1 text-[10px] focus:outline-none transition-colors cursor-pointer"
+                  style={{
+                    background: 'var(--color-card)',
+                    border: isActive
+                      ? '1px solid var(--color-neon-yellow)'
+                      : '1px solid rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.9)',
+                    fontFamily: 'var(--font-ui)',
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--color-neon-yellow)')}
+                  onBlur={(e) =>
+                    (e.currentTarget.style.borderColor = isActive
+                      ? 'var(--color-neon-yellow)'
+                      : 'rgba(255,255,255,0.08)')
+                  }
                 >
                   <option value="">— ninguém —</option>
                   {attackersToMark.map((a) => (

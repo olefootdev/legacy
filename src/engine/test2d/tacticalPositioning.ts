@@ -334,6 +334,27 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
   const shape = voiceOverride
     ? blendShape(getShapeModifiers(baseIntention, formation), getShapeModifiers(voiceOverride.intention, formation), voiceOverride.weight)
     : getShapeModifiers(baseIntention, formation);
+  // Bloco D — Modo de linha tática: modula lineHeight pós-intention.
+  // 'high'/'low' aplicam bias fixo; 'reactive' usa mentalidade + scoreDelta01/spiritMomentum01
+  // (campos transitórios anexados ao manager pelo simloop), fazendo o time avançar quando
+  // está embalado e recuar quando pressionado.
+  {
+    const dlm = (manager as any).defensiveLineMode as 'fixed' | 'high' | 'low' | 'reactive' | undefined;
+    if (dlm === 'high') {
+      shape.lineHeight = Math.min(1, shape.lineHeight + 0.15);
+    } else if (dlm === 'low') {
+      shape.lineHeight = Math.max(0, shape.lineHeight - 0.15);
+    } else if (dlm === 'reactive') {
+      const scoreDelta01 = (manager as any).scoreDelta01 ?? 0;
+      const spirit = (manager as any).spiritMomentum01 ?? 0.5;
+      const mentBias = ((manager.tacticalMentality ?? 50) - 50) / 100;
+      const bias =
+        scoreDelta01 * 0.08
+        + (spirit - 0.5) * 0.10
+        + mentBias * 0.06;
+      shape.lineHeight = Math.max(0, Math.min(1, shape.lineHeight + bias));
+    }
+  }
   const sfPhase = sfPhaseFromIntention(intention);
 
   const bases = FORMATION_BASES[formation] ?? FORMATION_BASES['4-3-3'];

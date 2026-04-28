@@ -261,6 +261,26 @@ export function decideOnBallWithIntention(
   }
   const shot = evaluateShot(ctx.self, ctx.attackDir, ctx.opponents);
 
+  // Bloco C — Pattern de 1 toque: recém-recebeu bola sob pressão alta
+  // Quando o jogador acaba de virar carrier (passe acabou de chegar) e há
+  // pressão de adversário próximo, libera bola rápido pra colega seguro.
+  // Skill firstTouchPlay aumenta a probabilidade.
+  if (ctx.carrierJustChanged && passOptions.length > 0) {
+    const press = nearestOpponentPressure01(ctx.self, ctx.opponents);
+    if (press > 0.55) {
+      const safe = passOptions.find(
+        (p) => p.distance < 18 && p.successProb > 0.58,
+      );
+      if (safe) {
+        const ftSkill = profile.firstTouchPlay ?? 0.4;
+        const oneTouchP = 0.25 + ftSkill * 0.45 + (press - 0.55) * 0.4;
+        if (pick01ForDecision(ctx) < oneTouchP) {
+          return { type: 'one_two', option: safe };
+        }
+      }
+    }
+  }
+
   const backToGoalPlay = tryBackToGoalAttackPlay(ctx, reading, passOptions, shot, profile, carrierDuel);
   if (backToGoalPlay) return backToGoalPlay;
 
