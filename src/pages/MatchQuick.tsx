@@ -25,7 +25,7 @@ import { QuickGoalCelebration } from '@/components/matchquick/QuickGoalCelebrati
 import { pickGoalOverlayStoryline } from '@/match/goalOverlayNarration';
 import { GOAL_SCORER_OVERLAY_MS } from '@/gamespirit/spiritStateMachine';
 import { fetchKeyMomentNarration } from '@/match/narrativeKeyMomentClient';
-import { PenaltyKickModal } from '@/match/PenaltyKickModal';
+import { PenaltyKickModalV2 as PenaltyKickModal } from '@/match/PenaltyKickModalV2';
 import { SubstitutionOverlay } from '@/components/matchquick/SubstitutionOverlay';
 import { RedCardOverlay } from '@/components/matchquick/RedCardOverlay';
 import { AssistantAI, type HalftimeScript } from '@/components/matchquick/AssistantAI';

@@ -53,6 +53,7 @@ const MatchLive = lazy(() => import('./pages/MatchLive').then((m) => ({ default:
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
+const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
 const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
 const OlefootLeague = lazy(() => import('./pages/OlefootLeague').then((m) => ({ default: m.default })));
@@ -358,6 +359,7 @@ export default function App() {
               }
             />
             <Route path="/match/penalty" element={<MatchPenalty />} />
+            <Route path="/match/penalty-v2" element={<MatchPenaltyV2 />} />
             <Route path="/match/global" element={<MatchGlobal />} />
             <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
             <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
