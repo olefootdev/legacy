@@ -1,0 +1,316 @@
+import { useEffect, useRef, useState } from 'react';
+import { PICK_TIME_SECONDS, POWER_RAMP_MS } from './constants';
+import { PenaltyPowerBar } from './PenaltyPowerBar';
+import { PenaltyShootSVG } from './PenaltyShootSVG';
+import { PenaltyShootoutScore } from './PenaltyShootoutScore';
+import { resolvePenalty } from './usePenaltyResolution';
+import type {
+  PenaltyKeeper,
+  PenaltyOutcome,
+  PenaltyPOV,
+  PenaltyPhase,
+  PenaltyShootResult,
+  PenaltyShooter,
+  ShootoutContext,
+  SlotIndex,
+} from './types';
+
+export interface PenaltyShootProps {
+  pov?: PenaltyPOV; // 'manager' (default) | 'player'
+  shooter: PenaltyShooter;
+  keeper: PenaltyKeeper;
+  pickTimeSeconds?: number;
+  shootoutContext?: ShootoutContext;
+  /** Texto da dica narrativa do goleiro (ex: "Goleiro lê bem o lado direito"). */
+  keeperHint?: string;
+  /** Disparado uma vez quando o pênalti é resolvido (após o reveal). */
+  onResolved?: (result: PenaltyShootResult) => void;
+  /** Botão "Próximo" só aparece se passado. */
+  onNextShooter?: () => void;
+  /** Botão "Reiniciar" só aparece se passado. */
+  onReset?: () => void;
+  /**
+   * Cabeçalho opcional acima do timer (ex: "Olefoot · Pênalti em jogo").
+   * Default: "Olefoot · Pênalti".
+   */
+  headerLabel?: string;
+}
+
+/**
+ * Componente top-level reutilizável de cobrança de pênalti.
+ * Orquestra estado, RAF da barra de força e timer; SVG/UI são presentationals.
+ */
+export function PenaltyShoot({
+  pov = 'manager',
+  shooter,
+  keeper,
+  pickTimeSeconds = PICK_TIME_SECONDS,
+  shootoutContext,
+  keeperHint,
+  onResolved,
+  onNextShooter,
+  onReset,
+  headerLabel = 'Olefoot · Pênalti',
+}: PenaltyShootProps) {
+  const [phase, setPhase] = useState<PenaltyPhase>('pick');
+  const [hoveredSlot, setHoveredSlot] = useState<SlotIndex | null>(null);
+  const [pickedSlot, setPickedSlot] = useState<SlotIndex | null>(null);
+  const [keeperSlot, setKeeperSlot] = useState<SlotIndex | null>(null);
+  const [outcome, setOutcome] = useState<PenaltyOutcome | null>(null);
+  const [landing, setLanding] = useState<{ x: number; y: number } | null>(null);
+  const [finalRotation, setFinalRotation] = useState(0);
+
+  const [timeLeft, setTimeLeft] = useState(pickTimeSeconds);
+  const [power, setPower] = useState(0);
+  const [shotPower, setShotPower] = useState(0);
+
+  const tickRef = useRef<number | null>(null);
+  const powerRafRef = useRef<number | null>(null);
+  const powerStartRef = useRef<number | null>(null);
+
+  // Timer countdown durante pick
+  useEffect(() => {
+    if (phase !== 'pick') {
+      if (tickRef.current) window.clearInterval(tickRef.current);
+      return;
+    }
+    setTimeLeft(pickTimeSeconds);
+    tickRef.current = window.setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          if (pickedSlot == null) {
+            const auto: SlotIndex = 4;
+            setPickedSlot(auto);
+            window.setTimeout(() => fireShotWith(auto, 0.4), 120);
+          }
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => {
+      if (tickRef.current) window.clearInterval(tickRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // Pointer up global pra disparar o chute
+  useEffect(() => {
+    function handleUp() {
+      if (phase === 'charging' && pickedSlot != null) {
+        fireShotWith(pickedSlot, power);
+      }
+    }
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+    return () => {
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, pickedSlot, power]);
+
+  function startCharge(idx: SlotIndex) {
+    if (phase !== 'pick') return;
+    setPickedSlot(idx);
+    setPhase('charging');
+    setPower(0);
+    powerStartRef.current = performance.now();
+
+    function tick(now: number) {
+      if (powerStartRef.current == null) return;
+      const elapsed = now - powerStartRef.current;
+      const p = Math.min(1, elapsed / POWER_RAMP_MS);
+      setPower(p);
+      if (p < 1) {
+        powerRafRef.current = requestAnimationFrame(tick);
+      } else {
+        fireShotWith(idx, 1);
+      }
+    }
+    powerRafRef.current = requestAnimationFrame(tick);
+  }
+
+  function fireShotWith(slot: SlotIndex, finalPower: number) {
+    if (powerRafRef.current) cancelAnimationFrame(powerRafRef.current);
+    powerStartRef.current = null;
+    setShotPower(finalPower);
+    setPickedSlot(slot);
+    setPhase('reveal');
+
+    const result = resolvePenalty({
+      slot,
+      power: finalPower,
+      shooter,
+      keeper,
+    });
+
+    setKeeperSlot(result.keeperSlot);
+    setOutcome(result.outcome);
+    setLanding(result.landing);
+    setFinalRotation(result.finalRotation);
+
+    window.setTimeout(() => {
+      setPhase('result');
+      onResolved?.(result);
+    }, 950);
+  }
+
+  function softReset() {
+    setPhase('pick');
+    setPickedSlot(null);
+    setKeeperSlot(null);
+    setHoveredSlot(null);
+    setPower(0);
+    setShotPower(0);
+    setOutcome(null);
+    setLanding(null);
+    setFinalRotation(0);
+  }
+
+  function handleNextShooter() {
+    onNextShooter?.();
+    softReset();
+  }
+
+  function handleReset() {
+    onReset?.();
+    softReset();
+  }
+
+  // Headline contextual
+  const headline = (() => {
+    if (phase === 'pick') return pickedSlot == null ? 'Onde mandamos ele bater?' : 'Confirma a mira?';
+    if (phase === 'charging') return 'SEGURA… CARREGA…';
+    if (phase === 'reveal') return 'CHUTA!';
+    if (outcome === 'goal') return 'GOOOOOL!';
+    if (outcome === 'over-bar') return 'POR CIMA!';
+    if (outcome === 'post') return 'NA TRAVE!';
+    if (outcome === 'wide') return 'PRA FORA!';
+    if (outcome === 'weak-save') return 'CHUTE FRACO!';
+    return 'DEFENDEU!';
+  })();
+
+  return (
+    <div
+      className="min-h-screen bg-neon-yellow flex flex-col items-center pt-6 pb-12 px-6 select-none"
+      style={{ touchAction: 'none' }}
+    >
+      {/* Header */}
+      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-3">
+        <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
+          {headerLabel}
+        </div>
+        {shootoutContext && (
+          <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
+            Batedor {shootoutContext.currentShooter + 1} de {shootoutContext.rounds}
+          </div>
+        )}
+      </div>
+
+      {/* Timer + Headline */}
+      <div className="w-full max-w-[920px] flex flex-col items-center mb-1">
+        <div
+          className={`font-display italic font-black leading-none tabular-nums transition-colors duration-200 ${
+            timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
+          }`}
+          style={{ fontSize: 'clamp(56px, 9vw, 96px)' }}
+        >
+          {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
+        </div>
+
+        <h1
+          className="ole-headline-italic text-black text-center mt-2"
+          style={{
+            fontSize: phase === 'result' ? 'clamp(56px, 10vw, 120px)' : 'clamp(28px, 4vw, 44px)',
+            lineHeight: 1.0,
+          }}
+        >
+          {headline}
+        </h1>
+      </div>
+
+      {/* Sub-info do batedor + goleiro */}
+      <div className="flex items-center gap-3 mt-4 mb-3 text-black/80 text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
+        <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
+          {shooter.displayName} · #{shooter.shirtNumber}
+        </span>
+        <span>Finalização {shooter.finishingRating}</span>
+        {keeperHint && (
+          <>
+            <span className="text-black/50">|</span>
+            <span>{keeperHint}</span>
+          </>
+        )}
+      </div>
+
+      {/* SVG do gol */}
+      <PenaltyShootSVG
+        phase={phase}
+        pickedSlot={pickedSlot}
+        hoveredSlot={hoveredSlot}
+        keeperSlot={keeperSlot}
+        outcome={outcome}
+        landing={landing}
+        shotPower={shotPower}
+        finalRotation={finalRotation}
+        finishingRating={shooter.finishingRating}
+        onSlotHoverChange={setHoveredSlot}
+        onSlotPointerDown={startCharge}
+      />
+
+      {/* Power bar (durante charging) */}
+      {phase === 'charging' && <PenaltyPowerBar power={power} />}
+
+      {/* Placar da disputa (opcional) */}
+      {shootoutContext && (
+        <PenaltyShootoutScore ctx={shootoutContext} highlightActive={phase !== 'result'} />
+      )}
+
+      {/* Botões pós-result */}
+      {phase === 'result' && (
+        <div className="flex gap-3">
+          {onNextShooter && (
+            <button
+              onClick={handleNextShooter}
+              className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
+            >
+              Próximo
+            </button>
+          )}
+          {onReset && (
+            <button
+              onClick={handleReset}
+              className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-black hover:text-neon-yellow transition-all"
+            >
+              Reiniciar
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Hint */}
+      {phase === 'pick' && (
+        <div className="mt-6 text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[920px] text-center leading-relaxed">
+          Pressione e segure um slot pra carregar a força · Solte pra chutar · {pickTimeSeconds}s pra
+          decidir
+        </div>
+      )}
+      {pov === 'player' && (
+        <div className="mt-2 text-[10px] uppercase tracking-[0.3em] text-black/40">
+          [POV: Player · placeholder]
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Re-export pra ergonomia
+export type {
+  PenaltyShooter,
+  PenaltyKeeper,
+  PenaltyShootResult,
+  PenaltyOutcome,
+  ShootoutContext,
+  SlotIndex,
+} from './types';
