@@ -30,6 +30,12 @@ export interface PenaltyShootProps {
   /** Botão "Reiniciar" só aparece se passado. */
   onReset?: () => void;
   /**
+   * Auto-advance após o resultado. Em ms. Se omitido, espera o manager clicar.
+   * Usado em multiplayer pra não travar o outro lado se manager AFK.
+   * Recomendado: 5000 (5s).
+   */
+  autoAdvanceMs?: number;
+  /**
    * Cabeçalho opcional acima do timer (ex: "Olefoot · Pênalti em jogo").
    * Default: "Olefoot · Pênalti".
    */
@@ -50,6 +56,7 @@ export function PenaltyShoot({
   onResolved,
   onNextShooter,
   onReset,
+  autoAdvanceMs,
   headerLabel = 'Olefoot · Pênalti',
 }: PenaltyShootProps) {
   const [phase, setPhase] = useState<PenaltyPhase>('pick');
@@ -64,9 +71,13 @@ export function PenaltyShoot({
   const [power, setPower] = useState(0);
   const [shotPower, setShotPower] = useState(0);
 
+  // Auto-advance pós-result (multiplayer-safe)
+  const [autoAdvanceLeft, setAutoAdvanceLeft] = useState<number | null>(null);
+
   const tickRef = useRef<number | null>(null);
   const powerRafRef = useRef<number | null>(null);
   const powerStartRef = useRef<number | null>(null);
+  const autoAdvanceRef = useRef<number | null>(null);
 
   // Timer countdown durante pick
   useEffect(() => {
@@ -93,6 +104,35 @@ export function PenaltyShoot({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+
+  // Auto-advance no result phase (multiplayer-safe)
+  useEffect(() => {
+    if (phase !== 'result' || !autoAdvanceMs || !onNextShooter) {
+      setAutoAdvanceLeft(null);
+      if (autoAdvanceRef.current) window.clearInterval(autoAdvanceRef.current);
+      return;
+    }
+    const totalSec = Math.ceil(autoAdvanceMs / 1000);
+    setAutoAdvanceLeft(totalSec);
+    const start = Date.now();
+    autoAdvanceRef.current = window.setInterval(() => {
+      const elapsedMs = Date.now() - start;
+      const remaining = Math.max(0, Math.ceil((autoAdvanceMs - elapsedMs) / 1000));
+      setAutoAdvanceLeft(remaining);
+      if (elapsedMs >= autoAdvanceMs) {
+        window.clearInterval(autoAdvanceRef.current!);
+        autoAdvanceRef.current = null;
+        handleNextShooter();
+      }
+    }, 200);
+    return () => {
+      if (autoAdvanceRef.current) {
+        window.clearInterval(autoAdvanceRef.current);
+        autoAdvanceRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, autoAdvanceMs, onNextShooter]);
 
   // Pointer up global pra disparar o chute
   useEffect(() => {
@@ -269,22 +309,45 @@ export function PenaltyShoot({
 
       {/* Botões pós-result */}
       {phase === 'result' && (
-        <div className="flex gap-3">
-          {onNextShooter && (
-            <button
-              onClick={handleNextShooter}
-              className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
-            >
-              Próximo
-            </button>
-          )}
-          {onReset && (
-            <button
-              onClick={handleReset}
-              className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-black hover:text-neon-yellow transition-all"
-            >
-              Reiniciar
-            </button>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex gap-3">
+            {onNextShooter && (
+              <button
+                onClick={handleNextShooter}
+                className="relative bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all overflow-hidden"
+              >
+                <span className="relative z-10">
+                  Próximo
+                  {autoAdvanceLeft != null && (
+                    <span className="ml-3 tabular-nums text-neon-yellow/70">
+                      {autoAdvanceLeft}s
+                    </span>
+                  )}
+                </span>
+                {/* Barra de progresso decrescente embaixo do botão */}
+                {autoAdvanceLeft != null && autoAdvanceMs && (
+                  <span
+                    className="absolute bottom-0 left-0 h-[3px] bg-neon-yellow/50 transition-[width] duration-200 ease-linear"
+                    style={{
+                      width: `${Math.max(0, (autoAdvanceLeft * 1000) / autoAdvanceMs) * 100}%`,
+                    }}
+                  />
+                )}
+              </button>
+            )}
+            {onReset && (
+              <button
+                onClick={handleReset}
+                className="bg-transparent border-2 border-black text-black px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-black hover:text-neon-yellow transition-all"
+              >
+                Reiniciar
+              </button>
+            )}
+          </div>
+          {autoAdvanceLeft != null && (
+            <div className="text-[10px] uppercase tracking-[0.3em] text-black/50">
+              Auto-avança em {autoAdvanceLeft}s · clique pra adiantar
+            </div>
           )}
         </div>
       )}
