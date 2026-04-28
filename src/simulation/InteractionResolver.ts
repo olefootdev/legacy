@@ -45,6 +45,11 @@ export interface AgentSnapshot {
    * da seta de visão tática). Usado para penalizar passes pra trás / fora do cone.
    */
   heading?: number;
+  /** Sprint L2 — Personalidade (modula comportamentos, não atributos técnicos). */
+  aggressiveness?: number;
+  loyalty?: number;
+  bigGameMentality?: number;
+  ego?: number;
 }
 
 export interface PassOption {
