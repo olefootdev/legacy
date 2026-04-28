@@ -16,8 +16,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { Eyebrow } from '@/components/ui';
 import { ALL_LEGEND_SLUGS, findLegend } from '@/data/legends';
 import { useLegendSocial } from '@/hooks/useLegendSocial';
@@ -30,7 +29,6 @@ import { LegendStoreCTA } from '@/components/legend/LegendStoreCTA';
 
 export function Legend() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const legend = useMemo(() => findLegend(id), [id]);
   const social = useLegendSocial(legend.slug);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -56,22 +54,10 @@ export function Legend() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-8 sm:py-12">
-          {/* 1. Topbar: Voltar (esquerda) */}
-          <div className="flex items-center justify-between mb-7 sm:mb-9">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 text-black/70 hover:text-black font-display uppercase font-black"
-              style={{ fontSize: '11px', letterSpacing: '0.22em' }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar
-            </button>
-          </div>
-
-          {/* Search centralizada com borda preta — sinaliza claramente
-              que há uma galeria de outras lendas pra explorar */}
-          <div className="mb-9 sm:mb-12">
+          {/* 1. Search centralizada com borda preta — primeiro elemento
+              do hero. Navegação back disponível pelo header global +
+              bottom nav; mudança de lenda via este search. */}
+          <div className="mb-9 sm:mb-12 mt-2">
             <LegendSearchBar
               onOpen={() => setSearchOpen(true)}
               totalCount={ALL_LEGEND_SLUGS.length}
