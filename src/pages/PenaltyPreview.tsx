@@ -14,14 +14,16 @@ const SLOT_LABELS: Record<SlotIndex, string> = {
   8: 'BAIXA DIR',
 };
 
-// Geometria da trave (em coords do SVG)
+// Câmera mais perto da bola — gol maior, ocupa mais da viewBox
+const VIEW_W = 800;
+const VIEW_H = 560;
 const GOAL = {
-  x: 100,
-  y: 80,
-  w: 600,
-  h: 220,
-  cornerRadius: 18,
-  frameWidth: 8,
+  x: 50,
+  y: 60,
+  w: 700,
+  h: 280,
+  cornerRadius: 22,
+  frameWidth: 10,
 };
 
 const SLOT_COLS = 3;
@@ -29,10 +31,23 @@ const SLOT_ROWS = 3;
 const SLOT_W = GOAL.w / SLOT_COLS;
 const SLOT_H = GOAL.h / SLOT_ROWS;
 
-const PICK_TIME_SECONDS = 8;
+// Bola gigante na marca (foreground bem próximo)
+const BALL_SIZE_MARCA = 110;
+const BALL_SIZE_FLY_END = 60;
+const BALL_SIZE_RESULT = 60;
+
+// Penalty spot bem para frente (sensação de proximidade)
+const SPOT = { x: VIEW_W / 2, y: 510 };
+
+const PICK_TIME_SECONDS = 7;
+const POWER_RAMP_MS = 950; // tempo pra encher 0→1
+const POWER_SWEET_LOW = 0.32;
+const POWER_SWEET_HIGH = 0.88;
 const SHOOTOUT_ROUNDS = 5;
 
 type ShotResult = 'goal' | 'save' | 'pending';
+type Phase = 'pick' | 'charging' | 'reveal' | 'result';
+type Outcome = 'goal' | 'save' | 'over-bar' | 'off-target';
 
 function slotRect(idx: SlotIndex) {
   const col = idx % SLOT_COLS;
@@ -45,8 +60,6 @@ function slotRect(idx: SlotIndex) {
   };
 }
 
-type Phase = 'pick' | 'reveal' | 'result';
-
 export function PenaltyPreview() {
   const [phase, setPhase] = useState<Phase>('pick');
   const [hoveredSlot, setHoveredSlot] = useState<SlotIndex | null>(null);
@@ -54,10 +67,31 @@ export function PenaltyPreview() {
   const [keeperSlot, setKeeperSlot] = useState<SlotIndex | null>(null);
   const [timeLeft, setTimeLeft] = useState(PICK_TIME_SECONDS);
 
-  // Placar simulado da disputa (5 batedores cada lado)
-  const [homeShots, setHomeShots] = useState<ShotResult[]>(['goal', 'goal', 'pending', 'pending', 'pending']);
-  const [awayShots, setAwayShots] = useState<ShotResult[]>(['goal', 'save', 'pending', 'pending', 'pending']);
-  const [currentShooter, setCurrentShooter] = useState(2); // batedor atual (0-indexed)
+  // Power bar
+  const [power, setPower] = useState(0);
+  const [shotPower, setShotPower] = useState(0);
+  const powerRafRef = useRef<number | null>(null);
+  const powerStartRef = useRef<number | null>(null);
+
+  // Outcome após reveal
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+
+  // Placar simulado da disputa
+  const [homeShots, setHomeShots] = useState<ShotResult[]>([
+    'goal',
+    'goal',
+    'pending',
+    'pending',
+    'pending',
+  ]);
+  const [awayShots, setAwayShots] = useState<ShotResult[]>([
+    'goal',
+    'save',
+    'pending',
+    'pending',
+    'pending',
+  ]);
+  const [currentShooter, setCurrentShooter] = useState(2);
 
   const finishingRating = 78;
   const uncertaintyRadius = useMemo(() => {
@@ -65,7 +99,7 @@ export function PenaltyPreview() {
     return Math.max(8, base * 0.8);
   }, [finishingRating]);
 
-  // Timer countdown durante a fase pick
+  // Timer countdown
   const tickRef = useRef<number | null>(null);
   useEffect(() => {
     if (phase !== 'pick') {
@@ -76,11 +110,11 @@ export function PenaltyPreview() {
     tickRef.current = window.setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
-          // tempo zerado: força chute aleatório
+          // Tempo zerado: chuta no centro com força fraca
           if (pickedSlot == null) {
-            const auto = Math.floor(Math.random() * 9) as SlotIndex;
+            const auto: SlotIndex = 4;
             setPickedSlot(auto);
-            window.setTimeout(() => confirmShot(auto), 200);
+            window.setTimeout(() => fireShotWith(auto, 0.4), 120);
           }
           return 0;
         }
@@ -93,29 +127,80 @@ export function PenaltyPreview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  function pickSlot(idx: SlotIndex) {
+  // Pointer up global pra disparar o chute quando solta o botão
+  useEffect(() => {
+    function handleUp() {
+      if (phase === 'charging' && pickedSlot != null) {
+        fireShotWith(pickedSlot, power);
+      }
+    }
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+    return () => {
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, pickedSlot, power]);
+
+  function startCharge(idx: SlotIndex) {
     if (phase !== 'pick') return;
     setPickedSlot(idx);
+    setPhase('charging');
+    setPower(0);
+    powerStartRef.current = performance.now();
+
+    function tick(now: number) {
+      if (powerStartRef.current == null) return;
+      const elapsed = now - powerStartRef.current;
+      const p = Math.min(1, elapsed / POWER_RAMP_MS);
+      setPower(p);
+      if (p < 1) {
+        powerRafRef.current = requestAnimationFrame(tick);
+      } else {
+        // Auto-fire ao chegar em 100% (super-power)
+        fireShotWith(idx, 1);
+      }
+    }
+    powerRafRef.current = requestAnimationFrame(tick);
   }
 
-  function confirmShot(slot?: SlotIndex) {
-    const finalSlot = slot ?? pickedSlot;
-    if (finalSlot == null) return;
-    setPickedSlot(finalSlot);
+  function fireShotWith(slot: SlotIndex, finalPower: number) {
+    if (powerRafRef.current) cancelAnimationFrame(powerRafRef.current);
+    powerStartRef.current = null;
+    setShotPower(finalPower);
+    setPickedSlot(slot);
     setPhase('reveal');
+
+    // Goleiro decide
     const guess = Math.floor(Math.random() * 9) as SlotIndex;
     setKeeperSlot(guess);
-    window.setTimeout(() => setPhase('result'), 1000);
+
+    // Determina outcome baseado em power × match com goleiro
+    let result: Outcome;
+    if (finalPower < POWER_SWEET_LOW) {
+      // Chute fraco → goleiro pega tranquilo
+      result = 'save';
+    } else if (finalPower > POWER_SWEET_HIGH) {
+      // Chute forte demais → por cima do travessão
+      result = 'over-bar';
+    } else if (slot === guess) {
+      result = 'save';
+    } else {
+      result = 'goal';
+    }
+    setOutcome(result);
+
+    window.setTimeout(() => setPhase('result'), 950);
   }
 
   function nextShooter() {
-    const isGoal = pickedSlot != null && keeperSlot != null && pickedSlot !== keeperSlot;
+    const isGoal = outcome === 'goal';
     const result: ShotResult = isGoal ? 'goal' : 'save';
     const nextHome = [...homeShots];
     nextHome[currentShooter] = result;
     setHomeShots(nextHome);
 
-    // Adversário também bate (simulado)
     if (currentShooter < SHOOTOUT_ROUNDS - 1) {
       const nextAway = [...awayShots];
       nextAway[currentShooter + 1] = Math.random() > 0.3 ? 'goal' : 'save';
@@ -123,35 +208,60 @@ export function PenaltyPreview() {
     }
 
     setCurrentShooter((c) => Math.min(c + 1, SHOOTOUT_ROUNDS - 1));
-    setPhase('pick');
-    setPickedSlot(null);
-    setKeeperSlot(null);
-    setHoveredSlot(null);
+    softReset();
   }
 
-  function reset() {
+  function softReset() {
     setPhase('pick');
     setPickedSlot(null);
     setKeeperSlot(null);
     setHoveredSlot(null);
+    setPower(0);
+    setShotPower(0);
+    setOutcome(null);
+  }
+
+  function fullReset() {
+    softReset();
     setHomeShots(['pending', 'pending', 'pending', 'pending', 'pending']);
     setAwayShots(['pending', 'pending', 'pending', 'pending', 'pending']);
     setCurrentShooter(0);
   }
 
-  const isGoal = phase === 'result' && pickedSlot !== null && keeperSlot !== null && pickedSlot !== keeperSlot;
-  const isSave = phase === 'result' && pickedSlot !== null && keeperSlot !== null && pickedSlot === keeperSlot;
-
   const pickRect = pickedSlot != null ? slotRect(pickedSlot) : null;
-  const keeperRect = keeperSlot != null ? slotRect(keeperSlot) : null;
-
   const homeGoals = homeShots.filter((s) => s === 'goal').length;
   const awayGoals = awayShots.filter((s) => s === 'goal').length;
 
+  // Tom da power bar
+  const powerTone =
+    power > POWER_SWEET_HIGH ? '#ef4444' : power > POWER_SWEET_LOW ? '#FDE100' : '#999';
+  const powerLabel =
+    power > POWER_SWEET_HIGH
+      ? 'DEMAIS!'
+      : power > POWER_SWEET_LOW
+        ? power > 0.6
+          ? 'PURA PANCADA'
+          : 'BOM'
+        : 'FRACO';
+
+  // Headline contextual
+  const headline = (() => {
+    if (phase === 'pick') return pickedSlot == null ? 'Onde mandamos ele bater?' : 'Confirma a mira?';
+    if (phase === 'charging') return 'SEGURA… CARREGA…';
+    if (phase === 'reveal') return 'CHUTA!';
+    // result
+    if (outcome === 'goal') return 'GOOOL!';
+    if (outcome === 'over-bar') return 'POR CIMA!';
+    return 'DEFENDIDA';
+  })();
+
   return (
-    <div className="min-h-screen bg-neon-yellow flex flex-col items-center pt-6 pb-12 px-6">
+    <div
+      className="min-h-screen bg-neon-yellow flex flex-col items-center pt-6 pb-12 px-6 select-none"
+      style={{ touchAction: 'none' }}
+    >
       {/* Header editorial */}
-      <div className="w-full max-w-[820px] flex items-baseline justify-between mb-3">
+      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-3">
         <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
           Olefoot · Disputa de Pênaltis
         </div>
@@ -160,39 +270,31 @@ export function PenaltyPreview() {
         </div>
       </div>
 
-      {/* Timer + Headline integrados */}
-      <div className="w-full max-w-[820px] flex flex-col items-center mb-2">
-        {/* Countdown timer cinematográfico */}
-        <div className="flex items-baseline gap-3 mb-1">
-          <div
-            className={`font-display italic font-black leading-none tabular-nums transition-colors duration-200 ${
-              timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
-            }`}
-            style={{ fontSize: 'clamp(48px, 7vw, 80px)' }}
-          >
-            {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
-          </div>
-          <div className="text-[10px] uppercase tracking-[0.35em] font-bold text-black/60 mb-3">
-            seg
-            <br />
-            restantes
-          </div>
+      {/* Timer (sem rótulo "seg restantes") */}
+      <div className="w-full max-w-[920px] flex flex-col items-center mb-1">
+        <div
+          className={`font-display italic font-black leading-none tabular-nums transition-colors duration-200 ${
+            timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
+          }`}
+          style={{ fontSize: 'clamp(56px, 9vw, 96px)' }}
+        >
+          {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
         </div>
 
         {/* Headline editorial */}
         <h1
-          className="ole-headline-italic text-black text-center"
+          className="ole-headline-italic text-black text-center mt-2"
           style={{ fontSize: 'clamp(28px, 4vw, 44px)', lineHeight: 1.05 }}
         >
-          {phase === 'pick' && (pickedSlot == null ? 'Onde mandamos ele bater?' : 'Confirma a mira?')}
-          {phase === 'reveal' && 'O goleiro decide…'}
-          {phase === 'result' && (isGoal ? 'GOOOL!' : 'DEFENDIDA')}
+          {headline}
         </h1>
       </div>
 
-      {/* Sub-info do batedor */}
-      <div className="flex items-center gap-3 mb-4 text-black/80 text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
-        <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">Adrien Ayo · #9</span>
+      {/* Sub-info */}
+      <div className="flex items-center gap-3 mb-3 text-black/80 text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
+        <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
+          Adrien Ayo · #9
+        </span>
         <span>Finalização {finishingRating}</span>
         <span className="text-black/50">|</span>
         <span>Goleiro lê bem o lado direito</span>
@@ -200,12 +302,11 @@ export function PenaltyPreview() {
 
       {/* SVG Goal */}
       <svg
-        viewBox="0 0 800 540"
-        className="w-full max-w-[820px] h-auto"
-        style={{ filter: 'drop-shadow(0 6px 0 rgba(0,0,0,0.08))' }}
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        className="w-full max-w-[920px] h-auto"
+        style={{ filter: 'drop-shadow(0 8px 0 rgba(0,0,0,0.08))' }}
       >
         <defs>
-          {/* Rede diagonal */}
           <pattern
             id="netPattern"
             x="0"
@@ -226,8 +327,6 @@ export function PenaltyPreview() {
           >
             <path d="M 0 0 L 0 22 M 22 0 L 22 22" stroke="#000" strokeWidth="0.6" opacity="0.12" />
           </pattern>
-
-          {/* Clip pra rede ficar dentro do gol arredondado */}
           <clipPath id="goalInside">
             <rect
               x={GOAL.x}
@@ -241,14 +340,23 @@ export function PenaltyPreview() {
         </defs>
 
         {/* Linha do gramado */}
-        <line x1="40" y1="400" x2="760" y2="400" stroke="#000" strokeWidth="2" opacity="0.5" />
+        <line
+          x1="20"
+          y1={GOAL.y + GOAL.h + 60}
+          x2={VIEW_W - 20}
+          y2={GOAL.y + GOAL.h + 60}
+          stroke="#000"
+          strokeWidth="2"
+          opacity="0.5"
+        />
+
         {/* Penalty spot */}
-        <circle cx="400" cy="475" r="4" fill="#000" />
+        <circle cx={SPOT.x} cy={SPOT.y} r="5" fill="#000" />
         <text
-          x="445"
-          y="478"
+          x={SPOT.x + 90}
+          y={SPOT.y + 4}
           textAnchor="start"
-          fontSize="9"
+          fontSize="10"
           fontFamily="monospace"
           fontWeight="700"
           letterSpacing="3"
@@ -258,19 +366,19 @@ export function PenaltyPreview() {
           11M
         </text>
 
-        {/* Rede dentro do gol (com clip nas bordas arredondadas) */}
+        {/* Rede dentro do gol */}
         <g clipPath="url(#goalInside)">
           <rect x={GOAL.x} y={GOAL.y} width={GOAL.w} height={GOAL.h} fill="url(#netPattern)" />
           <rect x={GOAL.x} y={GOAL.y} width={GOAL.w} height={GOAL.h} fill="url(#netPatternVert)" />
           <rect x={GOAL.x} y={GOAL.y} width={GOAL.w} height={GOAL.h} fill="black" opacity="0.04" />
         </g>
 
-        {/* Slots clicáveis */}
+        {/* Slots clicáveis (com pointerdown pra começar a carregar força) */}
         {([0, 1, 2, 3, 4, 5, 6, 7, 8] as SlotIndex[]).map((idx) => {
           const r = slotRect(idx);
           const isHover = hoveredSlot === idx && phase === 'pick';
           const isPicked = pickedSlot === idx;
-          const isKeeper = keeperSlot === idx && phase !== 'pick';
+          const isKeeper = keeperSlot === idx && (phase === 'reveal' || phase === 'result');
 
           return (
             <g key={idx} clipPath="url(#goalInside)">
@@ -290,14 +398,19 @@ export function PenaltyPreview() {
                 }}
                 onMouseEnter={() => phase === 'pick' && setHoveredSlot(idx)}
                 onMouseLeave={() => setHoveredSlot(null)}
-                onClick={() => pickSlot(idx)}
+                onPointerDown={(e) => {
+                  if (phase === 'pick') {
+                    e.preventDefault();
+                    startCharge(idx);
+                  }
+                }}
               />
 
               {isPicked && (
                 <g transform={`translate(${r.cx}, ${r.cy})`}>
-                  <line x1="-12" y1="0" x2="12" y2="0" stroke="#000" strokeWidth="2.5" />
-                  <line x1="0" y1="-12" x2="0" y2="12" stroke="#000" strokeWidth="2.5" />
-                  <circle cx="0" cy="0" r="4" fill="#000" />
+                  <line x1="-14" y1="0" x2="14" y2="0" stroke="#000" strokeWidth="3" />
+                  <line x1="0" y1="-14" x2="0" y2="14" stroke="#000" strokeWidth="3" />
+                  <circle cx="0" cy="0" r="5" fill="#000" />
                 </g>
               )}
 
@@ -306,7 +419,7 @@ export function PenaltyPreview() {
                   x={r.cx}
                   y={r.cy + 4}
                   textAnchor="middle"
-                  fontSize="10"
+                  fontSize="11"
                   fontFamily="ui-sans-serif, system-ui"
                   fontWeight="700"
                   letterSpacing="2"
@@ -322,23 +435,23 @@ export function PenaltyPreview() {
                   <circle
                     cx="0"
                     cy="0"
-                    r={Math.min(SLOT_W, SLOT_H) * 0.42}
+                    r={Math.min(SLOT_W, SLOT_H) * 0.45}
                     fill="#000"
                     opacity="0.85"
                   >
                     <animate
                       attributeName="r"
                       from="6"
-                      to={Math.min(SLOT_W, SLOT_H) * 0.42}
+                      to={Math.min(SLOT_W, SLOT_H) * 0.45}
                       dur="0.4s"
                       fill="freeze"
                     />
                   </circle>
                   <text
                     x="0"
-                    y="4"
+                    y="5"
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="13"
                     fontFamily="ui-sans-serif, system-ui"
                     fontWeight="800"
                     letterSpacing="2"
@@ -360,36 +473,13 @@ export function PenaltyPreview() {
             r={uncertaintyRadius}
             fill="none"
             stroke="#000"
-            strokeWidth="1.2"
+            strokeWidth="1.4"
             strokeDasharray="3 3"
             opacity="0.4"
           />
         )}
 
-        {/* Trajetória da bola */}
-        {pickRect && phase !== 'pick' && (
-          <line
-            x1="400"
-            y1="475"
-            x2={pickRect.cx}
-            y2={pickRect.cy}
-            stroke="#000"
-            strokeWidth="3"
-            strokeDasharray="8 4"
-            strokeLinecap="round"
-            opacity={isSave ? 0.4 : 0.85}
-          >
-            <animate
-              attributeName="stroke-dashoffset"
-              from="80"
-              to="0"
-              dur="0.5s"
-              fill="freeze"
-            />
-          </line>
-        )}
-
-        {/* Trave arredondada (path único pra contornar bordas) */}
+        {/* Trave arredondada */}
         <path
           d={`
             M ${GOAL.x},${GOAL.y + GOAL.h}
@@ -405,25 +495,36 @@ export function PenaltyPreview() {
           fill="none"
         />
 
-        {/* Bola Legacy Tech — asset oficial */}
-        {phase === 'pick' && <LegacyBall cx={400} cy={475} size={64} />}
-        {phase === 'reveal' && pickRect && (
+        {/* Bola */}
+        {(phase === 'pick' || phase === 'charging') && (
+          <LegacyBall cx={SPOT.x} cy={SPOT.y} size={BALL_SIZE_MARCA} jitter={phase === 'charging'} />
+        )}
+        {phase === 'reveal' && pickRect && outcome && (
           <LegacyBallFlying
-            from={{ x: 400, y: 475 }}
-            to={{ x: pickRect.cx, y: pickRect.cy }}
-            startSize={64}
-            endSize={42}
-            durationMs={650}
+            from={SPOT}
+            to={
+              outcome === 'over-bar'
+                ? { x: pickRect.cx, y: GOAL.y - 60 } // sai por cima do travessão
+                : pickRect
+            }
+            startSize={BALL_SIZE_MARCA}
+            endSize={BALL_SIZE_FLY_END}
+            durationMs={shotPower > POWER_SWEET_HIGH ? 320 : shotPower > POWER_SWEET_LOW ? 380 : 520}
+            power={shotPower}
           />
         )}
         {phase === 'result' && pickRect && (
-          <LegacyBall cx={pickRect.cx} cy={pickRect.cy} size={42} />
+          <LegacyBall
+            cx={outcome === 'over-bar' ? pickRect.cx : pickRect.cx}
+            cy={outcome === 'over-bar' ? GOAL.y - 60 : pickRect.cy}
+            size={BALL_SIZE_RESULT}
+          />
         )}
 
         {/* Selo de fase */}
         <text
-          x="400"
-          y="48"
+          x={VIEW_W / 2}
+          y="32"
           textAnchor="middle"
           fontSize="11"
           fontFamily="ui-sans-serif, system-ui"
@@ -433,15 +534,56 @@ export function PenaltyPreview() {
           opacity="0.55"
         >
           {phase === 'pick' && '— ESCOLHA A MIRA —'}
+          {phase === 'charging' && '— CARREGANDO FORÇA —'}
           {phase === 'reveal' && '— BATE —'}
-          {phase === 'result' && (isGoal ? '— REDE —' : '— DEFESA —')}
+          {phase === 'result' &&
+            (outcome === 'goal' ? '— REDE —' : outcome === 'over-bar' ? '— FORA —' : '— DEFESA —')}
         </text>
       </svg>
 
+      {/* POWER BAR (durante charge) */}
+      {phase === 'charging' && (
+        <div className="w-full max-w-[920px] mt-4">
+          <div className="flex items-baseline justify-between mb-1">
+            <div className="text-[11px] uppercase tracking-[0.35em] font-bold text-black">
+              Força · {Math.round(power * 100)}%
+            </div>
+            <div
+              className="text-[11px] uppercase tracking-[0.3em] font-black"
+              style={{ color: powerTone === '#FDE100' ? '#000' : powerTone }}
+            >
+              {powerLabel}
+            </div>
+          </div>
+          <div className="relative h-7 bg-black border-[3px] border-black overflow-hidden">
+            {/* Fill */}
+            <div
+              className="h-full transition-none"
+              style={{
+                width: `${power * 100}%`,
+                background: powerTone,
+                boxShadow: power > POWER_SWEET_HIGH ? '0 0 16px rgba(239,68,68,0.8)' : undefined,
+              }}
+            />
+            {/* Sweet zone markers */}
+            <div
+              className="absolute top-0 h-full border-l-2 border-neon-yellow/80"
+              style={{ left: `${POWER_SWEET_LOW * 100}%` }}
+            />
+            <div
+              className="absolute top-0 h-full border-l-2 border-red-500"
+              style={{ left: `${POWER_SWEET_HIGH * 100}%` }}
+            />
+          </div>
+          <div className="text-[10px] uppercase tracking-[0.25em] text-black/60 mt-1">
+            Solte o botão pra chutar · Zona dourada = pancada na medida
+          </div>
+        </div>
+      )}
+
       {/* PLACAR DA DISPUTA */}
-      <div className="w-full max-w-[820px] mt-4 mb-6 border-t-2 border-black/80 pt-4">
+      <div className="w-full max-w-[920px] mt-4 mb-6 border-t-2 border-black/80 pt-4">
         <div className="grid grid-cols-3 items-center gap-4">
-          {/* Time casa */}
           <div className="flex flex-col items-start gap-2">
             <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black/70">
               BSC · Casa
@@ -453,7 +595,6 @@ export function PenaltyPreview() {
             </div>
           </div>
 
-          {/* Placar central */}
           <div className="flex items-center justify-center gap-3">
             <div
               className="font-display italic font-black text-black tabular-nums leading-none"
@@ -470,7 +611,6 @@ export function PenaltyPreview() {
             </div>
           </div>
 
-          {/* Time visitante */}
           <div className="flex flex-col items-end gap-2">
             <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-black/70">
               ADV · Visitante
@@ -484,51 +624,46 @@ export function PenaltyPreview() {
         </div>
       </div>
 
-      {/* Controles */}
-      <div className="flex gap-3">
-        {phase === 'pick' && pickedSlot != null && (
+      {/* Controles (só após result) */}
+      {phase === 'result' && (
+        <div className="flex gap-3">
           <button
-            onClick={() => confirmShot()}
+            onClick={nextShooter}
             className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
           >
-            Confirmar chute
+            Próximo batedor
           </button>
-        )}
-        {phase === 'pick' && pickedSlot == null && (
-          <div className="text-black/60 text-sm uppercase tracking-[0.2em]">
-            Clique num dos 9 slots
-          </div>
-        )}
-        {phase === 'result' && (
-          <>
-            <button
-              onClick={nextShooter}
-              className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
-            >
-              Próximo batedor
-            </button>
-            <button
-              onClick={reset}
-              className="bg-transparent border-2 border-black text-black px-6 py-3 font-display font-bold uppercase tracking-wider hover:bg-black hover:text-neon-yellow transition-all"
-            >
-              Reiniciar
-            </button>
-          </>
-        )}
-      </div>
+          <button
+            onClick={fullReset}
+            className="bg-transparent border-2 border-black text-black px-6 py-3 font-display font-bold uppercase tracking-wider hover:bg-black hover:text-neon-yellow transition-all"
+          >
+            Reiniciar
+          </button>
+        </div>
+      )}
 
       {/* Debug */}
-      <div className="mt-8 text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[820px] text-center leading-relaxed">
-        Preview · Manager escolhe slot em {PICK_TIME_SECONDS}s · IA do goleiro placeholder (random)
-        <br />
-        Bola é placeholder — substituir por asset Legacy Tech via &lt;image href="/assets/penalty-ball.svg"/&gt;
+      <div className="mt-6 text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[920px] text-center leading-relaxed">
+        Pressione e segure um slot pra carregar a força · Solte pra chutar · {PICK_TIME_SECONDS}s pra
+        decidir
       </div>
     </div>
   );
 }
 
-// Bola Legacy Tech — estática (na marca ou no slot)
-function LegacyBall({ cx, cy, size }: { cx: number; cy: number; size: number }) {
+// ─────────────────────────────────────────────────────────────────────────
+// Bola estática (na marca / no slot final)
+function LegacyBall({
+  cx,
+  cy,
+  size,
+  jitter = false,
+}: {
+  cx: number;
+  cy: number;
+  size: number;
+  jitter?: boolean;
+}) {
   const half = size / 2;
   return (
     <g>
@@ -538,7 +673,7 @@ function LegacyBall({ cx, cy, size }: { cx: number; cy: number; size: number }) 
         rx={half * 0.85}
         ry={half * 0.18}
         fill="#000"
-        opacity="0.25"
+        opacity="0.3"
       />
       <image
         href="/assets/legacy-ball.png"
@@ -546,27 +681,34 @@ function LegacyBall({ cx, cy, size }: { cx: number; cy: number; size: number }) 
         y={cy - half}
         width={size}
         height={size}
-        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}
+        style={{
+          filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.45))',
+          animation: jitter ? 'penalty-ball-jitter 0.12s infinite' : undefined,
+          transformOrigin: `${cx}px ${cy}px`,
+        }}
       />
     </g>
   );
 }
 
-// Bola voando — interpolação rAF com arco parabólico + rotação + shrink (perspectiva)
+// ─────────────────────────────────────────────────────────────────────────
+// Bola voando — trajetória RETA, ease-in cubic (acelera = pancada violenta)
 function LegacyBallFlying({
   from,
   to,
   startSize,
   endSize,
   durationMs,
+  power,
 }: {
   from: { x: number; y: number };
   to: { x: number; y: number };
   startSize: number;
   endSize: number;
   durationMs: number;
+  power: number;
 }) {
-  const [t, setT] = useState(0); // 0..1
+  const [t, setT] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
 
@@ -585,37 +727,32 @@ function LegacyBallFlying({
     };
   }, [durationMs, from.x, from.y, to.x, to.y]);
 
-  // Easing ease-out cubic — bola desacelera ao chegar
-  const eased = 1 - Math.pow(1 - t, 3);
+  // Ease-in cubic — devagar no início, ACELERA na chegada (pancada)
+  const eased = t * t * t;
 
-  // Trajetória parabólica: ponto de controle acima do midpoint
-  // Quanto mais distante o slot, maior o pico
-  const dist = Math.hypot(to.x - from.x, to.y - from.y);
-  const peakOffset = Math.min(110, 60 + dist * 0.15);
-  const midX = (from.x + to.x) / 2;
-  const peakY = Math.min(from.y, to.y) - peakOffset;
+  // Trajetória LINEAR — bola voa reta, sem curva
+  const x = from.x + (to.x - from.x) * eased;
+  const y = from.y + (to.y - from.y) * eased;
 
-  // Bezier quadrática: B(t) = (1-t)²·P0 + 2(1-t)t·P1 + t²·P2
-  const u = 1 - eased;
-  const x = u * u * from.x + 2 * u * eased * midX + eased * eased * to.x;
-  const y = u * u * from.y + 2 * u * eased * peakY + eased * eased * to.y;
-
-  // Tamanho shrinks linearmente (efeito perspectiva — bola "afasta" indo pro fundo do gol)
+  // Tamanho encolhe (perspectiva — vai pro fundo do gol)
   const size = startSize + (endSize - startSize) * eased;
   const half = size / 2;
 
-  // Rotação: 540° na trajetória (1.5 voltas)
-  const rotation = eased * 540;
+  // Rotação dramática conforme força
+  const totalRotation = 540 + power * 540; // até 1080° em chute forte
+  const rotation = eased * totalRotation;
 
-  // Sombra no chão é projetada no Y do ponto de partida (chão), não na bola
-  // Vai diminuindo conforme a bola sobe (separa visualmente)
+  // Sombra projetada no chão (cai pra trás, encolhe)
   const heightAboveGround = from.y - y;
-  const shadowOpacity = Math.max(0.05, 0.25 - heightAboveGround / 600);
-  const shadowScale = 1 - heightAboveGround / 400;
+  const shadowOpacity = Math.max(0.05, 0.3 - heightAboveGround / 700);
+  const shadowScale = Math.max(0.3, 1 - heightAboveGround / 500);
+
+  // Trail de movimento (linhas atrás da bola pra reforçar a velocidade)
+  const trailIntensity = Math.min(1, eased * 1.5);
 
   return (
     <g>
-      {/* Sombra dinâmica no chão */}
+      {/* Sombra dinâmica no solo */}
       <ellipse
         cx={x}
         cy={from.y + half * 0.5}
@@ -624,6 +761,43 @@ function LegacyBallFlying({
         fill="#000"
         opacity={shadowOpacity}
       />
+
+      {/* Speed lines (motion blur) */}
+      {power > POWER_SWEET_LOW && eased > 0.1 && eased < 0.95 && (
+        <g opacity={trailIntensity * 0.6}>
+          <line
+            x1={from.x}
+            y1={from.y - 6}
+            x2={x}
+            y2={y - 4}
+            stroke="#000"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            opacity={0.3}
+          />
+          <line
+            x1={from.x - 4}
+            y1={from.y}
+            x2={x - 3}
+            y2={y}
+            stroke="#000"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            opacity={0.4}
+          />
+          <line
+            x1={from.x + 4}
+            y1={from.y}
+            x2={x + 3}
+            y2={y}
+            stroke="#000"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            opacity={0.3}
+          />
+        </g>
+      )}
+
       {/* Bola */}
       <g transform={`translate(${x}, ${y}) rotate(${rotation})`}>
         <image
@@ -633,7 +807,7 @@ function LegacyBallFlying({
           width={size}
           height={size}
           style={{
-            filter: `drop-shadow(0 ${2 + heightAboveGround / 30}px ${4 + heightAboveGround / 20}px rgba(0,0,0,0.4))`,
+            filter: `drop-shadow(0 ${4 + heightAboveGround / 25}px ${6 + heightAboveGround / 15}px rgba(0,0,0,0.5))`,
           }}
         />
       </g>
@@ -641,7 +815,7 @@ function LegacyBallFlying({
   );
 }
 
-// Bolinha do placar — preenchido = gol, X = erro, vazio = pendente
+// ─────────────────────────────────────────────────────────────────────────
 function ShotDot({ result, active = false }: { result: ShotResult; active?: boolean }) {
   if (result === 'goal') {
     return (
