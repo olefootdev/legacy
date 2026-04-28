@@ -122,7 +122,7 @@ export function useLegendSocial(slug: string) {
 
   const postMessage = useCallback(
     (input: { managerName: string; managerInitials: string; message: string }) => {
-      const trimmed = input.message.trim().slice(0, 280);
+      const trimmed = input.message.trim().slice(0, 150);
       if (!trimmed) return;
       const initials = (input.managerInitials || input.managerName || '?')
         .toUpperCase()

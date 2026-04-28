@@ -55,7 +55,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
     setDraft('');
   };
 
-  const remaining = 280 - draft.length;
+  const remaining = 150 - draft.length;
   const tooLong = remaining < 0;
 
   return (
@@ -123,7 +123,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
           </div>
           <textarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value.slice(0, 320))}
+            onChange={(e) => setDraft(e.target.value.slice(0, 180))}
             rows={3}
             placeholder={`Manda um recado pra ${legendName.split(' ')[0]}...`}
             className="w-full resize-none border border-white/15 bg-deep-black/60 px-3 py-2.5 text-sm text-white placeholder:text-white/35 focus:border-neon-yellow/55 focus:outline-none"
@@ -139,7 +139,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
                 letterSpacing: '0.16em',
               }}
             >
-              {remaining}/280
+              {remaining}/150
             </span>
             <button
               type="submit"
@@ -171,7 +171,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
                 fontSize: '15px',
               }}
             >
-              Sê o primeiro a deixar uma mensagem.
+              Seja o primeiro a deixar uma mensagem.
             </p>
           </div>
         ) : (

@@ -16,7 +16,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Eyebrow } from '@/components/ui';
 import { ALL_LEGEND_SLUGS, findLegend } from '@/data/legends';
@@ -56,7 +56,7 @@ export function Legend() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-8 sm:py-12">
-          {/* Top bar */}
+          {/* 1. Topbar: Voltar (esquerda) + Buscar lenda (direita, alinhado) */}
           <div className="flex items-center justify-between mb-10 sm:mb-14">
             <button
               type="button"
@@ -67,27 +67,18 @@ export function Legend() {
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </button>
-            <Link
-              to="/"
-              className="text-black/55 hover:text-black font-display uppercase font-black"
-              style={{ fontSize: '11px', letterSpacing: '0.22em' }}
-            >
-              Olefoot
-            </Link>
+            <LegendSearchBar
+              onOpen={() => setSearchOpen(true)}
+              totalCount={ALL_LEGEND_SLUGS.length}
+            />
           </div>
 
-          {/* 1. Search bar — galeria de outras lendas */}
-          <LegendSearchBar
-            onOpen={() => setSearchOpen(true)}
-            totalCount={ALL_LEGEND_SLUGS.length}
-          />
-
-          {/* 2. Eyebrow */}
+          {/* 2. Eyebrow (frase) */}
           <Eyebrow align="center" className="!text-black mb-5 sm:mb-6">
             <span className="!text-black">{legend.epithet}</span>
           </Eyebrow>
 
-          {/* 2. Nome */}
+          {/* 3. Nome */}
           <h1
             className="ole-headline-italic text-black text-center leading-[0.9]"
             style={{ fontSize: 'clamp(72px, 16vw, 144px)' }}
@@ -95,24 +86,25 @@ export function Legend() {
             {legend.name.charAt(0) + legend.name.slice(1).toLowerCase()}
           </h1>
 
-          {/* 3. Régua amarela editorial (Legacy Tech) */}
+          {/* 4. Régua editorial */}
           <div
             className="mx-auto mt-5 w-12 h-[3px] bg-black"
             aria-hidden
           />
 
-          {/* 4. Era + nacionalidade — metadata editorial */}
+          {/* 5. Data/conquista textual editorial — substitui "era · país" */}
           <p
-            className="mt-4 text-center font-display font-bold uppercase text-black/65"
+            className="mt-4 text-center font-display font-black uppercase text-black/75"
             style={{
-              fontSize: '11px',
-              letterSpacing: '0.32em',
+              fontSize: 'clamp(11px, 1.3vw, 12px)',
+              letterSpacing: '0.28em',
+              lineHeight: 1.4,
             }}
           >
-            {legend.era} · {legend.nationality}
+            {legend.signature}
           </p>
 
-          {/* 5. Foto + OVR overlay */}
+          {/* 6. Foto + OVR overlay */}
           <div className="relative mx-auto mt-8 sm:mt-10 w-full max-w-[320px] aspect-[4/5]">
             {legend.photoUrl ? (
               <img
@@ -166,23 +158,9 @@ export function Legend() {
             </div>
           </div>
 
-          {/* 6. Ações — Treinar (centralizado entre foto acima e quote abaixo)
-                + Curtir + Compartilhar */}
-          <div className="mt-9 sm:mt-11">
-            <LegendActions
-              slug={legend.slug}
-              name={legend.name}
-              liked={social.liked}
-              likeCount={social.likeCount}
-              onToggleLike={social.toggleLike}
-              storeHighlightId={legend.storeHighlightId}
-              variant="on-yellow"
-            />
-          </div>
-
-          {/* 7. Frase — fecha o hero */}
+          {/* 7. Frase — quote em Moret italic logo abaixo da foto */}
           <blockquote
-            className="ole-headline-italic mt-9 sm:mt-12 text-black/85 text-center max-w-2xl mx-auto leading-snug"
+            className="ole-headline-italic mt-8 sm:mt-10 text-black/85 text-center max-w-2xl mx-auto leading-snug"
             style={{ fontSize: 'clamp(17px, 2.4vw, 22px)' }}
           >
             "{legend.quote}"
@@ -195,6 +173,19 @@ export function Legend() {
               — {legend.quoteAuthor}
             </p>
           ) : null}
+
+          {/* 8. CTA Treinar + 9. Modal social (Curtir + Compartilhar) */}
+          <div className="mt-9 sm:mt-11">
+            <LegendActions
+              slug={legend.slug}
+              name={legend.name}
+              liked={social.liked}
+              likeCount={social.likeCount}
+              onToggleLike={social.toggleLike}
+              storeHighlightId={legend.storeHighlightId}
+              variant="on-yellow"
+            />
+          </div>
         </div>
       </section>
 
@@ -334,7 +325,7 @@ export function Legend() {
                   letterSpacing: '-0.02em',
                 }}
               >
-                A Voz do Esporte
+                A Voz do Povo
               </h2>
             </header>
             <div className="flex flex-col gap-4">

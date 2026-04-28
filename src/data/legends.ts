@@ -50,6 +50,10 @@ export interface LegendData {
   era: string;
   /** Nacionalidade ("Brasil"). */
   nationality: string;
+  /** Frase-data editorial ("Tricampeão do Mundo · 1958 · 1962 · 1970").
+   *  Substitui a linha "era · nacionalidade" no hero com algo mais
+   *  emocional/cinematográfico. Sempre maiúsculo. */
+  signature: string;
   /** OVR 0-100 do museum (média do DNA + premium). */
   ovr: number;
   /** Citação principal (atribuída à própria lenda). */
@@ -84,6 +88,7 @@ export const LEGENDS_BY_SLUG: Record<string, LegendData> = {
     epithet: 'O Rei do Futebol',
     era: '1956 – 1977',
     nationality: 'Brasil',
+    signature: 'Tricampeão do Mundo · 1958 · 1962 · 1970',
     ovr: 99,
     quote:
       'Eu nasci para jogar futebol, da mesma forma que Beethoven nasceu para escrever música e Michelangelo nasceu para pintar.',
@@ -134,6 +139,7 @@ export const LEGENDS_BY_SLUG: Record<string, LegendData> = {
     epithet: 'A Alegria do Povo',
     era: '1953 – 1973',
     nationality: 'Brasil',
+    signature: 'Bicampeão do Mundo · Bola de Ouro 1962',
     ovr: 95,
     quote:
       'Eu jogava futebol pela alegria de jogar. Não pensava em prêmio, em dinheiro, em fama.',
@@ -178,6 +184,7 @@ export const LEGENDS_BY_SLUG: Record<string, LegendData> = {
     epithet: 'O Galinho de Quintino',
     era: '1971 – 1994',
     nationality: 'Brasil',
+    signature: 'Mundial Interclubes 1981 · Geração de Ouro 82',
     ovr: 94,
     quote: 'O futebol arte é o futebol que faz a torcida sonhar.',
     quoteAuthor: 'Arthur Antunes Coimbra',
