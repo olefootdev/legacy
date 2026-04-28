@@ -359,6 +359,28 @@ export type GameAction =
       takerName: string;
       minute: number;
     }
+  /** Sprint L3 — escanteio/falta interativo: dispara overlay no manager. */
+  | {
+      type: 'AWARD_SET_PIECE';
+      mode: 'corner' | 'free_kick';
+      side: 'home' | 'away';
+      cornerSide?: 'left' | 'right';
+      distance?: number;
+      zone?: 'center' | 'left' | 'right';
+    }
+  /** Manager confirmou a batida: aplica resultado + adiciona narrativa. */
+  | {
+      type: 'RESOLVE_SET_PIECE';
+      takerId: string;
+      takerName: string;
+      type: 'short' | 'near_post' | 'far_post' | 'direct_shot' | 'cross' | 'short_pass';
+      targetId?: string;
+      targetName?: string;
+      /** Outcome calculado (caller que computa probabilidade). */
+      outcome: 'goal' | 'shot_saved' | 'cleared' | 'recycled';
+    }
+  /** Cancela set-piece pendente (timeout, etc). */
+  | { type: 'CANCEL_SET_PIECE' }
   | {
       /** Injeta comando de voz num jogador da casa. */
       type: 'VOICE_COMMAND_ISSUED';

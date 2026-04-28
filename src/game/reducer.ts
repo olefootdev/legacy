@@ -961,6 +961,88 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
+    case 'AWARD_SET_PIECE': {
+      const lm = state.liveMatch;
+      if (!lm) return state;
+      if (lm.pendingSetPiece) return state; // already pending
+      const a = action as any;
+      return {
+        ...state,
+        liveMatch: {
+          ...lm,
+          // Limpa flags do engine pra não dupla-resolução: o set-piece passa pro overlay
+          pendingCornerForSide: a.mode === 'corner' ? null : lm.pendingCornerForSide,
+          pendingFreeKickForSide: a.mode === 'free_kick' ? null : lm.pendingFreeKickForSide,
+          pendingSetPiece: {
+            mode: a.mode,
+            side: a.side,
+            cornerSide: a.cornerSide,
+            distance: a.distance,
+            zone: a.zone,
+          },
+        },
+      };
+    }
+    case 'RESOLVE_SET_PIECE': {
+      const lm = state.liveMatch;
+      if (!lm || !lm.pendingSetPiece) return state;
+      const a = action as any;
+      const minute = lm.minute ?? 0;
+      const outcome: 'goal' | 'shot_saved' | 'cleared' | 'recycled' = a.outcome;
+      const isCorner = lm.pendingSetPiece.mode === 'corner';
+
+      // Narrativa
+      const targetPart = a.targetName ? ` ${a.targetName} sobe` : '';
+      let narrativeText: string;
+      switch (outcome) {
+        case 'goal':
+          narrativeText = isCorner
+            ? `${a.takerName} cobra escanteio,${targetPart} e marca de cabeça!`
+            : `${a.takerName} cobra falta direto e supera a barreira — GOL!`;
+          break;
+        case 'shot_saved':
+          narrativeText = isCorner
+            ? `${a.takerName} cruza,${targetPart} mas o goleiro defende firme.`
+            : `${a.takerName} chuta a falta — goleiro defende.`;
+          break;
+        case 'cleared':
+          narrativeText = `Defesa adversária afasta a bola após cobrança de ${a.takerName}.`;
+          break;
+        default:
+          narrativeText = `${a.takerName} bate, jogada continua e o ataque é reciclado.`;
+      }
+
+      const ev: MatchEventEntry = {
+        id: uid(),
+        minute,
+        text: narrativeText,
+        kind: outcome === 'goal' ? 'goal_home' : 'narrative',
+      };
+
+      // Atualiza placar se gol
+      let homeScore = lm.homeScore;
+      let awayScore = lm.awayScore;
+      if (outcome === 'goal') {
+        if (lm.pendingSetPiece.side === 'home') homeScore += 1;
+        else awayScore += 1;
+      }
+
+      return {
+        ...state,
+        liveMatch: {
+          ...lm,
+          homeScore,
+          awayScore,
+          events: [ev, ...lm.events],
+          pendingSetPiece: null, // limpa direto — narrativa fica no events
+        },
+      };
+    }
+    case 'CANCEL_SET_PIECE': {
+      const lm = state.liveMatch;
+      if (!lm) return state;
+      return { ...state, liveMatch: { ...lm, pendingSetPiece: null } };
+    }
     case 'ADD_LIVE_MATCH_EVENT': {
       const lm = state.liveMatch;
       if (!lm) return state;
