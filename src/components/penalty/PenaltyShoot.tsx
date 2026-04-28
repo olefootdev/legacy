@@ -4,6 +4,13 @@ import { PenaltyPowerBar } from './PenaltyPowerBar';
 import { PenaltyShootSVG } from './PenaltyShootSVG';
 import { PenaltyShootoutScore } from './PenaltyShootoutScore';
 import { resolvePenalty } from './usePenaltyResolution';
+import {
+  playGoalNet,
+  playPost,
+  playSave,
+  playSwoosh,
+  playThock,
+} from './penaltySounds';
 import type {
   PenaltyKeeper,
   PenaltyOutcome,
@@ -152,6 +159,7 @@ export function PenaltyShoot({
 
   function startCharge(idx: SlotIndex) {
     if (phase !== 'pick') return;
+    playThock();
     setPickedSlot(idx);
     setPhase('charging');
     setPower(0);
@@ -189,6 +197,27 @@ export function PenaltyShoot({
     setOutcome(result.outcome);
     setLanding(result.landing);
     setFinalRotation(result.finalRotation);
+
+    // Som da batida (intensidade pela força)
+    playSwoosh(0.6 + finalPower * 0.6);
+
+    // Som do impacto, sincronizado com o landing
+    const flightDur = finalPower > 0.88 ? 320 : finalPower > 0.32 ? 380 : 520;
+    window.setTimeout(() => {
+      switch (result.outcome) {
+        case 'goal':
+          playGoalNet();
+          break;
+        case 'save':
+        case 'weak-save':
+          playSave();
+          break;
+        case 'post':
+          playPost();
+          break;
+        // 'wide' e 'over-bar' não tocam som de impacto (saiu da câmera)
+      }
+    }, flightDur - 30);
 
     window.setTimeout(() => {
       setPhase('result');

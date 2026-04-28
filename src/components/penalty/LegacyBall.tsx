@@ -34,7 +34,7 @@ export function LegacyBall({
       )}
       <g transform={`translate(${cx}, ${cy}) rotate(${rotation})`}>
         <image
-          href="/assets/legacy-ball.png"
+          href="/assets/legacy-ball-256.png"
           x={-half}
           y={-half}
           width={size}
@@ -121,7 +121,7 @@ export function LegacyBallFlying({
       />
       <g transform={`translate(${x}, ${y}) rotate(${rotation})`}>
         <image
-          href="/assets/legacy-ball.png"
+          href="/assets/legacy-ball-256.png"
           x={-half}
           y={-half}
           width={size}
