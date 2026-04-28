@@ -54,11 +54,6 @@ import {
   userParticipatesInChallenge,
 } from '@/supabase/friendlyChallenges';
 import { MomentumFieldEffect } from '@/components/matchday/MomentumFieldEffect';
-import { InteractiveMomentOverlay } from '@/components/matchday/InteractiveMomentOverlay';
-import { SpecialEventOverlay } from '@/components/matchday/SpecialEventOverlay';
-import { useSkillVisuals } from '@/components/matchday/SkillVisualEffect';
-import type { InteractiveMoment, InteractiveMomentOption } from '@/match/interactiveMoments';
-import type { SpecialEvent } from '@/match/specialEvents';
 
 const LIVE_MATCH_ENGINE_MODE = 'test2d' as const;
 
@@ -713,21 +708,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PitchPlayerState | null>(null);
 
-  // Fase 2 — Core Gameplay: Momentos Interativos + Skills + Eventos Especiais
-  const [interactiveMoment, setInteractiveMoment] = useState<InteractiveMoment | null>(null);
-  const [specialEvent, setSpecialEvent] = useState<SpecialEvent | null>(null);
-  const { activeSkills, addSkillVisual } = useSkillVisuals();
-
-  const handleInteractiveMomentChoice = useCallback((option: InteractiveMomentOption) => {
-    console.log('[Interactive Moment] Escolha:', option.action, 'xG:', option.xG);
-    setInteractiveMoment(null);
-  }, []);
-
-  const handleInteractiveMomentTimeout = useCallback(() => {
-    console.log('[Interactive Moment] Timeout - IA decide');
-    setInteractiveMoment(null);
-  }, []);
-
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const apply = () => setPrefersReducedMotion(mq.matches);
@@ -1333,17 +1313,6 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           }}
         />
       )}
-
-      {/* Fase 2 — Core Gameplay: Overlays */}
-      <InteractiveMomentOverlay
-        moment={interactiveMoment}
-        onChoose={handleInteractiveMomentChoice}
-        onTimeout={handleInteractiveMomentTimeout}
-      />
-      <SpecialEventOverlay
-        event={specialEvent}
-        onDismiss={() => setSpecialEvent(null)}
-      />
 
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <Link to="/" className="text-[10px] sm:text-xs font-bold text-gray-500 hover:text-neon-yellow">
