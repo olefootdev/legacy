@@ -244,21 +244,47 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </div>
 
-        {/* Status do jogo — Inter regular, sem display caps */}
+        {/* Status do jogo — número real de managers, ou "Fase Beta" enquanto a base é pequena. */}
         <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
             Status do jogo
           </p>
-          <p
-            className="text-white mt-1"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
-          >
-            Somos:{' '}
-            <span className="text-neon-yellow font-semibold tabular-nums">
-              {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
-            </span>{' '}
-            {totalManagers === 1 ? 'clube' : 'clubes'}
-          </p>
+          {totalManagers == null ? (
+            <p
+              className="mt-1"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+            >
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-neon-yellow"
+                style={{
+                  border: '1px solid var(--color-divider-yellow-strong)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '11px',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                }}
+              >
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full"
+                  style={{ background: 'var(--color-neon-yellow)' }}
+                  aria-hidden
+                />
+                Fase Beta
+              </span>
+            </p>
+          ) : (
+            <p
+              className="text-white mt-1"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+            >
+              Somos:{' '}
+              <span className="text-neon-yellow font-semibold tabular-nums">
+                {totalManagers.toLocaleString('pt-BR')}
+              </span>{' '}
+              {totalManagers === 1 ? 'manager' : 'managers'}
+            </p>
+          )}
         </div>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">

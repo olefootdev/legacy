@@ -1,9 +1,10 @@
 /**
- * useTotalManagers — count global de managers cadastrados.
+ * useTotalManagers — count global REAL de managers cadastrados.
  *
- * Busca via supabase (head request, sem retornar rows). Fallback estável
- * se supabase não estiver configurado ou falhar — número crescente
- * baseado em data, pra parecer vivo no v1.
+ * Consulta RPC `get_total_managers()` (SECURITY DEFINER) que retorna
+ * COUNT(*) de profiles ativos. Sem fallback mockado: se Supabase não
+ * estiver disponível ou retornar erro, retorna `null` — a UI exibe
+ * "Fase Beta" em vez de número fictício.
  *
  * Cacheia em sessionStorage por 5min pra evitar over-fetch.
  */
@@ -30,6 +31,7 @@ function readCache(): CacheEntry | null {
     return null;
   }
 }
+
 function writeCache(count: number) {
   if (typeof window === 'undefined') return;
   try {
@@ -39,48 +41,34 @@ function writeCache(count: number) {
   }
 }
 
-/** Fallback determinístico crescente — começa num baseline plausível. */
-function fallbackCount(): number {
-  const epoch = new Date('2026-04-01T00:00:00Z').getTime();
-  const daysSince = Math.max(0, Math.floor((Date.now() - epoch) / 86_400_000));
-  return 320 + daysSince * 7; // ~7 novos managers/dia
-}
-
 export function useTotalManagers(): number | null {
   const cached = readCache();
   const [count, setCount] = useState<number | null>(cached?.count ?? null);
 
   useEffect(() => {
-    if (cached) return; // evita fetch redundante
+    if (cached) return;
     let cancelled = false;
 
     const run = async () => {
       if (!isSupabaseConfigured()) {
-        const fb = fallbackCount();
-        if (!cancelled) {
-          setCount(fb);
-          writeCache(fb);
-        }
+        // Sem Supabase: deixa null (UI mostra "Fase Beta", não número fictício).
         return;
       }
       try {
         const sb = getSupabase();
-        if (!sb) throw new Error('supabase client unavailable');
-        const { count: c, error } = await sb
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-        if (error) throw error;
-        const value = (c ?? 0) > 0 ? (c ?? fallbackCount()) : fallbackCount();
-        if (!cancelled) {
+        if (!sb) return;
+        const { data, error } = await sb.rpc('get_total_managers');
+        if (error) {
+          console.warn('[useTotalManagers] rpc error:', error.message);
+          return;
+        }
+        const value = typeof data === 'number' ? data : null;
+        if (value != null && !cancelled) {
           setCount(value);
           writeCache(value);
         }
-      } catch {
-        const fb = fallbackCount();
-        if (!cancelled) {
-          setCount(fb);
-          writeCache(fb);
-        }
+      } catch (e) {
+        console.warn('[useTotalManagers] failed:', e);
       }
     };
     void run();

@@ -3725,6 +3725,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_total_managers: { Args: never; Returns: number }
       increment_vocabulary_usage: {
         Args: { p_phrase_id: string }
         Returns: undefined
