@@ -26,6 +26,7 @@ import { pickGoalOverlayStoryline } from '@/match/goalOverlayNarration';
 import { GOAL_SCORER_OVERLAY_MS } from '@/gamespirit/spiritStateMachine';
 import { fetchKeyMomentNarration } from '@/match/narrativeKeyMomentClient';
 import { PenaltyKickModalV2 as PenaltyKickModal } from '@/match/PenaltyKickModalV2';
+import { SetPieceModal } from '@/match/SetPieceModal';
 import { SubstitutionOverlay } from '@/components/matchquick/SubstitutionOverlay';
 import { RedCardOverlay } from '@/components/matchquick/RedCardOverlay';
 import { AssistantAI, type HalftimeScript } from '@/components/matchquick/AssistantAI';
@@ -3673,6 +3674,9 @@ export function MatchQuick() {
           }}
         />
       )}
+
+      {/* Sprint L3 — Set-piece interativo (escanteio/falta) */}
+      <SetPieceModal />
 
       {/* ─── Sprint 1: Overlay de Momento Interativo ─────────────────────── */}
       {live?.activeInteractiveMoment && (

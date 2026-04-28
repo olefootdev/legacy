@@ -18,6 +18,7 @@ import { LiveStatsPanel } from '@/components/matchday/LiveStatsPanel';
 import { PitchNarrationOverlay } from '@/components/matchday/PitchNarrationOverlay';
 import { CoachCommandInput } from '@/components/matchday/CoachCommandInput';
 import { PenaltyKickModalV2 } from '@/match/PenaltyKickModalV2';
+import { SetPieceModal } from '@/match/SetPieceModal';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import type { LiveMatchSnapshot, LiveMatchClockPeriod, PitchPlayerState } from '@/engine/types';
 import { interpolateBallPosition, type BallTrajectoryState } from '@/engine/test2d/ballTrajectory';
@@ -1313,6 +1314,9 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           }}
         />
       )}
+
+      {/* Sprint L3 — Set-piece interativo */}
+      <SetPieceModal />
 
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <Link to="/" className="text-[10px] sm:text-xs font-bold text-gray-500 hover:text-neon-yellow">

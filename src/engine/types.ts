@@ -248,6 +248,23 @@ export interface LiveMatchSnapshot {
   /** Sprint 1: Bônus de performance acumulados */
   performanceBonuses?: import('@/match/quickPerformanceBonuses').PerformanceBonus[];
 
+  /** Sprint L3: Set-piece pendente (escanteio/falta) aguardando escolha do manager. */
+  pendingSetPiece?: {
+    mode: 'corner' | 'free_kick';
+    side: 'home' | 'away';
+    cornerSide?: 'left' | 'right';
+    distance?: number;
+    zone?: 'center' | 'left' | 'right';
+    /** Resolved choice (preenchido após confirmação). */
+    takerId?: string;
+    takerName?: string;
+    type?: 'short' | 'near_post' | 'far_post' | 'direct_shot' | 'cross' | 'short_pass';
+    targetId?: string;
+    targetName?: string;
+    /** Outcome após resolução: 'goal' | 'shot_saved' | 'cleared' | 'recycled' */
+    outcome?: 'goal' | 'shot_saved' | 'cleared' | 'recycled';
+  } | null;
+
   /* ── Partida ao vivo 2D (`test2d`) ─────────────────────────────────── */
 
   /** Jogadores visitantes simulados com posicionamento tático. */
