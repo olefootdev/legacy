@@ -653,7 +653,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const dispatch = useGameDispatch();
 
   // P7: useShallow consolidates 12 selectors into 1, reducing Zustand subscribers
-  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, staff, tacticalObedience, managerRelationByPlayer } = useGameStore(
+  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, pressing, staff, tacticalObedience, managerRelationByPlayer } = useGameStore(
     useShallow((s) => ({
       live: s.liveMatch,
       playersById: s.players,
@@ -663,6 +663,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       defensiveLine: s.manager.defensiveLine,
       tempo: s.manager.tempo,
       tacticalStyle: s.manager.tacticalStyle,
+      pressing: s.manager.pressing,
       staff: s.manager.staff,
       tacticalObedience: s.tacticalObedience,
       managerRelationByPlayer: s.managerRelationByPlayer,
@@ -683,11 +684,12 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       defensiveLine,
       tempo,
       tacticalStyle,
+      pressing,
       isHomeFixture: fixture.isHome,
       homeStaffMatch,
       homeStaffPlayerBoosts,
     }),
-    [tacticalMentality, defensiveLine, tempo, tacticalStyle, fixture.isHome, homeStaffMatch, homeStaffPlayerBoosts],
+    [tacticalMentality, defensiveLine, tempo, tacticalStyle, pressing, fixture.isHome, homeStaffMatch, homeStaffPlayerBoosts],
   );
 
   const [session, setSession] = useState(0);

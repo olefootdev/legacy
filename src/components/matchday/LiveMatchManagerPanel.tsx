@@ -17,6 +17,7 @@ import {
   type StyleAxisKey,
 } from '@/tactics/playingStyle';
 import { cn } from '@/lib/utils';
+import { PressingControls } from './PressingControls';
 import { CoachCommandInput } from './CoachCommandInput';
 import type { CommandResult } from '@/match/coachCommands';
 
@@ -687,6 +688,9 @@ function LegacyFineTune({
           </div>
         </div>
       ) : null}
+
+      {/* Sprint L4 — Prensa contextual */}
+      <PressingControls />
     </div>
   );
 }
