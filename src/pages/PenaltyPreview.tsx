@@ -181,8 +181,10 @@ export function PenaltyPreview() {
     const slotCol = slot % SLOT_COLS;
 
     // 0. CHUTE FRACO — erro do manager (não carregou a barra)
-    // Identificação imediata: bola dribla devagar pro slot, goleiro pega sem dificuldade
+    // Identificação imediata: bola dribla devagar pro slot,
+    // goleiro mergulha pro MESMO lado e pega tranquilo
     if (finalPower < POWER_SWEET_LOW) {
+      setKeeperSlot(slot); // goleiro vai exatamente pra onde a bola foi
       setOutcome('weak-save');
       setLanding({ x: target.cx, y: target.cy });
       window.setTimeout(() => setPhase('result'), 950);
