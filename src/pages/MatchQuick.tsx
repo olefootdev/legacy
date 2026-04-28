@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, LogOut, Plus, Trophy, RotateCcw, X } from 'lucide-react';
@@ -28,7 +28,8 @@ import { fetchKeyMomentNarration } from '@/match/narrativeKeyMomentClient';
 import { PenaltyKickModal } from '@/match/PenaltyKickModal';
 import { SubstitutionOverlay } from '@/components/matchquick/SubstitutionOverlay';
 import { RedCardOverlay } from '@/components/matchquick/RedCardOverlay';
-import { AssistantAI } from '@/components/matchquick/AssistantAI';
+import { AssistantAI, type HalftimeScript } from '@/components/matchquick/AssistantAI';
+import { AssistantPanel } from '@/match/AssistantPanel';
 import { StreakBar } from '@/components/match/StreakBar';
 import { MomentumBar } from '@/components/match/MomentumBar';
 import { InstantRewards } from '@/components/match/InstantRewards';
@@ -176,6 +177,302 @@ function momentumPressure01(
   return Math.min(0.96, Math.max(0.04, base + possessionBias + bx * 0.26 + narrative));
 }
 
+/**
+ * QuickPlayerRowCard — Sprint D Fase 1.
+ * Adapta o pattern `view-player-card` (TransferRowCard) ao contexto de partida.
+ * Compacto: foto 64-80px com OVR Moret overlay + info (nome, pos, fadiga, impact).
+ *
+ * Variantes:
+ *  - 'home-active'  : clicável (substituição), suporta selected/tired/top
+ *  - 'home-sent-off': expulso (rail vermelho, ícone)
+ *  - 'away'         : estático, IA, sem foto OVR (sintético)
+ */
+interface QuickPlayerRowCardProps {
+  variant: 'home-active' | 'home-sent-off' | 'away';
+  rank?: number;          // 1..N na lista de impacto
+  num: number;
+  name: string;
+  pos: string;
+  ovr?: number;           // Home only (a partir de overallFromAttributes)
+  fatigue?: number;       // Home only (0..100)
+  impact?: number;        // 0..10
+  isSelected?: boolean;
+  isTop?: boolean;        // Top 3 do impact
+  badges?: ReactNode;     // PlayerEventStrip
+  photoSeed?: string;     // Para picsum determinístico
+  onClick?: () => void;
+}
+
+function QuickPlayerRowCard({
+  variant,
+  rank,
+  num,
+  name,
+  pos,
+  ovr,
+  fatigue = 0,
+  impact,
+  isSelected = false,
+  isTop = false,
+  badges,
+  photoSeed,
+  onClick,
+}: QuickPlayerRowCardProps) {
+  const isSentOff = variant === 'home-sent-off';
+  const isAway = variant === 'away';
+  const isTired = !isSentOff && !isAway && fatigue >= 68;
+
+  const railClass = isSelected
+    ? 'border-l-neon-yellow bg-neon-yellow/[0.08]'
+    : isSentOff
+      ? 'border-l-[var(--color-danger)]'
+      : isTired
+        ? 'border-l-[var(--color-warning)]'
+        : isTop
+          ? isAway
+            ? 'border-l-white/45'
+            : 'border-l-neon-yellow'
+          : 'border-l-white/15';
+
+  const photoUrl = photoSeed
+    ? `https://picsum.photos/seed/quick-${photoSeed}/200/240`
+    : `https://picsum.photos/seed/quick-${num}-${name}/200/240`;
+
+  const Wrapper: any = onClick && !isSentOff ? motion.button : motion.div;
+  const wrapperProps = onClick && !isSentOff
+    ? { type: 'button', onClick }
+    : {};
+
+  const fatigueColor =
+    fatigue >= 80
+      ? 'text-[var(--color-danger)]'
+      : fatigue >= 60
+        ? 'text-[var(--color-warning)]'
+        : 'text-white/55';
+  const fatigueBarColor =
+    fatigue >= 80
+      ? 'bg-[var(--color-danger)]'
+      : fatigue >= 60
+        ? 'bg-[var(--color-warning)]'
+        : 'bg-[var(--color-success)]';
+
+  return (
+    <Wrapper
+      layout="position"
+      initial={false}
+      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      {...wrapperProps}
+      className={cn(
+        'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all duration-200',
+        onClick && !isSentOff ? 'text-left hover:border-neon-yellow/40 hover:-translate-y-0.5 cursor-pointer' : '',
+        isSentOff ? 'opacity-85' : '',
+        railClass,
+      )}
+      style={{ borderRadius: 'var(--radius-md)' }}
+    >
+      {/* Foto + OVR overlay (só home) */}
+      <div
+        className="relative w-16 sm:w-20 flex-shrink-0 overflow-hidden bg-black border-r border-white/8"
+        aria-hidden
+      >
+        {!isAway ? (
+          <>
+            <img
+              src={photoUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
+              referrerPolicy="no-referrer"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent" />
+            {ovr !== undefined && !isSentOff ? (
+              <div className="absolute top-1 left-1.5 z-10">
+                <p
+                  className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.95)]"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: 'clamp(20px, 3vw, 28px)',
+                    letterSpacing: '-0.04em',
+                  }}
+                >
+                  {ovr}
+                </p>
+              </div>
+            ) : null}
+            {isSentOff ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60">
+                <RedCardIcon />
+              </div>
+            ) : null}
+          </>
+        ) : (
+          // Away: silhueta mínima IA com inicial
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/10 to-white/[0.02]">
+            <span
+              className="italic text-white/35 leading-none"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(22px, 3vw, 30px)',
+                letterSpacing: '-0.04em',
+              }}
+            >
+              {(name?.[0] ?? '?').toUpperCase()}
+            </span>
+          </div>
+        )}
+        {/* POS chip bottom */}
+        <div className="absolute bottom-1 left-1 z-10 inline-flex items-center bg-black/75 px-1.5 py-0.5">
+          <span
+            className="font-display font-bold uppercase text-white/90"
+            style={{
+              fontSize: '8px',
+              letterSpacing: '0.18em',
+            }}
+          >
+            {pos}
+          </span>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5">
+        {/* Rank */}
+        {rank !== undefined ? (
+          <span
+            className="shrink-0 italic tabular-nums leading-none w-5 text-center"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: '15px',
+              color: isSentOff
+                ? 'rgba(255,80,80,0.65)'
+                : isTop
+                  ? isAway
+                    ? 'rgba(255,255,255,0.9)'
+                    : 'var(--color-neon-yellow)'
+                  : 'rgba(255,255,255,0.35)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {isSentOff ? '—' : rank}
+          </span>
+        ) : null}
+
+        {/* Centro: nome + meta */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center min-w-0">
+            <span
+              className="truncate uppercase"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '13px',
+                fontWeight: 800,
+                letterSpacing: '0.03em',
+                color: isSentOff ? 'rgba(255,255,255,0.85)' : '#fff',
+                lineHeight: 1.05,
+              }}
+            >
+              {num} {name}
+            </span>
+            {badges}
+            {isSentOff ? (
+              <span
+                className="shrink-0 ml-1.5 text-[var(--color-danger)] uppercase"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Expulso
+              </span>
+            ) : null}
+          </div>
+          {!isAway && !isSentOff ? (
+            <>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span
+                  className={cn('tabular-nums', fatigueColor)}
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '9px',
+                    letterSpacing: '0.18em',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {Math.round(fatigue)}% cansaço
+                </span>
+              </div>
+              <div className="mt-1 h-[2px] bg-white/8 overflow-hidden max-w-[7rem]">
+                <div
+                  className={cn('h-full transition-all duration-700', fatigueBarColor)}
+                  style={{ width: `${Math.min(100, fatigue)}%` }}
+                  aria-hidden
+                />
+              </div>
+            </>
+          ) : (
+            <div
+              className="text-white/45 uppercase mt-0.5"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '9px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {isSentOff ? pos : 'IA · CPU'}
+            </div>
+          )}
+        </div>
+
+        {/* Impact — Moret italic */}
+        {impact !== undefined && !isSentOff ? (
+          <span
+            className={cn(
+              'shrink-0 italic tabular-nums leading-none',
+              isAway ? 'text-white/85' : 'text-neon-yellow',
+            )}
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(18px, 2.2vw, 22px)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {impact.toFixed(2)}
+          </span>
+        ) : null}
+        {isSentOff ? <RedCardIcon /> : null}
+      </div>
+    </Wrapper>
+  );
+}
+
+interface MvpSnapshot {
+  playerId: string;
+  name: string;
+  num: number;
+  pos: string;
+  ovr?: number;
+  rating: number;     // impact 0..10
+  goals: number;
+  assists: number;
+  portraitUrl?: string | null;
+}
+
+interface MatchStats {
+  shotsHome: number;
+  shotsAway: number;
+  possessionHome: number; // 0..100
+  cornersHome: number;
+  yellowsHome: number;
+  redsHome: number;
+}
+
 interface EndSummary {
   homeShort: string;
   awayShort: string;
@@ -185,6 +482,8 @@ interface EndSummary {
   awayScore: number;
   events: { id: string; text: string }[];
   result: 'win' | 'draw' | 'loss';
+  mvp?: MvpSnapshot;
+  stats?: MatchStats;
 }
 
 interface QuickAwayPlayer {
@@ -245,6 +544,8 @@ export function MatchQuick() {
   const dispatch = useGameDispatch();
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
+  // Derivados base — declarados aqui no topo para evitar TDZ em deps de hooks (effects/memos abaixo).
+  const pitch = live?.homePlayers ?? [];
   const lineupIds = useGameStore((s) => s.lineup);
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
@@ -274,6 +575,8 @@ export function MatchQuick() {
 
   // Assistente técnico
   const [assistantEvent, setAssistantEvent] = useState<AssistantEvent | null>(null);
+  /** Sprint D: chave que dispara o fluxo de chat scriptado de intervalo. */
+  const [halftimeAssistantKey, setHalftimeAssistantKey] = useState<number | null>(null);
   const shownAssistantEventsRef = useRef(new Set<string>());
   const halftimeForceEndRef = useRef<(() => void) | null>(null);
   const lastAssistantShownMsRef = useRef<number>(0);
@@ -313,8 +616,8 @@ export function MatchQuick() {
 
   // Novos overlays de substituição e cartão vermelho
   const [substitutionOverlay, setSubstitutionOverlay] = useState<{
-    playerOut: { name: string; number: number; position: string };
-    playerIn: { name: string; number: number; position: string };
+    playerOut: { playerId?: string; name: string; number: number; position: string };
+    playerIn: { playerId?: string; name: string; number: number; position: string };
     reason: 'injury' | 'tactical' | 'red_card';
   } | null>(null);
   const [redCardOverlay, setRedCardOverlay] = useState<{
@@ -333,11 +636,13 @@ export function MatchQuick() {
     // Mostrar overlay de substituição
     setSubstitutionOverlay({
       playerOut: {
+        playerId: outPlayerId,
         name: outPlayer.name,
         number: outPlayer.num,
         position: outPlayer.pos,
       },
       playerIn: {
+        playerId: inPlayerId,
         name: inPlayer.name,
         number: inPlayer.num,
         position: inPlayer.pos,
@@ -696,20 +1001,15 @@ export function MatchQuick() {
           htTimersRef.current.forEach(clearTimeout);
           htTimersRef.current = [];
           setHalfTimeUi(true);
-          // Assistente do intervalo
-          const st = getGameState().liveMatch;
+          // Assistente do intervalo — agora abre o AssistantAI com fluxo scriptado
           lastAssistantShownMsRef.current = Date.now();
-          setAssistantEvent({
-            kind: 'halftime',
-            currentFormation: lineupIds?.formation ?? '4-3-3',
-            subsUsed: st?.substitutionsUsed ?? 0,
-            subsMax: 3,
-          });
+          setHalftimeAssistantKey(Date.now());
           const endHalftime = () => {
             htTimersRef.current.forEach(clearTimeout);
             htTimersRef.current = [];
             setHalfTimeUi(false);
             setAssistantEvent(null);
+            setHalftimeAssistantKey(null);
             htRef.current = 2;
             loop();
           };
@@ -1244,6 +1544,41 @@ export function MatchQuick() {
     if (!live || isBlockingNonQuickMatch(live)) return;
     if (live.phase !== 'postgame' || finalizedRef.current) return;
     finalizedRef.current = true;
+
+    // ─ MVP: melhor do home por impact (homeRanked já está sorted desc)
+    let mvpSnapshot: MvpSnapshot | undefined;
+    if (homeRanked.length > 0) {
+      const top = homeRanked[0];
+      const entity = playersById[top.player.playerId];
+      const goals = live.events.filter(
+        (e) => e.kind === 'goal_home' && e.playerId === top.player.playerId,
+      ).length;
+      const assists = live.events.filter(
+        (e: any) => e.kind === 'assist_home' && e.playerId === top.player.playerId,
+      ).length;
+      mvpSnapshot = {
+        playerId: top.player.playerId,
+        name: top.player.name,
+        num: top.player.num,
+        pos: top.player.pos,
+        ovr: entity ? overallFromAttributes(entity.attrs) : undefined,
+        rating: top.impact,
+        goals,
+        assists,
+        portraitUrl: entity ? playerPortraitSrc(entity, 256, 256) : null,
+      };
+    }
+
+    // ─ Stats agregadas
+    const shotsHome = live.events.filter((e) => e.kind === 'shot_home').length;
+    const shotsAway = live.events.filter((e) => e.kind === 'shot_away').length;
+    const cornersHome = live.events.filter((e) =>
+      /escanteio.*(casa|home)|córner.*(casa|home)/i.test(e.text ?? ''),
+    ).length;
+    const yellowsHome = live.events.filter((e) => e.kind === 'yellow_home').length;
+    const redsHome = live.events.filter((e) => e.kind === 'red_home').length;
+    const possessionHome = live.possession === 'home' ? 58 : 42;
+
     setSummary({
       homeShort: live.homeShort,
       awayShort: live.awayShort,
@@ -1253,6 +1588,8 @@ export function MatchQuick() {
       awayScore: live.awayScore,
       events: live.events.map((e) => ({ id: e.id, text: e.text })),
       result: live.homeScore > live.awayScore ? 'win' : live.homeScore < live.awayScore ? 'loss' : 'draw',
+      mvp: mvpSnapshot,
+      stats: { shotsHome, shotsAway, possessionHome, cornersHome, yellowsHome, redsHome },
     });
     dispatch({ type: 'FINALIZE_MATCH' });
     trackMissionEvent('fast_match_completed');
@@ -1309,7 +1646,68 @@ export function MatchQuick() {
   }, [playersById, onPitchIds, maxOvr]);
 
   const homeStats = live?.homeStats ?? {};
-  const pitch = live?.homePlayers ?? [];
+
+  // Sprint D Fase 2: script do AssistantAI no intervalo (formações, estilos, jogadores cansados)
+  const halftimeScript = useMemo<HalftimeScript>(() => {
+    const currentFormation = (lineupIds?.formation ?? '4-3-3') as FormationSchemeId;
+    const allFormations: FormationSchemeId[] = [
+      '4-3-3',
+      '4-4-2',
+      '4-2-3-1',
+      '3-5-2',
+      '4-5-1',
+      '5-3-2',
+      '3-4-3',
+    ];
+    // Esconde a formação atual e mantém pelo menos 5
+    const formations = allFormations
+      .filter((f) => f !== currentFormation)
+      .slice(0, 6)
+      .map((f) => ({ id: f, label: f }));
+
+    const playStyles = [
+      { id: 'PRESSAO_ALTA', label: 'Pressão Alta' },
+      { id: 'POSSE_CONTROLADA', label: 'Posse Controlada' },
+      { id: 'TRANSICAO_RAPIDA', label: 'Contra-Ataque Rápido' },
+      { id: 'BLOCO_BAIXO', label: 'Bloco Baixo' },
+      { id: 'JOGO_DIRETO', label: 'Jogo Direto' },
+    ];
+
+    // Top 3 mais cansados (em campo)
+    const tiredPlayers = (live?.homePlayers ?? [])
+      .slice()
+      .sort((a, b) => (b.fatigue ?? 0) - (a.fatigue ?? 0))
+      .slice(0, 3)
+      .map((p) => ({
+        id: p.playerId,
+        label: `${p.num} ${p.name} — ${Math.round(p.fatigue ?? 0)}% cansaço`,
+      }));
+
+    return {
+      formations,
+      playStyles,
+      tiredPlayers,
+      onPickFormation: (formation) => {
+        dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formation } as any);
+        dispatch({
+          type: 'ADD_LIVE_MATCH_EVENT',
+          text: `Formação alterada para ${formation}`,
+          kind: 'narrative',
+        } as any);
+      },
+      onPickPlayStyle: (presetId) => {
+        dispatch({ type: 'APPLY_COACH_ACTION', presetId, feedText: `Estilo: ${presetId}` } as any);
+      },
+      onPickTiredPlayer: (playerId) => {
+        // Abre o modal de substituição focado neste jogador
+        const p = (live?.homePlayers ?? []).find((x) => x.playerId === playerId);
+        if (p) setSelected(p);
+      },
+      onClose: () => {
+        setHalftimeAssistantKey(null);
+      },
+    };
+  }, [lineupIds?.formation, live?.homePlayers, dispatch]);
 
   // Força = SOMA dos overalls dos titulares em campo (atualiza a cada substituição/expulsão)
   const homeForce = useMemo(() => {
@@ -1584,7 +1982,9 @@ export function MatchQuick() {
     );
   }
 
-  if (!live) {
+  // Tela de loading só quando não há live E não há summary (FINALIZE_MATCH zera o
+  // liveMatch — sem essa guarda, o postgame nunca aparece e o usuário fica preso).
+  if (!live && !summary) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
         <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">A carregar partida...</p>
@@ -2299,179 +2699,36 @@ export function MatchQuick() {
               </div>
               <div className="flex flex-col gap-2">
                 {homeRanked.map(({ player: p, impact }, idx) => {
-                  const top = idx < 3;
-                  const isSelected = selected?.playerId === p.playerId;
-                  const isTired = p.fatigue >= 68;
+                  const entity = playersById[p.playerId];
+                  const ovr = entity ? overallFromAttributes(entity.attrs) : undefined;
                   return (
-                    <motion.button
+                    <QuickPlayerRowCard
                       key={p.playerId}
-                      layout="position"
-                      type="button"
-                      initial={false}
-                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      variant="home-active"
+                      rank={idx + 1}
+                      num={p.num}
+                      name={p.name}
+                      pos={p.pos}
+                      ovr={ovr}
+                      fatigue={p.fatigue}
+                      impact={impact}
+                      isSelected={selected?.playerId === p.playerId}
+                      isTop={idx < 3}
+                      badges={<PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />}
+                      photoSeed={p.playerId}
                       onClick={() => setSelected(p)}
-                      className={cn(
-                        'w-full text-left bg-dark-gray border border-l-[3px] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 transition-colors hover:border-neon-yellow/40',
-                        isSelected
-                          ? 'border-[var(--color-border)] border-l-neon-yellow bg-neon-yellow/[0.08]'
-                          : isTired
-                            ? 'border-[var(--color-border)] border-l-[var(--color-warning)]'
-                            : top
-                              ? 'border-[var(--color-border)] border-l-neon-yellow'
-                              : 'border-[var(--color-border)] border-l-white/15',
-                      )}
-                      style={{ borderRadius: 'var(--radius-md)' }}
-                    >
-                      <span
-                        className="shrink-0 italic tabular-nums leading-none w-5 text-center"
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          color: top ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.35)',
-                          letterSpacing: '-0.02em',
-                        }}
-                      >
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center min-w-0">
-                          <span
-                            className="truncate text-white uppercase"
-                            style={{
-                              fontFamily: 'var(--font-display)',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            {p.num} {p.name}
-                          </span>
-                          <PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                          <span
-                            className="text-white/45 uppercase"
-                            style={{
-                              fontFamily: 'var(--font-ui)',
-                              fontSize: '9px',
-                              letterSpacing: '0.22em',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {p.pos}
-                          </span>
-                          <span
-                            className={cn(
-                              'tabular-nums',
-                              p.fatigue >= 80
-                                ? 'text-[var(--color-danger)]'
-                                : p.fatigue >= 60
-                                  ? 'text-[var(--color-warning)]'
-                                  : 'text-white/55',
-                            )}
-                            style={{
-                              fontFamily: 'var(--font-ui)',
-                              fontSize: '9px',
-                              letterSpacing: '0.18em',
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            {Math.round(p.fatigue)}% cansaço
-                          </span>
-                        </div>
-                        {/* Barra de cansaço (DNA-style) */}
-                        <div className="mt-1 h-[2px] bg-white/8 overflow-hidden max-w-[6rem]">
-                          <div
-                            className={cn(
-                              'h-full transition-all duration-700',
-                              p.fatigue >= 80
-                                ? 'bg-[var(--color-danger)]'
-                                : p.fatigue >= 60
-                                  ? 'bg-[var(--color-warning)]'
-                                  : 'bg-[var(--color-success)]',
-                            )}
-                            style={{ width: `${Math.min(100, p.fatigue)}%` }}
-                            aria-hidden
-                          />
-                        </div>
-                      </div>
-                      {/* Impact score — Moret italic editorial */}
-                      <span
-                        className="shrink-0 italic text-neon-yellow tabular-nums leading-none"
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
-                          fontSize: 'clamp(16px, 2vw, 20px)',
-                          letterSpacing: '-0.02em',
-                        }}
-                      >
-                        {impact.toFixed(2)}
-                      </span>
-                    </motion.button>
+                    />
                   );
                 })}
                 {homeSentOffRows.map((row) => (
-                  <motion.div
+                  <QuickPlayerRowCard
                     key={`sent-off-${row.playerId}`}
-                    layout="position"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                    className="w-full bg-dark-gray border border-l-[3px] border-[var(--color-border)] border-l-[var(--color-danger)] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 opacity-85"
-                    style={{ borderRadius: 'var(--radius-md)' }}
-                  >
-                    <span
-                      className="shrink-0 italic tabular-nums leading-none w-5 text-center text-[var(--color-danger)]/65"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: '15px',
-                      }}
-                    >
-                      —
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="truncate text-white/85 uppercase"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          {row.num} {row.name}
-                        </span>
-                        <span
-                          className="shrink-0 text-[var(--color-danger)] uppercase"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '9px',
-                            fontWeight: 700,
-                            letterSpacing: '0.22em',
-                          }}
-                        >
-                          Expulso
-                        </span>
-                      </div>
-                      <div
-                        className="mt-0.5 text-white/45 uppercase"
-                        style={{
-                          fontFamily: 'var(--font-ui)',
-                          fontSize: '9px',
-                          letterSpacing: '0.22em',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {row.pos}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <RedCardIcon />
-                    </div>
-                  </motion.div>
+                    variant="home-sent-off"
+                    num={row.num}
+                    name={row.name}
+                    pos={row.pos}
+                    photoSeed={row.playerId}
+                  />
                 ))}
               </div>
             </div>
@@ -2521,136 +2778,29 @@ export function MatchQuick() {
                 </span>
               </div>
               <div className="flex flex-col gap-2">
-                {awayRanked.map((p, idx) => {
-                  const top = idx < 3;
-                  return (
-                    <motion.div
-                      key={p.id}
-                      layout="position"
-                      initial={false}
-                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                      className={cn(
-                        'w-full bg-dark-gray border border-l-[3px] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3',
-                        top
-                          ? 'border-[var(--color-border)] border-l-white/45'
-                          : 'border-[var(--color-border)] border-l-white/10',
-                      )}
-                      style={{ borderRadius: 'var(--radius-md)' }}
-                    >
-                      <span
-                        className="shrink-0 italic tabular-nums leading-none w-5 text-center"
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          color: top ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)',
-                          letterSpacing: '-0.02em',
-                        }}
-                      >
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center min-w-0">
-                          <span
-                            className="truncate text-white uppercase"
-                            style={{
-                              fontFamily: 'var(--font-display)',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            {p.num} {p.name}
-                          </span>
-                          <PlayerEventStrip badges={awayEventBadges.get(p.id) ?? []} />
-                        </div>
-                        <span
-                          className="text-white/45 uppercase block mt-0.5"
-                          style={{
-                            fontFamily: 'var(--font-ui)',
-                            fontSize: '9px',
-                            letterSpacing: '0.22em',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {p.pos}
-                        </span>
-                      </div>
-                      {/* Impact score — Moret italic */}
-                      <span
-                        className="shrink-0 italic text-white/85 tabular-nums leading-none"
-                        style={{
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontWeight: 700,
-                          fontSize: 'clamp(16px, 2vw, 20px)',
-                          letterSpacing: '-0.02em',
-                        }}
-                      >
-                        {p.impact.toFixed(2)}
-                      </span>
-                    </motion.div>
-                  );
-                })}
+                {awayRanked.map((p, idx) => (
+                  <QuickPlayerRowCard
+                    key={p.id}
+                    variant="away"
+                    rank={idx + 1}
+                    num={p.num}
+                    name={p.name}
+                    pos={p.pos}
+                    impact={p.impact}
+                    isTop={idx < 3}
+                    badges={<PlayerEventStrip badges={awayEventBadges.get(p.id) ?? []} />}
+                    photoSeed={p.id}
+                  />
+                ))}
                 {awaySentOffRows.map((row) => (
-                  <motion.div
+                  <QuickPlayerRowCard
                     key={`away-sent-off-${row.id}`}
-                    layout="position"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                    className="w-full bg-dark-gray border border-l-[3px] border-[var(--color-border)] border-l-[var(--color-danger)] flex items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 opacity-85"
-                    style={{ borderRadius: 'var(--radius-md)' }}
-                  >
-                    <span
-                      className="shrink-0 italic tabular-nums leading-none w-5 text-center text-[var(--color-danger)]/65"
-                      style={{
-                        fontFamily: 'var(--font-serif-hero)',
-                        fontWeight: 700,
-                        fontSize: '15px',
-                      }}
-                    >
-                      —
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="truncate text-white/85 uppercase"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          {row.num} {row.name}
-                        </span>
-                        <span
-                          className="shrink-0 text-[var(--color-danger)] uppercase"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '9px',
-                            fontWeight: 700,
-                            letterSpacing: '0.22em',
-                          }}
-                        >
-                          Expulso
-                        </span>
-                      </div>
-                      <div
-                        className="mt-0.5 text-white/45 uppercase"
-                        style={{
-                          fontFamily: 'var(--font-ui)',
-                          fontSize: '9px',
-                          letterSpacing: '0.22em',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {row.pos}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <RedCardIcon />
-                    </div>
-                  </motion.div>
+                    variant="home-sent-off"
+                    num={row.num}
+                    name={row.name}
+                    pos={row.pos}
+                    photoSeed={row.id}
+                  />
                 ))}
               </div>
             </div>
@@ -2967,22 +3117,8 @@ export function MatchQuick() {
         )}
       </AnimatePresence>
 
-      {/* FAB do assistente — visível durante a partida, oculto no resumo */}
-      {live?.phase === 'playing' && !summary && (
-        <AssistantFab
-          hasPending={assistantEvent !== null}
-          onClick={() => {
-            if (!assistantEvent && !halfTimeUi) {
-              // Reabre o último sugerido (min15/min70) ou abre min70 se depois dos 60'
-              const min = live?.minute ?? 0;
-              if (min >= 60 && !shownAssistantEventsRef.current.has('min70_check_manual')) {
-                shownAssistantEventsRef.current.add('min70_check_manual');
-                setAssistantEvent({ kind: 'min70_check' });
-              }
-            }
-          }}
-        />
-      )}
+      {/* (FAB do assistente removido — o painel ainda abre automaticamente
+           via assistantEvent quando o motor sugere ação tática.) */}
 
       {/* ─── Sprint 2: Indicador de Arco Narrativo ─────────────────────── */}
       {live?.narrativeArc && live.phase === 'playing' && !halfTimeUi && !summary && (
@@ -2996,38 +3132,327 @@ export function MatchQuick() {
 
       {summary && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          {/* Resumo editorial — eyebrow + score + frase */}
+          {/* ─── HERO PLACAR + MVP — duo editorial ────────────────────────── */}
           <div
-            className="border border-[var(--color-border)] border-l-[3px] border-l-neon-yellow bg-dark-gray px-6 py-7 text-center"
+            className="overflow-hidden border border-[var(--color-border)] border-l-[3px] border-l-neon-yellow bg-dark-gray"
             style={{ borderRadius: 'var(--radius-md)' }}
           >
-            <div className="ole-eyebrow !text-neon-yellow mb-4">
-              <span>Fim de jogo</span>
+            {/* Eyebrow */}
+            <div className="flex items-center justify-center gap-3 pt-5 pb-2">
+              <span aria-hidden className="block h-px w-8 bg-neon-yellow/45" />
+              <span
+                className="font-display uppercase text-neon-yellow"
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  letterSpacing: '0.32em',
+                }}
+              >
+                {summary.result === 'win' ? 'Vitória' : summary.result === 'loss' ? 'Derrota' : 'Empate'} · Fim de jogo
+              </span>
+              <span aria-hidden className="block h-px w-8 bg-neon-yellow/45" />
             </div>
-            <MatchdayResultScores
-              homeShort={summary.homeShort}
-              awayShort={summary.awayShort}
-              homeName={summary.homeName}
-              awayName={summary.awayName}
-              homeScore={summary.homeScore}
-              awayScore={summary.awayScore}
-              awaySeed={fixture?.opponent?.id ?? 'away'}
-              className="text-2xl sm:text-3xl"
-            />
-            <span aria-hidden className="mx-auto mt-5 block w-12 h-[3px] bg-neon-yellow" />
-            <p
-              className="italic text-white/60 mt-4"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(14px, 1.7vw, 17px)',
-                lineHeight: 1.4,
-              }}
-            >
-              “liga e elenco atualizados.”
-            </p>
+
+            {/* Placar editorial — nomes Agency compactos + scores Moret gigantes */}
+            <div className="px-4 sm:px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-5">
+              {/* Home: escudo + nome */}
+              <div className="flex items-center gap-2 min-w-0 justify-end">
+                {homeCrestUrl ? (
+                  <img src={homeCrestUrl} alt="" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
+                ) : null}
+                <p
+                  className="text-white uppercase truncate text-right"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: 'clamp(11px, 1.6vw, 14px)',
+                    letterSpacing: '0.18em',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {summary.homeName?.trim() || summary.homeShort}
+                </p>
+              </div>
+
+              {/* Score Moret gigante */}
+              <div className="flex items-baseline gap-2 sm:gap-3">
+                <span
+                  className="italic text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: 'clamp(48px, 9vw, 72px)',
+                    letterSpacing: '-0.04em',
+                  }}
+                >
+                  {summary.homeScore}
+                </span>
+                <span
+                  className="text-white/35 leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontStyle: 'italic',
+                    fontWeight: 400,
+                    fontSize: 'clamp(28px, 5vw, 40px)',
+                  }}
+                  aria-hidden
+                >
+                  –
+                </span>
+                <span
+                  className="italic text-white tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: 'clamp(48px, 9vw, 72px)',
+                    letterSpacing: '-0.04em',
+                  }}
+                >
+                  {summary.awayScore}
+                </span>
+              </div>
+
+              {/* Away: nome + escudo */}
+              <div className="flex items-center gap-2 min-w-0 justify-start">
+                <p
+                  className="text-white uppercase truncate text-left"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: 'clamp(11px, 1.6vw, 14px)',
+                    letterSpacing: '0.18em',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {summary.awayName?.trim() || summary.awayShort}
+                </p>
+                <span
+                  className="inline-flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center bg-[#5e1a26] text-white"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    letterSpacing: '0.05em',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                  aria-hidden
+                >
+                  {(summary.awayName?.trim() || summary.awayShort).charAt(0).toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            {/* MVP card embutido */}
+            {summary.mvp ? (
+              <div className="mt-2 grid grid-cols-[110px_1fr] sm:grid-cols-[140px_1fr] gap-0 border-t border-[var(--color-divider-yellow)] bg-deep-black/40">
+                {/* Foto */}
+                <div className="relative aspect-[4/5] w-full overflow-hidden bg-black">
+                  {summary.mvp.portraitUrl ? (
+                    <img
+                      src={summary.mvp.portraitUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover object-top"
+                      referrerPolicy="no-referrer"
+                      aria-hidden
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neon-yellow/15 to-transparent">
+                      <span
+                        className="italic text-neon-yellow/80 leading-none"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: 'clamp(48px, 8vw, 64px)',
+                        }}
+                      >
+                        {(summary.mvp.name?.[0] ?? '?').toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/45" />
+                  {/* OVR */}
+                  {summary.mvp.ovr !== undefined ? (
+                    <div className="absolute top-2 left-2 z-10">
+                      <p
+                        className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.95)]"
+                        style={{
+                          fontFamily: 'var(--font-serif-hero)',
+                          fontWeight: 700,
+                          fontSize: 'clamp(28px, 4.5vw, 40px)',
+                          letterSpacing: '-0.04em',
+                        }}
+                      >
+                        {summary.mvp.ovr}
+                      </p>
+                    </div>
+                  ) : null}
+                  {/* Tag MVP */}
+                  <div className="absolute top-2 right-2 z-10">
+                    <span
+                      className="inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display font-black uppercase shadow-[0_0_14px_rgba(253,225,0,0.45)]"
+                      style={{
+                        fontSize: '9px',
+                        letterSpacing: '0.22em',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      MVP
+                    </span>
+                  </div>
+                  {/* POS chip rodapé */}
+                  <div className="absolute bottom-2 left-2 z-10">
+                    <span
+                      className="inline-flex items-center bg-black/75 px-1.5 py-0.5 font-display font-bold uppercase text-white/90"
+                      style={{ fontSize: '9px', letterSpacing: '0.22em' }}
+                    >
+                      {summary.mvp.pos}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info MVP */}
+                <div className="flex flex-col justify-center gap-2 px-4 py-3 sm:px-5 sm:py-4">
+                  <span
+                    className="font-display uppercase text-white/45"
+                    style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.32em' }}
+                  >
+                    Joia do Plantel
+                  </span>
+                  <p
+                    className="text-white uppercase truncate"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 800,
+                      fontSize: 'clamp(16px, 2.5vw, 22px)',
+                      letterSpacing: '0.03em',
+                      lineHeight: 1.05,
+                    }}
+                  >
+                    {summary.mvp.num} {summary.mvp.name}
+                  </p>
+                  {/* Rating Moret gigante */}
+                  <p
+                    className="italic text-neon-yellow tabular-nums leading-none mt-1"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: 'clamp(28px, 5vw, 40px)',
+                      letterSpacing: '-0.03em',
+                    }}
+                  >
+                    {summary.mvp.rating.toFixed(2)}
+                    <span
+                      className="ml-2 not-italic font-display text-white/45"
+                      style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.22em' }}
+                    >
+                      RATING
+                    </span>
+                  </p>
+                  {/* Mini-stats do MVP */}
+                  {(summary.mvp.goals > 0 || summary.mvp.assists > 0) ? (
+                    <div className="flex gap-3 mt-1">
+                      {summary.mvp.goals > 0 ? (
+                        <span
+                          className="inline-flex items-baseline gap-1 text-white/85"
+                          style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
+                        >
+                          <strong className="font-display tabular-nums" style={{ fontSize: '14px', color: 'var(--color-success)' }}>{summary.mvp.goals}</strong>
+                          <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.22em' }}>Gols</span>
+                        </span>
+                      ) : null}
+                      {summary.mvp.assists > 0 ? (
+                        <span
+                          className="inline-flex items-baseline gap-1 text-white/85"
+                          style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
+                        >
+                          <strong className="font-display tabular-nums" style={{ fontSize: '14px', color: 'var(--color-neon-yellow)' }}>{summary.mvp.assists}</strong>
+                          <span className="uppercase tracking-wider" style={{ fontSize: '9px', letterSpacing: '0.22em' }}>Assist.</span>
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Frase editorial fechando */}
+            <div className="px-6 pt-3 pb-5 text-center border-t border-[var(--color-divider-yellow)]">
+              <span aria-hidden className="mx-auto mb-3 block w-10 h-[2px] bg-neon-yellow/70" />
+              <p
+                className="italic text-white/55"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(13px, 1.5vw, 15px)',
+                  lineHeight: 1.4,
+                }}
+              >
+                "liga e elenco atualizados."
+              </p>
+            </div>
           </div>
 
-          {/* Eventos da partida */}
+          {/* ─── Stats agregadas ─────────────────────────────────────────── */}
+          {summary.stats ? (
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <span aria-hidden className="w-[3px] h-5 bg-neon-yellow shrink-0" />
+                <h3
+                  className="text-neon-yellow uppercase"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    letterSpacing: '0.24em',
+                  }}
+                >
+                  Estatísticas
+                </h3>
+              </div>
+              {(() => {
+                const s = summary.stats!;
+                const cells = [
+                  { label: 'Posse', val: `${s.possessionHome}%` },
+                  { label: 'Chutes', val: `${s.shotsHome}` },
+                  { label: 'Escanteios', val: `${s.cornersHome}` },
+                  { label: 'Cartões', val: `${s.yellowsHome + s.redsHome}` },
+                ];
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {cells.map((c) => (
+                      <div
+                        key={c.label}
+                        className="flex flex-col gap-1 border border-white/10 bg-deep-black/40 px-3 py-3"
+                        style={{ borderRadius: 'var(--radius-sm)' }}
+                      >
+                        <span
+                          className="font-display uppercase text-white/45"
+                          style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.24em' }}
+                        >
+                          {c.label}
+                        </span>
+                        <span
+                          className="italic text-neon-yellow tabular-nums leading-none"
+                          style={{
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontWeight: 700,
+                            fontSize: 'clamp(20px, 3.5vw, 28px)',
+                            letterSpacing: '-0.02em',
+                          }}
+                        >
+                          {c.val}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : null}
+
+          {/* ─── Lances do jogo ──────────────────────────────────────────── */}
           <div
             className="border border-[var(--color-border)] bg-dark-gray p-4 max-h-44 overflow-y-auto"
             style={{ borderRadius: 'var(--radius-md)' }}
@@ -3038,9 +3463,9 @@ export function MatchQuick() {
                 className="text-neon-yellow uppercase"
                 style={{
                   fontFamily: 'var(--font-display)',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  letterSpacing: '0.18em',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  letterSpacing: '0.24em',
                 }}
               >
                 Lances do jogo
@@ -3096,49 +3521,36 @@ export function MatchQuick() {
             </div>
           )}
 
-          {/* CTAs */}
-          <div className="flex flex-col gap-2">
+          {/* CTAs — Legacy Tech */}
+          <div className="flex flex-col gap-2 pt-1">
             {summary.result === 'loss' ? (
               <>
-                {/* Quick Rematch destacado para derrotas */}
                 <motion.button
                   type="button"
-                  initial={{ scale: 0.95 }}
+                  initial={{ scale: 0.96 }}
                   animate={{ scale: 1 }}
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-4 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-500 hover:to-red-400 transition-all relative overflow-hidden group"
+                  className="w-full py-4 inline-flex items-center justify-center gap-2 bg-neon-yellow text-black border-l-[3px] border-l-[var(--color-danger)] hover:bg-white transition-all"
                   style={{
                     fontFamily: 'var(--font-display)',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    letterSpacing: '0.2em',
+                    fontSize: '13px',
+                    fontWeight: 900,
+                    letterSpacing: '0.24em',
                     textTransform: 'uppercase',
                     borderRadius: 'var(--radius-sm)',
-                    boxShadow: '0 8px 32px rgba(220, 38, 38, 0.4)',
+                    boxShadow: '0 8px 24px rgba(253,225,0,0.20)',
                   }}
                   onClick={() => setSession((s) => s + 1)}
                 >
-                  <motion.div
-                    className="absolute inset-0 bg-white/20"
-                    animate={{
-                      x: ['-100%', '100%'],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: 'linear',
-                    }}
-                  />
-                  <RotateCcw className="w-5 h-5 relative z-10" />
-                  <span className="relative z-10">Revanche imediata</span>
+                  <RotateCcw className="w-5 h-5" />
+                  Revanche imediata
                 </motion.button>
                 <p
-                  className="text-center text-red-400/80 -mt-1 mb-1"
+                  className="text-center italic text-[var(--color-danger)]/85 -mt-1 mb-1"
                   style={{
                     fontFamily: 'var(--font-serif-hero)',
                     fontSize: '13px',
-                    fontStyle: 'italic',
                   }}
                 >
                   "Não desistas. Tenta outra vez."
@@ -3147,15 +3559,15 @@ export function MatchQuick() {
             ) : (
               <button
                 type="button"
-                className="w-full py-3 inline-flex items-center justify-center gap-2 bg-neon-yellow text-black hover:bg-white hover:scale-[1.005] active:scale-[0.995] transition-all"
+                className="w-full py-3.5 inline-flex items-center justify-center gap-2 bg-neon-yellow text-black hover:bg-white active:scale-[0.99] transition-all"
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: '12px',
-                  fontWeight: 700,
-                  letterSpacing: '0.2em',
+                  fontWeight: 900,
+                  letterSpacing: '0.24em',
                   textTransform: 'uppercase',
                   borderRadius: 'var(--radius-sm)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                  boxShadow: '0 8px 24px rgba(253,225,0,0.18)',
                 }}
                 onClick={() => setSession((s) => s + 1)}
               >
@@ -3283,6 +3695,14 @@ export function MatchQuick() {
             playerOut={substitutionOverlay.playerOut}
             playerIn={substitutionOverlay.playerIn}
             reason={substitutionOverlay.reason}
+            onDismiss={() => {
+              if (substitutionOverlayTimerRef.current) {
+                clearTimeout(substitutionOverlayTimerRef.current);
+                substitutionOverlayTimerRef.current = null;
+              }
+              setSubstitutionOverlay(null);
+              freezeUntilRef.current = 0;
+            }}
           />
         )}
       </AnimatePresence>
@@ -3297,7 +3717,7 @@ export function MatchQuick() {
       </AnimatePresence>
 
       {/* ─── Assistente AI ─────────────────────────────────────────────── */}
-      {live?.phase === 'playing' && !halfTimeUi && !summary && (
+      {live?.phase === 'playing' && !summary && (
         <AssistantAI
           onSubstitution={handleSubstitution}
           onTacticalChange={handleTacticalChange}
@@ -3312,6 +3732,8 @@ export function MatchQuick() {
             name: c.name,
             position: c.pos,
           }))}
+          halftimeOpenKey={halftimeAssistantKey}
+          halftimeScript={halftimeScript}
         />
       )}
 

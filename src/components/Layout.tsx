@@ -328,23 +328,55 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Mobile Bottom Nav — hidden at lg+ */}
+      {/* Mobile Bottom Nav — Legacy Tech (hidden at lg+) */}
       {!hideMobileBottomNav && (
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around border-t border-white/10 bg-[#0a0a0a] pb-safe">
+        <nav
+          aria-label="Navegação principal"
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around bg-deep-black/95 backdrop-blur pb-safe"
+        >
+          {/* Régua amarela editorial no topo (gradient sutil) */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-yellow/55 to-transparent"
+          />
           {mainNavItems.slice(0, 5).map((item) => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            const isActive =
+              location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 transition-all [-webkit-tap-highlight-color:transparent]',
-                  isActive ? 'text-neon-yellow' : 'text-gray-500',
+                  'group relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2.5 transition-all duration-200 [-webkit-tap-highlight-color:transparent] active:scale-[0.94]',
+                  isActive
+                    ? 'text-neon-yellow bg-neon-yellow/[0.05]'
+                    : 'text-white/45 hover:text-white/85',
                 )}
               >
-                {isActive && <div className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-neon-yellow" />}
-                <item.icon className="h-5 w-5 shrink-0" />
-                <span className="max-w-full truncate text-center text-[8px] font-display font-bold leading-tight tracking-wider min-[360px]:text-[9px]">
+                {/* Rail amarelo top (assinatura Legacy Tech, mais visível) */}
+                {isActive ? (
+                  <span
+                    aria-hidden
+                    className="absolute left-1/2 top-0 h-[3px] w-10 -translate-x-1/2 bg-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.55)]"
+                  />
+                ) : null}
+                <item.icon
+                  className={cn(
+                    'h-5 w-5 shrink-0 transition-transform duration-200',
+                    isActive
+                      ? 'drop-shadow-[0_0_6px_rgba(253,225,0,0.45)]'
+                      : 'group-hover:scale-110',
+                  )}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                <span
+                  className="max-w-full truncate text-center font-display font-black uppercase leading-none"
+                  style={{
+                    fontSize: '10px',
+                    letterSpacing: '0.22em',
+                  }}
+                >
                   {item.label}
                 </span>
               </Link>

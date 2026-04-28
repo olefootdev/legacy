@@ -23,9 +23,9 @@ const VALUE_PROPS: Record<ValueProposition, {
     },
     subheadline: 'Bem vindo ao OLEFOOT',
     features: [
-      { icon: ShoppingCart, text: 'Revele novos talentos no mercado', color: 'text-amber-400' },
-      { icon: Trophy, text: 'Construa sua cidade do futebol', color: 'text-yellow-400' },
-      { icon: Users, text: 'Dispute ligas contra gringos', color: 'text-blue-400' },
+      { icon: ShoppingCart, text: 'Revele novos talentos no mercado', color: 'text-neon-yellow' },
+      { icon: Trophy, text: 'Construa sua cidade do futebol', color: 'text-neon-yellow' },
+      { icon: Users, text: 'Dispute ligas contra gringos', color: 'text-neon-yellow' },
     ],
   },
   ai: {
@@ -36,9 +36,9 @@ const VALUE_PROPS: Record<ValueProposition, {
     },
     subheadline: 'Bem vindo ao OLEFOOT',
     features: [
-      { icon: Brain, text: 'Assistente tático com IA', color: 'text-purple-400' },
-      { icon: Sparkles, text: 'Crie jogadores com prompt', color: 'text-cyan-400' },
-      { icon: Zap, text: 'Análise em tempo real', color: 'text-pink-400' },
+      { icon: Brain, text: 'Assistente tático com IA', color: 'text-neon-yellow' },
+      { icon: Sparkles, text: 'Crie jogadores com prompt', color: 'text-neon-yellow' },
+      { icon: Zap, text: 'Análise em tempo real', color: 'text-neon-yellow' },
     ],
   },
   speed: {
@@ -49,12 +49,62 @@ const VALUE_PROPS: Record<ValueProposition, {
     },
     subheadline: 'Bem vindo ao OLEFOOT',
     features: [
-      { icon: Rocket, text: 'Partidas de 30 segundos', color: 'text-orange-400' },
-      { icon: Clock, text: 'Temporada completa em 5min', color: 'text-green-400' },
-      { icon: Trophy, text: 'Progressão transparente', color: 'text-yellow-400' },
+      { icon: Rocket, text: 'Partidas de 30 segundos', color: 'text-neon-yellow' },
+      { icon: Clock, text: 'Temporada completa em 5min', color: 'text-neon-yellow' },
+      { icon: Trophy, text: 'Progressão transparente', color: 'text-neon-yellow' },
     ],
   },
 };
+
+/**
+ * Feature card unificado Legacy Tech — sem rainbow, sempre neon-yellow.
+ * Foto-rail amarelo + ícone amarelo + Agency uppercase + descrição compacta.
+ */
+function FeatureCard({
+  icon,
+  title,
+  desc,
+}: {
+  icon: import('react').ReactNode;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div
+      className="group relative overflow-hidden border border-l-[3px] border-white/10 border-l-neon-yellow bg-dark-gray/85 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40 hover:-translate-y-0.5"
+      style={{ borderRadius: 'var(--radius-md)' }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center bg-deep-black border border-neon-yellow/45 text-neon-yellow"
+          style={{ borderRadius: 'var(--radius-sm)' }}
+        >
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3
+            className="text-white uppercase truncate"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '13px',
+              fontWeight: 800,
+              letterSpacing: '0.18em',
+              lineHeight: 1.1,
+            }}
+          >
+            {title}
+          </h3>
+          <p
+            className="mt-1 leading-snug text-white/60"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
+          >
+            {desc}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Login() {
   const navigate = useNavigate();
@@ -198,7 +248,14 @@ export function Login() {
               className="h-10 w-auto max-h-11 max-w-[min(100%,280px)] object-contain object-left drop-shadow-[0_2px_16px_rgba(0,0,0,0.75)] sm:h-12 sm:max-h-[3.25rem]"
             />
           </Link>
-          <span className="shrink-0 rounded-full border border-white/20 bg-black/35 px-4 py-2 font-display text-[9px] font-bold uppercase tracking-[0.28em] text-white/95 sm:px-5 sm:text-[10px] sm:tracking-[0.32em]">
+          <span
+            className="shrink-0 border border-neon-yellow/35 bg-deep-black/65 px-4 py-2 font-display font-black uppercase text-neon-yellow sm:px-5"
+            style={{
+              fontSize: '10px',
+              letterSpacing: '0.32em',
+              borderRadius: 'var(--radius-pill)',
+            }}
+          >
             Manager de Futebol
           </span>
         </div>
@@ -260,121 +317,51 @@ export function Login() {
               <div className="mt-6 space-y-3">
                 {variant === 'nostalgia' && (
                   <>
-                    <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-black/60 via-black/50 to-black/60 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black border-2 border-neon-yellow/40">
-                          <ShoppingCart className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Mercado Real
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Leilões ao vivo, garimpe talentos baratos e venda por fortuna
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-black/60 via-black/50 to-black/60 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black border-2 border-neon-yellow/40">
-                          <Trophy className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Construa Sua Dinastia
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Décadas de carreira, jogadores envelhecem e novos talentos surgem
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-gradient-to-r from-black/60 via-black/50 to-black/60 px-5 py-4 backdrop-blur-sm transition-all hover:border-neon-yellow/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black border-2 border-neon-yellow/40">
-                          <Zap className="h-5 w-5 text-neon-yellow" strokeWidth={2.5} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            O Jogo Começou
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Mostre que você entende de futebol e domine o ranking mundial
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <FeatureCard
+                      icon={<ShoppingCart className="h-5 w-5" strokeWidth={2.5} />}
+                      title="Mercado Real"
+                      desc="Leilões ao vivo, garimpe talentos baratos e venda por fortuna"
+                    />
+                    <FeatureCard
+                      icon={<Trophy className="h-5 w-5" strokeWidth={2.5} />}
+                      title="Construa Sua Dinastia"
+                      desc="Décadas de carreira, jogadores envelhecem e novos talentos surgem"
+                    />
+                    <FeatureCard
+                      icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
+                      title="O Jogo Começou"
+                      desc="Mostre que você entende de futebol e domine o ranking mundial"
+                    />
                   </>
                 )}
 
                 {variant === 'ai' && (
                   <>
-                    <div className="group relative overflow-hidden rounded-lg border border-purple-500/20 bg-gradient-to-r from-purple-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-purple-500/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-purple-400/30 bg-purple-500/10">
-                          <span className="font-display text-lg font-black text-purple-300">AI</span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Crie Jogadores com IA
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Descreva o perfil e gere jogadores únicos com atributos reais
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="group relative overflow-hidden rounded-lg border border-cyan-500/20 bg-gradient-to-r from-cyan-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-cyan-500/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-500/10">
-                          <Zap className="h-5 w-5 text-cyan-300" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Análise Tática em Tempo Real
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            IA analisa partidas e sugere mudanças táticas instantâneas
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <FeatureCard
+                      icon={<span className="font-display text-base font-black">AI</span>}
+                      title="Crie Jogadores com IA"
+                      desc="Descreva o perfil e gere jogadores únicos com atributos reais"
+                    />
+                    <FeatureCard
+                      icon={<Zap className="h-5 w-5" strokeWidth={2.5} />}
+                      title="Análise Tática em Tempo Real"
+                      desc="IA analisa partidas e sugere mudanças táticas instantâneas"
+                    />
                   </>
                 )}
 
                 {variant === 'speed' && (
                   <>
-                    <div className="group relative overflow-hidden rounded-lg border border-orange-500/20 bg-gradient-to-r from-orange-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-orange-500/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orange-400/30 bg-orange-500/10">
-                          <Rocket className="h-5 w-5 text-orange-300" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Partidas Ultrarrápidas
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Jogue uma partida completa em 30 segundos, gratificação instantânea
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="group relative overflow-hidden rounded-lg border border-green-500/20 bg-gradient-to-r from-green-950/30 via-black/40 to-black/50 px-5 py-4 backdrop-blur-sm transition-all hover:border-green-500/40">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-green-400/30 bg-green-500/10">
-                          <Clock className="h-5 w-5 text-green-300" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-display text-sm font-black uppercase tracking-wide text-white">
-                            Temporada Completa em 5 Minutos
-                          </h3>
-                          <p className="mt-0.5 font-sans text-[11px] leading-snug text-white/65">
-                            Simule 38 jogos rapidamente e veja seu time subir na tabela
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <FeatureCard
+                      icon={<Rocket className="h-5 w-5" strokeWidth={2.5} />}
+                      title="Partidas Ultrarrápidas"
+                      desc="Jogue uma partida completa em 30 segundos, gratificação instantânea"
+                    />
+                    <FeatureCard
+                      icon={<Clock className="h-5 w-5" strokeWidth={2.5} />}
+                      title="Temporada Completa em 5 Minutos"
+                      desc="Simule 38 jogos rapidamente e veja seu time subir na tabela"
+                    />
                   </>
                 )}
               </div>
@@ -523,10 +510,14 @@ export function Login() {
                   console.log('[A/B Test] User clicked "Entrar" on variant:', variant);
                   localStorage.setItem('olefoot_ab_converted', variant);
                 }}
-                className="group relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 px-6 py-4 font-display text-base font-black uppercase tracking-wide text-black shadow-[0_0_20px_rgba(253,224,71,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(253,224,71,0.5)] active:scale-[0.98]"
+                className="relative overflow-hidden bg-neon-yellow px-6 py-4 font-display font-black uppercase text-black shadow-[0_8px_24px_rgba(253,224,71,0.28)] transition-all hover:bg-white hover:scale-[1.005] active:scale-[0.99]"
+                style={{
+                  fontSize: '14px',
+                  letterSpacing: '0.24em',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
-                <span className="relative z-10">Entrar</span>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                Entrar
               </button>
               <Link
                 to="/cadastro"
@@ -535,9 +526,14 @@ export function Login() {
                   console.log('[A/B Test] User clicked "Cadastrar" on variant:', variant);
                   localStorage.setItem('olefoot_ab_converted', variant);
                 }}
-                className="group relative flex items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white/5 px-6 py-4 font-display text-base font-black uppercase tracking-wide text-white backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/10 active:scale-[0.98]"
+                className="flex items-center justify-center border border-white/20 bg-deep-black/60 px-6 py-4 font-display font-black uppercase text-white backdrop-blur-sm transition-all hover:border-neon-yellow/50 hover:text-neon-yellow active:scale-[0.99]"
+                style={{
+                  fontSize: '14px',
+                  letterSpacing: '0.24em',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
-                <span className="relative z-10">Cadastrar</span>
+                Cadastrar
               </Link>
               <button
                 type="button"

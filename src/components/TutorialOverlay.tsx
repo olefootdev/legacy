@@ -147,65 +147,122 @@ export function TutorialOverlay() {
       <button
         type="button"
         onClick={() => setMinimized(false)}
-        className="fixed bottom-4 right-4 z-[9998] inline-flex items-center gap-2 rounded-full border border-violet-500/50 bg-violet-950/90 px-3 py-2 text-[11px] font-bold text-violet-100 shadow-xl backdrop-blur hover:bg-violet-900/95"
+        className="fixed bottom-24 right-4 z-[9998] inline-flex items-center gap-2 border border-neon-yellow/45 bg-deep-black px-3.5 py-2 font-display font-black uppercase text-neon-yellow shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur transition-all hover:bg-neon-yellow hover:text-black sm:bottom-4"
+        style={{
+          fontSize: '10px',
+          letterSpacing: '0.22em',
+          borderRadius: 'var(--radius-pill)',
+        }}
       >
         <GraduationCap className="h-4 w-4" />
-        Tutorial ({currentIdx + 1}/{STEPS.length})
+        Tutorial · {currentIdx + 1}/{STEPS.length}
       </button>
     );
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[9998] flex justify-center px-3 pb-3 pointer-events-none sm:inset-auto sm:bottom-4 sm:right-4 sm:px-0 sm:pb-0">
-      <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-violet-500/50 bg-gradient-to-br from-violet-950/95 via-black/95 to-black/95 p-4 shadow-[0_20px_60px_rgba(139,92,246,0.25)] backdrop-blur">
-        <div className="mb-2 flex items-start gap-2">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-500/20 text-violet-300">
-            <Sparkles className="h-4 w-4" />
+    <div className="fixed inset-x-0 bottom-24 z-[9998] flex justify-center px-3 pointer-events-none sm:bottom-4 sm:inset-auto sm:right-4 sm:px-0">
+      <div
+        className="pointer-events-auto w-full max-w-md overflow-hidden border border-l-[3px] border-[var(--color-border)] border-l-neon-yellow bg-dark-gray shadow-[0_20px_60px_rgba(0,0,0,0.7)] backdrop-blur"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        {/* Header editorial */}
+        <div className="flex items-start gap-3 border-b border-[var(--color-divider-yellow)] bg-deep-black/60 px-4 py-3">
+          <div
+            className="grid h-9 w-9 shrink-0 place-items-center bg-neon-yellow text-black"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+            aria-hidden
+          >
+            <Sparkles className="h-4 w-4" strokeWidth={2.5} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-display text-[9px] font-bold uppercase tracking-widest text-violet-300/80">
-                Passo {currentIdx + 1}/{STEPS.length}
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="font-display uppercase text-neon-yellow"
+                style={{
+                  fontSize: '9px',
+                  fontWeight: 800,
+                  letterSpacing: '0.28em',
+                }}
+              >
+                Passo {currentIdx + 1} / {STEPS.length}
               </span>
               {offRoute ? (
-                <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300">
-                  fora da página
+                <span
+                  className="border border-[var(--color-warning)]/55 bg-[var(--color-warning)]/10 px-1.5 py-0.5 font-display uppercase text-[var(--color-warning)]"
+                  style={{
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    letterSpacing: '0.22em',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                >
+                  Fora da página
                 </span>
               ) : null}
             </div>
-            <h3 className="mt-0.5 text-sm font-black text-white">{current.title}</h3>
+            <h3
+              className="text-white uppercase truncate"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '13px',
+                fontWeight: 800,
+                letterSpacing: '0.18em',
+                lineHeight: 1.1,
+              }}
+            >
+              {current.title}
+            </h3>
           </div>
           <button
             type="button"
             onClick={() => setMinimized(true)}
             title="Minimizar"
-            className="rounded-lg p-1 text-violet-200/60 hover:bg-white/5 hover:text-white"
+            className="shrink-0 inline-flex h-7 w-7 items-center justify-center text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+            aria-label="Minimizar"
           >
-            <span className="block h-0.5 w-3 bg-current" />
+            <span aria-hidden className="block h-0.5 w-3 bg-current" />
           </button>
           <button
             type="button"
             onClick={skip}
             title="Pular tutorial"
-            className="rounded-lg p-1 text-violet-200/60 hover:bg-white/5 hover:text-white"
+            className="shrink-0 inline-flex h-7 w-7 items-center justify-center text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+            aria-label="Pular tutorial"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="space-y-1.5">
+        {/* Corpo: linhas de explicação */}
+        <div className="space-y-1.5 px-4 py-3.5">
           {current.lines.map((line, i) => (
-            <p key={i} className="text-[13px] leading-relaxed text-violet-50/90">
+            <p
+              key={i}
+              className="text-white/85"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '13px',
+                lineHeight: 1.5,
+              }}
+            >
               {line}
             </p>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-2">
+        {/* Footer: skip + CTA */}
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--color-divider-yellow)] bg-deep-black/40 px-4 py-3">
           <button
             type="button"
             onClick={skip}
-            className="text-[10px] font-bold uppercase tracking-wider text-violet-300/50 hover:text-violet-200"
+            className="font-display font-bold uppercase text-white/45 transition-colors hover:text-white/80"
+            style={{
+              fontSize: '10px',
+              letterSpacing: '0.22em',
+            }}
           >
             Pular
           </button>
@@ -213,11 +270,17 @@ export function TutorialOverlay() {
             type="button"
             onClick={handleAction}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors',
+              'inline-flex items-center gap-1.5 px-4 py-2 font-display font-black uppercase transition-all hover:scale-[1.02] active:scale-[0.98]',
               current.action.kind === 'finish'
-                ? 'bg-green-500 text-black hover:bg-green-400'
-                : 'bg-violet-500 text-black hover:bg-violet-400',
+                ? 'bg-[var(--color-success)] text-black hover:bg-white'
+                : 'bg-neon-yellow text-black hover:bg-white',
             )}
+            style={{
+              fontSize: '11px',
+              letterSpacing: '0.22em',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: '0 4px 14px rgba(253,225,0,0.18)',
+            }}
           >
             {current.action.label}
             <ChevronRight className="h-3.5 w-3.5" />

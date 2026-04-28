@@ -308,6 +308,9 @@ export function Cadastro() {
 
   const [clubName, setClubName] = useState('');
   const [initials, setInitials] = useState('');
+  /** Avisos inline pro usuário quando ele excede limite ou usa caractere inválido. */
+  const [clubNameWarn, setClubNameWarn] = useState<string | null>(null);
+  const [initialsWarn, setInitialsWarn] = useState<string | null>(null);
   const [formationScheme, setFormationScheme] = useState<FormationSchemeId>('4-3-3');
 
   const [favoriteTeam, setFavoriteTeam] = useState<FavoriteRealTeamRef | null>(null);
@@ -896,28 +899,191 @@ export function Cadastro() {
         )}
 
         {step === 2 && (
-          <div className="mt-8 space-y-4">
+          <div className="mt-8 space-y-5">
+            {/* Nome do clube — limite 10 caracteres com aviso inline */}
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">Crie um nome para o seu clube</span>
+              <span
+                className="mb-2 block uppercase text-white/60"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Nome do clube
+              </span>
               <input
                 className={inputClass}
                 value={clubName}
-                onChange={(e) => setClubName(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw.length > 10) {
+                    setClubName(raw.slice(0, 10));
+                    setClubNameWarn('Máximo 10 letras');
+                    window.setTimeout(() => setClubNameWarn(null), 2400);
+                    return;
+                  }
+                  setClubName(raw);
+                  setClubNameWarn(null);
+                }}
+                onKeyDown={(e) => {
+                  // Aviso quando tenta digitar além do limite
+                  if (
+                    clubName.length >= 10 &&
+                    e.key.length === 1 &&
+                    !e.metaKey && !e.ctrlKey && !e.altKey
+                  ) {
+                    setClubNameWarn('Máximo 10 letras');
+                    window.clearTimeout((window as any).__cnTimer);
+                    (window as any).__cnTimer = window.setTimeout(
+                      () => setClubNameWarn(null),
+                      2400,
+                    );
+                  }
+                }}
                 maxLength={10}
+                placeholder="Ex.: OLE FC"
               />
-              <p className="mt-1 text-[10px] text-white/40">Máximo 10 caracteres</p>
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                {clubNameWarn ? (
+                  <p
+                    className="uppercase text-[var(--color-warning)] animate-pulse"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      letterSpacing: '0.22em',
+                    }}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    ⚠ {clubNameWarn}
+                  </p>
+                ) : (
+                  <p
+                    className="text-white/40"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    Máximo 10 caracteres
+                  </p>
+                )}
+                <span
+                  className="tabular-nums text-white/35"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                  }}
+                >
+                  {clubName.length}/10
+                </span>
+              </div>
             </label>
+
+            {/* Iniciais — só A–Z, máximo 3 letras, sem pontos/caracteres especiais */}
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">Iniciais</span>
+              <span
+                className="mb-2 block uppercase text-white/60"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Iniciais
+              </span>
               <input
-                className={inputClass}
+                className={cn(inputClass, 'tracking-[0.4em] text-center font-display font-black uppercase')}
                 value={initials}
-                onChange={(e) => setInitials(e.target.value.toUpperCase())}
-                maxLength={6}
+                onChange={(e) => {
+                  const raw = e.target.value.toUpperCase();
+                  // Filtra só A–Z (sem pontos, números ou especiais)
+                  const cleaned = raw.replace(/[^A-Z]/g, '');
+                  const trimmed = cleaned.slice(0, 3);
+                  if (cleaned !== raw.replace(/\s/g, '')) {
+                    setInitialsWarn('Use apenas letras A–Z');
+                    window.clearTimeout((window as any).__inTimer);
+                    (window as any).__inTimer = window.setTimeout(
+                      () => setInitialsWarn(null),
+                      2400,
+                    );
+                  } else if (cleaned.length > 3) {
+                    setInitialsWarn('Máximo 3 letras');
+                    window.clearTimeout((window as any).__inTimer);
+                    (window as any).__inTimer = window.setTimeout(
+                      () => setInitialsWarn(null),
+                      2400,
+                    );
+                  } else {
+                    setInitialsWarn(null);
+                  }
+                  setInitials(trimmed);
+                }}
+                maxLength={3}
+                placeholder="OLE"
+                style={{ fontSize: '18px' }}
               />
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                {initialsWarn ? (
+                  <p
+                    className="uppercase text-[var(--color-warning)] animate-pulse"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      letterSpacing: '0.22em',
+                    }}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    ⚠ {initialsWarn}
+                  </p>
+                ) : (
+                  <p
+                    className="text-white/40"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    3 letras (sem pontos ou números)
+                  </p>
+                )}
+                <span
+                  className="tabular-nums text-white/35"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                  }}
+                >
+                  {initials.length}/3
+                </span>
+              </div>
             </label>
+
+            {/* Formação */}
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">Formação</span>
+              <span
+                className="mb-2 block uppercase text-white/60"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Formação
+              </span>
               <select
                 className={inputClass}
                 value={formationScheme}
@@ -929,9 +1095,16 @@ export function Cadastro() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[10px] text-white/40">
+              <p
+                className="mt-1.5 text-white/45"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.04em',
+                }}
+              >
                 Estilo tático:{' '}
-                <span className="text-neon-yellow/70">
+                <span className="font-display font-bold uppercase tracking-[0.2em] text-neon-yellow/85">
                   {PRESET_LABEL_PT[FORMATION_TACTICAL_DEFAULTS[formationScheme].presetId]}
                 </span>
               </p>

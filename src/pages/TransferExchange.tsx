@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowLeftRight, X } from 'lucide-react';
+import { ArrowLeftRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -91,33 +90,6 @@ export function TransferExchange() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl space-y-6 pb-10">
       <BackButton to="/mercado" label="Mercado" />
-      {/* Top bar — back link compacto (assinatura /legend) */}
-      <div className="flex items-center justify-between">
-        <Link
-          to="/transfer"
-          className="inline-flex items-center gap-2 text-white/65 hover:text-neon-yellow transition-colors"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-          }}
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Mercado
-        </Link>
-        <span
-          className="text-white/35 uppercase"
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: '10px',
-            letterSpacing: '0.22em',
-          }}
-        >
-          OLE Football · Exchange
-        </span>
-      </div>
 
       {/* Mini-hero editorial — eyebrow + headline duo + régua */}
       <header className="text-center pt-2 pb-2">
