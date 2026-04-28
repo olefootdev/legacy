@@ -653,7 +653,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   const dispatch = useGameDispatch();
 
   // P7: useShallow consolidates 12 selectors into 1, reducing Zustand subscribers
-  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, pressing, staff, tacticalObedience, managerRelationByPlayer } = useGameStore(
+  const { live, playersById, lineupIds, fixture, tacticalMentality, defensiveLine, tempo, tacticalStyle, pressing, markingAssignments, staff, tacticalObedience, managerRelationByPlayer } = useGameStore(
     useShallow((s) => ({
       live: s.liveMatch,
       playersById: s.players,
@@ -664,6 +664,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       tempo: s.manager.tempo,
       tacticalStyle: s.manager.tacticalStyle,
       pressing: s.manager.pressing,
+      markingAssignments: s.manager.markingAssignments,
       staff: s.manager.staff,
       tacticalObedience: s.tacticalObedience,
       managerRelationByPlayer: s.managerRelationByPlayer,
@@ -685,11 +686,12 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
       tempo,
       tacticalStyle,
       pressing,
+      markingAssignments,
       isHomeFixture: fixture.isHome,
       homeStaffMatch,
       homeStaffPlayerBoosts,
     }),
-    [tacticalMentality, defensiveLine, tempo, tacticalStyle, pressing, fixture.isHome, homeStaffMatch, homeStaffPlayerBoosts],
+    [tacticalMentality, defensiveLine, tempo, tacticalStyle, pressing, markingAssignments, fixture.isHome, homeStaffMatch, homeStaffPlayerBoosts],
   );
 
   const [session, setSession] = useState(0);
@@ -1779,6 +1781,78 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                         containerType: 'size' as const,
                       }}
                     >
+                      {/* Sprint L4 — visual feedback de marcação individual */}
+                      {markingAssignments && Object.keys(markingAssignments).length > 0 && (
+                        <svg
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ width: '100%', height: '100%' }}
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                        >
+                          {Object.entries(markingAssignments).map(([homeId, oppId]) => {
+                            const home = pitch.find((p) => p.playerId === homeId);
+                            const away = awayPitch.find((p) => p.playerId === oppId);
+                            if (!home || !away) return null;
+                            const x1 = pitchPlanePercent(home.x);
+                            const y1 = pitchPlanePercent(home.y);
+                            const x2 = pitchPlanePercent(away.x);
+                            const y2 = pitchPlanePercent(away.y);
+                            return (
+                              <g key={`mark-${homeId}`}>
+                                <line
+                                  x1={x1}
+                                  y1={y1}
+                                  x2={x2}
+                                  y2={y2}
+                                  stroke="#FDE100"
+                                  strokeWidth="0.4"
+                                  strokeDasharray="1.5 1"
+                                  opacity="0.75"
+                                />
+                                <circle cx={x2} cy={y2} r="2.2" fill="none" stroke="#FDE100" strokeWidth="0.5" opacity="0.9" />
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      )}
+                      {/* Sprint L4 — raio de prensa visível em defensores quando intensity alta */}
+                      {pressing && pressing.intensity > 70 && (
+                        <svg
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ width: '100%', height: '100%' }}
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                        >
+                          {pitch
+                            .filter((p) => {
+                              const ent = playersById[p.playerId];
+                              return ent && (ent.position === 'DEF' || ent.position === 'MID');
+                            })
+                            .map((p) => {
+                              const cx = pitchPlanePercent(p.x);
+                              const cy = pitchPlanePercent(p.y);
+                              // Raio em % da viewBox: 2.65m base × intensity/zone factor / ~105m field
+                              const intensityF = 1 + ((pressing.intensity - 50) / 100) * 0.6;
+                              const zoneF =
+                                pressing.zone === 'high' ? 1.25 : pressing.zone === 'low' ? 0.8 : 1;
+                              const radiusM = Math.max(1.5, Math.min(3.5, 2.65 * intensityF * zoneF));
+                              const radiusPct = (radiusM / 105) * 100 * 1.5; // visual scaling
+                              return (
+                                <circle
+                                  key={`press-${p.playerId}`}
+                                  cx={cx}
+                                  cy={cy}
+                                  r={radiusPct}
+                                  fill="none"
+                                  stroke="#FDE100"
+                                  strokeWidth="0.25"
+                                  strokeDasharray="0.8 0.8"
+                                  opacity="0.4"
+                                />
+                              );
+                            })}
+                        </svg>
+                      )}
                       {awayPitch.map((p) => {
                         const awayOnBall =
                           usesLive2dTacticalEngine && tacticalLive2dEnabled && storeOnBallId

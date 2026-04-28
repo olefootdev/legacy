@@ -2062,6 +2062,26 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
       return { ...state, manager: { ...state.manager, pressing: next } };
     }
+    case 'SET_MARKING_ASSIGNMENT': {
+      const a = action as any;
+      const current = state.manager.markingAssignments ?? {};
+      let next: Record<string, string>;
+      if (a.opponentId == null) {
+        // Remove assignment
+        next = { ...current };
+        delete next[a.homePlayerId];
+      } else {
+        // Remove qualquer outro home jogador que estivesse marcando esse opp
+        next = Object.fromEntries(
+          Object.entries(current).filter(([_, oppId]) => oppId !== a.opponentId),
+        );
+        next[a.homePlayerId] = a.opponentId;
+      }
+      return { ...state, manager: { ...state.manager, markingAssignments: next } };
+    }
+    case 'CLEAR_MARKING_ASSIGNMENTS': {
+      return { ...state, manager: { ...state.manager, markingAssignments: {} } };
+    }
     case 'SAVE_TACTIC_PLAN': {
       const name = action.name.trim();
       if (!name) return state;
