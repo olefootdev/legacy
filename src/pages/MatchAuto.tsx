@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Home, LogOut, Trophy, RotateCcw } from 'lucide-react';
+import { Loader2, Home, LogOut, Trophy, RotateCcw, Play, X } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes } from '@/entities/player';
+import { PenaltyShoot, type PenaltyKeeper, type PenaltyShooter } from '@/components/penalty';
 
 type UiPhase = 'analyzing' | 'result';
 
@@ -15,7 +16,7 @@ interface MatchSummary {
   awayName?: string;
   homeScore: number;
   awayScore: number;
-  events: { id: string; text: string }[];
+  events: { id: string; text: string; kind?: string }[];
   homeStats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number }>;
 }
 
@@ -39,6 +40,7 @@ export function MatchAuto() {
   /** Partida não arrancou (plantel) ou exceção no motor — evita ecrã em branco. */
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [forfeitOpen, setForfeitOpen] = useState(false);
+  const [replayPenaltyId, setReplayPenaltyId] = useState<string | null>(null);
 
   const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const aliveRef = useRef(true);
@@ -72,7 +74,7 @@ export function MatchAuto() {
             awayName: lm.awayName,
             homeScore: lm.homeScore,
             awayScore: lm.awayScore,
-            events: lm.events.map((e) => ({ id: e.id, text: e.text })),
+            events: lm.events.map((e) => ({ id: e.id, text: e.text, kind: e.kind })),
             homeStats: { ...lm.homeStats },
           });
         }
@@ -129,7 +131,7 @@ export function MatchAuto() {
         awayName: lm.awayName,
         homeScore: lm.homeScore,
         awayScore: lm.awayScore,
-        events: lm.events.map((e) => ({ id: e.id, text: e.text })),
+        events: lm.events.map((e) => ({ id: e.id, text: e.text, kind: e.kind })),
         homeStats: { ...lm.homeStats },
       });
     }
@@ -324,13 +326,53 @@ export function MatchAuto() {
           </div>
 
           <div className="glass-panel p-5 border border-white/10">
-            <div className="ole-eyebrow mb-3">EVENTOS</div>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {summary.events.slice(0, 18).map((e) => (
-                <p key={e.id} className="text-[11px] text-gray-400 leading-snug">
-                  {e.text}
-                </p>
-              ))}
+            <div className="ole-eyebrow mb-3 flex items-center justify-between">
+              <span>EVENTOS</span>
+              {summary.events.some((e) => e.kind === 'penalty_start') && (
+                <span className="text-[9px] text-neon-yellow tracking-[0.2em]">
+                  ▶ REJOGAR PÊNALTIS
+                </span>
+              )}
+            </div>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {summary.events.slice(0, 24).map((e) => {
+                const isPenaltyStart = e.kind === 'penalty_start';
+                const isPenaltyResult = e.kind === 'penalty_result';
+                if (isPenaltyStart) {
+                  return (
+                    <div
+                      key={e.id}
+                      className="flex items-center justify-between gap-2 border-l-2 border-neon-yellow bg-neon-yellow/5 pl-2 pr-2 py-1.5 my-1"
+                    >
+                      <p className="text-[11px] text-neon-yellow font-bold leading-snug">
+                        ⚽ {e.text}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setReplayPenaltyId(e.id)}
+                        className="shrink-0 inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.2em] font-bold px-2 py-1 bg-neon-yellow text-black hover:bg-white transition-colors"
+                      >
+                        <Play className="w-3 h-3" /> Jogar
+                      </button>
+                    </div>
+                  );
+                }
+                if (isPenaltyResult) {
+                  return (
+                    <p
+                      key={e.id}
+                      className="text-[11px] text-neon-yellow/80 leading-snug pl-3 border-l-2 border-neon-yellow/40"
+                    >
+                      {e.text}
+                    </p>
+                  );
+                }
+                return (
+                  <p key={e.id} className="text-[11px] text-gray-400 leading-snug">
+                    {e.text}
+                  </p>
+                );
+              })}
             </div>
           </div>
 
@@ -357,6 +399,72 @@ export function MatchAuto() {
           </div>
         </motion.div>
       )}
+
+      {/* Penalty Replay Overlay (modo automático) */}
+      <AnimatePresence>
+        {replayPenaltyId && summary && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] overflow-y-auto"
+          >
+            <button
+              type="button"
+              onClick={() => setReplayPenaltyId(null)}
+              className="fixed top-4 right-4 z-[110] bg-black text-neon-yellow p-2 hover:bg-white hover:text-black transition-colors"
+              aria-label="Fechar replay"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            {(() => {
+              // Pega melhor finalizador do plantel atual (para o replay)
+              const candidates = Object.values(playersById)
+                .filter((p) => p && (p as any).attrs?.finalizacao != null)
+                .sort(
+                  (a, b) =>
+                    ((b as any).attrs?.finalizacao ?? 0) -
+                    ((a as any).attrs?.finalizacao ?? 0),
+                );
+              const top = candidates[0] as any;
+              const shooter: PenaltyShooter = top
+                ? {
+                    id: top.id,
+                    displayName: top.name,
+                    shirtNumber: top.shirtNumber ?? 9,
+                    finishingRating: top.attrs.finalizacao,
+                    forcaMental: top.attrs.forca_mental ?? 70,
+                  }
+                : {
+                    id: 'fallback',
+                    displayName: 'Batedor',
+                    shirtNumber: 9,
+                    finishingRating: 70,
+                  };
+              const oppStrength = fixture?.opponent?.strength ?? 65;
+              const keeper: PenaltyKeeper = {
+                id: 'opp-gk',
+                displayName: `Goleiro ${summary.awayShort}`,
+                readingRating: Math.max(40, Math.min(95, oppStrength)),
+                positioningRating: Math.max(40, Math.min(95, oppStrength - 5)),
+              };
+              return (
+                <PenaltyShoot
+                  key={`replay-${replayPenaltyId}`}
+                  headerLabel={`Replay · Pênalti vs ${summary.awayShort}`}
+                  shooter={shooter}
+                  keeper={keeper}
+                  keeperHint="Replay — não afeta o resultado"
+                  onResolved={() => {
+                    /* Replay puro — score já está finalizado */
+                  }}
+                  onReset={() => setReplayPenaltyId(null)}
+                />
+              );
+            })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
