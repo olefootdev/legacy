@@ -269,6 +269,29 @@ function roleFromSlotId(slot: string): string {
   return 'attack';
 }
 
+/**
+ * Sprint L4 — decide se as instruções de pressing se aplicam neste momento.
+ * Triggers contextuais: onTurnover, whenLosing, whenLeading.
+ * Se nenhum trigger condicional, sempre aplica baseline.
+ */
+function def_pressingApplies(
+  _carrier: AgentSnapshot,
+  pressing: NonNullable<TacticalManagerParams['pressing']>,
+  simState: { homeScore?: number; awayScore?: number; lastTurnoverTickAgo?: number } & Record<string, unknown>,
+): boolean {
+  const triggers = pressing.triggers;
+  // Sempre aplica modulação baseline (intensidade + zone) — triggers só amplificam.
+  if (triggers.onTurnover && (simState as any).recentTurnoverTicks != null && (simState as any).recentTurnoverTicks < 60) {
+    return true;
+  }
+  const homeScore = (simState.homeScore as number) ?? 0;
+  const awayScore = (simState.awayScore as number) ?? 0;
+  if (triggers.whenLosing && homeScore < awayScore) return true;
+  if (triggers.whenLeading && homeScore > awayScore) return true;
+  // Sem trigger contextual disparado → ainda aplica modulação base (intensidade + zone)
+  return true;
+}
+
 function computeBallSector(ballZ: number): BallSector {
   const third = FIELD_WIDTH / 3;
   if (ballZ < third) return 'left';
@@ -313,6 +336,16 @@ interface TacticalManagerParams {
   homeStaffMatch?: HomeStaffMatchBonuses | null;
   /** Buff ATIVO por jogador (extra acima do coletivo). playerId → multiplicador de atributos. */
   homeStaffPlayerBoosts?: Record<string, number>;
+  /** Sprint L4 — Instruções contextuais de prensa (default: mid + intensity 60). */
+  pressing?: {
+    triggers: {
+      onTurnover: boolean;
+      whenLosing: boolean;
+      whenLeading: boolean;
+    };
+    zone: 'high' | 'mid' | 'low';
+    intensity: number; // 0-100
+  };
 }
 
 type ShotPlanKind = 'goal' | 'miss_wide' | 'hold' | 'parry' | 'block_rebound';
@@ -4879,9 +4912,21 @@ export class TacticalSimLoop {
     const stealX = carrier.vehicle.position.x;
     const stealZ = carrier.vehicle.position.z;
 
+    // Sprint L4 — pressing context modula raio de tackle.
+    //   intensidade alta + zona alta = defensores fecham mais cedo (raio maior)
+    //   intensidade baixa = bloco recuado, raio menor
+    let tackleRadius = 2.65;
+    if (manager.pressing && def_pressingApplies(carrierSnap, manager.pressing, this.simState)) {
+      // Bonus por intensidade: -25 a +25%
+      const intensityBonus = ((manager.pressing.intensity - 50) / 100) * 0.6;
+      // Bonus por zona alta quando defendendo no campo adversário
+      const zoneBonus = manager.pressing.zone === 'high' ? 0.25 : manager.pressing.zone === 'low' ? -0.20 : 0;
+      tackleRadius = Math.max(1.5, Math.min(3.5, 2.65 * (1 + intensityBonus + zoneBonus)));
+    }
+
     for (const def of defenders) {
       const dist = Math.hypot(def.vehicle.position.x - carrier.vehicle.position.x, def.vehicle.position.z - carrier.vehicle.position.z);
-      if (dist > 2.65) continue;
+      if (dist > tackleRadius) continue;
 
       const defSnap = this.toAgentSnapshot(def);
       const tickK = Math.floor(this.world.simTime * 60);

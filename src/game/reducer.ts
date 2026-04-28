@@ -2048,6 +2048,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const preset = STYLE_PRESETS[action.presetId];
       return { ...state, manager: { ...state.manager, tacticalStyle: preset } };
     }
+    case 'SET_PRESSING_CONTEXT': {
+      const a = action as any;
+      const cur = state.manager.pressing ?? {
+        triggers: { onTurnover: true, whenLosing: true, whenLeading: false },
+        zone: 'mid' as const,
+        intensity: 60,
+      };
+      const next = {
+        triggers: { ...cur.triggers, ...(a.patch?.triggers ?? {}) },
+        zone: a.patch?.zone ?? cur.zone,
+        intensity: a.patch?.intensity ?? cur.intensity,
+      };
+      return { ...state, manager: { ...state.manager, pressing: next } };
+    }
     case 'SAVE_TACTIC_PLAN': {
       const name = action.name.trim();
       if (!name) return state;

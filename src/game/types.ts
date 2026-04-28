@@ -233,6 +233,21 @@ export interface OlefootGameState {
     defensiveLine: number;
     tempo: number;
     tacticalStyle: TeamTacticalStyle;
+    /** Sprint L4 — Instruções contextuais de prensa (granular por contexto). */
+    pressing?: {
+      triggers: {
+        /** Prensar imediatamente ao perder a bola (counter-press). */
+        onTurnover: boolean;
+        /** Prensa intensifica quando estamos atrás no placar. */
+        whenLosing: boolean;
+        /** Prensa intensifica quando ganhando (defesa apertada). */
+        whenLeading: boolean;
+      };
+      /** Zona principal de prensa: alta (campo adversário), meia, baixa (atrás da bola). */
+      zone: 'high' | 'mid' | 'low';
+      /** Intensidade base 0-100. */
+      intensity: number;
+    };
     savedTactics: SavedTacticPlan[];
     activeMatchTacticId: string | null;
     activeTrainingTacticId: string | null;
@@ -381,6 +396,19 @@ export type GameAction =
     }
   /** Cancela set-piece pendente (timeout, etc). */
   | { type: 'CANCEL_SET_PIECE' }
+  /** Sprint L4 — Atualiza instruções de prensa (parcial). */
+  | {
+      type: 'SET_PRESSING_CONTEXT';
+      patch: Partial<{
+        triggers: Partial<{
+          onTurnover: boolean;
+          whenLosing: boolean;
+          whenLeading: boolean;
+        }>;
+        zone: 'high' | 'mid' | 'low';
+        intensity: number;
+      }>;
+    }
   | {
       /** Injeta comando de voz num jogador da casa. */
       type: 'VOICE_COMMAND_ISSUED';
