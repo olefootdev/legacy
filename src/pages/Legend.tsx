@@ -56,8 +56,8 @@ export function Legend() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-3xl px-5 sm:px-8 py-8 sm:py-12">
-          {/* 1. Topbar: Voltar (esquerda) + Buscar lenda (direita, alinhado) */}
-          <div className="flex items-center justify-between mb-10 sm:mb-14">
+          {/* 1. Topbar: Voltar (esquerda) */}
+          <div className="flex items-center justify-between mb-7 sm:mb-9">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -67,6 +67,11 @@ export function Legend() {
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </button>
+          </div>
+
+          {/* Search centralizada com borda preta — sinaliza claramente
+              que há uma galeria de outras lendas pra explorar */}
+          <div className="mb-9 sm:mb-12">
             <LegendSearchBar
               onOpen={() => setSearchOpen(true)}
               totalCount={ALL_LEGEND_SLUGS.length}
