@@ -747,7 +747,7 @@ export function PenaltyPreview() {
         <div className="flex gap-3">
           <button
             onClick={nextShooter}
-            className="bg-black text-neon-yellow px-8 py-3 font-display font-black italic uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
+            className="bg-black text-neon-yellow px-8 py-3 font-display font-black uppercase tracking-wider -skew-x-6 hover:bg-white hover:text-black transition-all"
           >
             Próximo
           </button>
