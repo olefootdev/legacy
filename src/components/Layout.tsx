@@ -53,6 +53,16 @@ const mainNavItems: NavItem[] = [
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
 ];
 
+/** Bottom nav (mobile <lg) — 5 itens, ordem própria.
+ *  MEMORÁVEIS fica só no menu lateral (drawer). MANAGER assume o slot central. */
+const bottomNavItems: NavItem[] = [
+  { icon: Home, label: 'HOME', path: '/' },
+  { icon: Users, label: 'CLUBE', path: '/clube' },
+  { icon: User, label: 'MANAGER', path: '/manager' },
+  { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
+  { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
+];
+
 /** Item secundário — mora no rodapé do menu lateral, perto do SAIR.
  *  Renderizado em Inter regular (não vira item principal "perdido"). */
 const secondaryNavItems: NavItem[] = [
@@ -539,7 +549,7 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-hidden
             className="pointer-events-none absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-yellow/55 to-transparent"
           />
-          {mainNavItems.slice(0, 5).map((item) => {
+          {bottomNavItems.map((item) => {
             const isActive =
               location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             const isAccent = item.accent === true;
