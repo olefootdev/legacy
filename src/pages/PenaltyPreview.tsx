@@ -47,7 +47,7 @@ const SHOOTOUT_ROUNDS = 5;
 
 type ShotResult = 'goal' | 'save' | 'pending';
 type Phase = 'pick' | 'charging' | 'reveal' | 'result';
-type Outcome = 'goal' | 'save' | 'over-bar' | 'off-target';
+type Outcome = 'goal' | 'save' | 'over-bar' | 'post' | 'wide';
 
 function slotRect(idx: SlotIndex) {
   const col = idx % SLOT_COLS;
@@ -75,6 +75,7 @@ export function PenaltyPreview() {
 
   // Outcome após reveal
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [landing, setLanding] = useState<{ x: number; y: number } | null>(null);
 
   // Placar simulado da disputa
   const [homeShots, setHomeShots] = useState<ShotResult[]>([
@@ -172,25 +173,96 @@ export function PenaltyPreview() {
     setPickedSlot(slot);
     setPhase('reveal');
 
-    // Goleiro decide
     const guess = Math.floor(Math.random() * 9) as SlotIndex;
     setKeeperSlot(guess);
 
-    // Determina outcome baseado em power × match com goleiro
+    // ── Resolução com posição final coerente ──
+    const target = slotRect(slot);
+
+    // Drift baseado em finalização + força fora da zona doce
+    // Quanto pior o atributo, maior o desvio. Força extrema também desvia.
+    const finishingFactor = 1 - finishingRating / 100; // 0..1
+    const powerWobble =
+      finalPower < POWER_SWEET_LOW
+        ? 0.6 // chute fraco oscila
+        : finalPower > POWER_SWEET_HIGH
+          ? 0.9 // chute forte demais é instável
+          : 0.25; // zona doce, drift mínimo
+    const driftMag = (finishingFactor + powerWobble) * 28;
+    const driftX = (Math.random() - 0.5) * 2 * driftMag;
+    const driftY = (Math.random() - 0.5) * 2 * driftMag;
+
+    let finalX = target.cx + driftX;
+    let finalY = target.cy + driftY;
     let result: Outcome;
-    if (finalPower < POWER_SWEET_LOW) {
-      // Chute fraco → goleiro pega tranquilo
-      result = 'save';
-    } else if (finalPower > POWER_SWEET_HIGH) {
-      // Chute forte demais → por cima do travessão
+
+    // 1. Por cima do travessão (força > 88%)
+    if (finalPower > POWER_SWEET_HIGH) {
       result = 'over-bar';
-    } else if (slot === guess) {
+      finalX = target.cx + driftX * 0.4;
+      finalY = GOAL.y - 50 - Math.random() * 30;
+      setOutcome(result);
+      setLanding({ x: finalX, y: finalY });
+      window.setTimeout(() => setPhase('result'), 950);
+      return;
+    }
+
+    // 2. Detecção de trave — se a posição final estiver dentro da margem do frame
+    const POST_TOLERANCE = GOAL.frameWidth + 6; // ~16px
+    const distLeft = Math.abs(finalX - GOAL.x);
+    const distRight = Math.abs(finalX - (GOAL.x + GOAL.w));
+    const distTop = Math.abs(finalY - GOAL.y);
+    const insideVerticalRange = finalY >= GOAL.y - 4 && finalY <= GOAL.y + GOAL.h + 4;
+    const insideHorizontalRange = finalX >= GOAL.x - 4 && finalX <= GOAL.x + GOAL.w + 4;
+
+    const onLeftPost = distLeft < POST_TOLERANCE && insideVerticalRange;
+    const onRightPost = distRight < POST_TOLERANCE && insideVerticalRange;
+    const onCrossbar = distTop < POST_TOLERANCE && insideHorizontalRange;
+
+    if (onLeftPost || onRightPost || onCrossbar) {
+      // Snap visual à trave (bola encosta no frame)
+      if (onLeftPost) finalX = GOAL.x;
+      else if (onRightPost) finalX = GOAL.x + GOAL.w;
+      if (onCrossbar) finalY = GOAL.y;
+      result = 'post';
+      setOutcome(result);
+      setLanding({ x: finalX, y: finalY });
+      window.setTimeout(() => setPhase('result'), 950);
+      return;
+    }
+
+    // 3. Para fora — drift mandou pra além do gol
+    const insideGoal =
+      finalX > GOAL.x + 2 &&
+      finalX < GOAL.x + GOAL.w - 2 &&
+      finalY > GOAL.y + 2 &&
+      finalY < GOAL.y + GOAL.h - 2;
+    if (!insideGoal) {
+      result = 'wide';
+      setOutcome(result);
+      setLanding({ x: finalX, y: finalY });
+      window.setTimeout(() => setPhase('result'), 950);
+      return;
+    }
+
+    // 4. Dentro do gol — força fraca sempre vai no goleiro
+    if (finalPower < POWER_SWEET_LOW) {
+      result = 'save';
+      // Bola lenta, posição final no slot escolhido (goleiro pega ali)
+      setOutcome(result);
+      setLanding({ x: target.cx, y: target.cy });
+      window.setTimeout(() => setPhase('result'), 950);
+      return;
+    }
+
+    // 5. Goleiro acertou o slot? Defesa.
+    if (slot === guess) {
       result = 'save';
     } else {
       result = 'goal';
     }
     setOutcome(result);
-
+    setLanding({ x: finalX, y: finalY });
     window.setTimeout(() => setPhase('result'), 950);
   }
 
@@ -219,6 +291,7 @@ export function PenaltyPreview() {
     setPower(0);
     setShotPower(0);
     setOutcome(null);
+    setLanding(null);
   }
 
   function fullReset() {
@@ -252,6 +325,8 @@ export function PenaltyPreview() {
     // result
     if (outcome === 'goal') return 'GOOOL!';
     if (outcome === 'over-bar') return 'POR CIMA!';
+    if (outcome === 'post') return 'NA TRAVE!';
+    if (outcome === 'wide') return 'PRA FORA!';
     return 'DEFENDIDA';
   })();
 
@@ -499,26 +574,18 @@ export function PenaltyPreview() {
         {(phase === 'pick' || phase === 'charging') && (
           <LegacyBall cx={SPOT.x} cy={SPOT.y} size={BALL_SIZE_MARCA} jitter={phase === 'charging'} />
         )}
-        {phase === 'reveal' && pickRect && outcome && (
+        {phase === 'reveal' && landing && (
           <LegacyBallFlying
             from={SPOT}
-            to={
-              outcome === 'over-bar'
-                ? { x: pickRect.cx, y: GOAL.y - 60 } // sai por cima do travessão
-                : pickRect
-            }
+            to={landing}
             startSize={BALL_SIZE_MARCA}
             endSize={BALL_SIZE_FLY_END}
             durationMs={shotPower > POWER_SWEET_HIGH ? 320 : shotPower > POWER_SWEET_LOW ? 380 : 520}
             power={shotPower}
           />
         )}
-        {phase === 'result' && pickRect && (
-          <LegacyBall
-            cx={outcome === 'over-bar' ? pickRect.cx : pickRect.cx}
-            cy={outcome === 'over-bar' ? GOAL.y - 60 : pickRect.cy}
-            size={BALL_SIZE_RESULT}
-          />
+        {phase === 'result' && landing && (
+          <LegacyBall cx={landing.x} cy={landing.y} size={BALL_SIZE_RESULT} />
         )}
 
         {/* Selo de fase */}
@@ -537,7 +604,15 @@ export function PenaltyPreview() {
           {phase === 'charging' && '— CARREGANDO FORÇA —'}
           {phase === 'reveal' && '— BATE —'}
           {phase === 'result' &&
-            (outcome === 'goal' ? '— REDE —' : outcome === 'over-bar' ? '— FORA —' : '— DEFESA —')}
+            (outcome === 'goal'
+              ? '— REDE —'
+              : outcome === 'over-bar'
+                ? '— POR CIMA —'
+                : outcome === 'post'
+                  ? '— TRAVE —'
+                  : outcome === 'wide'
+                    ? '— PRA FORA —'
+                    : '— DEFESA —')}
         </text>
       </svg>
 
