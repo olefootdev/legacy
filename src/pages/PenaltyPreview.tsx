@@ -245,15 +245,15 @@ export function PenaltyPreview() {
         {/* Penalty spot */}
         <circle cx="400" cy="475" r="4" fill="#000" />
         <text
-          x="400"
-          y="498"
-          textAnchor="middle"
+          x="445"
+          y="478"
+          textAnchor="start"
           fontSize="9"
           fontFamily="monospace"
           fontWeight="700"
           letterSpacing="3"
           fill="#000"
-          opacity="0.55"
+          opacity="0.5"
         >
           11M
         </text>
@@ -406,18 +406,18 @@ export function PenaltyPreview() {
         />
 
         {/* Bola Legacy Tech — asset oficial */}
-        {phase === 'pick' && <LegacyBall cx={400} cy={475} size={36} />}
+        {phase === 'pick' && <LegacyBall cx={400} cy={475} size={64} />}
         {phase === 'reveal' && pickRect && (
           <LegacyBallFlying
             from={{ x: 400, y: 475 }}
             to={{ x: pickRect.cx, y: pickRect.cy }}
-            startSize={36}
-            endSize={26}
+            startSize={64}
+            endSize={42}
             durationMs={650}
           />
         )}
         {phase === 'result' && pickRect && (
-          <LegacyBall cx={pickRect.cx} cy={pickRect.cy} size={26} />
+          <LegacyBall cx={pickRect.cx} cy={pickRect.cy} size={42} />
         )}
 
         {/* Selo de fase */}
