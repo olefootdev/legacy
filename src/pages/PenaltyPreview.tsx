@@ -405,16 +405,10 @@ export function PenaltyPreview() {
           fill="none"
         />
 
-        {/* Bola — placeholder pro asset Legacy Tech do usuário */}
-        {phase === 'pick' && (
-          <g>
-            {/* IMG slot: substituir por <image href="/assets/penalty-ball.svg" .../> quando o asset chegar */}
-            <BallPlaceholder cx={400} cy={475} r={11} />
-          </g>
-        )}
-
+        {/* Bola Legacy Tech — asset oficial */}
+        {phase === 'pick' && <LegacyBall cx={400} cy={475} size={36} />}
         {phase === 'result' && pickRect && (
-          <BallPlaceholder cx={pickRect.cx} cy={pickRect.cy} r={11} />
+          <LegacyBall cx={pickRect.cx} cy={pickRect.cy} size={32} spin />
         )}
 
         {/* Selo de fase */}
@@ -524,15 +518,35 @@ export function PenaltyPreview() {
   );
 }
 
-// Placeholder visual da bola até o usuário gerar o asset
-function BallPlaceholder({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+// Bola Legacy Tech — asset oficial preto/dourado
+function LegacyBall({
+  cx,
+  cy,
+  size,
+  spin = false,
+}: {
+  cx: number;
+  cy: number;
+  size: number;
+  spin?: boolean;
+}) {
+  const half = size / 2;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r} fill="white" stroke="#000" strokeWidth="2" />
-      {/* Pentágonos estilizados (placeholder até o asset oficial) */}
-      <polygon
-        points={`${cx},${cy - r * 0.55} ${cx + r * 0.5},${cy - r * 0.15} ${cx + r * 0.3},${cy + r * 0.45} ${cx - r * 0.3},${cy + r * 0.45} ${cx - r * 0.5},${cy - r * 0.15}`}
-        fill="#000"
+      {/* Sombra projetada no chão (elipse achatada) */}
+      <ellipse cx={cx} cy={cy + half * 0.85} rx={half * 0.85} ry={half * 0.18} fill="#000" opacity="0.25" />
+      {/* Asset oficial */}
+      <image
+        href="/assets/legacy-ball.png"
+        x={cx - half}
+        y={cy - half}
+        width={size}
+        height={size}
+        style={{
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+          transformOrigin: `${cx}px ${cy}px`,
+          animation: spin ? 'olefoot-ball-tumble 0.6s ease-out' : undefined,
+        }}
       />
     </g>
   );
