@@ -32,6 +32,7 @@ import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { AssistantWidget } from '@/components/AssistantWidget';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
+import { useTotalManagers } from '@/hooks/useTotalManagers';
 
 type NavItem = {
   icon: typeof Home;
@@ -50,6 +51,10 @@ const mainNavItems: NavItem[] = [
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
+];
+
+/** Item secundário — mora no rodapé do menu lateral, perto do SAIR. */
+const secondaryNavItems: NavItem[] = [
   { icon: GraduationCap, label: 'AJUDA', path: '/ajuda' },
 ];
 
@@ -57,6 +62,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const oleBalance = useGameStore((s) => s.finance.ole);
+  const totalManagers = useTotalManagers();
   const localManagerFirst = useGameStore((s) => s.userSettings?.managerProfile?.firstName?.trim() ?? '');
   const [remoteManagerFirst, setRemoteManagerFirst] = useState<string | null>(null);
 
@@ -209,6 +215,51 @@ export function Layout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Bloco secundário: AJUDA + Status do jogo */}
+        <div className="px-4 pt-2 pb-3 space-y-1">
+          {secondaryNavItems.map((item) => {
+            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-4 px-4 py-3 transition-all duration-200 group relative',
+                  isActive ? 'text-white' : 'text-gray-500 hover:text-white',
+                )}
+              >
+                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-yellow" />}
+                <item.icon
+                  className={cn(
+                    'w-5 h-5',
+                    isActive
+                      ? 'text-neon-yellow'
+                      : 'group-hover:text-neon-yellow transition-colors',
+                  )}
+                />
+                <span className="font-display font-bold tracking-wider text-lg">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Status do jogo — Inter regular, sem display caps */}
+        <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
+          <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
+            Status do jogo
+          </p>
+          <p
+            className="text-white mt-1"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+          >
+            Somos:{' '}
+            <span className="text-neon-yellow font-semibold tabular-nums">
+              {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+            </span>{' '}
+            {totalManagers === 1 ? 'clube' : 'clubes'}
+          </p>
+        </div>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
           <button
@@ -389,6 +440,49 @@ export function Layout({ children }: { children: ReactNode }) {
                   );
                 })}
               </nav>
+
+              {/* AJUDA secundário + Status do jogo */}
+              <div className="px-4 pt-1 pb-2 space-y-1">
+                {secondaryNavItems.map((item) => {
+                  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        'flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative',
+                        isActive ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5',
+                      )}
+                    >
+                      {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-neon-yellow rounded-r" />}
+                      <item.icon
+                        className={cn(
+                          'w-5 h-5',
+                          isActive ? 'text-neon-yellow' : 'group-hover:text-neon-yellow transition-colors',
+                        )}
+                      />
+                      <span className="font-display font-bold tracking-wider">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
+                  Status do jogo
+                </p>
+                <p
+                  className="text-white mt-1"
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+                >
+                  Somos:{' '}
+                  <span className="text-neon-yellow font-semibold tabular-nums">
+                    {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+                  </span>{' '}
+                  {totalManagers === 1 ? 'clube' : 'clubes'}
+                </p>
+              </div>
 
               <div className="p-5 border-t border-white/10 bg-[#0a0a0a]">
                 <button
