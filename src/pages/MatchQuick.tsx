@@ -280,7 +280,7 @@ const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
               <img
                 src={photoUrl}
                 alt=""
-                loading="lazy"
+                loading="eager"
                 decoding="async"
                 className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-opacity duration-300"
                 style={{ opacity: 0.88 }}
