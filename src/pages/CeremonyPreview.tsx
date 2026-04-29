@@ -61,7 +61,7 @@ function makeMockPackage(): OnboardingPackage {
   };
 }
 
-type Phase = 'intro' | 'exp' | 'squad' | 'top3' | 'daily' | 'outro' | 'done';
+type Phase = 'intro' | 'exp' | 'squad' | 'top3' | 'daily' | 'outro';
 
 const PHASE_ORDER: Phase[] = ['intro', 'exp', 'squad', 'top3', 'daily', 'outro'];
 
@@ -71,7 +71,7 @@ export function CeremonyPreview() {
 
   const next = () => {
     const idx = PHASE_ORDER.indexOf(phase);
-    setPhase(idx >= 0 && idx < PHASE_ORDER.length - 1 ? PHASE_ORDER[idx + 1]! : 'done');
+    setPhase(idx >= 0 && idx < PHASE_ORDER.length - 1 ? PHASE_ORDER[idx + 1]! : 'intro');
   };
 
   const jump = (p: Phase) => setPhase(p);
@@ -127,17 +127,7 @@ export function CeremonyPreview() {
         <DailyBonusChapter onClaim={() => {}} onNext={next} />
       )}
       {phase === 'outro' && (
-        <OutroChapter managerName="João" onFinish={() => setPhase('done')} />
-      )}
-      {phase === 'done' && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="font-serif-hero italic text-neon-yellow"
-            style={{ fontSize: 48 }}
-          >
-            ✓
-          </div>
-        </div>
+        <OutroChapter managerName="João" onFinish={() => setPhase('intro')} />
       )}
     </div>
   );
