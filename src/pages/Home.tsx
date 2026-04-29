@@ -1446,28 +1446,27 @@ export function Home() {
         <MarketActivityFeed activities={marketActivities} maxVisible={5} />
       </motion.section>
 
-      {/* Apoio da Torcida — banner amarelo full-width, fonte/ícones em preto (rodapé da Home) */}
+      {/* Apoio da Torcida — rodapé da Home, fundo cinza escuro com acento amarelo */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         aria-label="Apoio da torcida"
-        className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 rounded-sm mt-6 sm:mt-8"
-        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
+        className="relative isolate overflow-hidden mt-6 sm:mt-8"
       >
         <div className="px-5 sm:px-8 py-6 sm:py-7 flex flex-col items-center text-center gap-4">
           <div
-            className="inline-flex items-center gap-3 text-black/85"
+            className="inline-flex items-center gap-3 text-white"
             style={{ fontFamily: 'var(--font-ui)' }}
           >
-            <span aria-hidden className="h-px w-8 bg-black/60" />
+            <span aria-hidden className="h-px w-8 bg-white/25" />
             <span className="uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.22em' }}>
               Apoio da torcida
             </span>
-            <span aria-hidden className="h-px w-8 bg-black/60" />
+            <span aria-hidden className="h-px w-8 bg-white/25" />
           </div>
           <p
-            className="italic text-black leading-none tabular-nums"
+            className="italic text-neon-yellow leading-none tabular-nums"
             style={{
               fontFamily: 'var(--font-serif-hero)',
               fontWeight: 700,
@@ -1477,22 +1476,29 @@ export function Home() {
           >
             {supportLabel}
             <span
-              className="ml-1 text-black/55 not-italic"
+              className="ml-1 text-neon-yellow/55 not-italic"
               style={{ fontFamily: 'var(--font-display)', fontSize: '0.55em' }}
             >
               %
             </span>
           </p>
-          <div className="w-full max-w-md h-2 bg-black/15 overflow-hidden relative" style={{ borderRadius: 'var(--radius-sm)' }}>
+          <div
+            className="w-full max-w-md h-2 bg-white/10 overflow-hidden relative"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${roundedSupport}%` }}
               transition={{ duration: 1, delay: 0.5 }}
-              className="absolute top-0 left-0 h-full bg-black"
+              className="absolute top-0 left-0 h-full"
+              style={{
+                background:
+                  'linear-gradient(90deg, var(--color-neon-yellow-dark) 0%, var(--color-neon-yellow) 100%)',
+              }}
             />
           </div>
           <p
-            className="text-black/75 uppercase"
+            className="text-white uppercase"
             style={{
               fontFamily: 'var(--font-ui)',
               fontSize: '11px',
