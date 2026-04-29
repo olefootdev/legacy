@@ -515,3 +515,12 @@ html[data-graphic-quality='low'] .sports-panel::after {
       0 0 36px rgba(253, 225, 0, 0.85);
   }
 }
+
+/* Home hero — news ticker (loop infinito sem corte; conteúdo é duplicado) */
+@keyframes home-hero-ticker {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="home-hero-ticker"] { animation: none !important; }
+}
