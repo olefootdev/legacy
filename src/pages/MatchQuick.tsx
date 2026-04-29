@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, LogOut, Plus, Trophy, RotateCcw, X } from 'lucide-react';
@@ -201,11 +201,11 @@ interface QuickPlayerRowCardProps {
   isSelected?: boolean;
   isTop?: boolean;        // Top 3 do impact
   badges?: ReactNode;     // PlayerEventStrip
-  photoSeed?: string;     // Para picsum determinístico
+  photoUrl?: string;      // URL resolvida pelo caller (playerPortraitSrc)
   onClick?: () => void;
 }
 
-function QuickPlayerRowCard({
+const QuickPlayerRowCard = memo(function QuickPlayerRowCard({
   variant,
   rank,
   num,
@@ -217,12 +217,14 @@ function QuickPlayerRowCard({
   isSelected = false,
   isTop = false,
   badges,
-  photoSeed,
+  photoUrl,
   onClick,
 }: QuickPlayerRowCardProps) {
   const isSentOff = variant === 'home-sent-off';
   const isAway = variant === 'away';
   const isTired = !isSentOff && !isAway && fatigue >= 68;
+  const [imgError, setImgError] = useState(false);
+  const handleImgError = useCallback(() => setImgError(true), []);
 
   const railClass = isSelected
     ? 'border-l-neon-yellow bg-neon-yellow/[0.08]'
@@ -235,10 +237,6 @@ function QuickPlayerRowCard({
             ? 'border-l-white/45'
             : 'border-l-neon-yellow'
           : 'border-l-white/15';
-
-  const photoUrl = photoSeed
-    ? `https://picsum.photos/seed/quick-${photoSeed}/200/240`
-    : `https://picsum.photos/seed/quick-${num}-${name}/200/240`;
 
   const Wrapper: any = onClick && !isSentOff ? motion.button : motion.div;
   const wrapperProps = onClick && !isSentOff
@@ -260,9 +258,7 @@ function QuickPlayerRowCard({
 
   return (
     <Wrapper
-      layout="position"
       initial={false}
-      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       {...wrapperProps}
       className={cn(
         'group flex w-full overflow-hidden border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all duration-200',
@@ -270,7 +266,7 @@ function QuickPlayerRowCard({
         isSentOff ? 'opacity-85' : '',
         railClass,
       )}
-      style={{ borderRadius: 'var(--radius-md)' }}
+      style={{ borderRadius: 'var(--radius-md)', willChange: onClick && !isSentOff ? 'transform' : undefined }}
     >
       {/* Foto + OVR overlay (só home) — w-14 mobile (56px) economiza
        *  ~20% da largura pra info; w-20 (80px) em sm+. */}
@@ -280,12 +276,32 @@ function QuickPlayerRowCard({
       >
         {!isAway ? (
           <>
-            <img
-              src={photoUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
-              referrerPolicy="no-referrer"
-            />
+            {photoUrl && !imgError ? (
+              <img
+                src={photoUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-opacity duration-300"
+                style={{ opacity: 0.88 }}
+                referrerPolicy="no-referrer"
+                onError={handleImgError}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white/10 to-white/[0.02]">
+                <span
+                  className="italic text-white/40 leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: 'clamp(22px, 3vw, 30px)',
+                    letterSpacing: '-0.04em',
+                  }}
+                >
+                  {(name?.[0] ?? '?').toUpperCase()}
+                </span>
+              </div>
+            )}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent" />
             {/* OVR — só desktop (sm+). Mobile fica minimalista. */}
             {ovr !== undefined && !isSentOff ? (
@@ -548,7 +564,7 @@ function QuickPlayerRowCard({
       </div>
     </Wrapper>
   );
-}
+});
 
 interface MvpSnapshot {
   playerId: string;
@@ -2098,7 +2114,7 @@ export function MatchQuick() {
   }
 
   return (
-    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-52 md:flex-none">
+    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-52 md:flex-none" style={{ touchAction: 'pan-y' }}>
       {/* Streak Bar */}
       <StreakBar streak={quickMatchStreak} />
 
@@ -2844,21 +2860,24 @@ export function MatchQuick() {
                           isSelected={selected?.playerId === p.playerId}
                           isTop={idx < 3}
                           badges={<PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />}
-                          photoSeed={p.playerId}
+                          photoUrl={entity ? playerPortraitSrc(entity, 80, 96) : undefined}
                           onClick={() => setSelected(p)}
                         />
                       );
                     })}
-                    {homeSentOffRows.map((row) => (
-                      <QuickPlayerRowCard
-                        key={`sent-off-${row.playerId}`}
-                        variant="home-sent-off"
-                        num={row.num}
-                        name={row.name}
-                        pos={row.pos}
-                        photoSeed={row.playerId}
-                      />
-                    ))}
+                    {homeSentOffRows.map((row) => {
+                      const ent = playersById[row.playerId];
+                      return (
+                        <QuickPlayerRowCard
+                          key={`sent-off-${row.playerId}`}
+                          variant="home-sent-off"
+                          num={row.num}
+                          name={row.name}
+                          pos={row.pos}
+                          photoUrl={ent ? playerPortraitSrc(ent, 80, 96) : undefined}
+                        />
+                      );
+                    })}
                   </>
                 )}
               </div>
@@ -2920,7 +2939,6 @@ export function MatchQuick() {
                     impact={p.impact}
                     isTop={idx < 3}
                     badges={<PlayerEventStrip badges={awayEventBadges.get(p.id) ?? []} />}
-                    photoSeed={p.id}
                   />
                 ))}
                 {awaySentOffRows.map((row) => (
@@ -2930,7 +2948,6 @@ export function MatchQuick() {
                     num={row.num}
                     name={row.name}
                     pos={row.pos}
-                    photoSeed={row.id}
                   />
                 ))}
               </div>
