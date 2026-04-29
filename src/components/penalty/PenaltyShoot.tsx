@@ -262,7 +262,7 @@ export function PenaltyShoot({
 
   return (
     <div
-      className="bg-neon-yellow flex flex-col items-center px-4 sm:px-6 select-none"
+      className="bg-neon-yellow flex flex-col items-center px-4 sm:px-6 select-none w-full flex-1"
       style={{
         touchAction: 'none',
         minHeight: '100dvh',

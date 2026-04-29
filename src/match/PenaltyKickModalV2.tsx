@@ -181,7 +181,7 @@ export function PenaltyKickModalV2(props: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-y-auto">
+    <div className="fixed inset-0 z-[200] flex flex-col">
       <PenaltyShoot
         key={`shoot-${penalty.takerId}`}
         headerLabel="Pênalti em jogo"
