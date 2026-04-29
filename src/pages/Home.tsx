@@ -1449,11 +1449,11 @@ export function Home() {
             className="inline-flex items-center gap-3 text-black/85"
             style={{ fontFamily: 'var(--font-ui)' }}
           >
-            <Heart aria-hidden className="h-4 w-4 text-black" fill="currentColor" />
+            <span aria-hidden className="h-px w-8 bg-black/60" />
             <span className="uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.22em' }}>
               Apoio da torcida
             </span>
-            <Heart aria-hidden className="h-4 w-4 text-black" fill="currentColor" />
+            <span aria-hidden className="h-px w-8 bg-black/60" />
           </div>
           <p
             className="italic text-black leading-none tabular-nums"
