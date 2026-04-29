@@ -455,44 +455,67 @@ export function SquadDraftChapter(props: {
               >
                 {/* Barra dourada vertical à esquerda — assinatura do brandbook */}
                 <div
-                  className="absolute left-0 top-0 bottom-0"
+                  className="absolute left-0 top-0 bottom-0 z-20"
                   style={{
                     width: 4,
                     background: TIER_ACCENT[c.tier],
                   }}
                 />
-                <div className="absolute inset-0 pl-4 pr-3 py-3 flex flex-col gap-2">
+                {/* Foto centralizada no fundo */}
+                {c.portraitUrl ? (
+                  <img
+                    src={c.portraitUrl}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover grayscale"
+                    style={{ opacity: 0.42 }}
+                  />
+                ) : null}
+                {/* Vinheta para legibilidade do texto */}
+                <div
+                  aria-hidden
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.85) 100%)',
+                  }}
+                />
+                {/* OVR — topo esquerda */}
+                <div
+                  className="absolute top-2 left-3 z-10 italic text-neon-yellow tabular-nums leading-none"
+                  style={{
+                    fontFamily: 'var(--font-serif-hero)',
+                    fontWeight: 700,
+                    fontSize: 'clamp(32px, 5vw, 52px)',
+                    letterSpacing: '-0.03em',
+                    textShadow: '0 2px 8px rgba(0,0,0,0.85)',
+                  }}
+                >
+                  {c.ovr}
+                </div>
+                {/* Nome + POS — base direita */}
+                <div className="absolute bottom-2 right-3 z-10 flex flex-col items-end leading-tight">
                   <div
-                    className="font-display uppercase text-neon-yellow"
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: '0.32em',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {c.pos}
-                  </div>
-                  <div
-                    className="font-display uppercase text-white/90 truncate"
+                    className="font-display uppercase text-white truncate max-w-full"
                     style={{
                       fontSize: 12,
-                      letterSpacing: '0.16em',
+                      letterSpacing: '0.14em',
                       fontWeight: 700,
-                      lineHeight: 1.1,
+                      textShadow: '0 1px 4px rgba(0,0,0,0.85)',
                     }}
                   >
                     {c.name}
                   </div>
                   <div
-                    className="italic text-neon-yellow tabular-nums leading-none mt-auto"
+                    className="font-display uppercase text-neon-yellow"
                     style={{
-                      fontFamily: 'var(--font-serif-hero)',
+                      fontSize: 9,
+                      letterSpacing: '0.32em',
                       fontWeight: 700,
-                      fontSize: 'clamp(32px, 5vw, 52px)',
-                      letterSpacing: '-0.03em',
+                      marginTop: -1,
                     }}
                   >
-                    {c.ovr}
+                    {c.pos}
                   </div>
                 </div>
               </div>
