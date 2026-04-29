@@ -143,7 +143,7 @@ export function AssistantPanel({
       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
       className="fixed bottom-16 left-2 right-2 sm:bottom-[5rem] sm:left-0 sm:right-0 z-[90] sm:px-3 md:px-4 md:bottom-4"
     >
-      <div className="mx-auto max-w-lg overflow-hidden rounded-xl border border-neon-yellow/30 bg-deep-black shadow-[0_0_40px_rgba(253,224,71,0.2)]">
+      <div className="mx-auto max-w-lg flex flex-col overflow-hidden rounded-xl border border-neon-yellow/30 bg-deep-black shadow-[0_0_40px_rgba(253,224,71,0.2)] max-h-[min(72vh,32rem)]">
 
         {/* Barra de progresso — auto-dismiss para eventos normais, inativa no intervalo */}
         <div className="h-[3px] bg-black">
@@ -211,8 +211,9 @@ export function AssistantPanel({
           </div>
         </div>
 
-        {/* Corpo */}
-        <div className="px-4 py-4 bg-black/40">
+        {/* Corpo — scrollável internamente quando as opções/contexto
+            extrapolam a altura disponível (ex.: min70 com matchContext). */}
+        <div className="px-4 py-4 bg-black/40 overflow-y-auto flex-1 min-h-0">
           {event.kind === 'min15_check' && (
             <Min15Check
               step={step}
@@ -263,6 +264,20 @@ export function AssistantPanel({
             />
           )}
         </div>
+
+        {/* Footer eventos normais — CTA único "VOLTAR JOGO" pra evitar
+            que o user precise caçar o × no header pra fechar o painel. */}
+        {!isHalftime && (
+          <div className="border-t border-white/10 bg-black/60 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => { interact(); onDismiss(); }}
+              className="w-full rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_18px_rgba(253,224,71,0.25)] transition-all hover:scale-[1.01] active:scale-[0.99]"
+            >
+              ▶ Voltar ao Jogo
+            </button>
+          </div>
+        )}
 
         {/* Footer intervalo: APLICAR + RETOMAR PARTIDA */}
         {isHalftime && (

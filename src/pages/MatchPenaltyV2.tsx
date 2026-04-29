@@ -230,6 +230,35 @@ export function MatchPenaltyV2() {
             Ordenados por finalização. {takerOrder.length}/{TOTAL_KICKS} selecionados.
           </p>
 
+          {availablePlayers.length === 0 ? (
+            // Empty-state — sem plantel não dá pra escolher batedores.
+            // Mostra CTA pra criar/recrutar jogadores no clube.
+            <div className="rounded-md border border-dashed border-white/15 bg-deep-black/40 px-5 py-10 text-center mb-8">
+              <p
+                className="text-white/65 mb-2 uppercase"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                }}
+              >
+                Plantel vazio
+              </p>
+              <p className="text-white/45 text-[13px] leading-snug mb-5">
+                Você precisa de pelo menos {TOTAL_KICKS} jogadores no
+                plantel pra montar a disputa.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/clube/elenco')}
+                className="inline-flex items-center justify-center bg-neon-yellow text-black px-6 py-2.5 font-display font-black uppercase tracking-wider text-xs -skew-x-6 hover:bg-white transition-colors"
+              >
+                Ir ao Elenco
+              </button>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-8">
             {availablePlayers.slice(0, 12).map((p: any) => {
               const idx = takerOrder.indexOf(p.id);
