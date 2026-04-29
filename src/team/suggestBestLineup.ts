@@ -32,8 +32,13 @@ function posKey(p: string): string {
 export function suggestBestLineup(
   slots: LineupSlotUi[],
   squad: SquadPlayerLite[],
+  health?: Record<string, import('@/systems/playerHealth/types').PlayerHealth>,
 ): { slotToPlayerId: Record<string, string>; note: string } | { error: string } {
-  const eligible = squad.filter((p) => p.outForMatches <= 0);
+  const eligible = squad.filter((p) => {
+    const h = health?.[p.id];
+    if (h) return h.outForMatches <= 0 && h.suspendedMatches <= 0;
+    return p.outForMatches <= 0;
+  });
   if (eligible.length < slots.length) {
     return { error: 'Jogadores em campo ou suspensões: não há 11 disponíveis para sugerir.' };
   }

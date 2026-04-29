@@ -31,6 +31,8 @@
     "test:player-speed": "tsx src/match/runPlayerSpeedSelfTest.ts",
     "test:live-story": "tsx src/gamespirit/runLiveStorySelfTest.ts",
     "test:playing-style": "tsx src/playerDecision/runPlayingStyleSelfTest.ts",
+    "test:olefoot-league": "tsx src/olefootLeague/runOlefootLeagueSelfTest.ts",
+    "test:onboarding": "tsx src/onboarding/runOnboardingSelfTest.ts",
     "dev:server": "npm run dev --prefix server",
     "test:openai": "npm run test:openai --prefix server",
     "test:openai:http": "npm run test:openai:http --prefix server",

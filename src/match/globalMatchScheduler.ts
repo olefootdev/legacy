@@ -10,11 +10,13 @@ import type {
   GlobalFixture,
   GlobalLeagueState,
   GlobalRoundStatus,
+  CycleWindowPhase,
 } from './globalMatch';
 import {
   newGlobalRoundId,
   GLOBAL_MATCH_CONSTANTS,
   createEmptyGlobalLeagueState,
+  getCycleWindowPhase,
 } from './globalMatch';
 import { simulateGlobalRound } from './globalMatchSimulator';
 import { processRoundConsequences } from './globalMatchConsequences';
@@ -170,6 +172,8 @@ export class GlobalMatchScheduler {
   private state: GlobalLeagueState;
   private intervalId?: NodeJS.Timeout;
   private onStateChange?: (state: GlobalLeagueState) => void;
+  private onWindowChange?: (phase: CycleWindowPhase, round: GlobalRound) => void;
+  private lastWindowPhase?: CycleWindowPhase;
 
   constructor(
     initialState?: GlobalLeagueState,
@@ -182,15 +186,19 @@ export class GlobalMatchScheduler {
   /**
    * Inicia o scheduler
    */
-  start(onStateChange?: (state: GlobalLeagueState) => void) {
+  start(
+    onStateChange?: (state: GlobalLeagueState) => void,
+    onWindowChange?: (phase: CycleWindowPhase, round: GlobalRound) => void,
+  ) {
     this.onStateChange = onStateChange;
+    this.onWindowChange = onWindowChange;
 
     // Verificar estado a cada segundo
     this.intervalId = setInterval(() => {
       this.tick();
     }, 1000);
 
-    console.log('[GlobalMatchScheduler] Iniciado');
+    console.log('[GlobalMatchScheduler] Iniciado (LEGACY ciclo 15min)');
   }
 
   /**
@@ -239,6 +247,22 @@ export class GlobalMatchScheduler {
     if (updatedRound.status !== this.state.currentRound.status) {
       this.state.currentRound = updatedRound;
       this.notifyStateChange();
+    }
+
+    // Detectar transição de janela do ciclo de 15min e notificar
+    this.detectWindowTransition(this.state.currentRound, now);
+  }
+
+  /**
+   * Detecta transição entre janelas do ciclo (recovery → training → tactical → lock → live)
+   * e dispara o callback `onWindowChange` no momento da transição.
+   */
+  private detectWindowTransition(round: GlobalRound, nowMs: number) {
+    if (!this.onWindowChange) return;
+    const phase = getCycleWindowPhase(round, nowMs);
+    if (phase !== this.lastWindowPhase) {
+      this.lastWindowPhase = phase;
+      this.onWindowChange(phase, round);
     }
   }
 

@@ -107,7 +107,7 @@ function createDefaultCoach(): CoachAgent {
 
 export function AdminCoachAgentsPanel() {
   const dispatch = useGameDispatch();
-  const coach = useGameStore((s) => s.coach);
+  const coach = useGameStore((s) => s.manager.coach);
   const [editingCoach, setEditingCoach] = useState<CoachAgent | null>(null);
   const [showChat, setShowChat] = useState(false);
 
@@ -516,6 +516,9 @@ export function AdminCoachAgentsPanel() {
             )}
           </div>
 
+          {/* Treinar Coach — Instruções do Manager */}
+          <CoachInstructionsSection />
+
           {/* Histórico de Decisões */}
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-4">
@@ -555,6 +558,118 @@ export function AdminCoachAgentsPanel() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CoachInstructionsSection() {
+  const dispatch = useGameDispatch();
+  const instructions = useGameStore((s) => s.manager.coach?.memory.managerInstructions ?? []);
+  const [text, setText] = useState('');
+  const [category, setCategory] = useState<'training' | 'staff' | 'lineup' | 'tactics' | 'general'>('general');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+
+  const handleAdd = () => {
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return;
+    dispatch({
+      type: 'COACH_ADD_INSTRUCTION',
+      instruction: trimmed,
+      category,
+      priority,
+      context: 'Treinamento manual via Admin',
+    });
+    setText('');
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+      <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-4">
+        Treinar Coach — Instruções do Manager
+      </h3>
+
+      <div className="space-y-2">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Ex: Sempre priorize fadiga abaixo de 60% antes de treino tático"
+          className="w-full rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-white placeholder:text-white/30 focus:border-neon-green focus:outline-none"
+          rows={3}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as typeof category)}
+            className="rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-white"
+          >
+            <option value="general">Geral</option>
+            <option value="training">Treino</option>
+            <option value="staff">Staff</option>
+            <option value="lineup">Escalação</option>
+            <option value="tactics">Tática</option>
+          </select>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as typeof priority)}
+            className="rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-white"
+          >
+            <option value="high">Alta</option>
+            <option value="medium">Média</option>
+            <option value="low">Baixa</option>
+          </select>
+          <button
+            onClick={handleAdd}
+            disabled={text.trim().length === 0}
+            className="ml-auto rounded bg-neon-green px-3 py-1 text-xs font-bold text-black disabled:opacity-40"
+          >
+            + Adicionar instrução
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {instructions.length === 0 ? (
+          <p className="py-2 text-center text-xs text-white/40">
+            Nenhuma instrução registrada. O coach aprende com seus comandos.
+          </p>
+        ) : (
+          instructions.map((it, idx) => (
+            <div
+              key={idx}
+              className={cn(
+                'flex items-start gap-3 rounded border border-white/10 p-3',
+                it.active ? 'bg-black/30' : 'bg-black/10 opacity-50',
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={it.active}
+                onChange={(e) =>
+                  dispatch({
+                    type: 'COACH_TOGGLE_INSTRUCTION',
+                    index: idx,
+                    active: e.target.checked,
+                  })
+                }
+                className="mt-1"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-white">{it.instruction}</p>
+                <p className="mt-1 text-xs text-white/40">
+                  {it.category} · {it.priority} · {new Date(it.timestamp).toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <button
+                onClick={() => dispatch({ type: 'COACH_REMOVE_INSTRUCTION', index: idx })}
+                className="text-xs text-red-400 hover:text-red-300"
+                title="Remover"
+              >
+                ×
+              </button>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

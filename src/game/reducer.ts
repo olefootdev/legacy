@@ -37,6 +37,31 @@ import {
   updateChallengeProgress,
 } from './dailyChallenges';
 import { tickRecoveryMatches } from '@/systems/injury';
+import {
+  applyMatchConsequences as applyHealthConsequences,
+  tickHealthRecovery,
+} from '@/systems/playerHealth/reducer';
+import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
+import { applyHealthEffect } from '@/systems/playerHealth/reducer';
+import { generateProactiveHealthActions } from '@/coach/proactiveHealthActions';
+import { applyMatchResultToMoral, createDefaultMoral } from '@/systems/playerMoral/types';
+import type { MatchResult, PlayerMoral } from '@/systems/playerMoral/types';
+import {
+  OLEFOOT_LEAGUE_CONSTANTS,
+  createDefaultEloRating,
+  createEmptyOlefootRankedState,
+} from '@/olefootLeague/types';
+import type {
+  EloRating,
+  OlefootLeaderboardRow,
+  OlefootMatchRecord,
+  OlefootRankedState,
+} from '@/olefootLeague/types';
+import { updateElo, scoreFromGoals } from '@/olefootLeague/elo';
+import { generateProactiveTrainingActions } from '@/coach/proactiveTrainingActions';
+import { generateProactiveTacticalActions } from '@/coach/proactiveTacticalActions';
+import { buildPreMatchBriefing } from '@/coach/coachBriefing';
+import { createDefaultCoachAgent } from '@/coach/defaultCoach';
 import { applyWorldCatchUp } from './worldCatchUp';
 import { mergeWalletIntoFinance } from './financeWalletSync';
 import { applySquadTraining } from '@/systems/training';
@@ -169,7 +194,7 @@ import type { SocialState } from '@/social/types';
 import { discoverableById } from '@/social/catalog';
 import { makeInboxItem } from './inboxItem';
 import { buildPostMatchStaffInboxItem } from './postMatchStaffInbox';
-import { defaultShopCatalog, normalizeShopCatalog, shopEffectNeedsPlayer } from './shopCatalog';
+import { defaultShopCatalog, findShopItem, normalizeShopCatalog, shopEffectNeedsPlayer } from './shopCatalog';
 
 function socialOf(state: OlefootGameState): SocialState {
   return state.social ?? { friends: [], incoming: [], outgoing: [] };
@@ -313,8 +338,249 @@ function runTick(state: OlefootGameState): OlefootGameState {
   return { ...state, liveMatch, players, inbox };
 }
 
+/**
+ * Aplica efeitos de uma CoachAction no state. Usado por COACH_EXECUTE_ACTION
+ * (caminho normal: aprovar→executar) e por auto-execução em COACH_GENERATE_HEALTH_ACTIONS
+ * quando o coach tem `autonomyLevel >= 80`.
+ */
+function applyCoachActionEffects(
+  state: OlefootGameState,
+  coachAction: import('@/coach/types').CoachAction,
+): OlefootGameState {
+  let newState = state;
+  switch (coachAction.type) {
+    case 'start_training': {
+      const data = coachAction.data as any;
+      const plan = {
+        id: `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        mode: data.mode,
+        trainingType: data.trainingType,
+        playerIds: data.playerIds,
+        group: data.group,
+        startedAt: new Date().toISOString(),
+        endAt: new Date(Date.now() + data.durationHours * 60 * 60 * 1000).toISOString(),
+        status: 'running' as const,
+      };
+      newState = {
+        ...newState,
+        manager: { ...newState.manager, trainingPlans: [...newState.manager.trainingPlans, plan] },
+      };
+      break;
+    }
+    case 'start_treatment': {
+      const data = coachAction.data as any;
+      const treatmentPlan = {
+        id: `treat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        playerId: data.playerId,
+        startedAt: new Date().toISOString(),
+        endAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        status: 'running' as const,
+      };
+      newState = {
+        ...newState,
+        manager: {
+          ...newState.manager,
+          treatmentPlans: [...(newState.manager.treatmentPlans || []), treatmentPlan],
+        },
+      };
+      break;
+    }
+    case 'set_lineup_formation': {
+      const data = coachAction.data as any;
+      const scheme = data.formationScheme as FormationSchemeId;
+      if (!scheme || !(scheme in FORMATION_BASES)) break;
+      newState = {
+        ...newState,
+        manager: { ...newState.manager, formationScheme: scheme },
+        ...(data.lineup ? { lineup: { ...data.lineup } } : {}),
+      };
+      break;
+    }
+    case 'buy_health_booster': {
+      const data = coachAction.data as any;
+      const item = findShopItem(newState.shopCatalog, data.shopItemId);
+      if (!item || !item.consumable || !item.effect) break;
+      const costExp = item.priceExp ?? 0;
+      const costBro = item.priceBroCents ?? 0;
+      if (costExp > 0 && newState.finance.ole < costExp) break;
+      if (costBro > 0 && newState.finance.broCents < costBro) break;
+
+      let pHealth = newState.playerHealth;
+      let applied = false;
+      switch (item.effect.kind) {
+        case 'reset_squad_fatigue': {
+          const next: typeof pHealth = {};
+          for (const [pid, h] of Object.entries(pHealth)) {
+            next[pid] = applyHealthEffect(h, { kind: 'reset_fatigue' });
+          }
+          pHealth = next;
+          applied = true;
+          break;
+        }
+        case 'reduce_player_injury': {
+          const target = data.targetPlayerId as string | undefined;
+          if (target && pHealth[target]) {
+            const matches = (item.effect as { matches?: number }).matches ?? 1;
+            const cur = pHealth[target];
+            pHealth = {
+              ...pHealth,
+              [target]: { ...cur, outForMatches: Math.max(0, cur.outForMatches - matches) },
+            };
+            applied = true;
+          }
+          break;
+        }
+      }
+      if (!applied) break;
+
+      newState = {
+        ...newState,
+        finance: {
+          ...newState.finance,
+          ole: newState.finance.ole - costExp,
+          broCents: newState.finance.broCents - costBro,
+        },
+        playerHealth: pHealth,
+      };
+      break;
+    }
+  }
+  return newState;
+}
+
+/** Aplica resultado nas morais dos jogadores das duas equipes. */
+function applyMoralToPlayers(
+  moralMap: Record<string, PlayerMoral> | undefined,
+  homeIds: string[],
+  homeResult: MatchResult,
+  awayIds: string[],
+  awayResult: MatchResult,
+): Record<string, PlayerMoral> {
+  const next: Record<string, PlayerMoral> = { ...(moralMap ?? {}) };
+  const now = Date.now();
+  for (const pid of homeIds) {
+    const cur = next[pid] ?? createDefaultMoral(pid, now);
+    next[pid] = applyMatchResultToMoral(cur, homeResult, now);
+  }
+  for (const pid of awayIds) {
+    const cur = next[pid] ?? createDefaultMoral(pid, now);
+    next[pid] = applyMatchResultToMoral(cur, awayResult, now);
+  }
+  return next;
+}
+
+/** Recalcula leaderboard a partir do mapa de ratings + histórico recente. */
+function recomputeLeaderboard(
+  ratings: Record<string, EloRating>,
+  recentMatches: OlefootMatchRecord[],
+  knownNames: Record<string, string>,
+): OlefootLeaderboardRow[] {
+  const goalsFor: Record<string, number> = {};
+  const goalsAgainst: Record<string, number> = {};
+  const names: Record<string, string> = { ...knownNames };
+  for (const m of recentMatches) {
+    goalsFor[m.homeManagerId] = (goalsFor[m.homeManagerId] ?? 0) + m.homeGoals;
+    goalsFor[m.awayManagerId] = (goalsFor[m.awayManagerId] ?? 0) + m.awayGoals;
+    goalsAgainst[m.homeManagerId] = (goalsAgainst[m.homeManagerId] ?? 0) + m.awayGoals;
+    goalsAgainst[m.awayManagerId] = (goalsAgainst[m.awayManagerId] ?? 0) + m.homeGoals;
+    if (!names[m.homeManagerId]) names[m.homeManagerId] = m.homeManagerName;
+    if (!names[m.awayManagerId]) names[m.awayManagerId] = m.awayManagerName;
+  }
+  const rows: OlefootLeaderboardRow[] = Object.values(ratings).map((r) => ({
+    managerId: r.managerId,
+    managerName: names[r.managerId] ?? r.managerId,
+    points: r.wins * 3 + r.draws,
+    matchesPlayed: r.matchesPlayed,
+    wins: r.wins,
+    draws: r.draws,
+    losses: r.losses,
+    goalsFor: goalsFor[r.managerId] ?? 0,
+    goalsAgainst: goalsAgainst[r.managerId] ?? 0,
+    rating: r.rating,
+  }));
+  rows.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    const gdA = a.goalsFor - a.goalsAgainst;
+    const gdB = b.goalsFor - b.goalsAgainst;
+    if (gdB !== gdA) return gdB - gdA;
+    return b.rating - a.rating;
+  });
+  return rows;
+}
+
+/** Mapeia CoachActionType → CoachDecision['type'] para o learning loop. */
+function mapActionTypeToDecisionType(
+  t: import('@/coach/types').CoachActionType,
+): import('@/coach/types').CoachDecision['type'] {
+  switch (t) {
+    case 'start_training':
+      return 'training_plan';
+    case 'upgrade_staff':
+      return 'staff_upgrade';
+    case 'assign_staff':
+      return 'staff_assignment';
+    case 'set_lineup_formation':
+      return 'tactical_tweak';
+    case 'start_treatment':
+    case 'buy_health_booster':
+      return 'training_plan';
+  }
+}
+
+/**
+ * Merge de ações proativas no coach + auto-execução (autonomia >= 80, urgency >= medium).
+ * Usado por COACH_GENERATE_{HEALTH,TRAINING,TACTICAL}_ACTIONS.
+ */
+function mergeProactiveActions(
+  state: OlefootGameState,
+  proactive: import('@/coach/types').CoachAction[],
+): OlefootGameState {
+  if (!state.manager.coach) return state;
+  if (!proactive.length) return state;
+  const existing = state.manager.coach.pendingActions;
+  const existingTitles = new Set(existing.filter((a) => a.status === 'pending').map((a) => a.title));
+  const fresh = proactive.filter((a) => !existingTitles.has(a.title));
+  if (!fresh.length) return state;
+
+  const autonomy = state.manager.coach.autonomyLevel ?? 0;
+  const autoExecute = autonomy >= 80;
+  const merged = [...existing, ...fresh];
+
+  if (!autoExecute) {
+    return {
+      ...state,
+      manager: { ...state.manager, coach: { ...state.manager.coach, pendingActions: merged } },
+    };
+  }
+
+  let nextState: OlefootGameState = state;
+  const finalActions = merged.map((a) => ({ ...a }));
+  for (const a of fresh) {
+    if (a.urgency !== 'high' && a.urgency !== 'medium') continue;
+    const before = nextState;
+    const after = applyCoachActionEffects(before, a);
+    if (after !== before) {
+      nextState = after;
+      const idx = finalActions.findIndex((x) => x.id === a.id);
+      if (idx >= 0) finalActions[idx] = { ...finalActions[idx], status: 'executed' };
+    }
+  }
+  return {
+    ...nextState,
+    manager: {
+      ...nextState.manager,
+      coach: { ...nextState.manager.coach!, pendingActions: finalActions },
+    },
+  };
+}
+
 export function gameReducer(state: OlefootGameState, action: GameAction): OlefootGameState {
   switch (action.type) {
+    case 'APPLY_MATCH_CONSEQUENCES': {
+      if (!action.events.length) return state;
+      const { next } = applyHealthConsequences(state.playerHealth, action.events);
+      return { ...state, playerHealth: next };
+    }
     case 'SET_LINEUP': {
       const lineup = { ...action.lineup };
       let formationScheme: FormationSchemeId | undefined = action.formationScheme;
@@ -1063,7 +1329,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!playerId) return state;
       if ((lm.sentOffPlayerIds ?? []).includes(playerId)) return state;
 
-      const res = applyRedCardAutoSub({ snapshot: lm, players: state.players, sentOffId: playerId, minute: lm.minute ?? 0 });
+      const res = applyRedCardAutoSub({ snapshot: lm, players: state.players, sentOffId: playerId, minute: lm.minute ?? 0, health: state.playerHealth });
       const snap = res.snapshot;
       const nextLineup = { ...state.lineup };
       for (const [slot, pid] of Object.entries(snap.matchLineupBySlot ?? {})) {
@@ -1469,6 +1735,26 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let playerSeasonLedger = mergeLedgerAfterMatch(state.playerSeasonLedger, lm, marketBeforeMatch);
 
       let players = tickRecoveryMatches(state.players, state.structures.medical_dept ?? 1);
+
+      // SSOT shadow-write: aplica consequências de saúde no mapa unificado.
+      // Mantém-se em paralelo com a mutação legacy em `players` durante a Fase 1.
+      const isFriendly =
+        /amist/i.test(state.nextFixture.competition) ||
+        /^FRIENDLY/i.test(state.nextFixture.competition);
+      const matchModeForHealth = isFriendly ? 'friendly' : (lm.mode as 'quick' | 'auto' | 'test2d');
+      const healthEvents = liveMatchToHealthEvents({
+        lm,
+        matchId: state.nextFixture.id ?? `match-${Date.now()}`,
+        leagueId: isFriendly ? null : (state.adminPrimaryLeagueId ?? null),
+        modeOverride: matchModeForHealth,
+      });
+      const healthAfterMatch = healthEvents.length
+        ? applyHealthConsequences(state.playerHealth, healthEvents).next
+        : state.playerHealth;
+      const playerHealth = tickHealthRecovery(healthAfterMatch, {
+        medicalBonusPct: state.structures.medical_dept ? state.structures.medical_dept * 10 : 0,
+      });
+
       const outcome: 'win' | 'draw' | 'loss' = homeWin ? 'win' : draw ? 'draw' : 'loss';
       for (const [pid, stat] of Object.entries(lm.homeStats ?? {})) {
         const pl = players[pid];
@@ -1496,6 +1782,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           };
         }
       }
+      // Sync engine-final → SSOT: o engine ainda escreve fatigue/injuryRisk/outForMatches
+      // em PlayerEntity durante a partida. Aqui transcrevemos os valores finais
+      // (já com postNut/tickRecovery aplicados) para o playerHealth, garantindo paridade.
+      const syncedHealth: typeof playerHealth = { ...playerHealth };
+      for (const [pid, p] of Object.entries(players)) {
+        const cur = syncedHealth[pid];
+        if (!cur) continue;
+        syncedHealth[pid] = {
+          ...cur,
+          fatigue: p.fatigue,
+          injuryRisk: p.injuryRisk,
+          outForMatches: p.outForMatches,
+          atRisk: p.fatigue >= 80 || p.injuryRisk >= 70,
+        };
+      }
+      // Reatribui via const-block aliasing
+      const playerHealthFinal = syncedHealth;
+
       const marketAfterMatch = marketBroSnapshotFromPlayers(players);
       playerSeasonLedger = ledgerTouchMarketAfterMatch(playerSeasonLedger, playedUnique, marketAfterMatch);
 
@@ -1593,7 +1897,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         }
       }
 
-      return {
+      // Gerar propostas proativas do Coach baseadas em saúde pós-jogo.
+      const stateAfterMatch: OlefootGameState = {
         ...state,
         finance,
         inbox,
@@ -1603,6 +1908,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         memorableTrophyUnlockedIds,
         liveMatch: null,
         players,
+        playerHealth: playerHealthFinal,
         playerSeasonLedger,
         playerEvolutionTimeline,
         quickMatchStreak,
@@ -1610,6 +1916,28 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         streakChallenges,
         competitiveRanking,
       };
+      let manager = stateAfterMatch.manager;
+      if (manager.coach) {
+        const proactive = generateProactiveHealthActions(stateAfterMatch);
+        if (proactive.length) {
+          const existingTitles = new Set(
+            manager.coach.pendingActions
+              .filter((a) => a.status === 'pending')
+              .map((a) => a.title),
+          );
+          const fresh = proactive.filter((a) => !existingTitles.has(a.title));
+          if (fresh.length) {
+            manager = {
+              ...manager,
+              coach: {
+                ...manager.coach,
+                pendingActions: [...manager.coach.pendingActions, ...fresh],
+              },
+            };
+          }
+        }
+      }
+      return { ...stateAfterMatch, manager };
     }
     case 'MERGE_PLAYERS': {
       const players = { ...state.players, ...action.players };
@@ -2285,9 +2613,25 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const inboxParts: string[] = [];
       if (due.length > 0) inboxParts.push(`${due.length} treino(s) concluído(s)`);
       if (dueTreat.length > 0) inboxParts.push(`${dueTreat.length} tratamento(s) concluído(s)`);
+
+      // Sync playerHealth (SSOT) com fatigue/injuryRisk pós-treino/tratamento — descanso deposita aqui.
+      const syncedHealth: typeof state.playerHealth = { ...state.playerHealth };
+      for (const [pid, p] of Object.entries(players)) {
+        const cur = syncedHealth[pid];
+        if (!cur) continue;
+        syncedHealth[pid] = {
+          ...cur,
+          fatigue: p.fatigue,
+          injuryRisk: p.injuryRisk,
+          outForMatches: p.outForMatches,
+          atRisk: p.fatigue >= 80 || p.injuryRisk >= 70,
+        };
+      }
+
       return {
         ...state,
         players,
+        playerHealth: syncedHealth,
         playerSeasonLedger,
         playerEvolutionTimeline,
         manager: {
@@ -3298,6 +3642,51 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         userSettings: { ...state.userSettings, ...action.partial },
       };
     }
+    case 'GRANT_ONBOARDING_PACKAGE': {
+      const players = { ...state.players, ...action.players };
+      const playerSeasonLedger = sanitizePlayerSeasonLedger(
+        state.playerSeasonLedger,
+        new Set(Object.keys(players)),
+      );
+      const playerEvolutionTimeline = sanitizePlayerEvolutionTimeline(
+        state.playerEvolutionTimeline,
+        new Set(Object.keys(players)),
+      );
+      const lineup = { ...action.lineup };
+      let formationScheme = state.manager.formationScheme;
+      if (action.formationScheme && action.formationScheme in FORMATION_BASES) {
+        formationScheme = action.formationScheme;
+      }
+      const finance =
+        action.starterExpAmount > 0
+          ? grantEarnedExp(state.finance, action.starterExpAmount)
+          : state.finance;
+      return {
+        ...state,
+        players,
+        playerSeasonLedger,
+        playerEvolutionTimeline,
+        lineup,
+        manager: { ...state.manager, formationScheme },
+        finance,
+        userSettings: {
+          ...state.userSettings,
+          welcomeGenesisPackVersion: action.welcomePackVersion,
+        },
+      };
+    }
+    case 'CLAIM_DAILY_BONUS': {
+      return {
+        ...state,
+        userSettings: {
+          ...state.userSettings,
+          dailyBonus: {
+            lastClaimMs: action.claimMs,
+            streakDay: action.streakDay,
+          },
+        },
+      };
+    }
     case 'SET_CLUB_NAME': {
       const name = action.name.trim();
       if (!name) return state;
@@ -3780,10 +4169,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return { ...state, players: { ...state.players, [action.playerId]: patched } };
     }
     case 'ADMIN_SET_COACH': {
-      return { ...state, coach: action.coach };
+      return { ...state, manager: { ...state.manager, coach: action.coach } };
     }
     case 'ADMIN_REMOVE_COACH': {
-      return { ...state, coach: undefined };
+      return {
+        ...state,
+        manager: { ...state.manager, coach: createDefaultCoachAgent() },
+      };
     }
     case 'ADMIN_GRANT_SHOP_ITEM': {
       const item = state.shopCatalog.find((x) => x.id === action.itemId);
@@ -4025,6 +4417,147 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     // Coach Agent Actions
     // ============================================================================
 
+    case 'COACH_GENERATE_HEALTH_ACTIONS': {
+      return mergeProactiveActions(state, generateProactiveHealthActions(state));
+    }
+
+    case 'COACH_GENERATE_TRAINING_ACTIONS': {
+      return mergeProactiveActions(state, generateProactiveTrainingActions(state));
+    }
+
+    case 'COACH_GENERATE_TACTICAL_ACTIONS': {
+      return mergeProactiveActions(state, generateProactiveTacticalActions(state, action.opponentContext));
+    }
+
+    case 'OLEFOOT_RECORD_MATCH': {
+      const league = state.olefootRanked ?? createEmptyOlefootRankedState();
+      const ratings = { ...league.ratings };
+
+      const home = ratings[action.homeManagerId] ?? createDefaultEloRating(action.homeManagerId);
+      const away = ratings[action.awayManagerId] ?? createDefaultEloRating(action.awayManagerId);
+      const homeBefore = home.rating;
+      const awayBefore = away.rating;
+
+      const homeScore = scoreFromGoals(action.homeGoals, action.awayGoals);
+      const elo = updateElo(homeBefore, awayBefore, homeScore);
+
+      const isHomeWin = action.homeGoals > action.awayGoals;
+      const isDraw = action.homeGoals === action.awayGoals;
+
+      ratings[action.homeManagerId] = {
+        ...home,
+        rating: elo.newHome,
+        matchesPlayed: home.matchesPlayed + 1,
+        wins: home.wins + (isHomeWin ? 1 : 0),
+        draws: home.draws + (isDraw ? 1 : 0),
+        losses: home.losses + (!isHomeWin && !isDraw ? 1 : 0),
+      };
+      ratings[action.awayManagerId] = {
+        ...away,
+        rating: elo.newAway,
+        matchesPlayed: away.matchesPlayed + 1,
+        wins: away.wins + (!isHomeWin && !isDraw ? 1 : 0),
+        draws: away.draws + (isDraw ? 1 : 0),
+        losses: away.losses + (isHomeWin ? 1 : 0),
+      };
+
+      const record: OlefootMatchRecord = {
+        matchId: action.matchId,
+        homeManagerId: action.homeManagerId,
+        awayManagerId: action.awayManagerId,
+        homeManagerName: action.homeManagerName,
+        awayManagerName: action.awayManagerName,
+        homeGoals: action.homeGoals,
+        awayGoals: action.awayGoals,
+        finishedAt: Date.now(),
+        homeRatingBefore: homeBefore,
+        awayRatingBefore: awayBefore,
+        homeRatingDelta: elo.deltaHome,
+        awayRatingDelta: elo.deltaAway,
+      };
+      const recentMatches = [record, ...league.recentMatches].slice(
+        0,
+        OLEFOOT_LEAGUE_CONSTANTS.RECENT_MATCHES_CAP,
+      );
+
+      const homeResult: MatchResult = isHomeWin ? 'win' : isDraw ? 'draw' : 'loss';
+      const awayResult: MatchResult = isHomeWin ? 'loss' : isDraw ? 'draw' : 'win';
+      const playerMoral = applyMoralToPlayers(
+        state.playerMoral,
+        action.homePlayerIds,
+        homeResult,
+        action.awayPlayerIds,
+        awayResult,
+      );
+
+      const leaderboard = recomputeLeaderboard(ratings, recentMatches, {
+        [action.homeManagerId]: action.homeManagerName,
+        [action.awayManagerId]: action.awayManagerName,
+      });
+
+      const olefootRanked: OlefootRankedState = {
+        ratings,
+        leaderboard,
+        recentMatches,
+      };
+
+      return { ...state, olefootRanked, playerMoral };
+    }
+
+    case 'COACH_GENERATE_BRIEFING': {
+      if (!state.manager.coach) return state;
+      const msg = buildPreMatchBriefing(state, action.opponentContext);
+      if (!msg) return state;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            conversationContext: [...state.manager.coach.conversationContext, msg].slice(-50),
+          },
+        },
+      };
+    }
+
+    case 'CONSUME_SHOP_BOOSTER': {
+      const item = findShopItem(state.shopCatalog, action.itemId);
+      if (!item || !item.consumable || !item.effect) return state;
+      const inv = { ...state.shopInventory };
+      if ((inv[item.id] ?? 0) <= 0) return state;
+      inv[item.id] = inv[item.id] - 1;
+      if (inv[item.id] <= 0) delete inv[item.id];
+
+      let playerHealth = state.playerHealth;
+      switch (item.effect.kind) {
+        case 'reset_squad_fatigue': {
+          const next: typeof playerHealth = {};
+          for (const [pid, h] of Object.entries(playerHealth)) {
+            next[pid] = applyHealthEffect(h, { kind: 'reset_fatigue' });
+          }
+          playerHealth = next;
+          break;
+        }
+        case 'reduce_player_injury': {
+          const target = action.targetPlayerId;
+          if (!target || !playerHealth[target]) return state;
+          const matches = (item.effect as { matches?: number }).matches ?? 1;
+          const cur = playerHealth[target];
+          playerHealth = {
+            ...playerHealth,
+            [target]: {
+              ...cur,
+              outForMatches: Math.max(0, cur.outForMatches - matches),
+            },
+          };
+          break;
+        }
+        default:
+          return state;
+      }
+      return { ...state, shopInventory: inv, playerHealth };
+    }
+
     case 'COACH_ADD_PENDING_ACTION': {
       if (!state.manager.coach) return state;
       return {
@@ -4041,6 +4574,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'COACH_APPROVE_ACTION': {
       if (!state.manager.coach) return state;
+      const target = state.manager.coach.pendingActions.find((a) => a.id === action.actionId);
+      const decisionHistory = target
+        ? [
+            ...state.manager.coach.memory.decisionHistory,
+            {
+              timestamp: Date.now(),
+              type: mapActionTypeToDecisionType(target.type),
+              context: target.title,
+              action: target.description,
+              reasoning: target.reasoning,
+              managerApproved: true,
+            },
+          ].slice(-100)
+        : state.manager.coach.memory.decisionHistory;
       return {
         ...state,
         manager: {
@@ -4050,6 +4597,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             pendingActions: state.manager.coach.pendingActions.map((a) =>
               a.id === action.actionId ? { ...a, status: 'approved' as const } : a
             ),
+            memory: { ...state.manager.coach.memory, decisionHistory },
           },
         },
       };
@@ -4057,6 +4605,21 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'COACH_REJECT_ACTION': {
       if (!state.manager.coach) return state;
+      const target = state.manager.coach.pendingActions.find((a) => a.id === action.actionId);
+      const decisionHistory = target
+        ? [
+            ...state.manager.coach.memory.decisionHistory,
+            {
+              timestamp: Date.now(),
+              type: mapActionTypeToDecisionType(target.type),
+              context: target.title,
+              action: target.description,
+              reasoning: target.reasoning,
+              managerApproved: false,
+              outcome: 'Rejeitada pelo manager',
+            },
+          ].slice(-100)
+        : state.manager.coach.memory.decisionHistory;
       return {
         ...state,
         manager: {
@@ -4066,6 +4629,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             pendingActions: state.manager.coach.pendingActions.map((a) =>
               a.id === action.actionId ? { ...a, status: 'rejected' as const } : a
             ),
+            memory: { ...state.manager.coach.memory, decisionHistory },
           },
         },
       };
@@ -4088,90 +4652,104 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
 
+    case 'COACH_ADD_INSTRUCTION': {
+      if (!state.manager.coach) return state;
+      const text = action.instruction.trim();
+      if (text.length === 0) return state;
+      const next = {
+        timestamp: Date.now(),
+        instruction: text,
+        context: action.context ?? 'Treinamento manual via Admin',
+        priority: action.priority ?? 'medium',
+        active: true,
+        category: action.category ?? 'general',
+      };
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            memory: {
+              ...state.manager.coach.memory,
+              managerInstructions: [
+                ...state.manager.coach.memory.managerInstructions,
+                next,
+              ].slice(-200),
+            },
+          },
+        },
+      };
+    }
+
+    case 'COACH_TOGGLE_INSTRUCTION': {
+      if (!state.manager.coach) return state;
+      const list = state.manager.coach.memory.managerInstructions;
+      if (action.index < 0 || action.index >= list.length) return state;
+      const updated = list.map((it, i) => (i === action.index ? { ...it, active: action.active } : it));
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            memory: { ...state.manager.coach.memory, managerInstructions: updated },
+          },
+        },
+      };
+    }
+
+    case 'COACH_REMOVE_INSTRUCTION': {
+      if (!state.manager.coach) return state;
+      const list = state.manager.coach.memory.managerInstructions;
+      if (action.index < 0 || action.index >= list.length) return state;
+      const updated = list.filter((_, i) => i !== action.index);
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            memory: { ...state.manager.coach.memory, managerInstructions: updated },
+          },
+        },
+      };
+    }
+
     case 'COACH_EXECUTE_ACTION': {
       if (!state.manager.coach) return state;
 
       const coachAction = state.manager.coach.pendingActions.find((a) => a.id === action.actionId);
       if (!coachAction || coachAction.status !== 'approved') return state;
 
-      let newState = state;
+      let newState = applyCoachActionEffects(state, coachAction);
 
-      // Executa a ação baseado no tipo
-      switch (coachAction.type) {
-        case 'start_training': {
-          const data = coachAction.data as any;
-          const plan = {
-            id: `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            mode: data.mode,
-            trainingType: data.trainingType,
-            playerIds: data.playerIds,
-            group: data.group,
-            startedAt: new Date().toISOString(),
-            endAt: new Date(Date.now() + data.durationHours * 60 * 60 * 1000).toISOString(),
-            status: 'running' as const,
-          };
+      // upgrade_staff/assign_staff não fazem parte do helper de saúde — preservar.
+      if (coachAction.type === 'upgrade_staff') {
+        const data = coachAction.data as any;
+        const result = tryUpgradeStaffRole(newState.manager.staff, newState.finance, data.roleId);
+        if (result.ok) {
           newState = {
             ...newState,
-            manager: {
-              ...newState.manager,
-              trainingPlans: [...newState.manager.trainingPlans, plan],
-            },
+            finance: result.finance,
+            manager: { ...newState.manager, staff: result.staff },
           };
-          break;
         }
-
-        case 'upgrade_staff': {
-          const data = coachAction.data as any;
-          const result = tryUpgradeStaffRole(newState.manager.staff, newState.finance, data.roleId);
-          if (result.ok) {
-            newState = {
-              ...newState,
-              finance: result.finance,
-              manager: {
-                ...newState.manager,
-                staff: result.staff,
-              },
-            };
-          }
-          break;
-        }
-
-        case 'assign_staff': {
-          const data = coachAction.data as any;
-          newState = {
-            ...newState,
-            manager: {
-              ...newState.manager,
-              staff: {
-                ...newState.manager.staff,
-                assignedByPlayer: {
-                  ...newState.manager.staff.assignedByPlayer,
-                  [data.playerId]: data.roleIds,
-                },
+      } else if (coachAction.type === 'assign_staff') {
+        const data = coachAction.data as any;
+        newState = {
+          ...newState,
+          manager: {
+            ...newState.manager,
+            staff: {
+              ...newState.manager.staff,
+              assignedByPlayer: {
+                ...newState.manager.staff.assignedByPlayer,
+                [data.playerId]: data.roleIds,
               },
             },
-          };
-          break;
-        }
-
-        case 'start_treatment': {
-          const data = coachAction.data as any;
-          const treatmentPlan = {
-            id: `treat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            playerId: data.playerId,
-            startedAt: new Date().toISOString(),
-            endAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            status: 'running' as const,
-          };
-          newState = {
-            ...newState,
-            manager: {
-              ...newState.manager,
-              treatmentPlans: [...(newState.manager.treatmentPlans || []), treatmentPlan],
-            },
-          };
-          break;
-        }
+          },
+        };
       }
 
       // Marca ação como executada

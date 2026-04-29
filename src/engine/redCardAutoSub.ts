@@ -1,5 +1,6 @@
 import type { LiveMatchSnapshot, MatchEventEntry, PitchPlayerState } from './types';
 import type { PlayerEntity } from '@/entities/types';
+import type { PlayerHealth } from '@/systems/playerHealth/types';
 import { roleFromPos } from './pitchFromLineup';
 import { behaviorToCognitiveArchetype, matchAttributesFromPlayerEntity } from '@/match/playerInMatch';
 import { overallFromAttributes } from '@/entities/player';
@@ -9,13 +10,20 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function isAvailable(p: PlayerEntity, health?: Record<string, PlayerHealth>): boolean {
+  const h = health?.[p.id];
+  if (h) return (h.outForMatches ?? 0) <= 0 && (h.suspendedMatches ?? 0) <= 0;
+  return p.outForMatches <= 0;
+}
+
 /** Primeiro reserva elegível (fora do campo, disponível), por OVR. */
 export function pickBenchReplacement(
   snapshot: LiveMatchSnapshot,
   players: Record<string, PlayerEntity>,
+  health?: Record<string, PlayerHealth>,
 ): PlayerEntity | undefined {
   const onPitch = new Set(snapshot.homePlayers.map((p) => p.playerId));
-  const candidates = Object.values(players).filter((p) => !onPitch.has(p.id) && p.outForMatches <= 0);
+  const candidates = Object.values(players).filter((p) => !onPitch.has(p.id) && isAvailable(p, health));
   if (!candidates.length) return undefined;
   candidates.sort(
     (a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs),
@@ -31,8 +39,9 @@ export function applyRedCardAutoSub(input: {
   players: Record<string, PlayerEntity>;
   sentOffId: string;
   minute: number;
+  health?: Record<string, PlayerHealth>;
 }): { snapshot: LiveMatchSnapshot; events: MatchEventEntry[] } {
-  const { snapshot, players, sentOffId, minute } = input;
+  const { snapshot, players, sentOffId, minute, health } = input;
   const slot = findSlotForPlayer(snapshot.matchLineupBySlot, sentOffId);
   const outPs = snapshot.homePlayers.find((p) => p.playerId === sentOffId);
   if (!slot || !outPs) return { snapshot, events: [] };
@@ -62,7 +71,7 @@ export function applyRedCardAutoSub(input: {
     };
   }
 
-  const incoming = pickBenchReplacement(snapshot, players);
+  const incoming = pickBenchReplacement(snapshot, players, health);
   if (!incoming || snapshot.substitutionsUsed >= 5) {
     const ev: MatchEventEntry = {
       id: uid(),
@@ -92,7 +101,7 @@ export function applyRedCardAutoSub(input: {
     pos: incoming.pos,
     x: outPs.x,
     y: outPs.y,
-    fatigue: Math.round(incoming.fatigue),
+    fatigue: Math.round(health?.[incoming.id]?.fatigue ?? incoming.fatigue),
     role: roleFromPos(incoming.pos),
     attributes: matchAttributesFromPlayerEntity(incoming),
     cognitiveArchetype: behaviorToCognitiveArchetype(incoming.behavior),

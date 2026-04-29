@@ -72,12 +72,19 @@ export interface PlayerEntity {
   zone: TacticalZone;
   behavior: PlayerBehavior;
   attrs: PlayerAttributes;
-  /** 0–100, condição para partida */
+  /**
+   * @deprecated Use `state.playerHealth[id].fatigue` (SSOT). Mantido só durante migração.
+   * Será removido após Fase 4 (engine in-match também ler do SSOT).
+   */
   fatigue: number;
-  /** 0–100, risco acumulado (substituições, viagem) */
+  /**
+   * @deprecated Use `state.playerHealth[id].injuryRisk` (SSOT). Idem acima.
+   */
   injuryRisk: number;
   evolutionXp: number;
-  /** Partidas em que não pode entrar (lesão curta) */
+  /**
+   * @deprecated Use `state.playerHealth[id].outForMatches` (SSOT). Idem acima.
+   */
   outForMatches: number;
   /** Foto do jogador formato card (data URL ou URL https) — Admin CREATE PLAYER */
   portraitUrl?: string;

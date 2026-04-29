@@ -50,6 +50,11 @@ export function applyTrainingToPlayer(
       p.attrs.confianca = clampAttr(p.attrs.confianca + 2);
       p.attrs.fairPlay = clampAttr(p.attrs.fairPlay + 1);
       break;
+    case 'descanso':
+      // Recuperação preventiva: zera ganho de XP, foca em saúde.
+      p.fatigue = Math.max(0, p.fatigue - 25);
+      p.injuryRisk = Math.max(0, p.injuryRisk - 8);
+      return p; // sem evolutionXp += 4
   }
   p.evolutionXp += 4;
   return p;

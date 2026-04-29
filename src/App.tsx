@@ -11,7 +11,7 @@ import { loadGlobalLeagueFromSupabase } from './supabase/globalLeague';
 import { subscribeGlobalLeagueChanges } from './supabase/globalLeagueRealtime';
 import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHydrate';
 import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
-import { WelcomeGenesisPackHydrate } from './game/WelcomeGenesisPackHydrate';
+import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
@@ -60,6 +60,7 @@ const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => (
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
 const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
 const OlefootLeague = lazy(() => import('./pages/OlefootLeague').then((m) => ({ default: m.default })));
+const OlefootRanked = lazy(() => import('./pages/OlefootRanked').then((m) => ({ default: m.default })));
 const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
 const GlobalLeaguePlayoffs = lazy(() => import('./pages/GlobalLeaguePlayoffs').then((m) => ({ default: m.default })));
 const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m.default })));
@@ -273,7 +274,7 @@ export default function App() {
         <WorldClock />
         <GlobalLeagueHydrator />
         <GlobalSchedulerMount />
-        <WelcomeGenesisPackHydrate />
+        <OnboardingCeremony />
         <ManagerSquadHydrator />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
@@ -428,6 +429,7 @@ export default function App() {
             <Route path="/match/global" element={<MatchGlobal />} />
             <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
             <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
+            <Route path="/olefoot/ranked" element={<OlefootRanked />} />
             <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />
             <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
             <Route path="/postgame" element={<Postgame />} />

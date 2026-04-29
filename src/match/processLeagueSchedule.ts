@@ -11,6 +11,7 @@ import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics
 import { addBroCents, grantEarnedExp } from '@/systems/economy';
 import { diffNewMemorableTrophyIds, memorableTrophyFinanceReward } from '@/trophies/memorablePrizes';
 import { tickRecoveryMatches } from '@/systems/injury';
+import { tickHealthRecovery } from '@/systems/playerHealth/reducer';
 import { effectiveCrowdSupportPercent, structureMatchExpBonuses } from '@/clubStructures/benefits';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
 import { appendMemorableTrophyUnlocks } from '@/trophies/memorableCatalog';
@@ -234,6 +235,10 @@ function applyUserMatchResolution(
   };
   const results = [lastRow, ...state.results].slice(0, 8);
   players = tickRecoveryMatches(players, state.structures.medical_dept ?? 1);
+  // SSOT shadow-write: WO/auto-resolve avança contadores de saúde unificados.
+  const playerHealth = tickHealthRecovery(state.playerHealth, {
+    medicalBonusPct: state.structures.medical_dept ? state.structures.medical_dept * 10 : 0,
+  });
   players = applyHomeContractsAfterMatch(players, liveMatch);
 
   let leagueSeason = state.leagueSeason;
@@ -323,6 +328,7 @@ function applyUserMatchResolution(
   return {
     ...state,
     players,
+    playerHealth,
     finance,
     inbox,
     form,

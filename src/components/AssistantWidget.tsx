@@ -116,9 +116,38 @@ export function AssistantWidget() {
 
   // Esconde quando: desligado (user OU admin global), pré-cadastro, em partida, OU tutorial ativo.
   const { flags } = usePlatformConfig();
-  if (flags.ASSISTANT_ENABLED === false) return null;
-  if (!enabled || !managerProfile || hidden) return null;
-  if (typeof tutorialStep === 'number' && tutorialStep >= 0) return null;
+  const visibilityHidden =
+    flags.ASSISTANT_ENABLED === false ||
+    !enabled ||
+    !managerProfile ||
+    hidden ||
+    (typeof tutorialStep === 'number' && tutorialStep >= 0);
+
+  useEffect(() => {
+    if (visibilityHidden) return;
+    if (!isDragging) return;
+    const onMove = (e: globalThis.MouseEvent) => {
+      if (!dragRef.current) return;
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+      setPosition({
+        x: dragRef.current.initialX + deltaX,
+        y: dragRef.current.initialY + deltaY,
+      });
+    };
+    const onUp = () => {
+      setIsDragging(false);
+      dragRef.current = null;
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging, visibilityHidden]);
+
+  if (visibilityHidden) return null;
 
   const handleMouseDown = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -130,34 +159,6 @@ export function AssistantWidget() {
       initialY: position.y,
     };
   };
-
-  const handleMouseMove = (e: globalThis.MouseEvent) => {
-    if (!isDragging || !dragRef.current) return;
-
-    const deltaX = e.clientX - dragRef.current.startX;
-    const deltaY = e.clientY - dragRef.current.startY;
-
-    setPosition({
-      x: dragRef.current.initialX + deltaX,
-      y: dragRef.current.initialY + deltaY,
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    dragRef.current = null;
-  };
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging]);
 
   if (!open) {
     return (
