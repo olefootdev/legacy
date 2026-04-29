@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { OnboardingPackage } from './buildOnboardingPackage';
 import type { RarityTier } from './draftStarterSquad';
 import { STARTER_EXP_TIERS } from './rollStarterExp';
@@ -393,7 +393,9 @@ export function SquadDraftChapter(props: {
   pkg: OnboardingPackage;
   onNext: () => void;
 }) {
-  const cards = props.pkg.revealOrder; // basic → legendary
+  // revealOrder vem legendary→basic (sort do package). Para a cerimônia
+  // queremos basic→legendary: começa rápido, sobe a tensão até as estrelas.
+  const cards = useMemo(() => [...props.pkg.revealOrder].reverse(), [props.pkg.revealOrder]);
   const [revealedCount, setRevealedCount] = useState(0);
 
   useEffect(() => {
