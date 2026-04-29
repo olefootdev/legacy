@@ -411,8 +411,11 @@ export function SquadDraftChapter(props: {
   const done = revealedCount >= cards.length;
 
   return (
-    <StageWrap>
-      <div className="flex flex-col gap-5">
+    <div
+      className="absolute inset-0 overflow-y-auto"
+      style={{ animation: 'olefoot-fade-up 700ms cubic-bezier(.22,.61,.36,1) both' }}
+    >
+      <div className="w-full max-w-[1100px] mx-auto px-6 sm:px-12 py-8 flex flex-col gap-5">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <ChapterLabel>Capítulo II · 25 Pioneiros</ChapterLabel>
           <div
@@ -521,13 +524,13 @@ export function SquadDraftChapter(props: {
           })}
         </div>
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-2 pb-4">
           <NextButton onClick={props.onNext}>
             {done ? 'Conhecer os astros' : 'Aguarde…'}
           </NextButton>
         </div>
       </div>
-    </StageWrap>
+    </div>
   );
 }
 
