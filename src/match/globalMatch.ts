@@ -186,23 +186,80 @@ export interface RoundConsequences {
   }>;
 }
 
-/** Constantes do sistema */
+/** Constantes do sistema (Liga LEGACY — antigo Match Global) */
 export const GLOBAL_MATCH_CONSTANTS = {
   /** Duração de cada rodada (1 minuto) */
   ROUND_DURATION_MS: 1 * 60 * 1000,
 
-  /** Intervalo entre rodadas (1 hora) */
-  ROUND_INTERVAL_MS: 60 * 60 * 1000,
+  /** Intervalo entre rodadas (15 min — ciclo do "organismo vivo") */
+  ROUND_INTERVAL_MS: 15 * 60 * 1000,
 
-  /** Janela para definir comandos (5 minutos antes) */
-  COMMAND_WINDOW_MS: 5 * 60 * 1000,
+  /** Janela para definir comandos (1 min — pre_match_lock) */
+  COMMAND_WINDOW_MS: 1 * 60 * 1000,
+
+  /** Janela 1: descanso e recuperação (5min). */
+  RECOVERY_WINDOW_MS: 5 * 60 * 1000,
+
+  /** Janela 2: preparação e evolução / treinos (5min). */
+  TRAINING_WINDOW_MS: 5 * 60 * 1000,
+
+  /** Janela 3: ajustes técnicos e táticos (4min). */
+  TACTICAL_WINDOW_MS: 4 * 60 * 1000,
+
+  /** Janela 4: lock (1min antes do kickoff — sem matchmaking OLEFOOT). */
+  LOCK_WINDOW_MS: 1 * 60 * 1000,
 
   /** Duração de um minuto de jogo em ms real (1min / 90min = 0.67s por minuto) */
   GAME_MINUTE_MS: 667,
 
-  /** Máximo de rodadas por dia */
-  MAX_ROUNDS_PER_DAY: 10,
+  /** Máximo de rodadas por dia (15min × 30 = 7.5h de atividade) */
+  MAX_ROUNDS_PER_DAY: 30,
 } as const;
+
+/**
+ * Fase fina do ciclo de 15min (derivada do tempo restante até kickoff).
+ * Mais granular que GlobalRoundStatus — guia os hooks do coach por janela.
+ */
+export type CycleWindowPhase = 'recovery' | 'training' | 'tactical' | 'lock' | 'live' | 'finished';
+
+/**
+ * Retorna a janela atual do ciclo dado um round agendado e o tempo atual.
+ * Janelas (contadas regressivamente a partir do kickoff):
+ *  - [-15min .. -10min] → recovery
+ *  - [-10min .. -5min]  → training
+ *  - [-5min  .. -1min]  → tactical
+ *  - [-1min  .. 0]      → lock
+ *  - [0 .. +duration]   → live
+ *  - depois             → finished
+ */
+export function getCycleWindowPhase(round: GlobalRound, nowMs: number): CycleWindowPhase {
+  const k = round.scheduledKickoffMs;
+  const I = GLOBAL_MATCH_CONSTANTS.ROUND_INTERVAL_MS;
+  const lockEnd = k;
+  const lockStart = k - GLOBAL_MATCH_CONSTANTS.LOCK_WINDOW_MS;
+  const tacticalStart = lockStart - GLOBAL_MATCH_CONSTANTS.TACTICAL_WINDOW_MS;
+  const trainingStart = tacticalStart - GLOBAL_MATCH_CONSTANTS.TRAINING_WINDOW_MS;
+  const recoveryStart = k - I;
+
+  const liveEnd = (round.actualKickoffMs ?? k) + round.durationMs;
+  if (round.status === 'finished' || nowMs >= liveEnd) return 'finished';
+  if (round.status === 'live' || nowMs >= lockEnd) return 'live';
+  if (nowMs >= lockStart) return 'lock';
+  if (nowMs >= tacticalStart) return 'tactical';
+  if (nowMs >= trainingStart) return 'training';
+  if (nowMs >= recoveryStart) return 'recovery';
+  return 'recovery';
+}
+
+/**
+ * Liga LEGACY trava o matchmaking OLEFOOT durante lock + live (não pode pegar nova partida).
+ * Bridge para o futuro módulo OLEFOOT consumir.
+ */
+export function isLegacyMatchmakingLocked(round: GlobalRound | undefined, nowMs: number): boolean {
+  if (!round) return false;
+  const phase = getCycleWindowPhase(round, nowMs);
+  return phase === 'lock' || phase === 'live';
+}
 
 /** Helpers */
 

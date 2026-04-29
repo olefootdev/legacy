@@ -34,6 +34,7 @@ import type { DailyChallengesState } from './dailyChallenges';
 import type { GlobalLeagueState } from '@/match/globalMatch';
 import type { CompetitiveRankingState } from './competitiveRanking';
 import type { CoachAgent } from '@/coach/types';
+import type { PlayerHealth } from '@/systems/playerHealth/types';
 
 export type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
 export type { InboxItem, InboxCategory } from './inboxTypes';
@@ -46,8 +47,8 @@ export interface SavedTacticPlan {
   updatedAt: string;
 }
 
-export type IndividualTrainingType = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial';
-export type CollectiveTrainingType = 'formacao' | 'empatia' | 'fisico';
+export type IndividualTrainingType = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial' | 'descanso';
+export type CollectiveTrainingType = 'formacao' | 'empatia' | 'fisico' | 'descanso';
 export type TrainingGroup = 'defensivo' | 'criativo' | 'ataque' | 'all';
 export type TrainingMode = 'individual' | 'coletivo';
 
@@ -198,6 +199,23 @@ export interface OlefootGameState {
   /** Coleções NFT-style (off-chain): maxSupply global por coleção. */
   cardCollections: Record<string, CardCollection>;
   players: Record<string, PlayerEntity>;
+  /**
+   * Single Source of Truth para fadiga / lesão / suspensão / risco.
+   * Lido por TODOS os modos (quick, auto, test2d, global, penalty, friendly).
+   * Migrado a partir de `players[id].fatigue/injuryRisk/outForMatches` em persistence.
+   */
+  playerHealth: Record<string, PlayerHealth>;
+  /**
+   * SSOT de moral/momentum por jogador. Alimentado por resultados em todas as ligas
+   * (LEGACY, OLEFOOT, amistoso). Lido pelo coach e por sistemas de gameplay.
+   */
+  playerMoral?: Record<string, import('@/systems/playerMoral/types').PlayerMoral>;
+  /**
+   * Liga OLEFOOT Ranqueada — competição assíncrona com ELO (paralela à LEGACY).
+   * Distinta da `olefootLeague` (3 divisões, sistema de pontos corridos).
+   * Opcional: clientes legados que não inicializaram o módulo recebem `undefined`.
+   */
+  olefootRanked?: import('@/olefootLeague/types').OlefootRankedState;
   /** slotId → playerId (mesmas chaves que Team.tsx) */
   lineup: Record<string, string>;
   finance: FinanceState;
@@ -313,6 +331,15 @@ export interface OlefootGameState {
 }
 
 export type GameAction =
+  | {
+      /**
+       * Aplica eventos de UMA partida ao mapa SSOT `playerHealth`.
+       * Despachado por todos os modos (quick/auto/test2d/global/penalty/friendly).
+       * É o ÚNICO ponto que muta playerHealth a partir de partidas.
+       */
+      type: 'APPLY_MATCH_CONSEQUENCES';
+      events: import('@/systems/playerHealth/types').MatchOutcomeEvent[];
+    }
   | {
       type: 'SET_LINEUP';
       lineup: Record<string, string>;
@@ -533,11 +560,38 @@ export type GameAction =
   | { type: 'RESET' }
   // Coach Agent Actions
   | { type: 'COACH_ADD_PENDING_ACTION'; action: CoachAction }
+  | { type: 'COACH_GENERATE_HEALTH_ACTIONS' }
+  | { type: 'COACH_GENERATE_TRAINING_ACTIONS' }
+  | { type: 'COACH_GENERATE_TACTICAL_ACTIONS'; opponentContext?: string }
+  | { type: 'COACH_GENERATE_BRIEFING'; opponentContext?: string }
+  | {
+      type: 'OLEFOOT_RECORD_MATCH';
+      matchId: string;
+      homeManagerId: string;
+      homeManagerName: string;
+      awayManagerId: string;
+      awayManagerName: string;
+      homeGoals: number;
+      awayGoals: number;
+      /** IDs dos jogadores que atuaram (atualizam moral). */
+      homePlayerIds: string[];
+      awayPlayerIds: string[];
+    }
+  | { type: 'CONSUME_SHOP_BOOSTER'; itemId: string; targetPlayerId?: string }
   | { type: 'COACH_APPROVE_ACTION'; actionId: string }
   | { type: 'COACH_REJECT_ACTION'; actionId: string }
   | { type: 'COACH_EXECUTE_ACTION'; actionId: string }
   | { type: 'COACH_CLEAR_EXECUTED_ACTIONS' }
   | { type: 'COACH_ADD_MESSAGE'; message: import('@/coach/types').ConversationMessage }
+  | {
+      type: 'COACH_ADD_INSTRUCTION';
+      instruction: string;
+      context?: string;
+      priority?: 'high' | 'medium' | 'low';
+      category?: 'training' | 'staff' | 'lineup' | 'tactics' | 'general';
+    }
+  | { type: 'COACH_TOGGLE_INSTRUCTION'; index: number; active: boolean }
+  | { type: 'COACH_REMOVE_INSTRUCTION'; index: number }
   | { type: 'ADMIN_UPSERT_LEAGUE'; league: AdminLeagueConfig }
   | { type: 'ADMIN_REMOVE_LEAGUE'; id: string }
   | { type: 'ADMIN_SET_PRIMARY_LEAGUE'; id: string }

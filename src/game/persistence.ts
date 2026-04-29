@@ -37,6 +37,8 @@ import type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
 import { seedNpcExpExchangeOrders } from '@/economy/expExchange';
 import { sanitizePlayerSeasonLedger } from '@/team/playerSeasonLedger';
 import { sanitizePlayerEvolutionTimeline } from '@/team/playerEvolutionTimeline';
+import { healthFromLegacyPlayer, recomputeAtRisk, emptyHealth } from '@/systems/playerHealth/reducer';
+import type { PlayerHealth } from '@/systems/playerHealth/types';
 import { hydrateLegacyGenesisContract } from '@/playerContracts/playerContracts';
 import { defaultShopCatalog, normalizeShopCatalog } from './shopCatalog';
 import { generateMissingAgentProfiles } from '@/agents/agentProfileLoader';
@@ -461,6 +463,11 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
     ownListings: managerProspectMarketHydrated.ownListings.filter((l) => players[l.playerId]),
   };
 
+  const playerHealth = hydratePlayerHealth(
+    (raw as Partial<OlefootGameState>).playerHealth,
+    players,
+  );
+
   const playerSeasonLedger = sanitizePlayerSeasonLedger(
     (raw as Partial<OlefootGameState>).playerSeasonLedger,
     new Set(Object.keys(players)),
@@ -528,11 +535,42 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       (raw as Partial<OlefootGameState>).managerProspectArtQueue,
     ).filter((r) => players[r.playerId]),
     expExchange: hydrateExpExchange((raw as Partial<OlefootGameState>).expExchange, base.expExchange),
+    playerHealth,
     playerSeasonLedger,
     playerEvolutionTimeline,
     shopCatalog,
     shopInventory,
   };
+}
+
+/**
+ * Hidrata `playerHealth` (mapa SSOT) a partir do save:
+ * - se já existir o mapa novo, sanitiza e mantém
+ * - caso contrário, deriva dos campos legados em `players[id].fatigue/injuryRisk/outForMatches`
+ * - garante uma entrada por jogador ativo
+ */
+function hydratePlayerHealth(
+  raw: Record<string, PlayerHealth> | undefined,
+  players: Record<string, import('@/entities/types').PlayerEntity>,
+): Record<string, PlayerHealth> {
+  const out: Record<string, PlayerHealth> = {};
+  for (const [id, p] of Object.entries(players)) {
+    const fromRaw = raw && typeof raw === 'object' ? raw[id] : undefined;
+    if (fromRaw && typeof fromRaw === 'object') {
+      out[id] = recomputeAtRisk({
+        ...emptyHealth(id),
+        ...fromRaw,
+        playerId: id,
+        yellowCardsByLeague:
+          fromRaw.yellowCardsByLeague && typeof fromRaw.yellowCardsByLeague === 'object'
+            ? { ...fromRaw.yellowCardsByLeague }
+            : {},
+      });
+    } else {
+      out[id] = healthFromLegacyPlayer(p);
+    }
+  }
+  return out;
 }
 
 function hydrateSocial(raw: SocialState | undefined): SocialState {

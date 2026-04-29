@@ -100,9 +100,16 @@ export function trainingWindowLabelForCalendarSlot(hhmm: string): string {
   return 'Janela livre.';
 }
 
-function isAvailableForOfficialMatch(p: PlayerEntity | undefined): boolean {
+function isAvailableForOfficialMatch(
+  p: PlayerEntity | undefined,
+  health?: Record<string, import('@/systems/playerHealth/types').PlayerHealth>,
+): boolean {
   if (!p) return false;
   if (p.contractExpired === true) return false;
+  const fromHealth = health?.[p.id];
+  if (fromHealth) {
+    return fromHealth.outForMatches <= 0 && fromHealth.suspendedMatches <= 0;
+  }
   return (p.outForMatches ?? 0) <= 0;
 }
 
@@ -114,6 +121,7 @@ function isAvailableForOfficialMatch(p: PlayerEntity | undefined): boolean {
 export function evaluateOfficialSquad(
   lineup: Record<string, string>,
   playersById: Record<string, PlayerEntity>,
+  health?: Record<string, import('@/systems/playerHealth/types').PlayerHealth>,
 ): {
   ok: boolean;
   startersFilled: number;
@@ -124,11 +132,11 @@ export function evaluateOfficialSquad(
   const merged = mergeLineupWithDefaults(lineup, playersById);
   const starterIds = PITCH_SLOT_ORDER.map((s) => merged[s.id]).filter(Boolean);
 
-  const startersAvailable = starterIds.filter((id) => isAvailableForOfficialMatch(playersById[id])).length;
+  const startersAvailable = starterIds.filter((id) => isAvailableForOfficialMatch(playersById[id], health)).length;
   const startersFilled = starterIds.length;
 
   const starterSet = new Set(starterIds);
-  const benchPool = Object.values(playersById).filter((p) => !starterSet.has(p.id) && isAvailableForOfficialMatch(p));
+  const benchPool = Object.values(playersById).filter((p) => !starterSet.has(p.id) && isAvailableForOfficialMatch(p, health));
   const benchAvailable = benchPool.length;
 
   if (startersAvailable < 11) {

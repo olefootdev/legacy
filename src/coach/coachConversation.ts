@@ -464,10 +464,28 @@ O que precisas?`;
    */
   public buildTeamContext(): TeamContext {
     const players = Object.values(this.gameState.players);
-    const availablePlayers = players.filter((p) => p.outForMatches <= 0);
+    const health = this.gameState.playerHealth;
+    const healthOf = (p: typeof players[number]) =>
+      health?.[p.id] ?? null;
 
-    const totalFatigue = availablePlayers.reduce((sum, p) => sum + p.fatigue, 0);
-    const totalInjuryRisk = availablePlayers.reduce((sum, p) => sum + p.injuryRisk, 0);
+    const isAvailable = (p: typeof players[number]) => {
+      const h = healthOf(p);
+      if (h) return h.outForMatches <= 0 && h.suspendedMatches <= 0;
+      return p.outForMatches <= 0;
+    };
+    const fatigueOf = (p: typeof players[number]) => healthOf(p)?.fatigue ?? p.fatigue;
+    const injuryRiskOf = (p: typeof players[number]) => healthOf(p)?.injuryRisk ?? p.injuryRisk;
+    const isInjured = (p: typeof players[number]) => {
+      const h = healthOf(p);
+      if (h) return h.outForMatches > 0 && !!h.injurySeverity;
+      return p.outForMatches > 0;
+    };
+    const isSuspended = (p: typeof players[number]) => (healthOf(p)?.suspendedMatches ?? 0) > 0;
+
+    const availablePlayers = players.filter(isAvailable);
+
+    const totalFatigue = availablePlayers.reduce((sum, p) => sum + fatigueOf(p), 0);
+    const totalInjuryRisk = availablePlayers.reduce((sum, p) => sum + injuryRiskOf(p), 0);
     const totalOverall = availablePlayers.reduce(
       (sum, p) => sum + overallFromAttributes(p.attrs),
       0,
@@ -479,8 +497,8 @@ O que precisas?`;
 
     return {
       totalPlayers: availablePlayers.length,
-      injuredPlayers: players.filter((p) => p.outForMatches > 0).length,
-      suspendedPlayers: 0, // PlayerEntity não tem campo suspended
+      injuredPlayers: players.filter(isInjured).length,
+      suspendedPlayers: players.filter(isSuspended).length,
       averageFatigue:
         availablePlayers.length > 0 ? totalFatigue / availablePlayers.length : 0,
       averageInjuryRisk:

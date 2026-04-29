@@ -19,6 +19,11 @@ import { grantEarnedExp } from '@/systems/economy';
 import { createInitialExpExchangeState } from '@/economy/expExchange';
 import { defaultShopCatalog } from './shopCatalog';
 import { createDefaultCoachAgent } from '@/coach/defaultCoach';
+import { healthFromLegacyPlayer } from '@/systems/playerHealth/reducer';
+import type { PlayerHealth } from '@/systems/playerHealth/types';
+import type { PlayerMoral } from '@/systems/playerMoral/types';
+import { createDefaultMoral } from '@/systems/playerMoral/types';
+import { createEmptyOlefootRankedState } from '@/olefootLeague/types';
 
 function startingExpBonusForTests(): number {
   const raw = import.meta.env.VITE_STARTING_EXP;
@@ -61,6 +66,13 @@ export function createInitialGameState(): OlefootGameState {
   };
   const bonusExp = startingExpBonusForTests();
   const finance = bonusExp > 0 ? grantEarnedExp(baseFinance, bonusExp) : baseFinance;
+  const playerHealth: Record<string, PlayerHealth> = {};
+  const playerMoral: Record<string, PlayerMoral> = {};
+  const _now = Date.now();
+  for (const [id, p] of Object.entries(players)) {
+    playerHealth[id] = healthFromLegacyPlayer(p);
+    playerMoral[id] = createDefaultMoral(id, _now);
+  }
   return {
     version: 1,
     club: DEFAULT_CLUB,
@@ -103,6 +115,9 @@ export function createInitialGameState(): OlefootGameState {
     managerProspectConfig: { createCostExp: DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP },
     managerProspectArtQueue: [],
     expExchange: createInitialExpExchangeState(),
+    playerHealth,
+    playerMoral,
+    olefootRanked: createEmptyOlefootRankedState(),
     playerSeasonLedger: {},
     playerEvolutionTimeline: {},
     shopCatalog: defaultShopCatalog(),

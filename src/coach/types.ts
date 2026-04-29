@@ -92,7 +92,9 @@ export type CoachActionType =
   | 'start_training'
   | 'upgrade_staff'
   | 'assign_staff'
-  | 'start_treatment';
+  | 'start_treatment'
+  | 'buy_health_booster'
+  | 'set_lineup_formation';
 
 export interface CoachAction {
   id: string;

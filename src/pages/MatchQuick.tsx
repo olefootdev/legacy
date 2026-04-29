@@ -642,6 +642,7 @@ export function MatchQuick() {
   const dispatch = useGameDispatch();
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
+  const playerHealth = useGameStore((s) => s.playerHealth);
   // Derivados base — declarados aqui no topo para evitar TDZ em deps de hooks (effects/memos abaixo).
   const pitch = live?.homePlayers ?? [];
   const lineupIds = useGameStore((s) => s.lineup);
@@ -1452,7 +1453,7 @@ export function MatchQuick() {
 
     // Verificar se é lesão grave
     const injuredPlayer = playersById[q.outPlayerId];
-    const isGrave = (injuredPlayer?.outForMatches ?? 1) >= 3;
+    const isGrave = (playerHealth?.[q.outPlayerId]?.outForMatches ?? injuredPlayer?.outForMatches ?? 1) >= 3;
 
     if (isGrave) {
       // Lesão grave: IA decide automaticamente quem entra
@@ -1461,9 +1462,13 @@ export function MatchQuick() {
 
       // Buscar melhor substituto disponível da mesma posição
       const injuredPos = injuredPlayer?.pos ?? '';
-      const benchPlayers = Object.values(benchState.players ?? {}).filter(
-        p => !pitchIdSet.has(p.id) && p.outForMatches <= 0
-      );
+      const benchHealth = benchState.playerHealth ?? {};
+      const benchPlayers = Object.values(benchState.players ?? {}).filter((p) => {
+        if (pitchIdSet.has(p.id)) return false;
+        const h = benchHealth[p.id];
+        if (h) return (h.outForMatches ?? 0) <= 0 && (h.suspendedMatches ?? 0) <= 0;
+        return p.outForMatches <= 0;
+      });
 
       // Priorizar jogador da mesma posição, senão pegar o melhor disponível
       const bestSub = benchPlayers.find(p => p.pos === injuredPos) || benchPlayers[0];
@@ -1735,10 +1740,15 @@ export function MatchQuick() {
 
   const benchCards = useMemo(() => {
     return Object.values(playersById)
-      .filter((p) => !onPitchIds.has(p.id) && p.outForMatches <= 0)
+      .filter((p) => {
+        if (onPitchIds.has(p.id)) return false;
+        const h = playerHealth?.[p.id];
+        if (h) return (h.outForMatches ?? 0) <= 0 && (h.suspendedMatches ?? 0) <= 0;
+        return p.outForMatches <= 0;
+      })
       .slice(0, 8)
       .map((p) => playerToCardView(p, maxOvr));
-  }, [playersById, onPitchIds, maxOvr]);
+  }, [playersById, onPitchIds, maxOvr, playerHealth]);
 
   const homeStats = live?.homeStats ?? {};
 
@@ -2952,7 +2962,7 @@ export function MatchQuick() {
             {/* Header colorido por tipo */}
             {live?.quickInjurySub ? (() => {
               const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
-              const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
+              const isGrave = (playerHealth?.[live.quickInjurySub.outPlayerId]?.outForMatches ?? injuredEnt?.outForMatches ?? 1) >= 3;
               return (
                 <div className={cn('px-5 py-4 flex items-center justify-between gap-3 border-b', isGrave ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30')}>
                   <div className="flex items-center gap-3">
@@ -3031,7 +3041,7 @@ export function MatchQuick() {
             <div className="p-5 space-y-4">
               {live?.quickInjurySub ? (() => {
                 const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
-                const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
+                const isGrave = (playerHealth?.[live.quickInjurySub.outPlayerId]?.outForMatches ?? injuredEnt?.outForMatches ?? 1) >= 3;
                 return (
                   <p
                     className="leading-relaxed"
@@ -3113,7 +3123,7 @@ export function MatchQuick() {
                 {/* Opção "Arriscar" só para lesão leve */}
                 {live?.quickInjurySub && (() => {
                   const injuredEnt = playersById[live.quickInjurySub.outPlayerId];
-                  const isGrave = (injuredEnt?.outForMatches ?? 1) >= 3;
+                  const isGrave = (playerHealth?.[live.quickInjurySub.outPlayerId]?.outForMatches ?? injuredEnt?.outForMatches ?? 1) >= 3;
                   if (isGrave) return null;
                   return (
                     <button

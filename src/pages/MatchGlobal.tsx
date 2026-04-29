@@ -264,7 +264,7 @@ export default function MatchGlobal() {
   if (!globalLeagueMVP) {
     return (
       <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-white/60 mb-4">Liga Global não inicializada</p>
+        <p className="text-white/60 mb-4">Liga LEGACY não inicializada</p>
         <button
           onClick={() => navigate('/liga-global/registro')}
           className="btn-primary"
@@ -331,10 +331,10 @@ export default function MatchGlobal() {
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
           <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-            Liga Global
+            Liga LEGACY
           </h1>
           <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-2">
-            Temporada 2026
+            Rodadas a cada 15min · Temporada 2026
           </p>
         </motion.div>
       </section>

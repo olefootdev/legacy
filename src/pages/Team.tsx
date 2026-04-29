@@ -68,6 +68,7 @@ export function Team() {
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
   const playersById = useGameStore((s) => s.players);
+  const playerHealth = useGameStore((s) => s.playerHealth);
   const lineupSaved = useGameStore((s) => s.lineup);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
   const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
@@ -149,12 +150,10 @@ export function Team() {
   }, [lineup, pitchSlots]);
   const availablePlayers = rosterCards.filter((p) => {
     const ent = playersById[p.id];
-    return (
-      !lineupPlayerIds.includes(p.id) &&
-      ent &&
-      ent.outForMatches <= 0 &&
-      !ent.listedOnMarket
-    );
+    if (!ent || lineupPlayerIds.includes(p.id) || ent.listedOnMarket) return false;
+    const h = playerHealth?.[p.id];
+    if (h) return h.outForMatches <= 0 && h.suspendedMatches <= 0;
+    return ent.outForMatches <= 0;
   });
   
   const selectedSlot = pitchSlots.find((s) => s.id === selectedSlotId);

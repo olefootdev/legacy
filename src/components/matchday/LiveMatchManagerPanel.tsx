@@ -69,6 +69,7 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
   const tacticalStyle = useGameStore((s) => s.manager.tacticalStyle);
   const formationScheme = useGameStore((s) => s.manager.formationScheme);
   const liveMatch = useGameStore((s) => s.liveMatch);
+  const playerHealth = useGameStore((s) => s.playerHealth);
   const presetActive = tacticalStyle?.presetId;
 
   const [subOutId, setSubOutId] = useState('');
@@ -99,9 +100,14 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
 
   const benchPlayers = useMemo(() => {
     return Object.values(playersById)
-      .filter((p) => !onPitchIds.has(p.id) && p.outForMatches <= 0)
+      .filter((p) => {
+        if (onPitchIds.has(p.id)) return false;
+        const h = playerHealth?.[p.id];
+        if (h) return (h.outForMatches ?? 0) <= 0 && (h.suspendedMatches ?? 0) <= 0;
+        return p.outForMatches <= 0;
+      })
       .sort((a, b) => a.num - b.num);
-  }, [playersById, onPitchIds]);
+  }, [playersById, onPitchIds, playerHealth]);
 
   const maxSubs = liveMatch?.mode === 'quick' ? 5 : 3;
   const subsUsed = liveMatch?.substitutionsUsed ?? 0;
@@ -169,7 +175,11 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
       window.setTimeout(() => setFeedback(null), 2200);
       return;
     }
-    if (incoming.outForMatches > 0) {
+    const incomingHealth = playerHealth?.[incoming.id];
+    const incomingUnavailable = incomingHealth
+      ? (incomingHealth.outForMatches ?? 0) > 0 || (incomingHealth.suspendedMatches ?? 0) > 0
+      : incoming.outForMatches > 0;
+    if (incomingUnavailable) {
       setFeedback('Entrada indisponível (lesão / suspensão).');
       window.setTimeout(() => setFeedback(null), 2600);
       return;

@@ -1,11 +1,14 @@
 import type { CoachAgent, TeamContext } from './types';
 import type { IndividualTrainingType, CollectiveTrainingType, TrainingGroup, StaffRoleId } from '@/game/types';
+import type { FormationSchemeId } from '@/match-engine/types';
 
 export type CoachActionType =
   | 'start_training'
   | 'upgrade_staff'
   | 'assign_staff'
-  | 'start_treatment';
+  | 'start_treatment'
+  | 'buy_health_booster'
+  | 'set_lineup_formation';
 
 export interface CoachAction {
   id: string;
@@ -25,7 +28,25 @@ export type CoachActionData =
   | StartTrainingActionData
   | UpgradeStaffActionData
   | AssignStaffActionData
-  | StartTreatmentActionData;
+  | StartTreatmentActionData
+  | BuyHealthBoosterActionData
+  | SetLineupFormationActionData;
+
+export interface SetLineupFormationActionData {
+  formationScheme: FormationSchemeId;
+  /** Opcional: lineup proposto (slotId → playerId). Se omitido, mantém lineup atual e só troca formação. */
+  lineup?: Record<string, string>;
+  /** Adversário/contexto que motivou a sugestão. */
+  opponentContext?: string;
+}
+
+export interface BuyHealthBoosterActionData {
+  shopItemId: string;
+  /** Alvo do booster: 'squad' ou playerId específico. */
+  targetPlayerId?: string;
+  costExp?: number;
+  costBroCents?: number;
+}
 
 export interface StartTrainingActionData {
   mode: 'individual' | 'coletivo';
