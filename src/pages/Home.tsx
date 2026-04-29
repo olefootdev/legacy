@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, ChevronRight, Activity, Search, Star, X, UserPlus, TrendingUp } from 'lucide-react';
+import { Zap, ChevronRight, Activity, Search, Star, X, UserPlus, TrendingUp, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -35,7 +35,6 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { computeCareerTier } from '@/systems/careerTiers';
 import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { generateMockActivities } from '@/market/socialTrade';
-import { FriendlyMatchBox } from '@/components/home/FriendlyMatchBox';
 import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 
@@ -997,7 +996,12 @@ export function Home() {
         })()}
       </section>
 
-      <DashboardGrid id="home-below-fold">
+      {/* Liga LEGACY — banner adaptativo (AO VIVO ou countdown) — topo do fold */}
+      <div id="home-below-fold">
+        <LegacyRoundBanner />
+      </div>
+
+      <DashboardGrid>
       {/* PRÓXIMA PARTIDA — wide */}
       {fixture?.opponent ? (
         <DashboardSection
@@ -1103,68 +1107,70 @@ export function Home() {
         </DashboardSection>
       ) : null}
 
-        {/* Apoio da Torcida — sm */}
-        <DashboardSection size="sm">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
-        >
-          <div className="px-5 sm:px-6 py-5 sm:py-6 flex flex-col items-center text-center gap-4">
-            <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-              <span>Apoio da torcida</span>
-            </div>
-            {/* Valor central — Moret italic editorial */}
-            <p
-              className="italic text-neon-yellow leading-none tabular-nums"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(2.5rem, 6vw, 3.75rem)',
-                letterSpacing: '-0.03em',
-              }}
-            >
-              {supportLabel}
-              <span
-                className="ml-1 text-white/45 not-italic"
-                style={{ fontFamily: 'var(--font-display)', fontSize: '0.55em' }}
-              >
-                %
-              </span>
-            </p>
-            {/* Barra */}
-            <div className="w-full h-2 bg-dark-gray overflow-hidden relative" style={{ borderRadius: 'var(--radius-sm)' }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${roundedSupport}%` }}
-                transition={{ duration: 1, delay: 0.5 }}
-                className="absolute top-0 left-0 h-full bg-neon-yellow"
-              />
-            </div>
-            <p
-              className="text-white/55 uppercase"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '11px',
-                letterSpacing: '0.22em',
-                fontWeight: 600,
-              }}
-            >
-              {crowd.moodLabel}
-            </p>
-          </div>
-        </motion.div>
-        </DashboardSection>
-
-        {/* Amistoso — sm */}
-        <FriendlyMatchBox />
       </DashboardGrid>
 
-      {/* Liga LEGACY — banner adaptativo (AO VIVO ou countdown) */}
-      <LegacyRoundBanner />
+      {/* Apoio da Torcida — banner amarelo full-width, fonte/ícones em preto */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        aria-label="Apoio da torcida"
+        className="relative isolate overflow-hidden bg-neon-yellow border border-black/15 rounded-sm"
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
+      >
+        <div className="px-5 sm:px-8 py-6 sm:py-7 flex flex-col items-center text-center gap-4">
+          <div
+            className="inline-flex items-center gap-3 text-black/85"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            <Heart aria-hidden className="h-4 w-4 text-black" fill="currentColor" />
+            <span className="uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.22em' }}>
+              Apoio da torcida
+            </span>
+            <Heart aria-hidden className="h-4 w-4 text-black" fill="currentColor" />
+          </div>
+          {/* Valor central — Moret italic editorial em preto */}
+          <p
+            className="italic text-black leading-none tabular-nums"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(2.75rem, 7vw, 4.25rem)',
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {supportLabel}
+            <span
+              className="ml-1 text-black/55 not-italic"
+              style={{ fontFamily: 'var(--font-display)', fontSize: '0.55em' }}
+            >
+              %
+            </span>
+          </p>
+          {/* Barra preta sobre amarelo */}
+          <div className="w-full max-w-md h-2 bg-black/15 overflow-hidden relative" style={{ borderRadius: 'var(--radius-sm)' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${roundedSupport}%` }}
+              transition={{ duration: 1, delay: 0.5 }}
+              className="absolute top-0 left-0 h-full bg-black"
+            />
+          </div>
+          <p
+            className="text-black/75 uppercase"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '11px',
+              letterSpacing: '0.22em',
+              fontWeight: 700,
+            }}
+          >
+            {crowd.moodLabel}
+          </p>
+        </div>
+      </motion.section>
 
-      {/* Mini-painel inteligente do manager (Sprint C Fase B) — após Amistoso, antes do Ranking */}
+      {/* Mini-painel inteligente do manager (Sprint C Fase B) — após Apoio da Torcida */}
       <HomeManagerFeed
         players={players}
         highlightId={homeHighlight.id}
