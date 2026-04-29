@@ -191,6 +191,83 @@ export function HomeHeroLegacy(props: {
   const playersCount = Object.keys(players).length;
   const isDebut = !lastMatch;
 
+  /**
+   * Manchete dinâmica seguindo a hierarquia:
+   *   1. Estreia · plantel pronto
+   *   2. Streak forte (≥4V ou ≥3D) — mood do clube
+   *   3. Recap do último jogo (≤24h) — fechado em manchete
+   *   4. Preview do próximo (com adversário)
+   *   5. Default — síntese de forma
+   * Retorna headline em texto puro com placeholders já resolvidos.
+   */
+  const narrative = useMemo(() => {
+    const last = lastMatch;
+    const form = recentForm ?? [];
+    const streakW = (() => {
+      let n = 0;
+      for (const r of form) {
+        if (r === 'W') n += 1;
+        else break;
+      }
+      return n;
+    })();
+    const streakL = (() => {
+      let n = 0;
+      for (const r of form) {
+        if (r === 'L') n += 1;
+        else break;
+      }
+      return n;
+    })();
+
+    if (isDebut) {
+      const n = playersCount > 0 ? playersCount : 25;
+      return `Teu plantel de ${n} está pronto. Hoje começa a história do ${club?.name ?? 'Olefoot FC'}.`;
+    }
+
+    if (streakW >= 4) {
+      return `${streakW} vitórias seguidas. O ${club?.shortName ?? club?.name ?? 'Olé'} virou candidato.`;
+    }
+    if (streakL >= 3) {
+      const next = nextOpponentName ? `contra ${nextOpponentName}` : 'no próximo jogo';
+      return `Sequência ruim. Hora de virar a chave ${next}.`;
+    }
+
+    if (last) {
+      const verb =
+        last.result === 'win' ? 'Vitória' : last.result === 'loss' ? 'Tropeço' : 'Empate';
+      const score = `${last.scoreHome} a ${last.scoreAway}`;
+      const opp = last.away;
+      if (last.result === 'win') {
+        return `${verb} contra ${opp}. ${score} pra abrir caminho.`;
+      }
+      if (last.result === 'loss') {
+        return `${verb} contra ${opp}. ${score} pesa, mas tem volta.`;
+      }
+      return `${verb} contra ${opp}. ${score} — agora é construir do zero.`;
+    }
+
+    if (nextOpponentName) {
+      const when = nextKickoffLabel ? `${nextKickoffLabel}` : 'em breve';
+      return `${when}, ${club?.shortName ?? 'OLE'} × ${nextOpponentName}. Resultado define o ranking.`;
+    }
+
+    if (form.length > 0) {
+      return `Forma: ${form.join(' ')}. ${club?.name ?? 'O time'} segue construindo legado.`;
+    }
+
+    return `${club?.name ?? 'O time'} segue construindo legado.`;
+  }, [
+    isDebut,
+    lastMatch,
+    recentForm,
+    nextOpponentName,
+    nextKickoffLabel,
+    club?.name,
+    club?.shortName,
+    playersCount,
+  ]);
+
   // Estado scoreboard
   const homeScore = lastMatch?.scoreHome ?? 0;
   const awayScore = lastMatch?.scoreAway ?? 0;
@@ -289,7 +366,7 @@ export function HomeHeroLegacy(props: {
               className="font-display uppercase text-neon-yellow mb-2 sm:mb-3"
               style={{ fontSize: 11, letterSpacing: '0.45em' }}
             >
-              Olá, treinador
+              Olá, manager
             </div>
             <h1
               className="font-serif-hero italic text-white"
@@ -309,17 +386,7 @@ export function HomeHeroLegacy(props: {
                 lineHeight: 1.5,
               }}
             >
-              {isDebut ? (
-                <>
-                  Teu plantel de {playersCount > 0 ? playersCount : 25} está pronto. Hoje começa a
-                  história do <strong className="text-white">{club?.name ?? 'Olefoot FC'}</strong>.
-                </>
-              ) : (
-                <>
-                  Bem-vindo de volta. O <strong className="text-white">{club?.name ?? 'Olefoot FC'}</strong>{' '}
-                  segue construindo legado.
-                </>
-              )}
+              {narrative}
             </p>
 
             <div className="mt-5 sm:mt-6 mx-auto max-w-3xl flex flex-col items-center gap-4">
