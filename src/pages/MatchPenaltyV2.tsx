@@ -204,7 +204,14 @@ export function MatchPenaltyV2() {
   // ── SETUP PHASE ──
   if (phase === 'setup') {
     return (
-      <div className="min-h-screen bg-deep-black text-white px-6 pt-6 pb-12">
+      <div
+        className="bg-deep-black text-white px-4 sm:px-6"
+        style={{
+          minHeight: '100dvh',
+          paddingTop: 'max(env(safe-area-inset-top), 16px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 24px)',
+        }}
+      >
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <button
@@ -222,11 +229,11 @@ export function MatchPenaltyV2() {
 
           <h1
             className="ole-headline-italic text-center mb-2"
-            style={{ fontSize: 'clamp(36px, 5vw, 56px)' }}
+            style={{ fontSize: 'clamp(28px, min(5vh, 5vw), 56px)' }}
           >
             Escolha 5 batedores
           </h1>
-          <p className="text-center text-white/60 text-sm mb-8">
+          <p className="text-center text-white/60 text-sm mb-4 sm:mb-8">
             Ordenados por finalização. {takerOrder.length}/{TOTAL_KICKS} selecionados.
           </p>
 
@@ -259,7 +266,7 @@ export function MatchPenaltyV2() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 sm:mb-8">
             {availablePlayers.slice(0, 12).map((p: any) => {
               const idx = takerOrder.indexOf(p.id);
               const selected = idx >= 0;
@@ -313,18 +320,25 @@ export function MatchPenaltyV2() {
   // ── FINAL PHASE ──
   if (phase === 'final' && winner) {
     return (
-      <div className="min-h-screen bg-neon-yellow flex flex-col items-center justify-center px-6">
-        <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-6">
+      <div
+        className="bg-neon-yellow flex flex-col items-center justify-center px-4 sm:px-6"
+        style={{
+          minHeight: '100dvh',
+          paddingTop: 'max(env(safe-area-inset-top), 16px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+        }}
+      >
+        <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-4 sm:mb-6">
           Final da Disputa
         </div>
         <h1
-          className="ole-headline-italic text-black text-center mb-4"
-          style={{ fontSize: 'clamp(72px, 14vw, 160px)', lineHeight: 1 }}
+          className="ole-headline-italic text-black text-center mb-3 sm:mb-4"
+          style={{ fontSize: 'clamp(56px, min(13vh, 14vw), 160px)', lineHeight: 1 }}
         >
           {winner === 'home' ? 'GANHAMOS!' : 'PERDEMOS'}
         </h1>
-        <div className="font-display italic font-black tabular-nums text-black/85 mb-12"
-          style={{ fontSize: 'clamp(56px, 10vw, 120px)' }}
+        <div className="font-display italic font-black tabular-nums text-black/85 mb-6 sm:mb-12"
+          style={{ fontSize: 'clamp(44px, min(9vh, 10vw), 120px)' }}
         >
           {homeGoals} — {awayGoals}
         </div>
@@ -354,7 +368,7 @@ export function MatchPenaltyV2() {
 
   if (!currentTaker) {
     return (
-      <div className="min-h-screen bg-deep-black text-white flex items-center justify-center">
+      <div className="bg-deep-black text-white flex items-center justify-center" style={{ minHeight: '100dvh' }}>
         Erro: batedor não encontrado.
       </div>
     );
@@ -379,18 +393,25 @@ export function MatchPenaltyV2() {
 
   if (phase === 'awaiting-away') {
     return (
-      <div className="min-h-screen bg-neon-yellow flex flex-col items-center justify-center px-6">
+      <div
+        className="bg-neon-yellow flex flex-col items-center justify-center px-4 sm:px-6"
+        style={{
+          minHeight: '100dvh',
+          paddingTop: 'max(env(safe-area-inset-top), 16px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+        }}
+      >
         <div className="text-[10px] uppercase tracking-[0.35em] text-black/70 mb-2">
           {opponentShort} bate agora
         </div>
         <h2
           className="ole-headline-italic text-black animate-pulse"
-          style={{ fontSize: 'clamp(36px, 6vw, 64px)' }}
+          style={{ fontSize: 'clamp(32px, min(6vh, 6vw), 64px)' }}
         >
           Aguarde…
         </h2>
-        <div className="font-display italic font-black tabular-nums mt-8"
-          style={{ fontSize: 'clamp(40px, 6vw, 64px)' }}
+        <div className="font-display italic font-black tabular-nums mt-4 sm:mt-8"
+          style={{ fontSize: 'clamp(36px, min(6vh, 6vw), 64px)' }}
         >
           {homeGoals} — {awayGoals}
         </div>

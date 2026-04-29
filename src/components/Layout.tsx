@@ -150,11 +150,18 @@ export function Layout({ children }: { children: ReactNode }) {
   const coachGreetingName = remoteManagerFirst ?? (localManagerFirst || null);
   const coachGreetingLine = coachGreetingName ? `Olá, ${coachGreetingName}` : 'Olá, Treinador';
   const isQuickMatchRoute = location.pathname === '/match/quick';
-  const isImmersiveMatchRoute = location.pathname === '/match' || location.pathname === '/match/live';
+  const isPenaltyRoute =
+    location.pathname === '/match/penalty' ||
+    location.pathname === '/match/penalty-legacy';
+  const isImmersiveMatchRoute =
+    location.pathname === '/match' ||
+    location.pathname === '/match/live' ||
+    isPenaltyRoute;
   const hideMobileBottomNav =
     location.pathname === '/match' ||
     location.pathname === '/match/live' ||
-    location.pathname === '/match/quick';
+    location.pathname === '/match/quick' ||
+    isPenaltyRoute;
 
   const getPageAction = (pathname: string) => {
     switch (pathname) {
@@ -345,6 +352,7 @@ export function Layout({ children }: { children: ReactNode }) {
       >
         {/* Top Header — 3 zonas: [hamburger mobile] · [LOGO centro] · [ação rápida] */}
         {/* IMPORTANTE: Logo SEMPRE visível em todas as páginas e subpáginas */}
+        {!isPenaltyRoute && (
         <header
           className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] min-h-14 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-deep-black px-4 supports-[padding:max(0px)]:pt-[max(0px,env(safe-area-inset-top,0px))] sm:min-h-16 sm:px-6"
         >
@@ -396,19 +404,21 @@ export function Layout({ children }: { children: ReactNode }) {
             </Link>
           </div>
         </header>
+        )}
 
         <div
           className={cn(
             'flex w-full min-w-0 max-w-[100vw] flex-1 flex-col overflow-x-hidden',
             isQuickMatchRoute &&
               'min-h-0 overflow-y-auto [-webkit-overflow-scrolling:touch] lg:overflow-visible',
-            location.pathname === '/match' || location.pathname === '/match/live'
+            location.pathname === '/match' || location.pathname === '/match/live' || isPenaltyRoute
               ? ''
               : isQuickMatchRoute
                 ? 'lg:py-8'
                 : 'pt-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:pt-8 lg:pt-10 lg:pb-8',
             location.pathname !== '/match' &&
               location.pathname !== '/match/live' &&
+              !isPenaltyRoute &&
               'min-[1440px]:max-w-[1184px] min-[1440px]:mx-auto',
           )}
         >
