@@ -2421,7 +2421,7 @@ export function MatchQuick() {
       </AnimatePresence>
 
       {showBoard && live && (
-        <div className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">
+        <div data-tutorial-anchor="match-quick-board" className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">
           {quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
             <div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 backdrop-blur-[2px] pointer-events-none"

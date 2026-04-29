@@ -273,6 +273,7 @@ export function Team() {
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-8">
       <div className="w-full max-w-6xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4 md:space-y-8">
       <BackButton to="/clube" label="Clube" />
+      <div data-tutorial-anchor="team-hero">
       <TeamMeuTimeHeader
         title="Plantel Principal"
         customHero={
@@ -295,6 +296,7 @@ export function Team() {
           />
         }
       />
+      </div>
 
       {/*
         `items-stretch` (não `items-start`): em coluna, filhos ocupam 100% da largura útil — evita largura
