@@ -3642,6 +3642,51 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         userSettings: { ...state.userSettings, ...action.partial },
       };
     }
+    case 'GRANT_ONBOARDING_PACKAGE': {
+      const players = { ...state.players, ...action.players };
+      const playerSeasonLedger = sanitizePlayerSeasonLedger(
+        state.playerSeasonLedger,
+        new Set(Object.keys(players)),
+      );
+      const playerEvolutionTimeline = sanitizePlayerEvolutionTimeline(
+        state.playerEvolutionTimeline,
+        new Set(Object.keys(players)),
+      );
+      const lineup = { ...action.lineup };
+      let formationScheme = state.manager.formationScheme;
+      if (action.formationScheme && action.formationScheme in FORMATION_BASES) {
+        formationScheme = action.formationScheme;
+      }
+      const finance =
+        action.starterExpAmount > 0
+          ? grantEarnedExp(state.finance, action.starterExpAmount)
+          : state.finance;
+      return {
+        ...state,
+        players,
+        playerSeasonLedger,
+        playerEvolutionTimeline,
+        lineup,
+        manager: { ...state.manager, formationScheme },
+        finance,
+        userSettings: {
+          ...state.userSettings,
+          welcomeGenesisPackVersion: action.welcomePackVersion,
+        },
+      };
+    }
+    case 'CLAIM_DAILY_BONUS': {
+      return {
+        ...state,
+        userSettings: {
+          ...state.userSettings,
+          dailyBonus: {
+            lastClaimMs: action.claimMs,
+            streakDay: action.streakDay,
+          },
+        },
+      };
+    }
     case 'SET_CLUB_NAME': {
       const name = action.name.trim();
       if (!name) return state;

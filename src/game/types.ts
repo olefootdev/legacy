@@ -129,6 +129,14 @@ export interface UserSettings {
   tutorialStep?: number;
   /** Assistente flutuante ativo fora de partidas. Default: true após o primeiro boot. */
   assistantEnabled?: boolean;
+  /**
+   * Daily bonus — timestamp do último claim e dia atual da streak (1..7).
+   * Streak quebra se o gap exceder 48h (ver `src/onboarding/dailyBonus.ts`).
+   */
+  dailyBonus?: {
+    lastClaimMs?: number;
+    streakDay?: number;
+  };
 }
 
 export interface StaffState {
@@ -339,6 +347,32 @@ export type GameAction =
        */
       type: 'APPLY_MATCH_CONSEQUENCES';
       events: import('@/systems/playerHealth/types').MatchOutcomeEvent[];
+    }
+  | {
+      /**
+       * Onboarding — concede pacote inicial atomicamente:
+       *   - merge dos 25 jogadores Genesis
+       *   - +EXP da roleta inicial
+       *   - lineup default
+       *   - marca welcomeGenesisPackVersion para idempotência
+       *
+       * Usado pela cerimônia (PR2). PR1 só introduz o action.
+       */
+      type: 'GRANT_ONBOARDING_PACKAGE';
+      players: Record<string, import('@/entities/types').PlayerEntity>;
+      lineup: Record<string, string>;
+      formationScheme?: import('@/match-engine/types').FormationSchemeId;
+      starterExpAmount: number;
+      welcomePackVersion: number;
+    }
+  | {
+      /**
+       * Daily bonus — registra um claim, atualiza streakDay e lastClaimMs.
+       * EXP/packs são dispatched separadamente pelo caller (composável).
+       */
+      type: 'CLAIM_DAILY_BONUS';
+      streakDay: number;
+      claimMs: number;
     }
   | {
       type: 'SET_LINEUP';
