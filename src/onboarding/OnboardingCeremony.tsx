@@ -226,7 +226,10 @@ export function OnboardingCeremony() {
         <DailyBonusChapter onClaim={claimDay1} onNext={next} />
       )}
       {phase.kind === 'outro' && (
-        <OutroChapter clubName={clubName} onFinish={finish} />
+        <OutroChapter
+          managerName={managerProfile?.firstName ?? 'treinador'}
+          onFinish={finish}
+        />
       )}
       {askingExit && (
         <ExitConfirmModal

@@ -710,32 +710,24 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
 }
 
 /* ───────────────────── Capítulo: Outro ───────────────────── */
-export function OutroChapter(props: { clubName: string; onFinish: () => void }) {
+export function OutroChapter(props: { managerName: string; onFinish: () => void }) {
   return (
     <StageWrap>
       <div className="flex flex-col items-center text-center gap-8">
-        <ChapterLabel>Fim do Prólogo</ChapterLabel>
         <h1
           className="font-serif-hero text-white"
           style={{
             fontStyle: 'italic',
             fontSize: 'clamp(48px, 9vw, 112px)',
-            lineHeight: 0.9,
+            lineHeight: 0.95,
             letterSpacing: '-0.01em',
           }}
         >
-          A história
+          Bem vindo,
           <br />
-          <span className="text-neon-yellow">começou.</span>
+          <span className="text-neon-yellow">{props.managerName}</span>
         </h1>
-        <p
-          className="font-sans text-white/70 max-w-[560px]"
-          style={{ fontSize: 17, lineHeight: 1.5 }}
-        >
-          O elenco está formado, o cofre está cheio. Bem-vindo ao Olefoot,
-          treinador do <span className="text-white">{props.clubName}</span>.
-        </p>
-        <NextButton onClick={props.onFinish}>Entrar no clube</NextButton>
+        <NextButton onClick={props.onFinish}>Acessar painel</NextButton>
       </div>
     </StageWrap>
   );

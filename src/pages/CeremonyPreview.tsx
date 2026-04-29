@@ -127,7 +127,7 @@ export function CeremonyPreview() {
         <DailyBonusChapter onClaim={() => {}} onNext={next} />
       )}
       {phase === 'outro' && (
-        <OutroChapter clubName="Olefoot FC" onFinish={() => setPhase('done')} />
+        <OutroChapter managerName="João" onFinish={() => setPhase('done')} />
       )}
       {phase === 'done' && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -135,7 +135,7 @@ export function CeremonyPreview() {
             className="font-serif-hero italic text-neon-yellow"
             style={{ fontSize: 48 }}
           >
-            Cerimônia concluída ✓
+            ✓
           </div>
         </div>
       )}
