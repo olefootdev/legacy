@@ -62,7 +62,10 @@ export function PenaltyShootSVG({
     <svg
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
       className="w-full max-w-[920px] h-auto"
-      style={{ filter: 'drop-shadow(0 8px 0 rgba(0,0,0,0.08))' }}
+      style={{
+        filter: 'drop-shadow(0 8px 0 rgba(0,0,0,0.08))',
+        maxHeight: '52vh',
+      }}
     >
       <defs>
         <pattern id="penalty-net-diag" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">

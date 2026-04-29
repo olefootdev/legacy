@@ -262,11 +262,16 @@ export function PenaltyShoot({
 
   return (
     <div
-      className="min-h-screen bg-neon-yellow flex flex-col items-center pt-6 pb-12 px-6 select-none"
-      style={{ touchAction: 'none' }}
+      className="bg-neon-yellow flex flex-col items-center px-4 sm:px-6 select-none"
+      style={{
+        touchAction: 'none',
+        minHeight: '100dvh',
+        paddingTop: 'max(env(safe-area-inset-top), 12px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+      }}
     >
       {/* Header */}
-      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-3">
+      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-1 sm:mb-3">
         <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
           {headerLabel}
         </div>
@@ -278,20 +283,23 @@ export function PenaltyShoot({
       </div>
 
       {/* Timer + Headline */}
-      <div className="w-full max-w-[920px] flex flex-col items-center mb-1">
+      <div className="w-full max-w-[920px] flex flex-col items-center">
         <div
           className={`font-display italic font-black leading-none tabular-nums transition-colors duration-200 ${
             timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
           }`}
-          style={{ fontSize: 'clamp(56px, 9vw, 96px)' }}
+          style={{ fontSize: 'clamp(40px, min(7vh, 9vw), 96px)' }}
         >
           {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
         </div>
 
         <h1
-          className="ole-headline-italic text-black text-center mt-2"
+          className="ole-headline-italic text-black text-center mt-1 sm:mt-2"
           style={{
-            fontSize: phase === 'result' ? 'clamp(56px, 10vw, 120px)' : 'clamp(28px, 4vw, 44px)',
+            fontSize:
+              phase === 'result'
+                ? 'clamp(44px, min(9vh, 10vw), 120px)'
+                : 'clamp(22px, min(4vh, 4vw), 44px)',
             lineHeight: 1.0,
           }}
         >
@@ -300,7 +308,7 @@ export function PenaltyShoot({
       </div>
 
       {/* Sub-info do batedor + goleiro */}
-      <div className="flex items-center gap-3 mt-4 mb-3 text-black/80 text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
+      <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-4 mb-2 sm:mb-3 text-black/80 text-[10px] sm:text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
         <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
           {shooter.displayName} · #{shooter.shirtNumber}
         </span>
@@ -383,7 +391,7 @@ export function PenaltyShoot({
 
       {/* Hint */}
       {phase === 'pick' && (
-        <div className="mt-6 text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[920px] text-center leading-relaxed">
+        <div className="mt-3 sm:mt-6 text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-black/50 max-w-[920px] text-center leading-relaxed px-2">
           Pressione e segure um slot pra carregar a força · Solte pra chutar · {pickTimeSeconds}s pra
           decidir
         </div>
