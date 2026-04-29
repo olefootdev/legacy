@@ -37,6 +37,7 @@ import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { generateMockActivities } from '@/market/socialTrade';
 import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
+import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -858,11 +859,20 @@ export function Home() {
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
       <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6 sm:space-y-8">
-      {/* HERO PRINCIPAL — Matchday Hero do ÚLTIMO JOGO (placar real + MVP) */}
+      {/* HERO PRINCIPAL — editorial hero-legacy-full + news ticker + saudação manager */}
       <section
-        aria-label="Último jogo"
+        aria-label="Hero do manager"
         className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-6"
       >
+        <HomeHeroLegacy scrollCueTargetId="home-below-fold" />
+      </section>
+
+      {/* HERO LEGADO — temporariamente desabilitado pelo HomeHeroLegacy. */}
+      {false && (
+        <section
+          aria-label="Último jogo (legado)"
+          className="hidden"
+        >
         {(() => {
           const last5 = results.slice(0, 5);
           const wins = last5.filter((r) => r.result === 'win').length;
@@ -994,7 +1004,8 @@ export function Home() {
             />
           );
         })()}
-      </section>
+        </section>
+      )}
 
       {/* Liga LEGACY — banner adaptativo (AO VIVO ou countdown) — topo do fold */}
       <div id="home-below-fold">
