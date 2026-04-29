@@ -35,6 +35,7 @@ import { StreakBar } from '@/components/match/StreakBar';
 import { MomentumBar } from '@/components/match/MomentumBar';
 import { InstantRewards } from '@/components/match/InstantRewards';
 import { NearMissOverlay, NearMissMotivation, useNearMissDetection, detectShotNearMiss } from '@/components/match/NearMissSystem';
+import { getFatigueState, fatigueBadgeColor } from '@/match/fatigueState';
 import {
   MatchdayVersusWithClock,
   MatchdayLineupColumnTitle,
@@ -271,9 +272,10 @@ function QuickPlayerRowCard({
       )}
       style={{ borderRadius: 'var(--radius-md)' }}
     >
-      {/* Foto + OVR overlay (só home) */}
+      {/* Foto + OVR overlay (só home) — w-14 mobile (56px) economiza
+       *  ~20% da largura pra info; w-20 (80px) em sm+. */}
       <div
-        className="relative w-16 sm:w-20 flex-shrink-0 overflow-hidden bg-black border-r border-white/8"
+        className="relative w-14 sm:w-20 flex-shrink-0 overflow-hidden bg-black border-r border-white/8"
         aria-hidden
       >
         {!isAway ? (
@@ -285,8 +287,9 @@ function QuickPlayerRowCard({
               referrerPolicy="no-referrer"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent" />
+            {/* OVR — só desktop (sm+). Mobile fica minimalista. */}
             {ovr !== undefined && !isSentOff ? (
-              <div className="absolute top-1 left-1.5 z-10">
+              <div className="absolute top-1 left-1.5 z-10 hidden sm:block">
                 <p
                   className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.95)]"
                   style={{
@@ -305,6 +308,36 @@ function QuickPlayerRowCard({
                 <RedCardIcon />
               </div>
             ) : null}
+            {/* ─── Fatigue badge — top-right da foto. Só home & em jogo.
+                Verde/fresco: sem badge (visual limpo). 50-70%: amarelo.
+                71-89%: laranja pulsante. 90+: vermelho pulsante.
+                Tooltip via title — sem necessidade de UI extra. */}
+            {!isSentOff ? (() => {
+              const fState = getFatigueState(fatigue);
+              if (fState.badgeTone === 'none') return null;
+              const color = fatigueBadgeColor(fState.badgeTone);
+              const isPulse = fState.badgeTone === 'alert' || fState.badgeTone === 'danger';
+              return (
+                <div
+                  className={cn(
+                    'absolute top-1 right-1 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full ring-2 ring-deep-black',
+                    isPulse ? 'animate-pulse' : '',
+                  )}
+                  style={{ backgroundColor: color }}
+                  role="img"
+                  aria-label={`Fadiga ${Math.round(fState.pct)}% — ${fState.shortLabel}`}
+                  title={`Fadiga ${Math.round(fState.pct)}% — ${fState.shortLabel}`}
+                >
+                  <span
+                    aria-hidden
+                    className="text-deep-black font-display font-black leading-none"
+                    style={{ fontSize: '8px' }}
+                  >
+                    !
+                  </span>
+                </div>
+              );
+            })() : null}
           </>
         ) : (
           // Away: silhueta mínima IA com inicial
@@ -322,23 +355,87 @@ function QuickPlayerRowCard({
             </span>
           </div>
         )}
-        {/* POS chip bottom */}
-        <div className="absolute bottom-1 left-1 z-10 inline-flex items-center bg-black/75 px-1.5 py-0.5">
+        {/* POS chip — só DESKTOP (sm+) na foto. No mobile a posição
+            vive na info-strip pra deixar a foto mais limpa. */}
+        <div className="absolute bottom-1 left-1 z-10 hidden sm:inline-flex items-center bg-black/75 px-1.5 py-0.5">
           <span
             className="font-display font-bold uppercase text-white/90"
-            style={{
-              fontSize: '8px',
-              letterSpacing: '0.18em',
-            }}
+            style={{ fontSize: '8px', letterSpacing: '0.18em' }}
           >
             {pos}
           </span>
         </div>
+        {/* Número da camisa — bottom-right só mobile (com margem segura). */}
+        {!isSentOff ? (
+          <div className="absolute bottom-1 right-1 z-10 inline-flex items-baseline gap-0.5 sm:hidden">
+            <span
+              className="italic tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: isAway ? 'rgba(255,255,255,0.95)' : 'var(--color-neon-yellow)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {num}
+            </span>
+          </div>
+        ) : null}
       </div>
 
-      {/* Info */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5">
-        {/* Rank */}
+      {/* ─── Info — MOBILE (minimalista) ───────────────────────────────
+          POS · fadiga% · badges · rating Moret. Sem nome, sem rank,
+          sem label "IA·CPU", sem palavra "cansaço". */}
+      <div className="flex sm:hidden min-w-0 flex-1 items-center gap-2 px-2 py-2">
+        {/* Posição — chip leve no início da strip */}
+        <span
+          className="shrink-0 inline-flex items-center bg-white/8 text-white/85 px-1.5 py-0.5 uppercase font-display font-bold"
+          style={{ fontSize: '9px', letterSpacing: '0.18em' }}
+        >
+          {pos}
+        </span>
+        {/* Fadiga — só home & em jogo. Apenas o número, sem rótulo. */}
+        {!isAway && !isSentOff ? (
+          <span
+            className={cn('shrink-0 tabular-nums', fatigueColor)}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '12px',
+              fontWeight: 800,
+              letterSpacing: '0.02em',
+            }}
+          >
+            {Math.round(fatigue)}%
+          </span>
+        ) : null}
+        {/* Badges (gol, cartões, lesão) — empurrados pro fim da linha */}
+        <div className="flex items-center gap-1 min-w-0 ml-auto">
+          {badges}
+          {isSentOff ? <RedCardIcon /> : null}
+        </div>
+        {/* Rating Moret */}
+        {impact !== undefined && !isSentOff ? (
+          <span
+            className={cn(
+              'shrink-0 italic tabular-nums leading-none',
+              isAway ? 'text-white/85' : 'text-neon-yellow',
+            )}
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: '17px',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {impact.toFixed(2)}
+          </span>
+        ) : null}
+      </div>
+
+      {/* ─── Info — DESKTOP (sm+) — layout completo original ──────────── */}
+      <div className="hidden sm:flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5">
+        {/* Rank lateral */}
         {rank !== undefined ? (
           <span
             className="shrink-0 italic tabular-nums leading-none w-5 text-center"
@@ -417,15 +514,15 @@ function QuickPlayerRowCard({
             </>
           ) : (
             <div
-              className="text-white/45 uppercase mt-0.5"
+              className="text-white/45 uppercase mt-0.5 whitespace-nowrap"
               style={{
                 fontFamily: 'var(--font-ui)',
                 fontSize: '9px',
-                letterSpacing: '0.22em',
+                letterSpacing: '0.18em',
                 fontWeight: 600,
               }}
             >
-              {isSentOff ? pos : 'IA · CPU'}
+              {isSentOff ? pos : 'IA\u00A0·\u00A0CPU'}
             </div>
           )}
         </div>
@@ -1597,13 +1694,10 @@ export function MatchQuick() {
     if (live.homeScore > live.awayScore) trackMissionEvent('match_won');
     if (live.homeScore > 0) trackMissionEvent('goal_scored', live.homeScore);
 
-    // Show near-miss motivation for close losses
-    const scoreDiff = live.awayScore - live.homeScore;
-    if (scoreDiff > 0 && scoreDiff <= 2) {
-      setTimeout(() => {
-        setShowNearMissMotivation(true);
-      }, 1500);
-    }
+    // (removido) Near-miss motivation no fim de jogo — não faz mais
+    // parte do design da Partida Rápida (decisão de produto: 2026-04-28).
+    // O state setShowNearMissMotivation continua existindo só pra não
+    // quebrar o render do componente, mas nunca mais é setado pra true.
   }, [live, dispatch]);
 
   // Detect near-miss events from shot previews
@@ -2667,8 +2761,10 @@ export function MatchQuick() {
       )}
 
       {showBoard && live && (
-        <div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1.5 sm:gap-3 md:gap-4 items-start w-full">
+        // C4 — safe area pra bottom nav (botão JOGAR + h-16) não cobrir
+        // o último card do board.
+        <div className="pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 sm:gap-3 md:gap-4 items-start w-full">
             <div className="space-y-3 min-w-0">
               {/* Header da coluna — ▍ TÍTULO */}
               <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
@@ -2699,38 +2795,62 @@ export function MatchQuick() {
                 </span>
               </div>
               <div className="flex flex-col gap-2">
-                {homeRanked.map(({ player: p, impact }, idx) => {
-                  const entity = playersById[p.playerId];
-                  const ovr = entity ? overallFromAttributes(entity.attrs) : undefined;
-                  return (
-                    <QuickPlayerRowCard
-                      key={p.playerId}
-                      variant="home-active"
-                      rank={idx + 1}
-                      num={p.num}
-                      name={p.name}
-                      pos={p.pos}
-                      ovr={ovr}
-                      fatigue={p.fatigue}
-                      impact={impact}
-                      isSelected={selected?.playerId === p.playerId}
-                      isTop={idx < 3}
-                      badges={<PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />}
-                      photoSeed={p.playerId}
-                      onClick={() => setSelected(p)}
-                    />
-                  );
-                })}
-                {homeSentOffRows.map((row) => (
-                  <QuickPlayerRowCard
-                    key={`sent-off-${row.playerId}`}
-                    variant="home-sent-off"
-                    num={row.num}
-                    name={row.name}
-                    pos={row.pos}
-                    photoSeed={row.playerId}
-                  />
-                ))}
+                {homeRanked.length === 0 && homeSentOffRows.length === 0 ? (
+                  // C5 — empty-state da coluna CASA. Acontece quando o
+                  // user ainda não tem plantel cadastrado. Evita coluna
+                  // 100% vazia ao lado da AWAY cheia.
+                  <div className="rounded-md border border-dashed border-white/15 bg-deep-black/40 px-3 py-6 text-center">
+                    <p
+                      className="text-white/55 mb-1 uppercase"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.18em',
+                      }}
+                    >
+                      Plantel vazio
+                    </p>
+                    <p className="text-white/35 text-[11px] leading-snug">
+                      Sem titulares pra mostrar nesta partida.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {homeRanked.map(({ player: p, impact }, idx) => {
+                      const entity = playersById[p.playerId];
+                      const ovr = entity ? overallFromAttributes(entity.attrs) : undefined;
+                      return (
+                        <QuickPlayerRowCard
+                          key={p.playerId}
+                          variant="home-active"
+                          rank={idx + 1}
+                          num={p.num}
+                          name={p.name}
+                          pos={p.pos}
+                          ovr={ovr}
+                          fatigue={p.fatigue}
+                          impact={impact}
+                          isSelected={selected?.playerId === p.playerId}
+                          isTop={idx < 3}
+                          badges={<PlayerEventStrip badges={homeEventBadges.get(p.playerId) ?? []} />}
+                          photoSeed={p.playerId}
+                          onClick={() => setSelected(p)}
+                        />
+                      );
+                    })}
+                    {homeSentOffRows.map((row) => (
+                      <QuickPlayerRowCard
+                        key={`sent-off-${row.playerId}`}
+                        variant="home-sent-off"
+                        num={row.num}
+                        name={row.name}
+                        pos={row.pos}
+                        photoSeed={row.playerId}
+                      />
+                    ))}
+                  </>
+                )}
               </div>
             </div>
 
