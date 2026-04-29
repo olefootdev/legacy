@@ -227,17 +227,13 @@ export function IntroChapter(props: {
       <div className="flex flex-col items-center text-center gap-8">
         <ChapterLabel>Olefoot · História Viva</ChapterLabel>
 
-        <div
-          className="relative inline-flex items-center justify-center bg-neon-yellow text-black -skew-x-6"
-          style={{ width: 168, height: 168 }}
-        >
-          <span
-            className="font-display font-black skew-x-6"
-            style={{ fontSize: 72, letterSpacing: '0.04em' }}
-          >
-            {props.clubInitials}
-          </span>
-        </div>
+        <img
+          src="/brand/olefoot-icone-yellow-01.svg"
+          alt="Olefoot"
+          style={{ width: 220, height: 'auto' }}
+          className="select-none"
+          draggable={false}
+        />
 
         <h1
           className="font-serif-hero text-white"
