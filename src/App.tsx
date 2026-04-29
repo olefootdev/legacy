@@ -11,6 +11,7 @@ import { loadGlobalLeagueFromSupabase } from './supabase/globalLeague';
 import { subscribeGlobalLeagueChanges } from './supabase/globalLeagueRealtime';
 import { GenesisCatalogPortraitsHydrate } from './game/GenesisCatalogPortraitsHydrate';
 import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
+import { AnnouncementsHydrate } from './game/AnnouncementsHydrate';
 import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { WorldClock } from './game/WorldClock';
@@ -278,6 +279,7 @@ export default function App() {
         <ManagerSquadHydrator />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
+        <AnnouncementsHydrate />
         <Routes>
           <Route
             path="/admin/login"
