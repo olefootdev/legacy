@@ -37,6 +37,7 @@ import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { generateMockActivities } from '@/market/socialTrade';
 import { FriendlyMatchBox } from '@/components/home/FriendlyMatchBox';
 import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
+import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -1159,6 +1160,9 @@ export function Home() {
         {/* Amistoso — sm */}
         <FriendlyMatchBox />
       </DashboardGrid>
+
+      {/* Liga LEGACY — banner adaptativo (AO VIVO ou countdown) */}
+      <LegacyRoundBanner />
 
       {/* Mini-painel inteligente do manager (Sprint C Fase B) — após Amistoso, antes do Ranking */}
       <HomeManagerFeed

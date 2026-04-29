@@ -11,7 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Zap, Trophy, Activity, Target, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
-import type { GlobalTeam } from '@/match/globalLeagueMVP';
+import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
+import type { GlobalTeam, GlobalLeagueMVPState, PlayoffRound } from '@/match/globalLeagueMVP';
+import { createGlobalTeam, generatePlayoffRounds, GLOBAL_LEAGUE_MVP_CONSTANTS } from '@/match/globalLeagueMVP';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
@@ -39,6 +41,73 @@ function seedGlobalLeagueMock(dispatch: (a: any) => void) {
   });
   dispatch({ type: 'ADMIN_START_GLOBAL_PLAYOFFS' });
   dispatch({ type: 'START_GLOBAL_PLAYOFF_ROUND', roundNumber: 1 });
+}
+
+const MOCK_CLUBS = [
+  'Arena FC', 'Neon United', 'Pixel Atlético', 'Olefoot Stars',
+  'Legacy Boys', 'Meta Sports', 'Guarda Velha', 'Vermelhão',
+  'Lobos Azuis', 'Tigres FC', 'Águias do Sul', 'Rivais Eternos',
+  'Real Brasil', 'Cidade Alta', 'Santos do Norte', 'Verdão Clube',
+  'Furacão SP', 'Galo Negro', 'Estrela do Mar', 'Trovão Azul',
+  'Lanterna FC', 'Comandante', 'Costa Brava', 'Vila Nova',
+  'Capital Sul', 'Sertão FC', 'Voador Branco', 'Cometa SC',
+  'Trama Azul', 'Olho do Tigre', 'Voo do Falcão', 'Rei do Rio',
+];
+
+function buildMockGlobalLeague(mode: 'live' | 'tactical'): GlobalLeagueMVPState {
+  const now = Date.now();
+  const teams: GlobalTeam[] = MOCK_CLUBS.map((name, i) => {
+    const short = name.split(' ').map((s) => s[0]).join('').slice(0, 3).toUpperCase();
+    return createGlobalTeam(`mock_mgr_${i}`, name, short, 60 + Math.floor(Math.random() * 30));
+  });
+
+  const rounds: PlayoffRound[] = generatePlayoffRounds(teams);
+
+  // Reposicionar kickoffs relativos a "agora", baseado no modo escolhido.
+  // tactical: kickoff da R1 em ~3min (fase tactical, ~3min restantes).
+  // live: kickoff da R1 já há 20s (live, ~40s restantes).
+  const r1KickoffOffsetMs = mode === 'live' ? -20 * 1000 : 3 * 60 * 1000;
+  const interval = GLOBAL_LEAGUE_MVP_CONSTANTS.ROUND_INTERVAL_MS;
+
+  rounds.forEach((r, idx) => {
+    r.scheduledKickoffMs = now + r1KickoffOffsetMs + idx * interval;
+    if (idx === 0 && mode === 'live') {
+      r.status = 'live';
+      r.actualKickoffMs = r.scheduledKickoffMs;
+      // Hidratar primeiros fixtures com placar e minuto crescentes para visual
+      r.fixtures = r.fixtures.map((fx, i) => ({
+        ...fx,
+        status: 'live' as const,
+        kickoffMs: r.actualKickoffMs,
+        scoreHome: i === 0 ? 1 : i === 1 ? 0 : 2,
+        scoreAway: i === 0 ? 0 : i === 1 ? 0 : 1,
+        currentMinute: Math.min(90, Math.floor(20 / GLOBAL_MATCH_CONSTANTS.GAME_MINUTE_MS * 1000)),
+      }));
+    }
+  });
+
+  return {
+    seasonId: `season_${now}`,
+    status: 'playoffs',
+    teams,
+    minTeamsRequired: GLOBAL_LEAGUE_MVP_CONSTANTS.MIN_TEAMS,
+    playoffRounds: rounds,
+    currentPlayoffRound: 1,
+    leagueRounds: [],
+    teamsPerDivision: Math.ceil(GLOBAL_LEAGUE_MVP_CONSTANTS.MIN_TEAMS / GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS),
+    promotionPercentage: GLOBAL_LEAGUE_MVP_CONSTANTS.PROMOTION_PERCENTAGE,
+    relegationPercentage: GLOBAL_LEAGUE_MVP_CONSTANTS.RELEGATION_PERCENTAGE,
+    createdAt: now,
+    lastUpdated: now,
+  };
+}
+
+function seedMockBannerLive(dispatch: (a: any) => void) {
+  dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: buildMockGlobalLeague('live') });
+}
+
+function seedMockBannerTactical(dispatch: (a: any) => void) {
+  dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: buildMockGlobalLeague('tactical') });
 }
 
 function FixtureCard({ fixture, index }: { fixture: GlobalFixture; index: number }) {
@@ -296,12 +365,26 @@ export default function MatchGlobal() {
             Ir para Registro
           </button>
           {import.meta.env.DEV && (
-            <button
-              onClick={() => seedGlobalLeagueMock(dispatch)}
-              className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
-            >
-              Seed mock (dev)
-            </button>
+            <>
+              <button
+                onClick={() => seedGlobalLeagueMock(dispatch)}
+                className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
+              >
+                Seed mock (dev)
+              </button>
+              <button
+                onClick={() => seedMockBannerLive(dispatch)}
+                className="inline-flex items-center gap-2 bg-neon-green text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
+              >
+                Mock AO VIVO (dev)
+              </button>
+              <button
+                onClick={() => seedMockBannerTactical(dispatch)}
+                className="inline-flex items-center gap-2 bg-neon-yellow text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
+              >
+                Mock Countdown (dev)
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -319,12 +402,26 @@ export default function MatchGlobal() {
             Ver Registro
           </button>
           {import.meta.env.DEV && (
-            <button
-              onClick={() => seedGlobalLeagueMock(dispatch)}
-              className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
-            >
-              Preencher times (dev)
-            </button>
+            <>
+              <button
+                onClick={() => seedGlobalLeagueMock(dispatch)}
+                className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
+              >
+                Preencher times (dev)
+              </button>
+              <button
+                onClick={() => seedMockBannerLive(dispatch)}
+                className="inline-flex items-center gap-2 bg-neon-green text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
+              >
+                Mock AO VIVO (dev)
+              </button>
+              <button
+                onClick={() => seedMockBannerTactical(dispatch)}
+                className="inline-flex items-center gap-2 bg-neon-yellow text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
+              >
+                Mock Countdown (dev)
+              </button>
+            </>
           )}
         </div>
       </div>
