@@ -436,64 +436,65 @@ export function SquadDraftChapter(props: {
           Os primeiros nomes a vestir as cores do clube.
         </h2>
 
-        <div className="grid grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
           {cards.map((c, i) => {
             const visible = i < revealedCount;
             return (
               <div
                 key={c.id}
-                className="relative -skew-x-6 overflow-hidden"
+                className="relative overflow-hidden"
                 style={{
-                  aspectRatio: '3 / 4',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  opacity: visible ? 1 : 0.18,
-                  transform: visible ? 'skewX(-6deg)' : 'skewX(-6deg) translateY(8px)',
+                  aspectRatio: '5 / 6',
+                  background: '#0D0D0D',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 6,
+                  opacity: visible ? 1 : 0,
+                  transform: visible ? 'translateY(0)' : 'translateY(8px)',
                   transition: 'opacity 320ms ease, transform 320ms ease',
                 }}
               >
-                {visible && (
+                {/* Barra dourada vertical à esquerda — assinatura do brandbook */}
+                <div
+                  className="absolute left-0 top-0 bottom-0"
+                  style={{
+                    width: 4,
+                    background: TIER_ACCENT[c.tier],
+                  }}
+                />
+                <div className="absolute inset-0 pl-4 pr-3 py-3 flex flex-col gap-2">
                   <div
-                    className="absolute inset-0 flex flex-col justify-end p-2 skew-x-6"
+                    className="font-display uppercase text-neon-yellow"
                     style={{
-                      background: `linear-gradient(180deg, ${TIER_ACCENT[c.tier]}22 0%, rgba(0,0,0,0.85) 70%)`,
+                      fontSize: 10,
+                      letterSpacing: '0.32em',
+                      fontWeight: 700,
                     }}
                   >
-                    {c.portraitUrl ? (
-                      <img
-                        src={c.portraitUrl}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                        style={{ opacity: 0.65 }}
-                      />
-                    ) : null}
-                    <div className="relative z-10 flex flex-col gap-0.5">
-                      <div
-                        className="font-display uppercase"
-                        style={{
-                          color: TIER_ACCENT[c.tier],
-                          fontSize: 9,
-                          letterSpacing: '0.2em',
-                        }}
-                      >
-                        {c.pos}
-                      </div>
-                      <div
-                        className="font-display font-bold text-white truncate"
-                        style={{ fontSize: 12, lineHeight: 1.05 }}
-                      >
-                        {c.name.split(' ').slice(-1)[0]}
-                      </div>
-                      <div
-                        className="font-display font-black text-neon-yellow"
-                        style={{ fontSize: 18, lineHeight: 1 }}
-                      >
-                        {c.ovr}
-                      </div>
-                    </div>
+                    {c.pos}
                   </div>
-                )}
+                  <div
+                    className="font-display uppercase text-white/90 truncate"
+                    style={{
+                      fontSize: 12,
+                      letterSpacing: '0.16em',
+                      fontWeight: 700,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {c.name}
+                  </div>
+                  <div
+                    className="italic text-neon-yellow tabular-nums leading-none mt-auto"
+                    style={{
+                      fontFamily: 'var(--font-serif-hero)',
+                      fontWeight: 700,
+                      fontSize: 'clamp(32px, 5vw, 52px)',
+                      letterSpacing: '-0.03em',
+                    }}
+                  >
+                    {c.ovr}
+                  </div>
+                </div>
               </div>
             );
           })}
