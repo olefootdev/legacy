@@ -50,6 +50,159 @@ function NextButton({ children, onClick }: { children: string; onClick: () => vo
   );
 }
 
+/**
+ * CeremonyPlayerCard — adaptação do TransferRowCard (rota /transfer) para a cerimônia.
+ *
+ * Mantém o padrão canônico: foto à esquerda com OVR/POS sobreposto + bloco de info à direita.
+ * Diferenças em relação ao TransferRowCard: sem grid PAC/SHO/PAS (cards de cerimônia não trazem
+ * stats), sem CTA de lance, sem rodapé "Encerra em". Em troca, exibe badge de tier (Lendário,
+ * Épico, etc.) e, na variante hero, posição #1/#2/#3 no canto superior.
+ *
+ * Ver memória `pattern_view_player_card.md` (decisão 2026-04-29).
+ */
+type CeremonyCardData = {
+  id: string;
+  name: string;
+  pos: string;
+  tier: RarityTier;
+  ovr: number;
+  portraitUrl?: string;
+};
+
+function CeremonyPlayerCard({
+  player,
+  rank,
+  variant = 'hero',
+}: {
+  player: CeremonyCardData;
+  rank?: number; // posição no Top 3 (#1, #2, #3)
+  variant?: 'hero' | 'mini';
+}) {
+  const accent = TIER_ACCENT[player.tier];
+  const isHero = variant === 'hero';
+  return (
+    <div
+      className="group flex w-full overflow-hidden border bg-dark-gray"
+      style={{
+        borderColor: accent,
+        borderLeftWidth: 3,
+        borderRadius: 'var(--radius-md)',
+      }}
+    >
+      <div
+        className="relative flex-shrink-0 overflow-hidden bg-black border-r border-white/8"
+        style={{
+          width: isHero ? 'clamp(112px, 24%, 176px)' : 96,
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{ background: `${accent}1A` }}
+          aria-hidden
+        />
+        {player.portraitUrl ? (
+          <img
+            src={player.portraitUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-500 group-hover:grayscale-0"
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+        ) : null}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/65 via-black/15 to-transparent"
+        />
+        <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10">
+          <p
+            className="italic text-neon-yellow tabular-nums leading-none drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)]"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: isHero ? 'clamp(36px, 5.5vw, 56px)' : 30,
+              letterSpacing: '-0.04em',
+            }}
+          >
+            {player.ovr}
+          </p>
+          <p className="mt-0.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/85 drop-shadow-md">
+            {player.pos}
+          </p>
+        </div>
+        {rank ? (
+          <span
+            className="absolute bottom-2 left-2 z-10 inline-flex items-center bg-neon-yellow text-black px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.2em] shadow-[0_0_14px_rgba(234,255,0,0.5)]"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            #{rank}
+          </span>
+        ) : null}
+      </div>
+
+      <div className={`flex min-w-0 flex-1 flex-col gap-2 ${isHero ? 'px-4 py-4' : 'px-3 py-2.5'}`}>
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="min-w-0 flex-1">
+            <p
+              className="text-white uppercase truncate"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: isHero ? 'clamp(16px, 2.2vw, 22px)' : 14,
+                letterSpacing: '0.03em',
+                lineHeight: 1.05,
+              }}
+            >
+              {player.name}
+            </p>
+            <p
+              className="text-white/55 uppercase mt-0.5 truncate"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: isHero ? '10px' : '9px',
+                letterSpacing: '0.22em',
+                fontWeight: 600,
+              }}
+            >
+              {player.pos} · OVR {player.ovr}
+            </p>
+          </div>
+          <span
+            className="shrink-0 inline-flex items-center border px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]"
+            style={{
+              borderColor: accent,
+              color: accent,
+              background: 'rgba(0,0,0,0.7)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {TIER_LABEL[player.tier]}
+          </span>
+        </div>
+
+        {isHero ? (
+          <div className="mt-auto pt-2 border-t border-[var(--color-divider-yellow)]">
+            <span
+              className="italic tabular-nums leading-tight text-neon-yellow"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(18px, 2.4vw, 24px)',
+              }}
+            >
+              {TIER_LABEL[player.tier]}
+            </span>
+            <span
+              className="ml-2 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50"
+            >
+              · Pioneiro do clube
+            </span>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function StageWrap({ children }: { children: import('react').ReactNode }) {
   return (
     <div
@@ -283,64 +436,19 @@ export function SquadDraftChapter(props: {
           Os primeiros nomes a vestir as cores do clube.
         </h2>
 
-        <div className="grid grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {cards.map((c, i) => {
             const visible = i < revealedCount;
             return (
               <div
                 key={c.id}
-                className="relative -skew-x-6 overflow-hidden"
                 style={{
-                  aspectRatio: '3 / 4',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  opacity: visible ? 1 : 0.18,
-                  transform: visible ? 'skewX(-6deg)' : 'skewX(-6deg) translateY(8px)',
+                  opacity: visible ? 1 : 0,
+                  transform: visible ? 'translateY(0)' : 'translateY(8px)',
                   transition: 'opacity 320ms ease, transform 320ms ease',
                 }}
               >
-                {visible && (
-                  <div
-                    className="absolute inset-0 flex flex-col justify-end p-2 skew-x-6"
-                    style={{
-                      background: `linear-gradient(180deg, ${TIER_ACCENT[c.tier]}22 0%, rgba(0,0,0,0.85) 70%)`,
-                    }}
-                  >
-                    {c.portraitUrl ? (
-                      <img
-                        src={c.portraitUrl}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                        style={{ opacity: 0.65 }}
-                      />
-                    ) : null}
-                    <div className="relative z-10 flex flex-col gap-0.5">
-                      <div
-                        className="font-display uppercase"
-                        style={{
-                          color: TIER_ACCENT[c.tier],
-                          fontSize: 9,
-                          letterSpacing: '0.2em',
-                        }}
-                      >
-                        {c.pos}
-                      </div>
-                      <div
-                        className="font-display font-bold text-white truncate"
-                        style={{ fontSize: 12, lineHeight: 1.05 }}
-                      >
-                        {c.name.split(' ').slice(-1)[0]}
-                      </div>
-                      <div
-                        className="font-display font-black text-neon-yellow"
-                        style={{ fontSize: 18, lineHeight: 1 }}
-                      >
-                        {c.ovr}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {visible ? <CeremonyPlayerCard player={c} variant="mini" /> : null}
               </div>
             );
           })}
@@ -361,29 +469,33 @@ export function Top3Chapter(props: {
   top3: OnboardingPackage['top3'];
   onNext: () => void;
 }) {
-  // Stage 0: nada revelado. 1: card #1 visível. 2: cards #1+#2 visíveis. 3: todos visíveis (CTA aparece).
-  const [stage, setStage] = useState(0);
+  // revealed = quantidade de cards já revelados (0 a 3). Usuário toca a tela para revelar o próximo.
+  // Sem timers automáticos: evita travas e dá ritmo cerimonial — um por vez.
+  const [revealed, setRevealed] = useState(0);
+  const total = props.top3.length;
+  const allRevealed = revealed >= total;
 
-  // Auto-revelar card #1 e #2 (com respiro). Card #3 só com tap do usuário.
-  useEffect(() => {
-    if (stage >= 2) return;
-    const delay = stage === 0 ? 600 : 900;
-    const t = window.setTimeout(() => setStage((s) => Math.min(2, s + 1)), delay);
-    return () => window.clearTimeout(t);
-  }, [stage]);
-
-  const handleScreenTap = () => {
-    if (stage === 2) setStage(3); // tap libera o terceiro card
+  const handleTap = () => {
+    if (!allRevealed) setRevealed((n) => Math.min(total, n + 1));
   };
 
   return (
     <StageWrap>
       <div
-        className="flex flex-col gap-6"
-        onClick={handleScreenTap}
-        style={stage === 2 ? { cursor: 'pointer' } : undefined}
+        className="flex flex-col gap-6 cursor-pointer select-none"
+        onClick={handleTap}
+        role={allRevealed ? undefined : 'button'}
+        aria-label={allRevealed ? undefined : 'Tocar para revelar o próximo astro'}
       >
-        <ChapterLabel>Capítulo III · Os Astros</ChapterLabel>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <ChapterLabel>Capítulo III · Os Astros</ChapterLabel>
+          <div
+            className="font-display text-white/70"
+            style={{ fontSize: 13, letterSpacing: '0.25em' }}
+          >
+            {revealed} / {total}
+          </div>
+        </div>
 
         <h2
           className="font-serif-hero text-white"
@@ -397,102 +509,33 @@ export function Top3Chapter(props: {
           <span className="text-neon-yellow">três nomes</span> brilharam mais alto.
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+        <div className="flex flex-col gap-3 mt-2">
           {props.top3.map((p, i) => {
-            const visible = stage > i;
+            const visible = i < revealed;
             return (
-              <article
+              <div
                 key={p.id}
-                className="relative overflow-hidden -skew-x-6"
                 style={{
-                  aspectRatio: '3 / 4.5',
-                  background: 'linear-gradient(180deg, #1A1A1A 0%, #0D0D0D 100%)',
-                  border: `2px solid ${TIER_ACCENT[p.tier]}`,
                   opacity: visible ? 1 : 0,
-                  transform: visible ? 'skewX(-6deg) translateY(0)' : 'skewX(-6deg) translateY(20px)',
-                  transition: 'opacity 500ms ease, transform 500ms ease',
+                  transform: visible ? 'translateY(0)' : 'translateY(16px)',
+                  transition: 'opacity 420ms ease, transform 420ms ease',
+                  pointerEvents: visible ? 'auto' : 'none',
                 }}
               >
-                <div className="absolute inset-0 skew-x-6">
-                  {p.portraitUrl && (
-                    <img
-                      src={p.portraitUrl}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover"
-                      style={{ opacity: 0.9 }}
-                    />
-                  )}
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        'linear-gradient(180deg, transparent 35%, rgba(0,0,0,0.9) 90%)',
-                    }}
-                  />
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                    <div
-                      className="font-display uppercase px-2 py-0.5 -skew-x-6"
-                      style={{
-                        background: TIER_ACCENT[p.tier],
-                        color: '#000',
-                        fontSize: 10,
-                        letterSpacing: '0.22em',
-                      }}
-                    >
-                      <span className="inline-block skew-x-6">{TIER_LABEL[p.tier]}</span>
-                    </div>
-                    <div
-                      className="font-display font-black text-white/90"
-                      style={{ fontSize: 14, letterSpacing: '0.18em' }}
-                    >
-                      #{i + 1}
-                    </div>
-                  </div>
-                  <div className="absolute left-3 right-3 bottom-3 flex flex-col gap-1">
-                    <div
-                      className="font-display uppercase text-neon-yellow"
-                      style={{ fontSize: 11, letterSpacing: '0.3em' }}
-                    >
-                      {p.pos}
-                    </div>
-                    <div
-                      className="font-serif-hero text-white"
-                      style={{
-                        fontStyle: 'italic',
-                        fontSize: 'clamp(20px, 3vw, 28px)',
-                        lineHeight: 1,
-                      }}
-                    >
-                      {p.name}
-                    </div>
-                    <div
-                      className="font-display font-black text-neon-yellow"
-                      style={{ fontSize: 56, lineHeight: 1, letterSpacing: '-0.02em' }}
-                    >
-                      {p.ovr}
-                    </div>
-                  </div>
-                </div>
-              </article>
+                {visible ? <CeremonyPlayerCard player={p} rank={i + 1} variant="hero" /> : null}
+              </div>
             );
           })}
         </div>
 
-        {stage === 2 && (
+        {!allRevealed ? (
           <div
-            className="flex justify-center"
-            style={{ animation: 'olefoot-fade-up 400ms both' }}
+            className="font-display uppercase text-neon-yellow text-center pt-2"
+            style={{ fontSize: 12, letterSpacing: '0.32em', animation: 'olefoot-fade-up 400ms both' }}
           >
-            <span
-              className="font-display uppercase text-neon-yellow/80"
-              style={{ fontSize: 11, letterSpacing: '0.4em' }}
-            >
-              Toque para revelar o último
-            </span>
+            Toque para revelar o {revealed === 0 ? 'primeiro' : revealed === 1 ? 'segundo' : 'terceiro'} astro
           </div>
-        )}
-
-        {stage > 2 && (
+        ) : (
           <div
             className="flex justify-end"
             style={{ animation: 'olefoot-fade-up 400ms both' }}
