@@ -9,7 +9,7 @@
  *
  * Tabela do dia 1 ao 7 confirmada em product review.
  */
-export type DailyRewardKind = 'exp' | 'pack_basic' | 'pack_premium';
+export type DailyRewardKind = 'exp' | 'pack_basic' | 'pack_rare';
 
 export interface DailyReward {
   readonly day: number;
@@ -26,7 +26,7 @@ export const DAILY_REWARDS_7D: ReadonlyArray<DailyReward> = [
   { day: 4, kind: 'exp', expAmount:   500_000, label: '500K EXP',   tone: 'rare' },
   { day: 5, kind: 'pack_basic',                 label: 'Pack 3 cards basic', tone: 'epic' },
   { day: 6, kind: 'exp', expAmount: 1_000_000, label: '1M EXP',     tone: 'epic' },
-  { day: 7, kind: 'pack_premium',               label: 'Pack premium (1 RARE garantido)', tone: 'legendary' },
+  { day: 7, kind: 'pack_rare',                  label: 'Pack Rare',                       tone: 'legendary' },
 ];
 
 const HOUR_MS = 60 * 60 * 1000;
