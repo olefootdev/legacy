@@ -94,6 +94,10 @@ export function AssistantWidget() {
   const enabled = useGameStore((s) => s.userSettings.assistantEnabled ?? true);
   const managerProfile = useGameStore((s) => s.userSettings.managerProfile);
   const tutorialStep = useGameStore((s) => s.userSettings.tutorialStep);
+  const welcomePackVersion = useGameStore((s) => s.userSettings.welcomeGenesisPackVersion ?? 0);
+  const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
+  // Cerimônia de boas-vindas em curso = plantel vazio + pack ainda não entregue.
+  const ceremonyActive = !!managerProfile && welcomePackVersion < 1 && playersCount === 0;
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -121,6 +125,7 @@ export function AssistantWidget() {
     !enabled ||
     !managerProfile ||
     hidden ||
+    ceremonyActive ||
     (typeof tutorialStep === 'number' && tutorialStep >= 0);
 
   useEffect(() => {

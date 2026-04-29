@@ -361,16 +361,28 @@ export function Top3Chapter(props: {
   top3: OnboardingPackage['top3'];
   onNext: () => void;
 }) {
-  const [stage, setStage] = useState(0); // 0,1,2 = revelando cada card; 3 = todos revelados
+  // Stage 0: nada revelado. 1: card #1 visível. 2: cards #1+#2 visíveis. 3: todos visíveis (CTA aparece).
+  const [stage, setStage] = useState(0);
+
+  // Auto-revelar card #1 e #2 (com respiro). Card #3 só com tap do usuário.
   useEffect(() => {
-    if (stage > 2) return;
-    const t = window.setTimeout(() => setStage((s) => s + 1), stage === 0 ? 600 : 900);
+    if (stage >= 2) return;
+    const delay = stage === 0 ? 600 : 900;
+    const t = window.setTimeout(() => setStage((s) => Math.min(2, s + 1)), delay);
     return () => window.clearTimeout(t);
   }, [stage]);
 
+  const handleScreenTap = () => {
+    if (stage === 2) setStage(3); // tap libera o terceiro card
+  };
+
   return (
     <StageWrap>
-      <div className="flex flex-col gap-6">
+      <div
+        className="flex flex-col gap-6"
+        onClick={handleScreenTap}
+        style={stage === 2 ? { cursor: 'pointer' } : undefined}
+      >
         <ChapterLabel>Capítulo III · Os Astros</ChapterLabel>
 
         <h2
@@ -466,8 +478,26 @@ export function Top3Chapter(props: {
           })}
         </div>
 
+        {stage === 2 && (
+          <div
+            className="flex justify-center"
+            style={{ animation: 'olefoot-fade-up 400ms both' }}
+          >
+            <span
+              className="font-display uppercase text-neon-yellow/80"
+              style={{ fontSize: 11, letterSpacing: '0.4em' }}
+            >
+              Toque para revelar o último
+            </span>
+          </div>
+        )}
+
         {stage > 2 && (
-          <div className="flex justify-end" style={{ animation: 'olefoot-fade-up 400ms both' }}>
+          <div
+            className="flex justify-end"
+            style={{ animation: 'olefoot-fade-up 400ms both' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <NextButton onClick={props.onNext}>Rotina dos campeões</NextButton>
           </div>
         )}
