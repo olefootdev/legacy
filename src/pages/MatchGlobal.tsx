@@ -15,6 +15,32 @@ import type { GlobalTeam } from '@/match/globalLeagueMVP';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
+function seedGlobalLeagueMock(dispatch: (a: any) => void) {
+  dispatch({ type: 'INIT_GLOBAL_LEAGUE_MVP' });
+  const clubs = [
+    'Arena FC', 'Neon United', 'Pixel Atlético', 'Olefoot Stars',
+    'Legacy Boys', 'Meta Sports', 'Guarda Velha', 'Vermelhão',
+    'Lobos Azuis', 'Tigres FC', 'Águias do Sul', 'Rivais Eternos',
+    'Real Brasil', 'Cidade Alta', 'Santos do Norte', 'Verdão Clube',
+    'Furacão SP', 'Galo Negro', 'Estrela do Mar', 'Trovão Azul',
+    'Lanterna FC', 'Comandante', 'Costa Brava', 'Vila Nova',
+    'Capital Sul', 'Sertão FC', 'Voador Branco', 'Cometa SC',
+    'Trama Azul', 'Olho do Tigre', 'Voo do Falcão', 'Rei do Rio',
+  ];
+  clubs.forEach((name, i) => {
+    const short = name.split(' ').map((s) => s[0]).join('').slice(0, 3).toUpperCase();
+    dispatch({
+      type: 'REGISTER_GLOBAL_TEAM',
+      managerId: `mock_mgr_${i}`,
+      clubName: name,
+      clubShort: short,
+      overall: 60 + Math.floor(Math.random() * 30),
+    });
+  });
+  dispatch({ type: 'ADMIN_START_GLOBAL_PLAYOFFS' });
+  dispatch({ type: 'START_GLOBAL_PLAYOFF_ROUND', roundNumber: 1 });
+}
+
 function FixtureCard({ fixture, index }: { fixture: GlobalFixture; index: number }) {
   const lastEvent = fixture.events[fixture.events.length - 1];
   const hasGoal = fixture.scoreHome > 0 || fixture.scoreAway > 0;
@@ -265,12 +291,19 @@ export default function MatchGlobal() {
     return (
       <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
         <p className="text-white/60 mb-4">Liga LEGACY não inicializada</p>
-        <button
-          onClick={() => navigate('/liga-global/registro')}
-          className="btn-primary"
-        >
-          Ir para Registro
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button onClick={() => navigate('/liga-global/registro')} className="btn-primary">
+            Ir para Registro
+          </button>
+          {import.meta.env.DEV && (
+            <button
+              onClick={() => seedGlobalLeagueMock(dispatch)}
+              className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
+            >
+              Seed mock (dev)
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -281,12 +314,19 @@ export default function MatchGlobal() {
         <p className="text-white/60 mb-4">
           Aguardando times se cadastrarem ({globalLeagueMVP.teams.length}/{globalLeagueMVP.minTeamsRequired})
         </p>
-        <button
-          onClick={() => navigate('/liga-global/registro')}
-          className="btn-primary"
-        >
-          Ver Registro
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button onClick={() => navigate('/liga-global/registro')} className="btn-primary">
+            Ver Registro
+          </button>
+          {import.meta.env.DEV && (
+            <button
+              onClick={() => seedGlobalLeagueMock(dispatch)}
+              className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
+            >
+              Preencher times (dev)
+            </button>
+          )}
+        </div>
       </div>
     );
   }
