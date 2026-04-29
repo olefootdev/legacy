@@ -436,19 +436,64 @@ export function SquadDraftChapter(props: {
           Os primeiros nomes a vestir as cores do clube.
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-5 gap-2 sm:gap-3">
           {cards.map((c, i) => {
             const visible = i < revealedCount;
             return (
               <div
                 key={c.id}
+                className="relative -skew-x-6 overflow-hidden"
                 style={{
-                  opacity: visible ? 1 : 0,
-                  transform: visible ? 'translateY(0)' : 'translateY(8px)',
+                  aspectRatio: '3 / 4',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  opacity: visible ? 1 : 0.18,
+                  transform: visible ? 'skewX(-6deg)' : 'skewX(-6deg) translateY(8px)',
                   transition: 'opacity 320ms ease, transform 320ms ease',
                 }}
               >
-                {visible ? <CeremonyPlayerCard player={c} variant="mini" /> : null}
+                {visible && (
+                  <div
+                    className="absolute inset-0 flex flex-col justify-end p-2 skew-x-6"
+                    style={{
+                      background: `linear-gradient(180deg, ${TIER_ACCENT[c.tier]}22 0%, rgba(0,0,0,0.85) 70%)`,
+                    }}
+                  >
+                    {c.portraitUrl ? (
+                      <img
+                        src={c.portraitUrl}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                        style={{ opacity: 0.65 }}
+                      />
+                    ) : null}
+                    <div className="relative z-10 flex flex-col gap-0.5">
+                      <div
+                        className="font-display uppercase"
+                        style={{
+                          color: TIER_ACCENT[c.tier],
+                          fontSize: 9,
+                          letterSpacing: '0.2em',
+                        }}
+                      >
+                        {c.pos}
+                      </div>
+                      <div
+                        className="font-display font-bold text-white truncate"
+                        style={{ fontSize: 12, lineHeight: 1.05 }}
+                      >
+                        {c.name.split(' ').slice(-1)[0]}
+                      </div>
+                      <div
+                        className="font-display font-black text-neon-yellow"
+                        style={{ fontSize: 18, lineHeight: 1 }}
+                      >
+                        {c.ovr}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
