@@ -79,61 +79,121 @@ const ENGINE_EVENT_MAP: Record<LegacyEventKind, string> = {
 };
 
 // ── Painel de voz — estado idle ───────────────────────────────────────────────
-const VOICE_HINTS = ['Saída', 'Escanteio', 'Falta', 'Carrinho', 'Gegenpress', 'Cara a cara'];
+// Labels curtos para o grid de comandos de voz
+const VOICE_LABEL: Record<string, string> = {
+  gk: 'Saída', corner: 'Escanteio', freekick: 'Falta',
+  recv: 'Recepção', wing: 'Fundo', '1v1': '1×1',
+  header: 'Cabeça', '1v1gk': 'Cara a cara',
+  tackle: 'Carrinho', lastline: 'Última linha', rebound: 'Rebote',
+  gegen: 'Gegenpress', counter: 'Contra-ataque',
+};
 
-function VoiceIdlePanel() {
+const CATEGORY_LABEL: Record<MomentDef['category'], string> = {
+  'bola-parada': 'Parada',
+  'ataque': 'Ataque',
+  'defesa': 'Defesa',
+  'transicao': 'Transição',
+};
+
+const CATEGORIES_ORDER: MomentDef['category'][] = [
+  'bola-parada', 'ataque', 'defesa', 'transicao',
+];
+
+function VoiceIdlePanel({ onTrigger }: { onTrigger: (id: string) => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-5 px-4">
-      {/* Mic */}
-      <div className="relative flex items-center justify-center">
-        <span
-          className="absolute rounded-full"
+    <div style={{ padding: '10px 14px 14px' }}>
+      {/* Keyframes */}
+      <style>{`
+        @keyframes vbar {
+          0%, 100% { transform: scaleY(0.35); opacity: 0.25; }
+          50%       { transform: scaleY(1);    opacity: 0.65; }
+        }
+      `}</style>
+
+      {/* Status bar ── mic + label + waveform */}
+      <div className="flex items-center gap-2 mb-3">
+        {/* Mic — quadrado editorial, borda gold */}
+        <div
+          className="flex items-center justify-center flex-shrink-0"
           style={{
-            width: 56, height: 56,
-            background: 'rgba(253,225,0,0.08)',
-            animation: 'ping 2s cubic-bezier(0,0,0.2,1) infinite',
-          }}
-        />
-        <button
-          type="button"
-          className="relative flex items-center justify-center rounded-full"
-          style={{
-            width: 48, height: 48,
-            background: '#FDE100',
-            color: '#000',
-            border: 'none',
-            cursor: 'pointer',
+            width: 26, height: 26,
+            border: '1px solid rgba(253,225,0,0.55)',
+            color: '#FDE100',
           }}
         >
-          <Mic size={22} />
-        </button>
+          <Mic size={12} />
+        </div>
+
+        {/* Label */}
+        <span
+          className="font-display uppercase"
+          style={{ fontSize: 8, letterSpacing: '0.42em', color: 'rgba(253,225,0,0.5)', fontWeight: 700 }}
+        >
+          VOZ
+        </span>
+
+        {/* Divisor */}
+        <div style={{ flex: 1, height: 1, background: 'rgba(253,225,0,0.1)' }} />
+
+        {/* Waveform equalizer */}
+        <div className="flex items-end gap-px" style={{ height: 16 }}>
+          {[0.55, 0.9, 1, 0.75, 0.45].map((base, i) => (
+            <span
+              key={i}
+              style={{
+                display: 'block',
+                width: 2,
+                height: `${base * 100}%`,
+                background: '#FDE100',
+                borderRadius: 1,
+                transformOrigin: 'bottom',
+                animation: `vbar ${0.7 + i * 0.15}s ease-in-out ${i * 0.08}s infinite`,
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Label */}
-      <span
-        className="font-display uppercase"
-        style={{ fontSize: 9, letterSpacing: '0.35em', color: 'rgba(253,225,0,0.5)' }}
-      >
-        Aguardando comando de voz
-      </span>
+      {/* Grid de comandos por categoria */}
+      {CATEGORIES_ORDER.map((catId) => {
+        const catMoments = MOMENTS.filter((m) => m.category === catId);
+        return (
+          <div key={catId} className="flex items-baseline gap-2 mb-1.5 last:mb-0 flex-wrap">
+            {/* Category tag */}
+            <span
+              className="font-display uppercase flex-shrink-0"
+              style={{ fontSize: 7, letterSpacing: '0.38em', color: 'rgba(253,225,0,0.28)', fontWeight: 700 }}
+            >
+              {CATEGORY_LABEL[catId]}
+            </span>
 
-      {/* Hint chips */}
-      <div className="flex flex-wrap gap-1.5 justify-center">
-        {VOICE_HINTS.map((h) => (
-          <span
-            key={h}
-            className="font-display uppercase"
-            style={{
-              fontSize: 9, letterSpacing: '0.14em',
-              color: 'rgba(255,255,255,0.3)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              padding: '3px 8px', borderRadius: 3,
-            }}
-          >
-            {h}
-          </span>
-        ))}
-      </div>
+            {/* Command pills */}
+            <div className="flex flex-wrap gap-1">
+              {catMoments.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => onTrigger(m.id)}
+                  className="font-display uppercase transition-all active:scale-95"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(253,225,0,0.22)',
+                    color: 'rgba(253,225,0,0.72)',
+                    fontSize: 9,
+                    letterSpacing: '0.16em',
+                    fontWeight: 700,
+                    padding: '3px 9px',
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {VOICE_LABEL[m.id] ?? m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -263,7 +323,14 @@ export function FieldViewPreview() {
         </InlineDecisionCtx.Provider>
 
         {/* Idle: UI de voz */}
-        {!activeMoment && <VoiceIdlePanel />}
+        {!activeMoment && (
+          <VoiceIdlePanel
+            onTrigger={(id) => {
+              const m = MOMENTS.find((x) => x.id === id);
+              if (m) startMoment(m);
+            }}
+          />
+        )}
 
         {/* Resultado: feedback no painel enquanto flash some */}
         {activeMoment && outcome && (
