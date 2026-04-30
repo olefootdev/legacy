@@ -281,13 +281,16 @@ interface IVCardProps {
   isHome: boolean;
   isOnBall: boolean;
   onClick?: (p: PitchPlayerState) => void;
+  /** Cinematic shrink for our keeper during opposing attack (real-life proportions). */
+  shrink?: number;
 }
 
 const IV_CARD_W = 70;
 const IV_CARD_H = 86;
 
-const InclinedCard = memo(function InclinedCard({ p, isHome, isOnBall, onClick }: IVCardProps) {
-  const { sx, sy, scale } = ivProject(p.x, p.y);
+const InclinedCard = memo(function InclinedCard({ p, isHome, isOnBall, onClick, shrink = 1 }: IVCardProps) {
+  const { sx, sy, scale: baseScale } = ivProject(p.x, p.y);
+  const scale = baseScale * shrink;
   const cw = IV_CARD_W * scale;
   const ch = IV_CARD_H * scale;
   const x = sx - cw / 2;
@@ -437,6 +440,7 @@ function InclinedField({
   ballY,
   onBallId,
   onPlayerClick,
+  defensiveAction = false,
 }: {
   homePlayers: PitchPlayerState[];
   awayPlayers: PitchPlayerState[];
@@ -444,7 +448,12 @@ function InclinedField({
   ballY: number;
   onBallId: string | null;
   onPlayerClick?: (p: PitchPlayerState) => void;
+  defensiveAction?: boolean;
 }) {
+  // Defensive cinematic mode: shrink home GK and enlarge near goal so the
+  // proportions match real life (keeper ≈ 1.9m vs goal ≈ 2.44m tall).
+  const gkShrink = defensiveAction ? 0.55 : 1;
+  const nearGoalBoost = defensiveAction ? 2.0 : 1;
   // Sort players by depth: far first (top), near last (bottom) — natural occlusion
   const allCards = useMemo(() => {
     const home = homePlayers.map((p) => ({ p, isHome: true }));
@@ -509,7 +518,7 @@ function InclinedField({
   const nearGoalL = ivProject(0, goalYL);
   const nearGoalR = ivProject(0, goalYR);
   const nearGoalPostHeight =
-    (nearGoalR.sx - nearGoalL.sx) * GOAL_ASPECT;
+    (nearGoalR.sx - nearGoalL.sx) * GOAL_ASPECT * nearGoalBoost;
 
   return (
     <svg
@@ -711,6 +720,7 @@ function InclinedField({
           isHome={isHome}
           isOnBall={p.playerId === onBallId}
           onClick={onPlayerClick}
+          shrink={isHome && p.role === 'gk' ? gkShrink : 1}
         />
       ))}
 
@@ -846,6 +856,11 @@ export interface FieldViewProps {
    * Set to null/undefined to return to the wide tactical view.
    */
   highlightPlayerId?: string | null;
+  /**
+   * Cinematic mode for opposing-team attack on our goal: shrinks our keeper
+   * and enlarges the near goal so the proportions feel real.
+   */
+  defensiveAction?: boolean;
   className?: string;
 }
 
@@ -865,6 +880,7 @@ export const FieldView = memo(function FieldView({
   onCameraChange,
   onPlayerClick,
   highlightPlayerId = null,
+  defensiveAction = false,
   className = '',
 }: FieldViewProps) {
   const broadcastStyle =
@@ -1001,6 +1017,7 @@ export const FieldView = memo(function FieldView({
             ballY={ballY}
             onBallId={onBallPlayerId}
             onPlayerClick={onPlayerClick}
+            defensiveAction={defensiveAction}
           />
         ) : (
           <AerialField

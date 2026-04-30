@@ -68,6 +68,7 @@ export function FieldViewPreview() {
   const [ballY, setBallY] = useState(50);
   const [minute, setMinute] = useState(67);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [defensiveAction, setDefensiveAction] = useState(false);
 
   const handlePlayerClick = useCallback((p: PitchPlayerState) => {
     setOnBallId(p.playerId);
@@ -125,6 +126,30 @@ export function FieldViewPreview() {
         >
           ▶ destaque
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setCamera('aerial');
+            setDefensiveAction(true);
+            // Zoom on our keeper while opponent attacks
+            setHighlightId('gk1');
+            window.setTimeout(() => {
+              setDefensiveAction(false);
+              setHighlightId(null);
+            }, 4000);
+          }}
+          className="font-display uppercase tracking-wider px-2 py-1 transition-all"
+          style={{
+            background: defensiveAction ? '#FDE100' : 'rgba(255,255,255,0.06)',
+            color: defensiveAction ? '#000' : 'rgba(253,225,0,0.85)',
+            border: '1px solid rgba(253,225,0,0.4)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            borderRadius: 4,
+          }}
+        >
+          ▶ defesa
+        </button>
         <span className="text-white/40 self-center" style={{ fontSize: 9, marginLeft: 6 }}>
           · clique num jogador pra mover a bola
         </span>
@@ -146,6 +171,7 @@ export function FieldViewPreview() {
           matchMinute={minute}
           showCameraSwitch={false}
           highlightPlayerId={highlightId}
+          defensiveAction={defensiveAction}
           onPlayerClick={handlePlayerClick}
           className="w-full"
         />
