@@ -195,44 +195,43 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
     return () => window.clearInterval(id);
   }, [timeoutMs, onTimeout]);
 
-  // ── Inline (painel) — compacto, horizontal, editorial ──────────────────────
+  // ── Inline (painel) — dark/gold, mesmo visual do voice bar ─────────────────
   if (inline) {
     return (
-      <div style={{ width: '100%', overflow: 'hidden', background: NEON }}>
-        {/* Timer bar — topo */}
-        <div style={{ background: 'rgba(0,0,0,0.15)', height: 3 }}>
-          <div style={{ background: '#000', width: `${progress * 100}%`, height: '100%', transition: 'width 60ms linear' }} />
+      <div style={{ width: '100%', overflow: 'hidden', background: 'rgba(8,8,8,0.97)', borderTop: '1px solid rgba(253,225,0,0.18)' }}>
+        {/* Timer bar — topo, gold shrinks */}
+        <div style={{ background: 'rgba(253,225,0,0.08)', height: 2 }}>
+          <div style={{ background: NEON, width: `${progress * 100}%`, height: '100%', transition: 'width 60ms linear' }} />
         </div>
 
         {/* Choices row */}
-        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', height: 44 }}>
           {choices.map((c, idx) => {
             const color = TONE_COLORS[c.tone ?? 'safe'];
-            const isYellow = (c.tone ?? 'safe') === 'safe';
             return (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => onChoose(c.id)}
-                className="flex items-center justify-center gap-2 transition-all active:scale-95"
+                className="flex items-center justify-center gap-1.5 transition-all active:scale-95"
                 style={{
                   flex: 1,
-                  height: 52,
-                  background: '#000',
-                  color: isYellow ? NEON : color,
+                  height: '100%',
+                  background: 'transparent',
+                  color,
                   border: 'none',
-                  borderLeft: idx > 0 ? `1px solid rgba(253,225,0,0.15)` : 'none',
+                  borderLeft: idx > 0 ? `1px solid rgba(253,225,0,0.1)` : 'none',
                   cursor: 'pointer',
-                  padding: '0 8px',
+                  padding: '0 6px',
                 }}
               >
-                <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isYellow ? NEON : color, flexShrink: 0 }}>
+                <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
                   {c.arrow ? <Arrow kind={c.arrow} /> : c.icon}
                 </span>
                 {c.label && (
                   <span style={{
-                    fontFamily: "'Oswald', sans-serif", fontWeight: 800,
-                    letterSpacing: '0.18em', fontSize: 11, textTransform: 'uppercase',
+                    fontFamily: "'Oswald', sans-serif", fontWeight: 700,
+                    letterSpacing: '0.22em', fontSize: 9, textTransform: 'uppercase', color,
                   }}>
                     {c.label}
                   </span>
@@ -242,20 +241,18 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
           })}
         </div>
 
-        {/* Footer — título + timer */}
-        <div
-          className="flex items-center justify-between"
-          style={{ padding: '3px 10px 4px', background: NEON }}
-        >
+        {/* Footer — título + timer, igual ao rodapé do voice bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 12px 3px' }}>
           <span style={{
             fontFamily: "'Oswald', sans-serif", fontWeight: 800,
-            letterSpacing: '0.32em', fontSize: 8, textTransform: 'uppercase', color: '#000',
+            letterSpacing: '0.32em', fontSize: 7, textTransform: 'uppercase',
+            color: 'rgba(253,225,0,0.45)',
           }}>
             {title}
           </span>
           <span style={{
             fontFamily: "'Oswald', sans-serif", fontWeight: 700,
-            fontSize: 8, letterSpacing: '0.2em', color: 'rgba(0,0,0,0.55)',
+            fontSize: 7, letterSpacing: '0.2em', color: 'rgba(253,225,0,0.25)',
           }}>
             {Math.ceil((timeoutMs * progress) / 1000)}S
           </span>

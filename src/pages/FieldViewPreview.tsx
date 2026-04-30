@@ -213,25 +213,30 @@ export function FieldViewPreview() {
   const showAttacker = showDecision && !!Attacker && !attackerPick;
   const showDefender = showDecision && !!Defender && !!attackerPick;
 
+  const voiceTrigger = useCallback((id: string) => {
+    const m = MOMENTS.find((x) => x.id === id);
+    if (m) startMoment(m);
+  }, [startMoment]);
+
   return (
-    <div className="fixed inset-0 z-[200] bg-[#050505]" style={{ touchAction: 'none' }}>
+    <div className="fixed inset-0 z-[200] bg-[#050505] flex flex-col" style={{ touchAction: 'none' }}>
       <style>{`
-        @keyframes panelIn {
-          from { opacity: 0; transform: translateY(-48px) scaleY(0.92); }
-          to   { opacity: 1; transform: translateY(0)    scaleY(1); }
+        @keyframes slideFromField {
+          from { opacity: 0; transform: translateY(-100%); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes vbar {
           0%, 100% { transform: scaleY(0.3); opacity: 0.2; }
           50%       { transform: scaleY(1);   opacity: 0.6; }
         }
         @keyframes outcomeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translateY(6px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0)   scale(1); }
         }
       `}</style>
 
-      {/* ── Campo — ocupa tudo, push para baixo ── */}
-      <div className="h-full flex flex-col justify-end">
+      {/* ── Campo — flex-1, push para baixo ── */}
+      <div className="flex-1 min-h-0 flex flex-col justify-end overflow-hidden">
         <FieldView
           homePlayers={engine.homePlayers}
           awayPlayers={engine.awayPlayers}
@@ -252,7 +257,7 @@ export function FieldViewPreview() {
         />
       </div>
 
-      {/* Camera toggle — canto superior direito do campo, discreto */}
+      {/* Camera toggle — canto superior direito, sobre o campo */}
       <div className="absolute flex gap-1 z-20" style={{ top: 56, right: 8 }}>
         {(['aerial', 'broadcast'] as FieldCameraMode[]).map((m) => (
           <button key={m} type="button" onClick={() => setCamera(m)}
@@ -264,12 +269,32 @@ export function FieldViewPreview() {
         ))}
       </div>
 
-      {/* ── Card de decisão — overlay fixo, desliza de cima pra baixo ── */}
+      {/* ── Resultado — flash centralizado sobre o painel ── */}
+      {outcome && (
+        <div
+          className="absolute left-0 right-0 flex justify-center z-[500]"
+          style={{ bottom: showDecision ? 112 : 60, animation: 'outcomeIn 200ms ease both' }}
+        >
+          <div
+            className="font-display uppercase"
+            style={{
+              background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
+              color: '#000', padding: '7px 24px', fontWeight: 900,
+              letterSpacing: '0.36em', fontSize: 12,
+              border: '2px solid rgba(0,0,0,0.8)',
+              boxShadow: '0 4px 32px rgba(0,0,0,0.8)',
+            }}
+          >
+            {outcome === 'intercept' ? 'Interceptado' : 'Saiu jogando ✓'}
+          </div>
+        </div>
+      )}
+
+      {/* ── Card de decisão — desliza de baixo do campo, acima do voice bar ── */}
       {showDecision && (
         <div
           key={activeMoment.id + (attackerPick ?? '')}
-          className="fixed bottom-0 left-0 right-0 z-[400]"
-          style={{ animation: 'panelIn 320ms cubic-bezier(0.34,1.4,0.64,1) both' }}
+          style={{ flexShrink: 0, animation: 'slideFromField 280ms cubic-bezier(0.34,1.56,0.64,1) both' }}
         >
           <InlineDecisionCtx.Provider value={true}>
             {showAttacker && (
@@ -288,41 +313,12 @@ export function FieldViewPreview() {
         </div>
       )}
 
-      {/* ── Resultado — flash sobre o campo ── */}
-      {outcome && (
-        <div
-          className="fixed left-0 right-0 flex justify-center z-[500]"
-          style={{ bottom: 80, animation: 'outcomeIn 200ms ease both' }}
-        >
-          <div
-            className="font-display uppercase"
-            style={{
-              background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
-              color: '#000', padding: '8px 28px', fontWeight: 900,
-              letterSpacing: '0.36em', fontSize: 13,
-              border: '2px solid rgba(0,0,0,0.8)',
-              boxShadow: '0 4px 32px rgba(0,0,0,0.8)',
-            }}
-          >
-            {outcome === 'intercept' ? 'Interceptado' : 'Saiu jogando ✓'}
-          </div>
-        </div>
-      )}
-
-      {/* ── Voice strip — só no idle, muito compacta ── */}
-      {!activeMoment && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-[300]"
-          style={{ background: 'rgba(10,10,10,0.92)', borderTop: '1px solid rgba(253,225,0,0.1)' }}
-        >
-          <VoiceIdlePanel
-            onTrigger={(id) => {
-              const m = MOMENTS.find((x) => x.id === id);
-              if (m) startMoment(m);
-            }}
-          />
-        </div>
-      )}
+      {/* ── Voice bar — sempre visível, no fundo ── */}
+      <div
+        style={{ flexShrink: 0, background: 'rgba(8,8,8,0.97)', borderTop: '1px solid rgba(253,225,0,0.1)' }}
+      >
+        <VoiceIdlePanel onTrigger={voiceTrigger} />
+      </div>
     </div>
   );
 }
