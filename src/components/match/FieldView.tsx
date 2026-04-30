@@ -496,32 +496,41 @@ function InclinedField({
   const farSixFL = ivProject(100, sixYL);
   const farSixFR = ivProject(100, sixYR);
 
-  // Near penalty box
-  const nearBoxFL = ivProject(nearBoxX, boxYL);
-  const nearBoxFR = ivProject(nearBoxX, boxYR);
-  const nearBoxNL = ivProject(0, boxYL);
-  const nearBoxNR = ivProject(0, boxYR);
-  // Near six-yard
-  const nearSixFL = ivProject(PCT_SIX_DEPTH, sixYL);
-  const nearSixFR = ivProject(PCT_SIX_DEPTH, sixYR);
-  const nearSixNL = ivProject(0, sixYL);
-  const nearSixNR = ivProject(0, sixYR);
-
   // Far goal posts (real width 7.32m → ±5.38% of fieldY around 50)
   const farGoalL = ivProject(100, goalYL);
   const farGoalR = ivProject(100, goalYR);
   const farGoalPostHeight =
     (farGoalR.sx - farGoalL.sx) * GOAL_ASPECT * 1.0; // proper aspect
 
-  // Near goal posts (at fieldX=0)
-  const nearGoalLBase = ivProject(0, goalYL);
-  const nearGoalRBase = ivProject(0, goalYR);
-  // Defensive mode widens the goal frame; aspect stays 3:1 (real-life rectangle).
-  const nearWidthBoost = defensiveAction ? 2.4 : 1;
-  const nearGoalCx = (nearGoalLBase.sx + nearGoalRBase.sx) / 2;
-  const nearGoalHalfW = ((nearGoalRBase.sx - nearGoalLBase.sx) / 2) * nearWidthBoost;
-  const nearGoalL = { sx: nearGoalCx - nearGoalHalfW, sy: nearGoalLBase.sy };
-  const nearGoalR = { sx: nearGoalCx + nearGoalHalfW, sy: nearGoalRBase.sy };
+  // Defensive mode: zoom the entire near-end region outward from the goal-line
+  // center so the goal, six-yard and penalty boxes all grow together — like the
+  // camera moved closer instead of just the goal getting bigger.
+  // Limited to ~1.5 so the penalty box stays within the SVG viewBox; the
+  // remaining magnification comes from the outer CSS highlight zoom.
+  const nearScaleX = defensiveAction ? 1.5 : 1;
+  const nearScaleY = defensiveAction ? 1.35 : 1;
+  const nearAnchorY = IV_BOTTOM_Y;
+  const nearAnchorRaw = ivProject(0, 50);
+  const nearAnchorX = nearAnchorRaw.sx;
+  const expandNear = (p: { sx: number; sy: number }) => ({
+    sx: nearAnchorX + (p.sx - nearAnchorX) * nearScaleX,
+    sy: nearAnchorY + (p.sy - nearAnchorY) * nearScaleY,
+  });
+
+  // Near penalty box (expanded in defensive mode)
+  const nearBoxFL = expandNear(ivProject(nearBoxX, boxYL));
+  const nearBoxFR = expandNear(ivProject(nearBoxX, boxYR));
+  const nearBoxNL = expandNear(ivProject(0, boxYL));
+  const nearBoxNR = expandNear(ivProject(0, boxYR));
+  // Near six-yard
+  const nearSixFL = expandNear(ivProject(PCT_SIX_DEPTH, sixYL));
+  const nearSixFR = expandNear(ivProject(PCT_SIX_DEPTH, sixYR));
+  const nearSixNL = expandNear(ivProject(0, sixYL));
+  const nearSixNR = expandNear(ivProject(0, sixYR));
+
+  // Near goal posts (aspect-locked rectangle, expanded with the rest)
+  const nearGoalL = expandNear(ivProject(0, goalYL));
+  const nearGoalR = expandNear(ivProject(0, goalYR));
   const nearGoalPostHeight =
     (nearGoalR.sx - nearGoalL.sx) * GOAL_ASPECT;
 
@@ -642,7 +651,7 @@ function InclinedField({
 
         {/* Penalty spots */}
         <circle cx={ivProject(100 - PCT_PEN_SPOT, 50).sx} cy={ivProject(100 - PCT_PEN_SPOT, 50).sy} r={2.5} fill={LINE_COLOR} stroke="none" />
-        <circle cx={ivProject(PCT_PEN_SPOT, 50).sx} cy={ivProject(PCT_PEN_SPOT, 50).sy} r={3.5} fill={LINE_COLOR} stroke="none" />
+        <circle cx={expandNear(ivProject(PCT_PEN_SPOT, 50)).sx} cy={expandNear(ivProject(PCT_PEN_SPOT, 50)).sy} r={3.5 * (defensiveAction ? nearScaleX : 1)} fill={LINE_COLOR} stroke="none" />
       </g>
 
       {/* Far goal frame — vertical posts + crossbar + net hint */}
