@@ -47,14 +47,8 @@ const MODES: ReadonlyArray<ModeEntry> = [
     to: '/match/quick',
     glyph: '⏱',
   },
-  {
-    id: 'live',
-    label: 'Ao Vivo',
-    description: 'Modo teste · partida 2D com IA tática',
-    status: 'available',
-    to: '/match/live',
-    glyph: '◉',
-  },
+  // 'Ao Vivo' (/match/live) — oculto do menu. Lógica preservada na rota e
+  // toda a engine ao vivo está integrada ao Legacy Mode (/dev/field-view).
   {
     id: 'legacy',
     label: 'Legacy',
