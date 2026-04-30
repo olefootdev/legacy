@@ -5,6 +5,13 @@
 import { useState, useCallback } from 'react';
 import { FieldView, type FieldCameraMode } from '@/components/match/FieldView';
 import type { PitchPlayerState } from '@/engine/types';
+import {
+  GoalkeeperDistribution,
+  GoalkeeperPressure,
+  resolveGoalkeeperDistribution,
+  type GkDistributionChoice,
+  type DefensivePressure,
+} from '@/components/match/decisions/GoalkeeperDistribution';
 
 // ── Mock players ────────────────────────────────────────────────────────────
 function mkPlayer(
@@ -69,6 +76,38 @@ export function FieldViewPreview() {
   const [minute, setMinute] = useState(67);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [defensiveAction, setDefensiveAction] = useState(false);
+
+  // Decision moment: goalkeeper distribution
+  const [gkMomentActive, setGkMomentActive] = useState(false);
+  const [gkAttackerPick, setGkAttackerPick] = useState<GkDistributionChoice | null>(null);
+  const [gkOutcome, setGkOutcome] = useState<'intercept' | 'progress' | null>(null);
+
+  const startGkMoment = useCallback(() => {
+    setGkAttackerPick(null);
+    setGkOutcome(null);
+    setGkMomentActive(true);
+    setCamera('aerial');
+    setHighlightId('gk1');
+  }, []);
+
+  const handleGkAttacker = useCallback((c: GkDistributionChoice) => {
+    setGkAttackerPick(c);
+  }, []);
+
+  const handleGkDefender = useCallback(
+    (def: DefensivePressure) => {
+      if (!gkAttackerPick) return;
+      const result = resolveGoalkeeperDistribution(gkAttackerPick, def);
+      setGkOutcome(result);
+      window.setTimeout(() => {
+        setGkMomentActive(false);
+        setHighlightId(null);
+        setGkAttackerPick(null);
+        setGkOutcome(null);
+      }, 2200);
+    },
+    [gkAttackerPick],
+  );
 
   const handlePlayerClick = useCallback((p: PitchPlayerState) => {
     setOnBallId(p.playerId);
@@ -150,6 +189,21 @@ export function FieldViewPreview() {
         >
           ▶ defesa
         </button>
+        <button
+          type="button"
+          onClick={startGkMoment}
+          className="font-display uppercase tracking-wider px-2 py-1 transition-all"
+          style={{
+            background: gkMomentActive ? '#FDE100' : 'rgba(255,255,255,0.06)',
+            color: gkMomentActive ? '#000' : 'rgba(253,225,0,0.85)',
+            border: '1px solid rgba(253,225,0,0.4)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            borderRadius: 4,
+          }}
+        >
+          ▶ saída
+        </button>
         <span className="text-white/40 self-center" style={{ fontSize: 9, marginLeft: 6 }}>
           · clique num jogador pra mover a bola
         </span>
@@ -175,6 +229,44 @@ export function FieldViewPreview() {
           onPlayerClick={handlePlayerClick}
           className="w-full"
         />
+
+        {/* Decision Moment overlay (positioned above field) */}
+        {gkMomentActive && !gkAttackerPick && (
+          <GoalkeeperDistribution
+            onAttackerChoice={handleGkAttacker}
+            onTimeout={() => handleGkAttacker('short')}
+          />
+        )}
+        {gkMomentActive && gkAttackerPick && !gkOutcome && (
+          <GoalkeeperPressure
+            onDefenderChoice={handleGkDefender}
+            onTimeout={() => handleGkDefender('low')}
+          />
+        )}
+        {gkMomentActive && gkOutcome && (
+          <div
+            className="absolute left-1/2 -translate-x-1/2 z-[300]"
+            style={{ top: '6%', width: 'min(92%, 480px)' }}
+          >
+            <div
+              className="text-center font-display uppercase"
+              style={{
+                background: gkOutcome === 'intercept' ? '#EF4444' : '#FDE100',
+                color: '#000',
+                padding: '14px 12px',
+                fontWeight: 900,
+                letterSpacing: '0.32em',
+                fontSize: 16,
+                border: '2px solid #000',
+                borderRadius: 6,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+              }}
+            >
+              {gkOutcome === 'intercept' ? 'Interceptado!' : 'Saiu jogando ✓'}
+            </div>
+          </div>
+        )}
+
         {/* Below-field panel: live events placeholder */}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-4 border-t border-white/8">
           <div
