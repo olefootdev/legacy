@@ -73,9 +73,13 @@ const MOMENTS: MomentDef[] = [
   { id: 'counter',  label: 'Contra-ataque',     category: 'transicao',   Attacker: CounterAttacker as Comp,        Defender: CounterDefender as Comp,         resolve: resolveCounter as MomentDef['resolve'],                                   fa: 'wing',   fd: 'delay' },
 ];
 
-const ENGINE_EVENT_MAP: Record<LegacyEventKind, string> = {
-  corner: 'corner', freekick: 'freekick', shot: '1v1gk',
-  rebound: 'rebound', possession_change: 'gegen', goal: 'gegen',
+// Apenas situações decisivas disparam um decision moment.
+// possession_change e goal são eventos normais — não devem interromper.
+const ENGINE_EVENT_MAP: Partial<Record<LegacyEventKind, string>> = {
+  corner:   'corner',
+  freekick: 'freekick',
+  shot:     '1v1gk',   // cara a cara com o goleiro
+  rebound:  'rebound', // rebote após defesa
 };
 
 // ── Painel de voz — estado idle ───────────────────────────────────────────────
@@ -180,7 +184,9 @@ export function FieldViewPreview() {
 
   const handleEngineEvent = useCallback((kind: LegacyEventKind) => {
     if (momentBusyRef.current) return;
-    const m = MOMENTS.find((x) => x.id === ENGINE_EVENT_MAP[kind]);
+    const momentId = ENGINE_EVENT_MAP[kind];
+    if (!momentId) return;
+    const m = MOMENTS.find((x) => x.id === momentId);
     if (m) startMoment(m);
   }, [startMoment]);
 

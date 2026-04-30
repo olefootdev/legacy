@@ -134,7 +134,7 @@ export function useLegacyMatchEngine(
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
-  // Cooldown: não disparar events seguidos em menos de 6s
+  // Cooldown: mínimo 45s entre decision moments para preservar o peso de cada um
   const lastEventMsRef = useRef(0);
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export function useLegacyMatchEngine(
       const kind = simEventToLegacyKind(ev);
       if (!kind) return;
       const now = performance.now();
-      if (now - lastEventMsRef.current < 6000) return;
+      if (now - lastEventMsRef.current < 45000) return;
       lastEventMsRef.current = now;
       onEventRef.current(kind);
     });
