@@ -58,36 +58,25 @@ const LINE_COLOR = 'rgba(255,255,255,0.13)';
 const GRASS_A = '#0d1a0e';
 const GRASS_B = '#111f12';
 
-// ── Perspective first-person helpers ───────────────────────────────────────
-// VP = vanishing point (center-top); GROUND = near edge (camera position)
-// Camera params are dynamic: tracking shifts VPX based on ball.y for cinematic pan.
-const FP_VPY = VH * 0.22;    // horizon line
-const FP_GROUND_Y = VH;      // near edge
+// ── Real-world field dimensions (FIFA/smartfield) ──────────────────────────
+const FIELD_LENGTH_M = 105;
+const FIELD_WIDTH_M = 68;
+const GOAL_WIDTH_M = 7.32;
+const GOAL_HEIGHT_M = 2.44;
+const BOX_DEPTH_M = 16.5;
+const BOX_WIDTH_M = 40.3;
+const SIX_DEPTH_M = 5.5;
+const SIX_WIDTH_M = 18.32;
+const PENALTY_SPOT_M = 11;
 
-const FP_NEAR_SPREAD = VW * 0.92; // very wide at camera (sidelines overflow viewport)
-const FP_FOCAL = 0.42;             // foreshortening exponent — lower = more dramatic
-
-interface FPCam {
-  vpx: number;   // vanishing point x (camera pan)
-  vpy: number;   // vanishing point y (camera tilt)
-  zoom: number;  // 1 = neutral, >1 = dolly in
-}
-
-function fpProject(
-  fieldX: number,
-  fieldY: number,
-  cam: FPCam = { vpx: VW / 2, vpy: FP_VPY, zoom: 1 },
-): { sx: number; sy: number; scale: number } {
-  const depth = Math.max(0.01, fieldX / 100);
-  const t = Math.pow(depth, FP_FOCAL);
-
-  const latOffset = (fieldY - 50) / 50;
-  const sy = FP_GROUND_Y - t * (FP_GROUND_Y - cam.vpy);
-  const spread = (1 - t) * FP_NEAR_SPREAD;
-  const sx = cam.vpx + latOffset * spread * cam.zoom;
-  const scale = (0.18 + (1 - t) * 0.82) * cam.zoom;
-  return { sx, sy, scale };
-}
+// Convert to field percentages (fieldX 0-100 = length; fieldY 0-100 = width)
+const PCT_GOAL_HALF_Y = (GOAL_WIDTH_M / FIELD_WIDTH_M) * 50;       // ≈ 5.38
+const PCT_BOX_DEPTH = (BOX_DEPTH_M / FIELD_LENGTH_M) * 100;        // ≈ 15.71
+const PCT_BOX_HALF_Y = (BOX_WIDTH_M / FIELD_WIDTH_M) * 50;         // ≈ 29.63
+const PCT_SIX_DEPTH = (SIX_DEPTH_M / FIELD_LENGTH_M) * 100;        // ≈ 5.24
+const PCT_SIX_HALF_Y = (SIX_WIDTH_M / FIELD_WIDTH_M) * 50;         // ≈ 13.47
+const PCT_PEN_SPOT = (PENALTY_SPOT_M / FIELD_LENGTH_M) * 100;      // ≈ 10.48
+const GOAL_ASPECT = GOAL_HEIGHT_M / GOAL_WIDTH_M;                   // ≈ 0.333
 
 // ── Inclined (tactical) perspective constants ──────────────────────────────
 // Vertical viewBox: top = far end (away goal), bottom = near camera (home goal)
@@ -117,6 +106,37 @@ function ivProject(fieldX: number, fieldY: number) {
   const sx = IV_CX + lat * halfW;
   const scale = 1.05 - tEased * 0.55; // near=1.05, far=0.50
   return { sx, sy, scale, depth: tEased };
+}
+
+// ── Perspective first-person helpers ───────────────────────────────────────
+// FP shares the inclined viewBox (IV_VW×IV_VH) so it matches aerial dimensions —
+// designed to be triggered as a transient highlight zoom on key moments
+// (shots on goal), not a persistent camera mode.
+const FP_VPY = 220;
+const FP_GROUND_Y = IV_VH;
+const FP_NEAR_SPREAD = IV_VW * 0.78;
+const FP_FOCAL = 0.42;
+
+interface FPCam {
+  vpx: number;
+  vpy: number;
+  zoom: number;
+}
+
+function fpProject(
+  fieldX: number,
+  fieldY: number,
+  cam: FPCam = { vpx: IV_VW / 2, vpy: FP_VPY, zoom: 1 },
+): { sx: number; sy: number; scale: number } {
+  const depth = Math.max(0.01, fieldX / 100);
+  const t = Math.pow(depth, FP_FOCAL);
+
+  const latOffset = (fieldY - 50) / 50;
+  const sy = FP_GROUND_Y - t * (FP_GROUND_Y - cam.vpy);
+  const spread = (1 - t) * FP_NEAR_SPREAD;
+  const sx = cam.vpx + latOffset * spread * cam.zoom;
+  const scale = (0.18 + (1 - t) * 0.82) * cam.zoom;
+  return { sx, sy, scale };
 }
 
 // ── Aerial/broadcast grass stripes (SVG defs pattern) ────────────────────────
@@ -407,12 +427,12 @@ function FirstPersonField({
   // ── Cinematic camera tracking ──
   // Pan VPX based on ball's lateral position; tilt up slightly when ball is deep.
   const cam: FPCam = useMemo(() => {
-    const lat = (ballY - 50) / 50;       // -1..+1
-    const depth = ballX / 100;            // 0..1
+    const lat = (ballY - 50) / 50;
+    const depth = ballX / 100;
     return {
-      vpx: VW / 2 + lat * VW * 0.18,     // ~±18% pan
-      vpy: FP_VPY - depth * 22,           // tilt up as ball goes deeper
-      zoom: 1 + depth * 0.06,             // subtle dolly in toward attack
+      vpx: IV_VW / 2 + lat * IV_VW * 0.18,
+      vpy: FP_VPY - depth * 30,
+      zoom: 1 + depth * 0.08,
     };
   }, [ballX, ballY]);
 
@@ -444,14 +464,21 @@ function FirstPersonField({
     return lines;
   }, [cam]);
 
-  // Goal frame in perspective
-  const goalTop = fpProject(100, 38.5, cam);
-  const goalBottom = fpProject(100, 61.5, cam);
-  const FP_VPX = cam.vpx;
+  // Goal posts using real measurements
+  const fpGoalL = fpProject(100, 50 - PCT_GOAL_HALF_Y, cam);
+  const fpGoalR = fpProject(100, 50 + PCT_GOAL_HALF_Y, cam);
+  const fpGoalPostHeight = (fpGoalR.sx - fpGoalL.sx) * GOAL_ASPECT;
+
+  // Far box / six-yard
+  const fpBoxNL = fpProject(100 - PCT_BOX_DEPTH, 50 - PCT_BOX_HALF_Y, cam);
+  const fpBoxNR = fpProject(100 - PCT_BOX_DEPTH, 50 + PCT_BOX_HALF_Y, cam);
+  const fpBoxFL = fpProject(100, 50 - PCT_BOX_HALF_Y, cam);
+  const fpBoxFR = fpProject(100, 50 + PCT_BOX_HALF_Y, cam);
 
   return (
     <svg
-      viewBox={`0 0 ${VW} ${VH}`}
+      viewBox={`0 0 ${IV_VW} ${IV_VH}`}
+      preserveAspectRatio="xMidYMid meet"
       className="w-full h-auto"
       style={{ display: 'block' }}
     >
@@ -462,7 +489,7 @@ function FirstPersonField({
           <stop offset="60%" stopColor="#0a0d0b" />
           <stop offset="100%" stopColor={GRASS_A} />
         </linearGradient>
-        <radialGradient id="fp-vp-glow" cx="50%" cy={`${(FP_VPY / VH) * 100}%`} r="30%">
+        <radialGradient id="fp-vp-glow" cx="50%" cy={`${(FP_VPY / IV_VH) * 100}%`} r="30%">
           <stop offset="0%" stopColor={NEON} stopOpacity="0.08" />
           <stop offset="100%" stopColor={NEON} stopOpacity="0" />
         </radialGradient>
@@ -472,30 +499,29 @@ function FirstPersonField({
       </defs>
 
       {/* Sky / atmosphere */}
-      <rect x={0} y={0} width={VW} height={VH} fill="url(#fp-sky)" />
-      <rect x={0} y={0} width={VW} height={VH} fill="url(#fp-vp-glow)" />
+      <rect x={0} y={0} width={IV_VW} height={IV_VH} fill="url(#fp-sky)" />
+      <rect x={0} y={0} width={IV_VW} height={IV_VH} fill="url(#fp-vp-glow)" />
 
-      {/* Floodlights (4 corners + top center) */}
-      {[80, VW - 80, VW / 2].map((lx, i) => (
+      {/* Floodlights */}
+      {[80, IV_VW - 80, IV_VW / 2].map((lx, i) => (
         <g key={i}>
-          <circle cx={lx} cy={VH * 0.06} r={3} fill="#fffbe6" />
+          <circle cx={lx} cy={IV_VH * 0.04} r={3} fill="#fffbe6" />
           <radialGradient id={`fp-light-${i}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.25" />
             <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
           </radialGradient>
-          <ellipse cx={lx} cy={VH * 0.12} rx={80} ry={50} fill={`url(#fp-light-${i})`} />
+          <ellipse cx={lx} cy={IV_VH * 0.08} rx={80} ry={50} fill={`url(#fp-light-${i})`} />
         </g>
       ))}
 
-      {/* Stadium crowd silhouettes */}
-      <rect x={0} y={FP_VPY - 30} width={VW} height={40}
+      {/* Stadium crowd silhouettes near horizon */}
+      <rect x={0} y={cam.vpy - 30} width={IV_VW} height={40}
         fill="rgba(0,0,0,0.6)" />
-      {/* Simple crowd bumps */}
-      {Array.from({ length: 56 }).map((_, i) => {
+      {Array.from({ length: 36 }).map((_, i) => {
         const x = i * 21 + 5;
         const h = 10 + (Math.sin(i * 2.3) * 4);
         return (
-          <ellipse key={i} cx={x} cy={FP_VPY - 10} rx={9} ry={h}
+          <ellipse key={i} cx={x} cy={cam.vpy - 10} rx={9} ry={h}
             fill={`rgba(${20 + (i % 5) * 4},${20 + (i % 3) * 4},${20 + (i % 7) * 3},0.85)`} />
         );
       })}
@@ -531,26 +557,50 @@ function FirstPersonField({
           stroke={LINE_COLOR} strokeWidth={1.5} />
       ))}
 
-      {/* Goal frame in perspective */}
-      <g stroke="rgba(255,255,255,0.5)" fill="none" strokeWidth={2}>
-        {/* Posts */}
-        <line
-          x1={goalTop.sx} y1={goalTop.sy}
-          x2={FP_VPX + (goalTop.sx - FP_VPX) * 0.85}
-          y2={goalTop.sy - 38 * goalTop.scale}
+      {/* Far penalty box (perspective, real dims) */}
+      <g stroke={LINE_COLOR} fill="none" strokeWidth={1.4}>
+        <polygon
+          points={`${fpBoxNL.sx},${fpBoxNL.sy} ${fpBoxNR.sx},${fpBoxNR.sy} ${fpBoxFR.sx},${fpBoxFR.sy} ${fpBoxFL.sx},${fpBoxFL.sy}`}
         />
-        <line
-          x1={goalBottom.sx} y1={goalBottom.sy}
-          x2={FP_VPX + (goalBottom.sx - FP_VPX) * 0.85}
-          y2={goalBottom.sy - 38 * goalBottom.scale}
+        <circle cx={fpProject(100 - PCT_PEN_SPOT, 50, cam).sx}
+          cy={fpProject(100 - PCT_PEN_SPOT, 50, cam).sy} r={2.5}
+          fill={LINE_COLOR} stroke="none" />
+      </g>
+
+      {/* Goal frame — STRAIGHT vertical posts + net */}
+      <g stroke="rgba(255,255,255,0.7)" fill="none" strokeWidth={2}>
+        {/* Net background */}
+        <polygon
+          points={`${fpGoalL.sx},${fpGoalL.sy} ${fpGoalR.sx},${fpGoalR.sy} ${fpGoalR.sx},${fpGoalR.sy - fpGoalPostHeight} ${fpGoalL.sx},${fpGoalL.sy - fpGoalPostHeight}`}
+          fill="rgba(255,255,255,0.05)"
+          stroke="rgba(255,255,255,0.22)"
+          strokeWidth={1}
         />
+        {/* Net mesh */}
+        {[0.25, 0.5, 0.75].map((t) => {
+          const x = fpGoalL.sx + (fpGoalR.sx - fpGoalL.sx) * t;
+          return (
+            <line key={`fpv-${t}`} x1={x} y1={fpGoalL.sy}
+              x2={x} y2={fpGoalL.sy - fpGoalPostHeight}
+              stroke="rgba(255,255,255,0.18)" strokeWidth={0.7} />
+          );
+        })}
+        {[0.33, 0.66].map((t) => {
+          const y = fpGoalL.sy - fpGoalPostHeight * t;
+          return (
+            <line key={`fph-${t}`} x1={fpGoalL.sx} y1={y}
+              x2={fpGoalR.sx} y2={y}
+              stroke="rgba(255,255,255,0.18)" strokeWidth={0.7} />
+          );
+        })}
+        {/* STRAIGHT vertical posts */}
+        <line x1={fpGoalL.sx} y1={fpGoalL.sy}
+          x2={fpGoalL.sx} y2={fpGoalL.sy - fpGoalPostHeight} />
+        <line x1={fpGoalR.sx} y1={fpGoalR.sy}
+          x2={fpGoalR.sx} y2={fpGoalR.sy - fpGoalPostHeight} />
         {/* Crossbar */}
-        <line
-          x1={FP_VPX + (goalTop.sx - FP_VPX) * 0.85}
-          y1={goalTop.sy - 38 * goalTop.scale}
-          x2={FP_VPX + (goalBottom.sx - FP_VPX) * 0.85}
-          y2={goalBottom.sy - 38 * goalBottom.scale}
-        />
+        <line x1={fpGoalL.sx} y1={fpGoalL.sy - fpGoalPostHeight}
+          x2={fpGoalR.sx} y2={fpGoalR.sy - fpGoalPostHeight} />
       </g>
 
       {/* Players (sorted by depth, far first) */}
@@ -763,26 +813,49 @@ function InclinedField({
   const centerCircle = ivProject(50, 50);
   const ccHalfW = ivWidthAtDepth(centerCircle.depth) * 0.18;
 
-  // Far penalty box (around fieldX=88, fieldY 22→78)
-  const farBoxNL = ivProject(83, 22);
-  const farBoxNR = ivProject(83, 78);
-  const farBoxFL = ivProject(100, 22);
-  const farBoxFR = ivProject(100, 78);
+  // Spatial geometry from real measurements
+  const farBoxX = 100 - PCT_BOX_DEPTH;
+  const nearBoxX = PCT_BOX_DEPTH;
+  const boxYL = 50 - PCT_BOX_HALF_Y;
+  const boxYR = 50 + PCT_BOX_HALF_Y;
+  const sixYL = 50 - PCT_SIX_HALF_Y;
+  const sixYR = 50 + PCT_SIX_HALF_Y;
+  const goalYL = 50 - PCT_GOAL_HALF_Y;
+  const goalYR = 50 + PCT_GOAL_HALF_Y;
 
-  // Near penalty box (around fieldX=17)
-  const nearBoxFL = ivProject(17, 22);
-  const nearBoxFR = ivProject(17, 78);
-  const nearBoxNL = ivProject(0, 22);
-  const nearBoxNR = ivProject(0, 78);
+  // Far penalty box
+  const farBoxNL = ivProject(farBoxX, boxYL);
+  const farBoxNR = ivProject(farBoxX, boxYR);
+  const farBoxFL = ivProject(100, boxYL);
+  const farBoxFR = ivProject(100, boxYR);
+  // Far six-yard
+  const farSixNL = ivProject(100 - PCT_SIX_DEPTH, sixYL);
+  const farSixNR = ivProject(100 - PCT_SIX_DEPTH, sixYR);
+  const farSixFL = ivProject(100, sixYL);
+  const farSixFR = ivProject(100, sixYR);
 
-  // Far goal posts (at fieldX=100, narrow goal)
-  const farGoalL = ivProject(100, 46);
-  const farGoalR = ivProject(100, 54);
-  const farGoalScale = farGoalL.scale;
+  // Near penalty box
+  const nearBoxFL = ivProject(nearBoxX, boxYL);
+  const nearBoxFR = ivProject(nearBoxX, boxYR);
+  const nearBoxNL = ivProject(0, boxYL);
+  const nearBoxNR = ivProject(0, boxYR);
+  // Near six-yard
+  const nearSixFL = ivProject(PCT_SIX_DEPTH, sixYL);
+  const nearSixFR = ivProject(PCT_SIX_DEPTH, sixYR);
+  const nearSixNL = ivProject(0, sixYL);
+  const nearSixNR = ivProject(0, sixYR);
 
-  // Near goal posts (at fieldX=0, foreshortened toward camera)
-  const nearGoalL = ivProject(0, 44);
-  const nearGoalR = ivProject(0, 56);
+  // Far goal posts (real width 7.32m → ±5.38% of fieldY around 50)
+  const farGoalL = ivProject(100, goalYL);
+  const farGoalR = ivProject(100, goalYR);
+  const farGoalPostHeight =
+    (farGoalR.sx - farGoalL.sx) * GOAL_ASPECT * 1.0; // proper aspect
+
+  // Near goal posts (at fieldX=0)
+  const nearGoalL = ivProject(0, goalYL);
+  const nearGoalR = ivProject(0, goalYR);
+  const nearGoalPostHeight =
+    (nearGoalR.sx - nearGoalL.sx) * GOAL_ASPECT;
 
   return (
     <svg
@@ -883,34 +956,97 @@ function InclinedField({
         <polygon
           points={`${farBoxNL.sx},${farBoxNL.sy} ${farBoxNR.sx},${farBoxNR.sy} ${farBoxFR.sx},${farBoxFR.sy} ${farBoxFL.sx},${farBoxFL.sy}`}
         />
+        {/* Far six-yard */}
+        <polygon
+          points={`${farSixNL.sx},${farSixNL.sy} ${farSixNR.sx},${farSixNR.sy} ${farSixFR.sx},${farSixFR.sy} ${farSixFL.sx},${farSixFL.sy}`}
+          opacity={0.7}
+        />
 
         {/* Near penalty box (large, bottom) */}
         <polygon
           points={`${nearBoxFL.sx},${nearBoxFL.sy} ${nearBoxFR.sx},${nearBoxFR.sy} ${nearBoxNR.sx},${nearBoxNR.sy} ${nearBoxNL.sx},${nearBoxNL.sy}`}
         />
+        {/* Near six-yard */}
+        <polygon
+          points={`${nearSixFL.sx},${nearSixFL.sy} ${nearSixFR.sx},${nearSixFR.sy} ${nearSixNR.sx},${nearSixNR.sy} ${nearSixNL.sx},${nearSixNL.sy}`}
+          opacity={0.7}
+        />
 
         {/* Penalty spots */}
-        <circle cx={ivProject(89, 50).sx} cy={ivProject(89, 50).sy} r={2.5} fill={LINE_COLOR} stroke="none" />
-        <circle cx={ivProject(11, 50).sx} cy={ivProject(11, 50).sy} r={3.5} fill={LINE_COLOR} stroke="none" />
+        <circle cx={ivProject(100 - PCT_PEN_SPOT, 50).sx} cy={ivProject(100 - PCT_PEN_SPOT, 50).sy} r={2.5} fill={LINE_COLOR} stroke="none" />
+        <circle cx={ivProject(PCT_PEN_SPOT, 50).sx} cy={ivProject(PCT_PEN_SPOT, 50).sy} r={3.5} fill={LINE_COLOR} stroke="none" />
       </g>
 
-      {/* Far goal frame */}
-      <g stroke="rgba(255,255,255,0.5)" fill="none" strokeWidth={1.6}>
-        <line x1={farGoalL.sx} y1={farGoalL.sy} x2={farGoalL.sx} y2={farGoalL.sy - 28 * farGoalScale} />
-        <line x1={farGoalR.sx} y1={farGoalR.sy} x2={farGoalR.sx} y2={farGoalR.sy - 28 * farGoalScale} />
+      {/* Far goal frame — vertical posts + crossbar + net hint */}
+      <g stroke="rgba(255,255,255,0.7)" fill="none" strokeWidth={1.8}>
+        {/* Net background */}
+        <polygon
+          points={`${farGoalL.sx},${farGoalL.sy} ${farGoalR.sx},${farGoalR.sy} ${farGoalR.sx},${farGoalR.sy - farGoalPostHeight} ${farGoalL.sx},${farGoalL.sy - farGoalPostHeight}`}
+          fill="rgba(255,255,255,0.04)"
+          stroke="rgba(255,255,255,0.18)"
+          strokeWidth={0.8}
+        />
+        {/* Net mesh — vertical strands */}
+        {[0.25, 0.5, 0.75].map((t) => {
+          const x = farGoalL.sx + (farGoalR.sx - farGoalL.sx) * t;
+          return (
+            <line key={`fnv-${t}`} x1={x} y1={farGoalL.sy}
+              x2={x} y2={farGoalL.sy - farGoalPostHeight}
+              stroke="rgba(255,255,255,0.13)" strokeWidth={0.6} />
+          );
+        })}
+        {[0.33, 0.66].map((t) => {
+          const y = farGoalL.sy - farGoalPostHeight * t;
+          return (
+            <line key={`fnh-${t}`} x1={farGoalL.sx} y1={y}
+              x2={farGoalR.sx} y2={y}
+              stroke="rgba(255,255,255,0.13)" strokeWidth={0.6} />
+          );
+        })}
+        {/* Posts (vertical) */}
+        <line x1={farGoalL.sx} y1={farGoalL.sy} x2={farGoalL.sx} y2={farGoalL.sy - farGoalPostHeight} />
+        <line x1={farGoalR.sx} y1={farGoalR.sy} x2={farGoalR.sx} y2={farGoalR.sy - farGoalPostHeight} />
+        {/* Crossbar */}
         <line
-          x1={farGoalL.sx}
-          y1={farGoalL.sy - 28 * farGoalScale}
-          x2={farGoalR.sx}
-          y2={farGoalR.sy - 28 * farGoalScale}
+          x1={farGoalL.sx} y1={farGoalL.sy - farGoalPostHeight}
+          x2={farGoalR.sx} y2={farGoalR.sy - farGoalPostHeight}
         />
       </g>
 
-      {/* Near goal frame (foreshortened, diagonal posts toward camera) */}
-      <g stroke="rgba(255,255,255,0.6)" fill="none" strokeWidth={2.2}>
-        <line x1={nearGoalL.sx} y1={nearGoalL.sy} x2={nearGoalL.sx - 32} y2={nearGoalL.sy - 70} />
-        <line x1={nearGoalR.sx} y1={nearGoalR.sy} x2={nearGoalR.sx + 32} y2={nearGoalR.sy - 70} />
-        <line x1={nearGoalL.sx - 32} y1={nearGoalL.sy - 70} x2={nearGoalR.sx + 32} y2={nearGoalR.sy - 70} />
+      {/* Near goal frame — STRAIGHT vertical posts */}
+      <g stroke="rgba(255,255,255,0.85)" fill="none" strokeWidth={2.5}>
+        {/* Net background */}
+        <polygon
+          points={`${nearGoalL.sx},${nearGoalL.sy} ${nearGoalR.sx},${nearGoalR.sy} ${nearGoalR.sx},${nearGoalR.sy - nearGoalPostHeight} ${nearGoalL.sx},${nearGoalL.sy - nearGoalPostHeight}`}
+          fill="rgba(255,255,255,0.05)"
+          stroke="rgba(255,255,255,0.28)"
+          strokeWidth={1}
+        />
+        {/* Net mesh */}
+        {[0.2, 0.4, 0.6, 0.8].map((t) => {
+          const x = nearGoalL.sx + (nearGoalR.sx - nearGoalL.sx) * t;
+          return (
+            <line key={`nnv-${t}`} x1={x} y1={nearGoalL.sy}
+              x2={x} y2={nearGoalL.sy - nearGoalPostHeight}
+              stroke="rgba(255,255,255,0.22)" strokeWidth={0.8} />
+          );
+        })}
+        {[0.25, 0.5, 0.75].map((t) => {
+          const y = nearGoalL.sy - nearGoalPostHeight * t;
+          return (
+            <line key={`nnh-${t}`} x1={nearGoalL.sx} y1={y}
+              x2={nearGoalR.sx} y2={y}
+              stroke="rgba(255,255,255,0.22)" strokeWidth={0.8} />
+          );
+        })}
+        {/* Posts (STRAIGHT vertical, not foreshortened) */}
+        <line x1={nearGoalL.sx} y1={nearGoalL.sy}
+          x2={nearGoalL.sx} y2={nearGoalL.sy - nearGoalPostHeight} />
+        <line x1={nearGoalR.sx} y1={nearGoalR.sy}
+          x2={nearGoalR.sx} y2={nearGoalR.sy - nearGoalPostHeight} />
+        {/* Crossbar */}
+        <line x1={nearGoalL.sx} y1={nearGoalL.sy - nearGoalPostHeight}
+          x2={nearGoalR.sx} y2={nearGoalR.sy - nearGoalPostHeight} />
       </g>
 
       {/* Players (depth-sorted) */}
@@ -1075,10 +1211,12 @@ export const FieldView = memo(function FieldView({
         }
       : undefined;
 
+  // Aerial (inclined) and FP both use the portrait viewBox so a future
+  // aerial→FP highlight transition feels seamless. Broadcast keeps landscape.
   const aspectRatio =
-    cameraMode === 'aerial'
-      ? `${IV_VW}/${IV_VH}`
-      : `${VW}/${VH}`;
+    cameraMode === 'broadcast'
+      ? `${VW}/${VH}`
+      : `${IV_VW}/${IV_VH}`;
 
   return (
     <div
