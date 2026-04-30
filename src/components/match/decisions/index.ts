@@ -1,4 +1,4 @@
-export { DecisionPromptCard } from './DecisionPromptCard';
+export { DecisionPromptCard, InlineDecisionCtx } from './DecisionPromptCard';
 export type { DecisionArrow, DecisionChoice, DecisionPromptCardProps } from './DecisionPromptCard';
 
 export {

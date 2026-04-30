@@ -8,8 +8,11 @@
  * 1×1 ponta, etc) reusa este componente — só varia o título, os choices,
  * e o handler de outcome.
  */
-import { memo, useEffect, useState } from 'react';
+import { createContext, memo, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+
+/** Provide `true` to render DecisionPromptCard as a panel block (no absolute overlay). */
+export const InlineDecisionCtx = createContext(false);
 
 const NEON = '#FDE100';
 
@@ -41,6 +44,8 @@ export interface DecisionPromptCardProps {
   onChoose: (choiceId: string) => void;
   /** Fired when timer hits zero with no choice. */
   onTimeout?: () => void;
+  /** When true renders as normal block (panel mode). Default false = absolute overlay. */
+  inline?: boolean;
 }
 
 /** SVG arrow primitives for the choice icons. 32×32 box, currentColor stroke. */
@@ -170,7 +175,10 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
   timeoutMs = 8000,
   onChoose,
   onTimeout,
+  inline: inlineProp = false,
 }: DecisionPromptCardProps) {
+  const inlineCtx = useContext(InlineDecisionCtx);
+  const inline = inlineProp || inlineCtx;
   const [progress, setProgress] = useState(1);
 
   useEffect(() => {
@@ -187,18 +195,19 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
     return () => window.clearInterval(id);
   }, [timeoutMs, onTimeout]);
 
+  const wrapper = inline
+    ? { className: 'w-full pointer-events-auto', style: {} }
+    : { className: 'absolute left-1/2 -translate-x-1/2 z-[300] pointer-events-auto', style: { top: '6%', width: 'min(92%, 480px)' } };
+
   return (
-    <div
-      className="absolute left-1/2 -translate-x-1/2 z-[300] pointer-events-auto"
-      style={{ top: '6%', width: 'min(92%, 480px)' }}
-    >
+    <div className={wrapper.className} style={wrapper.style}>
       <div
         style={{
           background: NEON,
           color: '#000',
           border: '2px solid #000',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 0 4px rgba(253,225,0,0.18)',
-          borderRadius: 6,
+          boxShadow: inline ? 'none' : '0 8px 24px rgba(0,0,0,0.6), 0 0 0 4px rgba(253,225,0,0.18)',
+          borderRadius: inline ? 0 : 6,
           overflow: 'hidden',
         }}
       >
