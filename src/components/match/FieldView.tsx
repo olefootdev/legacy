@@ -59,31 +59,33 @@ const GRASS_A = '#0d1a0e';
 const GRASS_B = '#111f12';
 
 // ── Perspective first-person helpers ───────────────────────────────────────
-// VP = vanishing point (center-top of the first-person view)
-const FP_VPX = VW / 2;       // 568
-const FP_VPY = VH * 0.18;    // 121
-const FP_GROUND_Y = VH;      // bottom edge (camera position row)
+// VP = vanishing point (center-top); GROUND = near edge (camera position)
+// Camera params are dynamic: tracking shifts VPX based on ball.y for cinematic pan.
+const FP_VPY = VH * 0.22;    // horizon line
+const FP_GROUND_Y = VH;      // near edge
 
-function fpProject(fieldX: number, fieldY: number): { sx: number; sy: number; scale: number } {
-  // fieldX: 0-100 (left goal=0, right goal=100)
-  // fieldY: 0-100 (top touchline=0, bottom touchline=100)
-  //
-  // Camera looking toward right goal (x=100 side).
-  // Depth factor: how far the player is from the camera in field-X (0 = same row, 100 = far end)
-  const depth = Math.max(0.01, fieldX / 100); // 0–1, 1 = far goal
-  const t = Math.pow(depth, 0.55);            // non-linear foreshortening
+const FP_NEAR_SPREAD = VW * 0.92; // very wide at camera (sidelines overflow viewport)
+const FP_FOCAL = 0.42;             // foreshortening exponent — lower = more dramatic
 
-  // Horizontal: player lateral offset relative to center (fieldY=50 is center)
-  const latOffset = (fieldY - 50) / 50;      // -1 to +1
+interface FPCam {
+  vpx: number;   // vanishing point x (camera pan)
+  vpy: number;   // vanishing point y (camera tilt)
+  zoom: number;  // 1 = neutral, >1 = dolly in
+}
 
-  // Screen Y: interpolate from bottom (camera) to VP
-  const sy = FP_GROUND_Y - t * (FP_GROUND_Y - FP_VPY);
+function fpProject(
+  fieldX: number,
+  fieldY: number,
+  cam: FPCam = { vpx: VW / 2, vpy: FP_VPY, zoom: 1 },
+): { sx: number; sy: number; scale: number } {
+  const depth = Math.max(0.01, fieldX / 100);
+  const t = Math.pow(depth, FP_FOCAL);
 
-  // Screen X: lateral spread shrinks with depth
-  const spread = (1 - t) * (VW * 0.48);
-  const sx = FP_VPX + latOffset * spread;
-
-  const scale = 0.25 + (1 - t) * 0.75; // near=1.0, far=0.25
+  const latOffset = (fieldY - 50) / 50;
+  const sy = FP_GROUND_Y - t * (FP_GROUND_Y - cam.vpy);
+  const spread = (1 - t) * FP_NEAR_SPREAD;
+  const sx = cam.vpx + latOffset * spread * cam.zoom;
+  const scale = (0.18 + (1 - t) * 0.82) * cam.zoom;
   return { sx, sy, scale };
 }
 
@@ -290,9 +292,9 @@ interface FPCardProps {
   onClick?: (p: PitchPlayerState) => void;
 }
 
-const FPCard = memo(function FPCard({ p, isHome, isOnBall, onClick }: FPCardProps) {
-  const { sx, sy, scale } = fpProject(p.x, p.y);
-  if (scale < 0.18) return null; // too far, don't render
+const FPCard = memo(function FPCard({ p, isHome, isOnBall, onClick, cam }: FPCardProps & { cam: FPCam }) {
+  const { sx, sy, scale } = fpProject(p.x, p.y, cam);
+  if (scale < 0.14) return null; // too far, don't render
 
   const cw = CARD_W * scale;
   const ch = CARD_H * scale;
@@ -374,8 +376,8 @@ function Ball({ bx, by }: { bx: number; by: number }) {
 }
 
 // ── First-person ball ────────────────────────────────────────────────────────
-function FPBall({ bx, by }: { bx: number; by: number }) {
-  const { sx, sy, scale } = fpProject(bx, by);
+function FPBall({ bx, by, cam }: { bx: number; by: number; cam: FPCam }) {
+  const { sx, sy, scale } = fpProject(bx, by, cam);
   const r = 8 * scale;
   return (
     <g>
@@ -402,6 +404,18 @@ function FirstPersonField({
   onBallId: string | null;
   onPlayerClick?: (p: PitchPlayerState) => void;
 }) {
+  // ── Cinematic camera tracking ──
+  // Pan VPX based on ball's lateral position; tilt up slightly when ball is deep.
+  const cam: FPCam = useMemo(() => {
+    const lat = (ballY - 50) / 50;       // -1..+1
+    const depth = ballX / 100;            // 0..1
+    return {
+      vpx: VW / 2 + lat * VW * 0.18,     // ~±18% pan
+      vpy: FP_VPY - depth * 22,           // tilt up as ball goes deeper
+      zoom: 1 + depth * 0.06,             // subtle dolly in toward attack
+    };
+  }, [ballX, ballY]);
+
   // Sort all players by depth (far first, near last) for proper z-ordering
   const allCards = useMemo(() => {
     const home = homePlayers.map((p) => ({ p, isHome: true }));
@@ -412,32 +426,28 @@ function FirstPersonField({
   // Ground perspective lines — left/right sidelines + center line converging to VP
   const groundLines = useMemo(() => {
     const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    // Left sideline (fieldY=0)
-    const l0 = fpProject(0, 0);
-    const l1 = fpProject(100, 0);
+    const l0 = fpProject(0, 0, cam);
+    const l1 = fpProject(100, 0, cam);
     lines.push({ x1: l0.sx, y1: l0.sy, x2: l1.sx, y2: l1.sy });
-    // Right sideline (fieldY=100)
-    const r0 = fpProject(0, 100);
-    const r1 = fpProject(100, 100);
+    const r0 = fpProject(0, 100, cam);
+    const r1 = fpProject(100, 100, cam);
     lines.push({ x1: r0.sx, y1: r0.sy, x2: r1.sx, y2: r1.sy });
-    // Center line (fieldY=50)
-    const c0 = fpProject(0, 50);
-    const c1 = fpProject(100, 50);
+    const c0 = fpProject(0, 50, cam);
+    const c1 = fpProject(100, 50, cam);
     lines.push({ x1: c0.sx, y1: c0.sy, x2: c1.sx, y2: c1.sy });
-    // Mid-field line (fieldX=50)
-    const m0 = fpProject(50, 0);
-    const m1 = fpProject(50, 100);
+    const m0 = fpProject(50, 0, cam);
+    const m1 = fpProject(50, 100, cam);
     lines.push({ x1: m0.sx, y1: m0.sy, x2: m1.sx, y2: m1.sy });
-    // Away goal line (fieldX=100)
-    const g0 = fpProject(100, 0);
-    const g1 = fpProject(100, 100);
+    const g0 = fpProject(100, 0, cam);
+    const g1 = fpProject(100, 100, cam);
     lines.push({ x1: g0.sx, y1: g0.sy, x2: g1.sx, y2: g1.sy });
     return lines;
-  }, []);
+  }, [cam]);
 
   // Goal frame in perspective
-  const goalTop = fpProject(100, 38.5);    // left post (38.5% = (50 - 3.66/68*100))
-  const goalBottom = fpProject(100, 61.5); // right post
+  const goalTop = fpProject(100, 38.5, cam);
+  const goalBottom = fpProject(100, 61.5, cam);
+  const FP_VPX = cam.vpx;
 
   return (
     <svg
@@ -492,7 +502,7 @@ function FirstPersonField({
 
       {/* Ground fill */}
       <polygon
-        points={`0,${VH} ${VW},${VH} ${fpProject(100, 100).sx},${fpProject(100, 100).sy} ${fpProject(100, 0).sx},${fpProject(100, 0).sy}`}
+        points={`${fpProject(0, 0, cam).sx},${fpProject(0, 0, cam).sy} ${fpProject(0, 100, cam).sx},${fpProject(0, 100, cam).sy} ${fpProject(100, 100, cam).sx},${fpProject(100, 100, cam).sy} ${fpProject(100, 0, cam).sx},${fpProject(100, 0, cam).sy}`}
         fill={GRASS_A}
       />
 
@@ -500,10 +510,10 @@ function FirstPersonField({
       {Array.from({ length: 10 }).map((_, i) => {
         const x0 = i * 10;
         const x1 = x0 + 10;
-        const p0 = fpProject(x0, 0);
-        const p1 = fpProject(x1, 0);
-        const p2 = fpProject(x1, 100);
-        const p3 = fpProject(x0, 100);
+        const p0 = fpProject(x0, 0, cam);
+        const p1 = fpProject(x1, 0, cam);
+        const p2 = fpProject(x1, 100, cam);
+        const p3 = fpProject(x0, 100, cam);
         if (i % 2 === 1) return null;
         return (
           <polygon
@@ -551,11 +561,12 @@ function FirstPersonField({
           isHome={isHome}
           isOnBall={p.playerId === onBallId}
           onClick={onPlayerClick}
+          cam={cam}
         />
       ))}
 
       {/* Ball */}
-      <FPBall bx={ballX} by={ballY} />
+      <FPBall bx={ballX} by={ballY} cam={cam} />
     </svg>
   );
 }
