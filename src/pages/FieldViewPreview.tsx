@@ -82,14 +82,24 @@ const ENGINE_EVENT_MAP: Partial<Record<LegacyEventKind, string>> = {
   rebound:  'rebound', // rebote após defesa
 };
 
-// ── Camera targets (T1 leve) ──────────────────────────────────────────────────
+// ── Camera targets ────────────────────────────────────────────────────────────
 // Tier 1: zoom sutil 1.2× sobre a zona da ação. Voice bar permanece.
-// Coordenadas em % do container do campo (origin do transform).
+// Tier 2: zoom 1.6× + freeze frame + vignette editorial.
 type CameraTarget = { x: number; y: number; zoom: number };
 const T1_CAMERA_TARGETS: Record<string, CameraTarget> = {
-  gk:    { x: 50, y: 86, zoom: 1.2 },  // saída do goleiro home (parte de baixo)
-  gegen: { x: 50, y: 48, zoom: 1.2 },  // gegenpress no meio-campo
+  gk:    { x: 50, y: 86, zoom: 1.2 },
+  gegen: { x: 50, y: 48, zoom: 1.2 },
 };
+const T2_CAMERA_TARGETS: Record<string, CameraTarget> = {
+  corner:   { x: 50, y: 18, zoom: 1.6 }, // canto adversário (área superior)
+  freekick: { x: 50, y: 30, zoom: 1.6 }, // zona de meia-lua adversária
+  '1v1':    { x: 78, y: 32, zoom: 1.6 }, // ponta direita ataque
+};
+const MOMENT_CAMERA_TARGETS: Record<string, CameraTarget> = {
+  ...T1_CAMERA_TARGETS,
+  ...T2_CAMERA_TARGETS,
+};
+const T2_MOMENT_IDS = new Set(Object.keys(T2_CAMERA_TARGETS));
 
 // ── Painel de voz — estado idle ───────────────────────────────────────────────
 // Labels curtos para o grid de comandos de voz
@@ -181,6 +191,7 @@ export function FieldViewPreview() {
   const [attackerPick, setAttackerPick] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<'intercept' | 'progress' | null>(null);
   const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
+  const [frozen, setFrozen] = useState(false);
   const momentBusyRef = useRef(false);
 
   const startMoment = useCallback((m: MomentDef) => {
@@ -188,7 +199,8 @@ export function FieldViewPreview() {
     momentBusyRef.current = true;
     setAttackerPick(null); setOutcome(null); setActiveMoment(m);
     setCamera('aerial');
-    setCameraTarget(T1_CAMERA_TARGETS[m.id] ?? null);
+    setCameraTarget(MOMENT_CAMERA_TARGETS[m.id] ?? null);
+    setFrozen(T2_MOMENT_IDS.has(m.id));
     if (m.highlight) setHighlightId(m.highlight);
     if (m.defensiveAction) setDefensiveAction(true);
   }, []);
@@ -201,7 +213,7 @@ export function FieldViewPreview() {
     if (m) startMoment(m);
   }, [startMoment]);
 
-  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent);
+  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen);
 
   const handleAttackerChoice = useCallback((c: string) => setAttackerPick(c), []);
 
@@ -212,7 +224,7 @@ export function FieldViewPreview() {
     window.setTimeout(() => {
       setActiveMoment(null); setAttackerPick(null); setOutcome(null);
       setHighlightId(null); setDefensiveAction(false);
-      setCameraTarget(null);
+      setCameraTarget(null); setFrozen(false);
       momentBusyRef.current = false;
     }, 2200);
   }, [activeMoment, attackerPick]);
@@ -244,6 +256,14 @@ export function FieldViewPreview() {
           from { opacity: 0; transform: translateY(6px) scale(0.96); }
           to   { opacity: 1; transform: translateY(0)   scale(1); }
         }
+        @keyframes vignetteIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes eyebrowIn {
+          from { opacity: 0; transform: translateY(-8px); letter-spacing: 0.5em; }
+          to   { opacity: 1; transform: translateY(0);    letter-spacing: 0.32em; }
+        }
       `}</style>
 
       {/* ── Campo — flex-1, push para baixo, com zoom T1 ── */}
@@ -274,6 +294,34 @@ export function FieldViewPreview() {
           className="w-full"
         />
       </div>
+
+      {/* Vinheta T2 — escurece bordas durante freeze */}
+      {frozen && (
+        <div
+          className="absolute inset-0 z-[150] pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.78) 95%)',
+            animation: 'vignetteIn 320ms ease-out both',
+          }}
+        />
+      )}
+
+      {/* Eyebrow editorial T2 — MOMENTO · TIPO · MIN' */}
+      {frozen && activeMoment && (
+        <div
+          className="absolute z-[200] pointer-events-none flex items-center gap-2"
+          style={{ top: 18, left: 16, animation: 'eyebrowIn 360ms cubic-bezier(0.34,1.2,0.64,1) both' }}
+        >
+          <span aria-hidden style={{ width: 24, height: 2, background: '#FDE100' }} />
+          <span style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            letterSpacing: '0.32em', fontSize: 10, textTransform: 'uppercase',
+            color: '#FDE100',
+          }}>
+            Momento · {activeMoment.label} · {engine.minute}'
+          </span>
+        </div>
+      )}
 
       {/* Camera toggle — canto superior direito, sobre o campo */}
       <div className="absolute flex gap-1 z-20" style={{ top: 56, right: 8 }}>
