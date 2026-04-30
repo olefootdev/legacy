@@ -67,6 +67,7 @@ export function FieldViewPreview() {
   const [ballX, setBallX] = useState(76);
   const [ballY, setBallY] = useState(50);
   const [minute, setMinute] = useState(67);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const handlePlayerClick = useCallback((p: PitchPlayerState) => {
     setOnBallId(p.playerId);
@@ -108,20 +109,21 @@ export function FieldViewPreview() {
         <button
           type="button"
           onClick={() => {
-            setCamera('firstperson');
-            window.setTimeout(() => setCamera('aerial'), 4000);
+            setCamera('aerial');
+            setHighlightId(onBallId);
+            window.setTimeout(() => setHighlightId(null), 3500);
           }}
           className="font-display uppercase tracking-wider px-2 py-1 transition-all"
           style={{
-            background: camera === 'firstperson' ? '#FDE100' : 'rgba(255,255,255,0.06)',
-            color: camera === 'firstperson' ? '#000' : 'rgba(253,225,0,0.85)',
+            background: highlightId ? '#FDE100' : 'rgba(255,255,255,0.06)',
+            color: highlightId ? '#000' : 'rgba(253,225,0,0.85)',
             border: '1px solid rgba(253,225,0,0.4)',
             fontSize: 10,
             letterSpacing: '0.18em',
             borderRadius: 4,
           }}
         >
-          ▶ highlight
+          ▶ destaque
         </button>
         <span className="text-white/40 self-center" style={{ fontSize: 9, marginLeft: 6 }}>
           · clique num jogador pra mover a bola
@@ -143,6 +145,7 @@ export function FieldViewPreview() {
           awayScore={1}
           matchMinute={minute}
           showCameraSwitch={false}
+          highlightPlayerId={highlightId}
           onPlayerClick={handlePlayerClick}
           className="w-full"
         />

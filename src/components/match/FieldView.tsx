@@ -4,12 +4,14 @@
  * Design: preto absoluto + neon-yellow (#FDE100), Oswald uppercase, Playfair itálico.
  * Campo: listras de grama escuras, marcações mínimas (sem detalhes), nada de verde brilhante.
  * Jogadores: cards posicionados no campo (não sprites).
- * Câmeras: aerial (drone top-down) | broadcast (ângulo TV) | firstperson (1ª pessoa).
+ * Câmeras: aerial (visão tática inclinada) | broadcast (ângulo TV).
+ * Destaque: zoom-in no jogador ativo via prop `highlightPlayerId` —
+ * mesmo modo aerial, só com escala + tradução suave pra dar imersão.
  */
 import { memo, useMemo } from 'react';
 import type { PitchPlayerState } from '@/engine/types';
 
-export type FieldCameraMode = 'aerial' | 'broadcast' | 'firstperson';
+export type FieldCameraMode = 'aerial' | 'broadcast';
 
 // ── SVG layout constants ────────────────────────────────────────────────────
 const VW = 1136;
@@ -106,37 +108,6 @@ function ivProject(fieldX: number, fieldY: number) {
   const sx = IV_CX + lat * halfW;
   const scale = 1.05 - tEased * 0.55; // near=1.05, far=0.50
   return { sx, sy, scale, depth: tEased };
-}
-
-// ── Perspective first-person helpers ───────────────────────────────────────
-// FP shares the inclined viewBox (IV_VW×IV_VH) so it matches aerial dimensions —
-// designed to be triggered as a transient highlight zoom on key moments
-// (shots on goal), not a persistent camera mode.
-const FP_VPY = 220;
-const FP_GROUND_Y = IV_VH;
-const FP_NEAR_SPREAD = IV_VW * 0.78;
-const FP_FOCAL = 0.42;
-
-interface FPCam {
-  vpx: number;
-  vpy: number;
-  zoom: number;
-}
-
-function fpProject(
-  fieldX: number,
-  fieldY: number,
-  cam: FPCam = { vpx: IV_VW / 2, vpy: FP_VPY, zoom: 1 },
-): { sx: number; sy: number; scale: number } {
-  const depth = Math.max(0.01, fieldX / 100);
-  const t = Math.pow(depth, FP_FOCAL);
-
-  const latOffset = (fieldY - 50) / 50;
-  const sy = FP_GROUND_Y - t * (FP_GROUND_Y - cam.vpy);
-  const spread = (1 - t) * FP_NEAR_SPREAD;
-  const sx = cam.vpx + latOffset * spread * cam.zoom;
-  const scale = (0.18 + (1 - t) * 0.82) * cam.zoom;
-  return { sx, sy, scale };
 }
 
 // ── Aerial/broadcast grass stripes (SVG defs pattern) ────────────────────────
@@ -303,323 +274,6 @@ const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick }: Pl
     </g>
   );
 });
-
-// ── First-person player card ──────────────────────────────────────────────
-interface FPCardProps {
-  p: PitchPlayerState;
-  isHome: boolean;
-  isOnBall: boolean;
-  onClick?: (p: PitchPlayerState) => void;
-}
-
-const FPCard = memo(function FPCard({ p, isHome, isOnBall, onClick, cam }: FPCardProps & { cam: FPCam }) {
-  const { sx, sy, scale } = fpProject(p.x, p.y, cam);
-  if (scale < 0.14) return null; // too far, don't render
-
-  const cw = CARD_W * scale;
-  const ch = CARD_H * scale;
-  const borderColor = isHome ? NEON : '#ffffff';
-  const textColor = isHome ? NEON : '#ffffff';
-
-  return (
-    <g
-      transform={`translate(${sx - cw / 2},${sy - ch})`}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
-      onClick={() => onClick?.(p)}
-    >
-      <rect
-        x={0}
-        y={0}
-        width={cw}
-        height={ch}
-        rx={2 * scale}
-        fill={DEEP}
-        stroke={borderColor}
-        strokeWidth={isOnBall ? 2 * scale : 1 * scale}
-        opacity={0.9}
-      />
-      <text
-        x={cw / 2}
-        y={ch * 0.22}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={textColor}
-        fontSize={9 * scale}
-        fontFamily="'Oswald', 'Agency FB', sans-serif"
-        fontWeight={700}
-        letterSpacing={1}
-        opacity={0.7}
-      >
-        {p.pos.toUpperCase()}
-      </text>
-      <text
-        x={cw / 2}
-        y={ch * 0.55}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={isOnBall ? borderColor : '#fff'}
-        fontSize={22 * scale}
-        fontFamily="'Playfair Display', serif"
-        fontStyle="italic"
-        fontWeight={900}
-      >
-        {p.num}
-      </text>
-      <text
-        x={cw / 2}
-        y={ch * 0.82}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={textColor}
-        fontSize={7 * scale}
-        fontFamily="'Oswald', 'Agency FB', sans-serif"
-        fontWeight={600}
-        opacity={0.8}
-      >
-        {shortName(p.name)}
-      </text>
-    </g>
-  );
-});
-
-// ── Ball ────────────────────────────────────────────────────────────────────
-function Ball({ bx, by }: { bx: number; by: number }) {
-  const sx = toSvgX(bx);
-  const sy = toSvgY(by);
-  return (
-    <g>
-      <circle cx={sx} cy={sy} r={10} fill="none" stroke={NEON} strokeWidth={2} opacity={0.3} />
-      <circle cx={sx} cy={sy} r={5} fill="#ffffff" />
-      <circle cx={sx} cy={sy} r={3} fill={NEON} />
-    </g>
-  );
-}
-
-// ── First-person ball ────────────────────────────────────────────────────────
-function FPBall({ bx, by, cam }: { bx: number; by: number; cam: FPCam }) {
-  const { sx, sy, scale } = fpProject(bx, by, cam);
-  const r = 8 * scale;
-  return (
-    <g>
-      <circle cx={sx} cy={sy - r} r={r * 1.8} fill="none" stroke={NEON} strokeWidth={2} opacity={0.25} />
-      <circle cx={sx} cy={sy - r} r={r} fill="#ffffff" />
-      <circle cx={sx} cy={sy - r} r={r * 0.55} fill={NEON} />
-    </g>
-  );
-}
-
-// ── First-person field (perspective SVG) ────────────────────────────────────
-function FirstPersonField({
-  homePlayers,
-  awayPlayers,
-  ballX,
-  ballY,
-  onBallId,
-  onPlayerClick,
-}: {
-  homePlayers: PitchPlayerState[];
-  awayPlayers: PitchPlayerState[];
-  ballX: number;
-  ballY: number;
-  onBallId: string | null;
-  onPlayerClick?: (p: PitchPlayerState) => void;
-}) {
-  // ── Cinematic camera tracking ──
-  // Pan VPX based on ball's lateral position; tilt up slightly when ball is deep.
-  const cam: FPCam = useMemo(() => {
-    const lat = (ballY - 50) / 50;
-    const depth = ballX / 100;
-    return {
-      vpx: IV_VW / 2 + lat * IV_VW * 0.18,
-      vpy: FP_VPY - depth * 30,
-      zoom: 1 + depth * 0.08,
-    };
-  }, [ballX, ballY]);
-
-  // Sort all players by depth (far first, near last) for proper z-ordering
-  const allCards = useMemo(() => {
-    const home = homePlayers.map((p) => ({ p, isHome: true }));
-    const away = awayPlayers.map((p) => ({ p, isHome: false }));
-    return [...home, ...away].sort((a, b) => b.p.x - a.p.x); // far (high x) rendered first
-  }, [homePlayers, awayPlayers]);
-
-  // Ground perspective lines — left/right sidelines + center line converging to VP
-  const groundLines = useMemo(() => {
-    const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    const l0 = fpProject(0, 0, cam);
-    const l1 = fpProject(100, 0, cam);
-    lines.push({ x1: l0.sx, y1: l0.sy, x2: l1.sx, y2: l1.sy });
-    const r0 = fpProject(0, 100, cam);
-    const r1 = fpProject(100, 100, cam);
-    lines.push({ x1: r0.sx, y1: r0.sy, x2: r1.sx, y2: r1.sy });
-    const c0 = fpProject(0, 50, cam);
-    const c1 = fpProject(100, 50, cam);
-    lines.push({ x1: c0.sx, y1: c0.sy, x2: c1.sx, y2: c1.sy });
-    const m0 = fpProject(50, 0, cam);
-    const m1 = fpProject(50, 100, cam);
-    lines.push({ x1: m0.sx, y1: m0.sy, x2: m1.sx, y2: m1.sy });
-    const g0 = fpProject(100, 0, cam);
-    const g1 = fpProject(100, 100, cam);
-    lines.push({ x1: g0.sx, y1: g0.sy, x2: g1.sx, y2: g1.sy });
-    return lines;
-  }, [cam]);
-
-  // Goal posts using real measurements
-  const fpGoalL = fpProject(100, 50 - PCT_GOAL_HALF_Y, cam);
-  const fpGoalR = fpProject(100, 50 + PCT_GOAL_HALF_Y, cam);
-  const fpGoalPostHeight = (fpGoalR.sx - fpGoalL.sx) * GOAL_ASPECT;
-
-  // Far box / six-yard
-  const fpBoxNL = fpProject(100 - PCT_BOX_DEPTH, 50 - PCT_BOX_HALF_Y, cam);
-  const fpBoxNR = fpProject(100 - PCT_BOX_DEPTH, 50 + PCT_BOX_HALF_Y, cam);
-  const fpBoxFL = fpProject(100, 50 - PCT_BOX_HALF_Y, cam);
-  const fpBoxFR = fpProject(100, 50 + PCT_BOX_HALF_Y, cam);
-
-  return (
-    <svg
-      viewBox={`0 0 ${IV_VW} ${IV_VH}`}
-      preserveAspectRatio="xMidYMid meet"
-      className="w-full h-auto"
-      style={{ display: 'block' }}
-    >
-      {/* ── Background sky gradient ── */}
-      <defs>
-        <linearGradient id="fp-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#050507" />
-          <stop offset="60%" stopColor="#0a0d0b" />
-          <stop offset="100%" stopColor={GRASS_A} />
-        </linearGradient>
-        <radialGradient id="fp-vp-glow" cx="50%" cy={`${(FP_VPY / IV_VH) * 100}%`} r="30%">
-          <stop offset="0%" stopColor={NEON} stopOpacity="0.08" />
-          <stop offset="100%" stopColor={NEON} stopOpacity="0" />
-        </radialGradient>
-        <filter id="fp-card-shadow">
-          <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.8" />
-        </filter>
-      </defs>
-
-      {/* Sky / atmosphere */}
-      <rect x={0} y={0} width={IV_VW} height={IV_VH} fill="url(#fp-sky)" />
-      <rect x={0} y={0} width={IV_VW} height={IV_VH} fill="url(#fp-vp-glow)" />
-
-      {/* Floodlights */}
-      {[80, IV_VW - 80, IV_VW / 2].map((lx, i) => (
-        <g key={i}>
-          <circle cx={lx} cy={IV_VH * 0.04} r={3} fill="#fffbe6" />
-          <radialGradient id={`fp-light-${i}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
-          </radialGradient>
-          <ellipse cx={lx} cy={IV_VH * 0.08} rx={80} ry={50} fill={`url(#fp-light-${i})`} />
-        </g>
-      ))}
-
-      {/* Stadium crowd silhouettes near horizon */}
-      <rect x={0} y={cam.vpy - 30} width={IV_VW} height={40}
-        fill="rgba(0,0,0,0.6)" />
-      {Array.from({ length: 36 }).map((_, i) => {
-        const x = i * 21 + 5;
-        const h = 10 + (Math.sin(i * 2.3) * 4);
-        return (
-          <ellipse key={i} cx={x} cy={cam.vpy - 10} rx={9} ry={h}
-            fill={`rgba(${20 + (i % 5) * 4},${20 + (i % 3) * 4},${20 + (i % 7) * 3},0.85)`} />
-        );
-      })}
-
-      {/* Ground fill */}
-      <polygon
-        points={`${fpProject(0, 0, cam).sx},${fpProject(0, 0, cam).sy} ${fpProject(0, 100, cam).sx},${fpProject(0, 100, cam).sy} ${fpProject(100, 100, cam).sx},${fpProject(100, 100, cam).sy} ${fpProject(100, 0, cam).sx},${fpProject(100, 0, cam).sy}`}
-        fill={GRASS_A}
-      />
-
-      {/* Grass stripes in perspective */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const x0 = i * 10;
-        const x1 = x0 + 10;
-        const p0 = fpProject(x0, 0, cam);
-        const p1 = fpProject(x1, 0, cam);
-        const p2 = fpProject(x1, 100, cam);
-        const p3 = fpProject(x0, 100, cam);
-        if (i % 2 === 1) return null;
-        return (
-          <polygon
-            key={i}
-            points={`${p0.sx},${p0.sy} ${p1.sx},${p1.sy} ${p2.sx},${p2.sy} ${p3.sx},${p3.sy}`}
-            fill={GRASS_B}
-            opacity={0.7}
-          />
-        );
-      })}
-
-      {/* Ground lines */}
-      {groundLines.map((l, i) => (
-        <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-          stroke={LINE_COLOR} strokeWidth={1.5} />
-      ))}
-
-      {/* Far penalty box (perspective, real dims) */}
-      <g stroke={LINE_COLOR} fill="none" strokeWidth={1.4}>
-        <polygon
-          points={`${fpBoxNL.sx},${fpBoxNL.sy} ${fpBoxNR.sx},${fpBoxNR.sy} ${fpBoxFR.sx},${fpBoxFR.sy} ${fpBoxFL.sx},${fpBoxFL.sy}`}
-        />
-        <circle cx={fpProject(100 - PCT_PEN_SPOT, 50, cam).sx}
-          cy={fpProject(100 - PCT_PEN_SPOT, 50, cam).sy} r={2.5}
-          fill={LINE_COLOR} stroke="none" />
-      </g>
-
-      {/* Goal frame — STRAIGHT vertical posts + net */}
-      <g stroke="rgba(255,255,255,0.7)" fill="none" strokeWidth={2}>
-        {/* Net background */}
-        <polygon
-          points={`${fpGoalL.sx},${fpGoalL.sy} ${fpGoalR.sx},${fpGoalR.sy} ${fpGoalR.sx},${fpGoalR.sy - fpGoalPostHeight} ${fpGoalL.sx},${fpGoalL.sy - fpGoalPostHeight}`}
-          fill="rgba(255,255,255,0.05)"
-          stroke="rgba(255,255,255,0.22)"
-          strokeWidth={1}
-        />
-        {/* Net mesh */}
-        {[0.25, 0.5, 0.75].map((t) => {
-          const x = fpGoalL.sx + (fpGoalR.sx - fpGoalL.sx) * t;
-          return (
-            <line key={`fpv-${t}`} x1={x} y1={fpGoalL.sy}
-              x2={x} y2={fpGoalL.sy - fpGoalPostHeight}
-              stroke="rgba(255,255,255,0.18)" strokeWidth={0.7} />
-          );
-        })}
-        {[0.33, 0.66].map((t) => {
-          const y = fpGoalL.sy - fpGoalPostHeight * t;
-          return (
-            <line key={`fph-${t}`} x1={fpGoalL.sx} y1={y}
-              x2={fpGoalR.sx} y2={y}
-              stroke="rgba(255,255,255,0.18)" strokeWidth={0.7} />
-          );
-        })}
-        {/* STRAIGHT vertical posts */}
-        <line x1={fpGoalL.sx} y1={fpGoalL.sy}
-          x2={fpGoalL.sx} y2={fpGoalL.sy - fpGoalPostHeight} />
-        <line x1={fpGoalR.sx} y1={fpGoalR.sy}
-          x2={fpGoalR.sx} y2={fpGoalR.sy - fpGoalPostHeight} />
-        {/* Crossbar */}
-        <line x1={fpGoalL.sx} y1={fpGoalL.sy - fpGoalPostHeight}
-          x2={fpGoalR.sx} y2={fpGoalR.sy - fpGoalPostHeight} />
-      </g>
-
-      {/* Players (sorted by depth, far first) */}
-      {allCards.map(({ p, isHome }) => (
-        <FPCard
-          key={p.playerId}
-          p={p}
-          isHome={isHome}
-          isOnBall={p.playerId === onBallId}
-          onClick={onPlayerClick}
-          cam={cam}
-        />
-      ))}
-
-      {/* Ball */}
-      <FPBall bx={ballX} by={ballY} cam={cam} />
-    </svg>
-  );
-}
 
 // ── Inclined player card (tactical perspective) ────────────────────────────
 interface IVCardProps {
@@ -1187,6 +841,11 @@ export interface FieldViewProps {
   showCameraSwitch?: boolean;
   onCameraChange?: (mode: FieldCameraMode) => void;
   onPlayerClick?: (p: PitchPlayerState) => void;
+  /**
+   * When set, zooms in on this player during aerial mode (highlight effect).
+   * Set to null/undefined to return to the wide tactical view.
+   */
+  highlightPlayerId?: string | null;
   className?: string;
 }
 
@@ -1205,6 +864,7 @@ export const FieldView = memo(function FieldView({
   showCameraSwitch = true,
   onCameraChange,
   onPlayerClick,
+  highlightPlayerId = null,
   className = '',
 }: FieldViewProps) {
   const broadcastStyle =
@@ -1215,12 +875,34 @@ export const FieldView = memo(function FieldView({
         }
       : undefined;
 
-  // Aerial (inclined) and FP both use the portrait viewBox so a future
-  // aerial→FP highlight transition feels seamless. Broadcast keeps landscape.
   const aspectRatio =
     cameraMode === 'broadcast'
       ? `${VW}/${VH}`
       : `${IV_VW}/${IV_VH}`;
+
+  // ── Highlight zoom: scale + translate to keep active player centred ──
+  // Resolves the active player's screen position in the inclined viewBox,
+  // then applies CSS transform so the same SVG zooms in. Smooth via transition.
+  const highlight = useMemo(() => {
+    if (!highlightPlayerId || cameraMode !== 'aerial') return null;
+    const all = [...homePlayers, ...awayPlayers];
+    const p = all.find((pp) => pp.playerId === highlightPlayerId);
+    if (!p) return null;
+    // Project player to inclined SVG coords
+    const t = Math.pow(Math.max(0, Math.min(1, p.x / 100)), 0.78);
+    const sy = IV_BOTTOM_Y - t * (IV_BOTTOM_Y - IV_TOP_Y);
+    const halfW = IV_BOTTOM_HALF_W + t * (IV_TOP_HALF_W - IV_BOTTOM_HALF_W);
+    const sx = IV_CX + ((p.y - 50) / 50) * halfW;
+    // Convert to viewBox % — used as transform-origin for scale
+    const ox = (sx / IV_VW) * 100;
+    const oy = (sy / IV_VH) * 100;
+    return { ox, oy };
+  }, [highlightPlayerId, cameraMode, homePlayers, awayPlayers]);
+
+  const zoomActive = highlight != null;
+  const fieldTransform = zoomActive
+    ? `scale(2.4) translate(${(50 - highlight!.ox) * 0.42}%, ${(50 - highlight!.oy) * 0.42}%)`
+    : 'none';
 
   return (
     <div
@@ -1294,23 +976,24 @@ export const FieldView = memo(function FieldView({
 
       {/* ── Field area — fills width, height determined by SVG aspect ratio ── */}
       <div
-        className="relative w-full"
+        className="relative w-full overflow-hidden"
         style={{
           aspectRatio,
           background: 'radial-gradient(ellipse 80% 50% at 50% 40%, #131e14 0%, #090d09 55%, #050805 100%)',
           ...broadcastStyle,
         }}
       >
-        {cameraMode === 'firstperson' ? (
-          <FirstPersonField
-            homePlayers={homePlayers}
-            awayPlayers={awayPlayers}
-            ballX={ballX}
-            ballY={ballY}
-            onBallId={onBallPlayerId}
-            onPlayerClick={onPlayerClick}
-          />
-        ) : cameraMode === 'aerial' ? (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            transform: fieldTransform,
+            transformOrigin: zoomActive ? `${highlight!.ox}% ${highlight!.oy}%` : '50% 50%',
+            transition: 'transform 700ms cubic-bezier(0.4, 0, 0.2, 1)',
+            willChange: 'transform',
+          }}
+        >
+        {cameraMode === 'aerial' ? (
           <InclinedField
             homePlayers={homePlayers}
             awayPlayers={awayPlayers}
@@ -1327,6 +1010,21 @@ export const FieldView = memo(function FieldView({
             ballY={ballY}
             onBallId={onBallPlayerId}
             onPlayerClick={onPlayerClick}
+          />
+        )}
+        </div>
+
+        {/* Vignette during zoom highlight */}
+        {zoomActive && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(ellipse 70% 70% at 50% 50%, transparent 50%, rgba(0,0,0,0.55) 100%)',
+              mixBlendMode: 'multiply',
+              opacity: 1,
+              transition: 'opacity 700ms ease',
+            }}
           />
         )}
       </div>
