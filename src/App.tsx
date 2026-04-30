@@ -34,6 +34,7 @@ const PenaltyPreview = lazy(() => import('./pages/PenaltyPreview').then((m) => (
 const SetPiecePreview = lazy(() => import('./pages/SetPiecePreview').then((m) => ({ default: m.SetPiecePreview })));
 const LegacyCardPreview = lazy(() => import('./pages/LegacyCardPreview').then((m) => ({ default: m.LegacyCardPreview })));
 const CeremonyPreview = lazy(() => import('./pages/CeremonyPreview').then((m) => ({ default: m.CeremonyPreview })));
+const FieldViewPreview = lazy(() => import('./pages/FieldViewPreview').then((m) => ({ default: m.FieldViewPreview })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
@@ -413,6 +414,7 @@ export default function App() {
             <Route path="/dev/setpiece-preview" element={<SetPiecePreview />} />
             <Route path="/dev/legacy-card" element={<LegacyCardPreview />} />
             <Route path="/dev/ceremony-preview" element={<CeremonyPreview />} />
+            <Route path="/dev/field-view" element={<FieldViewPreview />} />
             <Route path="/match/live" element={<MatchLive />} />
             <Route path="/match" element={<LiveMatch />} />
             <Route path="/match/test2d" element={<Navigate to="/match/live" replace />} />
