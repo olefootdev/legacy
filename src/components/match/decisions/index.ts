@@ -1,4 +1,5 @@
 export { DecisionPromptCard } from './DecisionPromptCard';
+export { DecisionMomentsDebugDock } from './DecisionMomentsDebugDock';
 export type { DecisionArrow, DecisionChoice, DecisionPromptCardProps } from './DecisionPromptCard';
 
 export {
