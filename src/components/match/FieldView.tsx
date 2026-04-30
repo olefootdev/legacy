@@ -1161,8 +1161,12 @@ function AerialField({
 const CAMERA_LABELS: Record<FieldCameraMode, string> = {
   aerial: 'TÁTICA',
   broadcast: 'TV',
-  firstperson: '1ª PESSOA',
+  firstperson: 'HIGHLIGHT',
 };
+// Modes available in the user-facing switcher.
+// 'firstperson' is intentionally omitted: it's the highlight zoom triggered
+// programmatically from key moments (shots on goal), not a persistent camera.
+const SWITCHER_MODES: FieldCameraMode[] = ['aerial', 'broadcast'];
 
 // ── Main FieldView component ─────────────────────────────────────────────────
 export interface FieldViewProps {
@@ -1265,7 +1269,7 @@ export const FieldView = memo(function FieldView({
           {/* Camera switcher */}
           {showCameraSwitch && onCameraChange && (
             <div className="flex gap-1">
-              {(Object.keys(CAMERA_LABELS) as FieldCameraMode[]).map((mode) => (
+              {SWITCHER_MODES.map((mode) => (
                 <button
                   key={mode}
                   type="button"

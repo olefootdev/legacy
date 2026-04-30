@@ -87,7 +87,7 @@ export function FieldViewPreview() {
         >
           CAMPO ·
         </span>
-        {(['aerial', 'broadcast', 'firstperson'] as FieldCameraMode[]).map((m) => (
+        {(['aerial', 'broadcast'] as FieldCameraMode[]).map((m) => (
           <button
             key={m}
             type="button"
@@ -105,6 +105,24 @@ export function FieldViewPreview() {
             {m}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => {
+            setCamera('firstperson');
+            window.setTimeout(() => setCamera('aerial'), 4000);
+          }}
+          className="font-display uppercase tracking-wider px-2 py-1 transition-all"
+          style={{
+            background: camera === 'firstperson' ? '#FDE100' : 'rgba(255,255,255,0.06)',
+            color: camera === 'firstperson' ? '#000' : 'rgba(253,225,0,0.85)',
+            border: '1px solid rgba(253,225,0,0.4)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            borderRadius: 4,
+          }}
+        >
+          ▶ highlight
+        </button>
         <span className="text-white/40 self-center" style={{ fontSize: 9, marginLeft: 6 }}>
           · clique num jogador pra mover a bola
         </span>
