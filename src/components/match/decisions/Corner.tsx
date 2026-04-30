@@ -1,22 +1,10 @@
-/**
- * Decision Moment — Escanteio.
- *
- * Atacante: curto / 1º pau / 2º pau.
- * Defensor (mirror): marca curto / cobre 1º pau / cobre 2º pau.
- * Match → defesa intercepta. Mismatch → cruzamento aberto, chance.
- */
 import { useCallback } from 'react';
+import { ArrowRight, CornerLeftUp, CornerRightUp, ArrowLeft, CornerLeftDown, CornerRightDown } from 'lucide-react';
 import { DecisionPromptCard } from './DecisionPromptCard';
 
 export type CornerChoice = 'short' | 'near' | 'far';
 
-export function CornerAttacker({
-  onChoose,
-  onTimeout,
-}: {
-  onChoose: (c: CornerChoice) => void;
-  onTimeout?: () => void;
-}) {
+export function CornerAttacker({ onChoose, onTimeout }: { onChoose: (c: CornerChoice) => void; onTimeout?: () => void }) {
   const handle = useCallback((id: string) => onChoose(id as CornerChoice), [onChoose]);
   return (
     <DecisionPromptCard
@@ -25,21 +13,15 @@ export function CornerAttacker({
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'short', arrow: 'short-right', label: 'Curto', tone: 'safe' },
-        { id: 'near', arrow: 'curve-left', label: '1º Pau', tone: 'mid' },
-        { id: 'far', arrow: 'long-left', label: '2º Pau', tone: 'risk' },
+        { id: 'short', icon: <ArrowRight    size={32} />, label: 'Curto', tone: 'safe' },
+        { id: 'near',  icon: <CornerLeftUp  size={32} />, label: '1º Pau', tone: 'mid' },
+        { id: 'far',   icon: <CornerRightUp size={32} />, label: '2º Pau', tone: 'risk' },
       ]}
     />
   );
 }
 
-export function CornerDefender({
-  onChoose,
-  onTimeout,
-}: {
-  onChoose: (c: CornerChoice) => void;
-  onTimeout?: () => void;
-}) {
+export function CornerDefender({ onChoose, onTimeout }: { onChoose: (c: CornerChoice) => void; onTimeout?: () => void }) {
   const handle = useCallback((id: string) => onChoose(id as CornerChoice), [onChoose]);
   return (
     <DecisionPromptCard
@@ -48,9 +30,9 @@ export function CornerDefender({
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'short', arrow: 'short-left', label: 'Curto', tone: 'safe' },
-        { id: 'near', arrow: 'curve-right', label: '1º Pau', tone: 'mid' },
-        { id: 'far', arrow: 'long-right', label: '2º Pau', tone: 'risk' },
+        { id: 'short', icon: <ArrowLeft      size={32} />, label: 'Curto', tone: 'safe' },
+        { id: 'near',  icon: <CornerLeftDown size={32} />, label: '1º Pau', tone: 'mid' },
+        { id: 'far',   icon: <CornerRightDown size={32} />, label: '2º Pau', tone: 'risk' },
       ]}
     />
   );

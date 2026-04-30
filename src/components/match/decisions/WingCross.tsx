@@ -1,22 +1,10 @@
-/**
- * Decision Moment — Lateral chega no fundo (linha de fundo, prestes a cruzar).
- *
- * Atacante: cruza alto / entra na pequena área / toca pra trás (volante).
- * Defensor (mirror): bloqueia cruzamento / marca pequena área / cobre volante.
- * Match → defesa intercepta. Mismatch → chance clara.
- */
 import { useCallback } from 'react';
+import { ArrowUpLeft, LogIn, ArrowDown, Blocks, ArrowDownRight, ArrowUp } from 'lucide-react';
 import { DecisionPromptCard } from './DecisionPromptCard';
 
 export type WingCrossChoice = 'cross' | 'enter' | 'cutback';
 
-export function WingCrossAttacker({
-  onChoose,
-  onTimeout,
-}: {
-  onChoose: (c: WingCrossChoice) => void;
-  onTimeout?: () => void;
-}) {
+export function WingCrossAttacker({ onChoose, onTimeout }: { onChoose: (c: WingCrossChoice) => void; onTimeout?: () => void }) {
   const handle = useCallback((id: string) => onChoose(id as WingCrossChoice), [onChoose]);
   return (
     <DecisionPromptCard
@@ -25,21 +13,15 @@ export function WingCrossAttacker({
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'cross', arrow: 'cross', label: 'Cruza', tone: 'mid' },
-        { id: 'enter', arrow: 'long-left', label: 'Entra', tone: 'risk' },
-        { id: 'cutback', arrow: 'tap-back', label: 'Toca', tone: 'safe' },
+        { id: 'cross',   icon: <ArrowUpLeft size={32} />, label: 'Cruza', tone: 'mid' },
+        { id: 'enter',   icon: <LogIn       size={32} />, label: 'Entra', tone: 'risk' },
+        { id: 'cutback', icon: <ArrowDown   size={32} />, label: 'Toca',  tone: 'safe' },
       ]}
     />
   );
 }
 
-export function WingCrossDefender({
-  onChoose,
-  onTimeout,
-}: {
-  onChoose: (c: WingCrossChoice) => void;
-  onTimeout?: () => void;
-}) {
+export function WingCrossDefender({ onChoose, onTimeout }: { onChoose: (c: WingCrossChoice) => void; onTimeout?: () => void }) {
   const handle = useCallback((id: string) => onChoose(id as WingCrossChoice), [onChoose]);
   return (
     <DecisionPromptCard
@@ -48,9 +30,9 @@ export function WingCrossDefender({
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'cross', arrow: 'cross', label: 'Bloq.', tone: 'mid' },
-        { id: 'enter', arrow: 'long-right', label: 'Marca', tone: 'risk' },
-        { id: 'cutback', arrow: 'short-up', label: 'Cobre', tone: 'safe' },
+        { id: 'cross',   icon: <Blocks        size={32} />, label: 'Bloq.',  tone: 'mid' },
+        { id: 'enter',   icon: <ArrowDownRight size={32} />, label: 'Marca',  tone: 'risk' },
+        { id: 'cutback', icon: <ArrowUp        size={32} />, label: 'Cobre',  tone: 'safe' },
       ]}
     />
   );
