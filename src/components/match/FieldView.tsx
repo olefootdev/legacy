@@ -453,7 +453,6 @@ function InclinedField({
   // Defensive cinematic mode: shrink home GK and enlarge near goal so the
   // proportions match real life (keeper ≈ 1.9m vs goal ≈ 2.44m tall).
   const gkShrink = defensiveAction ? 0.55 : 1;
-  const nearGoalBoost = defensiveAction ? 2.0 : 1;
   // Sort players by depth: far first (top), near last (bottom) — natural occlusion
   const allCards = useMemo(() => {
     const home = homePlayers.map((p) => ({ p, isHome: true }));
@@ -515,10 +514,16 @@ function InclinedField({
     (farGoalR.sx - farGoalL.sx) * GOAL_ASPECT * 1.0; // proper aspect
 
   // Near goal posts (at fieldX=0)
-  const nearGoalL = ivProject(0, goalYL);
-  const nearGoalR = ivProject(0, goalYR);
+  const nearGoalLBase = ivProject(0, goalYL);
+  const nearGoalRBase = ivProject(0, goalYR);
+  // Defensive mode widens the goal frame; aspect stays 3:1 (real-life rectangle).
+  const nearWidthBoost = defensiveAction ? 2.4 : 1;
+  const nearGoalCx = (nearGoalLBase.sx + nearGoalRBase.sx) / 2;
+  const nearGoalHalfW = ((nearGoalRBase.sx - nearGoalLBase.sx) / 2) * nearWidthBoost;
+  const nearGoalL = { sx: nearGoalCx - nearGoalHalfW, sy: nearGoalLBase.sy };
+  const nearGoalR = { sx: nearGoalCx + nearGoalHalfW, sy: nearGoalRBase.sy };
   const nearGoalPostHeight =
-    (nearGoalR.sx - nearGoalL.sx) * GOAL_ASPECT * nearGoalBoost;
+    (nearGoalR.sx - nearGoalL.sx) * GOAL_ASPECT;
 
   return (
     <svg
