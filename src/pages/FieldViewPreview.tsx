@@ -189,7 +189,7 @@ export function FieldViewPreview() {
   const [defensiveAction, setDefensiveAction] = useState(false);
   const [activeMoment, setActiveMoment] = useState<MomentDef | null>(null);
   const [attackerPick, setAttackerPick] = useState<string | null>(null);
-  const [outcome, setOutcome] = useState<'intercept' | 'progress' | null>(null);
+  const [outcome, setOutcome] = useState<'intercept' | 'progress' | 'goal' | null>(null);
   const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
   const [frozen, setFrozen] = useState(false);
   const momentBusyRef = useRef(false);
@@ -215,9 +215,11 @@ export function FieldViewPreview() {
 
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen);
 
-  // ── Ambient camera — segue a bola quando OLE está atacando ────────────────
-  // Engine x: 0 = nosso gol, 100 = gol adversário. Quando ballX > 55 e
-  // possession === 'home', amplia gradualmente até 1.12x conforme aprofunda.
+  // ── Ambient camera — narrativa emocional pela posse e profundidade ────────
+  // Engine x: 0 = nosso gol, 100 = gol adversário.
+  //  • OLE atacando (possession=home): aproxima de 1.0x → 1.25x conforme avança.
+  //  • OLE defendendo: afasta para 0.92x dando sensação de "campo aberto, tensão".
+  //  • Meio-campo neutro: volta a 1.0x (sem target).
   const engineRef = useRef(engine);
   engineRef.current = engine;
 
@@ -225,18 +227,31 @@ export function FieldViewPreview() {
     if (activeMoment) return; // T1/T2 assumem o controle
     const tick = () => {
       const e = engineRef.current;
-      if (e.possession !== 'home' || e.ballX < 55) {
-        setCameraTarget(null);
+
+      // Defesa: bola no nosso campo + posse adversária → recua
+      if (e.possession === 'away' && e.ballX < 50) {
+        const danger = Math.min(1, (50 - e.ballX) / 40);
+        const zoom = 1.0 - danger * 0.08; // 1.0 → 0.92
+        setCameraTarget({ x: 50, y: 78, zoom });
         return;
       }
-      const depth = Math.min(1, (e.ballX - 55) / 40);
-      const zoom = 1.0 + depth * 0.12;
-      // Engine x → screen y (calibrado vs T1 targets: gk@x=5→y=86, gegen@x=50→y=48).
-      const screenY = Math.max(8, 90 - 0.85 * e.ballX);
-      setCameraTarget({ x: 50, y: screenY, zoom });
+
+      // Ataque: posse OLE no campo adversário → aproxima
+      if (e.possession === 'home' && e.ballX > 50) {
+        const depth = Math.min(1, (e.ballX - 50) / 45);
+        // Curva ease-in: começa lento e acelera perto do gol (mais emocionante)
+        const eased = depth * depth;
+        const zoom = 1.0 + eased * 0.25; // 1.0 → 1.25
+        const screenY = Math.max(10, 88 - 0.82 * e.ballX);
+        setCameraTarget({ x: 50, y: screenY, zoom });
+        return;
+      }
+
+      // Neutro: meio-campo sem definição
+      setCameraTarget(null);
     };
     tick();
-    const id = window.setInterval(tick, 350);
+    const id = window.setInterval(tick, 280);
     return () => window.clearInterval(id);
   }, [activeMoment]);
 
@@ -245,6 +260,11 @@ export function FieldViewPreview() {
   const handleDefenderChoice = useCallback((c: string) => {
     if (!activeMoment || !attackerPick) return;
     const r = activeMoment.resolve(attackerPick, c);
+
+    // Em situações de finalização (1×1 GK, cabeçada, rebote), progress = GOL.
+    const isShotMoment = activeMoment.id === '1v1gk' || activeMoment.id === 'header' || activeMoment.id === 'rebound';
+    const finalOutcome: 'intercept' | 'progress' | 'goal' =
+      isShotMoment && r === 'progress' ? 'goal' : r;
 
     const cleanup = () => {
       setActiveMoment(null); setAttackerPick(null); setOutcome(null);
@@ -259,13 +279,21 @@ export function FieldViewPreview() {
       window.setTimeout(() => {
         setCameraTarget({ x: 50, y: 22, zoom: 1.7 }); // pequena área (cabeçada)
       }, 280);
-      window.setTimeout(() => setOutcome(r), 820);
-      window.setTimeout(cleanup, 2700);
+      window.setTimeout(() => setOutcome(finalOutcome), 820);
+      window.setTimeout(cleanup, finalOutcome === 'goal' ? 3200 : 2700);
       return;
     }
 
-    setOutcome(r);
-    window.setTimeout(cleanup, 2200);
+    // 1×1 com goleiro: aproxima ainda mais para a baliza
+    if (activeMoment.id === '1v1gk') {
+      setCameraTarget({ x: 50, y: 8, zoom: 2.2 });
+      window.setTimeout(() => setOutcome(finalOutcome), 360);
+      window.setTimeout(cleanup, finalOutcome === 'goal' ? 3200 : 2200);
+      return;
+    }
+
+    setOutcome(finalOutcome);
+    window.setTimeout(cleanup, finalOutcome === 'goal' ? 3200 : 2200);
   }, [activeMoment, attackerPick]);
 
   const Attacker = activeMoment?.Attacker;
@@ -311,7 +339,10 @@ export function FieldViewPreview() {
         style={{
           transformOrigin: cameraTarget ? `${cameraTarget.x}% ${cameraTarget.y}%` : '50% 50%',
           transform: cameraTarget ? `scale(${cameraTarget.zoom})` : 'scale(1)',
-          transition: 'transform 600ms cubic-bezier(0.34, 1.2, 0.64, 1), transform-origin 600ms cubic-bezier(0.34, 1.2, 0.64, 1)',
+          // Abertura snappy (cubic-bezier overshooting), retorno suave (linear-ease).
+          transition: cameraTarget
+            ? 'transform 420ms cubic-bezier(0.22, 1.4, 0.36, 1), transform-origin 420ms cubic-bezier(0.22, 1.4, 0.36, 1)'
+            : 'transform 720ms cubic-bezier(0.4, 0, 0.2, 1), transform-origin 720ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <FieldView
@@ -383,15 +414,19 @@ export function FieldViewPreview() {
           <div
             className="font-display uppercase"
             style={{
-              background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
-              color: '#000', padding: '8px 28px', fontWeight: 900,
-              letterSpacing: '0.32em', fontSize: 12,
-              boxShadow: outcome === 'intercept'
-                ? '0 4px 32px rgba(239,68,68,0.45)'
-                : '0 4px 32px rgba(253,225,0,0.45)',
+              background: outcome === 'intercept' ? '#EF4444' : outcome === 'goal' ? '#10B981' : '#FDE100',
+              color: '#000',
+              padding: outcome === 'goal' ? '12px 36px' : '8px 28px',
+              fontWeight: 900,
+              letterSpacing: outcome === 'goal' ? '0.5em' : '0.32em',
+              fontSize: outcome === 'goal' ? 22 : 12,
+              boxShadow:
+                outcome === 'intercept' ? '0 4px 32px rgba(239,68,68,0.45)'
+                : outcome === 'goal'    ? '0 6px 48px rgba(16,185,129,0.65)'
+                :                          '0 4px 32px rgba(253,225,0,0.45)',
             }}
           >
-            {outcome === 'intercept' ? 'Interceptado' : 'Saiu jogando'}
+            {outcome === 'intercept' ? 'Interceptado' : outcome === 'goal' ? 'GOOOL' : 'Saiu jogando'}
           </div>
         </div>
       )}
