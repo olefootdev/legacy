@@ -101,99 +101,67 @@ const CATEGORIES_ORDER: MomentDef['category'][] = [
 
 function VoiceIdlePanel({ onTrigger }: { onTrigger: (id: string) => void }) {
   return (
-    <div style={{ padding: '10px 14px 14px' }}>
-      {/* Keyframes */}
+    <div
+      className="flex items-center gap-2"
+      style={{ height: 44, padding: '0 12px', overflow: 'hidden' }}
+    >
       <style>{`
         @keyframes vbar {
-          0%, 100% { transform: scaleY(0.35); opacity: 0.25; }
-          50%       { transform: scaleY(1);    opacity: 0.65; }
+          0%, 100% { transform: scaleY(0.3); opacity: 0.2; }
+          50%       { transform: scaleY(1);   opacity: 0.6; }
         }
       `}</style>
 
-      {/* Status bar ── mic + label + waveform */}
-      <div className="flex items-center gap-2 mb-3">
-        {/* Mic — quadrado editorial, borda gold */}
-        <div
-          className="flex items-center justify-center flex-shrink-0"
-          style={{
-            width: 26, height: 26,
-            border: '1px solid rgba(253,225,0,0.55)',
-            color: '#FDE100',
-          }}
-        >
-          <Mic size={12} />
-        </div>
-
-        {/* Label */}
-        <span
-          className="font-display uppercase"
-          style={{ fontSize: 8, letterSpacing: '0.42em', color: 'rgba(253,225,0,0.5)', fontWeight: 700 }}
-        >
-          VOZ
-        </span>
-
-        {/* Divisor */}
-        <div style={{ flex: 1, height: 1, background: 'rgba(253,225,0,0.1)' }} />
-
-        {/* Waveform equalizer */}
-        <div className="flex items-end gap-px" style={{ height: 16 }}>
-          {[0.55, 0.9, 1, 0.75, 0.45].map((base, i) => (
-            <span
-              key={i}
-              style={{
-                display: 'block',
-                width: 2,
-                height: `${base * 100}%`,
-                background: '#FDE100',
-                borderRadius: 1,
-                transformOrigin: 'bottom',
-                animation: `vbar ${0.7 + i * 0.15}s ease-in-out ${i * 0.08}s infinite`,
-              }}
-            />
-          ))}
-        </div>
+      {/* Mic — quadrado editorial */}
+      <div
+        className="flex items-center justify-center flex-shrink-0"
+        style={{ width: 24, height: 24, border: '1px solid rgba(253,225,0,0.5)', color: '#FDE100' }}
+      >
+        <Mic size={11} />
       </div>
 
-      {/* Grid de comandos por categoria */}
-      {CATEGORIES_ORDER.map((catId) => {
-        const catMoments = MOMENTS.filter((m) => m.category === catId);
-        return (
-          <div key={catId} className="flex items-baseline gap-2 mb-1.5 last:mb-0 flex-wrap">
-            {/* Category tag */}
-            <span
-              className="font-display uppercase flex-shrink-0"
-              style={{ fontSize: 7, letterSpacing: '0.38em', color: 'rgba(253,225,0,0.28)', fontWeight: 700 }}
-            >
-              {CATEGORY_LABEL[catId]}
-            </span>
+      {/* Waveform */}
+      <div className="flex items-end gap-px flex-shrink-0" style={{ height: 14 }}>
+        {[0.5, 0.85, 1, 0.7, 0.4].map((base, i) => (
+          <span key={i} style={{
+            display: 'block', width: 2, height: `${base * 100}%`,
+            background: '#FDE100', borderRadius: 1, transformOrigin: 'bottom',
+            animation: `vbar ${0.65 + i * 0.14}s ease-in-out ${i * 0.07}s infinite`,
+          }} />
+        ))}
+      </div>
 
-            {/* Command pills */}
-            <div className="flex flex-wrap gap-1">
-              {catMoments.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => onTrigger(m.id)}
-                  className="font-display uppercase transition-all active:scale-95"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid rgba(253,225,0,0.22)',
-                    color: 'rgba(253,225,0,0.72)',
-                    fontSize: 9,
-                    letterSpacing: '0.16em',
-                    fontWeight: 700,
-                    padding: '3px 9px',
-                    borderRadius: 2,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {VOICE_LABEL[m.id] ?? m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      {/* Divisor vertical */}
+      <div style={{ width: 1, height: 20, background: 'rgba(253,225,0,0.15)', flexShrink: 0 }} />
+
+      {/* Pills — scroll horizontal, sem quebra de linha */}
+      <div
+        className="flex gap-1.5 items-center"
+        style={{ overflowX: 'auto', scrollbarWidth: 'none', flex: 1 }}
+      >
+        {MOMENTS.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onTrigger(m.id)}
+            className="font-display uppercase flex-shrink-0 transition-all active:scale-95"
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(253,225,0,0.2)',
+              color: 'rgba(253,225,0,0.65)',
+              fontSize: 8,
+              letterSpacing: '0.15em',
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: 2,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {VOICE_LABEL[m.id] ?? m.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
