@@ -87,6 +87,36 @@ function fpProject(fieldX: number, fieldY: number): { sx: number; sy: number; sc
   return { sx, sy, scale };
 }
 
+// ── Inclined (tactical) perspective constants ──────────────────────────────
+// Vertical viewBox: top = far end (away goal), bottom = near camera (home goal)
+const IV_VW = 720;
+const IV_VH = 1100;
+const IV_CX = IV_VW / 2; // 360
+
+// Trapezoid: top narrower (far), bottom wider (near camera)
+const IV_TOP_Y = 110;
+const IV_BOTTOM_Y = 990;
+const IV_TOP_HALF_W = 290;    // near goal area at top, narrower
+const IV_BOTTOM_HALF_W = 430; // wider near camera
+
+function ivWidthAtDepth(t: number): number {
+  // t: 0 = near (bottom), 1 = far (top)
+  return IV_BOTTOM_HALF_W + t * (IV_TOP_HALF_W - IV_BOTTOM_HALF_W);
+}
+
+function ivProject(fieldX: number, fieldY: number) {
+  // home defends fieldX=0 (bottom/near); away goal at fieldX=100 (top/far)
+  const t = Math.max(0, Math.min(1, fieldX / 100));
+  // non-linear foreshortening so near players feel bigger
+  const tEased = Math.pow(t, 0.78);
+  const sy = IV_BOTTOM_Y - tEased * (IV_BOTTOM_Y - IV_TOP_Y);
+  const halfW = ivWidthAtDepth(tEased);
+  const lat = (fieldY - 50) / 50; // -1..+1
+  const sx = IV_CX + lat * halfW;
+  const scale = 1.05 - tEased * 0.55; // near=1.05, far=0.50
+  return { sx, sy, scale, depth: tEased };
+}
+
 // ── Aerial/broadcast grass stripes (SVG defs pattern) ────────────────────────
 function GrassStripes() {
   const stripeW = FW / 14; // 14 alternating stripes
@@ -530,6 +560,365 @@ function FirstPersonField({
   );
 }
 
+// ── Inclined player card (tactical perspective) ────────────────────────────
+interface IVCardProps {
+  p: PitchPlayerState;
+  isHome: boolean;
+  isOnBall: boolean;
+  onClick?: (p: PitchPlayerState) => void;
+}
+
+const IV_CARD_W = 70;
+const IV_CARD_H = 86;
+
+const InclinedCard = memo(function InclinedCard({ p, isHome, isOnBall, onClick }: IVCardProps) {
+  const { sx, sy, scale } = ivProject(p.x, p.y);
+  const cw = IV_CARD_W * scale;
+  const ch = IV_CARD_H * scale;
+  const x = sx - cw / 2;
+  const y = sy - ch; // anchor at feet (bottom)
+  const borderColor = isHome ? NEON : '#ffffff';
+  const textColor = isHome ? NEON : '#ffffff';
+  const fatigue = Math.max(0, Math.min(100, p.fatigue ?? 0));
+  const energy = 100 - fatigue;
+  const ovr = Math.round(((p as any).attributes?.overall ?? 75 + ((p.num * 7) % 18)));
+
+  return (
+    <g
+      transform={`translate(${x},${y})`}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+      onClick={() => onClick?.(p)}
+      filter="url(#iv-card-shadow)"
+    >
+      {/* Shadow on ground (ellipse) */}
+      <ellipse
+        cx={cw / 2}
+        cy={ch + 3 * scale}
+        rx={cw * 0.42}
+        ry={cw * 0.12}
+        fill="#000"
+        opacity={0.55}
+      />
+
+      {/* Selected ring */}
+      {isOnBall && (
+        <rect
+          x={-3}
+          y={-3}
+          width={cw + 6}
+          height={ch + 6}
+          rx={4 * scale}
+          fill="none"
+          stroke={borderColor}
+          strokeWidth={2.5}
+          opacity={0.55}
+        />
+      )}
+
+      {/* Card body */}
+      <rect
+        x={0}
+        y={0}
+        width={cw}
+        height={ch}
+        rx={3 * scale}
+        fill={DEEP}
+        stroke={borderColor}
+        strokeWidth={isOnBall ? 2 * scale : 1.2 * scale}
+        opacity={0.94}
+      />
+
+      {/* Top accent bar */}
+      <rect x={0} y={0} width={cw} height={3 * scale} fill={borderColor} opacity={isHome ? 0.95 : 0.6} />
+
+      {/* POS · OVR */}
+      <text
+        x={cw / 2}
+        y={ch * 0.18}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={textColor}
+        fontSize={11 * scale}
+        fontFamily="'Oswald', 'Agency FB', sans-serif"
+        fontWeight={700}
+        letterSpacing={1.2}
+        opacity={0.85}
+      >
+        {p.pos.toUpperCase()} · {ovr}
+      </text>
+
+      {/* Number (Playfair italic) */}
+      <text
+        x={cw / 2}
+        y={ch * 0.49}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={isOnBall ? borderColor : '#ffffff'}
+        fontSize={28 * scale}
+        fontFamily="'Playfair Display', 'Georgia', serif"
+        fontStyle="italic"
+        fontWeight={900}
+      >
+        {p.num}
+      </text>
+
+      {/* Name */}
+      <text
+        x={cw / 2}
+        y={ch * 0.76}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={textColor}
+        fontSize={9 * scale}
+        fontFamily="'Oswald', sans-serif"
+        fontWeight={600}
+        letterSpacing={0.7}
+        opacity={0.88}
+      >
+        {shortName(p.name)}
+      </text>
+
+      {/* Energy bar */}
+      <rect
+        x={4 * scale}
+        y={ch - 7 * scale}
+        width={cw - 8 * scale}
+        height={3 * scale}
+        rx={1.5 * scale}
+        fill="rgba(255,255,255,0.12)"
+      />
+      <rect
+        x={4 * scale}
+        y={ch - 7 * scale}
+        width={((cw - 8 * scale) * energy) / 100}
+        height={3 * scale}
+        rx={1.5 * scale}
+        fill={energy < 30 ? '#ef4444' : energy < 60 ? '#f97316' : borderColor}
+        opacity={0.85}
+      />
+    </g>
+  );
+});
+
+// ── Inclined ball ──────────────────────────────────────────────────────────
+function IVBall({ bx, by }: { bx: number; by: number }) {
+  const { sx, sy, scale } = ivProject(bx, by);
+  const r = 9 * scale;
+  return (
+    <g>
+      <ellipse cx={sx} cy={sy + 1} rx={r * 0.9} ry={r * 0.3} fill="#000" opacity={0.55} />
+      <circle cx={sx} cy={sy - r * 0.2} r={r * 1.9} fill="none" stroke={NEON} strokeWidth={2} opacity={0.3} />
+      <circle cx={sx} cy={sy - r * 0.2} r={r} fill="#ffffff" />
+      <circle cx={sx} cy={sy - r * 0.2} r={r * 0.55} fill={NEON} />
+    </g>
+  );
+}
+
+// ── Inclined (tactical perspective) field ──────────────────────────────────
+function InclinedField({
+  homePlayers,
+  awayPlayers,
+  ballX,
+  ballY,
+  onBallId,
+  onPlayerClick,
+}: {
+  homePlayers: PitchPlayerState[];
+  awayPlayers: PitchPlayerState[];
+  ballX: number;
+  ballY: number;
+  onBallId: string | null;
+  onPlayerClick?: (p: PitchPlayerState) => void;
+}) {
+  // Sort players by depth: far first (top), near last (bottom) — natural occlusion
+  const allCards = useMemo(() => {
+    const home = homePlayers.map((p) => ({ p, isHome: true }));
+    const away = awayPlayers.map((p) => ({ p, isHome: false }));
+    // higher fieldX → further away → render first
+    return [...home, ...away].sort((a, b) => b.p.x - a.p.x);
+  }, [homePlayers, awayPlayers]);
+
+  // Trapezoid corners
+  const tlx = IV_CX - IV_TOP_HALF_W;
+  const trx = IV_CX + IV_TOP_HALF_W;
+  const brx = IV_CX + IV_BOTTOM_HALF_W;
+  const blx = IV_CX - IV_BOTTOM_HALF_W;
+
+  // Center line at midfield (fieldX=50)
+  const midL = ivProject(50, 0);
+  const midR = ivProject(50, 100);
+
+  // Center circle ellipse (perspective)
+  const centerCircle = ivProject(50, 50);
+  const ccHalfW = ivWidthAtDepth(centerCircle.depth) * 0.18;
+
+  // Far penalty box (around fieldX=88, fieldY 22→78)
+  const farBoxNL = ivProject(83, 22);
+  const farBoxNR = ivProject(83, 78);
+  const farBoxFL = ivProject(100, 22);
+  const farBoxFR = ivProject(100, 78);
+
+  // Near penalty box (around fieldX=17)
+  const nearBoxFL = ivProject(17, 22);
+  const nearBoxFR = ivProject(17, 78);
+  const nearBoxNL = ivProject(0, 22);
+  const nearBoxNR = ivProject(0, 78);
+
+  // Far goal posts (at fieldX=100, narrow goal)
+  const farGoalL = ivProject(100, 46);
+  const farGoalR = ivProject(100, 54);
+  const farGoalScale = farGoalL.scale;
+
+  // Near goal posts (at fieldX=0, foreshortened toward camera)
+  const nearGoalL = ivProject(0, 44);
+  const nearGoalR = ivProject(0, 56);
+
+  return (
+    <svg
+      viewBox={`0 0 ${IV_VW} ${IV_VH}`}
+      preserveAspectRatio="xMidYMid meet"
+      className="w-full h-auto"
+      style={{ display: 'block' }}
+    >
+      <defs>
+        <linearGradient id="iv-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#050505" />
+          <stop offset="50%" stopColor="#080a08" />
+          <stop offset="100%" stopColor="#0a0d0a" />
+        </linearGradient>
+        <linearGradient id="iv-grass" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={GRASS_A} stopOpacity="0.8" />
+          <stop offset="100%" stopColor={GRASS_B} />
+        </linearGradient>
+        <radialGradient id="iv-spot" cx="50%" cy="55%" r="55%">
+          <stop offset="0%" stopColor="#1a2a1c" stopOpacity="0.65" />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
+        <filter id="iv-card-shadow">
+          <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.7" />
+        </filter>
+      </defs>
+
+      {/* Background */}
+      <rect x={0} y={0} width={IV_VW} height={IV_VH} fill="url(#iv-bg)" />
+
+      {/* Crowd silhouette behind far end */}
+      <rect x={0} y={0} width={IV_VW} height={IV_TOP_Y - 40} fill="#0a0a0a" />
+      {Array.from({ length: 36 }).map((_, i) => {
+        const cx = i * 21 + 8;
+        const h = 9 + Math.sin(i * 1.7) * 4;
+        return (
+          <ellipse
+            key={i}
+            cx={cx}
+            cy={IV_TOP_Y - 18}
+            rx={9}
+            ry={h}
+            fill={`rgba(${22 + (i % 4) * 5},${22 + (i % 3) * 5},${24 + (i % 5) * 4},0.85)`}
+          />
+        );
+      })}
+
+      {/* Trapezoid pitch surface */}
+      <polygon
+        points={`${tlx},${IV_TOP_Y} ${trx},${IV_TOP_Y} ${brx},${IV_BOTTOM_Y} ${blx},${IV_BOTTOM_Y}`}
+        fill="url(#iv-grass)"
+      />
+
+      {/* Spotlight overlay */}
+      <polygon
+        points={`${tlx},${IV_TOP_Y} ${trx},${IV_TOP_Y} ${brx},${IV_BOTTOM_Y} ${blx},${IV_BOTTOM_Y}`}
+        fill="url(#iv-spot)"
+      />
+
+      {/* Grass stripes (perspective bands across width) */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        if (i % 2 === 1) return null;
+        const t0 = i / 12;
+        const t1 = (i + 1) / 12;
+        const yA = IV_TOP_Y + t0 * (IV_BOTTOM_Y - IV_TOP_Y);
+        const yB = IV_TOP_Y + t1 * (IV_BOTTOM_Y - IV_TOP_Y);
+        const wA = IV_TOP_HALF_W + t0 * (IV_BOTTOM_HALF_W - IV_TOP_HALF_W);
+        const wB = IV_TOP_HALF_W + t1 * (IV_BOTTOM_HALF_W - IV_TOP_HALF_W);
+        return (
+          <polygon
+            key={i}
+            points={`${IV_CX - wA},${yA} ${IV_CX + wA},${yA} ${IV_CX + wB},${yB} ${IV_CX - wB},${yB}`}
+            fill={GRASS_B}
+            opacity={0.55}
+          />
+        );
+      })}
+
+      {/* Pitch outline */}
+      <g stroke={LINE_COLOR} fill="none" strokeWidth={1.5}>
+        <polygon
+          points={`${tlx},${IV_TOP_Y} ${trx},${IV_TOP_Y} ${brx},${IV_BOTTOM_Y} ${blx},${IV_BOTTOM_Y}`}
+        />
+
+        {/* Center line */}
+        <line x1={midL.sx} y1={midL.sy} x2={midR.sx} y2={midR.sy} />
+
+        {/* Center circle (ellipse perspective) */}
+        <ellipse
+          cx={centerCircle.sx}
+          cy={centerCircle.sy}
+          rx={ccHalfW}
+          ry={ccHalfW * 0.52}
+        />
+        <circle cx={centerCircle.sx} cy={centerCircle.sy} r={3} fill={LINE_COLOR} stroke="none" />
+
+        {/* Far penalty box (small, top) */}
+        <polygon
+          points={`${farBoxNL.sx},${farBoxNL.sy} ${farBoxNR.sx},${farBoxNR.sy} ${farBoxFR.sx},${farBoxFR.sy} ${farBoxFL.sx},${farBoxFL.sy}`}
+        />
+
+        {/* Near penalty box (large, bottom) */}
+        <polygon
+          points={`${nearBoxFL.sx},${nearBoxFL.sy} ${nearBoxFR.sx},${nearBoxFR.sy} ${nearBoxNR.sx},${nearBoxNR.sy} ${nearBoxNL.sx},${nearBoxNL.sy}`}
+        />
+
+        {/* Penalty spots */}
+        <circle cx={ivProject(89, 50).sx} cy={ivProject(89, 50).sy} r={2.5} fill={LINE_COLOR} stroke="none" />
+        <circle cx={ivProject(11, 50).sx} cy={ivProject(11, 50).sy} r={3.5} fill={LINE_COLOR} stroke="none" />
+      </g>
+
+      {/* Far goal frame */}
+      <g stroke="rgba(255,255,255,0.5)" fill="none" strokeWidth={1.6}>
+        <line x1={farGoalL.sx} y1={farGoalL.sy} x2={farGoalL.sx} y2={farGoalL.sy - 28 * farGoalScale} />
+        <line x1={farGoalR.sx} y1={farGoalR.sy} x2={farGoalR.sx} y2={farGoalR.sy - 28 * farGoalScale} />
+        <line
+          x1={farGoalL.sx}
+          y1={farGoalL.sy - 28 * farGoalScale}
+          x2={farGoalR.sx}
+          y2={farGoalR.sy - 28 * farGoalScale}
+        />
+      </g>
+
+      {/* Near goal frame (foreshortened, diagonal posts toward camera) */}
+      <g stroke="rgba(255,255,255,0.6)" fill="none" strokeWidth={2.2}>
+        <line x1={nearGoalL.sx} y1={nearGoalL.sy} x2={nearGoalL.sx - 32} y2={nearGoalL.sy - 70} />
+        <line x1={nearGoalR.sx} y1={nearGoalR.sy} x2={nearGoalR.sx + 32} y2={nearGoalR.sy - 70} />
+        <line x1={nearGoalL.sx - 32} y1={nearGoalL.sy - 70} x2={nearGoalR.sx + 32} y2={nearGoalR.sy - 70} />
+      </g>
+
+      {/* Players (depth-sorted) */}
+      {allCards.map(({ p, isHome }) => (
+        <InclinedCard
+          key={p.playerId}
+          p={p}
+          isHome={isHome}
+          isOnBall={p.playerId === onBallId}
+          onClick={onPlayerClick}
+        />
+      ))}
+
+      {/* Ball */}
+      <IVBall bx={ballX} by={ballY} />
+    </svg>
+  );
+}
+
 // ── Aerial / Broadcast field ─────────────────────────────────────────────────
 function AerialField({
   homePlayers,
@@ -623,7 +1012,7 @@ function AerialField({
 
 // ── Camera mode labels ───────────────────────────────────────────────────────
 const CAMERA_LABELS: Record<FieldCameraMode, string> = {
-  aerial: 'DRONE',
+  aerial: 'TÁTICA',
   broadcast: 'TV',
   firstperson: '1ª PESSOA',
 };
@@ -674,6 +1063,11 @@ export const FieldView = memo(function FieldView({
           transformOrigin: '50% 45%',
         }
       : undefined;
+
+  const aspectRatio =
+    cameraMode === 'aerial'
+      ? `${IV_VW}/${IV_VH}`
+      : `${VW}/${VH}`;
 
   return (
     <div
@@ -749,13 +1143,22 @@ export const FieldView = memo(function FieldView({
       <div
         className="relative w-full"
         style={{
-          aspectRatio: `${VW}/${VH}`,
+          aspectRatio,
           background: 'radial-gradient(ellipse 80% 50% at 50% 40%, #131e14 0%, #090d09 55%, #050805 100%)',
           ...broadcastStyle,
         }}
       >
         {cameraMode === 'firstperson' ? (
           <FirstPersonField
+            homePlayers={homePlayers}
+            awayPlayers={awayPlayers}
+            ballX={ballX}
+            ballY={ballY}
+            onBallId={onBallPlayerId}
+            onPlayerClick={onPlayerClick}
+          />
+        ) : cameraMode === 'aerial' ? (
+          <InclinedField
             homePlayers={homePlayers}
             awayPlayers={awayPlayers}
             ballX={ballX}
