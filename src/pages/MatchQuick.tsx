@@ -50,7 +50,6 @@ import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
 import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
 import { QuickMatchSummary } from '@/components/matchquick/QuickMatchSummary';
 import { QuickInteractiveMomentOverlay } from '@/components/matchquick/QuickInteractiveMomentOverlay';
-import { DecisionMomentsDebugDock } from '@/components/match/decisions';
 import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
 import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
@@ -3825,11 +3824,6 @@ export function MatchQuick() {
 
       {/* Sprint L3 — Set-piece interativo (escanteio/falta) */}
       <SetPieceModal />
-
-      {/* Decision moments debug dock — ?decisions=1 */}
-      <DecisionMomentsDebugDock
-        enabled={typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('decisions') === '1'}
-      />
 
       {/* ─── Sprint 1: Overlay de Momento Interativo ─────────────────────── */}
       {live?.activeInteractiveMoment && (
