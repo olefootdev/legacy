@@ -82,6 +82,15 @@ const ENGINE_EVENT_MAP: Partial<Record<LegacyEventKind, string>> = {
   rebound:  'rebound', // rebote após defesa
 };
 
+// ── Camera targets (T1 leve) ──────────────────────────────────────────────────
+// Tier 1: zoom sutil 1.2× sobre a zona da ação. Voice bar permanece.
+// Coordenadas em % do container do campo (origin do transform).
+type CameraTarget = { x: number; y: number; zoom: number };
+const T1_CAMERA_TARGETS: Record<string, CameraTarget> = {
+  gk:    { x: 50, y: 86, zoom: 1.2 },  // saída do goleiro home (parte de baixo)
+  gegen: { x: 50, y: 48, zoom: 1.2 },  // gegenpress no meio-campo
+};
+
 // ── Painel de voz — estado idle ───────────────────────────────────────────────
 // Labels curtos para o grid de comandos de voz
 const VOICE_LABEL: Record<string, string> = {
@@ -171,6 +180,7 @@ export function FieldViewPreview() {
   const [activeMoment, setActiveMoment] = useState<MomentDef | null>(null);
   const [attackerPick, setAttackerPick] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<'intercept' | 'progress' | null>(null);
+  const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
   const momentBusyRef = useRef(false);
 
   const startMoment = useCallback((m: MomentDef) => {
@@ -178,6 +188,7 @@ export function FieldViewPreview() {
     momentBusyRef.current = true;
     setAttackerPick(null); setOutcome(null); setActiveMoment(m);
     setCamera('aerial');
+    setCameraTarget(T1_CAMERA_TARGETS[m.id] ?? null);
     if (m.highlight) setHighlightId(m.highlight);
     if (m.defensiveAction) setDefensiveAction(true);
   }, []);
@@ -201,6 +212,7 @@ export function FieldViewPreview() {
     window.setTimeout(() => {
       setActiveMoment(null); setAttackerPick(null); setOutcome(null);
       setHighlightId(null); setDefensiveAction(false);
+      setCameraTarget(null);
       momentBusyRef.current = false;
     }, 2200);
   }, [activeMoment, attackerPick]);
@@ -234,8 +246,15 @@ export function FieldViewPreview() {
         }
       `}</style>
 
-      {/* ── Campo — flex-1, push para baixo ── */}
-      <div className="flex-1 min-h-0 flex flex-col justify-end overflow-hidden">
+      {/* ── Campo — flex-1, push para baixo, com zoom T1 ── */}
+      <div
+        className="flex-1 min-h-0 flex flex-col justify-end overflow-hidden"
+        style={{
+          transformOrigin: cameraTarget ? `${cameraTarget.x}% ${cameraTarget.y}%` : '50% 50%',
+          transform: cameraTarget ? `scale(${cameraTarget.zoom})` : 'scale(1)',
+          transition: 'transform 600ms cubic-bezier(0.34, 1.2, 0.64, 1), transform-origin 600ms cubic-bezier(0.34, 1.2, 0.64, 1)',
+        }}
+      >
         <FieldView
           homePlayers={engine.homePlayers}
           awayPlayers={engine.awayPlayers}
