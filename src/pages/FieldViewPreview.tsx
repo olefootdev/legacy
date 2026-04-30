@@ -209,109 +209,120 @@ export function FieldViewPreview() {
   const Attacker = activeMoment?.Attacker;
   const Defender = activeMoment?.Defender;
 
+  const showDecision = !!activeMoment && !outcome;
+  const showAttacker = showDecision && !!Attacker && !attackerPick;
+  const showDefender = showDecision && !!Defender && !!attackerPick;
+
   return (
-    <div className="fixed inset-0 z-[200] bg-[#050505] flex flex-col" style={{ touchAction: 'none' }}>
+    <div className="fixed inset-0 z-[200] bg-[#050505]" style={{ touchAction: 'none' }}>
+      <style>{`
+        @keyframes panelIn {
+          from { opacity: 0; transform: translateY(-48px) scaleY(0.92); }
+          to   { opacity: 1; transform: translateY(0)    scaleY(1); }
+        }
+        @keyframes vbar {
+          0%, 100% { transform: scaleY(0.3); opacity: 0.2; }
+          50%       { transform: scaleY(1);   opacity: 0.6; }
+        }
+        @keyframes outcomeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* ── Campo — limpo, sem overlays de decisão ── */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col justify-end">
-        <div className="relative w-full">
-          <FieldView
-            homePlayers={engine.homePlayers}
-            awayPlayers={engine.awayPlayers}
-            ballX={engine.ballX}
-            ballY={engine.ballY}
-            onBallPlayerId={engine.onBallPlayerId}
-            cameraMode={camera}
-            homeShort="OLE"
-            awayShort="ADV"
-            homeScore={engine.homeScore}
-            awayScore={engine.awayScore}
-            matchMinute={engine.minute}
-            showCameraSwitch={false}
-            highlightPlayerId={highlightId}
-            defensiveAction={defensiveAction}
-            onPlayerClick={(p) => { setHighlightId(p.playerId); window.setTimeout(() => setHighlightId(null), 2500); }}
-            className="w-full"
-          />
-
-          {/* Camera toggle — canto superior direito, discreto */}
-          <div className="absolute top-2 right-2 flex gap-1 z-20">
-            {(['aerial', 'broadcast'] as FieldCameraMode[]).map((m) => (
-              <button key={m} type="button" onClick={() => setCamera(m)}
-                className="font-display uppercase"
-                style={{ background: camera === m ? '#FDE100' : 'rgba(0,0,0,0.7)', color: camera === m ? '#000' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 9, letterSpacing: '0.16em', padding: '4px 8px', borderRadius: 3 }}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-
-          {/* Flash de resultado — breve, sobre o campo, some em 2.2s */}
-          {activeMoment && outcome && (
-            <div className="absolute inset-x-0 z-[300]" style={{ bottom: 12 }}>
-              <div
-                className="mx-auto text-center font-display uppercase"
-                style={{
-                  width: 'fit-content',
-                  background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
-                  color: '#000', padding: '10px 24px', fontWeight: 900,
-                  letterSpacing: '0.32em', fontSize: 14,
-                  border: '2px solid #000', borderRadius: 4,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.7)',
-                }}
-              >
-                {outcome === 'intercept' ? 'Interceptado!' : 'Saiu jogando ✓'}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* ── Campo — ocupa tudo, push para baixo ── */}
+      <div className="h-full flex flex-col justify-end">
+        <FieldView
+          homePlayers={engine.homePlayers}
+          awayPlayers={engine.awayPlayers}
+          ballX={engine.ballX}
+          ballY={engine.ballY}
+          onBallPlayerId={engine.onBallPlayerId}
+          cameraMode={camera}
+          homeShort="OLE"
+          awayShort="ADV"
+          homeScore={engine.homeScore}
+          awayScore={engine.awayScore}
+          matchMinute={engine.minute}
+          showCameraSwitch={false}
+          highlightPlayerId={highlightId}
+          defensiveAction={defensiveAction}
+          onPlayerClick={(p) => { setHighlightId(p.playerId); window.setTimeout(() => setHighlightId(null), 2500); }}
+          className="w-full"
+        />
       </div>
 
-      {/* ── Painel inferior — decisões ou voz ── */}
-      <div
-        style={{
-          background: '#0a0a0a',
-          borderTop: '1px solid rgba(253,225,0,0.18)',
-          flexShrink: 0,
-        }}
-      >
-        <InlineDecisionCtx.Provider value={true}>
-          {activeMoment && Attacker && !attackerPick && !outcome && (
-            <Attacker
-              onChoose={handleAttackerChoice}
-              onTimeout={() => handleAttackerChoice(activeMoment.fa)}
-            />
-          )}
-          {activeMoment && Defender && attackerPick && !outcome && (
-            <Defender
-              onChoose={handleDefenderChoice}
-              onTimeout={() => handleDefenderChoice(activeMoment.fd)}
-            />
-          )}
-        </InlineDecisionCtx.Provider>
+      {/* Camera toggle — canto superior direito do campo, discreto */}
+      <div className="absolute flex gap-1 z-20" style={{ top: 56, right: 8 }}>
+        {(['aerial', 'broadcast'] as FieldCameraMode[]).map((m) => (
+          <button key={m} type="button" onClick={() => setCamera(m)}
+            className="font-display uppercase"
+            style={{ background: camera === m ? '#FDE100' : 'rgba(0,0,0,0.7)', color: camera === m ? '#000' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 9, letterSpacing: '0.16em', padding: '4px 8px', borderRadius: 3 }}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
 
-        {/* Idle: UI de voz */}
-        {!activeMoment && (
+      {/* ── Card de decisão — overlay fixo, desliza de cima pra baixo ── */}
+      {showDecision && (
+        <div
+          key={activeMoment.id + (attackerPick ?? '')}
+          className="fixed bottom-0 left-0 right-0 z-[400]"
+          style={{ animation: 'panelIn 320ms cubic-bezier(0.34,1.4,0.64,1) both' }}
+        >
+          <InlineDecisionCtx.Provider value={true}>
+            {showAttacker && (
+              <Attacker
+                onChoose={handleAttackerChoice}
+                onTimeout={() => handleAttackerChoice(activeMoment.fa)}
+              />
+            )}
+            {showDefender && (
+              <Defender
+                onChoose={handleDefenderChoice}
+                onTimeout={() => handleDefenderChoice(activeMoment.fd)}
+              />
+            )}
+          </InlineDecisionCtx.Provider>
+        </div>
+      )}
+
+      {/* ── Resultado — flash sobre o campo ── */}
+      {outcome && (
+        <div
+          className="fixed left-0 right-0 flex justify-center z-[500]"
+          style={{ bottom: 80, animation: 'outcomeIn 200ms ease both' }}
+        >
+          <div
+            className="font-display uppercase"
+            style={{
+              background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
+              color: '#000', padding: '8px 28px', fontWeight: 900,
+              letterSpacing: '0.36em', fontSize: 13,
+              border: '2px solid rgba(0,0,0,0.8)',
+              boxShadow: '0 4px 32px rgba(0,0,0,0.8)',
+            }}
+          >
+            {outcome === 'intercept' ? 'Interceptado' : 'Saiu jogando ✓'}
+          </div>
+        </div>
+      )}
+
+      {/* ── Voice strip — só no idle, muito compacta ── */}
+      {!activeMoment && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-[300]"
+          style={{ background: 'rgba(10,10,10,0.92)', borderTop: '1px solid rgba(253,225,0,0.1)' }}
+        >
           <VoiceIdlePanel
             onTrigger={(id) => {
               const m = MOMENTS.find((x) => x.id === id);
               if (m) startMoment(m);
             }}
           />
-        )}
-
-        {/* Resultado: feedback no painel enquanto flash some */}
-        {activeMoment && outcome && (
-          <div className="flex items-center justify-center py-4">
-            <span
-              className="font-display uppercase"
-              style={{ fontSize: 11, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.35)' }}
-            >
-              {activeMoment.label}
-            </span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -195,19 +195,85 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
     return () => window.clearInterval(id);
   }, [timeoutMs, onTimeout]);
 
-  const wrapper = inline
-    ? { className: 'w-full pointer-events-auto', style: {} }
-    : { className: 'absolute left-1/2 -translate-x-1/2 z-[300] pointer-events-auto', style: { top: '6%', width: 'min(92%, 480px)' } };
+  // ── Inline (painel) — compacto, horizontal, editorial ──────────────────────
+  if (inline) {
+    return (
+      <div style={{ width: '100%', overflow: 'hidden', background: NEON }}>
+        {/* Timer bar — topo */}
+        <div style={{ background: 'rgba(0,0,0,0.15)', height: 3 }}>
+          <div style={{ background: '#000', width: `${progress * 100}%`, height: '100%', transition: 'width 60ms linear' }} />
+        </div>
 
+        {/* Choices row */}
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          {choices.map((c, idx) => {
+            const color = TONE_COLORS[c.tone ?? 'safe'];
+            const isYellow = (c.tone ?? 'safe') === 'safe';
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onChoose(c.id)}
+                className="flex items-center justify-center gap-2 transition-all active:scale-95"
+                style={{
+                  flex: 1,
+                  height: 52,
+                  background: '#000',
+                  color: isYellow ? NEON : color,
+                  border: 'none',
+                  borderLeft: idx > 0 ? `1px solid rgba(253,225,0,0.15)` : 'none',
+                  cursor: 'pointer',
+                  padding: '0 8px',
+                }}
+              >
+                <span style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isYellow ? NEON : color, flexShrink: 0 }}>
+                  {c.arrow ? <Arrow kind={c.arrow} /> : c.icon}
+                </span>
+                {c.label && (
+                  <span style={{
+                    fontFamily: "'Oswald', sans-serif", fontWeight: 800,
+                    letterSpacing: '0.18em', fontSize: 11, textTransform: 'uppercase',
+                  }}>
+                    {c.label}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer — título + timer */}
+        <div
+          className="flex items-center justify-between"
+          style={{ padding: '3px 10px 4px', background: NEON }}
+        >
+          <span style={{
+            fontFamily: "'Oswald', sans-serif", fontWeight: 800,
+            letterSpacing: '0.32em', fontSize: 8, textTransform: 'uppercase', color: '#000',
+          }}>
+            {title}
+          </span>
+          <span style={{
+            fontFamily: "'Oswald', sans-serif", fontWeight: 700,
+            fontSize: 8, letterSpacing: '0.2em', color: 'rgba(0,0,0,0.55)',
+          }}>
+            {Math.ceil((timeoutMs * progress) / 1000)}S
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Overlay (campo) — original ───────────────────────────────────────────────
   return (
-    <div className={wrapper.className} style={wrapper.style}>
+    <div className="absolute left-1/2 -translate-x-1/2 z-[300] pointer-events-auto" style={{ top: '6%', width: 'min(92%, 480px)' }}>
       <div
         style={{
           background: NEON,
           color: '#000',
           border: '2px solid #000',
-          boxShadow: inline ? 'none' : '0 8px 24px rgba(0,0,0,0.6), 0 0 0 4px rgba(253,225,0,0.18)',
-          borderRadius: inline ? 0 : 6,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 0 4px rgba(253,225,0,0.18)',
+          borderRadius: 6,
           overflow: 'hidden',
         }}
       >
