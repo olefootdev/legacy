@@ -11,8 +11,8 @@
 import { useCallback } from 'react';
 import { DecisionPromptCard } from './DecisionPromptCard';
 
-export type GkDistributionChoice = 'short' | 'medium' | 'long';
-export type DefensivePressure = 'high' | 'mid' | 'low';
+export type GkDistributionChoice = 'left' | 'long' | 'right';
+export type DefensivePressure = 'left' | 'deep' | 'right';
 
 export interface GoalkeeperDistributionProps {
   /** Side that the prompt is for: attacker chooses distribution. */
@@ -36,9 +36,9 @@ export function GoalkeeperDistribution({
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'short', arrow: 'short-up', label: 'Curto', tone: 'safe' },
-        { id: 'medium', arrow: 'long-up', label: 'Médio', tone: 'mid' },
-        { id: 'long', arrow: 'fan-right', label: 'Lança', tone: 'risk' },
+        { id: 'left', arrow: 'long-left', label: 'Lat Esq', tone: 'safe' },
+        { id: 'long', arrow: 'long-up', label: 'Chutão', tone: 'risk' },
+        { id: 'right', arrow: 'long-right', label: 'Lat Dir', tone: 'safe' },
       ]}
     />
   );
@@ -64,9 +64,9 @@ export function GoalkeeperPressure({
       onChoose={handle}
       onTimeout={onTimeout}
       choices={[
-        { id: 'high', arrow: 'long-down', label: 'Alta', tone: 'risk' },
-        { id: 'mid', arrow: 'short-down', label: 'Meia', tone: 'mid' },
-        { id: 'low', arrow: 'tap-back', label: 'Baixa', tone: 'safe' },
+        { id: 'left', arrow: 'long-right', label: 'Esq', tone: 'safe' },
+        { id: 'deep', arrow: 'tap-back', label: 'Recua', tone: 'risk' },
+        { id: 'right', arrow: 'long-left', label: 'Dir', tone: 'safe' },
       ]}
     />
   );
@@ -86,9 +86,9 @@ export function resolveGoalkeeperDistribution(
   defender: DefensivePressure,
 ): 'intercept' | 'progress' {
   const map: Record<GkDistributionChoice, DefensivePressure> = {
-    short: 'high',
-    medium: 'mid',
-    long: 'low',
+    left: 'left',
+    long: 'deep',
+    right: 'right',
   };
   return map[attacker] === defender ? 'intercept' : 'progress';
 }

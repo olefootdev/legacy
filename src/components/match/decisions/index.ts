@@ -30,3 +30,24 @@ export {
   resolveWingerOneOnOne,
 } from './WingerOneOnOne';
 export type { WingerOneOnOneChoice } from './WingerOneOnOne';
+
+export { TackleAttacker, TackleDefender, resolveTackle } from './Tackle';
+export type { TackleAttackerChoice, TackleDefenderChoice } from './Tackle';
+
+export { LastLineAttacker, LastLineDefender, resolveLastLine } from './LastLine';
+export type { LastLineAttChoice, LastLineDefChoice } from './LastLine';
+
+export { ReboundAttacker, ReboundDefender, resolveRebound } from './Rebound';
+export type { ReboundAttChoice, ReboundDefChoice } from './Rebound';
+
+export { GegenpressAttacker, GegenpressDefender, resolveGegenpress } from './Gegenpress';
+export type { GegenpressAttChoice, GegenpressDefChoice } from './Gegenpress';
+
+export { CounterAttacker, CounterDefender, resolveCounter } from './CounterAttack';
+export type { CounterAttChoice, CounterDefChoice } from './CounterAttack';
+
+export { OneOnOneAttacker, OneOnOneKeeper, resolveOneOnOne } from './OneOnOneKeeper';
+export type { OneOnOneAttChoice, OneOnOneGkChoice } from './OneOnOneKeeper';
+
+export { HeaderAttacker, HeaderDefender, resolveHeader } from './Header';
+export type { HeaderAttChoice, HeaderDefChoice } from './Header';
