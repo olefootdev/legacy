@@ -112,12 +112,15 @@ export function useLegacyMatchEngine(
   homePlayers: PitchPlayerState[],
   onEvent: (kind: LegacyEventKind) => void,
   frozen = false,
+  timeScale = 1,
 ) {
   const loopRef = useRef<TacticalSimLoop | null>(null);
   const homePlayersRef = useRef(homePlayers);
   homePlayersRef.current = homePlayers;
   const frozenRef = useRef(frozen);
   frozenRef.current = frozen;
+  const timeScaleRef = useRef(timeScale);
+  timeScaleRef.current = timeScale;
 
   const [state, setState] = useState<LegacyMatchState>({
     minute: 0,
@@ -159,7 +162,8 @@ export function useLegacyMatchEngine(
     let lastRenderMs = 0;
 
     const run = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
+      const rawDt = Math.min(0.05, (now - last) / 1000);
+      const dt = rawDt * timeScaleRef.current;
       last = now;
 
       // Freeze frame — pula simulação e render mas mantém a rAF rodando

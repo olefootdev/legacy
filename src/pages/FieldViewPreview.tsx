@@ -94,12 +94,50 @@ const T2_CAMERA_TARGETS: Record<string, CameraTarget> = {
   corner:   { x: 50, y: 18, zoom: 1.6 }, // canto adversário (área superior)
   freekick: { x: 50, y: 30, zoom: 1.6 }, // zona de meia-lua adversária
   '1v1':    { x: 78, y: 32, zoom: 1.6 }, // ponta direita ataque
+  '1v1gk':  { x: 50, y: 14, zoom: 1.7 }, // cara a cara — baliza adversária
+  header:   { x: 50, y: 18, zoom: 1.6 }, // cabeçada na pequena área
+  rebound:  { x: 50, y: 80, zoom: 1.5 }, // rebote na nossa área
 };
 const MOMENT_CAMERA_TARGETS: Record<string, CameraTarget> = {
   ...T1_CAMERA_TARGETS,
   ...T2_CAMERA_TARGETS,
 };
 const T2_MOMENT_IDS = new Set(Object.keys(T2_CAMERA_TARGETS));
+
+// ── Color grade por momento ───────────────────────────────────────────────────
+// Cada T2 ganha um filtro CSS distinto, vendendo emoção pelo grade da cena.
+const MOMENT_GRADE: Record<string, string> = {
+  corner:   'saturate(1.35) contrast(1.12) hue-rotate(-8deg) brightness(1.05)', // dourado quente
+  freekick: 'saturate(1.6)  contrast(1.25) hue-rotate(-20deg) brightness(0.95)', // vermelho tenso
+  '1v1':    'saturate(0.85) contrast(1.18) hue-rotate(15deg)  brightness(0.92)', // azul-frio cinematográfico
+  '1v1gk':  'saturate(0.7)  contrast(1.3)  hue-rotate(20deg)  brightness(0.88)', // azul-frio máximo (decisivo)
+  header:   'saturate(1.25) contrast(1.18) hue-rotate(-5deg)  brightness(1.02)', // dourado quente
+  rebound:  'saturate(1.45) contrast(1.22) hue-rotate(-15deg) brightness(0.98)', // âmbar de tensão
+};
+
+// ── Trajetórias fantasmas ─────────────────────────────────────────────────────
+// Setas curvadas (SVG path) previsualizando cada escolha do atacante.
+// Coordenadas em % do viewport — baseadas no MOMENT_CAMERA_TARGETS.
+type Ghost = { id: string; label: string; from: { x: number; y: number }; to: { x: number; y: number }; color: string };
+const MOMENT_GHOSTS: Record<string, Ghost[]> = {
+  corner: [
+    { id: 'short', label: 'CURTO', from: { x: 14, y: 14 }, to: { x: 26, y: 22 }, color: '#FDE100' },
+    { id: 'near',  label: '1° PAU', from: { x: 14, y: 14 }, to: { x: 42, y: 20 }, color: '#FDE100' },
+    { id: 'far',   label: '2° PAU', from: { x: 14, y: 14 }, to: { x: 60, y: 24 }, color: '#FDE100' },
+  ],
+  freekick: [
+    { id: 'cross',  label: 'CRUZAMENTO', from: { x: 50, y: 36 }, to: { x: 50, y: 22 }, color: '#FDE100' },
+    { id: 'shoot',  label: 'CHUTE',       from: { x: 50, y: 36 }, to: { x: 50, y: 12 }, color: '#FDE100' },
+    { id: 'short',  label: 'CURTA',       from: { x: 50, y: 36 }, to: { x: 36, y: 38 }, color: '#FDE100' },
+  ],
+};
+
+// ── Stat-chave do closeup ─────────────────────────────────────────────────────
+const MOMENT_KEY_STAT: Record<string, { label: string; value: number }> = {
+  '1v1gk':  { label: 'Finalização', value: 88 },
+  header:   { label: 'Cabeceio',    value: 84 },
+  rebound:  { label: 'Reflexo',     value: 82 },
+};
 
 // ── Painel de voz — estado idle ───────────────────────────────────────────────
 // Labels curtos para o grid de comandos de voz
@@ -192,6 +230,7 @@ export function FieldViewPreview() {
   const [outcome, setOutcome] = useState<'intercept' | 'progress' | 'goal' | null>(null);
   const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
   const [frozen, setFrozen] = useState(false);
+  const [timeScale, setTimeScale] = useState(1);
   const momentBusyRef = useRef(false);
 
   const startMoment = useCallback((m: MomentDef) => {
@@ -200,7 +239,16 @@ export function FieldViewPreview() {
     setAttackerPick(null); setOutcome(null); setActiveMoment(m);
     setCamera('aerial');
     setCameraTarget(MOMENT_CAMERA_TARGETS[m.id] ?? null);
-    setFrozen(T2_MOMENT_IDS.has(m.id));
+
+    if (T2_MOMENT_IDS.has(m.id)) {
+      // Bullet-time entry: 280ms a 0.3× → freeze. Vende a câmera "entrando" na cena.
+      setTimeScale(0.3);
+      window.setTimeout(() => {
+        setFrozen(true);
+        setTimeScale(1);
+      }, 280);
+    }
+
     if (m.highlight) setHighlightId(m.highlight);
     if (m.defensiveAction) setDefensiveAction(true);
   }, []);
@@ -213,7 +261,7 @@ export function FieldViewPreview() {
     if (m) startMoment(m);
   }, [startMoment]);
 
-  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen);
+  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale);
 
   // ── Ambient camera — narrativa emocional pela posse e profundidade ────────
   // Engine x: 0 = nosso gol, 100 = gol adversário.
@@ -269,7 +317,7 @@ export function FieldViewPreview() {
     const cleanup = () => {
       setActiveMoment(null); setAttackerPick(null); setOutcome(null);
       setHighlightId(null); setDefensiveAction(false);
-      setCameraTarget(null); setFrozen(false);
+      setCameraTarget(null); setFrozen(false); setTimeScale(1);
       momentBusyRef.current = false;
     };
 
@@ -331,6 +379,14 @@ export function FieldViewPreview() {
           from { opacity: 0; transform: translateY(-8px); letter-spacing: 0.5em; }
           to   { opacity: 1; transform: translateY(0);    letter-spacing: 0.32em; }
         }
+        @keyframes ghostDraw {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes closeupIn {
+          from { opacity: 0; transform: translateX(20px) scale(0.9); }
+          to   { opacity: 1; transform: translateX(0)    scale(1); }
+        }
       `}</style>
 
       {/* ── Campo — flex-1, push para baixo, com zoom T1/T2 ── */}
@@ -351,10 +407,14 @@ export function FieldViewPreview() {
           transform: frozen
             ? `scale(${(cameraTarget?.zoom ?? 1) * 1.15}) rotateX(22deg)`
             : cameraTarget ? `scale(${cameraTarget.zoom})` : 'scale(1)',
+          // Color grade por momento — vende emoção pelo filtro
+          filter: frozen && activeMoment && MOMENT_GRADE[activeMoment.id]
+            ? MOMENT_GRADE[activeMoment.id]
+            : 'none',
           // Abertura snappy (cubic-bezier overshooting), retorno suave (linear-ease).
           transition: cameraTarget || frozen
-            ? 'transform 480ms cubic-bezier(0.22, 1.4, 0.36, 1), transform-origin 480ms cubic-bezier(0.22, 1.4, 0.36, 1)'
-            : 'transform 720ms cubic-bezier(0.4, 0, 0.2, 1), transform-origin 720ms cubic-bezier(0.4, 0, 0.2, 1)',
+            ? 'transform 480ms cubic-bezier(0.22, 1.4, 0.36, 1), transform-origin 480ms cubic-bezier(0.22, 1.4, 0.36, 1), filter 600ms ease-out'
+            : 'transform 720ms cubic-bezier(0.4, 0, 0.2, 1), transform-origin 720ms cubic-bezier(0.4, 0, 0.2, 1), filter 400ms ease-out',
         }}
       >
         <FieldView
@@ -405,6 +465,112 @@ export function FieldViewPreview() {
           </span>
         </div>
       )}
+
+      {/* ── Trajetórias fantasmas — setas curvadas previewando escolhas ── */}
+      {frozen && activeMoment && !attackerPick && MOMENT_GHOSTS[activeMoment.id] && (
+        <svg
+          className="absolute inset-0 z-[180] pointer-events-none"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          style={{ animation: 'vignetteIn 480ms ease-out 200ms both' }}
+        >
+          <defs>
+            <marker id="ghost-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#FDE100" opacity="0.85" />
+            </marker>
+          </defs>
+          {MOMENT_GHOSTS[activeMoment.id].map((g, i) => {
+            // Curva de Bézier quadrática: ponto de controle entre from/to com offset perpendicular
+            const mx = (g.from.x + g.to.x) / 2;
+            const my = (g.from.y + g.to.y) / 2 - 8 + i * 2;
+            return (
+              <g key={g.id}>
+                <path
+                  d={`M ${g.from.x} ${g.from.y} Q ${mx} ${my} ${g.to.x} ${g.to.y}`}
+                  fill="none"
+                  stroke={g.color}
+                  strokeWidth="0.4"
+                  strokeDasharray="1.2 0.8"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                  markerEnd="url(#ghost-arrow)"
+                  style={{ animation: `ghostDraw 600ms ease-out ${300 + i * 80}ms both` }}
+                />
+                <text
+                  x={g.to.x}
+                  y={g.to.y - 1.5}
+                  fill={g.color}
+                  fontSize="1.6"
+                  fontFamily="var(--font-display)"
+                  fontWeight="800"
+                  letterSpacing="0.18em"
+                  textAnchor="middle"
+                  opacity="0.85"
+                  style={{ animation: `ghostDraw 400ms ease-out ${500 + i * 80}ms both` }}
+                >
+                  {g.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      )}
+
+      {/* ── Closeup do jogador-chave — mini-card pre-shot ── */}
+      {frozen && activeMoment && MOMENT_KEY_STAT[activeMoment.id] && (() => {
+        // Closeup do atacante (finalizador) — não do goleiro/zagueiro adversário
+        const player = engine.homePlayers.find((p) => p.playerId === 'ata1')
+          ?? engine.homePlayers.find((p) => p.role === 'attack');
+        if (!player) return null;
+        const stat = MOMENT_KEY_STAT[activeMoment.id];
+        return (
+          <div
+            className="absolute z-[200] pointer-events-none"
+            style={{
+              top: 64, right: 14,
+              animation: 'closeupIn 440ms cubic-bezier(0.22, 1.4, 0.36, 1) 180ms both',
+            }}
+          >
+            <div style={{
+              background: 'rgba(13,13,13,0.92)',
+              border: '1px solid #FDE100',
+              padding: '8px 10px',
+              minWidth: 96,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+            }}>
+              <div style={{
+                fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.32em',
+                color: '#FDE100', textTransform: 'uppercase', fontWeight: 800, marginBottom: 4,
+              }}>
+                {player.pos} · {player.num}
+              </div>
+              <div style={{
+                fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+                fontSize: 18, color: '#fff', lineHeight: 1, marginBottom: 6,
+              }}>
+                {player.name}
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', gap: 6,
+                borderTop: '1px solid rgba(253,225,0,0.2)', paddingTop: 6,
+              }}>
+                <span style={{
+                  fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.22em',
+                  color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', fontWeight: 800,
+                }}>
+                  {stat.label}
+                </span>
+                <span style={{
+                  fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+                  fontSize: 22, color: '#FDE100', fontWeight: 700, marginLeft: 'auto',
+                }}>
+                  {stat.value}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Camera toggle — canto superior direito, sobre o campo */}
       <div className="absolute flex gap-1 z-20" style={{ top: 56, right: 8 }}>
