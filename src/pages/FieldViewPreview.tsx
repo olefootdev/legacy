@@ -2,7 +2,7 @@
  * Legacy Mode — /dev/field-view.
  * Campo ao vivo limpo + cards de decisão no painel inferior + voz.
  */
-import { useState, useCallback, useRef, type ComponentType } from 'react';
+import { useState, useCallback, useEffect, useRef, type ComponentType } from 'react';
 import { Mic } from 'lucide-react';
 import { FieldView, type FieldCameraMode } from '@/components/match/FieldView';
 import type { PitchPlayerState } from '@/engine/types';
@@ -215,18 +215,57 @@ export function FieldViewPreview() {
 
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen);
 
+  // ── Ambient camera — segue a bola quando OLE está atacando ────────────────
+  // Engine x: 0 = nosso gol, 100 = gol adversário. Quando ballX > 55 e
+  // possession === 'home', amplia gradualmente até 1.12x conforme aprofunda.
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
+
+  useEffect(() => {
+    if (activeMoment) return; // T1/T2 assumem o controle
+    const tick = () => {
+      const e = engineRef.current;
+      if (e.possession !== 'home' || e.ballX < 55) {
+        setCameraTarget(null);
+        return;
+      }
+      const depth = Math.min(1, (e.ballX - 55) / 40);
+      const zoom = 1.0 + depth * 0.12;
+      // Engine x → screen y (calibrado vs T1 targets: gk@x=5→y=86, gegen@x=50→y=48).
+      const screenY = Math.max(8, 90 - 0.85 * e.ballX);
+      setCameraTarget({ x: 50, y: screenY, zoom });
+    };
+    tick();
+    const id = window.setInterval(tick, 350);
+    return () => window.clearInterval(id);
+  }, [activeMoment]);
+
   const handleAttackerChoice = useCallback((c: string) => setAttackerPick(c), []);
 
   const handleDefenderChoice = useCallback((c: string) => {
     if (!activeMoment || !attackerPick) return;
     const r = activeMoment.resolve(attackerPick, c);
-    setOutcome(r);
-    window.setTimeout(() => {
+
+    const cleanup = () => {
       setActiveMoment(null); setAttackerPick(null); setOutcome(null);
       setHighlightId(null); setDefensiveAction(false);
       setCameraTarget(null); setFrozen(false);
       momentBusyRef.current = false;
-    }, 2200);
+    };
+
+    // Córner: câmera segue a bola — bandeira → área → outcome
+    if (activeMoment.id === 'corner') {
+      setCameraTarget({ x: 14, y: 12, zoom: 2.0 });   // bandeira de córner
+      window.setTimeout(() => {
+        setCameraTarget({ x: 50, y: 22, zoom: 1.7 }); // pequena área (cabeçada)
+      }, 280);
+      window.setTimeout(() => setOutcome(r), 820);
+      window.setTimeout(cleanup, 2700);
+      return;
+    }
+
+    setOutcome(r);
+    window.setTimeout(cleanup, 2200);
   }, [activeMoment, attackerPick]);
 
   const Attacker = activeMoment?.Attacker;
