@@ -103,25 +103,18 @@ function VoiceIdlePanel({ onTrigger }: { onTrigger: (id: string) => void }) {
   return (
     <div
       className="flex items-center gap-2"
-      style={{ height: 44, padding: '0 12px', overflow: 'hidden' }}
+      style={{ height: 48, padding: '0 12px', overflow: 'hidden' }}
     >
-      <style>{`
-        @keyframes vbar {
-          0%, 100% { transform: scaleY(0.3); opacity: 0.2; }
-          50%       { transform: scaleY(1);   opacity: 0.6; }
-        }
-      `}</style>
-
       {/* Mic — quadrado editorial */}
       <div
         className="flex items-center justify-center flex-shrink-0"
-        style={{ width: 24, height: 24, border: '1px solid rgba(253,225,0,0.5)', color: '#FDE100' }}
+        style={{ width: 26, height: 26, border: '1px solid rgba(253,225,0,0.45)', color: '#FDE100' }}
       >
-        <Mic size={11} />
+        <Mic size={12} />
       </div>
 
       {/* Waveform */}
-      <div className="flex items-end gap-px flex-shrink-0" style={{ height: 14 }}>
+      <div className="flex items-end gap-px flex-shrink-0" style={{ height: 16 }}>
         {[0.5, 0.85, 1, 0.7, 0.4].map((base, i) => (
           <span key={i} style={{
             display: 'block', width: 2, height: `${base * 100}%`,
@@ -132,9 +125,9 @@ function VoiceIdlePanel({ onTrigger }: { onTrigger: (id: string) => void }) {
       </div>
 
       {/* Divisor vertical */}
-      <div style={{ width: 1, height: 20, background: 'rgba(253,225,0,0.15)', flexShrink: 0 }} />
+      <div style={{ width: 1, height: 22, background: 'rgba(253,225,0,0.15)', flexShrink: 0 }} />
 
-      {/* Pills — scroll horizontal, sem quebra de linha */}
+      {/* Pills — Agency FB uppercase, scroll horizontal */}
       <div
         className="flex gap-1.5 items-center"
         style={{ overflowX: 'auto', scrollbarWidth: 'none', flex: 1 }}
@@ -149,10 +142,10 @@ function VoiceIdlePanel({ onTrigger }: { onTrigger: (id: string) => void }) {
               background: 'transparent',
               border: '1px solid rgba(253,225,0,0.2)',
               color: 'rgba(253,225,0,0.65)',
-              fontSize: 8,
-              letterSpacing: '0.15em',
-              fontWeight: 700,
-              padding: '3px 8px',
+              fontSize: 10,
+              letterSpacing: '0.22em',
+              fontWeight: 800,
+              padding: '3px 10px',
               borderRadius: 2,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
@@ -262,7 +255,7 @@ export function FieldViewPreview() {
         {(['aerial', 'broadcast'] as FieldCameraMode[]).map((m) => (
           <button key={m} type="button" onClick={() => setCamera(m)}
             className="font-display uppercase"
-            style={{ background: camera === m ? '#FDE100' : 'rgba(0,0,0,0.7)', color: camera === m ? '#000' : 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.12)', fontSize: 9, letterSpacing: '0.16em', padding: '4px 8px', borderRadius: 3 }}
+            style={{ background: camera === m ? '#FDE100' : 'rgba(13,13,13,0.8)', color: camera === m ? '#000' : 'rgba(255,255,255,0.45)', border: `1px solid ${camera === m ? 'transparent' : 'rgba(253,225,0,0.15)'}`, fontSize: 10, letterSpacing: '0.22em', fontWeight: 800, padding: '4px 10px', borderRadius: 2 }}
           >
             {m}
           </button>
@@ -273,19 +266,20 @@ export function FieldViewPreview() {
       {outcome && (
         <div
           className="absolute left-0 right-0 flex justify-center z-[500]"
-          style={{ bottom: showDecision ? 112 : 60, animation: 'outcomeIn 200ms ease both' }}
+          style={{ bottom: showDecision ? 116 : 64, animation: 'outcomeIn 200ms ease both' }}
         >
           <div
             className="font-display uppercase"
             style={{
               background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
-              color: '#000', padding: '7px 24px', fontWeight: 900,
-              letterSpacing: '0.36em', fontSize: 12,
-              border: '2px solid rgba(0,0,0,0.8)',
-              boxShadow: '0 4px 32px rgba(0,0,0,0.8)',
+              color: '#000', padding: '8px 28px', fontWeight: 900,
+              letterSpacing: '0.32em', fontSize: 12,
+              boxShadow: outcome === 'intercept'
+                ? '0 4px 32px rgba(239,68,68,0.45)'
+                : '0 4px 32px rgba(253,225,0,0.45)',
             }}
           >
-            {outcome === 'intercept' ? 'Interceptado' : 'Saiu jogando ✓'}
+            {outcome === 'intercept' ? 'Interceptado' : 'Saiu jogando'}
           </div>
         </div>
       )}

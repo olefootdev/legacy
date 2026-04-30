@@ -195,17 +195,17 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
     return () => window.clearInterval(id);
   }, [timeoutMs, onTimeout]);
 
-  // ── Inline (painel) — dark/gold, mesmo visual do voice bar ─────────────────
+  // ── Inline (painel) — Legacy Tech: Agency FB + Moret italic para números ────
   if (inline) {
     return (
-      <div style={{ width: '100%', overflow: 'hidden', background: 'rgba(8,8,8,0.97)', borderTop: '1px solid rgba(253,225,0,0.18)' }}>
-        {/* Timer bar — topo, gold shrinks */}
+      <div style={{ width: '100%', overflow: 'hidden', background: 'rgba(20,20,20,0.97)', borderTop: '1px solid rgba(253,225,0,0.18)' }}>
+        {/* Timer bar — gold shrinks */}
         <div style={{ background: 'rgba(253,225,0,0.08)', height: 2 }}>
           <div style={{ background: NEON, width: `${progress * 100}%`, height: '100%', transition: 'width 60ms linear' }} />
         </div>
 
         {/* Choices row */}
-        <div style={{ display: 'flex', alignItems: 'stretch', height: 44 }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', height: 48 }}>
           {choices.map((c, idx) => {
             const color = TONE_COLORS[c.tone ?? 'safe'];
             return (
@@ -213,7 +213,7 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
                 key={c.id}
                 type="button"
                 onClick={() => onChoose(c.id)}
-                className="flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                className="flex items-center justify-center gap-2 transition-all active:scale-95"
                 style={{
                   flex: 1,
                   height: '100%',
@@ -222,7 +222,7 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
                   border: 'none',
                   borderLeft: idx > 0 ? `1px solid rgba(253,225,0,0.1)` : 'none',
                   cursor: 'pointer',
-                  padding: '0 6px',
+                  padding: '0 8px',
                 }}
               >
                 <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
@@ -230,8 +230,8 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
                 </span>
                 {c.label && (
                   <span style={{
-                    fontFamily: "'Oswald', sans-serif", fontWeight: 700,
-                    letterSpacing: '0.22em', fontSize: 9, textTransform: 'uppercase', color,
+                    fontFamily: 'var(--font-display)', fontWeight: 800,
+                    letterSpacing: '0.24em', fontSize: 11, textTransform: 'uppercase', color,
                   }}>
                     {c.label}
                   </span>
@@ -241,20 +241,22 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
           })}
         </div>
 
-        {/* Footer — título + timer, igual ao rodapé do voice bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 12px 3px' }}>
+        {/* Footer — Agency eyebrow + Moret italic para o timer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 12px 4px' }}>
           <span style={{
-            fontFamily: "'Oswald', sans-serif", fontWeight: 800,
-            letterSpacing: '0.32em', fontSize: 7, textTransform: 'uppercase',
-            color: 'rgba(253,225,0,0.45)',
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            letterSpacing: '0.32em', fontSize: 10, textTransform: 'uppercase',
+            color: 'rgba(253,225,0,0.5)',
           }}>
             {title}
           </span>
           <span style={{
-            fontFamily: "'Oswald', sans-serif", fontWeight: 700,
-            fontSize: 7, letterSpacing: '0.2em', color: 'rgba(253,225,0,0.25)',
+            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+            fontSize: 13, letterSpacing: '-0.02em',
+            color: 'rgba(253,225,0,0.35)',
+            fontVariantNumeric: 'tabular-nums',
           }}>
-            {Math.ceil((timeoutMs * progress) / 1000)}S
+            {Math.ceil((timeoutMs * progress) / 1000)}s
           </span>
         </div>
       </div>
@@ -275,18 +277,18 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
         }}
       >
         {/* Header */}
-        <div
-          className="flex items-center justify-between px-3 pt-2"
-          style={{
-            fontFamily: "'Oswald', 'Agency FB', sans-serif",
-            fontWeight: 800,
-            letterSpacing: '0.28em',
-            fontSize: 11,
-            textTransform: 'uppercase',
-          }}
-        >
-          <span>{title}</span>
-          <span style={{ opacity: 0.65 }}>
+        <div className="flex items-center justify-between px-3 pt-2">
+          <span style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            letterSpacing: '0.28em', fontSize: 11, textTransform: 'uppercase',
+          }}>
+            {title}
+          </span>
+          <span style={{
+            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+            fontSize: 16, letterSpacing: '-0.02em',
+            fontVariantNumeric: 'tabular-nums', opacity: 0.7,
+          }}>
             {Math.ceil((timeoutMs * progress) / 1000)}s
           </span>
         </div>
@@ -321,9 +323,9 @@ export const DecisionPromptCard = memo(function DecisionPromptCard({
                 {c.label && (
                   <span
                     style={{
-                      fontFamily: "'Oswald', sans-serif",
+                      fontFamily: 'var(--font-display)',
                       fontWeight: 800,
-                      letterSpacing: '0.18em',
+                      letterSpacing: '0.24em',
                       fontSize: 12,
                       textTransform: 'uppercase',
                     }}
