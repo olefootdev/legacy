@@ -333,15 +333,27 @@ export function FieldViewPreview() {
         }
       `}</style>
 
-      {/* ── Campo — flex-1, push para baixo, com zoom T1 ── */}
+      {/* ── Campo — flex-1, push para baixo, com zoom T1/T2 ── */}
+      {/* T2 imersivo: perspectiva de baixo (rotateX) + zoom alto.
+          A câmera "entra" na cena: o campo se inclina como visto do banco de reservas. */}
       <div
         className="flex-1 min-h-0 flex flex-col justify-end overflow-hidden"
         style={{
+          perspective: frozen ? '900px' : 'none',
+          perspectiveOrigin: '50% 100%',
+          transition: 'perspective 480ms ease',
+        }}
+      >
+      <div
+        className="w-full h-full flex flex-col justify-end"
+        style={{
           transformOrigin: cameraTarget ? `${cameraTarget.x}% ${cameraTarget.y}%` : '50% 50%',
-          transform: cameraTarget ? `scale(${cameraTarget.zoom})` : 'scale(1)',
+          transform: frozen
+            ? `scale(${(cameraTarget?.zoom ?? 1) * 1.15}) rotateX(22deg)`
+            : cameraTarget ? `scale(${cameraTarget.zoom})` : 'scale(1)',
           // Abertura snappy (cubic-bezier overshooting), retorno suave (linear-ease).
-          transition: cameraTarget
-            ? 'transform 420ms cubic-bezier(0.22, 1.4, 0.36, 1), transform-origin 420ms cubic-bezier(0.22, 1.4, 0.36, 1)'
+          transition: cameraTarget || frozen
+            ? 'transform 480ms cubic-bezier(0.22, 1.4, 0.36, 1), transform-origin 480ms cubic-bezier(0.22, 1.4, 0.36, 1)'
             : 'transform 720ms cubic-bezier(0.4, 0, 0.2, 1), transform-origin 720ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
@@ -363,6 +375,7 @@ export function FieldViewPreview() {
           onPlayerClick={(p) => { setHighlightId(p.playerId); window.setTimeout(() => setHighlightId(null), 2500); }}
           className="w-full"
         />
+      </div>
       </div>
 
       {/* Vinheta T2 — escurece bordas durante freeze */}
@@ -431,11 +444,19 @@ export function FieldViewPreview() {
         </div>
       )}
 
-      {/* ── Card de decisão — desliza de baixo do campo, acima do voice bar ── */}
+      {/* ── Card de decisão — desliza de baixo do campo, acima do voice bar ──
+           T2 (frozen): card cresce 1.18× — botões de ação maiores, "dentro do estádio" */}
       {showDecision && (
         <div
           key={activeMoment.id + (attackerPick ?? '')}
-          style={{ flexShrink: 0, animation: 'slideFromField 280ms cubic-bezier(0.34,1.56,0.64,1) both' }}
+          style={{
+            flexShrink: 0,
+            transform: frozen ? 'scale(1.18)' : 'scale(1)',
+            transformOrigin: 'bottom center',
+            transition: 'transform 360ms cubic-bezier(0.22, 1.4, 0.36, 1)',
+            animation: 'slideFromField 280ms cubic-bezier(0.34,1.56,0.64,1) both',
+            zIndex: 300,
+          }}
         >
           <InlineDecisionCtx.Provider value={true}>
             {showAttacker && (
