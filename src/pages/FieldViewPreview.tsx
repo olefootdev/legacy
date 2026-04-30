@@ -2,16 +2,29 @@
  * Sandbox do novo campo Legacy Tech — /dev/field-view.
  * Dados mock estáticos: formação 4-3-3 casa vs 4-4-2 visitante.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ComponentType } from 'react';
 import { FieldView, type FieldCameraMode } from '@/components/match/FieldView';
 import type { PitchPlayerState } from '@/engine/types';
 import {
   GoalkeeperDistribution,
   GoalkeeperPressure,
   resolveGoalkeeperDistribution,
-  type GkDistributionChoice,
-  type DefensivePressure,
-} from '@/components/match/decisions/GoalkeeperDistribution';
+  CornerAttacker,
+  CornerDefender,
+  resolveCorner,
+  FreeKickAttacker,
+  FreeKickDefender,
+  resolveFreeKick,
+  AttackerReceivesAttacker,
+  AttackerReceivesDefender,
+  resolveAttackerReceives,
+  WingCrossAttacker,
+  WingCrossDefender,
+  resolveWingCross,
+  WingerOneOnOneAttacker,
+  WingerOneOnOneDefender,
+  resolveWingerOneOnOne,
+} from '@/components/match/decisions';
 
 // ── Mock players ────────────────────────────────────────────────────────────
 function mkPlayer(
@@ -68,45 +81,124 @@ const AWAY_PLAYERS: PitchPlayerState[] = [
   mkPlayer('aata1', 'Bruno M', 9, 'ATA', 'attack', 28, 50, 25),
 ];
 
+// ── Decision moment registry ────────────────────────────────────────────────
+type ChoiceCb = (c: string) => void;
+type PromptComp = ComponentType<{ onChoose: ChoiceCb; onTimeout?: () => void }>;
+
+interface MomentDef {
+  id: string;
+  label: string;
+  Attacker: PromptComp;
+  Defender: PromptComp;
+  resolve: (att: string, def: string) => 'intercept' | 'progress';
+  highlight?: string;
+  defensiveAction?: boolean;
+  fallbackAttacker: string;
+  fallbackDefender: string;
+}
+
+const MOMENTS: MomentDef[] = [
+  {
+    id: 'gk',
+    label: '▶ saída',
+    Attacker: GoalkeeperDistribution as PromptComp,
+    Defender: GoalkeeperPressure as PromptComp,
+    resolve: resolveGoalkeeperDistribution as (a: string, d: string) => 'intercept' | 'progress',
+    highlight: 'gk1',
+    fallbackAttacker: 'short',
+    fallbackDefender: 'low',
+  },
+  {
+    id: 'corner',
+    label: '▶ escanteio',
+    Attacker: CornerAttacker as PromptComp,
+    Defender: CornerDefender as PromptComp,
+    resolve: resolveCorner as (a: string, d: string) => 'intercept' | 'progress',
+    fallbackAttacker: 'near',
+    fallbackDefender: 'near',
+  },
+  {
+    id: 'freekick',
+    label: '▶ falta',
+    Attacker: FreeKickAttacker as PromptComp,
+    Defender: FreeKickDefender as PromptComp,
+    resolve: resolveFreeKick as (a: string, d: string) => 'intercept' | 'progress',
+    fallbackAttacker: 'cross',
+    fallbackDefender: 'cross',
+  },
+  {
+    id: 'recv',
+    label: '▶ recepção',
+    Attacker: AttackerReceivesAttacker as PromptComp,
+    Defender: AttackerReceivesDefender as PromptComp,
+    resolve: resolveAttackerReceives as (a: string, d: string) => 'intercept' | 'progress',
+    highlight: 'ata1',
+    fallbackAttacker: 'hold',
+    fallbackDefender: 'hold',
+  },
+  {
+    id: 'wing',
+    label: '▶ fundo',
+    Attacker: WingCrossAttacker as PromptComp,
+    Defender: WingCrossDefender as PromptComp,
+    resolve: resolveWingCross as (a: string, d: string) => 'intercept' | 'progress',
+    highlight: 'pd1',
+    fallbackAttacker: 'cross',
+    fallbackDefender: 'cross',
+  },
+  {
+    id: '1v1',
+    label: '▶ 1×1',
+    Attacker: WingerOneOnOneAttacker as PromptComp,
+    Defender: WingerOneOnOneDefender as PromptComp,
+    resolve: resolveWingerOneOnOne as (a: string, d: string) => 'intercept' | 'progress',
+    highlight: 'pd1',
+    fallbackAttacker: 'inside',
+    fallbackDefender: 'inside',
+  },
+];
+
 export function FieldViewPreview() {
   const [camera, setCamera] = useState<FieldCameraMode>('aerial');
   const [onBallId, setOnBallId] = useState<string>('ata1');
   const [ballX, setBallX] = useState(76);
   const [ballY, setBallY] = useState(50);
-  const [minute, setMinute] = useState(67);
+  const [minute] = useState(67);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [defensiveAction, setDefensiveAction] = useState(false);
 
-  // Decision moment: goalkeeper distribution
-  const [gkMomentActive, setGkMomentActive] = useState(false);
-  const [gkAttackerPick, setGkAttackerPick] = useState<GkDistributionChoice | null>(null);
-  const [gkOutcome, setGkOutcome] = useState<'intercept' | 'progress' | null>(null);
+  // Generic moment state
+  const [activeMoment, setActiveMoment] = useState<MomentDef | null>(null);
+  const [attackerPick, setAttackerPick] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<'intercept' | 'progress' | null>(null);
 
-  const startGkMoment = useCallback(() => {
-    setGkAttackerPick(null);
-    setGkOutcome(null);
-    setGkMomentActive(true);
+  const startMoment = useCallback((m: MomentDef) => {
+    setAttackerPick(null);
+    setOutcome(null);
+    setActiveMoment(m);
     setCamera('aerial');
-    setHighlightId('gk1');
+    if (m.highlight) setHighlightId(m.highlight);
+    if (m.defensiveAction) setDefensiveAction(true);
   }, []);
 
-  const handleGkAttacker = useCallback((c: GkDistributionChoice) => {
-    setGkAttackerPick(c);
+  const handleAttackerChoice = useCallback((c: string) => {
+    setAttackerPick(c);
   }, []);
 
-  const handleGkDefender = useCallback(
-    (def: DefensivePressure) => {
-      if (!gkAttackerPick) return;
-      const result = resolveGoalkeeperDistribution(gkAttackerPick, def);
-      setGkOutcome(result);
+  const handleDefenderChoice = useCallback(
+    (c: string) => {
+      if (!activeMoment || !attackerPick) return;
+      const r = activeMoment.resolve(attackerPick, c);
+      setOutcome(r);
       window.setTimeout(() => {
-        setGkMomentActive(false);
+        setActiveMoment(null);
+        setAttackerPick(null);
+        setOutcome(null);
         setHighlightId(null);
-        setGkAttackerPick(null);
-        setGkOutcome(null);
+        setDefensiveAction(false);
       }, 2200);
     },
-    [gkAttackerPick],
+    [activeMoment, attackerPick],
   );
 
   const handlePlayerClick = useCallback((p: PitchPlayerState) => {
@@ -115,12 +207,15 @@ export function FieldViewPreview() {
     setBallY(p.y);
   }, []);
 
+  const Attacker = activeMoment?.Attacker;
+  const Defender = activeMoment?.Defender;
+
   return (
     <div className="fixed inset-0 z-[200] bg-[#050505] flex flex-col" style={{ touchAction: 'none' }}>
       {/* Dev bar */}
       <div
         className="absolute top-3 left-3 z-50 flex flex-wrap gap-1.5 px-3 py-2 border border-white/15 bg-black/90"
-        style={{ borderRadius: 6 }}
+        style={{ borderRadius: 6, maxWidth: 'calc(100% - 24px)' }}
       >
         <span
           className="font-display uppercase text-neon-yellow self-center"
@@ -170,7 +265,6 @@ export function FieldViewPreview() {
           onClick={() => {
             setCamera('aerial');
             setDefensiveAction(true);
-            // Zoom on our keeper while opponent attacks
             setHighlightId('gk1');
             window.setTimeout(() => {
               setDefensiveAction(false);
@@ -189,24 +283,24 @@ export function FieldViewPreview() {
         >
           ▶ defesa
         </button>
-        <button
-          type="button"
-          onClick={startGkMoment}
-          className="font-display uppercase tracking-wider px-2 py-1 transition-all"
-          style={{
-            background: gkMomentActive ? '#FDE100' : 'rgba(255,255,255,0.06)',
-            color: gkMomentActive ? '#000' : 'rgba(253,225,0,0.85)',
-            border: '1px solid rgba(253,225,0,0.4)',
-            fontSize: 10,
-            letterSpacing: '0.18em',
-            borderRadius: 4,
-          }}
-        >
-          ▶ saída
-        </button>
-        <span className="text-white/40 self-center" style={{ fontSize: 9, marginLeft: 6 }}>
-          · clique num jogador pra mover a bola
-        </span>
+        {MOMENTS.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => startMoment(m)}
+            className="font-display uppercase tracking-wider px-2 py-1 transition-all"
+            style={{
+              background: activeMoment?.id === m.id ? '#FDE100' : 'rgba(255,255,255,0.06)',
+              color: activeMoment?.id === m.id ? '#000' : 'rgba(253,225,0,0.85)',
+              border: '1px solid rgba(253,225,0,0.4)',
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              borderRadius: 4,
+            }}
+          >
+            {m.label}
+          </button>
+        ))}
       </div>
 
       {/* Field — fills width, natural height on portrait; fills height on landscape */}
@@ -230,20 +324,20 @@ export function FieldViewPreview() {
           className="w-full"
         />
 
-        {/* Decision Moment overlay (positioned above field) */}
-        {gkMomentActive && !gkAttackerPick && (
-          <GoalkeeperDistribution
-            onAttackerChoice={handleGkAttacker}
-            onTimeout={() => handleGkAttacker('short')}
+        {/* Decision Moment overlay */}
+        {activeMoment && Attacker && !attackerPick && (
+          <Attacker
+            onChoose={handleAttackerChoice}
+            onTimeout={() => handleAttackerChoice(activeMoment.fallbackAttacker)}
           />
         )}
-        {gkMomentActive && gkAttackerPick && !gkOutcome && (
-          <GoalkeeperPressure
-            onDefenderChoice={handleGkDefender}
-            onTimeout={() => handleGkDefender('low')}
+        {activeMoment && Defender && attackerPick && !outcome && (
+          <Defender
+            onChoose={handleDefenderChoice}
+            onTimeout={() => handleDefenderChoice(activeMoment.fallbackDefender)}
           />
         )}
-        {gkMomentActive && gkOutcome && (
+        {activeMoment && outcome && (
           <div
             className="absolute left-1/2 -translate-x-1/2 z-[300]"
             style={{ top: '6%', width: 'min(92%, 480px)' }}
@@ -251,7 +345,7 @@ export function FieldViewPreview() {
             <div
               className="text-center font-display uppercase"
               style={{
-                background: gkOutcome === 'intercept' ? '#EF4444' : '#FDE100',
+                background: outcome === 'intercept' ? '#EF4444' : '#FDE100',
                 color: '#000',
                 padding: '14px 12px',
                 fontWeight: 900,
@@ -262,7 +356,7 @@ export function FieldViewPreview() {
                 boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
               }}
             >
-              {gkOutcome === 'intercept' ? 'Interceptado!' : 'Saiu jogando ✓'}
+              {outcome === 'intercept' ? 'Interceptado!' : 'Saiu jogando ✓'}
             </div>
           </div>
         )}
