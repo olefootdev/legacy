@@ -42,7 +42,7 @@ export function MatchAuto() {
   const [forfeitOpen, setForfeitOpen] = useState(false);
   const [replayPenaltyId, setReplayPenaltyId] = useState<string | null>(null);
 
-  const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const analysisTimeoutRef = useRef<number | null>(null);
   const aliveRef = useRef(true);
 
   /** Mínimo de tempo no ecrã “a analisar” para não piscar; a simulação corre logo a seguir ao 1.º paint. */

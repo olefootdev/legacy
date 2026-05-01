@@ -874,12 +874,12 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
   }, [session]);
 
   const htRef = useRef(0);
-  const htTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const htTimersRef = useRef<number[]>([]);
+  const ivRef = useRef<number | null>(null);
   const finalizedRef = useRef(false);
   const freezeUntilRef = useRef(0);
   const lastSeenGoalEventIdRef = useRef<string | null>(null);
-  const preKickoffTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const preKickoffTimersRef = useRef<number[]>([]);
   const [fcGate, setFcGate] = useState<'off' | 'pending' | 'ok' | 'fail'>('off');
   const fcSeedRef = useRef<number | undefined>(undefined);
 
@@ -959,6 +959,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
         return;
       }
       ivRef.current = setInterval(() => {
+
         const lm = getGameState().liveMatch;
         if (!lm || lm.phase !== 'playing') {
           clearIv();
@@ -981,7 +982,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
           setHalfTimeTick(HALFTIME_TICK_START);
           for (let s = 1; s < HALFTIME_TICK_START; s++) {
             htTimersRef.current.push(
-              window.setTimeout(() => setHalfTimeTick(HALFTIME_TICK_START - s), s * 1000),
+              window.setTimeout(() => setHalfTimeTick(HALFTIME_TICK_START - s), s * 1000) as unknown as number,
             );
           }
           htTimersRef.current.push(
@@ -990,13 +991,13 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
               setHalfTimeTick(HALFTIME_TICK_START);
               htRef.current = 2;
               loop();
-            }, HALFTIME_MS),
+            }, HALFTIME_MS) as unknown as number,
           );
           return;
         }
 
         tick();
-      }, MS_PER_MINUTE);
+      }, MS_PER_MINUTE) as unknown as number;
     };
 
     if (TEST2D_KICKOFF_COUNTDOWN_SEC <= 0 && TEST2D_KICKOFF_MESSAGE_MS <= 0) {

@@ -315,7 +315,7 @@ export function Transfer() {
   const [purchaseCompleteBanner, setPurchaseCompleteBanner] = useState(false);
   /** Sprint B-4: visualização do catálogo "Genesis em foco" — grade ou lista horizontal. */
   const [genesisViewMode, setGenesisViewMode] = useState<'grid' | 'list'>('grid');
-  const purchaseBannerHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const purchaseBannerHideTimerRef = useRef<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<MockAuctionPlayer | null>(null);
   const [discoveryVisibleCount, setDiscoveryVisibleCount] = useState(initialDiscoveryVisibleMap);
   const searchInputRef = useRef<HTMLInputElement>(null);

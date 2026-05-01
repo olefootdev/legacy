@@ -683,8 +683,8 @@ export function MatchQuick() {
   const [yellowCountdown, setYellowCountdown] = useState(8);
   const [injurySubCountdown, setInjurySubCountdown] = useState(5);
   const secondYellowAlertRef = useRef<SecondYellowAlert | null>(null);
-  const secondYellowAutoRedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const injurySubAutoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const secondYellowAutoRedRef = useRef<number | null>(null);
+  const injurySubAutoCloseRef = useRef<number | null>(null);
 
   // Assistente técnico
   const [assistantEvent, setAssistantEvent] = useState<AssistantEvent | null>(null);
@@ -697,7 +697,7 @@ export function MatchQuick() {
    *  nunca dispara nos primeiros segundos mesmo que o estado de fadiga já seja alto. */
   const matchLoopStartMsRef = useRef<number>(0);
   const [tacticalFeedback, setTacticalFeedback] = useState<string | null>(null);
-  const tacticalFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tacticalFeedbackTimerRef = useRef<number | null>(null);
   const lastEmotionalMinuteRef = useRef<number>(-1);
   const processedNarrativeEventIdRef = useRef<Set<string>>(new Set());
 
@@ -707,14 +707,14 @@ export function MatchQuick() {
   const lastShotPreviewRef = useRef<string | null>(null);
 
   // Interactive Moment auto-timeout
-  const interactiveMomentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const interactiveMomentTimeoutRef = useRef<number | null>(null);
 
   // sync ref for use inside interval
   useEffect(() => { secondYellowAlertRef.current = secondYellowAlert; }, [secondYellowAlert]);
 
   const htRef = useRef(0);
-  const htTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const htTimersRef = useRef<number[]>([]);
+  const ivRef = useRef<number | null>(null);
   const finalizedRef = useRef(false);
   const freezeUntilRef = useRef(0);
   const lastSeenGoalEventIdRef = useRef<string | null>(null);
@@ -737,8 +737,8 @@ export function MatchQuick() {
     player: { name: string; number: number; position: string };
     reason: 'second_yellow' | 'direct_red' | 'violent_conduct';
   } | null>(null);
-  const substitutionOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const redCardOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const substitutionOverlayTimerRef = useRef<number | null>(null);
+  const redCardOverlayTimerRef = useRef<number | null>(null);
 
   // Callbacks para o AssistantAI
   const handleSubstitution = (outPlayerId: string, inPlayerId: string, reason: 'injury' | 'tactical') => {
@@ -778,7 +778,7 @@ export function MatchQuick() {
     if (substitutionOverlayTimerRef.current) clearTimeout(substitutionOverlayTimerRef.current);
     substitutionOverlayTimerRef.current = setTimeout(() => {
       setSubstitutionOverlay(null);
-    }, 3000);
+    }, 3000) as unknown as number;
   };
 
   const handleTacticalChange = (command: string) => {
@@ -806,7 +806,7 @@ export function MatchQuick() {
   const [scoreShakeKey, setScoreShakeKey] = useState(0);
   const lastShakeEventIdRef = useRef<string | null>(null);
   const [quickPreStart, setQuickPreStart] = useState<QuickPreStartPhase>('ready');
-  const preKickoffTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const preKickoffTimersRef = useRef<number[]>([]);
   const soundEnabled = useGameStore((s) => s.userSettings.soundEnabled);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [soundStarted, setSoundStarted] = useState(false);
@@ -941,6 +941,7 @@ export function MatchQuick() {
       matchLoopStartMsRef.current = Date.now();
       lastAssistantShownMsRef.current = Date.now(); // cooldown inicia no arranque real
       ivRef.current = setInterval(() => {
+
         const lm = getGameState().liveMatch;
         if (!lm || lm.phase !== 'playing') {
           clearIv();
@@ -1134,7 +1135,7 @@ export function MatchQuick() {
         }
 
         tick();
-      }, MS_PER_MINUTE);
+      }, MS_PER_MINUTE) as unknown as number;
     };
 
     const tPrelude = QUICK_KICKOFF_PRELUDE_MS;
@@ -1373,7 +1374,7 @@ export function MatchQuick() {
       clearInterval(tickInterval);
       dispatch({ type: 'QUICK_ENFORCE_CARD_RULES', playerId: secondYellowAlert.playerId, reason: 'two_yellows' });
       setSecondYellowAlert(null);
-    }, 5000);
+    }, 5000) as unknown as number;
 
     return () => {
       clearInterval(tickInterval);
@@ -1424,7 +1425,7 @@ export function MatchQuick() {
         if (redCardOverlayTimerRef.current) clearTimeout(redCardOverlayTimerRef.current);
         redCardOverlayTimerRef.current = setTimeout(() => {
           setRedCardOverlay(null);
-        }, 3000);
+        }, 3000) as unknown as number;
       }
     }
   }, [live?.events, live?.phase, live?.mode, pitch, playersById]);
@@ -1537,7 +1538,7 @@ export function MatchQuick() {
       clearInterval(tickId);
       dispatch({ type: 'CANCEL_QUICK_INJURY_SUB' });
       setSelected(null);
-    }, 5000);
+    }, 5000) as unknown as number;
     return () => {
       clearInterval(tickId);
       if (injurySubAutoCloseRef.current) clearTimeout(injurySubAutoCloseRef.current);
@@ -1648,7 +1649,7 @@ export function MatchQuick() {
         momentId: moment.id,
         choiceId: autoChoiceId,
       });
-    }, 5000);
+    }, 5000) as unknown as number;
 
     return () => {
       if (interactiveMomentTimeoutRef.current) {
@@ -3234,7 +3235,7 @@ export function MatchQuick() {
               if (tacticalFeedbackTimerRef.current) clearTimeout(tacticalFeedbackTimerRef.current);
               tacticalFeedbackTimerRef.current = setTimeout(() => {
                 setTacticalFeedback(null);
-              }, 8000);
+              }, 8000) as unknown as number;
             }}
             onFormationChange={(formation) => {
               dispatch({ type: 'LIVE_MATCH_SET_FORMATION', formation } as any);
