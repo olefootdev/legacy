@@ -245,6 +245,7 @@ import {
 import { detectTeamPhase } from '@/playerDecision/ContextScanner';
 import { isCommandActive, commandDecisionBias } from '@/voiceCommand/commandQueue';
 import { identifyFieldZone } from '@/playerDecision/ContextScanner';
+import { recordCrossTelegraphed, recordCrossConcluded } from '@/playerDecision/crossTelegraphTelemetry';
 import { computeGoalThreat, type GoalThreat, type ThreatTrend } from '@/playerDecision/ThreatModel';
 import { buildGoalContext } from '@/match/goalContext';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
@@ -3900,6 +3901,14 @@ export class TacticalSimLoop {
           reason: cRes.reason,
         });
         if (cRes.success) stats.passesOk++;
+        // PR3 — Telemetria: só credita quando lateral telegrafou nos últimos 1.5s.
+        recordCrossConcluded({
+          senderId: ag.id,
+          senderSlot: ag.slotId,
+          senderSide: ag.side as 'home' | 'away',
+          minute: this.simState.minute,
+          outcome: cRes.success ? 'cross_ok' : 'cross_fail',
+        });
         if (cRes.success && cRes.executionTier === 'critical_hit') {
           pushSimEvent(
             this.simState,
@@ -4635,6 +4644,7 @@ export class TacticalSimLoop {
 
     const teamAgents = sender.side === 'home' ? this.homeAgents : this.awayAgents;
     const until = this.world.simTime + 1.2;
+    const receiverIds: string[] = [];
     for (const mate of teamAgents) {
       if (mate.id === sender.id) continue;
       const isAttacker =
@@ -4649,7 +4659,19 @@ export class TacticalSimLoop {
         expectedZ,
         until,
       });
+      receiverIds.push(mate.id);
     }
+
+    // PR3 — Telemetria observacional (DEV only).
+    recordCrossTelegraphed({
+      senderId: sender.id,
+      senderSlot: sender.slotId,
+      senderSide: sender.side as 'home' | 'away',
+      minute: this.simState.minute,
+      expectedX,
+      expectedZ,
+      receiverIds,
+    });
   }
 
   /**

@@ -157,6 +157,24 @@ function summarize(events: AttackingTelemetryEvent[]) {
     else byRole[e.role]!.fallthrough++;
   }
 
+  // PR3 — breakdown por agente: quantas vezes cada jogador venceu cada ação.
+  // Foco principal em striker_infiltrate_box (validação direta do PR1).
+  const byAgent: Record<string, {
+    slot?: string;
+    role: string;
+    fired: number;
+    actions: Record<string, number>;
+  }> = {};
+  for (const e of events) {
+    if (!e.fire || !e.actionId) continue;
+    if (!byAgent[e.agentId]) {
+      byAgent[e.agentId] = { slot: e.slot, role: e.role, fired: 0, actions: {} };
+    }
+    const a = byAgent[e.agentId]!;
+    a.fired++;
+    a.actions[e.actionId] = (a.actions[e.actionId] ?? 0) + 1;
+  }
+
   const lowMarginRate = fired.filter((e) => e.margin < 0.05).length / Math.max(1, fired.length);
 
   return {
@@ -168,6 +186,7 @@ function summarize(events: AttackingTelemetryEvent[]) {
     lowMarginRate: round3(lowMarginRate),
     actionDistribution: actionDist,
     byRole,
+    byAgent,
     avgFiredScore: round3(avg(fired.map((e) => e.score))),
     avgFellThroughScore: round3(avg(fellThrough.map((e) => e.score))),
   };
