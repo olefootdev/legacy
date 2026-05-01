@@ -13,6 +13,7 @@ import { LegacyMinuteWatermark } from '@/components/match/LegacyMinuteWatermark'
 import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
 import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
 import { ReadGamePanel } from '@/components/match/ReadGamePanel';
+import { ExpertPanel } from '@/components/match/ExpertPanel';
 import { useNarrativeCamera } from '@/components/match/useNarrativeCamera';
 import type { PitchPlayerState } from '@/engine/types';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -70,6 +71,7 @@ export function FieldViewPreview() {
   const navigate = useNavigate();
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [camera, setCamera] = useState<'aerial' | 'broadcast'>('aerial');
+  const [viewMode, setViewMode] = useState<'aerial' | 'expert'>('aerial');
   const [cameraTrack, setCameraTrack] = useState<CameraTrackMode>('static');
   const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
   const [cameraZoom, setCameraZoom] = useState(1);
@@ -266,8 +268,37 @@ export function FieldViewPreview() {
         </div>
       )}
 
-      {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative">
+      {/* ── View mode toggle: Aerial / Expert ── */}
+      <div style={{
+        display: 'flex', justifyContent: 'center', gap: 2,
+        padding: '4px 0 2px', background: 'rgba(5,5,5,0.98)',
+        borderBottom: '1px solid rgba(253,225,0,0.04)',
+      }}>
+        {(['aerial', 'expert'] as const).map((m) => (
+          <button key={m} type="button" onClick={() => {
+            setViewMode(m);
+            if (m === 'expert') setCamera('broadcast');
+            else setCamera('aerial');
+          }}
+            style={{
+              background: viewMode === m ? '#FDE100' : 'rgba(255,255,255,0.04)',
+              color: viewMode === m ? '#000' : 'rgba(255,255,255,0.3)',
+              border: viewMode === m ? '1px solid #FDE100' : '1px solid rgba(255,255,255,0.06)',
+              fontFamily: 'var(--font-display)',
+              fontSize: 8, fontWeight: 800,
+              letterSpacing: '0.25em', textTransform: 'uppercase',
+              padding: '4px 14px', cursor: 'pointer',
+              transition: 'all 150ms',
+            }}>
+            {m === 'aerial' ? 'Aerial' : 'Expert'}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Campo — flex-1 in aerial, constrained in expert ── */}
+      <div className={`${viewMode === 'expert' ? '' : 'flex-1'} min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative`}
+        style={viewMode === 'expert' ? { height: '38vh', flexShrink: 0 } : undefined}
+      >
         <div
           ref={cameraRef}
           className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
@@ -282,7 +313,7 @@ export function FieldViewPreview() {
             ballX={engine.ballX}
             ballY={engine.ballY}
             onBallPlayerId={engine.onBallPlayerId}
-            cameraMode={camera}
+            cameraMode={viewMode === 'expert' ? 'broadcast' : camera}
             homeShort="OLE"
             awayShort="ADV"
             homeName="Olefoot FC"
@@ -292,7 +323,7 @@ export function FieldViewPreview() {
             matchMinute={engine.minute}
             possession={engine.possession}
             phase={engine.phase}
-            showCameraSwitch={true}
+            showCameraSwitch={viewMode !== 'expert'}
             hideHud={true}
             onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
             onPlayerClick={(p) => {
@@ -303,11 +334,13 @@ export function FieldViewPreview() {
           />
 
           {/* ── PressureZoneOverlay — zonas de tensão ── */}
-          <PressureZoneOverlay
-            ballX={engine.ballX}
-            possession={engine.possession}
-            phase={engine.phase}
-          />
+          {viewMode !== 'expert' && (
+            <PressureZoneOverlay
+              ballX={engine.ballX}
+              possession={engine.possession}
+              phase={engine.phase}
+            />
+          )}
 
           {/* ── PlayerBrainCard — inteligência do jogador ── */}
           {brainPlayer && (
@@ -318,27 +351,45 @@ export function FieldViewPreview() {
           )}
         </div>
 
-        {/* ── Watermark do minuto (ambient) ── */}
-        <LegacyMinuteWatermark
-          minute={engine.minute}
-          phase={engine.phase}
-          momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
-        />
+        {/* ── Watermark do minuto (ambient) — only in aerial ── */}
+        {viewMode !== 'expert' && (
+          <LegacyMinuteWatermark
+            minute={engine.minute}
+            phase={engine.phase}
+            momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
+          />
+        )}
 
         {/* ── Ler Jogo — overlay no campo, canto inferior esquerdo ── */}
-        <div style={{ position: 'absolute', left: 16, bottom: 16, zIndex: 100 }}>
-          <ReadGamePanel
-            possession={engine.possession}
-            ballX={engine.ballX}
-            homePlayers={engine.homePlayers}
-            events={engine.events}
-            playStyle={playStyle}
-            homeScore={engine.homeScore}
-            awayScore={engine.awayScore}
-            minute={engine.minute}
-          />
-        </div>
+        {viewMode !== 'expert' && (
+          <div style={{ position: 'absolute', left: 16, bottom: 16, zIndex: 100 }}>
+            <ReadGamePanel
+              possession={engine.possession}
+              ballX={engine.ballX}
+              homePlayers={engine.homePlayers}
+              events={engine.events}
+              playStyle={playStyle}
+              homeScore={engine.homeScore}
+              awayScore={engine.awayScore}
+              minute={engine.minute}
+            />
+          </div>
+        )}
       </div>
+
+      {/* ── Expert Panel — stats below field ── */}
+      {viewMode === 'expert' && (
+        <ExpertPanel
+          homeStats={engine.homeStats}
+          awayStats={engine.awayStats}
+          possessionPct={engine.possessionPct}
+          homePlayers={engine.homePlayers}
+          awayPlayers={engine.awayPlayers}
+          homeScore={engine.homeScore}
+          awayScore={engine.awayScore}
+          minute={engine.minute}
+        />
+      )}
 
       {/* Spacer para FalePlayerBar fixa não cobrir o campo */}
       <div aria-hidden style={{ height: 110, flexShrink: 0 }} />

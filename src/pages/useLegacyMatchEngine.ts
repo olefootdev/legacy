@@ -16,6 +16,18 @@ export type LegacyEventKind =
   | 'possession_change'
   | 'goal';
 
+export interface TeamStats {
+  passesOk: number;
+  passesAttempt: number;
+  shots: number;
+  shotsOn: number;
+  tackles: number;
+  km: number;
+  goals: number;
+  saves: number;
+  dribblesOk: number;
+}
+
 export interface LegacyMatchState {
   minute: number;
   homeScore: number;
@@ -29,6 +41,9 @@ export interface LegacyMatchState {
   events: Array<{ minute: number; text: string; kind?: string }>;
   phase: 'playing' | 'halftime' | 'fulltime';
   lastEvent: (LegacyEventKind & string) | null;
+  homeStats: TeamStats;
+  awayStats: TeamStats;
+  possessionPct: { home: number; away: number };
 }
 
 const RENDER_MS = 24;
@@ -122,6 +137,9 @@ export function useLegacyMatchEngine(
   const timeScaleRef = useRef(timeScale);
   timeScaleRef.current = timeScale;
 
+  const emptyStats: TeamStats = { passesOk: 0, passesAttempt: 0, shots: 0, shotsOn: 0, tackles: 0, km: 0, goals: 0, saves: 0, dribblesOk: 0 };
+  const possessionTicksRef = useRef({ home: 0, away: 0 });
+
   const [state, setState] = useState<LegacyMatchState>({
     minute: 0,
     homeScore: 0,
@@ -135,6 +153,9 @@ export function useLegacyMatchEngine(
     events: [],
     phase: 'playing',
     lastEvent: null,
+    homeStats: emptyStats,
+    awayStats: emptyStats,
+    possessionPct: { home: 50, away: 50 },
   });
 
   const onEventRef = useRef(onEvent);
@@ -202,6 +223,30 @@ export function useLegacyMatchEngine(
           });
           const carrierId = loop.getSimState().carrierId ?? undefined;
 
+          // Aggregate per-player stats into team totals
+          const stats = simSt.stats ?? {};
+          const homeIds = new Set(hp.map(p => p.playerId));
+          const hs: TeamStats = { ...emptyStats };
+          const as: TeamStats = { ...emptyStats };
+          for (const [pid, s] of Object.entries(stats)) {
+            const target = homeIds.has(pid) ? hs : as;
+            target.passesOk += s.passesOk;
+            target.passesAttempt += s.passesAttempt;
+            target.shots += s.shots;
+            target.shotsOn += s.shotsOn;
+            target.tackles += s.tackles;
+            target.km += s.km;
+            target.goals += s.goals;
+            target.saves += s.saves;
+            target.dribblesOk += s.dribblesOk;
+          }
+
+          // Track possession ticks
+          const poss = simSt.possession ?? 'home';
+          possessionTicksRef.current[poss]++;
+          const totalTicks = possessionTicksRef.current.home + possessionTicksRef.current.away;
+          const homePoss = totalTicks > 0 ? Math.round((possessionTicksRef.current.home / totalTicks) * 100) : 50;
+
           setState({
             minute: simSt.minute,
             homeScore: simSt.homeScore,
@@ -219,6 +264,9 @@ export function useLegacyMatchEngine(
             })),
             phase: simSt.phase === 'fulltime' ? 'fulltime' : simSt.phase === 'halftime' ? 'halftime' : 'playing',
             lastEvent: lastEventKindRef.current,
+            homeStats: hs,
+            awayStats: as,
+            possessionPct: { home: homePoss, away: 100 - homePoss },
           });
         }
       }
