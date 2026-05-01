@@ -430,11 +430,14 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
     //   Suficiente pra aparecer na lateral, não tanto que "fuja" de passes direcionados.
     const isWingback = p.slotId === 'le' || p.slotId === 'ld';
     if (isWingback && hasBall && ballZone === 'att') {
-      const wingAdvance = 8 * (side === 'home' ? 1 : -1);
+      // Fix #2 + #3: avanço de 8 (~2m) era insuficiente para parecer overlap, e o lerp
+      // de 0.14 fazia o lateral chegar ~7 ticks tarde demais (jogada já tinha acabado).
+      // Agora avança ~5–6m e converge à linha em 2–3 ticks (timing realista).
+      const wingAdvance = 22 * (side === 'home' ? 1 : -1);
       tx += wingAdvance;
       const isLeft = p.slotId === 'le';
       const lineTargetY = isLeft ? 14 : 86;
-      ty = lerp(ty, lineTargetY, 0.14);
+      ty = lerp(ty, lineTargetY, 0.45);
     }
 
     // ── SMARTFIELD: anchor blending + zone intelligence ──────────────

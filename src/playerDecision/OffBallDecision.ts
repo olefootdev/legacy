@@ -1210,6 +1210,11 @@ function countTeammatesInAttackingThird(ctx: DecisionContext): number {
 function shouldAnchorToSlot(ctx: DecisionContext): boolean {
   const role = ctx.self.role;
   if (role === 'gk') return true;
+  // Fix #5: laterais (LE/LD) NUNCA são ancorados pela regra de "muitos no terço final" —
+  // overlap é exatamente o comportamento que a regra antiga sufocava (decideFullbackSupport
+  // existia mas nunca era chamado para wingbacks porque a anchor disparava antes).
+  const slotId = ctx.self.slotId ?? '';
+  if (slotId === 'le' || slotId === 'ld') return false;
   const inAttThird = countTeammatesInAttackingThird(ctx);
   // Defenders: don't push if 3+ already in attacking third
   if (role === 'def' && inAttThird >= 3) return true;

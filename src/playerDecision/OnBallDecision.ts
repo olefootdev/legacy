@@ -167,7 +167,11 @@ function trySeekBetterGoalAngleDribble(
   }
   if (reading.pressure.intensity === 'extreme') return null;
   if (reading.distToGoal < 6 || reading.distToGoal > 36) return null;
-  if (reading.lineOfSightScore >= 0.58) return null;
+  // Fix #4: gate antigo bloqueava drible quando o gol estava LIVRE (lineOfSight alto),
+  // o que era contraditório — atacante com visão de gol clara deveria arriscar drible
+  // para ganhar ângulo/proximidade, não congelar. Só aborta se a linha está muito tapada
+  // (lineOfSightScore < 0.18) — nesse caso, melhor passar do que driblar para o nada.
+  if (reading.lineOfSightScore < 0.18) return null;
   const minForwardSpace = reading.inOppPenaltyArea ? 2.8 : 4.2;
   if (reading.space.forwardSpaceDepth < minForwardSpace) return null;
 
@@ -806,7 +810,10 @@ function tryBackToGoalAttackPlay(
     return sa - sb;
   });
   const best = cand[0]!;
-  if (best.distToOppGoal >= carrierDistGoal + 8) return null;
+  // Fix #1: gate antigo (`+ 8`) abortava enfiada/through-ball sempre que havia colega à frente
+  // do portador. Agora só descarta se o melhor passe efetivamente RECUA em relação ao gol
+  // (margem de 3m para tolerar passes de apoio laterais que não regridem).
+  if (best.distToOppGoal >= carrierDistGoal - 3) return null;
 
   if (best.isLong && best.isForward) return { type: 'long_ball', option: best };
   if (best.linesBroken > 0 && best.isForward) return { type: 'through_ball', option: best };
