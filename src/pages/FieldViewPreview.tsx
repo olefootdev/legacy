@@ -146,8 +146,6 @@ export function FieldViewPreview() {
         phase={engine.phase}
         formation={formation}
         onFormationChange={setFormation}
-        actionCam={cameraTrack === 'actioncam'}
-        onActionCamToggle={() => setCameraTrack(t => t === 'actioncam' ? 'static' : 'actioncam')}
         onExit={() => setShowExitConfirm(true)}
       />
 

@@ -143,7 +143,7 @@ export function LegacyEditorialHeader({
             }}
           />
 
-          {/* Linha de controle padronizada: POSSE • Formação • Action */}
+          {/* Linha de controle: POSSE • Formação */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             <span
               style={{
@@ -158,87 +158,62 @@ export function LegacyEditorialHeader({
               POSSE {possessionPct}%
             </span>
 
-            <span style={dotStyle}>•</span>
-
-            {formation && onFormationChange ? (
-              <div style={{ position: 'relative' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowFormations(v => !v)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: '0.32em',
-                    color: NEON,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {formation}
-                  <span style={{ fontSize: 7, color: 'rgba(253,225,0,0.55)' }}>▾</span>
-                </button>
-                {showFormations && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#0d0d0d', border: '1px solid rgba(253,225,0,0.18)', zIndex: 400, minWidth: 100 }}>
-                    {FORMATIONS.map(f => (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => { onFormationChange(f); setShowFormations(false); }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          background: f === formation ? 'rgba(253,225,0,0.08)' : 'transparent',
-                          border: 'none',
-                          padding: '6px 12px',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-serif-hero)',
-                          fontStyle: 'italic',
-                          fontSize: 13,
-                          color: f === formation ? NEON : 'rgba(255,255,255,0.6)',
-                          textAlign: 'left',
-                          transition: 'background 120ms',
-                        }}
-                        onMouseEnter={e => { if (f !== formation) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                        onMouseLeave={e => { if (f !== formation) e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            {onActionCamToggle && (
+            {formation && onFormationChange && (
               <>
                 <span style={dotStyle}>•</span>
-                <button
-                  type="button"
-                  onClick={onActionCamToggle}
-                  aria-pressed={actionCam}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: '0.32em',
-                    color: actionCam ? NEON : 'rgba(255,255,255,0.5)',
-                    textTransform: 'uppercase',
-                    transition: 'color 150ms',
-                  }}
-                >
-                  Action
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormations(v => !v)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 9,
+                      fontWeight: 800,
+                      letterSpacing: '0.32em',
+                      color: NEON,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {formation}
+                    <span style={{ fontSize: 7, color: 'rgba(253,225,0,0.55)' }}>▾</span>
+                  </button>
+                  {showFormations && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#0d0d0d', border: '1px solid rgba(253,225,0,0.18)', zIndex: 400, minWidth: 100 }}>
+                      {FORMATIONS.map(f => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => { onFormationChange(f); setShowFormations(false); }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            background: f === formation ? 'rgba(253,225,0,0.08)' : 'transparent',
+                            border: 'none',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--font-serif-hero)',
+                            fontStyle: 'italic',
+                            fontSize: 13,
+                            color: f === formation ? NEON : 'rgba(255,255,255,0.6)',
+                            textAlign: 'left',
+                            transition: 'background 120ms',
+                          }}
+                          onMouseEnter={e => { if (f !== formation) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                          onMouseLeave={e => { if (f !== formation) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -250,15 +225,16 @@ export function LegacyEditorialHeader({
             fontFamily: 'var(--font-serif-hero)',
             fontStyle: 'italic',
             fontWeight: 700,
-            fontSize: 'clamp(48px, 9vw, 80px)',
+            fontSize: 'clamp(40px, 7.5vw, 68px)',
             letterSpacing: '-0.04em',
             color: '#fff',
             fontVariantNumeric: 'tabular-nums',
             lineHeight: 0.9,
             display: 'flex',
             alignItems: 'baseline',
-            gap: 14,
+            gap: 12,
             flexShrink: 0,
+            marginTop: 18,
           }}
         >
           <span style={{ color: homeScore >= awayScore ? '#fff' : 'rgba(255,255,255,0.45)' }}>{homeScore}</span>

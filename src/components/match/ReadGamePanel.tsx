@@ -78,7 +78,6 @@ export function ReadGamePanel(props: ReadGamePanelProps) {
     );
     setLines(analysis);
     setOpen(true);
-    window.setTimeout(() => setOpen(false), 5000);
   }, [props]);
 
   return (
@@ -104,34 +103,59 @@ export function ReadGamePanel(props: ReadGamePanelProps) {
         LER JOGO
       </button>
 
-      {/* Overlay de análise */}
+      {/* Banner horizontal — clique em qualquer parte para fechar */}
       {open && (
         <div
-          className="absolute z-[450] pointer-events-none"
-          style={{ bottom: '100%', left: 0, right: 0, padding: '0 12px 8px' }}
+          onClick={() => setOpen(false)}
+          role="button"
+          aria-label="Fechar leitura do jogo"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 450,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'flex-end',
+            padding: '0 16px 120px',
+          }}
         >
-          <div style={{
-            background: 'rgba(8,8,8,0.97)',
-            border: '1px solid rgba(253,225,0,0.2)',
-            borderLeft: `3px solid ${NEON}`,
-            padding: '10px 14px',
-            animation: 'feedbackIn 280ms cubic-bezier(0.34,1.2,0.64,1) both',
-          }}>
+          <div
+            style={{
+              width: '100%',
+              background: 'rgba(8,8,8,0.96)',
+              backdropFilter: 'blur(6px)',
+              border: '1px solid rgba(253,225,0,0.22)',
+              borderLeft: `3px solid ${NEON}`,
+              padding: '14px 18px 16px',
+              animation: 'feedbackIn 280ms cubic-bezier(0.34,1.2,0.64,1) both',
+            }}
+          >
             <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 8, fontWeight: 800,
-              letterSpacing: '0.3em', color: NEON, textTransform: 'uppercase', marginBottom: 8,
+              fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800,
+              letterSpacing: '0.32em', color: NEON, textTransform: 'uppercase', marginBottom: 10,
             }}>
-              LEITURA DO JOGO
+              Leitura do Jogo
             </div>
-            {lines.map((line, i) => (
-              <div key={i} style={{
-                fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
-                fontSize: 11, color: i === 0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.55)',
-                lineHeight: 1.5, marginBottom: i < lines.length - 1 ? 4 : 0,
-              }}>
-                {line}
-              </div>
-            ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {lines.map((line, i) => (
+                <div key={i} style={{
+                  fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+                  fontSize: i === 0 ? 16 : 14,
+                  color: i === 0 ? '#fff' : 'rgba(255,255,255,0.7)',
+                  lineHeight: 1.35,
+                  letterSpacing: '-0.01em',
+                }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+            <div style={{
+              marginTop: 12,
+              fontFamily: 'var(--font-display)', fontSize: 8, fontWeight: 700,
+              letterSpacing: '0.28em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase',
+            }}>
+              Toque em qualquer lugar para fechar
+            </div>
           </div>
         </div>
       )}
