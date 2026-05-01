@@ -25,7 +25,6 @@ import {
   WingerOneOnOneAttacker, WingerOneOnOneDefender, resolveWingerOneOnOne,
   TackleAttacker, TackleDefender, resolveTackle,
   LastLineAttacker, LastLineDefender, resolveLastLine,
-  ReboundAttacker, ReboundDefender, resolveRebound,
   GegenpressAttacker, GegenpressDefender, resolveGegenpress,
   CounterAttacker, CounterDefender, resolveCounter,
   OneOnOneAttacker, OneOnOneKeeper, resolveOneOnOne,
@@ -76,7 +75,6 @@ const MOMENTS: MomentDef[] = [
   { id: '1v1gk',    label: 'Cara a cara',       category: 'ataque',      Attacker: OneOnOneAttacker as Comp,       Defender: OneOnOneKeeper as Comp,          resolve: resolveOneOnOne as MomentDef['resolve'],         defensiveAction: true, highlight: 'gk1', fa: 'placed', fd: 'angle' },
   { id: 'tackle',   label: 'Carrinho',          category: 'defesa',      Attacker: TackleAttacker as Comp,         Defender: TackleDefender as Comp,          resolve: resolveTackle as MomentDef['resolve'],                                    fa: 'shield', fd: 'cover' },
   { id: 'lastline', label: 'Última linha',      category: 'defesa',      Attacker: LastLineAttacker as Comp,       Defender: LastLineDefender as Comp,        resolve: resolveLastLine as MomentDef['resolve'],                                  fa: 'feet',   fd: 'hold'  },
-  { id: 'rebound',  label: 'Rebote',            category: 'defesa',      Attacker: ReboundAttacker as Comp,        Defender: ReboundDefender as Comp,         resolve: resolveRebound as MomentDef['resolve'],          defensiveAction: true, highlight: 'gk1', fa: 'first', fd: 'block' },
   { id: 'gegen',    label: 'Gegenpress',        category: 'transicao',   Attacker: GegenpressAttacker as Comp,     Defender: GegenpressDefender as Comp,      resolve: resolveGegenpress as MomentDef['resolve'],                                fa: 'short',  fd: 'swarm' },
   { id: 'counter',  label: 'Contra-ataque',     category: 'transicao',   Attacker: CounterAttacker as Comp,        Defender: CounterDefender as Comp,         resolve: resolveCounter as MomentDef['resolve'],                                   fa: 'wing',   fd: 'delay' },
 ];
@@ -87,7 +85,6 @@ const ENGINE_EVENT_MAP: Partial<Record<LegacyEventKind, string>> = {
   corner:   'corner',
   freekick: 'freekick',
   shot:     '1v1gk',   // cara a cara com o goleiro
-  rebound:  'rebound', // rebote após defesa
 };
 
 // ── Camera targets ────────────────────────────────────────────────────────────
@@ -104,7 +101,6 @@ const T2_CAMERA_TARGETS: Record<string, CameraTarget> = {
   '1v1':    { x: 78, y: 32, zoom: 1.6 }, // ponta direita ataque
   '1v1gk':  { x: 50, y: 14, zoom: 1.7 }, // cara a cara — baliza adversária
   header:   { x: 50, y: 18, zoom: 1.6 }, // cabeçada na pequena área
-  rebound:  { x: 50, y: 80, zoom: 1.5 }, // rebote na nossa área
 };
 const MOMENT_CAMERA_TARGETS: Record<string, CameraTarget> = {
   ...T1_CAMERA_TARGETS,
@@ -120,7 +116,6 @@ const MOMENT_GRADE: Record<string, string> = {
   '1v1':    'saturate(0.85) contrast(1.18) hue-rotate(15deg)  brightness(0.92)', // azul-frio cinematográfico
   '1v1gk':  'saturate(0.7)  contrast(1.3)  hue-rotate(20deg)  brightness(0.88)', // azul-frio máximo (decisivo)
   header:   'saturate(1.25) contrast(1.18) hue-rotate(-5deg)  brightness(1.02)', // dourado quente
-  rebound:  'saturate(1.45) contrast(1.22) hue-rotate(-15deg) brightness(0.98)', // âmbar de tensão
 };
 
 // ── Trajetórias fantasmas ─────────────────────────────────────────────────────
@@ -144,7 +139,6 @@ const MOMENT_GHOSTS: Record<string, Ghost[]> = {
 const MOMENT_KEY_STAT: Record<string, { label: string; value: number }> = {
   '1v1gk':  { label: 'Finalização', value: 88 },
   header:   { label: 'Cabeceio',    value: 84 },
-  rebound:  { label: 'Reflexo',     value: 82 },
 };
 
 // ── Painel de voz — estado idle ───────────────────────────────────────────────
@@ -153,7 +147,7 @@ const VOICE_LABEL: Record<string, string> = {
   gk: 'Saída', corner: 'Escanteio', freekick: 'Falta',
   recv: 'Recepção', wing: 'Fundo', '1v1': '1×1',
   header: 'Cabeça', '1v1gk': 'Cara a cara',
-  tackle: 'Carrinho', lastline: 'Última linha', rebound: 'Rebote',
+  tackle: 'Carrinho', lastline: 'Última linha',
   gegen: 'Gegenpress', counter: 'Contra-ataque',
 };
 
@@ -285,8 +279,8 @@ export function FieldViewPreview() {
       lastGoalMsRef.current = performance.now();
       return; // gol não abre decision moment
     }
-    // Ignora shot/rebound se gol aconteceu nos últimos 3s
-    if ((kind === 'shot' || kind === 'rebound') && performance.now() - lastGoalMsRef.current < 3000) return;
+    // Ignora shot se gol aconteceu nos últimos 3s
+    if (kind === 'shot' && performance.now() - lastGoalMsRef.current < 3000) return;
     // Cooldown de 8s após qualquer momento fechar — evita double-trigger
     if (performance.now() - lastMomentEndMsRef.current < 8000) return;
     if (momentBusyRef.current) return;
@@ -373,8 +367,8 @@ export function FieldViewPreview() {
     if (!activeMoment || !attackerPick) return;
     const r = activeMoment.resolve(attackerPick, c);
 
-    // Em situações de finalização (1×1 GK, cabeçada, rebote), progress = GOL.
-    const isShotMoment = activeMoment.id === '1v1gk' || activeMoment.id === 'header' || activeMoment.id === 'rebound';
+    // Em situações de finalização (1×1 GK, cabeçada), progress = GOL.
+    const isShotMoment = activeMoment.id === '1v1gk' || activeMoment.id === 'header';
     const finalOutcome: 'intercept' | 'progress' | 'goal' =
       isShotMoment && r === 'progress' ? 'goal' : r;
 
@@ -745,7 +739,6 @@ export function FieldViewPreview() {
           '1v1gk':  [{ id: 'placed', label: 'COLOCAR' }, { id: 'power', label: 'FORÇA' }],
           tackle:   [{ id: 'cover', label: 'COBRIR' }, { id: 'slide', label: 'CARRINHO' }],
           lastline: [{ id: 'hold', label: 'SEGURAR' }, { id: 'step', label: 'AVANÇAR' }],
-          rebound:  [{ id: 'first', label: 'PRIMEIRO' }, { id: 'wait', label: 'ESPERAR' }],
           gegen:    [{ id: 'swarm', label: 'PRESSÃO' }, { id: 'short', label: 'CURTO' }],
           counter:  [{ id: 'wing', label: 'PELAS PONTAS' }, { id: 'center', label: 'CENTRO' }],
         };
