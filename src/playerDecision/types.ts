@@ -441,6 +441,12 @@ export interface DecisionContext {
     distanceToGoal: number;
   };
   stamina?: number;
+  /** TeamIntentResolver bias — injected into macroTilt for collective tactical alignment. */
+  teamIntentBias?: Partial<Record<string, number>>;
+  /** Spatial memory for awareness (recalled opponents in blind spot). */
+  spatialMemory?: import('@/agents/spatialMemory').SpatialMemory;
+  /** Current simulation time in ms (for spatial memory). */
+  simTimeMs?: number;
   decisionDebug?: boolean;
   profile: PlayerProfile;
   teamPhase: TeamPhase;

@@ -36,9 +36,16 @@ import {
 } from '@/agents/yukaAgents';
 import { LiveLearningBridge } from '@/agents/liveLearningBridge';
 import { SkillActivationSystem } from '@/match/skillActivation';
-import { resolveTeamIntent, type TeamIntentContext } from '@/agents/TeamIntentResolver';
+import { resolveTeamIntent, getTeamIntentBias, type TeamIntentContext } from '@/agents/TeamIntentResolver';
 import type { TeamIntent } from '@/agents/types';
 import { AgentRegulator } from '@/agents/yukaRegulator';
+import {
+  computeInterpose,
+  computeOffsetSupport,
+  computeDefensiveLineCohesion,
+  getSupportOffset,
+} from '@/agents/advancedSteering';
+import { SpatialMemory } from '@/agents/spatialMemory';
 import { FIELD_SCHEMA_VERSION } from '@/field-schema/constants';
 import {
   CENTER_CIRCLE_RADIUS_M,
@@ -394,6 +401,8 @@ export class TacticalSimLoop {
   private homeTeamIntent: TeamIntent = 'control_game';
   private awayTeamIntent: TeamIntent = 'control_game';
   private readonly teamIntentRegulator = new AgentRegulator(2000, 500);
+  private readonly homeSpatialMemory = new SpatialMemory();
+  private readonly awaySpatialMemory = new SpatialMemory();
   private readonly matchEngine = new MatchEngine();
   private readonly structuralSys = new StructuralReorganizationSystem();
 
@@ -802,6 +811,20 @@ export class TacticalSimLoop {
       this.fsm.state = { phase: 'kickoff', goalSequenceTimer: 0 };
       this.initialized = true;
       this.liveLearning.attach(this.eventBus);
+      this.liveLearning.registerPlayers(
+        [...this.homeAgents, ...this.awayAgents].map((a) => ({
+          id: a.id,
+          learningState: {
+            confidence: 50,
+            riskTendency: 50,
+            passVsShootPreference: 50,
+            criticalComposure: 50,
+            tacticalDiscipline: 50,
+            egoControl: 50,
+            recentEvents: [],
+          },
+        })),
+      );
       }
     }
 
@@ -2537,6 +2560,22 @@ export class TacticalSimLoop {
     const homeSnaps = this.homeAgents.map((a) => this.toAgentSnapshot(a));
     const awaySnaps = this.awayAgents.map((a) => this.toAgentSnapshot(a));
 
+    const memTimeMs = this.world.simTime * 1000;
+    const allAgentsForMemory = [...this.homeAgents, ...this.awayAgents].map(a => {
+      const ui = worldToUiPercent(a.vehicle.position.x, a.vehicle.position.z);
+      return {
+        playerId: a.id,
+        team: a.side as 'home' | 'away',
+        x: ui.ux,
+        y: ui.uy,
+        vx: a.vehicle.velocity.x,
+        vy: a.vehicle.velocity.z,
+        role: a.role,
+      };
+    });
+    this.homeSpatialMemory.update(allAgentsForMemory, memTimeMs);
+    this.awaySpatialMemory.update(allAgentsForMemory, memTimeMs);
+
     const cidPoss = this.simState.carrierId;
     const carrierSide = cidPoss ? this.findAgent(cidPoss)?.side : undefined;
     const homeHasBall = carrierSide === 'home';
@@ -2956,7 +2995,7 @@ export class TacticalSimLoop {
       const others = allV.filter((v) => v !== ag.vehicle);
       const ballUI = worldToUiPercent(ballX, ballZ);
       const playerUI = worldToUiPercent(ag.vehicle.position.x, ag.vehicle.position.z);
-      applySteeringForPhase(ag, this.ballVehicle, others, modeHomeEffective, dist, homeHasBall, ballUI.ux, playerUI.ux);
+      applySteeringForPhase(ag, this.ballVehicle, others, modeHomeEffective, dist, homeHasBall, ballUI.ux, playerUI.ux, ag.matchRuntime.stamina / 100);
     }
     for (const ag of this.awayAgents) {
       if (gkWideFreeze && this.gkRestart && ag.id !== this.gkRestart.gkId) {
@@ -2969,7 +3008,7 @@ export class TacticalSimLoop {
       const others = allV.filter((v) => v !== ag.vehicle);
       const ballUI = worldToUiPercent(ballX, ballZ);
       const playerUI = worldToUiPercent(ag.vehicle.position.x, ag.vehicle.position.z);
-      applySteeringForPhase(ag, this.ballVehicle, others, modeAwayEffective, dist, awayHasBall, ballUI.ux, playerUI.ux);
+      applySteeringForPhase(ag, this.ballVehicle, others, modeAwayEffective, dist, awayHasBall, ballUI.ux, playerUI.ux, ag.matchRuntime.stamina / 100);
     }
 
     for (const ag of this.homeAgents) {
@@ -3063,15 +3102,63 @@ export class TacticalSimLoop {
       }
     };
     const skipNudge = this.fsm.isReforming();
+
+    const applyAdvancedSteering = (a: AgentEx, teammates: AgentEx[], opponents: AgentEx[], teamHasBall: boolean, attackDir: 1 | -1) => {
+      if (a.id === cid || a.role === 'gk') return;
+      const pos = a.vehicle.position;
+      const isDefender = a.slotId === 'zag1' || a.slotId === 'zag2' || a.slotId === 'zag3';
+      const isAttacker = a.slotId === 'ata' || a.slotId === 'pe' || a.slotId === 'pd';
+
+      if (isDefender && !teamHasBall) {
+        let nearestThreat: AgentEx | null = null;
+        let nearestDist = Infinity;
+        for (const opp of opponents) {
+          const d = Math.hypot(pos.x - opp.vehicle.position.x, pos.z - opp.vehicle.position.z);
+          if (d < nearestDist) { nearestDist = d; nearestThreat = opp; }
+        }
+        if (nearestThreat && nearestDist < 30) {
+          const goalX = attackDir === 1 ? 0 : FIELD_LENGTH;
+          const goalZ = FIELD_WIDTH / 2;
+          const interpose = computeInterpose(pos.x, pos.z, nearestThreat.vehicle.position.x, nearestThreat.vehicle.position.z, goalX, goalZ);
+          if (interpose.weight > 0) {
+            a.arrive.target.x += interpose.fx * interpose.weight * 1.8;
+            a.arrive.target.z += interpose.fz * interpose.weight * 1.8;
+          }
+        }
+        const linemates = teammates.filter(t => t.slotId === 'zag1' || t.slotId === 'zag2' || t.slotId === 'zag3');
+        if (linemates.length > 0) {
+          const cohesion = computeDefensiveLineCohesion(pos.x, pos.z, linemates.map(t => ({ x: t.vehicle.position.x, z: t.vehicle.position.z })));
+          if (cohesion.weight > 0) {
+            a.arrive.target.x += cohesion.fx * cohesion.weight * 1.2;
+            a.arrive.target.z += cohesion.fz * cohesion.weight * 1.2;
+          }
+        }
+      }
+
+      if (isAttacker && teamHasBall && cid) {
+        const carrier = teammates.find(t => t.id === cid);
+        if (carrier) {
+          const offset = getSupportOffset(a.slotId, carrier.slotId, attackDir);
+          const support = computeOffsetSupport(pos.x, pos.z, carrier.vehicle.position.x, carrier.vehicle.position.z, offset.offsetX, offset.offsetZ);
+          if (support.weight > 0) {
+            a.arrive.target.x += support.fx * support.weight * 1.5;
+            a.arrive.target.z += support.fz * support.weight * 1.5;
+          }
+        }
+      }
+    };
+
     for (const a of this.homeAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
       if (!skipNudge) nudgeArriveTargetToZone(a);
+      applyAdvancedSteering(a, this.homeAgents, this.awayAgents, homeHasBall, attackDirHome);
       stepVehicle(a, fixedDt);
       stepAgentBodyYaw(a, fixedDt);
     }
     for (const a of this.awayAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
       if (!skipNudge) nudgeArriveTargetToZone(a);
+      applyAdvancedSteering(a, this.awayAgents, this.homeAgents, awayHasBall, attackDirAway);
       stepVehicle(a, fixedDt);
       stepAgentBodyYaw(a, fixedDt);
     }
@@ -3363,6 +3450,9 @@ export class TacticalSimLoop {
           return { kind: 'free_kick' as const, distanceToGoal };
         })(),
         stamina: ag.matchRuntime.stamina,
+        teamIntentBias: getTeamIntentBias(side === 'home' ? this.homeTeamIntent : this.awayTeamIntent),
+        spatialMemory: side === 'home' ? this.homeSpatialMemory : this.awaySpatialMemory,
+        simTimeMs: this.world.simTime * 1000,
         decisionDebug: DECISION_DEBUG,
         profile: ag.profile,
         teamPhase,

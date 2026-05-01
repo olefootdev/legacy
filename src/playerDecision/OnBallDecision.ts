@@ -52,6 +52,44 @@ import {
 } from './localDuelRead';
 import { playContinuityScore } from './teamCollectiveState';
 import type { DecisionActionId } from './collectiveIndividualDecision';
+import { evaluateGoalTree } from '@/agents/goap';
+import type { GoalContext as GoapGoalContext } from '@/agents/goap';
+
+// ---------------------------------------------------------------------------
+// GOAP goal bias → macroTilt
+// ---------------------------------------------------------------------------
+
+function buildGoapMacroTilt(ctx: DecisionContext): Partial<Record<DecisionActionId, number>> {
+  const teamHasBall = ctx.possession === ctx.self.side;
+  const distToGoal = ctx.goalContext?.distToGoal ?? 50;
+  const distToBall = Math.hypot(ctx.self.x - ctx.ballX, ctx.self.z - ctx.ballZ);
+  const role = ctx.self.role ?? '';
+  const isForward = role === 'fw' || role === 'st' || role === 'rw' || role === 'lw';
+  const isDefender = role === 'cb' || role === 'rb' || role === 'lb';
+  const isMidfielder = role === 'cm' || role === 'dm' || role === 'am' || role === 'rm' || role === 'lm';
+  const goapCtx: GoapGoalContext = {
+    isCarrier: ctx.isCarrier,
+    teamHasBall,
+    distToGoalM: distToGoal,
+    distToBallM: distToBall,
+    minute: ctx.minute,
+    scoreDiff: ctx.scoreDiff,
+    fatigue01: 1 - (ctx.stamina ?? 100) / 100,
+    pressureLevel: ctx.threatLevel,
+    inBox: distToGoal < 18,
+    inFinalThird: distToGoal < 35,
+    inDefensiveThird: distToGoal > 70,
+    isForward,
+    isDefender,
+    isMidfielder,
+  };
+  const evaluation = evaluateGoalTree(goapCtx);
+  const tilt: Partial<Record<string, number>> = {};
+  for (const action of evaluation.biasActions) {
+    tilt[action] = (tilt[action] ?? 0) + evaluation.biasStrength;
+  }
+  return tilt as Partial<Record<DecisionActionId, number>>;
+}
 
 // ---------------------------------------------------------------------------
 // Decision timing
@@ -474,6 +512,8 @@ export function decideOnBallWithIntention(
   // If lead pass preference detected, bias progressive/through a bit
   ...((ctx as any)._leadPassPreferred ? { pass_progressive: 0.26, pass_long: 0.08 } : {}),
       ...computePlayContinuityTilt(ctx),
+      ...(ctx.teamIntentBias ?? {}),
+      ...buildGoapMacroTilt(ctx),
     };
     const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, {
       tags: zoneTags,

@@ -151,6 +151,7 @@ export function applySteeringForPhase(
   teamHasBall: boolean,
   ballX?: number,
   playerX?: number,
+  stamina01 = 1,
 ) {
   binding.pursuit.evader = ballVehicle;
   binding.obstacle.obstacles = others;
@@ -201,7 +202,7 @@ export function applySteeringForPhase(
 
   // Fuzzy evaluation for smooth weight transitions (replaces binary IF/ELSE chains)
   const fuzzyDist = fuzzifyDistance(distToBall);
-  const fuzzyFat = fuzzifyFatigue((binding as any).fatigue01 ?? 0);
+  const fuzzyFat = fuzzifyFatigue(1 - stamina01);
   const fuzzyRole = fuzzifyRole(defensiveLine, forwardLine, lateralLine);
   const fuzzy = evaluateFuzzySteering(fuzzyDist, fuzzyFat, fuzzyRole, teamHasBall);
 

@@ -112,7 +112,8 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
   ];
   const half = ctx.clockHalf ?? 1;
   const zoneTags = getZoneTags({ x: ctx.self.x, z: ctx.self.z }, { team: ctx.self.side, half });
-  const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, { tags: zoneTags });
+  const offBallIntentTilt = ctx.teamIntentBias as Record<string, number> | undefined;
+  const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, { tags: zoneTags, macroTilt: offBallIntentTilt });
   if (!teamHasBall) {
     // Voice command: pressão / falta tática → força press mais próximo, ignora delay.
     const vPress = ctx.voiceBias?.pressIntensity ?? 0;
