@@ -415,6 +415,7 @@ export default function App() {
             <Route path="/dev/legacy-card" element={<LegacyCardPreview />} />
             <Route path="/dev/ceremony-preview" element={<CeremonyPreview />} />
             <Route path="/dev/field-view" element={<FieldViewPreview />} />
+            <Route path="/match/legacy" element={<FieldViewPreview />} />
             <Route path="/match/live" element={<MatchLive />} />
             <Route path="/match" element={<LiveMatch />} />
             <Route path="/match/test2d" element={<Navigate to="/match/live" replace />} />
