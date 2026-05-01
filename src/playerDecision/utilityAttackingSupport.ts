@@ -53,12 +53,17 @@ import { getLastAttackingAction, recordAttackingAction } from './agentActionMemo
  */
 
 // 1. STRIKER_INFILTRATE_BOX
+// PR1: usa inFinalThirdOrSelf (bola OU jogador no terço final) — striker
+// já dentro da área não congela quando bola está no meio-campo. Atributos
+// (finalizacao/velocidade) entram como axes sigmoid: craque infiltra mais.
 const STRIKER_INFILTRATE_BOX: CandidateAction = {
   id: 'striker_infiltrate_box',
   axes: [
-    { input: 'roleAttack',     curve: 'linear', m: 1, k: 0, b: 0,    c: 1 },
-    { input: 'inFinalThird',   curve: 'linear', m: 1, k: 0, b: 0,    c: 1 },
-    { input: 'boxNotFull',     curve: 'linear', m: 1, k: 0, b: 0,    c: 1 },
+    { input: 'roleAttack',         curve: 'linear',  m: 1, k: 0,    b: 0,    c: 1 },
+    { input: 'inFinalThirdOrSelf', curve: 'linear',  m: 1, k: 0,    b: 0,    c: 1 },
+    { input: 'boxNotFull',         curve: 'linear',  m: 1, k: 0,    b: 0,    c: 1 },
+    { input: 'finalizacaoNorm',    curve: 'sigmoid', m: 6, k: 0.45, b: 0.15, c: 0.85 },
+    { input: 'velocidadeNorm',     curve: 'sigmoid', m: 5, k: 0.45, b: 0.25, c: 0.85 },
   ],
 };
 
@@ -168,12 +173,15 @@ export interface AttackingUtilityInputs {
   slotFullback: number;
   slotMidAtt: number;
   inFinalThird: number;
+  inFinalThirdOrSelf: number;
   inBoxEntry: number;
   notInFinalThird: number;
   boxNotFull: number;
   shouldAnchor: number;
   notShouldAnchor: number;
   farFromBall: number;
+  finalizacaoNorm: number;
+  velocidadeNorm: number;
   sqLowUsefulness: number;
   sqSuggestionWidth: number;
   sqSuggestionAttackSpace: number;
@@ -189,6 +197,14 @@ export function buildAttackingInputs(args: {
   shouldAnchor: boolean;
   distToBall: number;
   supportQuality: SupportQuality | null;
+  /** PR1: posição própria do jogador (engine X 0–100) — usada para playerInFinalThird. */
+  selfX: number;
+  /** PR1: direção do ataque (+1 home, -1 away). */
+  attackDir: number;
+  /** PR1: atributo finalizacao 0–100 (de AgentSnapshot). */
+  finalizacao: number;
+  /** PR1: atributo velocidade 0–100 (de AgentSnapshot). */
+  velocidade: number;
 }): AttackingUtilityInputs {
   const slotL = args.slot.toLowerCase();
   const isWinger = slotL.includes('pe') || slotL.includes('pd');
@@ -196,6 +212,11 @@ export function buildAttackingInputs(args: {
   const isMidAtt = slotL.includes('mei') || slotL.includes('am');
   const inFinalThird = (args.attackPhase === 'box_entry' || args.attackPhase === 'final_third') ? 1 : 0;
   const inBoxEntry = args.attackPhase === 'box_entry' ? 1 : 0;
+  // PR1: posição PRÓPRIA do jogador no terço final (independente da bola).
+  // selfAlong = avanço normalizado em direção ao gol adversário, 0..1.
+  const selfAlong = args.attackDir === 1 ? args.selfX / 100 : (100 - args.selfX) / 100;
+  const playerInFinalThird = selfAlong > 0.66 ? 1 : 0;
+  const inFinalThirdOrSelf = Math.max(inFinalThird, playerInFinalThird);
   const sq = args.supportQuality;
   const sqLow = sq && sq.usefulness < 0.35 && sq.suggestion !== 'stay' ? 1 : 0;
 
@@ -205,12 +226,15 @@ export function buildAttackingInputs(args: {
     slotFullback: isFullback ? 1 : 0,
     slotMidAtt: isMidAtt ? 1 : 0,
     inFinalThird,
+    inFinalThirdOrSelf,
     inBoxEntry,
     notInFinalThird: 1 - inFinalThird,
     boxNotFull: args.inBoxCount < 4 ? 1 : 0,
     shouldAnchor: args.shouldAnchor ? 1 : 0,
     notShouldAnchor: args.shouldAnchor ? 0 : 1,
     farFromBall: args.distToBall > 30 ? 1 : 0,
+    finalizacaoNorm: Math.max(0, Math.min(1, args.finalizacao / 100)),
+    velocidadeNorm: Math.max(0, Math.min(1, args.velocidade / 100)),
     sqLowUsefulness: sqLow,
     sqSuggestionWidth: sqLow && sq?.suggestion === 'create_width' ? 1 : 0,
     sqSuggestionAttackSpace: sqLow && sq?.suggestion === 'attack_space' ? 1 : 0,

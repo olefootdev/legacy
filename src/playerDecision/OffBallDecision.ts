@@ -278,6 +278,11 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
       shouldAnchor: shouldAnchorToSlot(ctx),
       distToBall,
       supportQuality: sq,
+      // PR1: player-aware inputs (posição + atributos).
+      selfX: ctx.self.x,
+      attackDir: ctx.attackDir,
+      finalizacao: ctx.self.finalizacao,
+      velocidade: ctx.self.velocidade,
     });
     const { action: utilityAction } = evaluateAttackingUtility(
       ctx,
@@ -632,7 +637,17 @@ function decideFullbackSupport(
   const isLeft = ctx.self.z < FIELD_WIDTH / 2;
   const mySector: BallSector = isLeft ? 'left' : 'right';
   const overlapRoll01 = contextualFullbackOverlapRoll01(ctx, reading, sector);
-  const inputs = buildFullbackInputs(reading, profile, sector, mySector, overlapRoll01);
+  const inputs = buildFullbackInputs(
+    reading,
+    profile,
+    sector,
+    mySector,
+    overlapRoll01,
+    // PR1: player-aware inputs (posição + cruzamento).
+    ctx.self.x,
+    ctx.attackDir,
+    ctx.self.cruzamento,
+  );
   const { action } = shouldFireFullbackUtility(ctx, reading, inputs, isLeft, pick01ForDecision);
   return action;
 }

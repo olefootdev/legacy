@@ -37,13 +37,18 @@ import { getLastFullbackAction, recordFullbackAction } from './agentActionMemory
  *   - alta quando: bola do meu lado + fase ofensiva + workRate alto + overlap roll alto
  *   - baixa quando: bola do outro lado, fase defensiva, workRate baixo
  */
+// PR1: cruzamentoNorm + playerInAttackHalf entram como axes.
+// Lateral com cruzamento alto e já avançado tem overlap_run dominante mesmo
+// quando overlapRoll fica mediano — atributo do jogador realmente importa.
 const OVERLAP_RUN: CandidateAction = {
   id: 'overlap_run',
   axes: [
-    { input: 'ballSideMatch',  curve: 'linear',  m: 1, k: 0,    b: 0,   c: 1 },
-    { input: 'inAttackPhase',  curve: 'linear',  m: 1, k: 0,    b: 0,   c: 1 },
-    { input: 'workRate',       curve: 'sigmoid', m: 8, k: 0.55, b: 0,   c: 1 },
-    { input: 'overlapRoll',    curve: 'linear',  m: 1, k: 0,    b: 0.2, c: 0.8 },
+    { input: 'ballSideMatch',      curve: 'linear',  m: 1, k: 0,    b: 0,    c: 1 },
+    { input: 'inAttackPhase',      curve: 'linear',  m: 1, k: 0,    b: 0,    c: 1 },
+    { input: 'workRate',           curve: 'sigmoid', m: 8, k: 0.55, b: 0,    c: 1 },
+    { input: 'overlapRoll',        curve: 'linear',  m: 1, k: 0,    b: 0.2,  c: 0.8 },
+    { input: 'cruzamentoNorm',     curve: 'sigmoid', m: 6, k: 0.40, b: 0.15, c: 0.85 },
+    { input: 'playerInAttackHalf', curve: 'linear',  m: 1, k: 0,    b: 0.25, c: 0.75 },
   ],
 };
 
@@ -106,6 +111,8 @@ export interface FullbackUtilityInputs {
   workRateInverted: number;
   overlapRoll: number;
   defenseScore: number;
+  cruzamentoNorm: number;
+  playerInAttackHalf: number;
 }
 
 export function buildFullbackInputs(
@@ -114,6 +121,12 @@ export function buildFullbackInputs(
   sector: BallSector,
   mySector: BallSector,
   overlapRoll01: number,
+  /** PR1: posição própria do jogador (engine X 0–100). */
+  selfX: number,
+  /** PR1: direção do ataque (+1 home, -1 away). */
+  attackDir: number,
+  /** PR1: atributo cruzamento 0–100 (de AgentSnapshot). */
+  cruzamento: number,
 ): FullbackUtilityInputs {
   const ballSideMatch = sector === mySector ? 1 : 0;
   const ballOpposite = (sector !== mySector && sector !== 'center') ? 1 : 0;
@@ -125,6 +138,11 @@ export function buildFullbackInputs(
   // Defensive score: low when team in attack, high when team in transition_def.
   // (TeamPhase enum: 'buildup' | 'progression' | 'attack' | 'transition_def' | 'transition_att')
   const defenseScore = reading.teamPhase === 'transition_def' ? 1 : 0.3;
+  // PR1: lateral já avançado (>55% rumo ao gol adversário) recebe boost direto
+  // no overlap_run, mesmo com overlapRoll mediano.
+  const lateralAlong = attackDir === 1 ? selfX / 100 : (100 - selfX) / 100;
+  const playerInAttackHalf = lateralAlong > 0.55 ? 1 : 0;
+  const cruzamentoNorm = Math.max(0, Math.min(1, cruzamento / 100));
 
   return {
     ballSideMatch,
@@ -135,6 +153,8 @@ export function buildFullbackInputs(
     workRateInverted,
     overlapRoll,
     defenseScore,
+    cruzamentoNorm,
+    playerInAttackHalf,
   };
 }
 

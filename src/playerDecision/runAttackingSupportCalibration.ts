@@ -196,6 +196,11 @@ function runScenario(s: Scenario, previousActionId?: string | null): ScenarioRes
     distToBall: s.distToBall,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     supportQuality: s.sq as any,
+    // PR1: defaults neutros para calibração — cenários explícitos podem extender.
+    selfX: 50,
+    attackDir: 1,
+    finalizacao: 60,
+    velocidade: 60,
   });
   const verdict = selectAttackingAction({} as never, inputs, undefined, previousActionId);
   const expected = s.expect;
