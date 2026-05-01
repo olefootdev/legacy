@@ -53,20 +53,6 @@ export interface LegacyMatchState {
 
 const RENDER_MS = 24;
 
-/** 4-3-3 slot→playerId para o time da casa mock */
-const MOCK_HOME_LINEUP: Record<string, string> = {
-  gol: 'gk1',
-  zag1: 'zag1',
-  zag2: 'zag2',
-  le: 'lat1',
-  ld: 'lat2',
-  vol: 'vol1',
-  mc1: 'mei1',
-  mc2: 'mei2',
-  pe: 'pe1',
-  pd: 'pd1',
-  ata: 'ata1',
-};
 
 /** Constrói LiveMatchSnapshot mínimo para inicializar TacticalSimLoop */
 function buildMockLive(
@@ -75,10 +61,10 @@ function buildMockLive(
   homeScore: number,
   awayScore: number,
 ): LiveMatchSnapshot {
-  // Garantir slotIds corretos para o TacticalSimLoop
-  const playersWithSlots = homePlayers.map((p) => {
-    const slot = Object.entries(MOCK_HOME_LINEUP).find(([, pid]) => pid === p.playerId)?.[0];
-    return { ...p, slotId: slot ?? p.slotId };
+  // Build lineup from actual slotIds on the players (works for both mock and real squad)
+  const lineupBySlot: Record<string, string> = {};
+  homePlayers.forEach((p) => {
+    if (p.slotId) lineupBySlot[p.slotId] = p.playerId;
   });
 
   return {
@@ -92,10 +78,10 @@ function buildMockLive(
     awayShort: 'ADV',
     possession: 'home',
     ball: { x: 50, y: 50 },
-    homePlayers: playersWithSlots,
+    homePlayers,
     homeFormationScheme: '4-3-3',
     awayFormationScheme: '4-4-2',
-    matchLineupBySlot: MOCK_HOME_LINEUP,
+    matchLineupBySlot: lineupBySlot,
     homeStats: {},
     events: [],
     substitutionsUsed: 0,
