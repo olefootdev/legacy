@@ -85,34 +85,23 @@ export function FieldViewPreview() {
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, () => {}, false, 1);
 
   // ── Camera tracking — Follow + Action Cam ─────────────────────────────────
-  useEffect(() => {
-    const viewportHeight = window.innerHeight;
+  // TODO: Re-enable camera tracking with proper effect management
+  // For now, keeping cameras in static mode to avoid update depth exceeded errors
 
-    if (cameraTrack === 'follow') {
-      const transform = computeFollowCameraTransform(engine.ballX, engine.ballY, viewportHeight);
-      setCameraPan({ x: transform.panX, y: transform.panY });
-      setCameraZoom(1);
-    } else if (cameraTrack === 'actioncam') {
-      const transform = computeActionCamTransform(engine.ballX, engine.ballY, viewportHeight);
-      setCameraPan({ x: transform.translateX, y: transform.translateY });
-      setCameraZoom(transform.scale);
-    } else {
-      // static mode
-      setCameraPan({ x: 0, y: 0 });
-      setCameraZoom(1);
-    }
-  }, [engine.ballX, engine.ballY, cameraTrack]);
-
-  // Atualiza fanMood com base no placar e posse (após engine estar disponível)
-  useEffect(() => {
-    const diff = engine.homeScore - engine.awayScore;
-    const possessionBonus = engine.possession === 'home' ? 5 : -5;
-    const base = 60 + diff * 8 + possessionBonus;
-    setFanMood(prev => {
-      const target = Math.max(10, Math.min(100, base));
-      return Math.round(prev + (target - prev) * 0.15);
-    });
-  }, [engine.homeScore, engine.awayScore, engine.possession, engine.minute]);
+  // Atualiza fanMood com base no placar e posse (disabled for now due to update depth issue)
+  // const lastMinuteRef = useRef(-1);
+  // useEffect(() => {
+  //   // Only update fanMood once per game minute
+  //   if (engine.minute === lastMinuteRef.current) return;
+  //   lastMinuteRef.current = engine.minute;
+  //   const diff = engine.homeScore - engine.awayScore;
+  //   const possessionBonus = engine.possession === 'home' ? 5 : -5;
+  //   const base = 60 + diff * 8 + possessionBonus;
+  //   setFanMood(prev => {
+  //     const target = Math.max(10, Math.min(100, base));
+  //     return Math.round(prev + (target - prev) * 0.15);
+  //   });
+  // }, [engine.homeScore, engine.awayScore, engine.possession, engine.minute]);
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#050505] flex flex-col" style={{ touchAction: 'none' }}>
@@ -144,134 +133,130 @@ export function FieldViewPreview() {
         }
       `}</style>
 
-      {/* ── NarrativeBar — faixa editorial entre HUD e campo ── */}
-      <NarrativeBar
+      {/* ── NarrativeBar — disabled to test for update depth error ── */}
+      {/* <NarrativeBar
         lastEventText={engine.events[0]?.text ?? null}
         lastEventKind={engine.events[0]?.kind}
         possession={engine.possession}
         ballX={engine.ballX}
         minute={engine.minute}
         isGoal={engine.lastEvent === 'goal'}
-      />
+      /> */}
 
       {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
-      {/* Wrapper externo: items-stretch + justify-center + min-h-0 permite o
-          FieldView interno (h-full + aspect-ratio) fittar pelo menor lado. */}
-      <div
-        className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden"
-      >
-      <div
-        className="w-full h-full flex flex-col items-stretch justify-center min-h-0"
-        style={{
-          transform: `translate(${cameraPan.x}px, ${cameraPan.y}px) scale(${cameraZoom})`,
-          transformOrigin: '50% 50%',
-          transition: cameraTrack === 'static' ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)' : 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        }}
-      >
-        <FieldView
-          homePlayers={engine.homePlayers}
-          awayPlayers={engine.awayPlayers}
-          ballX={engine.ballX}
-          ballY={engine.ballY}
-          onBallPlayerId={engine.onBallPlayerId}
-          cameraMode={camera}
-          homeShort="OLE"
-          awayShort={awayClub?.name?.slice(0, 3).toUpperCase() ?? 'ADV'}
-          homeName="Olefoot FC"
-          awayName={awayClub?.name}
-          homeCrestUrl={favoriteRealTeam?.logo ?? null}
-          awayClub={awayClub}
-          onAwayClubChange={setAwayClub}
-          homeScore={engine.homeScore}
-          awayScore={engine.awayScore}
-          matchMinute={engine.minute}
-          possession={engine.possession}
-          phase={engine.phase}
-          showCameraSwitch={true}
-          onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
-          onPlayerClick={(p) => {
-            setBrainPlayer(p);
-            window.setTimeout(() => setBrainPlayer(null), 4000);
-          }}
-          className="w-full"
-        />
-
-        {/* ── PressureZoneOverlay — zonas de tensão ── */}
-        <PressureZoneOverlay
-          ballX={engine.ballX}
-          possession={engine.possession}
-          phase={engine.phase}
-        />
-
-        {/* ── PlayerBrainCard — inteligência do jogador ── */}
-        {brainPlayer && (
-          <PlayerBrainCard
-            player={brainPlayer}
-            onClose={() => setBrainPlayer(null)}
-          />
-        )}
-
-        {/* ── Camera tracking controls — Follow + Action Cam ── */}
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden">
         <div
-          className="absolute top-4 right-4 z-[120] flex gap-1.5"
-          style={{ pointerEvents: 'auto' }}
+          className="w-full h-full flex flex-col items-stretch justify-center min-h-0"
+          style={{
+            transform: `translate(${cameraPan.x}px, ${cameraPan.y}px) scale(${cameraZoom})`,
+            transformOrigin: '50% 50%',
+            transition: cameraTrack === 'static' ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)' : 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          }}
         >
-          <button
-            type="button"
-            onClick={() => setCameraTrack('static')}
-            className="font-display uppercase transition-all active:scale-95"
-            style={{
-              background: cameraTrack === 'static' ? '#FDE100' : 'rgba(253,225,0,0.2)',
-              color: cameraTrack === 'static' ? '#000' : '#FDE100',
-              border: '1px solid rgba(253,225,0,0.5)',
-              padding: '6px 12px',
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: '0.18em',
-              borderRadius: 2,
-              cursor: 'pointer',
+          <FieldView
+            homePlayers={engine.homePlayers}
+            awayPlayers={engine.awayPlayers}
+            ballX={engine.ballX}
+            ballY={engine.ballY}
+            onBallPlayerId={engine.onBallPlayerId}
+            cameraMode={camera}
+            homeShort="OLE"
+            awayShort={awayClub?.name?.slice(0, 3).toUpperCase() ?? 'ADV'}
+            homeName="Olefoot FC"
+            awayName={awayClub?.name}
+            homeCrestUrl={favoriteRealTeam?.logo ?? null}
+            awayClub={awayClub}
+            onAwayClubChange={setAwayClub}
+            homeScore={engine.homeScore}
+            awayScore={engine.awayScore}
+            matchMinute={engine.minute}
+            possession={engine.possession}
+            phase={engine.phase}
+            showCameraSwitch={true}
+            onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
+            onPlayerClick={(p) => {
+              setBrainPlayer(p);
+              window.setTimeout(() => setBrainPlayer(null), 4000);
             }}
-          >
-            Estático
-          </button>
-          <button
-            type="button"
-            onClick={() => setCameraTrack('follow')}
-            className="font-display uppercase transition-all active:scale-95"
-            style={{
-              background: cameraTrack === 'follow' ? '#FDE100' : 'rgba(253,225,0,0.2)',
-              color: cameraTrack === 'follow' ? '#000' : '#FDE100',
-              border: '1px solid rgba(253,225,0,0.5)',
-              padding: '6px 12px',
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: '0.18em',
-              borderRadius: 2,
-              cursor: 'pointer',
-            }}
-          >
-            Follow
-          </button>
-          <button
-            type="button"
-            onClick={() => setCameraTrack('actioncam')}
-            className="font-display uppercase transition-all active:scale-95"
-            style={{
-              background: cameraTrack === 'actioncam' ? '#FDE100' : 'rgba(253,225,0,0.2)',
-              color: cameraTrack === 'actioncam' ? '#000' : '#FDE100',
-              border: '1px solid rgba(253,225,0,0.5)',
-              padding: '6px 12px',
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: '0.18em',
-              borderRadius: 2,
-              cursor: 'pointer',
-            }}
-          >
-            Action Cam
-          </button>
+            className="w-full"
+          />
+
+          {/* ── PressureZoneOverlay — zonas de tensão ── */}
+          <PressureZoneOverlay
+            ballX={engine.ballX}
+            possession={engine.possession}
+            phase={engine.phase}
+          />
+
+          {/* ── PlayerBrainCard — inteligência do jogador ── */}
+          {brainPlayer && (
+            <PlayerBrainCard
+              player={brainPlayer}
+              onClose={() => setBrainPlayer(null)}
+            />
+          )}
         </div>
       </div>
+
+      {/* ── Camera tracking controls — Fixed position (top level) ── */}
+      <div
+        className="absolute top-4 right-4 z-[120] flex gap-1.5"
+        style={{ pointerEvents: 'auto' }}
+      >
+        <button
+          type="button"
+          onClick={() => setCameraTrack('static')}
+          className="font-display uppercase transition-all active:scale-95"
+          style={{
+            background: cameraTrack === 'static' ? '#FDE100' : 'rgba(253,225,0,0.2)',
+            color: cameraTrack === 'static' ? '#000' : '#FDE100',
+            border: '1px solid rgba(253,225,0,0.5)',
+            padding: '6px 12px',
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: '0.18em',
+            borderRadius: 2,
+            cursor: 'pointer',
+          }}
+        >
+          Estático
+        </button>
+        <button
+          type="button"
+          onClick={() => setCameraTrack('follow')}
+          className="font-display uppercase transition-all active:scale-95"
+          style={{
+            background: cameraTrack === 'follow' ? '#FDE100' : 'rgba(253,225,0,0.2)',
+            color: cameraTrack === 'follow' ? '#000' : '#FDE100',
+            border: '1px solid rgba(253,225,0,0.5)',
+            padding: '6px 12px',
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: '0.18em',
+            borderRadius: 2,
+            cursor: 'pointer',
+          }}
+        >
+          Follow
+        </button>
+        <button
+          type="button"
+          onClick={() => setCameraTrack('actioncam')}
+          className="font-display uppercase transition-all active:scale-95"
+          style={{
+            background: cameraTrack === 'actioncam' ? '#FDE100' : 'rgba(253,225,0,0.2)',
+            color: cameraTrack === 'actioncam' ? '#000' : '#FDE100',
+            border: '1px solid rgba(253,225,0,0.5)',
+            padding: '6px 12px',
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: '0.18em',
+            borderRadius: 2,
+            cursor: 'pointer',
+          }}
+        >
+          Action Cam
+        </button>
       </div>
 
       {/* ── LiveEventTimeline — memória da partida ── */}
