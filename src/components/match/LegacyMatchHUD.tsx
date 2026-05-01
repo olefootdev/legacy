@@ -171,23 +171,25 @@ export function LegacyMatchHUD({
               <div style={{ width: 4, height: 4, borderRadius: '50%', background: possession === 'away' ? 'rgba(255,255,255,0.8)' : 'transparent', border: `1px solid ${possession === 'away' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.12)'}`, flexShrink: 0, transition: 'background 300ms' }} />
             </div>
           </div>
-          {/* Brasão adversário — clicável para trocar */}
-          <button type="button" onClick={() => setShowClubPicker(v => !v)}
-            style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}
-            title="Escolher clube adversário"
-          >
-            {awayClub?.logo ? (
-              <img src={awayClub.logo} alt={awayClub.name}
-                style={{ width: 28, height: 28, objectFit: 'contain', opacity: 0.85 }}
-                referrerPolicy="no-referrer" draggable={false} />
-            ) : (
-              <div style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>
-                  {awayShort.slice(0, 3)}
-                </span>
-              </div>
-            )}
-          </button>
+          {/* Brasão adversário — clicável apenas quando há callback */}
+          {onAwayClubChange ? (
+            <button type="button" onClick={() => setShowClubPicker(v => !v)}
+              style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}
+              title="Escolher clube adversário"
+            >
+              {awayClub?.logo ? (
+                <img src={awayClub.logo} alt={awayClub.name}
+                  style={{ width: 28, height: 28, objectFit: 'contain', opacity: 0.85 }}
+                  referrerPolicy="no-referrer" draggable={false} />
+              ) : (
+                <div style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>
+                    {awayShort.slice(0, 3)}
+                  </span>
+                </div>
+              )}
+            </button>
+          ) : null}
         </div>
       </div>
 

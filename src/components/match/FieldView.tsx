@@ -890,6 +890,8 @@ export interface FieldViewProps {
   phase?: 'playing' | 'halftime' | 'fulltime';
   /** Show camera mode switcher UI. */
   showCameraSwitch?: boolean;
+  /** Hide the built-in LegacyMatchHUD scoreboard (Legacy Mode uses external header). */
+  hideHud?: boolean;
   onCameraChange?: (mode: FieldCameraMode) => void;
   onPlayerClick?: (p: PitchPlayerState) => void;
   /**
@@ -925,6 +927,7 @@ export const FieldView = memo(function FieldView({
   possession = 'home',
   phase = 'playing',
   showCameraSwitch = true,
+  hideHud = false,
   onCameraChange,
   onPlayerClick,
   highlightPlayerId = null,
@@ -974,7 +977,7 @@ export const FieldView = memo(function FieldView({
       style={{ touchAction: 'none' }}
     >
       {/* ── Scoreboard header ── */}
-      <LegacyMatchHUD
+      {!hideHud && <LegacyMatchHUD
         homeShort={homeShort}
         awayShort={awayShort}
         homeName={homeName}
@@ -990,7 +993,7 @@ export const FieldView = memo(function FieldView({
         phase={phase}
         cameraMode={cameraMode === 'firstperson' ? 'aerial' : cameraMode}
         onCameraChange={showCameraSwitch ? onCameraChange : undefined}
-      />
+      />}
 
       {/* ── Field area — aspect-locked, fit pelo menor lado do container.
            Container externo: flex centraliza vertical+horizontal e clipa overflow.
@@ -1058,19 +1061,21 @@ export const FieldView = memo(function FieldView({
       </div>
 
       {/* ── Camera mode label (bottom-right watermark) ── */}
-      <div
-        className="absolute bottom-3 right-4 pointer-events-none"
-        style={{
-          fontSize: 9,
-          letterSpacing: '0.3em',
-          fontFamily: "'Oswald', sans-serif",
-          fontWeight: 700,
-          color: 'rgba(255,255,255,0.18)',
-          textTransform: 'uppercase',
-        }}
-      >
-        {CAMERA_LABELS[cameraMode]}
-      </div>
+      {!hideHud && (
+        <div
+          className="absolute bottom-3 right-4 pointer-events-none"
+          style={{
+            fontSize: 9,
+            letterSpacing: '0.3em',
+            fontFamily: "'Oswald', sans-serif",
+            fontWeight: 700,
+            color: 'rgba(255,255,255,0.18)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {CAMERA_LABELS[cameraMode]}
+        </div>
+      )}
     </div>
   );
 });

@@ -4,9 +4,11 @@
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { FieldView } from '@/components/match/FieldView';
-import { SmartPanel, type PlayStyle } from '@/components/match/SmartPanel';
+import type { PlayStyle } from '@/components/match/SmartPanel';
 import { NarrativeBar } from '@/components/match/NarrativeBar';
-import { LiveEventTimeline } from '@/components/match/LiveEventTimeline';
+import { FalePlayerBar } from '@/components/match/FalePlayerBar';
+import { LegacyEditorialHeader } from '@/components/match/LegacyEditorialHeader';
+import { LegacyMinuteWatermark } from '@/components/match/LegacyMinuteWatermark';
 import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
 import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
 import { ReadGamePanel } from '@/components/match/ReadGamePanel';
@@ -73,9 +75,6 @@ export function FieldViewPreview() {
   const [playStyle, setPlayStyle] = useState<PlayStyle>('PRESSAO_ALTA');
   const [fanMood, setFanMood] = useState(72);
 
-  // ── Away club picker ──────────────────────────────────────────────────────
-  const [awayClub, setAwayClub] = useState<{ name: string; logo: string } | null>(null);
-
   // ── Home crest from game store (optional — page is standalone) ────────────
   const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
 
@@ -133,18 +132,23 @@ export function FieldViewPreview() {
         }
       `}</style>
 
-      {/* ── NarrativeBar — disabled to test for update depth error ── */}
-      {/* <NarrativeBar
-        lastEventText={engine.events[0]?.text ?? null}
-        lastEventKind={engine.events[0]?.kind}
-        possession={engine.possession}
-        ballX={engine.ballX}
+      {/* ── Header editorial Legacy Tech ── */}
+      <LegacyEditorialHeader
+        homeName="Olefoot FC"
+        awayName="Adversário"
+        homeScore={engine.homeScore}
+        awayScore={engine.awayScore}
         minute={engine.minute}
-        isGoal={engine.lastEvent === 'goal'}
-      /> */}
+        possession={engine.possession}
+        phase={engine.phase}
+        formation={formation}
+        onFormationChange={setFormation}
+        actionCam={cameraTrack === 'actioncam'}
+        onActionCamToggle={() => setCameraTrack(t => t === 'actioncam' ? 'static' : 'actioncam')}
+      />
 
       {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden relative">
         <div
           className="w-full h-full flex flex-col items-stretch justify-center min-h-0"
           style={{
@@ -161,18 +165,16 @@ export function FieldViewPreview() {
             onBallPlayerId={engine.onBallPlayerId}
             cameraMode={camera}
             homeShort="OLE"
-            awayShort={awayClub?.name?.slice(0, 3).toUpperCase() ?? 'ADV'}
+            awayShort="ADV"
             homeName="Olefoot FC"
-            awayName={awayClub?.name}
             homeCrestUrl={favoriteRealTeam?.logo ?? null}
-            awayClub={awayClub}
-            onAwayClubChange={setAwayClub}
             homeScore={engine.homeScore}
             awayScore={engine.awayScore}
             matchMinute={engine.minute}
             possession={engine.possession}
             phase={engine.phase}
             showCameraSwitch={true}
+            hideHud={true}
             onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
             onPlayerClick={(p) => {
               setBrainPlayer(p);
@@ -196,95 +198,38 @@ export function FieldViewPreview() {
             />
           )}
         </div>
-      </div>
 
-      {/* ── Camera tracking controls — Fixed position (top level) ── */}
-      <div
-        className="absolute top-4 right-4 z-[120] flex gap-1.5"
-        style={{ pointerEvents: 'auto' }}
-      >
-        <button
-          type="button"
-          onClick={() => setCameraTrack('static')}
-          className="font-display uppercase transition-all active:scale-95"
-          style={{
-            background: cameraTrack === 'static' ? '#FDE100' : 'rgba(253,225,0,0.2)',
-            color: cameraTrack === 'static' ? '#000' : '#FDE100',
-            border: '1px solid rgba(253,225,0,0.5)',
-            padding: '6px 12px',
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: '0.18em',
-            borderRadius: 2,
-            cursor: 'pointer',
-          }}
-        >
-          Estático
-        </button>
-        <button
-          type="button"
-          onClick={() => setCameraTrack('follow')}
-          className="font-display uppercase transition-all active:scale-95"
-          style={{
-            background: cameraTrack === 'follow' ? '#FDE100' : 'rgba(253,225,0,0.2)',
-            color: cameraTrack === 'follow' ? '#000' : '#FDE100',
-            border: '1px solid rgba(253,225,0,0.5)',
-            padding: '6px 12px',
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: '0.18em',
-            borderRadius: 2,
-            cursor: 'pointer',
-          }}
-        >
-          Follow
-        </button>
-        <button
-          type="button"
-          onClick={() => setCameraTrack('actioncam')}
-          className="font-display uppercase transition-all active:scale-95"
-          style={{
-            background: cameraTrack === 'actioncam' ? '#FDE100' : 'rgba(253,225,0,0.2)',
-            color: cameraTrack === 'actioncam' ? '#000' : '#FDE100',
-            border: '1px solid rgba(253,225,0,0.5)',
-            padding: '6px 12px',
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: '0.18em',
-            borderRadius: 2,
-            cursor: 'pointer',
-          }}
-        >
-          Action Cam
-        </button>
-      </div>
-
-      {/* ── LiveEventTimeline — memória da partida ── */}
-      <LiveEventTimeline
-        events={engine.events}
-        currentMinute={engine.minute}
-      />
-
-      {/* ── Rodapé: SmartPanel + ReadGamePanel + CommandCenter ── */}
-      <div style={{ position: 'relative' }}>
-        <ReadGamePanel
-          possession={engine.possession}
-          ballX={engine.ballX}
-          homePlayers={engine.homePlayers}
-          events={engine.events}
-          playStyle={playStyle}
-          homeScore={engine.homeScore}
-          awayScore={engine.awayScore}
+        {/* ── Watermark do minuto (ambient) ── */}
+        <LegacyMinuteWatermark
           minute={engine.minute}
+          phase={engine.phase}
+          momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
         />
-        <SmartPanel
-          formation={formation}
-          onFormationChange={setFormation}
-          playStyle={playStyle}
-          onStyleChange={setPlayStyle}
-          fanMood={fanMood}
-        />
+
+        {/* ── Ler Jogo — overlay no campo, canto inferior esquerdo ── */}
+        <div style={{ position: 'absolute', left: 16, bottom: 16, zIndex: 100 }}>
+          <ReadGamePanel
+            possession={engine.possession}
+            ballX={engine.ballX}
+            homePlayers={engine.homePlayers}
+            events={engine.events}
+            playStyle={playStyle}
+            homeScore={engine.homeScore}
+            awayScore={engine.awayScore}
+            minute={engine.minute}
+          />
+        </div>
       </div>
+
+      {/* Spacer para FalePlayerBar fixa não cobrir o campo */}
+      <div aria-hidden style={{ height: 110, flexShrink: 0 }} />
+
+      {/* ── FALE COM OS JOGADORES — fixo no rodapé absoluto ── */}
+      <FalePlayerBar
+        players={engine.homePlayers}
+        ballCarrierId={engine.onBallPlayerId}
+        minute={engine.minute}
+      />
     </div>
   );
 }
