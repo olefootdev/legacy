@@ -17,15 +17,50 @@ import { ExpertPanel } from '@/components/match/ExpertPanel';
 import { useNarrativeCamera } from '@/components/match/useNarrativeCamera';
 import type { PitchPlayerState } from '@/engine/types';
 import type { FormationSchemeId } from '@/match-engine/types';
+import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import { useLegacyMatchEngine } from './useLegacyMatchEngine';
 import { useGameStore } from '@/game/store';
+import type { PlayerEntity } from '@/entities/types';
 
-// ── Mock inicial ─────────────────────────────────────────────────────────────
+// ── Slot order for 4-3-3 (maps squad players by index to formation slots) ────
+const SLOT_ORDER_433 = ['gol', 'zag1', 'zag2', 'le', 'ld', 'vol', 'mc1', 'mc2', 'pe', 'pd', 'ata'];
+
+function posToRole(pos: string): 'gk' | 'def' | 'mid' | 'attack' {
+  const p = pos.toUpperCase();
+  if (p === 'GOL' || p === 'GK') return 'gk';
+  if (['ZAG', 'LAT', 'LE', 'LD', 'CB', 'LB', 'RB', 'DEF'].includes(p)) return 'def';
+  if (['VOL', 'MEI', 'MC', 'MED', 'MID', 'PE', 'PD'].includes(p)) return 'mid';
+  return 'attack';
+}
+
+function squadToPitchPlayers(players: Record<string, PlayerEntity>): PitchPlayerState[] {
+  const bases = FORMATION_BASES['4-3-3'];
+  const sorted = Object.values(players).slice(0, 11);
+  return SLOT_ORDER_433.map((slotId, i) => {
+    const p = sorted[i];
+    const base = bases[slotId];
+    if (!p || !base) return null;
+    return {
+      playerId: p.id,
+      slotId,
+      name: p.name,
+      num: p.num ?? i + 1,
+      pos: p.pos,
+      role: posToRole(p.pos),
+      x: base.nx * 100,
+      y: base.nz * 100,
+      fatigue: p.fatigue ?? 20,
+      heading: 0,
+    } satisfies PitchPlayerState;
+  }).filter(Boolean) as PitchPlayerState[];
+}
+
+// ── Fallback mock (used only when store has no squad) ─────────────────────────
 function mkPlayer(id: string, name: string, num: number, pos: string,
   role: 'attack' | 'mid' | 'def' | 'gk', x: number, y: number, fatigue = 20): PitchPlayerState {
   return { playerId: id, slotId: id, name, num, pos, role, x, y, fatigue, heading: 0 };
 }
-const HOME_PLAYERS_INITIAL: PitchPlayerState[] = [
+const FALLBACK_PLAYERS: PitchPlayerState[] = [
   mkPlayer('gk1', 'Murilo Sá', 1, 'GOL', 'gk', 5, 50, 10),
   mkPlayer('zag1', 'Rafael Lima', 4, 'ZAG', 'def', 22, 32, 15),
   mkPlayer('zag2', 'Bruno Costa', 5, 'ZAG', 'def', 22, 68, 12),
@@ -81,13 +116,20 @@ export function FieldViewPreview() {
   const [playStyle, setPlayStyle] = useState<PlayStyle>('PRESSAO_ALTA');
   const [fanMood, setFanMood] = useState(72);
 
-  // ── Home crest from game store (optional — page is standalone) ────────────
+  // ── Club + squad from game store ─────────────────────────────────────────
+  const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
+  const clubShort = useGameStore((s) => s.club?.shortName ?? 'OLE');
+  const storePlayers = useGameStore((s) => s.players);
   const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
+
+  const homePlayers = Object.keys(storePlayers).length >= 11
+    ? squadToPitchPlayers(storePlayers)
+    : FALLBACK_PLAYERS;
 
   // ── PlayerBrainCard ───────────────────────────────────────────────────────
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
-  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, () => {}, false, 1);
+  const engine = useLegacyMatchEngine(homePlayers, () => {}, false, 1);
 
   // Câmera narrativa — ref-based, escreve direto no DOM (zero re-render)
   const cameraRef = useRef<HTMLDivElement>(null);
@@ -151,7 +193,7 @@ export function FieldViewPreview() {
 
       {/* ── Header editorial Legacy Tech ── */}
       <LegacyEditorialHeader
-        homeName="Olefoot FC"
+        homeName={clubName}
         awayName="Adversário"
         homeScore={engine.homeScore}
         awayScore={engine.awayScore}
@@ -292,9 +334,9 @@ export function FieldViewPreview() {
             ballY={engine.ballY}
             onBallPlayerId={engine.onBallPlayerId}
             cameraMode={viewMode === 'expert' ? 'broadcast' : camera}
-            homeShort="OLE"
+            homeShort={clubShort}
             awayShort="ADV"
-            homeName="Olefoot FC"
+            homeName={clubName}
             homeCrestUrl={favoriteRealTeam?.logo ?? null}
             homeScore={engine.homeScore}
             awayScore={engine.awayScore}
