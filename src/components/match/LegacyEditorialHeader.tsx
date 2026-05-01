@@ -25,15 +25,18 @@ interface LegacyEditorialHeaderProps {
   actionCam?: boolean;
   onActionCamToggle?: () => void;
   onExit?: () => void;
+  viewMode?: 'aerial' | 'expert';
+  onViewModeChange?: (m: 'aerial' | 'expert') => void;
 }
 
 export function LegacyEditorialHeader({
   homeName, awayName, homeScore, awayScore, minute, possession, phase,
   formation, onFormationChange, actionCam = false, onActionCamToggle, onExit,
+  viewMode = 'aerial', onViewModeChange,
 }: LegacyEditorialHeaderProps) {
   const eyebrow = phase === 'halftime' ? 'OLEFOOT • INTERVALO' : phase === 'fulltime' ? 'OLEFOOT • ENCERRADO' : 'OLEFOOT • LEGACY MODE';
-  const possessionPct = possession === 'home' ? 58 : 42;
   const [showFormations, setShowFormations] = useState(false);
+  const [showViewModes, setShowViewModes] = useState(false);
 
   const dotStyle: React.CSSProperties = {
     color: 'rgba(253,225,0,0.4)',
@@ -143,24 +146,69 @@ export function LegacyEditorialHeader({
             }}
           />
 
-          {/* Linha de controle: POSSE • Formação */}
+          {/* Linha de controle: View Mode • Formação */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 9,
-                fontWeight: 800,
-                letterSpacing: '0.32em',
-                color: NEON,
-                textTransform: 'uppercase',
-              }}
-            >
-              POSSE {possessionPct}%
-            </span>
+            {onViewModeChange && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowViewModes(v => !v)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 9,
+                    fontWeight: 800,
+                    letterSpacing: '0.32em',
+                    color: NEON,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {viewMode === 'aerial' ? 'Aerial' : 'Expert'}
+                  <span style={{ fontSize: 7, color: 'rgba(253,225,0,0.55)' }}>▾</span>
+                </button>
+                {showViewModes && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#0d0d0d', border: '1px solid rgba(253,225,0,0.18)', zIndex: 400, minWidth: 120 }}>
+                    {(['aerial', 'expert'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => { onViewModeChange(m); setShowViewModes(false); }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          background: m === viewMode ? 'rgba(253,225,0,0.08)' : 'transparent',
+                          border: 'none',
+                          padding: '6px 12px',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-display)',
+                          fontSize: 9,
+                          fontWeight: 800,
+                          letterSpacing: '0.2em',
+                          color: m === viewMode ? NEON : 'rgba(255,255,255,0.6)',
+                          textAlign: 'left',
+                          textTransform: 'uppercase',
+                          transition: 'background 120ms',
+                        }}
+                        onMouseEnter={e => { if (m !== viewMode) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                        onMouseLeave={e => { if (m !== viewMode) e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        {m === 'aerial' ? 'Aerial' : 'Expert'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {formation && onFormationChange && (
               <>
-                <span style={dotStyle}>•</span>
+                {onViewModeChange && <span style={dotStyle}>•</span>}
                 <div style={{ position: 'relative' }}>
                   <button
                     type="button"

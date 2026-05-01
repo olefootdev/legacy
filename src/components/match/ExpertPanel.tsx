@@ -175,10 +175,10 @@ export function ExpertPanel({
     <div style={{
       background: 'rgba(5,5,5,0.96)',
       borderTop: '1px solid rgba(253,225,0,0.08)',
-      padding: '12px 16px 8px',
+      padding: '8px 16px 6px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 10,
+      gap: 8,
       overflowY: 'auto',
       flex: 1,
       minHeight: 0,

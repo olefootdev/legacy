@@ -161,6 +161,11 @@ export function FieldViewPreview() {
         formation={formation}
         onFormationChange={setFormation}
         onExit={() => setShowExitConfirm(true)}
+        viewMode={viewMode}
+        onViewModeChange={(m) => {
+          setViewMode(m);
+          setCamera(m === 'expert' ? 'broadcast' : 'aerial');
+        }}
       />
 
       {showExitConfirm && (
@@ -268,36 +273,9 @@ export function FieldViewPreview() {
         </div>
       )}
 
-      {/* ── View mode toggle: Aerial / Expert ── */}
-      <div style={{
-        display: 'flex', justifyContent: 'center', gap: 2,
-        padding: '4px 0 2px', background: 'rgba(5,5,5,0.98)',
-        borderBottom: '1px solid rgba(253,225,0,0.04)',
-      }}>
-        {(['aerial', 'expert'] as const).map((m) => (
-          <button key={m} type="button" onClick={() => {
-            setViewMode(m);
-            if (m === 'expert') setCamera('broadcast');
-            else setCamera('aerial');
-          }}
-            style={{
-              background: viewMode === m ? '#FDE100' : 'rgba(255,255,255,0.04)',
-              color: viewMode === m ? '#000' : 'rgba(255,255,255,0.3)',
-              border: viewMode === m ? '1px solid #FDE100' : '1px solid rgba(255,255,255,0.06)',
-              fontFamily: 'var(--font-display)',
-              fontSize: 8, fontWeight: 800,
-              letterSpacing: '0.25em', textTransform: 'uppercase',
-              padding: '4px 14px', cursor: 'pointer',
-              transition: 'all 150ms',
-            }}>
-            {m === 'aerial' ? 'Aerial' : 'Expert'}
-          </button>
-        ))}
-      </div>
-
       {/* ── Campo — flex-1 in aerial, constrained in expert ── */}
       <div className={`${viewMode === 'expert' ? '' : 'flex-1'} min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative`}
-        style={viewMode === 'expert' ? { height: '38vh', flexShrink: 0 } : undefined}
+        style={viewMode === 'expert' ? { height: '32vh', flexShrink: 0 } : undefined}
       >
         <div
           ref={cameraRef}
@@ -357,6 +335,7 @@ export function FieldViewPreview() {
             minute={engine.minute}
             phase={engine.phase}
             momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
+            possessionPct={engine.possessionPct}
           />
         )}
 
