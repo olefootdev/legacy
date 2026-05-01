@@ -359,13 +359,9 @@ export function FieldViewPreview() {
       {/* ── Expert Panel — stats below field ── */}
       {viewMode === 'expert' && (
         <ExpertPanel
-          homeStats={engine.homeStats}
-          awayStats={engine.awayStats}
-          possessionPct={engine.possessionPct}
+          expertBars={engine.expertBars}
           homePlayers={engine.homePlayers}
           awayPlayers={engine.awayPlayers}
-          homeScore={engine.homeScore}
-          awayScore={engine.awayScore}
           minute={engine.minute}
         />
       )}

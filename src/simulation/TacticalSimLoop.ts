@@ -5785,6 +5785,25 @@ export class TacticalSimLoop {
     return this.simState;
   }
 
+  getExpertMetrics(): {
+    homeMorale: TeamMoraleState | null;
+    awayMorale: TeamMoraleState | null;
+    homeTacticalDiscipline: number;
+    awayTacticalDiscipline: number;
+  } {
+    const avgDiscipline = (agents: { matchRuntime: { tacticalDisciplineScore: number }; role: string }[]) => {
+      const field = agents.filter(a => a.role !== 'gk');
+      if (field.length === 0) return 0.5;
+      return field.reduce((sum, a) => sum + a.matchRuntime.tacticalDisciplineScore, 0) / field.length;
+    };
+    return {
+      homeMorale: this.homeMorale,
+      awayMorale: this.awayMorale,
+      homeTacticalDiscipline: avgDiscipline(this.homeAgents),
+      awayTacticalDiscipline: avgDiscipline(this.awayAgents),
+    };
+  }
+
   /** Returns home player IDs whose stamina is critically low (≤ threshold). Used for auto-sub hints. */
   getCriticallyFatiguedHomeIds(threshold = 30): string[] {
     return this.homeAgents

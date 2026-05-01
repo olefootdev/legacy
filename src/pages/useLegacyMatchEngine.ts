@@ -44,6 +44,11 @@ export interface LegacyMatchState {
   homeStats: TeamStats;
   awayStats: TeamStats;
   possessionPct: { home: number; away: number };
+  expertBars: {
+    decisions: { home: number; away: number };
+    confidence: { home: number; away: number; homeLabel: string; awayLabel: string };
+    tactical: { home: number; away: number };
+  };
 }
 
 const RENDER_MS = 24;
@@ -156,6 +161,11 @@ export function useLegacyMatchEngine(
     homeStats: emptyStats,
     awayStats: emptyStats,
     possessionPct: { home: 50, away: 50 },
+    expertBars: {
+      decisions: { home: 50, away: 50 },
+      confidence: { home: 50, away: 50, homeLabel: 'estável', awayLabel: 'estável' },
+      tactical: { home: 50, away: 50 },
+    },
   });
 
   const onEventRef = useRef(onEvent);
@@ -247,6 +257,28 @@ export function useLegacyMatchEngine(
           const totalTicks = possessionTicksRef.current.home + possessionTicksRef.current.away;
           const homePoss = totalTicks > 0 ? Math.round((possessionTicksRef.current.home / totalTicks) * 100) : 50;
 
+          // Expert bars: 3 composite metrics
+          const expert = loop.getExpertMetrics();
+
+          // DECISÕES CERTAS: weighted success rate of all actions
+          const decisionScore = (st: TeamStats) => {
+            const passW = 3, shotW = 5, dribW = 2, tackW = 2;
+            const successes = st.passesOk * passW + st.shotsOn * shotW + st.dribblesOk * dribW + st.tackles * tackW;
+            const attempts = st.passesAttempt * passW + st.shots * shotW + st.dribblesOk * dribW + st.tackles * tackW;
+            if (attempts === 0) return 50;
+            return Math.round((successes / attempts) * 100);
+          };
+
+          // CONFIANÇA: from TeamMoraleState
+          const homeConf = expert.homeMorale?.confidence ?? 50;
+          const awayConf = expert.awayMorale?.confidence ?? 50;
+          const homeConfLabel = expert.homeMorale?.label ?? 'estável';
+          const awayConfLabel = expert.awayMorale?.label ?? 'estável';
+
+          // TÁTICO: tactical discipline 0-1 → 0-100
+          const homeTact = Math.round(expert.homeTacticalDiscipline * 100);
+          const awayTact = Math.round(expert.awayTacticalDiscipline * 100);
+
           setState({
             minute: simSt.minute,
             homeScore: simSt.homeScore,
@@ -267,6 +299,11 @@ export function useLegacyMatchEngine(
             homeStats: hs,
             awayStats: as,
             possessionPct: { home: homePoss, away: 100 - homePoss },
+            expertBars: {
+              decisions: { home: decisionScore(hs), away: decisionScore(as) },
+              confidence: { home: homeConf, away: awayConf, homeLabel: homeConfLabel, awayLabel: awayConfLabel },
+              tactical: { home: homeTact, away: awayTact },
+            },
           });
         }
       }
