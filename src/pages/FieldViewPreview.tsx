@@ -361,7 +361,6 @@ export function FieldViewPreview() {
         <ExpertPanel
           expertBars={engine.expertBars}
           homePlayers={engine.homePlayers}
-          awayPlayers={engine.awayPlayers}
           minute={engine.minute}
         />
       )}
