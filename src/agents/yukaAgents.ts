@@ -10,6 +10,12 @@ import {
 } from 'yuka';
 import { clampToPitch } from '@/simulation/field';
 import { YUKA_BOUNDING_RADIUS_M, YUKA_SEPARATION_NEIGHBOR_RADIUS_M } from '@/match/tacticalSpacingTuning';
+import {
+  fuzzifyDistance,
+  fuzzifyFatigue,
+  fuzzifyRole,
+  evaluateFuzzySteering,
+} from './fuzzySteeringModule';
 
 export type AgentMode = 'reforming' | 'in_play' | 'pressing';
 
@@ -184,13 +190,8 @@ export function applySteeringForPhase(
   const defensiveLine = binding.slotId === 'zag1' || binding.slotId === 'zag2' || binding.slotId === 'zag3';
   const lateralLine = binding.slotId === 'le' || binding.slotId === 'ld';
 
-  // ZONE AWARENESS: zagueiros só pressionam no terço defensivo (< 38 no eixo 0–100).
-  // Se a bola está no meio-campo ou ataque adversário, mantêm posição via arrive.
+  // ZONE AWARENESS: hard constraints remain — defenders don't chase into opposing third
   const ballInDefensiveThird = ballX !== undefined && ballX < 38;
-  const ballInMidfield = ballX !== undefined && ballX >= 38 && ballX < 68;
-  const playerInDefensiveThird = playerX !== undefined && playerX < 38;
-
-  // Zagueiros: só perseguem bola no terço defensivo OU se já estão perto dela.
   if (defensiveLine && !ballInDefensiveThird && distToBall > 15) {
     binding.pursuit.weight = 0;
     binding.arrive.weight = 1.2;
@@ -198,44 +199,23 @@ export function applySteeringForPhase(
     return;
   }
 
-  // Laterais: reduzem pursuit quando a bola está longe da sua ala (evita abandono de posição).
-  if (lateralLine && ballInMidfield && distToBall > 20) {
-    binding.pursuit.weight = 0.08;
-    binding.arrive.weight = 1.1;
-    binding.separation.weight = 0.88;
-    return;
-  }
+  // Fuzzy evaluation for smooth weight transitions (replaces binary IF/ELSE chains)
+  const fuzzyDist = fuzzifyDistance(distToBall);
+  const fuzzyFat = fuzzifyFatigue((binding as any).fatigue01 ?? 0);
+  const fuzzyRole = fuzzifyRole(defensiveLine, forwardLine, lateralLine);
+  const fuzzy = evaluateFuzzySteering(fuzzyDist, fuzzyFat, fuzzyRole, teamHasBall);
 
-  // DEFENDING: pressing — rampa por distância para não pôr meia-equipa em pursuit forte à volta da bola.
-  if (mode === 'pressing' && distToBall < 22) {
-    let press01 = 1;
-    if (distToBall > 12) {
-      press01 = Math.max(0, 1 - (distToBall - 12) / 10);
-    }
-    if (press01 >= 0.04) {
-      let pw = 0.46 * press01;
-      let aw = 0.74 + (1 - press01) * 0.16;
-      if (forwardLine) {
-        pw *= 0.52;
-        aw = Math.min(0.95, aw + 0.1);
-      }
-      binding.pursuit.weight = pw;
-      binding.arrive.weight = aw;
-      binding.separation.weight = forwardLine ? 1.06 : 1.02;
-      return;
-    }
-  }
-
-  // Defensive without pressing: only the closest non-forward player gets light pursuit.
-  // Everyone else holds tactical position via arrive — no random chasing.
-  if (distToBall < 10 && !forwardLine) {
-    binding.pursuit.weight = 0.18;
+  // Pressing mode amplifies pursuit from fuzzy output
+  if (mode === 'pressing') {
+    binding.pursuit.weight = fuzzy.pursuitWeight;
+    binding.arrive.weight = fuzzy.arriveWeight;
+    binding.separation.weight = fuzzy.separationWeight;
   } else {
-    binding.pursuit.weight = 0;
+    // In-play (not pressing): dampen pursuit to light levels
+    binding.pursuit.weight = fuzzy.pursuitWeight * 0.4;
+    binding.arrive.weight = fuzzy.arriveWeight;
+    binding.separation.weight = fuzzy.separationWeight;
   }
-
-  binding.arrive.weight = 1;
-  binding.separation.weight = forwardLine ? 0.94 : 0.88;
 }
 
 export function rebuildNeighbors(team: AgentBinding[]) {
@@ -256,7 +236,15 @@ export function stepVehicle(binding: AgentBinding, dt: number) {
   binding.vehicle.update(dt);
   binding.vehicle.position.y = 0;
   binding.vehicle.velocity.y = 0;
-  const c = clampToPitch(binding.vehicle.position.x, binding.vehicle.position.z, 0.9);
-  binding.vehicle.position.x = c.x;
-  binding.vehicle.position.z = c.z;
+  const pos = binding.vehicle.position;
+  const vel = binding.vehicle.velocity;
+  const c = clampToPitch(pos.x, pos.z, 0.9);
+  if (c.x !== pos.x) {
+    vel.x *= -0.3;
+    pos.x = c.x;
+  }
+  if (c.z !== pos.z) {
+    vel.z *= -0.3;
+    pos.z = c.z;
+  }
 }

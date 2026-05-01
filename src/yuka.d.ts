@@ -70,4 +70,30 @@ declare module 'yuka' {
     obstacles: GameEntity[];
     constructor(obstacles?: GameEntity[]);
   }
+
+  export class SeekBehavior extends SteeringBehavior {
+    target: Vector3;
+    constructor(target?: Vector3);
+  }
+
+  export class InterposeBehavior extends SteeringBehavior {
+    entity1: Vehicle | null;
+    entity2: Vehicle | null;
+    deceleration: number;
+    constructor(entity1?: Vehicle | null, entity2?: Vehicle | null, deceleration?: number);
+  }
+
+  export class OffsetPursuitBehavior extends SteeringBehavior {
+    leader: Vehicle | null;
+    offset: Vector3;
+    constructor(leader?: Vehicle | null, offset?: Vector3);
+  }
+
+  export class CohesionBehavior extends SteeringBehavior {
+    constructor();
+  }
+
+  export class AlignmentBehavior extends SteeringBehavior {
+    constructor();
+  }
 }

@@ -34,6 +34,11 @@ import {
   type AgentBinding,
   type AgentMode,
 } from '@/agents/yukaAgents';
+import { LiveLearningBridge } from '@/agents/liveLearningBridge';
+import { SkillActivationSystem } from '@/match/skillActivation';
+import { resolveTeamIntent, type TeamIntentContext } from '@/agents/TeamIntentResolver';
+import type { TeamIntent } from '@/agents/types';
+import { AgentRegulator } from '@/agents/yukaRegulator';
 import { FIELD_SCHEMA_VERSION } from '@/field-schema/constants';
 import {
   CENTER_CIRCLE_RADIUS_M,
@@ -384,6 +389,11 @@ export class TacticalSimLoop {
   awayAgents: AgentEx[] = [];
   ballVehicle = new Vehicle();
   readonly eventBus = new MatchSimulationEventBus();
+  readonly liveLearning = new LiveLearningBridge();
+  readonly skillActivation = new SkillActivationSystem();
+  private homeTeamIntent: TeamIntent = 'control_game';
+  private awayTeamIntent: TeamIntent = 'control_game';
+  private readonly teamIntentRegulator = new AgentRegulator(2000, 500);
   private readonly matchEngine = new MatchEngine();
   private readonly structuralSys = new StructuralReorganizationSystem();
 
@@ -791,6 +801,7 @@ export class TacticalSimLoop {
       this.matchOpeningKickoffAt = this.world.simTime + MATCH_OPENING_KICKOFF_WAIT_SEC;
       this.fsm.state = { phase: 'kickoff', goalSequenceTimer: 0 };
       this.initialized = true;
+      this.liveLearning.attach(this.eventBus);
       }
     }
 
@@ -2882,6 +2893,38 @@ export class TacticalSimLoop {
     this.syncBallVehicleFromWorld();
     const allV = this.allVehicles();
 
+  // Update team intent every ~2s (throttled by regulator)
+  const simTimeMs = this.world.simTime * 1000;
+  if (this.teamIntentRegulator.ready(simTimeMs)) {
+    const minute = this.matchClock.state.minute;
+    const homeScore = this.simState.homeScore;
+    const awayScore = this.simState.awayScore;
+    const homeAvgFatigue = this.homeAgents.length > 0
+      ? this.homeAgents.reduce((s, a) => s + (100 - (a.matchRuntime?.stamina ?? 100)), 0) / this.homeAgents.length
+      : 0;
+    const awayAvgFatigue = this.awayAgents.length > 0
+      ? this.awayAgents.reduce((s, a) => s + (100 - (a.matchRuntime?.stamina ?? 100)), 0) / this.awayAgents.length
+      : 0;
+    this.homeTeamIntent = resolveTeamIntent({
+      minute,
+      homeScore,
+      awayScore,
+      possession: this.simState.possession ?? 'home',
+      teamStrength: 50,
+      opponentStrength: 50,
+      averageFatigue: homeAvgFatigue,
+    });
+    this.awayTeamIntent = resolveTeamIntent({
+      minute,
+      homeScore: awayScore,
+      awayScore: homeScore,
+      possession: this.simState.possession === 'away' ? 'home' : 'away',
+      teamStrength: 50,
+      opponentStrength: 50,
+      averageFatigue: awayAvgFatigue,
+    });
+  }
+
   // Update rhythm based on recent turnover / possession / threat
   this.updateRhythm();
   // Smoothly lerp timeScale toward target for gentle slow-motion
@@ -2987,16 +3030,18 @@ export class TacticalSimLoop {
     }
 
     const halfPhys = this.matchClock.state.half;
-    const nudgeTowardOperative18 = (a: AgentEx) => {
+    // Cooperative nudge: blend arrive.target toward operative zone BEFORE YUKA integration.
+    // This lets YUKA execute the convergence naturally instead of overwriting position post-physics.
+    const nudgeArriveTargetToZone = (a: AgentEx) => {
       if (a.id === this.simState.carrierId) return;
       const schemeN: FormationSchemeId = a.side === 'home' ? homeScheme : awayScheme;
       const ctxZ = { team: a.side, half: halfPhys };
       const model = buildSlotZoneProfile(a.slotId ?? 'mc1', a.role, schemeN, a.side, halfPhys);
-      const curZ = worldPosToTactical18Zone(a.vehicle.position.x, a.vehicle.position.z, ctxZ);
-      if (operativeZoneIdSet18(model).has(curZ)) return;
+      const curTargetZ = worldPosToTactical18Zone(a.arrive.target.x, a.arrive.target.z, ctxZ);
+      if (operativeZoneIdSet18(model).has(curTargetZ)) return;
       const t = clampWorldToOperativeTactical18(
-        a.vehicle.position.x,
-        a.vehicle.position.z,
+        a.arrive.target.x,
+        a.arrive.target.z,
         a.slotId ?? 'mc1',
         a.role,
         schemeN,
@@ -3005,29 +3050,29 @@ export class TacticalSimLoop {
         0.55,
       );
       const k = 0.14;
-      a.vehicle.position.x += (t.x - a.vehicle.position.x) * k;
-      a.vehicle.position.z += (t.z - a.vehicle.position.z) * k;
+      a.arrive.target.x += (t.x - a.arrive.target.x) * k;
+      a.arrive.target.z += (t.z - a.arrive.target.z) * k;
 
       // SMARTFIELD: secondary shape correction toward role anchor (recovery_priority weighted)
       const sfRole = sfRoleFromSlot(a.slotId ?? 'mc1', schemeN);
-      const sfCorr = sfShapeCorrection(a.vehicle.position.x, a.vehicle.position.z, sfRole, a.side);
+      const sfCorr = sfShapeCorrection(a.arrive.target.x, a.arrive.target.z, sfRole, a.side);
       if (sfCorr.isOutOfShape) {
         const sfK = 0.04 * Math.min(1, sfCorr.distFromAnchor / 30);
-        a.vehicle.position.x += sfCorr.correctionDx * sfK;
-        a.vehicle.position.z += sfCorr.correctionDz * sfK;
+        a.arrive.target.x += sfCorr.correctionDx * sfK;
+        a.arrive.target.z += sfCorr.correctionDz * sfK;
       }
     };
     const skipNudge = this.fsm.isReforming();
     for (const a of this.homeAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
+      if (!skipNudge) nudgeArriveTargetToZone(a);
       stepVehicle(a, fixedDt);
-      if (!skipNudge) nudgeTowardOperative18(a);
       stepAgentBodyYaw(a, fixedDt);
     }
     for (const a of this.awayAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
+      if (!skipNudge) nudgeArriveTargetToZone(a);
       stepVehicle(a, fixedDt);
-      if (!skipNudge) nudgeTowardOperative18(a);
       stepAgentBodyYaw(a, fixedDt);
     }
 

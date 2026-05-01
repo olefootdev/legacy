@@ -32,6 +32,7 @@ import {
   prethinkingRefreshSeconds,
   prethinkingScanDelayFactor,
 } from './prethinking';
+import { AgentRegulator } from '@/agents/yukaRegulator';
 
 /**
  * Per-player decision state machine.
@@ -67,6 +68,8 @@ export class PlayerDecisionEngine {
   private prethinking: PrethinkingState | null = null;
   private lastPrethinkingSimTime = -1e9;
   private lastPrethinkingIntent: PrethinkingIntent | null = null;
+  /** Decision frequency regulator — prevents jittery 60fps re-evaluation. */
+  readonly regulator = new AgentRegulator(250, 100);
 
   /** Executing lasts just long enough to commit to an action */
   private static readonly EXECUTING_DURATION = 0.10;
@@ -104,16 +107,19 @@ export class PlayerDecisionEngine {
   tick(ctx: DecisionContext, simTime: number): PlayerAction {
     this.refreshPrethinking(ctx, simTime);
     const x = this.withPrethinkingCtx(ctx);
+    const simTimeMs = simTime * 1000;
 
     // ---------------------------------------------------------------
     // Collective trigger: carrier changed → immediate off-ball re-eval
     // ---------------------------------------------------------------
     if (x.carrierJustChanged && !x.isCarrier && !x.isReceiver) {
+      this.regulator.rush();
       this.forceOffBallReEval(x, simTime);
     }
 
     // Became carrier while still in an off-ball executing phase (e.g. right after tackle) — start on-ball flow
     if (x.isCarrier && !this.currentOnBall && this.currentOffBall && (this.phase === 'executing' || this.phase === 'idle')) {
+      this.regulator.rush();
       this.enterScanning(x, simTime);
     }
 
@@ -121,6 +127,7 @@ export class PlayerDecisionEngine {
     // Ball arriving → pre-reception pipeline
     // ---------------------------------------------------------------
     if (x.isReceiver && this.phase !== 'pre_receiving' && this.phase !== 'receiving') {
+      this.regulator.rush();
       this.enterPreReception(x);
     }
 
@@ -146,6 +153,7 @@ export class PlayerDecisionEngine {
     // Lost the ball while in on-ball phases → immediate off-ball eval
     // ---------------------------------------------------------------
     if (!x.isCarrier && !x.isReceiver && isOnBallPhase(this.phase)) {
+      this.regulator.rush();
       this.transitionToOffBall(x, simTime);
     }
 
@@ -556,11 +564,13 @@ export class PlayerDecisionEngine {
   /**
    * ALIVE: Replaces both 'idle' and 'recovering'. Off-ball players always
    * have contextual movement — they never stand still waiting for a command.
+   * Regulator gates re-evaluation to prevent 60fps jitter.
    */
   private tickAlive(ctx: DecisionContext, simTime: number): PlayerAction {
     if (
       this.currentOffBall
-      && simTime - this.lastDecisionTime < offBallReplanIntervalSec(ctx)
+      && (simTime - this.lastDecisionTime < offBallReplanIntervalSec(ctx)
+        || !this.regulator.ready(simTime * 1000))
     ) {
       this.phase = 'executing';
       return { kind: 'off_ball', action: this.currentOffBall };

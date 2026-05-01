@@ -22,6 +22,7 @@ import {
   dangerToOppGoal01,
   type ZoneInfo,
 } from '@/match/spatialZones';
+import { SpatialMemory, type SpatialMemoryRecord } from '@/agents/spatialMemory';
 
 /** Jogador com side associado (necessário pra distinguir aliado/adversário). */
 export interface AwarePlayer extends PitchPlayerState {
@@ -68,6 +69,8 @@ export interface AwarenessContext {
   peripheralPlayers: AwarePlayer[];
   /** Existem mas o jogador NÃO sabe (atrás dele). */
   blindSpotPlayers: AwarePlayer[];
+  /** Players recalled from memory (not currently visible but remembered). */
+  rememberedPlayers: SpatialMemoryRecord[];
   availableTeammates: Array<AwarePlayer & { passQuality: number; zone: ZoneInfo }>;
   nearOpponents: AwarePlayer[];
   isUnderPressure: boolean;
@@ -85,6 +88,8 @@ export function getAwarenessContext(
   player: AwarePlayer,
   allPlayers: AwarePlayer[],
   side: 'home' | 'away',
+  memory?: SpatialMemory,
+  nowMs?: number,
 ): AwarenessContext {
   const z = zoneAtUI(player.x, player.y, side);
 
@@ -96,10 +101,11 @@ export function getAwarenessContext(
   const peripheralPlayers: AwarePlayer[] = [];
   const blindSpotPlayers: AwarePlayer[] = [];
 
-  // PitchPlayerState.heading vem em radianos; convertemos pra graus para o cálculo.
   const headRad = player.heading ?? 0;
   const headingDeg = (headRad * 180) / Math.PI;
   const me = { ux: player.x, uy: player.y, headingDeg };
+
+  const visibleIds = new Set<string>();
 
   for (const p of allPlayers) {
     if (p.playerId === player.playerId) continue;
@@ -108,16 +114,59 @@ export function getAwarenessContext(
 
     if (d <= FOCAL_RADIUS_UI && angle <= FOCAL_HALF_ANGLE) {
       focalPlayers.push(p);
+      visibleIds.add(p.playerId);
     } else if (d <= peripheralR && angle < 180 - BLIND_HALF_ANGLE) {
       peripheralPlayers.push(p);
+      visibleIds.add(p.playerId);
     } else if (d <= peripheralR) {
       blindSpotPlayers.push(p);
     }
   }
 
+  // Update spatial memory: visible players refresh, blind-spot players decay naturally
+  const visibleForMemory = [...focalPlayers, ...peripheralPlayers];
+  if (memory && nowMs !== undefined && visibleForMemory.length > 0) {
+    memory.update(
+      visibleForMemory.map(p => ({
+        playerId: p.playerId,
+        team: p.team,
+        x: p.x,
+        y: p.y,
+        role: p.role ?? '',
+      })),
+      nowMs,
+    );
+  }
+
+  // Recall remembered players not currently visible
+  let rememberedPlayers: SpatialMemoryRecord[] = [];
+  if (memory && nowMs !== undefined) {
+    rememberedPlayers = memory.recallAll(nowMs).filter(r => !visibleIds.has(r.entityId) && r.entityId !== player.playerId);
+  }
+
   const nearOpponents = focalPlayers.filter(
     (p) => p.team !== player.team && distance2D(player.x, player.y, p.x, p.y) < PRESSURE_RADIUS_UI,
   );
+
+  // Remembered opponents in pressure radius contribute reduced pressure
+  if (rememberedPlayers.length > 0) {
+    for (const r of rememberedPlayers) {
+      if (r.team === side) continue;
+      const d = distance2D(player.x, player.y, r.lastSeenX, r.lastSeenZ);
+      if (d < PRESSURE_RADIUS_UI && memory && nowMs !== undefined) {
+        const conf = memory.confidence(r.entityId, nowMs);
+        if (conf > 0.3) {
+          nearOpponents.push({
+            playerId: r.entityId,
+            team: r.team,
+            x: r.lastSeenX,
+            y: r.lastSeenZ,
+          } as AwarePlayer);
+        }
+      }
+    }
+  }
+
   const pressureLevel = Math.min(1, nearOpponents.length * 0.35);
 
   const availableTeammates = [...focalPlayers, ...peripheralPlayers]
@@ -147,6 +196,7 @@ export function getAwarenessContext(
     focalPlayers,
     peripheralPlayers,
     blindSpotPlayers,
+    rememberedPlayers,
     availableTeammates,
     nearOpponents,
     isUnderPressure: pressureLevel > 0.5,

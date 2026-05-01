@@ -266,6 +266,46 @@ export function updateAgentProfileWithLearning(
 }
 
 /**
+ * Micro-learning: apply a single event to LearningState in real-time during the match.
+ * Impact is reduced to ¼ of post-game values to prevent flip-flopping.
+ * Total drift per match is capped at ±5 per dimension.
+ */
+export function applyMicroLearning(
+  state: LearningState,
+  event: CapturedLearningEvent,
+  driftAccumulator: Map<string, number>,
+): LearningState {
+  const MICRO_SCALE = 0.25;
+  const MAX_DRIFT_PER_MATCH = 5;
+
+  const key = `${event.playerId}`;
+  const currentDrift = driftAccumulator.get(key) ?? 0;
+  const scaledImpact = event.impact * MICRO_SCALE;
+  const remainingBudget = MAX_DRIFT_PER_MATCH - Math.abs(currentDrift);
+  if (remainingBudget <= 0) return state;
+
+  const clampedImpact = Math.sign(scaledImpact) * Math.min(Math.abs(scaledImpact), remainingBudget);
+  driftAccumulator.set(key, currentDrift + clampedImpact);
+
+  const s = { ...state };
+
+  s.confidence = clamp(s.confidence + clampedImpact * 0.5);
+
+  if (event.type === 'pass_ok') s.passVsShootPreference = clamp(s.passVsShootPreference + clampedImpact * 0.3);
+  if (event.type === 'pass_fail') s.passVsShootPreference = clamp(s.passVsShootPreference - Math.abs(clampedImpact) * 0.2);
+  if (event.type === 'shot_ok') s.passVsShootPreference = clamp(s.passVsShootPreference - clampedImpact * 0.3);
+  if (event.type === 'shot_fail') s.riskTendency = clamp(s.riskTendency - Math.abs(clampedImpact) * 0.4);
+  if (event.type === 'duel_won') s.confidence = clamp(s.confidence + Math.abs(clampedImpact) * 0.3);
+  if (event.type === 'duel_lost') s.confidence = clamp(s.confidence - Math.abs(clampedImpact) * 0.3);
+  if (event.type === 'critical_success') s.criticalComposure = clamp(s.criticalComposure + Math.abs(clampedImpact) * 0.6);
+  if (event.type === 'critical_error') s.criticalComposure = clamp(s.criticalComposure - Math.abs(clampedImpact) * 0.6);
+  if (event.type === 'selfish_ok') s.egoControl = clamp(s.egoControl - Math.abs(clampedImpact) * 0.3);
+  if (event.type === 'selfish_fail') s.egoControl = clamp(s.egoControl + Math.abs(clampedImpact) * 0.4);
+
+  return s;
+}
+
+/**
  * Gera relatório de aprendizado para UI
  */
 export function generateLearningReport(
