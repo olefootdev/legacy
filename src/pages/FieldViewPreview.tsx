@@ -19,6 +19,8 @@ import type { VoiceIntent } from '@/voiceCommand/types';
 import type { PitchPlayerState } from '@/engine/types';
 import { useLegacyMatchEngine, type LegacyEventKind } from './useLegacyMatchEngine';
 import type { FormationSchemeId } from '@/match-engine/types';
+import { useVoiceTacticalState } from '@/hooks/useVoiceTacticalState';
+import { processVoiceCommand, type ProcessVoiceCommandOptions } from '@/voiceCommand/voiceCommandProcessor';
 import { useGameStore } from '@/game/store';
 import {
   GoalkeeperDistribution, GoalkeeperPressure, resolveGoalkeeperDistribution,
@@ -305,7 +307,10 @@ export function FieldViewPreview() {
     if (m) startMoment(m);
   }, [startMoment]);
 
-  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale);
+  // ── Voice tactical state — comando → parâmetros táticos ────────────────────
+  const { params: tacticalParams, applyIntent: applyVoiceIntent } = useVoiceTacticalState();
+
+  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale, tacticalParams);
 
   // ── AgentFeedbackStream ───────────────────────────────────────────────────
   const { entries: feedbackEntries, push: pushFeedback } = useAgentFeedbackStream(
@@ -374,24 +379,30 @@ export function FieldViewPreview() {
     }
   }, [pushFeedback]);
 
-  const handleCommandSubmit = useCallback((transcript: string) => {
-    // Mapeia hashtag transcripts para intents coletivos
-    const TRANSCRIPT_INTENT: Record<string, VoiceIntent> = {
-      'pressiona alto':     'team_press_high',
-      'recua todo mundo':   'team_retreat',
-      'sobe o lateral':     'left_back_overlap',
-      'estica o time':      'stretch_team',
-      'pisa no acelerador': 'pedal_to_metal',
-      'segura a bola':      'team_hold_possession',
-    };
-    const intent = TRANSCRIPT_INTENT[transcript.toLowerCase().trim()];
-    if (intent) {
-      triggerEditorialOverlays(intent);
-    } else {
-      // Comando livre — feedback genérico no primeiro atacante
-      pushFeedback('free_play', [engine.homePlayers.find((p) => p.role === 'attack')?.playerId ?? '']);
+  const handleCommandSubmit = useCallback(async (transcript: string) => {
+    // Processa comando de voz com NLP completo
+    const result = await processVoiceCommand({
+      transcript,
+      players: engine.homePlayers,
+      playersById: {}, // TODO: passar player entities se disponível
+      ballCarrierId: engine.onBallPlayerId,
+      side: 'home',
+      minute: engine.minute,
+    });
+
+    if (result.success && result.intent) {
+      // Aplica parâmetros táticos derivados do intent
+      applyVoiceIntent(result.intent);
+
+      // Trigger overlay visual
+      triggerEditorialOverlays(result.intent);
+
+      // Push feedback com jogadores afetados
+      if (result.targetPlayers && result.targetPlayers.length > 0) {
+        pushFeedback(result.intent, result.targetPlayers);
+      }
     }
-  }, [triggerEditorialOverlays, pushFeedback, engine.homePlayers]);
+  }, [engine.homePlayers, engine.onBallPlayerId, engine.minute, applyVoiceIntent, triggerEditorialOverlays, pushFeedback]);
 
   const handleTagDispatch = useCallback((transcript: string, intent: VoiceIntent) => {
     triggerEditorialOverlays(intent);
