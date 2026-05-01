@@ -255,9 +255,9 @@ export function FieldViewPreview() {
       )}
 
       {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden relative">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative">
         <div
-          className="w-full h-full flex flex-col items-stretch justify-center min-h-0"
+          className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
           style={{
             transform: `translate(${cameraPan.x}px, ${cameraPan.y}px) scale(${cameraZoom})`,
             transformOrigin: '50% 50%',
