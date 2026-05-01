@@ -13,6 +13,7 @@ import { LegacyMinuteWatermark } from '@/components/match/LegacyMinuteWatermark'
 import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
 import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
 import { ReadGamePanel } from '@/components/match/ReadGamePanel';
+import { useNarrativeCamera } from '@/components/match/useNarrativeCamera';
 import type { PitchPlayerState } from '@/engine/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { useLegacyMatchEngine } from './useLegacyMatchEngine';
@@ -85,6 +86,17 @@ export function FieldViewPreview() {
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, () => {}, false, 1);
+
+  // Câmera narrativa — ref-based, escreve direto no DOM (zero re-render)
+  const cameraRef = useRef<HTMLDivElement>(null);
+  useNarrativeCamera(cameraRef, {
+    ballX: engine.ballX,
+    ballY: engine.ballY,
+    possession: engine.possession,
+    homePlayers: engine.homePlayers,
+    awayPlayers: engine.awayPlayers,
+    lastEvent: engine.lastEvent,
+  });
 
   // ── Camera tracking — Follow + Action Cam ─────────────────────────────────
   // TODO: Re-enable camera tracking with proper effect management
@@ -257,14 +269,10 @@ export function FieldViewPreview() {
       {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative">
         <div
+          ref={cameraRef}
           className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
           style={{
-            // Pan vertical suave acompanhando a bola — quando ataque é no gol home (ballX baixo),
-            // câmera desce pra revelar o gol de baixo; quando é no gol away (ballX alto), sobe.
-            // Range: ±8% do viewport (subtle, mantém leitura tática).
-            transform: `translateY(${(engine.ballX - 50) * 0.18}%)`,
             transformOrigin: '50% 50%',
-            transition: 'transform 1200ms cubic-bezier(0.4, 0, 0.2, 1)',
             willChange: 'transform',
           }}
         >
