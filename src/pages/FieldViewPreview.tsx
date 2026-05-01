@@ -3,6 +3,7 @@
  * Campo ao vivo limpo + SmartPanel.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FieldView } from '@/components/match/FieldView';
 import type { PlayStyle } from '@/components/match/SmartPanel';
 import { NarrativeBar } from '@/components/match/NarrativeBar';
@@ -65,6 +66,8 @@ function computeActionCamTransform(
 }
 
 export function FieldViewPreview() {
+  const navigate = useNavigate();
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [camera, setCamera] = useState<'aerial' | 'broadcast'>('aerial');
   const [cameraTrack, setCameraTrack] = useState<CameraTrackMode>('static');
   const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
@@ -145,7 +148,113 @@ export function FieldViewPreview() {
         onFormationChange={setFormation}
         actionCam={cameraTrack === 'actioncam'}
         onActionCamToggle={() => setCameraTrack(t => t === 'actioncam' ? 'static' : 'actioncam')}
+        onExit={() => setShowExitConfirm(true)}
       />
+
+      {showExitConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 300,
+            background: 'rgba(0,0,0,0.78)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: '#0D0D0D',
+              border: '1px solid rgba(253,225,0,0.25)',
+              borderLeft: '3px solid #FDE100',
+              padding: '24px 24px 20px',
+              maxWidth: 380,
+              width: '100%',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 9,
+                fontWeight: 800,
+                letterSpacing: '0.32em',
+                color: '#FDE100',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              Sair da partida
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontStyle: 'italic',
+                fontSize: 22,
+                color: '#fff',
+                lineHeight: 1.2,
+                marginBottom: 16,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Tem certeza?
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.5,
+                marginBottom: 20,
+              }}
+            >
+              Em partida rankeada ou de campeonato, desistir conta como derrota de <strong style={{ color: '#EF4444' }}>5×0</strong>.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowExitConfirm(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.7)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                style={{
+                  background: '#EF4444',
+                  border: '1px solid #EF4444',
+                  color: '#fff',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden relative">
