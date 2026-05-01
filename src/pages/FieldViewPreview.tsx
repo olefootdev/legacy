@@ -5,8 +5,9 @@
 import { useState, useCallback, useEffect, useRef, type ComponentType } from 'react';
 import { Mic } from 'lucide-react';
 import { FieldView } from '@/components/match/FieldView';
-import { AgentFeedbackStream, useAgentFeedbackStream } from '@/components/match/AgentFeedbackStream';
-import { SectorFocus, type SectorZone } from '@/components/match/SectorFocus';
+import { useTeamSentimentGauge, TeamSentimentGauge } from '@/components/match/TeamSentimentGauge';
+import { ContextualQuickCommands } from '@/components/match/ContextualQuickCommands';
+import { TacticalHeatmap, useTacticalHeatmap, type HeatmapZone } from '@/components/match/TacticalHeatmap';
 import { CommandCenter } from '@/components/match/CommandCenter';
 import { SmartPanel, type PlayStyle } from '@/components/match/SmartPanel';
 import { FieldDecisionOverlay, type FieldDecisionChoice } from '@/components/match/FieldDecisionOverlay';
@@ -312,11 +313,14 @@ export function FieldViewPreview() {
 
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale, tacticalParams);
 
-  // ── AgentFeedbackStream ───────────────────────────────────────────────────
-  const { entries: feedbackEntries, push: pushFeedback } = useAgentFeedbackStream(
+  // ── Team Sentiment Gauge ────────────────────────────────────────────────
+  const { sentiment, push: pushTeamSentiment } = useTeamSentimentGauge(
     engine.homePlayers,
     30,
   );
+
+  // ── Tactical Heatmap ────────────────────────────────────────────────────
+  const { intent: heatmapIntent, show: showHeatmap } = useTacticalHeatmap();
 
   // Atualiza fanMood com base no placar e posse (após engine estar disponível)
   useEffect(() => {
@@ -397,12 +401,15 @@ export function FieldViewPreview() {
       // Trigger overlay visual
       triggerEditorialOverlays(result.intent);
 
-      // Push feedback com jogadores afetados
+      // Mostra heatmap tático
+      showHeatmap(result.intent);
+
+      // Push team sentiment com jogadores afetados
       if (result.targetPlayers && result.targetPlayers.length > 0) {
-        pushFeedback(result.intent, result.targetPlayers);
+        pushTeamSentiment(result.intent, result.targetPlayers);
       }
     }
-  }, [engine.homePlayers, engine.onBallPlayerId, engine.minute, applyVoiceIntent, triggerEditorialOverlays, pushFeedback]);
+  }, [engine.homePlayers, engine.onBallPlayerId, engine.minute, applyVoiceIntent, triggerEditorialOverlays, showHeatmap, pushTeamSentiment]);
 
   const handleTagDispatch = useCallback((transcript: string, intent: VoiceIntent) => {
     triggerEditorialOverlays(intent);
@@ -558,6 +565,23 @@ export function FieldViewPreview() {
         @keyframes pressurePulse {
           0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
           50%     { transform: translate(-50%,-50%) scale(1.8); opacity: 0; }
+        }
+        @keyframes heatmapIn {
+          from { opacity: 0; transform: scale(0.92); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes heatmapPulse {
+          0%,100% { box-shadow: inset 0 0 20px currentColor; }
+          50%     { box-shadow: inset 0 0 40px currentColor; }
+        }
+        @keyframes heatmapFade {
+          0% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
       `}</style>
 
@@ -879,11 +903,20 @@ export function FieldViewPreview() {
       </div>
       <CommandCenter onSubmit={handleCommandSubmit} onTagDispatch={handleTagDispatch} />
 
-      {/* ── AgentFeedbackStream — timeline lateral direita ── */}
-      <AgentFeedbackStream entries={feedbackEntries} />
+      {/* ── Contextual Quick Commands — sugestões inteligentes baseadas no jogo ── */}
+      <ContextualQuickCommands
+        homeScore={engine.homeScore}
+        awayScore={engine.awayScore}
+        possession={engine.possession}
+        teamFatigue={Math.round(engine.homePlayers.reduce((sum, p) => sum + (p.fatigue ?? 25), 0) / engine.homePlayers.length)}
+        onDispatch={handleTagDispatch}
+      />
 
-      {/* ── SectorFocus — overlay de zona ── */}
-      <SectorFocus zone={sectorZone} />
+      {/* ── Team Sentiment Gauge — agregação de saúde do time ── */}
+      <TeamSentimentGauge sentiment={sentiment} />
+
+      {/* ── Tactical Heatmap — zona ativada pelo comando ── */}
+      <TacticalHeatmap intent={heatmapIntent} />
 
       {/* ── Tipografia Cinética — palavra no centro do campo ── */}
       {kineticWord && (
