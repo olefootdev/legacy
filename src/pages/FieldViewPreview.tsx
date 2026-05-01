@@ -259,9 +259,13 @@ export function FieldViewPreview() {
         <div
           className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
           style={{
-            transform: `translate(${cameraPan.x}px, ${cameraPan.y}px) scale(${cameraZoom})`,
+            // Pan vertical suave acompanhando a bola — quando ataque é no gol home (ballX baixo),
+            // câmera desce pra revelar o gol de baixo; quando é no gol away (ballX alto), sobe.
+            // Range: ±8% do viewport (subtle, mantém leitura tática).
+            transform: `translateY(${(engine.ballX - 50) * 0.18}%)`,
             transformOrigin: '50% 50%',
-            transition: cameraTrack === 'static' ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)' : 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            transition: 'transform 1200ms cubic-bezier(0.4, 0, 0.2, 1)',
+            willChange: 'transform',
           }}
         >
           <FieldView
