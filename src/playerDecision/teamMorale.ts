@@ -62,8 +62,10 @@ export function deriveTeamMorale(input: TeamMoraleInputs): TeamMoraleState {
   // Momentum recente (fluxo do jogo)
   confidence += spiritMomentum * 6;
 
-  // Cansaço drena moral
-  confidence -= avgFatigue / 10;
+  // Cansaço só drena moral após minuto 20 (início da partida todos estão frescos)
+  if (minute >= 20) {
+    confidence -= (avgFatigue / 10) * Math.min(1, (minute - 20) / 30);
+  }
 
   // Cartão vermelho é golpe psicológico
   confidence -= redCardsAgainst * 12;
