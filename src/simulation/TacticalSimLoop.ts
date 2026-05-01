@@ -411,6 +411,17 @@ export class TacticalSimLoop {
   private passReturnBlock = new Map<string, { fromId: string; until: number }>();
   /** Passador deve trocar de setor após combinar com o novo portador. */
   private passMobilityHint = new Map<string, { carrierId: string; until: number; forward: boolean }>();
+  /**
+   * PR2 — Lateral telegrafou cruzamento. Atacantes recebem ponto esperado
+   * de entrega (2º pau / pênalti) e antecipam a chegada na área ~0.3s antes
+   * da bola ser cruzada. Chave = id do ATACANTE (receptor do sinal).
+   */
+  private crossIncomingHint = new Map<string, {
+    senderId: string;
+    expectedX: number;
+    expectedZ: number;
+    until: number;
+  }>();
   /** Defesa deste lado desorganizada até `simTime` (passe crítico recente do adversário). */
   private defensiveShapeBreakUntil: Record<PossessionSide, number> = { home: -1e9, away: -1e9 };
   /** Receptor com passe crítico: decisão mais rápida até `simTime`. */
@@ -1001,8 +1012,13 @@ export class TacticalSimLoop {
     this.rekeySimIdMap(this.turnoverPassBlock, outId, inId);
     this.rekeySimIdMap(this.passReturnBlock, outId, inId);
     this.rekeySimIdMap(this.passMobilityHint, outId, inId);
+    this.rekeySimIdMap(this.crossIncomingHint, outId, inId);
     this.rekeySimIdMap(this.executionBoostUntil, outId, inId);
     this.rekeySimIdMap(this.executionBoostImpact01, outId, inId);
+
+    for (const v of this.crossIncomingHint.values()) {
+      if (v.senderId === outId) v.senderId = inId;
+    }
 
     for (const v of this.turnoverPassBlock.values()) {
       if (v.peerId === outId) v.peerId = inId;
@@ -1578,6 +1594,7 @@ export class TacticalSimLoop {
     this.turnoverPassBlock.clear();
     this.passReturnBlock.clear();
     this.passMobilityHint.clear();
+    this.crossIncomingHint.clear();
 
     this.ballSys.placeForKickoff();
     this.simState.carrierId = null;
@@ -2136,6 +2153,10 @@ export class TacticalSimLoop {
     }
     for (const [pid, v] of [...this.passMobilityHint.entries()]) {
       if (this.world.simTime >= v.until) this.passMobilityHint.delete(pid);
+    }
+    // PR2 — expira cross_incoming hints depois da janela de antecipação.
+    for (const [pid, v] of [...this.crossIncomingHint.entries()]) {
+      if (this.world.simTime >= v.until) this.crossIncomingHint.delete(pid);
     }
 
     this.matchClock.tick(fixedDt);
@@ -3240,6 +3261,12 @@ export class TacticalSimLoop {
         }
       }
 
+      // PR2 — Cross telegraphing: atacante recebeu sinal do lateral.
+      const ci = this.crossIncomingHint.get(ag.id);
+      const incomingCross = ci && this.world.simTime < ci.until
+        ? { x: ci.expectedX, z: ci.expectedZ }
+        : undefined;
+
       let rollSalt = 0;
       const tickKey = Math.floor(this.world.simTime * 1000);
       const roll01 = () =>
@@ -3302,6 +3329,7 @@ export class TacticalSimLoop {
         threatTrend: activeThreat.trend,
         passBlocklist,
         offensivePassMobility,
+        incomingCross,
         goalContext: buildGoalContext(
           selfSnap.x, selfSnap.z,
           ag.side as 'home' | 'away',
@@ -4564,6 +4592,11 @@ export class TacticalSimLoop {
       case 'anticipate_second_ball':
       case 'prepare_rebound':
         arriveBlended(action.targetX, action.targetZ, 'in_play');
+        // PR2 — Cross telegraphing: lateral em terço final disparando overlap_run
+        // sinaliza atacantes para antecipar a chegada na área (~0.3s antes da bola).
+        if (action.type === 'overlap_run' && (ag.slotId === 'le' || ag.slotId === 'ld')) {
+          this.broadcastCrossIncoming(ag);
+        }
         break;
       case 'move_to_slot':
         arriveBlended(action.targetX, action.targetZ, mode);
@@ -4577,6 +4610,45 @@ export class TacticalSimLoop {
           mode,
         );
         break;
+    }
+  }
+
+  /**
+   * PR2 — Lateral telegrafa cruzamento para atacantes do mesmo time.
+   * Só dispara se o lateral já está no terço ofensivo (proximidade > 0.66).
+   * Calcula ponto esperado de entrega (entre 1º pau e ponto-de-pênalti, lado oposto)
+   * e seta hint para atacantes (role==='attack' OU slot 'ata'/'pe'/'pd') por 1.2s.
+   * Atacantes leem o hint via DecisionContext.incomingCross e antecipam a chegada.
+   */
+  private broadcastCrossIncoming(sender: AgentEx): void {
+    const half = this.matchClock.state.half;
+    const attackDir = getSideAttackDir(sender.side, half);
+    const senderProximity = attackProximity01(sender.vehicle.position.x, attackDir);
+    if (senderProximity < 0.66) return;
+
+    // Ponto esperado de entrega: ~6m antes da linha de fundo, lado oposto ao do lateral.
+    const goalX = attackDir === 1 ? FIELD_LENGTH : 0;
+    const expectedX = goalX - attackDir * 6;
+    const senderIsLeftSide = sender.vehicle.position.z < FIELD_WIDTH / 2;
+    // 2º pau = lado oposto ao do cruzador. Lateral esquerda → entrega na direita do gol.
+    const expectedZ = senderIsLeftSide ? FIELD_WIDTH * 0.62 : FIELD_WIDTH * 0.38;
+
+    const teamAgents = sender.side === 'home' ? this.homeAgents : this.awayAgents;
+    const until = this.world.simTime + 1.2;
+    for (const mate of teamAgents) {
+      if (mate.id === sender.id) continue;
+      const isAttacker =
+        mate.role === 'attack'
+        || mate.slotId === 'ata'
+        || mate.slotId === 'pe'
+        || mate.slotId === 'pd';
+      if (!isAttacker) continue;
+      this.crossIncomingHint.set(mate.id, {
+        senderId: sender.id,
+        expectedX,
+        expectedZ,
+        until,
+      });
     }
   }
 

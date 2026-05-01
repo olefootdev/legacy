@@ -468,6 +468,12 @@ export interface DecisionContext {
    * continuidade ofensiva (não ficar no mesmo corredor; terceiro homem).
    */
   offensivePassMobility?: { forward: boolean };
+  /**
+   * PR2 — Lateral do mesmo time telegrafou que vai cruzar. Atacante deve antecipar
+   * a chegada na área, redirecionando o alvo de movimento para o ponto esperado
+   * de entrega (~6m antes da linha de fundo, lado oposto ao do cruzador).
+   */
+  incomingCross?: { x: number; z: number };
   /** Spatial orientation toward the attacked goal (derived from side + half). */
   goalContext?: GoalContext;
   /**

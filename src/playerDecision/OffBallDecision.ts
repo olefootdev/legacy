@@ -231,6 +231,23 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
   const slot = ctx.self.slotId ?? '';
   const sector = ctx.ballSector;
 
+  // PR2 — Cross telegraphing override: lateral sinalizou cruzamento incoming.
+  // Atacante (attack/ata/pe/pd) corre para o ponto esperado de entrega antes
+  // da bola sair do pé do cruzador. Override curto (~1.2s, gerenciado pelo
+  // hint expirar no TacticalSimLoop). Cluster guard deliberadamente bypassed:
+  // 3 atacantes convergindo na área é o comportamento desejado.
+  if (ctx.incomingCross) {
+    const isCrossReceiver =
+      role === 'attack' || slot === 'ata' || slot === 'pe' || slot === 'pd';
+    if (isCrossReceiver) {
+      return {
+        type: 'infiltrate',
+        targetX: clamp(ctx.incomingCross.x, 5, FIELD_LENGTH - 5),
+        targetZ: clamp(ctx.incomingCross.z, 6, FIELD_WIDTH - 6),
+      };
+    }
+  }
+
   // Hard cap: max 2 teammates near ball — third player MUST peel away.
   const nearBallCount = countTeammatesNearBall(ctx, 10);
   const tripleCluster =
