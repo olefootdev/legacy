@@ -54,7 +54,6 @@ import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerform
 import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
 import { QuickStreakChallengesPanel } from '@/components/matchquick/QuickStreakChallengesPanel';
-import { QuickMatchHeatmapPanel } from '@/components/matchquick/QuickMatchHeatmapPanel';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import {
   shouldTriggerCounterAttack,
@@ -65,7 +64,6 @@ import {
 import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
 import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
-import { buildHeatmapFromEvents } from '@/match/quickMatchHeatmap';
 
 const FIRST_HALF_MS = 45_000;
 const HALFTIME_MS = 10_000;
@@ -3646,25 +3644,6 @@ export function MatchQuick() {
                 bonuses={live.performanceBonuses}
                 totalOle={calculateTotalBonusRewards(live.performanceBonuses).ole}
                 totalExp={calculateTotalBonusRewards(live.performanceBonuses).exp}
-              />
-            </div>
-          )}
-
-          {/* ─── Sprint 3: Heatmap Tático ─────────────────────────────────── */}
-          {live?.events && (
-            <div
-              className="border border-[var(--color-border)] bg-dark-gray p-4"
-              style={{ borderRadius: 'var(--radius-md)' }}
-            >
-              <QuickMatchHeatmapPanel
-                heatmap={buildHeatmapFromEvents(
-                  live.events,
-                  60,
-                  live.homePlayers,
-                  (lineupIds?.formation ?? '4-3-3') as FormationSchemeId
-                )}
-                homeColor="#fbbf24"
-                awayColor="#ef4444"
               />
             </div>
           )}
