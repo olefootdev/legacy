@@ -89,12 +89,12 @@ export function useVoiceCommandDispatch() {
             intent: cmd.intent,
             teamObedience,
             player: {
-              attributes: playerEntity.attributes,
+              attributes: playerEntity.attrs as any,
               role: player.role,
               slotId: player.slotId,
               confianca: 70, // TODO: pegar do estado do jogador
               fatigue: player.fatigue || 0,
-              tatico: playerEntity.attributes?.tatico || 50,
+              tatico: playerEntity.attrs?.tatico || 50,
               relacaoManager: managerRelationByPlayer[playerId],
             },
             assistantEffectiveness: result.confidence || 75,

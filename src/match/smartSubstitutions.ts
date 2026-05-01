@@ -33,7 +33,7 @@ function calculateSubstitutionImpact(
   const inAttrs = playerIn.attrs;
 
   // Ataque: média de finalização, drible, passe
-  const outAttack = ((outAttrs?.finalizacao ?? 50) + (outAttrs?.drible ?? 50) + (outAttrs?.passe ?? 50)) / 3;
+  const outAttack = ((outAttrs?.finalizacao ?? 50) + (outAttrs?.drible ?? 50) + (outAttrs?.passeCurto ?? 50)) / 3;
   const inAttack = ((inAttrs?.finalizacao ?? 50) + (inAttrs?.drible ?? 50) + (inAttrs?.passe ?? 50)) / 3;
   const attackDiff = Math.round((inAttack - outAttack) / 10); // -5 a +5
 

@@ -116,7 +116,7 @@ export function generateMockActivities(count: number): MarketActivity[] {
     const isAI = user.includes('Madrid') || user.includes('Barcelona') || user.includes('Bayern');
     const type = Math.random() > 0.5 ? 'purchase' : 'auction_won';
     const price = Math.floor(500_000 + Math.random() * 2_000_000);
-    const profit = type === 'sale' ? Math.floor(price * 0.3) : undefined;
+    const profit = undefined;
 
     activities.push({
       id: `act_${now}_${i}`,

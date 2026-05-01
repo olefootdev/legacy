@@ -27,6 +27,7 @@ export function HubSectionCard({
   external = false,
   onClick,
 }: {
+  key?: import('react').Key;
   to: string;
   eyebrow: ReactNode;
   title: ReactNode;

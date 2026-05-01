@@ -80,7 +80,7 @@ function fmtCountdown(ms: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function FixtureChip({ fx, nowMs }: { fx: GlobalFixture; nowMs: number }) {
+function FixtureChip({ fx, nowMs }: { key?: import("react").Key; fx: GlobalFixture; nowMs: number }) {
   const min = fx.kickoffMs ? Math.min(90, Math.max(0, Math.floor((nowMs - fx.kickoffMs) / GLOBAL_MATCH_CONSTANTS.GAME_MINUTE_MS))) : fx.currentMinute ?? 0;
   return (
     <div className="flex items-center gap-2 rounded-md border border-white/10 bg-deep-black/60 px-3 py-2 min-w-0">

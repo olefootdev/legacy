@@ -172,14 +172,20 @@ function resolveTarget(
 ): PitchPlayerState | null {
   // Se comando tem alvo explícito, resolve
   if (command.target) {
-    // Busca por nome (fuzzy)
-    const lower = command.target.toLowerCase();
-    const match = players.find(
-      (p) =>
-        p.name.toLowerCase().includes(lower) ||
-        p.playerId === command.target
-    );
-    if (match) return match;
+    const target = command.target;
+    if (target.kind === 'player_name') {
+      const lower = target.nameToken.toLowerCase();
+      const match = players.find((p) => p.name.toLowerCase().includes(lower));
+      if (match) return match;
+    }
+    if (target.kind === 'player_id') {
+      const match = players.find((p) => p.playerId === target.playerId);
+      if (match) return match;
+    }
+    if (target.kind === 'shirt_number') {
+      const match = players.find((p) => p.num === target.number);
+      if (match) return match;
+    }
   }
 
   // Fallback: portador da bola (se comando individual)

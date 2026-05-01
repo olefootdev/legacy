@@ -13,7 +13,9 @@ export type InboxCategory =
   | 'MISSÃO'
   | 'TORCIDA'
   | 'EMPRESA'
-  | 'CONTA';
+  | 'CONTA'
+  | 'RANKING'
+  | 'DESAFIOS';
 
 /** Identificador estável para analytics / filtros. */
 export type InboxMessageType =
@@ -134,6 +136,8 @@ export const INBOX_CATEGORY_LABELS: Record<InboxCategory, string> = {
   TORCIDA: 'Torcida',
   EMPRESA: 'Empresa',
   CONTA: 'Conta',
+  RANKING: 'Ranking',
+  DESAFIOS: 'Desafios',
 };
 
 /**
@@ -182,6 +186,8 @@ export function inboxCategoryColorClass(c: InboxCategory): string {
     TORCIDA: 'text-orange-400',
     EMPRESA: 'text-gray-300',
     CONTA: 'text-cyan-400',
+    RANKING: 'text-yellow-400',
+    DESAFIOS: 'text-red-400',
   };
   return map[c];
 }

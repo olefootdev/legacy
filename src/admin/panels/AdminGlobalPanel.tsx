@@ -384,7 +384,7 @@ export function AdminGlobalPanel() {
   );
 }
 
-function FixtureCard({ fixture, index }: { fixture: GlobalFixture; index: number }) {
+function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: GlobalFixture; index: number }) {
   const lastEvent = fixture.events[fixture.events.length - 1];
   const hasGoal = fixture.scoreHome > 0 || fixture.scoreAway > 0;
 

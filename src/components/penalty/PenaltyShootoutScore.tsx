@@ -62,7 +62,7 @@ export function PenaltyShootoutScore({
   );
 }
 
-function ShotDot({ result, active = false }: { result: ShotResult; active?: boolean }) {
+function ShotDot({ result, active = false }: { key?: import("react").Key; result: ShotResult; active?: boolean }) {
   if (result === 'goal') {
     return (
       <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center">

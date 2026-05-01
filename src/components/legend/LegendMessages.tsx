@@ -5,7 +5,7 @@
  * O state vive no hook `useLegendSocial(slug)` (localStorage hoje;
  * Supabase quando as tabelas existirem).
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Send } from 'lucide-react';
 import type { LegendMessage } from '@/hooks/useLegendSocial';
 import { useGameStore } from '@/game/store';
@@ -48,7 +48,7 @@ export function LegendMessages({ legendName, messages, onPost, onRemove }: Legen
 
   const [draft, setDraft] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!draft.trim()) return;
     onPost({ managerName, managerInitials, message: draft });

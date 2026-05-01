@@ -508,4 +508,17 @@ export interface DecisionContext {
   collective?: import('./teamCollectiveState').TeamCollectiveState | null;
   /** Voice command bias — quando há comando ativo no portador, enviesa scores do macroTilt. */
   voiceBias?: import('@/voiceCommand/commandQueue').CommandDecisionBias;
+  /**
+   * FASE 6.3 — Voice command position override (off-ball fast path).
+   * Quando o jogador tem comando ativo (ex: "Sobe o lateral esquerdo"), o
+   * commandPositionOverride retorna o ponto pra onde ele deve correr e o
+   * strength (0–1) que controla quanto sobrepõe o slot/tactical normal.
+   * Permite resposta IMEDIATA ao comando do manager sem depender de
+   * obedienceRoll probabilístico.
+   */
+  voicePositionOverride?: {
+    tx: number;
+    ty: number;
+    strength: number;
+  };
 }

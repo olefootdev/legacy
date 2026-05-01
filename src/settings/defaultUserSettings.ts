@@ -14,7 +14,5 @@ export const defaultUserSettings: UserSettings = {
     id: 541,
     name: 'Real Madrid',
     logo: 'https://media.api-sports.io/football/teams/541.png',
-    country: 'Spain',
-    league: 'La Liga',
   },
 };

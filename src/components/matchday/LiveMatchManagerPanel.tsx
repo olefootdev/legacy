@@ -503,6 +503,13 @@ export const LiveMatchManagerPanel = memo(function LiveMatchManagerPanel({
           </button>
         </div>
       </div>
+
+      {/* Sprint L4 Fase 2 — Marcação individual */}
+      <MarkingAssignmentsControls
+        homePlayers={homePlayers}
+        awayRoster={awayRoster}
+        playersById={playersById}
+      />
     </div>
   );
 });
@@ -706,13 +713,6 @@ function LegacyFineTune({
 
       {/* Sprint L4 — Prensa contextual */}
       <PressingControls />
-
-      {/* Sprint L4 Fase 2 — Marcação individual */}
-      <MarkingAssignmentsControls
-        homePlayers={homePlayers}
-        awayRoster={awayRoster}
-        playersById={playersById}
-      />
     </div>
   );
 }

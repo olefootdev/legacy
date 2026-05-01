@@ -167,7 +167,7 @@ export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
       type: 'RESOLVE_SET_PIECE',
       takerId: choice.takerId,
       takerName: taker.name,
-      type: choice.type,
+      deliveryType: choice.type,
       targetId: choice.targetId,
       targetName: target?.name,
       outcome,

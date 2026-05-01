@@ -21,6 +21,7 @@ import {
 const TAKER_TIMEOUT = 10;
 
 interface Props {
+  key?: import('react').Key;
   penalty: PenaltyState;
   homePlayers: PitchPlayerState[];
   opponentStrength: number;
@@ -76,7 +77,7 @@ export function PenaltyKickModalV2(props: Props) {
               ((b as any).attributes?.finalizacao ?? 0) -
               ((a as any).attributes?.finalizacao ?? 0),
           )[0] ?? homePlayers[0];
-        if (top) onPickTaker(top.id, (top as any).name ?? top.id);
+        if (top) onPickTaker(top.playerId, (top as any).name ?? top.playerId);
       }
     }, 200);
     return () => window.clearInterval(id);
@@ -116,14 +117,14 @@ export function PenaltyKickModalV2(props: Props) {
                   const finalizacao = (p as any).attributes?.finalizacao ?? 60;
                   return (
                     <button
-                      key={p.id}
+                      key={p.playerId}
                       type="button"
-                      onClick={() => onPickTaker(p.id, (p as any).name ?? p.id)}
+                      onClick={() => onPickTaker(p.playerId, (p as any).name ?? p.playerId)}
                       className="flex items-center justify-between bg-zinc-900 border-2 border-zinc-700 hover:border-neon-yellow px-4 py-3 transition-all"
                     >
                       <div className="text-left">
                         <div className="font-display font-bold uppercase tracking-wider text-sm text-white">
-                          {(p as any).name ?? p.id}
+                          {(p as any).name ?? p.playerId}
                         </div>
                         <div className="text-[10px] uppercase tracking-[0.2em] text-white/50">
                           {(p as any).role ?? '?'}
@@ -148,7 +149,7 @@ export function PenaltyKickModalV2(props: Props) {
   }
 
   // Buscar atributos do batedor
-  const takerEntity = homePlayers.find((p) => p.id === penalty.takerId);
+  const takerEntity = homePlayers.find((p) => p.playerId === penalty.takerId);
   const finishingRating =
     (takerEntity as any)?.attributes?.finalizacao ??
     (takerEntity as any)?.attrs?.finalizacao ??
@@ -157,7 +158,7 @@ export function PenaltyKickModalV2(props: Props) {
   const shooter: PenaltyShooter = {
     id: penalty.takerId,
     displayName: penalty.takerName,
-    shirtNumber: (takerEntity as any)?.shirtNumber ?? 9,
+    shirtNumber: (takerEntity as any)?.num ?? 9,
     finishingRating,
     forcaMental: (takerEntity as any)?.attributes?.forca_mental ?? 70,
   };

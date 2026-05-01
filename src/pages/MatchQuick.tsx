@@ -30,7 +30,7 @@ import { SetPieceModal } from '@/match/SetPieceModal';
 import { SubstitutionOverlay } from '@/components/matchquick/SubstitutionOverlay';
 import { RedCardOverlay } from '@/components/matchquick/RedCardOverlay';
 import { AssistantAI, type HalftimeScript } from '@/components/matchquick/AssistantAI';
-import { AssistantPanel } from '@/match/AssistantPanel';
+import { AssistantPanel, type AssistantEvent } from '@/match/AssistantPanel';
 import { StreakBar } from '@/components/match/StreakBar';
 import { MomentumBar } from '@/components/match/MomentumBar';
 import { InstantRewards } from '@/components/match/InstantRewards';

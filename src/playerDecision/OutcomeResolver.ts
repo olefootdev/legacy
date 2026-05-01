@@ -9,8 +9,9 @@ export function resolveOnBallOutcome(
   reading: ContextReading,
   profile: PlayerProfile,
   attrs: { passe: number; drible: number; finalizacao: number; velocidade: number },
+  rng01: () => number = Math.random,
 ): DecisionResult {
-  const quality = rollExecutionQuality(action, reading, profile, attrs);
+  const quality = rollExecutionQuality(action, reading, profile, attrs, rng01);
   const outcome = determineOutcome(action, quality, reading, profile);
   return { action, outcome, executionQuality: quality };
 }
@@ -19,8 +20,9 @@ export function resolveOffBallOutcome(
   action: OffBallAction,
   reading: ContextReading,
   profile: PlayerProfile,
+  rng01: () => number = Math.random,
 ): DecisionResult {
-  const quality = 0.6 + profile.workRate * 0.3 + Math.random() * 0.1;
+  const quality = 0.6 + profile.workRate * 0.3 + rng01() * 0.1;
   return { action, outcome: quality > 0.7 ? 'success' : 'deceleration', executionQuality: quality };
 }
 
@@ -33,6 +35,7 @@ function rollExecutionQuality(
   reading: ContextReading,
   profile: PlayerProfile,
   attrs: { passe: number; drible: number; finalizacao: number; velocidade: number },
+  rng01: () => number = Math.random,
 ): number {
   let base = 0.6;
 
@@ -92,7 +95,7 @@ function rollExecutionQuality(
 
   base -= pressurePenalty;
   base += profile.composure * 0.05;
-  base += (Math.random() - 0.5) * 0.15;
+  base += (rng01() - 0.5) * 0.15;
 
   return Math.max(0.05, Math.min(0.98, base));
 }

@@ -146,6 +146,14 @@ export function mapArchetype(
 }
 
 export function extractAttributes(self: AgentSnapshot, profile: PlayerProfile): DecisionAttributes {
+  // Guard: se self for undefined (agente não inicializado), retorna defaults seguros
+  if (!self) {
+    return {
+      tecnica: 65, passe: 65, cruzamento: 62, marcacao: 65, visao: 65,
+      criatividade: 50, compostura: 70, desarme: 65, finalizacao: 64,
+      forca: 70, velocidade: 72, posicionamento: 65, decisao: 65,
+    };
+  }
   const criatividade = Math.round((profile.vision * 100 * 0.5) + (profile.riskAppetite * 100 * 0.5));
   const visao = Math.round(profile.vision * 100);
   const compostura = Math.round(self.mentalidade * 0.55 + self.confianca * 0.45);

@@ -24,6 +24,14 @@ import {
   evaluateMarkingDuelDefender,
   evaluateAnticipationDuel,
 } from './localDuelRead';
+import {
+  buildFullbackInputs,
+  shouldFireFullbackUtility,
+} from './utilityFullbackSupport';
+import {
+  buildAttackingInputs,
+  evaluateAttackingUtility,
+} from './utilityAttackingSupport';
 
 /** Bote só se o duelo de marcação ou a antecipação favorecer — evita exposição burra. */
 function shouldPressCarrierByDuel(ctx: DecisionContext, reading: ContextReading): boolean {
@@ -238,116 +246,56 @@ function decideAttackingSupport(ctx: DecisionContext, reading: ContextReading): 
   // ANTI-SWARM: if too many teammates are already forward, stay anchored
   // to maintain team structure instead of joining the pile.
   // -----------------------------------------------------------------------
-  // Bloco B — Invasão de área em final_third/box_entry para atacantes/pontas/laterais
-  // Quebra a disciplina de slot quando o ataque está no terço final, para ampliar
-  // ocupação da área e padrões de cruzamento. Não aplicável a defensores/volantes.
   const phase = ctx.attackPhase;
   const isAttackerLike =
     role === 'attack'
     || slot.includes('pe') || slot.includes('pd')
     || slot.includes('le') || slot.includes('ld')
     || slot.includes('mei') || slot.includes('am');
-  if ((phase === 'box_entry' || phase === 'final_third') && isAttackerLike) {
-    const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
-    const inBoxCount = countTeammatesInBox(ctx);
-    // Cap: até 4 jogadores na área pra evitar enxame absurdo
-    if (inBoxCount < 4) {
-      // Atacantes centrais → infiltram a pequena área
-      if (role === 'attack') {
-        const lateralOffset = ctx.self.z < FIELD_WIDTH / 2 ? -1 : 1;
-        return applySpacingToAction(ctx, {
-          type: 'infiltrate',
-          targetX: clamp(goalX - ctx.attackDir * (5 + pick01ForDecision(ctx) * 5), 3, FIELD_LENGTH - 3),
-          targetZ: clamp(FIELD_WIDTH / 2 + lateralOffset * (3 + pick01ForDecision(ctx) * 6), 8, FIELD_WIDTH - 8),
-        });
-      }
-      // Pontas → atacam segundo poste / linha de fundo
-      if (slot.includes('pe') || slot.includes('pd')) {
-        const isLeft = slot.includes('pe') || ctx.self.z < FIELD_WIDTH / 2;
-        const wideZ = isLeft ? 6 + pick01ForDecision(ctx) * 6 : FIELD_WIDTH - 6 - pick01ForDecision(ctx) * 6;
-        return applySpacingToAction(ctx, {
-          type: 'attack_depth',
-          targetX: clamp(goalX - ctx.attackDir * (4 + pick01ForDecision(ctx) * 6), 3, FIELD_LENGTH - 3),
-          targetZ: wideZ,
-        });
-      }
-      // Laterais em final_third → linha de cruzamento (overlap forçado)
-      if ((slot.includes('le') || slot.includes('ld')) && phase === 'box_entry') {
-        const isLeft = slot.includes('le') || ctx.self.z < FIELD_WIDTH / 2;
-        return applySpacingToAction(ctx, {
-          type: 'overlap_run',
-          targetX: clamp(goalX - ctx.attackDir * (10 + pick01ForDecision(ctx) * 8), 8, FIELD_LENGTH - 8),
-          targetZ: isLeft ? 2 + pick01ForDecision(ctx) * 4 : FIELD_WIDTH - 2 - pick01ForDecision(ctx) * 4,
-        });
-      }
-      // Meia ofensivo → entra na meia-lua / segunda onda
-      if (slot.includes('mei') || slot.includes('am')) {
-        return applySpacingToAction(ctx, {
-          type: 'attack_depth',
-          targetX: clamp(goalX - ctx.attackDir * (14 + pick01ForDecision(ctx) * 6), 5, FIELD_LENGTH - 5),
-          targetZ: clamp(FIELD_WIDTH / 2 + (pick01ForDecision(ctx) - 0.5) * 12, 10, FIELD_WIDTH - 10),
-        });
-      }
-    }
-  }
-
-  if (shouldAnchorToSlot(ctx)) {
-    const anchor = enforceSpacing(ctx, ctx.slotX, ctx.slotZ);
-    return { type: 'move_to_slot', targetX: anchor.x, targetZ: anchor.z };
-  }
-
-  // Far from ball: hold structural position — only compress X slightly,
-  // keep lateral corridor to maintain team width and create passing angles.
-  if (distToBall > 30) {
-    const t = enforceSpacing(ctx,
-      lerpToward(ctx.slotX, ctx.ballX, 0.08),
-      ctx.slotZ,
-    );
-    return { type: 'move_to_slot', targetX: t.x, targetZ: t.z };
-  }
 
   // -----------------------------------------------------------------------
-  // Collective support quality: redirect players who aren't helping the play.
-  // Active for ALL distances when collective state is available.
+  // FASE 1.3 — Utility AI multi-candidate (Phases 2–4).
+  // Substitui: box_entry cascade + shouldAnchorToSlot + distToBall>30 + collective sq.
+  // Quando nenhum candidate atinge ATTACKING_FIRE_THRESHOLD, cai pra Phase 5
+  // (role dispatch legacy) — comportamento legacy 100% preservado nesse path.
+  // Phase 1 (cluster guard, acima) e Phase 5 (role dispatch, abaixo) intactos.
   // -----------------------------------------------------------------------
-  if (ctx.collective) {
-    const sq = evaluateSupportQuality(
-      ctx.self, ctx.ballX, ctx.ballZ, ctx.attackDir,
-      ctx.teammates, ctx.opponents, ctx.collective,
+  {
+    const inBoxCount = (phase === 'box_entry' || phase === 'final_third') && isAttackerLike
+      ? countTeammatesInBox(ctx)
+      : 0;
+    const sq = ctx.collective
+      ? evaluateSupportQuality(
+          ctx.self, ctx.ballX, ctx.ballZ, ctx.attackDir,
+          ctx.teammates, ctx.opponents, ctx.collective,
+        )
+      : null;
+    const inputs = buildAttackingInputs({
+      role,
+      slot,
+      attackPhase: phase,
+      inBoxCount,
+      shouldAnchor: shouldAnchorToSlot(ctx),
+      distToBall,
+      supportQuality: sq,
+    });
+    const { action: utilityAction } = evaluateAttackingUtility(
+      ctx,
+      reading,
+      inputs,
+      { ctx, reading, pick01: pick01ForDecision, findReceptionZone },
     );
-    if (sq.usefulness < 0.35 && sq.suggestion !== 'stay') {
-      if (sq.suggestion === 'create_width') {
-        const wideDir = ctx.self.z < FIELD_WIDTH / 2 ? -1 : 1;
-        const wz = clamp(ctx.self.z + wideDir * (10 + pick01ForDecision(ctx) * 6), 4, FIELD_WIDTH - 4);
-        return applySpacingToAction(ctx, {
-          type: 'open_width',
-          targetX: clamp(ctx.self.x + ctx.attackDir * 3, 5, FIELD_LENGTH - 5),
-          targetZ: wz,
-        });
+    if (utilityAction) {
+      const lifted = nudgeOffBallTowardHigherThreat(ctx, reading, utilityAction);
+      let finalAction = applySpacingToAction(ctx, lifted);
+      if (ctx.offensivePassMobility) {
+        finalAction = ctx.offensivePassMobility.forward
+          ? applySectorChangeAfterForwardPass(ctx, finalAction)
+          : applyLightSectorNudgeAfterPass(ctx, finalAction);
       }
-      if (sq.suggestion === 'attack_space') {
-        return applySpacingToAction(ctx, {
-          type: 'attack_depth',
-          targetX: clamp(ctx.self.x + ctx.attackDir * (8 + pick01ForDecision(ctx) * 5), 5, FIELD_LENGTH - 5),
-          targetZ: clamp(ctx.self.z + (pick01ForDecision(ctx) - 0.5) * 8, 6, FIELD_WIDTH - 6),
-        });
-      }
-      if (sq.suggestion === 'recycle') {
-        return applySpacingToAction(ctx, {
-          type: 'move_to_slot',
-          targetX: clamp(ctx.slotX - ctx.attackDir * 4, 5, FIELD_LENGTH - 5),
-          targetZ: ctx.slotZ,
-        });
-      }
-      if (sq.suggestion === 'offer_line') {
-        const rz = findReceptionZone(ctx);
-        return applySpacingToAction(ctx, {
-          type: 'offer_short_line',
-          targetX: rz.x,
-          targetZ: rz.z,
-        });
-      }
+      return finalAction;
     }
+    // Fallthrough → Phase 5 (role dispatch legacy).
   }
 
   // -----------------------------------------------------------------------
@@ -683,45 +631,10 @@ function decideFullbackSupport(
   const profile = ctx.profile;
   const isLeft = ctx.self.z < FIELD_WIDTH / 2;
   const mySector: BallSector = isLeft ? 'left' : 'right';
-
-  // Ball on my side: overlap forward
-  if (sector === mySector && (reading.teamPhase === 'attack' || reading.teamPhase === 'progression')) {
-    const overlapP = 0.35 + contextualFullbackOverlapRoll01(ctx, reading, sector);
-    if (profile.workRate > 0.55 && pick01ForDecision(ctx) < overlapP) {
-      const goalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
-      // In attack phase: push to crossing zone near byline; in progression: stay moderate
-      const targetX = reading.teamPhase === 'attack'
-        ? clamp(goalX - ctx.attackDir * (8 + pick01ForDecision(ctx) * 8), 8, FIELD_LENGTH - 8)
-        : clamp(ctx.ballX + ctx.attackDir * 18, 10, FIELD_LENGTH - 8);
-      return {
-        type: 'overlap_run',
-        targetX,
-        targetZ: isLeft ? 2 + pick01ForDecision(ctx) * 5 : FIELD_WIDTH - 2 - pick01ForDecision(ctx) * 5,
-      };
-    }
-    return {
-      type: 'offer_short_line',
-      targetX: clamp(ctx.ballX - ctx.attackDir * 3, 3, FIELD_LENGTH - 3),
-      targetZ: ctx.self.z,
-    };
-  }
-
-  // Ball on opposite side: tuck in to cover transition
-  if (sector !== mySector && sector !== 'center') {
-    return {
-      type: 'defensive_cover',
-      targetX: clamp(ctx.slotX + ctx.attackDir * 3, 5, FIELD_LENGTH - 5),
-      targetZ: lerpToward(ctx.slotZ, FIELD_WIDTH / 2, 0.3),
-    };
-  }
-
-  // Ball central: hold width on own wing to stretch the defense
-  const wideTarget = isLeft ? 5 + pick01ForDecision(ctx) * 5 : FIELD_WIDTH - 5 - pick01ForDecision(ctx) * 5;
-  return {
-    type: 'open_width',
-    targetX: clamp(ctx.ballX + ctx.attackDir * 4, 5, FIELD_LENGTH - 5),
-    targetZ: wideTarget,
-  };
+  const overlapRoll01 = contextualFullbackOverlapRoll01(ctx, reading, sector);
+  const inputs = buildFullbackInputs(reading, profile, sector, mySector, overlapRoll01);
+  const { action } = shouldFireFullbackUtility(ctx, reading, inputs, isLeft, pick01ForDecision);
+  return action;
 }
 
 function decideMidSupport(

@@ -55,6 +55,7 @@ import {
   userParticipatesInChallenge,
 } from '@/supabase/friendlyChallenges';
 import { MomentumFieldEffect } from '@/components/matchday/MomentumFieldEffect';
+import { MomentumBar } from '@/components/match/MomentumBar';
 
 const LIVE_MATCH_ENGINE_MODE = 'test2d' as const;
 
@@ -1642,6 +1643,17 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
             </div>
           </div>
 
+          {/* Barra de momentum — domínio tático em tempo real */}
+          {live.spiritMomentumClamp01 != null && (
+            <div className="mx-auto w-full max-w-3xl px-3 pb-1">
+              <MomentumBar
+                momentum={live.spiritMomentumClamp01}
+                homeShort={live.homeShort ?? 'Casa'}
+                awayShort={live.awayShort ?? 'Fora'}
+              />
+            </div>
+          )}
+
           {/* Toolbar de controles do campo */}
           <div
             className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-0.5 pb-0.5 sm:pb-1"
@@ -1875,7 +1887,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                           {pitch
                             .filter((p) => {
                               const ent = playersById[p.playerId];
-                              return ent && (ent.position === 'DEF' || ent.position === 'MID');
+                              return ent && (ent.pos === 'DEF' || ent.pos === 'MID');
                             })
                             .map((p) => {
                               const cx = pitchPlanePercent(p.x);
@@ -2036,7 +2048,7 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
                 <CoachCommandInput
                   players={pitch}
                   playersById={playersById}
-                  ballCarrierId={live.ballCarrier?.playerId}
+                  ballCarrierId={live.onBallPlayerId ?? undefined}
                   side="home"
                   minute={live.minute}
                   teamObedience={tacticalObedience}

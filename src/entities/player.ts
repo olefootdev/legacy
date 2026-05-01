@@ -116,6 +116,8 @@ export function createPlayer(partial: {
   bio?: string;
   /** `false` = não listado; `true` = no mercado; omitir = legado sem flag */
   listedOnMarket?: boolean;
+  /** Tag de coleção admin-market (ex.: 'welcomepack'). */
+  adminMarketTag?: string;
   managerCreated?: boolean;
   age?: number;
   mintOverall?: number;
@@ -192,6 +194,7 @@ export function createPlayer(partial: {
       : {}),
     ...(partial.bio?.trim() ? { bio: partial.bio.trim() } : {}),
     ...(partial.listedOnMarket !== undefined ? { listedOnMarket: partial.listedOnMarket } : {}),
+    ...(partial.adminMarketTag?.trim() ? { adminMarketTag: partial.adminMarketTag.trim() } : {}),
     ...(partial.managerCreated ? { managerCreated: true } : {}),
     ...(partial.age != null && Number.isFinite(partial.age)
       ? { age: Math.max(16, Math.min(40, Math.round(partial.age))) }

@@ -1,5 +1,6 @@
 import type { PossessionSide, MatchEventEntry, LiveMatchClockPeriod } from '@/engine/types';
 import type { CausalLogState, CausalMatchEvent } from '@/match/causal/matchCausalTypes';
+import type { GameMode } from './MatchStateSnapshot';
 import { appendCausalEntries, scoreDeltaFromEvents } from '@/match/causal/matchCausalTypes';
 import {
   pushMotorTelemetryRecord,
@@ -7,6 +8,8 @@ import {
 } from '@/match/motorActionOutcome';
 
 export type { MotorTelemetryRecord } from '@/match/motorActionOutcome';
+
+export type { GameMode } from './MatchStateSnapshot';
 
 export interface SimMatchStats {
   passesOk: number;
@@ -56,6 +59,8 @@ export interface SimMatchState {
   carrierId: string | null;
   minute: number;
   phase: 'live' | 'stopped' | 'kickoff' | 'goal_restart' | 'halftime' | 'fulltime';
+  /** 0.3 — Game mode canônico: determina action space disponível por agente */
+  gameMode: GameMode;
   /** Alinhado ao MatchClock (exceto pós-jogo, quando pode ficar em second_half até sync final). */
   clockPeriod: LiveMatchClockPeriod;
   causalLog: CausalLogState;
@@ -111,6 +116,7 @@ export function createSimMatchState(): SimMatchState {
     carrierId: null,
     minute: 0,
     phase: 'kickoff',
+    gameMode: 'normal',
     clockPeriod: 'first_half',
     causalLog: { nextSeq: 1, entries: [] },
     events: [],

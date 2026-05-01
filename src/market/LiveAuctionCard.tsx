@@ -11,6 +11,7 @@ import type { LiveAuction } from './socialTrade';
 import { formatPrice } from './socialTrade';
 
 interface LiveAuctionCardProps {
+  key?: import("react").Key;
   auction: LiveAuction;
   userId: string;
   userName: string;

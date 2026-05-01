@@ -186,10 +186,12 @@ export function useReplayPlayer(replayData: MatchReplayData | null) {
       const e = replayData.events[i];
       if (!e) continue;
 
-      if (e.kind === 'goal_home') homeScore++;
-      if (e.kind === 'goal_away') awayScore++;
-      if (e.type === 'possession_change') {
-        possession = (e.payload as any)?.to || possession;
+      if (e.type === 'shot_result' && e.payload.outcome === 'goal') {
+        if (e.payload.side === 'home') homeScore++;
+        else awayScore++;
+      }
+      if (e.type === 'shot_result' && e.payload.outcome === 'goal') {
+        // possession handled below
       }
     }
 
@@ -241,8 +243,10 @@ export function useReplayPlayer(replayData: MatchReplayData | null) {
         let newScore = { ...prev.currentScore };
         let newPossession = prev.currentPossession;
 
-        if (event.kind === 'goal_home') newScore.home++;
-        if (event.kind === 'goal_away') newScore.away++;
+        if (event.type === 'shot_result' && event.payload.outcome === 'goal') {
+          if (event.payload.side === 'home') newScore.home++;
+          else newScore.away++;
+        }
         // possession_change não existe em MatchEventEntry.kind, removendo
         // if (event.kind === 'possession_change') {
         //   newPossession = (event.payload as any)?.to || newPossession;

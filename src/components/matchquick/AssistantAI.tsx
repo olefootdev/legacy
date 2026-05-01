@@ -2,7 +2,7 @@
  * Assistente AI - FAB flutuante com chat interativo
  * Faz substituições automáticas por lesão e responde a comandos do usuário
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -251,7 +251,7 @@ export function AssistantAI({
     setMessage('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (message.trim() && !isProcessing) {
       processCommand(message.trim());

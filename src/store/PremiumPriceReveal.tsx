@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react';
 import type { ShopCatalogItem } from '@/game/shopCatalog';
 
 interface PremiumPriceRevealProps {
+  key?: import("react").Key;
   item: ShopCatalogItem;
   children: ReactNode;
   onSelect: () => void;

@@ -47,6 +47,7 @@ function notificationRowToInbox(row: NotificationRow): InboxItem {
 }
 
 interface NotificationItemProps {
+  key?: import("react").Key;
   notification: InboxItem;
   onClose: () => void;
 }
@@ -70,7 +71,7 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
   };
 
   const getLink = () => {
-    if (notification.link) return notification.link;
+    if ((notification as any).link) return (notification as any).link;
 
     switch (notification.category) {
       case 'COMPETIÇÃO':

@@ -24,6 +24,7 @@ export interface LegacyPlayerCardStats {
 }
 
 export interface LegacyPlayerCardProps {
+  key?: import("react").Key;
   name: string;
   position: string; // "CAM", "ATA", "GOL", etc.
   ovr: number;
@@ -54,6 +55,7 @@ function StatPip({
   label,
   value,
 }: {
+  key?: import("react").Key;
   x: number;
   label: string;
   value: number;

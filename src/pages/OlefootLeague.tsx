@@ -31,7 +31,7 @@ import type { OlefootLeagueTeam } from '@/match/olefootLeague';
 
 type ViewMode = 'fixtures' | 'standings';
 
-function StandingsTable({ division, teams }: { division: number; teams: OlefootLeagueTeam[] }) {
+function StandingsTable({ division, teams }: { key?: import("react").Key; division: number; teams: OlefootLeagueTeam[] }) {
   return (
     <div className="sports-panel rounded-lg overflow-hidden">
       {/* Header */}
@@ -223,7 +223,7 @@ function StandingsTable({ division, teams }: { division: number; teams: OlefootL
   );
 }
 
-function FixtureCard({ fixture, index }: { fixture: GlobalFixture; index: number }) {
+function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: GlobalFixture; index: number }) {
   const lastEvent = fixture.events[fixture.events.length - 1];
   const hasGoal = fixture.scoreHome > 0 || fixture.scoreAway > 0;
 

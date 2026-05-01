@@ -3,7 +3,8 @@
  * Eventos únicos que criam histórias memoráveis (~5% chance).
  */
 
-import type { PitchPlayerState, SpiritContext } from '@/gamespirit/types';
+import type { PitchPlayerState } from '@/engine/types';
+import type { SpiritContext } from '@/gamespirit/types';
 
 export type SpecialEventType =
   | 'bicycle_kick'
@@ -33,7 +34,7 @@ export function tryBicycleKick(
   ctx: SpiritContext,
 ): SpecialEvent | null {
   const fisico = shooter.attributes?.fisico ?? 50;
-  const acrobacia = shooter.attributes?.acrobacia ?? 50;
+  const acrobacia = shooter.attributes?.fisico ?? 50; // proxy: fisico
 
   // Só em zona de ataque, 5% chance, requer físico 70+ e acrobacia 65+
   if (ctx.ballZone !== 'att') return null;
@@ -58,7 +59,7 @@ export function tryThunderstrike(
   ctx: SpiritContext,
 ): SpecialEvent | null {
   const finalizacao = shooter.attributes?.finalizacao ?? 50;
-  const chuteLongo = shooter.attributes?.chuteLongo ?? 50;
+  const chuteLongo = shooter.attributes?.finalizacao ?? 50; // proxy: finalizacao
 
   // Só fora da área (mid zone), 8% chance, requer finalização 75+ e chute longo 70+
   if (ctx.ballZone !== 'mid') return null;

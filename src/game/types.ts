@@ -451,7 +451,7 @@ export type GameAction =
       type: 'RESOLVE_SET_PIECE';
       takerId: string;
       takerName: string;
-      type: 'short' | 'near_post' | 'far_post' | 'direct_shot' | 'cross' | 'short_pass';
+      deliveryType: 'short' | 'near_post' | 'far_post' | 'direct_shot' | 'cross' | 'short_pass';
       targetId?: string;
       targetName?: string;
       /** Outcome calculado (caller que computa probabilidade). */

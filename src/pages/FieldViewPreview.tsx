@@ -1,13 +1,25 @@
 /**
  * Legacy Mode — /dev/field-view.
- * Campo ao vivo limpo + cards de decisão no painel inferior + voz.
+ * Campo ao vivo limpo + SmartPanel + CommandCenter + decision moments cinematográficos.
  */
 import { useState, useCallback, useEffect, useRef, type ComponentType } from 'react';
 import { Mic } from 'lucide-react';
-import { FieldView, type FieldCameraMode } from '@/components/match/FieldView';
+import { FieldView } from '@/components/match/FieldView';
+import { AgentFeedbackStream, useAgentFeedbackStream } from '@/components/match/AgentFeedbackStream';
+import { SectorFocus, type SectorZone } from '@/components/match/SectorFocus';
+import { CommandCenter } from '@/components/match/CommandCenter';
+import { SmartPanel, type PlayStyle } from '@/components/match/SmartPanel';
+import { FieldDecisionOverlay, type FieldDecisionChoice } from '@/components/match/FieldDecisionOverlay';
+import { NarrativeBar } from '@/components/match/NarrativeBar';
+import { LiveEventTimeline } from '@/components/match/LiveEventTimeline';
+import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
+import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
+import { ReadGamePanel } from '@/components/match/ReadGamePanel';
+import type { VoiceIntent } from '@/voiceCommand/types';
 import type { PitchPlayerState } from '@/engine/types';
 import { useLegacyMatchEngine, type LegacyEventKind } from './useLegacyMatchEngine';
-import { InlineDecisionCtx } from '@/components/match/decisions';
+import type { FormationSchemeId } from '@/match-engine/types';
+import { useGameStore } from '@/game/store';
 import {
   GoalkeeperDistribution, GoalkeeperPressure, resolveGoalkeeperDistribution,
   CornerAttacker, CornerDefender, resolveCorner,
@@ -222,7 +234,7 @@ function VoiceIdlePanel({ onTrigger }: { onTrigger: (id: string) => void }) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 export function FieldViewPreview() {
-  const [camera, setCamera] = useState<FieldCameraMode>('aerial');
+  const [camera, setCamera] = useState<'aerial' | 'broadcast'>('aerial');
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [defensiveAction, setDefensiveAction] = useState(false);
   const [activeMoment, setActiveMoment] = useState<MomentDef | null>(null);
@@ -232,6 +244,25 @@ export function FieldViewPreview() {
   const [frozen, setFrozen] = useState(false);
   const [timeScale, setTimeScale] = useState(1);
   const momentBusyRef = useRef(false);
+
+  // ── SmartPanel state ──────────────────────────────────────────────────────
+  const [formation, setFormation] = useState<FormationSchemeId>('4-3-3');
+  const [playStyle, setPlayStyle] = useState<PlayStyle>('PRESSAO_ALTA');
+  const [fanMood, setFanMood] = useState(72);
+
+  // ── Away club picker ──────────────────────────────────────────────────────
+  const [awayClub, setAwayClub] = useState<{ name: string; logo: string } | null>(null);
+
+  // ── Home crest from game store (optional — page is standalone) ────────────
+  const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
+
+  // ── PlayerBrainCard ───────────────────────────────────────────────────────
+  const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
+
+  // ── Editorial overlays ────────────────────────────────────────────────────
+  const [sectorZone, setSectorZone] = useState<SectorZone>(null);
+  const [kineticWord, setKineticWord] = useState<string | null>(null);
+  const kineticTimerRef = useRef<number | null>(null);
 
   const startMoment = useCallback((m: MomentDef) => {
     if (momentBusyRef.current) return;
@@ -253,7 +284,20 @@ export function FieldViewPreview() {
     if (m.defensiveAction) setDefensiveAction(true);
   }, []);
 
+  // Ref para detectar gol recente — bloqueia shot decision após gol
+  const lastGoalMsRef = useRef(0);
+  // Ref para cooldown pós-momento — evita double-trigger imediato
+  const lastMomentEndMsRef = useRef(0);
+
   const handleEngineEvent = useCallback((kind: LegacyEventKind) => {
+    if (kind === 'goal') {
+      lastGoalMsRef.current = performance.now();
+      return; // gol não abre decision moment
+    }
+    // Ignora shot/rebound se gol aconteceu nos últimos 3s
+    if ((kind === 'shot' || kind === 'rebound') && performance.now() - lastGoalMsRef.current < 3000) return;
+    // Cooldown de 8s após qualquer momento fechar — evita double-trigger
+    if (performance.now() - lastMomentEndMsRef.current < 8000) return;
     if (momentBusyRef.current) return;
     const momentId = ENGINE_EVENT_MAP[kind];
     if (!momentId) return;
@@ -262,6 +306,97 @@ export function FieldViewPreview() {
   }, [startMoment]);
 
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale);
+
+  // ── AgentFeedbackStream ───────────────────────────────────────────────────
+  const { entries: feedbackEntries, push: pushFeedback } = useAgentFeedbackStream(
+    engine.homePlayers,
+    30,
+  );
+
+  // Atualiza fanMood com base no placar e posse (após engine estar disponível)
+  useEffect(() => {
+    const diff = engine.homeScore - engine.awayScore;
+    const possessionBonus = engine.possession === 'home' ? 5 : -5;
+    const base = 60 + diff * 8 + possessionBonus;
+    setFanMood(prev => {
+      const target = Math.max(10, Math.min(100, base));
+      return Math.round(prev + (target - prev) * 0.15);
+    });
+  }, [engine.homeScore, engine.awayScore, engine.possession, engine.minute]);
+
+  // ── Cancela decision moment se gol acontecer enquanto está aberto ─────────
+  useEffect(() => {
+    if (engine.lastEvent === 'goal' && activeMoment && momentBusyRef.current) {
+      setActiveMoment(null);
+      setAttackerPick(null);
+      setOutcome('goal');
+      setHighlightId(null);
+      setDefensiveAction(false);
+      setCameraTarget(null);
+      setFrozen(false);
+      setTimeScale(1);
+      momentBusyRef.current = false;
+      lastMomentEndMsRef.current = performance.now();
+      window.setTimeout(() => setOutcome(null), 2800);
+    }
+  }, [engine.lastEvent, engine.homeScore, engine.awayScore]);
+
+  // ── Sector + kinetic word helpers ─────────────────────────────────────────
+  const INTENT_SECTOR: Partial<Record<VoiceIntent, SectorZone>> = {
+    team_press_high:     'att',
+    team_retreat:        'def',
+    left_back_overlap:   'mid',
+    stretch_team:        'mid',
+    pedal_to_metal:      'att',
+    team_hold_possession:'mid',
+  };
+
+  const INTENT_WORD: Partial<Record<VoiceIntent, string>> = {
+    team_press_high:     'PRESSÃO',
+    team_retreat:        'RECUAR',
+    left_back_overlap:   'OVERLAP',
+    stretch_team:        'ABRIR',
+    pedal_to_metal:      'ACELERAR',
+    team_hold_possession:'SEGURAR',
+  };
+
+  const triggerEditorialOverlays = useCallback((intent: VoiceIntent, targetIds?: string[]) => {
+    pushFeedback(intent, targetIds);
+
+    const zone = INTENT_SECTOR[intent];
+    if (zone) setSectorZone(zone);
+
+    const word = INTENT_WORD[intent];
+    if (word) {
+      setKineticWord(word);
+      if (kineticTimerRef.current) window.clearTimeout(kineticTimerRef.current);
+      kineticTimerRef.current = window.setTimeout(() => setKineticWord(null), 1200);
+    }
+  }, [pushFeedback]);
+
+  const handleCommandSubmit = useCallback((transcript: string) => {
+    // Mapeia hashtag transcripts para intents coletivos
+    const TRANSCRIPT_INTENT: Record<string, VoiceIntent> = {
+      'pressiona alto':     'team_press_high',
+      'recua todo mundo':   'team_retreat',
+      'sobe o lateral':     'left_back_overlap',
+      'estica o time':      'stretch_team',
+      'pisa no acelerador': 'pedal_to_metal',
+      'segura a bola':      'team_hold_possession',
+    };
+    const intent = TRANSCRIPT_INTENT[transcript.toLowerCase().trim()];
+    if (intent) {
+      triggerEditorialOverlays(intent);
+    } else {
+      // Comando livre — feedback genérico no primeiro atacante
+      pushFeedback('free_play', [engine.homePlayers.find((p) => p.role === 'attack')?.playerId ?? '']);
+    }
+  }, [triggerEditorialOverlays, pushFeedback, engine.homePlayers]);
+
+  const handleTagDispatch = useCallback((transcript: string, intent: VoiceIntent) => {
+    triggerEditorialOverlays(intent);
+    handleCommandSubmit(transcript);
+  }, [triggerEditorialOverlays, handleCommandSubmit]);
 
   // ── Ambient camera — narrativa emocional pela posse e profundidade ────────
   // Engine x: 0 = nosso gol, 100 = gol adversário.
@@ -319,6 +454,7 @@ export function FieldViewPreview() {
       setHighlightId(null); setDefensiveAction(false);
       setCameraTarget(null); setFrozen(false); setTimeScale(1);
       momentBusyRef.current = false;
+      lastMomentEndMsRef.current = performance.now();
     };
 
     // Córner: câmera segue a bola — bandeira → área → outcome
@@ -387,13 +523,49 @@ export function FieldViewPreview() {
           from { opacity: 0; transform: translateX(20px) scale(0.9); }
           to   { opacity: 1; transform: translateX(0)    scale(1); }
         }
+        @keyframes feedbackIn {
+          from { opacity: 0; transform: translateX(16px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes sectorIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes kineticWord {
+          0%   { opacity: 0;    transform: scale(0.88); }
+          15%  { opacity: 0.10; transform: scale(1.02); }
+          60%  { opacity: 0.10; transform: scale(1); }
+          100% { opacity: 0;    transform: scale(1.06); }
+        }
+        @keyframes hudScoreShake {
+          0%,100% { transform: translateX(0) scale(1); }
+          20%     { transform: translateX(-5px) scale(1.08); }
+          40%     { transform: translateX(5px) scale(1.12); }
+          60%     { transform: translateX(-3px) scale(1.06); }
+          80%     { transform: translateX(2px) scale(1.02); }
+        }
+        @keyframes pressurePulse {
+          0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+          50%     { transform: translate(-50%,-50%) scale(1.8); opacity: 0; }
+        }
       `}</style>
 
-      {/* ── Campo — flex-1, push para baixo, com zoom T1/T2 ── */}
-      {/* T2 imersivo: perspectiva de baixo (rotateX) + zoom alto.
-          A câmera "entra" na cena: o campo se inclina como visto do banco de reservas. */}
+      {/* ── NarrativeBar — faixa editorial entre HUD e campo ── */}
+      <NarrativeBar
+        lastEventText={engine.events[0]?.text ?? null}
+        lastEventKind={engine.events[0]?.kind}
+        possession={engine.possession}
+        ballX={engine.ballX}
+        minute={engine.minute}
+        isGoal={engine.lastEvent === 'goal'}
+      />
+
+      {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
+      {/* Wrapper externo: items-stretch + justify-center + min-h-0 permite o
+          FieldView interno (h-full + aspect-ratio) fittar pelo menor lado.
+          T2 imersivo: perspectiva de baixo (rotateX) + zoom alto. */}
       <div
-        className="flex-1 min-h-0 flex flex-col justify-end overflow-hidden"
+        className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden"
         style={{
           perspective: frozen ? '900px' : 'none',
           perspectiveOrigin: '50% 100%',
@@ -401,7 +573,7 @@ export function FieldViewPreview() {
         }}
       >
       <div
-        className="w-full h-full flex flex-col justify-end"
+        className="w-full h-full flex flex-col items-stretch justify-center min-h-0"
         style={{
           transformOrigin: cameraTarget ? `${cameraTarget.x}% ${cameraTarget.y}%` : '50% 50%',
           transform: frozen
@@ -425,16 +597,43 @@ export function FieldViewPreview() {
           onBallPlayerId={engine.onBallPlayerId}
           cameraMode={camera}
           homeShort="OLE"
-          awayShort="ADV"
+          awayShort={awayClub?.name?.slice(0, 3).toUpperCase() ?? 'ADV'}
+          homeName="Olefoot FC"
+          awayName={awayClub?.name}
+          homeCrestUrl={favoriteRealTeam?.logo ?? null}
+          awayClub={awayClub}
+          onAwayClubChange={setAwayClub}
           homeScore={engine.homeScore}
           awayScore={engine.awayScore}
           matchMinute={engine.minute}
-          showCameraSwitch={false}
+          possession={engine.possession}
+          phase={engine.phase}
+          showCameraSwitch={true}
+          onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
           highlightPlayerId={highlightId}
           defensiveAction={defensiveAction}
-          onPlayerClick={(p) => { setHighlightId(p.playerId); window.setTimeout(() => setHighlightId(null), 2500); }}
+          onPlayerClick={(p) => {
+            setBrainPlayer(p);
+            setHighlightId(p.playerId);
+            window.setTimeout(() => { setBrainPlayer(null); setHighlightId(null); }, 4000);
+          }}
           className="w-full"
         />
+
+        {/* ── PressureZoneOverlay — zonas de tensão ── */}
+        <PressureZoneOverlay
+          ballX={engine.ballX}
+          possession={engine.possession}
+          phase={engine.phase}
+        />
+
+        {/* ── PlayerBrainCard — inteligência do jogador ── */}
+        {brainPlayer && (
+          <PlayerBrainCard
+            player={brainPlayer}
+            onClose={() => setBrainPlayer(null)}
+          />
+        )}
       </div>
       </div>
 
@@ -572,18 +771,6 @@ export function FieldViewPreview() {
         );
       })()}
 
-      {/* Camera toggle — canto superior direito, sobre o campo */}
-      <div className="absolute flex gap-1 z-20" style={{ top: 56, right: 8 }}>
-        {(['aerial', 'broadcast'] as FieldCameraMode[]).map((m) => (
-          <button key={m} type="button" onClick={() => setCamera(m)}
-            className="font-display uppercase"
-            style={{ background: camera === m ? '#FDE100' : 'rgba(13,13,13,0.8)', color: camera === m ? '#000' : 'rgba(255,255,255,0.45)', border: `1px solid ${camera === m ? 'transparent' : 'rgba(253,225,0,0.15)'}`, fontSize: 10, letterSpacing: '0.22em', fontWeight: 800, padding: '4px 10px', borderRadius: 2 }}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
-
       {/* ── Resultado — flash centralizado sobre o painel ── */}
       {outcome && (
         <div
@@ -610,43 +797,100 @@ export function FieldViewPreview() {
         </div>
       )}
 
-      {/* ── Card de decisão — desliza de baixo do campo, acima do voice bar ──
-           T2 (frozen): card cresce 1.18× — botões de ação maiores, "dentro do estádio" */}
-      {showDecision && (
+      {/* ── FieldDecisionOverlay — cinematográfico, dentro do campo ── */}
+      {showDecision && activeMoment && (() => {
+        const focusPlayer = activeMoment.highlight
+          ? (engine.homePlayers.find(p => p.playerId === activeMoment.highlight) ?? engine.homePlayers[0])
+          : engine.homePlayers.find(p => p.role === 'attack') ?? engine.homePlayers[0];
+
+        // Monta 2 choices a partir das opções do momento
+        const isAttackerTurn = showAttacker;
+        const choiceMap: Record<string, [FieldDecisionChoice, FieldDecisionChoice]> = {
+          gk:       [{ id: 'long', label: 'LONGO' }, { id: 'short', label: 'CURTO' }],
+          corner:   [{ id: 'near', label: '1° PAU' }, { id: 'far', label: '2° PAU' }],
+          freekick: [{ id: 'shoot', label: 'CHUTE' }, { id: 'cross', label: 'CRUZAR' }],
+          recv:     [{ id: 'hold', label: 'SEGURAR' }, { id: 'turn', label: 'GIRAR' }],
+          wing:     [{ id: 'cross', label: 'CRUZAR' }, { id: 'cut', label: 'CORTAR' }],
+          '1v1':    [{ id: 'inside', label: 'DENTRO' }, { id: 'outside', label: 'FORA' }],
+          header:   [{ id: 'power', label: 'FORÇA' }, { id: 'place', label: 'COLOCAR' }],
+          '1v1gk':  [{ id: 'placed', label: 'COLOCAR' }, { id: 'power', label: 'FORÇA' }],
+          tackle:   [{ id: 'cover', label: 'COBRIR' }, { id: 'slide', label: 'CARRINHO' }],
+          lastline: [{ id: 'hold', label: 'SEGURAR' }, { id: 'step', label: 'AVANÇAR' }],
+          rebound:  [{ id: 'first', label: 'PRIMEIRO' }, { id: 'wait', label: 'ESPERAR' }],
+          gegen:    [{ id: 'swarm', label: 'PRESSÃO' }, { id: 'short', label: 'CURTO' }],
+          counter:  [{ id: 'wing', label: 'PELAS PONTAS' }, { id: 'center', label: 'CENTRO' }],
+        };
+        const choices = choiceMap[activeMoment.id] ?? [{ id: 'a', label: 'OPÇÃO A' }, { id: 'b', label: 'OPÇÃO B' }];
+
+        return (
+          <FieldDecisionOverlay
+            key={activeMoment.id + (attackerPick ?? '')}
+            playerName={focusPlayer?.name ?? 'Jogador'}
+            playerPos={focusPlayer?.pos ?? '—'}
+            playerNum={focusPlayer?.num ?? 0}
+            momentLabel={activeMoment.label.toUpperCase()}
+            choices={choices}
+            onChoose={isAttackerTurn ? handleAttackerChoice : handleDefenderChoice}
+            onTimeout={() => isAttackerTurn
+              ? handleAttackerChoice(activeMoment.fa)
+              : handleDefenderChoice(activeMoment.fd)
+            }
+            timeoutMs={5000}
+          />
+        );
+      })()}
+
+      {/* ── LiveEventTimeline — memória da partida ── */}
+      <LiveEventTimeline
+        events={engine.events}
+        currentMinute={engine.minute}
+      />
+
+      {/* ── Rodapé: SmartPanel + ReadGamePanel + CommandCenter ── */}
+      <div style={{ position: 'relative' }}>
+        <ReadGamePanel
+          possession={engine.possession}
+          ballX={engine.ballX}
+          homePlayers={engine.homePlayers}
+          events={engine.events}
+          playStyle={playStyle}
+          homeScore={engine.homeScore}
+          awayScore={engine.awayScore}
+          minute={engine.minute}
+        />
+        <SmartPanel
+          formation={formation}
+          onFormationChange={setFormation}
+          playStyle={playStyle}
+          onStyleChange={setPlayStyle}
+          fanMood={fanMood}
+        />
+      </div>
+      <CommandCenter onSubmit={handleCommandSubmit} onTagDispatch={handleTagDispatch} />
+
+      {/* ── AgentFeedbackStream — timeline lateral direita ── */}
+      <AgentFeedbackStream entries={feedbackEntries} />
+
+      {/* ── SectorFocus — overlay de zona ── */}
+      <SectorFocus zone={sectorZone} />
+
+      {/* ── Tipografia Cinética — palavra no centro do campo ── */}
+      {kineticWord && (
         <div
-          key={activeMoment.id + (attackerPick ?? '')}
-          style={{
-            flexShrink: 0,
-            transform: frozen ? 'scale(1.18)' : 'scale(1)',
-            transformOrigin: 'bottom center',
-            transition: 'transform 360ms cubic-bezier(0.22, 1.4, 0.36, 1)',
-            animation: 'slideFromField 280ms cubic-bezier(0.34,1.56,0.64,1) both',
-            zIndex: 300,
-          }}
+          className="absolute inset-0 z-[155] pointer-events-none flex items-center justify-center"
+          key={kineticWord + Date.now()}
         >
-          <InlineDecisionCtx.Provider value={true}>
-            {showAttacker && (
-              <Attacker
-                onChoose={handleAttackerChoice}
-                onTimeout={() => handleAttackerChoice(activeMoment.fa)}
-              />
-            )}
-            {showDefender && (
-              <Defender
-                onChoose={handleDefenderChoice}
-                onTimeout={() => handleDefenderChoice(activeMoment.fd)}
-              />
-            )}
-          </InlineDecisionCtx.Provider>
+          <span style={{
+            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+            fontSize: 'clamp(48px, 10vw, 96px)', fontWeight: 900,
+            color: 'rgba(255,255,255,0.10)', letterSpacing: '0.08em',
+            textTransform: 'uppercase', animation: 'kineticWord 1200ms ease-out both',
+            userSelect: 'none',
+          }}>
+            {kineticWord}
+          </span>
         </div>
       )}
-
-      {/* ── Voice bar — sempre visível, no fundo ── */}
-      <div
-        style={{ flexShrink: 0, background: 'rgba(8,8,8,0.97)', borderTop: '1px solid rgba(253,225,0,0.1)' }}
-      >
-        <VoiceIdlePanel onTrigger={voiceTrigger} />
-      </div>
     </div>
   );
 }

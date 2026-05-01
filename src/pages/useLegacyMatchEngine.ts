@@ -26,7 +26,7 @@ export interface LegacyMatchState {
   ballX: number;
   ballY: number;
   onBallPlayerId: string | undefined;
-  events: Array<{ minute: number; text: string }>;
+  events: Array<{ minute: number; text: string; kind?: string }>;
   phase: 'playing' | 'halftime' | 'fulltime';
   lastEvent: (LegacyEventKind & string) | null;
 }
@@ -140,20 +140,29 @@ export function useLegacyMatchEngine(
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
-  // Cooldown: mínimo 45s entre decision moments para preservar o peso de cada um
-  const lastEventMsRef = useRef(0);
-
   useEffect(() => {
     const loop = new TacticalSimLoop();
     loopRef.current = loop;
 
-    // Subscrever ao event bus do loop
+    // Cooldown por tipo de evento — evita spam mas não bloqueia eventos diferentes
+    const lastEventKindRef = { current: null as (LegacyEventKind & string) | null };
+    const lastEventByKind = new Map<string, number>();
+    const COOLDOWN_MS: Partial<Record<LegacyEventKind, number>> = {
+      corner:           12000,
+      freekick:         12000,
+      shot:             15000,
+      rebound:           8000,
+      goal:                 0,
+      possession_change:    0,
+    };
     const unsub = loop.eventBus.subscribe((ev) => {
       const kind = simEventToLegacyKind(ev);
       if (!kind) return;
       const now = performance.now();
-      if (now - lastEventMsRef.current < 45000) return;
-      lastEventMsRef.current = now;
+      lastEventKindRef.current = kind;
+      const cooldown = COOLDOWN_MS[kind] ?? 12000;
+      if (cooldown > 0 && now - (lastEventByKind.get(kind) ?? 0) < cooldown) return;
+      lastEventByKind.set(kind, now);
       onEventRef.current(kind);
     });
 
@@ -204,11 +213,12 @@ export function useLegacyMatchEngine(
             ballY: ball.y,
             onBallPlayerId: carrierId,
             events: (simSt.events ?? []).slice(-5).reverse().map((e) => ({
-              minute: simSt.minute,
+              minute: e.minute ?? simSt.minute,
               text: e.text ?? '',
+              kind: e.kind,
             })),
             phase: simSt.phase === 'fulltime' ? 'fulltime' : simSt.phase === 'halftime' ? 'halftime' : 'playing',
-            lastEvent: null,
+            lastEvent: lastEventKindRef.current,
           });
         }
       }

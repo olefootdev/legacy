@@ -154,7 +154,6 @@ export function useMatchSimulation(props: UseMatchSimulationProps) {
         homePlayers,
         homeShort: 'Casa',
         awayRoster,
-        awayPlayers,
       });
 
       // Check for interactive moment trigger

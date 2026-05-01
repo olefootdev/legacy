@@ -23,6 +23,7 @@ import type {
 } from './types';
 
 export interface PenaltyShootProps {
+  key?: import("react").Key;
   pov?: PenaltyPOV; // 'manager' (default) | 'player'
   shooter: PenaltyShooter;
   keeper: PenaltyKeeper;

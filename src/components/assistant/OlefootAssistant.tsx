@@ -227,7 +227,7 @@ export function OlefootAssistant({ autoOpen = false, onComplete }: OlefootAssist
   };
 
   const handleNext = () => {
-    const newCompleted = new Set(completedSteps);
+    const newCompleted = new Set<string>(completedSteps);
     newCompleted.add(currentStep.id);
     setCompletedSteps(newCompleted);
 

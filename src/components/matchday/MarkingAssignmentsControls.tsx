@@ -26,7 +26,7 @@ export function MarkingAssignmentsControls({ homePlayers, awayRoster, playersByI
     .map((p) => playersById[p.playerId])
     .filter(
       (p): p is NonNullable<typeof p> =>
-        !!p && (p.position === 'DEF' || p.position === 'MID'),
+        !!p && (p.pos === 'DEF' || p.pos === 'MID'),
     )
     .sort((a, b) => (a.num ?? 0) - (b.num ?? 0));
 

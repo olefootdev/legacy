@@ -89,13 +89,13 @@ function calculateInfluence(player: PitchPlayerState, events: MatchEventEntry[])
   let influence = 0.4; // base
 
   // Aumenta influência baseado em eventos do jogador
-  const playerEvents = events.filter(e => e.playerId === player.id);
+  const playerEvents = events.filter(e => e.playerId === player.playerId);
   influence += playerEvents.length * 0.04;
 
   // Bônus por role
   if (player.role === 'attack') influence += 0.2;
   if (player.role === 'mid') influence += 0.15;
-  if (player.role === 'defense') influence += 0.1;
+  if (player.role === 'def') influence += 0.1;
 
   return Math.min(1, influence);
 }
@@ -212,7 +212,7 @@ export function buildHeatmapFromEvents(
       const anchor = sfGetAnchor(sfRole, 'home');
 
       playerPositions.push({
-        id: player.id,
+        id: player.playerId,
         name: player.name || `#${player.num}`,
         x: worldPos.x,
         z: worldPos.z,

@@ -723,7 +723,7 @@ function FormPills({
 }: {
   form: { v: number; e: number; d: number };
   variant: 'onYellow' | 'onDark';
-  align?: 'left' | 'right';
+  align?: 'left' | 'right' | 'center';
 }) {
   const sub = variant === 'onYellow' ? 'text-black/70' : 'text-white/70';
   return (

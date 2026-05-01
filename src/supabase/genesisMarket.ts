@@ -250,7 +250,7 @@ export function genesisRowToPlayerEntity(row: GenesisMarketPlayerRow): PlayerEnt
     cardSupply: row.card_supply != null && Number.isFinite(row.card_supply) ? Math.floor(row.card_supply) : undefined,
     bio: row.bio?.trim() || undefined,
     listedOnMarket: row.listed_on_market === true,
-    adminMarketTag: row.admin_market_tag?.trim() || undefined,
+    adminMarketTag: (row as any).admin_market_tag?.trim() || undefined,
     age: row.age != null && Number.isFinite(row.age) ? Math.round(row.age) : undefined,
     mintOverall: mintOvr,
     evolutionRate: evo,

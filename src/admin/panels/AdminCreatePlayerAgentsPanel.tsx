@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import type { JSX } from 'react';
 import { getSupabase } from '@/supabase/client';
 import { Sparkles, User, Target, BookOpen, DollarSign, Play, Check, Copy, Image as ImageIcon, Upload, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';

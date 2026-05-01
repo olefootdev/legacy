@@ -9,9 +9,12 @@
  * mesmo modo aerial, só com escala + tradução suave pra dar imersão.
  */
 import { memo, useMemo } from 'react';
+import type { JSX } from 'react';
 import type { PitchPlayerState } from '@/engine/types';
+import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
+import { LegacyMatchHUD } from './LegacyMatchHUD';
 
-export type FieldCameraMode = 'aerial' | 'broadcast';
+export type FieldCameraMode = 'aerial' | 'broadcast' | 'firstperson';
 
 // ── SVG layout constants ────────────────────────────────────────────────────
 const VW = 1136;
@@ -453,13 +456,30 @@ function InclinedField({
   // Defensive cinematic mode: shrink home GK and enlarge near goal so the
   // proportions match real life (keeper ≈ 1.9m vs goal ≈ 2.44m tall).
   const gkShrink = defensiveAction ? 0.55 : 1;
-  // Sort players by depth: far first (top), near last (bottom) — natural occlusion
+  // Sort players by depth: far first (top), near last (bottom) — natural occlusion.
+  // FASE 3.5: anti-chaos visual — offsets per-token pra evitar sobreposição
+  // sem alterar posições da simulação (aditivo, cosmético only).
   const allCards = useMemo(() => {
-    const home = homePlayers.map((p) => ({ p, isHome: true }));
-    const away = awayPlayers.map((p) => ({ p, isHome: false }));
+    const allAgents = [
+      ...homePlayers.map((p) => ({ id: p.playerId, x: p.x, y: p.y })),
+      ...awayPlayers.map((p) => ({ id: p.playerId, x: p.x, y: p.y })),
+    ];
+    const offsets = computePitchTokenSeparation(allAgents, {
+      ball: { x: ballX, y: ballY },
+      minSeparation: 2.4,
+      iterations: 5,
+      maxOffset: 3.2,
+      minFromBall: 1.6,
+    });
+    const applyOffset = (p: PitchPlayerState): PitchPlayerState => {
+      const o = offsets.get(p.playerId);
+      return o ? { ...p, x: p.x + o.dx, y: p.y + o.dy } : p;
+    };
+    const home = homePlayers.map((p) => ({ p: applyOffset(p), isHome: true }));
+    const away = awayPlayers.map((p) => ({ p: applyOffset(p), isHome: false }));
     // higher fieldX → further away → render first
     return [...home, ...away].sort((a, b) => b.p.x - a.p.x);
-  }, [homePlayers, awayPlayers]);
+  }, [homePlayers, awayPlayers, ballX, ballY]);
 
   // Trapezoid corners
   const tlx = IV_CX - IV_TOP_HALF_W;
@@ -830,7 +850,7 @@ function AerialField({
       ))}
 
       {/* Ball */}
-      <Ball bx={ballX} by={ballY} />
+      <IVBall bx={ballX} by={ballY} />
     </svg>
   );
 }
@@ -858,9 +878,16 @@ export interface FieldViewProps {
   cameraMode?: FieldCameraMode;
   homeShort?: string;
   awayShort?: string;
+  homeName?: string;
+  awayName?: string;
+  homeCrestUrl?: string | null;
+  awayClub?: { name: string; logo: string } | null;
+  onAwayClubChange?: (club: { name: string; logo: string }) => void;
   homeScore?: number;
   awayScore?: number;
   matchMinute?: number;
+  possession?: 'home' | 'away';
+  phase?: 'playing' | 'halftime' | 'fulltime';
   /** Show camera mode switcher UI. */
   showCameraSwitch?: boolean;
   onCameraChange?: (mode: FieldCameraMode) => void;
@@ -887,9 +914,16 @@ export const FieldView = memo(function FieldView({
   cameraMode = 'aerial',
   homeShort = 'HOM',
   awayShort = 'VIS',
+  homeName,
+  awayName,
+  homeCrestUrl,
+  awayClub,
+  onAwayClubChange,
   homeScore = 0,
   awayScore = 0,
   matchMinute,
+  possession = 'home',
+  phase = 'playing',
   showCameraSwitch = true,
   onCameraChange,
   onPlayerClick,
@@ -936,79 +970,41 @@ export const FieldView = memo(function FieldView({
 
   return (
     <div
-      className={`relative flex flex-col bg-[#050505] select-none overflow-hidden ${className}`}
+      className={`relative flex flex-col bg-[#050505] select-none overflow-hidden h-full max-h-full min-h-0 ${className}`}
       style={{ touchAction: 'none' }}
     >
       {/* ── Scoreboard header ── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/8 shrink-0">
-        <div className="flex items-center gap-3">
-          <span
-            className="font-display font-black uppercase tracking-[0.25em] text-neon-yellow"
-            style={{ fontSize: 11 }}
-          >
-            {homeShort}
-          </span>
-          <span
-            className="font-display font-black tabular-nums"
-            style={{
-              fontSize: 22,
-              fontFamily: "'Playfair Display', serif",
-              fontStyle: 'italic',
-              color: '#fff',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {homeScore} – {awayScore}
-          </span>
-          <span
-            className="font-display font-black uppercase tracking-[0.25em] text-white/60"
-            style={{ fontSize: 11 }}
-          >
-            {awayShort}
-          </span>
-        </div>
+      <LegacyMatchHUD
+        homeShort={homeShort}
+        awayShort={awayShort}
+        homeName={homeName}
+        awayName={awayName}
+        homeCrestUrl={homeCrestUrl}
+        awayClub={awayClub}
+        onAwayClubChange={onAwayClubChange}
+        homeScore={homeScore}
+        awayScore={awayScore}
+        matchMinute={matchMinute ?? 0}
+        possession={possession}
+        ballX={ballX}
+        phase={phase}
+        cameraMode={cameraMode === 'firstperson' ? 'aerial' : cameraMode}
+        onCameraChange={showCameraSwitch ? onCameraChange : undefined}
+      />
 
-        <div className="flex items-center gap-3">
-          {matchMinute != null && (
-            <span
-              className="font-display font-black tabular-nums text-neon-yellow"
-              style={{ fontSize: 13, letterSpacing: '0.05em' }}
-            >
-              {matchMinute}&prime;
-            </span>
-          )}
-
-          {/* Camera switcher */}
-          {showCameraSwitch && onCameraChange && (
-            <div className="flex gap-1">
-              {SWITCHER_MODES.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => onCameraChange(mode)}
-                  className="px-2 py-1 font-display font-black uppercase transition-all"
-                  style={{
-                    fontSize: 9,
-                    letterSpacing: '0.2em',
-                    background: cameraMode === mode ? NEON : 'rgba(255,255,255,0.06)',
-                    color: cameraMode === mode ? '#000' : 'rgba(255,255,255,0.5)',
-                    borderRadius: 2,
-                    border: `1px solid ${cameraMode === mode ? NEON : 'rgba(255,255,255,0.1)'}`,
-                  }}
-                >
-                  {CAMERA_LABELS[mode]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Field area — fills width, height determined by SVG aspect ratio ── */}
+      {/* ── Field area — aspect-locked, fit pelo menor lado do container.
+           Container externo: flex centraliza vertical+horizontal e clipa overflow.
+           Inner aspect-locked: width 100% + height auto + maxHeight 100% — quando
+           altura derivada > parent, browser reduz mantendo aspect. Resultado:
+           campo SEMPRE inteiro visível, sem zoom artificial. ── */}
+      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden">
       <div
-        className="relative w-full overflow-hidden"
+        className="relative overflow-hidden"
         style={{
           aspectRatio,
+          width: '100%',
+          height: 'auto',
+          maxHeight: '100%',
           background: 'radial-gradient(ellipse 80% 50% at 50% 40%, #131e14 0%, #090d09 55%, #050805 100%)',
           ...broadcastStyle,
         }}
@@ -1058,6 +1054,7 @@ export const FieldView = memo(function FieldView({
             }}
           />
         )}
+      </div>
       </div>
 
       {/* ── Camera mode label (bottom-right watermark) ── */}

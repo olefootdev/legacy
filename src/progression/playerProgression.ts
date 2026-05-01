@@ -170,8 +170,8 @@ export class PlayerProgressionManager {
         matchesPlayed: 0,
         goalsScored: 0,
         assistsMade: 0,
-        unlockedMoves: [],
-        moveUsageCount: {},
+        unlockedMoves: [] as SignatureMoveType[],
+        moveUsageCount: {} as Record<SignatureMoveType, number>,
         lastMatchXP: 0,
       }
     );

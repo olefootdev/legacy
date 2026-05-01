@@ -9,6 +9,7 @@ import type {
 } from './types';
 
 interface Props {
+  key?: import("react").Key;
   ctx: SetPieceContext;
   /** Tempo limite pra escolher (multiplayer-safe). 0 = sem limite. */
   pickTimeSeconds?: number;
@@ -198,6 +199,7 @@ function TakerCard({
   selected,
   onSelect,
 }: {
+  key?: import("react").Key;
   taker: SetPieceTaker;
   selected: boolean;
   onSelect: () => void;
@@ -231,6 +233,7 @@ function TypeCard({
   selected,
   onSelect,
 }: {
+  key?: import("react").Key;
   label: string;
   desc: string;
   selected: boolean;
@@ -257,6 +260,7 @@ function TargetCard({
   selected,
   onSelect,
 }: {
+  key?: import("react").Key;
   target: SetPieceTarget;
   selected: boolean;
   onSelect: () => void;

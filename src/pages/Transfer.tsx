@@ -2113,6 +2113,7 @@ function TransferRowCard({
   onSelect,
   delay = 0,
 }: {
+  key?: import("react").Key;
   player: MockAuctionPlayer;
   listHomonym?: { index: number; total: number };
   onSelect: () => void;

@@ -2062,7 +2062,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const player = state.players[action.playerId];
       if (!player) return state;
       if (!player.contractExpired) return state;
-      if (player.creatorType !== 'managerCreated') return state;
+      if (!player.managerCreated) return state;
 
       // Custo de renovação: 50% do custo base + prêmio do contrato
       const baseCost = Math.max(

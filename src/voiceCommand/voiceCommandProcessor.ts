@@ -98,7 +98,7 @@ export async function processVoiceCommand(
       homePlayers: players.map(p => ({
         playerId: p.playerId,
         name: p.name,
-        num: p.shirtNumber,
+        num: p.num,
         slotId: p.slotId,
         role: p.role,
       })),
@@ -143,7 +143,7 @@ export async function processVoiceCommand(
           y: targetPlayer.y,
           role: targetPlayer.role,
           slotId: targetPlayer.slotId,
-          attributes: playersById[targetPlayer.playerId]?.attributes,
+          attributes: playersById[targetPlayer.playerId]?.attrs as any,
           hasBall: targetPlayer.playerId === ballCarrierId,
         },
         match: {
@@ -231,7 +231,7 @@ function resolveCommandTarget(
       return findClosestPlayerName(target.nameToken, players);
 
     case 'shirt_number':
-      return players.find(p => p.shirtNumber === target.number) || null;
+      return players.find(p => p.num === target.number) || null;
 
     case 'ball_carrier':
       return ballCarrierId ? players.find(p => p.playerId === ballCarrierId) || null : null;
