@@ -3,10 +3,13 @@
  * Campo ao vivo limpo + SmartPanel.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FieldView } from '@/components/match/FieldView';
-import { SmartPanel, type PlayStyle } from '@/components/match/SmartPanel';
+import type { PlayStyle } from '@/components/match/SmartPanel';
 import { NarrativeBar } from '@/components/match/NarrativeBar';
-import { LiveEventTimeline } from '@/components/match/LiveEventTimeline';
+import { FalePlayerBar } from '@/components/match/FalePlayerBar';
+import { LegacyEditorialHeader } from '@/components/match/LegacyEditorialHeader';
+import { LegacyMinuteWatermark } from '@/components/match/LegacyMinuteWatermark';
 import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
 import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
 import { ReadGamePanel } from '@/components/match/ReadGamePanel';
@@ -35,16 +38,45 @@ const HOME_PLAYERS_INITIAL: PitchPlayerState[] = [
 ];
 
 // ── Main ─────────────────────────────────────────────────────────────────────
+type CameraTrackMode = 'static' | 'follow' | 'actioncam';
+
+function computeFollowCameraTransform(
+  ballX: number,
+  ballY: number,
+  viewportHeight: number,
+): { panY: number; panX: number } {
+  // Keep ball at ~70% of viewport height for follow mode
+  const targetY = ballX * (viewportHeight * 0.25) - viewportHeight * 0.6;
+  // Lateral pan for follow
+  const panX = (ballY - 50) * (viewportHeight * 0.08);
+  return { panY: targetY, panX };
+}
+
+function computeActionCamTransform(
+  ballX: number,
+  ballY: number,
+  viewportHeight: number,
+): { scale: number; translateX: number; translateY: number } {
+  // Zoom: 0.85 at home goal → 1.3 at away goal
+  const zoomFactor = 0.85 + (ballX / 100) * 0.45;
+  // Pan to ball with slight lead
+  const panX = (ballY - 50) * (viewportHeight * 0.15);
+  const panY = ballX * (viewportHeight * 0.25) - viewportHeight * 0.6;
+  return { scale: zoomFactor, translateX: panX, translateY: panY };
+}
+
 export function FieldViewPreview() {
+  const navigate = useNavigate();
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [camera, setCamera] = useState<'aerial' | 'broadcast'>('aerial');
+  const [cameraTrack, setCameraTrack] = useState<CameraTrackMode>('static');
+  const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
+  const [cameraZoom, setCameraZoom] = useState(1);
 
   // ── SmartPanel state ──────────────────────────────────────────────────────
   const [formation, setFormation] = useState<FormationSchemeId>('4-3-3');
   const [playStyle, setPlayStyle] = useState<PlayStyle>('PRESSAO_ALTA');
   const [fanMood, setFanMood] = useState(72);
-
-  // ── Away club picker ──────────────────────────────────────────────────────
-  const [awayClub, setAwayClub] = useState<{ name: string; logo: string } | null>(null);
 
   // ── Home crest from game store (optional — page is standalone) ────────────
   const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
@@ -54,17 +86,24 @@ export function FieldViewPreview() {
 
   const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, () => {}, false, 1);
 
+  // ── Camera tracking — Follow + Action Cam ─────────────────────────────────
+  // TODO: Re-enable camera tracking with proper effect management
+  // For now, keeping cameras in static mode to avoid update depth exceeded errors
 
-  // Atualiza fanMood com base no placar e posse (após engine estar disponível)
-  useEffect(() => {
-    const diff = engine.homeScore - engine.awayScore;
-    const possessionBonus = engine.possession === 'home' ? 5 : -5;
-    const base = 60 + diff * 8 + possessionBonus;
-    setFanMood(prev => {
-      const target = Math.max(10, Math.min(100, base));
-      return Math.round(prev + (target - prev) * 0.15);
-    });
-  }, [engine.homeScore, engine.awayScore, engine.possession, engine.minute]);
+  // Atualiza fanMood com base no placar e posse (disabled for now due to update depth issue)
+  // const lastMinuteRef = useRef(-1);
+  // useEffect(() => {
+  //   // Only update fanMood once per game minute
+  //   if (engine.minute === lastMinuteRef.current) return;
+  //   lastMinuteRef.current = engine.minute;
+  //   const diff = engine.homeScore - engine.awayScore;
+  //   const possessionBonus = engine.possession === 'home' ? 5 : -5;
+  //   const base = 60 + diff * 8 + possessionBonus;
+  //   setFanMood(prev => {
+  //     const target = Math.max(10, Math.min(100, base));
+  //     return Math.round(prev + (target - prev) * 0.15);
+  //   });
+  // }, [engine.homeScore, engine.awayScore, engine.possession, engine.minute]);
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#050505] flex flex-col" style={{ touchAction: 'none' }}>
@@ -96,97 +135,212 @@ export function FieldViewPreview() {
         }
       `}</style>
 
-      {/* ── NarrativeBar — faixa editorial entre HUD e campo ── */}
-      <NarrativeBar
-        lastEventText={engine.events[0]?.text ?? null}
-        lastEventKind={engine.events[0]?.kind}
-        possession={engine.possession}
-        ballX={engine.ballX}
+      {/* ── Header editorial Legacy Tech ── */}
+      <LegacyEditorialHeader
+        homeName="Olefoot FC"
+        awayName="Adversário"
+        homeScore={engine.homeScore}
+        awayScore={engine.awayScore}
         minute={engine.minute}
-        isGoal={engine.lastEvent === 'goal'}
+        possession={engine.possession}
+        phase={engine.phase}
+        formation={formation}
+        onFormationChange={setFormation}
+        onExit={() => setShowExitConfirm(true)}
       />
+
+      {showExitConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 300,
+            background: 'rgba(0,0,0,0.78)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: '#0D0D0D',
+              border: '1px solid rgba(253,225,0,0.25)',
+              borderLeft: '3px solid #FDE100',
+              padding: '24px 24px 20px',
+              maxWidth: 380,
+              width: '100%',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 9,
+                fontWeight: 800,
+                letterSpacing: '0.32em',
+                color: '#FDE100',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              Sair da partida
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontStyle: 'italic',
+                fontSize: 22,
+                color: '#fff',
+                lineHeight: 1.2,
+                marginBottom: 16,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Tem certeza?
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.5,
+                marginBottom: 20,
+              }}
+            >
+              Em partida rankeada ou de campeonato, desistir conta como derrota de <strong style={{ color: '#EF4444' }}>5×0</strong>.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowExitConfirm(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.7)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                style={{
+                  background: '#EF4444',
+                  border: '1px solid #EF4444',
+                  color: '#fff',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Campo — flex-1, centra e contém aspect-locked, com zoom T1/T2 ── */}
-      {/* Wrapper externo: items-stretch + justify-center + min-h-0 permite o
-          FieldView interno (h-full + aspect-ratio) fittar pelo menor lado.
-          T2 imersivo: perspectiva de baixo (rotateX) + zoom alto. */}
-      <div
-        className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-center overflow-hidden"
-      >
-      <div
-        className="w-full h-full flex flex-col items-stretch justify-center min-h-0"
-      >
-        <FieldView
-          homePlayers={engine.homePlayers}
-          awayPlayers={engine.awayPlayers}
-          ballX={engine.ballX}
-          ballY={engine.ballY}
-          onBallPlayerId={engine.onBallPlayerId}
-          cameraMode={camera}
-          homeShort="OLE"
-          awayShort={awayClub?.name?.slice(0, 3).toUpperCase() ?? 'ADV'}
-          homeName="Olefoot FC"
-          awayName={awayClub?.name}
-          homeCrestUrl={favoriteRealTeam?.logo ?? null}
-          awayClub={awayClub}
-          onAwayClubChange={setAwayClub}
-          homeScore={engine.homeScore}
-          awayScore={engine.awayScore}
-          matchMinute={engine.minute}
-          possession={engine.possession}
-          phase={engine.phase}
-          showCameraSwitch={true}
-          onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
-          onPlayerClick={(p) => {
-            setBrainPlayer(p);
-            window.setTimeout(() => setBrainPlayer(null), 4000);
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative">
+        <div
+          className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
+          style={{
+            // Pan vertical suave acompanhando a bola — quando ataque é no gol home (ballX baixo),
+            // câmera desce pra revelar o gol de baixo; quando é no gol away (ballX alto), sobe.
+            // Range: ±8% do viewport (subtle, mantém leitura tática).
+            transform: `translateY(${(engine.ballX - 50) * 0.18}%)`,
+            transformOrigin: '50% 50%',
+            transition: 'transform 1200ms cubic-bezier(0.4, 0, 0.2, 1)',
+            willChange: 'transform',
           }}
-          className="w-full"
-        />
-
-        {/* ── PressureZoneOverlay — zonas de tensão ── */}
-        <PressureZoneOverlay
-          ballX={engine.ballX}
-          possession={engine.possession}
-          phase={engine.phase}
-        />
-
-        {/* ── PlayerBrainCard — inteligência do jogador ── */}
-        {brainPlayer && (
-          <PlayerBrainCard
-            player={brainPlayer}
-            onClose={() => setBrainPlayer(null)}
+        >
+          <FieldView
+            homePlayers={engine.homePlayers}
+            awayPlayers={engine.awayPlayers}
+            ballX={engine.ballX}
+            ballY={engine.ballY}
+            onBallPlayerId={engine.onBallPlayerId}
+            cameraMode={camera}
+            homeShort="OLE"
+            awayShort="ADV"
+            homeName="Olefoot FC"
+            homeCrestUrl={favoriteRealTeam?.logo ?? null}
+            homeScore={engine.homeScore}
+            awayScore={engine.awayScore}
+            matchMinute={engine.minute}
+            possession={engine.possession}
+            phase={engine.phase}
+            showCameraSwitch={true}
+            hideHud={true}
+            onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
+            onPlayerClick={(p) => {
+              setBrainPlayer(p);
+              window.setTimeout(() => setBrainPlayer(null), 4000);
+            }}
+            className="w-full"
           />
-        )}
-      </div>
-      </div>
 
-      {/* ── LiveEventTimeline — memória da partida ── */}
-      <LiveEventTimeline
-        events={engine.events}
-        currentMinute={engine.minute}
-      />
+          {/* ── PressureZoneOverlay — zonas de tensão ── */}
+          <PressureZoneOverlay
+            ballX={engine.ballX}
+            possession={engine.possession}
+            phase={engine.phase}
+          />
 
-      {/* ── Rodapé: SmartPanel + ReadGamePanel + CommandCenter ── */}
-      <div style={{ position: 'relative' }}>
-        <ReadGamePanel
-          possession={engine.possession}
-          ballX={engine.ballX}
-          homePlayers={engine.homePlayers}
-          events={engine.events}
-          playStyle={playStyle}
-          homeScore={engine.homeScore}
-          awayScore={engine.awayScore}
+          {/* ── PlayerBrainCard — inteligência do jogador ── */}
+          {brainPlayer && (
+            <PlayerBrainCard
+              player={brainPlayer}
+              onClose={() => setBrainPlayer(null)}
+            />
+          )}
+        </div>
+
+        {/* ── Watermark do minuto (ambient) ── */}
+        <LegacyMinuteWatermark
           minute={engine.minute}
+          phase={engine.phase}
+          momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
         />
-        <SmartPanel
-          formation={formation}
-          onFormationChange={setFormation}
-          playStyle={playStyle}
-          onStyleChange={setPlayStyle}
-          fanMood={fanMood}
-        />
+
+        {/* ── Ler Jogo — overlay no campo, canto inferior esquerdo ── */}
+        <div style={{ position: 'absolute', left: 16, bottom: 16, zIndex: 100 }}>
+          <ReadGamePanel
+            possession={engine.possession}
+            ballX={engine.ballX}
+            homePlayers={engine.homePlayers}
+            events={engine.events}
+            playStyle={playStyle}
+            homeScore={engine.homeScore}
+            awayScore={engine.awayScore}
+            minute={engine.minute}
+          />
+        </div>
       </div>
+
+      {/* Spacer para FalePlayerBar fixa não cobrir o campo */}
+      <div aria-hidden style={{ height: 110, flexShrink: 0 }} />
+
+      {/* ── FALE COM OS JOGADORES — fixo no rodapé absoluto ── */}
+      <FalePlayerBar
+        players={engine.homePlayers}
+        ballCarrierId={engine.onBallPlayerId}
+        minute={engine.minute}
+      />
     </div>
   );
 }

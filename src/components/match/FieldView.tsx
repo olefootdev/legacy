@@ -444,6 +444,8 @@ function InclinedField({
   onBallId,
   onPlayerClick,
   defensiveAction = false,
+  cropDeadZones = false,
+  anchorBottom = false,
 }: {
   homePlayers: PitchPlayerState[];
   awayPlayers: PitchPlayerState[];
@@ -452,6 +454,8 @@ function InclinedField({
   onBallId: string | null;
   onPlayerClick?: (p: PitchPlayerState) => void;
   defensiveAction?: boolean;
+  cropDeadZones?: boolean;
+  anchorBottom?: boolean;
 }) {
   // Defensive cinematic mode: shrink home GK and enlarge near goal so the
   // proportions match real life (keeper ≈ 1.9m vs goal ≈ 2.44m tall).
@@ -556,9 +560,11 @@ function InclinedField({
 
   return (
     <svg
-      viewBox={`0 0 ${IV_VW} ${IV_VH}`}
-      preserveAspectRatio="xMidYMid meet"
-      className="w-full h-auto"
+      viewBox={cropDeadZones
+        ? `0 ${IV_TOP_Y - 20} ${IV_VW} ${IV_BOTTOM_Y - IV_TOP_Y + 40}`
+        : `0 0 ${IV_VW} ${IV_VH}`}
+      preserveAspectRatio={anchorBottom ? 'xMidYMax meet' : 'xMidYMid meet'}
+      className="w-full h-full"
       style={{ display: 'block' }}
     >
       <defs>
@@ -890,6 +896,8 @@ export interface FieldViewProps {
   phase?: 'playing' | 'halftime' | 'fulltime';
   /** Show camera mode switcher UI. */
   showCameraSwitch?: boolean;
+  /** Hide the built-in LegacyMatchHUD scoreboard (Legacy Mode uses external header). */
+  hideHud?: boolean;
   onCameraChange?: (mode: FieldCameraMode) => void;
   onPlayerClick?: (p: PitchPlayerState) => void;
   /**
@@ -925,6 +933,7 @@ export const FieldView = memo(function FieldView({
   possession = 'home',
   phase = 'playing',
   showCameraSwitch = true,
+  hideHud = false,
   onCameraChange,
   onPlayerClick,
   highlightPlayerId = null,
@@ -974,7 +983,7 @@ export const FieldView = memo(function FieldView({
       style={{ touchAction: 'none' }}
     >
       {/* ── Scoreboard header ── */}
-      <LegacyMatchHUD
+      {!hideHud && <LegacyMatchHUD
         homeShort={homeShort}
         awayShort={awayShort}
         homeName={homeName}
@@ -990,21 +999,20 @@ export const FieldView = memo(function FieldView({
         phase={phase}
         cameraMode={cameraMode === 'firstperson' ? 'aerial' : cameraMode}
         onCameraChange={showCameraSwitch ? onCameraChange : undefined}
-      />
+      />}
 
       {/* ── Field area — aspect-locked, fit pelo menor lado do container.
            Container externo: flex centraliza vertical+horizontal e clipa overflow.
            Inner aspect-locked: width 100% + height auto + maxHeight 100% — quando
            altura derivada > parent, browser reduz mantendo aspect. Resultado:
            campo SEMPRE inteiro visível, sem zoom artificial. ── */}
-      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden">
+      <div className={`flex-1 min-h-0 min-w-0 flex ${hideHud ? 'items-stretch' : 'items-center'} justify-center overflow-hidden`}>
       <div
         className="relative overflow-hidden"
         style={{
-          aspectRatio,
-          width: '100%',
-          height: 'auto',
-          maxHeight: '100%',
+          ...(hideHud
+            ? { width: '100%', height: '100%' }
+            : { aspectRatio, width: '100%', height: 'auto', maxHeight: '100%' }),
           background: 'radial-gradient(ellipse 80% 50% at 50% 40%, #131e14 0%, #090d09 55%, #050805 100%)',
           ...broadcastStyle,
         }}
@@ -1028,6 +1036,8 @@ export const FieldView = memo(function FieldView({
             onBallId={onBallPlayerId}
             onPlayerClick={onPlayerClick}
             defensiveAction={defensiveAction}
+            cropDeadZones={hideHud}
+            anchorBottom={hideHud}
           />
         ) : (
           <AerialField
@@ -1058,19 +1068,21 @@ export const FieldView = memo(function FieldView({
       </div>
 
       {/* ── Camera mode label (bottom-right watermark) ── */}
-      <div
-        className="absolute bottom-3 right-4 pointer-events-none"
-        style={{
-          fontSize: 9,
-          letterSpacing: '0.3em',
-          fontFamily: "'Oswald', sans-serif",
-          fontWeight: 700,
-          color: 'rgba(255,255,255,0.18)',
-          textTransform: 'uppercase',
-        }}
-      >
-        {CAMERA_LABELS[cameraMode]}
-      </div>
+      {!hideHud && (
+        <div
+          className="absolute bottom-3 right-4 pointer-events-none"
+          style={{
+            fontSize: 9,
+            letterSpacing: '0.3em',
+            fontFamily: "'Oswald', sans-serif",
+            fontWeight: 700,
+            color: 'rgba(255,255,255,0.18)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {CAMERA_LABELS[cameraMode]}
+        </div>
+      )}
     </div>
   );
 });

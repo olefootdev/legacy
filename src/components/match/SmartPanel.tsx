@@ -17,15 +17,21 @@ const STYLES: { id: PlayingStylePresetId; label: string }[] = [
   { id: 'JOGO_DIRETO',      label: 'Ataque Total' },
 ];
 
+export type CameraTrackMode = 'static' | 'follow' | 'actioncam';
+
+
 interface SmartPanelProps {
   formation: FormationSchemeId;
   onFormationChange: (f: FormationSchemeId) => void;
-  playStyle: PlayingStylePresetId;
-  onStyleChange: (s: PlayingStylePresetId) => void;
+  /** Mantido p/ compat: caller continua dono do playStyle, só não exibimos buttons. */
+  playStyle?: PlayingStylePresetId;
+  onStyleChange?: (s: PlayingStylePresetId) => void;
   fanMood: number;
+  cameraTrack?: CameraTrackMode;
+  onCameraTrackChange?: (m: CameraTrackMode) => void;
 }
 
-export function SmartPanel({ formation, onFormationChange, playStyle, onStyleChange, fanMood }: SmartPanelProps) {
+export function SmartPanel({ formation, onFormationChange, fanMood, cameraTrack = 'static', onCameraTrackChange }: SmartPanelProps) {
   const [showFormations, setShowFormations] = useState(false);
 
   const moodColor = fanMood >= 70 ? NEON : fanMood >= 40 ? '#f97316' : '#ef4444';
@@ -42,12 +48,11 @@ export function SmartPanel({ formation, onFormationChange, playStyle, onStyleCha
     }}>
 
       {/* ── Bloco 1: Formação ── */}
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+      <div style={{ borderRight: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
         <button type="button" onClick={() => setShowFormations(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'transparent', border: 'none', padding: '7px 10px', cursor: 'pointer' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>FORM</span>
-          <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 14, fontWeight: 700, color: NEON, letterSpacing: '0.04em' }}>{formation}</span>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>▾</span>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'transparent', border: 'none', padding: '7px 14px', cursor: 'pointer' }}>
+          <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 14, fontWeight: 700, color: NEON, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{formation}</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, color: 'rgba(255,255,255,0.35)', marginLeft: 4 }}>▾</span>
         </button>
         {showFormations && (
           <div style={{ position: 'absolute', bottom: '100%', left: 0, background: '#0d0d0d', border: '1px solid rgba(253,225,0,0.18)', zIndex: 400, minWidth: 100 }}>
@@ -65,37 +70,36 @@ export function SmartPanel({ formation, onFormationChange, playStyle, onStyleCha
         )}
       </div>
 
-      {/* ── Bloco 2: Estilo de jogo — 5 presets reais ── */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 3, padding: '5px 8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {STYLES.map(s => {
-          const active = playStyle === s.id;
+      {/* ── Bloco 2: Câmera (toggle Action) ── */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        {(() => {
+          const active = cameraTrack === 'actioncam';
           return (
-            <button key={s.id} type="button" onClick={() => onStyleChange(s.id)}
+            <button
+              type="button"
+              onClick={() => onCameraTrackChange?.(active ? 'static' : 'actioncam')}
+              aria-pressed={active}
               style={{
                 background: active ? NEON : 'transparent',
-                border: `1px solid ${active ? NEON : 'rgba(255,255,255,0.1)'}`,
-                color: active ? '#000' : 'rgba(255,255,255,0.35)',
-                fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 800,
-                letterSpacing: '0.16em', textTransform: 'uppercase',
-                padding: '3px 8px', cursor: 'pointer', transition: 'all 150ms',
-                whiteSpace: 'nowrap', flexShrink: 0,
+                border: `1px solid ${active ? NEON : 'rgba(255,255,255,0.18)'}`,
+                color: active ? '#000' : 'rgba(255,255,255,0.55)',
+                fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800,
+                letterSpacing: '0.24em', textTransform: 'uppercase',
+                padding: '5px 12px', cursor: 'pointer', transition: 'all 150ms',
+                whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = NEON; e.currentTarget.style.borderColor = 'rgba(253,225,0,0.35)'; } }}
-              onMouseLeave={e => { if (!active) { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; } }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = NEON; e.currentTarget.style.borderColor = 'rgba(253,225,0,0.45)'; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; } }}
             >
-              {s.label}
+              Action
             </button>
           );
-        })}
+        })()}
       </div>
 
-      {/* ── Bloco 3: Humor da torcida ── */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 700, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>TORCIDA</span>
-        <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.07)', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${fanMood}%`, background: moodColor, transition: 'width 800ms ease, background 600ms ease', boxShadow: fanMood >= 70 ? `0 0 6px ${moodColor}` : 'none' }} />
-        </div>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 800, letterSpacing: '0.18em', color: moodColor, whiteSpace: 'nowrap', transition: 'color 600ms' }}>
+      {/* ── Bloco 3: Humor da torcida — apenas status ── */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '7px 14px', marginLeft: 'auto' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 800, letterSpacing: '0.26em', color: moodColor, whiteSpace: 'nowrap', transition: 'color 600ms' }}>
           {moodLabel}
         </span>
       </div>
