@@ -5,10 +5,6 @@
 import { useState, useCallback, useEffect, useRef, type ComponentType } from 'react';
 import { Mic } from 'lucide-react';
 import { FieldView } from '@/components/match/FieldView';
-import { useTeamSentimentGauge, TeamSentimentGauge } from '@/components/match/TeamSentimentGauge';
-import { ContextualQuickCommands } from '@/components/match/ContextualQuickCommands';
-import { TacticalHeatmap, useTacticalHeatmap, type HeatmapZone } from '@/components/match/TacticalHeatmap';
-import { CommandCenter } from '@/components/match/CommandCenter';
 import { SmartPanel, type PlayStyle } from '@/components/match/SmartPanel';
 import { FieldDecisionOverlay, type FieldDecisionChoice } from '@/components/match/FieldDecisionOverlay';
 import { NarrativeBar } from '@/components/match/NarrativeBar';
@@ -16,12 +12,9 @@ import { LiveEventTimeline } from '@/components/match/LiveEventTimeline';
 import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
 import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
 import { ReadGamePanel } from '@/components/match/ReadGamePanel';
-import type { VoiceIntent } from '@/voiceCommand/types';
 import type { PitchPlayerState } from '@/engine/types';
 import { useLegacyMatchEngine, type LegacyEventKind } from './useLegacyMatchEngine';
 import type { FormationSchemeId } from '@/match-engine/types';
-import { useVoiceTacticalState } from '@/hooks/useVoiceTacticalState';
-import { processVoiceCommand, type ProcessVoiceCommandOptions } from '@/voiceCommand/voiceCommandProcessor';
 import { useGameStore } from '@/game/store';
 import {
   GoalkeeperDistribution, GoalkeeperPressure, resolveGoalkeeperDistribution,
@@ -262,11 +255,6 @@ export function FieldViewPreview() {
   // ── PlayerBrainCard ───────────────────────────────────────────────────────
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
-  // ── Editorial overlays ────────────────────────────────────────────────────
-  const [sectorZone, setSectorZone] = useState<SectorZone>(null);
-  const [kineticWord, setKineticWord] = useState<string | null>(null);
-  const kineticTimerRef = useRef<number | null>(null);
-
   const startMoment = useCallback((m: MomentDef) => {
     if (momentBusyRef.current) return;
     momentBusyRef.current = true;
@@ -308,19 +296,8 @@ export function FieldViewPreview() {
     if (m) startMoment(m);
   }, [startMoment]);
 
-  // ── Voice tactical state — comando → parâmetros táticos ────────────────────
-  const { params: tacticalParams, applyIntent: applyVoiceIntent } = useVoiceTacticalState();
+  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale);
 
-  const engine = useLegacyMatchEngine(HOME_PLAYERS_INITIAL, handleEngineEvent, frozen, timeScale, tacticalParams);
-
-  // ── Team Sentiment Gauge ────────────────────────────────────────────────
-  const { sentiment, push: pushTeamSentiment } = useTeamSentimentGauge(
-    engine.homePlayers,
-    30,
-  );
-
-  // ── Tactical Heatmap ────────────────────────────────────────────────────
-  const { intent: heatmapIntent, show: showHeatmap } = useTacticalHeatmap();
 
   // Atualiza fanMood com base no placar e posse (após engine estar disponível)
   useEffect(() => {
@@ -349,72 +326,6 @@ export function FieldViewPreview() {
       window.setTimeout(() => setOutcome(null), 2800);
     }
   }, [engine.lastEvent, engine.homeScore, engine.awayScore]);
-
-  // ── Sector + kinetic word helpers ─────────────────────────────────────────
-  const INTENT_SECTOR: Partial<Record<VoiceIntent, SectorZone>> = {
-    team_press_high:     'att',
-    team_retreat:        'def',
-    left_back_overlap:   'mid',
-    stretch_team:        'mid',
-    pedal_to_metal:      'att',
-    team_hold_possession:'mid',
-  };
-
-  const INTENT_WORD: Partial<Record<VoiceIntent, string>> = {
-    team_press_high:     'PRESSÃO',
-    team_retreat:        'RECUAR',
-    left_back_overlap:   'OVERLAP',
-    stretch_team:        'ABRIR',
-    pedal_to_metal:      'ACELERAR',
-    team_hold_possession:'SEGURAR',
-  };
-
-  const triggerEditorialOverlays = useCallback((intent: VoiceIntent, targetIds?: string[]) => {
-    pushFeedback(intent, targetIds);
-
-    const zone = INTENT_SECTOR[intent];
-    if (zone) setSectorZone(zone);
-
-    const word = INTENT_WORD[intent];
-    if (word) {
-      setKineticWord(word);
-      if (kineticTimerRef.current) window.clearTimeout(kineticTimerRef.current);
-      kineticTimerRef.current = window.setTimeout(() => setKineticWord(null), 1200);
-    }
-  }, [pushFeedback]);
-
-  const handleCommandSubmit = useCallback(async (transcript: string) => {
-    // Processa comando de voz com NLP completo
-    const result = await processVoiceCommand({
-      transcript,
-      players: engine.homePlayers,
-      playersById: {}, // TODO: passar player entities se disponível
-      ballCarrierId: engine.onBallPlayerId,
-      side: 'home',
-      minute: engine.minute,
-    });
-
-    if (result.success && result.intent) {
-      // Aplica parâmetros táticos derivados do intent
-      applyVoiceIntent(result.intent);
-
-      // Trigger overlay visual
-      triggerEditorialOverlays(result.intent);
-
-      // Mostra heatmap tático
-      showHeatmap(result.intent);
-
-      // Push team sentiment com jogadores afetados
-      if (result.targetPlayers && result.targetPlayers.length > 0) {
-        pushTeamSentiment(result.intent, result.targetPlayers);
-      }
-    }
-  }, [engine.homePlayers, engine.onBallPlayerId, engine.minute, applyVoiceIntent, triggerEditorialOverlays, showHeatmap, pushTeamSentiment]);
-
-  const handleTagDispatch = useCallback((transcript: string, intent: VoiceIntent) => {
-    triggerEditorialOverlays(intent);
-    handleCommandSubmit(transcript);
-  }, [triggerEditorialOverlays, handleCommandSubmit]);
 
   // ── Ambient camera — narrativa emocional pela posse e profundidade ────────
   // Engine x: 0 = nosso gol, 100 = gol adversário.
@@ -565,23 +476,6 @@ export function FieldViewPreview() {
         @keyframes pressurePulse {
           0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
           50%     { transform: translate(-50%,-50%) scale(1.8); opacity: 0; }
-        }
-        @keyframes heatmapIn {
-          from { opacity: 0; transform: scale(0.92); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        @keyframes heatmapPulse {
-          0%,100% { box-shadow: inset 0 0 20px currentColor; }
-          50%     { box-shadow: inset 0 0 40px currentColor; }
-        }
-        @keyframes heatmapFade {
-          0% { opacity: 1; }
-          70% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
         }
       `}</style>
 
@@ -901,40 +795,6 @@ export function FieldViewPreview() {
           fanMood={fanMood}
         />
       </div>
-      <CommandCenter onSubmit={handleCommandSubmit} onTagDispatch={handleTagDispatch} />
-
-      {/* ── Contextual Quick Commands — sugestões inteligentes baseadas no jogo ── */}
-      <ContextualQuickCommands
-        homeScore={engine.homeScore}
-        awayScore={engine.awayScore}
-        possession={engine.possession}
-        teamFatigue={Math.round(engine.homePlayers.reduce((sum, p) => sum + (p.fatigue ?? 25), 0) / engine.homePlayers.length)}
-        onDispatch={handleTagDispatch}
-      />
-
-      {/* ── Team Sentiment Gauge — agregação de saúde do time ── */}
-      <TeamSentimentGauge sentiment={sentiment} />
-
-      {/* ── Tactical Heatmap — zona ativada pelo comando ── */}
-      <TacticalHeatmap intent={heatmapIntent} />
-
-      {/* ── Tipografia Cinética — palavra no centro do campo ── */}
-      {kineticWord && (
-        <div
-          className="absolute inset-0 z-[155] pointer-events-none flex items-center justify-center"
-          key={kineticWord + Date.now()}
-        >
-          <span style={{
-            fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
-            fontSize: 'clamp(48px, 10vw, 96px)', fontWeight: 900,
-            color: 'rgba(255,255,255,0.10)', letterSpacing: '0.08em',
-            textTransform: 'uppercase', animation: 'kineticWord 1200ms ease-out both',
-            userSelect: 'none',
-          }}>
-            {kineticWord}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

@@ -7,7 +7,6 @@ import type { PitchPlayerState, LiveMatchSnapshot } from '@/engine/types';
 import { TacticalSimLoop } from '@/simulation/TacticalSimLoop';
 import { truthSnapshotToTest2dPitch } from '@/engine/test2d/truthToTest2dPitch';
 import type { MatchSimulationEvent } from '@/match/events/matchSimulationContract';
-import type { TacticalParams } from '@/hooks/useVoiceTacticalState';
 
 export type LegacyEventKind =
   | 'corner'
@@ -114,7 +113,6 @@ export function useLegacyMatchEngine(
   onEvent: (kind: LegacyEventKind) => void,
   frozen = false,
   timeScale = 1,
-  tacticalParams?: TacticalParams,
 ) {
   const loopRef = useRef<TacticalSimLoop | null>(null);
   const homePlayersRef = useRef(homePlayers);
@@ -123,8 +121,6 @@ export function useLegacyMatchEngine(
   frozenRef.current = frozen;
   const timeScaleRef = useRef(timeScale);
   timeScaleRef.current = timeScale;
-  const tacticalParamsRef = useRef(tacticalParams);
-  tacticalParamsRef.current = tacticalParams;
 
   const [state, setState] = useState<LegacyMatchState>({
     minute: 0,
@@ -188,16 +184,12 @@ export function useLegacyMatchEngine(
       const hp = homePlayersRef.current;
       const simSt = loop.getSimState();
       const mockLive = buildMockLive(hp, simSt.minute, simSt.homeScore, simSt.awayScore);
-
-      // Tactical params derivados de voice intent, ou baseline
-      const tactics = tacticalParamsRef.current ?? {
+      loop.syncLive(mockLive, {
         tacticalMentality: 55,
         defensiveLine: 50,
         tempo: 55,
-      };
-
-      loop.syncLive(mockLive, tactics);
-      loop.step(dt, tactics);
+      });
+      loop.step(dt, { tacticalMentality: 55, defensiveLine: 50, tempo: 55 });
 
       if (now - lastRenderMs >= RENDER_MS) {
         lastRenderMs = now;
