@@ -4,10 +4,12 @@
  * Feedback Moret italic. Fixa no rodapé.
  */
 import { useCallback, useState } from 'react';
-import { Mic, Send, Sparkles } from 'lucide-react';
+import { Mic, Send, Crown } from 'lucide-react';
 import type { PitchPlayerState } from '@/engine/types';
+import type { PlayerEntity } from '@/entities/types';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { processVoiceCommand, type VoiceCommandResult } from '@/voiceCommand/voiceCommandProcessor';
+import { parseCoachCommand, findPlayerByName } from '@/match/coachCommands';
 
 const NEON = '#FDE100';
 
@@ -15,8 +17,16 @@ interface FalePlayerBarProps {
   players: PitchPlayerState[];
   ballCarrierId?: string;
   minute: number;
-  onLegacyToggle?: (active: boolean) => void;
+  onLegacyToggle?: (active: boolean) => { active: boolean; activated: number } | void;
   onIntent?: (result: VoiceCommandResult) => void;
+  /** Hook injetado pelo Legacy Mode para ativar skill no engine. */
+  onSkillCommand?: (playerId: string | null, skillId: string) => { ok: boolean; message: string };
+  /** Voice command de substituição: "substituir <nome>". */
+  onSubstituteByName?: (name: string) => { ok: boolean; message: string };
+  /** PlayerEntities para validar skills equipadas. */
+  playersById?: Record<string, PlayerEntity>;
+  /** Estado externo do Legacy Mode (sobrescreve estado local). */
+  legacyActive?: boolean;
 }
 
 export function FalePlayerBar({
@@ -25,6 +35,10 @@ export function FalePlayerBar({
   minute,
   onLegacyToggle,
   onIntent,
+  onSkillCommand,
+  onSubstituteByName,
+  playersById,
+  legacyActive: legacyActiveProp,
 }: FalePlayerBarProps) {
   const [text, setText] = useState('');
   const [feedback, setFeedback] = useState<{ ok: boolean; intent?: string; player?: string; raw: string } | null>(null);
@@ -34,12 +48,56 @@ export function FalePlayerBar({
   const submit = useCallback(async (raw: string) => {
     const transcript = raw.trim();
     if (!transcript || busy) return;
+
+    // Substitution voice intercept: "substituir <nome>" / "tira <nome>" / "trocar <nome>"
+    if (onSubstituteByName) {
+      const m = transcript.match(/^(?:substitui[ru]+|tira|trocar?|troca|sai)\s+(.+)$/i);
+      if (m) {
+        const name = m[1].trim().replace(/[.!?]+$/, '');
+        const result = onSubstituteByName(name);
+        setFeedback({
+          ok: result.ok,
+          intent: result.ok ? 'SUBSTITUIÇÃO' : undefined,
+          raw: result.message,
+        });
+        if (result.ok) setText('');
+        window.setTimeout(() => setFeedback(null), 4000);
+        return;
+      }
+    }
+
+    // Slash-command interception: /<skill> or @<nome> /<skill> → engine.applySkill
+    if (onSkillCommand && (transcript.startsWith('/') || /^@\S+\s+\//.test(transcript))) {
+      const cmd = parseCoachCommand(transcript);
+      if (cmd?.skill) {
+        let targetId: string | null = null;
+        if (cmd.scope === 'player' && cmd.target) {
+          const found = findPlayerByName(cmd.target, players);
+          if (!found) {
+            setFeedback({ ok: false, raw: `Jogador "${cmd.target}" não encontrado` });
+            window.setTimeout(() => setFeedback(null), 4000);
+            return;
+          }
+          targetId = found.playerId;
+        }
+        const result = onSkillCommand(targetId, cmd.skill);
+        setFeedback({
+          ok: result.ok,
+          intent: result.ok ? 'SKILL ATIVADA' : undefined,
+          raw: result.message,
+        });
+        if (result.ok) setText('');
+        window.setTimeout(() => setFeedback(null), 4000);
+        return;
+      }
+    }
+
     setBusy(true);
     try {
       const res = await processVoiceCommand({
         transcript,
         players,
-        playersById: {},
+        playersById: playersById ?? {},
         ballCarrierId,
         side: 'home',
         minute,
@@ -61,7 +119,7 @@ export function FalePlayerBar({
       setBusy(false);
       window.setTimeout(() => setFeedback(null), 4000);
     }
-  }, [players, ballCarrierId, minute, busy, onIntent]);
+  }, [players, ballCarrierId, minute, busy, onIntent, onSkillCommand, onSubstituteByName, playersById]);
 
   const voice = useVoiceRecognition({
     lang: 'pt-BR',
@@ -73,10 +131,21 @@ export function FalePlayerBar({
 
   const listening = voice.state === 'listening';
 
+  const effectiveLegacyActive = legacyActiveProp ?? legacyActive;
   const toggleLegacy = () => {
-    const next = !legacyActive;
-    setLegacyActive(next);
-    onLegacyToggle?.(next);
+    const next = !effectiveLegacyActive;
+    if (legacyActiveProp === undefined) setLegacyActive(next);
+    const result = onLegacyToggle?.(next);
+    if (result && typeof result === 'object' && 'activated' in result) {
+      setFeedback({
+        ok: result.active,
+        intent: result.active ? `LEGACY · ${result.activated} skills` : 'LEGACY OFF',
+        raw: result.active
+          ? `${result.activated} jogador(es) ativaram skills`
+          : 'Legacy mode desativado',
+      });
+      window.setTimeout(() => setFeedback(null), 4000);
+    }
   };
 
   return (
@@ -267,12 +336,12 @@ export function FalePlayerBar({
           <button
             type="button"
             onClick={toggleLegacy}
-            aria-pressed={legacyActive}
-            aria-label={legacyActive ? 'Desativar Legacy' : 'Ativar Legacy'}
-            title={legacyActive ? 'Legacy ativo' : 'Ativar Legacy'}
+            aria-pressed={effectiveLegacyActive}
+            aria-label={effectiveLegacyActive ? 'Desativar Legacy' : 'Ativar Legacy'}
+            title={effectiveLegacyActive ? 'Legacy ativo — skills do time ativadas' : 'Ativar Legacy: ativa skills do time'}
             style={{
-              background: legacyActive ? '#0D0D0D' : NEON,
-              color: legacyActive ? NEON : '#000',
+              background: effectiveLegacyActive ? '#0D0D0D' : NEON,
+              color: effectiveLegacyActive ? NEON : '#000',
               border: `2px solid ${NEON}`,
               width: 44,
               height: 44,
@@ -283,7 +352,7 @@ export function FalePlayerBar({
               justifyContent: 'center',
               flexShrink: 0,
               transition: 'all 200ms',
-              boxShadow: legacyActive
+              boxShadow: effectiveLegacyActive
                 ? '0 0 18px rgba(253,225,0,0.65)'
                 : '0 8px 24px rgba(253,225,0,0.18)',
               fontFamily: 'var(--font-serif-hero)',
@@ -292,9 +361,10 @@ export function FalePlayerBar({
               fontSize: 16,
               letterSpacing: '-0.01em',
               padding: 0,
+              gap: 4,
             }}
           >
-            Legacy
+            <Crown size={14} strokeWidth={2.25} />
           </button>
         </div>
       </div>

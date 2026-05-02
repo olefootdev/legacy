@@ -2,8 +2,9 @@
  * Motor standalone do Legacy Mode — roda TacticalSimLoop sem game store.
  * Expõe: posições reais dos jogadores, clock, placar, feed, event bus.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PitchPlayerState, LiveMatchSnapshot } from '@/engine/types';
+import type { PlayerEntity } from '@/entities/types';
 import { TacticalSimLoop } from '@/simulation/TacticalSimLoop';
 import { truthSnapshotToTest2dPitch } from '@/engine/test2d/truthToTest2dPitch';
 import type { MatchSimulationEvent } from '@/match/events/matchSimulationContract';
@@ -53,6 +54,33 @@ export interface LegacyMatchState {
 
 const RENDER_MS = 24;
 
+/**
+ * Skills mock atribuídas por role no Legacy mode standalone.
+ * O mode não tem game store, então os jogadores ganham 1 skill default por posição.
+ */
+const MOCK_SKILLS_BY_ROLE: Record<'gk' | 'def' | 'mid' | 'attack', string> = {
+  gk: 'skl_goleiro_padrao',
+  def: 'skl_ferrolho_italiano',
+  mid: 'skl_meia_padrao',
+  attack: 'skl_artilheiro_clutch',
+};
+
+/**
+ * Constrói playersById mock para o Legacy mode (sem game store).
+ * Cada jogador recebe 1 skill default baseada na role.
+ */
+function buildMockPlayersById(homePlayers: PitchPlayerState[]): Record<string, PlayerEntity> {
+  const out: Record<string, PlayerEntity> = {};
+  for (const p of homePlayers) {
+    const role = (p.role ?? 'mid') as keyof typeof MOCK_SKILLS_BY_ROLE;
+    out[p.playerId] = {
+      id: p.playerId,
+      name: p.name,
+      skills: [MOCK_SKILLS_BY_ROLE[role] ?? 'skl_meia_padrao'],
+    } as unknown as PlayerEntity;
+  }
+  return out;
+}
 
 /** Constrói LiveMatchSnapshot mínimo para inicializar TacticalSimLoop */
 function buildMockLive(
@@ -89,7 +117,9 @@ function buildMockLive(
   } as unknown as LiveMatchSnapshot;
 }
 
-const AWAY_ROSTER = [
+export type LegacyAwayRosterEntry = { id: string; num: number; name: string; pos: string };
+
+const FALLBACK_AWAY_ROSTER: LegacyAwayRosterEntry[] = [
   { id: 'agk1', num: 1, name: 'Silvio', pos: 'GOL' },
   { id: 'azag1', num: 4, name: 'Marcos', pos: 'ZAG' },
   { id: 'azag2', num: 5, name: 'Felipe', pos: 'ZAG' },
@@ -119,6 +149,7 @@ export function useLegacyMatchEngine(
   onEvent: (kind: LegacyEventKind) => void,
   frozen = false,
   timeScale = 1,
+  awayRoster: LegacyAwayRosterEntry[] = FALLBACK_AWAY_ROSTER,
 ) {
   const loopRef = useRef<TacticalSimLoop | null>(null);
   const homePlayersRef = useRef(homePlayers);
@@ -127,9 +158,15 @@ export function useLegacyMatchEngine(
   frozenRef.current = frozen;
   const timeScaleRef = useRef(timeScale);
   timeScaleRef.current = timeScale;
+  const awayRosterRef = useRef(awayRoster);
+  awayRosterRef.current = awayRoster;
 
   const emptyStats: TeamStats = { passesOk: 0, passesAttempt: 0, shots: 0, shotsOn: 0, tackles: 0, km: 0, goals: 0, saves: 0, dribblesOk: 0 };
   const possessionTicksRef = useRef({ home: 0, away: 0 });
+  const playersByIdRef = useRef<Record<string, PlayerEntity>>(buildMockPlayersById(homePlayers));
+  playersByIdRef.current = buildMockPlayersById(homePlayers);
+  const [activatedSkills, setActivatedSkills] = useState<Array<{ playerId: string; skillId: string; activatedAt: number }>>([]);
+  const [legacyModeActive, setLegacyModeActive] = useState(false);
 
   const [state, setState] = useState<LegacyMatchState>({
     minute: 0,
@@ -215,7 +252,7 @@ export function useLegacyMatchEngine(
           const { homePitch, awayPitch, ball } = truthSnapshotToTest2dPitch({
             snap,
             homePlayers: hp,
-            awayRoster: AWAY_ROSTER,
+            awayRoster: awayRosterRef.current,
           });
           const carrierId = loop.getSimState().carrierId ?? undefined;
 
@@ -305,5 +342,57 @@ export function useLegacyMatchEngine(
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return state;
+  /**
+   * Ativa skill em um jogador específico via TacticalSimLoop.skillActivation.
+   * Retorna { ok, message } para feedback de UI.
+   */
+  const applySkillToPlayer = useCallback((playerId: string, skillId: string): { ok: boolean; message: string } => {
+    const loop = loopRef.current;
+    if (!loop) return { ok: false, message: 'Engine não inicializado' };
+    const gameTime = loop.getSimState().minute * 60;
+    const res = loop.skillActivation.activateSkill(playerId, skillId, gameTime, playersByIdRef.current);
+    if (res.success) {
+      const player = homePlayersRef.current.find((p) => p.playerId === playerId);
+      setActivatedSkills((prev) => [
+        ...prev.filter((s) => !(s.playerId === playerId && s.skillId === skillId)),
+        { playerId, skillId, activatedAt: gameTime },
+      ]);
+      window.setTimeout(() => {
+        setActivatedSkills((prev) => prev.filter((s) => !(s.playerId === playerId && s.skillId === skillId && s.activatedAt === gameTime)));
+      }, 30_000);
+      return { ok: true, message: `${player?.name ?? playerId} ativou ${skillId}` };
+    }
+    return { ok: false, message: res.reason ?? 'Falha ao ativar skill' };
+  }, []);
+
+  /**
+   * Ativa Legacy Mode: dispara skill default de cada jogador da casa simultaneamente.
+   * Retorna número de skills ativadas.
+   */
+  const toggleLegacyMode = useCallback((): { active: boolean; activated: number } => {
+    const next = !legacyModeActive;
+    setLegacyModeActive(next);
+    if (!next) return { active: false, activated: 0 };
+
+    let count = 0;
+    const players = homePlayersRef.current;
+    const byId = playersByIdRef.current;
+    for (const p of players) {
+      const entity = byId[p.playerId];
+      const skillId = entity?.skills?.[0];
+      if (!skillId) continue;
+      const res = applySkillToPlayer(p.playerId, skillId);
+      if (res.ok) count++;
+    }
+    return { active: true, activated: count };
+  }, [legacyModeActive, applySkillToPlayer]);
+
+  return {
+    ...state,
+    activatedSkills,
+    legacyModeActive,
+    playersById: playersByIdRef.current,
+    applySkillToPlayer,
+    toggleLegacyMode,
+  };
 }

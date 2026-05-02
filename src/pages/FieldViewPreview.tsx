@@ -2,7 +2,7 @@
  * Legacy Mode — /dev/field-view.
  * Campo ao vivo limpo + SmartPanel.
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FieldView } from '@/components/match/FieldView';
 import type { PlayStyle } from '@/components/match/SmartPanel';
@@ -14,46 +14,17 @@ import { PlayerBrainCard } from '@/components/match/PlayerBrainCard';
 import { PressureZoneOverlay } from '@/components/match/PressureZoneOverlay';
 import { ReadGamePanel } from '@/components/match/ReadGamePanel';
 import { ExpertPanel } from '@/components/match/ExpertPanel';
+import { LegacySkillBanner } from '@/components/match/LegacySkillBanner';
+import { SubstitutePickerModal } from '@/components/match/SubstitutePickerModal';
 import { useNarrativeCamera } from '@/components/match/useNarrativeCamera';
 import type { PitchPlayerState } from '@/engine/types';
-import type { FormationSchemeId } from '@/match-engine/types';
-import { FORMATION_BASES } from '@/match-engine/formations/catalog';
-import { useLegacyMatchEngine } from './useLegacyMatchEngine';
-import { useGameStore } from '@/game/store';
 import type { PlayerEntity } from '@/entities/types';
-
-// ── Slot order for 4-3-3 (maps squad players by index to formation slots) ────
-const SLOT_ORDER_433 = ['gol', 'zag1', 'zag2', 'le', 'ld', 'vol', 'mc1', 'mc2', 'pe', 'pd', 'ata'];
-
-function posToRole(pos: string): 'gk' | 'def' | 'mid' | 'attack' {
-  const p = pos.toUpperCase();
-  if (p === 'GOL' || p === 'GK') return 'gk';
-  if (['ZAG', 'LAT', 'LE', 'LD', 'CB', 'LB', 'RB', 'DEF'].includes(p)) return 'def';
-  if (['VOL', 'MEI', 'MC', 'MED', 'MID', 'PE', 'PD'].includes(p)) return 'mid';
-  return 'attack';
-}
-
-function squadToPitchPlayers(players: Record<string, PlayerEntity>): PitchPlayerState[] {
-  const bases = FORMATION_BASES['4-3-3'];
-  const sorted = Object.values(players).slice(0, 11);
-  return SLOT_ORDER_433.map((slotId, i) => {
-    const p = sorted[i];
-    const base = bases[slotId];
-    if (!p || !base) return null;
-    return {
-      playerId: p.id,
-      slotId,
-      name: p.name,
-      num: p.num ?? i + 1,
-      pos: p.pos,
-      role: posToRole(p.pos),
-      x: base.nx * 100,
-      y: base.nz * 100,
-      fatigue: p.fatigue ?? 20,
-      heading: 0,
-    } satisfies PitchPlayerState;
-  }).filter(Boolean) as PitchPlayerState[];
-}
+import type { FormationSchemeId } from '@/match-engine/types';
+import { useLegacyMatchEngine, type LegacyAwayRosterEntry } from './useLegacyMatchEngine';
+import { useGameStore } from '@/game/store';
+import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
+import { mergeLineupWithDefaults, awayStartingElevenFromSquad } from '@/entities/lineup';
+import { matchAttributesFromPlayerEntity, behaviorToCognitiveArchetype } from '@/match/playerInMatch';
 
 // ── Fallback mock (used only when store has no squad) ─────────────────────────
 function mkPlayer(id: string, name: string, num: number, pos: string,
@@ -72,6 +43,33 @@ const FALLBACK_PLAYERS: PitchPlayerState[] = [
   mkPlayer('pe1', 'Vini Santos', 11, 'PE', 'attack', 68, 18, 55),
   mkPlayer('pd1', 'Rodry Neto', 7, 'PD', 'attack', 68, 82, 60),
   mkPlayer('ata1', 'Gabri Gol', 9, 'ATA', 'attack', 76, 50, 30),
+];
+
+/** Fallback bench mock — só é usado quando a loja está vazia (dev preview). */
+function mkBenchEntity(id: string, name: string, num: number, pos: string): PlayerEntity {
+  return {
+    id, name, num, pos,
+    fatigue: 0,
+    outForMatches: 0,
+    skills: [],
+    attrs: {
+      passe: 70, drible: 65, marcacao: 65, velocidade: 70, fairPlay: 75,
+      finalizacao: 60, fisico: 70, tatico: 65, mentalidade: 70, confianca: 65,
+    },
+    behavior: {},
+    strongFoot: 'right',
+    archetype: 'box_to_box',
+  } as unknown as PlayerEntity;
+}
+const FALLBACK_BENCH: PlayerEntity[] = [
+  mkBenchEntity('bench_gk', 'Helder Reserva', 12, 'GOL'),
+  mkBenchEntity('bench_zag', 'Felipe Reserva', 14, 'ZAG'),
+  mkBenchEntity('bench_lat', 'Ramon Reserva', 13, 'LAT'),
+  mkBenchEntity('bench_vol', 'Paulinho Reserva', 15, 'VOL'),
+  mkBenchEntity('bench_mei', 'Renato Reserva', 16, 'MEI'),
+  mkBenchEntity('bench_pe', 'Thiago Reserva', 17, 'PE'),
+  mkBenchEntity('bench_pd', 'Joaquim Reserva', 18, 'PD'),
+  mkBenchEntity('bench_ata', 'Jonas Reserva', 19, 'ATA'),
 ];
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -112,24 +110,152 @@ export function FieldViewPreview() {
   const [cameraZoom, setCameraZoom] = useState(1);
 
   // ── SmartPanel state ──────────────────────────────────────────────────────
-  const [formation, setFormation] = useState<FormationSchemeId>('4-3-3');
   const [playStyle, setPlayStyle] = useState<PlayStyle>('PRESSAO_ALTA');
   const [fanMood, setFanMood] = useState(72);
 
-  // ── Club + squad from game store ─────────────────────────────────────────
-  const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
-  const clubShort = useGameStore((s) => s.club?.shortName ?? 'OLE');
-  const storePlayers = useGameStore((s) => s.players);
+  // ── Real game state from store ────────────────────────────────────────────
+  const club = useGameStore((s) => s.club);
+  const lineup = useGameStore((s) => s.lineup);
+  const players = useGameStore((s) => s.players);
+  const formationFromStore = useGameStore((s) => s.manager?.formationScheme ?? '4-3-3') as FormationSchemeId;
+  const nextFixture = useGameStore((s) => s.nextFixture);
   const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
 
-  const homePlayers = Object.keys(storePlayers).length >= 11
-    ? squadToPitchPlayers(storePlayers)
-    : FALLBACK_PLAYERS;
+  const [formation, setFormation] = useState<FormationSchemeId>(formationFromStore);
+
+  // ── Home XI: real lineup from store (fallback to mock if empty) ───────────
+  const initialHomeXI = useMemo<PitchPlayerState[]>(() => {
+    const playersCount = players ? Object.keys(players).length : 0;
+    if (playersCount === 0) return FALLBACK_PLAYERS;
+    const fullLineup = mergeLineupWithDefaults(lineup ?? {}, players);
+    const pitch = pitchPlayersFromLineup(fullLineup, players, formation);
+    return pitch.length === 11 ? pitch : FALLBACK_PLAYERS;
+  }, [players, lineup, formation]);
+
+  // homeXI is mutable: substituições atualizam aqui sem mexer no store global.
+  const [homeXI, setHomeXI] = useState<PitchPlayerState[]>(initialHomeXI);
+  // Sincroniza quando lineup/formation/players do store mudam.
+  useEffect(() => { setHomeXI(initialHomeXI); }, [initialHomeXI]);
+
+  const [usedSubs, setUsedSubs] = useState(0);
+  const [subbedInIds, setSubbedInIds] = useState<Set<string>>(() => new Set());
+  const [subPickerOut, setSubPickerOut] = useState<PitchPlayerState | null>(null);
+  const [subToast, setSubToast] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Banco = jogadores do plantel não-titulares + ainda não usados como entrada.
+  // Fallback: quando a loja está vazia (dev preview), usa FALLBACK_BENCH.
+  const benchPlayers = useMemo<PlayerEntity[]>(() => {
+    const storeHasPlayers = players && Object.keys(players).length > 0;
+    const pool: PlayerEntity[] = storeHasPlayers ? Object.values(players) : FALLBACK_BENCH;
+    const onPitch = new Set(homeXI.map((p) => p.playerId));
+    return pool.filter((p) => !onPitch.has(p.id) && !subbedInIds.has(p.id));
+  }, [players, homeXI, subbedInIds]);
+
+  // playersById expandido inclui FALLBACK_BENCH quando store está vazia (para applySubstitutionLocal).
+  const effectivePlayersById = useMemo<Record<string, PlayerEntity>>(() => {
+    const storeHasPlayers = players && Object.keys(players).length > 0;
+    if (storeHasPlayers) return players;
+    const map: Record<string, PlayerEntity> = {};
+    for (const p of FALLBACK_BENCH) map[p.id] = p;
+    return map;
+  }, [players]);
+
+  // ── Away roster: opponent squad from nextFixture (fallback to mock) ───────
+  const awayRoster = useMemo<LegacyAwayRosterEntry[] | undefined>(() => {
+    const squad = nextFixture?.opponent?.genesisAwayPlayers;
+    if (!squad || squad.length === 0) return undefined;
+    const eleven = awayStartingElevenFromSquad(squad);
+    if (eleven.length < 11) return undefined;
+    return eleven.map((p) => ({ id: p.id, num: p.num, name: p.name, pos: p.pos }));
+  }, [nextFixture]);
+
+  const homeName = club?.name ?? 'Olefoot FC';
+  const homeShort = club?.shortName ?? 'OLE';
+  const awayName = nextFixture?.opponent?.name ?? 'Adversário';
+  const awayShort = nextFixture?.opponent?.shortName ?? 'ADV';
 
   // ── PlayerBrainCard ───────────────────────────────────────────────────────
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
-  const engine = useLegacyMatchEngine(homePlayers, () => {}, false, 1);
+  const engine = useLegacyMatchEngine(homeXI, () => {}, false, 1, awayRoster);
+
+  // ── Substituição local (não persiste no store, vale só na partida) ────────
+  const applySubstitutionLocal = useCallback((outId: string, inId: string): { ok: boolean; message: string } => {
+    if (usedSubs >= 5) return { ok: false, message: 'Limite de 5 substituições atingido' };
+    const outgoing = homeXI.find((p) => p.playerId === outId);
+    if (!outgoing) return { ok: false, message: 'Jogador não está em campo' };
+    const incoming = effectivePlayersById[inId];
+    if (!incoming) return { ok: false, message: 'Reserva não encontrada' };
+    const newPitch: PitchPlayerState = {
+      playerId: incoming.id,
+      slotId: outgoing.slotId,
+      name: incoming.name,
+      num: incoming.num,
+      pos: incoming.pos,
+      x: outgoing.x,
+      y: outgoing.y,
+      heading: outgoing.heading,
+      fatigue: Math.round(incoming.fatigue),
+      role: roleFromPos(incoming.pos),
+      attributes: matchAttributesFromPlayerEntity(incoming),
+      cognitiveArchetype: behaviorToCognitiveArchetype(incoming.behavior),
+      strongFoot: incoming.strongFoot,
+      archetype: incoming.archetype,
+    };
+    setHomeXI((prev) => prev.map((p) => (p.playerId === outId ? newPitch : p)));
+    setSubbedInIds((prev) => new Set(prev).add(inId));
+    setUsedSubs((n) => n + 1);
+    const inLast = (incoming.name ?? '').split(' ').pop();
+    const outLast = (outgoing.name ?? '').split(' ').pop();
+    return { ok: true, message: `↪ ${outLast} sai · ${inLast} entra` };
+  }, [homeXI, effectivePlayersById, usedSubs]);
+
+  // Voz: "substituir <nome>" → escolhe melhor reserva por role.
+  const substituteByName = useCallback((rawName: string): { ok: boolean; message: string } => {
+    const name = rawName.trim().toLowerCase();
+    if (!name) return { ok: false, message: 'Nome vazio' };
+    const target = homeXI.find((p) => {
+      const n = p.name?.toLowerCase() ?? '';
+      return n.includes(name) || (n.split(' ').pop() ?? '').startsWith(name);
+    });
+    if (!target) return { ok: false, message: `"${rawName}" não está em campo` };
+    if (benchPlayers.length === 0) return { ok: false, message: 'Sem reservas disponíveis' };
+    const sameRole = benchPlayers.filter((p) => roleFromPos(p.pos) === target.role);
+    const pool = sameRole.length > 0 ? sameRole : benchPlayers;
+    const incoming = pool[0];
+    return applySubstitutionLocal(target.playerId, incoming.id);
+  }, [homeXI, benchPlayers, applySubstitutionLocal]);
+
+  // Toast feedback efêmero
+  useEffect(() => {
+    if (!subToast) return;
+    const t = window.setTimeout(() => setSubToast(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [subToast]);
+
+  // ── Legacy banner: visível enquanto Legacy ativo + dismiss em clique ──────
+  const [legacyBannerVisible, setLegacyBannerVisible] = useState(false);
+  const [legacyHighlightIdx, setLegacyHighlightIdx] = useState(0);
+
+  // Reabre banner sempre que Legacy é (re)ativado
+  useEffect(() => {
+    if (engine.legacyModeActive && engine.activatedSkills.length > 0) {
+      setLegacyBannerVisible(true);
+      setLegacyHighlightIdx(0);
+    } else {
+      setLegacyBannerVisible(false);
+    }
+  }, [engine.legacyModeActive, engine.activatedSkills.length]);
+
+  // Carrossel — alterna jogador em destaque a cada 2.4s
+  useEffect(() => {
+    if (!legacyBannerVisible) return;
+    if (engine.activatedSkills.length <= 1) return;
+    const id = window.setInterval(() => {
+      setLegacyHighlightIdx((i) => i + 1);
+    }, 2400);
+    return () => window.clearInterval(id);
+  }, [legacyBannerVisible, engine.activatedSkills.length]);
 
   // Câmera narrativa — ref-based, escreve direto no DOM (zero re-render)
   const cameraRef = useRef<HTMLDivElement>(null);
@@ -193,8 +319,8 @@ export function FieldViewPreview() {
 
       {/* ── Header editorial Legacy Tech ── */}
       <LegacyEditorialHeader
-        homeName={clubName}
-        awayName="Adversário"
+        homeName={homeName}
+        awayName={awayName}
         homeScore={engine.homeScore}
         awayScore={engine.awayScore}
         minute={engine.minute}
@@ -316,9 +442,21 @@ export function FieldViewPreview() {
       )}
 
       {/* ── Campo — flex-1 in aerial, constrained in expert ── */}
-      <div className={`${viewMode === 'expert' ? '' : 'flex-1'} min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative`}
+      <div
+        className={`${viewMode === 'expert' ? '' : 'flex-1'} min-h-0 min-w-0 flex flex-col items-stretch justify-end overflow-hidden relative`}
         style={viewMode === 'expert' ? { height: '32vh', flexShrink: 0 } : undefined}
+        onClickCapture={() => { if (legacyBannerVisible) setLegacyBannerVisible(false); }}
       >
+        {/* ── Legacy Skill Banner — canto superior esquerdo ── */}
+        {legacyBannerVisible && engine.activatedSkills.length > 0 && (
+          <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 110, pointerEvents: 'none' }}>
+            <LegacySkillBanner
+              entries={engine.activatedSkills.map((s) => ({ playerId: s.playerId, skillId: s.skillId }))}
+              players={engine.homePlayers}
+              highlightIndex={legacyHighlightIdx}
+            />
+          </div>
+        )}
         <div
           ref={cameraRef}
           className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
@@ -334,9 +472,9 @@ export function FieldViewPreview() {
             ballY={engine.ballY}
             onBallPlayerId={engine.onBallPlayerId}
             cameraMode={viewMode === 'expert' ? 'broadcast' : camera}
-            homeShort={clubShort}
-            awayShort="ADV"
-            homeName={clubName}
+            homeShort={homeShort}
+            awayShort={awayShort}
+            homeName={homeName}
             homeCrestUrl={favoriteRealTeam?.logo ?? null}
             homeScore={engine.homeScore}
             awayScore={engine.awayScore}
@@ -367,6 +505,11 @@ export function FieldViewPreview() {
             <PlayerBrainCard
               player={brainPlayer}
               onClose={() => setBrainPlayer(null)}
+              onSubstitute={benchPlayers.length > 0 ? (pid) => {
+                const onPitch = homeXI.find((p) => p.playerId === pid);
+                if (onPitch) setSubPickerOut(onPitch);
+                setBrainPlayer(null);
+              } : undefined}
             />
           )}
         </div>
@@ -410,11 +553,78 @@ export function FieldViewPreview() {
       {/* Spacer para FalePlayerBar fixa não cobrir o campo */}
       <div aria-hidden style={{ height: 110, flexShrink: 0 }} />
 
+      {/* ── Substitute Picker ── */}
+      {subPickerOut && (
+        <SubstitutePickerModal
+          outgoing={subPickerOut}
+          bench={benchPlayers}
+          onClose={() => setSubPickerOut(null)}
+          onPick={(inId) => {
+            const result = applySubstitutionLocal(subPickerOut.playerId, inId);
+            setSubToast({ ok: result.ok, text: result.message });
+            setSubPickerOut(null);
+          }}
+        />
+      )}
+
+      {/* ── Toast feedback de substituição ── */}
+      {subToast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 84,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 250,
+            background: '#0D0D0D',
+            border: `1px solid ${subToast.ok ? 'rgba(253,225,0,0.45)' : 'rgba(239,68,68,0.55)'}`,
+            borderLeft: `3px solid ${subToast.ok ? '#FDE100' : '#EF4444'}`,
+            padding: '10px 16px',
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontSize: 14,
+            color: '#fff',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.55)',
+            pointerEvents: 'none',
+          }}
+        >
+          {subToast.text}
+        </div>
+      )}
+
       {/* ── FALE COM OS JOGADORES — fixo no rodapé absoluto ── */}
       <FalePlayerBar
         players={engine.homePlayers}
         ballCarrierId={engine.onBallPlayerId}
         minute={engine.minute}
+        playersById={engine.playersById}
+        onSubstituteByName={substituteByName}
+        legacyActive={engine.legacyModeActive}
+        onLegacyToggle={() => {
+          // Se Legacy já está ativo e o banner foi dismissado, apenas re-exibe.
+          if (engine.legacyModeActive && !legacyBannerVisible && engine.activatedSkills.length > 0) {
+            setLegacyBannerVisible(true);
+            setLegacyHighlightIdx(0);
+            return { active: true, activated: engine.activatedSkills.length };
+          }
+          return engine.toggleLegacyMode();
+        }}
+        onSkillCommand={(playerId, skillId) => {
+          if (playerId) return engine.applySkillToPlayer(playerId, skillId);
+          // team-wide: ativa skill em todos jogadores que têm equipada
+          let count = 0;
+          let lastMessage = '';
+          for (const p of engine.homePlayers) {
+            const equipped = engine.playersById[p.playerId]?.skills ?? [];
+            if (!equipped.includes(skillId)) continue;
+            const r = engine.applySkillToPlayer(p.playerId, skillId);
+            if (r.ok) count++;
+            lastMessage = r.message;
+          }
+          return count > 0
+            ? { ok: true, message: `${count} jogador(es) ativaram ${skillId}` }
+            : { ok: false, message: lastMessage || `Ninguém tem ${skillId} equipada` };
+        }}
       />
     </div>
   );

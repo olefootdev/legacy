@@ -58,16 +58,20 @@ const TIER_COLOR: Record<string, string> = {
 interface PlayerBrainCardProps {
   player: PitchPlayerState;
   onClose: () => void;
+  /** Quando definido, exibe botão SUBSTITUIR e pausa o auto-close. */
+  onSubstitute?: (playerId: string) => void;
 }
 
-export function PlayerBrainCard({ player, onClose }: PlayerBrainCardProps) {
+export function PlayerBrainCard({ player, onClose, onSubstitute }: PlayerBrainCardProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const t1 = window.setTimeout(() => setVisible(true), 30);
-    const t2 = window.setTimeout(() => { setVisible(false); window.setTimeout(onClose, 300); }, 4000);
+    // Auto-close: 4s padrão, 8s quando há ação de substituir disponível.
+    const closeMs = onSubstitute ? 8000 : 4000;
+    const t2 = window.setTimeout(() => { setVisible(false); window.setTimeout(onClose, 300); }, closeMs);
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
-  }, [onClose]);
+  }, [onClose, onSubstitute]);
 
   // Última ação do agente
   const lastAction = getLastAttackingAction(player.playerId)
@@ -93,8 +97,9 @@ export function PlayerBrainCard({ player, onClose }: PlayerBrainCardProps) {
 
   return (
     <div
-      className="absolute z-[350] pointer-events-none"
-      style={{ top: 48, left: 12, width: 160 }}
+      className="absolute z-[350]"
+      style={{ top: 48, left: 12, width: 160, pointerEvents: onSubstitute ? 'auto' : 'none' }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div style={{
         background: 'rgba(8,8,8,0.96)',
@@ -159,6 +164,32 @@ export function PlayerBrainCard({ player, onClose }: PlayerBrainCardProps) {
             {OBEDIENCE_TIER_BUBBLE[roll.tier]}
           </span>
         </div>
+
+        {onSubstitute && (
+          <button
+            type="button"
+            onClick={() => onSubstitute(player.playerId)}
+            style={{
+              marginTop: 10,
+              width: '100%',
+              background: 'transparent',
+              color: NEON,
+              border: `1px solid ${NEON}`,
+              padding: '7px 8px',
+              fontFamily: 'var(--font-display)',
+              fontSize: 9,
+              fontWeight: 800,
+              letterSpacing: '0.24em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              transition: 'all 150ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = NEON; e.currentTarget.style.color = '#000'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = NEON; }}
+          >
+            Substituir
+          </button>
+        )}
       </div>
     </div>
   );
