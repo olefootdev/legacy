@@ -11,6 +11,7 @@
 import { getSupabase, isSupabaseConfigured } from './client';
 import type { PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
+import { overallFromAttributes } from '@/entities/player';
 
 interface ManagerSquadRow {
   user_id: string;
@@ -97,4 +98,85 @@ export async function loadManagerSquad(): Promise<ManagerSquadSnapshot | null> {
     lineup: (row.lineup as Record<string, string>) ?? {},
     formationScheme: row.formation_scheme ?? null,
   };
+}
+
+export interface OpponentSquadEntry {
+  userId: string;
+  clubName: string;
+  clubShort: string;
+  players: PlayerEntity[];
+  lineup: Record<string, string>;
+  formationScheme: FormationSchemeId | null;
+  avgOvr: number;
+}
+
+/**
+ * Busca squads de outros managers para matchmaking assíncrono (PvP offline).
+ * Filtra por OVR médio do XI dentro do range especificado.
+ */
+export async function fetchOpponentSquads(params: {
+  excludeUserId: string;
+  ovrRange: [number, number];
+  limit?: number;
+}): Promise<OpponentSquadEntry[]> {
+  if (!isSupabaseConfigured()) return [];
+  const sb = getSupabase();
+  if (!sb) return [];
+
+  const { excludeUserId, limit = 20 } = params;
+
+  try {
+    const { data, error } = await sb
+      .from('manager_squad')
+      .select('user_id, players, lineup, formation_scheme, profiles!inner(club_name, club_short)')
+      .neq('user_id', excludeUserId)
+      .limit(limit);
+
+    if (error) {
+      console.warn('[managerSquad] fetchOpponentSquads:', error.message);
+      return [];
+    }
+
+    const [minOvr, maxOvr] = params.ovrRange;
+    const results: OpponentSquadEntry[] = [];
+
+    for (const row of (data ?? []) as Array<{
+      user_id: string;
+      players: PlayerEntity[];
+      lineup: Record<string, string>;
+      formation_scheme: FormationSchemeId | null;
+      profiles: { club_name: string | null; club_short: string | null };
+    }>) {
+      const players = Array.isArray(row.players) ? row.players as PlayerEntity[] : [];
+      const lineup = (row.lineup as Record<string, string>) ?? {};
+
+      // Calcula OVR médio dos jogadores no lineup
+      const lineupPlayers = Object.values(lineup)
+        .map(id => players.find(p => p.id === id))
+        .filter((p): p is PlayerEntity => !!p);
+
+      if (lineupPlayers.length === 0) continue;
+
+      const avgOvr = Math.round(
+        lineupPlayers.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / lineupPlayers.length
+      );
+
+      if (avgOvr < minOvr || avgOvr > maxOvr) continue;
+
+      results.push({
+        userId: row.user_id,
+        clubName: row.profiles?.club_name ?? 'Clube Visitante',
+        clubShort: row.profiles?.club_short ?? 'VIS',
+        players,
+        lineup,
+        formationScheme: row.formation_scheme,
+        avgOvr,
+      });
+    }
+
+    return results;
+  } catch (err) {
+    console.warn('[managerSquad] fetchOpponentSquads exception:', err);
+    return [];
+  }
 }

@@ -43,7 +43,12 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
     // Simular delay de busca (UX)
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const result = await quickFindOpponent(club.id, myOverall);
+    // Busca sessão para passar userId ao matchmaking
+    const { getSupabase } = await import('@/supabase/client');
+    const sb = getSupabase();
+    const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+
+    const result = await quickFindOpponent(club.id, myOverall, userId);
     setOpponent(result);
     setSearching(false);
   };
@@ -51,19 +56,15 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
   const handleConfirm = () => {
     if (!opponent) return;
 
-    // TODO: integrar com reducer para debitar aposta e criar partida com flag competitiva
-    // Dispatch para criar partida com metadados de ranking
     const isHumanOpponent = opponent.type !== 'bot';
-    const shouldCountForRanking = matchType === 'competitive' && isHumanOpponent;
-
-    // Por enquanto, navega direto para a partida
-    // Em produção, dispatch({ type: 'CREATE_FRIENDLY_MATCH', ... }) antes de navegar
     const path = mode === 'penalty' ? '/match/penalty' : '/match/quick';
 
-    // TODO: Passar metadados via state ou query params
-    // navigate(path, { state: { isCompetitive: matchType === 'competitive', opponentType: opponent.type } });
-
-    navigate(path);
+    // Para times reais, passa o stub via state para a partida usar o plantel real
+    if (opponent.type === 'real_manager') {
+      navigate(path, { state: { pvpOpponentStub: opponent.stub } });
+    } else {
+      navigate(path);
+    }
     onClose();
   };
 
@@ -245,6 +246,10 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                       <span className="px-2 py-1 rounded text-[9px] font-bold uppercase bg-gray-700 text-gray-300">
                         BOT
                       </span>
+                    ) : opponent.type === 'real_manager' ? (
+                      <span className="px-2 py-1 rounded text-[9px] font-bold uppercase bg-neon-yellow/20 text-neon-yellow">
+                        MANAGER REAL
+                      </span>
                     ) : (
                       <span className="px-2 py-1 rounded text-[9px] font-bold uppercase bg-emerald-500/20 text-emerald-300">
                         ONLINE
@@ -258,16 +263,27 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h5 className="text-lg font-display font-black text-white truncate">
-                        {opponent.type === 'bot' ? opponent.bot.name : opponent.club.name}
+                        {opponent.type === 'bot'
+                          ? opponent.bot.name
+                          : opponent.type === 'real_manager'
+                            ? opponent.stub.name
+                            : opponent.club.name}
                       </h5>
                       <p className="text-xs text-gray-400">
                         {opponent.type === 'bot'
                           ? `OVR ${opponent.bot.avgOverall} · ${opponent.bot.country}`
-                          : `OVR ${myOverall} · Online`}
+                          : opponent.type === 'real_manager'
+                            ? `OVR ${opponent.stub.strength} · Manager`
+                            : `OVR ${myOverall} · Online`}
                       </p>
                       {opponent.type === 'bot' && (
                         <p className="text-[10px] text-gray-500 mt-1">
                           {opponent.bot.formation} · {opponent.bot.style}
+                        </p>
+                      )}
+                      {opponent.type === 'real_manager' && (
+                        <p className="text-[10px] text-neon-yellow/60 mt-1">
+                          Plantel real · EXP conta para o ranking
                         </p>
                       )}
                     </div>
@@ -293,12 +309,12 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                           : `${betExp} EXP`}
                       </span>
                     </div>
-                    {matchType === 'competitive' && opponent.type !== 'bot' && (
+                    {(matchType === 'competitive' && opponent.type !== 'bot') || opponent.type === 'real_manager' ? (
                       <div className="flex items-center gap-1.5 text-[10px] text-neon-yellow/70 bg-neon-yellow/5 px-2 py-1.5 rounded">
                         <Star className="w-3 h-3 shrink-0" />
                         <span>Partida vale pontos no ranking</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   <button

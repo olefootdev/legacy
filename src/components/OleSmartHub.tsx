@@ -746,7 +746,7 @@ type ChatMode = 'coach' | 'manager' | 'support';
 const CHAT_TABS: Array<{ mode: ChatMode; Icon: React.ElementType; label: string }> = [
   { mode: 'coach', Icon: MessageCircle, label: 'TREINADOR' },
   { mode: 'manager', Icon: Users, label: 'MANAGER' },
-  { mode: 'support', Icon: HeadphonesIcon, label: 'SUPORTE' },
+  { mode: 'support', Icon: HeadphonesIcon, label: 'ASSIST+' },
 ];
 
 // ─── Manager contact picker ───────────────────────────────────────────────────

@@ -1,64 +1,115 @@
 import { getSupabase } from '@/supabase/client';
 import { getBotTeamById, getMatchingBotTeam, type BotTeamDefinition } from './botTeams';
 import type { ClubSearchHit } from '@/supabase/friendlyChallenges';
+import type { OpponentStub } from '@/entities/types';
+import { overallFromAttributes } from '@/entities/player';
+import { fetchOpponentSquads } from '@/supabase/managerSquad';
 
 export type MatchmakingMode = 'quick' | 'penalty';
 
 export interface MatchmakingParams {
   myClubId: string;
+  myUserId?: string;
   myOverall: number;
   preferredMode: MatchmakingMode;
   maxOvrDiff?: number;
 }
 
 export type OpponentMatch =
+  | { type: 'real_manager'; stub: OpponentStub }
   | { type: 'online'; club: ClubSearchHit; ovrDiff: number }
   | { type: 'bot'; bot: BotTeamDefinition };
+
+/**
+ * Monta um OpponentStub a partir de um squad real do banco.
+ */
+function squadToOpponentStub(entry: {
+  userId: string;
+  clubName: string;
+  clubShort: string;
+  players: import('@/entities/types').PlayerEntity[];
+  lineup: Record<string, string>;
+  avgOvr: number;
+}): OpponentStub {
+  const lineupPlayers = Object.values(entry.lineup)
+    .map(id => entry.players.find(p => p.id === id))
+    .filter((p): p is import('@/entities/types').PlayerEntity => !!p);
+
+  return {
+    id: entry.userId,
+    name: entry.clubName,
+    shortName: entry.clubShort,
+    strength: entry.avgOvr,
+    genesisAwayPlayers: lineupPlayers,
+  };
+}
 
 /**
  * Busca automática de adversário para amistoso.
  *
  * Prioridade:
- * 1. Times ONLINE com OVR similar (±10)
- * 2. Times ONLINE com OVR similar (±15)
- * 3. Bot aleatório com OVR próximo
+ * 1. Times reais do banco com OVR similar (±10) — PvP assíncrono
+ * 2. Times reais do banco com OVR similar (±15)
+ * 3. Times ONLINE com OVR similar (±10)
+ * 4. Times ONLINE com OVR similar (±15)
+ * 5. Bot aleatório com OVR próximo (fallback)
  */
 export async function findFriendlyOpponent(
   params: MatchmakingParams,
 ): Promise<OpponentMatch> {
-  const { myClubId, myOverall, maxOvrDiff = 10 } = params;
+  const { myClubId, myUserId, myOverall, maxOvrDiff = 10 } = params;
 
-  // 1. Tentar buscar times ONLINE disponíveis
+  // 1. Times reais do banco (±10)
+  if (myUserId) {
+    const realTeams = await fetchOpponentSquads({
+      excludeUserId: myUserId,
+      ovrRange: [myOverall - maxOvrDiff, myOverall + maxOvrDiff],
+    });
+    if (realTeams.length > 0) {
+      // Escolhe o mais próximo em OVR, com aleatoriedade para variar
+      const sorted = [...realTeams].sort((a, b) =>
+        Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
+      );
+      // Pega um dos 3 mais próximos aleatoriamente
+      const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
+      return { type: 'real_manager', stub: squadToOpponentStub(pick!) };
+    }
+
+    // 2. Times reais do banco (±15)
+    const realTeamsWide = await fetchOpponentSquads({
+      excludeUserId: myUserId,
+      ovrRange: [myOverall - 15, myOverall + 15],
+    });
+    if (realTeamsWide.length > 0) {
+      const sorted = [...realTeamsWide].sort((a, b) =>
+        Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
+      );
+      const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
+      return { type: 'real_manager', stub: squadToOpponentStub(pick!) };
+    }
+  }
+
+  // 3. Times ONLINE disponíveis (±10)
   const onlineTeams = await searchOnlineAvailableTeams({
     ovrRange: [myOverall - maxOvrDiff, myOverall + maxOvrDiff],
     excludeClubId: myClubId,
   });
-
   if (onlineTeams.length > 0) {
     const best = pickBestOnlineMatch(onlineTeams, myOverall);
-    return {
-      type: 'online',
-      club: best.club,
-      ovrDiff: best.ovrDiff,
-    };
+    return { type: 'online', club: best.club, ovrDiff: best.ovrDiff };
   }
 
-  // 2. Tentar com range maior (±15)
+  // 4. Times ONLINE disponíveis (±15)
   const onlineTeamsWide = await searchOnlineAvailableTeams({
     ovrRange: [myOverall - 15, myOverall + 15],
     excludeClubId: myClubId,
   });
-
   if (onlineTeamsWide.length > 0) {
     const best = pickBestOnlineMatch(onlineTeamsWide, myOverall);
-    return {
-      type: 'online',
-      club: best.club,
-      ovrDiff: best.ovrDiff,
-    };
+    return { type: 'online', club: best.club, ovrDiff: best.ovrDiff };
   }
 
-  // 3. Fallback: retornar bot com OVR próximo
+  // 5. Fallback: bot com OVR próximo
   const bot = getMatchingBotTeam(myOverall, 15);
   return { type: 'bot', bot };
 }
@@ -129,9 +180,11 @@ function pickBestOnlineMatch(
 export async function quickFindOpponent(
   myClubId: string,
   myOverall: number,
+  myUserId?: string,
 ): Promise<OpponentMatch> {
   return findFriendlyOpponent({
     myClubId,
+    myUserId,
     myOverall,
     preferredMode: 'quick',
     maxOvrDiff: 10,

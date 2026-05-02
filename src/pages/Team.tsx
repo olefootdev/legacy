@@ -747,7 +747,6 @@ export function Team() {
                         type="button"
                         onClick={() => {
                           setSaveBanner(null);
-                          setAnnouncePrice('180000');
                           setAnnouncePlayer(player);
                         }}
                         className="flex flex-1 items-center justify-center gap-1.5 border border-[var(--color-border)] bg-deep-black py-2.5 text-white/85 hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors [-webkit-tap-highlight-color:transparent]"
@@ -1187,7 +1186,6 @@ export function Team() {
               const card: CardPlayer = { ...playerToCardView(pl, maxOvr), id: pl.id };
               setSheetPlayerId(null);
               setSaveBanner(null);
-              setAnnouncePrice('180000');
               setAnnouncePlayer(card);
             }}
           />
@@ -1218,7 +1216,6 @@ export function Team() {
             onAnunciar={() => {
               const card = pitchMenu.player;
               setPitchMenu(null);
-              setAnnouncePrice('180000');
               setAnnouncePlayer(card);
             }}
           />

@@ -1,5 +1,5 @@
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, LogOut, Plus, Trophy, RotateCcw, X } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
@@ -660,11 +660,18 @@ export function MatchQuick() {
   // Derivados base — declarados aqui no topo para evitar TDZ em deps de hooks (effects/memos abaixo).
   const pitch = live?.homePlayers ?? [];
   const lineupIds = useGameStore((s) => s.lineup);
-  const fixture = useGameStore((s) => s.nextFixture);
+  const fixtureBase = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const quickMatchStreak = useGameStore((s) => s.quickMatchStreak);
   const quickMatchIntensity = useGameStore((s) => s.quickMatchIntensity);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
+
+  // PvP assíncrono: adversário real passado via navigate state
+  const location = useLocation();
+  const pvpStub = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const fixture = pvpStub
+    ? { ...fixtureBase, opponent: pvpStub, awayName: pvpStub.name }
+    : fixtureBase;
 
   // Brasão do time do coração
   const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));

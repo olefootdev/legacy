@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { cn } from '@/lib/utils';
-import type { PlayerEntity } from '@/entities/types';
+import type { OpponentStub, PlayerEntity } from '@/entities/types';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -258,8 +258,13 @@ function GoalSlotPicker({
 
 export function MatchPenalty() {
   const navigate = useNavigate();
+  const location = useLocation();
   const players = useGameStore(s => s.players ?? {});
-  const fixture = useGameStore(s => (s as any).currentFixture ?? s.liveMatch);
+  const fixtureBase = useGameStore(s => (s as any).currentFixture ?? s.liveMatch);
+
+  // PvP assíncrono: adversário real passado via navigate state
+  const pvpStub = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const fixture = pvpStub ? { ...fixtureBase, opponent: pvpStub } : fixtureBase;
 
   const opponentName: string = fixture?.opponent?.name ?? fixture?.opponentName ?? 'Rival FC';
   const opponentShort: string = fixture?.opponent?.shortName ?? opponentName.slice(0, 3).toUpperCase();

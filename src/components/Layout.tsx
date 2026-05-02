@@ -30,7 +30,6 @@ import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayName';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
-import { AssistantWidget } from '@/components/AssistantWidget';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
@@ -54,7 +53,7 @@ const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Users, label: 'CLUBE', path: '/clube' },
   { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
-  { icon: Crown, label: 'MEMORÁVEIS', path: '/legend', accent: true },
+  { icon: Crown, label: 'MEMORÁVEIS', path: '/legend' },
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },
@@ -166,13 +165,11 @@ export function Layout({ children }: { children: ReactNode }) {
     if (sb) {
       try { await sb.auth.signOut(); } catch { /* noop */ }
     }
-    // Limpa o save local — sem isto o Zustand mantém `managerProfile` e o
-    // `RedirectIfRegistered` em `/login` joga o usuário de volta pra home
-    // (aparentando que o botão SAIR não fez nada).
+    // Limpa todo o save local para evitar estado inconsistente
     try {
-      localStorage.removeItem('olefoot-game-v1');
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('olefoot'));
+      keys.forEach(k => localStorage.removeItem(k));
     } catch { /* noop */ }
-    // Hard reload — Zustand re-inicializa em estado limpo no /login.
     window.location.href = '/login';
   };
 
@@ -296,13 +293,13 @@ export function Layout({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => setMatchModeSheetOpen(true)}
             aria-expanded={matchModeSheetOpen}
-            className="group w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 text-neon-yellow hover:bg-neon-yellow/[0.06] rounded-lg"
+            className="group w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 bg-neon-yellow hover:bg-neon-yellow/85 active:scale-[0.98] rounded-lg"
           >
             <span className="flex h-5 w-5 items-center justify-center">
               <img src="/test-botao-01-01.svg" alt="" aria-hidden className="w-5 h-5" />
             </span>
             <span
-              className="italic text-neon-yellow leading-none"
+              className="italic text-black leading-none"
               style={{
                 fontFamily: 'var(--font-serif-hero)',
                 fontWeight: 700,
@@ -487,7 +484,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <OleSmartHubPanel />
       </main>
       <TutorialOverlay />
-      <AssistantWidget />
       <CoachActionApproval />
       <OleSmartHubDrawer open={hubOpen} onClose={() => setHubOpen(false)} />
 

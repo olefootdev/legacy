@@ -26,23 +26,32 @@ import { getSupabase, isSupabaseConfigured } from './supabase/client';
 /**
  * SessionGuard — verifica no boot se há sessão válida no Supabase atual.
  * Se o manager tem save local mas não tem sessão no banco atual (ex: migração
- * de banco), limpa o save local e recarrega a página para forçar o login.
+ * de banco), limpa o save local e redireciona para /login.
+ * Não age em rotas públicas (/login, /cadastro) para evitar loops.
  */
 function SessionGuard() {
   useEffect(() => {
+    // Não age em rotas públicas
+    const path = window.location.pathname;
+    if (path === '/login' || path === '/cadastro' || path.startsWith('/admin') || path === '/reset-password') return;
+
+    // Só age se houver save local — sem save não há nada a limpar
+    const hasSave = Object.keys(localStorage).some(k => k.startsWith('olefoot'));
+    if (!hasSave) return;
+
     if (!isSupabaseConfigured()) return;
     const sb = getSupabase();
     if (!sb) return;
+
     void sb.auth.getSession().then(({ data }) => {
       if (!data.session) {
-        // Sem sessão válida no banco atual — limpa save local e recarrega
+        // Sem sessão válida — limpa save e vai para login
         try {
-          const keys = Object.keys(localStorage).filter(k => k.startsWith('olefoot'));
-          if (keys.length > 0) {
-            keys.forEach(k => localStorage.removeItem(k));
-            window.location.reload();
-          }
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('olefoot'))
+            .forEach(k => localStorage.removeItem(k));
         } catch { /* noop */ }
+        window.location.href = '/login';
       }
     });
   }, []);

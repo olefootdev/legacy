@@ -29,7 +29,7 @@ import {
 } from '@/ranking/worldRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
-import { MatchdayHero } from '@/components/matchday/MatchdayHero';
+import { makeInboxItem } from '@/game/inboxItem';
 import { DashboardGrid, DashboardSection } from '@/components/dashboard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { computeCareerTier } from '@/systems/careerTiers';
@@ -176,52 +176,25 @@ export function Home() {
   // Adiciona notificação de boas-vindas na primeira visita
   useEffect(() => {
     const hasWelcomeNotification = inbox.some(
-      (item) => item.category === 'STAFF' && item.title.includes('Bem-vindo')
+      (item) => item.id === 'olefoot-welcome-v1'
     );
-
     if (!hasWelcomeNotification) {
-      const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
-      const supportLabel = roundedSupport.toLocaleString('pt-BR', {
-        minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
-        maximumFractionDigits: 1,
-      });
-
       dispatch({
-        type: 'INBOX_PUSH',
-        item: {
-          category: 'STAFF',
-          title: 'Bem-vindo ao Olefoot! ⚽',
-          body: 'Seu clube está pronto para dominar o mundo do futebol. Explore o mercado, treine seus jogadores e conquiste títulos. A jornada começa agora!',
-          timestamp: new Date().toISOString(),
-          read: false,
-        },
-      });
-
-      // Adiciona mais algumas notificações de exemplo
-      dispatch({
-        type: 'INBOX_PUSH',
-        item: {
-          category: 'COMPETIÇÃO',
-          title: 'Próxima partida agendada',
-          body: `**${club.name}** enfrenta **${fixture.opponent.name}** em breve. Prepare sua tática e escale o melhor time!`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min atrás
-          read: false,
-          link: '/match/quick',
-        },
-      });
-
-      dispatch({
-        type: 'INBOX_PUSH',
-        item: {
-          category: 'TORCIDA',
-          title: 'Apoio da torcida crescendo',
-          body: `A torcida está com **${supportLabel}%** de confiança no time. Continue vencendo para aumentar o apoio!`,
-          timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1h atrás
-          read: false,
-        },
+        type: 'INBOX_PREPEND',
+        item: makeInboxItem(
+          'olefoot-welcome-v1',
+          'COMPANY_ANNOUNCEMENT',
+          'CLUBE',
+          'Bem Vindo ao Olefoot',
+          {
+            body: 'A Olefoot chega hoje carregando a alma do futebol que aprendemos a amar — aquele de táticas pensadas, decisões de boleiro e histórias que atravessam gerações.',
+            tag: 'Olefoot',
+            timeLabel: 'Agora',
+          }
+        ),
       });
     }
-  }, [dispatch, inbox.length, club.name, fixture.opponent.name, crowd.supportPercent]);
+  }, [dispatch, inbox]);
 
   const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
   /**

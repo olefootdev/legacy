@@ -15,6 +15,7 @@ import { voiceRoutes } from './routes/voice.js';
 import { assistantRoutes } from './routes/assistant.js';
 import { coachRoutes } from './routes/coach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
+import { adminRoutes } from './routes/admin.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 const app = new Hono();
 /**
@@ -73,6 +74,7 @@ app.route('/api/voice', voiceRoutes);
 app.route('/api/assistant', assistantRoutes);
 app.route('/api/coach', coachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
+app.route('/api/admin', adminRoutes);
 const port = Number(process.env.PORT) || 4000;
 serve({ fetch: app.fetch, port }, () => {
     console.log(`[olefoot-server] listening on http://localhost:${port}`);
