@@ -1201,7 +1201,7 @@ function HubBody({ onClose }: { onClose?: () => void }) {
 /** Painel desktop fixo (xl+), lado direito, w-72, fixed right-0 top-0 h-screen z-40 */
 export function OleSmartHubPanel() {
   return (
-    <div className="hidden xl:flex fixed right-0 top-0 h-screen w-72 z-40 flex-col">
+    <div className="hidden xl:flex fixed right-2 top-2 bottom-2 w-72 z-40 flex-col rounded-xl overflow-hidden">
       <HubBody />
     </div>
   );
