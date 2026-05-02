@@ -188,3 +188,44 @@ export async function fetchMyMentorships(): Promise<LegacyMentorshipRow[]> {
   }
   return (data ?? []) as LegacyMentorshipRow[];
 }
+
+/**
+ * Persiste o positionKnowledge evoluído de um jogador com isLegacy: true.
+ * Usa a tabela `legacy_players` via upsert parcial — só atualiza o campo
+ * `position_knowledge` (JSONB) sem tocar nos outros campos.
+ *
+ * O `legacyId` é o UUID sem o prefixo "legacy-" (ex: "legacy-abc123" → "abc123").
+ * Silencia erros de coluna inexistente (migration pendente) para não quebrar o fluxo.
+ */
+export async function syncLegacyPlayerPositionKnowledge(
+  legacyPlayerId: string,
+  positionKnowledge: unknown,
+): Promise<{ ok: boolean; reason?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, reason: 'no_client' };
+
+  // Remove prefixo "legacy-" se presente
+  const rawId = legacyPlayerId.startsWith('legacy-')
+    ? legacyPlayerId.slice('legacy-'.length)
+    : legacyPlayerId;
+
+  try {
+    const { error } = await sb
+      .from('legacy_players')
+      .update({ position_knowledge: positionKnowledge, updated_at: new Date().toISOString() } as never)
+      .eq('id', rawId);
+
+    if (error) {
+      // Coluna pode não existir ainda (migration pendente) — não é erro crítico
+      if (error.message.includes('column') || error.message.includes('position_knowledge')) {
+        console.info('[legacyPlayers] position_knowledge column not yet migrated, skipping sync.');
+        return { ok: false, reason: 'column_missing' };
+      }
+      console.warn('[legacyPlayers] syncPositionKnowledge:', error.message);
+      return { ok: false, reason: error.message };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+  }
+}

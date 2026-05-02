@@ -223,6 +223,8 @@ export interface LiveMatchSnapshot {
   pendingCornerForSide?: PossessionSide | null;
   /** Falta perigosa na zona de ataque: próximo tick força cobrança direta ao gol. */
   pendingFreeKickForSide?: PossessionSide | null;
+  /** Legacy Mode foi ativado durante esta partida — usado pós-partida para dobrar evolução de positionKnowledge. */
+  legacyModeWasActive?: boolean;
   /** Preview de probabilidades do último tiro (transparência ao jogador). */
   lastShotPreview?: {
     side: PossessionSide;

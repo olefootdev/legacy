@@ -1756,10 +1756,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       });
 
       const outcome: 'win' | 'draw' | 'loss' = homeWin ? 'win' : draw ? 'draw' : 'loss';
+      const legacyModeWasActive = !!(lm as unknown as Record<string, unknown>)['legacyModeWasActive'];
       for (const [pid, stat] of Object.entries(lm.homeStats ?? {})) {
         const pl = players[pid];
         if (!pl) continue;
-        let next = applyMatchPerformanceEvolution(pl, stat, outcome);
+        let next = applyMatchPerformanceEvolution(pl, stat, outcome, legacyModeWasActive);
         next = clampPlayerToEvolutionCap(ensureMintOverall(next));
         players[pid] = next;
       }

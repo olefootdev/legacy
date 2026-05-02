@@ -4,7 +4,7 @@
  * "MODO LEGACY · Movimento lembra Pelé 1970".
  */
 import type { PitchPlayerState } from '@/engine/types';
-import { Crown } from 'lucide-react';
+import { Crown, Zap } from 'lucide-react';
 
 const NEON = '#FDE100';
 
@@ -18,6 +18,12 @@ interface Props {
   players: PitchPlayerState[];
   /** Index do jogador atualmente em destaque no carrossel. */
   highlightIndex?: number;
+  /** Nome da lenda cujo DNA foi ativado (ex: "O Artilheiro Nato"). */
+  legendName?: string;
+  /** Duração do buff em segundos — exibida como "Xmin de buff". */
+  buffDurationSec?: number;
+  /** Sessões de treino acumuladas — exibidas como indicador de profundidade. */
+  sessionsCompleted?: number;
 }
 
 const SKILL_TAGLINES: Record<string, { tag: string; legend: string }> = {
@@ -34,7 +40,19 @@ function taglineFor(skillId: string): { tag: string; legend: string } {
   return SKILL_TAGLINES[skillId] ?? { tag: 'LEGADO', legend: 'Inspiração histórica' };
 }
 
-export function LegacySkillBanner({ entries, players, highlightIndex = 0 }: Props) {
+function formatBuffDuration(sec: number): string {
+  const min = Math.round(sec / 60);
+  return min <= 1 ? '1 min' : `${min} min`;
+}
+
+export function LegacySkillBanner({
+  entries,
+  players,
+  highlightIndex = 0,
+  legendName,
+  buffDurationSec,
+  sessionsCompleted,
+}: Props) {
   if (entries.length === 0) return null;
   const idx = ((highlightIndex % entries.length) + entries.length) % entries.length;
   const current = entries[idx];
@@ -43,6 +61,9 @@ export function LegacySkillBanner({ entries, players, highlightIndex = 0 }: Prop
   const { tag, legend } = taglineFor(current.skillId);
   const initial = (player.name?.[0] ?? '?').toUpperCase();
   const lastName = (player.name ?? '').split(' ').pop() ?? player.name ?? '';
+
+  const showBuff = buffDurationSec != null && buffDurationSec > 0;
+  const showSessions = sessionsCompleted != null && sessionsCompleted > 0;
 
   return (
     <div
@@ -108,6 +129,23 @@ export function LegacySkillBanner({ entries, players, highlightIndex = 0 }: Prop
           {idx + 1}/{entries.length}
         </div>
       </div>
+
+      {/* Nome da lenda ativada — só exibe quando disponível */}
+      {legendName && (
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 8,
+            fontWeight: 700,
+            letterSpacing: '0.28em',
+            color: 'rgba(253,225,0,0.7)',
+            textTransform: 'uppercase',
+            marginBottom: 8,
+          }}
+        >
+          DNA · {legendName}
+        </div>
+      )}
 
       {/* Linha principal: avatar + nome/legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -204,6 +242,53 @@ export function LegacySkillBanner({ entries, players, highlightIndex = 0 }: Prop
           {legend}
         </div>
       </div>
+
+      {/* Buff duration + sessões — rodapé informativo */}
+      {(showBuff || showSessions) && (
+        <div
+          style={{
+            marginTop: 8,
+            paddingTop: 8,
+            borderTop: '1px solid rgba(255,255,255,0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          {showBuff && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Zap size={9} color={NEON} strokeWidth={2.5} aria-hidden />
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  color: NEON,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {formatBuffDuration(buffDurationSec!)} de buff
+              </span>
+            </div>
+          )}
+          {showSessions && (
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 8,
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase',
+              }}
+            >
+              {sessionsCompleted} {sessionsCompleted === 1 ? 'sessão' : 'sessões'}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+

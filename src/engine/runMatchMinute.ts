@@ -224,12 +224,26 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   const test2dTickModifiers =
     s.mode === 'test2d'
-      ? {
-          homeInPossession: possessionAtStart === 'home',
-          progressLossMult: possessionAtStart === 'home' ? 0.91 : 1,
-          shotInAttThirdBias: possessionAtStart === 'home' ? 0.04 : 0,
-          awayPressMult: possessionAtStart === 'away' ? 1.07 : 0.94,
-        }
+      ? (() => {
+          // pressIntensity médio dos jogadores em campo com positionKnowledge treinado.
+          // Neutro = 1.0; acima de 1 = time mais agressivo no pressing.
+          const pitchIds = new Set(s.homePlayers.map((p) => p.playerId));
+          let pressSum = 0, pressCount = 0;
+          for (const e of input.homeRoster) {
+            if (!pitchIds.has(e.id) || !e.positionKnowledge?.sessionsCompleted) continue;
+            pressSum += e.positionKnowledge.traits.pressIntensity;
+            pressCount++;
+          }
+          const avgPressIntensity = pressCount > 0 ? pressSum / pressCount : 1.0;
+          // Mapeia 0–2 → multiplicador 0.85–1.15 sobre o base awayPressMult.
+          const pressMod = 0.85 + (avgPressIntensity / 2) * 0.30;
+          return {
+            homeInPossession: possessionAtStart === 'home',
+            progressLossMult: possessionAtStart === 'home' ? 0.91 : 1,
+            shotInAttThirdBias: possessionAtStart === 'home' ? 0.04 : 0,
+            awayPressMult: (possessionAtStart === 'away' ? 1.07 : 0.94) * pressMod,
+          };
+        })()
       : undefined;
 
   const canRunSpirit = shouldRunSpiritPlayTick({

@@ -251,6 +251,8 @@ export async function syncPlayerToSupabase(
         injury_risk: player.injuryRisk,
         evolution_xp: player.evolutionXp,
         out_for_matches: player.outForMatches,
+        // positionKnowledge: persiste DNA de lenda quando disponível (coluna JSONB opcional)
+        ...(player.positionKnowledge ? { position_knowledge: player.positionKnowledge } : {}),
       } as never,
       { onConflict: 'id' },
     );

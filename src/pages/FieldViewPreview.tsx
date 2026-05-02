@@ -177,7 +177,7 @@ export function FieldViewPreview() {
   // ── PlayerBrainCard ───────────────────────────────────────────────────────
   const [brainPlayer, setBrainPlayer] = useState<PitchPlayerState | null>(null);
 
-  const engine = useLegacyMatchEngine(homeXI, () => {}, false, 1, awayRoster);
+  const engine = useLegacyMatchEngine(homeXI, () => {}, false, 1, awayRoster, effectivePlayersById);
 
   // ── Substituição local (não persiste no store, vale só na partida) ────────
   const applySubstitutionLocal = useCallback((outId: string, inId: string): { ok: boolean; message: string } => {
@@ -236,6 +236,28 @@ export function FieldViewPreview() {
   // ── Legacy banner: visível enquanto Legacy ativo + dismiss em clique ──────
   const [legacyBannerVisible, setLegacyBannerVisible] = useState(false);
   const [legacyHighlightIdx, setLegacyHighlightIdx] = useState(0);
+  const [legacyBuffDurationSec, setLegacyBuffDurationSec] = useState(0);
+
+  // Sessões totais acumuladas pelo elenco com positionKnowledge
+  const legacyTotalSessions = useMemo(() => {
+    return homeXI.reduce((sum, p) => {
+      const entity = effectivePlayersById[p.playerId];
+      return sum + (entity?.positionKnowledge?.sessionsCompleted ?? 0);
+    }, 0);
+  }, [homeXI, effectivePlayersById]);
+
+  // Nome da lenda dominante no elenco (a que tem mais sessões)
+  const legacyDominantLegendName = useMemo(() => {
+    let best: { name: string; sessions: number } | null = null;
+    for (const p of homeXI) {
+      const pk = effectivePlayersById[p.playerId]?.positionKnowledge;
+      if (!pk) continue;
+      if (!best || pk.sessionsCompleted > best.sessions) {
+        best = { name: pk.legendSource ?? '', sessions: pk.sessionsCompleted };
+      }
+    }
+    return best?.name ?? undefined;
+  }, [homeXI, effectivePlayersById]);
 
   // Reabre banner sempre que Legacy é (re)ativado
   useEffect(() => {
@@ -454,6 +476,9 @@ export function FieldViewPreview() {
               entries={engine.activatedSkills.map((s) => ({ playerId: s.playerId, skillId: s.skillId }))}
               players={engine.homePlayers}
               highlightIndex={legacyHighlightIdx}
+              legendName={legacyDominantLegendName}
+              buffDurationSec={legacyBuffDurationSec}
+              sessionsCompleted={legacyTotalSessions > 0 ? legacyTotalSessions : undefined}
             />
           </div>
         )}
@@ -605,9 +630,11 @@ export function FieldViewPreview() {
           if (engine.legacyModeActive && !legacyBannerVisible && engine.activatedSkills.length > 0) {
             setLegacyBannerVisible(true);
             setLegacyHighlightIdx(0);
-            return { active: true, activated: engine.activatedSkills.length };
+            return { active: true, activated: engine.activatedSkills.length, buffDurationSec: legacyBuffDurationSec };
           }
-          return engine.toggleLegacyMode();
+          const result = engine.toggleLegacyMode();
+          if (result.active) setLegacyBuffDurationSec(result.buffDurationSec);
+          return result;
         }}
         onSkillCommand={(playerId, skillId) => {
           if (playerId) return engine.applySkillToPlayer(playerId, skillId);

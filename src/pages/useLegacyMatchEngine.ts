@@ -54,11 +54,8 @@ export interface LegacyMatchState {
 
 const RENDER_MS = 24;
 
-/**
- * Skills mock atribuídas por role no Legacy mode standalone.
- * O mode não tem game store, então os jogadores ganham 1 skill default por posição.
- */
-const MOCK_SKILLS_BY_ROLE: Record<'gk' | 'def' | 'mid' | 'attack', string> = {
+/** Fallback de skill por role quando o PlayerEntity não tem skills reais. */
+const FALLBACK_SKILL_BY_ROLE: Record<'gk' | 'def' | 'mid' | 'attack', string> = {
   gk: 'skl_goleiro_padrao',
   def: 'skl_ferrolho_italiano',
   mid: 'skl_meia_padrao',
@@ -66,18 +63,28 @@ const MOCK_SKILLS_BY_ROLE: Record<'gk' | 'def' | 'mid' | 'attack', string> = {
 };
 
 /**
- * Constrói playersById mock para o Legacy mode (sem game store).
- * Cada jogador recebe 1 skill default baseada na role.
+ * Constrói playersById para o Legacy mode.
+ * Usa skills reais do PlayerEntity quando disponíveis; cai no mock por role como fallback.
+ * realEntities: mapa opcional vindo do game store (FieldViewPreview passa o elenco real).
  */
-function buildMockPlayersById(homePlayers: PitchPlayerState[]): Record<string, PlayerEntity> {
+function buildMockPlayersById(
+  homePlayers: PitchPlayerState[],
+  realEntities?: Record<string, PlayerEntity>,
+): Record<string, PlayerEntity> {
   const out: Record<string, PlayerEntity> = {};
   for (const p of homePlayers) {
-    const role = (p.role ?? 'mid') as keyof typeof MOCK_SKILLS_BY_ROLE;
-    out[p.playerId] = {
-      id: p.playerId,
-      name: p.name,
-      skills: [MOCK_SKILLS_BY_ROLE[role] ?? 'skl_meia_padrao'],
-    } as unknown as PlayerEntity;
+    const real = realEntities?.[p.playerId];
+    if (real) {
+      // Usa entidade real — preserva skills, positionKnowledge, isLegacy, etc.
+      out[p.playerId] = real;
+    } else {
+      const role = (p.role ?? 'mid') as keyof typeof FALLBACK_SKILL_BY_ROLE;
+      out[p.playerId] = {
+        id: p.playerId,
+        name: p.name,
+        skills: [FALLBACK_SKILL_BY_ROLE[role] ?? 'skl_meia_padrao'],
+      } as unknown as PlayerEntity;
+    }
   }
   return out;
 }
@@ -150,6 +157,8 @@ export function useLegacyMatchEngine(
   frozen = false,
   timeScale = 1,
   awayRoster: LegacyAwayRosterEntry[] = FALLBACK_AWAY_ROSTER,
+  /** Entidades reais do game store — quando fornecidas, skills e positionKnowledge reais são usados. */
+  realEntities?: Record<string, PlayerEntity>,
 ) {
   const loopRef = useRef<TacticalSimLoop | null>(null);
   const homePlayersRef = useRef(homePlayers);
@@ -163,8 +172,8 @@ export function useLegacyMatchEngine(
 
   const emptyStats: TeamStats = { passesOk: 0, passesAttempt: 0, shots: 0, shotsOn: 0, tackles: 0, km: 0, goals: 0, saves: 0, dribblesOk: 0 };
   const possessionTicksRef = useRef({ home: 0, away: 0 });
-  const playersByIdRef = useRef<Record<string, PlayerEntity>>(buildMockPlayersById(homePlayers));
-  playersByIdRef.current = buildMockPlayersById(homePlayers);
+  const playersByIdRef = useRef<Record<string, PlayerEntity>>(buildMockPlayersById(homePlayers, realEntities));
+  playersByIdRef.current = buildMockPlayersById(homePlayers, realEntities);
   const [activatedSkills, setActivatedSkills] = useState<Array<{ playerId: string; skillId: string; activatedAt: number }>>([]);
   const [legacyModeActive, setLegacyModeActive] = useState(false);
 
@@ -366,17 +375,41 @@ export function useLegacyMatchEngine(
   }, []);
 
   /**
-   * Ativa Legacy Mode: dispara skill default de cada jogador da casa simultaneamente.
-   * Retorna número de skills ativadas.
+   * Ativa Legacy Mode:
+   * 1. Dispara a skill real (ou fallback) de cada jogador da casa.
+   * 2. Ativa o momentum buff no TacticalSimLoop, escalonado por sessionsCompleted do elenco.
+   *    Base: 300s (5min). +30s por sessão acumulada, máximo 600s (10min).
+   * Retorna número de skills ativadas e duração do buff em segundos.
    */
-  const toggleLegacyMode = useCallback((): { active: boolean; activated: number } => {
+  const toggleLegacyMode = useCallback((): { active: boolean; activated: number; buffDurationSec: number } => {
     const next = !legacyModeActive;
     setLegacyModeActive(next);
-    if (!next) return { active: false, activated: 0 };
+    if (!next) return { active: false, activated: 0, buffDurationSec: 0 };
 
-    let count = 0;
     const players = homePlayersRef.current;
     const byId = playersByIdRef.current;
+
+    // Calcula sessões totais acumuladas pelo elenco com positionKnowledge
+    const totalSessions = players.reduce((sum, p) => {
+      const entity = byId[p.playerId];
+      return sum + (entity?.positionKnowledge?.sessionsCompleted ?? 0);
+    }, 0);
+
+    // Buff escalonado: 300s base + 30s por sessão, máximo 600s
+    const buffDurationSec = Math.min(600, 300 + totalSessions * 30);
+
+    // Ativa momentum buff no loop
+    const loop = loopRef.current;
+    if (loop) {
+      loop.activateLegacyModeBuff(buffDurationSec);
+      loop.applyLegacyKnowledgeBoosts(byId, buffDurationSec);
+      // Marca flag no snapshot para o reducer usar pós-partida
+      const simSt = loop.getSimState();
+      if (simSt) (simSt as unknown as Record<string, unknown>)['legacyModeWasActive'] = true;
+    }
+
+    // Ativa skills reais (ou fallback) de cada jogador
+    let count = 0;
     for (const p of players) {
       const entity = byId[p.playerId];
       const skillId = entity?.skills?.[0];
@@ -384,7 +417,8 @@ export function useLegacyMatchEngine(
       const res = applySkillToPlayer(p.playerId, skillId);
       if (res.ok) count++;
     }
-    return { active: true, activated: count };
+
+    return { active: true, activated: count, buffDurationSec };
   }, [legacyModeActive, applySkillToPlayer]);
 
   return {

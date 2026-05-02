@@ -5946,6 +5946,42 @@ export class TacticalSimLoop {
     activateMomentumBuff(this.homeMomentumBuff, this.world.simTime);
   }
 
+  /**
+   * Fase 3.2 — Injeta boost de decisão baseado no positionKnowledge de cada agente.
+   * Chamado pelo useLegacyMatchEngine ao ativar Legacy Mode.
+   * playersById: mapa de PlayerEntity com positionKnowledge real.
+   * boostDurationSec: duração do boost (alinhada ao buff de momentum).
+   *
+   * Converte os actionWeights da lenda num impact01 (0–1) e registra nos mapas
+   * executionBoostUntil/Impact01 que já alimentam o DecisionContext de cada agente.
+   */
+  applyLegacyKnowledgeBoosts(
+    playersById: Record<string, { positionKnowledge?: { actionWeights: Record<string, { weight: number }>; sessionsCompleted: number } }>,
+    boostDurationSec: number,
+  ): void {
+    const until = this.world.simTime + boostDurationSec;
+
+    for (const ag of this.homeAgents) {
+      const entity = playersById[ag.id];
+      const pk = entity?.positionKnowledge;
+      if (!pk || pk.sessionsCompleted === 0) continue;
+
+      // Calcula impact01 como média dos pesos acima de 1.0 (só os que superam o neutro)
+      const weights = Object.values(pk.actionWeights);
+      const aboveNeutral = weights.filter((w) => w.weight > 1.0);
+      if (aboveNeutral.length === 0) continue;
+
+      const avgBoost = aboveNeutral.reduce((sum, w) => sum + (w.weight - 1.0), 0) / aboveNeutral.length;
+      // Escala: avgBoost 0.5 → impact01 0.75; cap em 0.95
+      const impact01 = Math.min(0.95, 0.5 + avgBoost * 0.5);
+      // Sessões amplificam levemente: +2% por sessão, máximo +20%
+      const sessionMult = Math.min(1.2, 1 + pk.sessionsCompleted * 0.02);
+
+      this.executionBoostUntil.set(ag.id, until);
+      this.executionBoostImpact01.set(ag.id, Math.min(0.95, impact01 * sessionMult));
+    }
+  }
+
   /** Returns home player IDs whose stamina is critically low (≤ threshold). Used for auto-sub hints. */
   getCriticallyFatiguedHomeIds(threshold = 30): string[] {
     return this.homeAgents

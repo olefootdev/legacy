@@ -28,6 +28,17 @@ import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum'
 import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
+import { doesLooseControl } from '@/behaviorAI/firstTouchErrors';
+import {
+  createTeamPressingState,
+  detectPressingTrigger,
+  activatePressingTrap,
+  tickPressingTrap,
+  isPressingTrapActive,
+  type TeamPressingState,
+} from '@/behaviorAI/pressingTrap';
+import { evaluateTacticalFoul } from '@/behaviorAI/tacticalFoul';
+import type { AgentSnapshot } from '@/simulation/InteractionResolver';
 import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
 import { enrichNarrative } from './contextualNarrative';
 import { detectSpecialEvent, applySpecialEventEffect } from '@/match/specialEvents';
@@ -256,7 +267,11 @@ function pickAction(ctx: SpiritContext): ProposedAction {
 
   if (ctx.possession === 'away' && deepDefense && highPress) {
     if (!m) return 'press';
-    if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult)) return 'press';
+    // Pressing trap: se armadilha ativa, pressão é garantida (ignora gate aleatório).
+    const simTime = ctx.minute * 60;
+    tickPressingTrap(_homePressing, simTime);
+    const trapBonus = isPressingTrapActive(_homePressing, simTime) ? 0.12 : 0;
+    if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus)) return 'press';
   }
   if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
@@ -272,6 +287,10 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     const awarenessShotBias = (underPressure && !freeFwd && inDangerZone) ? 0.20 : 0;
     // Inverso: portador livre + colega livre adiantado fora da box → passa em vez de chutar.
     const passOverShot = (!underPressure && freeFwd && zi && !isBox(zi)) ? -0.18 : 0;
+    // DNA de lenda: riskTaking do portador empurra decisão de chute (0–2, neutro=1).
+    const dnaRiskBias = ctx.onBallKnowledge
+      ? (ctx.onBallKnowledge.traits.riskTaking - 1) * 0.10
+      : 0;
     const shotBias =
       style.shootingProfile * 0.25 +
       style.riskTaking * 0.18 +
@@ -280,6 +299,7 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       zoneShotBias +
       awarenessShotBias +
       passOverShot +
+      dnaRiskBias +
       urgencyByContext;  // Urgência por placar/tempo
     return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
   }
@@ -615,6 +635,16 @@ function commitGoal(input: CommitGoalInput): {
     ball,
     nextPossession,
   };
+}
+
+// Estado de pressing compartilhado entre ticks (módulo-nível, reset por partida via resetPressingState).
+const _homePressing: TeamPressingState = createTeamPressingState('home');
+const _awayPressing: TeamPressingState = createTeamPressingState('away');
+
+/** Reseta o estado de pressing (chamar no início de cada partida). */
+export function resetPressingState(): void {
+  Object.assign(_homePressing, createTeamPressingState('home'));
+  Object.assign(_awayPressing, createTeamPressingState('away'));
 }
 
 /** Ciclo: contexto → decisão → consequência → narrativa + log causal (A1–A3). */
@@ -1105,8 +1135,20 @@ export function gameSpiritTick(
         });
       }
 
-      if (Math.random() < lossChance) {
+      // Perda de posse: usa firstTouchErrors para modular por técnica do portador.
+      // Velocidade estimada da bola em condução: ~8 m/s base.
+      const carrierTechnique = ctx.onBall?.attributes?.drible ?? 50;
+      const lostControl = doesLooseControl(carrierTechnique, 8, Math.random.bind(Math));
+      if (lostControl || Math.random() < lossChance * 0.6) {
         next = 'away';
+        // Perda de posse ativa pressing trap do adversário (passe ruim = trigger).
+        const simTime = ctx.minute * 60;
+        const trigger = detectPressingTrigger(
+          lostControl ? 0.2 : lossChance,
+          true,
+          (ctx.ball?.y ?? 34) * (FIELD_WIDTH / 100),
+        );
+        activatePressingTrap(_awayPressing, trigger, simTime);
         // 40% das perdas são interceptação (vs. simples perda de bola).
         if (Math.random() < 0.4) {
           L.push({
@@ -1146,13 +1188,28 @@ export function gameSpiritTick(
     const awayShooterId = awayScorer.id;
     // Roubada de bola — 3 níveis + crítico de erro (miss).
     // Só tenta desarme quando o motor seleciona 'press' + passa no gate de probabilidade.
-    const willTackle = action === 'press' && Math.random() < 0.42 + (ctx.tacticalMentality - 50) / 250;
+    // evaluateTacticalFoul decide se o defensor comete falta tática ou tenta o desarme limpo.
+    const tacklerName = secondaryMate(ctx);
+    const tackler = ctx.homePlayers?.find((p) => p.name === tacklerName);
+    const tacklerId = tackler?.playerId ?? 'home:unknown';
+    const fairPlay01 = tackler ? (tackler.attributes?.fairPlay ?? 70) / 100 : 0.7;
+    const distToGoal = ctx.ball ? (100 - ctx.ball.x) * 1.05 : 52; // aprox em metros
+    const isLastDefender = (ctx.homePlayers ?? []).filter((p) => p.role === 'def').length <= 1;
+    const foulDecision = action === 'press'
+      ? evaluateTacticalFoul(
+          { id: tacklerId, x: ctx.ball?.x ?? 50, z: ctx.ball?.y ?? 34, speed: 0, yellowCards: 0 } as unknown as AgentSnapshot & { yellowCards?: number },
+          { id: ctx.onBall?.playerId ?? 'away', x: ctx.ball?.x ?? 50, z: ctx.ball?.y ?? 34, speed: 1 } as unknown as AgentSnapshot,
+          isLastDefender,
+          distToGoal,
+          tackler?.attributes?.marcacao ?? 60,
+          Math.random.bind(Math),
+        )
+      : null;
+    const willTackle = action === 'press' && (
+      foulDecision?.shouldFoul ||
+      Math.random() < 0.42 + (ctx.tacticalMentality - 50) / 250
+    );
     if (willTackle) {
-      const tacklerName = secondaryMate(ctx);
-      const tackler = ctx.homePlayers?.find((p) => p.name === tacklerName);
-      const tacklerId = tackler?.playerId ?? 'home:unknown';
-      const fairPlay01 = tackler ? (tackler.attributes?.fairPlay ?? 70) / 100 : 0.7;
-
       const tackleOut = rollTackleOutcome(Math.random(), {
         tacticalMentality: ctx.tacticalMentality,
         fairPlay01,

@@ -96,11 +96,14 @@ function bumpAttrsBySwing(attrs: PlayerAttributes, swing: number): PlayerAttribu
 /**
  * Ajusta atributos e EXP de evolução com base na linha de estatísticas da partida (casa).
  * `evolutionRate` amplifica ganhos/perdas de swing e de XP.
+ * `legacyModeWasActive`: se true, dobra o delta de evolução do positionKnowledge —
+ * a lenda "ensinou mais" nesta partida.
  */
 export function applyMatchPerformanceEvolution(
   player: PlayerEntity,
   stat: HomePlayerStatRow | undefined,
   outcome: MatchOutcomeLetter,
+  legacyModeWasActive = false,
 ): PlayerEntity {
   const rate =
     player.evolutionRate != null && Number.isFinite(player.evolutionRate)
@@ -132,6 +135,10 @@ export function applyMatchPerformanceEvolution(
     const action = playerDominantActionFromStat(stat, swing);
     if (zone && action) {
       updatedKnowledge = evolvePositionKnowledgePostMatch(updatedKnowledge, outcome, action, zone);
+      // Legacy Mode ativo: aplica uma segunda evolução com peso reduzido (sessão extra)
+      if (legacyModeWasActive) {
+        updatedKnowledge = evolvePositionKnowledgePostMatch(updatedKnowledge, outcome, action, zone);
+      }
     }
   }
 
