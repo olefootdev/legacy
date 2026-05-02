@@ -718,6 +718,7 @@ export type GameAction =
     }
   | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
+  | { type: 'MARKET_MAKER_ACCEPT'; playerId: string; offerExp: number }
   | {
       type: 'BUY_GENESIS_MARKET_PLAYER';
       player: import('@/entities/types').PlayerEntity;

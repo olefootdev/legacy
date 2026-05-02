@@ -2136,6 +2136,39 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
+    case 'MARKET_MAKER_ACCEPT': {
+      const pl = state.players[action.playerId];
+      if (!pl) return state;
+      const offerExp = Math.max(0, Math.round(action.offerExp));
+      // Remove da lineup
+      const lineup = { ...state.lineup };
+      for (const [slot, pid] of Object.entries(lineup)) {
+        if (pid === action.playerId) delete lineup[slot];
+      }
+      // Remove do plantel
+      const players = { ...state.players };
+      delete players[action.playerId];
+      // Credita EXP
+      const finance = withExpHistory(
+        addOle(state.finance, offerExp),
+        offerExp,
+        `Market Maker · ${pl.name}`,
+      );
+      // Notificação no inbox
+      const inboxItem = {
+        id: `mm_${Date.now()}`,
+        messageType: 'PLAYER_SOLD' as const,
+        category: 'FINANCEIRO' as const,
+        tag: 'Market Maker',
+        title: 'Market Maker comprou seu jogador',
+        body: `**${pl.name}** vendido por **${offerExp.toLocaleString('pt-BR')} EXP**. Saldo creditado na wallet.`,
+        timeLabel: 'agora',
+        colorClass: 'text-neon-yellow',
+        read: false,
+      };
+      const inbox = [inboxItem, ...(state.inbox ?? [])];
+      return { ...state, lineup, players, finance, inbox };
+    }
     case 'DELIST_MANAGER_PROSPECT': {
       const li = state.managerProspectMarket.ownListings.find((l) => l.listingId === action.listingId);
       if (!li) return state;

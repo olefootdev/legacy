@@ -60,6 +60,10 @@ import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
+import { calcMarketMakerOffer, marketMakerDiscountLabel } from '@/market/marketMaker';
+import { formatExp } from '@/systems/economy';
+import { recordMarketActivity } from '@/supabase/marketActivities';
+import { getSupabase } from '@/supabase/client';
 
 type CardPlayer = ReturnType<typeof playerToCardView> & { id: string };
 
@@ -103,7 +107,6 @@ export function Team() {
   /** Feedback visível no painel (substitui alert nativo). */
   const [saveBanner, setSaveBanner] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const [announcePlayer, setAnnouncePlayer] = useState<CardPlayer | null>(null);
-  const [announcePrice, setAnnouncePrice] = useState('180000');
   /** Ficha temporada / evolução (clique no token ou no cartão). */
   const [sheetPlayerId, setSheetPlayerId] = useState<string | null>(null);
   /** Sprint B-3: menu de ações ao clicar num token do campo (Substituir/Skill/Anunciar). */
@@ -243,29 +246,38 @@ export function Team() {
     }, 400);
   };
 
-  const handleConfirmAnnounce = () => {
+  const handleMarketMakerAccept = async () => {
     if (!announcePlayer) return;
-    const raw = Number(String(announcePrice).replace(',', '.'));
-    const n = Number.isFinite(raw) ? Math.round(raw) : 180_000;
-    if (n < 50_000 || n > 5_000_000) {
-      setSaveBanner({
-        kind: 'error',
-        text: 'Preço EXP inválido. Usa entre 50 000 e 5 000 000.',
-      });
-      return;
-    }
     const ent = playersById[announcePlayer.id];
-    if (!ent || ent.listedOnMarket) {
-      setAnnouncePlayer(null);
-      return;
-    }
+    if (!ent) { setAnnouncePlayer(null); return; }
+    const offerExp = calcMarketMakerOffer(ent);
     const name = announcePlayer.name;
-    dispatch({ type: 'LIST_MANAGER_PROSPECT', playerId: announcePlayer.id, priceExp: n });
+    dispatch({ type: 'MARKET_MAKER_ACCEPT', playerId: announcePlayer.id, offerExp });
     setAnnouncePlayer(null);
-    setAnnouncePrice('180000');
-    setSaveBanner({
-      kind: 'success',
-      text: `${name} anunciado no Mercado EXP. Retira o anúncio em Mercado → cartão do jogador.`,
+    setSaveBanner({ kind: 'success', text: `Market Maker comprou ${name} por ${formatExp(offerExp)} EXP 💰` });
+    // Salvar no Supabase (fire-and-forget)
+    const sb = getSupabase();
+    if (sb) {
+      const { data: { session } } = await sb.auth.getSession();
+      void sb.from('market_maker_inventory').insert({
+        player_snapshot: ent as unknown as Record<string, unknown>,
+        player_name: ent.name,
+        player_pos: ent.pos,
+        player_ovr: overallFromAttributes(ent.attrs),
+        purchase_price_exp: offerExp,
+        seller_manager_id: session?.user?.id ?? null,
+        seller_club_name: club.name,
+      });
+    }
+    void recordMarketActivity({
+      type: 'sale',
+      managerId: null,
+      managerName: club.name,
+      clubName: club.name,
+      playerName: name,
+      playerOvr: overallFromAttributes(ent.attrs),
+      playerPos: ent.pos,
+      priceExp: offerExp,
     });
   };
 
@@ -1071,7 +1083,11 @@ export function Team() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {announcePlayer && (
+        {announcePlayer && (() => {
+          const ent = playersById[announcePlayer.id];
+          const offerExp = ent ? calcMarketMakerOffer(ent) : 0;
+          const discountLabel = ent ? marketMakerDiscountLabel(ent.pos, overallFromAttributes(ent.attrs)) : '';
+          return (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1088,23 +1104,22 @@ export function Team() {
               className="my-auto w-full max-w-md overflow-hidden rounded-md border border-neon-yellow/25 bg-dark-gray shadow-2xl"
               role="dialog"
               aria-modal="true"
-              aria-labelledby="announce-market-title"
+              aria-labelledby="market-maker-title"
             >
+              {/* Header */}
               <div className="flex items-start justify-between gap-3 border-b border-white/10 bg-black/40 px-4 py-3">
                 <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-white/45 font-display font-bold">
+                    Market Maker · Proposta
+                  </p>
                   <h3
-                    id="announce-market-title"
-                    className="font-display text-lg font-black uppercase tracking-wide text-white"
+                    id="market-maker-title"
+                    className="mt-0.5 font-display text-lg font-black uppercase tracking-wide text-white"
                   >
-                    Anunciar no mercado
+                    {announcePlayer.name}
                   </h3>
-                  <p className="mt-1 truncate text-sm font-bold text-neon-yellow">{announcePlayer.name}</p>
-                  <p className="mt-1 text-[10px] leading-relaxed text-gray-500">
-                    Preço em EXP (50k–5M). O jogador sai da escalação e aparece nas vitrines do{' '}
-                    <Link to="/transfer" className="text-neon-yellow/90 underline-offset-2 hover:underline">
-                      Mercado
-                    </Link>
-                    .
+                  <p className="mt-0.5 text-xs text-white/50">
+                    {announcePlayer.pos} · OVR {ent ? overallFromAttributes(ent.attrs) : '—'}
                   </p>
                 </div>
                 <button
@@ -1116,38 +1131,47 @@ export function Team() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="space-y-4 p-4">
-                <label className="block space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Preço EXP</span>
-                  <input
-                    type="number"
-                    min={50_000}
-                    max={5_000_000}
-                    value={announcePrice}
-                    onChange={(e) => setAnnouncePrice(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 font-display text-sm font-bold text-white outline-none focus:border-neon-yellow"
-                  />
-                </label>
+
+              {/* Oferta */}
+              <div className="p-4 space-y-4">
+                <div className="rounded-lg border border-neon-yellow/30 bg-neon-yellow/[0.06] px-4 py-3 text-center">
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-display font-bold">
+                    Oferta do Market Maker
+                  </p>
+                  <p
+                    className="mt-1 text-3xl font-black text-neon-yellow tabular-nums"
+                    style={{ fontFamily: 'var(--font-serif-hero)', letterSpacing: '-0.02em' }}
+                  >
+                    {formatExp(offerExp)} EXP
+                  </p>
+                  <p className="mt-1 text-[11px] text-white/40">{discountLabel}</p>
+                </div>
+
+                <p className="text-xs text-white/50 leading-relaxed">
+                  O Market Maker compra na hora. O valor é creditado imediatamente na tua wallet em EXP.
+                </p>
+
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setAnnouncePlayer(null)}
                     className="rounded-lg border border-white/20 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5 sm:px-4"
                   >
-                    Cancelar
+                    Recusar
                   </button>
                   <button
                     type="button"
-                    onClick={handleConfirmAnnounce}
-                    className="rounded-lg border border-neon-yellow/50 bg-neon-yellow/15 py-2.5 font-display text-xs font-black uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/25 sm:px-4"
+                    onClick={() => void handleMarketMakerAccept()}
+                    className="rounded-lg bg-neon-yellow py-2.5 font-display text-xs font-black uppercase tracking-wider text-black hover:bg-neon-yellow/85 active:scale-[0.98] sm:px-4"
                   >
-                    Confirmar anúncio
+                    Aceitar oferta
                   </button>
                 </div>
               </div>
             </motion.div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       <ManagerCreatePlayerModal open={createProspectOpen} onClose={() => setCreateProspectOpen(false)} />
