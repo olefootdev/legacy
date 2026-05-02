@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { loadShopCatalogFromSupabase } from '@/supabase/platformShopCatalog';
 import { loadAdminLeagues } from '@/supabase/adminLeagues';
+import { loadGlobalLeagueState } from '@/supabase/globalLeagueState';
 import { dispatchGame, getGameState } from '@/game/store';
 import { normalizeShopCatalog } from '@/game/shopCatalog';
 
@@ -9,9 +10,7 @@ import { normalizeShopCatalog } from '@/game/shopCatalog';
  * No boot, hidrata dados globais de plataforma vindos do Supabase:
  * - shop_catalog: catálogo da loja definido pelo admin
  * - admin_leagues: competições criadas pelo admin
- *
- * Esses dados substituem os defaults locais se existirem no Supabase.
- * Roda uma vez por sessão, silencioso em erro.
+ * - global_league_state: estado da liga global 24/7
  */
 export function PlatformDataHydrator() {
   useEffect(() => {
@@ -29,7 +28,6 @@ export function PlatformDataHydrator() {
       // Admin leagues
       const leaguesData = await loadAdminLeagues();
       if (leaguesData && leaguesData.leagues.length > 0) {
-        // Só sobrescreve se o estado local ainda tem as ligas default
         const local = getGameState();
         const hasCustomLeagues = local.adminLeagues.some((l) => !l.id.startsWith('lg_ole_'));
         if (!hasCustomLeagues) {
@@ -40,6 +38,12 @@ export function PlatformDataHydrator() {
             dispatchGame({ type: 'ADMIN_SET_PRIMARY_LEAGUE', id: leaguesData.primaryId });
           }
         }
+      }
+
+      // Liga global 24/7
+      const globalState = await loadGlobalLeagueState();
+      if (globalState) {
+        dispatchGame({ type: 'SET_OLEFOOT_LEAGUE', payload: globalState });
       }
     })();
   }, []);
