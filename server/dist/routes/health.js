@@ -1,0 +1,6 @@
+import { Hono } from 'hono';
+export const healthRoutes = new Hono();
+healthRoutes.get('/health', (c) => {
+    return c.json({ status: 'ok', ts: new Date().toISOString() });
+});
+//# sourceMappingURL=health.js.map

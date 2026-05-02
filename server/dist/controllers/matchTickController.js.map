@@ -1,0 +1,1 @@
+{"version":3,"file":"matchTickController.js","sourceRoot":"","sources":["../../src/controllers/matchTickController.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;GAYG;AAIH,MAAM,CAAC,KAAK,UAAU,aAAa,CAAC,CAAU;IAC5C,OAAO,CAAC,CAAC,IAAI,CACX;QACE,EAAE,EAAE,KAAK;QACT,KAAK,EAAE,iBAAiB;QACxB,OAAO,EACL,uFAAuF;KAC1F,EACD,GAAG,CACJ,CAAC;AACJ,CAAC"}
