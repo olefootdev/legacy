@@ -290,6 +290,31 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
+        {/* Botão JOGAR — desktop sidebar */}
+        <div className="px-4 pb-2">
+          <button
+            type="button"
+            onClick={() => setMatchModeSheetOpen(true)}
+            aria-expanded={matchModeSheetOpen}
+            className="group w-full flex items-center gap-4 px-4 py-3 transition-all duration-200 text-neon-yellow hover:bg-neon-yellow/[0.06] rounded-lg"
+          >
+            <span className="flex h-5 w-5 items-center justify-center">
+              <img src="/test-botao-01-01.svg" alt="" aria-hidden className="w-5 h-5" />
+            </span>
+            <span
+              className="italic text-neon-yellow leading-none"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: '24px',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Jogar
+            </span>
+          </button>
+        </div>
+
         {/* Bloco secundário: link "| Como jogar" em Inter regular,
             visual de footer link (não compete com nav principal) */}
         <div className="px-8 pt-1 pb-2">
@@ -317,47 +342,43 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </div>
 
-        {/* Status do jogo — número real de managers, ou "Fase Beta" enquanto a base é pequena. */}
+        {/* Status do jogo — Fase Beta sempre visível + número real de clubes. */}
         <div className="mx-4 mb-3 px-4 py-3 border border-white/10 bg-white/[0.02]" style={{ borderRadius: 'var(--radius-sm)' }}>
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}>
             Status do jogo
           </p>
-          {totalManagers == null ? (
-            <p
-              className="mt-1"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+          <p
+            className="mt-1"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
+          >
+            <span
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 text-neon-yellow"
+              style={{
+                border: '1px solid var(--color-divider-yellow-strong)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '11px',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
             >
               <span
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-neon-yellow"
-                style={{
-                  border: '1px solid var(--color-divider-yellow-strong)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '11px',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                }}
-              >
-                <span
-                  className="inline-block w-1.5 h-1.5 rounded-full"
-                  style={{ background: 'var(--color-neon-yellow)' }}
-                  aria-hidden
-                />
-                Fase Beta
-              </span>
-            </p>
-          ) : (
-            <p
-              className="text-white mt-1"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
-            >
-              Somos:{' '}
-              <span className="text-neon-yellow font-semibold tabular-nums">
-                {totalManagers.toLocaleString('pt-BR')}
-              </span>{' '}
-              {totalManagers === 1 ? 'manager' : 'managers'}
-            </p>
-          )}
+                className="inline-block w-1.5 h-1.5 rounded-full"
+                style={{ background: 'var(--color-neon-yellow)' }}
+                aria-hidden
+              />
+              Fase Beta
+            </span>
+          </p>
+          <p
+            className="text-white/70 mt-2"
+            style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500 }}
+          >
+            Clubes criados:{' '}
+            <span className="text-neon-yellow font-semibold tabular-nums">
+              {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
+            </span>
+          </p>
         </div>
 
         <div className="p-6 border-t border-white/10 bg-[#0a0a0a]">
@@ -586,14 +607,36 @@ export function Layout({ children }: { children: ReactNode }) {
                   Status do jogo
                 </p>
                 <p
-                  className="text-white mt-1"
+                  className="mt-1"
                   style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500 }}
                 >
-                  Somos:{' '}
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 text-neon-yellow"
+                    style={{
+                      border: '1px solid var(--color-divider-yellow-strong)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '11px',
+                      letterSpacing: '0.18em',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span
+                      className="inline-block w-1.5 h-1.5 rounded-full"
+                      style={{ background: 'var(--color-neon-yellow)' }}
+                      aria-hidden
+                    />
+                    Fase Beta
+                  </span>
+                </p>
+                <p
+                  className="text-white/70 mt-2"
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500 }}
+                >
+                  Clubes criados:{' '}
                   <span className="text-neon-yellow font-semibold tabular-nums">
                     {totalManagers != null ? totalManagers.toLocaleString('pt-BR') : '—'}
-                  </span>{' '}
-                  {totalManagers === 1 ? 'clube' : 'clubes'}
+                  </span>
                 </p>
               </div>
 
