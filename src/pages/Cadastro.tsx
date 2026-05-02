@@ -18,6 +18,7 @@ import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
 import type { FavoriteRealTeamRef } from '@/game/types';
 import { signUpWithEmail, checkEmailExists } from '@/supabase/auth';
 import { fetchMyReferralCode } from '@/supabase/referrals';
+import { checkClubShortAvailable, computeUsername } from '@/supabase/managerUsername';
 
 type UserProfile =
   | 'apaixonado'
@@ -321,6 +322,8 @@ export function Cadastro() {
   const [finishBusy, setFinishBusy] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
   const [emailChecking, setEmailChecking] = useState(false);
+  const [initialsTaken, setInitialsTaken] = useState(false);
+  const [initialsChecking, setInitialsChecking] = useState(false);
 
   useEffect(() => {
     const p = readPendingReferrerCode();
@@ -342,6 +345,27 @@ export function Cadastro() {
     };
   }, [email]);
 
+  useEffect(() => {
+    setInitialsTaken(false);
+    const clean = initials.trim();
+    if (clean.length < 2) return;
+    setInitialsChecking(true);
+    const t = setTimeout(async () => {
+      const available = await checkClubShortAvailable(clean);
+      setInitialsTaken(!available);
+      setInitialsChecking(false);
+    }, 400);
+    return () => {
+      clearTimeout(t);
+      setInitialsChecking(false);
+    };
+  }, [initials]);
+
+  const previewUsername = useMemo(
+    () => computeUsername(firstName, initials),
+    [firstName, initials],
+  );
+
   const dialDigits = useMemo(() => {
     if (dialOption.iso2 === 'OTHER') return digitsOnly(customDialDigits);
     return digitsOnly(dialOption.dial);
@@ -358,7 +382,7 @@ export function Cadastro() {
     password.length >= 6 &&
     phoneE164.length >= 8;
 
-  const step2Valid = clubName.trim().length > 0 && initials.trim().length > 0;
+  const step2Valid = clubName.trim().length > 0 && initials.trim().length > 0 && !initialsTaken && !initialsChecking;
   const step3Valid = !!favoriteTeam && !!userProfile;
 
   const goNext = () => {
@@ -1079,6 +1103,59 @@ export function Cadastro() {
                   {initials.length}/3
                 </span>
               </div>
+
+              {/* Status de disponibilidade das iniciais */}
+              {initials.trim().length >= 2 && (
+                <div className="mt-1">
+                  {initialsChecking ? (
+                    <p className="text-white/40" style={{ fontFamily: 'var(--font-ui)', fontSize: '10px' }}>
+                      Verificando…
+                    </p>
+                  ) : initialsTaken ? (
+                    <p
+                      className="uppercase text-red-400"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '9px',
+                        fontWeight: 800,
+                        letterSpacing: '0.22em',
+                      }}
+                    >
+                      ✗ Iniciais já em uso — escolhe outras
+                    </p>
+                  ) : (
+                    <p
+                      className="text-green-400"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        letterSpacing: '0.18em',
+                      }}
+                    >
+                      ✓ DISPONÍVEL
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Preview do @username */}
+              {previewUsername && !initialsTaken && !initialsChecking && (
+                <div className="mt-2 flex items-center gap-1.5 rounded border border-neon-yellow/20 bg-neon-yellow/[0.04] px-3 py-1.5">
+                  <span
+                    className="text-neon-yellow/60"
+                    style={{ fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '0.15em' }}
+                  >
+                    TEU USERNAME:
+                  </span>
+                  <span
+                    className="text-neon-yellow font-semibold tabular-nums"
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
+                  >
+                    @{previewUsername}
+                  </span>
+                </div>
+              )}
             </label>
 
             {/* Formação */}

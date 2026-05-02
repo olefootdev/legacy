@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -34,6 +34,7 @@ import { AssistantWidget } from '@/components/AssistantWidget';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
+import { OleSmartHubPanel, OleSmartHubDrawer, OleSmartHubTrigger } from '@/components/OleSmartHub';
 
 type NavItem = {
   icon: typeof Home;
@@ -95,6 +96,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [matchModeSheetOpen, setMatchModeSheetOpen] = useState(false);
+  const [hubOpen, setHubOpen] = useState(false);
   const oleBalance = useGameStore((s) => s.finance.ole);
   const totalManagers = useTotalManagers();
   const localManagerFirst = useGameStore((s) => s.userSettings?.managerProfile?.firstName?.trim() ?? '');
@@ -131,6 +133,33 @@ export function Layout({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Swipe da borda direita para abrir o Smart Hub (mobile/tablet, < xl)
+  const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
+  const EDGE_ZONE = 28;
+  const SWIPE_THRESHOLD = 60;
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (t.clientX >= window.innerWidth - EDGE_ZONE) {
+      swipeStartX.current = t.clientX;
+      swipeStartY.current = t.clientY;
+    } else {
+      swipeStartX.current = null;
+    }
+  }, []);
+
+  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (swipeStartX.current === null || swipeStartY.current === null) return;
+    const t = e.changedTouches[0];
+    const dx = swipeStartX.current - t.clientX;
+    const dy = Math.abs(t.clientY - swipeStartY.current);
+    swipeStartX.current = null;
+    if (dx > SWIPE_THRESHOLD && dy < dx * 1.2) {
+      setHubOpen(true);
+    }
+  }, []);
 
   const handleSignOut = async () => {
     const sb = getSupabase();
@@ -196,10 +225,14 @@ export function Layout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans lg:flex-row">
+    <div
+      className="flex min-h-[100dvh] w-full max-w-[100vw] min-w-0 flex-col overflow-x-hidden bg-deep-black font-sans lg:flex-row"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
 
       {/* Desktop Sidebar — visible only at ≥1024px */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 sports-panel border-r border-white/10 fixed h-screen z-50 rounded-none">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-panel border border-white/5 overflow-x-hidden overflow-y-visible border-r border-white/10 fixed h-screen z-50 rounded-none">
         <div className="flex items-center mb-10 p-6 pb-0">
           <img
             src="/brand/olefoot-yellow-01.svg"
@@ -342,7 +375,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main
         className={cn(
-          'flex w-full max-w-[100vw] min-w-0 flex-1 flex-col overflow-x-hidden lg:ml-64',
+          'flex min-w-0 flex-1 flex-col overflow-x-hidden lg:ml-64 xl:mr-72',
           isQuickMatchRoute
             ? 'h-[100dvh] min-h-0 lg:h-auto lg:min-h-screen'
             : isImmersiveMatchRoute
@@ -402,6 +435,12 @@ export function Layout({ children }: { children: ReactNode }) {
             >
               <Settings className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={2.25} />
             </Link>
+
+            {/* Smart Hub trigger (mobile/tablet) */}
+            <OleSmartHubTrigger
+              onClick={() => setHubOpen(true)}
+              hasActivity={true}
+            />
           </div>
         </header>
         )}
@@ -419,15 +458,17 @@ export function Layout({ children }: { children: ReactNode }) {
             location.pathname !== '/match' &&
               location.pathname !== '/match/live' &&
               !isPenaltyRoute &&
-              'min-[1440px]:max-w-[1184px] min-[1440px]:mx-auto',
+              'xl:px-6 2xl:px-10',
           )}
         >
           {children}
         </div>
+        <OleSmartHubPanel />
       </main>
       <TutorialOverlay />
       <AssistantWidget />
       <CoachActionApproval />
+      <OleSmartHubDrawer open={hubOpen} onClose={() => setHubOpen(false)} />
 
       {/* Mobile / Tablet Drawer — slides in below lg */}
       <AnimatePresence>

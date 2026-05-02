@@ -862,7 +862,7 @@ export function Home() {
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6 sm:space-y-8">
+      <div className="w-full min-w-0 mx-auto space-y-6 sm:space-y-8 max-w-6xl xl:max-w-none">
       {/* HERO PRINCIPAL — editorial hero-legacy-full + news ticker + saudação manager */}
       <section
         aria-label="Hero do manager"
