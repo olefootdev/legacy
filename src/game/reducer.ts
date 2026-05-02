@@ -1937,7 +1937,19 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           }
         }
       }
-      return { ...stateAfterMatch, manager };
+      // Atualiza apoio da torcida com base no resultado da partida.
+      // Vitória: +3 a +5 | Empate: -1 | Derrota: -4 a -6
+      // Goleada (3+ gols de diferença) dá bônus extra.
+      const goalDiff = lm.homeScore - lm.awayScore;
+      const crowdDelta = homeWin
+        ? Math.min(5, 3 + Math.floor(Math.max(0, goalDiff - 1)))
+        : draw
+        ? -1
+        : Math.max(-6, -4 - Math.floor(Math.max(0, -goalDiff - 1)));
+      const newSupportPercent = Math.min(99, Math.max(0, stateAfterMatch.crowd.supportPercent + crowdDelta));
+      const crowd = { supportPercent: newSupportPercent, moodLabel: crowdMood(newSupportPercent) };
+
+      return { ...stateAfterMatch, manager, crowd };
     }
     case 'MERGE_PLAYERS': {
       const players = { ...state.players, ...action.players };
