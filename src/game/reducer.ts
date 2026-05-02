@@ -2253,6 +2253,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
+    case 'RECRUIT_YOUTH_PROSPECT': {
+      const pid = action.player.id;
+      if (state.players[pid]) return state; // já no plantel
+      if (state.finance.broCents < action.priceBroCents) return state; // saldo insuficiente
+      const num = nextKitNumber(state.players);
+      const finance = addBroCents(state.finance, -action.priceBroCents);
+      return {
+        ...state,
+        finance,
+        players: { ...state.players, [pid]: { ...action.player, num, listedOnMarket: false } },
+      };
+    }
     case 'BUY_MANAGER_NPC_OFFER': {
       const offer = state.managerProspectMarket.npcOffers.find((o) => o.listingId === action.listingId);
       if (!offer) return state;

@@ -731,6 +731,12 @@ export type GameAction =
       priceExp: number;
     }
   | {
+      /** Recruta uma promessa da categoria de base — desconta BRO e adiciona ao plantel. */
+      type: 'RECRUIT_YOUTH_PROSPECT';
+      player: import('@/entities/types').PlayerEntity;
+      priceBroCents: number;
+    }
+  | {
       /** Aplica progresso acumulado de mentorias — merge max(base, base+learned capped at legacy). */
       type: 'APPLY_LEGACY_LEARNED';
       updates: Array<{

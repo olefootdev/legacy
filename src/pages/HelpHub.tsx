@@ -27,7 +27,7 @@ const quickActions: Array<{
     title: 'FAQ',
     description: 'Perguntas frequentes sobre Wallet, mercado e partidas.',
     cta: 'Ver perguntas',
-    href: '/wallet/faq',
+    href: '/wallet',
     rail: 'bg-cyan-400',
   },
   {
@@ -204,7 +204,7 @@ export function HelpHub() {
               <ChevronRight className="w-5 h-5 text-white/30" />
             </div>
           </Link>
-          <Link to="/wallet/faq" className="block p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-neon-yellow/40 rounded transition-all">
+          <Link to="/wallet" className="block p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-neon-yellow/40 rounded transition-all">
             <div className="flex items-center justify-between">
               <span className="text-white font-display font-bold">Como funciona a Wallet?</span>
               <ChevronRight className="w-5 h-5 text-white/30" />

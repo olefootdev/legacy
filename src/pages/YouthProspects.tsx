@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, GraduationCap, Search, X, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useGameStore } from '@/game/store';
+import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { cn } from '@/lib/utils';
 import { youthAcademyProspectTrainingMultiplier } from '@/clubStructures/benefits';
@@ -10,11 +10,15 @@ import { BackButton } from '@/components/BackButton';
 
 export function YouthProspects() {
   const players = useGameStore((s) => s.players);
+  const broCents = useGameStore((s) => s.finance.broCents);
   const youthLvl = useGameStore((s) => s.structures.youth_academy ?? 1);
   const prospectTrainMult = youthAcademyProspectTrainingMultiplier(youthLvl);
+  const dispatch = useGameDispatch();
   const [query, setQuery] = useState('');
   const [pos, setPos] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [buySuccess, setBuySuccess] = useState(false);
 
   const prospects = useMemo(() => {
     return Object.values(players)
@@ -26,6 +30,27 @@ export function YouthProspects() {
 
   const positions = useMemo(() => Array.from(new Set(prospects.map((p) => p.pos))).sort(), [prospects]);
   const selected = prospects.find((p) => p.id === selectedId) ?? null;
+
+  const handleBuy = () => {
+    if (!selected) return;
+    const ovr = overallFromAttributes(selected.attrs);
+    const priceBroCents = Math.round(ovr * 1850);
+    if (broCents < priceBroCents) {
+      setBuyError(`Saldo BRO insuficiente. Necessário: ${(priceBroCents / 100).toFixed(2)} BRO`);
+      return;
+    }
+    if (players[selected.id]) {
+      setBuyError('Este jogador já está no teu plantel.');
+      return;
+    }
+    dispatch({ type: 'RECRUIT_YOUTH_PROSPECT', player: selected, priceBroCents });
+    setBuySuccess(true);
+    setBuyError(null);
+    setTimeout(() => {
+      setSelectedId(null);
+      setBuySuccess(false);
+    }, 1500);
+  };
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6 pb-10">
@@ -163,14 +188,26 @@ export function YouthProspects() {
                     <p className="text-[11px] text-gray-400 mt-1">
                       Valor base calculado por overall e potencial da promessa.
                     </p>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Teu saldo:{' '}
+                      <span className={cn('font-bold', broCents < overallFromAttributes(selected.attrs) * 1850 ? 'text-red-400' : 'text-neon-yellow')}>
+                        {(broCents / 100).toFixed(2)} BRO
+                      </span>
+                    </p>
                   </div>
+
+                  {buyError && (
+                    <p className="text-xs text-red-400 font-medium mt-2">{buyError}</p>
+                  )}
 
                   <button
                     type="button"
-                    className="mt-auto w-full bg-neon-yellow text-black py-3 rounded-xl font-display font-black uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-white transition-colors"
+                    onClick={handleBuy}
+                    disabled={buySuccess || broCents < overallFromAttributes(selected.attrs) * 1850 || !!players[selected.id]}
+                    className="mt-auto w-full bg-neon-yellow text-black py-3 rounded-xl font-display font-black uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    Comprar Agora
+                    {buySuccess ? 'Recrutado!' : players[selected.id] ? 'Já no plantel' : 'Comprar Agora'}
                   </button>
                 </div>
               </div>
