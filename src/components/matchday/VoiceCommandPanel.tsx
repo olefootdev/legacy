@@ -217,7 +217,7 @@ export function VoiceCommandPanel() {
     if (parsed.length === 0) {
       // 2b. Parser determinístico falhou — tenta Claude como intérprete semântico.
       setText('');
-      addFeedback({ kind: 'sent', message: `🧠 Interpretando: "${clean}"…` });
+      addFeedback({ kind: 'sent', message: `Interpretando: "${clean}"…` });
       void (async () => {
         const llmResult = await llmInterpretCommand(clean, {
           players: live.homePlayers.map((p) => ({
@@ -239,7 +239,7 @@ export function VoiceCommandPanel() {
           if (llmResult.narrative) {
             addFeedback({
               kind: 'sent',
-              message: `🤖 ${llmResult.narrative}`,
+              message: llmResult.narrative,
               detail: `Interpretado por IA · "${clean}"`,
             });
           }
