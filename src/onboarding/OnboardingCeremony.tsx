@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { dispatchGame, getGameState, useGameStore } from '@/game/store';
+import { dispatchGame, getGameState, useGameStore, useSquadHydrationDone } from '@/game/store';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { makeInboxItem } from '@/game/inboxItem';
 import { WELCOME_GENESIS_PACK_VERSION } from '@/game/welcomeGenesisPack';
@@ -123,14 +123,16 @@ export function OnboardingCeremony() {
   const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
   const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
   const clubInitials = deriveInitials(clubName);
+  const hydrationDone = useSquadHydrationDone();
 
   const startedRef = useRef(false);
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [askingExit, setAskingExit] = useState(false);
   const [active, setActive] = useState(false);
 
-  // Detecta condição de gatilho. Roda só uma vez por sessão.
+  // Detecta condição de gatilho. Aguarda hydration do Supabase antes de avaliar.
   useEffect(() => {
+    if (!hydrationDone) return; // espera o ManagerSquadHydrator terminar
     if (startedRef.current) return;
     if (!isSupabaseConfigured()) return;
     if (!managerProfile) return;
@@ -138,7 +140,7 @@ export function OnboardingCeremony() {
     if (playersCount > 0) return;
     startedRef.current = true;
     setActive(true);
-  }, [managerProfile, playersCount, welcomePackVersion]);
+  }, [hydrationDone, managerProfile, playersCount, welcomePackVersion]);
 
   const startBuild = useCallback(async () => {
     setPhase({ kind: 'loading' });
@@ -238,6 +240,11 @@ export function OnboardingCeremony() {
             setAskingExit(false);
             setActive(false);
             startedRef.current = true; // não retentar nesta sessão
+            // Grava marcador para não abrir em sessões futuras
+            dispatchGame({
+              type: 'SET_USER_SETTINGS',
+              partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+            });
           }}
         />
       )}

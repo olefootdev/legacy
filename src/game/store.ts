@@ -25,6 +25,25 @@ type Listener = () => void;
 let state: OlefootGameState = loadGameState();
 const listeners = new Set<Listener>();
 
+// ─── Squad hydration gate ─────────────────────────────────────────────
+// Impede que a cerimônia de onboarding abra antes do ManagerSquadHydrator
+// terminar de verificar o Supabase (evita falso positivo de plantel vazio).
+let squadHydrationDone = false;
+const hydrationListeners = new Set<Listener>();
+
+export function setSquadHydrationDone(): void {
+  if (squadHydrationDone) return;
+  squadHydrationDone = true;
+  for (const l of hydrationListeners) l();
+}
+
+export function useSquadHydrationDone(): boolean {
+  return useSyncExternalStore(
+    (cb) => { hydrationListeners.add(cb); return () => hydrationListeners.delete(cb); },
+    () => squadHydrationDone,
+  );
+}
+
 function emit() {
   for (const l of listeners) l();
 }
