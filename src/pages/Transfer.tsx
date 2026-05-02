@@ -575,7 +575,6 @@ export function Transfer() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
                 Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ genesis_catalog_id: cid }),
