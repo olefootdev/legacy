@@ -3,15 +3,16 @@
  *
  * Endpoints:
  *   POST /api/voice/transcribe — Whisper fallback para transcrição
- *   POST /api/voice/parse-intent — LLM fallback para parsing de intent
+ *   POST /api/voice/parse-intent — Claude fallback para parsing de intent
  */
 
 import { Hono } from 'hono';
 import OpenAI from 'openai';
+import { callAnthropic, hasAnthropicKey, jsonSystemPrompt } from '../lib/anthropic.js';
 
 const voice = new Hono();
 
-// Inicializa OpenAI apenas se a chave estiver configurada
+// OpenAI apenas para Whisper (transcrição de áudio)
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
@@ -66,29 +67,33 @@ voice.post('/transcribe', async (c) => {
   }
 });
 
-// ─── LLM Intent Parser ──────────────────────────────────────────────────────
+// ─── Claude Intent Parser ──────────────────────────────────────────────────
 
 /**
  * POST /api/voice/parse-intent
  *
- * Fallback quando parser determinístico falha. Usa GPT-4o-mini para extrair
- * intents estruturados de frases naturais.
+ * Fallback semântico quando o parser determinístico falha.
+ * Usa Claude Haiku para interpretar frases naturais de futebol em pt-BR.
  *
  * Body: {
  *   transcript: string,
  *   context: {
  *     players: Array<{ name: string, num?: number, role?: string }>,
- *     ballCarrier?: string
+ *     ballCarrier?: string,
+ *     minute?: number,
+ *     homeScore?: number,
+ *     awayScore?: number
  *   }
  * }
  *
  * Response: {
- *   commands: Array<{ intent: string, target: string, targetType: string }>
+ *   commands: Array<{ intent: string, target: string, targetType: string }>,
+ *   narrative: string  // o que o Claude entendeu, para feedback na UI
  * }
  */
 voice.post('/parse-intent', async (c) => {
-  if (!openai) {
-    return c.json({ error: 'OPENAI_API_KEY not configured' }, 503);
+  if (!hasAnthropicKey()) {
+    return c.json({ error: 'ANTHROPIC_API_KEY not configured' }, 503);
   }
 
   try {
@@ -103,102 +108,76 @@ voice.post('/parse-intent', async (c) => {
       return c.json({ error: 'Missing or invalid context' }, 400);
     }
 
-    const playersList = context.players
-      .map((p: { name: string; num?: number; role?: string }) =>
-        `${p.name}${p.num ? ` (#${p.num})` : ''}${p.role ? ` [${p.role}]` : ''}`
-      )
+    const playersList = (context.players as Array<{ name: string; num?: number; role?: string }>)
+      .map((p) => `${p.name}${p.num ? ` (#${p.num})` : ''}${p.role ? ` [${p.role}]` : ''}`)
       .join(', ');
 
-    const prompt = `Você é um parser de comandos de voz para um jogo de futebol.
-Traduza a frase do usuário em comandos estruturados.
+    const scoreCtx = (context.homeScore !== undefined && context.awayScore !== undefined)
+      ? `Placar: ${context.homeScore}×${context.awayScore}` : '';
+    const minuteCtx = context.minute !== undefined ? `Minuto: ${context.minute}'` : '';
 
-INTENTS DISPONÍVEIS (principais):
-- invade_box: invadir a área, ir pra área, atacar a área
-- dribble_attempt: driblar, passar por ele, encarar
-- take_shot: chutar, finalizar, bater pro gol, mandar bala
-- cross_ball: cruzar, levantar a bola
-- pass_to_player: passar pro [jogador], tocar pro [jogador]
-- hold_ball: segurar a bola, ficar com a bola
-- quick_pass: toque rápido, tocar rápido
-- switch_play: trocar de lado, inverter
-- mark_player: marcar o [adversário], colar no [adversário]
-- block_advance: segurar ele, fechar o cara
-- aggressive_tackle: entrar duro, dividir forte
-- tactical_foul: fazer falta, parar com falta
-- team_press_high: pressionar alto, marcação alta, pressão alta
-- team_retreat: recuar, voltar pra defesa, todos atrás
-- team_hold_possession: matar o jogo, segurar o jogo, posse segura
-- team_high_line: subir o time, linha alta
-- forwards_press_defenders: atacantes pressionam, ataque pressiona
-- midfielders_compact: meias fecham o meio, meio compacto
-- laterals_cross: laterais cruzam mais
-- left_back_overlap: sobe o lateral esquerdo
-- break_line: quebrar a linha, furar a linha
-- break_zone: quebrar a zona, sair da zona
-- run_behind: correr pelas costas, por trás do marcador
-- pedal_to_metal: pisar no acelerador, acelerar, forçar
-- free_play: se vira, joga livre
-- wait_support: espera a chegada, aguarda o apoio
-- stretch_team: esticar o time
-- hold_small_area: vai pra pequena e segura
-- spare_player: poupar o [jogador]
-- calm_team: acalmar o time, respirar, calma
-- player_substitution: sai [jogador] entra [jogador], substituir [jogador] por [jogador]
-- formation_change: mudar pra [formação], trocar pra [formação]
+    const system = jsonSystemPrompt(
+      `Você é o intérprete de comandos de voz do Olefoot, um jogo de futebol brasileiro.
+Seu trabalho é entender o que o manager está tentando dizer ao time — mesmo que ele use gírias, expressões coloquiais ou frases incompletas — e traduzir para um comando estruturado.
 
-TARGET TYPES:
-- player_name: nome do jogador específico
-- ball_carrier: o jogador com a bola
-- role: atacantes, meias, zagueiros, goleiro
-- team: time todo
-- shirt_number: número da camisa
+Pense como um assistente técnico que ouve o treinador na beira do campo e repassa ao time.
+"abre mais o jogo" = stretch_team
+"vai pra cima" = team_press_high ou invade_box dependendo do contexto
+"manda o lateral subir" = left_back_overlap
+"toca e corre" = quick_pass
+"segura o resultado" = team_hold_possession
+"vai com tudo" = pedal_to_metal
 
-CONTEXTO DA PARTIDA:
-Jogadores em campo: ${playersList}
+INTENTS DISPONÍVEIS:
+invade_box, dribble_attempt, take_shot, cross_ball, pass_to_player, hold_ball, quick_pass,
+switch_play, mark_player, block_advance, aggressive_tackle, tactical_foul,
+team_press_high, team_retreat, team_hold_possession, team_high_line,
+forwards_press_defenders, midfielders_compact, laterals_cross, left_back_overlap,
+break_line, break_zone, run_behind, pedal_to_metal, free_play, wait_support,
+stretch_team, hold_small_area, spare_player, calm_team, player_substitution, formation_change
+
+TARGET TYPES: player_name, ball_carrier, role, team, shirt_number`,
+      `{"commands":[{"intent":"string","target":"string","targetType":"string"}],"narrative":"string"}`,
+    );
+
+    const user = `Jogadores em campo: ${playersList}
 Portador da bola: ${context.ballCarrier ?? 'nenhum'}
+${minuteCtx} ${scoreCtx}
 
-FRASE DO USUÁRIO:
-"${transcript}"
+Comando do manager: "${transcript}"
 
-REGRAS:
-1. Se a frase mencionar um jogador pelo nome, use target_type: "player_name"
-2. Se for comando genérico sem alvo, use "ball_carrier" ou "team"
-3. Se mencionar posição (atacantes, meias), use "role"
-4. Retorne APENAS comandos que você tem CERTEZA que o usuário quis dizer
-5. Se a frase for ambígua ou não reconhecida, retorne array vazio
+Interprete o comando. Se mencionar jogador pelo nome, use targetType "player_name".
+Se for coletivo, use "team". Se mencionar posição (atacantes, meias), use "role".
+Em "narrative", escreva em 1 frase curta o que você entendeu (ex: "Esticar o time para abrir espaços").
+Se não conseguir interpretar com confiança, retorne commands vazio.`;
 
-RESPONDA APENAS COM JSON (sem markdown, sem explicação):
-{
-  "commands": [
-    { "intent": "take_shot", "target": "ball_carrier", "targetType": "ball_carrier" }
-  ]
-}`;
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.1,
-      max_tokens: 500,
+    const result = await callAnthropic<{
+      commands: Array<{ intent: string; target: string; targetType: string }>;
+      narrative: string;
+    }>({
+      model: 'haiku',
+      system,
+      user,
+      maxTokens: 300,
+      temperature: 0.2,
+      expectJson: true,
+      timeoutMs: 5000,
     });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      return c.json({ error: 'Empty response from LLM' }, 500);
+    if (!result.ok || !result.json) {
+      return c.json({ error: result.error ?? 'Claude parse failed', commands: [] }, 500);
     }
 
-    const parsed = JSON.parse(content);
-
-    // Validação básica
-    if (!parsed.commands || !Array.isArray(parsed.commands)) {
-      return c.json({ error: 'Invalid LLM response format' }, 500);
+    const parsed = result.json;
+    if (!Array.isArray(parsed.commands)) {
+      return c.json({ error: 'Invalid response format', commands: [] }, 500);
     }
 
     return c.json(parsed);
   } catch (err) {
-    console.error('[voice] LLM intent parsing error:', err);
+    console.error('[voice] Claude intent parsing error:', err);
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return c.json({ error: 'Intent parsing failed', detail: message }, 500);
+    return c.json({ error: 'Intent parsing failed', detail: message, commands: [] }, 500);
   }
 });
 

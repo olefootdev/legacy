@@ -44,6 +44,7 @@ import { guessCommand, intentLabelPt, type GuessResult } from '@/voiceCommand/in
 import { saveLearnedPhrase, lookupLearned, hydrateLearnedFromSupabase, syncLearnedPhraseToSupabase } from '@/voiceCommand/learnedPhrases';
 import { extractMentions, detectMentionAtCursor, applyMentionCompletion, SECTOR_SUGGESTIONS, type MentionEditState } from '@/voiceCommand/mentions';
 import { validateCommand } from '@/voiceCommand/commandValidation';
+import { llmInterpretCommand } from '@/voiceCommand/llmInterpret';
 
 type FeedbackEntry = {
   id: string;
@@ -214,18 +215,58 @@ export function VoiceCommandPanel() {
     }
 
     if (parsed.length === 0) {
-      // 2b. não parseou nem pela aprendizagem — tenta adivinhar e oferecer confirmação.
-      const guess = guessCommand(clean, ctx);
-      if (guess) {
-        setPendingGuess({ guess, originalPhrase: clean });
-      } else {
-        addFeedback({
-          kind: 'error',
-          message: `Comando não reconhecido: "${clean}"`,
-          detail: 'Tenta mais direto — ex: "chuta", "pressiona alto", "recua", "passa pro <nome>".',
-        });
-      }
+      // 2b. Parser determinístico falhou — tenta Claude como intérprete semântico.
       setText('');
+      addFeedback({ kind: 'sent', message: `🧠 Interpretando: "${clean}"…` });
+      void (async () => {
+        const llmResult = await llmInterpretCommand(clean, {
+          players: live.homePlayers.map((p) => ({
+            playerId: p.playerId,
+            name: p.name,
+            num: p.num,
+            role: p.role,
+          })),
+          ballCarrier: live.onBallPlayerId
+            ? live.homePlayers.find((p) => p.playerId === live.onBallPlayerId)?.name
+            : undefined,
+          minute: live.minute,
+          homeScore: live.homeScore,
+          awayScore: live.awayScore,
+        });
+
+        if (llmResult.commands.length > 0) {
+          // Claude entendeu — executa direto como se fosse um parse normal.
+          if (llmResult.narrative) {
+            addFeedback({
+              kind: 'sent',
+              message: `🤖 ${llmResult.narrative}`,
+              detail: `Interpretado por IA · "${clean}"`,
+            });
+          }
+          // Salva na biblioteca aprendida para próximas vezes (sem precisar do Claude).
+          const firstIntent = llmResult.commands[0]?.intent;
+          if (firstIntent) {
+            const normalizedClean = clean.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[.,!?;:"']/g, ' ').replace(/\s+/g, ' ').trim();
+            const learnInput = { phrase: normalizedClean, stem: normalizedClean, intent: firstIntent, canonicalPhrase: clean };
+            saveLearnedPhrase(learnInput);
+            void syncLearnedPhraseToSupabase(learnInput);
+          }
+          submit(clean, source);
+          return;
+        }
+
+        // Claude também não entendeu — cai no guess local como último recurso.
+        const guess = guessCommand(clean, ctx);
+        if (guess) {
+          setPendingGuess({ guess, originalPhrase: clean });
+        } else {
+          addFeedback({
+            kind: 'error',
+            message: `Comando não reconhecido: "${clean}"`,
+            detail: 'Tenta mais direto — ex: "chuta", "pressiona alto", "recua", "passa pro <nome>".',
+          });
+        }
+      })();
       return;
     }
 
