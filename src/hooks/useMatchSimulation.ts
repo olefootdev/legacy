@@ -149,7 +149,7 @@ export function useMatchSimulation(props: UseMatchSimulationProps) {
         onBall,
         crowdSupport: 75,
         tacticalMentality: 60,
-        opponentStrength: opponent.overall,
+        opponentStrength: opponent.strength ?? 70,
         homeRoster,
         homePlayers,
         homeShort: 'Casa',
@@ -163,14 +163,14 @@ export function useMatchSimulation(props: UseMatchSimulationProps) {
           onInteractiveMoment({
             ctx,
             awayPlayers,
-            opponentStrength: opponent.overall,
+            opponentStrength: opponent.strength ?? 70,
           });
           return { ...prevState, isPaused: true };
         }
       }
 
       // Run GameSpirit tick
-      const outcome = gameSpiritTick(ctx, opponent.short, causalSeqRef.current);
+      const outcome = gameSpiritTick(ctx, opponent.shortName, causalSeqRef.current);
       causalSeqRef.current += outcome.causalEvents.length;
 
       // CORREÇÃO: Aplicar modifiers de momentos interativos

@@ -768,10 +768,9 @@ export function MatchQuick() {
 
     // Executar a substituição no reducer
     dispatch({
-      type: 'QUICK_SUBSTITUTE',
+      type: 'MATCH_SUBSTITUTE',
       outPlayerId,
       inPlayerId,
-      slotId: outPlayer.pos,
     });
 
     // Auto-clear após 3 segundos
@@ -1816,7 +1815,7 @@ export function MatchQuick() {
         } as any);
       },
       onPickPlayStyle: (presetId) => {
-        dispatch({ type: 'APPLY_COACH_ACTION', presetId, feedText: `Estilo: ${presetId}` } as any);
+        dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: presetId as import('@/tactics/playingStyle').PlayingStylePresetId });
       },
       onPickTiredPlayer: (playerId) => {
         // Abre o modal de substituição focado neste jogador
@@ -3216,7 +3215,7 @@ export function MatchQuick() {
                 feedText = `🎯 ${preset.name} aplicado`;
                 feedbackDetail = preset.effect;
 
-                dispatch({ type: 'APPLY_COACH_ACTION', presetId, feedText });
+                dispatch({ type: 'SET_PLAYING_STYLE_PRESET', presetId: presetId as import('@/tactics/playingStyle').PlayingStylePresetId });
 
                 // Adicionar feedback detalhado no feed (Passo 7)
                 setTimeout(() => {

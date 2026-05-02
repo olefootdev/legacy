@@ -26,6 +26,7 @@ import {
 } from '@/supabase/proPayouts';
 import { getSupabase } from '@/supabase/client';
 import { formatExp } from '@/systems/economy';
+import { overallFromAttributes } from '@/entities/player';
 import { cn } from '@/lib/utils';
 
 export function ManagerPro() {
@@ -319,7 +320,7 @@ export function ManagerPro() {
                     </span>
                   </p>
                   <p className="text-[10px] text-white/45">
-                    {p.pos} · OVR {Math.round((p.ovr ?? 0))}
+                    {p.pos} · OVR {Math.round(overallFromAttributes(p.attrs))}
                     {p.listedOnMarket ? ' · À venda' : ''}
                   </p>
                 </div>

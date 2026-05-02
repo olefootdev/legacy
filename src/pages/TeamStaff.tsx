@@ -7,6 +7,7 @@ import { getStaffUpgradeCost, maxStaffSlotsByLevel, STAFF_LABELS, STAFF_ROLE_IDS
 import { STAFF_BENEFIT_SUMMARY } from '@/systems/staffBenefits';
 import type { StaffRoleId } from '@/game/types';
 import { cn } from '@/lib/utils';
+import { overallFromAttributes } from '@/entities/player';
 import { BackButton } from '@/components/BackButton';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { StatTile } from '@/components/ui/StatTile';
@@ -423,7 +424,7 @@ export function TeamStaff() {
                       <div className="min-w-0 text-left">
                         <div className="text-sm font-bold text-white truncate">{p.name}</div>
                         <div className="text-[10px] text-gray-500 uppercase tracking-wider">
-                          {p.pos} · OVR {Math.round(p.ovr ?? 0)}
+                          {p.pos} · OVR {Math.round(overallFromAttributes(p.attrs))}
                         </div>
                       </div>
                     </div>

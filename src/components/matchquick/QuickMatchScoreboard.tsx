@@ -26,7 +26,7 @@ interface QuickMatchScoreboardProps {
   /** Duração da transição da barra (ms) */
   barTransitionMs: number;
   /** Easing da transição */
-  barEasing: string;
+  barEasing: import('motion/react').Easing | import('motion/react').Easing[];
   /** Relógio */
   elapsedSec: number;
   clockFrozen: boolean;

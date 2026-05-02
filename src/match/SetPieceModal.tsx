@@ -96,10 +96,10 @@ export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
   const targets: SetPieceTarget[] = [...startersOnPitch]
     .filter(
       (p) =>
-        p.position === 'CB' ||
-        p.position === 'ST' ||
-        p.position === 'AM' ||
-        (p.position === 'CM' && p.attrs.fisico >= 70),
+        p.pos === 'CB' ||
+        p.pos === 'ST' ||
+        p.pos === 'AM' ||
+        (p.pos === 'CM' && p.attrs.fisico >= 70),
     )
     .map((p) => ({ p, skill: targetSkill(p) }))
     .sort((a, b) => b.skill - a.skill)
@@ -109,7 +109,7 @@ export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
       displayName: p.name,
       shirtNumber: (p as any).shirtNumber ?? 9,
       skillRating: skill,
-      position: p.position ?? 'CM',
+      position: p.pos ?? 'CM',
     }));
 
   const ctx: SetPieceContext = {
