@@ -34,7 +34,8 @@ import { DashboardGrid, DashboardSection } from '@/components/dashboard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { computeCareerTier } from '@/systems/careerTiers';
 import { MarketActivityFeed } from '@/market/MarketActivityFeed';
-import { generateMockActivities } from '@/market/socialTrade';
+import { fetchMarketActivities } from '@/supabase/marketActivities';
+import type { MarketActivity } from '@/market/socialTrade';
 import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
@@ -488,8 +489,11 @@ export function Home() {
   const [notifShowAll, setNotifShowAll] = useState(false);
   const notificacoesRef = useRef<HTMLDivElement>(null);
 
-  // Social Trade: atividades do mercado
-  const [marketActivities] = useState(() => generateMockActivities(10));
+  // Atividades reais do mercado — feed público do Supabase
+  const [marketActivities, setMarketActivities] = useState<MarketActivity[]>([]);
+  useEffect(() => {
+    void fetchMarketActivities(10).then(setMarketActivities);
+  }, []);
 
   useEffect(() => {
     setNotifShowAll(false);

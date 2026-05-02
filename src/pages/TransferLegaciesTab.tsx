@@ -9,11 +9,14 @@ import {
   legacyRowToPlayerEntity,
   type LegacyPlayerRow,
 } from '@/supabase/legacyPlayers';
+import { recordMarketActivity } from '@/supabase/marketActivities';
+import { getSupabase } from '@/supabase/client';
 
 export function TransferLegaciesTab() {
   const dispatch = useGameDispatch();
   const oleBal = useGameStore((s) => s.finance.ole);
   const playersById = useGameStore((s) => s.players);
+  const clubName = useGameStore((s) => s.club?.name ?? 'Manager');
   const [rows, setRows] = useState<LegacyPlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +50,21 @@ export function TransferLegaciesTab() {
       return;
     }
     dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp });
+    // Registra atividade pública no feed do mercado
+    void (async () => {
+      const sb = getSupabase();
+      const userId = sb ? (await sb.auth.getSession()).data.session?.user.id : undefined;
+      void recordMarketActivity({
+        type: 'purchase',
+        managerId: userId ?? null,
+        managerName: clubName,
+        clubName,
+        playerName: entity.name,
+        playerOvr: overallFromAttributes(entity.attrs),
+        playerPos: entity.pos,
+        priceExp,
+      });
+    })();
   };
 
   if (loading) {

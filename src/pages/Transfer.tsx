@@ -35,6 +35,7 @@ import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
+import { recordMarketActivity } from '@/supabase/marketActivities';
 
 const BIO_MAX_LEN = 250;
 
@@ -325,6 +326,7 @@ export function Transfer() {
   const playersById = useGameStore((s) => s.players);
   const managerProspectMarket = useGameStore((s) => s.managerProspectMarket);
   const oleBal = useGameStore((s) => s.finance.ole);
+  const clubName = useGameStore((s) => s.club?.name ?? 'Manager');
 
   // NPC offers removidos — mercado é exclusivamente Genesis.
 
@@ -579,6 +581,21 @@ export function Transfer() {
         genesisCatalogId: cid,
         mintOverall,
       });
+      // Registra atividade pública no feed do mercado
+      void (async () => {
+        const sb = getSupabase();
+        const userId = sb ? (await sb.auth.getSession()).data.session?.user.id : undefined;
+        void recordMarketActivity({
+          type: 'purchase',
+          managerId: userId ?? null,
+          managerName: clubName,
+          clubName,
+          playerName: entity.name,
+          playerOvr: mintOverall,
+          playerPos: entity.pos,
+          priceExp,
+        });
+      })();
       trackGrowthCommerce('transfer_player', 0, { grossBroCents: priceExp, label: entity.name });
       showPurchaseCompleteBanner();
       setSelectedPlayer(null);
