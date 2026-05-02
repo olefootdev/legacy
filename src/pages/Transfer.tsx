@@ -314,6 +314,8 @@ export function Transfer() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [purchaseCompleteBanner, setPurchaseCompleteBanner] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
   /** Sprint B-4: visualização do catálogo "Genesis em foco" — grade ou lista horizontal. */
   const [genesisViewMode, setGenesisViewMode] = useState<'grid' | 'list'>('grid');
   const purchaseBannerHideTimerRef = useRef<number | null>(null);
@@ -505,6 +507,11 @@ export function Transfer() {
 
   useHighlightRailSizing(highlightsScrollRef, !isFiltered, highlightsShownLen);
 
+  // Limpa erro de compra quando manager muda de jogador ou fecha o modal
+  useEffect(() => {
+    setPurchaseError(null);
+  }, [selectedPlayer]);
+
   useEffect(() => {
     return () => {
       if (purchaseBannerHideTimerRef.current) {
@@ -533,79 +540,105 @@ export function Transfer() {
 
   const handleAcademiaMarketAction = useCallback(async () => {
     if (!selectedPlayer?.marketKind || selectedPlayer.marketKind === 'mock') return;
+
     if (selectedPlayer.marketKind === 'genesis') {
       const cid = selectedPlayer.genesisCatalogId;
       if (!cid) return;
       const entity = genesisListedEntities[cid];
       if (!entity) return;
 
-      // Validação server-side: preço e unicidade confirmados pelo servidor antes do dispatch.
-      const sb = getSupabase();
-      const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
-      const base = olefootApiBase();
-      if (!base) {
-        // Sem servidor configurado — fallback para validação client-side apenas (dev local)
-        console.warn('[market/buy] servidor não configurado, validando apenas no cliente');
-      } else {
-        let serverRes: { ok: boolean; price_exp?: number; mint_overall?: number; error?: string } | null = null;
-        try {
-          const r = await fetch(`${base}/api/market/buy`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ genesis_catalog_id: cid }),
-          });
-          serverRes = await r.json() as typeof serverRes;
-        } catch {
-          console.error('[market/buy] falha de rede');
-          return;
-        }
-        if (!serverRes?.ok) {
-          console.warn('[market/buy] rejeitado pelo servidor:', serverRes?.error);
-          return;
-        }
-      }
-
       const priceExp = Math.round(selectedPlayer.listingPriceExp ?? selectedPlayer.buyNow);
       const mintOverall = Math.round(
         selectedPlayer.mintOverall ?? entity.mintOverall ?? overallFromAttributes(entity.attrs),
       );
-      if (oleBal < priceExp) return;
-      dispatch({
-        type: 'BUY_GENESIS_MARKET_PLAYER',
-        player: entity,
-        priceExp,
-        genesisCatalogId: cid,
-        mintOverall,
-      });
-      // Registra atividade pública no feed do mercado
-      void (async () => {
+
+      // Verifica saldo antes de qualquer chamada
+      if (oleBal < priceExp) {
+        setPurchaseError('Saldo EXP insuficiente para esta compra.');
+        return;
+      }
+
+      setIsPurchasing(true);
+      setPurchaseError(null);
+
+      try {
+        // Validação server-side: preço e unicidade confirmados pelo servidor
         const sb = getSupabase();
-        const userId = sb ? (await sb.auth.getSession()).data.session?.user.id : undefined;
-        void recordMarketActivity({
-          type: 'purchase',
-          managerId: userId ?? null,
-          managerName: clubName,
-          clubName,
-          playerName: entity.name,
-          playerOvr: mintOverall,
-          playerPos: entity.pos,
+        const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+        const base = olefootApiBase();
+        const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
+
+        if (serverUrl && token) {
+          let serverRes: { ok: boolean; price_exp?: number; mint_overall?: number; error?: string } | null = null;
+          try {
+            const r = await fetch(`${serverUrl}/api/market/buy`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ genesis_catalog_id: cid }),
+            });
+            serverRes = await r.json() as typeof serverRes;
+          } catch {
+            setPurchaseError('Falha de rede. Verifica a tua ligação e tenta novamente.');
+            setIsPurchasing(false);
+            return;
+          }
+          if (!serverRes?.ok) {
+            const msg = serverRes?.error === 'Jogador já adquirido.'
+              ? 'Este jogador já está no teu plantel.'
+              : serverRes?.error === 'Jogador não está à venda.'
+              ? 'Este jogador já não está disponível.'
+              : serverRes?.error === 'Unauthorized'
+              ? 'Sessão expirada. Faz login novamente.'
+              : (serverRes?.error ?? 'Não foi possível concluir a compra. Tenta novamente.');
+            setPurchaseError(msg);
+            setIsPurchasing(false);
+            return;
+          }
+        }
+        // Se não há servidor configurado (dev local sem token), prossegue com validação client-side
+
+        dispatch({
+          type: 'BUY_GENESIS_MARKET_PLAYER',
+          player: entity,
           priceExp,
+          genesisCatalogId: cid,
+          mintOverall,
         });
-      })();
-      trackGrowthCommerce('transfer_player', 0, { grossBroCents: priceExp, label: entity.name });
-      showPurchaseCompleteBanner();
-      setSelectedPlayer(null);
+
+        // Registra atividade pública no feed do mercado
+        void (async () => {
+          const sbInner = getSupabase();
+          const userId = sbInner ? (await sbInner.auth.getSession()).data.session?.user.id : undefined;
+          void recordMarketActivity({
+            type: 'purchase',
+            managerId: userId ?? null,
+            managerName: clubName,
+            clubName,
+            playerName: entity.name,
+            playerOvr: mintOverall,
+            playerPos: entity.pos,
+            priceExp,
+          });
+        })();
+
+        trackGrowthCommerce('transfer_player', 0, { grossBroCents: priceExp, label: entity.name });
+        showPurchaseCompleteBanner();
+        setSelectedPlayer(null);
+      } finally {
+        setIsPurchasing(false);
+      }
       return;
     }
+
     if (selectedPlayer.marketKind === 'manager_own' && selectedPlayer.managerListingId) {
       dispatch({ type: 'DELIST_MANAGER_PROSPECT', listingId: selectedPlayer.managerListingId });
       setSelectedPlayer(null);
     }
-  }, [selectedPlayer, genesisListedEntities, oleBal, dispatch, showPurchaseCompleteBanner]);
+  }, [selectedPlayer, genesisListedEntities, oleBal, dispatch, showPurchaseCompleteBanner, clubName]);
 
   type TransferTabKey = 'genesis' | 'legacies' | 'newbies' | 'highlights';
   const TAB_META: Record<TransferTabKey, { num: string; subtitle: string; eyebrow: string }> = {
@@ -1583,26 +1616,33 @@ export function Transfer() {
                                   ) : null}
                                 </>
                               )}
+                              {purchaseError && (
+                                <p className="text-xs text-red-400 font-medium">{purchaseError}</p>
+                              )}
                               <button
                                 type="button"
                                 onClick={handleAcademiaMarketAction}
                                 disabled={
-                                  selectedPlayer.marketKind === 'genesis' &&
-                                  (oleBal < selectedPlayer.buyNow ||
-                                    (!!selectedPlayer.genesisCatalogId &&
-                                      genesisListedEntities[selectedPlayer.genesisCatalogId] == null))
+                                  isPurchasing ||
+                                  (selectedPlayer.marketKind === 'genesis' &&
+                                    (oleBal < selectedPlayer.buyNow ||
+                                      (!!selectedPlayer.genesisCatalogId &&
+                                        genesisListedEntities[selectedPlayer.genesisCatalogId] == null)))
                                 }
                                 className={cn(
                                   'btn-primary min-h-12 w-full bg-neon-green px-3 py-3 text-black hover:bg-white sm:py-4',
-                                  selectedPlayer.marketKind === 'genesis' &&
-                                    (oleBal < selectedPlayer.buyNow ||
-                                      (!!selectedPlayer.genesisCatalogId &&
-                                        genesisListedEntities[selectedPlayer.genesisCatalogId] == null)) &&
+                                  (isPurchasing ||
+                                    (selectedPlayer.marketKind === 'genesis' &&
+                                      (oleBal < selectedPlayer.buyNow ||
+                                        (!!selectedPlayer.genesisCatalogId &&
+                                          genesisListedEntities[selectedPlayer.genesisCatalogId] == null)))) &&
                                     'pointer-events-none opacity-40',
                                 )}
                               >
                                 <span className="skew-x-6 block text-center text-sm font-black uppercase sm:text-base">
-                                  {selectedPlayer.marketKind === 'manager_own'
+                                  {isPurchasing
+                                    ? 'A processar…'
+                                    : selectedPlayer.marketKind === 'manager_own'
                                     ? 'Retirar do mercado'
                                     : `Comprar agora · ${formatAuctionDisplay(
                                         selectedPlayer.auctionCurrency,
