@@ -1,12 +1,12 @@
 /**
  * Persistência do estado da liga global (OlefootLeague + GlobalLeagueState).
- * Admin escreve via AdminGlobalPanel, todos os managers leem no boot.
- * O servidor Hono lê para executar rodadas automáticas.
+ * Usa tabela admin_global_league_snapshot (JSONB) separada da
+ * tabela global_league_state (schema relacional existente).
  */
 import { getSupabase, isSupabaseConfigured } from './client';
 import type { OlefootLeagueState } from '@/match/olefootLeague';
 
-const TABLE = 'global_league_state';
+const TABLE = 'admin_global_league_snapshot';
 
 export async function persistGlobalLeagueState(state: OlefootLeagueState): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
