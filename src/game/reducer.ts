@@ -2148,9 +2148,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // Remove do plantel
       const players = { ...state.players };
       delete players[action.playerId];
-      // Credita EXP
+      // Credita EXP (grantEarnedExp incrementa expLifetimeEarned para o plano de carreira)
       const finance = withExpHistory(
-        addOle(state.finance, offerExp),
+        grantEarnedExp(state.finance, offerExp),
         offerExp,
         `Market Maker · ${pl.name}`,
       );

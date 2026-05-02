@@ -1,6 +1,7 @@
 import { getSupabase } from '@/supabase/client';
 import { loadAdminPanelSession } from './adminPanelAuth';
 import { addCsrfHeader } from '@/lib/csrf';
+import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 
 export type UserStatus = 'active' | 'suspended' | 'banned';
 
@@ -16,14 +17,17 @@ export interface AdminProfileRow {
 }
 
 export async function adminListProfiles(): Promise<AdminProfileRow[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
-  const { data, error } = await sb.rpc('admin_list_profiles');
-  if (error) {
-    console.warn('[adminCore] list_profiles:', error.message);
+  try {
+    const res = await fetch(`${olefootApiBase()}/api/admin/profiles`);
+    if (!res.ok) {
+      console.warn('[adminCore] list_profiles HTTP', res.status);
+      return [];
+    }
+    return (await res.json()) as AdminProfileRow[];
+  } catch (e) {
+    console.warn('[adminCore] list_profiles:', e instanceof Error ? e.message : e);
     return [];
   }
-  return (data ?? []) as AdminProfileRow[];
 }
 
 export interface AdminTopReferrerRow {

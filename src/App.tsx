@@ -21,6 +21,33 @@ import { UserSettingsEffects } from './components/UserSettingsEffects';
 import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
 import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
+import { getSupabase, isSupabaseConfigured } from './supabase/client';
+
+/**
+ * SessionGuard — verifica no boot se há sessão válida no Supabase atual.
+ * Se o manager tem save local mas não tem sessão no banco atual (ex: migração
+ * de banco), limpa o save local e recarrega a página para forçar o login.
+ */
+function SessionGuard() {
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    void sb.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        // Sem sessão válida no banco atual — limpa save local e recarrega
+        try {
+          const keys = Object.keys(localStorage).filter(k => k.startsWith('olefoot'));
+          if (keys.length > 0) {
+            keys.forEach(k => localStorage.removeItem(k));
+            window.location.reload();
+          }
+        } catch { /* noop */ }
+      }
+    });
+  }, []);
+  return null;
+}
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const ClubHub = lazy(() => import('./pages/ClubHub').then((m) => ({ default: m.ClubHub })));
@@ -275,6 +302,7 @@ export default function App() {
     <ErrorBoundary FallbackComponent={RootErrorFallback}>
       <GameProvider>
         <Router>
+        <SessionGuard />
         <FriendlyChallengeLayer />
         <UserSettingsEffects />
         <WorldClock />

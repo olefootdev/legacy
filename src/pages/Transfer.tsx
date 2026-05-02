@@ -60,12 +60,26 @@ function truncateBio(text: string, max: number): string {
   return `${t.slice(0, max - 1)}…`;
 }
 
+/** Calcula tempo restante de 90 dias a partir da data de listagem. */
+function calcTimeLeft(listedAtIso: string): string {
+  const DURATION_MS = 90 * 24 * 60 * 60 * 1000; // 90 dias
+  const elapsed = Date.now() - new Date(listedAtIso).getTime();
+  const remaining = Math.max(0, DURATION_MS - elapsed);
+  const totalSecs = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  if (days > 0) return `${days}d ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 function playerEntityToManagerMockAuction(
   p: PlayerEntity,
   cardId: number,
   priceExp: number,
   marketKind: 'manager_own' | 'manager_npc',
-  opts: { managerListingId?: string; managerPlayerId?: string },
+  opts: { managerListingId?: string; managerPlayerId?: string; listedAtIso?: string },
 ): MockAuctionPlayer {
   const ovr = overallFromAttributes(p.attrs);
   const style = ovr >= 68 ? 'white' : 'gray-400';
@@ -88,7 +102,7 @@ function playerEntityToManagerMockAuction(
     auctionCurrency: 'EXP',
     currentBid: priceExp,
     buyNow: priceExp,
-    timeLeft: '23:59:59',
+    timeLeft: calcTimeLeft(opts.listedAtIso ?? new Date().toISOString()),
     history: [
       {
         year: ageLabel,
@@ -369,6 +383,7 @@ export function Transfer() {
         playerEntityToManagerMockAuction(pl, nid++, l.priceExp, 'manager_own', {
           managerListingId: l.listingId,
           managerPlayerId: l.playerId,
+          listedAtIso: l.listedAtIso,
         }),
       );
     }
