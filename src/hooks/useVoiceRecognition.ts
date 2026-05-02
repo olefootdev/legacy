@@ -10,6 +10,11 @@
  *
  * State machine: idle → listening → processing → idle (ou error).
  * Auto-stop em `maxSecs` segundos (5 por default).
+ *
+ * Proteções de produção:
+ *  - Page Visibility API: para o microfone quando o manager sai da aba/minimiza
+ *  - Silence VAD: para após `silenceSecs` de silêncio real (AnalyserNode)
+ *  - MediaStream cleanup: garante que o indicador de microfone apaga no iOS/Android
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -61,6 +66,16 @@ export type VoiceState = 'idle' | 'listening' | 'processing' | 'error';
 export interface VoiceRecognitionOptions {
   lang?: string;
   maxSecs?: number;
+  /**
+   * Segundos de silêncio real (VAD) antes de parar automaticamente.
+   * Default: 2.5s. Usa AnalyserNode para detectar ausência de voz.
+   */
+  silenceSecs?: number;
+  /**
+   * Threshold de amplitude RMS para considerar silêncio (0-255).
+   * Default: 10. Valores menores = mais sensível ao silêncio.
+   */
+  silenceThreshold?: number;
   onResult: (transcript: string, confidence: number) => void;
   onError?: (message: string) => void;
   /** Chamado quando início da captura é confirmado. */
@@ -98,9 +113,95 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
   const lastConfidenceRef = useRef(0);
   const supported = !!getSpeechRecognition();
 
+  // Espelha state em ref para listeners que não podem depender de closure.
+  const stateRef = useRef<VoiceState>('idle');
+
+  // VAD (Voice Activity Detection) — AudioContext paralelo para detectar silêncio real.
+  const vadCtxRef = useRef<AudioContext | null>(null);
+  const vadStreamRef = useRef<MediaStream | null>(null);
+  const vadRafRef = useRef<number>(0);
+  const silenceStartRef = useRef<number | null>(null);
+
   // Mantém callbacks em ref pra não reiniciar recognition a cada render.
   const optsRef = useRef(opts);
   optsRef.current = opts;
+
+  // Wrapper que mantém stateRef sincronizado com o state React.
+  const setVoiceState = (s: VoiceState | ((prev: VoiceState) => VoiceState)) => {
+    setState((prev) => {
+      const next = typeof s === 'function' ? s(prev) : s;
+      stateRef.current = next;
+      return next;
+    });
+  };
+
+  // ── VAD helpers ──────────────────────────────────────────────────────────
+
+  const stopVAD = () => {
+    if (vadRafRef.current) {
+      cancelAnimationFrame(vadRafRef.current);
+      vadRafRef.current = 0;
+    }
+    if (vadCtxRef.current) {
+      try { void vadCtxRef.current.close(); } catch { /* noop */ }
+      vadCtxRef.current = null;
+    }
+    if (vadStreamRef.current) {
+      vadStreamRef.current.getTracks().forEach((t) => t.stop());
+      vadStreamRef.current = null;
+    }
+    silenceStartRef.current = null;
+  };
+
+  const startVAD = async () => {
+    stopVAD(); // garante estado limpo
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      vadStreamRef.current = stream;
+      const Ctx: typeof AudioContext =
+        (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext ??
+        (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).webkitAudioContext!;
+      const ctx = new Ctx();
+      vadCtxRef.current = ctx;
+      if (ctx.state === 'suspended') {
+        try { await ctx.resume(); } catch { /* noop */ }
+      }
+      const src = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.5;
+      src.connect(analyser);
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      const threshold = optsRef.current.silenceThreshold ?? 10;
+      const silenceMs = (optsRef.current.silenceSecs ?? 2.5) * 1000;
+
+      const tick = () => {
+        if (!vadCtxRef.current) return;
+        analyser.getByteFrequencyData(buf);
+        // RMS da amplitude
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) sum += (buf[i] ?? 0) ** 2;
+        const rms = Math.sqrt(sum / buf.length);
+
+        if (rms < threshold) {
+          if (silenceStartRef.current === null) silenceStartRef.current = performance.now();
+          else if (performance.now() - silenceStartRef.current > silenceMs) {
+            // Silêncio real detectado — para o mic
+            stopVAD();
+            // Chama stop() via ref para não criar dependência circular
+            recognitionRef.current?.stop();
+            return;
+          }
+        } else {
+          silenceStartRef.current = null;
+        }
+        vadRafRef.current = requestAnimationFrame(tick);
+      };
+      vadRafRef.current = requestAnimationFrame(tick);
+    } catch {
+      // Sem acesso ao mic para VAD — não bloqueia o fluxo principal
+    }
+  };
 
   // Verifica permissão de microfone ao montar
   useEffect(() => {
@@ -167,22 +268,24 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
 
   const stop = useCallback(() => {
     clearAutoStop();
+    stopVAD();
     try {
       recognitionRef.current?.stop();
     } catch {
       /* noop */
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = useCallback(() => {
     clearAutoStop();
+    stopVAD();
     try { recognitionRef.current?.abort(); } catch { /* noop */ }
-    setState('idle');
+    setVoiceState('idle');
     setTranscript('');
     setInterim('');
     finalTranscriptRef.current = '';
     lastConfidenceRef.current = 0;
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = useCallback(async () => {
     console.log('[voice] start() chamado', { hasPermission });
@@ -219,8 +322,9 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     r.maxAlternatives = 1;
 
     r.onstart = () => {
-      setState('listening');
+      setVoiceState('listening');
       optsRef.current.onStart?.();
+      void startVAD();
     };
     r.onresult = (e) => {
       let finalText = finalTranscriptRef.current;
@@ -251,7 +355,8 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
                   e.error === 'network' ? 'Sem rede pra transcrever' :
                   `Erro no reconhecimento: ${e.error}`;
       optsRef.current.onError?.(msg);
-      setState('error');
+      stopVAD();
+      setVoiceState('error');
       clearAutoStop();
 
       // Se erro de permissão, atualiza estado
@@ -261,7 +366,8 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     };
     r.onend = () => {
       clearAutoStop();
-      setState((prev) => {
+      stopVAD();
+      setVoiceState((prev) => {
         if (prev === 'error') return 'error';
         return 'processing';
       });
@@ -271,7 +377,7 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
       // do consumer (submit pipeline) lançar exceção ou rodar assíncrono, a
       // UI não fica presa em "processando…" eternamente.
       const returnToIdle = window.setTimeout(() => {
-        setState((prev) => (prev === 'processing' ? 'idle' : prev));
+        setVoiceState((prev) => (prev === 'processing' ? 'idle' : prev));
       }, 250);
       try {
         if (finalText) {
@@ -283,9 +389,8 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
       } catch (err) {
         console.warn('[voice] onResult/onEnd handler threw:', err);
         optsRef.current.onError?.('Falha ao processar o comando');
-        // Força saída imediata do processing em caso de exceção.
         window.clearTimeout(returnToIdle);
-        setState((prev) => (prev === 'processing' ? 'idle' : prev));
+        setVoiceState((prev) => (prev === 'processing' ? 'idle' : prev));
       }
     };
 
@@ -305,13 +410,28 @@ export function useVoiceRecognition(opts: VoiceRecognitionOptions): VoiceRecogni
     }, maxMs);
   }, [stop, hasPermission, requestPermission]);
 
-  // Limpa ao desmontar.
+  // Limpa ao desmontar — garante que mic e VAD stream são liberados.
   useEffect(() => {
     return () => {
       clearAutoStop();
+      stopVAD();
       try { recognitionRef.current?.abort(); } catch { /* noop */ }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Page Visibility API — para o mic quando o manager sai da aba ou minimiza o app.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden && stateRef.current === 'listening') {
+        clearAutoStop();
+        stopVAD();
+        try { recognitionRef.current?.stop(); } catch { /* noop */ }
+        optsRef.current.onError?.('Microfone desligado — aba em segundo plano');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { state, transcript, interim, supported, hasPermission, requestPermission, start, stop, reset };
 }

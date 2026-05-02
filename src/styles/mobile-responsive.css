@@ -115,9 +115,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 img,
-video,
-canvas,
-svg {
+video {
   max-width: 100%;
   height: auto;
   display: block;
