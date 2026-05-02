@@ -154,6 +154,8 @@ export function estimateShotXG(
   ballZ: number,
   goalCtx: GoalContext,
   opponents: readonly AgentSnapshot[],
+  /** Distância do GK adversário ao seu próprio gol (m). Undefined = GK na posição normal. */
+  gkDistToGoal?: number,
 ): number {
   const { distToGoal, angleToGoal, lineOfSightScore } = goalCtx;
 
@@ -207,6 +209,13 @@ export function estimateShotXG(
   // Stamina
   const st = shooter.stamina ?? 85;
   if (st < XG_STAMINA_THRESHOLD) xg *= XG_STAMINA_PENALTY + st / 500;
+
+  // Gol aberto: GK fora da posição — bônus proporcional à distância do GK ao gol
+  if (gkDistToGoal !== undefined && gkDistToGoal > 3.5) {
+    if (gkDistToGoal > 12)     xg += 0.22;  // GK muito longe — gol praticamente aberto
+    else if (gkDistToGoal > 7) xg += 0.12;  // GK fora da área pequena
+    else if (gkDistToGoal > 4) xg += 0.05;  // GK adiantado mas ainda presente
+  }
 
   return Math.max(XG_MIN, Math.min(XG_MAX, xg));
 }

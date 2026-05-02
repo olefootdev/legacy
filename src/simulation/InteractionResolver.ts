@@ -300,8 +300,8 @@ export function findPassOptions(
   return options.sort((a, b) => passOptionAttackBuildUpScore(b) - passOptionAttackBuildUpScore(a));
 }
 
-/** Calculate shot xG for a carrier. */
-export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponents: AgentSnapshot[]): ShotChance {
+/** Calculate shot xG for a carrier. Optionally pass gkDistToGoal to boost xG when goal is unguarded. */
+export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponents: AgentSnapshot[], gkDistToGoal?: number): ShotChance {
   const goalX = attackDir === 1 ? FIELD_LENGTH : 0;
   const goalZ = FIELD_WIDTH / 2;
   const dist = Math.hypot(goalX - carrier.x, goalZ - carrier.z);
@@ -339,6 +339,13 @@ export function evaluateShot(carrier: AgentSnapshot, attackDir: 1 | -1, opponent
 
   const st = carrier.stamina ?? 85;
   if (st < 45) xG *= 0.88 + st / 500;
+
+  // Gol aberto: GK adversário fora da posição — bônus proporcional à distância do GK ao gol
+  if (gkDistToGoal !== undefined && gkDistToGoal > 3.5) {
+    if (gkDistToGoal > 12)     xG += 0.22;  // GK muito longe — gol praticamente aberto
+    else if (gkDistToGoal > 7) xG += 0.12;  // GK fora da área pequena
+    else if (gkDistToGoal > 4) xG += 0.05;  // GK adiantado mas ainda presente
+  }
 
   // Q1 — cap do xG sobe pra permitir chutes claros refletirem confiança real.
   xG = Math.max(0.01, Math.min(0.55, xG));

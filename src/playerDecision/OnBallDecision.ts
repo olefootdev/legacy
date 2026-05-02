@@ -337,7 +337,16 @@ export function decideOnBallWithIntention(
     const bl = new Set(ctx.passBlocklist);
     passOptions = passOptions.filter((o) => !bl.has(o.targetId));
   }
-  const shot = evaluateShot(ctx.self, ctx.attackDir, ctx.opponents);
+  const shot = (() => {
+    // Calcular distância do GK adversário ao seu próprio gol para bônus de gol aberto
+    const oppGK = ctx.opponents.find(o => o.role === 'gk');
+    const atkGoalX = ctx.attackDir === 1 ? FIELD_LENGTH : 0;
+    const atkGoalZ = FIELD_WIDTH / 2;
+    const gkDistToGoal = oppGK
+      ? Math.hypot(oppGK.x - atkGoalX, oppGK.z - atkGoalZ)
+      : undefined;
+    return evaluateShot(ctx.self, ctx.attackDir, ctx.opponents, gkDistToGoal);
+  })();
 
   // Q3 — Cobrador de falta direta: avalia chute direto / cruzamento conforme
   // distância ao gol e atributos. Cap de probabilidade de chute (não vira shoot

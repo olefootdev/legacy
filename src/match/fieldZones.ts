@@ -49,8 +49,8 @@ export function getAttackingGoalX(team: TeamSide, half: MatchHalf): number {
   return FIELD_LENGTH - getDefendingGoalX(team, half);
 }
 
-/** Profundidade máxima (m) a que o GR pode afastar-se da linha de baliza defendida — evita atravessar o campo. */
-export const GOALKEEPER_MAX_DEPTH_FROM_GOAL_M = 28;
+/** Profundidade máxima (m) a que o GR pode afastar-se da linha de baliza defendida — dentro da grande área. */
+export const GOALKEEPER_MAX_DEPTH_FROM_GOAL_M = 14;
 
 /**
  * Mantém o alvo X do guarda-redes junto à baliza que defende neste tempo.
@@ -62,6 +62,22 @@ export function clampGoalkeeperTargetX(team: TeamSide, half: MatchHalf, x: numbe
     return Math.max(0.8, Math.min(m, x));
   }
   return Math.max(FIELD_LENGTH - m, Math.min(FIELD_LENGTH - 0.8, x));
+}
+
+/** Raio lateral máximo do GK a partir do centro do gol (m) — dentro da grande área. */
+export const GK_LATERAL_MAX_M = 9.0;
+
+/**
+ * Restringe o alvo Z do GK: acompanha a bola lateralmente (45% do deslocamento)
+ * mas nunca sai mais de GK_LATERAL_MAX_M do centro do gol.
+ * Garante que o goleiro protege o gol mesmo quando a bola vai para a lateral.
+ */
+export function clampGoalkeeperTargetZ(ballZ: number, z: number): number {
+  const goalZ = CZ;
+  const ballOffset = (ballZ - goalZ) * 0.45;
+  const anchorZ = goalZ + Math.max(-GK_LATERAL_MAX_M, Math.min(GK_LATERAL_MAX_M, ballOffset));
+  // Clamp final: nunca mais de 2m do anchor calculado
+  return Math.max(anchorZ - 2.0, Math.min(anchorZ + 2.0, z));
 }
 
 /**

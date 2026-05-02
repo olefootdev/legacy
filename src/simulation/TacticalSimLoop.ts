@@ -123,6 +123,7 @@ import {
 import { transitionOutcomeFromSteal } from '@/playerDecision/carrierMacroBrain';
 import {
   clampGoalkeeperTargetX,
+  clampGoalkeeperTargetZ,
   clampWorldOutsideBothPenaltyAreas,
   clampWorldOutsidePenaltyAreaAtEnd,
   defendingPenaltyEndForTeam,
@@ -1664,6 +1665,7 @@ export class TacticalSimLoop {
     let tx = x;
     if (this.simState.phase === 'live' && (ag.slotId === 'gol' || ag.role === 'gk')) {
       tx = clampGoalkeeperTargetX(ag.side, half, tx);
+      z = clampGoalkeeperTargetZ(this.ballSys.state.z, z);
     }
     // Angular inertia: limit heading change based on speed and agility
     const speed = ag.vehicle.getSpeed();

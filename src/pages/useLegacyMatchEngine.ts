@@ -40,7 +40,7 @@ export interface LegacyMatchState {
   ballY: number;
   onBallPlayerId: string | undefined;
   events: Array<{ minute: number; text: string; kind?: string }>;
-  phase: 'playing' | 'halftime' | 'fulltime';
+  phase: 'pregame' | 'playing' | 'halftime' | 'fulltime';
   lastEvent: (LegacyEventKind & string) | null;
   homeStats: TeamStats;
   awayStats: TeamStats;
@@ -169,6 +169,8 @@ export function useLegacyMatchEngine(
   timeScaleRef.current = timeScale;
   const awayRosterRef = useRef(awayRoster);
   awayRosterRef.current = awayRoster;
+  /** Ref sincronizado com state.phase — permite o rAF ler sem closure stale. */
+  const phaseRef = useRef<LegacyMatchState['phase']>('pregame');
 
   const emptyStats: TeamStats = { passesOk: 0, passesAttempt: 0, shots: 0, shotsOn: 0, tackles: 0, km: 0, goals: 0, saves: 0, dribblesOk: 0 };
   const possessionTicksRef = useRef({ home: 0, away: 0 });
@@ -188,7 +190,7 @@ export function useLegacyMatchEngine(
     ballY: 50,
     onBallPlayerId: undefined,
     events: [],
-    phase: 'playing',
+    phase: 'pregame',
     lastEvent: null,
     homeStats: emptyStats,
     awayStats: emptyStats,
@@ -199,6 +201,9 @@ export function useLegacyMatchEngine(
       tactical: { home: 50, away: 50 },
     },
   });
+
+  // Sincroniza phaseRef com state.phase para o rAF ler sem closure stale
+  phaseRef.current = state.phase;
 
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
@@ -244,6 +249,8 @@ export function useLegacyMatchEngine(
         return;
       }
 
+      const isPregame = phaseRef.current === 'pregame';
+
       const hp = homePlayersRef.current;
       const simSt = loop.getSimState();
       const mockLive = buildMockLive(hp, simSt.minute, simSt.homeScore, simSt.awayScore);
@@ -252,7 +259,10 @@ export function useLegacyMatchEngine(
         defensiveLine: 50,
         tempo: 55,
       });
-      loop.step(dt, { tacticalMentality: 55, defensiveLine: 50, tempo: 55 });
+      // Durante pregame: não avança a simulação, apenas renderiza a formação inicial
+      if (!isPregame) {
+        loop.step(dt, { tacticalMentality: 55, defensiveLine: 50, tempo: 55 });
+      }
 
       if (now - lastRenderMs >= RENDER_MS) {
         lastRenderMs = now;
@@ -429,5 +439,7 @@ export function useLegacyMatchEngine(
     playersById: playersByIdRef.current,
     applySkillToPlayer,
     toggleLegacyMode,
+    /** Inicia a partida: transição de 'pregame' → 'playing' (apito do juiz). */
+    startMatch: () => setState(prev => prev.phase === 'pregame' ? { ...prev, phase: 'playing' } : prev),
   };
 }

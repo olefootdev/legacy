@@ -309,6 +309,9 @@ export function FieldViewPreview() {
   //   });
   // }, [engine.homeScore, engine.awayScore, engine.possession, engine.minute]);
 
+  // Normaliza 'pregame' → 'playing' para componentes que não aceitam 'pregame' no tipo phase
+  const displayPhase = engine.phase === 'pregame' ? 'playing' as const : engine.phase;
+
   return (
     <div className="fixed inset-0 z-[200] bg-[#050505] flex flex-col" style={{ touchAction: 'none' }}>
       <style>{`
@@ -347,7 +350,7 @@ export function FieldViewPreview() {
         awayScore={engine.awayScore}
         minute={engine.minute}
         possession={engine.possession}
-        phase={engine.phase}
+        phase={displayPhase}
         formation={formation}
         onFormationChange={setFormation}
         onExit={() => setShowExitConfirm(true)}
@@ -484,7 +487,7 @@ export function FieldViewPreview() {
         )}
         <div
           ref={cameraRef}
-          className="w-full h-full flex flex-col items-stretch justify-end min-h-0"
+          className="relative w-full h-full flex flex-col items-stretch justify-end min-h-0"
           style={{
             transformOrigin: '50% 50%',
             willChange: 'transform',
@@ -505,7 +508,7 @@ export function FieldViewPreview() {
             awayScore={engine.awayScore}
             matchMinute={engine.minute}
             possession={engine.possession}
-            phase={engine.phase}
+            phase={displayPhase}
             showCameraSwitch={viewMode !== 'expert'}
             hideHud={true}
             onCameraChange={(m) => setCamera(m as 'aerial' | 'broadcast')}
@@ -516,12 +519,25 @@ export function FieldViewPreview() {
             className="w-full"
           />
 
+          {/* ── Cerimônia de abertura: botão Apitar ── */}
+          {engine.phase === 'pregame' && engine.legacyModeActive && (
+            <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+              <button
+                className="pointer-events-auto bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold px-8 py-4 rounded-full text-lg shadow-2xl transition-colors"
+                onClick={() => engine.startMatch()}
+                aria-label="Apitar início da partida"
+              >
+                ▶ Apitar
+              </button>
+            </div>
+          )}
+
           {/* ── PressureZoneOverlay — zonas de tensão ── */}
           {viewMode !== 'expert' && (
             <PressureZoneOverlay
               ballX={engine.ballX}
               possession={engine.possession}
-              phase={engine.phase}
+              phase={displayPhase}
             />
           )}
 
@@ -543,7 +559,7 @@ export function FieldViewPreview() {
         {viewMode !== 'expert' && (
           <LegacyMinuteWatermark
             minute={engine.minute}
-            phase={engine.phase}
+            phase={displayPhase}
             momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
             possessionPct={engine.possessionPct}
           />
