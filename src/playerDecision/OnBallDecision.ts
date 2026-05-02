@@ -54,6 +54,7 @@ import { playContinuityScore } from './teamCollectiveState';
 import type { DecisionActionId } from './collectiveIndividualDecision';
 import { evaluateGoalTree } from '@/agents/goap';
 import type { GoalContext as GoapGoalContext } from '@/agents/goap';
+import { isInDesperationMode, getDesperationClearance } from '@/polishAI/desperationBehavior';
 
 // ---------------------------------------------------------------------------
 // GOAP goal bias → macroTilt
@@ -272,6 +273,11 @@ export function decisionDelaySec(speed: DecisionSpeed, pick01: () => number = Ma
 // ---------------------------------------------------------------------------
 
 export function decideOnBall(ctx: DecisionContext): OnBallAction {
+  const role = ctx.self.role ?? '';
+  if (isInDesperationMode(ctx.minute, ctx.scoreDiff, role, ctx.stamina ?? 100)) {
+    const clearance = getDesperationClearance(ctx.self, ctx.attackDir, () => pick01ForDecision(ctx));
+    return { type: 'clearance', targetX: clearance.targetX, targetZ: clearance.targetZ };
+  }
   const reading = buildContextReading(ctx);
   if (ctx.isCarrier && ctx.noteShootCandidate && shouldCountShootCandidate(ctx.self, reading, ctx)) {
     ctx.noteShootCandidate();

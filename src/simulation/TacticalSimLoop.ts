@@ -210,6 +210,14 @@ import {
 import { sfGetSubzone, sfShapeCorrection, sfRoleFromSlot } from '@/smartfield/smartfieldBridge';
 import { deriveTeamCollectiveState, computeLineCohesionDelta, type TeamCollectiveState } from '@/playerDecision/teamCollectiveState';
 import { deriveTeamMorale, type TeamMoraleState } from '@/playerDecision/teamMorale';
+import { clampHeadingChange, computeTurnRadius } from '@/behaviorAI/angularInertia';
+import { createMomentumBuffState, activateMomentumBuff, tickMomentumBuff, isMomentumBuffActive, type MomentumBuffState } from '@/polishAI/momentumBuff';
+import { createTacticalAdaptationState, recordPossessionLoss, recomputeAnchorAdjustment, type TacticalAdaptationState } from '@/behaviorAI/tacticalAdaptation';
+import { applyCaptainInfluence, createCaptainInfluenceState } from '@/behaviorAI/captainInfluence';
+import { shouldShieldBall, computeShieldPosition } from '@/polishAI/shielding';
+import { resolveLooseBall } from '@/polishAI/looseBall';
+import { triggerMissedGoalReaction, triggerGoalCelebration } from '@/polishAI/reactionSignals';
+import { computeFoulArgumentPositions } from '@/polishAI/foulArgument';
 import FanFrustrationSystem, { FrustrationRulesRegistry } from '@/match/fanFrustration/FanFrustrationSystem';
 import { createSeededRng, hashTurnoverSeed, pickPlayAfterTurnover } from './pickPlayAfterTurnover';
 import {
@@ -540,6 +548,11 @@ export class TacticalSimLoop {
   private homeMorale: TeamMoraleState | null = null;
   private awayMorale: TeamMoraleState | null = null;
   private moraleLastComputedTick = -10;
+  private homeMomentumBuff: MomentumBuffState = createMomentumBuffState('home');
+  private awayMomentumBuff: MomentumBuffState = createMomentumBuffState('away');
+  private homeAdaptation: TacticalAdaptationState = createTacticalAdaptationState('home');
+  private awayAdaptation: TacticalAdaptationState = createTacticalAdaptationState('away');
+  private homeCaptainId: string | null = null;
   // Rhythm and visual focus
   private matchRhythm: 'fast' | 'normal' | 'slow' = 'normal';
   private timeScale: number = 1;
@@ -680,6 +693,7 @@ export class TacticalSimLoop {
   syncLive(live: LiveMatchSnapshot | null, manager: TacticalManagerParams) {
     this.liveRef = live;
     if (!live) return;
+    if (live.homeCaptainPlayerId) this.homeCaptainId = live.homeCaptainPlayerId;
 
     if (live.phase !== 'playing') return;
 
@@ -1648,6 +1662,22 @@ export class TacticalSimLoop {
     let tx = x;
     if (this.simState.phase === 'live' && (ag.slotId === 'gol' || ag.role === 'gk')) {
       tx = clampGoalkeeperTargetX(ag.side, half, tx);
+    }
+    // Angular inertia: limit heading change based on speed and agility
+    const speed = ag.vehicle.getSpeed();
+    if (speed > 0.5) {
+      const vx = ag.vehicle.velocity.x;
+      const vz = ag.vehicle.velocity.z;
+      const currentHeading = Math.atan2(vx, vz);
+      const desiredHeading = Math.atan2(tx - ag.vehicle.position.x, z - ag.vehicle.position.z);
+      const clampedHeading = clampHeadingChange(currentHeading, desiredHeading, speed, ag.matchAttrs.velocidade, 1 / 60);
+      const dist = Math.hypot(tx - ag.vehicle.position.x, z - ag.vehicle.position.z);
+      if (dist > 0.5) {
+        tx = ag.vehicle.position.x + Math.sin(clampedHeading) * dist;
+        const tz = ag.vehicle.position.z + Math.cos(clampedHeading) * dist;
+        setArriveTarget(ag, tx, tz, mode);
+        return;
+      }
     }
     setArriveTarget(ag, tx, z, mode);
   }
@@ -2789,6 +2819,18 @@ export class TacticalSimLoop {
         avgFatigue: awayFatigue,
         hasPossession: awayHasBall,
       });
+      // Tick momentum buffs and apply confidence boost if active
+      tickMomentumBuff(this.homeMomentumBuff, this.world.simTime);
+      tickMomentumBuff(this.awayMomentumBuff, this.world.simTime);
+      if (isMomentumBuffActive(this.homeMomentumBuff, this.world.simTime) && this.homeMorale) {
+        this.homeMorale = { ...this.homeMorale, confidence: Math.min(100, this.homeMorale.confidence * this.homeMomentumBuff.confidenceBoost) };
+      }
+      if (isMomentumBuffActive(this.awayMomentumBuff, this.world.simTime) && this.awayMorale) {
+        this.awayMorale = { ...this.awayMorale, confidence: Math.min(100, this.awayMorale.confidence * this.awayMomentumBuff.confidenceBoost) };
+      }
+      // Recompute tactical adaptation anchors
+      recomputeAnchorAdjustment(this.homeAdaptation);
+      recomputeAnchorAdjustment(this.awayAdaptation);
     }
 
     this.runAgentDecisions(
@@ -3529,6 +3571,23 @@ export class TacticalSimLoop {
   // @ts-ignore
   timeScale: this.timeScale ?? 1,
       };
+
+      // Captain influence: boost pressing and defensive line for agents near the captain
+      try {
+        const captainId = side === 'home' ? this.homeCaptainId : null;
+        const captain = captainId ? agents.find((a) => a.id === captainId || (a as any).playerId === captainId) : null;
+        if (captain && captain.id !== ag.id) {
+          const captainState = createCaptainInfluenceState(captain.id);
+          const influences = applyCaptainInfluence(captainState, captain.vehicle.position.x, captain.vehicle.position.z, [{ id: ag.id, x: ag.vehicle.position.x, z: ag.vehicle.position.z }]);
+          const inf = influences.get(ag.id);
+          if (inf) {
+            (decCtx as any).pressingIntensity = Math.min(100, ((decCtx as any).pressingIntensity ?? manager.pressing?.intensity ?? 50) + inf.pressingBoost);
+            (decCtx as any).tacticalDefensiveLine = Math.min(100, ((decCtx as any).tacticalDefensiveLine ?? manager.defensiveLine ?? 50) + inf.defensiveLineBoost);
+          }
+        }
+      } catch (e) {
+        // non-blocking
+      }
 
       // attach a lightweight memory/emotional snapshot for decision consumers
       try {
@@ -4534,6 +4593,14 @@ export class TacticalSimLoop {
     }
 
     const attackDir = getSideAttackDir(carrier.side, this.matchClock.state.half);
+    // Record possession loss zone for tactical adaptation
+    const lossZone = carrier.vehicle.position.x < FIELD_LENGTH * 0.33 ? 'def_third'
+      : carrier.vehicle.position.x < FIELD_LENGTH * 0.67 ? 'center'
+      : carrier.vehicle.position.z < FIELD_WIDTH * 0.33 ? 'right_flank'
+      : carrier.vehicle.position.z > FIELD_WIDTH * 0.67 ? 'left_flank'
+      : 'center';
+    const adaptation = carrier.side === 'home' ? this.homeAdaptation : this.awayAdaptation;
+    recordPossessionLoss(adaptation, lossZone, this.world.simTime);
     const teamSnaps =
       carrier.side === 'home'
         ? this.homeAgents.map((a) => this.toAgentSnapshot(a))
@@ -4876,6 +4943,22 @@ export class TacticalSimLoop {
           : `${m}' — Falta leve de marcação — respira o jogo.`;
     pushSimEvent(this.simState, line);
 
+    // Foul argument: nearby agents move toward the foul point
+    try {
+      const foulX = fouler.vehicle.position.x;
+      const foulZ = fouler.vehicle.position.z;
+      const allAgents = [...this.homeAgents, ...this.awayAgents].map((a) => ({
+        id: a.id, x: a.vehicle.position.x, z: a.vehicle.position.z, side: a.side, role: a.role,
+      }));
+      const argPositions = computeFoulArgumentPositions(foulX, foulZ, allAgents);
+      for (const p of argPositions) {
+        const argAg = this.findAgent(p.agentId);
+        if (argAg) this.safeArrive(argAg, p.targetX, p.targetZ, 'in_play');
+      }
+    } catch (e) {
+      // non-blocking
+    }
+
     const redP =
       foulSeverity === 'ugly'
         ? FOUL_CARD_RED_P_UGLY
@@ -5119,6 +5202,18 @@ export class TacticalSimLoop {
     if (shotOutcome === 'goal') {
       const scoringSide = pend.shooterSide;
       const otherSide: PossessionSide = scoringSide === 'home' ? 'away' : 'home';
+      // Activate momentum buff for the scoring team
+      activateMomentumBuff(scoringSide === 'home' ? this.homeMomentumBuff : this.awayMomentumBuff, this.world.simTime);
+      // Goal celebration reaction signals
+      try {
+        const scorerId = pend.shooterId;
+        const scoringAgents = (scoringSide === 'home' ? this.homeAgents : this.awayAgents)
+          .filter((a) => a.id !== scorerId)
+          .map((a) => ({ id: a.id, x: a.vehicle.position.x, z: a.vehicle.position.z }));
+        triggerGoalCelebration(scorerId, scoringAgents, this.world.simTime);
+      } catch (e) {
+        // non-blocking
+      }
       if (ag) {
         this.bumpRuntimeConfidence(ag, CONFIDENCE_DELTA_GOOD * 0.95);
         pushLastAction(ag.matchRuntime, 'goal');
@@ -5161,6 +5256,16 @@ export class TacticalSimLoop {
       if (ag) {
         pushLastAction(ag.matchRuntime, `shot_${shotOutcome}`);
         this.bumpRuntimeConfidence(ag, -CONFIDENCE_DELTA_BAD * 0.18);
+        // Missed goal reaction: teammates show frustration
+        try {
+          const shooterSide = pend.shooterSide;
+          const teammates = (shooterSide === 'home' ? this.homeAgents : this.awayAgents)
+            .filter((a) => a.id !== ag!.id)
+            .map((a) => ({ id: a.id, x: a.vehicle.position.x, z: a.vehicle.position.z }));
+          triggerMissedGoalReaction(ag.id, teammates, this.ballSys.state.x, this.ballSys.state.z, this.world.simTime);
+        } catch (e) {
+          // non-blocking
+        }
       }
       this.assignBallToDefendingGoalkeeper(pend.defSide, pend.shooterSide, L, `shot_${shotOutcome}`);
       this.skipKickoffBallAssign = true;
@@ -5428,6 +5533,16 @@ export class TacticalSimLoop {
           this.bumpRuntimeConfidence(def, CONFIDENCE_DELTA_GOOD * 0.2);
         }
 
+        // Shielding: carrier may protect the ball and cancel the tackle — check BEFORE emitting possession_change
+        const shieldRng = rngFromSeed(this.simState.simulationSeed, `shield:${carrier.id}:${def.id}:${tickK}`);
+        if (shouldShieldBall(carrierSnap, defSnap, carrierSnap.drible, defSnap.marcacao, () => shieldRng.nextUnit())) {
+          const shieldOffset = computeShieldPosition(carrier.vehicle.position.x, carrier.vehicle.position.z, def.vehicle.position.x, def.vehicle.position.z);
+          carrier.vehicle.position.x = Math.max(1, Math.min(FIELD_LENGTH - 1, carrier.vehicle.position.x + shieldOffset.dx));
+          carrier.vehicle.position.z = Math.max(1, Math.min(FIELD_WIDTH - 1, carrier.vehicle.position.z + shieldOffset.dz));
+          // Shield succeeded — no possession change
+          return;
+        }
+
         L.push({ type: 'possession_change', payload: { to: def.side, reason: 'tackle' } });
 
         this.simState.possession = def.side;
@@ -5644,6 +5759,23 @@ export class TacticalSimLoop {
     if (best) {
       const stealX = this.ballSys.state.x;
       const stealZ = this.ballSys.state.z;
+      // Loose ball resolution: role-aware decision (attacker shoots, defender clears)
+      try {
+        const attackDirLb = getSideAttackDir(best.side, this.matchClock.state.half);
+        const allSnaps = [...this.homeAgents, ...this.awayAgents].map((a) => this.toAgentSnapshot(a));
+        const lbRng = rngFromSeed(this.simState.simulationSeed, `loose_ball:${stealX.toFixed(1)}:${stealZ.toFixed(1)}:${Math.floor(this.world.simTime * 10)}`);
+        const lbDecisions = resolveLooseBall(stealX, stealZ, allSnaps, attackDirLb, () => lbRng.nextUnit());
+        const bestDecision = lbDecisions.find((d) => d.agentId === best!.id);
+        if (bestDecision?.action === 'clear') {
+          // Defender clears — give ball but steer away from goal
+          const clearDir = attackDirLb === 1 ? -1 : 1;
+          const clearX = Math.max(5, Math.min(FIELD_LENGTH - 5, stealX + clearDir * 20));
+          const clearZ = FIELD_WIDTH / 2 + (lbRng.nextUnit() - 0.5) * 30;
+          this.safeArrive(best, clearX, clearZ, 'in_play');
+        }
+      } catch (e) {
+        // non-blocking
+      }
       const possChanged = this.simState.possession !== best.side;
       this.ballSys.giveTo(best.id, stealX, stealZ);
       this.simState.carrierId = best.id;
@@ -5802,6 +5934,16 @@ export class TacticalSimLoop {
       homeTacticalDiscipline: avgDiscipline(this.homeAgents),
       awayTacticalDiscipline: avgDiscipline(this.awayAgents),
     };
+  }
+
+  /**
+   * Ativa o buff de momentum do Legacy Mode para o time da casa.
+   * durationSec: duração base em segundos de simulação (default 300 = 5min).
+   * Escalonado externamente por sessionsCompleted antes de chamar.
+   */
+  activateLegacyModeBuff(durationSec = 300): void {
+    this.homeMomentumBuff.durationSec = durationSec;
+    activateMomentumBuff(this.homeMomentumBuff, this.world.simTime);
   }
 
   /** Returns home player IDs whose stamina is critically low (≤ threshold). Used for auto-sub hints. */

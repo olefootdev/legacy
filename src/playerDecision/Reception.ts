@@ -2,6 +2,7 @@ import type { DecisionContext, ReceptionType, ReceptionResult, PressureReading }
 import { scanPressure, identifyFieldZone, buildContextReading } from './ContextScanner';
 import { pick01ForDecision } from './decisionRng';
 import { prethinkingReceptionSuccessPenalty } from './prethinking';
+import { computeFirstTouchError, doesLooseControl } from '@/behaviorAI/firstTouchErrors';
 
 /**
  * Reception / ball control phase.
@@ -15,11 +16,17 @@ export function resolveReception(ctx: DecisionContext): ReceptionResult {
   const composure = profile.composure;
 
   const receptionType = chooseReceptionType(pressure, profile, drible, ctx);
-  const success = rollReceptionSuccess(receptionType, pressure, drible, composure, ctx);
+  let success = rollReceptionSuccess(receptionType, pressure, drible, composure, ctx);
   const duration = receptionDuration(receptionType, pressure, success, ctx);
+
+  const ballSpeed = (ctx.ballControlDifficulty ?? 0) * 25;
+  const rng = () => pick01ForDecision(ctx);
+  if (success && doesLooseControl(ctx.self.drible, ballSpeed, rng)) {
+    success = false;
+  }
   const errorDisplacement = success
     ? { dx: 0, dz: 0 }
-    : rollFumbleDisplacement(pressure, ctx);
+    : computeFirstTouchError(ctx.self.drible, ballSpeed, rng);
 
   return { type: receptionType, success, durationSec: duration, errorDisplacement };
 }

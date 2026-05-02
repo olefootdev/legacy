@@ -32,6 +32,9 @@ import {
   buildAttackingInputs,
   evaluateAttackingUtility,
 } from './utilityAttackingSupport';
+import {
+  shouldStartDummyRun,
+} from '@/polishAI/dummyRun';
 
 /** Bote só se o duelo de marcação ou a antecipação favorecer — evita exposição burra. */
 function shouldPressCarrierByDuel(ctx: DecisionContext, reading: ContextReading): boolean {
@@ -70,6 +73,20 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
         targetId: target.id,
         targetX: target.x,
         targetZ: target.z,
+      };
+    }
+  }
+
+  // Dummy run: atacante no terço ofensivo com 2+ defensores próximos faz corrida de distração
+  const attackRoles = new Set(['attack', 'fw', 'st', 'rw', 'lw', 'ponta', 'atacante', 'pe', 'pd']);
+  if (teamHasBall && attackRoles.has(ctx.self.role ?? '') && ctx.self.role !== 'gk') {
+    if (shouldStartDummyRun(ctx.self.x, ctx.self.z, ctx.opponents, true, ctx.attackDir, () => pick01ForDecision(ctx))) {
+      const runDepth = 15 + pick01ForDecision(ctx) * 10;
+      const lateralOffset = (pick01ForDecision(ctx) - 0.5) * 20;
+      return {
+        type: 'attack_depth',
+        targetX: Math.max(5, Math.min(FIELD_LENGTH - 5, ctx.self.x + ctx.attackDir * runDepth)),
+        targetZ: Math.max(5, Math.min(FIELD_WIDTH - 5, ctx.self.z + lateralOffset)),
       };
     }
   }

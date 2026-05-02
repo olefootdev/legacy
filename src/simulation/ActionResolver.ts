@@ -15,6 +15,7 @@ import {
   type PassOption,
 } from './InteractionResolver';
 import { rngFromSeed } from '@/match/rngDraw';
+import { applyShotVariance } from '@/polishAI/shotVariance';
 import type { HomeStaffMatchBonuses } from '@/systems/staffBenefits';
 import {
   ACTION_SOFT_CAP_CROSS,
@@ -654,6 +655,9 @@ export function resolveShotForPossession(
   if (carrier.side === 'home' && homeStaff) {
     xG = Math.max(0.02, Math.min(SHOT_XG_CAP, xG + homeStaff.shotXgAdd01Home));
   }
+  const shotVarRng = rngFromSeed(baseSeed, `shot-variance:${carrier.id}:${tickKey}`);
+  const shotVarResult = applyShotVariance(xG, () => shotVarRng.nextUnit());
+  xG = shotVarResult.adjustedXG;
 
   const rngCrit = rngFromSeed(baseSeed, `shot-xgcrit:${carrier.id}:${tickKey}`);
   let xGCriticalBoosted = false;
