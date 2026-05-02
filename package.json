@@ -44,7 +44,7 @@
     "genesis:import-local-photos-to-pinata": "node scripts/import-local-players-photos-to-pinata.mjs",
     "genesis:apply-pinata-folder-cid": "node scripts/apply-genesis-from-pinata-folder-cid.mjs",
     "genesis:repair-pinata-token-from-card-url": "node scripts/repair-genesis-pinata-token-from-card-url.mjs",
-    "deploy:cloudflare": "npm run build && wrangler deploy",
+    "deploy:cloudflare": "VITE_OLEFOOT_API_URL=https://legacy-production-de1e.up.railway.app npm run build && wrangler deploy",
     "generate:assets": "tsx scripts/generateAssetsFreepik.ts"
   },
   "dependencies": {
