@@ -449,6 +449,8 @@ export interface DecisionContext {
   simTimeMs?: number;
   decisionDebug?: boolean;
   profile: PlayerProfile;
+  agentProfile?: import('@/agents/types').AgentProfile;
+  teamIntent?: import('@/agents/types').TeamIntent;
   teamPhase: TeamPhase;
   /** Current ball carrier id (any team) */
   carrierId: string | null;

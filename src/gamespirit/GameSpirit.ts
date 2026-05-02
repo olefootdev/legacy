@@ -271,7 +271,8 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     const simTime = ctx.minute * 60;
     tickPressingTrap(_homePressing, simTime);
     const trapBonus = isPressingTrapActive(_homePressing, simTime) ? 0.12 : 0;
-    if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus)) return 'press';
+    const carrierPressResist = ctx.onBallKnowledge ? (ctx.onBallKnowledge.traits.pressIntensity - 1) * 0.06 : 0;
+    if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus - carrierPressResist)) return 'press';
   }
   if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
@@ -305,11 +306,16 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   }
   // Build-up: só joga longo (clear) se realmente sem opção curta.
   // Urgência: quando perdendo no final, evita clear (prefere progress mesmo sem colega livre).
-  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && urgencyByContext <= 0 && Math.random() < 0.22) return 'clear';
+  // Traits do portador (positionKnowledge) escalam as probabilidades base.
+  const pkTraits = ctx.onBallKnowledge?.traits;
+  const clearThreshold = pkTraits ? Math.max(0.10, 0.22 - (pkTraits.offensiveRuns - 1) * 0.04) : 0.22;
+  const progressThreshold = pkTraits ? Math.min(0.38, 0.24 + (pkTraits.offensiveRuns - 1) * 0.05) : 0.24;
+  const recycleThreshold = pkTraits ? Math.max(0.14, 0.28 - (pkTraits.buildUpPreference - 1) * 0.04) : 0.28;
+  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && urgencyByContext <= 0 && Math.random() < clearThreshold) return 'clear';
   if (ctx.possession === 'home' && style.verticality > 0.72 && freeFwd) return 'progress';
-  if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < 0.24) return 'progress';
+  if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < progressThreshold) return 'progress';
   // Urgência: quando perdendo, reduz recycle (prefere avançar mesmo sob pressão moderada).
-  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && urgencyByContext <= 0 && Math.random() < 0.28) return 'recycle';
+  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && urgencyByContext <= 0 && Math.random() < recycleThreshold) return 'recycle';
   /** Sem remate “milagre” do meio-campo: em desespero só remata quem já chegou à zona final. */
   if (ctx.possession === 'home' && losingHome && ctx.minute > 70) {
     // Urgência extrema: aceita chute mesmo sem estar tão aglomerado.
@@ -1122,7 +1128,8 @@ export function gameSpiritTick(
       const carrierDrible = ctx.onBall?.attributes?.drible ?? 50;
       const dribbleUrge = 0.22 + Math.max(0, (carrierDrible - 55) / 200); // 22% base, até ~45% em Driblador top
       if (Math.random() < dribbleUrge && ctx.onBall?.playerId) {
-        const succ = Math.random() < 0.38 + (carrierDrible - 50) / 200; // drible>=90 → ~58% sucesso
+        const trapPenalty = isPressingTrapActive(_awayPressing, ctx.minute * 60) ? 0.08 : 0;
+        const succ = Math.random() < 0.38 + (carrierDrible - 50) / 200 - trapPenalty; // drible>=90 → ~58% sucesso; pressing trap -8%
         L.push({
           type: 'dribble_attempt',
           payload: {

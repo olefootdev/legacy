@@ -7,6 +7,7 @@ import { useGameDispatch } from '@/game/store';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import { LIVE_SIM_SYNC_THROTTLE_MS } from '@/match/matchSimulationTuning';
 import type { HomeStaffMatchBonuses } from '@/systems/staffBenefits';
+import type { PlayerEntity } from '@/entities/types';
 
 export interface Live2dTacticalManagerSlice {
   tacticalMentality: number;
@@ -31,13 +32,19 @@ export function useLive2dTacticalSim(opts: {
   session: number;
   live: LiveMatchSnapshot | null;
   manager: Live2dTacticalManagerSlice;
+  playersById?: Record<string, { positionKnowledge?: { traits: { pressIntensity: number; offensiveRuns: number; riskTaking: number; buildUpPreference: number }; sessionsCompleted: number } }>;
+  entitiesById?: Record<string, PlayerEntity>;
 }) {
   const dispatch = useGameDispatch();
   const loopRef = useRef(new TacticalSimLoop());
   const liveRef = useRef(opts.live);
   const managerRef = useRef(opts.manager);
+  const playersByIdRef = useRef(opts.playersById);
+  const entitiesByIdRef = useRef(opts.entitiesById);
   liveRef.current = opts.live;
   managerRef.current = opts.manager;
+  playersByIdRef.current = opts.playersById;
+  entitiesByIdRef.current = opts.entitiesById;
 
   const truthRef = useRef<MatchTruthSnapshot | null>(null);
   /** Evita fallback para `live.homePlayers` quando `getSnapshot` devolve lista vazia por um instante. */
@@ -52,6 +59,14 @@ export function useLive2dTacticalSim(opts: {
     lastGoodTruthRef.current = null;
     carrierRef.current = null;
     setRenderTick(0);
+    // Injeta traits do positionKnowledge nos profiles dos agentes ao iniciar sessão.
+    if (playersByIdRef.current) {
+      loopRef.current.applyPositionKnowledgeTraits(playersByIdRef.current);
+    }
+    // Injeta AgentProfile completo (skills, spatialAwareness, riskProfile) quando disponível.
+    if (entitiesByIdRef.current) {
+      loopRef.current.applyAgentProfiles(entitiesByIdRef.current);
+    }
   }, [opts.session]);
 
   useEffect(() => {
@@ -75,6 +90,11 @@ export function useLive2dTacticalSim(opts: {
       loop.syncLive(live, managerRef.current);
       if (live?.phase === 'playing') {
         loop.step(dt, managerRef.current);
+        // Sincroniza spiritMomentum (GameSpirit) com MomentumBuffState (TacticalSimLoop).
+        // Garante que momentum forte no loop de minuto ative o buff de confiança/morale no loop 2D.
+        if (live?.spiritMomentum) {
+          loop.syncSpiritMomentum(live.spiritMomentum);
+        }
       }
 
       const snap = loop.getSnapshot();

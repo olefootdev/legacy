@@ -222,18 +222,20 @@ export function AdminFinanceiroPanel() {
   const [treasuryEdit, setTreasuryEdit] = useState('');
   const [escrowEdit, setEscrowEdit] = useState('');
 
-  // Creditar BRO via Supabase (depósito confirmado)
+  // Creditar BRO e/ou EXP via Supabase (depósito confirmado)
   const [creditUserId, setCreditUserId] = useState('');
   const [creditBro, setCreditBro] = useState('');
+  const [creditExp, setCreditExp] = useState('');
   const [creditReason, setCreditReason] = useState('');
   const [creditStatus, setCreditStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
   const [creditMsg, setCreditMsg] = useState('');
 
   const handleCreditBro = async () => {
     const cents = broInputToCents(creditBro);
-    if (!creditUserId.trim() || !cents) {
+    const expAmount = Math.round(Number(creditExp.replace(/\s/g, '').replace(',', '.')) || 0);
+    if (!creditUserId.trim() || (!cents && !expAmount)) {
       setCreditStatus('err');
-      setCreditMsg('user_id e valor BRO são obrigatórios.');
+      setCreditMsg('user_id e pelo menos um valor (BRO ou EXP) são obrigatórios.');
       return;
     }
     const sb = getSupabase();
@@ -245,17 +247,22 @@ export function AdminFinanceiroPanel() {
     setCreditStatus('loading');
     const { error } = await sb.from('wallet_credits').insert({
       user_id: creditUserId.trim(),
-      bro_cents: cents,
-      reason: creditReason.trim() || 'Depósito confirmado pelo admin',
+      bro_cents: cents || 0,
+      exp_amount: expAmount,
+      reason: creditReason.trim() || 'Crédito confirmado pelo admin',
     });
     if (error) {
       setCreditStatus('err');
       setCreditMsg(error.message);
     } else {
+      const parts = [];
+      if (cents) parts.push(`${formatBroFromCents(cents)} BRO`);
+      if (expAmount) parts.push(`${expAmount.toLocaleString('pt-BR')} EXP`);
       setCreditStatus('ok');
-      setCreditMsg(`✓ ${formatBroFromCents(cents)} BRO creditados. O jogador receberá ao próximo login.`);
+      setCreditMsg(`✓ ${parts.join(' + ')} creditados. O jogador receberá ao próximo login.`);
       setCreditUserId('');
       setCreditBro('');
+      setCreditExp('');
       setCreditReason('');
     }
   };
@@ -1411,7 +1418,7 @@ export function AdminFinanceiroPanel() {
         <div className="space-y-4">
           <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
             <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-yellow/90">
-              Creditar BRO — depósito confirmado
+              Creditar BRO / EXP — depósito confirmado
             </h3>
             <p className="text-[11px] text-white/45">
               Insere um crédito na tabela <code>wallet_credits</code> do Supabase.
@@ -1429,16 +1436,29 @@ export function AdminFinanceiroPanel() {
               />
             </label>
 
-            <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
-              Valor BRO
-              <input
-                type="text"
-                value={creditBro}
-                onChange={(e) => setCreditBro(e.target.value)}
-                placeholder="ex: 50.00"
-                className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/20"
-              />
-            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
+                Valor BRO (opcional)
+                <input
+                  type="text"
+                  value={creditBro}
+                  onChange={(e) => setCreditBro(e.target.value)}
+                  placeholder="ex: 50.00"
+                  className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/20"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
+                Valor EXP (opcional)
+                <input
+                  type="text"
+                  value={creditExp}
+                  onChange={(e) => setCreditExp(e.target.value)}
+                  placeholder="ex: 500000"
+                  className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-white placeholder:text-white/20"
+                />
+              </label>
+            </div>
 
             <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-white/45">
               Motivo (opcional)
@@ -1457,7 +1477,7 @@ export function AdminFinanceiroPanel() {
               disabled={creditStatus === 'loading'}
               className="rounded-lg bg-neon-yellow px-4 py-2 text-xs font-bold uppercase text-black hover:bg-yellow-300 disabled:opacity-50"
             >
-              {creditStatus === 'loading' ? 'A processar…' : 'Emitir crédito BRO'}
+              {creditStatus === 'loading' ? 'A processar…' : 'Emitir crédito'}
             </button>
 
             {creditStatus === 'ok' && (

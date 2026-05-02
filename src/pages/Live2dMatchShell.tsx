@@ -767,6 +767,8 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
     session,
     live,
     manager,
+    playersById,
+    entitiesById: playersById,
   });
 
   const truthSnapRef = useRef(truthSnap);

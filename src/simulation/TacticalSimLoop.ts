@@ -3,6 +3,7 @@ import { FOOTBALL_TOTAL_SECONDS } from '@/engine/types';
 import type { MatchTruthPhase, MatchTruthPlayer, CameraCue } from '@/bridge/matchTruthSchema';
 import { Vehicle } from 'yuka';
 import { MatchTruthWorld } from './MatchTruthWorld';
+import { createAgentProfile } from '@/agents/AgentProfileFactory';
 import {
   MatchPlayFsm,
   MATCH_OPENING_KICKOFF_WAIT_SEC,
@@ -553,6 +554,7 @@ export class TacticalSimLoop {
   private homeAdaptation: TacticalAdaptationState = createTacticalAdaptationState('home');
   private awayAdaptation: TacticalAdaptationState = createTacticalAdaptationState('away');
   private homeCaptainId: string | null = null;
+  private agentProfileCache: Map<string, import('@/agents/types').AgentProfile> = new Map();
   // Rhythm and visual focus
   private matchRhythm: 'fast' | 'normal' | 'slow' = 'normal';
   private timeScale: number = 1;
@@ -3497,6 +3499,8 @@ export class TacticalSimLoop {
         simTimeMs: this.world.simTime * 1000,
         decisionDebug: DECISION_DEBUG,
         profile: ag.profile,
+        agentProfile: this.agentProfileCache.get(ag.id),
+        teamIntent: side === 'home' ? this.homeTeamIntent : this.awayTeamIntent,
         teamPhase,
         carrierId: this.simState.carrierId,
         carrierJustChanged,
@@ -5947,6 +5951,21 @@ export class TacticalSimLoop {
   }
 
   /**
+   * Sincroniza spiritMomentum (GameSpirit, -1..+1) com MomentumBuffState (TacticalSimLoop).
+   * Chamado por runMatchMinute após cada tick do GameSpirit.
+   * Threshold 0.4: momentum forte → ativa buff de confiança/morale no loop 2D.
+   */
+  syncSpiritMomentum(spiritMomentum: { home: number; away: number }): void {
+    const THRESHOLD = 0.4;
+    if (spiritMomentum.home >= THRESHOLD && !isMomentumBuffActive(this.homeMomentumBuff, this.world.simTime)) {
+      activateMomentumBuff(this.homeMomentumBuff, this.world.simTime);
+    }
+    if (spiritMomentum.away >= THRESHOLD && !isMomentumBuffActive(this.awayMomentumBuff, this.world.simTime)) {
+      activateMomentumBuff(this.awayMomentumBuff, this.world.simTime);
+    }
+  }
+
+  /**
    * Fase 3.2 — Injeta boost de decisão baseado no positionKnowledge de cada agente.
    * Chamado pelo useLegacyMatchEngine ao ativar Legacy Mode.
    * playersById: mapa de PlayerEntity com positionKnowledge real.
@@ -5979,6 +5998,47 @@ export class TacticalSimLoop {
 
       this.executionBoostUntil.set(ag.id, until);
       this.executionBoostImpact01.set(ag.id, Math.min(0.95, impact01 * sessionMult));
+    }
+  }
+
+  /**
+   * Injeta traits do positionKnowledge diretamente no PlayerProfile de cada agente home.
+   * Converte riskTaking/offensiveRuns/buildUpPreference (0–2, neutro=1) para os campos
+   * equivalentes do PlayerProfile (0–1), de forma que decisões TypeScript locais os usem
+   * sem depender do modelo de IA.
+   * Chamado na inicialização do match e ao ativar Legacy Mode.
+   */
+  applyPositionKnowledgeTraits(
+    playersById: Record<string, { positionKnowledge?: { traits: { pressIntensity: number; offensiveRuns: number; riskTaking: number; buildUpPreference: number }; sessionsCompleted: number } }>,
+  ): void {
+    for (const ag of this.homeAgents) {
+      const pk = playersById[ag.id]?.positionKnowledge;
+      if (!pk || pk.sessionsCompleted === 0) continue;
+      const t = pk.traits;
+      // Mapeia 0–2 (neutro=1) para 0–1 (neutro=0.5) com clamp
+      const toProfile = (v: number) => Math.max(0, Math.min(1, v / 2));
+      ag.profile = {
+        ...ag.profile,
+        riskAppetite: toProfile(t.riskTaking),
+        verticality: toProfile(t.offensiveRuns),
+        possessionBias: toProfile(2 - t.buildUpPreference), // buildUp alto → menos posse-bias
+      };
+      ag.decision = new PlayerDecisionEngine(ag.profile);
+    }
+  }
+
+  /**
+   * Popula o cache de AgentProfile para todos os jogadores home.
+   * Chamado pelo useLive2dTacticalSim na inicialização do match.
+   * playersById: mapa de PlayerEntity completo (com atributos, skills, arquétipo).
+   */
+  applyAgentProfiles(
+    playersById: Record<string, import('@/entities/types').PlayerEntity>,
+  ): void {
+    for (const ag of [...this.homeAgents, ...this.awayAgents]) {
+      const entity = playersById[ag.id];
+      if (!entity) continue;
+      this.agentProfileCache.set(ag.id, createAgentProfile(entity));
     }
   }
 

@@ -1,5 +1,10 @@
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import {
+  calculateTacticalRadius,
+  calculatePlayerAwareness,
+  findBestPassTarget,
+} from '@/match/tacticalAwareness';
+import {
   findPassOptions,
   evaluateShot,
   nearestOpponentPressure01,
@@ -295,6 +300,31 @@ export function decideOnBallWithIntention(
   /** Duelo local vs o adversário mais relevante — inclina chooseAction / instinto sem substituir o pipeline. */
   const carrierDuel = evaluateCarrierLocalDuel(ctx, reading);
   let passOptions = findPassOptions(ctx.self, ctx.teammates, ctx.opponents, ctx.attackDir);
+
+  // Enriquece passOptions com awareness tático: promove o alvo com mais suporte espacial.
+  // Converte AgentSnapshot (x/z) → PitchPlayerState (x/y) para compatibilidade com tacticalAwareness.
+  if (ctx.teammates.length > 1 && ctx.opponents.length > 0) {
+    const toPS = (a: AgentSnapshot) => ({ playerId: a.id, x: a.x, y: a.z, role: a.role, fatigue: a.stamina ?? 0, attributes: undefined });
+    const carrierPS = toPS(ctx.self);
+    const teammatePS = ctx.teammates.map(toPS);
+    const opponentPS = ctx.opponents.map(toPS);
+    const awarenessMap = new Map(
+      teammatePS.map((t) => [
+        t.playerId,
+        calculatePlayerAwareness(t as any, teammatePS as any, opponentPS as any, calculateTacticalRadius(t as any, t.role)),
+      ]),
+    );
+    const bestTarget = findBestPassTarget(carrierPS as any, teammatePS as any, opponentPS as any, awarenessMap);
+    if (bestTarget && passOptions.length > 1) {
+      const idx = passOptions.findIndex((p) => p.targetId === bestTarget.playerId);
+      if (idx > 0) {
+        // Promove o melhor alvo tático para o topo sem descartar os outros
+        const [promoted] = passOptions.splice(idx, 1);
+        passOptions = [promoted!, ...passOptions];
+      }
+    }
+  }
+
   // Respect nudges from FanFrustrationSystem (propagated as transient ctx fields)
   try {
     if ((ctx as any)._nudgeAvoidKeeperPass) {
@@ -528,6 +558,9 @@ export function decideOnBallWithIntention(
       attackUrgency01: attackUrgency01(reading),
       lineOfSight01: reading.lineOfSightScore,
       macroTilt,
+      agentProfile: ctx.agentProfile,
+      teamIntent: ctx.teamIntent,
+      decisionCtx: ctx,
     });
 
     ctx.noteCarrierDecisionDebug?.({

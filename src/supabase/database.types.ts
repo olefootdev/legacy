@@ -3163,6 +3163,7 @@ export type Database = {
         Row: {
           applied_at: string | null
           bro_cents: number
+          exp_amount: number
           created_at: string
           id: string
           reason: string
@@ -3170,7 +3171,8 @@ export type Database = {
         }
         Insert: {
           applied_at?: string | null
-          bro_cents: number
+          bro_cents?: number
+          exp_amount?: number
           created_at?: string
           id?: string
           reason?: string
@@ -3179,6 +3181,7 @@ export type Database = {
         Update: {
           applied_at?: string | null
           bro_cents?: number
+          exp_amount?: number
           created_at?: string
           id?: string
           reason?: string

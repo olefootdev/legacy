@@ -7,6 +7,7 @@ import {
   getEvolvedOverallCap,
 } from '@/entities/playerEvolution';
 import { MANAGER_PROSPECT_EVOLVED_MAX_OVR } from '@/entities/managerProspect';
+import { persistPlayerEvolutionRate } from '@/supabase/playerAdminPatch';
 
 function parseRate(raw: string, fallback: number): number | null {
   const n = Number(raw.replace(',', '.'));
@@ -32,6 +33,7 @@ export function AdminPlayerEvolutionPanel() {
     const parsed = parseRate(rateFor(playerId, currentRate), currentRate ?? 1);
     if (parsed == null) return;
     dispatch({ type: 'ADMIN_PATCH_PLAYER', playerId, partial: { evolutionRate: parsed } });
+    void persistPlayerEvolutionRate(playerId, parsed);
     setRateDraft((d) => {
       const next = { ...d };
       delete next[playerId];

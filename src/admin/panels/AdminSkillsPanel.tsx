@@ -14,6 +14,7 @@ import { FULL_SKILL_CATALOG, getSkillById } from '@/skills/index';
 import type { CoachSkill } from '@/skills/playbookV1';
 import type { PlayerEntity } from '@/entities/types';
 import { cn } from '@/lib/utils';
+import { persistPlayerSkills } from '@/supabase/playerAdminPatch';
 
 const MAX_SKILLS_PER_PLAYER = 3;
 
@@ -82,21 +83,24 @@ export function AdminSkillsPanel() {
   const equipSkill = (skillId: string) => {
     if (!selectedPlayerId || equippedSkills.length >= MAX_SKILLS_PER_PLAYER) return;
     if (equippedSkills.includes(skillId)) return;
-
+    const newSkills = [...equippedSkills, skillId];
     dispatch({
       type: 'ADMIN_PATCH_PLAYER',
       playerId: selectedPlayerId,
-      partial: { skills: [...equippedSkills, skillId] },
+      partial: { skills: newSkills },
     });
+    void persistPlayerSkills(selectedPlayerId, newSkills);
   };
 
   const unequipSkill = (skillId: string) => {
     if (!selectedPlayerId) return;
+    const newSkills = equippedSkills.filter((id) => id !== skillId);
     dispatch({
       type: 'ADMIN_PATCH_PLAYER',
       playerId: selectedPlayerId,
-      partial: { skills: equippedSkills.filter((id) => id !== skillId) },
+      partial: { skills: newSkills },
     });
+    void persistPlayerSkills(selectedPlayerId, newSkills);
   };
 
   return (

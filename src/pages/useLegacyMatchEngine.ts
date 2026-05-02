@@ -403,6 +403,7 @@ export function useLegacyMatchEngine(
     if (loop) {
       loop.activateLegacyModeBuff(buffDurationSec);
       loop.applyLegacyKnowledgeBoosts(byId, buffDurationSec);
+      loop.applyPositionKnowledgeTraits(byId);
       // Marca flag no snapshot para o reducer usar pós-partida
       const simSt = loop.getSimState();
       if (simSt) (simSt as unknown as Record<string, unknown>)['legacyModeWasActive'] = true;

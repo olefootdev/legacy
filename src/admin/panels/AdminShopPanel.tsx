@@ -12,6 +12,7 @@ import {
   type ShopRarity,
   type ShopTabId,
 } from '@/game/shopCatalog';
+import { saveShopCatalogToSupabase } from '@/supabase/platformShopCatalog';
 
 const TABS: ShopTabId[] = ['boosters', 'packs', 'extra'];
 const RARITIES: ShopRarity[] = ['comum', 'raro', 'epico', 'mitico'];
@@ -75,9 +76,12 @@ export function AdminShopPanel() {
     return rows;
   }, [inventory, storeCatalog]);
 
-  const persist = () => {
+  const persist = async () => {
     const next = normalizeShopCatalog(draft);
-    dispatch({ type: 'ADMIN_SET_SHOP_CATALOG', items: next.length ? next : defaultShopCatalog() });
+    const items = next.length ? next : defaultShopCatalog();
+    dispatch({ type: 'ADMIN_SET_SHOP_CATALOG', items });
+    // Persiste no Supabase para todos os managers receberem no próximo boot
+    void saveShopCatalogToSupabase(items);
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 1600);
   };
@@ -86,6 +90,7 @@ export function AdminShopPanel() {
     const d = defaultShopCatalog();
     setDraft(d);
     dispatch({ type: 'ADMIN_SET_SHOP_CATALOG', items: d });
+    void saveShopCatalogToSupabase(d);
   };
 
   const patchAt = (idx: number, partial: Partial<ShopCatalogItem>) => {

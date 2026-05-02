@@ -30,6 +30,7 @@ import { createOlefootLeague } from '@/match/olefootLeague';
 import { formatRoundTime, getTimeUntilNextRound } from '@/match/globalRoundScheduler';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { cn } from '@/lib/utils';
+import { persistGlobalLeagueState } from '@/supabase/globalLeagueState';
 
 export function AdminGlobalPanel() {
   const dispatch = useGameDispatch();
@@ -79,21 +80,25 @@ export function AdminGlobalPanel() {
       type: 'CREATE_GLOBAL_ROUND',
       scheduledKickoffMs: nextKickoffMs,
     });
+    void persistGlobalLeagueState(newLeague);
   };
 
   const handleForceStart = () => {
     if (!currentRound || currentRound.status === 'live') return;
     dispatch({ type: 'START_GLOBAL_ROUND' });
+    if (olefootLeague) void persistGlobalLeagueState(olefootLeague);
   };
 
   const handleForceFinish = () => {
     if (!currentRound || currentRound.status !== 'live') return;
     dispatch({ type: 'FINISH_GLOBAL_ROUND', nowMs: Date.now() });
+    if (olefootLeague) void persistGlobalLeagueState(olefootLeague);
   };
 
   const handleForceAdvance = () => {
     if (!currentRound || currentRound.status !== 'finished') return;
     dispatch({ type: 'ADVANCE_GLOBAL_ROUND', nowMs: Date.now() });
+    if (olefootLeague) void persistGlobalLeagueState(olefootLeague);
   };
 
   const handleResetLeague = () => {

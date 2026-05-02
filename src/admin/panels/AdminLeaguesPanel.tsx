@@ -18,6 +18,7 @@ import {
 } from '@/match/adminLeagues';
 import { AdminNewLeagueModal } from '@/admin/components/AdminNewLeagueModal';
 import { cn } from '@/lib/utils';
+import { persistAdminLeague, removeAdminLeague, setAdminPrimaryLeague } from '@/supabase/adminLeagues';
 
 export function AdminLeaguesPanel() {
   const dispatch = useGameDispatch();
@@ -46,7 +47,9 @@ export function AdminLeaguesPanel() {
   };
 
   const saveLeague = (lg: AdminLeagueConfig) => {
+    const isPrimary = adminPrimaryLeagueId === lg.id;
     dispatch({ type: 'ADMIN_UPSERT_LEAGUE', league: lg });
+    void persistAdminLeague(lg, isPrimary);
     discardDraft(lg.id);
   };
 
@@ -67,6 +70,7 @@ export function AdminLeaguesPanel() {
         clubName={club.name}
         onCreate={(league) => {
           dispatch({ type: 'ADMIN_UPSERT_LEAGUE', league });
+          void persistAdminLeague(league, adminLeagues.length === 0);
           setExpandedId(league.id);
         }}
       />
@@ -303,7 +307,10 @@ export function AdminLeaguesPanel() {
                   <div className="flex flex-wrap items-end gap-2">
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'ADMIN_SET_PRIMARY_LEAGUE', id: lg.id })}
+                      onClick={() => {
+                        dispatch({ type: 'ADMIN_SET_PRIMARY_LEAGUE', id: lg.id });
+                        void setAdminPrimaryLeague(lg.id);
+                      }}
                       className={cn(
                         'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold uppercase',
                         isPrimary
@@ -323,6 +330,7 @@ export function AdminLeaguesPanel() {
                         }
                         if (!window.confirm(`Eliminar "${d.name}"?`)) return;
                         dispatch({ type: 'ADMIN_REMOVE_LEAGUE', id: lg.id });
+                        void removeAdminLeague(lg.id);
                         discardDraft(lg.id);
                         setExpandedId(null);
                       }}

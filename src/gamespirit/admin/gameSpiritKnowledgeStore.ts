@@ -1,7 +1,10 @@
 /**
- * Conhecimento editável pelo Admin — persistido em localStorage.
- * Honesto: até haver ingestão no motor, isto é fonte de verdade para ti + export JSON para o repo.
+ * Conhecimento editável pelo Admin — persistido em localStorage E Supabase.
+ * localStorage: acesso síncrono imediato no painel.
+ * Supabase: fonte de verdade para o servidor Hono e outros clientes.
  */
+
+import { saveGameSpiritKnowledge } from '@/supabase/gameSpiritKnowledge';
 
 export const GAME_SPIRIT_KNOWLEDGE_KEY = 'olefoot-gamespirit-knowledge-v2';
 
@@ -197,6 +200,8 @@ export function loadKnowledge(): GameSpiritKnowledgeRoot {
 
 export function saveKnowledge(root: GameSpiritKnowledgeRoot): void {
   localStorage.setItem(GAME_SPIRIT_KNOWLEDGE_KEY, JSON.stringify(root));
+  // Persiste no Supabase para o servidor Hono e outros clientes
+  void saveGameSpiritKnowledge(root);
 }
 
 export function exportKnowledgeJson(root: GameSpiritKnowledgeRoot): string {

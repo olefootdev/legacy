@@ -17,6 +17,7 @@ import {
   type NormalizedTacticalStyle,
   type TeamTacticalStyle,
 } from '@/tactics/playingStyle';
+import { applyAgentBiasToScore } from '@/agents/agentDecisionIntegration';
 
 export type TacticalRole = 'zagueiro' | 'lateral' | 'volante' | 'meia' | 'ponta' | 'atacante' | 'goleiro';
 export type CognitiveArchetype = MatchCognitiveArchetype;
@@ -326,6 +327,12 @@ export function chooseAction(
     lineOfSight01?: number;
     /** Inclinação da camada macro (cérebro do portador) antes do score coletivo. */
     macroTilt?: Partial<Record<DecisionActionId, number>>;
+    /** Perfil individual do agente — aplica bias de spatialAwareness, skills, riskProfile, etc. */
+    agentProfile?: import('@/agents/types').AgentProfile;
+    /** Intenção tática do time — aplica bias coletivo sobre as ações. */
+    teamIntent?: import('@/agents/types').TeamIntent;
+    /** Contexto de decisão — necessário para applyAgentBiasToScore. */
+    decisionCtx?: import('./types').DecisionContext;
   },
 ): DecisionPick {
   const scored: ScoredAction[] = [];
@@ -388,10 +395,13 @@ export function chooseAction(
       + attackPush
       + losMoveBonus
       + macroNudge * 0.34;
+    const finalScore = (zoneOpts?.agentProfile && zoneOpts.decisionCtx)
+      ? applyAgentBiasToScore(score, zoneOpts.agentProfile, zoneOpts.teamIntent, option.id, zoneOpts.decisionCtx as any)
+      : score;
     const reason = `${option.id}: fit=${tacticalFit.toFixed(2)} cap=${capability.toFixed(2)} bias=${bias.toFixed(2)} risk=${riskPenalty.toFixed(2)} zone=${zb.toFixed(2)}/${zp.toFixed(2)} style=${styleBias.toFixed(2)} macro=${macroNudge.toFixed(2)}`;
-    scored.push({ id: option.id, score, reason });
-    if (score > bestScore) {
-      bestScore = score;
+    scored.push({ id: option.id, score: finalScore, reason });
+    if (finalScore > bestScore) {
+      bestScore = finalScore;
       best = option;
       bestReason = reason;
     }

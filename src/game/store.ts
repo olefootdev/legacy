@@ -7,6 +7,7 @@ import { insertMatch } from '@/supabase/matchPersistence';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { persistGlobalLeagueSnapshot } from '@/supabase/globalLeague';
 import { persistManagerSquad } from '@/supabase/managerSquad';
+import { persistManagerGameState, type ManagerGameStateSnapshot } from '@/supabase/managerGameState';
 
 const GLOBAL_LEAGUE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'INIT_GLOBAL_LEAGUE_MVP',
@@ -18,6 +19,25 @@ const GLOBAL_LEAGUE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'FINISH_GLOBAL_LEAGUE_ROUND',
   'APPLY_GLOBAL_PROMOTION_RELEGATION',
   'RESET_GLOBAL_LEAGUE_MVP',
+]);
+
+// Actions que disparam persistência dos slices críticos no Supabase
+const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
+  'APPLY_MATCH_CONSEQUENCES',
+  'FINALIZE_MATCH',
+  'UPGRADE_STRUCTURE',
+  'UNLOCK_TROPHY',
+  'GRANT_EARNED_EXP',
+  'ADMIN_GRANT_RESOURCES',
+  'SET_OLEFOOT_LEAGUE',
+  'SHOP_PURCHASE_ITEM',
+  'APPLY_PLAYER_HEALTH_EVENTS',
+  'TICK_TRAINING',
+  'SET_STAFF',
+  'SAVE_TACTIC',
+  'DELETE_TACTIC',
+  'SET_COMPETITIVE_RANKING',
+  'UPDATE_OLEFOOT_RANKED',
 ]);
 
 type Listener = () => void;
@@ -71,7 +91,50 @@ export function applyHydratedSquad(input: {
   emit();
 }
 
-// ─── Debounced manager squad persistence ─────────────────────────────
+/** Hidrata slices críticos vindos do Supabase sem reentrar no reducer. */
+export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
+  const local = state;
+  const hasLocalResults = local.results && local.results.length > 0;
+  const hasLocalStructures = local.structures && Object.values(local.structures).some((v) => (v as number) > 1);
+  const hasLocalTrophies = local.memorableTrophyUnlockedIds && local.memorableTrophyUnlockedIds.length > 0;
+
+  state = {
+    ...local,
+    structures:                 (!hasLocalStructures && remote.structures)         ? remote.structures         : local.structures,
+    leagueSeason:               remote.leagueSeason                                ? remote.leagueSeason       : local.leagueSeason,
+    results:                    (!hasLocalResults && remote.results)               ? remote.results            : local.results,
+    memorableTrophyUnlockedIds: (!hasLocalTrophies && remote.trophyIds)            ? remote.trophyIds          : local.memorableTrophyUnlockedIds,
+    competitiveRanking:         remote.competitiveRanking                          ?? local.competitiveRanking,
+    olefootRanked:              remote.olefootRanked                               ?? local.olefootRanked,
+    playerHealth:               remote.playerHealth                                ?? local.playerHealth,
+    playerSeasonLedger:         remote.playerSeasonLedger                          ?? local.playerSeasonLedger,
+    playerMoral:                remote.playerMoral                                 ?? local.playerMoral,
+    shopInventory:              remote.shopInventory                               ?? local.shopInventory,
+    olefootLeague:              remote.olefootLeague                               ?? local.olefootLeague,
+    managerRelationByPlayer:    remote.managerRelation                             ?? local.managerRelationByPlayer,
+    manager: {
+      ...local.manager,
+      savedTactics: remote.savedTactics ?? local.manager.savedTactics,
+      staff:        remote.staff        ?? local.manager.staff,
+    },
+  };
+  saveGameState(state);
+  emit();
+}
+
+// ─── Debounced manager_game_state persistence ─────────────────────────
+let gameStatePersistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleGameStatePersist(): void {
+  if (!isSupabaseConfigured()) return;
+  if (gameStatePersistTimer) clearTimeout(gameStatePersistTimer);
+  gameStatePersistTimer = setTimeout(() => {
+    gameStatePersistTimer = null;
+    void persistManagerGameState(state);
+  }, 2000);
+}
+
+
 let lastPersistedPlayersRef: OlefootGameState['players'] | null = null;
 let lastPersistedLineupRef: OlefootGameState['lineup'] | null = null;
 let lastPersistedFormation: OlefootGameState['manager']['formationScheme'] | null = null;
@@ -123,6 +186,10 @@ export function dispatchGame(action: GameAction): void {
 
   if (GLOBAL_LEAGUE_PERSIST_ACTIONS.has(action.type) && state.globalLeagueMVP) {
     void persistGlobalLeagueSnapshot(state.globalLeagueMVP);
+  }
+
+  if (GAME_STATE_PERSIST_ACTIONS.has(action.type)) {
+    scheduleGameStatePersist();
   }
 
   scheduleManagerSquadPersist();

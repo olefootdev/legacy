@@ -215,8 +215,8 @@ export function Team() {
       const pl = playersById[pid];
       if (pl) next[slot.id] = { ...playerToCardView(pl, maxOvr), id: pl.id };
     }
-    setLineupDirty(true);
     setLineup(next);
+    setLineupDirty(true);
     setSelectedSlotId(null);
     setSaveBanner({ kind: 'success', text: res.note });
   };

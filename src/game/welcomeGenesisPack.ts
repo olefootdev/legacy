@@ -11,12 +11,31 @@ import {
 import { isFeatureEnabled, loadPlatformConfigOnce } from '@/admin/platformConfigStore';
 
 /** Incrementar quando mudar regras do pack (re-entrega controlada no futuro). */
-export const WELCOME_GENESIS_PACK_VERSION = 1;
+export const WELCOME_GENESIS_PACK_VERSION = 2;
 
 const WELCOME_CONTRACT_MATCHES = 70;
 const WELCOME_PACK_TAG = 'welcomepack';
 const WELCOME_BENCH_COUNT = 9; // 11 starters + 9 bench = 20 total (entrega a lista WP inteira)
 const WELCOME_EXP_GRANT = 500_000; // saldo inicial de EXP pra cada manager que abre o welcome pack
+
+/**
+ * Verifica server-side se este manager já recebeu o welcome pack.
+ * Guard primário — independente do localStorage.
+ */
+async function hasServerGrant(): Promise<boolean> {
+  const sb = getSupabase();
+  if (!sb) return false;
+  const { data: sessData } = await sb.auth.getSession();
+  const uid = sessData?.session?.user?.id ?? null;
+  if (!uid) return false;
+  const { data, error } = await sb
+    .from('welcome_pack_grants')
+    .select('user_id')
+    .eq('user_id', uid)
+    .maybeSingle();
+  if (error) return false;
+  return data !== null;
+}
 
 /**
  * Reserva atômica de 1 slot via RPC. Retorna null se Supabase off ou sem auth.
@@ -198,9 +217,18 @@ export type WelcomeGenesisPackResult =
  */
 export async function tryGrantWelcomeGenesisPack(): Promise<WelcomeGenesisPackResult> {
   const st0 = getGameState();
-  if ((st0.userSettings.welcomeGenesisPackVersion ?? 0) >= WELCOME_GENESIS_PACK_VERSION) {
-    return { ok: false, reason: 'already_granted' };
+
+  // Guard server-side primário — independente do localStorage
+  if (isSupabaseConfigured()) {
+    const alreadyGranted = await hasServerGrant();
+    if (alreadyGranted) return { ok: false, reason: 'already_granted' };
+  } else {
+    // Fallback local apenas quando Supabase não está configurado
+    if ((st0.userSettings.welcomeGenesisPackVersion ?? 0) >= WELCOME_GENESIS_PACK_VERSION) {
+      return { ok: false, reason: 'already_granted' };
+    }
   }
+
   if (Object.keys(st0.players).length > 0) {
     return { ok: false, reason: 'squad_not_empty' };
   }

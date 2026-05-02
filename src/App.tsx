@@ -14,6 +14,8 @@ import { GenesisTestSquadsHydrate } from './game/GenesisTestSquadsHydrate';
 import { AnnouncementsHydrate } from './game/AnnouncementsHydrate';
 import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
+import { ManagerGameStateHydrator } from './game/ManagerGameStateHydrator';
+import { PlatformDataHydrator } from './game/PlatformDataHydrator';
 import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
 import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
@@ -280,6 +282,8 @@ export default function App() {
         <GlobalSchedulerMount />
         <OnboardingCeremony />
         <ManagerSquadHydrator />
+        <ManagerGameStateHydrator />
+        <PlatformDataHydrator />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
         <AnnouncementsHydrate />

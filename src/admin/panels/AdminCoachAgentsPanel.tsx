@@ -29,6 +29,7 @@ import {
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { cn } from '@/lib/utils';
 import type { CoachAgent, CoachPersonality, CoachSpecialty } from '@/coach/types';
+import { saveCoachTemplate, removeCoachTemplate } from '@/supabase/coachTemplates';
 
 const PERSONALITY_OPTIONS: { id: CoachPersonality; label: string; description: string; icon: typeof Shield }[] = [
   {
@@ -118,14 +119,15 @@ export function AdminCoachAgentsPanel() {
 
   const handleSaveCoach = () => {
     if (!editingCoach) return;
-
     dispatch({ type: 'ADMIN_SET_COACH', coach: editingCoach });
+    // Persiste como template global no Supabase
+    void saveCoachTemplate(editingCoach);
     setEditingCoach(null);
   };
 
   const handleDeleteCoach = () => {
     if (!window.confirm('Remover o treinador assistente?')) return;
-
+    if (coach) void removeCoachTemplate(coach.id);
     dispatch({ type: 'ADMIN_REMOVE_COACH' });
   };
 
