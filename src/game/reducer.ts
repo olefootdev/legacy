@@ -604,6 +604,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (st.liveMatch?.phase === 'postgame') {
         st = gameReducer(st, { type: 'FINALIZE_MATCH' });
       }
+
+      // Identifica preferência de visualização para o modo Legacy
+      const viewPreference = (action as any).viewPreference ?? 'expert'; 
+      const isLegacy = action.mode === 'auto' || action.mode === 'quick';
+
       const squadCheck = evaluateOfficialSquad(st.lineup, st.players);
       const skipSquadGateForQuickTest =
         (action.mode === 'quick' || action.mode === 'test2d') && isOfficialSquadGateRelaxedForTests();
@@ -635,6 +640,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         fs,
         { homeName: st.club.name, awayName: st.nextFixture.opponent.name },
       );
+      
+      liveMatch = { ...liveMatch, viewPreference } as any;
       liveMatch = { ...liveMatch, mode: action.mode };
       if (typeof action.simulationSeed === 'number' && Number.isFinite(action.simulationSeed)) {
         liveMatch = { ...liveMatch, simulationSeed: Math.floor(action.simulationSeed) };
@@ -660,7 +667,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         });
         players = { ...players, ...updatedPlayers };
         liveMatch = snapshot;
-      } else if (action.mode === 'quick' || action.mode === 'test2d') {
+        
+        // Se for Expert View no modo Auto, injetamos uma flag para o Ticker de Tensão
+        if (viewPreference === 'expert') {
+           (liveMatch as any).useLegacyTicker = true;
+        }
+      } 
+      else if (action.mode === 'quick' || action.mode === 'test2d') {
         const kickLabel = action.mode === 'test2d' ? '(ao vivo 2D)' : '(partida rápida)';
         const kick: MatchEventEntry = {
           id: uid(),

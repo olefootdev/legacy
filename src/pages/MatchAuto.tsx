@@ -6,8 +6,9 @@ import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { overallFromAttributes } from '@/entities/player';
 import { PenaltyShoot, type PenaltyKeeper, type PenaltyShooter } from '@/components/penalty';
+import { LegacyTicker } from '@/components/match/LegacyTicker';
 
-type UiPhase = 'analyzing' | 'result';
+type UiPhase = 'analyzing' | 'ticker' | 'result';
 
 interface MatchSummary {
   homeShort: string;
@@ -41,6 +42,7 @@ export function MatchAuto() {
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [forfeitOpen, setForfeitOpen] = useState(false);
   const [replayPenaltyId, setReplayPenaltyId] = useState<string | null>(null);
+  const [useTicker, setUseTicker] = useState(false);
 
   const analysisTimeoutRef = useRef<number | null>(null);
   const aliveRef = useRef(true);
@@ -77,6 +79,8 @@ export function MatchAuto() {
             events: lm.events.map((e) => ({ id: e.id, text: e.text, kind: e.kind })),
             homeStats: { ...lm.homeStats },
           });
+          const ticker = (lm as any).useLegacyTicker === true;
+          setUseTicker(ticker);
         }
         dispatch({ type: 'FINALIZE_MATCH' });
       } catch (e) {
@@ -100,7 +104,8 @@ export function MatchAuto() {
       analysisTimeoutRef.current = window.setTimeout(() => {
         analysisTimeoutRef.current = null;
         if (!aliveRef.current) return;
-        setPhase('result');
+        const willUseTicker = lm && (lm as any).useLegacyTicker === true;
+        setPhase(willUseTicker ? 'ticker' : 'result');
       }, remainder);
     }, 0);
   }, [dispatch]);
@@ -243,6 +248,28 @@ export function MatchAuto() {
           <p className="text-xs text-gray-500 text-center max-w-sm">
             O GameSpirit resolve os 90 minutos de uma vez — alvo &lt; 10 segundos (sem relógio ao vivo da Partida Rápida).
           </p>
+        </motion.div>
+      )}
+
+      {phase === 'ticker' && summary && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+          <div className="ole-eyebrow text-center">PARTIDA AUTOMÁTICA</div>
+          <LegacyTicker
+            homeShort={summary.homeShort}
+            awayShort={summary.awayShort}
+            homeScore={summary.homeScore}
+            awayScore={summary.awayScore}
+            events={summary.events}
+            intervalMs={380}
+            onComplete={() => setPhase('result')}
+          />
+          <button
+            type="button"
+            className="w-full py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
+            onClick={() => setPhase('result')}
+          >
+            Pular para resultado →
+          </button>
         </motion.div>
       )}
 
