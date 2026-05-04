@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Send, Bot, User, Sparkles, TrendingUp, Users, Dumbbell, ChevronLeft, Zap, Check } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
@@ -9,20 +10,55 @@ import { suggestTraining, suggestStaff } from '@/coach/coachApi';
 import { createTrainingAction, createUpgradeStaffAction } from '@/coach/coachActions';
 import { cn } from '@/lib/utils';
 
+function buildWelcomeMessage(engine: CoachConversationEngine, coachName: string): ConversationMessage {
+  const ctx = engine.buildTeamContext();
+
+  const fatigueNote =
+    ctx.averageFatigue > 60
+      ? `⚠️ Fadiga média alta (${Math.round(ctx.averageFatigue)}%) — recomendo treino de recuperação.`
+      : ctx.averageFatigue < 30
+        ? `✅ Plantel descansado (${Math.round(ctx.averageFatigue)}%) — bom momento para desenvolvimento.`
+        : `Fadiga média em ${Math.round(ctx.averageFatigue)}% — situação controlada.`;
+
+  const injuryNote = ctx.injuredPlayers > 0
+    ? `\n• ${ctx.injuredPlayers} jogador(es) lesionado(s).`
+    : '';
+
+  const matchNote = ctx.nextMatch
+    ? `\n• Próximo jogo: **${ctx.nextMatch.opponent}** em ${ctx.nextMatch.daysUntil} dia(s).`
+    : '';
+
+  const content = `Olá, manager! Sou o **${coachName}**, teu assistente técnico.
+
+Aqui está o resumo rápido do plantel:
+• ${ctx.totalPlayers} jogadores disponíveis. ${fatigueNote}${injuryNote}${matchNote}
+• Treinos em execução: ${ctx.runningTrainingPlans}
+• Treinador nível ${ctx.staffLevels.treinador ?? 1}
+
+Como posso ajudar? Usa os botões abaixo ou escreve diretamente.`;
+
+  return { role: 'assistant', content, timestamp: Date.now() };
+}
+
 export function CoachChat() {
+  const location = useLocation();
   const gameState = useGameStore((state) => state);
   const dispatch = useGameDispatch();
   const coach = gameState.manager.coach;
 
-  const [messages, setMessages] = useState<ConversationMessage[]>(
-    coach?.conversationContext ?? []
-  );
-  const [input, setInput] = useState('');
+  const conversationEngine = new CoachConversationEngine(coach!, gameState);
+
+  const [messages, setMessages] = useState<ConversationMessage[]>(() => {
+    const saved = coach?.conversationContext ?? [];
+    if (saved.length > 0) return saved;
+    return [buildWelcomeMessage(conversationEngine, coach?.name ?? 'Assistente Técnico')];
+  });
+
+  const draft = (location.state as { draft?: string } | null)?.draft ?? '';
+  const [input, setInput] = useState(draft);
   const [loading, setLoading] = useState(false);
   const [suggestingAction, setSuggestingAction] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const conversationEngine = new CoachConversationEngine(coach!, gameState);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
