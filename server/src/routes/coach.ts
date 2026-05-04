@@ -9,7 +9,7 @@ export const coachRoutes = new Hono();
  * POST /api/coach/chat
  * Coach Agent conversação com Claude Haiku
  */
-coachRoutes.post('/api/coach/chat', rateLimit(60), async (c) => {
+coachRoutes.post('/chat', rateLimit(60), async (c) => {
   if (!hasAnthropicKey()) {
     return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }
@@ -27,20 +27,21 @@ coachRoutes.post('/api/coach/chat', rateLimit(60), async (c) => {
     // Monta system prompt completo
     const systemPrompt = buildCoachSystemPrompt(coach, teamContext);
 
-    // Monta contexto de conversa
-    const conversationContext = (conversationHistory || [])
-      .slice(-10)
-      .map((msg: any) => `${msg.role === 'user' ? 'Manager' : 'Coach'}: ${msg.content}`)
-      .join('\n\n');
-
-    const fullPrompt = conversationContext
-      ? `${conversationContext}\n\nManager: ${sanitizedMessage}`
-      : sanitizedMessage;
+    // Monta histórico nativo da API (roles alternados user/assistant)
+    const history = (conversationHistory || []).slice(-10);
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      ...history.map((msg: any) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content as string,
+      })),
+      { role: 'user', content: sanitizedMessage },
+    ];
 
     const result = await callAnthropic({
       model: 'haiku',
       system: systemPrompt,
-      user: fullPrompt,
+      user: sanitizedMessage,
+      messages,
       maxTokens: 1024,
       temperature: 0.7,
     });
@@ -71,7 +72,7 @@ coachRoutes.post('/api/coach/chat', rateLimit(60), async (c) => {
  * POST /api/coach/suggest-training
  * Sugestão de plano de treino baseado em análise do time
  */
-coachRoutes.post('/api/coach/suggest-training', rateLimit(30), async (c) => {
+coachRoutes.post('/suggest-training', rateLimit(30), async (c) => {
   if (!hasAnthropicKey()) {
     return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }
@@ -137,7 +138,7 @@ Retorna JSON com esta estrutura:
  * POST /api/coach/suggest-staff
  * Sugestão de ações de staff (upgrades, atribuições)
  */
-coachRoutes.post('/api/coach/suggest-staff', rateLimit(30), async (c) => {
+coachRoutes.post('/suggest-staff', rateLimit(30), async (c) => {
   if (!hasAnthropicKey()) {
     return c.json({ ok: false, error: 'ANTHROPIC_API_KEY em falta no servidor.' }, 503);
   }
@@ -285,8 +286,17 @@ Conhecimento sobre o sistema Olefoot:
 6. olheiro: Aumenta recompensas EXP de scouting.
 7. preparador_goleiros: Buff específico para goleiros.
 
-**Time do coração do manager:** ${(teamContext as any).favoriteTeam ?? 'não informado'}
-${(teamContext as any).favoriteTeam ? `Quando relevante, mencione o estilo de jogo do ${(teamContext as any).favoriteTeam} e pergunte se o manager quer se inspirar nele.` : ''}
+**Time do coração do manager:** ${teamContext.favoriteTeam ?? 'não informado'}
+${teamContext.favoriteTeam ? `Quando relevante, mencione o estilo de jogo do ${teamContext.favoriteTeam} e pergunte se o manager quer se inspirar nele.` : ''}
+
+**Forma recente (últimos jogos):**
+${teamContext.recentForm && teamContext.recentForm.length > 0
+  ? teamContext.recentForm.join('-') + ' — ' + (
+      teamContext.recentResults?.map((r: any) =>
+        `${r.result === 'win' ? '✅' : r.result === 'draw' ? '⚖️' : '❌'} ${r.scoreFor}-${r.scoreAgainst} vs ${r.opponent}`
+      ).join(' | ') ?? ''
+    )
+  : 'Sem jogos registados ainda.'}
 
 **Instruções do manager:**
 ${activeInstructions}

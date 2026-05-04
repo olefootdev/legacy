@@ -153,4 +153,13 @@ export interface TeamContext {
 
   // Time do coração do manager (do cadastro)
   favoriteTeam?: string;
+
+  // Últimos 5 resultados
+  recentResults?: Array<{
+    opponent: string;
+    result: 'win' | 'draw' | 'loss';
+    scoreFor: number;
+    scoreAgainst: number;
+  }>;
+  recentForm?: Array<'W' | 'D' | 'L'>;
 }

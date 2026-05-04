@@ -524,6 +524,10 @@ O que precisas?`;
       availableBro: this.gameState.finance.broCents,
 
       nextMatch: this.getNextMatch(),
+
+      favoriteTeam: this.gameState.userSettings.favoriteRealTeam?.name ?? undefined,
+
+      ...this.getRecentMatchContext(),
     };
   }
 
@@ -567,5 +571,25 @@ O que precisas?`;
       isHome,
       daysUntil: Math.max(0, daysUntil),
     };
+  }
+
+  private getRecentMatchContext(): Pick<TeamContext, 'recentResults' | 'recentForm'> {
+    const results = this.gameState.results ?? [];
+    const clubName = this.gameState.club.name;
+    const last5 = results.slice(-5);
+
+    const recentResults = last5.map((r) => {
+      const isHome = r.home === clubName;
+      const scoreFor = isHome ? r.scoreHome : r.scoreAway;
+      const scoreAgainst = isHome ? r.scoreAway : r.scoreHome;
+      const opponent = isHome ? r.away : r.home;
+      return { opponent, result: r.result, scoreFor, scoreAgainst };
+    });
+
+    const recentForm = last5.map((r) =>
+      r.result === 'win' ? 'W' : r.result === 'draw' ? 'D' : 'L'
+    ) as Array<'W' | 'D' | 'L'>;
+
+    return { recentResults, recentForm };
   }
 }

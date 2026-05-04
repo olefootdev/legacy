@@ -17,7 +17,7 @@ import Anthropic from '@anthropic-ai/sdk';
 // Defaults: família Claude 4 (sonnet-4-6 pra qualidade, haiku-4-5 pra custo).
 
 const DEFAULT_SONNET = 'claude-sonnet-4-6';
-const DEFAULT_HAIKU = 'claude-haiku-4-5-20251001';
+const DEFAULT_HAIKU = 'claude-haiku-4-5';
 
 export const MODELS = {
   sonnet: process.env.ANTHROPIC_MODEL_SONNET ?? DEFAULT_SONNET,
@@ -53,8 +53,10 @@ export interface AnthropicCallOptions {
   model: ModelKey;
   /** System prompt — identidade e regras do agente. */
   system: string;
-  /** Conteúdo do usuário — pergunta/contexto. */
+  /** Conteúdo do usuário — pergunta/contexto. Ignorado se `messages` for fornecido. */
   user: string;
+  /** Histórico de conversa nativo da API. Quando fornecido, substitui `user`. */
+  messages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   /** Máximo de tokens de resposta. Default 1024. */
   maxTokens?: number;
   /** Criatividade 0.0–1.0. Default 0.7 pra narrativa; use 0.3 pra JSON estrito. */
@@ -101,7 +103,7 @@ export async function callAnthropic<T = unknown>(
         max_tokens: opts.maxTokens ?? 1024,
         temperature: opts.temperature ?? (opts.expectJson ? 0.3 : 0.7),
         system: opts.system,
-        messages: [{ role: 'user', content: opts.user }],
+        messages: opts.messages ?? [{ role: 'user', content: opts.user }],
       },
       { signal: abort.signal },
     );
