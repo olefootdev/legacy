@@ -61,11 +61,21 @@ export interface SfAnchor {
   role_intent_weights: Record<string, number>;
 }
 
+export interface SfFormationAnchors {
+  anchors: {
+    home: Record<string, SfAnchor>;
+    away: Record<string, SfAnchor>;
+  };
+}
+
 export interface SmartfieldSnapshot {
   field: { length: number; width: number; center: SfPoint; center_circle_radius: number };
   goals: { west: SfGoalDefinition; east: SfGoalDefinition };
   macro_zones: SfZone[];
   subzones: SfZone[];
+  /** Multi-formation anchors — keyed by formation string e.g. "4-3-3" */
+  formations: Record<string, SfFormationAnchors>;
+  /** Legacy flat anchors for the default formation (backwards compat) */
   anchors: {
     home: Record<string, SfAnchor>;
     away: Record<string, SfAnchor>;
@@ -91,6 +101,18 @@ export type SfTeamPhase =
 // ── Data ───────────────────────────────────────────────────────────
 
 const SF: SmartfieldSnapshot = snapshotData as SmartfieldSnapshot;
+
+// ── Formation-aware anchor resolver ────────────────────────────────
+
+function sfAnchorsFor(formation: string, side: 'home' | 'away'): Record<string, SfAnchor> {
+  const f = SF.formations?.[formation] ?? SF.formations?.['4-3-3'];
+  return f?.anchors?.[side] ?? SF.anchors[side];
+}
+
+/** All subzones — used by influence maps and zone attraction. */
+export function sfSubzones(): SfZone[] {
+  return SF.subzones;
+}
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -221,15 +243,16 @@ export function sfGetPostZone(
 export function sfGetAnchor(
   role: string,
   side: 'home' | 'away',
+  formation = '4-3-3',
 ): SfAnchor | undefined {
-  return SF.anchors[side]?.[role];
+  return sfAnchorsFor(formation, side)[role];
 }
 
 /**
  * All anchors for a side — used by the tactical overlay and positioning engine.
  */
-export function sfGetAllAnchors(side: 'home' | 'away'): Record<string, SfAnchor> {
-  return SF.anchors[side] ?? {};
+export function sfGetAllAnchors(side: 'home' | 'away', formation = '4-3-3'): Record<string, SfAnchor> {
+  return sfAnchorsFor(formation, side);
 }
 
 /**
@@ -241,8 +264,9 @@ export function sfShapeCorrection(
   playerZ: number,
   role: string,
   side: 'home' | 'away',
+  formation = '4-3-3',
 ): { distFromAnchor: number; isOutOfShape: boolean; correctionDx: number; correctionDz: number } {
-  const anchor = sfGetAnchor(role, side);
+  const anchor = sfGetAnchor(role, side, formation);
   if (!anchor) return { distFromAnchor: 0, isOutOfShape: false, correctionDx: 0, correctionDz: 0 };
   const dx = anchor.base_anchor.x - playerX;
   const dz = anchor.base_anchor.z - playerZ;
@@ -275,8 +299,8 @@ const SF_PHASE_RADIUS_MULT: Record<SfTeamPhase, number> = {
  * Effective freedom radius for a role given the current team phase.
  * Mirrors the Python `get_player_allowed_movement`.
  */
-export function sfEffectiveRadius(role: string, side: 'home' | 'away', phase: SfTeamPhase): number {
-  const anchor = sfGetAnchor(role, side);
+export function sfEffectiveRadius(role: string, side: 'home' | 'away', phase: SfTeamPhase, formation = '4-3-3'): number {
+  const anchor = sfGetAnchor(role, side, formation);
   if (!anchor) return 14;
   return anchor.allowed_radius * (SF_PHASE_RADIUS_MULT[phase] ?? 1);
 }
@@ -290,8 +314,9 @@ export function sfShouldRecoverShape(
   role: string,
   side: 'home' | 'away',
   phase: SfTeamPhase,
+  formation = '4-3-3',
 ): boolean {
-  const anchor = sfGetAnchor(role, side);
+  const anchor = sfGetAnchor(role, side, formation);
   if (!anchor) return false;
   const dist = Math.hypot(anchor.base_anchor.x - playerX, anchor.base_anchor.z - playerZ);
   const effectiveR = anchor.allowed_radius * (SF_PHASE_RADIUS_MULT[phase] ?? 1);
@@ -310,8 +335,9 @@ export function sfIsInForbiddenZone(
   z: number,
   role: string,
   side: 'home' | 'away',
+  formation = '4-3-3',
 ): boolean {
-  const anchor = sfGetAnchor(role, side);
+  const anchor = sfGetAnchor(role, side, formation);
   if (!anchor || anchor.forbidden_zones.length === 0) return false;
   const subzone = sfGetSubzone(x, z);
   if (!subzone) return false;
@@ -327,9 +353,10 @@ export function sfForbiddenZoneRepulsion(
   z: number,
   role: string,
   side: 'home' | 'away',
+  formation = '4-3-3',
 ): { dx: number; dz: number } {
-  if (!sfIsInForbiddenZone(x, z, role, side)) return { dx: 0, dz: 0 };
-  const anchor = sfGetAnchor(role, side);
+  if (!sfIsInForbiddenZone(x, z, role, side, formation)) return { dx: 0, dz: 0 };
+  const anchor = sfGetAnchor(role, side, formation);
   if (!anchor) return { dx: 0, dz: 0 };
   const ax = anchor.base_anchor.x;
   const az = anchor.base_anchor.z;
@@ -351,8 +378,9 @@ export function sfActiveZonesForRole(
   role: string,
   side: 'home' | 'away',
   phase: SfTeamPhase,
+  formation = '4-3-3',
 ): string[] {
-  const anchor = sfGetAnchor(role, side);
+  const anchor = sfGetAnchor(role, side, formation);
   if (!anchor) return [];
   switch (phase) {
     case 'organized_attack':
@@ -383,9 +411,17 @@ export function sfZoneAttractionVector(
   role: string,
   side: 'home' | 'away',
   phase: SfTeamPhase,
+  formation = '4-3-3',
+  openChannels?: string[],
 ): { dx: number; dz: number; targetZoneId: string | null } {
-  const activeZoneIds = sfActiveZonesForRole(role, side, phase);
+  let activeZoneIds = sfActiveZonesForRole(role, side, phase, formation);
   if (activeZoneIds.length === 0) return { dx: 0, dz: 0, targetZoneId: null };
+
+  // If open channels provided, prefer uncontested zones over contested ones
+  if (openChannels && openChannels.length > 0) {
+    const openActive = activeZoneIds.filter(id => openChannels.includes(id));
+    if (openActive.length > 0) activeZoneIds = openActive;
+  }
 
   let bestDist = Infinity;
   let bestDx = 0;

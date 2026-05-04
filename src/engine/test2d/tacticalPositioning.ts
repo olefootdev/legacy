@@ -48,8 +48,12 @@ import {
   sfZoneAttractionVector,
   sfRoleFromSlot,
   sfIsInForbiddenZone,
+  sfGetSubzone,
+  sfSubzones,
   type SfTeamPhase,
 } from '@/smartfield/smartfieldBridge';
+import { computeZoneInfluence, getOpenChannels } from '@/smartfield/influenceMaps';
+import { uiPercentToWorld } from '@/simulation/field';
 import {
   teammateProximityRadiusMul,
   shouldLateralOverlap,
@@ -328,7 +332,12 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
 
   const hasBall = side === possession;
   const ballZone = tacticalBallZoneForTeam(ball.x, ball.y, side, matchHalf);
-  const baseIntention = deriveTeamIntention(hasBall, ballZone, spiritPhase, actionKind, possession, side, manager.tacticalMentality);
+
+  // Gap 2: subzone-aware intention — granular SmartField zone instead of 3-bucket ballZone
+  const { x: ballWx, z: ballWz } = uiPercentToWorld(ball.x, ball.y);
+  const ballSubzone = sfGetSubzone(ballWx, ballWz);
+
+  const baseIntention = deriveTeamIntention(hasBall, ballZone, spiritPhase, actionKind, possession, side, manager.tacticalMentality, ballSubzone);
   const voiceOverride = voiceIntentionOverride(voiceCommands, nowMs);
   const intention = voiceOverride && voiceOverride.weight >= 0.5 ? voiceOverride.intention : baseIntention;
   const shape = voiceOverride
@@ -387,6 +396,14 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
     return computePressureOnCarrier(cWorld.x, cWorld.z, oppWorld);
   })();
 
+  // Gap 3: runtime influence maps — which subzones are dominated by opponents
+  const influence = computeZoneInfluence(
+    players.map((p) => ({ x: p.x, y: p.y })),
+    opponentPositions ?? [],
+    sfSubzones(),
+  );
+  const openChannels = getOpenChannels(influence, side);
+
   // Step 1: Compute raw formation target per player
   const targets: { playerId: string; tx: number; ty: number }[] = [];
 
@@ -442,14 +459,14 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
 
     // ── SMARTFIELD: anchor blending + zone intelligence ──────────────
     const sfRole = sfRoleFromSlot(p.slotId, formation);
-    const sfAnchor = sfGetAnchor(sfRole, side);
+    const sfAnchor = sfGetAnchor(sfRole, side, formation);
     if (sfAnchor) {
       const anchorEx = (sfAnchor.base_anchor.x / FIELD_LENGTH) * 100;
       const anchorEy = (sfAnchor.base_anchor.z / FIELD_WIDTH) * 100;
       tx = lerp(tx, anchorEx, SF_ANCHOR_BLEND);
       ty = lerp(ty, anchorEy, SF_ANCHOR_BLEND);
 
-      const effRadius = sfEffectiveRadius(sfRole, side, sfPhase);
+      const effRadius = sfEffectiveRadius(sfRole, side, sfPhase, formation);
       // Zona integrada: colega próximo EXPANDE o raio permitido (criar espaço).
       const teammatePts = players.map((pp) => ({ playerId: pp.playerId, x: pp.x, z: pp.y }));
       const radiusMul = teammateProximityRadiusMul(p.x, p.y, teammatePts, p.playerId);
@@ -495,7 +512,7 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
     {
       const wx = (tx / 100) * FIELD_LENGTH;
       const wz = (ty / 100) * FIELD_WIDTH;
-      const zoneVec = sfZoneAttractionVector(wx, wz, sfRole, side, sfPhase);
+      const zoneVec = sfZoneAttractionVector(wx, wz, sfRole, side, sfPhase, formation, openChannels);
       tx += (zoneVec.dx / FIELD_LENGTH) * 100 * SF_ZONE_PULL;
       ty += (zoneVec.dz / FIELD_WIDTH) * 100 * SF_ZONE_PULL;
     }
@@ -504,7 +521,7 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
     {
       const wx = (tx / 100) * FIELD_LENGTH;
       const wz = (ty / 100) * FIELD_WIDTH;
-      const rep = sfForbiddenZoneRepulsion(wx, wz, sfRole, side);
+      const rep = sfForbiddenZoneRepulsion(wx, wz, sfRole, side, formation);
       if (rep.dx !== 0 || rep.dz !== 0) {
         const repStrength = p.role === 'gk' ? SF_FORBIDDEN_REPULSION * 2 : SF_FORBIDDEN_REPULSION;
         tx += (rep.dx / FIELD_LENGTH) * 100 * repStrength;
@@ -534,7 +551,7 @@ export function computeTacticalPositions(input: TacticalPositionInput): PitchPla
     if (p.playerId !== onBallPlayerId) {
       const wx = (tx / 100) * FIELD_LENGTH;
       const wz = (ty / 100) * FIELD_WIDTH;
-      if (sfShouldRecoverShape(wx, wz, sfRole, side, sfPhase) && sfAnchor) {
+      if (sfShouldRecoverShape(wx, wz, sfRole, side, sfPhase, formation) && sfAnchor) {
         const anchorEx = (sfAnchor.base_anchor.x / FIELD_LENGTH) * 100;
         const anchorEy = (sfAnchor.base_anchor.z / FIELD_WIDTH) * 100;
         const urgency = SF_RECOVERY_URGENCY * sfAnchor.recovery_priority;

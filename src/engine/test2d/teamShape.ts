@@ -56,6 +56,7 @@ export function deriveTeamIntention(
   possession: PossessionSide,
   side: 'home' | 'away',
   tacticalMentality: number,
+  ballSubzone: string | null = null,
 ): TeamIntention {
   const isMySide = side === possession;
   const isOverlay = spiritPhase === 'celebration_goal' || spiritPhase === 'penalty';
@@ -64,6 +65,15 @@ export function deriveTeamIntention(
 
   if (spiritPhase === 'buildup_gk') {
     return isMySide ? 'build_low' : 'mid_block';
+  }
+
+  // Subzone override — granular SmartField zone takes priority over 3-bucket ballZone
+  if (ballSubzone && isMySide && hasBall) {
+    if (ballSubzone === 'BOX_CENTER' || ballSubzone === 'SIX_YARD_CENTER') return 'attack_central';
+    if (ballSubzone === 'CREATION_LEFT' || ballSubzone === 'BOX_LEFT') return 'attack_wide';
+    if (ballSubzone === 'CREATION_RIGHT' || ballSubzone === 'BOX_RIGHT') return 'attack_wide';
+    if (ballSubzone === 'RECOVERY_CENTER' || ballSubzone === 'RECOVERY_LEFT' || ballSubzone === 'RECOVERY_RIGHT') return 'low_block';
+    if (ballSubzone === 'PRESS_CENTER' || ballSubzone === 'PRESS_LEFT' || ballSubzone === 'PRESS_RIGHT') return 'press_high';
   }
 
   if (isMySide && hasBall) {

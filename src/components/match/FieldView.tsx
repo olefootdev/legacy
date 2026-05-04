@@ -12,6 +12,8 @@ import { memo, useMemo } from 'react';
 import type { JSX } from 'react';
 import type { PitchPlayerState } from '@/engine/types';
 import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
+import { sfRoleFromSlot, sfGetAnchor } from '@/smartfield/smartfieldBridge';
+import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import { LegacyMatchHUD } from './LegacyMatchHUD';
 
 export type FieldCameraMode = 'aerial' | 'broadcast' | 'firstperson';
@@ -173,9 +175,10 @@ interface PlayerCardProps {
   isHome: boolean;
   isOnBall: boolean;
   onClick?: (p: PitchPlayerState) => void;
+  transition?: boolean;
 }
 
-const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick }: PlayerCardProps) {
+const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick, transition = false }: PlayerCardProps) {
   const sx = toSvgX(p.x) - CARD_W / 2;
   const sy = toSvgY(p.y) - CARD_H / 2;
   const borderColor = isHome ? NEON : '#ffffff';
@@ -183,11 +186,15 @@ const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick }: Pl
   const glowRadius = isOnBall ? 14 : 0;
   const fatigue = Math.max(0, Math.min(100, p.fatigue ?? 0));
   const energy = 100 - fatigue;
+  const isPulsing = (p as any)._pulsing === true;
 
   return (
     <g
-      transform={`translate(${sx},${sy})`}
-      style={{ cursor: onClick ? 'pointer' : 'default' }}
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transform: `translate(${sx}px,${sy}px)`,
+        transition: transition ? 'transform 1.2s cubic-bezier(0.4,0,0.2,1)' : undefined,
+      }}
       onClick={() => onClick?.(p)}
     >
       {/* Glow ring on-ball */}
@@ -200,6 +207,20 @@ const PlayerCard = memo(function PlayerCard({ p, isHome, isOnBall, onClick }: Pl
           stroke={borderColor}
           strokeWidth={2}
           opacity={0.4}
+        />
+      )}
+
+      {/* Pulse ring — receptor do passe prestes a receber a bola */}
+      {isPulsing && (
+        <circle
+          cx={CARD_W / 2}
+          cy={CARD_H / 2}
+          r={CARD_W * 0.85}
+          fill="none"
+          stroke={borderColor}
+          strokeWidth={2.5}
+          opacity={0.85}
+          style={{ animation: 'expertPulse 0.5s ease-out forwards' }}
         />
       )}
 
@@ -435,6 +456,21 @@ function IVBall({ bx, by }: { bx: number; by: number }) {
   );
 }
 
+// ── Aerial ball (horizontal field) — smooth CSS transition ─────────────────
+function AerialBall({ bx, by }: { bx: number; by: number }) {
+  const sx = toSvgX(bx);
+  const sy = toSvgY(by);
+  const r = 10;
+  return (
+    <g style={{ transform: `translate(${sx}px,${sy}px)`, transition: 'transform 0.18s linear' }}>
+      <ellipse cx={0} cy={r * 0.4} rx={r * 0.9} ry={r * 0.28} fill="#000" opacity={0.45} />
+      <circle cx={0} cy={0} r={r * 1.8} fill="none" stroke={NEON} strokeWidth={1.5} opacity={0.22} />
+      <circle cx={0} cy={0} r={r} fill="#ffffff" />
+      <circle cx={0} cy={0} r={r * 0.52} fill={NEON} />
+    </g>
+  );
+}
+
 // ── Inclined (tactical perspective) field ──────────────────────────────────
 function InclinedField({
   homePlayers,
@@ -460,29 +496,54 @@ function InclinedField({
   // Defensive cinematic mode: shrink home GK and enlarge near goal so the
   // proportions match real life (keeper ≈ 1.9m vs goal ≈ 2.44m tall).
   const gkShrink = defensiveAction ? 0.55 : 1;
-  // Sort players by depth: far first (top), near last (bottom) — natural occlusion.
   // FASE 3.5: anti-chaos visual — offsets per-token pra evitar sobreposição
   // sem alterar posições da simulação (aditivo, cosmético only).
+  // Restrições por role: GK ancorado (maxOffset 0.6%), DEF limitado (1.8%), MID/ATK livre (3.2%).
   const allCards = useMemo(() => {
-    const allAgents = [
-      ...homePlayers.map((p) => ({ id: p.playerId, x: p.x, y: p.y })),
-      ...awayPlayers.map((p) => ({ id: p.playerId, x: p.x, y: p.y })),
+    const allPlayers = [
+      ...homePlayers.map((p) => ({ p, isHome: true })),
+      ...awayPlayers.map((p) => ({ p, isHome: false })),
     ];
+
+    // Separação base para todos (evita sobreposição visual)
+    // anchor SmartField por jogador direciona a repulsão de volta à posição tática
+    const allAgents = allPlayers.map(({ p, isHome }) => {
+      const side = isHome ? 'home' : 'away';
+      const sfRole = sfRoleFromSlot(p.slotId);
+      const sfAnchor = sfGetAnchor(sfRole, side);
+      const anchor = sfAnchor
+        ? { x: (sfAnchor.base_anchor.x / FIELD_LENGTH) * 100, y: (sfAnchor.base_anchor.z / FIELD_WIDTH) * 100 }
+        : undefined;
+      return { id: p.playerId, x: p.x, y: p.y, anchor };
+    });
     const offsets = computePitchTokenSeparation(allAgents, {
       ball: { x: ballX, y: ballY },
       minSeparation: 2.4,
-      iterations: 5,
+      iterations: 6,
       maxOffset: 3.2,
       minFromBall: 1.6,
     });
+
     const applyOffset = (p: PitchPlayerState): PitchPlayerState => {
       const o = offsets.get(p.playerId);
-      return o ? { ...p, x: p.x + o.dx, y: p.y + o.dy } : p;
+      if (!o) return p;
+
+      // Restrição por role: GK quase imóvel, DEF pouco, MID/ATK livre
+      const role = p.role ?? 'mid';
+      const maxByRole =
+        role === 'gk'     ? 0.6   // ~18% — quase fixo
+        : role === 'def'  ? 0.8   // ~25% — linha defensiva firme
+        : role === 'mid'  ? 0.8   // ~25% — bloco médio compacto
+        :                   0.8;  // ~25% — atacantes disciplinados
+
+      const len = Math.hypot(o.dx, o.dy);
+      const scale = len > maxByRole && len > 1e-9 ? maxByRole / len : 1;
+      return { ...p, x: p.x + o.dx * scale, y: p.y + o.dy * scale };
     };
-    const home = homePlayers.map((p) => ({ p: applyOffset(p), isHome: true }));
-    const away = awayPlayers.map((p) => ({ p: applyOffset(p), isHome: false }));
-    // higher fieldX → further away → render first
-    return [...home, ...away].sort((a, b) => b.p.x - a.p.x);
+
+    return allPlayers
+      .map(({ p, isHome }) => ({ p: applyOffset(p), isHome }))
+      .sort((a, b) => b.p.x - a.p.x);
   }, [homePlayers, awayPlayers, ballX, ballY]);
 
   // Trapezoid corners
@@ -778,6 +839,8 @@ function AerialField({
   ballY,
   onBallId,
   onPlayerClick,
+  playerTransition = false,
+  passLine = null,
 }: {
   homePlayers: PitchPlayerState[];
   awayPlayers: PitchPlayerState[];
@@ -785,6 +848,8 @@ function AerialField({
   ballY: number;
   onBallId: string | null;
   onPlayerClick?: (p: PitchPlayerState) => void;
+  playerTransition?: boolean;
+  passLine?: { fromX: number; fromY: number; toX: number; toY: number } | null;
 }) {
   // Sort: render home over away for overlap
   return (
@@ -841,6 +906,7 @@ function AerialField({
           isHome={false}
           isOnBall={p.playerId === onBallId}
           onClick={onPlayerClick}
+          transition={playerTransition}
         />
       ))}
 
@@ -852,11 +918,27 @@ function AerialField({
           isHome={true}
           isOnBall={p.playerId === onBallId}
           onClick={onPlayerClick}
+          transition={playerTransition}
         />
       ))}
 
+      {/* Pass line — dotted line between passer and receiver during ball flight */}
+      {passLine && (
+        <line
+          x1={toSvgX(passLine.fromX)}
+          y1={toSvgY(passLine.fromY)}
+          x2={toSvgX(passLine.toX)}
+          y2={toSvgY(passLine.toY)}
+          stroke={NEON}
+          strokeWidth={1.2}
+          strokeDasharray="4 5"
+          opacity={0.45}
+          strokeLinecap="round"
+        />
+      )}
+
       {/* Ball */}
-      <IVBall bx={ballX} by={ballY} />
+      <AerialBall bx={ballX} by={ballY} />
     </svg>
   );
 }
@@ -865,12 +947,9 @@ function AerialField({
 const CAMERA_LABELS: Record<FieldCameraMode, string> = {
   aerial: 'TÁTICA',
   broadcast: 'TV',
-  firstperson: 'HIGHLIGHT',
+  firstperson: 'CINEMA',
 };
-// Modes available in the user-facing switcher.
-// 'firstperson' is intentionally omitted: it's the highlight zoom triggered
-// programmatically from key moments (shots on goal), not a persistent camera.
-const SWITCHER_MODES: FieldCameraMode[] = ['aerial', 'broadcast'];
+const SWITCHER_MODES: FieldCameraMode[] = ['aerial', 'firstperson', 'broadcast'];
 
 // ── Main FieldView component ─────────────────────────────────────────────────
 export interface FieldViewProps {
@@ -910,6 +989,16 @@ export interface FieldViewProps {
    * and enlarges the near goal so the proportions feel real.
    */
   defensiveAction?: boolean;
+  /**
+   * When true, player cards animate smoothly to their positions (CSS transition).
+   * Used in Legacy Mode when players move from kickoff to formation positions.
+   */
+  playerTransition?: boolean;
+  /**
+   * Pass line: dotted line between passer and receiver during ball flight.
+   * Coordinates in field percent (0-100).
+   */
+  passLine?: { fromX: number; fromY: number; toX: number; toY: number } | null;
   className?: string;
 }
 
@@ -938,6 +1027,8 @@ export const FieldView = memo(function FieldView({
   onPlayerClick,
   highlightPlayerId = null,
   defensiveAction = false,
+  playerTransition = false,
+  passLine = null,
   className = '',
 }: FieldViewProps) {
   const broadcastStyle =
@@ -997,7 +1088,7 @@ export const FieldView = memo(function FieldView({
         possession={possession}
         ballX={ballX}
         phase={phase}
-        cameraMode={cameraMode === 'firstperson' ? 'aerial' : cameraMode}
+        cameraMode={cameraMode}
         onCameraChange={showCameraSwitch ? onCameraChange : undefined}
       />}
 
@@ -1027,7 +1118,7 @@ export const FieldView = memo(function FieldView({
             willChange: 'transform',
           }}
         >
-        {cameraMode === 'aerial' ? (
+        {cameraMode === 'firstperson' || cameraMode === 'aerial' ? (
           <InclinedField
             homePlayers={homePlayers}
             awayPlayers={awayPlayers}
@@ -1047,6 +1138,8 @@ export const FieldView = memo(function FieldView({
             ballY={ballY}
             onBallId={onBallPlayerId}
             onPlayerClick={onPlayerClick}
+            playerTransition={playerTransition}
+            passLine={passLine}
           />
         )}
         </div>

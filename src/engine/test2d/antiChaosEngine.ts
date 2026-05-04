@@ -1,6 +1,10 @@
 /**
  * Anti-chaos: deslocamentos visuais para evitar sobreposição de tokens no plano 0–100%
  * (mesma escala que `pitchPlanePercent` em Live2dMatchShell). Não altera posições de simulação.
+ *
+ * Quando `anchor` é fornecido por agente, a repulsão é direcionada de volta ao anchor tático
+ * (posição SmartField) em vez de empurrar em direção aleatória — tokens voltam para onde
+ * deveriam estar taticamente, não para qualquer zona livre.
  */
 
 export interface AntiChaosAgent {
@@ -8,6 +12,8 @@ export interface AntiChaosAgent {
   /** Mesmas coordenadas que `PitchPlayerState.x` / `.y` (0–1 ou 0–100). */
   x: number;
   y: number;
+  /** Anchor tático SmartField em engine coords (0–100). Quando presente, direciona a repulsão. */
+  anchor?: { x: number; y: number };
 }
 
 export interface AntiChaosOptions {
@@ -96,10 +102,17 @@ export function computePitchTokenSeparation(
   const baseY = new Float64Array(n);
   const offX = new Float64Array(n);
   const offY = Float64Array.from({ length: n }, () => 0);
+  // Anchor positions per agent (NaN = no anchor)
+  const anchorX = new Float64Array(n).fill(NaN);
+  const anchorY = new Float64Array(n).fill(NaN);
 
   for (let i = 0; i < n; i++) {
     baseX[i] = toPlanePercent(agents[i]!.x);
     baseY[i] = toPlanePercent(agents[i]!.y);
+    if (agents[i]!.anchor) {
+      anchorX[i] = toPlanePercent(agents[i]!.anchor!.x);
+      anchorY[i] = toPlanePercent(agents[i]!.anchor!.y);
+    }
   }
 
   const maxPerAgent = perAgentMaxOffsets(n, baseX, baseY, baseMaxOffset);
@@ -113,29 +126,60 @@ export function computePitchTokenSeparation(
     ballActive = Number.isFinite(ballPx) && Number.isFinite(ballPy);
   }
 
+  // When an agent has an anchor, push it toward the anchor instead of away from the
+  // colliding neighbour — this keeps tokens in their tactical position rather than
+  // drifting into a random free zone.
   const separatePair = (i: number, j: number, needDist: number) => {
-    let ax = baseX[i]! + offX[i]!;
-    let ay = baseY[i]! + offY[i]!;
-    let bx = baseX[j]! + offX[j]!;
-    let by = baseY[j]! + offY[j]!;
+    const ax = baseX[i]! + offX[i]!;
+    const ay = baseY[i]! + offY[i]!;
+    const bx = baseX[j]! + offX[j]!;
+    const by = baseY[j]! + offY[j]!;
     let dx = bx - ax;
     let dy = by - ay;
-    let dist = Math.hypot(dx, dy);
-    if (dist < eps) {
+    let d = Math.hypot(dx, dy);
+    if (d < eps) {
       const seed = (i * 7919 + j * 5023) % 1000;
       const ang = (seed / 1000) * Math.PI * 2;
       dx = Math.cos(ang);
       dy = Math.sin(ang);
-      dist = eps;
+      d = eps;
     }
-    if (dist >= needDist) return;
-    const nx = dx / dist;
-    const ny = dy / dist;
-    const push = (needDist - dist) * 0.5;
-    offX[i] = offX[i]! - nx * push;
-    offY[i] = offY[i]! - ny * push;
-    offX[j] = offX[j]! + nx * push;
-    offY[j] = offY[j]! + ny * push;
+    if (d >= needDist) return;
+    const push = (needDist - d) * 0.5;
+
+    // Agent i: push toward its anchor if available, else away from j
+    if (!isNaN(anchorX[i]!)) {
+      const adx = anchorX[i]! - ax;
+      const ady = anchorY[i]! - ay;
+      const al = Math.hypot(adx, ady);
+      if (al > eps) {
+        offX[i] = offX[i]! + (adx / al) * push;
+        offY[i] = offY[i]! + (ady / al) * push;
+      } else {
+        offX[i] = offX[i]! - (dx / d) * push;
+        offY[i] = offY[i]! - (dy / d) * push;
+      }
+    } else {
+      offX[i] = offX[i]! - (dx / d) * push;
+      offY[i] = offY[i]! - (dy / d) * push;
+    }
+
+    // Agent j: push toward its anchor if available, else away from i
+    if (!isNaN(anchorX[j]!)) {
+      const adx = anchorX[j]! - bx;
+      const ady = anchorY[j]! - by;
+      const al = Math.hypot(adx, ady);
+      if (al > eps) {
+        offX[j] = offX[j]! + (adx / al) * push;
+        offY[j] = offY[j]! + (ady / al) * push;
+      } else {
+        offX[j] = offX[j]! + (dx / d) * push;
+        offY[j] = offY[j]! + (dy / d) * push;
+      }
+    } else {
+      offX[j] = offX[j]! + (dx / d) * push;
+      offY[j] = offY[j]! + (dy / d) * push;
+    }
   };
 
   for (let it = 0; it < iterations; it++) {

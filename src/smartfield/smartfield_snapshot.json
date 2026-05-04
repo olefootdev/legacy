@@ -13,11 +13,11 @@
       "goal_line_x": 0.0,
       "near_post": {
         "x": 0.0,
-        "z": 30.34
+        "z": 29.0
       },
       "far_post": {
         "x": 0.0,
-        "z": 37.66
+        "z": 39.0
       },
       "center": {
         "x": 0.0,
@@ -25,9 +25,9 @@
       },
       "mouth_rect": {
         "x_min": 0.0,
-        "z_min": 30.34,
+        "z_min": 29.0,
         "x_max": 0.5,
-        "z_max": 37.66
+        "z_max": 39.0
       },
       "six_yard_box": {
         "x_min": 0.0,
@@ -47,32 +47,32 @@
       },
       "near_post_zone": {
         "x_min": -0.1,
-        "z_min": 30.34,
+        "z_min": 29.0,
         "x_max": 0.5,
-        "z_max": 32.78
+        "z_max": 32.333333333333336
       },
       "far_post_zone": {
         "x_min": -0.1,
-        "z_min": 35.22,
+        "z_min": 35.666666666666664,
         "x_max": 0.5,
-        "z_max": 37.66
+        "z_max": 39.0
       },
       "central_channel": {
         "x_min": -0.1,
-        "z_min": 32.78,
+        "z_min": 32.333333333333336,
         "x_max": 0.5,
-        "z_max": 35.22
+        "z_max": 35.666666666666664
       }
     },
     "east": {
       "goal_line_x": 105.0,
       "near_post": {
         "x": 105.0,
-        "z": 30.34
+        "z": 29.0
       },
       "far_post": {
         "x": 105.0,
-        "z": 37.66
+        "z": 39.0
       },
       "center": {
         "x": 105.0,
@@ -80,9 +80,9 @@
       },
       "mouth_rect": {
         "x_min": 104.5,
-        "z_min": 30.34,
+        "z_min": 29.0,
         "x_max": 105.0,
-        "z_max": 37.66
+        "z_max": 39.0
       },
       "six_yard_box": {
         "x_min": 99.5,
@@ -102,21 +102,21 @@
       },
       "near_post_zone": {
         "x_min": 104.5,
-        "z_min": 30.34,
+        "z_min": 29.0,
         "x_max": 105.1,
-        "z_max": 32.78
+        "z_max": 32.333333333333336
       },
       "far_post_zone": {
         "x_min": 104.5,
-        "z_min": 35.22,
+        "z_min": 35.666666666666664,
         "x_max": 105.1,
-        "z_max": 37.66
+        "z_max": 39.0
       },
       "central_channel": {
         "x_min": 104.5,
-        "z_min": 32.78,
+        "z_min": 32.333333333333336,
         "x_max": 105.1,
-        "z_max": 35.22
+        "z_max": 35.666666666666664
       }
     }
   },
@@ -490,9 +490,9 @@
       "id": "goalmouth_left",
       "rect": {
         "x_min": 104.5,
-        "z_min": 30.34,
+        "z_min": 29.0,
         "x_max": 105.0,
-        "z_max": 32.78
+        "z_max": 32.333333333333336
       },
       "third": "attacking",
       "lane": "left_halfspace"
@@ -501,9 +501,9 @@
       "id": "goalmouth_center",
       "rect": {
         "x_min": 104.5,
-        "z_min": 32.78,
+        "z_min": 32.333333333333336,
         "x_max": 105.0,
-        "z_max": 35.22
+        "z_max": 35.666666666666664
       },
       "third": "attacking",
       "lane": "center"
@@ -512,14 +512,2850 @@
       "id": "goalmouth_right",
       "rect": {
         "x_min": 104.5,
-        "z_min": 35.22,
+        "z_min": 35.666666666666664,
         "x_max": 105.0,
-        "z_max": 37.66
+        "z_max": 39.0
       },
       "third": "attacking",
       "lane": "right_halfspace"
     }
   ],
+  "formations": {
+    "4-3-3": {
+      "anchors": {
+        "home": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 5,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_left",
+              "press_center",
+              "press_right",
+              "creation_left",
+              "creation_center",
+              "creation_right"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 18,
+              "z": 58
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 42
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 26
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 18,
+              "z": 10
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 30,
+              "z": 34
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 42,
+              "z": 34
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center",
+              "press_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 56,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center",
+              "box_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.45,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 62,
+              "z": 58
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 62,
+              "z": 10
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 72,
+              "z": 34
+            },
+            "allowed_radius": 20,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          }
+        },
+        "away": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 100.0,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_right",
+              "press_center",
+              "press_left",
+              "creation_right",
+              "creation_center",
+              "creation_left"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 58
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 42
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 26
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 10
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 75.0,
+              "z": 34
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 63.0,
+              "z": 34
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center",
+              "press_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 49.0,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center",
+              "box_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.45,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 43.0,
+              "z": 58
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 43.0,
+              "z": 10
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 33.0,
+              "z": 34
+            },
+            "allowed_radius": 20,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          }
+        }
+      }
+    },
+    "4-4-2": {
+      "anchors": {
+        "home": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 5,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 18,
+              "z": 58
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 42
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 26
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 18,
+              "z": 10
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 34,
+              "z": 42
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_right"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 34,
+              "z": 26
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_left"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 55,
+              "z": 58
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 55,
+              "z": 10
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 68,
+              "z": 40
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "box_right",
+              "six_yard_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 68,
+              "z": 28
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "box_left",
+              "six_yard_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          }
+        },
+        "away": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 100.0,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 58
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 42
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 26
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 10
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 71.0,
+              "z": 42
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_left"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 71.0,
+              "z": 26
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_right"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 50.0,
+              "z": 58
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 50.0,
+              "z": 10
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 37.0,
+              "z": 40
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "box_left",
+              "six_yard_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 37.0,
+              "z": 28
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "box_right",
+              "six_yard_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          }
+        }
+      }
+    },
+    "3-5-2": {
+      "anchors": {
+        "home": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 5,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 48
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_right",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 14,
+              "z": 34
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 16,
+              "z": 20
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_left",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 28,
+              "z": 60
+            },
+            "allowed_radius": 18,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.75,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 32,
+              "z": 34
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 42,
+              "z": 42
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 42,
+              "z": 26
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 28,
+              "z": 8
+            },
+            "allowed_radius": 18,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.75,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 68,
+              "z": 40
+            },
+            "allowed_radius": 20,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 68,
+              "z": 28
+            },
+            "allowed_radius": 20,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "box_left"
+            ],
+            "transition_zones": [
+              "creation_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          }
+        },
+        "away": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 100.0,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 48
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_left",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 91.0,
+              "z": 34
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 20
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_right",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 77.0,
+              "z": 60
+            },
+            "allowed_radius": 18,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.75,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 73.0,
+              "z": 34
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 63.0,
+              "z": 42
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 63.0,
+              "z": 26
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 77.0,
+              "z": 8
+            },
+            "allowed_radius": 18,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.75,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 37.0,
+              "z": 40
+            },
+            "allowed_radius": 20,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 37.0,
+              "z": 28
+            },
+            "allowed_radius": 20,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "box_right"
+            ],
+            "transition_zones": [
+              "creation_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.25,
+            "role_intent_weights": {}
+          }
+        }
+      }
+    },
+    "4-2-3-1": {
+      "anchors": {
+        "home": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 5,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_left",
+              "press_center",
+              "press_right",
+              "creation_left",
+              "creation_center",
+              "creation_right"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 18,
+              "z": 58
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 44
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 24
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 18,
+              "z": 10
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 30,
+              "z": 42
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_center",
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 30,
+              "z": 26
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_center",
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 52,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center",
+              "box_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.5,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 60,
+              "z": 58
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 60,
+              "z": 10
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 74,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.2,
+            "role_intent_weights": {}
+          }
+        },
+        "away": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 100.0,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_right",
+              "press_center",
+              "press_left",
+              "creation_right",
+              "creation_center",
+              "creation_left"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 58
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 44
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 24
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 10
+            },
+            "allowed_radius": 14,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.85,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 75.0,
+              "z": 42
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_center",
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 75.0,
+              "z": 26
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_center",
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.8,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 53.0,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center",
+              "box_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.5,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 45.0,
+              "z": 58
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 45.0,
+              "z": 10
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.35,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 31.0,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.2,
+            "role_intent_weights": {}
+          }
+        }
+      }
+    },
+    "4-5-1": {
+      "anchors": {
+        "home": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 5,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_left",
+              "press_center",
+              "press_right",
+              "creation_left",
+              "creation_center",
+              "creation_right"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 18,
+              "z": 58
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.88,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 44
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 24
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 18,
+              "z": 10
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.88,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 32,
+              "z": 34
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.82,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 42,
+              "z": 44
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_right"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.65,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 42,
+              "z": 24
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_left"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.65,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 52,
+              "z": 58
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 52,
+              "z": 10
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 72,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.22,
+            "role_intent_weights": {}
+          }
+        },
+        "away": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 100.0,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_right",
+              "press_center",
+              "press_left",
+              "creation_right",
+              "creation_center",
+              "creation_left"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 58
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.88,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 44
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_left"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 24
+            },
+            "allowed_radius": 10,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center",
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 87.0,
+              "z": 10
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.88,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 73.0,
+              "z": 34
+            },
+            "allowed_radius": 13,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.82,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 63.0,
+              "z": 44
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_left"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.65,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 63.0,
+              "z": 24
+            },
+            "allowed_radius": 15,
+            "support_zones": [
+              "build_up_center",
+              "build_up_right"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.65,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 53.0,
+              "z": 58
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 53.0,
+              "z": 10
+            },
+            "allowed_radius": 17,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.4,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 33.0,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.22,
+            "role_intent_weights": {}
+          }
+        }
+      }
+    },
+    "3-4-3": {
+      "anchors": {
+        "home": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 5,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_left",
+              "press_center",
+              "press_right",
+              "creation_left",
+              "creation_center",
+              "creation_right"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 16,
+              "z": 50
+            },
+            "allowed_radius": 11,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_right",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 14,
+              "z": 34
+            },
+            "allowed_radius": 11,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 16,
+              "z": 18
+            },
+            "allowed_radius": 11,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_left",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 38,
+              "z": 60
+            },
+            "allowed_radius": 20,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 38,
+              "z": 8
+            },
+            "allowed_radius": 20,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 44,
+              "z": 44
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 44,
+              "z": 24
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 68,
+              "z": 58
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.3,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 72,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.2,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 68,
+              "z": 10
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.3,
+            "role_intent_weights": {}
+          }
+        },
+        "away": {
+          "GK": {
+            "role": "GK",
+            "base_anchor": {
+              "x": 100.0,
+              "z": 34
+            },
+            "allowed_radius": 6,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [
+              "press_right",
+              "press_center",
+              "press_left",
+              "creation_right",
+              "creation_center",
+              "creation_left"
+            ],
+            "recovery_priority": 1.0,
+            "role_intent_weights": {}
+          },
+          "RCB": {
+            "role": "RCB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 50
+            },
+            "allowed_radius": 11,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_left",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LCB": {
+            "role": "LCB",
+            "base_anchor": {
+              "x": 91.0,
+              "z": 34
+            },
+            "allowed_radius": 11,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "LB": {
+            "role": "LB",
+            "base_anchor": {
+              "x": 89.0,
+              "z": 18
+            },
+            "allowed_radius": 11,
+            "support_zones": [],
+            "defensive_zones": [
+              "recovery_right",
+              "recovery_center"
+            ],
+            "attack_zones": [],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.95,
+            "role_intent_weights": {}
+          },
+          "RB": {
+            "role": "RB",
+            "base_anchor": {
+              "x": 67.0,
+              "z": 60
+            },
+            "allowed_radius": 20,
+            "support_zones": [
+              "build_up_left"
+            ],
+            "defensive_zones": [
+              "recovery_left"
+            ],
+            "attack_zones": [
+              "creation_left"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "DM": {
+            "role": "DM",
+            "base_anchor": {
+              "x": 67.0,
+              "z": 8
+            },
+            "allowed_radius": 20,
+            "support_zones": [
+              "build_up_right"
+            ],
+            "defensive_zones": [
+              "recovery_right"
+            ],
+            "attack_zones": [
+              "creation_right"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.7,
+            "role_intent_weights": {}
+          },
+          "CM": {
+            "role": "CM",
+            "base_anchor": {
+              "x": 61.0,
+              "z": 44
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_left"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "AM": {
+            "role": "AM",
+            "base_anchor": {
+              "x": 61.0,
+              "z": 24
+            },
+            "allowed_radius": 16,
+            "support_zones": [
+              "build_up_center"
+            ],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_center"
+            ],
+            "transition_zones": [],
+            "pressure_zones": [
+              "press_center",
+              "press_right"
+            ],
+            "forbidden_zones": [],
+            "recovery_priority": 0.6,
+            "role_intent_weights": {}
+          },
+          "RW": {
+            "role": "RW",
+            "base_anchor": {
+              "x": 37.0,
+              "z": 58
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_left",
+              "box_left"
+            ],
+            "transition_zones": [
+              "press_left"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.3,
+            "role_intent_weights": {}
+          },
+          "ST": {
+            "role": "ST",
+            "base_anchor": {
+              "x": 33.0,
+              "z": 34
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "box_center",
+              "six_yard_center"
+            ],
+            "transition_zones": [
+              "creation_center"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.2,
+            "role_intent_weights": {}
+          },
+          "LW": {
+            "role": "LW",
+            "base_anchor": {
+              "x": 37.0,
+              "z": 10
+            },
+            "allowed_radius": 18,
+            "support_zones": [],
+            "defensive_zones": [],
+            "attack_zones": [
+              "creation_right",
+              "box_right"
+            ],
+            "transition_zones": [
+              "press_right"
+            ],
+            "pressure_zones": [],
+            "forbidden_zones": [],
+            "recovery_priority": 0.3,
+            "role_intent_weights": {}
+          }
+        }
+      }
+    }
+  },
   "anchors": {
     "home": {
       "GK": {

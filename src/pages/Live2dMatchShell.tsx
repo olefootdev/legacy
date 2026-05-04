@@ -23,6 +23,8 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import type { LiveMatchSnapshot, LiveMatchClockPeriod, PitchPlayerState } from '@/engine/types';
 import { interpolateBallPosition, type BallTrajectoryState } from '@/engine/test2d/ballTrajectory';
 import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
+import { sfRoleFromSlot, sfGetAnchor } from '@/smartfield/smartfieldBridge';
+import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import { truthSnapshotToTest2dPitch, carrierIdToStoreOnBallId } from '@/engine/test2d/truthToTest2dPitch';
 import { useLive2dTacticalSim, LIVE2D_RENDER_INTERVAL_MS } from '@/pages/useLive2dTacticalSim';
 import { tryAutoAttachFromWindow } from '@/bridge/babylonPlayerVisualsIntegration';
@@ -1286,8 +1288,22 @@ export function Live2dMatchShell({ config }: { config: Live2dShellConfig }) {
 
   const tokenSeparation = useMemo(() => {
     const agents = [
-      ...pitch.map((p) => ({ id: `h:${p.playerId}`, x: p.x, y: p.y })),
-      ...awayPitch.map((p) => ({ id: `a:${p.playerId}`, x: p.x, y: p.y })),
+      ...pitch.map((p) => {
+        const sfRole = sfRoleFromSlot(p.slotId);
+        const sfAnchor = sfGetAnchor(sfRole, 'home');
+        const anchor = sfAnchor
+          ? { x: (sfAnchor.base_anchor.x / FIELD_LENGTH) * 100, y: (sfAnchor.base_anchor.z / FIELD_WIDTH) * 100 }
+          : undefined;
+        return { id: `h:${p.playerId}`, x: p.x, y: p.y, anchor };
+      }),
+      ...awayPitch.map((p) => {
+        const sfRole = sfRoleFromSlot(p.slotId);
+        const sfAnchor = sfGetAnchor(sfRole, 'away');
+        const anchor = sfAnchor
+          ? { x: (sfAnchor.base_anchor.x / FIELD_LENGTH) * 100, y: (sfAnchor.base_anchor.z / FIELD_WIDTH) * 100 }
+          : undefined;
+        return { id: `a:${p.playerId}`, x: p.x, y: p.y, anchor };
+      }),
     ];
     return computePitchTokenSeparation(agents, { ball: ballPos });
   }, [pitch, awayPitch, ballPos]);

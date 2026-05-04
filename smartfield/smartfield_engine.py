@@ -450,10 +450,195 @@ _DEFAULT_ANCHORS_352: dict[RoleId, TacticalAnchor] = {
     ),
 }
 
+_DEFAULT_ANCHORS_4231: dict[RoleId, TacticalAnchor] = {
+    RoleId.GK: TacticalAnchor(
+        role=RoleId.GK, base_anchor=Point(5, 34), allowed_radius=6,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER],
+        forbidden_zones=[SubZoneId.PRESS_LEFT, SubZoneId.PRESS_CENTER, SubZoneId.PRESS_RIGHT,
+                         SubZoneId.CREATION_LEFT, SubZoneId.CREATION_CENTER, SubZoneId.CREATION_RIGHT],
+        recovery_priority=1.0,
+    ),
+    RoleId.RB: TacticalAnchor(
+        role=RoleId.RB, base_anchor=Point(18, 58), allowed_radius=14,
+        support_zones=[SubZoneId.BUILD_UP_RIGHT], defensive_zones=[SubZoneId.RECOVERY_RIGHT],
+        attack_zones=[SubZoneId.CREATION_RIGHT], recovery_priority=0.85,
+    ),
+    RoleId.RCB: TacticalAnchor(
+        role=RoleId.RCB, base_anchor=Point(16, 44), allowed_radius=10,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER, SubZoneId.RECOVERY_RIGHT], recovery_priority=0.95,
+    ),
+    RoleId.LCB: TacticalAnchor(
+        role=RoleId.LCB, base_anchor=Point(16, 24), allowed_radius=10,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER, SubZoneId.RECOVERY_LEFT], recovery_priority=0.95,
+    ),
+    RoleId.LB: TacticalAnchor(
+        role=RoleId.LB, base_anchor=Point(18, 10), allowed_radius=14,
+        support_zones=[SubZoneId.BUILD_UP_LEFT], defensive_zones=[SubZoneId.RECOVERY_LEFT],
+        attack_zones=[SubZoneId.CREATION_LEFT], recovery_priority=0.85,
+    ),
+    RoleId.DM: TacticalAnchor(
+        role=RoleId.DM, base_anchor=Point(30, 42), allowed_radius=13,
+        support_zones=[SubZoneId.BUILD_UP_CENTER, SubZoneId.BUILD_UP_RIGHT],
+        defensive_zones=[SubZoneId.RECOVERY_CENTER],
+        pressure_zones=[SubZoneId.PRESS_CENTER, SubZoneId.PRESS_RIGHT], recovery_priority=0.8,
+    ),
+    RoleId.CM: TacticalAnchor(
+        role=RoleId.CM, base_anchor=Point(30, 26), allowed_radius=13,
+        support_zones=[SubZoneId.BUILD_UP_CENTER, SubZoneId.BUILD_UP_LEFT],
+        defensive_zones=[SubZoneId.RECOVERY_CENTER],
+        pressure_zones=[SubZoneId.PRESS_CENTER, SubZoneId.PRESS_LEFT], recovery_priority=0.8,
+    ),
+    RoleId.AM: TacticalAnchor(
+        role=RoleId.AM, base_anchor=Point(52, 34), allowed_radius=18,
+        support_zones=[SubZoneId.BUILD_UP_CENTER],
+        attack_zones=[SubZoneId.CREATION_CENTER, SubZoneId.BOX_CENTER],
+        pressure_zones=[SubZoneId.PRESS_CENTER], recovery_priority=0.5,
+    ),
+    RoleId.RW: TacticalAnchor(
+        role=RoleId.RW, base_anchor=Point(60, 58), allowed_radius=18,
+        attack_zones=[SubZoneId.CREATION_RIGHT, SubZoneId.BOX_RIGHT],
+        transition_zones=[SubZoneId.PRESS_RIGHT], recovery_priority=0.35,
+    ),
+    RoleId.LW: TacticalAnchor(
+        role=RoleId.LW, base_anchor=Point(60, 10), allowed_radius=18,
+        attack_zones=[SubZoneId.CREATION_LEFT, SubZoneId.BOX_LEFT],
+        transition_zones=[SubZoneId.PRESS_LEFT], recovery_priority=0.35,
+    ),
+    RoleId.ST: TacticalAnchor(
+        role=RoleId.ST, base_anchor=Point(74, 34), allowed_radius=18,
+        attack_zones=[SubZoneId.BOX_CENTER, SubZoneId.SIX_YARD_CENTER],
+        transition_zones=[SubZoneId.CREATION_CENTER], recovery_priority=0.2,
+    ),
+}
+
+_DEFAULT_ANCHORS_451: dict[RoleId, TacticalAnchor] = {
+    RoleId.GK: TacticalAnchor(
+        role=RoleId.GK, base_anchor=Point(5, 34), allowed_radius=6,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER],
+        forbidden_zones=[SubZoneId.PRESS_LEFT, SubZoneId.PRESS_CENTER, SubZoneId.PRESS_RIGHT,
+                         SubZoneId.CREATION_LEFT, SubZoneId.CREATION_CENTER, SubZoneId.CREATION_RIGHT],
+        recovery_priority=1.0,
+    ),
+    RoleId.RB: TacticalAnchor(
+        role=RoleId.RB, base_anchor=Point(18, 58), allowed_radius=13,
+        support_zones=[SubZoneId.BUILD_UP_RIGHT], defensive_zones=[SubZoneId.RECOVERY_RIGHT],
+        recovery_priority=0.88,
+    ),
+    RoleId.RCB: TacticalAnchor(
+        role=RoleId.RCB, base_anchor=Point(16, 44), allowed_radius=10,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER, SubZoneId.RECOVERY_RIGHT], recovery_priority=0.95,
+    ),
+    RoleId.LCB: TacticalAnchor(
+        role=RoleId.LCB, base_anchor=Point(16, 24), allowed_radius=10,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER, SubZoneId.RECOVERY_LEFT], recovery_priority=0.95,
+    ),
+    RoleId.LB: TacticalAnchor(
+        role=RoleId.LB, base_anchor=Point(18, 10), allowed_radius=13,
+        support_zones=[SubZoneId.BUILD_UP_LEFT], defensive_zones=[SubZoneId.RECOVERY_LEFT],
+        recovery_priority=0.88,
+    ),
+    RoleId.DM: TacticalAnchor(
+        role=RoleId.DM, base_anchor=Point(32, 34), allowed_radius=13,
+        support_zones=[SubZoneId.BUILD_UP_CENTER],
+        defensive_zones=[SubZoneId.RECOVERY_CENTER],
+        pressure_zones=[SubZoneId.PRESS_CENTER], recovery_priority=0.82,
+    ),
+    RoleId.CM: TacticalAnchor(
+        role=RoleId.CM, base_anchor=Point(42, 44), allowed_radius=15,
+        support_zones=[SubZoneId.BUILD_UP_CENTER, SubZoneId.BUILD_UP_RIGHT],
+        pressure_zones=[SubZoneId.PRESS_CENTER, SubZoneId.PRESS_RIGHT], recovery_priority=0.65,
+    ),
+    RoleId.AM: TacticalAnchor(
+        role=RoleId.AM, base_anchor=Point(42, 24), allowed_radius=15,
+        support_zones=[SubZoneId.BUILD_UP_CENTER, SubZoneId.BUILD_UP_LEFT],
+        pressure_zones=[SubZoneId.PRESS_CENTER, SubZoneId.PRESS_LEFT], recovery_priority=0.65,
+    ),
+    RoleId.RW: TacticalAnchor(
+        role=RoleId.RW, base_anchor=Point(52, 58), allowed_radius=17,
+        attack_zones=[SubZoneId.CREATION_RIGHT, SubZoneId.BOX_RIGHT],
+        transition_zones=[SubZoneId.PRESS_RIGHT], recovery_priority=0.4,
+    ),
+    RoleId.LW: TacticalAnchor(
+        role=RoleId.LW, base_anchor=Point(52, 10), allowed_radius=17,
+        attack_zones=[SubZoneId.CREATION_LEFT, SubZoneId.BOX_LEFT],
+        transition_zones=[SubZoneId.PRESS_LEFT], recovery_priority=0.4,
+    ),
+    RoleId.ST: TacticalAnchor(
+        role=RoleId.ST, base_anchor=Point(72, 34), allowed_radius=18,
+        attack_zones=[SubZoneId.BOX_CENTER, SubZoneId.SIX_YARD_CENTER],
+        transition_zones=[SubZoneId.CREATION_CENTER], recovery_priority=0.22,
+    ),
+}
+
+_DEFAULT_ANCHORS_343: dict[RoleId, TacticalAnchor] = {
+    RoleId.GK: TacticalAnchor(
+        role=RoleId.GK, base_anchor=Point(5, 34), allowed_radius=6,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER],
+        forbidden_zones=[SubZoneId.PRESS_LEFT, SubZoneId.PRESS_CENTER, SubZoneId.PRESS_RIGHT,
+                         SubZoneId.CREATION_LEFT, SubZoneId.CREATION_CENTER, SubZoneId.CREATION_RIGHT],
+        recovery_priority=1.0,
+    ),
+    RoleId.RCB: TacticalAnchor(
+        role=RoleId.RCB, base_anchor=Point(16, 50), allowed_radius=11,
+        defensive_zones=[SubZoneId.RECOVERY_RIGHT, SubZoneId.RECOVERY_CENTER], recovery_priority=0.95,
+    ),
+    RoleId.LCB: TacticalAnchor(
+        role=RoleId.LCB, base_anchor=Point(14, 34), allowed_radius=11,
+        defensive_zones=[SubZoneId.RECOVERY_CENTER], recovery_priority=0.95,
+    ),
+    RoleId.LB: TacticalAnchor(
+        role=RoleId.LB, base_anchor=Point(16, 18), allowed_radius=11,
+        defensive_zones=[SubZoneId.RECOVERY_LEFT, SubZoneId.RECOVERY_CENTER], recovery_priority=0.95,
+    ),
+    # Wing-backs (RB/LB slots used as WBs in 3-4-3)
+    RoleId.RB: TacticalAnchor(
+        role=RoleId.RB, base_anchor=Point(38, 60), allowed_radius=20,
+        support_zones=[SubZoneId.BUILD_UP_RIGHT],
+        attack_zones=[SubZoneId.CREATION_RIGHT],
+        defensive_zones=[SubZoneId.RECOVERY_RIGHT], recovery_priority=0.7,
+    ),
+    RoleId.DM: TacticalAnchor(
+        role=RoleId.DM, base_anchor=Point(38, 8), allowed_radius=20,
+        support_zones=[SubZoneId.BUILD_UP_LEFT],
+        attack_zones=[SubZoneId.CREATION_LEFT],
+        defensive_zones=[SubZoneId.RECOVERY_LEFT], recovery_priority=0.7,
+    ),
+    RoleId.CM: TacticalAnchor(
+        role=RoleId.CM, base_anchor=Point(44, 44), allowed_radius=16,
+        support_zones=[SubZoneId.BUILD_UP_CENTER],
+        attack_zones=[SubZoneId.CREATION_CENTER],
+        pressure_zones=[SubZoneId.PRESS_CENTER, SubZoneId.PRESS_RIGHT], recovery_priority=0.6,
+    ),
+    RoleId.AM: TacticalAnchor(
+        role=RoleId.AM, base_anchor=Point(44, 24), allowed_radius=16,
+        support_zones=[SubZoneId.BUILD_UP_CENTER],
+        attack_zones=[SubZoneId.CREATION_CENTER],
+        pressure_zones=[SubZoneId.PRESS_CENTER, SubZoneId.PRESS_LEFT], recovery_priority=0.6,
+    ),
+    RoleId.RW: TacticalAnchor(
+        role=RoleId.RW, base_anchor=Point(68, 58), allowed_radius=18,
+        attack_zones=[SubZoneId.CREATION_RIGHT, SubZoneId.BOX_RIGHT],
+        transition_zones=[SubZoneId.PRESS_RIGHT], recovery_priority=0.3,
+    ),
+    RoleId.ST: TacticalAnchor(
+        role=RoleId.ST, base_anchor=Point(72, 34), allowed_radius=18,
+        attack_zones=[SubZoneId.BOX_CENTER, SubZoneId.SIX_YARD_CENTER],
+        transition_zones=[SubZoneId.CREATION_CENTER], recovery_priority=0.2,
+    ),
+    RoleId.LW: TacticalAnchor(
+        role=RoleId.LW, base_anchor=Point(68, 10), allowed_radius=18,
+        attack_zones=[SubZoneId.CREATION_LEFT, SubZoneId.BOX_LEFT],
+        transition_zones=[SubZoneId.PRESS_LEFT], recovery_priority=0.3,
+    ),
+}
+
 _FORMATION_REGISTRY: dict[str, dict[RoleId, TacticalAnchor]] = {
     "4-3-3": _DEFAULT_ANCHORS_433,
     "4-4-2": _DEFAULT_ANCHORS_442,
     "3-5-2": _DEFAULT_ANCHORS_352,
+    "4-2-3-1": _DEFAULT_ANCHORS_4231,
+    "4-5-1": _DEFAULT_ANCHORS_451,
+    "3-4-3": _DEFAULT_ANCHORS_343,
 }
 
 
@@ -769,11 +954,20 @@ def export_smartfield_snapshot(
     out_path: Optional[str] = None,
 ) -> dict:
     """
-    Static snapshot of field geometry, zones, goals and anchors.
+    Static snapshot of field geometry, zones, goals and anchors for ALL formations.
     Written as JSON for the TypeScript side to import at build or startup.
+    The `formation` param is kept for backwards-compat but all formations are exported.
     """
-    home_anchors = get_anchors_for_formation(formation, TeamSide.HOME, half)
-    away_anchors = get_anchors_for_formation(formation, TeamSide.AWAY, half)
+    formations_data: dict[str, dict] = {}
+    for fname in _FORMATION_REGISTRY:
+        home_anchors = get_anchors_for_formation(fname, TeamSide.HOME, half)
+        away_anchors = get_anchors_for_formation(fname, TeamSide.AWAY, half)
+        formations_data[fname] = {
+            "anchors": {
+                "home": {r.value: _anchor_dict(a) for r, a in home_anchors.items()},
+                "away": {r.value: _anchor_dict(a) for r, a in away_anchors.items()},
+            }
+        }
 
     data = {
         "field": {
@@ -794,10 +988,9 @@ def export_smartfield_snapshot(
             {"id": z.id, "rect": _rect_dict(z.rect), "third": z.third.value, "lane": z.lane.value}
             for z in SUBZONES
         ],
-        "anchors": {
-            "home": {r.value: _anchor_dict(a) for r, a in home_anchors.items()},
-            "away": {r.value: _anchor_dict(a) for r, a in away_anchors.items()},
-        },
+        "formations": formations_data,
+        # Legacy flat anchors for the default formation (backwards compat)
+        "anchors": formations_data[formation]["anchors"],
         "half": half.value,
         "formation": formation,
     }
