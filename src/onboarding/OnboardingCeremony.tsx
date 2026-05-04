@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { dispatchGame, getGameState, useGameStore, useSquadHydrationDone } from '@/game/store';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { makeInboxItem } from '@/game/inboxItem';
-import { WELCOME_GENESIS_PACK_VERSION } from '@/game/welcomeGenesisPack';
+import { WELCOME_GENESIS_PACK_VERSION, hasServerGrant } from '@/game/welcomeGenesisPack';
 import { buildOnboardingPackage, type OnboardingPackage } from './buildOnboardingPackage';
 import {
   IntroChapter,
@@ -126,20 +126,43 @@ export function OnboardingCeremony() {
   const hydrationDone = useSquadHydrationDone();
 
   const startedRef = useRef(false);
+  const lastProfileRef = useRef<string | undefined>(undefined);
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [askingExit, setAskingExit] = useState(false);
   const [active, setActive] = useState(false);
 
+  // Reseta o guard quando o perfil muda (logout → login de outra conta).
+  const profileId = managerProfile?.email;
+  if (profileId !== lastProfileRef.current) {
+    lastProfileRef.current = profileId;
+    startedRef.current = false;
+  }
+
   // Detecta condição de gatilho. Aguarda hydration do Supabase antes de avaliar.
   useEffect(() => {
-    if (!hydrationDone) return; // espera o ManagerSquadHydrator terminar
+    if (!hydrationDone) return;
     if (startedRef.current) return;
     if (!isSupabaseConfigured()) return;
     if (!managerProfile) return;
     if (welcomePackVersion >= WELCOME_GENESIS_PACK_VERSION) return;
     if (playersCount > 0) return;
     startedRef.current = true;
-    setActive(true);
+    void (async () => {
+      // Guard server-side: se já recebeu o pack em qualquer sessão/device, não abre.
+      const alreadyGranted = await hasServerGrant();
+      if (alreadyGranted) {
+        dispatchGame({
+          type: 'SET_USER_SETTINGS',
+          partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+        });
+        return;
+      }
+      dispatchGame({
+        type: 'SET_USER_SETTINGS',
+        partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+      });
+      setActive(true);
+    })();
   }, [hydrationDone, managerProfile, playersCount, welcomePackVersion]);
 
   const startBuild = useCallback(async () => {

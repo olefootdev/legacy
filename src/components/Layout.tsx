@@ -29,7 +29,6 @@ import { formatExp } from '@/systems/economy';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayName';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
-import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
@@ -483,7 +482,6 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
         <OleSmartHubPanel />
       </main>
-      <TutorialOverlay />
       <CoachActionApproval />
       <OleSmartHubDrawer open={hubOpen} onClose={() => setHubOpen(false)} />
 

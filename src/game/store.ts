@@ -57,6 +57,11 @@ export function setSquadHydrationDone(): void {
   for (const l of hydrationListeners) l();
 }
 
+export function resetSquadHydrationDone(): void {
+  squadHydrationDone = false;
+  for (const l of hydrationListeners) l();
+}
+
 export function useSquadHydrationDone(): boolean {
   return useSyncExternalStore(
     (cb) => { hydrationListeners.add(cb); return () => hydrationListeners.delete(cb); },

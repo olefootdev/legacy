@@ -102,6 +102,8 @@ export async function signOutGame(): Promise<void> {
   if (sb) {
     try { await sb.auth.signOut(); } catch { /* noop */ }
   }
+  const { resetSquadHydrationDone } = await import('@/game/store');
+  resetSquadHydrationDone();
 }
 
 export async function saveOnboardingProfile(input: {
