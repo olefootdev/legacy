@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -18,11 +18,16 @@ import {
   ChevronRight,
   Check,
   AtSign,
+  Brain,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
+import { useGameDispatch } from '@/game/store';
 import { formatOle } from '@/systems/economy';
 import { computeUsername, findProfileByUsername } from '@/supabase/managerUsername';
+import { chatWithCoach } from '@/coach/coachApi';
+import type { TeamContext } from '@/coach/types';
 
 function ovr(attrs: import('@/entities/types').PlayerAttributes): number {
   const vals = Object.values(attrs);
@@ -739,6 +744,344 @@ function useFriends() {
   return { friends, add, remove, isFriend };
 }
 
+// ─── Coach Inline Chat ────────────────────────────────────────────────────────
+
+const ONBOARDING_QUESTIONS = [
+  {
+    question: 'Como você prefere jogar?',
+    chips: ['Posse de bola', 'Contra-ataque', 'Pressing intenso', 'Jogo direto'],
+    category: 'tactics' as const,
+  },
+  {
+    question: 'Qual sua prioridade de desenvolvimento?',
+    chips: ['Jovens talentos', 'Resultados imediatos', 'Equilíbrio', 'Construção longa'],
+    category: 'training' as const,
+  },
+  {
+    question: 'Como você escala o time?',
+    chips: ['Conservador e seguro', 'Arrisco formações novas', 'Depende do adversário'],
+    category: 'lineup' as const,
+  },
+];
+
+function CoachInlineChat() {
+  const dispatch = useGameDispatch();
+  const coach = useGameStore((s) => s.manager.coach);
+  const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam);
+  const players = useGameStore((s) => s.players);
+  const finance = useGameStore((s) => s.finance);
+
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [localMessages, setLocalMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [heartTeamAsked, setHeartTeamAsked] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const onboardingStep = coach?.memory.onboardingStep ?? -1;
+  const isOnboarding = onboardingStep < 3;
+
+  // Pergunta do time do coração: inserida após step 0 se ainda não foi feita
+  const heartTeamQuestion = favoriteRealTeam && !heartTeamAsked && onboardingStep >= 0;
+
+  const activeInstructions = coach?.memory.managerInstructions.filter((i) => i.active).length ?? 0;
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [localMessages, loading]);
+
+  // Monta TeamContext a partir do estado do jogo
+  function buildTeamContext(): TeamContext {
+    const allPlayers = Object.values(players);
+    const injured = allPlayers.filter((p) => (p.injuryRisk ?? 0) > 80).length;
+    const avgFatigue = allPlayers.length
+      ? allPlayers.reduce((sum, p) => sum + (p.fatigue ?? 0), 0) / allPlayers.length
+      : 0;
+    const avgOvr = allPlayers.length
+      ? allPlayers.reduce((sum, p) => {
+          const vals = Object.values(p.attrs);
+          return sum + Math.round(vals.reduce((a: number, b) => a + (b as number), 0) / vals.length);
+        }, 0) / allPlayers.length
+      : 0;
+
+    return {
+      totalPlayers: allPlayers.length,
+      injuredPlayers: injured,
+      suspendedPlayers: 0,
+      averageFatigue: Math.round(avgFatigue),
+      averageInjuryRisk: Math.round(avgFatigue * 0.6),
+      averageOverall: Math.round(avgOvr),
+      staffLevels: {} as any,
+      staffSlotsAvailable: 0,
+      staffAssignedCount: 0,
+      runningTrainingPlans: 0,
+      completedTrainingPlans: 0,
+      trainingCenterLevel: 1,
+      availableExp: finance.ole ?? 0,
+      availableBro: finance.broCents ?? 0,
+      favoriteTeam: favoriteRealTeam?.name,
+    };
+  }
+
+  async function sendMessage(text: string) {
+    if (!coach || !text.trim() || loading) return;
+    const userMsg = text.trim();
+    setInput('');
+    setLoading(true);
+
+    const userEntry = { role: 'user' as const, content: userMsg };
+    setLocalMessages((prev) => [...prev, userEntry]);
+
+    dispatch({ type: 'COACH_ADD_MESSAGE', message: { role: 'user', content: userMsg, timestamp: Date.now() } });
+
+    const history = [
+      ...(coach.conversationContext ?? []).slice(-10).map((m) => ({ role: m.role, content: m.content })),
+      ...localMessages.slice(-6),
+    ];
+
+    const res = await chatWithCoach(coach, buildTeamContext(), userMsg, history);
+    setLoading(false);
+
+    if (!res.ok || !res.response) {
+      const errMsg = res.error ?? 'Erro ao conectar com o servidor.';
+      setLocalMessages((prev) => [...prev, { role: 'assistant', content: errMsg }]);
+      return;
+    }
+
+    const assistantMsg = res.response;
+    setLocalMessages((prev) => [...prev, { role: 'assistant', content: assistantMsg }]);
+    dispatch({ type: 'COACH_ADD_MESSAGE', message: { role: 'assistant', content: assistantMsg, timestamp: Date.now() } });
+
+    // Persiste instrução se o backend detectou uma
+    if (res.instruction) {
+      dispatch({
+        type: 'COACH_ADD_INSTRUCTION',
+        instruction: res.instruction.instruction,
+        context: res.instruction.category === 'training' ? 'Conversa sobre treinos'
+          : res.instruction.category === 'tactics' ? 'Conversa sobre táticas'
+          : res.instruction.category === 'lineup' ? 'Conversa sobre escalação'
+          : 'Conversa com o manager',
+        priority: res.instruction.priority,
+        category: res.instruction.category,
+      });
+    }
+  }
+
+  async function handleOnboardingAnswer(text: string, stepIndex: number) {
+    if (!coach) return;
+
+    // Persiste a resposta como instrução
+    const q = ONBOARDING_QUESTIONS[stepIndex];
+    if (q) {
+      dispatch({
+        type: 'COACH_ADD_INSTRUCTION',
+        instruction: text,
+        context: `Onboarding — ${q.question}`,
+        priority: 'high',
+        category: q.category,
+      });
+    }
+
+    // Avança o step
+    dispatch({ type: 'COACH_SET_ONBOARDING_STEP', step: stepIndex + 1 });
+
+    await sendMessage(text);
+  }
+
+  async function handleHeartTeamAnswer(text: string) {
+    setHeartTeamAsked(true);
+    if (favoriteRealTeam && text.toLowerCase().includes('sim')) {
+      dispatch({
+        type: 'COACH_ADD_INSTRUCTION',
+        instruction: `Inspirar estilo de jogo no ${favoriteRealTeam.name}`,
+        context: 'Onboarding — time do coração',
+        priority: 'high',
+        category: 'tactics',
+      });
+    }
+    await sendMessage(text);
+  }
+
+  // Determina qual pergunta de onboarding mostrar
+  function getCurrentOnboardingQuestion(): { question: string; chips: string[]; isHeartTeam: boolean } | null {
+    if (!isOnboarding) return null;
+    if (heartTeamQuestion && onboardingStep >= 1) {
+      return {
+        question: `Vi que você torce para o ${favoriteRealTeam!.name}. Quer que eu inspire o estilo de jogo do seu time do coração nas sugestões táticas?`,
+        chips: ['Sim, quero!', 'Não por enquanto'],
+        isHeartTeam: true,
+      };
+    }
+    const q = ONBOARDING_QUESTIONS[onboardingStep === -1 ? 0 : onboardingStep];
+    if (!q) return null;
+    return { ...q, isHeartTeam: false };
+  }
+
+  const currentQ = getCurrentOnboardingQuestion();
+  const effectiveStep = onboardingStep === -1 ? 0 : onboardingStep;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Knowledge badge */}
+      {activeInstructions > 0 && (
+        <div className="flex items-center gap-1.5 px-2 py-1 border border-neon-yellow/20 bg-neon-yellow/[0.04]"
+          style={{ borderRadius: 'var(--radius-sm)' }}>
+          <Brain className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={2} />
+          <span className="text-neon-yellow/80" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
+            {activeInstructions} instrução{activeInstructions !== 1 ? 'ões' : ''} aprendida{activeInstructions !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Onboarding: pergunta atual + chips */}
+      {isOnboarding && currentQ && (
+        <div className="space-y-2">
+          {/* Progresso */}
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className={cn(
+                  'flex-1 h-0.5 rounded-full transition-all',
+                  i < effectiveStep ? 'bg-neon-yellow' : i === effectiveStep ? 'bg-neon-yellow/50' : 'bg-white/10',
+                )}
+              />
+            ))}
+          </div>
+
+          {/* Pergunta do coach */}
+          <div className="px-2.5 py-2 border border-white/10 bg-white/[0.03]"
+            style={{ borderRadius: 'var(--radius-sm)' }}>
+            <p className="text-white/80 leading-snug" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+              {localMessages.length === 0
+                ? currentQ.question
+                : localMessages[localMessages.length - 1]?.role === 'assistant'
+                  ? localMessages[localMessages.length - 1]!.content
+                  : currentQ.question}
+            </p>
+          </div>
+
+          {/* Chips de resposta rápida */}
+          {!loading && (
+            <div className="flex flex-wrap gap-1">
+              {currentQ.chips.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => currentQ.isHeartTeam ? handleHeartTeamAnswer(chip) : handleOnboardingAnswer(chip, effectiveStep)}
+                  className="px-2 py-1 border border-white/15 bg-white/[0.04] text-white/65 hover:border-neon-yellow/50 hover:text-neon-yellow/90 hover:bg-neon-yellow/[0.06] transition-all"
+                  style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: '10px' }}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex items-center gap-1.5 text-white/40">
+              <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>Treinador respondendo…</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Chat livre (pós-onboarding) */}
+      {!isOnboarding && (
+        <div className="space-y-2">
+          {/* Histórico de mensagens */}
+          <div
+            ref={scrollRef}
+            className="flex flex-col gap-1.5 overflow-y-auto"
+            style={{ maxHeight: 180 }}
+          >
+            {localMessages.slice(-12).map((m, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'px-2.5 py-1.5 leading-snug',
+                  m.role === 'user'
+                    ? 'self-end border border-neon-yellow/25 bg-neon-yellow/[0.06] text-white/85 ml-4'
+                    : 'self-start border border-white/10 bg-white/[0.03] text-white/70 mr-4',
+                )}
+                style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: '11px', maxWidth: '90%' }}
+              >
+                {m.content}
+              </div>
+            ))}
+            {loading && (
+              <div className="self-start flex items-center gap-1.5 px-2.5 py-1.5 border border-white/10 bg-white/[0.03]"
+                style={{ borderRadius: 'var(--radius-sm)' }}>
+                <Loader2 className="w-3 h-3 animate-spin text-white/40" strokeWidth={2} />
+                <span className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>digitando…</span>
+              </div>
+            )}
+          </div>
+
+          {localMessages.length === 0 && !loading && (
+            <p className="text-white/30 text-center" style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
+              Pergunte qualquer coisa ao seu treinador
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Input — aparece sempre (onboarding: texto livre opcional; chat: principal) */}
+      <div
+        className="flex items-end gap-1.5 border border-white/10 bg-white/[0.03] px-2 py-1.5 focus-within:border-neon-yellow/40 transition-colors"
+        style={{ borderRadius: 'var(--radius-sm)' }}
+      >
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (isOnboarding && currentQ) {
+                if (input.trim()) {
+                  currentQ.isHeartTeam ? handleHeartTeamAnswer(input) : handleOnboardingAnswer(input, effectiveStep);
+                }
+              } else {
+                sendMessage(input);
+              }
+            }
+          }}
+          placeholder={isOnboarding ? 'Ou escreva sua resposta…' : 'Fale com seu treinador…'}
+          rows={2}
+          disabled={loading}
+          className="flex-1 bg-transparent text-white/85 placeholder:text-white/25 outline-none resize-none leading-snug min-w-0 disabled:opacity-50"
+          style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (!input.trim()) return;
+            if (isOnboarding && currentQ) {
+              currentQ.isHeartTeam ? handleHeartTeamAnswer(input) : handleOnboardingAnswer(input, effectiveStep);
+            } else {
+              sendMessage(input);
+            }
+          }}
+          disabled={!input.trim() || loading}
+          className={cn(
+            'flex items-center justify-center shrink-0 mb-0.5 transition-all',
+            input.trim() && !loading
+              ? 'text-neon-yellow hover:scale-110 active:scale-95'
+              : 'text-white/20 cursor-not-allowed',
+          )}
+          aria-label="Enviar"
+        >
+          <Send className="w-4 h-4" strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Chat modes ───────────────────────────────────────────────────────────────
 
 type ChatMode = 'coach' | 'manager' | 'support';
@@ -910,6 +1253,9 @@ function ManagerContactPicker({
 function ChatPanel() {
   const navigate = useNavigate();
   const { friends, add, remove, isFriend } = useFriends();
+  const activeInstructions = useGameStore(
+    (s) => s.manager.coach?.memory.managerInstructions.filter((i) => i.active).length ?? 0,
+  );
 
   const [mode, setMode] = useState<ChatMode>('coach');
   const [message, setMessage] = useState('');
@@ -928,9 +1274,7 @@ function ChatPanel() {
 
   function handleSend() {
     if (!message.trim()) return;
-    if (mode === 'coach') {
-      navigate('/coach/chat', { state: { draft: message } });
-    } else if (mode === 'manager' && selectedFriend) {
+    if (mode === 'manager' && selectedFriend) {
       navigate(`/manager/dm/${selectedFriend}`, { state: { draft: message } });
     } else if (mode === 'support') {
       navigate('/ajuda', { state: { draft: message } });
@@ -949,14 +1293,14 @@ function ChatPanel() {
   }
 
   const placeholders: Record<ChatMode, string> = {
-    coach: 'Pergunta ao treinador…',
+    coach: 'Fale com seu treinador…',
     manager: `Mensagem para @${selectedFriend ?? ''}…`,
     support: 'Descreve o problema…',
   };
 
   const canSend =
     message.trim().length > 0 &&
-    (mode !== 'manager' || selectedFriend !== null);
+    (mode === 'support' || (mode === 'manager' && selectedFriend !== null));
 
   return (
     <div className="border-t border-white/10 pt-3 space-y-3">
@@ -970,7 +1314,7 @@ function ChatPanel() {
               type="button"
               onClick={() => handleTabChange(m)}
               className={cn(
-                'flex flex-1 flex-col items-center gap-1 py-2 border transition-all',
+                'flex flex-1 flex-col items-center gap-1 py-2 border transition-all relative',
                 active
                   ? 'border-neon-yellow/60 bg-neon-yellow/[0.07] text-neon-yellow'
                   : 'border-white/10 bg-white/[0.02] text-white/40 hover:border-white/20 hover:text-white/60',
@@ -984,10 +1328,22 @@ function ChatPanel() {
               >
                 {label}
               </span>
+              {/* Badge de conhecimento no tab do treinador */}
+              {m === 'coach' && activeInstructions > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 flex items-center justify-center bg-neon-yellow text-black font-bold rounded-full"
+                  style={{ width: 14, height: 14, fontFamily: 'var(--font-display)', fontSize: '7px' }}
+                >
+                  {activeInstructions > 9 ? '9+' : activeInstructions}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
+      {/* Coach: chat inline */}
+      {mode === 'coach' && <CoachInlineChat />}
 
       {/* Manager: contact picker or selected badge */}
       {mode === 'manager' && !selectedFriend && (
@@ -1061,8 +1417,8 @@ function ChatPanel() {
         </div>
       )}
 
-      {/* Message input — só aparece quando pode digitar */}
-      {(mode !== 'manager' || selectedFriend) && (
+      {/* Message input — só para support e manager (coach tem CoachInlineChat) */}
+      {(mode === 'support' || (mode === 'manager' && selectedFriend)) && (
         <div
           className="flex items-end gap-1.5 border border-white/10 bg-white/[0.03] px-2 py-1.5 focus-within:border-neon-yellow/40 transition-colors"
           style={{ borderRadius: 'var(--radius-sm)' }}

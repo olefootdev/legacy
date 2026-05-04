@@ -510,6 +510,8 @@ export type GameAction =
   | { type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT'; momentId: string; choiceId: string | null }
   /** Sprint 2: Mudar intensidade tática */
   | { type: 'SET_TACTICAL_INTENSITY'; level: import('@/match/quickTacticalIntensity').TacticalIntensityLevel }
+  /** Atualizar arco narrativo da partida rápida em andamento */
+  | { type: 'SET_NARRATIVE_ARC'; arc: import('@/match/quickNarrativeArcs').NarrativeArcState }
   /** Sprint 3: Atualizar progresso dos desafios semanais */
   | { type: 'UPDATE_STREAK_CHALLENGES'; currentStreak: number; won: boolean }
   /** Sprint 3: Renovar desafios semanais */
@@ -626,6 +628,7 @@ export type GameAction =
     }
   | { type: 'COACH_TOGGLE_INSTRUCTION'; index: number; active: boolean }
   | { type: 'COACH_REMOVE_INSTRUCTION'; index: number }
+  | { type: 'COACH_SET_ONBOARDING_STEP'; step: number }
   | { type: 'ADMIN_UPSERT_LEAGUE'; league: AdminLeagueConfig }
   | { type: 'ADMIN_REMOVE_LEAGUE'; id: string }
   | { type: 'ADMIN_SET_PRIMARY_LEAGUE'; id: string }

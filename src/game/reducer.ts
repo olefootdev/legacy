@@ -788,6 +788,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
 
+    case 'SET_NARRATIVE_ARC': {
+      if (!state.liveMatch) return state;
+      return {
+        ...state,
+        liveMatch: { ...state.liveMatch, narrativeArc: action.arc },
+      };
+    }
+
     case 'UPDATE_STREAK_CHALLENGES': {
       if (!state.streakChallenges) return state;
 
@@ -4752,6 +4760,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           coach: {
             ...state.manager.coach,
             memory: { ...state.manager.coach.memory, managerInstructions: updated },
+          },
+        },
+      };
+    }
+
+    case 'COACH_SET_ONBOARDING_STEP': {
+      if (!state.manager.coach) return state;
+      return {
+        ...state,
+        manager: {
+          ...state.manager,
+          coach: {
+            ...state.manager.coach,
+            memory: { ...state.manager.coach.memory, onboardingStep: action.step },
           },
         },
       };

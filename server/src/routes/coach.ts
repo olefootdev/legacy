@@ -285,6 +285,9 @@ Conhecimento sobre o sistema Olefoot:
 6. olheiro: Aumenta recompensas EXP de scouting.
 7. preparador_goleiros: Buff específico para goleiros.
 
+**Time do coração do manager:** ${(teamContext as any).favoriteTeam ?? 'não informado'}
+${(teamContext as any).favoriteTeam ? `Quando relevante, mencione o estilo de jogo do ${(teamContext as any).favoriteTeam} e pergunte se o manager quer se inspirar nele.` : ''}
+
 **Instruções do manager:**
 ${activeInstructions}
 

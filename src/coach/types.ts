@@ -61,6 +61,9 @@ export interface CoachMemory {
 
   // Histórico de decisões
   decisionHistory: CoachDecision[];
+
+  // Progresso do onboarding guiado (undefined = não iniciado, 0-2 = em progresso, 3+ = completo)
+  onboardingStep?: number;
 }
 
 export interface ManagerInstruction {
@@ -147,4 +150,7 @@ export interface TeamContext {
     isHome: boolean;
     daysUntil: number;
   };
+
+  // Time do coração do manager (do cadastro)
+  favoriteTeam?: string;
 }
