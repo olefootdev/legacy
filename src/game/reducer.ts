@@ -3740,6 +3740,21 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         action.starterExpAmount > 0
           ? grantEarnedExp(state.finance, action.starterExpAmount)
           : state.finance;
+
+      // Auto-registrar na liga global ao receber o plantel
+      const allPlayers = Object.values(players);
+      const avgOverall = allPlayers.length > 0
+        ? Math.round(allPlayers.reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) / allPlayers.length)
+        : 70;
+      const managerId = state.userSettings.managerProfile?.email ?? state.club.id;
+      const clubName = state.club.name ?? 'Olefoot FC';
+      const clubShort = state.club.shortName ?? clubName.slice(0, 3).toUpperCase();
+      let globalLeagueMVP = state.globalLeagueMVP;
+      if (globalLeagueMVP && !globalLeagueMVP.teams.some(t => t.managerId === managerId)) {
+        const { registerTeam } = require('@/match/globalLeagueMVP');
+        globalLeagueMVP = registerTeam(globalLeagueMVP, managerId, clubName, clubShort, avgOverall);
+      }
+
       return {
         ...state,
         players,
@@ -3748,6 +3763,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         lineup,
         manager: { ...state.manager, formationScheme },
         finance,
+        globalLeagueMVP,
         userSettings: {
           ...state.userSettings,
           welcomeGenesisPackVersion: action.welcomePackVersion,

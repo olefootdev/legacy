@@ -22,6 +22,7 @@ import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
 import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
 import { useGlobalPlayoffScheduler } from './hooks/useGlobalPlayoffScheduler';
+import { useAutoRegisterGlobalLeague } from './hooks/useAutoRegisterGlobalLeague';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
 
 /**
@@ -227,6 +228,7 @@ function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; 
 function GlobalSchedulerMount() {
   useGlobalRoundScheduler();
   useGlobalPlayoffScheduler();
+  useAutoRegisterGlobalLeague();
   return null;
 }
 
