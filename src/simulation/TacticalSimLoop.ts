@@ -271,6 +271,9 @@ import { recordCrossTelegraphed, recordCrossConcluded } from '@/playerDecision/c
 import { computeGoalThreat, type GoalThreat, type ThreatTrend } from '@/playerDecision/ThreatModel';
 import { buildGoalContext } from '@/match/goalContext';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
+import { getPlayerIntention } from '@/tactical';
+import { getZoneFromNormalizedPosition } from '@/tactical';
+import type { FieldZoneId } from '@/tactical';
 const FIXED_DT = 1 / 60;
 /**
  * Tempo mínimo com bola nas mãos do GR antes do pontapé (s).
@@ -2203,9 +2206,17 @@ export class TacticalSimLoop {
     const scheme: FormationSchemeId = ag.side === 'home'
       ? (this.liveRef?.homeFormationScheme ?? '4-3-3') as FormationSchemeId
       : (this.liveRef?.awayFormationScheme ?? '4-3-3') as FormationSchemeId;
-    const sfRole = sfRoleFromSlot(ag.slotId ?? 'mc1', scheme);
-    const sfCorr = sfShapeCorrection(ag.vehicle.position.x, ag.vehicle.position.z, sfRole, ag.side);
-    tickTacticalDiscipline(ag.matchRuntime, sfCorr.isOutOfShape, fixedDt);
+
+    // Disciplina tática: mede distância ao arrive.target (destino tático dinâmico),
+    // não ao anchor estático do SmartField — o anchor não acompanha o deslocamento do bloco,
+    // causando isOutOfShape=true quase sempre e disciplina colapsando para ~4%.
+    const distToTarget = Math.hypot(
+      ag.vehicle.position.x - ag.arrive.target.x,
+      ag.vehicle.position.z - ag.arrive.target.z,
+    );
+    // Tolerância: 8m = jogador está executando o movimento tático corretamente
+    const isOutOfShape = distToTarget > 8;
+    tickTacticalDiscipline(ag.matchRuntime, isOutOfShape, fixedDt);
   }
 
   private integrateFixed(fixedDt: number, manager: TacticalManagerParams) {
@@ -2569,7 +2580,7 @@ export class TacticalSimLoop {
       && this.simState.carrierId === this.gkRestart.gkId;
     const dampBallFollowGk =
       gkBallInHandRestart || this.world.simTime < this.gkReleaseChaseSuppressionUntil;
-    const ballCentricStrength = dampBallFollowGk ? 0 : 0.04;
+    const ballCentricStrength = dampBallFollowGk ? 0 : 0.12;
     applyBallCentricShiftToSlotMap(dynamicHomeForAgents, {
       ballX,
       ballZ,
@@ -3134,7 +3145,7 @@ export class TacticalSimLoop {
         halfPhys,
         0.55,
       );
-      const k = 0.14;
+      const k = 0.28;
       a.arrive.target.x += (t.x - a.arrive.target.x) * k;
       a.arrive.target.z += (t.z - a.arrive.target.z) * k;
 
@@ -3142,7 +3153,7 @@ export class TacticalSimLoop {
       const sfRole = sfRoleFromSlot(a.slotId ?? 'mc1', schemeN);
       const sfCorr = sfShapeCorrection(a.arrive.target.x, a.arrive.target.z, sfRole, a.side);
       if (sfCorr.isOutOfShape) {
-        const sfK = 0.04 * Math.min(1, sfCorr.distFromAnchor / 30);
+        const sfK = 0.18 * Math.min(1, sfCorr.distFromAnchor / 20);
         a.arrive.target.x += sfCorr.correctionDx * sfK;
         a.arrive.target.z += sfCorr.correctionDz * sfK;
       }
@@ -3207,6 +3218,18 @@ export class TacticalSimLoop {
       applyAdvancedSteering(a, this.awayAgents, this.homeAgents, awayHasBall, attackDirAway);
       stepVehicle(a, fixedDt);
       stepAgentBodyYaw(a, fixedDt);
+    }
+
+    // Hard clamp físico do GK: garante que nenhum path de código deixa o goleiro fora da área.
+    // Aplicado após stepVehicle para ser a última palavra sobre a posição física.
+    if (this.simState.phase === 'live') {
+      const half = this.matchClock.state.half;
+      const bz = this.ballSys.state.z;
+      for (const a of [...this.homeAgents, ...this.awayAgents]) {
+        if (a.role !== 'gk' && a.slotId !== 'gol') continue;
+        a.vehicle.position.x = clampGoalkeeperTargetX(a.side, half, a.vehicle.position.x);
+        a.vehicle.position.z = clampGoalkeeperTargetZ(bz, a.vehicle.position.z);
+      }
     }
 
     this.tryConfusionRefereeIntegrateEnd(fsmPhaseAfter, ballStoppedRestart);
@@ -3619,6 +3642,46 @@ export class TacticalSimLoop {
             pushSimEvent(this.simState, text, 'narrative');
           },
         });
+      }
+
+      // ── Tactical Archetype Intention ─────────────────────────────────────
+      // Deriva a intenção do arquétipo tático e injeta no decCtx.
+      // Não-bloqueante: falha silenciosa se o jogador não tem tacticalArchetypeId.
+      try {
+        const pitchState = (ag as any).pitchState as import('@/engine/types').PitchPlayerState | undefined;
+        const archetypeId = pitchState?.tacticalArchetypeId ?? (ag as any).tacticalArchetypeId;
+        if (archetypeId) {
+          const agX = ag.vehicle.position.x;
+          const agZ = ag.vehicle.position.z;
+          const { ux: nx, uy: ny } = worldToUiPercent(agX, agZ);
+          const zone = getZoneFromNormalizedPosition({ x: nx, y: ny });
+          const teamHasPossession = this.simState.possession === ag.side;
+          const activeTriggers: import('@/tactical').ArchetypeTrigger[] = [];
+          if (teamHasPossession) activeTriggers.push('team_in_possession');
+          else activeTriggers.push('team_out_of_possession');
+          if (decCtx.attackPhase === 'final_third' || decCtx.attackPhase === 'box_entry') activeTriggers.push('ball_in_final_third');
+          if (decCtx.attackPhase === 'build_up') activeTriggers.push('ball_in_own_half');
+          if ((decCtx as any).pressingIntensity > 65) activeTriggers.push('high_press_active');
+          if (decCtx.scoreDiff < 0 && decCtx.minute > 75) activeTriggers.push('space_behind_defense');
+          const intentionResult = getPlayerIntention(
+            { tacticalArchetypeId: archetypeId, currentZone: (zone?.id ?? 'MDC') as FieldZoneId },
+            {
+              currentZone: (zone?.id ?? 'MDC') as FieldZoneId,
+              teamHasPossession,
+              isCarrier,
+              activeTriggers,
+              pressureLevel: (decCtx as any).pressingIntensity ?? 50,
+              minute: decCtx.minute,
+              scoreDiff: decCtx.scoreDiff,
+              phase: teamHasPossession
+                ? (decCtx.attackPhase === 'final_third' || decCtx.attackPhase === 'box_entry' ? 'attack' : 'buildup')
+                : 'defense',
+            },
+          );
+          decCtx.tacticalIntention = intentionResult;
+        }
+      } catch (_e) {
+        // non-blocking — never break the sim loop
       }
 
       const playerAction = ag.decision.tick(decCtx, this.world.simTime);
@@ -4761,7 +4824,10 @@ export class TacticalSimLoop {
       0.52,
     );
     if (this.simState.phase === 'live' && (ag.slotId === 'gol' || ag.role === 'gk')) {
-      return { ...clamped, x: clampGoalkeeperTargetX(ag.side, half, clamped.x) };
+      return {
+        x: clampGoalkeeperTargetX(ag.side, half, clamped.x),
+        z: clampGoalkeeperTargetZ(this.ballSys.state.z, clamped.z),
+      };
     }
     return clamped;
   }

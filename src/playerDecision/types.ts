@@ -535,4 +535,10 @@ export interface DecisionContext {
     ty: number;
     strength: number;
   };
+  /**
+   * Intenção tática derivada do arquétipo (@/tactical).
+   * Preenchida pelo TacticalSimLoop antes de ag.decision.tick().
+   * Consumers (OffBallDecision, OnBallDecision) podem usar para enviesar movimento.
+   */
+  tacticalIntention?: import('@/tactical').IntentionResult | null;
 }
