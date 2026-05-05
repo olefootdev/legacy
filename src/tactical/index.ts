@@ -122,3 +122,16 @@ export {
   TACTICAL_ROLES,
   TACTICAL_ROLE_BY_ID,
 } from './roles';
+
+export {
+  type ArchetypeId,
+  type ArchetypeFamily,
+  type ArchetypeBasePosition,
+  type ArchetypeIntention,
+  type ArchetypeTrigger,
+  type ArchetypeProfile,
+  type PlayerArchetype,
+  ARCHETYPES,
+  ARCHETYPE_BY_ID,
+  getArchetypesByFamily,
+} from './archetypesCatalog';
