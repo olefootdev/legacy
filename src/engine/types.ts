@@ -50,6 +50,8 @@ export interface PitchPlayerState {
   archetype?: import('@/entities/types').PlayerArchetype;
   /** IDs de Coach Skills equipadas (carregadas do PlayerEntity) */
   skillIds?: string[];
+  /** Arquétipo tático do catálogo @/tactical (ex.: 'CM_MEZZALA', 'ST_FALSE_9') */
+  tacticalArchetypeId?: import('@/tactical').ArchetypeId;
 }
 
 export type GoalBuildUp = 'positional' | 'counter';

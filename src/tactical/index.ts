@@ -135,3 +135,11 @@ export {
   ARCHETYPE_BY_ID,
   getArchetypesByFamily,
 } from './archetypesCatalog';
+
+export {
+  type IntentionContext,
+  type IntentionResult,
+  type PlayerIntentionInput,
+  getPlayerIntention,
+  getTeamIntentions,
+} from './intentionEngine';
