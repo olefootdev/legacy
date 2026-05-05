@@ -252,15 +252,25 @@ function FieldMarkings({ cfg }: { cfg: Cfg }) {
       {cfg.showPenaltyArcs && (
         <>
           <defs>
+            {/* Near: mostra só a parte FORA da grande área (acima da linha nearBoxTL→nearBoxTR) */}
             <clipPath id="fv-arc-near">
-              <polygon points={`${nearBoxTL.sx},${nearBoxTL.sy} ${nearBoxTR.sx},${nearBoxTR.sy} ${FV_CX + FV_BOTTOM_HALF_W + 50},${FV_BOTTOM_Y + 50} ${FV_CX - FV_BOTTOM_HALF_W - 50},${FV_BOTTOM_Y + 50}`} />
+              <polygon points={`${nearBoxTL.sx},${nearBoxTL.sy} ${nearBoxTR.sx},${nearBoxTR.sy} ${FV_CX + FV_BOTTOM_HALF_W + 50},${nearBoxTL.sy - 200} ${FV_CX - FV_BOTTOM_HALF_W - 50},${nearBoxTL.sy - 200}`} />
             </clipPath>
+            {/* Far: mostra só a parte FORA da grande área (abaixo da linha farBoxBL→farBoxBR) */}
             <clipPath id="fv-arc-far">
-              <polygon points={`${farBoxBL.sx},${farBoxBL.sy} ${farBoxBR.sx},${farBoxBR.sy} ${FV_CX + FV_TOP_HALF_W + 50},${FV_TOP_Y - 50} ${FV_CX - FV_TOP_HALF_W - 50},${FV_TOP_Y - 50}`} />
+              <polygon points={`${farBoxBL.sx},${farBoxBL.sy} ${farBoxBR.sx},${farBoxBR.sy} ${FV_CX + FV_TOP_HALF_W + 50},${farBoxBL.sy + 200} ${FV_CX - FV_TOP_HALF_W - 50},${farBoxBL.sy + 200}`} />
             </clipPath>
           </defs>
-          <ellipse cx={nearPen.sx} cy={nearPen.sy} rx={ccRx} ry={ccRy} clipPath="url(#fv-arc-near)" />
-          <ellipse cx={farPen.sx} cy={farPen.sy} rx={ccRx * 0.6} ry={ccRy * 0.6} clipPath="url(#fv-arc-far)" />
+          {/* Arco Home — raio maior para estética */}
+          <ellipse cx={nearPen.sx} cy={nearPen.sy}
+            rx={ccRx * 1.1} ry={ccRy * 1.1}
+            clipPath="url(#fv-arc-near)"
+            stroke={LINE_COLOR} fill="none" strokeWidth={lw} />
+          {/* Arco Away — proporcional à perspectiva */}
+          <ellipse cx={farPen.sx} cy={farPen.sy}
+            rx={ccRx * 0.75} ry={ccRy * 0.75}
+            clipPath="url(#fv-arc-far)"
+            stroke={LINE_COLOR} fill="none" strokeWidth={lw} />
         </>
       )}
     </g>
