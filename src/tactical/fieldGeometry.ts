@@ -35,6 +35,7 @@ export const GOAL_INNER_WIDTH_M      = 10;
 export const GOAL_INNER_WIDTH_IFAB_M = 7.32;
 export const GOAL_CROSSBAR_HEIGHT_M  = 3;
 export const GOAL_MOUTH_HALF_WIDTH_M = GOAL_INNER_WIDTH_M / 2;
+export const GOAL_DEPTH_M            = 2.5; // profundidade física do gol (gameplay)
 
 // ── Marcações em metros ───────────────────────────────────────────────────────
 export const CENTER_CIRCLE_RADIUS_M  = 9.15;
@@ -55,14 +56,16 @@ export const N_MIDFIELD          = 50;
 export const N_BOX_HALF_W        = (PENALTY_AREA_HALF_W_M / FIELD_WIDTH_M) * 50;  // ≈ 14.82
 export const N_SIX_HALF_W        = (GOAL_AREA_HALF_W_M    / FIELD_WIDTH_M) * 50;  // ≈ 6.74
 export const N_GOAL_HALF_W       = (GOAL_HALF_W_M          / FIELD_WIDTH_M) * 50;  // ≈ 5.38
+export const N_GOAL_MOUTH_HALF_W = (GOAL_MOUTH_HALF_WIDTH_M / FIELD_WIDTH_M) * 50; // ≈ 7.35 (largura gameplay)
+export const N_GOAL_DEPTH        = (GOAL_DEPTH_M            / FIELD_LENGTH_M) * 100; // ≈ 2.38
 
 // ── Bounds normalizados das áreas ─────────────────────────────────────────────
 export const BOX_HOME = { xMin: 50 - N_BOX_HALF_W, xMax: 50 + N_BOX_HALF_W, yMin: 0,                  yMax: N_BOX_DEPTH         } as const;
 export const BOX_AWAY = { xMin: 50 - N_BOX_HALF_W, xMax: 50 + N_BOX_HALF_W, yMin: 100 - N_BOX_DEPTH,  yMax: 100                 } as const;
 export const SIX_HOME = { xMin: 50 - N_SIX_HALF_W, xMax: 50 + N_SIX_HALF_W, yMin: 0,                  yMax: N_SIX_DEPTH         } as const;
 export const SIX_AWAY = { xMin: 50 - N_SIX_HALF_W, xMax: 50 + N_SIX_HALF_W, yMin: 100 - N_SIX_DEPTH,  yMax: 100                 } as const;
-export const GOAL_HOME = { xMin: 50 - N_GOAL_HALF_W, xMax: 50 + N_GOAL_HALF_W, yMin: 0,   yMax: 0   } as const;
-export const GOAL_AWAY = { xMin: 50 - N_GOAL_HALF_W, xMax: 50 + N_GOAL_HALF_W, yMin: 100, yMax: 100 } as const;
+export const GOAL_HOME = { xMin: 50 - N_GOAL_MOUTH_HALF_W, xMax: 50 + N_GOAL_MOUTH_HALF_W, yMin: 0,                   yMax: N_GOAL_DEPTH         } as const;
+export const GOAL_AWAY = { xMin: 50 - N_GOAL_MOUTH_HALF_W, xMax: 50 + N_GOAL_MOUTH_HALF_W, yMin: 100 - N_GOAL_DEPTH,  yMax: 100                  } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPOS DE POSIÇÃO

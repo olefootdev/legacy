@@ -22,6 +22,7 @@ export {
   GOAL_INNER_WIDTH_IFAB_M,
   GOAL_CROSSBAR_HEIGHT_M,
   GOAL_MOUTH_HALF_WIDTH_M,
+  GOAL_DEPTH_M,
   // Marcações em metros
   CENTER_CIRCLE_RADIUS_M,
   PENALTY_SPOT_M,
@@ -40,6 +41,8 @@ export {
   N_BOX_HALF_W,
   N_SIX_HALF_W,
   N_GOAL_HALF_W,
+  N_GOAL_MOUTH_HALF_W,
+  N_GOAL_DEPTH,
   // Bounds normalizados das áreas
   BOX_HOME,
   BOX_AWAY,
