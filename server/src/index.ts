@@ -17,6 +17,7 @@ import { coachRoutes } from './routes/coach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
+import { startGlobalLeagueScheduler } from './services/globalLeagueScheduler.js';
 
 const app = new Hono();
 
@@ -91,4 +92,5 @@ const port = Number(process.env.PORT) || 4000;
 serve({ fetch: app.fetch, port }, () => {
   console.log(`[olefoot-server] listening on http://localhost:${port}`);
   getSupabaseAdmin(); // aciona validação de conectividade no startup
+  startGlobalLeagueScheduler(); // inicia scheduler da liga global
 });

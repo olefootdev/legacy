@@ -331,7 +331,7 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       seasonId,
       status: stateRow.status as GlobalLeagueMVPState['status'],
       teams,
-      minTeamsRequired: Number(stateRow.min_teams_required ?? 32),
+      minTeamsRequired: 1,
       playoffRounds,
       currentPlayoffRound: stateRow.current_playoff_round == null ? undefined : Number(stateRow.current_playoff_round),
       leagueRounds,
