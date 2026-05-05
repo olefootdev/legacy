@@ -18,14 +18,30 @@ import {
   zoneBoundsToPolygonPoints,
   FIELD_ZONES,
   ZONE_SECTOR_COLOR,
+  normalizeForVisual,
+  defendingY,
+  attackingY,
   type FieldZone,
+  type MatchHalf,
 } from '@/tactical';
 
 // ── Helpers locais ────────────────────────────────────────────────────────────
-// Assinatura (x, y) para uso interno — delega para @/tactical
+// p(x, y) — projeção direta, sem contexto de tempo (grid, marcações fixas)
 function p(x: number, y: number) { return normalizedToFirstViewSvg({ x, y }); }
+// pv(x, y, half) — projeção com perspectiva visual (jogadores, bola, zonas)
+function pv(x: number, y: number, half: MatchHalf) {
+  return normalizedToFirstViewSvg(normalizeForVisual({ x, y }, half));
+}
 function poly(xMin: number, xMax: number, yMin: number, yMax: number) {
   return zoneBoundsToPolygonPoints(xMin, xMax, yMin, yMax);
+}
+// poly com perspectiva visual
+function polyv(xMin: number, xMax: number, yMin: number, yMax: number, half: MatchHalf) {
+  const bl = normalizedToFirstViewSvg(normalizeForVisual({ x: xMin, y: yMin }, half));
+  const br = normalizedToFirstViewSvg(normalizeForVisual({ x: xMax, y: yMin }, half));
+  const tr = normalizedToFirstViewSvg(normalizeForVisual({ x: xMax, y: yMax }, half));
+  const tl = normalizedToFirstViewSvg(normalizeForVisual({ x: xMin, y: yMax }, half));
+  return `${bl.sx},${bl.sy} ${br.sx},${br.sy} ${tr.sx},${tr.sy} ${tl.sx},${tl.sy}`;
 }
 function zoneColor(z: FieldZone) { return ZONE_SECTOR_COLOR[z.sector]; }
 
@@ -69,6 +85,7 @@ interface Cfg {
   showPositions: boolean;
   formation: FormationSchemeId;
   zoneOpacity: number;
+  half: MatchHalf;
 }
 
 const DEFAULT: Cfg = {
@@ -82,6 +99,7 @@ const DEFAULT: Cfg = {
   showPositions: true,
   formation: '4-3-3',
   zoneOpacity: 0.18,
+  half: 1,
 };
 
 // ── Gramado ───────────────────────────────────────────────────────────────────
@@ -112,13 +130,17 @@ function FieldZones({ cfg }: { cfg: Cfg }) {
       {FIELD_ZONES.map((z) => {
         const { xMin, xMax, yMin, yMax } = z.boundsNormalized;
         const color = zoneColor(z);
-        const center = p((xMin + xMax) / 2, (yMin + yMax) / 2);
-        const depthT = (yMin + yMax) / 200;
+        const cx = (xMin + xMax) / 2;
+        const cy = (yMin + yMax) / 2;
+        const center = pv(cx, cy, cfg.half);
+        // Profundidade visual após perspectiva de tempo
+        const visualY = cfg.half === 1 ? cy : 100 - cy;
+        const depthT = visualY / 100;
         const fontSize = Math.round(16 - depthT * 7);
         return (
           <g key={z.id}>
             <polygon
-              points={poly(xMin, xMax, yMin, yMax)}
+              points={polyv(xMin, xMax, yMin, yMax, cfg.half)}
               fill={color} opacity={cfg.zoneOpacity}
               stroke={color} strokeWidth={1} strokeOpacity={0.6}
             />
@@ -317,11 +339,13 @@ function FieldPositions({ cfg }: { cfg: Cfg }) {
     <>
       {Object.entries(slots).map(([slotId, slot]) => {
         const { x, y } = slotToNormalized(slot.nx, slot.nz);
-        const pos = p(x, y);
-        const color = LINE_COLORS[slot.line] ?? '#ffffff';
-        const depthT = y / 100;
+        const pos = pv(x, y, cfg.half);
+        // Profundidade visual após perspectiva de tempo
+        const visualY = cfg.half === 1 ? y : 100 - y;
+        const depthT = visualY / 100;
         const r = Math.round(14 - depthT * 6);
         const fontSize = Math.round(9 - depthT * 3);
+        const color = LINE_COLORS[slot.line] ?? '#ffffff';
         return (
           <g key={slotId}>
             <ellipse cx={pos.sx} cy={pos.sy + r * 0.3} rx={r * 0.85} ry={r * 0.25} fill="#000" opacity={0.4} />
@@ -339,20 +363,25 @@ function FieldPositions({ cfg }: { cfg: Cfg }) {
 }
 
 // ── Labels HOME / AWAY ────────────────────────────────────────────────────────
-function FieldLabels() {
-  const homeCenter = p(50, -5);
-  const awayCenter = p(50, 105);
+function FieldLabels({ half }: { half: MatchHalf }) {
+  // No 2º tempo os lados trocam visualmente
+  const homeY  = defendingY('home', half);
+  const awayY  = defendingY('away', half);
+  const homePos = p(50, homeY === 0 ? -5 : 105);
+  const awayPos = p(50, awayY === 0 ? -5 : 105);
+  const homeLabel = `HOME · defende y=${homeY} · ${half === 1 ? '1º tempo' : '2º tempo'}`;
+  const awayLabel = `AWAY · defende y=${awayY}`;
   return (
     <>
-      <text x={homeCenter.sx} y={homeCenter.sy} textAnchor="middle"
+      <text x={homePos.sx} y={homePos.sy} textAnchor="middle"
         fill={NEON} fontSize={11} fontFamily="'Oswald', sans-serif"
         fontWeight={700} letterSpacing={3} opacity={0.7}>
-        HOME · y=0
+        {homeLabel}
       </text>
-      <text x={awayCenter.sx} y={awayCenter.sy} textAnchor="middle"
+      <text x={awayPos.sx} y={awayPos.sy} textAnchor="middle"
         fill="rgba(255,255,255,0.4)" fontSize={9}
         fontFamily="'Oswald', sans-serif" fontWeight={700} letterSpacing={3}>
-        AWAY · y=100
+        {awayLabel}
       </text>
     </>
   );
@@ -384,7 +413,7 @@ function FVField({ cfg }: { cfg: Cfg }) {
       <FieldGrid cfg={cfg} />
       <FieldMarkings cfg={cfg} />
       <FieldPositions cfg={cfg} />
-      <FieldLabels />
+      <FieldLabels half={cfg.half} />
     </svg>
   );
 }
@@ -437,6 +466,30 @@ export function OleFieldLabLegacy() {
           <Toggle label="Gols" active={cfg.showGoals} onToggle={() => toggle('showGoals')} />
           <Toggle label="Escanteios" active={cfg.showCorners} onToggle={() => toggle('showCorners')} />
           <Toggle label="Arcos pênalti" active={cfg.showPenaltyArcs} onToggle={() => toggle('showPenaltyArcs')} />
+
+          {/* Tempo da partida */}
+          <div className="mt-3 border-t border-white/8 pt-3">
+            <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest mb-2">Tempo</p>
+            <div className="flex gap-1">
+              {([1, 2] as MatchHalf[]).map((h) => (
+                <button key={h}
+                  onClick={() => setCfg((prev) => ({ ...prev, half: h }))}
+                  className={cn(
+                    'flex-1 py-1.5 rounded text-xs font-mono font-bold tracking-wider transition-colors',
+                    cfg.half === h
+                      ? 'bg-[#FDE100]/15 text-[#FDE100] border border-[#FDE100]/30'
+                      : 'text-white/40 hover:text-white/70 hover:bg-white/5 border border-transparent',
+                  )}>
+                  {h}º
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-white/25 font-mono mt-1.5 leading-tight">
+              {cfg.half === 1
+                ? 'Home defende y=0 · Away defende y=100'
+                : 'Home defende y=100 · Away defende y=0'}
+            </p>
+          </div>
 
           <div className="mt-3 border-t border-white/8 pt-3">
             <label className="text-[10px] text-white/40 block mb-1">Opacidade: {Math.round(cfg.zoneOpacity * 100)}%</label>

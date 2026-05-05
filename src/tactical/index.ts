@@ -103,4 +103,9 @@ export {
   type PitchEnd,
   type PitchPosition,
   type TeamPitchContext,
+  isFieldMirrored,
+  mirrorY,
+  normalizeForVisual,
+  defendingY,
+  attackingY,
 } from './matchTypes';
