@@ -237,9 +237,10 @@ async function persistRound(state, round, options = {}) {
     if (!sb)
         return;
     // Atualizar estado singleton
-    await sb.from('global_league_state').upsert({
+    const { error: stateErr } = await sb.from('global_league_state').upsert({
         id: 'current',
         season_id: state.seasonId,
+        season_name: `OLEFOOT LIGA — ${state.seasonId}`,
         status: state.status,
         current_playoff_round: state.currentPlayoffRound ?? null,
         current_league_round: state.currentLeagueRound ?? null,
@@ -248,6 +249,8 @@ async function persistRound(state, round, options = {}) {
         promotion_percentage: state.promotionPercentage,
         relegation_percentage: state.relegationPercentage,
     }, { onConflict: 'id' });
+    if (stateErr)
+        console.error('[scheduler] state upsert FAILED:', stateErr.message, stateErr.details ?? '');
     // Atualizar rodada
     const roundIdPrefix = round.kind === 'playoff' ? 'playoff' : 'league';
     const roundId = `${roundIdPrefix}_${state.seasonId}_${round.roundNumber}`;
@@ -446,7 +449,12 @@ function liteRoundToRound(r) {
 }
 /**
  * AUTO-START: waiting_teams + teams.length >= min → gera playoffs e transiciona.
- * Persiste estado, rodadas, fixtures.
+ *
+ * IMPORTANTE — Safeguard anti-duplicação:
+ *   Se já existem rounds para esta season no banco (caso do persist do state
+ *   ter falhado em tick anterior por qualquer motivo), promovemos status
+ *   localmente para 'playoffs' e SAÍMOS sem regenerar fixtures. O persist do
+ *   state com season_name correto vai concluir a transição no próximo write.
  */
 async function tryAutoStartPlayoffs(state, nowMs) {
     if (state.status !== 'waiting_teams')
@@ -455,6 +463,14 @@ async function tryAutoStartPlayoffs(state, nowMs) {
         return false;
     if (state.teams.length < 2)
         return false;
+    // SAFEGUARD: se já há rounds desta season, não regenerar — só promover status
+    if (state.playoffRounds.length > 0) {
+        console.log(`[scheduler] AUTO-START skipped: já existem ${state.playoffRounds.length} rounds — promovendo status`);
+        state.status = 'playoffs';
+        state.currentPlayoffRound = 1;
+        await persistTeamsAndState(state);
+        return true;
+    }
     console.log(`[scheduler] AUTO-START playoffs: ${state.teams.length} times atingiram min=${state.minTeamsRequired}`);
     const liteRounds = logicGenPlayoffs(state.teams.map(teamToLite), nowMs);
     if (liteRounds.length === 0)
@@ -462,7 +478,8 @@ async function tryAutoStartPlayoffs(state, nowMs) {
     state.playoffRounds = liteRounds.map(liteRoundToRound);
     state.status = 'playoffs';
     state.currentPlayoffRound = 1;
-    // Persistir todas as rodadas iniciais
+    // Persistir TODAS as rodadas iniciais. persistRound já atualiza state singleton
+    // com season_name (necessário pra não falhar no NOT NULL constraint).
     for (const r of state.playoffRounds) {
         await persistRound(state, r);
     }
@@ -536,9 +553,10 @@ async function persistTeamsAndState(state) {
     const sb = getSupabaseAdmin();
     if (!sb)
         return;
-    await sb.from('global_league_state').upsert({
+    const { error: stateErr } = await sb.from('global_league_state').upsert({
         id: 'current',
         season_id: state.seasonId,
+        season_name: `OLEFOOT LIGA — ${state.seasonId}`,
         status: state.status,
         current_playoff_round: state.currentPlayoffRound ?? null,
         current_league_round: state.currentLeagueRound ?? null,
@@ -547,6 +565,8 @@ async function persistTeamsAndState(state) {
         promotion_percentage: state.promotionPercentage,
         relegation_percentage: state.relegationPercentage,
     }, { onConflict: 'id' });
+    if (stateErr)
+        console.error('[scheduler] state upsert FAILED:', stateErr.message, stateErr.details ?? '');
     if (state.teams.length > 0) {
         await sb.from('global_league_teams').upsert(state.teams.map(t => ({
             id: t.id, manager_id: t.managerId, club_name: t.clubName, club_short: t.clubShort,
