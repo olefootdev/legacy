@@ -6,7 +6,7 @@ import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, RotateCcw, ChevronLeft, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { FIELD_ZONES, ZONE_SECTOR_COLOR, type FieldZone } from '@/match/fieldZones12';
+import { FIELD_ZONES, ZONE_SECTOR_COLOR, type FieldZone } from '@/tactical';
 
 // ── Constantes SVG (idênticas ao FieldView.tsx) ───────────────────────────────
 const VW = 1136;
@@ -66,10 +66,10 @@ function AerialZones({ cfg }: { cfg: Cfg }) {
   return (
     <>
       {FIELD_ZONES.map((z) => {
-        const svgX = toSvgX(z.bounds.yMin);
-        const svgY = toSvgY(z.bounds.xMin);
-        const svgW = ((z.bounds.yMax - z.bounds.yMin) / 100) * FW;
-        const svgH = ((z.bounds.xMax - z.bounds.xMin) / 100) * FH;
+        const svgX = toSvgX(z.boundsNormalized.yMin);
+        const svgY = toSvgY(z.boundsNormalized.xMin);
+        const svgW = ((z.boundsNormalized.yMax - z.boundsNormalized.yMin) / 100) * FW;
+        const svgH = ((z.boundsNormalized.xMax - z.boundsNormalized.xMin) / 100) * FH;
         const color = zoneColor(z);
         return (
           <g key={z.id}>

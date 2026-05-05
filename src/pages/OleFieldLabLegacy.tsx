@@ -4,9 +4,9 @@
  * UI de teste e visualização. Toda lógica de geometria e zonas
  * vive em @/tactical — reutilizável pelo motor real.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, RotateCcw, ChevronLeft, LayoutGrid, Save, X, MousePointer } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, ChevronLeft, LayoutGrid, Save, X, MousePointer, Play, Pause, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -20,11 +20,11 @@ import {
   ZONE_SECTOR_COLOR,
   normalizeForVisual,
   defendingY,
-  attackingY,
   type FieldZone,
   type MatchHalf,
 } from '@/tactical';
 import { ARCHETYPES, type ArchetypeId, type ArchetypeFamily } from '@/tactical';
+import { initFLState, tickFLState, TICK_MS, type FLState, type FLPlayer, type FLBall } from '@/simulation/FieldLabEngine';
 
 // ── Helpers locais ────────────────────────────────────────────────────────────
 // p(x, y) — projeção direta, sem contexto de tempo (grid, marcações fixas)
@@ -380,7 +380,7 @@ function FieldPositions({ cfg, editor, onSelectSlot }: {
         const fontSize = Math.round(9 - depthT * 3);
         const isSelected = editor.selectedSlot === slotId;
         const hasEdit = !!edit;
-        const color = isSelected ? '#FDE100' : hasEdit ? '#22c55e' : (LINE_COLORS[slot.line] ?? '#ffffff');
+        const color = isSelected ? '#FDE100' : '#3b82f6';
         return (
           <g key={slotId} style={{ cursor: 'pointer' }} onClick={() => onSelectSlot(slotId)}>
             <ellipse cx={pos.sx} cy={pos.sy + r * 0.3} rx={r * 0.85} ry={r * 0.25} fill="#000" opacity={0.4} />
@@ -409,37 +409,79 @@ function FieldPositions({ cfg, editor, onSelectSlot }: {
   );
 }
 
+// ── Jogadores no campo (home + away via FLState) ───────────────────────────────
+function FieldPlayers({ players, half }: { players: FLPlayer[]; half: MatchHalf }) {
+  return (
+    <>
+      {players.map((p) => {
+        const pos = pv(p.x, p.y, half);
+        const visualY = half === 1 ? p.y : 100 - p.y;
+        const depthT = visualY / 100;
+        const r = Math.round(14 - depthT * 6);
+        const fontSize = Math.round(9 - depthT * 3);
+        const isHome = p.side === 'home';
+        const stroke = p.hasBall ? '#FDE100' : isHome ? '#3b82f6' : '#ffffff';
+        const fill = isHome ? '#050a14' : '#0a0a14';
+        const strokeW = p.hasBall ? 3 : 2;
+        return (
+          <g key={p.id}>
+            <ellipse cx={pos.sx} cy={pos.sy + r * 0.3} rx={r * 0.85} ry={r * 0.25} fill="#000" opacity={0.4} />
+            <circle cx={pos.sx} cy={pos.sy} r={r} fill={fill} stroke={stroke} strokeWidth={strokeW} opacity={0.95} />
+            <text x={pos.sx} y={pos.sy} textAnchor="middle" dominantBaseline="middle"
+              fill={stroke} fontSize={fontSize} fontFamily="'Oswald', sans-serif" fontWeight={700}>
+              {p.label}
+            </text>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+// ── Bola ──────────────────────────────────────────────────────────────────────
+function Ball({ ball, half }: { ball: FLBall; half: MatchHalf }) {
+  const { sx, sy } = pv(ball.x, ball.y, half);
+  const visualY = half === 1 ? ball.y : 100 - ball.y;
+  const depthT = visualY / 100;
+  const r = Math.round(7 - depthT * 3);
+  return (
+    <g>
+      <ellipse cx={sx} cy={sy + r * 0.4} rx={r * 0.9} ry={r * 0.25} fill="#000" opacity={0.35} />
+      <circle cx={sx} cy={sy} r={r} fill="#f5f5f5" stroke="#cccccc" strokeWidth={1} />
+      <ellipse cx={sx} cy={sy} rx={r * 0.5} ry={r * 0.9} fill="none" stroke="#999" strokeWidth={0.6} opacity={0.6} />
+    </g>
+  );
+}
+
 // ── Labels HOME / AWAY ────────────────────────────────────────────────────────
 function FieldLabels({ half }: { half: MatchHalf }) {
-  // No 2º tempo os lados trocam visualmente
   const homeY  = defendingY('home', half);
   const awayY  = defendingY('away', half);
   const homePos = p(50, homeY === 0 ? -5 : 105);
   const awayPos = p(50, awayY === 0 ? -5 : 105);
-  const homeLabel = `HOME · defende y=${homeY} · ${half === 1 ? '1º tempo' : '2º tempo'}`;
-  const awayLabel = `AWAY · defende y=${awayY}`;
   return (
     <>
       <text x={homePos.sx} y={homePos.sy} textAnchor="middle"
         fill={NEON} fontSize={11} fontFamily="'Oswald', sans-serif"
         fontWeight={700} letterSpacing={3} opacity={0.7}>
-        {homeLabel}
+        {`HOME · defende y=${homeY} · ${half === 1 ? '1º tempo' : '2º tempo'}`}
       </text>
       <text x={awayPos.sx} y={awayPos.sy} textAnchor="middle"
         fill="rgba(255,255,255,0.4)" fontSize={9}
         fontFamily="'Oswald', sans-serif" fontWeight={700} letterSpacing={3}>
-        {awayLabel}
+        {`AWAY · defende y=${awayY}`}
       </text>
     </>
   );
 }
 
 // ── Campo SVG ─────────────────────────────────────────────────────────────────
-function FVField({ cfg, editor, onSelectSlot, onPlaceSlot }: {
+function FVField({ cfg, editor, onSelectSlot, onPlaceSlot, flState }: {
   cfg: Cfg;
   editor: EditorState;
   onSelectSlot: (slotId: string) => void;
   onPlaceSlot: (nx: number, nz: number) => void;
+  flState: FLState;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -481,7 +523,8 @@ function FVField({ cfg, editor, onSelectSlot, onPlaceSlot }: {
       <FieldZones cfg={cfg} />
       <FieldGrid cfg={cfg} />
       <FieldMarkings cfg={cfg} />
-      <FieldPositions cfg={cfg} editor={editor} onSelectSlot={onSelectSlot} />
+      <FieldPlayers players={flState.players} half={cfg.half} />
+      <Ball ball={flState.ball} half={cfg.half} />
       <FieldLabels half={cfg.half} />
     </svg>
   );
@@ -512,6 +555,56 @@ export function OleFieldLabLegacy() {
     edits: {},
   });
   const [saveOutput, setSaveOutput] = useState<string | null>(null);
+
+  // ── Motor de jogo ─────────────────────────────────────────────────────────
+  const [flState, setFlState] = useState<FLState>(() => initFLState(cfg.formation, '4-4-2'));
+  // Motor roda em ref puro — React só re-renderiza a cada 50ms
+  const simRef = useRef<FLState>(flState);
+  const loopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const minuteRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function startLoop() {
+    if (loopRef.current) return;
+    // Tick de simulação: 50ms
+    loopRef.current = setInterval(() => {
+      simRef.current = tickFLState(simRef.current);
+      setFlState({ ...simRef.current });
+    }, TICK_MS);
+    // Tick de minuto: 1000ms
+    minuteRef.current = setInterval(() => {
+      if (simRef.current.minute >= 90) {
+        simRef.current = { ...simRef.current, playing: false, minute: 90 };
+        setFlState({ ...simRef.current });
+        stopLoop();
+        return;
+      }
+      simRef.current = { ...simRef.current, minute: simRef.current.minute + 1 };
+    }, 1000);
+  }
+
+  function stopLoop() {
+    if (loopRef.current) { clearInterval(loopRef.current); loopRef.current = null; }
+    if (minuteRef.current) { clearInterval(minuteRef.current); minuteRef.current = null; }
+  }
+
+  useEffect(() => () => stopLoop(), []);
+
+  function handlePlayPause() {
+    const playing = !simRef.current.playing;
+    simRef.current = { ...simRef.current, playing };
+    setFlState({ ...simRef.current });
+    if (playing) startLoop();
+    else stopLoop();
+  }
+
+  function handleRestart() {
+    stopLoop();
+    const fresh = initFLState(cfg.formation, '4-4-2');
+    simRef.current = fresh;
+    setFlState(fresh);
+  }
+
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   const selectedSlotData = editor.selectedSlot
     ? (editor.edits[editor.selectedSlot] ?? (() => {
@@ -594,7 +687,41 @@ export function OleFieldLabLegacy() {
           Field Lab · LEGACY
         </span>
         <span className="text-white/20 text-xs font-mono">@/tactical · first view vertical</span>
-        <div className="ml-auto text-white/25 text-[10px] font-mono">
+
+        {/* ── Controles do jogo ── */}
+        <div className="ml-auto flex items-center gap-3">
+          {/* Placar */}
+          <div className="flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/10">
+            <span className="text-[#FDE100] font-mono font-bold text-sm">{flState.homeScore}</span>
+            <span className="text-white/30 font-mono text-xs">–</span>
+            <span className="text-white font-mono font-bold text-sm">{flState.awayScore}</span>
+          </div>
+          {/* Tempo */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded bg-white/5 border border-white/10 min-w-[56px] justify-center">
+            <span className="text-white font-mono font-bold text-sm">{flState.minute}'</span>
+            {flState.minute >= 90 && <span className="text-white/40 font-mono text-[10px]">FT</span>}
+          </div>
+          {/* Play/Pause */}
+          <button
+            onClick={handlePlayPause}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-colors',
+              flState.playing
+                ? 'bg-[#FDE100]/15 text-[#FDE100] border border-[#FDE100]/30 hover:bg-[#FDE100]/25'
+                : 'bg-white/10 text-white/70 border border-white/10 hover:bg-white/15',
+            )}>
+            {flState.playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            {flState.playing ? 'Pause' : 'Play'}
+          </button>
+          {/* Restart */}
+          <button
+            onClick={handleRestart}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold text-white/40 border border-white/10 hover:text-white/70 hover:bg-white/5 transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="text-white/25 text-[10px] font-mono">
           x=largura · y=profundidade · home y=0 · away y=100
         </div>
       </header>
@@ -694,7 +821,7 @@ export function OleFieldLabLegacy() {
             </div>
           )}
           <div className="h-full" style={{ aspectRatio: `${FV_SVG_W} / ${FV_SVG_H}`, maxHeight: '100%' }}>
-            <FVField cfg={cfg} editor={editor} onSelectSlot={handleSelectSlot} onPlaceSlot={handlePlaceSlot} />
+            <FVField cfg={cfg} editor={editor} onSelectSlot={handleSelectSlot} onPlaceSlot={handlePlaceSlot} flState={flState} />
           </div>
         </main>
 

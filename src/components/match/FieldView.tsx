@@ -13,7 +13,7 @@ import type { JSX } from 'react';
 import type { PitchPlayerState } from '@/engine/types';
 import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
 import { sfRoleFromSlot, sfGetAnchor } from '@/smartfield/smartfieldBridge';
-import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
+import { FIELD_LENGTH, FIELD_WIDTH } from '@/tactical';
 import { LegacyMatchHUD } from './LegacyMatchHUD';
 import {
   // SVG First View

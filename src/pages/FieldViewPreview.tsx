@@ -27,13 +27,14 @@ import { useGameStore } from '@/game/store';
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { mergeLineupWithDefaults, awayStartingElevenFromSquad } from '@/entities/lineup';
 import { matchAttributesFromPlayerEntity, behaviorToCognitiveArchetype } from '@/match/playerInMatch';
+import { initFLState, tickFLState, flStateToPitchPlayers, TICK_MS, type FLState } from '@/simulation/FieldLabEngine';
 
 // ── Formation position helpers ────────────────────────────────────────────────
 
 /**
  * Retorna jogadores com posições fixas da formação (engine % 0-100).
- * Home: nx*100 = x (profundidade), nz*100 = y (largura).
- * Away: espelhado em x.
+ * Sistema canônico @/tactical: x=largura (nz*100), y=profundidade (nx*100).
+ * Home: y cresce para o ataque (y=100). Away: espelhado em y.
  */
 function formationPositions(
   players: PitchPlayerState[],
@@ -44,8 +45,8 @@ function formationPositions(
   return players.map((p) => {
     const slot = bases[p.slotId];
     if (!slot) return p;
-    const x = side === 'home' ? slot.nx * 100 : (1 - slot.nx) * 100;
-    const y = slot.nz * 100;
+    const x = slot.nz * 100;                                          // largura
+    const y = side === 'home' ? slot.nx * 100 : (1 - slot.nx) * 100; // profundidade espelhada
     return { ...p, x, y };
   });
 }
@@ -429,6 +430,61 @@ export function FieldViewPreview() {
 
   const engine = useLegacyMatchEngine(homeXI, () => {}, false, 1, awayRoster, effectivePlayersById);
 
+  // ── FieldLabEngine: movimento real dos jogadores (Fase 2+3) ──────────────
+  const [flState, setFlState] = useState<FLState>(() =>
+    initFLState(formation, (nextFixture?.opponent?.formationScheme as FormationSchemeId | undefined) ?? '4-4-2')
+  );
+  const flStateRef = useRef(flState);
+  const flRafRef = useRef<number | null>(null);
+  const flLastMinuteRef = useRef(performance.now());
+
+  useEffect(() => { flStateRef.current = flState; }, [flState]);
+
+  const flRunLoop = useCallback(() => {
+    const s = flStateRef.current;
+    if (!s.playing) { flRafRef.current = null; return; }
+    const next = tickFLState(s);
+    flStateRef.current = next;
+    setFlState(next);
+    flRafRef.current = requestAnimationFrame(flRunLoop);
+  }, []);
+
+  // Sincroniza playing com a fase do engine legacy
+  useEffect(() => {
+    const isPlaying = engine.phase === 'playing';
+    if (isPlaying && !flStateRef.current.playing) {
+      const next = { ...flStateRef.current, playing: true };
+      flStateRef.current = next;
+      setFlState(next);
+      flLastMinuteRef.current = performance.now();
+      flRafRef.current = requestAnimationFrame(flRunLoop);
+    } else if (!isPlaying && flStateRef.current.playing) {
+      const next = { ...flStateRef.current, playing: false };
+      flStateRef.current = next;
+      setFlState(next);
+      if (flRafRef.current) { cancelAnimationFrame(flRafRef.current); flRafRef.current = null; }
+    }
+  }, [engine.phase, flRunLoop]);
+
+  // Sincroniza placar e minuto do engine legacy → flState
+  useEffect(() => {
+    setFlState(s => ({ ...s, homeScore: engine.homeScore, awayScore: engine.awayScore, minute: engine.minute }));
+  }, [engine.homeScore, engine.awayScore, engine.minute]);
+
+  // Reinicia FieldLabEngine quando formação muda
+  useEffect(() => {
+    if (flRafRef.current) { cancelAnimationFrame(flRafRef.current); flRafRef.current = null; }
+    const fresh = initFLState(formation, (nextFixture?.opponent?.formationScheme as FormationSchemeId | undefined) ?? '4-4-2');
+    flStateRef.current = fresh;
+    setFlState(fresh);
+  }, [formation, nextFixture?.opponent?.formationScheme]);
+
+  // Cleanup
+  useEffect(() => () => { if (flRafRef.current) cancelAnimationFrame(flRafRef.current); }, []);
+
+  // Converte FLState → PitchPlayerState para o FieldView
+  const flPitch = useMemo(() => flStateToPitchPlayers(flState), [flState]);
+
   // ── Substituição local (não persiste no store, vale só na partida) ────────
   const applySubstitutionLocal = useCallback((outId: string, inId: string): { ok: boolean; message: string } => {
     if (usedSubs >= 5) return { ok: false, message: 'Limite de 5 substituições atingido' };
@@ -532,11 +588,11 @@ export function FieldViewPreview() {
   // Câmera narrativa — ref-based, escreve direto no DOM (zero re-render)
   const cameraRef = useRef<HTMLDivElement>(null);
   useNarrativeCamera(cameraRef, {
-    ballX: engine.ballX,
-    ballY: engine.ballY,
+    ballX: flPitch.ballX,
+    ballY: flPitch.ballY,
     possession: engine.possession,
-    homePlayers: engine.homePlayers,
-    awayPlayers: engine.awayPlayers,
+    homePlayers: flPitch.homePlayers,
+    awayPlayers: flPitch.awayPlayers,
     lastEvent: engine.lastEvent,
   });
 
@@ -571,8 +627,8 @@ export function FieldViewPreview() {
     const el = cameraRef.current;
     if (!el) return;
     const { scale, translateX, translateY } = computeActionCamTransform(
-      engine.ballX,
-      engine.ballY,
+      flPitch.ballX,
+      flPitch.ballY,
       el.offsetHeight || 400,
     );
     el.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
@@ -612,35 +668,36 @@ export function FieldViewPreview() {
   // Normaliza 'pregame' → 'playing' para componentes que não aceitam 'pregame' no tipo phase
   const displayPhase = engine.phase === 'pregame' ? 'playing' as const : engine.phase;
 
-  // ── Players para o campo: fixos na formação (expert) ou do engine (outros modos) ──
+  // ── Players para o campo ──────────────────────────────────────────────────
+  // Antes do jogo: posições de kickoff do engine legacy (TacticalSimLoop)
+  // Durante o jogo: FieldLabEngine com movimento real
   const aerialHomePlayers = useMemo(() => {
     const base = homeXI.length > 0 ? homeXI : engine.homePlayers;
     if (!matchStarted) return kickoffPositions(base, 'home');
-    return formationPositions(base, formation, 'home');
-  }, [homeXI, engine.homePlayers, matchStarted, formation]);
+    return flPitch.homePlayers.length > 0 ? flPitch.homePlayers : formationPositions(base, formation, 'home');
+  }, [flPitch.homePlayers, homeXI, engine.homePlayers, matchStarted, formation]);
 
   const aerialAwayPlayers = useMemo(() => {
-    const base = engine.awayPlayers;
-    // Usa formação real do adversário se disponível, senão espelha a formação do home
-    const awayFormation = (nextFixture?.opponent?.formationScheme as FormationSchemeId | undefined)
-      ?? formation;
-    if (!matchStarted) return kickoffPositions(base, 'away');
-    return formationPositions(base, awayFormation, 'away');
-  }, [engine.awayPlayers, matchStarted, formation, nextFixture]);
+    const awayFormation = (nextFixture?.opponent?.formationScheme as FormationSchemeId | undefined) ?? formation;
+    if (!matchStarted) {
+      const base = engine.awayPlayers.length > 0 ? engine.awayPlayers : [];
+      return kickoffPositions(base, 'away');
+    }
+    return flPitch.awayPlayers.length > 0 ? flPitch.awayPlayers : formationPositions(engine.awayPlayers, awayFormation, 'away');
+  }, [flPitch.awayPlayers, engine.awayPlayers, matchStarted, formation, nextFixture]);
 
   // ── Expert ball animation: trajetória física + passes encadeados + pulso ──
   const expertBallAnim = useExpertBallAnimation(
     viewMode === 'expert' && matchStarted,
-    engine.ballX,
-    engine.ballY,
-    engine.onBallPlayerId ?? null,
+    flPitch.ballX,
+    flPitch.ballY,
+    flPitch.onBallPlayerId ?? null,
     aerialHomePlayers,
     aerialAwayPlayers,
   );
 
-  // Posição final da bola: animada no expert, real nos outros modos
-  const displayBallX = viewMode === 'expert' && matchStarted ? expertBallAnim.ballX : engine.ballX;
-  const displayBallY = viewMode === 'expert' && matchStarted ? expertBallAnim.ballY : engine.ballY;
+  const displayBallX = viewMode === 'expert' && matchStarted ? expertBallAnim.ballX : flPitch.ballX;
+  const displayBallY = viewMode === 'expert' && matchStarted ? expertBallAnim.ballY : flPitch.ballY;
   // Jogadores com pulso no receptor
   const expertHomePlayers = viewMode === 'expert' && matchStarted
     ? aerialHomePlayers.map(p => expertBallAnim.pulsingId === p.playerId ? { ...p, _pulsing: true } : p)
@@ -851,11 +908,11 @@ export function FieldViewPreview() {
           }}
         >
           <FieldView
-            homePlayers={viewMode === 'expert' ? expertHomePlayers : engine.homePlayers}
-            awayPlayers={viewMode === 'expert' ? expertAwayPlayers : engine.awayPlayers}
+            homePlayers={viewMode === 'expert' ? expertHomePlayers : aerialHomePlayers}
+            awayPlayers={viewMode === 'expert' ? expertAwayPlayers : aerialAwayPlayers}
             ballX={displayBallX}
             ballY={displayBallY}
-            onBallPlayerId={engine.onBallPlayerId}
+            onBallPlayerId={flPitch.onBallPlayerId}
             cameraMode={viewMode === 'expert' ? 'broadcast' : camera}
             homeShort={homeShort}
             awayShort={awayShort}
@@ -895,7 +952,7 @@ export function FieldViewPreview() {
           {/* ── PressureZoneOverlay — zonas de tensão ── */}
           {viewMode !== 'expert' && (
             <PressureZoneOverlay
-              ballX={engine.ballX}
+              ballX={flPitch.ballX}
               possession={engine.possession}
               phase={displayPhase}
             />
@@ -920,7 +977,7 @@ export function FieldViewPreview() {
           <LegacyMinuteWatermark
             minute={engine.minute}
             phase={displayPhase}
-            momentLabel={engine.lastEvent === 'goal' ? 'GOL' : engine.ballX > 70 ? 'ATAQUE' : engine.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
+            momentLabel={engine.lastEvent === 'goal' ? 'GOL' : flPitch.ballX > 70 ? 'ATAQUE' : flPitch.ballX < 30 ? 'DEFESA' : 'BOLA ROLANDO'}
             possessionPct={engine.possessionPct}
           />
         )}
@@ -930,8 +987,8 @@ export function FieldViewPreview() {
           <div style={{ position: 'absolute', left: 16, bottom: 16, zIndex: 100 }}>
             <ReadGamePanel
               possession={engine.possession}
-              ballX={engine.ballX}
-              homePlayers={engine.homePlayers}
+              ballX={flPitch.ballX}
+              homePlayers={aerialHomePlayers}
               events={engine.events}
               playStyle={playStyle}
               homeScore={engine.homeScore}
