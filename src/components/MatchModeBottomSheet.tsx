@@ -53,8 +53,7 @@ const MODES: ReadonlyArray<ModeEntry> = [
     id: 'legacy',
     label: 'Legacy',
     description: 'Partida ao vivo · simulação tática 2D',
-    status: 'available',
-    to: '/match/legacy',
+    status: 'soon',
     glyph: '✦',
   },
   {
