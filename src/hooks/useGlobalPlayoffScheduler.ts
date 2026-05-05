@@ -1,14 +1,20 @@
 /**
- * Hook de Auto-Progressão dos Playoffs Globais
+ * Hook de Auto-Progressão dos Playoffs Globais — FALLBACK LOCAL
  *
- * Kickoffs sempre no topo de 5 minutos exatos do relógio (15:00, 15:05, 15:10...)
- * Ciclo: scheduled → live (1min real) → finished → próxima rodada no próximo topo de 5min
+ * IMPORTANTE: Quando `VITE_OLEFOOT_API_URL` está definido, o scheduler
+ * server-side (Railway) é AUTORITATIVO e este hook fica desativado.
+ * O cliente apenas lê o estado via Realtime do Supabase.
+ *
+ * Em dev local sem API URL, esse hook age como fallback para que o ciclo
+ * scheduled → live → finished → próxima rodada continue funcionando.
  */
 
 import { useEffect, useRef } from 'react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { getNextRoundTime } from '@/match/globalRoundScheduler';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
+
+const SERVER_DRIVEN = Boolean(import.meta.env.VITE_OLEFOOT_API_URL);
 
 export function useGlobalPlayoffScheduler() {
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
@@ -17,6 +23,8 @@ export function useGlobalPlayoffScheduler() {
   const lastStartedRound = useRef<number | null>(null);
 
   useEffect(() => {
+    // Server-side scheduler é autoritativo: cliente não toca no estado.
+    if (SERVER_DRIVEN) return;
     if (!globalLeagueMVP || globalLeagueMVP.status !== 'playoffs') return;
 
     intervalRef.current = setInterval(() => {
@@ -57,7 +65,6 @@ export function useGlobalPlayoffScheduler() {
         const nextRound = globalLeagueMVP.playoffRounds.find(r => r.roundNumber === nextRoundNumber);
         if (nextRound && nextRound.status === 'scheduled') {
           const nextKickoffMs = getNextRoundTime(nowMs);
-          // Só reagenda se o kickoff atual já passou ou está desatualizado
           if (nextRound.scheduledKickoffMs <= nowMs + 5000) {
             dispatch({
               type: 'RESCHEDULE_PLAYOFF_ROUND',

@@ -1,7 +1,7 @@
 /**
- * Bridge: GlobalMatchScheduler (LEGACY 15min) → Coach Agent dispatches.
+ * Bridge: GlobalMatchScheduler (ciclo 5min) → Coach Agent dispatches.
  *
- * Em cada transição de janela do ciclo de 15min, dispara o gerador
+ * Em cada transição de janela do ciclo de 5min, dispara o gerador
  * proativo do coach correspondente. O coach já trata dedupe e auto-execução.
  */
 

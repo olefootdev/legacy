@@ -186,25 +186,25 @@ export interface RoundConsequences {
   }>;
 }
 
-/** Constantes do sistema (Liga LEGACY — antigo Match Global) */
+/** Constantes do sistema (Liga Global) */
 export const GLOBAL_MATCH_CONSTANTS = {
-  /** Duração de cada rodada (1 minuto) */
+  /** Duração de cada rodada ao vivo (1 minuto real ≡ 90min de jogo) */
   ROUND_DURATION_MS: 1 * 60 * 1000,
 
-  /** Intervalo entre rodadas (15 min — ciclo do "organismo vivo") */
-  ROUND_INTERVAL_MS: 15 * 60 * 1000,
+  /** Intervalo entre kickoffs dentro de um slot ativo (5 min). */
+  ROUND_INTERVAL_MS: 5 * 60 * 1000,
 
   /** Janela para definir comandos (1 min — pre_match_lock) */
   COMMAND_WINDOW_MS: 1 * 60 * 1000,
 
-  /** Janela 1: descanso e recuperação (5min). */
-  RECOVERY_WINDOW_MS: 5 * 60 * 1000,
+  /** Janela 1: descanso e recuperação pós-jogo (1.5min). */
+  RECOVERY_WINDOW_MS: 90 * 1000,
 
-  /** Janela 2: preparação e evolução / treinos (5min). */
-  TRAINING_WINDOW_MS: 5 * 60 * 1000,
+  /** Janela 2: preparação e evolução / treinos (1.5min). */
+  TRAINING_WINDOW_MS: 90 * 1000,
 
-  /** Janela 3: ajustes técnicos e táticos (4min). */
-  TACTICAL_WINDOW_MS: 4 * 60 * 1000,
+  /** Janela 3: ajustes técnicos e táticos (1min). */
+  TACTICAL_WINDOW_MS: 1 * 60 * 1000,
 
   /** Janela 4: lock (1min antes do kickoff — sem matchmaking OLEFOOT). */
   LOCK_WINDOW_MS: 1 * 60 * 1000,
@@ -212,25 +212,28 @@ export const GLOBAL_MATCH_CONSTANTS = {
   /** Duração de um minuto de jogo em ms real (1min / 90min = 0.67s por minuto) */
   GAME_MINUTE_MS: 667,
 
-  /** Máximo de rodadas por dia (15min × 30 = 7.5h de atividade) */
-  MAX_ROUNDS_PER_DAY: 30,
+  /**
+   * Máximo de rodadas por dia: 5 slots × ~30 rodadas/slot = ~150.
+   * Cada slot dura 2.5h e roda uma rodada a cada 5min (2.5h ÷ 5min = 30).
+   */
+  MAX_ROUNDS_PER_DAY: 150,
 } as const;
 
 /**
- * Fase fina do ciclo de 15min (derivada do tempo restante até kickoff).
+ * Fase fina do ciclo de 5min (derivada do tempo restante até kickoff).
  * Mais granular que GlobalRoundStatus — guia os hooks do coach por janela.
  */
 export type CycleWindowPhase = 'recovery' | 'training' | 'tactical' | 'lock' | 'live' | 'finished';
 
 /**
  * Retorna a janela atual do ciclo dado um round agendado e o tempo atual.
- * Janelas (contadas regressivamente a partir do kickoff):
- *  - [-15min .. -10min] → recovery
- *  - [-10min .. -5min]  → training
- *  - [-5min  .. -1min]  → tactical
- *  - [-1min  .. 0]      → lock
- *  - [0 .. +duration]   → live
- *  - depois             → finished
+ * Janelas (contadas regressivamente a partir do kickoff, ciclo de 5min):
+ *  - [-5min   .. -3.5min] → recovery (1.5min)
+ *  - [-3.5min .. -2min]   → training (1.5min)
+ *  - [-2min   .. -1min]   → tactical (1min)
+ *  - [-1min   .. 0]       → lock (1min)
+ *  - [0 .. +duration]     → live
+ *  - depois               → finished
  */
 export function getCycleWindowPhase(round: GlobalRound, nowMs: number): CycleWindowPhase {
   const k = round.scheduledKickoffMs;

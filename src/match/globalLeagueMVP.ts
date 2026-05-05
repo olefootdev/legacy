@@ -114,7 +114,7 @@ export const GLOBAL_LEAGUE_MVP_CONSTANTS = {
   DIVISIONS: 3,
   PROMOTION_PERCENTAGE: 0.1, // 10%
   RELEGATION_PERCENTAGE: 0.1, // 10%
-  ROUND_INTERVAL_MS: 60 * 60 * 1000, // 1 hora entre rodadas
+  ROUND_INTERVAL_MS: 5 * 60 * 1000, // 5 min entre kickoffs (slot ativo)
 } as const;
 
 /** Criar time inicial */

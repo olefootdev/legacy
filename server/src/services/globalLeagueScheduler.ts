@@ -1,21 +1,35 @@
 /**
  * Scheduler Server-Side da Liga Global
  *
- * Roda em loop no Railway a cada 10s.
- * Gerencia o ciclo completo dos playoffs:
+ * Roda em loop no Railway a cada 10s. Gerencia o ciclo completo:
  *   scheduled → live (1min) → finished → próxima rodada no topo de 5min
  *
+ * Cobre playoffs (status='playoffs') e liga oficial (status='active').
  * Persiste no Supabase após cada mudança — todos os clients recebem via Realtime.
+ *
+ * Single source of truth: este scheduler é AUTORITATIVO. O cliente
+ * desativa o scheduler local quando o server está disponível.
  */
 
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
+import {
+  generatePlayoffRounds as logicGenPlayoffs,
+  distributeIntoDivisions as logicDistribute,
+  generateLeagueRounds as logicGenLeague,
+  applyPromotionRelegation as logicPromoRele,
+  type GlobalTeamLite,
+  type RoundLite,
+  type FixtureLite,
+} from './globalLeagueLogic.js';
 
 const ROUND_DURATION_MS = 60 * 1000;       // 1 minuto real = 90min de jogo
 const GAME_MINUTE_MS = ROUND_DURATION_MS / 90;
 const TICK_INTERVAL_MS = 10 * 1000;        // tick a cada 10s
+const HEARTBEAT_EVERY_N_TICKS = 30;        // log de saúde a cada 5min
 
 type FixtureStatus = 'scheduled' | 'live' | 'finished';
 type RoundStatus = 'scheduled' | 'live' | 'finished';
+type RoundKind = 'playoff' | 'league';
 
 interface MatchEvent {
   id: string;
@@ -47,7 +61,8 @@ interface Fixture {
   division: string | number;
 }
 
-interface PlayoffRound {
+interface Round {
+  kind: RoundKind;
   roundNumber: number;
   phase: string;
   status: RoundStatus;
@@ -88,19 +103,17 @@ interface LeagueState {
   seasonId: string;
   status: string;
   teams: GlobalTeam[];
-  minTeamsRequired: number;
-  playoffRounds: PlayoffRound[];
+  playoffRounds: Round[];
+  leagueRounds: Round[];
   currentPlayoffRound?: number;
-  leagueRounds: unknown[];
   currentLeagueRound?: number;
+  minTeamsRequired: number;
   teamsPerDivision: number;
   promotionPercentage: number;
   relegationPercentage: number;
-  createdAt: number;
-  lastUpdated: number;
 }
 
-/** Próximo topo de 5min do relógio */
+/** Próximo topo de 5min do relógio (15:00, 15:05, 15:10...) */
 function getNextRoundTime(nowMs: number): number {
   const intervalMs = 5 * 60 * 1000;
   return Math.ceil((nowMs + 1000) / intervalMs) * intervalMs;
@@ -166,6 +179,34 @@ function applyPlayoffResults(teams: GlobalTeam[], fixtures: Fixture[]): GlobalTe
       playoffLosses: team.playoffLosses + (!won && !drew ? 1 : 0),
       playoffGoalsFor: team.playoffGoalsFor + scored,
       playoffGoalsAgainst: team.playoffGoalsAgainst + conceded,
+    };
+  });
+}
+
+/** Atualiza pontos dos times após rodada da liga oficial */
+function applyLeagueResults(teams: GlobalTeam[], fixtures: Fixture[]): GlobalTeam[] {
+  return teams.map(team => {
+    const fixture = fixtures.find(f => f.homeTeamId === team.id || f.awayTeamId === team.id);
+    if (!fixture) return team;
+
+    const isHome = fixture.homeTeamId === team.id;
+    const scored = isHome ? fixture.scoreHome : fixture.scoreAway;
+    const conceded = isHome ? fixture.scoreAway : fixture.scoreHome;
+    const won = scored > conceded;
+    const drew = scored === conceded;
+    const result: 'W' | 'D' | 'L' = won ? 'W' : drew ? 'D' : 'L';
+
+    return {
+      ...team,
+      matchesPlayed: team.matchesPlayed + 1,
+      points: team.points + (won ? 3 : drew ? 1 : 0),
+      wins: team.wins + (won ? 1 : 0),
+      draws: team.draws + (drew ? 1 : 0),
+      losses: team.losses + (!won && !drew ? 1 : 0),
+      goalsFor: team.goalsFor + scored,
+      goalsAgainst: team.goalsAgainst + conceded,
+      goalDifference: (team.goalsFor + scored) - (team.goalsAgainst + conceded),
+      recentForm: [...team.recentForm.slice(-4), result],
     };
   });
 }
@@ -265,40 +306,44 @@ async function loadState(): Promise<LeagueState | null> {
     fixturesByRound.set(roundId, list);
   }
 
-  const playoffRounds: PlayoffRound[] = (roundsRes.data ?? [])
-    .filter((r: Record<string, unknown>) => r.round_type === 'playoff')
-    .map((r: Record<string, unknown>) => {
-      const roundId = String(r.id);
-      return {
-        roundNumber: Number(r.round_number),
-        phase: String(r.phase ?? 'round_1'),
-        status: r.status as RoundStatus,
-        scheduledKickoffMs: Number(r.scheduled_kickoff_ms),
-        actualKickoffMs: r.actual_kickoff_ms ? Number(r.actual_kickoff_ms) : undefined,
-        finishedAtMs: r.finished_at_ms ? Number(r.finished_at_ms) : undefined,
-        fixtures: fixturesByRound.get(roundId) ?? [],
-      };
-    })
-    .sort((a: PlayoffRound, b: PlayoffRound) => a.roundNumber - b.roundNumber);
+  const playoffRounds: Round[] = [];
+  const leagueRounds: Round[] = [];
+  for (const rr of roundsRes.data ?? []) {
+    const r = rr as Record<string, unknown>;
+    const roundId = String(r.id);
+    const round: Round = {
+      kind: r.round_type === 'playoff' ? 'playoff' : 'league',
+      roundNumber: Number(r.round_number),
+      phase: String(r.phase ?? 'round_1'),
+      status: r.status as RoundStatus,
+      scheduledKickoffMs: Number(r.scheduled_kickoff_ms),
+      actualKickoffMs: r.actual_kickoff_ms ? Number(r.actual_kickoff_ms) : undefined,
+      finishedAtMs: r.finished_at_ms ? Number(r.finished_at_ms) : undefined,
+      fixtures: fixturesByRound.get(roundId) ?? [],
+    };
+    if (round.kind === 'playoff') playoffRounds.push(round);
+    else leagueRounds.push(round);
+  }
+  playoffRounds.sort((a, b) => a.roundNumber - b.roundNumber);
+  leagueRounds.sort((a, b) => a.roundNumber - b.roundNumber);
 
   return {
     seasonId,
     status: String(stateRow.status),
     teams,
-    minTeamsRequired: 1,
     playoffRounds,
+    leagueRounds,
     currentPlayoffRound: stateRow.current_playoff_round == null ? undefined : Number(stateRow.current_playoff_round),
-    leagueRounds: [],
+    currentLeagueRound: stateRow.current_league_round == null ? undefined : Number(stateRow.current_league_round),
+    minTeamsRequired: Number(stateRow.min_teams_required ?? 2),
     teamsPerDivision: Number(stateRow.teams_per_division ?? 11),
     promotionPercentage: Number(stateRow.promotion_percentage ?? 0.1),
     relegationPercentage: Number(stateRow.relegation_percentage ?? 0.1),
-    createdAt: Date.now(),
-    lastUpdated: Date.now(),
   };
 }
 
-/** Persiste mudanças no Supabase */
-async function persistChanges(state: LeagueState, changedRound: PlayoffRound): Promise<void> {
+/** Persiste mudanças no Supabase para um round específico */
+async function persistRound(state: LeagueState, round: Round, options: { persistTeams?: boolean } = {}): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
 
@@ -308,30 +353,32 @@ async function persistChanges(state: LeagueState, changedRound: PlayoffRound): P
     season_id: state.seasonId,
     status: state.status,
     current_playoff_round: state.currentPlayoffRound ?? null,
-    min_teams_required: 1,
+    current_league_round: state.currentLeagueRound ?? null,
+    min_teams_required: state.minTeamsRequired,
     teams_per_division: state.teamsPerDivision,
     promotion_percentage: state.promotionPercentage,
     relegation_percentage: state.relegationPercentage,
   }, { onConflict: 'id' });
 
   // Atualizar rodada
+  const roundIdPrefix = round.kind === 'playoff' ? 'playoff' : 'league';
+  const roundId = `${roundIdPrefix}_${state.seasonId}_${round.roundNumber}`;
   await sb.from('global_league_rounds').upsert({
-    id: `playoff_${state.seasonId}_${changedRound.roundNumber}`,
+    id: roundId,
     season_id: state.seasonId,
-    round_number: changedRound.roundNumber,
-    round_type: 'playoff',
-    phase: changedRound.phase,
-    status: changedRound.status,
-    scheduled_kickoff_ms: changedRound.scheduledKickoffMs,
-    actual_kickoff_ms: changedRound.actualKickoffMs ?? null,
-    finished_at_ms: changedRound.finishedAtMs ?? null,
+    round_number: round.roundNumber,
+    round_type: round.kind,
+    phase: round.kind === 'playoff' ? round.phase : null,
+    status: round.status,
+    scheduled_kickoff_ms: round.scheduledKickoffMs,
+    actual_kickoff_ms: round.actualKickoffMs ?? null,
+    finished_at_ms: round.finishedAtMs ?? null,
   }, { onConflict: 'id' });
 
   // Atualizar fixtures
-  if (changedRound.fixtures.length > 0) {
-    const roundId = `playoff_${state.seasonId}_${changedRound.roundNumber}`;
+  if (round.fixtures.length > 0) {
     await sb.from('global_league_fixtures').upsert(
-      changedRound.fixtures.map(f => ({
+      round.fixtures.map(f => ({
         id: f.id,
         round_id: roundId,
         division: f.division,
@@ -352,7 +399,7 @@ async function persistChanges(state: LeagueState, changedRound: PlayoffRound): P
     );
 
     // Persistir eventos
-    const allEvents = changedRound.fixtures.flatMap(f => f.events);
+    const allEvents = round.fixtures.flatMap(f => f.events);
     if (allEvents.length > 0) {
       await sb.from('global_league_events').upsert(
         allEvents.map(e => ({
@@ -372,8 +419,8 @@ async function persistChanges(state: LeagueState, changedRound: PlayoffRound): P
     }
   }
 
-  // Atualizar times (pontos)
-  if (state.teams.length > 0) {
+  // Atualizar times só quando solicitado (no fim da rodada)
+  if (options.persistTeams && state.teams.length > 0) {
     await sb.from('global_league_teams').upsert(
       state.teams.map(t => ({
         id: t.id,
@@ -407,21 +454,23 @@ async function persistChanges(state: LeagueState, changedRound: PlayoffRound): P
   }
 }
 
-/** Tick principal — avança o estado da liga */
-async function tick(): Promise<void> {
-  const state = await loadState();
-  if (!state || state.status !== 'playoffs') return;
+/** Cache em memória do último minuto persistido por rodada — reduz writes */
+const lastPersistedMinute = new Map<string, number>();
 
-  const nowMs = Date.now();
-  const roundNumber = state.currentPlayoffRound;
-  if (!roundNumber) return;
-
-  const round = state.playoffRounds.find(r => r.roundNumber === roundNumber);
-  if (!round) return;
+/** Processa uma rodada: scheduled → live → finished → próxima */
+async function processRound(
+  state: LeagueState,
+  round: Round,
+  rounds: Round[],
+  setCurrentRound: (n: number | undefined) => void,
+  applyResults: (teams: GlobalTeam[], fixtures: Fixture[]) => GlobalTeam[],
+  nowMs: number,
+): Promise<boolean /* didChange */> {
+  const roundKey = `${round.kind}_${round.roundNumber}`;
 
   // 1. Iniciar rodada no kickoff
   if (round.status === 'scheduled' && nowMs >= round.scheduledKickoffMs) {
-    console.log(`[scheduler] Iniciando rodada ${roundNumber}`);
+    console.log(`[scheduler] Iniciando ${round.kind} rodada ${round.roundNumber}`);
 
     const simulatedFixtures = round.fixtures.map(fixture => {
       const homeTeam = state.teams.find(t => t.id === fixture.homeTeamId);
@@ -433,8 +482,9 @@ async function tick(): Promise<void> {
 
       return {
         ...fixture,
-        scoreHome: result.homeScore,
-        scoreAway: result.awayScore,
+        // Esconder placar final inicialmente — só revela conforme avança
+        scoreHome: 0,
+        scoreAway: 0,
         status: 'live' as FixtureStatus,
         kickoffMs: nowMs,
         currentMinute: 0,
@@ -445,78 +495,309 @@ async function tick(): Promise<void> {
     round.status = 'live';
     round.actualKickoffMs = nowMs;
     round.fixtures = simulatedFixtures;
+    lastPersistedMinute.delete(roundKey);
 
-    await persistChanges(state, round);
-    return;
+    await persistRound(state, round);
+    return true;
   }
 
-  // 2. Revelar minuto atual ao vivo
+  // 2. Reveal progressivo durante live (só persiste se minuto avançou)
   if (round.status === 'live' && round.actualKickoffMs) {
     const elapsed = nowMs - round.actualKickoffMs;
     const currentMinute = Math.min(90, Math.floor(elapsed / GAME_MINUTE_MS));
+    const last = lastPersistedMinute.get(roundKey) ?? -1;
 
-    // Atualizar placar revelado
-    round.fixtures = round.fixtures.map(f => {
-      const revealedEvents = f.events.filter(e => e.minute <= currentMinute);
-      const scoreHome = revealedEvents.filter(e => e.type === 'goal' && e.side === 'home').length;
-      const scoreAway = revealedEvents.filter(e => e.type === 'goal' && e.side === 'away').length;
-      return { ...f, currentMinute, scoreHome, scoreAway };
-    });
-
-    await persistChanges(state, round);
-
-    // 3. Finalizar rodada após 1min
+    // 3. Finalizar rodada após duração total
     if (elapsed >= ROUND_DURATION_MS) {
-      console.log(`[scheduler] Finalizando rodada ${roundNumber}`);
+      console.log(`[scheduler] Finalizando ${round.kind} rodada ${round.roundNumber}`);
 
+      round.fixtures = round.fixtures.map(f => {
+        const goals = f.events.filter(e => e.type === 'goal');
+        const scoreHome = goals.filter(e => e.side === 'home').length;
+        const scoreAway = goals.filter(e => e.side === 'away').length;
+        return { ...f, currentMinute: 90, scoreHome, scoreAway, status: 'finished' as FixtureStatus, finishedAtMs: nowMs };
+      });
       round.status = 'finished';
       round.finishedAtMs = nowMs;
-      round.fixtures = round.fixtures.map(f => ({ ...f, status: 'finished' as FixtureStatus, finishedAtMs: nowMs }));
 
-      // Atualizar pontos dos times
-      state.teams = applyPlayoffResults(state.teams, round.fixtures);
+      // Aplicar pontos
+      state.teams = applyResults(state.teams, round.fixtures);
 
-      await persistChanges(state, round);
+      // Agendar a próxima rodada IMEDIATAMENTE (próximo top de 5min)
+      const nextRound = rounds.find(r => r.roundNumber === round.roundNumber + 1);
+      if (nextRound) {
+        const nextKickoffMs = getNextRoundTime(nowMs);
+        nextRound.scheduledKickoffMs = nextKickoffMs;
+        nextRound.status = 'scheduled';
+        setCurrentRound(nextRound.roundNumber);
+        console.log(`[scheduler] Próxima ${round.kind} rodada ${nextRound.roundNumber} agendada para ${new Date(nextKickoffMs).toISOString()}`);
+        await persistRound(state, round, { persistTeams: true });
+        await persistRound(state, nextRound);
+      } else {
+        // Última rodada da fase
+        setCurrentRound(undefined);
+        await persistRound(state, round, { persistTeams: true });
+      }
+      return true;
     }
+
+    // Reveal só quando o minuto mudou (de fato) — reduz writes
+    if (currentMinute > last) {
+      round.fixtures = round.fixtures.map(f => {
+        const revealedEvents = f.events.filter(e => e.minute <= currentMinute);
+        const scoreHome = revealedEvents.filter(e => e.type === 'goal' && e.side === 'home').length;
+        const scoreAway = revealedEvents.filter(e => e.type === 'goal' && e.side === 'away').length;
+        return { ...f, currentMinute, scoreHome, scoreAway };
+      });
+      lastPersistedMinute.set(roundKey, currentMinute);
+      await persistRound(state, round);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** Converte time interno para o formato da lib pura */
+function teamToLite(t: GlobalTeam): GlobalTeamLite {
+  return {
+    id: t.id, managerId: t.managerId, clubName: t.clubName, clubShort: t.clubShort,
+    overall: t.overall, division: t.division, position: t.position,
+    playoffPoints: t.playoffPoints, playoffMatchesPlayed: t.playoffMatchesPlayed,
+    playoffWins: t.playoffWins, playoffDraws: t.playoffDraws, playoffLosses: t.playoffLosses,
+    playoffGoalsFor: t.playoffGoalsFor, playoffGoalsAgainst: t.playoffGoalsAgainst,
+    points: t.points, matchesPlayed: t.matchesPlayed,
+    wins: t.wins, draws: t.draws, losses: t.losses,
+    goalsFor: t.goalsFor, goalsAgainst: t.goalsAgainst, goalDifference: t.goalDifference,
+    recentForm: t.recentForm, registeredAt: t.registeredAt,
+  };
+}
+
+/** Converte de volta para o formato interno */
+function liteToTeam(l: GlobalTeamLite): GlobalTeam {
+  return l as GlobalTeam;
+}
+
+/** Converte rodada da lib para o formato interno do scheduler */
+function liteRoundToRound(r: RoundLite): Round {
+  return {
+    kind: r.kind,
+    roundNumber: r.roundNumber,
+    phase: r.phase,
+    status: r.status,
+    scheduledKickoffMs: r.scheduledKickoffMs,
+    actualKickoffMs: r.actualKickoffMs,
+    finishedAtMs: r.finishedAtMs,
+    fixtures: r.fixtures.map(f => ({ ...f } as Fixture)),
+  };
+}
+
+/**
+ * AUTO-START: waiting_teams + teams.length >= min → gera playoffs e transiciona.
+ * Persiste estado, rodadas, fixtures.
+ */
+async function tryAutoStartPlayoffs(state: LeagueState, nowMs: number): Promise<boolean> {
+  if (state.status !== 'waiting_teams') return false;
+  if (state.teams.length < state.minTeamsRequired) return false;
+  if (state.teams.length < 2) return false;
+
+  console.log(`[scheduler] AUTO-START playoffs: ${state.teams.length} times atingiram min=${state.minTeamsRequired}`);
+
+  const liteRounds = logicGenPlayoffs(state.teams.map(teamToLite), nowMs);
+  if (liteRounds.length === 0) return false;
+
+  state.playoffRounds = liteRounds.map(liteRoundToRound);
+  state.status = 'playoffs';
+  state.currentPlayoffRound = 1;
+
+  // Persistir todas as rodadas iniciais
+  for (const r of state.playoffRounds) {
+    await persistRound(state, r);
+  }
+  return true;
+}
+
+/**
+ * TRANSIÇÃO playoffs → active: quando última rodada de playoff terminou,
+ * distribuir times em divisões e gerar leagueRounds.
+ */
+async function tryTransitionToLeague(state: LeagueState, nowMs: number): Promise<boolean> {
+  if (state.status !== 'playoffs') return false;
+  // Só transiciona se TODAS as rodadas de playoff terminaram
+  const allFinished = state.playoffRounds.length > 0 && state.playoffRounds.every(r => r.status === 'finished');
+  if (!allFinished) return false;
+
+  console.log(`[scheduler] TRANSIÇÃO playoffs → active`);
+
+  const distributed = logicDistribute(state.teams.map(teamToLite));
+  state.teams = distributed.map(liteToTeam);
+
+  const leagueLite = logicGenLeague(distributed, nowMs);
+  state.leagueRounds = leagueLite.map(liteRoundToRound);
+  state.status = 'active';
+  state.currentLeagueRound = state.leagueRounds.length > 0 ? 1 : undefined;
+  state.currentPlayoffRound = undefined;
+
+  // Persistir times com novas divisões + todas as rodadas da liga
+  if (state.leagueRounds.length > 0) {
+    for (const r of state.leagueRounds) {
+      await persistRound(state, r);
+    }
+    // Garantir times persistidos com divisão
+    await persistRound(state, state.leagueRounds[0], { persistTeams: true });
+  } else {
+    // Sem rodadas (poucos times) — só atualiza estado e times
+    await persistTeamsAndState(state);
+  }
+  return true;
+}
+
+/**
+ * TRANSIÇÃO active → waiting_teams (nova season): quando última rodada da liga
+ * termina, aplica promoção/rebaixamento, zera stats, cria nova season.
+ * O scheduler imediatamente vai tentar auto-start na próxima tick.
+ */
+async function tryTransitionToNewSeason(state: LeagueState, nowMs: number): Promise<boolean> {
+  if (state.status !== 'active') return false;
+  const allFinished = state.leagueRounds.length > 0 && state.leagueRounds.every(r => r.status === 'finished');
+  if (!allFinished) return false;
+
+  console.log(`[scheduler] TRANSIÇÃO active → nova season`);
+
+  const promoted = logicPromoRele(
+    state.teams.map(teamToLite),
+    state.promotionPercentage,
+    state.relegationPercentage,
+  );
+  state.teams = promoted.map(liteToTeam);
+  state.seasonId = `season_${nowMs}`;
+  state.status = 'waiting_teams';
+  state.currentLeagueRound = undefined;
+  state.currentPlayoffRound = undefined;
+  state.playoffRounds = [];
+  state.leagueRounds = [];
+
+  // Limpar rodadas/fixtures/events da temporada antiga (mantém time IDs estáveis)
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    await sb.from('global_league_events').delete().neq('id', '');
+    await sb.from('global_league_fixtures').delete().neq('id', '');
+    await sb.from('global_league_rounds').delete().neq('id', '');
+  }
+
+  await persistTeamsAndState(state);
+  return true;
+}
+
+/** Persiste apenas state + teams (usado nas transições) */
+async function persistTeamsAndState(state: LeagueState): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return;
+
+  await sb.from('global_league_state').upsert({
+    id: 'current',
+    season_id: state.seasonId,
+    status: state.status,
+    current_playoff_round: state.currentPlayoffRound ?? null,
+    current_league_round: state.currentLeagueRound ?? null,
+    min_teams_required: state.minTeamsRequired,
+    teams_per_division: state.teamsPerDivision,
+    promotion_percentage: state.promotionPercentage,
+    relegation_percentage: state.relegationPercentage,
+  }, { onConflict: 'id' });
+
+  if (state.teams.length > 0) {
+    await sb.from('global_league_teams').upsert(
+      state.teams.map(t => ({
+        id: t.id, manager_id: t.managerId, club_name: t.clubName, club_short: t.clubShort,
+        overall: t.overall, division: t.division ?? null, position: t.position ?? null,
+        previous_position: null,
+        playoff_points: t.playoffPoints, playoff_matches_played: t.playoffMatchesPlayed,
+        playoff_wins: t.playoffWins, playoff_draws: t.playoffDraws, playoff_losses: t.playoffLosses,
+        playoff_goals_for: t.playoffGoalsFor, playoff_goals_against: t.playoffGoalsAgainst,
+        points: t.points, matches_played: t.matchesPlayed,
+        wins: t.wins, draws: t.draws, losses: t.losses,
+        goals_for: t.goalsFor, goals_against: t.goalsAgainst, goal_difference: t.goalDifference,
+        recent_form: t.recentForm,
+        registered_at: new Date(t.registeredAt).toISOString(),
+      })),
+      { onConflict: 'id' }
+    );
+  }
+}
+
+/** Tick principal — avança o estado da liga */
+async function tick(): Promise<void> {
+  const state = await loadState();
+  if (!state) return;
+
+  const nowMs = Date.now();
+
+  // ─── Auto-start playoffs ──────────────────────────────────────────────
+  if (await tryAutoStartPlayoffs(state, nowMs)) return;
+
+  // ─── Playoffs ────────────────────────────────────────────────────────
+  if (state.status === 'playoffs' && state.currentPlayoffRound) {
+    const round = state.playoffRounds.find(r => r.roundNumber === state.currentPlayoffRound);
+    if (round) {
+      const changed = await processRound(
+        state,
+        round,
+        state.playoffRounds,
+        (n) => { state.currentPlayoffRound = n; },
+        applyPlayoffResults,
+        nowMs,
+      );
+      if (changed) return;
+    }
+    // Se não houve mudança no round, talvez todas terminaram — tenta transicionar
+    await tryTransitionToLeague(state, nowMs);
     return;
   }
 
-  // 4. Agendar próxima rodada no topo de 5min
-  if (round.status === 'finished') {
-    const nextRoundNumber = roundNumber + 1;
-    const nextRound = state.playoffRounds.find(r => r.roundNumber === nextRoundNumber);
-    if (!nextRound) {
-      console.log(`[scheduler] Playoffs concluídos após rodada ${roundNumber}`);
-      return;
+  // ─── Liga oficial ────────────────────────────────────────────────────
+  if (state.status === 'active' && state.currentLeagueRound) {
+    const round = state.leagueRounds.find(r => r.roundNumber === state.currentLeagueRound);
+    if (round) {
+      const changed = await processRound(
+        state,
+        round,
+        state.leagueRounds,
+        (n) => { state.currentLeagueRound = n; },
+        applyLeagueResults,
+        nowMs,
+      );
+      if (changed) return;
     }
-
-    if (nextRound.status === 'scheduled' && nextRound.scheduledKickoffMs <= nowMs + 5000) {
-      const nextKickoffMs = getNextRoundTime(nowMs);
-      console.log(`[scheduler] Agendando rodada ${nextRoundNumber} para ${new Date(nextKickoffMs).toISOString()}`);
-
-      nextRound.scheduledKickoffMs = nextKickoffMs;
-      state.currentPlayoffRound = nextRoundNumber;
-
-      await persistChanges(state, nextRound);
-    }
+    // Se todas terminaram, transiciona para nova season
+    await tryTransitionToNewSeason(state, nowMs);
+    return;
   }
 }
 
 /** Inicia o loop do scheduler */
 export function startGlobalLeagueScheduler(): void {
-  console.log('[scheduler] Global League Scheduler iniciado');
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    console.warn('[scheduler] Supabase admin não configurado — scheduler NÃO iniciado.');
+    return;
+  }
+
+  console.log('[scheduler] Global League Scheduler iniciado (tick a cada 10s)');
+  let tickCount = 0;
 
   const run = async () => {
+    tickCount++;
     try {
       await tick();
+      if (tickCount % HEARTBEAT_EVERY_N_TICKS === 0) {
+        console.log(`[scheduler] heartbeat: ${tickCount} ticks (~${Math.round(tickCount * TICK_INTERVAL_MS / 60000)}min)`);
+      }
     } catch (err) {
       console.error('[scheduler] Erro no tick:', err);
     }
   };
 
-  // Primeiro tick imediato
   void run();
-
-  // Loop a cada 10s
   setInterval(() => void run(), TICK_INTERVAL_MS);
 }

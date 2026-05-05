@@ -198,7 +198,7 @@ export class GlobalMatchScheduler {
       this.tick();
     }, 1000);
 
-    console.log('[GlobalMatchScheduler] Iniciado (LEGACY ciclo 15min)');
+    console.log('[GlobalMatchScheduler] Iniciado (ciclo 5min)');
   }
 
   /**
@@ -249,7 +249,7 @@ export class GlobalMatchScheduler {
       this.notifyStateChange();
     }
 
-    // Detectar transição de janela do ciclo de 15min e notificar
+    // Detectar transição de janela do ciclo de 5min e notificar
     this.detectWindowTransition(this.state.currentRound, now);
   }
 

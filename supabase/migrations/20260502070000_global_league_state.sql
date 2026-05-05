@@ -1,37 +1,15 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- OLEFOOT — global_league_state
+-- OLEFOOT — global_league_state (NO-OP)
 --
--- Estado singleton da liga global (OlefootLeague + rodadas).
--- Admin escreve via painel, servidor Hono lê para executar rodadas.
--- Managers leem no boot via PlatformDataHydrator.
+-- Esta migration tentava criar `global_league_state` com schema (id text PK,
+-- state jsonb). Mas a tabela já tinha sido criada em
+-- 20260427135532_global_league_mvp.sql com o schema relacional (season_id,
+-- status, current_playoff_round, current_league_round, min_teams_required,
+-- ...) que é o que cliente e server usam.
+--
+-- O `CREATE TABLE IF NOT EXISTS` impedia que essa migration criasse algo, mas
+-- o arquivo confundia leitores. Mantida vazia para preservar o histórico de
+-- migrations sem alterar o estado do banco. Sem rollback necessário.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-create table if not exists public.global_league_state (
-  id         text primary key default 'singleton',
-  state      jsonb not null,
-  updated_at timestamptz not null default now(),
-  constraint global_league_state_singleton check (id = 'singleton')
-);
-
-alter table public.global_league_state enable row level security;
-
--- Todos os managers autenticados podem ler
-create policy "global_league_state_select"
-  on public.global_league_state for select
-  to authenticated using (true);
-
--- Só service_role escreve (admin usa service_role via servidor)
-grant select on table public.global_league_state to authenticated;
-
-comment on table public.global_league_state is
-  'Estado singleton da liga global. 1 row (id=singleton). Escrito pelo servidor Hono com service_role.';
-
-create or replace function public.touch_global_league_state_updated_at()
-returns trigger language plpgsql as $$
-begin new.updated_at := now(); return new; end;
-$$;
-
-drop trigger if exists trg_touch_global_league_state on public.global_league_state;
-create trigger trg_touch_global_league_state
-  before update on public.global_league_state
-  for each row execute function public.touch_global_league_state_updated_at();
+select 1 as global_league_state_noop_2026_05_02;
