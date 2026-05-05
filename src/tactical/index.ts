@@ -109,3 +109,16 @@ export {
   defendingY,
   attackingY,
 } from './matchTypes';
+
+export {
+  type TacticalRoleId,
+  type RoleFamily,
+  type BasePosition,
+  type BehaviorProfile,
+  type TacticalRole,
+} from './roleTypes';
+
+export {
+  TACTICAL_ROLES,
+  TACTICAL_ROLE_BY_ID,
+} from './roles';
