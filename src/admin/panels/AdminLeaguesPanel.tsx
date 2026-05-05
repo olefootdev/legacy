@@ -19,6 +19,7 @@ import {
 import { AdminNewLeagueModal } from '@/admin/components/AdminNewLeagueModal';
 import { cn } from '@/lib/utils';
 import { persistAdminLeague, removeAdminLeague, setAdminPrimaryLeague } from '@/supabase/adminLeagues';
+import { AdminOlefootLigaPanel } from './AdminOlefootLigaPanel';
 
 export function AdminLeaguesPanel() {
   const dispatch = useGameDispatch();
@@ -64,6 +65,7 @@ export function AdminLeaguesPanel() {
 
   return (
     <div className="space-y-4">
+      <AdminOlefootLigaPanel />
       <AdminNewLeagueModal
         open={newModalOpen}
         onClose={() => setNewModalOpen(false)}

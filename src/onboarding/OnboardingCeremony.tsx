@@ -120,6 +120,7 @@ export function OnboardingCeremony() {
   const welcomePackVersion = useGameStore(
     (s) => s.userSettings?.welcomeGenesisPackVersion ?? 0,
   );
+  const hasDoneOnboarding = useGameStore((s) => s.userSettings?.hasDoneOnboarding ?? false);
   const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
   const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
   const clubInitials = deriveInitials(clubName);
@@ -130,40 +131,74 @@ export function OnboardingCeremony() {
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [askingExit, setAskingExit] = useState(false);
   const [active, setActive] = useState(false);
+  // Aguarda 1.5s após hydration antes de avaliar — garante que jogadores do Supabase chegaram
+  const [hydrationSettled, setHydrationSettled] = useState(false);
+
+  useEffect(() => {
+    if (!hydrationDone) return;
+    const t = setTimeout(() => setHydrationSettled(true), 1500);
+    return () => clearTimeout(t);
+  }, [hydrationDone]);
+
+  // Se manager já tem jogadores, gravar flag e nunca abrir
+  useEffect(() => {
+    if (playersCount > 0 && !hasDoneOnboarding) {
+      dispatchGame({
+        type: 'SET_USER_SETTINGS',
+        partial: { hasDoneOnboarding: true, welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+      });
+    }
+    // Fechar cerimônia se abriu por engano e jogadores já existem
+    if (playersCount > 0 && active) {
+      setActive(false);
+    }
+  }, [playersCount, hasDoneOnboarding, active]);
 
   // Reseta o guard quando o perfil muda (logout → login de outra conta).
   const profileId = managerProfile?.email;
   if (profileId !== lastProfileRef.current) {
     lastProfileRef.current = profileId;
     startedRef.current = false;
+    setHydrationSettled(false);
   }
 
-  // Detecta condição de gatilho. Aguarda hydration do Supabase antes de avaliar.
+  // Detecta condição de gatilho. Aguarda hydration + 1.5s de settle antes de avaliar.
   useEffect(() => {
-    if (!hydrationDone) return;
+    if (!hydrationSettled) return;
     if (startedRef.current) return;
     if (!isSupabaseConfigured()) return;
     if (!managerProfile) return;
+    if (hasDoneOnboarding) return;
     if (welcomePackVersion >= WELCOME_GENESIS_PACK_VERSION) return;
     if (playersCount > 0) return;
     startedRef.current = true;
     void (async () => {
+      // Verificar novamente após async — jogadores podem ter chegado nesse intervalo
+      const currentCount = Object.keys(getGameState().players ?? {}).length;
+      if (currentCount > 0) {
+        dispatchGame({
+          type: 'SET_USER_SETTINGS',
+          partial: { hasDoneOnboarding: true, welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+        });
+        return;
+      }
       // Guard server-side: se já recebeu o pack em qualquer sessão/device, não abre.
       const alreadyGranted = await hasServerGrant();
       if (alreadyGranted) {
         dispatchGame({
           type: 'SET_USER_SETTINGS',
-          partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+          partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION, hasDoneOnboarding: true },
         });
         return;
       }
+      // Grava hasDoneOnboarding imediatamente para evitar re-trigger em reloads
       dispatchGame({
         type: 'SET_USER_SETTINGS',
-        partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+        partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION, hasDoneOnboarding: true },
       });
       setActive(true);
     })();
-  }, [hydrationDone, managerProfile, playersCount, welcomePackVersion]);
+  }, [hydrationSettled, managerProfile, hasDoneOnboarding, playersCount, welcomePackVersion]);
 
   const startBuild = useCallback(async () => {
     setPhase({ kind: 'loading' });
@@ -195,6 +230,10 @@ export function OnboardingCeremony() {
       formationScheme: getGameState().manager.formationScheme,
       starterExpAmount: pkg.expTier.amount,
       welcomePackVersion: WELCOME_GENESIS_PACK_VERSION,
+    });
+    dispatchGame({
+      type: 'SET_USER_SETTINGS',
+      partial: { hasDoneOnboarding: true },
     });
     const note = makeInboxItem(
       `welcome-onboarding-${Date.now()}`,

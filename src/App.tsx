@@ -21,6 +21,7 @@ import { UserSettingsEffects } from './components/UserSettingsEffects';
 import { FriendlyChallengeLayer } from './components/FriendlyChallengeLayer';
 import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
+import { useGlobalPlayoffScheduler } from './hooks/useGlobalPlayoffScheduler';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
 
 /**
@@ -73,6 +74,8 @@ const SetPiecePreview = lazy(() => import('./pages/SetPiecePreview').then((m) =>
 const LegacyCardPreview = lazy(() => import('./pages/LegacyCardPreview').then((m) => ({ default: m.LegacyCardPreview })));
 const CeremonyPreview = lazy(() => import('./pages/CeremonyPreview').then((m) => ({ default: m.CeremonyPreview })));
 const FieldViewPreview = lazy(() => import('./pages/FieldViewPreview').then((m) => ({ default: m.FieldViewPreview })));
+const AgentsDebugLog = lazy(() => import('./pages/AgentsDebugLog').then((m) => ({ default: m.AgentsDebugLog })));
+const AgentsFieldView = lazy(() => import('./pages/AgentsFieldView').then((m) => ({ default: m.AgentsFieldView })));
 const OleFieldLab = lazy(() => import('./pages/OleFieldLab').then((m) => ({ default: m.OleFieldLab })));
 const OleFieldLabLegacy = lazy(() => import('./pages/OleFieldLabLegacy').then((m) => ({ default: m.OleFieldLabLegacy })));
 const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
@@ -223,6 +226,7 @@ function MatchQuickErrorFallback({ error, resetErrorBoundary }: { error: Error; 
 
 function GlobalSchedulerMount() {
   useGlobalRoundScheduler();
+  useGlobalPlayoffScheduler();
   return null;
 }
 
@@ -459,6 +463,15 @@ export default function App() {
             <Route path="/dev/legacy-card" element={<LegacyCardPreview />} />
             <Route path="/dev/ceremony-preview" element={<CeremonyPreview />} />
             <Route path="/dev/field-view" element={<FieldViewPreview />} />
+            <Route path="/dev/agents-field" element={<AgentsFieldView />} />
+            <Route
+              path="/dev/agents-debug"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <AgentsDebugLog />
+                </Suspense>
+              }
+            />
             <Route path="/match/legacy" element={<FieldViewPreview />} />
             <Route path="/match/live" element={<MatchLive />} />
             <Route path="/match" element={<LiveMatch />} />

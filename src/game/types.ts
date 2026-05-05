@@ -137,6 +137,18 @@ export interface UserSettings {
     lastClaimMs?: number;
     streakDay?: number;
   };
+  /**
+   * Dia do manager desde o cadastro (Dia 1, Dia 2...).
+   * Incrementa às 23:59 BRT (02:59 UTC). Nunca zera — só cresce.
+   */
+  managerDay?: number;
+  /** Data do último reset de dia (YYYY-MM-DD em UTC). */
+  lastDayResetDate?: string;
+  /**
+   * Flag permanente: cerimônia de onboarding já foi concluída.
+   * Impede que o fluxo de boas-vindas dispare novamente após o Dia 1.
+   */
+  hasDoneOnboarding?: boolean;
 }
 
 export interface StaffState {
@@ -773,8 +785,10 @@ export type GameAction =
   | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
   | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
   | { type: 'ADMIN_START_GLOBAL_PLAYOFFS' }
+  | { type: 'SET_GLOBAL_LEAGUE_MVP_MIN_TEAMS'; minTeams: number }
   | { type: 'START_GLOBAL_PLAYOFF_ROUND'; roundNumber: number }
   | { type: 'UPDATE_GLOBAL_PLAYOFF_LIVE'; nowMs: number }
+  | { type: 'RESCHEDULE_PLAYOFF_ROUND'; roundNumber: number; scheduledKickoffMs: number }
   | { type: 'FINISH_GLOBAL_PLAYOFF_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }
   | { type: 'START_GLOBAL_LEAGUE_ROUND'; roundNumber: number }
   | { type: 'UPDATE_GLOBAL_LEAGUE_LIVE'; nowMs: number }

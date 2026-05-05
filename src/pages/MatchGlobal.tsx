@@ -9,11 +9,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Zap, Trophy, Activity, Target, Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import { Play, Zap, Trophy, Activity, Target, Clock, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import type { GlobalTeam, GlobalLeagueMVPState, PlayoffRound } from '@/match/globalLeagueMVP';
 import { createGlobalTeam, generatePlayoffRounds, GLOBAL_LEAGUE_MVP_CONSTANTS } from '@/match/globalLeagueMVP';
+import { SCHEDULER_CONFIG } from '@/match/globalRoundScheduler';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
@@ -349,6 +350,170 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
   );
 }
 
+function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | undefined; totalRounds: number }) {
+  const [countdown, setCountdown] = useState('--:--');
+
+  useEffect(() => {
+    const tick = () => {
+      const nowMs = Date.now();
+      if (!round) { setCountdown('--:--'); return; }
+
+      if (round.status === 'scheduled') {
+        const diff = Math.max(0, round.scheduledKickoffMs - nowMs);
+        setCountdown(formatMs(diff));
+        return;
+      }
+      if (round.status === 'live' && round.actualKickoffMs) {
+        const elapsed = nowMs - round.actualKickoffMs;
+        const remaining = Math.max(0, GLOBAL_MATCH_CONSTANTS.ROUND_DURATION_MS - elapsed);
+        setCountdown(formatMs(remaining));
+        return;
+      }
+      if (round.status === 'finished' && round.finishedAtMs) {
+        const nextIn = Math.max(0, round.finishedAtMs + SCHEDULER_CONFIG.ROUND_INTERVAL_MS - nowMs);
+        setCountdown(formatMs(nextIn));
+        return;
+      }
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [round]);
+
+  if (!round) return null;
+
+  const isLive = round.status === 'live';
+  const isFinished = round.status === 'finished';
+  const isScheduled = round.status === 'scheduled';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="sports-panel rounded-lg p-4 border border-white/10 flex items-center justify-between gap-4"
+    >
+      <div className="flex items-center gap-3">
+        {isLive && <Activity className="w-5 h-5 text-neon-green animate-pulse" />}
+        {isFinished && <Trophy className="w-5 h-5 text-neon-yellow" />}
+        {isScheduled && <Clock className="w-5 h-5 text-white/40" />}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">
+            {isLive ? 'Ao Vivo' : isFinished ? 'Próxima rodada em' : 'Kickoff em'}
+          </p>
+          <p className={`font-serif-hero text-2xl font-bold ${isLive ? 'text-neon-green' : isFinished ? 'text-neon-yellow' : 'text-white'}`}>
+            {isLive ? `${round.fixtures[0]?.currentMinute ?? 0}'` : countdown}
+          </p>
+        </div>
+      </div>
+
+      {/* Progresso das rodadas */}
+      <div className="flex items-center gap-1.5">
+        {Array.from({ length: totalRounds }, (_, i) => {
+          const r = i + 1;
+          const isCurrent = r === round.roundNumber;
+          const isDone = r < round.roundNumber;
+          return (
+            <div
+              key={r}
+              className={`h-1.5 rounded-full transition-all ${
+                isDone ? 'w-4 bg-neon-yellow' :
+                isCurrent ? 'w-6 bg-neon-green' :
+                'w-4 bg-white/20'
+              }`}
+            />
+          );
+        })}
+      </div>
+
+      <div className="text-right">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">Rodada</p>
+        <p className="font-serif-hero text-2xl font-bold text-white">{round.roundNumber}<span className="text-white/30 text-sm">/{totalRounds}</span></p>
+      </div>
+    </motion.div>
+  );
+}
+
+function PlayoffStandings({ teams, roundNumber }: { teams: GlobalTeam[]; roundNumber: number }) {
+  const sorted = [...teams].sort((a, b) => {
+    if (b.playoffPoints !== a.playoffPoints) return b.playoffPoints - a.playoffPoints;
+    const sgA = a.playoffGoalsFor - a.playoffGoalsAgainst;
+    const sgB = b.playoffGoalsFor - b.playoffGoalsAgainst;
+    if (sgB !== sgA) return sgB - sgA;
+    return b.playoffGoalsFor - a.playoffGoalsFor;
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="sports-panel rounded-lg overflow-hidden"
+    >
+      <div className="bg-deep-black px-6 py-4 border-b border-white/10 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-neon-yellow" />
+          <div>
+            <h3 className="font-display text-base font-bold uppercase tracking-wider text-white">Classificação Playoffs</h3>
+            <p className="text-xs text-white/40 mt-0.5">Após rodada {roundNumber}</p>
+          </div>
+        </div>
+        <span className="font-serif-hero text-2xl font-bold text-neon-yellow">{teams.length}</span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-black/20">
+            <tr className="text-left">
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40">#</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40">Time</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">J</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">V</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">E</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">D</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">SG</th>
+              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/40 text-center">PTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((team, index) => {
+              const sg = team.playoffGoalsFor - team.playoffGoalsAgainst;
+              return (
+                <tr key={team.id} className={`border-t border-white/5 hover:bg-white/5 transition-colors ${index === 0 ? 'bg-neon-yellow/10 border-l-4 border-l-neon-yellow' : ''}`}>
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-sm text-white/60">{index + 1}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-display text-sm font-bold text-white">{team.clubName}</p>
+                    <p className="text-xs text-white/40">{team.clubShort}</p>
+                  </td>
+                  <td className="px-4 py-3 text-center"><span className="font-mono text-sm text-white/80">{team.playoffMatchesPlayed}</span></td>
+                  <td className="px-4 py-3 text-center"><span className="font-mono text-sm text-emerald-400">{team.playoffWins}</span></td>
+                  <td className="px-4 py-3 text-center"><span className="font-mono text-sm text-amber-400">{team.playoffDraws}</span></td>
+                  <td className="px-4 py-3 text-center"><span className="font-mono text-sm text-red-400">{team.playoffLosses}</span></td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`font-mono text-sm ${sg > 0 ? 'text-emerald-400' : sg < 0 ? 'text-red-400' : 'text-white/60'}`}>
+                      {sg > 0 ? '+' : ''}{sg}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="font-serif-hero text-base font-bold text-neon-yellow">{team.playoffPoints}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </motion.div>
+  );
+}
+
+function formatMs(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
 export default function MatchGlobal() {
   const navigate = useNavigate();
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
@@ -429,15 +594,66 @@ export default function MatchGlobal() {
   }
 
   if (globalLeagueMVP.status === 'playoffs') {
+    const roundNumber = globalLeagueMVP.currentPlayoffRound ?? 1;
+    const round = globalLeagueMVP.playoffRounds.find(r => r.roundNumber === roundNumber);
+    const totalRounds = globalLeagueMVP.playoffRounds.length;
+
     return (
-      <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-white/60 mb-4">Playoffs em andamento</p>
-        <button
-          onClick={() => navigate('/liga-global/playoffs')}
-          className="btn-primary"
-        >
-          Ver Playoffs
-        </button>
+      <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
+        {/* Hero */}
+        <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
+          >
+            <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-black/60 mb-2">
+              Playoffs · Rodada {roundNumber} de {totalRounds}
+            </p>
+            <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
+              Liga Global
+            </h1>
+            <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-2">
+              {round?.status === 'live' ? 'Ao Vivo Agora' :
+               round?.status === 'finished' ? 'Rodada Encerrada' :
+               'Aguardando Kickoff'}
+            </p>
+          </motion.div>
+        </section>
+
+        {/* Status bar da rodada */}
+        <PlayoffRoundStatusBar round={round} totalRounds={totalRounds} />
+
+        {/* Jogos ao vivo ou finalizados */}
+        {round && (round.status === 'live' || round.status === 'finished') && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              {round.status === 'live' && (
+                <span className="flex items-center gap-1.5 bg-neon-green/20 text-neon-green border border-neon-green/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                  <Activity className="w-3 h-3 animate-pulse" /> Ao Vivo
+                </span>
+              )}
+              {round.status === 'finished' && (
+                <span className="flex items-center gap-1.5 bg-white/10 text-white/60 border border-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                  <Trophy className="w-3 h-3" /> Encerrado
+                </span>
+              )}
+              <span className="text-white/40 text-xs font-display uppercase tracking-wider">
+                {round.fixtures.length} partidas
+              </span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {round.fixtures.map((fixture, index) => (
+                <FixtureCard key={fixture.id} fixture={fixture} index={index} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Classificação dos playoffs (pontos acumulados) */}
+        {globalLeagueMVP.teams.length > 0 && (
+          <PlayoffStandings teams={globalLeagueMVP.teams} roundNumber={roundNumber} />
+        )}
       </div>
     );
   }

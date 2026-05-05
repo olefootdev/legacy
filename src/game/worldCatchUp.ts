@@ -11,6 +11,45 @@ import { mergeWalletIntoFinance } from './financeWalletSync';
 import { effectiveCrowdSupportPercent, medicalDeptRecoverySpeedBonusPercent } from '@/clubStructures/benefits';
 import { staffPhysicalRecoveryBonusPercent, staffRunMatchMinuteEffects } from '@/systems/staffBenefits';
 
+/** BRT = UTC-3 */
+const BRT_OFFSET_MS = -3 * 60 * 60 * 1000;
+
+/** Retorna a data BRT como string YYYY-MM-DD */
+function brtDateString(ms: number): string {
+  return new Date(ms + BRT_OFFSET_MS).toISOString().split('T')[0]!;
+}
+
+/**
+ * Aplica o avanço de dia do manager.
+ * O dia incrementa quando a data BRT muda (reset às 00:00 BRT = 03:00 UTC).
+ * hasDoneOnboarding nunca é resetado — protege a cerimônia de repetir.
+ */
+function applyManagerDayAdvance(
+  settings: OlefootGameState['userSettings'],
+  nowMs: number,
+): OlefootGameState['userSettings'] {
+  const todayBrt = brtDateString(nowMs);
+  const lastReset = settings.lastDayResetDate;
+
+  if (lastReset === todayBrt) return settings;
+
+  // Primeiro boot: inicializa no Dia 1
+  if (!lastReset) {
+    return {
+      ...settings,
+      managerDay: 1,
+      lastDayResetDate: todayBrt,
+    };
+  }
+
+  // Novo dia BRT: incrementa
+  return {
+    ...settings,
+    managerDay: (settings.managerDay ?? 1) + 1,
+    lastDayResetDate: todayBrt,
+  };
+}
+
 function recoverOffMatch(
   player: PlayerEntity,
   gameMinutes: number,
@@ -122,5 +161,6 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
 
   let next: OlefootGameState = { ...state, players, liveMatch, crowd, finance, lastWorldRealMs: nowMs };
   next = processLeagueScheduleDue(next, nowMs);
+  next = { ...next, userSettings: applyManagerDayAdvance(next.userSettings, nowMs) };
   return next;
 }

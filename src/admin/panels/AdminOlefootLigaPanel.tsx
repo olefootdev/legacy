@@ -43,14 +43,27 @@ export function AdminOlefootLigaPanel() {
 
   const teamsCount = league.teams.length;
   const minTeams = league.minTeamsRequired;
-  const ready = league.status === 'waiting_teams' && teamsCount >= minTeams;
+  const ready = league.status === 'waiting_teams' && teamsCount > 0;
   const status = STATUS_LABEL[league.status] ?? { text: league.status, tone: 'bg-white/10 text-white border-white/20' };
 
   const handleStartPlayoffs = () => {
     if (!ready || busy) return;
-    if (!window.confirm(`Iniciar playoffs com ${teamsCount} times? Serão criadas 6 rodadas (ida e volta).`)) return;
+    if (!window.confirm(`Iniciar liga com ${teamsCount} time(s)? Serão criadas as rodadas de playoff.`)) return;
     setBusy(true);
     try {
+      dispatch({ type: 'ADMIN_START_GLOBAL_PLAYOFFS' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleForceStart = () => {
+    if (busy) return;
+    if (!window.confirm(`Forçar início com ${teamsCount} time(s)? Isso ignora o mínimo e inicia os playoffs agora.`)) return;
+    setBusy(true);
+    try {
+      // Zera o mínimo no estado antes de disparar
+      dispatch({ type: 'SET_GLOBAL_LEAGUE_MVP_MIN_TEAMS', minTeams: 1 });
       dispatch({ type: 'ADMIN_START_GLOBAL_PLAYOFFS' });
     } finally {
       setBusy(false);
@@ -97,6 +110,16 @@ export function AdminOlefootLigaPanel() {
             <Play className="h-4 w-4" />
             Iniciar Playoffs
           </button>
+          {league.status === 'waiting_teams' && teamsCount > 0 && (
+            <button
+              onClick={handleForceStart}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-neon-yellow/20 px-4 py-2 text-sm font-bold text-neon-yellow hover:bg-neon-yellow/30 disabled:opacity-40"
+            >
+              <Play className="h-4 w-4" />
+              Forçar Início ({teamsCount} times)
+            </button>
+          )}
           <button
             onClick={handleReset}
             disabled={busy}
@@ -107,9 +130,9 @@ export function AdminOlefootLigaPanel() {
           </button>
         </div>
 
-        {!ready && league.status === 'waiting_teams' && (
+        {league.status === 'waiting_teams' && teamsCount === 0 && (
           <p className="mt-3 text-xs text-white/50">
-            Faltam {Math.max(0, minTeams - teamsCount)} times para liberar os playoffs.
+            Nenhum time cadastrado ainda.
           </p>
         )}
       </div>

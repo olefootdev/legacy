@@ -4900,11 +4900,67 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'ADMIN_START_GLOBAL_PLAYOFFS':
       return handleAdminStartGlobalPlayoffs(state);
 
+    case 'SET_GLOBAL_LEAGUE_MVP_MIN_TEAMS': {
+      if (!state.globalLeagueMVP) return state;
+      return {
+        ...state,
+        globalLeagueMVP: {
+          ...state.globalLeagueMVP,
+          minTeamsRequired: action.minTeams,
+        },
+      };
+    }
+
     case 'START_GLOBAL_PLAYOFF_ROUND':
       return handleStartGlobalPlayoffRound(state, action.roundNumber);
 
+    case 'UPDATE_GLOBAL_PLAYOFF_LIVE': {
+      if (!state.globalLeagueMVP || state.globalLeagueMVP.status !== 'playoffs') return state;
+      const { GLOBAL_MATCH_CONSTANTS } = require('@/match/globalMatch');
+      const roundNumber = state.globalLeagueMVP.currentPlayoffRound;
+      if (!roundNumber) return state;
+      const round = state.globalLeagueMVP.playoffRounds.find(r => r.roundNumber === roundNumber);
+      if (!round || round.status !== 'live' || !round.actualKickoffMs) return state;
+
+      const elapsed = action.nowMs - round.actualKickoffMs;
+      const currentMinute = Math.min(90, Math.floor(elapsed / GLOBAL_MATCH_CONSTANTS.GAME_MINUTE_MS));
+
+      const updatedFixtures = round.fixtures.map(f => {
+        const revealedEvents = f.events.filter((e: { minute: number }) => e.minute <= currentMinute);
+        const scoreHome = revealedEvents.filter((e: { type: string; side: string }) => e.type === 'goal' && e.side === 'home').length;
+        const scoreAway = revealedEvents.filter((e: { type: string; side: string }) => e.type === 'goal' && e.side === 'away').length;
+        return { ...f, currentMinute, scoreHome, scoreAway };
+      });
+
+      return {
+        ...state,
+        globalLeagueMVP: {
+          ...state.globalLeagueMVP,
+          playoffRounds: state.globalLeagueMVP.playoffRounds.map(r =>
+            r.roundNumber === roundNumber ? { ...r, fixtures: updatedFixtures } : r
+          ),
+        },
+      };
+    }
+
     case 'FINISH_GLOBAL_PLAYOFF_ROUND':
       return handleFinishGlobalPlayoffRound(state, action.roundNumber, action.finishedFixtures);
+
+    case 'RESCHEDULE_PLAYOFF_ROUND': {
+      if (!state.globalLeagueMVP) return state;
+      return {
+        ...state,
+        globalLeagueMVP: {
+          ...state.globalLeagueMVP,
+          currentPlayoffRound: action.roundNumber,
+          playoffRounds: state.globalLeagueMVP.playoffRounds.map(r =>
+            r.roundNumber === action.roundNumber
+              ? { ...r, scheduledKickoffMs: action.scheduledKickoffMs }
+              : r
+          ),
+        },
+      };
+    }
 
     case 'START_GLOBAL_LEAGUE_ROUND':
       return handleStartGlobalLeagueRound(state, action.roundNumber);

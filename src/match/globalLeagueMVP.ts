@@ -189,12 +189,12 @@ export function registerTeam(
 
 /**
  * Disparado pelo admin: gera rodadas de playoff a partir dos times registrados
- * e move o status para 'playoffs'. Falha (no-op) se status != 'waiting_teams'
- * ou se não há times suficientes.
+ * e move o status para 'playoffs'. Falha (no-op) se status != 'waiting_teams'.
+ * Não exige mínimo de times — admin decide quando iniciar.
  */
 export function adminStartPlayoffs(league: GlobalLeagueMVPState): GlobalLeagueMVPState {
   if (league.status !== 'waiting_teams') return league;
-  if (league.teams.length < league.minTeamsRequired) return league;
+  if (league.teams.length === 0) return league;
 
   return {
     ...league,
