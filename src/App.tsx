@@ -73,6 +73,9 @@ const SetPiecePreview = lazy(() => import('./pages/SetPiecePreview').then((m) =>
 const LegacyCardPreview = lazy(() => import('./pages/LegacyCardPreview').then((m) => ({ default: m.LegacyCardPreview })));
 const CeremonyPreview = lazy(() => import('./pages/CeremonyPreview').then((m) => ({ default: m.CeremonyPreview })));
 const FieldViewPreview = lazy(() => import('./pages/FieldViewPreview').then((m) => ({ default: m.FieldViewPreview })));
+const OleFieldLab = lazy(() => import('./pages/OleFieldLab').then((m) => ({ default: m.OleFieldLab })));
+const OleFieldLabLegacy = lazy(() => import('./pages/OleFieldLabLegacy').then((m) => ({ default: m.OleFieldLabLegacy })));
+const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) => ({ default: m.OleFieldLabAerea })));
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
@@ -485,6 +488,30 @@ export default function App() {
             <Route path="/postgame" element={<Postgame />} />
             </Route>
           </Route>
+          <Route
+            path="/dev/field-lab"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <OleFieldLab />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/dev/field-lab/legacy"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <OleFieldLabLegacy />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/dev/field-lab/aerea"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <OleFieldLabAerea />
+              </Suspense>
+            }
+          />
           <Route
             path="/:inviteCode"
             element={
