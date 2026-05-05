@@ -15,6 +15,19 @@ import { computePitchTokenSeparation } from '@/engine/test2d/antiChaosEngine';
 import { sfRoleFromSlot, sfGetAnchor } from '@/smartfield/smartfieldBridge';
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import { LegacyMatchHUD } from './LegacyMatchHUD';
+import {
+  // SVG First View
+  FV_SVG_W as IV_VW, FV_SVG_H as IV_VH,
+  FV_CX as IV_CX,
+  FV_TOP_Y as IV_TOP_Y, FV_BOTTOM_Y as IV_BOTTOM_Y,
+  FV_TOP_HALF_W as IV_TOP_HALF_W, FV_BOTTOM_HALF_W as IV_BOTTOM_HALF_W,
+  normalizedToFirstViewSvg,
+  // Marcações normalizadas
+  N_BOX_DEPTH, N_SIX_DEPTH, N_PENALTY_SPOT_HOME,
+  N_BOX_HALF_W, N_SIX_HALF_W, N_GOAL_HALF_W,
+  // Dimensões gol
+  GOAL_INNER_WIDTH_IFAB_M, GOAL_CROSSBAR_HEIGHT_M,
+} from '@/tactical';
 
 export type FieldCameraMode = 'aerial' | 'broadcast' | 'firstperson';
 
@@ -65,55 +78,47 @@ const LINE_COLOR = 'rgba(255,255,255,0.13)';
 const GRASS_A = '#0d1a0e';
 const GRASS_B = '#111f12';
 
-// ── Real-world field dimensions (FIFA/smartfield) ──────────────────────────
-const FIELD_LENGTH_M = 105;
-const FIELD_WIDTH_M = 68;
-const GOAL_WIDTH_M = 7.32;
-const GOAL_HEIGHT_M = 2.44;
-const BOX_DEPTH_M = 16.5;
-const BOX_WIDTH_M = 40.3;
-const SIX_DEPTH_M = 5.5;
-const SIX_WIDTH_M = 18.32;
-const PENALTY_SPOT_M = 11;
+// ── Real-world field dimensions — importadas de @/tactical ────────────────────
+// (constantes locais removidas — fonte única de verdade em @/tactical/fieldGeometry.ts)
 
-// Convert to field percentages (fieldX 0-100 = length; fieldY 0-100 = width)
-const PCT_GOAL_HALF_Y = (GOAL_WIDTH_M / FIELD_WIDTH_M) * 50;       // ≈ 5.38
-const PCT_BOX_DEPTH = (BOX_DEPTH_M / FIELD_LENGTH_M) * 100;        // ≈ 15.71
-const PCT_BOX_HALF_Y = (BOX_WIDTH_M / FIELD_WIDTH_M) * 50;         // ≈ 29.63
-const PCT_SIX_DEPTH = (SIX_DEPTH_M / FIELD_LENGTH_M) * 100;        // ≈ 5.24
-const PCT_SIX_HALF_Y = (SIX_WIDTH_M / FIELD_WIDTH_M) * 50;         // ≈ 13.47
-const PCT_PEN_SPOT = (PENALTY_SPOT_M / FIELD_LENGTH_M) * 100;      // ≈ 10.48
-const GOAL_ASPECT = GOAL_HEIGHT_M / GOAL_WIDTH_M;                   // ≈ 0.333
+// Aspect ratio do gol para renderização SVG
+const GOAL_ASPECT = GOAL_CROSSBAR_HEIGHT_M / GOAL_INNER_WIDTH_IFAB_M; // ≈ 0.333
 
 // ── Inclined (tactical) perspective constants ──────────────────────────────
-// Vertical viewBox: top = far end (away goal), bottom = near camera (home goal)
-const IV_VW = 720;
-const IV_VH = 1100;
-const IV_CX = IV_VW / 2; // 360
-
-// Trapezoid: top narrower (far), bottom wider (near camera)
-const IV_TOP_Y = 110;
-const IV_BOTTOM_Y = 990;
-const IV_TOP_HALF_W = 290;    // near goal area at top, narrower
-const IV_BOTTOM_HALF_W = 430; // wider near camera
+// Importadas de @/tactical: IV_VW, IV_VH, IV_CX, IV_TOP_Y, IV_BOTTOM_Y,
+// IV_TOP_HALF_W, IV_BOTTOM_HALF_W
 
 function ivWidthAtDepth(t: number): number {
-  // t: 0 = near (bottom), 1 = far (top)
   return IV_BOTTOM_HALF_W + t * (IV_TOP_HALF_W - IV_BOTTOM_HALF_W);
 }
 
+/**
+ * Projeta coordenadas do FieldView para SVG.
+ * ATENÇÃO: FieldView usa fieldX=profundidade, fieldY=largura (eixos invertidos vs canônico).
+ * Adapta para normalizedToFirstViewSvg({ x: fieldY, y: fieldX }) de @/tactical.
+ */
 function ivProject(fieldX: number, fieldY: number) {
-  // home defends fieldX=0 (bottom/near); away goal at fieldX=100 (top/far)
+  const { sx, sy } = normalizedToFirstViewSvg({ x: fieldY, y: fieldX });
   const t = Math.max(0, Math.min(1, fieldX / 100));
-  // non-linear foreshortening so near players feel bigger
   const tEased = Math.pow(t, 0.78);
-  const sy = IV_BOTTOM_Y - tEased * (IV_BOTTOM_Y - IV_TOP_Y);
-  const halfW = ivWidthAtDepth(tEased);
-  const lat = (fieldY - 50) / 50; // -1..+1
-  const sx = IV_CX + lat * halfW;
-  const scale = 1.05 - tEased * 0.55; // near=1.05, far=0.50
+  const scale = 1.05 - tEased * 0.55;
   return { sx, sy, scale, depth: tEased };
 }
+
+// Marcações do campo — de @/tactical (normalizadas 0–100)
+// FieldView usa fieldX=profundidade, fieldY=largura → mapeamento:
+//   PCT_BOX_DEPTH   = N_BOX_DEPTH
+//   PCT_BOX_HALF_Y  = N_BOX_HALF_W  (largura, eixo Y do FieldView)
+//   PCT_SIX_DEPTH   = N_SIX_DEPTH
+//   PCT_SIX_HALF_Y  = N_SIX_HALF_W
+//   PCT_GOAL_HALF_Y = N_GOAL_HALF_W
+//   PCT_PEN_SPOT    = N_PENALTY_SPOT_HOME
+const PCT_BOX_DEPTH   = N_BOX_DEPTH;
+const PCT_BOX_HALF_Y  = N_BOX_HALF_W;
+const PCT_SIX_DEPTH   = N_SIX_DEPTH;
+const PCT_SIX_HALF_Y  = N_SIX_HALF_W;
+const PCT_GOAL_HALF_Y = N_GOAL_HALF_W;
+const PCT_PEN_SPOT    = N_PENALTY_SPOT_HOME;
 
 // ── Aerial/broadcast grass stripes (SVG defs pattern) ────────────────────────
 function GrassStripes() {
