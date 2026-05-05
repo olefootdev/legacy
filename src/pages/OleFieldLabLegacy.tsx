@@ -141,14 +141,24 @@ function FieldZones({ cfg }: { cfg: Cfg }) {
 // ── Grid de coordenadas ───────────────────────────────────────────────────────
 function FieldGrid({ cfg }: { cfg: Cfg }) {
   if (!cfg.showGrid && !cfg.showCoords) return null;
+
   const steps = Array.from({ length: 11 }, (_, i) => i * 10);
+
+  // Linhas especiais da grande área — destacadas para deixar claro onde ocorrem pênaltis
+  const BOX_LINES = [
+    { y: 15, label: 'y=15 · grande área' },
+    { y: 85, label: 'y=85 · grande área' },
+  ];
+  const BOX_COLOR = 'rgba(253,225,0,0.55)'; // NEON com transparência
+
   return (
     <>
+      {/* Grid base 0-10-20...100 */}
       {steps.map((v) => {
-        const yL = p(0,   v);
-        const yR = p(100, v);
-        const xT = p(v, 100);
-        const xB = p(v, 0);
+        const yL  = p(0,   v);
+        const yR  = p(100, v);
+        const xT  = p(v, 100);
+        const xB  = p(v, 0);
         const lbl = p(v, -6);
         return (
           <g key={v}>
@@ -173,6 +183,27 @@ function FieldGrid({ cfg }: { cfg: Cfg }) {
                   x={v}
                 </text>
               </>
+            )}
+          </g>
+        );
+      })}
+
+      {/* Linhas da grande área — y=15 (home) e y=85 (away) */}
+      {BOX_LINES.map(({ y, label }) => {
+        const l = p(0,   y);
+        const r = p(100, y);
+        return (
+          <g key={`box-${y}`}>
+            {cfg.showGrid && (
+              <line x1={l.sx} y1={l.sy} x2={r.sx} y2={r.sy}
+                stroke={BOX_COLOR} strokeWidth={1.2}
+                strokeDasharray="5 3" />
+            )}
+            {cfg.showCoords && (
+              <text x={r.sx + 8} y={r.sy} dominantBaseline="middle"
+                fill={BOX_COLOR} fontSize={9} fontFamily="monospace" fontWeight={700}>
+                y={y}
+              </text>
             )}
           </g>
         );
