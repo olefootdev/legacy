@@ -96,3 +96,11 @@ export {
   type ZoneBoundsMeters,
   type FieldZone,
 } from './zones12';
+
+export {
+  type MatchHalf,
+  type TeamSide,
+  type PitchEnd,
+  type PitchPosition,
+  type TeamPitchContext,
+} from './matchTypes';

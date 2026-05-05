@@ -6,32 +6,25 @@
 
 import { FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import { sfGetZone, sfGetSubzone, sfGetGoalContext } from '@/smartfield/smartfieldBridge';
+import {
+  PENALTY_AREA_DEPTH_M,
+  PENALTY_AREA_HALF_W_M,
+  GOAL_AREA_DEPTH_M,
+  GOAL_AREA_HALF_W_M,
+  type MatchHalf,
+  type TeamSide,
+  type PitchEnd,
+  type PitchPosition,
+  type TeamPitchContext,
+} from '@/tactical';
 
-export type MatchHalf = 1 | 2;
-export type TeamSide = 'home' | 'away';
+// Re-exporta tipos base de @/tactical — fonte única de verdade
+export type { MatchHalf, TeamSide, PitchEnd, PitchPosition, TeamPitchContext } from '@/tactical';
 
-/** Extremidade física do campo onde está o gol (x=0 oeste, x=L leste). */
-export type PitchEnd = 'west' | 'east';
-
-export interface PitchPosition {
-  x: number;
-  z: number;
-}
-
-export interface TeamPitchContext {
-  team: TeamSide;
-  half: MatchHalf;
-}
-
-/** IFAB: profundidade da grande área a partir da linha de fundo (m). */
-export const PENALTY_AREA_DEPTH_M = 16.5;
-/** Metade da largura da grande área (m a cada lado do eixo central). */
-export const PENALTY_AREA_HALF_WIDTH_M = 20.16;
-
-/** IFAB pequena área (goal area): 5,5 m a partir da linha de golo; largura 18,32 m. */
-export const GOAL_AREA_DEPTH_M = 5.5;
-/** Metade da largura da pequena área (m), centrada no meio-campo. */
-export const GOAL_AREA_HALF_WIDTH_M = 9.16;
+// Aliases de compatibilidade para código que importa daqui
+export const PENALTY_AREA_HALF_WIDTH_M = PENALTY_AREA_HALF_W_M;
+export const GOAL_AREA_HALF_WIDTH_M    = GOAL_AREA_HALF_W_M;
+export { PENALTY_AREA_DEPTH_M, GOAL_AREA_DEPTH_M } from '@/tactical';
 
 const MID_X = FIELD_LENGTH / 2;
 const CZ = FIELD_WIDTH / 2;
@@ -50,7 +43,7 @@ export function getAttackingGoalX(team: TeamSide, half: MatchHalf): number {
 }
 
 /** Profundidade máxima (m) a que o GR pode afastar-se da linha de baliza defendida — dentro da grande área. */
-export const GOALKEEPER_MAX_DEPTH_FROM_GOAL_M = 14;
+export const GOALKEEPER_MAX_DEPTH_FROM_GOAL_M = 11;
 
 /**
  * Mantém o alvo X do guarda-redes junto à baliza que defende neste tempo.
@@ -65,7 +58,7 @@ export function clampGoalkeeperTargetX(team: TeamSide, half: MatchHalf, x: numbe
 }
 
 /** Raio lateral máximo do GK a partir do centro do gol (m) — dentro da grande área. */
-export const GK_LATERAL_MAX_M = 9.0;
+export const GK_LATERAL_MAX_M = 6.5;
 
 /**
  * Restringe o alvo Z do GK: acompanha a bola lateralmente (45% do deslocamento)
