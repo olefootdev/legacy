@@ -28,6 +28,7 @@ import {
   buildFullbackInputs,
   shouldFireFullbackUtility,
 } from './utilityFullbackSupport';
+import { getZoneCenterMeters } from '@/tactical';
 import {
   buildAttackingInputs,
   evaluateAttackingUtility,
@@ -116,6 +117,22 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
 
   // Collective/individual architecture layer for off-ball behavior.
   const collective = getCollectiveTarget(ctx.self, ctx);
+
+  // ── Tactical Archetype Intention blend ───────────────────────────────────
+  // Se o jogador tem uma intenção tática derivada do arquétipo com zona alvo,
+  // blendamos o collective target em direção ao centro dessa zona.
+  // Strength proporcional ao score da intenção (0.3–0.6 max para não quebrar disciplina).
+  if (ctx.tacticalIntention?.targetZone && ctx.tacticalIntention.score > 0.4) {
+    try {
+      const zoneCenter = getZoneCenterMeters(ctx.tacticalIntention.targetZone);
+      const blendStrength = Math.min(0.6, (ctx.tacticalIntention.score - 0.4) * 1.5);
+      collective.targetX = collective.targetX + (zoneCenter.xMeters - collective.targetX) * blendStrength;
+      collective.targetZ = collective.targetZ + (zoneCenter.yMeters - collective.targetZ) * blendStrength;
+    } catch (_e) {
+      // non-blocking
+    }
+  }
+
   const role = mapRole(ctx.self);
   const attrs = extractAttributes(ctx.self, ctx.profile);
   const arch = mapArchetype(ctx.profile, ctx.self);
