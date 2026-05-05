@@ -38,14 +38,17 @@ export const GOAL_MOUTH_HALF_WIDTH_M = GOAL_INNER_WIDTH_M / 2;
 export const GOAL_DEPTH_M            = 2.5; // profundidade física do gol (gameplay)
 
 // ── Marcações em metros ───────────────────────────────────────────────────────
+// Escala de largura: gol passou de 7.32m → 10m (+36.6%)
+// Grande área e pequena área escalam proporcionalmente no eixo da largura.
+const _GOAL_SCALE = GOAL_INNER_WIDTH_M / GOAL_INNER_WIDTH_IFAB_M; // ≈ 1.366
 export const CENTER_CIRCLE_RADIUS_M  = 9.15;
 export const PENALTY_SPOT_M          = 11;
 export const PENALTY_AREA_DEPTH_M    = 16.5;
-export const PENALTY_AREA_HALF_W_M   = 20.16;
+export const PENALTY_AREA_HALF_W_M   = 20.16 * _GOAL_SCALE; // ≈ 27.54m
 export const GOAL_AREA_DEPTH_M       = 5.5;
-export const GOAL_AREA_HALF_W_M      = 9.16;
-export const GOAL_WIDTH_M            = 7.32;
-export const GOAL_HALF_W_M           = GOAL_WIDTH_M / 2;
+export const GOAL_AREA_HALF_W_M      = 9.16  * _GOAL_SCALE; // ≈ 12.51m
+export const GOAL_WIDTH_M            = GOAL_INNER_WIDTH_M;  // 10m
+export const GOAL_HALF_W_M           = GOAL_WIDTH_M / 2;    // 5m
 
 // ── Marcações normalizadas (0–100) ────────────────────────────────────────────
 export const N_PENALTY_SPOT_HOME = (PENALTY_SPOT_M       / FIELD_LENGTH_M) * 100; // ≈ 10.48

@@ -274,7 +274,49 @@ import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import { getPlayerIntention } from '@/tactical';
 import { getZoneFromNormalizedPosition } from '@/tactical';
 import type { FieldZoneId } from '@/tactical';
+import {
+  slotToTacticalRole,
+  getTargetZoneCenter,
+  isInAllowedZoneSided,
+  findNearestZoneCenter,
+} from '@/tactical';
+import { worldToNormalized, normalizedToWorld } from '@/tactical';
+import { decideTactica, getZoneDepth, type TacticaDecision } from '../../agents/knowledge/TacticaDoZero';
+import { MatchFieldContext } from '../../agents/match/MatchFieldContext';
+import { clampTargetToAllowedTerritory } from '../../agents/fieldKnowledge/TerritoryRules';
+import { getTerritory } from '../../agents/fieldKnowledge/PositionTerritories';
+import { slotToTacticalRoleId } from '@/tactical/slotToTacticalRole';
+import { slotToPositionId } from '../../agents/bridge/slotToPositionId';
+import { ROLE_EXPECTATIONS } from '../../agents/context/PlayerRoleExpectations';
+import type { Vec2, PositionId } from '../../agents/core/AgentTypes';
 const FIXED_DT = 1 / 60;
+
+// ── World ↔ AgentVec2 converters ─────────────────────────────────────────────
+// AgentVec2: x=depth 0–100, y=width 0–100 (agents/core/AgentTypes.ts)
+// WorldPos:  x=depth 0–105m, z=width 0–68m  (simulation/field.ts)
+function worldToAgentVec2(wx: number, wz: number): Vec2 {
+  return { x: (wx / FIELD_LENGTH) * 100, y: (wz / FIELD_WIDTH) * 100 };
+}
+function agentVec2ToWorld(v: Vec2): { x: number; z: number } {
+  return { x: (v.x / 100) * FIELD_LENGTH, z: (v.y / 100) * FIELD_WIDTH };
+}
+/**
+ * Converte TacticaDecision → macroTilt compatível com chooseAction.
+ * Princípios do "Táctica do Zero" traduzidos para biases de ação do engine.
+ */
+function tacticaDecisionToMacroTilt(t: TacticaDecision): Record<string, number> {
+  const tilt: Record<string, number> = {};
+  if (t.shouldShoot)   { tilt['shoot'] = (tilt['shoot'] ?? 0) + 0.18; }
+  if (t.shouldPass)    { tilt['pass_safe'] = (tilt['pass_safe'] ?? 0) + 0.10; tilt['pass_progressive'] = (tilt['pass_progressive'] ?? 0) + 0.08; }
+  if (t.shouldDribble) { tilt['carry'] = (tilt['carry'] ?? 0) + 0.12; }
+  if (t.shouldRun)     { tilt['attack_depth'] = (tilt['attack_depth'] ?? 0) + 0.14; tilt['infiltrate'] = (tilt['infiltrate'] ?? 0) + 0.10; }
+  if (t.shouldSupport) { tilt['offer_short_line'] = (tilt['offer_short_line'] ?? 0) + 0.12; tilt['offer_diagonal_line'] = (tilt['offer_diagonal_line'] ?? 0) + 0.08; }
+  if (t.shouldHold)    { tilt['move_to_slot'] = (tilt['move_to_slot'] ?? 0) + 0.10; }
+  if (t.shouldPress)   { tilt['press_carrier'] = (tilt['press_carrier'] ?? 0) + 0.16; tilt['close_passing_lane'] = (tilt['close_passing_lane'] ?? 0) + 0.08; }
+  if (t.shouldRetreat) { tilt['recover_behind_ball'] = (tilt['recover_behind_ball'] ?? 0) + 0.14; tilt['defensive_cover'] = (tilt['defensive_cover'] ?? 0) + 0.10; }
+  return tilt;
+}
+
 /**
  * Tempo mínimo com bola nas mãos do GR antes do pontapé (s).
  * ~3s dá tempo aos rivais de sair da grande área (evac no freeze) sem colapsar na bola.
@@ -351,6 +393,10 @@ interface AgentEx extends AgentBinding {
   injuredOnPitch?: boolean;
   strongFoot?: import('@/entities/types').PlayerStrongFoot;
   archetype?: import('@/entities/types').PlayerArchetype;
+  /** Per-agent decision throttle — prevents re-evaluation at 60fps. */
+  regulator: AgentRegulator;
+  /** Last computed action — reused when regulator is not ready. */
+  _lastAction?: PlayerAction;
 }
 
 interface TacticalManagerParams {
@@ -526,6 +572,15 @@ export class TacticalSimLoop {
   private prevLoopPossession: PossessionSide | null = null;
   private transitionCompaction = 0;
   private transitionLoserSide: PossessionSide | null = null;
+  /** 4-phase match state (TacticaDoZero): POSSESSION | DEFENDING | TRANSITION_ATTACK | TRANSITION_DEFENSE */
+  private homeMatchPhase: 'POSSESSION' | 'DEFENDING' | 'TRANSITION_ATTACK' | 'TRANSITION_DEFENSE' = 'DEFENDING';
+  private awayMatchPhase: 'POSSESSION' | 'DEFENDING' | 'TRANSITION_ATTACK' | 'TRANSITION_DEFENSE' = 'DEFENDING';
+  /** Transition phase expires after this sim time (seconds). */
+  private transitionPhaseUntil = -1e9;
+  private static readonly TRANSITION_PHASE_DURATION_SEC = 3.5;
+  /** MatchFieldContext: zonas por fase + TerritoryRules para home e away. */
+  private homeFieldCtx = new MatchFieldContext('home');
+  private awayFieldCtx = new MatchFieldContext('away');
   /** Após remate para fora: reformação tipo saída de bola sem roubar a bola ao GR no kickoff intermédio. */
   private skipKickoffBallAssign = false;
   /** Após golo: bola e executor no centro durante FSM `kickoff`; o passe de saída corre em `kickoff`→`live`. */
@@ -758,6 +813,7 @@ export class TacticalSimLoop {
           locomotionRunBlendSmoothed: 0.35,
           strongFoot: hp.strongFoot,
           archetype: hp.archetype,
+          regulator: new AgentRegulator(280, 120),
         };
         this.applyVehicleSpeedFromAttrs(agEx, FIXED_DT, null);
         this.homeAgents.push(agEx);
@@ -787,6 +843,7 @@ export class TacticalSimLoop {
           matchRuntime: rt,
           cognitiveArchetype: cog,
           locomotionRunBlendSmoothed: 0.35,
+          regulator: new AgentRegulator(280, 120),
         };
         this.applyVehicleSpeedFromAttrs(agEx, FIXED_DT, null);
         this.awayAgents.push(agEx);
@@ -1020,6 +1077,8 @@ export class TacticalSimLoop {
     oldAg.cognitiveArchetype = cog;
     oldAg.strongFoot = hp.strongFoot;
     oldAg.archetype = hp.archetype;
+    oldAg.regulator = new AgentRegulator(280, 120);
+    oldAg._lastAction = undefined;
     this.applyVehicleSpeedFromAttrs(oldAg, FIXED_DT, null);
     oldAg.vehicle.maxSpeed = maxSpeed;
 
@@ -1664,6 +1723,19 @@ export class TacticalSimLoop {
 
   /** Alvo de movimento; GR em `live` fica ancorado à sua baliza. */
   private safeArrive(ag: AgentEx, x: number, z: number, mode: AgentMode) {
+    // Guard: never propagate NaN into arrive target — reset to current position if needed
+    if (!Number.isFinite(x) || !Number.isFinite(z)) {
+      const px = ag.vehicle.position.x;
+      const pz = ag.vehicle.position.z;
+      x = Number.isFinite(px) ? px : FIELD_LENGTH / 2;
+      z = Number.isFinite(pz) ? pz : FIELD_WIDTH / 2;
+    }
+    // Guard: if vehicle position itself is NaN, teleport back to a safe spot
+    if (!Number.isFinite(ag.vehicle.position.x) || !Number.isFinite(ag.vehicle.position.z)) {
+      const w = kickoffWorldXZ(ag.side, '4-3-3', ag.slotId ?? 'mc1');
+      ag.vehicle.position.set(w.x, 0, w.z);
+      ag.vehicle.velocity.set(0, 0, 0);
+    }
     const half = this.matchClock.state.half;
     let tx = x;
     if (this.simState.phase === 'live' && (ag.slotId === 'gol' || ag.role === 'gk')) {
@@ -2562,8 +2634,33 @@ export class TacticalSimLoop {
     if (this.prevLoopPossession !== null && this.prevLoopPossession !== this.simState.possession) {
       this.transitionCompaction = 1;
       this.transitionLoserSide = this.prevLoopPossession;
+      // 4-phase update: winner → TRANSITION_ATTACK, loser → TRANSITION_DEFENSE
+      const winner = this.simState.possession;
+      const loser = this.prevLoopPossession;
+      this.homeMatchPhase = winner === 'home' ? 'TRANSITION_ATTACK' : 'TRANSITION_DEFENSE';
+      this.awayMatchPhase = winner === 'away' ? 'TRANSITION_ATTACK' : 'TRANSITION_DEFENSE';
+      this.transitionPhaseUntil = this.world.simTime + TacticalSimLoop.TRANSITION_PHASE_DURATION_SEC;
     }
     this.prevLoopPossession = this.simState.possession;
+    // Decay transition phases back to steady state
+    if (this.world.simTime >= this.transitionPhaseUntil) {
+      this.homeMatchPhase = this.simState.possession === 'home' ? 'POSSESSION' : 'DEFENDING';
+      this.awayMatchPhase = this.simState.possession === 'away' ? 'POSSESSION' : 'DEFENDING';
+    }
+
+    // ── MatchFieldContext: updateTick() ONCE per loop, before all agents ──────
+    const ballAgentVec = worldToAgentVec2(this.ballSys.state.x, this.ballSys.state.z);
+    const homeAgentsNorm = this.homeAgents.map(a => ({
+      position: slotToPositionId(a.slotId),
+      currentPosition: worldToAgentVec2(a.vehicle.position.x, a.vehicle.position.z),
+    }));
+    const awayAgentsNorm = this.awayAgents.map(a => ({
+      position: slotToPositionId(a.slotId),
+      currentPosition: worldToAgentVec2(a.vehicle.position.x, a.vehicle.position.z),
+    }));
+    const tickNum = Math.round(this.world.simTime * 60);
+    this.homeFieldCtx.updateTick(tickNum, ballAgentVec, homeAgentsNorm as any, this.simState.possession);
+    this.awayFieldCtx.updateTick(tickNum, ballAgentVec, awayAgentsNorm as any, this.simState.possession);
 
     if (this.transitionCompaction > 0.001 && this.transitionLoserSide === 'home') {
       applyTransitionCompactionToSlots(dynamicHomeForAgents, 'home', this.transitionCompaction);
@@ -2580,7 +2677,7 @@ export class TacticalSimLoop {
       && this.simState.carrierId === this.gkRestart.gkId;
     const dampBallFollowGk =
       gkBallInHandRestart || this.world.simTime < this.gkReleaseChaseSuppressionUntil;
-    const ballCentricStrength = dampBallFollowGk ? 0 : 0.12;
+    const ballCentricStrength = dampBallFollowGk ? 0 : 0.04;
     applyBallCentricShiftToSlotMap(dynamicHomeForAgents, {
       ballX,
       ballZ,
@@ -2647,6 +2744,13 @@ export class TacticalSimLoop {
     if (gkHeldWait) {
       modeHomeEffective = 'reforming';
       modeAwayEffective = 'reforming';
+    }
+    // 4-phase override: TRANSITION_ATTACK → pressing (counter-press), TRANSITION_DEFENSE → reforming
+    if (!gkHeldWait && !this.fsm.isReforming()) {
+      if (this.homeMatchPhase === 'TRANSITION_ATTACK') modeHomeEffective = 'pressing';
+      if (this.homeMatchPhase === 'TRANSITION_DEFENSE') modeHomeEffective = 'reforming';
+      if (this.awayMatchPhase === 'TRANSITION_ATTACK') modeAwayEffective = 'pressing';
+      if (this.awayMatchPhase === 'TRANSITION_DEFENSE') modeAwayEffective = 'reforming';
     }
 
     // -- Compute goal threat for both teams BEFORE decisions --
@@ -3127,35 +3231,50 @@ export class TacticalSimLoop {
 
     const halfPhys = this.matchClock.state.half;
     // Cooperative nudge: blend arrive.target toward operative zone BEFORE YUKA integration.
-    // This lets YUKA execute the convergence naturally instead of overwriting position post-physics.
+    // Uses zones12 + roles system (allowedZones / attackShape / defenseShape).
     const nudgeArriveTargetToZone = (a: AgentEx) => {
       if (a.id === this.simState.carrierId) return;
-      const schemeN: FormationSchemeId = a.side === 'home' ? homeScheme : awayScheme;
-      const ctxZ = { team: a.side, half: halfPhys };
-      const model = buildSlotZoneProfile(a.slotId ?? 'mc1', a.role, schemeN, a.side, halfPhys);
-      const curTargetZ = worldPosToTactical18Zone(a.arrive.target.x, a.arrive.target.z, ctxZ);
-      if (operativeZoneIdSet18(model).has(curTargetZ)) return;
-      const t = clampWorldToOperativeTactical18(
-        a.arrive.target.x,
-        a.arrive.target.z,
-        a.slotId ?? 'mc1',
-        a.role,
-        schemeN,
+
+      const teamHasBall = this.simState.possession === a.side;
+
+      // ── MatchFieldContext: zonas por fase (POSSESSION/DEFENDING/TRANSITION_*) ──
+      const fieldCtx = a.side === 'home' ? this.homeFieldCtx : this.awayFieldCtx;
+      const posAgentVec = worldToAgentVec2(a.vehicle.position.x, a.vehicle.position.z);
+      const agentProxy = { position: slotToPositionId(a.slotId), currentPosition: posAgentVec } as any;
+      const fieldQuery = fieldCtx.queryForAgent(agentProxy);
+
+      // shouldIgnoreBall: agente deve recuperar posição — força nudge para recoveryTarget
+      if (fieldQuery.shouldIgnoreBall) {
+        const recovWorld = agentVec2ToWorld(fieldQuery.recoveryTarget);
+        const k = 0.18;
+        a.arrive.target.x += (recovWorld.x - a.arrive.target.x) * k;
+        a.arrive.target.z += (recovWorld.z - a.arrive.target.z) * k;
+        return;
+      }
+
+      // 1. Verificar se já está numa zona permitida (do ponto de vista do time)
+      if (isInAllowedZoneSided(
+        { x: a.arrive.target.x, z: a.arrive.target.z },
+        a.slotId,
+        teamHasBall,
         a.side,
         halfPhys,
-        0.55,
-      );
-      const k = 0.28;
-      a.arrive.target.x += (t.x - a.arrive.target.x) * k;
-      a.arrive.target.z += (t.z - a.arrive.target.z) * k;
+      )) return;
 
-      // SMARTFIELD: secondary shape correction toward role anchor (recovery_priority weighted)
-      const sfRole = sfRoleFromSlot(a.slotId ?? 'mc1', schemeN);
-      const sfCorr = sfShapeCorrection(a.arrive.target.x, a.arrive.target.z, sfRole, a.side);
-      if (sfCorr.isOutOfShape) {
-        const sfK = 0.18 * Math.min(1, sfCorr.distFromAnchor / 20);
-        a.arrive.target.x += sfCorr.correctionDx * sfK;
-        a.arrive.target.z += sfCorr.correctionDz * sfK;
+      // 2. Encontrar zona alvo mais próxima (attackShape ou defenseShape)
+      const worldTarget = getTargetZoneCenter(
+        { x: a.arrive.target.x, z: a.arrive.target.z },
+        a.slotId,
+        teamHasBall,
+        a.side,
+        halfPhys,
+      );
+
+      // 3. Blend suave — não teleportar, deixar o Yuka executar
+      const k = 0.14;
+      if (Number.isFinite(worldTarget.x) && Number.isFinite(worldTarget.z)) {
+        a.arrive.target.x += (worldTarget.x - a.arrive.target.x) * k;
+        a.arrive.target.z += (worldTarget.z - a.arrive.target.z) * k;
       }
     };
     const skipNudge = this.fsm.isReforming();
@@ -3207,14 +3326,14 @@ export class TacticalSimLoop {
 
     for (const a of this.homeAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
-      if (!skipNudge) nudgeArriveTargetToZone(a);
+      // nudgeArriveTargetToZone desativado — conflito com OffBallDecision/agentes
       applyAdvancedSteering(a, this.homeAgents, this.awayAgents, homeHasBall, attackDirHome);
       stepVehicle(a, fixedDt);
       stepAgentBodyYaw(a, fixedDt);
     }
     for (const a of this.awayAgents) {
       if (gkWideFreeze && this.gkRestart && a.id !== this.gkRestart.gkId) continue;
-      if (!skipNudge) nudgeArriveTargetToZone(a);
+      // nudgeArriveTargetToZone desativado — conflito com OffBallDecision/agentes
       applyAdvancedSteering(a, this.awayAgents, this.homeAgents, awayHasBall, attackDirAway);
       stepVehicle(a, fixedDt);
       stepAgentBodyYaw(a, fixedDt);
@@ -3311,8 +3430,23 @@ export class TacticalSimLoop {
         const d = dynamicSlots.get(ag.slotId);
         slotTarget = d ?? { x: ag.vehicle.position.x, z: ag.vehicle.position.z };
       }
-      const agTactx = { ...tactx, teamHasBall: this.simState.possession === ag.side };
-      const clamped = clampTargetToRoleZone({ side: ag.side, role: ag.role, slotId: ag.slotId }, slotTarget.x, slotTarget.z, agTactx);
+      // Clamp slot target to allowed zones using zones12 + roles system
+      const teamHasBallForClamp = this.simState.possession === ag.side;
+      const agRole = slotToTacticalRole(ag.slotId);
+      const agShapeZones = teamHasBallForClamp ? agRole.attackShape : agRole.defenseShape;
+      const agTargetZones = agShapeZones.length > 0 ? agShapeZones : agRole.allowedZones;
+      const agHalf = this.matchClock.state.half;
+      const agMirror = ag.side === 'away' ? agHalf === 1 : agHalf === 2;
+      const agRawNorm = worldToNormalized({ x: slotTarget.x, z: slotTarget.z });
+      const agNorm = agMirror ? { x: agRawNorm.x, y: 100 - agRawNorm.y } : agRawNorm;
+      const agBestNorm = findNearestZoneCenter(agNorm, agTargetZones);
+      const agFinalNorm = agMirror ? { x: agBestNorm.x, y: 100 - agBestNorm.y } : agBestNorm;
+      const agWorldBest = normalizedToWorld(agFinalNorm);
+      // Blend: 70% slot original + 30% zona alvo — mantém disciplina de formação
+      const clamped = {
+        x: slotTarget.x * 0.7 + agWorldBest.x * 0.3,
+        z: slotTarget.z * 0.7 + agWorldBest.z * 0.3,
+      };
 
       if (this.isGkRestartBallInHandFreeze() && this.gkRestart && ag.id !== this.gkRestart.gkId) {
         const bx = this.ballSys.state.x;
@@ -3519,12 +3653,55 @@ export class TacticalSimLoop {
           return { kind: 'free_kick' as const, distanceToGoal };
         })(),
         stamina: ag.matchRuntime.stamina,
-        teamIntentBias: getTeamIntentBias(side === 'home' ? this.homeTeamIntent : this.awayTeamIntent),
+        teamIntentBias: (() => {
+          const intentBias = getTeamIntentBias(side === 'home' ? this.homeTeamIntent : this.awayTeamIntent);
+          // Enriquecer com princípios táticos reais por posição (TacticaDoZero)
+          try {
+            const agX = ag.vehicle.position.x;
+            const agZ = ag.vehicle.position.z;
+            const teamSide = ag.side as 'home' | 'away';
+            const half = this.matchClock.state.half;
+            const attackDir = getSideAttackDir(teamSide, half);
+            // Converter posição world → normalizada para getZoneDepth (0–100, home ataca +x)
+            const normX = attackDir === 1 ? (agX / FIELD_LENGTH) * 100 : (1 - agX / FIELD_LENGTH) * 100;
+            const zoneDepth = getZoneDepth(normX, 'home'); // sempre 'home' pois já normalizamos
+            const teamHasBall = this.simState.possession === ag.side;
+            const isCarrier = this.simState.carrierId === ag.id;
+            const distToGoal = attackDir === 1
+              ? Math.hypot(FIELD_LENGTH - agX, FIELD_WIDTH / 2 - agZ)
+              : Math.hypot(agX, FIELD_WIDTH / 2 - agZ);
+            const distToBall = Math.hypot(agX - this.ballSys.state.x, agZ - this.ballSys.state.z);
+            // Mapear slotId → positionId do TacticaDoZero
+            const slotToPos: Record<string, string> = {
+              gol: 'GK', zag1: 'CB_L', zag2: 'CB_R', le: 'LB', ld: 'RB',
+              vol: 'CM_L', mc1: 'CM_L', mc2: 'CM_R', pe: 'LM', pd: 'RM', ata: 'ST_L',
+            };
+            const posId = slotToPos[ag.slotId ?? ''] ?? 'CM_L';
+            const tactica = decideTactica(
+              posId, isCarrier, teamHasBall,
+              distToGoal, distToBall, zoneDepth,
+              selfSnap.marcacao ?? 50,
+              'home', // já normalizamos attackDir acima
+              teamHasBall ? ag.side : (ag.side === 'home' ? 'away' : 'home'),
+            );
+            const tacticaTilt = tacticaDecisionToMacroTilt(tactica);
+            // Merge: tacticaTilt tem peso menor que teamIntentBias (0.6x)
+            const merged: Record<string, number> = { ...intentBias };
+            for (const [k, v] of Object.entries(tacticaTilt)) {
+              merged[k] = (merged[k] ?? 0) + v * 0.6;
+            }
+            return merged;
+          } catch (_e) {
+            return intentBias;
+          }
+        })(),
         spatialMemory: side === 'home' ? this.homeSpatialMemory : this.awaySpatialMemory,
         simTimeMs: this.world.simTime * 1000,
         decisionDebug: DECISION_DEBUG,
         profile: ag.profile,
         agentProfile: this.agentProfileCache.get(ag.id),
+        // Integração 1: perfil tático completo por posição — missão, limites, ações preferidas
+        roleBriefing: ROLE_EXPECTATIONS[slotToPositionId(ag.slotId ?? '')],
         teamIntent: side === 'home' ? this.homeTeamIntent : this.awayTeamIntent,
         teamPhase,
         carrierId: this.simState.carrierId,
@@ -3684,7 +3861,18 @@ export class TacticalSimLoop {
         // non-blocking — never break the sim loop
       }
 
-      const playerAction = ag.decision.tick(decCtx, this.world.simTime);
+      // Throttle decisions: carrier and receiver always re-decide; others every ~280-400ms.
+      // Prevents 60fps re-evaluation that causes action loops.
+      const simTimeMs = this.world.simTime * 1000;
+      if (isCarrier || isReceiver) ag.regulator.rush();
+      ag.regulator.adjustForFatigue(1 - ag.matchRuntime.stamina / 100);
+      let playerAction: PlayerAction;
+      if (ag.regulator.ready(simTimeMs)) {
+        playerAction = ag.decision.tick(decCtx, this.world.simTime);
+        ag._lastAction = playerAction;
+      } else {
+        playerAction = ag._lastAction ?? ag.decision.tick(decCtx, this.world.simTime);
+      }
       // record attempted action into player memory (non-blocking)
       try {
         const runtime = ag.matchRuntime as PlayerMatchRuntime | undefined;
@@ -4841,6 +5029,8 @@ export class TacticalSimLoop {
     const arriveBlended = (x: number, z: number, arriveMode: AgentMode) => {
       const b = this.blendOffBallArriveTarget(ag, { x, z }, slotTarget, action.type, arriveMode);
       const zc = clampWorldTargetToSlotFlankCorridor(ag.slotId, b.z, slotTarget.z);
+      // TerritoryRules desativado — conflito com sistema de agentes
+      // blendOffBallArriveTarget já aplica clampWorldToOperativeTactical18
       this.safeArrive(ag, b.x, zc, arriveMode);
     };
 

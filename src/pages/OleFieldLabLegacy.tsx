@@ -604,7 +604,7 @@ export function OleFieldLabLegacy() {
     setFlState(fresh);
   }
 
-  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => () => { if (loopRef.current) clearInterval(loopRef.current); }, []);
 
   const selectedSlotData = editor.selectedSlot
     ? (editor.edits[editor.selectedSlot] ?? (() => {

@@ -22,36 +22,36 @@ export interface TacticalMovementRadii {
 export function tacticalRadiiFor(role: string, slotId: string): TacticalMovementRadii {
   const sid = slotId.toLowerCase();
   if (role === 'gk' || sid === 'gol') {
-    return { actionRadius: 11, supportRadius: 15, returnBias: 0.92, maxDeviationInAction: 9 };
+    return { actionRadius: 11, supportRadius: 15, returnBias: 0.97, maxDeviationInAction: 7 };
   }
   if (sid.includes('zag')) {
-    return { actionRadius: 17, supportRadius: 28, returnBias: 0.84, maxDeviationInAction: 13 };
+    return { actionRadius: 14, supportRadius: 22, returnBias: 0.93, maxDeviationInAction: 9 };
   }
   if (sid === 'le' || sid === 'ld') {
-    return { actionRadius: 19, supportRadius: 30, returnBias: 0.78, maxDeviationInAction: 15 };
+    return { actionRadius: 16, supportRadius: 26, returnBias: 0.88, maxDeviationInAction: 11 };
   }
   if (sid === 'vol') {
-    return { actionRadius: 21, supportRadius: 32, returnBias: 0.72, maxDeviationInAction: 16 };
+    return { actionRadius: 18, supportRadius: 28, returnBias: 0.84, maxDeviationInAction: 12 };
   }
   if (sid.startsWith('mc')) {
-    return { actionRadius: 23, supportRadius: 36, returnBias: 0.64, maxDeviationInAction: 17 };
+    return { actionRadius: 20, supportRadius: 30, returnBias: 0.78, maxDeviationInAction: 13 };
   }
   if (sid === 'pe' || sid === 'pd') {
-    return { actionRadius: 25, supportRadius: 38, returnBias: 0.56, maxDeviationInAction: 19 };
+    return { actionRadius: 22, supportRadius: 32, returnBias: 0.72, maxDeviationInAction: 14 };
   }
   if (sid === 'ata') {
-    return { actionRadius: 27, supportRadius: 40, returnBias: 0.5, maxDeviationInAction: 21 };
+    return { actionRadius: 24, supportRadius: 34, returnBias: 0.68, maxDeviationInAction: 15 };
   }
   if (role === 'def') {
-    return { actionRadius: 17, supportRadius: 28, returnBias: 0.82, maxDeviationInAction: 13 };
+    return { actionRadius: 14, supportRadius: 22, returnBias: 0.91, maxDeviationInAction: 9 };
   }
   if (role === 'mid') {
-    return { actionRadius: 23, supportRadius: 36, returnBias: 0.62, maxDeviationInAction: 17 };
+    return { actionRadius: 20, supportRadius: 30, returnBias: 0.78, maxDeviationInAction: 13 };
   }
   if (role === 'attack') {
-    return { actionRadius: 27, supportRadius: 40, returnBias: 0.52, maxDeviationInAction: 21 };
+    return { actionRadius: 24, supportRadius: 34, returnBias: 0.68, maxDeviationInAction: 15 };
   }
-  return { actionRadius: 21, supportRadius: 34, returnBias: 0.68, maxDeviationInAction: 16 };
+  return { actionRadius: 18, supportRadius: 28, returnBias: 0.80, maxDeviationInAction: 12 };
 }
 
 /** Com posse: apoiantes podem estender ligeiramente o setor de ação. */
@@ -186,8 +186,8 @@ export function anchorPullScaleForOffBallAction(
   if (isPressingCarrier) return 1;
   if (actionType === 'move_to_slot' || actionType === 'idle') return 1;
   if (teamHasBall) {
-    // Mais peso na formação com posse: menos “ímã” coletivo para a bola (menos corrida inútil).
-    return 0.46; // attackers commit slightly more to target when in possession
+    // Com posse: agente consulta o código mas ancora forte no slot (90% slot, 10% ação)
+    return 0.72;
   }
   const commitDefense = new Set<string>([
     'press_carrier',
@@ -199,12 +199,12 @@ export function anchorPullScaleForOffBallAction(
     'defensive_cover',
     'cover_central',
   ]);
-  if (commitDefense.has(actionType)) return 0.52;
-  // For generic attacking/support actions prefer a bit more commitment to space.
+  if (commitDefense.has(actionType)) return 0.72;
+  // Ações ofensivas de ruptura: agente sai do slot intencionalmente mas volta rápido
   if (actionType === 'attack_depth' || actionType === 'open_width' || actionType === 'offer_short_line' || actionType === 'offer_diagonal_line' || actionType === 'overlap_run' || actionType === 'infiltrate') {
-    return 0.62;
+    return 0.80;
   }
-  return 0.88;
+  return 0.92;
 }
 
 /**

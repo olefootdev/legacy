@@ -67,7 +67,9 @@ export function truthSnapshotToTest2dPitch(args: {
   };
 
   for (const tp of snap.players) {
+    if (!Number.isFinite(tp.x) || !Number.isFinite(tp.z)) continue;
     const { ux, uy } = worldToUiPercent(tp.x, tp.z);
+    if (!Number.isFinite(ux) || !Number.isFinite(uy)) continue;
     const facing = tp.facingYaw ?? tp.heading;
     if (tp.side === 'home') {
       const base = byHomeId.get(tp.id);

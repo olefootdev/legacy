@@ -1,0 +1,2512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Olefoot · Investment Whitepaper · 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Inter (corrido), Oswald (Agency FB substitute — condensed display sans), Playfair Display Italic (Moret substitute — high-contrast editorial serif italic), JetBrains Mono (monospace ASCII diagrams) -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&family=Playfair+Display:ital,wght@1,500;1,600;1,700;1,800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --color-neon-yellow:#FDE100;
+  --color-deep-black:#0D0D0D;
+  --color-dark-gray:#1A1A1A;
+  --color-success:#22C55E;
+  --color-warning:#F59E0B;
+  --color-danger:#EF4444;
+  --color-border:rgba(0,0,0,0.10);
+  --color-divider-yellow:rgba(253,225,0,0.30);
+
+  --font-display:"Oswald", "Agency FB", "Impact", system-ui, sans-serif;
+  --font-serif-hero:"Playfair Display", "Moret", "Times New Roman", serif;
+  --font-sans:"Inter", system-ui, sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-sm:4px;
+  --radius-md:8px;
+
+  /* A4 metrics */
+  --page-w:210mm;
+  --page-h:297mm;
+  --pad-x:18mm;
+  --pad-y:18mm;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:#2a2a2a;
+  font-family:var(--font-sans);
+  color:#111;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+/* Screen-only viewer chrome */
+.viewer{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+  padding:32px 16px 80px;
+}
+
+/* A4 page */
+.page{
+  width:var(--page-w);
+  height:var(--page-h);
+  background:#fff;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,0.35);
+  page-break-after:always;
+  break-after:page;
+  color:#111;
+}
+.page.dark{
+  background:var(--color-deep-black);
+  color:#fff;
+}
+
+/* Page frame: padding + header/footer slots */
+.page-inner{
+  position:absolute;
+  inset:var(--pad-y) var(--pad-x);
+  display:flex;
+  flex-direction:column;
+}
+
+/* Recurring header strip */
+.page-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-bottom:6mm;
+  border-bottom:1px solid rgba(0,0,0,0.12);
+  margin-bottom:8mm;
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.22em;
+  font-weight:700;
+  font-size:8.5pt;
+  color:rgba(0,0,0,0.70);
+}
+.dark .page-head{
+  border-bottom-color:rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.65);
+}
+.page-head .head-left{display:flex;align-items:center;gap:10mm}
+.page-head .head-mark{
+  display:inline-flex;align-items:center;gap:6px;
+  font-weight:700;letter-spacing:0.28em;color:#0D0D0D;
+}
+.dark .page-head .head-mark{color:var(--color-neon-yellow)}
+.page-head .head-mark::before{
+  content:"";display:inline-block;width:10px;height:10px;
+  background:var(--color-neon-yellow);border-radius:2px;
+}
+
+/* Recurring footer */
+.page-foot{
+  margin-top:auto;
+  padding-top:5mm;
+  border-top:1px solid rgba(0,0,0,0.12);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.22em;
+  font-weight:700;
+  font-size:8pt;
+  color:rgba(0,0,0,0.55);
+}
+.dark .page-foot{
+  border-top-color:rgba(255,255,255,0.10);
+  color:rgba(255,255,255,0.55);
+}
+.page-foot .foot-num{
+  font-family:var(--font-serif-hero);
+  font-style:italic;
+  font-weight:600;
+  font-size:14pt;
+  letter-spacing:-0.02em;
+  color:#0D0D0D;
+  text-transform:none;
+}
+.dark .page-foot .foot-num{color:var(--color-neon-yellow)}
+
+/* Body region */
+.page-body{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+
+/* === Editorial primitives === */
+.eyebrow{
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.32em;
+  font-weight:700;
+  font-size:8.5pt;
+  color:#0D0D0D;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.eyebrow::before{
+  content:"";display:inline-block;width:18px;height:1.5px;
+  background:var(--color-neon-yellow);
+}
+.dark .eyebrow{color:var(--color-neon-yellow)}
+
+.section-rule{
+  width:48px;height:3px;background:var(--color-neon-yellow);
+  margin:6mm 0 7mm;
+}
+
+.h-display{
+  font-family:var(--font-serif-hero);
+  font-style:italic;
+  font-weight:700;
+  letter-spacing:-0.02em;
+  line-height:0.95;
+  color:#0D0D0D;
+  margin:0;
+}
+.dark .h-display{color:#fff}
+
+.h1{font-size:48pt}
+.h2{font-size:32pt}
+.h3{font-size:22pt}
+.h4{font-size:16pt}
+
+.kicker{
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.22em;
+  font-weight:700;
+  font-size:9pt;
+  color:rgba(0,0,0,0.65);
+}
+.dark .kicker{color:rgba(255,255,255,0.65)}
+
+p{margin:0 0 3mm;font-size:10.5pt;line-height:1.55;color:rgba(0,0,0,0.85)}
+.dark p{color:rgba(255,255,255,0.85)}
+p.lead{font-size:12pt;line-height:1.5;color:rgba(0,0,0,0.92)}
+.dark p.lead{color:rgba(255,255,255,0.92)}
+
+.small{font-size:9pt;line-height:1.5;color:rgba(0,0,0,0.65)}
+.dark .small{color:rgba(255,255,255,0.65)}
+
+strong{font-weight:700;color:#0D0D0D}
+.dark strong{color:#fff}
+
+em.serif{
+  font-family:var(--font-serif-hero);
+  font-style:italic;font-weight:600;
+  letter-spacing:-0.01em;
+}
+
+/* Tables */
+table.editorial{
+  width:100%;
+  border-collapse:collapse;
+  font-size:9.5pt;
+  margin:3mm 0;
+  font-variant-numeric:tabular-nums;
+}
+table.editorial th{
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.2em;
+  font-weight:700;
+  font-size:8pt;
+  text-align:left;
+  padding:3mm 2.5mm;
+  border-bottom:2px solid #0D0D0D;
+  color:#0D0D0D;
+  background:#fafafa;
+}
+.dark table.editorial th{
+  border-bottom-color:var(--color-neon-yellow);
+  color:var(--color-neon-yellow);
+  background:rgba(255,255,255,0.04);
+}
+table.editorial td{
+  padding:2.6mm 2.5mm;
+  border-bottom:1px solid rgba(0,0,0,0.08);
+  vertical-align:top;
+  line-height:1.4;
+}
+.dark table.editorial td{border-bottom-color:rgba(255,255,255,0.08)}
+table.editorial tr:last-child td{border-bottom:0}
+table.editorial td.num,table.editorial th.num{text-align:right;font-variant-numeric:tabular-nums}
+table.editorial tr.total td{
+  font-weight:700;background:rgba(253,225,0,0.10);
+  border-top:2px solid #0D0D0D;border-bottom:2px solid #0D0D0D;
+}
+table.editorial tr.bk td{
+  background:rgba(34,197,94,0.10);
+  font-weight:600;
+}
+
+/* Stat blocks */
+.stat-row{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:5mm;
+  margin:3mm 0 4mm;
+}
+.stat-row.three{grid-template-columns:repeat(3,1fr)}
+.stat-row.two{grid-template-columns:repeat(2,1fr)}
+.stat{
+  border-left:3px solid var(--color-neon-yellow);
+  padding:3mm 4mm 3mm 4mm;
+}
+.dark .stat{background:rgba(255,255,255,0.02)}
+.stat .label{
+  font-family:var(--font-display);
+  text-transform:uppercase;letter-spacing:0.22em;
+  font-weight:700;font-size:7.5pt;
+  color:rgba(0,0,0,0.55);
+  margin-bottom:1.5mm;
+}
+.dark .stat .label{color:rgba(255,255,255,0.55)}
+.stat .val{
+  font-family:var(--font-serif-hero);
+  font-style:italic;font-weight:700;
+  font-size:24pt;letter-spacing:-0.02em;
+  line-height:1;color:#0D0D0D;
+}
+.dark .stat .val{color:#fff}
+.stat .val.yellow{color:#0D0D0D;background:var(--color-neon-yellow);display:inline-block;padding:0 6px}
+.dark .stat .val.yellow{color:#0D0D0D}
+.stat .sub{
+  font-size:8.5pt;color:rgba(0,0,0,0.60);margin-top:1mm;line-height:1.3;
+}
+.dark .stat .sub{color:rgba(255,255,255,0.60)}
+
+/* Pull-quote */
+.pullquote{
+  border-left:3px solid var(--color-neon-yellow);
+  padding:4mm 6mm;
+  margin:5mm 0;
+}
+.pullquote .q{
+  font-family:var(--font-serif-hero);
+  font-style:italic;font-weight:600;
+  font-size:18pt;line-height:1.25;
+  letter-spacing:-0.015em;
+  color:#0D0D0D;
+  margin:0 0 3mm;
+}
+.dark .pullquote .q{color:#fff}
+.pullquote .attr{
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.22em;font-weight:700;font-size:8.5pt;
+  color:rgba(0,0,0,0.65);
+}
+.dark .pullquote .attr{color:rgba(255,255,255,0.65)}
+
+/* Code / ASCII frame */
+pre.ascii{
+  font-family:var(--font-mono);
+  font-size:7.4pt;
+  line-height:1.35;
+  background:var(--color-deep-black);
+  color:var(--color-neon-yellow);
+  padding:5mm 6mm;
+  border-radius:var(--radius-md);
+  overflow:hidden;
+  white-space:pre;
+  margin:3mm 0;
+  letter-spacing:0;
+}
+pre.ascii.lite{
+  background:#fafafa;color:#0D0D0D;
+  border:1px solid rgba(0,0,0,0.12);
+}
+
+/* Card */
+.card{
+  border:1px solid rgba(0,0,0,0.10);
+  border-left:3px solid var(--color-neon-yellow);
+  padding:5mm 6mm;
+  background:#fff;
+  border-radius:var(--radius-md);
+}
+.dark .card{
+  background:rgba(255,255,255,0.03);
+  border-color:rgba(255,255,255,0.10);
+  border-left-color:var(--color-neon-yellow);
+}
+.card .card-eyebrow{
+  font-family:var(--font-display);
+  text-transform:uppercase;letter-spacing:0.22em;
+  font-weight:700;font-size:8pt;
+  color:rgba(0,0,0,0.55);
+  margin-bottom:2mm;
+}
+.dark .card .card-eyebrow{color:rgba(255,255,255,0.55)}
+.card h4{
+  font-family:var(--font-serif-hero);
+  font-style:italic;font-weight:700;
+  font-size:14pt;letter-spacing:-0.02em;
+  margin:0 0 2.5mm;color:#0D0D0D;
+}
+.dark .card h4{color:#fff}
+.card p{font-size:10pt;margin-bottom:0}
+
+/* Two-column grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:5mm}
+
+/* Cover */
+.cover{
+  background:var(--color-deep-black);
+  color:#fff;
+  position:relative;
+}
+.cover .cover-inner{
+  position:absolute;inset:var(--pad-y) var(--pad-x);
+  display:flex;flex-direction:column;
+}
+.cover-logo{
+  width:62%;
+  display:block;
+}
+.cover-meta{
+  display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.28em;font-weight:700;font-size:9pt;
+  color:rgba(255,255,255,0.55);
+  padding-bottom:6mm;border-bottom:1px solid rgba(255,255,255,0.18);
+  margin-bottom:0;
+}
+.cover-meta .yel{color:var(--color-neon-yellow)}
+.cover-title-block{
+  margin-top:auto;
+}
+.cover-eyebrow{
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.32em;font-weight:700;font-size:10pt;
+  color:var(--color-neon-yellow);margin-bottom:6mm;
+  display:inline-flex;align-items:center;gap:10px;
+}
+.cover-eyebrow::before{
+  content:"";display:inline-block;width:24px;height:2px;
+  background:var(--color-neon-yellow);
+}
+.cover-headline{
+  font-family:var(--font-serif-hero);
+  font-style:italic;font-weight:800;
+  font-size:78pt;line-height:0.92;
+  letter-spacing:-0.025em;
+  color:#fff;margin:0 0 4mm;
+}
+.cover-headline em{color:var(--color-neon-yellow);font-style:italic}
+.cover-sub{
+  font-family:var(--font-sans);font-size:13pt;line-height:1.45;
+  color:rgba(255,255,255,0.80);max-width:160mm;
+  margin:0 0 10mm;
+}
+.cover-rule{
+  width:80px;height:4px;background:var(--color-neon-yellow);
+  margin:8mm 0 8mm;
+}
+.cover-foot{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  padding-top:6mm;border-top:1px solid rgba(255,255,255,0.18);
+}
+.cover-foot .col{
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.22em;font-weight:700;font-size:8.5pt;
+  color:rgba(255,255,255,0.55);
+}
+.cover-foot .col strong{
+  display:block;color:#fff;font-weight:700;font-size:9pt;
+  margin-top:1mm;
+}
+.cover-foot .col .yel{color:var(--color-neon-yellow)}
+
+/* Section divider page */
+.section-divider{
+  background:var(--color-neon-yellow);
+  color:#0D0D0D;
+  position:relative;
+}
+.section-divider .sd-inner{
+  position:absolute;inset:var(--pad-y) var(--pad-x);
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.section-divider .sd-num{
+  font-family:var(--font-serif-hero);font-style:italic;
+  font-weight:800;font-size:240pt;line-height:0.85;
+  letter-spacing:-0.04em;margin:0;color:#0D0D0D;
+}
+.section-divider .sd-title{
+  font-family:var(--font-serif-hero);font-style:italic;
+  font-weight:700;font-size:54pt;line-height:0.95;
+  letter-spacing:-0.025em;margin:0;color:#0D0D0D;
+}
+.section-divider .sd-eye{
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.32em;font-weight:700;font-size:10pt;
+  color:#0D0D0D;
+}
+.section-divider .sd-rule{
+  width:80px;height:4px;background:#0D0D0D;margin:6mm 0;
+}
+
+/* Tag / badge */
+.tag{
+  display:inline-block;
+  background:var(--color-neon-yellow);color:#0D0D0D;
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.22em;font-weight:700;font-size:8pt;
+  padding:1.5mm 3mm;border-radius:var(--radius-sm);
+}
+.tag.ghost{
+  background:transparent;color:#0D0D0D;
+  border:1px solid rgba(0,0,0,0.25);
+}
+.dark .tag.ghost{color:#fff;border-color:rgba(255,255,255,0.30)}
+
+/* Roadmap timeline */
+.roadmap{display:flex;flex-direction:column;gap:5mm;margin-top:4mm}
+.roadmap .row{
+  display:grid;grid-template-columns:32mm 1fr;gap:6mm;
+  border-top:1px solid rgba(0,0,0,0.12);
+  padding-top:4mm;
+}
+.dark .roadmap .row{border-top-color:rgba(255,255,255,0.12)}
+.roadmap .yr{
+  font-family:var(--font-serif-hero);font-style:italic;font-weight:700;
+  font-size:30pt;letter-spacing:-0.02em;line-height:0.9;color:#0D0D0D;
+}
+.dark .roadmap .yr{color:var(--color-neon-yellow)}
+.roadmap .yr .label{
+  display:block;font-family:var(--font-display);
+  text-transform:uppercase;letter-spacing:0.22em;
+  font-weight:700;font-size:8pt;color:rgba(0,0,0,0.55);
+  margin-top:2mm;font-style:normal;
+}
+.dark .roadmap .yr .label{color:rgba(255,255,255,0.55)}
+.roadmap .body{padding-top:1mm}
+.roadmap .body .head{
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.22em;font-weight:700;font-size:9pt;
+  color:#0D0D0D;margin-bottom:2mm;
+}
+.dark .roadmap .body .head{color:#fff}
+.roadmap ul{
+  margin:0;padding:0;list-style:none;
+  display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 6mm;
+  font-size:9.5pt;line-height:1.4;
+}
+.roadmap ul li{padding-left:5mm;position:relative}
+.roadmap ul li::before{
+  content:"";position:absolute;left:0;top:7px;
+  width:6px;height:6px;background:var(--color-neon-yellow);
+}
+
+/* Tier ladder */
+.tiers{
+  display:grid;grid-template-columns:repeat(8,1fr);
+  gap:0;border:1px solid rgba(0,0,0,0.12);
+  margin:4mm 0;
+}
+.tiers .tier{
+  padding:4mm 3mm 5mm;
+  border-right:1px solid rgba(0,0,0,0.08);
+  text-align:center;
+  position:relative;
+  background:#fff;
+}
+.tiers .tier:last-child{border-right:0}
+.tiers .tier .n{
+  font-family:var(--font-display);text-transform:uppercase;
+  letter-spacing:0.22em;font-weight:700;font-size:7.5pt;
+  color:rgba(0,0,0,0.50);margin-bottom:2mm;
+}
+.tiers .tier .name{
+  font-family:var(--font-serif-hero);font-style:italic;font-weight:700;
+  font-size:14pt;letter-spacing:-0.02em;color:#0D0D0D;line-height:1;
+}
+.tiers .tier.gold{background:#0D0D0D}
+.tiers .tier.gold .n{color:rgba(255,255,255,0.55)}
+.tiers .tier.gold .name{color:var(--color-neon-yellow)}
+.tiers .tier .bar{
+  position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:linear-gradient(90deg,rgba(253,225,0,0.20),var(--color-neon-yellow));
+}
+
+/* Big number block */
+.bignum{
+  font-family:var(--font-serif-hero);font-style:italic;
+  font-weight:800;letter-spacing:-0.03em;line-height:0.9;
+  color:var(--color-neon-yellow);
+}
+
+/* Two-up half page */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:8mm}
+
+/* Print */
+@media print{
+  body{background:#fff;}
+  .viewer{padding:0;gap:0}
+  .page{box-shadow:none;margin:0}
+  @page{size:A4;margin:0}
+}
+
+/* Screen scaling: nice viewer */
+@media screen{
+  .viewer-toolbar{
+    position:fixed;top:14px;right:14px;z-index:50;
+    display:flex;gap:6px;
+    background:rgba(13,13,13,0.92);
+    padding:6px;border-radius:8px;
+    box-shadow:0 6px 24px rgba(0,0,0,0.4);
+    backdrop-filter:blur(8px);
+  }
+  .viewer-toolbar button{
+    appearance:none;border:0;background:transparent;
+    color:rgba(255,255,255,0.85);
+    font-family:var(--font-display);text-transform:uppercase;
+    letter-spacing:0.22em;font-weight:700;font-size:9pt;
+    padding:6px 12px;border-radius:4px;cursor:pointer;
+  }
+  .viewer-toolbar button:hover{background:rgba(255,255,255,0.08);color:var(--color-neon-yellow)}
+  .viewer-toolbar button.print{background:var(--color-neon-yellow);color:#0D0D0D}
+  .viewer-toolbar button.print:hover{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<div class="viewer-toolbar">
+  <button class="print" onclick="window.print()">Save as PDF</button>
+</div>
+
+<div class="viewer">
+
+<!-- =========================================================
+PAGE 1 — COVER
+========================================================= -->
+<section class="page cover" data-screen-label="01 Cover">
+  <div class="cover-inner">
+    <div class="cover-meta">
+      <span><span class="yel">●</span>&nbsp;&nbsp;Confidential</span>
+      <span>Investment Whitepaper</span>
+      <span>May 2026 · v1.0</span>
+    </div>
+
+    <div class="cover-title-block" style="margin-top:auto">
+      <img src="whitepaper-assets/olefoot-logo.png" alt="Olefoot" class="cover-logo" />
+      <div style="height:14mm"></div>
+      <span class="cover-eyebrow">Football Fantasy · Driven by AI+</span>
+      <h1 class="cover-headline">The next chapter of <em>football,</em><br/>built from <em>Brazil.</em></h1>
+      <p class="cover-sub">A mobile-first football management game with native generative AI — Football Manager depth in 5-minute sessions, Sorare's digital economy, Elifoot's Brazilian soul. Live in production. 250,000+ users registered. Launching into the largest World Cup in history.</p>
+      <div class="cover-rule"></div>
+    </div>
+
+    <div class="cover-foot">
+      <div class="col">
+        Operator<br/>
+        <strong>Olefoot Game</strong>
+      </div>
+      <div class="col">
+        Round<br/>
+        <strong class="yel">$250K · 15% Equity</strong>
+      </div>
+      <div class="col">
+        Pre-Money<br/>
+        <strong>US$ 1.67 Million</strong>
+      </div>
+      <div class="col">
+        Break-even<br/>
+        <strong>Month 6 · Conservative</strong>
+      </div>
+      <div class="col" style="text-align:right">
+        Contact<br/>
+        <strong>exp@olefoot.com</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 2 — TABLE OF CONTENTS
+========================================================= -->
+<section class="page" data-screen-label="02 Contents">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>Investment Whitepaper</span>
+      </div>
+      <span>Confidential</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">Document</span>
+      <h2 class="h-display h2" style="margin-top:6mm">Contents.</h2>
+      <div class="section-rule"></div>
+
+      <div class="grid-2" style="margin-top:6mm">
+        <div>
+          <table class="editorial">
+            <tbody>
+              <tr><td style="width:18mm"><span class="tag ghost">00</span></td><td><strong>Executive Summary</strong></td><td class="num">04</td></tr>
+              <tr><td><span class="tag ghost">01</span></td><td><strong>Market Opportunity</strong><div class="small">A $103B mobile gaming market</div></td><td class="num">06</td></tr>
+              <tr><td><span class="tag ghost">02</span></td><td><strong>The Problem We Solve</strong><div class="small">The invisible player</div></td><td class="num">09</td></tr>
+              <tr><td><span class="tag ghost">03</span></td><td><strong>The Solution — Olefoot</strong><div class="small">Mobile-first, AI-native, Portuguese</div></td><td class="num">11</td></tr>
+              <tr><td><span class="tag ghost">04</span></td><td><strong>Technology Architecture</strong><div class="small">AI at creation, not at runtime</div></td><td class="num">14</td></tr>
+              <tr><td><span class="tag ghost">05</span></td><td><strong>The Agent Economy — Legacy Mode</strong></td><td class="num">17</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <table class="editorial">
+            <tbody>
+              <tr><td style="width:18mm"><span class="tag ghost">06</span></td><td><strong>Business Model & Revenue</strong></td><td class="num">19</td></tr>
+              <tr><td><span class="tag ghost">07</span></td><td><strong>Financial Projections</strong><div class="small">Break-even Month 6 · $481k Year 1</div></td><td class="num">22</td></tr>
+              <tr><td><span class="tag ghost">08</span></td><td><strong>Competitive Landscape</strong></td><td class="num">25</td></tr>
+              <tr><td><span class="tag ghost">09</span></td><td><strong>Go-to-Market Strategy</strong></td><td class="num">27</td></tr>
+              <tr><td><span class="tag ghost">10</span></td><td><strong>Product Roadmap 2026–2030</strong></td><td class="num">29</td></tr>
+              <tr><td><span class="tag ghost">11</span></td><td><strong>The Team</strong></td><td class="num">30</td></tr>
+              <tr><td><span class="tag ghost">12</span></td><td><strong>Investment Thesis</strong></td><td class="num">31</td></tr>
+              <tr><td><span class="tag ghost">A</span></td><td><strong>Appendix · Technical Reference</strong></td><td class="num">33</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="margin-top:auto">
+        <div class="pullquote">
+          <p class="q">"We are not just a game. We are the infrastructure for football's digital economy — built from Brazil, designed for the world."</p>
+          <span class="attr">Jonhnes Carvalho · Founder & CEO</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>Olefoot · Legacy Tech · 2026</span>
+      <span class="foot-num">02</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 3 — SECTION DIVIDER 00
+========================================================= -->
+<section class="page section-divider" data-screen-label="03 Divider 00">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">00</p>
+    </div>
+    <div>
+      <h2 class="sd-title">Executive<br/>Summary.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">
+        The product is live. The technology is in production. The community is growing. The market is sending unambiguous signals.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 4 — EXEC SUMMARY
+========================================================= -->
+<section class="page" data-screen-label="04 Executive Summary">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>00 · Executive Summary</span>
+      </div>
+      <span>Confidential</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">The Pitch</span>
+      <h2 class="h-display h2" style="margin-top:5mm">A football management game<br/>that <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">finally fits</em> in your pocket.</h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">Olefoot is a mobile-first football management game powered by native generative AI. It occupies a market position that no current product serves: <strong>the depth of Football Manager in sessions of 5 to 10 minutes</strong>, accessible on any device, in Portuguese, with real AI embedded in the core of every decision.</p>
+
+      <p>The product is live. The technology is in production. The community is growing. And the market is sending unambiguous signals: EA Sports was acquired by the Saudi PIF consortium for <strong>US$55 billion in September 2025</strong> — the largest private buyout in entertainment history. Football Manager 2026 Mobile ranks as the third most-played game on Netflix. Sorare reached a US$4.3 billion valuation. The market is not a hypothesis. It is a fact, validated at scale.</p>
+
+      <div style="height:5mm"></div>
+      <span class="kicker">The Ask</span>
+      <div class="stat-row three" style="margin-top:3mm">
+        <div class="stat">
+          <div class="label">Investment / Equity</div>
+          <div class="val" style="color:#0D0D0D"><span style="background:var(--color-neon-yellow);padding:0 6px">$250K</span> / 15%</div>
+          <div class="sub">Seed round — 18 months runway</div>
+        </div>
+        <div class="stat">
+          <div class="label">Pre-Money Valuation</div>
+          <div class="val">US$ 1.67M</div>
+          <div class="sub">Post-money: US$ 1.92M</div>
+        </div>
+        <div class="stat">
+          <div class="label">Break-Even</div>
+          <div class="val">Month 6</div>
+          <div class="sub">Conservative model · 50% of optimistic</div>
+        </div>
+      </div>
+
+      <div style="height:4mm"></div>
+      <span class="kicker">Key Metrics at a Glance</span>
+      <div class="stat-row" style="margin-top:3mm">
+        <div class="stat">
+          <div class="label">Users Registered</div>
+          <div class="val">250,000+</div>
+          <div class="sub">Live on the platform</div>
+        </div>
+        <div class="stat">
+          <div class="label">Active Clubs</div>
+          <div class="val">15,321</div>
+          <div class="sub">Managing real squads</div>
+        </div>
+        <div class="stat">
+          <div class="label">Player Contracts</div>
+          <div class="val">50+</div>
+          <div class="sub">Champions Q1/Q2 2026</div>
+        </div>
+        <div class="stat">
+          <div class="label">Ambassador</div>
+          <div class="val" style="font-size:18pt">Diego Lugano</div>
+          <div class="sub">Ex-Uruguay captain</div>
+        </div>
+      </div>
+
+      <p style="margin-top:5mm">Olefoot seeks <strong>$250,000 USD for 15% equity</strong>, implying a pre-money valuation of <strong>$1.67 million</strong>. This seed round funds 18 months of product development, user acquisition during the 2026 FIFA World Cup window, and the infrastructure to support 200,000+ active users. Under conservative projections, Olefoot reaches cash-flow positive by Month 6 and accumulates <strong>$481k in Year 1 revenue</strong> across three core monetization streams.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>00 · Executive Summary</span>
+      <span class="foot-num">04</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 5 — DIVIDER 01
+========================================================= -->
+<section class="page section-divider" data-screen-label="05 Divider 01">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">01</p>
+    </div>
+    <div>
+      <h2 class="sd-title">Market<br/>Opportunity.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">Football is the largest entertainment market on the planet. Mobile gaming is its fastest-growing distribution channel. We sit precisely at the intersection.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 6 — 1.1 GLOBAL MARKET
+========================================================= -->
+<section class="page" data-screen-label="06 Section 1.1">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>01 · Market Opportunity</span>
+      </div>
+      <span>1.1</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">1.1 · Global Football Gaming</span>
+      <h2 class="h-display h2" style="margin-top:5mm">A <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">$103B</em> market.<br/>And nobody serves the depth player.</h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">Football is the largest entertainment market on the planet. Over <strong>3.5 billion people</strong> identify as fans — nearly half the global population. The translation of this passion into digital products is one of the most consistent growth trends in the gaming industry.</p>
+
+      <table class="editorial" style="margin-top:5mm">
+        <thead>
+          <tr><th>Market Segment</th><th class="num">Size / Projection</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Global mobile gaming IAP revenue</td><td class="num"><strong>US$ 81.7B</strong></td><td>Sensor Tower 2025</td></tr>
+          <tr><td>Mobile gaming projected revenue</td><td class="num"><strong>US$ 103B</strong></td><td>Newzoo 2026</td></tr>
+          <tr><td>Fantasy sports market</td><td class="num">US$ 24.9B</td><td>2024</td></tr>
+          <tr><td>Fantasy sports market projection</td><td class="num"><strong>US$ 56.4B</strong></td><td>2030 · +15.2% CAGR</td></tr>
+          <tr><td>Football management game simulators</td><td class="num">US$ 3.8B</td><td>2024</td></tr>
+          <tr><td>Strategy games · % of mobile IAP revenue</td><td class="num"><strong>21.4%</strong></td><td>From only 4% of downloads</td></tr>
+          <tr><td>Battle pass / season pass market</td><td class="num">US$ 12.9B</td><td>PwC / Statista 2026</td></tr>
+        </tbody>
+      </table>
+
+      <div style="height:5mm"></div>
+      <div class="pullquote">
+        <p class="q">Strategy and RPG games generate 21.4% of total mobile IAP revenue from only 4% of downloads. Depth sells. Olefoot is a depth product.</p>
+        <span class="attr">Sensor Tower · Mobile Gaming Report 2025</span>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>01 · Market Opportunity</span>
+      <span class="foot-num">06</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 7 — 1.2 BRAZIL
+========================================================= -->
+<section class="page dark" data-screen-label="07 Section 1.2 Brazil">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>01 · Market Opportunity</span>
+      </div>
+      <span>1.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">1.2 · Launch Market</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Brazil is not a <em class="serif" style="color:var(--color-neon-yellow)">secondary</em> market.<br/>It is the ideal one.</h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">Brazil is the most strategically valuable launch market in the world for a football management game — and we are based here. The gap is clear: a mobile-first, AI-native, Portuguese-language football management game does not exist.</p>
+
+      <div class="stat-row" style="margin-top:6mm">
+        <div class="stat">
+          <div class="label">Mobile Gamers</div>
+          <div class="val">130M+</div>
+          <div class="sub">#1 in Latin America · ABRAGAMES 2024</div>
+        </div>
+        <div class="stat">
+          <div class="label">Smartphone Penetration</div>
+          <div class="val">85%+</div>
+          <div class="sub">Of the adult population</div>
+        </div>
+        <div class="stat">
+          <div class="label">Football Fans</div>
+          <div class="val">78%</div>
+          <div class="sub">Of Brazilians · Datafolha 2024</div>
+        </div>
+        <div class="stat">
+          <div class="label">Mobile Market Growth</div>
+          <div class="val">+18%</div>
+          <div class="sub">Annual · above global average</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:5mm">
+        <div class="card">
+          <div class="card-eyebrow">Top 3 Globally</div>
+          <h4>Brazil ranks among the top 3 markets by mobile game downloads.</h4>
+          <p>Source: SensorTower 2025. The infrastructure is ready, the demand is proven, and acquisition costs are still meaningfully below US/EU benchmarks.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">+13% Revenue Growth</div>
+          <h4>Latin America led the world (ex-Middle East) in IAP revenue growth in 2024.</h4>
+          <p>Brazil is the single largest contributor. The window to establish a category leader is open and finite.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:6mm"><strong>Zero direct competition:</strong> no deep football management simulator exists in Portuguese. That is the exact space Olefoot occupies — not by accident, by design.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>01 · Market Opportunity</span>
+      <span class="foot-num">07</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 8 — 1.3 WORLD CUP
+========================================================= -->
+<section class="page" data-screen-label="08 Section 1.3 World Cup">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>01 · Market Opportunity</span>
+      </div>
+      <span>1.3</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">1.3 · Distribution Window</span>
+      <h2 class="h-display h2" style="margin-top:5mm">The World Cup 2026<br/>is a <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">once-per-generation</em> event.</h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">The 2026 FIFA World Cup — hosted across the United States, Mexico, and Canada — is the first edition with <strong>48 national teams</strong>, making it the largest in the tournament's history. It represents a once-per-generation moment of peak global football attention, occurring precisely during Olefoot's launch window.</p>
+
+      <div class="stat-row two" style="margin-top:6mm">
+        <div class="stat">
+          <div class="label">Estimated Viewers</div>
+          <div class="val">5 Billion+</div>
+          <div class="sub">Worldwide during July 2026</div>
+        </div>
+        <div class="stat">
+          <div class="label">2022 Cup Effect</div>
+          <div class="val">+34%</div>
+          <div class="sub">Football app downloads globally</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:6mm">
+        <div class="card-eyebrow">Strategic Implication</div>
+        <h4>This is the cheapest user acquisition window of the next decade.</h4>
+        <p>All-time record engagement for football content. Brazilian national team participation drives domestic mobile gaming spikes. Sovereign and content interest in football peaks for ~60 days. Olefoot's marketing thesis — Phase 1 GTM — is timed precisely to this curve.</p>
+      </div>
+
+      <pre class="ascii lite" style="margin-top:6mm">
+  WORLD CUP 2026 · LAUNCH WINDOW                              JUL 2026
+  ──────────────────────────────────────────────────────────────────────
+  Apr ─── May ─── Jun ─── ░░░░ JUL: 5B viewers ░░░░ ─── Aug ─── Sep
+                                       ▲
+                                       │
+                            OLEFOOT public launch
+                            organic CAC at all-time low
+                            5+ billion potential reach
+  ──────────────────────────────────────────────────────────────────────
+      </pre>
+    </div>
+
+    <footer class="page-foot">
+      <span>01 · Market Opportunity</span>
+      <span class="foot-num">08</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 9 — DIVIDER 02
+========================================================= -->
+<section class="page section-divider" data-screen-label="09 Divider 02">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">02</p>
+    </div>
+    <div>
+      <h2 class="sd-title">The Problem<br/>We Solve.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">There is a football fan who has been invisible to the gaming industry for over a decade. He grew up with Elifoot.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 10 — 2.1 INVISIBLE PLAYER
+========================================================= -->
+<section class="page" data-screen-label="10 Section 2.1 Invisible Player">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>02 · The Problem</span>
+      </div>
+      <span>2.1</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">2.1 · The Invisible Player</span>
+      <h2 class="h-display h2" style="margin-top:5mm">28 years old. 10 minutes on the bus.<br/>He has <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">never been served.</em></h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">There is a football fan who has been invisible to the gaming industry for over a decade.</p>
+
+      <p>He grew up with <strong>Elifoot</strong> — the Portuguese-language football simulator launched in 1990 that proved Brazilians love deep tactical simulation. He played <strong>Football Manager</strong> through his university years but no longer has three hours for a single session. He has <strong>FIFA</strong> on his phone but it feels like a slot machine.</p>
+
+      <p>He is 28 years old. He has 10 minutes on the bus. He has a mid-range Android phone. He speaks Portuguese. He wants depth. He wants decisions that matter. He has never been served.</p>
+
+      <div class="pullquote" style="margin-top:6mm">
+        <p class="q">Football Manager is brilliant — and inaccessible. EA FC is spectacular — and hollow. Mobile football games are designed to extract money, not create experience.</p>
+        <span class="attr">Olefoot · Product Thesis</span>
+      </div>
+
+      <p style="margin-top:6mm"><strong>Olefoot is the answer for the invisible player.</strong> A deep tactical simulator he can play in 5 minutes between subway stops, in his language, on the phone he already owns, with AI that respects his intelligence.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>02 · The Problem</span>
+      <span class="foot-num">10</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 11 — 2.2 COMPETITIVE GAPS
+========================================================= -->
+<section class="page" data-screen-label="11 Section 2.2 Competitive Gaps">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>02 · The Problem</span>
+      </div>
+      <span>2.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">2.2 · Competitive Gaps</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Every incumbent has<br/>an <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">unfixable</em> gap.</h2>
+      <div class="section-rule"></div>
+
+      <table class="editorial" style="margin-top:4mm">
+        <thead>
+          <tr>
+            <th style="width:32mm">Product</th>
+            <th>Core Problem</th>
+            <th>What Olefoot Provides</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Football Manager</strong><div class="small">SEGA · Netflix</div></td>
+            <td>Minimum session: 1 hour. Desktop-first. No real mobile version. No generative AI. No PvP.</td>
+            <td><strong>5-min sessions.</strong> Mobile-native. AI in every decision.</td>
+          </tr>
+          <tr>
+            <td><strong>EA FC / Ultimate Team</strong><div class="small">Electronic Arts</div></td>
+            <td>Pay-to-win. No tactical simulation. Loot boxes. Cards are static. No manager progression.</td>
+            <td><strong>Transparent economy.</strong> Deep tactics. Agents that evolve.</td>
+          </tr>
+          <tr>
+            <td><strong>Sorare</strong><div class="small">SoftBank-backed</div></td>
+            <td>No match engine. Results calculated from real-world stats. No AI agents. 100% dependent on expensive club licenses.</td>
+            <td><strong>Full match simulation.</strong> 22 AI agents per match. Own player creation.</td>
+          </tr>
+          <tr>
+            <td><strong>Top Eleven</strong><div class="small">Take-Two · 2010</div></td>
+            <td>Launched 2010. Dated mechanics. No generative AI. No real match engine. Artificial token economy.</td>
+            <td><strong>2026 architecture.</strong> Native AI. Real economy built on player value.</td>
+          </tr>
+          <tr>
+            <td><strong>Hattrick</strong><div class="small">Est. 1997</div></td>
+            <td>1990s interface. No mobile native. No AI. No modern economy.</td>
+            <td><strong>Modern stack.</strong> Edge CDN. AI-native. Economic depth.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="card" style="margin-top:6mm">
+        <div class="card-eyebrow">The Synthesis</div>
+        <h4>Football Manager depth + Elifoot's Brazilian soul + Sorare's digital asset economy.</h4>
+        <p>On mobile. In Portuguese. With AI at its core. <strong>That is Olefoot.</strong></p>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>02 · The Problem</span>
+      <span class="foot-num">11</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 12 — DIVIDER 03
+========================================================= -->
+<section class="page section-divider" data-screen-label="12 Divider 03">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">03</p>
+    </div>
+    <div>
+      <h2 class="sd-title">The Solution.<br/>Olefoot.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">A Football Fantasy Game Driven by AI+. Mobile-first, browser-based, in Portuguese — where every decision matters.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 13 — 3.1 + 3.2
+========================================================= -->
+<section class="page" data-screen-label="13 Section 3.1 What is Olefoot">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>03 · The Solution</span>
+      </div>
+      <span>3.1 — 3.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">3.1 · What Olefoot Is</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Football management,<br/><em class="serif">reimagined</em> as an AI-native product.</h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">Olefoot is a <strong>Football Fantasy Game Driven by AI+</strong> — a mobile-first, browser-based football management simulator where every player is an autonomous AI agent, every match has a narrative, and every decision by the manager has real tactical consequence.</p>
+
+      <p>It is not Football Manager. It is not EA FC. It is not Sorare. It is the product those three companies collectively proved the world wants — and collectively failed to deliver in a single, accessible, intelligent package.</p>
+
+      <div style="height:5mm"></div>
+      <span class="eyebrow">3.2 · The Player Journey</span>
+      <h3 class="h-display h3" style="margin-top:4mm">Eight tiers. Lifetime EXP. Never resettable, <em class="serif">never purchasable.</em></h3>
+
+      <div class="tiers" style="margin-top:5mm">
+        <div class="tier"><div class="n">01</div><div class="name">Fraldinha</div><div class="bar"></div></div>
+        <div class="tier"><div class="n">02</div><div class="name">Juvenil</div><div class="bar"></div></div>
+        <div class="tier"><div class="n">03</div><div class="name">Amador</div><div class="bar"></div></div>
+        <div class="tier"><div class="n">04</div><div class="name">Profissional</div><div class="bar"></div></div>
+        <div class="tier"><div class="n">05</div><div class="name">Campeão</div><div class="bar"></div></div>
+        <div class="tier"><div class="n">06</div><div class="name">Internacional</div><div class="bar"></div></div>
+        <div class="tier"><div class="n">07</div><div class="name">Raro</div><div class="bar"></div></div>
+        <div class="tier gold"><div class="n">08</div><div class="name">Lenda</div><div class="bar"></div></div>
+      </div>
+
+      <p style="margin-top:5mm" class="small"><strong>EXP is vitalício (lifetime)</strong> — never resettable, never purchasable. Each tier is earned, not bought. Prestige has real meaning. Signature Moves (Bicycle Kick, Trivela, Panenka) unlock through attribute thresholds and XP requirements, not microtransactions.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>03 · The Solution</span>
+      <span class="foot-num">13</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 14 — 3.3 CORE FEATURES
+========================================================= -->
+<section class="page" data-screen-label="14 Section 3.3 Core Features">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>03 · The Solution</span>
+      </div>
+      <span>3.3</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">3.3 · Core Product Features</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Six systems. <em class="serif">One</em> product.</h2>
+      <div class="section-rule"></div>
+
+      <div class="grid-2" style="gap:5mm;margin-top:4mm">
+        <div class="card">
+          <div class="card-eyebrow">01 · Match Narrator</div>
+          <h4>GameSpirit AI</h4>
+          <p>Not a chatbot — the referee, commentator, and tactical advisor integrated frame-by-frame into the simulation loop. Resolves shots, builds story arcs, decides penalties. Powered by Anthropic Claude via Railway API.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">02 · Tactical Geometry</div>
+          <h4>SmartField</h4>
+          <p>Python-generated zones, positional anchors, radius of influence. Exported as JSON, consumed by the match engine at <strong>zero runtime cost.</strong> Tactical intelligence is pre-computed — not generated live.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">03 · Autonomous Players</div>
+          <h4>Yuka Agents · 22 per match</h4>
+          <p>Each player is an independent AI agent using Yuka steering behavior. They respond to ball position, team phase, opponent pressure, and individual DNA (riskTaking, buildUpPreference, pressIntensity). The field is alive.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">04 · Career Tiers</div>
+          <h4>Non-Purchasable Progression</h4>
+          <p>Eight tiers of lifetime progression. EXP earned through matches — gols, assists, tactical decisions. Cannot be reset or purchased. Signature Moves unlock through attribute thresholds.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">05 · Liquidity Engine</div>
+          <h4>Market Maker</h4>
+          <p>Instant buy offers for any player, with dynamic pricing based on position and rarity (20% discount for OVR 75+, 35% for lower rated). Every transaction in the public feed. The market never stops. Revenue never stops.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">06 · Real Opponents</div>
+          <h4>Asynchronous PvP</h4>
+          <p>Matchmaking uses OVR differential of ±10 points against real managers' squads. Intelligent fallback ensures no match is ever without an opponent. Results generate EXP and League Points regardless of online status.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>03 · The Solution</span>
+      <span class="foot-num">14</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 15 — DIVIDER 04 TECH
+========================================================= -->
+<section class="page section-divider" data-screen-label="15 Divider 04">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">04</p>
+    </div>
+    <div>
+      <h2 class="sd-title">Technology<br/>Architecture.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">AI runs at creation time, not at runtime. The marginal cost of every match played is effectively zero.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 16 — 4.1 SYSTEM ARCHITECTURE
+========================================================= -->
+<section class="page dark" data-screen-label="16 Section 4.1 Architecture">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>04 · Technology</span>
+      </div>
+      <span>4.1</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">4.1 · System Architecture</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Five layers.<br/>One <em class="serif" style="color:var(--color-neon-yellow)">strategic</em> decision.</h2>
+      <div class="section-rule"></div>
+
+      <p>Olefoot is built on a five-layer architecture designed around a critical strategic decision: <strong>AI runs at creation time, not at runtime.</strong> This means the marginal cost of every match played is effectively zero.</p>
+
+      <pre class="ascii" style="margin-top:5mm">
+  ╔═══════════════════════════════════════════════════════════════════╗
+  ║  LAYER 1 · MANAGER / BROWSER                                      ║
+  ║  React 18 · Zustand · TypeScript · Vite · PWA                     ║
+  ╚══════════════════════════╤════════════════════════════════════════╝
+                             │
+  ╔══════════════════════════▼════════════════════════════════════════╗
+  ║  LAYER 2 · MATCH ENGINE — CLIENT-SIDE   ← $0 per match AI cost   ║
+  ║  runMatchMinute · TacticalSimLoop · BallSystem · MatchTruthWorld  ║
+  ║  SmartField geometry (pre-computed JSON)                          ║
+  ╚══════════════════════════╤════════════════════════════════════════╝
+                             │
+  ╔══════════════════════════▼════════════════════════════════════════╗
+  ║  LAYER 3 · AI ENGINES — 4 SIMULTANEOUS SYSTEMS                    ║
+  ║  ┌──────────────┬──────────────┬──────────────┬───────────────┐   ║
+  ║  │ BehaviorAI   │ PolishAI     │ OffBallAI    │PlayerDecision │   ║
+  ║  │ pressingTrap │ desperation  │ bendingRuns  │OnBallDecision │   ║
+  ║  │ tacticalFoul │ momentumBuff │ visionCone   │prethinking    │   ║
+  ║  │ captainInfl  │ shotVariance │ scanToken    │spatialMemory  │   ║
+  ║  └──────────────┴──────────────┴──────────────┴───────────────┘   ║
+  ╚══════════════════════════╤════════════════════════════════════════╝
+                             │
+  ╔══════════════════════════▼════════════════════════════════════════╗
+  ║  LAYER 4 · GAME SPIRIT + CLAUDE API (Railway / Hono / Node.js)    ║
+  ║  spiritStateMachine → liveStoryEngine → narrativeCatalog          ║
+  ║  /api/coach   /api/gamespirit   /api/assistant   /api/voice       ║
+  ╚══════════════════════════╤════════════════════════════════════════╝
+                             │
+  ╔══════════════════════════▼════════════════════════════════════════╗
+  ║  LAYER 5 · DATA & INFRASTRUCTURE                                  ║
+  ║  SUPABASE              CLOUDFLARE PAGES         RAILWAY           ║
+  ║  Postgres + Auth       Edge CDN, global         API Server        ║
+  ║  Realtime + RLS        Zero cold start          Auto-deploy       ║
+  ╚═══════════════════════════════════════════════════════════════════╝
+      </pre>
+
+      <p class="small" style="margin-top:5mm"><strong>Data flow:</strong> Manager → Browser → Motor (client) → Supabase (sync). Tactical decisions → Railway → Claude → Contextual response. <strong>Matchmaking:</strong> manager_squad → fetchOpponentSquads → OVR ±10 → match. <strong>Market:</strong> squad → calcMarketMakerOffer → EXP immediate → inventory.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>04 · Technology</span>
+      <span class="foot-num">16</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 17 — 4.2 STACK + 4.3 KEY DECISION
+========================================================= -->
+<section class="page" data-screen-label="17 Section 4.2 Stack and 4.3 AI Decision">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>04 · Technology</span>
+      </div>
+      <span>4.2 — 4.3</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">4.2 · Technology Stack</span>
+      <h3 class="h-display h3" style="margin-top:4mm">Production-grade. <em class="serif">Already shipped.</em></h3>
+      <div class="section-rule"></div>
+
+      <table class="editorial">
+        <thead>
+          <tr><th style="width:30mm">Layer</th><th>Technology</th><th>Strategic Rationale</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Frontend</strong></td><td>React 18 · Zustand · TypeScript · Vite</td><td>Universal browser support. Zero install friction.</td></tr>
+          <tr><td><strong>Match Engine</strong></td><td>TypeScript pure · Yuka agents · SmartField (Python)</td><td>Client-side execution = $0 per match in AI costs.</td></tr>
+          <tr><td><strong>AI Runtime</strong></td><td>Anthropic Claude (via Railway / Hono)</td><td>8 specialized API routes. Contextual, not generic.</td></tr>
+          <tr><td><strong>Database</strong></td><td>Supabase (Postgres · Auth · Realtime · RLS)</td><td>Row-level security. Real-time sync. Scalable from day 1.</td></tr>
+          <tr><td><strong>CDN / Deploy</strong></td><td>Cloudflare Pages + Workers</td><td>Global edge. Zero cold start. Latency &lt; 30ms worldwide.</td></tr>
+          <tr><td><strong>API Server</strong></td><td>Railway (auto-deploy · Node.js)</td><td>Instant deploys. Isolated from frontend scaling.</td></tr>
+        </tbody>
+      </table>
+
+      <div style="height:6mm"></div>
+      <span class="eyebrow">4.3 · The Architectural Decision</span>
+      <h3 class="h-display h3" style="margin-top:4mm">AI at <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">creation,</em> not at runtime.</h3>
+
+      <p style="margin-top:4mm">Most AI-native games generate responses at runtime: every player action, every match event, every piece of narrative costs an API call. As the user base grows, so does the AI bill — often exponentially. This is the <strong>"AI scaling trap"</strong> that has broken several well-funded startups.</p>
+
+      <p>Olefoot inverts this model. Claude is used <strong>once per player creation</strong> — to generate the player's DNA: attributes, behavioral traits, personality, Signature Moves, narrative backstory. Once generated, this DNA is stored in Supabase and consumed by the match engine with no additional API calls.</p>
+
+      <div class="stat-row two" style="margin-top:5mm">
+        <div class="stat">
+          <div class="label">Cost of AI per match played</div>
+          <div class="val">$0</div>
+          <div class="sub">After initial player DNA generation</div>
+        </div>
+        <div class="stat">
+          <div class="label">1 match vs 1,000,000 matches</div>
+          <div class="val">Identical</div>
+          <div class="sub">Marginal cost is invariant — this is the architecture that scales.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>04 · Technology</span>
+      <span class="foot-num">17</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 18 — DIVIDER 05 LEGACY
+========================================================= -->
+<section class="page section-divider" data-screen-label="18 Divider 05">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">05</p>
+    </div>
+    <div>
+      <h2 class="sd-title">The Agent Economy.<br/>Legacy Mode.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">What if a real football player could exist inside the game — as an autonomous AI agent trained on his own tactical DNA?</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 19 — 5.1 + 5.2
+========================================================= -->
+<section class="page" data-screen-label="19 Section 5.1 5.2 Legacy">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>05 · Legacy Mode</span>
+      </div>
+      <span>5.1 — 5.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">5.1 · What Legacy Mode Is</span>
+      <h2 class="h-display h2" style="margin-top:5mm">A <em class="serif">Ronaldinho</em> card<br/>that plays like Ronaldinho.</h2>
+      <div class="section-rule"></div>
+
+      <p>In Legacy Mode, any professional footballer can be transformed into a digital card with their own DNA — real attributes, career history, playing style. With the advancement of AI agents, each card now carries an autonomous agent that makes decisions inside the match based on the real player's profile.</p>
+
+      <p>A Ronaldinho in Legacy Mode is not just a card with 92 dribbling. <strong>It is an agent that prefers to receive with its back to goal, that activates pressingTrap when morale is high, that executes dummyRun at the right moments</strong> — because the agent was trained with that player's tactical DNA.</p>
+
+      <div style="height:5mm"></div>
+      <span class="eyebrow">5.2 · The Agent Creation Pipeline</span>
+      <pre class="ascii lite" style="margin-top:4mm">
+  ─────────────────────────────────────────────────────────────────────
+  STEP 1 · PLAYER DATA INPUT
+    Real player (historical stats, style) OR Manager description
+    "Fast striker, left-footed, counter-attack specialist"
+  ↓
+  STEP 2 · CLAUDE DNA GENERATION       (1× API call — never repeated)
+    → Attributes: pace, finishing, passing, tackling, vision, strength
+    → Behavioral traits: riskTaking, buildUpPreference, offensiveRuns
+    → Signature Moves: unlockable via XP thresholds
+    → Narrative: career backstory, personality, preferred conditions
+  ↓
+  STEP 3 · DNA STORED IN SUPABASE
+    Player card minted as unique digital asset
+  ↓
+  STEP 4 · AGENT RUNTIME              (zero AI cost per match)
+    Match engine reads DNA snapshot → Yuka agent decides
+    pressingTrap fires if morale > 80 + opponent in pressing zone
+    dummyRun executes if time > 70min + team losing by 1 goal
+    captainInfluence boosts nearby teammates
+  ↓
+  STEP 5 · EVOLUTION                  (EXP accumulation)
+    Goals, assists, performance → XP → new Signature Moves unlock
+    Agent evolves. DNA expands. Card value increases.
+  ─────────────────────────────────────────────────────────────────────
+      </pre>
+    </div>
+
+    <footer class="page-foot">
+      <span>05 · Legacy Mode</span>
+      <span class="foot-num">19</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 20 — 5.3 SKILLS
+========================================================= -->
+<section class="page" data-screen-label="20 Section 5.3 Skills">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>05 · Legacy Mode</span>
+      </div>
+      <span>5.3</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">5.3 · Skills System</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Skills are not cosmetic.<br/>They <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">change</em> how the team plays.</h2>
+      <div class="section-rule"></div>
+
+      <p class="lead">Skills are special abilities that modify how an agent behaves in specific match situations. Purchased, traded, or unlocked through achievements. The right skill combination is a real tactical differentiator.</p>
+
+      <table class="editorial" style="margin-top:5mm">
+        <thead>
+          <tr>
+            <th style="width:38mm">Skill</th>
+            <th>Behavior Triggered</th>
+            <th class="num" style="width:24mm">Rarity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pressing Trap</strong></td>
+            <td>Agent forces opponent error in defensive third; triggers coordinated press.</td>
+            <td class="num"><span class="tag">Rare</span></td>
+          </tr>
+          <tr>
+            <td><strong>Sweeper Keeper</strong></td>
+            <td>Goalkeeper actively intercepts through balls outside penalty area.</td>
+            <td class="num"><span class="tag ghost">Common</span></td>
+          </tr>
+          <tr>
+            <td><strong>Captain Influence</strong></td>
+            <td>Boosts morale and action probability of adjacent teammates by 12%.</td>
+            <td class="num"><span class="tag" style="background:#0D0D0D;color:var(--color-neon-yellow)">Epic</span></td>
+          </tr>
+          <tr>
+            <td><strong>Desperation Mode</strong></td>
+            <td>Final 15 minutes losing: agent risk tolerance increases dramatically.</td>
+            <td class="num"><span class="tag">Rare</span></td>
+          </tr>
+          <tr>
+            <td><strong>Dummy Run</strong></td>
+            <td>Creates space for ball carrier through coordinated off-ball movement.</td>
+            <td class="num"><span class="tag ghost">Common</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pullquote" style="margin-top:6mm">
+        <p class="q">Every invested real changes the outcome on the field. This is the retention mechanism that no other mobile football game has.</p>
+        <span class="attr">Olefoot · Skills System</span>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>05 · Legacy Mode</span>
+      <span class="foot-num">20</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 21 — DIVIDER 06
+========================================================= -->
+<section class="page section-divider" data-screen-label="21 Divider 06">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">06</p>
+    </div>
+    <div>
+      <h2 class="sd-title">Business Model<br/>& Revenue.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">Monetization through depth, not manipulation. Every purchase delivers real, functional value that changes how the team performs.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 22 — 6.1 REVENUE FLOW
+========================================================= -->
+<section class="page dark" data-screen-label="22 Section 6.1 Revenue Flow">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>06 · Business Model</span>
+      </div>
+      <span>6.1</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">6.1 · Revenue Architecture</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Eight streams.<br/>Zero <em class="serif" style="color:var(--color-neon-yellow)">loot boxes.</em></h2>
+      <div class="section-rule"></div>
+
+      <p>Olefoot operates on a freemium model with monetization through depth, not manipulation. There are no loot boxes, no pay-to-win mechanics, no opaque spending systems. Every purchase delivers real, functional value that changes how the team performs.</p>
+
+      <pre class="ascii" style="margin-top:5mm">
+  ────────────────────────────────────────────────────────────────────
+  FREE TIER  (base acquisition)                            All users
+    Complete game · default squad · unlimited matches
+    Basic EXP progression · public league access
+  ↓
+  CARD PACKS  (primary transactional)                  5% conv · $25
+    Virtual player cards with DNA · Bronze/Silver/Gold/Legend
+  ↓
+  OLE PASS  (recurring subscription)                  10% conv · $9.99
+    Premium squads · private leagues · post-match analysis
+    Full career history · advanced coaching
+  ↓
+  SKILLS  (in-game items)                          R$ 7.90 — 79.90
+    Agent behavior modifiers · tradeable on marketplace
+  ↓
+  AI AGENTS  (premium cognitive upgrades)         R$ 19.90 — 199
+    Basic → Pro → Elite → Legend
+    visionCone · spatialMemory · prethinking · macroBrain
+  ↓
+  CLUB STRUCTURES  (permanent upgrades)           R$ 24.90 — 99.90
+    Youth Academy · Medical Center · Tactical Lab · Stadium
+  ↓
+  CONSUMABLES  (short-cycle economy)               R$ 4.90 — 19.90
+    Morale boost · Recovery accelerator · Special contracts
+  ↓
+  SEASON PASS  (quarterly subscription)         R$ 19.90 — 49.90/mo
+    Exclusive content · events · ranked leagues per season
+  ────────────────────────────────────────────────────────────────────
+  SPONSORSHIP  (B2B · from month 5)             From R$ 2,500/mo
+    Stadium naming rights · Jersey logos · Live-stream activations
+  ────────────────────────────────────────────────────────────────────
+      </pre>
+    </div>
+
+    <footer class="page-foot">
+      <span>06 · Business Model</span>
+      <span class="foot-num">22</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 23 — 6.2 DETAIL TABLES
+========================================================= -->
+<section class="page" data-screen-label="23 Section 6.2 Revenue Tables">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>06 · Business Model</span>
+      </div>
+      <span>6.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">6.2 · Revenue Streams · 500k Active Users</span>
+      <h3 class="h-display h3" style="margin-top:4mm">Year-3 target. <em class="serif">Modeled from the bottom up.</em></h3>
+      <div class="section-rule"></div>
+
+      <span class="kicker">Professional Player Cards</span>
+      <table class="editorial" style="margin-top:2mm">
+        <thead><tr><th>Tier</th><th class="num">Price</th><th class="num">Volume / month</th><th class="num">Monthly revenue</th></tr></thead>
+        <tbody>
+          <tr><td>Bronze</td><td class="num">R$ 9.90</td><td class="num">5,000</td><td class="num">R$ 49,500</td></tr>
+          <tr><td>Silver</td><td class="num">R$ 29.90</td><td class="num">2,000</td><td class="num">R$ 59,800</td></tr>
+          <tr><td>Gold</td><td class="num">R$ 89.90</td><td class="num">500</td><td class="num">R$ 44,950</td></tr>
+          <tr><td>Legend (limited)</td><td class="num">R$ 299.00</td><td class="num">100</td><td class="num">R$ 29,900</td></tr>
+          <tr class="total"><td colspan="3"><strong>Subtotal · Professional Cards</strong></td><td class="num"><strong>R$ 184,150</strong></td></tr>
+        </tbody>
+      </table>
+
+      <div style="height:4mm"></div>
+      <span class="kicker">AI-Generated Player Cards</span>
+      <table class="editorial" style="margin-top:2mm">
+        <thead><tr><th>Type</th><th class="num">Price</th><th class="num">Volume / month</th><th class="num">Monthly revenue</th></tr></thead>
+        <tbody>
+          <tr><td>Basic AI card</td><td class="num">R$ 14.90</td><td class="num">3,000</td><td class="num">R$ 44,700</td></tr>
+          <tr><td>Premium AI card</td><td class="num">R$ 49.90</td><td class="num">800</td><td class="num">R$ 39,920</td></tr>
+          <tr><td>Legend AI generation</td><td class="num">R$ 149.00</td><td class="num">150</td><td class="num">R$ 22,350</td></tr>
+          <tr class="total"><td colspan="3"><strong>Subtotal · AI Cards</strong></td><td class="num"><strong>R$ 106,970</strong></td></tr>
+        </tbody>
+      </table>
+
+      <p class="small" style="margin-top:4mm"><strong>Note on conversion:</strong> 12% paying conversion targets the mid-core gaming demographic (sports management). Industry average for all mobile games is 1.83% (Unity 2024); strategy and RPG titles average 8–15%. Olefoot's engagement model is designed to drive above-average conversion through functional, non-manipulative monetization.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>06 · Business Model</span>
+      <span class="foot-num">23</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 24 — 6.2 CONSOLIDATED
+========================================================= -->
+<section class="page" data-screen-label="24 Section 6.2 Consolidated">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>06 · Business Model</span>
+      </div>
+      <span>6.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">6.2 · Consolidated Revenue at Scale</span>
+      <h2 class="h-display h2" style="margin-top:5mm">500k users.<br/><em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">R$ 11.2M</em> ARR.</h2>
+      <div class="section-rule"></div>
+
+      <table class="editorial" style="margin-top:4mm">
+        <thead>
+          <tr>
+            <th>Revenue Stream</th>
+            <th class="num">Monthly (R$)</th>
+            <th class="num">Annual (R$)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Professional Player Cards</td><td class="num">184,150</td><td class="num">2,209,800</td></tr>
+          <tr><td>Season Pass (Standard + Premium)</td><td class="num">174,350</td><td class="num">2,092,200</td></tr>
+          <tr><td>Skills (Common + Rare + Epic)</td><td class="num">136,970</td><td class="num">1,643,640</td></tr>
+          <tr><td>Club Structures</td><td class="num">124,690</td><td class="num">1,496,280</td></tr>
+          <tr><td>Consumable Items</td><td class="num">118,450</td><td class="num">1,421,400</td></tr>
+          <tr><td>AI-Generated Cards</td><td class="num">106,970</td><td class="num">1,283,640</td></tr>
+          <tr><td>AI Agent Upgrades</td><td class="num">85,670</td><td class="num">1,028,040</td></tr>
+          <tr class="total">
+            <td><strong>TOTAL</strong><div class="small" style="font-weight:400">500k users · 12% paying conversion</div></td>
+            <td class="num"><strong>R$ 931,250</strong></td>
+            <td class="num"><strong>R$ 11,175,000</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid-2" style="margin-top:6mm">
+        <div class="card">
+          <div class="card-eyebrow">Monetization Philosophy</div>
+          <h4>Depth, not manipulation.</h4>
+          <p>No loot boxes. No pay-to-win. Every purchase changes how the team performs on the field — it's an investment in tactics, not a gamble.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">Diversification</div>
+          <h4>No single stream &gt; 20% of revenue.</h4>
+          <p>Eight independent revenue lines from transactional, subscription, and B2B sources. Resilient by design.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>06 · Business Model</span>
+      <span class="foot-num">24</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 25 — DIVIDER 07
+========================================================= -->
+<section class="page section-divider" data-screen-label="25 Divider 07">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">07</p>
+    </div>
+    <div>
+      <h2 class="sd-title">Financial<br/>Projections.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">Conservative model. Break-even Month 6. $481k accumulated revenue Year 1. Every dollar tracked.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 26 — 7.1 CASHFLOW
+========================================================= -->
+<section class="page" data-screen-label="26 Section 7.1 Cashflow">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>07 · Financials</span>
+      </div>
+      <span>7.1</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">7.1 · Year 1 Monthly Cashflow · Conservative</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Break-even at <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">Month 6.</em><br/>$481k Year 1.</h2>
+      <div class="section-rule"></div>
+
+      <p class="small">Conservative model = 50% of optimistic user growth targets. All figures in USD.</p>
+
+      <table class="editorial" style="margin-top:3mm">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th class="num">M1</th><th class="num">M2</th><th class="num">M3</th>
+            <th class="num">M4</th><th class="num">M5</th>
+            <th class="num" style="background:rgba(34,197,94,0.18)">M6 ✓</th>
+            <th class="num">M7</th><th class="num">M8</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Users</strong></td><td class="num">500</td><td class="num">1,000</td><td class="num">2,000</td><td class="num">4,000</td><td class="num">7,500</td><td class="num">15,000</td><td class="num">18,750</td><td class="num">23,437</td></tr>
+          <tr><td><strong>Revenue ($)</strong></td><td class="num">938</td><td class="num">1,875</td><td class="num">3,750</td><td class="num">7,500</td><td class="num">15,000</td><td class="num">30,000</td><td class="num">37,500</td><td class="num">46,875</td></tr>
+          <tr><td><strong>Expenses ($)</strong></td><td class="num">21,250</td><td class="num">10,750</td><td class="num">13,250</td><td class="num">13,750</td><td class="num">13,750</td><td class="num">13,750</td><td class="num">14,750</td><td class="num">29,750</td></tr>
+          <tr class="bk">
+            <td><strong>Net Cashflow ($)</strong></td>
+            <td class="num">(20,312)</td><td class="num">(8,875)</td><td class="num">(9,500)</td>
+            <td class="num">(6,250)</td><td class="num">1,250</td>
+            <td class="num"><strong>16,250</strong></td>
+            <td class="num">22,750</td><td class="num">17,125</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="editorial" style="margin-top:5mm">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th class="num">M5</th>
+            <th class="num" style="background:rgba(34,197,94,0.18)">M6 ✓</th>
+            <th class="num">M7</th><th class="num">M8</th><th class="num">M9</th>
+            <th class="num">M10</th><th class="num">M11</th><th class="num">M12</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Revenue ($)</strong></td><td class="num">15,000</td><td class="num">30,000</td><td class="num">37,500</td><td class="num">46,875</td><td class="num">58,594</td><td class="num">73,242</td><td class="num">91,553</td><td class="num">114,441</td></tr>
+          <tr class="bk"><td><strong>Net Cashflow ($)</strong></td><td class="num">1,250</td><td class="num"><strong>16,250</strong></td><td class="num">22,750</td><td class="num">17,125</td><td class="num">28,844</td><td class="num">43,492</td><td class="num">61,803</td><td class="num">84,691</td></tr>
+        </tbody>
+      </table>
+
+      <div class="stat-row three" style="margin-top:6mm">
+        <div class="stat">
+          <div class="label">Break-Even</div>
+          <div class="val">Month 6</div>
+          <div class="sub">Conservative model</div>
+        </div>
+        <div class="stat">
+          <div class="label">M12 Monthly Revenue</div>
+          <div class="val">$114,441</div>
+          <div class="sub">Run-rate exiting Year 1</div>
+        </div>
+        <div class="stat">
+          <div class="label">Year 1 Total</div>
+          <div class="val">$481,000</div>
+          <div class="sub">Accumulated revenue</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>07 · Financials</span>
+      <span class="foot-num">26</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 27 — 7.2 USE OF FUNDS
+========================================================= -->
+<section class="page" data-screen-label="27 Section 7.2 Use of Funds">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>07 · Financials</span>
+      </div>
+      <span>7.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">7.2 · Use of the $250,000 Investment</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Zero waste. <em class="serif">Every dollar tracked.</em></h2>
+      <div class="section-rule"></div>
+
+      <table class="editorial" style="margin-top:4mm">
+        <thead>
+          <tr>
+            <th>Expense Category</th>
+            <th class="num">Annual Budget</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Team Wages</strong><div class="small">scaling $7.5k → $25k/month</div></td><td class="num">$190,000</td><td>Core dev + design team build-out in months 7–12</td></tr>
+          <tr><td><strong>Technology</strong></td><td class="num">$22,500</td><td>Supabase, Railway, Cloudflare, Claude API credits</td></tr>
+          <tr><td><strong>Advisors</strong><div class="small">fixed R$1,250/month</div></td><td class="num">$15,000</td><td>Legal, financial, sports industry advisors</td></tr>
+          <tr><td><strong>User Acquisition</strong></td><td class="num">$12,000</td><td>$1k/month — targeted Google + Meta performance campaigns</td></tr>
+          <tr><td><strong>Player Contracts · Legacy Mode</strong></td><td class="num">$5,000</td><td>Initial batch of 50+ champion contracts (already executed)</td></tr>
+          <tr><td><strong>Company Structure / Legal</strong></td><td class="num">$5,500</td><td>Entity formalization, international IP registration</td></tr>
+          <tr class="total"><td><strong>TOTAL</strong></td><td class="num"><strong>$250,000</strong></td><td><strong>Matches investment exactly.</strong></td></tr>
+        </tbody>
+      </table>
+
+      <div style="height:6mm"></div>
+      <span class="eyebrow">7.3 · Three-Year Projection</span>
+      <table class="editorial" style="margin-top:3mm">
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th class="num">Users</th>
+            <th class="num">Paying (12%)</th>
+            <th class="num">Monthly Rev</th>
+            <th class="num">Annual Rev</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Seed · Year 1 (end)</strong></td><td class="num">55,000</td><td class="num">6,600</td><td class="num">$35,000</td><td class="num">$481,000</td></tr>
+          <tr><td><strong>Growth · Year 2</strong></td><td class="num">200,000</td><td class="num">24,000</td><td class="num">$130,000</td><td class="num">$2,235,000</td></tr>
+          <tr><td><strong>Scale · Year 3</strong></td><td class="num">500,000</td><td class="num">60,000</td><td class="num">R$ 931,250</td><td class="num">R$ 11,175,000</td></tr>
+          <tr><td><strong>Maturity · Year 5</strong></td><td class="num">2,000,000</td><td class="num">240,000</td><td class="num">R$ 3,725,000</td><td class="num">R$ 44,700,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="page-foot">
+      <span>07 · Financials</span>
+      <span class="foot-num">27</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 28 — DIVIDER 08
+========================================================= -->
+<section class="page section-divider" data-screen-label="28 Divider 08">
+  <div class="sd-inner">
+    <div>
+      <span class="sd-eye">Olefoot · 2026 · Section</span>
+      <div class="sd-rule"></div>
+      <p class="sd-num">08</p>
+    </div>
+    <div>
+      <h2 class="sd-title">Competition<br/>& Validation.</h2>
+      <p style="font-size:11pt;line-height:1.5;color:rgba(0,0,0,0.75);max-width:130mm;margin-top:6mm">The thesis does not rely on creating a new market. It relies on the fact that three separate markets have each been validated at scale.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 29 — 8.1 POSITIONING
+========================================================= -->
+<section class="page" data-screen-label="29 Section 8.1 Positioning">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>08 · Competitive Landscape</span>
+      </div>
+      <span>8.1</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">8.1 · Positioning Map</span>
+      <h2 class="h-display h2" style="margin-top:5mm">The empty quadrant.<br/><em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">Tactical Depth × Mobile Access.</em></h2>
+      <div class="section-rule"></div>
+
+      <pre class="ascii lite" style="margin-top:5mm;font-size:8.5pt;line-height:1.4">
+                          TACTICAL DEPTH
+                                ▲
+                                │
+             Football Manager ● │
+             (SEGA / Netflix)   │
+                                │                  ★ OLEFOOT
+                                │                    (target zone)
+  ──────────────────────────────┼──────────────────────────────────►
+                                │                      MOBILE ACCESS
+                                │
+                   Hattrick ●   │       Top Eleven ●
+                                │
+                    Sorare ●    │              ● EA FC
+                                │
+      </pre>
+
+      <p style="margin-top:5mm">Olefoot occupies the empty quadrant: <strong>Tactical Depth + Mobile Access.</strong> No current product serves this combination. The depth incumbents (Football Manager, Hattrick) are desktop-tied or 1990s-architected; the mobile incumbents (EA FC, Top Eleven) are shallow by design. Sorare is a card market without a match engine. <strong>This is the gap.</strong></p>
+
+      <div class="card" style="margin-top:6mm">
+        <div class="card-eyebrow">Why this gap exists</div>
+        <h4>Depth-on-mobile was technically impossible until 2024.</h4>
+        <p>22 autonomous AI agents simulating a football match on a mobile browser, with narrative resolution, pre-computed tactical geometry, and zero per-match AI cost — the architectural ingredients only matured in the past 24 months. Olefoot is the first product engineered for this moment.</p>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>08 · Competitive Landscape</span>
+      <span class="foot-num">29</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 30 — 8.2 GIANTS
+========================================================= -->
+<section class="page" data-screen-label="30 Section 8.2 Validation">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>08 · Competitive Landscape</span>
+      </div>
+      <span>8.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">8.2 · Market Validation</span>
+      <h2 class="h-display h2" style="margin-top:5mm">The giants <em class="serif">showed the way.</em></h2>
+      <div class="section-rule"></div>
+
+      <table class="editorial" style="margin-top:4mm">
+        <thead>
+          <tr>
+            <th style="width:48mm">Market Signal</th>
+            <th>What It Proved</th>
+            <th>What Olefoot Does Better</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>EA Sports acquired by Saudi PIF for $55B</strong><div class="small">Sept 2025 · Largest private buyout in entertainment history</div></td>
+            <td>Football games are the largest entertainment asset class in the world. Sovereign capital is mobilizing.</td>
+            <td>Olefoot is the mobile-first, AI-native, Portuguese-language alternative that no acquisition can quickly replicate.</td>
+          </tr>
+          <tr>
+            <td><strong>Sorare raises $680M at $4.3B valuation</strong><div class="small">SoftBank-led</div></td>
+            <td>Digital football player cards with real-world value — the NFT fantasy model at scale works.</td>
+            <td>Olefoot adds a real match engine, autonomous AI agents, and skill-based gameplay — not just card trading.</td>
+          </tr>
+          <tr>
+            <td><strong>Football Manager 26 Mobile</strong><div class="small">#3 most-played game on Netflix globally</div></td>
+            <td>Deep football management content drives sustained engagement even on a subscription platform.</td>
+            <td>Olefoot delivers FM depth natively on mobile, with PvP and AI — without the FM barrier to entry.</td>
+          </tr>
+          <tr>
+            <td><strong>Elifoot (1990)</strong><div class="small">30+ years of Brazilian football sim passion</div></td>
+            <td>Brazilian football fans have been hungry for deep simulation for three decades. Cultural demand is proven.</td>
+            <td>Olefoot is Elifoot's spiritual successor — in the palm of your hand, with AI, in 2026.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="page-foot">
+      <span>08 · Competitive Landscape</span>
+      <span class="foot-num">30</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 31 — 9. GTM
+========================================================= -->
+<section class="page" data-screen-label="31 Section 9 GTM">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>09 · Go-to-Market</span>
+      </div>
+      <span>9.1 — 9.4</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">09 · Go-to-Market Strategy</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Three phases.<br/>One <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">World Cup.</em></h2>
+      <div class="section-rule"></div>
+
+      <div class="grid-3" style="margin-top:5mm">
+        <div class="card">
+          <div class="card-eyebrow">Phase 1 · M1–M4</div>
+          <h4>World Cup 2026</h4>
+          <p>Public launch with Brazilian tech press and gaming media PR. <strong>Diego Lugano</strong> activation: organic content, social posts, commentary. 50+ contracted champions as first micro-influencers — real players recommending a real game. Targeted Meta + Google: $1k/mo, Brazil-first.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">Phase 2 · M5–M12</div>
+          <h4>Community & Leagues</h4>
+          <p>OLE Pass launch — first recurring subscription revenue. Private league tournaments. Content creator partnerships (FM + EA FC YouTubers / TikTokers). Legacy Mode beta: first batch of champion cards. First <strong>OLE Summit Brasil</strong> — community gathering, press event, investor showcase.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">Phase 3 · Year 2</div>
+          <h4>Regional Scale</h4>
+          <p>Native iOS + Android (PWA → native). South American club partnerships (Argentina, Colombia, Uruguay). Spanish-language expansion. Institutional sponsorship deals. <strong>OLEXP token ecosystem</strong> launch (on-chain asset layer).</p>
+        </div>
+      </div>
+
+      <div style="height:6mm"></div>
+      <span class="eyebrow">9.4 · Distribution Channels</span>
+      <table class="editorial" style="margin-top:3mm">
+        <thead>
+          <tr><th>Channel</th><th>Mechanism</th><th>Target</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Organic · Player ambassadors</strong></td><td>50+ contracted players share their own cards/results</td><td>Football fan communities, player fan bases</td></tr>
+          <tr><td><strong>Content creators</strong></td><td>FM + EA FC YouTube/TikTok creators</td><td>Existing football game audience already primed</td></tr>
+          <tr><td><strong>Paid acquisition</strong></td><td>Meta + Google · $1k/month seed phase</td><td>25–40 male, football fan, Brazil-first</td></tr>
+          <tr><td><strong>PR / Media</strong></td><td>Cointelegraph, Exame already covered</td><td>Investor community, tech-savvy football fans</td></tr>
+          <tr><td><strong>Grupo Figer network</strong></td><td>Brazil's largest sports marketing group — strategic partner</td><td>Club partnerships, sponsorship, athlete access</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="page-foot">
+      <span>09 · Go-to-Market</span>
+      <span class="foot-num">31</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 32 — 10. ROADMAP (full bleed dark)
+========================================================= -->
+<section class="page dark" data-screen-label="32 Section 10 Roadmap">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>10 · Roadmap</span>
+      </div>
+      <span>2026 — 2030</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">10 · Product Roadmap</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Five years.<br/>From <em class="serif" style="color:var(--color-neon-yellow)">Cup</em> to <em class="serif" style="color:var(--color-neon-yellow)">platform.</em></h2>
+      <div class="section-rule"></div>
+
+      <div class="roadmap" style="margin-top:5mm">
+        <div class="row">
+          <div class="yr">2026 Q1–Q2 <span class="label">MVP + Launch</span></div>
+          <div class="body">
+            <div class="head">Already shipped · World Cup launch</div>
+            <ul>
+              <li>✓ Match engine (22 Yuka agents, client-side)</li>
+              <li>✓ GameSpirit AI narrative (Claude)</li>
+              <li>✓ Career Tiers (8 levels)</li>
+              <li>✓ Market Maker · guaranteed liquidity</li>
+              <li>✓ Asynchronous PvP · OVR matchmaking</li>
+              <li>✓ 50+ player contracts signed</li>
+              <li>→ World Cup 2026 public launch</li>
+              <li>→ First OLE Summit Brasil</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="yr">2026 Q3–Q4 <span class="label">Monetization</span></div>
+          <div class="body">
+            <div class="head">Subscription · Community · Marketplace</div>
+            <ul>
+              <li>→ OLE Pass live (R$ 19.90–49.90/mo)</li>
+              <li>→ Legacy Mode beta — first cards</li>
+              <li>→ Skills marketplace open</li>
+              <li>→ Private leagues + seasonal tournaments</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="yr">2027 <span class="label">Expansion</span></div>
+          <div class="body">
+            <div class="head">Native mobile · LATAM rollout</div>
+            <ul>
+              <li>→ Native iOS + Android (PWA → native)</li>
+              <li>→ South American club partnerships</li>
+              <li>→ Spanish launch (MX, AR, CO)</li>
+              <li>→ Social impact: youth academies</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="yr">2028 <span class="label">Global Scale</span></div>
+          <div class="body">
+            <div class="head">25k licensed cards · OLEXP on-chain</div>
+            <ul>
+              <li>→ Mass tokenization · 25,000 player cards</li>
+              <li>→ OLEXP on-chain economy launch</li>
+              <li>→ Top 1,000 on CoinMarketCap</li>
+              <li>→ International expansion beyond LATAM</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="yr">2029 — 2030 <span class="label">Platform</span></div>
+          <div class="body">
+            <div class="head">502,614 accounts · R$ 11.2M ARR · platform dominance</div>
+            <ul>
+              <li>→ "Half a Million Reasons" milestone (2029)</li>
+              <li>→ Full ecosystem: clubs, legends, federations</li>
+              <li>→ 1.5M+ accounts (2030)</li>
+              <li>→ Licensing API for third-party developers</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>10 · Roadmap</span>
+      <span class="foot-num">32</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 33 — 11. TEAM
+========================================================= -->
+<section class="page" data-screen-label="33 Section 11 Team">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>11 · The Team</span>
+      </div>
+      <span>11.1 — 11.3</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">11 · The Team</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Seven years building.<br/>Zero <em class="serif">external funding.</em></h2>
+      <div class="section-rule"></div>
+
+      <div class="card" style="margin-top:5mm">
+        <div class="card-eyebrow">11.1 · Founder & CEO</div>
+        <h4>Jonhnes Carvalho</h4>
+        <p>Building Olefoot since 2018 — seven years of continuous development, zero external funding, consistent participation in global startup competitions. Born and raised in Campo Grande, Mato Grosso do Sul, he has taken the project from a personal passion for football simulation to a production-grade platform with 250,000 registered users.</p>
+        <table class="editorial" style="margin-top:4mm">
+          <tbody>
+            <tr><td style="width:22mm"><strong>2018</strong></td><td>Olefoot project begins — first match engine prototype</td></tr>
+            <tr><td><strong>2020–2023</strong></td><td>Multiple global startup competition participations</td></tr>
+            <tr><td><strong>2024</strong></td><td>First CoinTelegraph Brasil and Exame / Future of Money coverage</td></tr>
+            <tr><td><strong>2025</strong></td><td>50+ player contracts signed with Brazilian and South American champions</td></tr>
+            <tr><td><strong>2026</strong></td><td>Diego Lugano joins as official ambassador · Grupo Figer partnership formalized</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin-top:3mm"><strong>Contact:</strong> exp@olefoot.com · +55 67 99322-6559 · linkedin.com/in/jonhnescarvalho</p>
+      </div>
+
+      <div class="grid-2" style="margin-top:5mm">
+        <div class="card">
+          <div class="card-eyebrow">11.2 · Official Ambassador</div>
+          <h4>Diego Lugano</h4>
+          <p>Former Uruguay national team captain. Three-time Copa América participant. Former São Paulo FC legend. He chose to join Olefoot <strong>before a formal financial offer</strong> — because the project resonated with his understanding of how football culture and technology should intersect. His endorsement is not commercial. It is conviction.</p>
+        </div>
+        <div class="card">
+          <div class="card-eyebrow">11.3 · Strategic Partner</div>
+          <h4>Andre Figer · Grupo Figer</h4>
+          <p>One of Brazil's largest sports marketing and entertainment groups. The Olefoot–Figer partnership provides access to a network of clubs, athletes, brands, and distribution infrastructure that <strong>cannot be replicated with capital alone.</strong> This is Olefoot's smart money.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>11 · The Team</span>
+      <span class="foot-num">33</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 34 — 12. INVESTMENT THESIS
+========================================================= -->
+<section class="page dark" data-screen-label="34 Section 12 Investment Thesis">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>12 · Investment Thesis</span>
+      </div>
+      <span>The Ask</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">12 · Investment Thesis</span>
+      <h2 class="h-display h2" style="margin-top:5mm">$250K. <em class="serif" style="color:var(--color-neon-yellow)">15%.</em><br/>The window is now.</h2>
+      <div class="section-rule"></div>
+
+      <div class="stat-row" style="margin-top:5mm">
+        <div class="stat">
+          <div class="label">Investment</div>
+          <div class="val">$250K</div>
+          <div class="sub">USD seed round</div>
+        </div>
+        <div class="stat">
+          <div class="label">Equity</div>
+          <div class="val">15%</div>
+          <div class="sub">Common shares</div>
+        </div>
+        <div class="stat">
+          <div class="label">Pre-Money</div>
+          <div class="val">$1.67M</div>
+          <div class="sub">Implied valuation</div>
+        </div>
+        <div class="stat">
+          <div class="label">Post-Money</div>
+          <div class="val">$1.92M</div>
+          <div class="sub">Closed round</div>
+        </div>
+      </div>
+
+      <div style="height:5mm"></div>
+      <span class="kicker">12.2 · What this investment unlocks</span>
+      <table class="editorial" style="margin-top:2mm">
+        <tbody>
+          <tr><td style="width:22mm"><strong class="bignum" style="font-size:18pt">40%</strong></td><td><strong>$100k</strong> · Mobile app development — PWA → native iOS + Android</td></tr>
+          <tr><td><strong class="bignum" style="font-size:18pt">30%</strong></td><td><strong>$75k</strong> · World Cup 2026 marketing campaign and user acquisition</td></tr>
+          <tr><td><strong class="bignum" style="font-size:18pt">20%</strong></td><td><strong>$50k</strong> · Infrastructure scaling — Supabase, Railway, Cloudflare growth tier</td></tr>
+          <tr><td><strong class="bignum" style="font-size:18pt">10%</strong></td><td><strong>$25k</strong> · Legal, IP registration, club partnership contracts</td></tr>
+        </tbody>
+      </table>
+
+      <div style="height:5mm"></div>
+      <span class="kicker">12.3 · Why now</span>
+      <p style="margin-top:2mm">Three independent forces converge in 2026 to create a market entry window that will not repeat:</p>
+      <p><strong>1.</strong> The FIFA World Cup 2026 creates peak global football engagement — a once-per-generation distribution opportunity.</p>
+      <p><strong>2.</strong> EA Sports' $55B acquisition signals that football gaming is the most valuable entertainment asset category in the world.</p>
+      <p><strong>3.</strong> Generative AI has matured to the point where 22 autonomous agents can simulate a football match on a mobile browser — this was technically impossible 3 years ago.</p>
+
+      <p style="margin-top:5mm"><strong>The market is ready. The technology is ready. The team has been building for 7 years. The window is now.</strong></p>
+    </div>
+
+    <footer class="page-foot">
+      <span>12 · Investment Thesis</span>
+      <span class="foot-num">34</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 35 — 12.4 RETURNS
+========================================================= -->
+<section class="page" data-screen-label="35 Section 12.4 Returns">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>12 · Investment Thesis</span>
+      </div>
+      <span>12.4</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">12.4 · Return Scenarios</span>
+      <h2 class="h-display h2" style="margin-top:5mm">Up to <em class="serif" style="color:#0D0D0D;background:var(--color-neon-yellow);padding:0 8px">8.4× upside</em><br/>on a 15% stake.</h2>
+      <div class="section-rule"></div>
+
+      <table class="editorial" style="margin-top:5mm">
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th class="num">Revenue (Year 3)</th>
+            <th class="num">Valuation Multiple</th>
+            <th class="num">15% Stake Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Conservative</strong><div class="small">500k users · 12% conv.</div></td>
+            <td class="num">R$ 11.2M / yr</td>
+            <td class="num">5×</td>
+            <td class="num"><strong>R$ 8.4M</strong><div class="small">~$1.7M USD</div></td>
+          </tr>
+          <tr>
+            <td><strong>Base</strong><div class="small">500k users + sponsorship</div></td>
+            <td class="num">R$ 15M / yr</td>
+            <td class="num">6×</td>
+            <td class="num"><strong>R$ 13.5M</strong><div class="small">~$2.7M USD</div></td>
+          </tr>
+          <tr class="total">
+            <td><strong>Optimistic</strong><div class="small" style="font-weight:400">1M users · regional expansion</div></td>
+            <td class="num"><strong>R$ 35M / yr</strong></td>
+            <td class="num"><strong>8×</strong></td>
+            <td class="num"><strong>R$ 42M</strong><div class="small" style="font-weight:400">~$8.4M USD</div></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pullquote" style="margin-top:8mm">
+        <p class="q">We are not just a game. We are the infrastructure for football's digital economy — built from Brazil, designed for the world.</p>
+        <span class="attr">Jonhnes Carvalho · Founder & CEO</span>
+      </div>
+    </div>
+
+    <footer class="page-foot">
+      <span>12 · Investment Thesis</span>
+      <span class="foot-num">35</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 36 — APPENDIX A · DB SCHEMA
+========================================================= -->
+<section class="page" data-screen-label="36 Appendix A">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>Appendix A · Technical Reference</span>
+      </div>
+      <span>A.1 — A.2</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">Appendix A · Database Schema</span>
+      <h3 class="h-display h3" style="margin-top:4mm">Supabase tables overview.</h3>
+      <div class="section-rule"></div>
+
+      <pre class="ascii" style="margin-top:4mm">
+  ─────────────────────────────────────────────────────────────────────
+  profiles              manager_squad          manager_game_state
+  ─────────             ─────────────          ──────────────────
+  display_name          players[]              finance / EXP
+  club_name             lineup                 inbox
+  onboarding            formation              results
+                        avg_ovr                streaks
+
+  global_league         market_maker_inventory market_activities
+  ─────────────         ──────────────────────  ─────────────────
+  rodadas               snapshots_sold         public feed
+  standings             pricing_matrix         transaction history
+  fixtures
+  ─────────────────────────────────────────────────────────────────────
+      </pre>
+
+      <div style="height:6mm"></div>
+      <span class="eyebrow">Appendix B · API Endpoints — Claude Integration</span>
+      <h3 class="h-display h3" style="margin-top:4mm">Railway · Hono · Node.js.</h3>
+
+      <table class="editorial" style="margin-top:3mm">
+        <thead><tr><th style="width:46mm">Endpoint</th><th>Function</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST /api/coach</code></td><td>Analyzes squad, suggests formation/training</td></tr>
+          <tr><td><code>POST /api/gamespirit</code></td><td>Match narrative resolution (goals, penalties)</td></tr>
+          <tr><td><code>POST /api/assistant</code></td><td>Ole Smart Hub — answers manager questions</td></tr>
+          <tr><td><code>POST /api/voice</code></td><td>Natural language → GameAction conversion</td></tr>
+          <tr><td><code>POST /api/admin</code></td><td>Internal admin operations</td></tr>
+        </tbody>
+      </table>
+
+      <p class="small" style="margin-top:3mm">Each route: context injection → Claude inference → structured response. <strong>AI cost: called only on narrative/coaching events, not per simulation tick.</strong></p>
+    </div>
+
+    <footer class="page-foot">
+      <span>Appendix · Technical Reference</span>
+      <span class="foot-num">36</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 37 — APPENDIX C GLOSSARY
+========================================================= -->
+<section class="page" data-screen-label="37 Appendix C Glossary">
+  <div class="page-inner">
+    <header class="page-head">
+      <div class="head-left">
+        <span class="head-mark">Olefoot · 2026</span>
+        <span>Appendix C · Glossary</span>
+      </div>
+      <span>Glossary</span>
+    </header>
+
+    <div class="page-body">
+      <span class="eyebrow">Appendix C · Glossary</span>
+      <h3 class="h-display h3" style="margin-top:4mm">Terms used in this whitepaper.</h3>
+      <div class="section-rule"></div>
+
+      <table class="editorial" style="margin-top:4mm">
+        <tbody>
+          <tr><td style="width:32mm"><strong>GameSpirit</strong></td><td>The AI narrative engine that resolves match events (goals, penalties, red cards) and generates real-time commentary via Claude.</td></tr>
+          <tr><td><strong>SmartField</strong></td><td>Python-generated tactical geometry: zones, positional anchors, radius of influence. Pre-computed and served as JSON — zero runtime AI cost.</td></tr>
+          <tr><td><strong>Yuka Agents</strong></td><td>Independent steering-behavior AI agents for each of the 22 players on the field. Each agent reads DNA and field context to make autonomous decisions.</td></tr>
+          <tr><td><strong>DNA</strong></td><td>Player behavioral profile generated once by Claude: attributes, traits (riskTaking, buildUpPreference), Signature Moves, and narrative backstory.</td></tr>
+          <tr><td><strong>Legacy Mode</strong></td><td>The system for transforming real professional players into digital cards with autonomous AI agents trained on their tactical DNA.</td></tr>
+          <tr><td><strong>OLEXP</strong></td><td>The on-chain token representing value within the Olefoot economy. Layer 2 / Solana-compatible. Roadmap Year 2 launch.</td></tr>
+          <tr><td><strong>EXP</strong></td><td>Lifetime, non-purchasable experience points that determine career tier progression for the manager.</td></tr>
+          <tr><td><strong>Market Maker</strong></td><td>The system that guarantees instant liquidity for player card sales by providing dynamic buy offers based on position and OVR rating.</td></tr>
+          <tr><td><strong>OVR</strong></td><td>Overall Rating — composite metric calculated from player attributes (pace, finishing, passing, tackling, vision, strength).</td></tr>
+        </tbody>
+      </table>
+
+      <p class="small" style="margin-top:6mm">For the complete technical documentation, API specification, and live product demo, please contact <strong>exp@olefoot.com</strong> or visit <strong>www.olefoot.ai</strong> under NDA.</p>
+    </div>
+
+    <footer class="page-foot">
+      <span>Appendix · Glossary</span>
+      <span class="foot-num">37</span>
+    </footer>
+  </div>
+</section>
+
+<!-- =========================================================
+PAGE 38 — BACK COVER
+========================================================= -->
+<section class="page cover" data-screen-label="38 Back Cover">
+  <div class="cover-inner">
+    <div class="cover-meta">
+      <span><span class="yel">●</span>&nbsp;&nbsp;Confidential</span>
+      <span>End of Document</span>
+      <span>May 2026 · v1.0</span>
+    </div>
+
+    <div style="margin:auto 0">
+      <span class="cover-eyebrow">Bom jogo.</span>
+      <h1 class="cover-headline" style="font-size:64pt">A bola está <em>rolando.</em></h1>
+      <p class="cover-sub" style="margin-top:6mm">For investor questions, due diligence access, NDA-gated technical docs, or to schedule a product demo, contact the team directly.</p>
+      <div class="cover-rule"></div>
+
+      <div class="grid-3" style="margin-top:8mm;gap:12mm">
+        <div>
+          <span class="kicker" style="color:rgba(255,255,255,0.55)">Founder & CEO</span>
+          <p style="font-family:var(--font-serif-hero);font-style:italic;font-weight:700;font-size:20pt;color:#fff;letter-spacing:-0.02em;margin:2mm 0 1mm">Jonhnes Carvalho</p>
+          <p style="font-size:10.5pt;color:rgba(255,255,255,0.75);margin:0">exp@olefoot.com<br/>+55 67 99322-6559</p>
+        </div>
+        <div>
+          <span class="kicker" style="color:rgba(255,255,255,0.55)">Web</span>
+          <p style="font-family:var(--font-serif-hero);font-style:italic;font-weight:700;font-size:20pt;color:var(--color-neon-yellow);letter-spacing:-0.02em;margin:2mm 0 1mm">olefoot.ai</p>
+          <p style="font-size:10.5pt;color:rgba(255,255,255,0.75);margin:0">Live product · investor portal<br/>Demo on request (NDA)</p>
+        </div>
+        <div>
+          <span class="kicker" style="color:rgba(255,255,255,0.55)">Headquarters</span>
+          <p style="font-family:var(--font-serif-hero);font-style:italic;font-weight:700;font-size:20pt;color:#fff;letter-spacing:-0.02em;margin:2mm 0 1mm">Brazil</p>
+          <p style="font-size:10.5pt;color:rgba(255,255,255,0.75);margin:0">Campo Grande · MS<br/>Designed for the world</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-foot" style="border-top:1px solid rgba(255,255,255,0.18);padding-top:6mm">
+      <div class="col">
+        <strong>OLEFOOT © 2026</strong><br/>
+        Confidential & Proprietary
+      </div>
+      <div class="col" style="text-align:right">
+        <strong class="yel">Legacy Tech</strong><br/>
+        For intended recipients only
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+</body>
+</html>

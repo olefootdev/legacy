@@ -25,8 +25,9 @@ import {
   // Marcações normalizadas
   N_BOX_DEPTH, N_SIX_DEPTH, N_PENALTY_SPOT_HOME,
   N_BOX_HALF_W, N_SIX_HALF_W, N_GOAL_HALF_W,
-  // Dimensões gol
+  // Dimensões gol e áreas
   GOAL_INNER_WIDTH_IFAB_M, GOAL_CROSSBAR_HEIGHT_M,
+  GOAL_WIDTH_M, PENALTY_AREA_HALF_W_M,
 } from '@/tactical';
 
 export type FieldCameraMode = 'aerial' | 'broadcast' | 'firstperson';
@@ -44,16 +45,16 @@ const FH = 620;  // height (FT + FH = 647)  → 968/620 ≈ 1.561 ≈ 105/68
 const FCX = FL + FW / 2; // center x = 568
 const FCY = FT + FH / 2; // center y = 337
 
-// Gol: profundidade visual 28px, boca 7.32m/68m * FH ≈ 66.7px
+// Gol: profundidade visual 28px, boca usa GOAL_WIDTH_M (10m) / 68m * FH
 const GOAL_D = 28;
-const GOAL_H = Math.round((7.32 / 68) * FH); // ≈ 67
+const GOAL_H = Math.round((GOAL_WIDTH_M / 68) * FH); // 10/68 * 620 ≈ 91px
 
 // Penalti: 11m / 105m = 10.48% do FW ≈ 101.4px
 const PEN_X_PCT = 11 / 105;
 
-// Área grande: 16.5m × 40.3m
-const BOX_W = Math.round((16.5 / 105) * FW); // ≈ 152
-const BOX_H = Math.round((40.3 / 68) * FH);  // ≈ 367
+// Área grande: 16.5m × PENALTY_AREA_HALF_W_M*2
+const BOX_W = Math.round((16.5 / 105) * FW);                          // ≈ 152
+const BOX_H = Math.round(((PENALTY_AREA_HALF_W_M * 2) / 68) * FH);   // ≈ 501
 const BOX_T = FCY - BOX_H / 2;
 
 // Círculo central: r = 9.15m / 105m * FW / 2 ≈ 42.2
@@ -98,8 +99,10 @@ function ivWidthAtDepth(t: number): number {
  * Adapta para normalizedToFirstViewSvg({ x: fieldY, y: fieldX }) de @/tactical.
  */
 function ivProject(fieldX: number, fieldY: number) {
-  const { sx, sy } = normalizedToFirstViewSvg({ x: fieldY, y: fieldX });
-  const t = Math.max(0, Math.min(1, fieldX / 100));
+  const safeX = Number.isFinite(fieldX) ? fieldX : 50;
+  const safeY = Number.isFinite(fieldY) ? fieldY : 50;
+  const { sx, sy } = normalizedToFirstViewSvg({ x: safeY, y: safeX });
+  const t = Math.max(0, Math.min(1, safeX / 100));
   const tEased = Math.pow(t, 0.78);
   const scale = 1.05 - tEased * 0.55;
   return { sx, sy, scale, depth: tEased };

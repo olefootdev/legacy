@@ -13,6 +13,13 @@ import {
   type ActionOption,
 } from './collectiveIndividualDecision';
 import { evaluateSupportQuality } from './teamCollectiveState';
+import {
+  POSITION_BEHAVIORS,
+} from '../../agents/knowledge/TacticaDoZero';
+import { buildPerception } from '../../agents/core/AgentPerception';
+import { decideIntention } from '../../agents/core/AgentDecision';
+import { slotToPositionId } from '../../agents/bridge/slotToPositionId';
+import { ROLE_EXPECTATIONS } from '../../agents/context/PlayerRoleExpectations';
 import { getZoneTags, getDefendingGoalX, clampGoalkeeperTargetX, type TeamSide } from '@/match/fieldZones';
 import { getDefensiveIntent } from '@/tactics/playingStyle';
 import { pick01ForDecision } from './decisionRng';
@@ -36,6 +43,95 @@ import {
 import {
   shouldStartDummyRun,
 } from '@/polishAI/dummyRun';
+
+// ── Mudança 2: mapeia Intention do ebook → bias de score por ação do legado ──
+function intentionToActionBias(intention: string): Record<string, number> {
+  switch (intention) {
+    case 'RUN_BEHIND':   return { attack_depth: 0.4, infiltrate: 0.3, offer_diagonal_line: 0.1 };
+    case 'OVERLAP':      return { overlap_run: 0.5, open_width: 0.2 };
+    case 'HOLD_WIDTH':   return { open_width: 0.4, offer_diagonal_line: 0.2 };
+    case 'PRESS':        return { press_carrier: 0.4, delay_press: 0.1 };
+    case 'COVER':        return { defensive_cover: 0.4, cover_central: 0.3 };
+    case 'TRACK_RUNNER': return { mark_man: 0.3, mark_zone: 0.2 };
+    case 'DELAY':        return { delay_press: 0.4, recover_behind_ball: 0.2 };
+    case 'RECOVER':      return { recover_behind_ball: 0.5, move_to_slot: 0.2 };
+    case 'HOLD_SHAPE':   return { move_to_slot: 0.3, idle: 0.1 };
+    case 'SUPPORT_BALL': return { offer_short_line: 0.3, offer_diagonal_line: 0.2 };
+    case 'HOLD_UP':      return { offer_short_line: 0.2, move_to_slot: 0.2 };
+    case 'FINISH':       return { attack_depth: 0.3, infiltrate: 0.2 };
+    default:             return {};
+  }
+}
+
+// ── Mudança 3: POSITION_BEHAVIORS → multiplicadores adicionais por princípio ──
+function positionPrinciplesBias(
+  slotId: string | undefined,
+  teamHasBall: boolean,
+): Record<string, number> {
+  const posId = slotToPositionId(slotId ?? '');
+  const behavior = POSITION_BEHAVIORS[posId];
+  const roleExpect = ROLE_EXPECTATIONS[posId];
+  if (!behavior && !roleExpect) return {};
+
+  const bias: Record<string, number> = {};
+
+  // ── Integração 3a: POSITION_BEHAVIORS offensivePrinciples/defensivePrinciples ──
+  if (behavior) {
+    const principles = teamHasBall ? behavior.offensivePrinciples : behavior.defensivePrinciples;
+    if (teamHasBall) {
+      const off = principles as typeof behavior.offensivePrinciples;
+      if (off.width)     bias['open_width']          = (bias['open_width']          ?? 0) + 0.2;
+      if (off.overlap)   bias['overlap_run']          = (bias['overlap_run']          ?? 0) + 0.25;
+      if (off.depth)     bias['attack_depth']         = (bias['attack_depth']         ?? 0) + 0.2;
+      if (off.support)   bias['offer_short_line']     = (bias['offer_short_line']     ?? 0) + 0.15;
+      if (off.wallPass)  bias['offer_diagonal_line']  = (bias['offer_diagonal_line']  ?? 0) + 0.15;
+      if (off.demarking === 'run') bias['infiltrate'] = (bias['infiltrate']           ?? 0) + 0.2;
+    } else {
+      const def = principles as typeof behavior.defensivePrinciples;
+      if (def.pressing === 'total')   bias['press_carrier']    = (bias['press_carrier']    ?? 0) + 0.3;
+      if (def.pressing === 'partial') bias['press_carrier']    = (bias['press_carrier']    ?? 0) + 0.15;
+      if (def.coverage)               bias['defensive_cover']  = (bias['defensive_cover']  ?? 0) + 0.2;
+      if (def.delay)                  bias['delay_press']      = (bias['delay_press']      ?? 0) + 0.2;
+      if (def.basculation)            bias['cover_central']    = (bias['cover_central']    ?? 0) + 0.15;
+    }
+  }
+
+  // ── Integração 3b: preferredActions por posição (PlayerRoleExpectations) ──────
+  if (roleExpect) {
+    const pref = roleExpect.preferredActions;
+    if (teamHasBall) {
+      switch (pref.movementType) {
+        case 'overlap':  bias['overlap_run']          = (bias['overlap_run']          ?? 0) + 0.3;  break;
+        case 'run':      bias['attack_depth']         = (bias['attack_depth']         ?? 0) + 0.2;  break;
+        case 'sprint':   bias['attack_depth']         = (bias['attack_depth']         ?? 0) + 0.25;
+                         bias['infiltrate']           = (bias['infiltrate']           ?? 0) + 0.15; break;
+        case 'hold':     bias['move_to_slot']         = (bias['move_to_slot']         ?? 0) + 0.2;  break;
+        case 'walk':     bias['offer_short_line']     = (bias['offer_short_line']     ?? 0) + 0.15; break;
+      }
+      switch (pref.attackingAction) {
+        case 'cross':      bias['open_width']           = (bias['open_width']           ?? 0) + 0.2;  break;
+        case 'run_behind': bias['attack_depth']         = (bias['attack_depth']         ?? 0) + 0.25;
+                           bias['infiltrate']           = (bias['infiltrate']           ?? 0) + 0.15; break;
+        case 'hold_up':    bias['offer_short_line']     = (bias['offer_short_line']     ?? 0) + 0.2;
+                           bias['drop_to_create_space'] = (bias['drop_to_create_space'] ?? 0) + 0.2;  break;
+        case 'dribble':    bias['drag_marker']          = (bias['drag_marker']          ?? 0) + 0.15; break;
+      }
+    } else {
+      switch (pref.defensiveAction) {
+        case 'press':      bias['press_carrier']          = (bias['press_carrier']          ?? 0) + 0.25; break;
+        case 'intercept':  bias['close_passing_lane']     = (bias['close_passing_lane']     ?? 0) + 0.25;
+                           bias['anticipate_second_ball'] = (bias['anticipate_second_ball'] ?? 0) + 0.15; break;
+        case 'tackle':     bias['press_carrier']          = (bias['press_carrier']          ?? 0) + 0.2;  break;
+        case 'cover':      bias['defensive_cover']        = (bias['defensive_cover']        ?? 0) + 0.25; break;
+        case 'block':      bias['cover_central']          = (bias['cover_central']          ?? 0) + 0.2;
+                           bias['recover_behind_ball']    = (bias['recover_behind_ball']    ?? 0) + 0.15; break;
+        case 'hold':       bias['move_to_slot']           = (bias['move_to_slot']           ?? 0) + 0.2;  break;
+      }
+    }
+  }
+
+  return bias;
+}
 
 /** Bote só se o duelo de marcação ou a antecipação favorecer — evita exposição burra. */
 function shouldPressCarrierByDuel(ctx: DecisionContext, reading: ContextReading): boolean {
@@ -62,6 +158,36 @@ export function decideOffBall(ctx: DecisionContext): OffBallAction {
 function decideOffBallCore(ctx: DecisionContext): OffBallAction {
   const reading = buildContextReading(ctx);
   const teamHasBall = ctx.possession === ctx.self.side;
+
+  // ── REGRA SOBERANA: fora do raio de ação, o agente guarda o slot ─────────────
+  // O agente só executa ações off-ball complexas quando a bola está dentro do seu
+  // raio de ação. Fora disso, move_to_slot é a lei — o agente não se move por conta.
+  // Exceções: marcação designada, receptor esperado, goleiro.
+  if (ctx.self.role !== 'gk') {
+    const distToBall = Math.hypot(ctx.self.x - ctx.ballX, ctx.self.z - ctx.ballZ);
+    // Raios por slot (metros) — espelha tacticalRadiiFor mas sem importar o módulo
+    const actionRadius = (() => {
+      const sid = (ctx.self.slotId ?? '').toLowerCase();
+      if (sid.includes('zag'))              return 14;
+      if (sid === 'le' || sid === 'ld')     return 16;
+      if (sid === 'vol')                    return 18;
+      if (sid.startsWith('mc'))             return 20;
+      if (sid === 'pe' || sid === 'pd')     return 22;
+      if (sid === 'ata')                    return 24;
+      if (ctx.self.role === 'def')          return 14;
+      if (ctx.self.role === 'mid')          return 20;
+      if (ctx.self.role === 'attack')       return 24;
+      return 18;
+    })();
+
+    const isDirectlyInvolved = ctx.isReceiver || ctx.carrierId === ctx.self.id;
+    const hasMarkingAssignment = !teamHasBall && ctx.markingAssignment;
+
+    if (!isDirectlyInvolved && !hasMarkingAssignment && distToBall > actionRadius) {
+      // Fora do raio: guarda o slot. Não se move por conta.
+      return { type: 'move_to_slot', targetX: ctx.slotX, targetZ: ctx.slotZ };
+    }
+  }
 
   // ── Sprint L4: marcação individual designada pelo manager ──
   // Quando time perde a posse e há assignment, jogador marca o adversário designado.
@@ -146,8 +272,64 @@ function decideOffBallCore(ctx: DecisionContext): OffBallAction {
   ];
   const half = ctx.clockHalf ?? 1;
   const zoneTags = getZoneTags({ x: ctx.self.x, z: ctx.self.z }, { team: ctx.self.side, half });
-  const offBallIntentTilt = ctx.teamIntentBias as Record<string, number> | undefined;
-  const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, { tags: zoneTags, macroTilt: offBallIntentTilt });
+
+  // ── Mudança 1: decideIntention() do ebook → bias de ação ─────────────────
+  // Converte coordenadas world (metros) → normalized (0-100) para o agente.
+  const posNormX = (ctx.self.x / FIELD_LENGTH) * 100;
+  const posNormY = (ctx.self.z / FIELD_WIDTH)  * 100;
+  const ballNormX = (ctx.ballX / FIELD_LENGTH) * 100;
+  const ballNormY = (ctx.ballZ / FIELD_WIDTH)  * 100;
+  const goalNormX = ctx.attackDir === 1 ? 97 : 3;
+
+  const positionId = slotToPositionId(ctx.self.slotId ?? '');
+
+  // Constrói percepção normalizada (0-100) para decideIntention do ebook
+  const teammateNormPositions = ctx.teammates.map(t => ({
+    x: (t.x / FIELD_LENGTH) * 100,
+    y: (t.z / FIELD_WIDTH) * 100,
+  }));
+  const opponentNormPositions = ctx.opponents.map(o => ({
+    x: (o.x / FIELD_LENGTH) * 100,
+    y: (o.z / FIELD_WIDTH) * 100,
+  }));
+  const perception = buildPerception(
+    { x: posNormX, y: posNormY },
+    { x: ballNormX, y: ballNormY },
+    { x: goalNormX, y: 50 },
+    teammateNormPositions,
+    opponentNormPositions,
+    teamHasBall,
+    false,
+  );
+  const ebookIntention = decideIntention(
+    perception,
+    { speedBias: 1, attackBias: 1, reachBias: 1, holdBias: 1 },
+    75,
+    null,
+    positionId,
+    ctx.self.side,
+    ctx.possession,
+  );
+
+  // Mescla: bias do ebook (peso 0.7) + princípios por posição (peso 1.0) + teamIntentBias existente
+  const intentionBias = intentionToActionBias(ebookIntention);
+  const principlesBias = positionPrinciplesBias(ctx.self.slotId, teamHasBall);
+  const baseTilt = ctx.teamIntentBias as Record<string, number> | undefined;
+  const mergedTilt: Record<string, number> = { ...(baseTilt ?? {}) };
+  for (const [k, v] of Object.entries(intentionBias)) {
+    mergedTilt[k] = (mergedTilt[k] ?? 0) + v * 0.7;
+  }
+  for (const [k, v] of Object.entries(principlesBias)) {
+    mergedTilt[k] = (mergedTilt[k] ?? 0) + v;
+  }
+
+  const pick = chooseAction(role, attrs, arch, tctx, pstate, options, !!ctx.decisionDebug, {
+    tags: zoneTags,
+    macroTilt: mergedTilt,
+    agentProfile: ctx.agentProfile,
+    teamIntent: ctx.teamIntent,
+    decisionCtx: ctx,
+  });
   if (!teamHasBall) {
     // Voice command: pressão / falta tática → força press mais próximo, ignora delay.
     const vPress = ctx.voiceBias?.pressIntensity ?? 0;

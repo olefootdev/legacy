@@ -451,6 +451,9 @@ export interface DecisionContext {
   profile: PlayerProfile;
   agentProfile?: import('@/agents/types').AgentProfile;
   teamIntent?: import('@/agents/types').TeamIntent;
+  /** Integração 1: perfil tático completo por posição (PlayerRoleExpectations).
+   *  Injetado pelo TacticalSimLoop. Consumido por OffBallDecision e OnBallDecision. */
+  roleBriefing?: import('../../agents/context/PlayerRoleExpectations').RoleBriefing;
   teamPhase: TeamPhase;
   /** Current ball carrier id (any team) */
   carrierId: string | null;

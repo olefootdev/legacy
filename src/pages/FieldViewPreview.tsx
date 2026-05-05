@@ -27,9 +27,8 @@ import { useGameStore } from '@/game/store';
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { mergeLineupWithDefaults, awayStartingElevenFromSquad } from '@/entities/lineup';
 import { matchAttributesFromPlayerEntity, behaviorToCognitiveArchetype } from '@/match/playerInMatch';
-import { initFLState, tickFLState, flStateToPitchPlayers, TICK_MS, type FLState } from '@/simulation/FieldLabEngine';
 
-// ── Formation position helpers ────────────────────────────────────────────────
+import { TacticalOverlay } from '@/components/match/TacticalOverlay';
 
 /**
  * Retorna jogadores com posições fixas da formação (engine % 0-100).
@@ -70,21 +69,21 @@ function kickoffPositions(
 
 // ── Fallback mock (used only when store has no squad) ─────────────────────────
 function mkPlayer(id: string, name: string, num: number, pos: string,
-  role: 'attack' | 'mid' | 'def' | 'gk', x: number, y: number, fatigue = 20): PitchPlayerState {
-  return { playerId: id, slotId: id, name, num, pos, role, x, y, fatigue, heading: 0 };
+  role: 'attack' | 'mid' | 'def' | 'gk', x: number, y: number, fatigue = 20, slotId?: string): PitchPlayerState {
+  return { playerId: id, slotId: slotId ?? id, name, num, pos, role, x, y, fatigue, heading: 0 };
 }
 const FALLBACK_PLAYERS: PitchPlayerState[] = [
-  mkPlayer('gk1', 'Murilo Sá', 1, 'GOL', 'gk', 5, 50, 10),
-  mkPlayer('zag1', 'Rafael Lima', 4, 'ZAG', 'def', 22, 32, 15),
-  mkPlayer('zag2', 'Bruno Costa', 5, 'ZAG', 'def', 22, 68, 12),
-  mkPlayer('lat1', 'Diego Ramos', 2, 'LAT', 'def', 18, 15, 28),
-  mkPlayer('lat2', 'André Paulo', 3, 'LAT', 'def', 18, 85, 22),
-  mkPlayer('vol1', 'Thiago Cruz', 8, 'VOL', 'mid', 40, 50, 35),
-  mkPlayer('mei1', 'Lucas Brito', 10, 'MEI', 'mid', 52, 28, 18),
-  mkPlayer('mei2', 'Caio Alves', 6, 'MEI', 'mid', 52, 72, 42),
-  mkPlayer('pe1', 'Vini Santos', 11, 'PE', 'attack', 68, 18, 55),
-  mkPlayer('pd1', 'Rodry Neto', 7, 'PD', 'attack', 68, 82, 60),
-  mkPlayer('ata1', 'Gabri Gol', 9, 'ATA', 'attack', 76, 50, 30),
+  mkPlayer('gk1',   'Murilo Sá',    1,  'GOL', 'gk',     5, 50, 10, 'gol'),
+  mkPlayer('zag1',  'Rafael Lima',  4,  'ZAG', 'def',   22, 32, 15, 'zag1'),
+  mkPlayer('zag2',  'Bruno Costa',  5,  'ZAG', 'def',   22, 68, 12, 'zag2'),
+  mkPlayer('lat1',  'Diego Ramos',  2,  'LAT', 'def',   18, 15, 28, 'le'),
+  mkPlayer('lat2',  'André Paulo',  3,  'LAT', 'def',   18, 85, 22, 'ld'),
+  mkPlayer('vol1',  'Thiago Cruz',  8,  'VOL', 'mid',   40, 50, 35, 'vol'),
+  mkPlayer('mei1',  'Lucas Brito',  10, 'MEI', 'mid',   52, 28, 18, 'mc1'),
+  mkPlayer('mei2',  'Caio Alves',   6,  'MEI', 'mid',   52, 72, 42, 'mc2'),
+  mkPlayer('pe1',   'Vini Santos',  11, 'PE',  'attack', 68, 18, 55, 'pe'),
+  mkPlayer('pd1',   'Rodry Neto',   7,  'PD',  'attack', 68, 82, 60, 'pd'),
+  mkPlayer('ata1',  'Gabri Gol',    9,  'ATA', 'attack', 76, 50, 30, 'ata'),
 ];
 
 /** Fallback bench mock — só é usado quando a loja está vazia (dev preview). */
@@ -351,6 +350,7 @@ export function FieldViewPreview() {
   const [cameraTrack, setCameraTrack] = useState<CameraTrackMode>('static');
   const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
   const [cameraZoom, setCameraZoom] = useState(1);
+  const [tacticalMode, setTacticalMode] = useState(false);
 
   // ── Formation fixed positions state ──────────────────────────────────────
   // matchStarted: false = kickoff positions, true = formation positions (fixed)
@@ -430,60 +430,16 @@ export function FieldViewPreview() {
 
   const engine = useLegacyMatchEngine(homeXI, () => {}, false, 1, awayRoster, effectivePlayersById);
 
-  // ── FieldLabEngine: movimento real dos jogadores (Fase 2+3) ──────────────
-  const [flState, setFlState] = useState<FLState>(() =>
-    initFLState(formation, (nextFixture?.opponent?.formationScheme as FormationSchemeId | undefined) ?? '4-4-2')
-  );
-  const flStateRef = useRef(flState);
-  const flRafRef = useRef<number | null>(null);
-  const flLastMinuteRef = useRef(performance.now());
-
-  useEffect(() => { flStateRef.current = flState; }, [flState]);
-
-  const flRunLoop = useCallback(() => {
-    const s = flStateRef.current;
-    if (!s.playing) { flRafRef.current = null; return; }
-    const next = tickFLState(s);
-    flStateRef.current = next;
-    setFlState(next);
-    flRafRef.current = requestAnimationFrame(flRunLoop);
-  }, []);
-
-  // Sincroniza playing com a fase do engine legacy
-  useEffect(() => {
-    const isPlaying = engine.phase === 'playing';
-    if (isPlaying && !flStateRef.current.playing) {
-      const next = { ...flStateRef.current, playing: true };
-      flStateRef.current = next;
-      setFlState(next);
-      flLastMinuteRef.current = performance.now();
-      flRafRef.current = requestAnimationFrame(flRunLoop);
-    } else if (!isPlaying && flStateRef.current.playing) {
-      const next = { ...flStateRef.current, playing: false };
-      flStateRef.current = next;
-      setFlState(next);
-      if (flRafRef.current) { cancelAnimationFrame(flRafRef.current); flRafRef.current = null; }
-    }
-  }, [engine.phase, flRunLoop]);
-
-  // Sincroniza placar e minuto do engine legacy → flState
-  useEffect(() => {
-    setFlState(s => ({ ...s, homeScore: engine.homeScore, awayScore: engine.awayScore, minute: engine.minute }));
-  }, [engine.homeScore, engine.awayScore, engine.minute]);
-
-  // Reinicia FieldLabEngine quando formação muda
-  useEffect(() => {
-    if (flRafRef.current) { cancelAnimationFrame(flRafRef.current); flRafRef.current = null; }
-    const fresh = initFLState(formation, (nextFixture?.opponent?.formationScheme as FormationSchemeId | undefined) ?? '4-4-2');
-    flStateRef.current = fresh;
-    setFlState(fresh);
-  }, [formation, nextFixture?.opponent?.formationScheme]);
-
-  // Cleanup
-  useEffect(() => () => { if (flRafRef.current) cancelAnimationFrame(flRafRef.current); }, []);
-
-  // Converte FLState → PitchPlayerState para o FieldView
-  const flPitch = useMemo(() => flStateToPitchPlayers(flState), [flState]);
+  // flPitch vem diretamente do TacticalSimLoop via engine —
+  // que já tem Yuka, MatchFieldContext, TerritoryRules, TacticaDoZero e OffBallDecision integrados.
+  const flPitch = {
+    homePlayers:    engine.homePlayers,
+    awayPlayers:    engine.awayPlayers,
+    ballX:          engine.ballX,
+    ballY:          engine.ballY,
+    onBallPlayerId: engine.onBallPlayerId,
+    possession:     engine.possession,
+  };
 
   // ── Substituição local (não persiste no store, vale só na partida) ────────
   const applySubstitutionLocal = useCallback((outId: string, inId: string): { ok: boolean; message: string } => {
@@ -515,6 +471,11 @@ export function FieldViewPreview() {
     const outLast = (outgoing.name ?? '').split(' ').pop();
     return { ok: true, message: `↪ ${outLast} sai · ${inLast} entra` };
   }, [homeXI, effectivePlayersById, usedSubs]);
+
+  // ── Tactical mode: update player role/archetype ao vivo ──────────────────
+  const handleTacticalUpdate = useCallback((playerId: string, patch: Partial<Pick<PitchPlayerState, 'cognitiveArchetype' | 'role'>>) => {
+    setHomeXI(prev => prev.map(p => p.playerId === playerId ? { ...p, ...patch } : p));
+  }, []);
 
   // Voz: "substituir <nome>" → escolhe melhor reserva por role.
   const substituteByName = useCallback((rawName: string): { ok: boolean; message: string } => {
@@ -936,12 +897,58 @@ export function FieldViewPreview() {
             className="w-full"
           />
 
+          {/* ── Modo Tático: campo top-down 2D ── */}
+          {tacticalMode && (
+            <div className="absolute inset-0 z-30">
+              <TacticalOverlay
+                homePlayers={aerialHomePlayers}
+                awayPlayers={aerialAwayPlayers}
+                ballX={flPitch.ballX}
+                ballY={flPitch.ballY}
+                onUpdatePlayer={handleTacticalUpdate}
+              />
+            </div>
+          )}
+
+          {/* ── Botão TÁTICO ── */}
+          <button
+            type="button"
+            onClick={() => setTacticalMode(m => !m)}
+            style={{
+              position: 'absolute',
+              bottom: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 40,
+              background: tacticalMode ? '#FDE100' : 'rgba(0,0,0,0.82)',
+              border: `2px solid ${tacticalMode ? '#000' : '#FDE100'}`,
+              color: tacticalMode ? '#000' : '#FDE100',
+              fontFamily: 'var(--font-display, monospace)',
+              fontSize: 9,
+              fontWeight: 800,
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+              padding: '6px 18px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+            aria-label="Modo tático"
+          >
+            <span style={{ fontSize: 12 }}>👁</span>
+            TÁTICO
+          </button>
+
           {/* ── Cerimônia de abertura: botão Apitar ── */}
-          {engine.phase === 'pregame' && engine.legacyModeActive && (
+          {engine.phase === 'pregame' && (
             <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
               <button
                 className="pointer-events-auto bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-bold px-8 py-4 rounded-full text-lg shadow-2xl transition-colors"
-                onClick={() => engine.startMatch()}
+                onClick={() => {
+                  if (!engine.legacyModeActive) engine.toggleLegacyMode();
+                  engine.startMatch();
+                }}
                 aria-label="Apitar início da partida"
               >
                 ▶ Apitar

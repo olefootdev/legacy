@@ -146,3 +146,15 @@ export {
   getPlayerIntention,
   getTeamIntentions,
 } from './intentionEngine';
+
+export {
+  slotToTacticalRoleId,
+  slotToTacticalRole,
+} from './slotToTacticalRole';
+
+export {
+  findNearestZoneCenter,
+  isInAllowedZone,
+  isInAllowedZoneSided,
+  getTargetZoneCenter,
+} from './zonePositioning';

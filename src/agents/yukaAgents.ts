@@ -8,7 +8,7 @@ import {
   WanderBehavior,
   type GameEntity,
 } from 'yuka';
-import { clampToPitch } from '@/simulation/field';
+import { clampToPitch, FIELD_LENGTH, FIELD_WIDTH } from '@/simulation/field';
 import { YUKA_BOUNDING_RADIUS_M, YUKA_SEPARATION_NEIGHBOR_RADIUS_M } from '@/match/tacticalSpacingTuning';
 import {
   fuzzifyDistance,
@@ -239,6 +239,16 @@ export function stepVehicle(binding: AgentBinding, dt: number) {
   binding.vehicle.velocity.y = 0;
   const pos = binding.vehicle.position;
   const vel = binding.vehicle.velocity;
+
+  // Guard: if position became NaN (e.g. from corrupted arrive.target), reset to center
+  if (!Number.isFinite(pos.x) || !Number.isFinite(pos.z)) {
+    pos.x = Number.isFinite(pos.x) ? pos.x : FIELD_LENGTH / 2;
+    pos.z = Number.isFinite(pos.z) ? pos.z : FIELD_WIDTH / 2;
+    vel.x = 0;
+    vel.z = 0;
+    return;
+  }
+
   const c = clampToPitch(pos.x, pos.z, 0.9);
   if (c.x !== pos.x) {
     vel.x *= -0.3;

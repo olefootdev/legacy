@@ -5,200 +5,21 @@
  * Adaptado para Global League MVP com 3 divisões
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useGameStore, useGameDispatch } from '@/game/store';
+import { useState, useMemo, useEffect } from 'react';
+import { useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Zap, Trophy, Activity, Target, Clock, ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
+import { Trophy, Activity, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
-import type { GlobalTeam, GlobalLeagueMVPState, PlayoffRound } from '@/match/globalLeagueMVP';
-import { createGlobalTeam, generatePlayoffRounds, GLOBAL_LEAGUE_MVP_CONSTANTS } from '@/match/globalLeagueMVP';
+import type { GlobalTeam, PlayoffRound } from '@/match/globalLeagueMVP';
 import { SCHEDULER_CONFIG } from '@/match/globalRoundScheduler';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
-function seedGlobalLeagueMock(dispatch: (a: any) => void) {
-  dispatch({ type: 'INIT_GLOBAL_LEAGUE_MVP' });
-  const clubs = [
-    'Arena FC', 'Neon United', 'Pixel Atlético', 'Olefoot Stars',
-    'Legacy Boys', 'Meta Sports', 'Guarda Velha', 'Vermelhão',
-    'Lobos Azuis', 'Tigres FC', 'Águias do Sul', 'Rivais Eternos',
-    'Real Brasil', 'Cidade Alta', 'Santos do Norte', 'Verdão Clube',
-    'Furacão SP', 'Galo Negro', 'Estrela do Mar', 'Trovão Azul',
-    'Lanterna FC', 'Comandante', 'Costa Brava', 'Vila Nova',
-    'Capital Sul', 'Sertão FC', 'Voador Branco', 'Cometa SC',
-    'Trama Azul', 'Olho do Tigre', 'Voo do Falcão', 'Rei do Rio',
-  ];
-  clubs.forEach((name, i) => {
-    const short = name.split(' ').map((s) => s[0]).join('').slice(0, 3).toUpperCase();
-    dispatch({
-      type: 'REGISTER_GLOBAL_TEAM',
-      managerId: `mock_mgr_${i}`,
-      clubName: name,
-      clubShort: short,
-      overall: 60 + Math.floor(Math.random() * 30),
-    });
-  });
-  dispatch({ type: 'ADMIN_START_GLOBAL_PLAYOFFS' });
-  dispatch({ type: 'START_GLOBAL_PLAYOFF_ROUND', roundNumber: 1 });
-}
-
-const MOCK_CLUBS = [
-  'Arena FC', 'Neon United', 'Pixel Atlético', 'Olefoot Stars',
-  'Legacy Boys', 'Meta Sports', 'Guarda Velha', 'Vermelhão',
-  'Lobos Azuis', 'Tigres FC', 'Águias do Sul', 'Rivais Eternos',
-  'Real Brasil', 'Cidade Alta', 'Santos do Norte', 'Verdão Clube',
-  'Furacão SP', 'Galo Negro', 'Estrela do Mar', 'Trovão Azul',
-  'Lanterna FC', 'Comandante', 'Costa Brava', 'Vila Nova',
-  'Capital Sul', 'Sertão FC', 'Voador Branco', 'Cometa SC',
-  'Trama Azul', 'Olho do Tigre', 'Voo do Falcão', 'Rei do Rio',
-];
-
-function buildMockGlobalLeague(mode: 'live' | 'tactical' | 'finished'): GlobalLeagueMVPState {
-  const now = Date.now();
-  const teams: GlobalTeam[] = MOCK_CLUBS.map((name, i) => {
-    const short = name.split(' ').map((s) => s[0]).join('').slice(0, 3).toUpperCase();
-    const t = createGlobalTeam(`mock_mgr_${i}`, name, short, 60 + Math.floor(Math.random() * 30));
-    if (mode === 'finished') {
-      const r = i % 3;
-      t.playoffMatchesPlayed = 1;
-      if (r === 0) { t.playoffPoints = 3; t.playoffWins = 1; t.playoffGoalsFor = 2; t.playoffGoalsAgainst = 1; }
-      else if (r === 1) { t.playoffPoints = 1; t.playoffDraws = 1; t.playoffGoalsFor = 1; t.playoffGoalsAgainst = 1; }
-      else { t.playoffPoints = 0; t.playoffLosses = 1; t.playoffGoalsFor = 0; t.playoffGoalsAgainst = 2; }
-    }
-    return t;
-  });
-
-  const rounds: PlayoffRound[] = generatePlayoffRounds(teams);
-
-  // Reposicionar kickoffs relativos a "agora", baseado no modo escolhido.
-  // tactical: kickoff da R1 em ~3min (fase tactical, ~3min restantes).
-  // live: kickoff da R1 já há 20s (live, ~40s restantes).
-  // finished: R1 acabou há 30s, R2 agendada no próximo top de 5min.
-  const r1KickoffOffsetMs =
-    mode === 'live' ? -20 * 1000
-    : mode === 'finished' ? -90 * 1000
-    : 3 * 60 * 1000;
-  const interval = GLOBAL_LEAGUE_MVP_CONSTANTS.ROUND_INTERVAL_MS;
-
-  rounds.forEach((r, idx) => {
-    r.scheduledKickoffMs = now + r1KickoffOffsetMs + idx * interval;
-    if (idx === 0 && mode === 'live') {
-      r.status = 'live';
-      r.actualKickoffMs = r.scheduledKickoffMs;
-      r.fixtures = r.fixtures.map((fx, i) => ({
-        ...fx,
-        status: 'live' as const,
-        kickoffMs: r.actualKickoffMs,
-        scoreHome: i === 0 ? 1 : i === 1 ? 0 : 2,
-        scoreAway: i === 0 ? 0 : i === 1 ? 0 : 1,
-        currentMinute: Math.min(90, Math.floor(20 / GLOBAL_MATCH_CONSTANTS.GAME_MINUTE_MS * 1000)),
-      }));
-    }
-    if (idx === 0 && mode === 'finished') {
-      r.status = 'finished';
-      r.actualKickoffMs = now - 90 * 1000;
-      r.finishedAtMs = now - 30 * 1000;
-      r.fixtures = r.fixtures.map((fx, i) => ({
-        ...fx,
-        status: 'finished' as const,
-        kickoffMs: r.actualKickoffMs,
-        finishedAtMs: r.finishedAtMs,
-        scoreHome: i % 3 === 0 ? 2 : i % 3 === 1 ? 1 : 0,
-        scoreAway: i % 3 === 0 ? 1 : i % 3 === 1 ? 1 : 2,
-        currentMinute: 90,
-      }));
-    }
-    if (idx === 1 && mode === 'finished') {
-      // R2 agendada no próximo top de 5min do relógio
-      const intervalMs = 5 * 60 * 1000;
-      r.scheduledKickoffMs = Math.ceil((now + 1000) / intervalMs) * intervalMs;
-      r.status = 'scheduled';
-    }
-  });
-
-  return {
-    seasonId: `season_${now}`,
-    status: 'playoffs',
-    teams,
-    minTeamsRequired: GLOBAL_LEAGUE_MVP_CONSTANTS.MIN_TEAMS,
-    playoffRounds: rounds,
-    currentPlayoffRound: mode === 'finished' ? 2 : 1,
-    leagueRounds: [],
-    teamsPerDivision: Math.ceil(GLOBAL_LEAGUE_MVP_CONSTANTS.MIN_TEAMS / GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS),
-    promotionPercentage: GLOBAL_LEAGUE_MVP_CONSTANTS.PROMOTION_PERCENTAGE,
-    relegationPercentage: GLOBAL_LEAGUE_MVP_CONSTANTS.RELEGATION_PERCENTAGE,
-    createdAt: now,
-    lastUpdated: now,
-  };
-}
-
-function buildMockActiveLeague(): GlobalLeagueMVPState {
-  const now = Date.now();
-  const teams: GlobalTeam[] = MOCK_CLUBS.map((name, i) => {
-    const short = name.split(' ').map((s) => s[0]).join('').slice(0, 3).toUpperCase();
-    const t = createGlobalTeam(`mock_mgr_${i}`, name, short, 60 + Math.floor(Math.random() * 30));
-    // Distribuir em 3 divisões (~11 cada) — top 11 → div 1, próximos 11 → div 2, resto → div 3
-    const division = Math.min(3, Math.floor(i / 11) + 1);
-    const positionInDiv = (i % 11) + 1;
-    const matches = 4 + Math.floor(Math.random() * 3);
-    const wins = Math.floor(Math.random() * (matches + 1));
-    const draws = Math.floor(Math.random() * (matches - wins + 1));
-    const losses = matches - wins - draws;
-    const goalsFor = wins * 2 + draws + Math.floor(Math.random() * 3);
-    const goalsAgainst = losses * 2 + draws + Math.floor(Math.random() * 3);
-    return {
-      ...t,
-      division,
-      position: positionInDiv,
-      previousPosition: positionInDiv + (Math.random() > 0.5 ? -1 : 1),
-      matchesPlayed: matches,
-      wins,
-      draws,
-      losses,
-      points: wins * 3 + draws,
-      goalsFor,
-      goalsAgainst,
-      goalDifference: goalsFor - goalsAgainst,
-      recentForm: Array.from({ length: Math.min(5, matches) }, () => {
-        const r = Math.random();
-        return r < 0.5 ? 'W' as const : r < 0.75 ? 'D' as const : 'L' as const;
-      }),
-    };
-  });
-
-  return {
-    seasonId: `season_${now}`,
-    status: 'active',
-    teams,
-    minTeamsRequired: GLOBAL_LEAGUE_MVP_CONSTANTS.MIN_TEAMS,
-    playoffRounds: [],
-    leagueRounds: [],
-    currentLeagueRound: 5,
-    teamsPerDivision: Math.ceil(GLOBAL_LEAGUE_MVP_CONSTANTS.MIN_TEAMS / GLOBAL_LEAGUE_MVP_CONSTANTS.DIVISIONS),
-    promotionPercentage: GLOBAL_LEAGUE_MVP_CONSTANTS.PROMOTION_PERCENTAGE,
-    relegationPercentage: GLOBAL_LEAGUE_MVP_CONSTANTS.RELEGATION_PERCENTAGE,
-    createdAt: now,
-    lastUpdated: now,
-  };
-}
-
-function seedMockBannerLive(dispatch: (a: any) => void) {
-  dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: buildMockGlobalLeague('live') });
-}
-
-function seedMockBannerTactical(dispatch: (a: any) => void) {
-  dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: buildMockGlobalLeague('tactical') });
-}
-
-function seedMockBannerFinished(dispatch: (a: any) => void) {
-  dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: buildMockGlobalLeague('finished') });
-}
-
-function seedMockActive(dispatch: (a: any) => void) {
-  dispatch({ type: 'HYDRATE_GLOBAL_LEAGUE_MVP', payload: buildMockActiveLeague() });
-}
+// Mock helpers removidos. Server (Railway) agora gera playoffs/rodadas
+// automaticamente quando teams >= min_teams_required no banco.
+// A tela é uma vitrine read-only do estado real, hidratado via Realtime.
 
 function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: GlobalFixture; index: number }) {
   const lastEvent = fixture.events[fixture.events.length - 1];
@@ -676,7 +497,6 @@ function formatMs(ms: number): string {
 export default function MatchGlobal() {
   const navigate = useNavigate();
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
-  const dispatch = useGameDispatch();
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
   // Hooks devem ser chamados na mesma ordem em todo render — sem returns antes deles.
@@ -691,98 +511,54 @@ export default function MatchGlobal() {
   }, [currentLeagueRound, filterMode]);
 
   // Verificar status da liga
-  if (!globalLeagueMVP) {
-    return (
-      <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-white/60 mb-4">Liga LEGACY não inicializada</p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <button onClick={() => navigate('/liga-global/registro')} className="btn-primary">
-            Ir para Registro
-          </button>
-          {import.meta.env.DEV && (
-            <>
-              <button
-                onClick={() => seedGlobalLeagueMock(dispatch)}
-                className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
-              >
-                Seed mock (dev)
-              </button>
-              <button
-                onClick={() => seedMockBannerLive(dispatch)}
-                className="inline-flex items-center gap-2 bg-neon-green text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
-              >
-                Mock AO VIVO (dev)
-              </button>
-              <button
-                onClick={() => seedMockBannerTactical(dispatch)}
-                className="inline-flex items-center gap-2 bg-neon-yellow text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
-              >
-                Mock Countdown (dev)
-              </button>
-              <button
-                onClick={() => seedMockBannerFinished(dispatch)}
-                className="inline-flex items-center gap-2 bg-white text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-neon-yellow transition-colors"
-              >
-                Mock Pós-Rodada (dev)
-              </button>
-              <button
-                onClick={() => seedMockActive(dispatch)}
-                className="inline-flex items-center gap-2 bg-blue-400 text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
-              >
-                Mock Liga Ativa (dev)
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
+  if (!globalLeagueMVP || globalLeagueMVP.status === 'waiting_teams') {
+    const teamsNow = globalLeagueMVP?.teams.length ?? 0;
+    const minTeams = globalLeagueMVP?.minTeamsRequired ?? 2;
+    const ready = teamsNow >= minTeams;
 
-  if (globalLeagueMVP.status === 'waiting_teams') {
     return (
-      <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-12 text-center">
-        <p className="text-white/60 mb-4">
-          Aguardando times se cadastrarem ({globalLeagueMVP.teams.length}/{globalLeagueMVP.minTeamsRequired})
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <button onClick={() => navigate('/liga-global/registro')} className="btn-primary">
-            Ver Registro
+      <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-16 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5">
+            <Activity className="w-3 h-3 text-neon-green animate-pulse" />
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.25em] text-white/60">
+              {ready ? 'Próxima rodada em instantes' : 'Aguardando managers'}
+            </span>
+          </div>
+
+          <h1 className="font-display text-5xl sm:text-6xl font-bold uppercase text-white">
+            Liga Global
+          </h1>
+
+          <p className="font-serif-hero text-lg sm:text-xl italic text-white/70 max-w-xl mx-auto">
+            {ready
+              ? 'A primeira rodada vai começar automaticamente no próximo topo de 5 minutos do relógio.'
+              : `Faltam ${Math.max(0, minTeams - teamsNow)} ${minTeams - teamsNow === 1 ? 'manager' : 'managers'} para destravar os playoffs.`}
+          </p>
+
+          <div className="flex items-center justify-center gap-8 pt-4">
+            <div>
+              <p className="font-serif-hero text-4xl font-bold text-neon-yellow">{teamsNow}</p>
+              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">Inscritos</p>
+            </div>
+            <div className="h-12 w-px bg-white/10" />
+            <div>
+              <p className="font-serif-hero text-4xl font-bold text-white">{minTeams}</p>
+              <p className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 mt-1">Mínimo</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/liga-global/registro')}
+            className="mt-4 inline-flex items-center gap-2 bg-neon-yellow text-black px-6 py-3 font-display text-xs font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
+          >
+            <span className="skew-x-6">Ver registro completo</span>
           </button>
-          {import.meta.env.DEV && (
-            <>
-              <button
-                onClick={() => seedGlobalLeagueMock(dispatch)}
-                className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-white/80 hover:bg-white/10 transition-colors"
-              >
-                Preencher times (dev)
-              </button>
-              <button
-                onClick={() => seedMockBannerLive(dispatch)}
-                className="inline-flex items-center gap-2 bg-neon-green text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
-              >
-                Mock AO VIVO (dev)
-              </button>
-              <button
-                onClick={() => seedMockBannerTactical(dispatch)}
-                className="inline-flex items-center gap-2 bg-neon-yellow text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
-              >
-                Mock Countdown (dev)
-              </button>
-              <button
-                onClick={() => seedMockBannerFinished(dispatch)}
-                className="inline-flex items-center gap-2 bg-white text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-neon-yellow transition-colors"
-              >
-                Mock Pós-Rodada (dev)
-              </button>
-              <button
-                onClick={() => seedMockActive(dispatch)}
-                className="inline-flex items-center gap-2 bg-blue-400 text-black px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] -skew-x-6 hover:bg-white transition-colors"
-              >
-                Mock Liga Ativa (dev)
-              </button>
-            </>
-          )}
-        </div>
+        </motion.div>
       </div>
     );
   }
