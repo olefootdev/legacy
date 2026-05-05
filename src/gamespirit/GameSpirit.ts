@@ -1289,7 +1289,7 @@ export function gameSpiritTick(
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
       const pGoalAway =
         awayZone === 'att'
-          ? (0.1 + ctx.opponentStrength / 850 + errorTax * 0.15) * awayNumericRatio
+          ? (0.14 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
           : 0;
       const pWideAway = 0.12;
       if (awayZone === 'att' && rShot < pGoalAway) {

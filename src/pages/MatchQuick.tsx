@@ -682,6 +682,7 @@ export function MatchQuick() {
   const [session, setSession] = useState(0);
   const [halfTimeUi, setHalfTimeUi] = useState(false);
   const [summary, setSummary] = useState<EndSummary | null>(null);
+  const [showInstantRewards, setShowInstantRewards] = useState(false);
   const [selected, setSelected] = useState<PitchPlayerState | null>(null);
   const [subPickId, setSubPickId] = useState('');
   const [forfeitOpen, setForfeitOpen] = useState(false);
@@ -1066,9 +1067,7 @@ export function MatchQuick() {
             shotsAgainst,
           });
 
-          // Atualizar narrativeArc no state (via SIM_SYNC ou action dedicada)
-          const updatedLm = { ...lm, narrativeArc: arc };
-          // Note: idealmente criar action SET_NARRATIVE_ARC, mas por ora mantemos no state local
+          dispatch({ type: 'SET_NARRATIVE_ARC', arc });
         }
 
         // ── Sprint 2: Auto-switch de intensidade tática ──────────────────
@@ -1307,6 +1306,7 @@ export function MatchQuick() {
 
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live) || live.phase !== 'playing' || summary !== null) return;
+    const rotateMs = live.narrativeArc ? getArcFeedSpeed(live.narrativeArc.arc) : FEED_ROTATE_MS;
     const id = window.setInterval(() => {
       setFeedWindowStart((s) => {
         const evs = getGameState().liveMatch?.events ?? [];
@@ -1316,9 +1316,9 @@ export function MatchQuick() {
         const clamped = Math.min(s, maxStart);
         return (clamped + 1) % (maxStart + 1);
       });
-    }, FEED_ROTATE_MS);
+    }, rotateMs);
     return () => window.clearInterval(id);
-  }, [live?.mode, live?.phase, session, summary]);
+  }, [live?.mode, live?.phase, live?.narrativeArc?.arc, session, summary]);
 
   // Enforce quick-match card rules: direct red on injury, two yellows -> red.
   const _quickEnforcedRef = useRef<Set<string>>(new Set());
@@ -1715,6 +1715,8 @@ export function MatchQuick() {
       mvp: mvpSnapshot,
       stats: { shotsHome, shotsAway, possessionHome, cornersHome, yellowsHome, redsHome },
     });
+    // Mostrar recompensas instantâneas após 800ms (deixa o summary aparecer primeiro)
+    window.setTimeout(() => setShowInstantRewards(true), 800);
     dispatch({ type: 'FINALIZE_MATCH' });
     trackMissionEvent('fast_match_completed');
     if (live.homeScore > live.awayScore) trackMissionEvent('match_won');
@@ -2119,7 +2121,7 @@ export function MatchQuick() {
   }
 
   return (
-    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-52 md:flex-none" style={{ touchAction: 'pan-y' }}>
+    <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-[calc(13rem+env(safe-area-inset-bottom,0px))] md:flex-none" style={{ touchAction: 'pan-y' }}>
       {/* Streak Bar */}
       <StreakBar streak={quickMatchStreak} />
 
@@ -3655,6 +3657,16 @@ export function MatchQuick() {
             </div>
           )}
 
+          {/* ─── Sprint 3: Desafios Semanais ──────────────────────────────── */}
+          {streakChallenges && streakChallenges.challenges.length > 0 && (
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              <QuickStreakChallengesPanel challenges={streakChallenges.challenges} />
+            </div>
+          )}
+
           {/* CTAs — Legacy Tech */}
           <div className="flex flex-col gap-2 pt-1">
             {summary.result === 'loss' ? (
@@ -3884,6 +3896,19 @@ export function MatchQuick() {
         scoreDiff={summary ? summary.awayScore - summary.homeScore : 0}
         onClose={() => setShowNearMissMotivation(false)}
       />
+
+      {/* Recompensas instantâneas pós-partida */}
+      {summary && (
+        <InstantRewards
+          visible={showInstantRewards}
+          result={summary.result}
+          baseExp={summary.result === 'win' ? 120 : summary.result === 'draw' ? 60 : 30}
+          streakMultiplier={quickMatchStreak && quickMatchStreak.current >= 3 ? 1 + quickMatchStreak.current * 0.1 : 1}
+          streakCount={quickMatchStreak?.current ?? 0}
+          bonuses={live?.performanceBonuses?.map((b) => ({ label: b.name, value: b.exp })) ?? []}
+          onClose={() => setShowInstantRewards(false)}
+        />
+      )}
     </div>
   );
 }

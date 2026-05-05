@@ -13,7 +13,7 @@ import {
   type SlotIndex,
 } from '@/components/penalty';
 
-const TOTAL_KICKS = 5;
+const REGULAR_KICKS = 5;
 
 type Side = 'home' | 'away';
 type Phase = 'setup' | 'kicking-home' | 'awaiting-away' | 'final';
@@ -48,15 +48,20 @@ export function MatchPenaltyV2() {
   const [phase, setPhase] = useState<Phase>('setup');
   const [takerOrder, setTakerOrder] = useState<string[]>([]);
   const [homeShots, setHomeShots] = useState<ShotResult[]>(
-    Array(TOTAL_KICKS).fill('pending'),
+    Array(REGULAR_KICKS).fill('pending'),
   );
   const [awayShots, setAwayShots] = useState<ShotResult[]>(
-    Array(TOTAL_KICKS).fill('pending'),
+    Array(REGULAR_KICKS).fill('pending'),
   );
+  // Em morte súbita, cada round adiciona 1 slot. sdRound = quantos rounds SD já foram.
+  const [sdRound, setSdRound] = useState(0);
   const [round, setRound] = useState(0);
   const [resetSeed, setResetSeed] = useState(0);
   const [winner, setWinner] = useState<Side | null>(null);
   const [isSuddenDeath, setIsSuddenDeath] = useState(false);
+
+  // Limite dinâmico: 5 na fase normal, +1 por round de morte súbita
+  const TOTAL_KICKS = isSuddenDeath ? REGULAR_KICKS + sdRound + 1 : REGULAR_KICKS;
 
   // Goleiro adversário (qualidade derivada do strength do clube)
   const opponentKeeper: PenaltyKeeper = useMemo(
@@ -96,13 +101,14 @@ export function MatchPenaltyV2() {
   const homeKicksUsed = homeShots.filter((s) => s !== 'pending').length;
   const awayKicksUsed = awayShots.filter((s) => s !== 'pending').length;
 
-  // Detectar fim da disputa (vitória matemática ou após 5 cada)
+  // Detectar fim da disputa (vitória matemática ou após TOTAL_KICKS cada)
   useEffect(() => {
     if (phase === 'setup' || phase === 'final') return;
 
-    // Vitória matemática
     const homeRemaining = TOTAL_KICKS - homeKicksUsed;
     const awayRemaining = TOTAL_KICKS - awayKicksUsed;
+
+    // Vitória matemática (só na fase normal)
     if (!isSuddenDeath) {
       if (homeGoals > awayGoals + awayRemaining) {
         setWinner('home');
@@ -116,14 +122,18 @@ export function MatchPenaltyV2() {
       }
     }
 
-    // Após 5 cada
+    // Ambos bateram o round atual
     if (homeKicksUsed >= TOTAL_KICKS && awayKicksUsed >= TOTAL_KICKS) {
-      if (homeGoals === awayGoals) {
-        setIsSuddenDeath(true);
-      } else {
+      if (homeGoals !== awayGoals) {
         setWinner(homeGoals > awayGoals ? 'home' : 'away');
         setPhase('final');
+        return;
       }
+      // Empate: entrar/continuar morte súbita — expande arrays em +1
+      setIsSuddenDeath(true);
+      setSdRound((r) => r + 1);
+      setHomeShots((prev) => [...prev, 'pending']);
+      setAwayShots((prev) => [...prev, 'pending']);
     }
   }, [
     homeShots,
@@ -134,18 +144,19 @@ export function MatchPenaltyV2() {
     homeKicksUsed,
     awayKicksUsed,
     isSuddenDeath,
+    TOTAL_KICKS,
   ]);
 
   function toggleTaker(playerId: string) {
     setTakerOrder((prev) => {
       if (prev.includes(playerId)) return prev.filter((id) => id !== playerId);
-      if (prev.length >= TOTAL_KICKS) return prev;
+      if (prev.length >= REGULAR_KICKS) return prev;
       return [...prev, playerId];
     });
   }
 
   function startMatch() {
-    if (takerOrder.length < TOTAL_KICKS) return;
+    if (takerOrder.length < REGULAR_KICKS) return;
     setPhase('kicking-home');
   }
 
@@ -192,9 +203,10 @@ export function MatchPenaltyV2() {
 
   function fullReset() {
     setPhase('setup');
-    setHomeShots(Array(TOTAL_KICKS).fill('pending'));
-    setAwayShots(Array(TOTAL_KICKS).fill('pending'));
+    setHomeShots(Array(REGULAR_KICKS).fill('pending'));
+    setAwayShots(Array(REGULAR_KICKS).fill('pending'));
     setRound(0);
+    setSdRound(0);
     setWinner(null);
     setIsSuddenDeath(false);
     setTakerOrder([]);
@@ -234,7 +246,7 @@ export function MatchPenaltyV2() {
             Escolha 5 batedores
           </h1>
           <p className="text-center text-white/60 text-sm mb-4 sm:mb-8">
-            Ordenados por finalização. {takerOrder.length}/{TOTAL_KICKS} selecionados.
+            Ordenados por finalização. {takerOrder.length}/{REGULAR_KICKS} selecionados.
           </p>
 
           {availablePlayers.length === 0 ? (
@@ -253,7 +265,7 @@ export function MatchPenaltyV2() {
                 Plantel vazio
               </p>
               <p className="text-white/45 text-[13px] leading-snug mb-5">
-                Você precisa de pelo menos {TOTAL_KICKS} jogadores no
+                Você precisa de pelo menos {REGULAR_KICKS} jogadores no
                 plantel pra montar a disputa.
               </p>
               <button
@@ -306,7 +318,7 @@ export function MatchPenaltyV2() {
 
           <button
             type="button"
-            disabled={takerOrder.length < TOTAL_KICKS}
+            disabled={takerOrder.length < REGULAR_KICKS}
             onClick={startMatch}
             className="w-full bg-neon-yellow text-black px-8 py-4 font-display font-black uppercase tracking-wider -skew-x-6 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
           >

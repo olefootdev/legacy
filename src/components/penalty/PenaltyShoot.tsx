@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PICK_TIME_SECONDS, POWER_RAMP_MS } from './constants';
 import { PenaltyPowerBar } from './PenaltyPowerBar';
 import { PenaltyShootSVG } from './PenaltyShootSVG';
@@ -86,6 +86,14 @@ export function PenaltyShoot({
   const powerRafRef = useRef<number | null>(null);
   const powerStartRef = useRef<number | null>(null);
   const autoAdvanceRef = useRef<number | null>(null);
+
+  // Force re-layout on viewport resize (fixes mobile portrait/landscape flicker)
+  const [, forceUpdate] = useState(0);
+  useLayoutEffect(() => {
+    function onResize() { forceUpdate((n) => n + 1); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Timer countdown durante pick
   useEffect(() => {
@@ -272,7 +280,7 @@ export function PenaltyShoot({
       }}
     >
       {/* Header */}
-      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-1 sm:mb-3">
+      <div className="w-full max-w-[920px] flex items-baseline justify-between mb-1">
         <div className="text-[10px] uppercase tracking-[0.35em] font-medium text-black/70">
           {headerLabel}
         </div>
@@ -289,18 +297,18 @@ export function PenaltyShoot({
           className={`font-display italic font-black leading-none tabular-nums transition-colors duration-200 ${
             timeLeft <= 3 && phase === 'pick' ? 'text-black animate-pulse' : 'text-black/85'
           }`}
-          style={{ fontSize: 'clamp(40px, min(7vh, 9vw), 96px)' }}
+          style={{ fontSize: 'clamp(32px, min(5vh, 8vw), 80px)' }}
         >
           {phase === 'pick' ? timeLeft.toString().padStart(2, '0') : '00'}
         </div>
 
         <h1
-          className="ole-headline-italic text-black text-center mt-1 sm:mt-2"
+          className="ole-headline-italic text-black text-center mt-1"
           style={{
             fontSize:
               phase === 'result'
-                ? 'clamp(44px, min(9vh, 10vw), 120px)'
-                : 'clamp(22px, min(4vh, 4vw), 44px)',
+                ? 'clamp(36px, min(7vh, 9vw), 100px)'
+                : 'clamp(18px, min(3.5vh, 3.5vw), 40px)',
             lineHeight: 1.0,
           }}
         >
@@ -309,7 +317,7 @@ export function PenaltyShoot({
       </div>
 
       {/* Sub-info do batedor + goleiro */}
-      <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-4 mb-2 sm:mb-3 text-black/80 text-[10px] sm:text-[11px] uppercase tracking-[0.18em] flex-wrap justify-center">
+      <div className="flex items-center gap-2 mt-1 mb-1 sm:mt-3 sm:mb-2 text-black/80 text-[10px] uppercase tracking-[0.18em] flex-wrap justify-center">
         <span className="border border-black/40 px-2 py-1 bg-black text-neon-yellow">
           {shooter.displayName} · #{shooter.shirtNumber}
         </span>

@@ -66,17 +66,20 @@ export const FORMATION_BASES: Record<FormationSchemeId, Record<string, BaseSlot>
     pd: { nx: 0.72, nz: 0.8, line: 'att' },
   },
   '4-4-2': {
-    gol: { nx: 0.08, nz: 0.5, line: 'def' },
-    zag1: { nx: 0.24, nz: 0.36, line: 'def' },
-    zag2: { nx: 0.24, nz: 0.64, line: 'def' },
-    le: { nx: 0.3, nz: 0.1, line: 'def' },
-    ld: { nx: 0.3, nz: 0.9, line: 'def' },
-    mc1: { nx: 0.46, nz: 0.22, line: 'mid' },
-    mc2: { nx: 0.46, nz: 0.5, line: 'mid' },
-    pe: { nx: 0.46, nz: 0.78, line: 'mid' },
-    pd: { nx: 0.58, nz: 0.18, line: 'mid' },
-    vol: { nx: 0.74, nz: 0.58, line: 'att' },
-    ata: { nx: 0.76, nz: 0.38, line: 'att' },
+    // Defesa — linha de 4 compacta
+    gol:  { nx: 0.08, nz: 0.50, line: 'def' },
+    le:   { nx: 0.22, nz: 0.10, line: 'def' },
+    zag1: { nx: 0.22, nz: 0.36, line: 'def' },
+    zag2: { nx: 0.22, nz: 0.64, line: 'def' },
+    ld:   { nx: 0.22, nz: 0.90, line: 'def' },
+    // Meio — linha de 4 em linha (4-4-2 clássico)
+    vol:  { nx: 0.50, nz: 0.10, line: 'mid' }, // meia esquerda
+    mc1:  { nx: 0.50, nz: 0.36, line: 'mid' }, // meia centro-esquerda
+    mc2:  { nx: 0.50, nz: 0.64, line: 'mid' }, // meia centro-direita
+    pd:   { nx: 0.50, nz: 0.90, line: 'mid' }, // meia direita
+    // Ataque — dupla centrada
+    ata:  { nx: 0.76, nz: 0.38, line: 'att' }, // atacante 1
+    pe:   { nx: 0.76, nz: 0.62, line: 'att' }, // atacante 2
   },
   '4-2-3-1': {
     gol: { nx: 0.08, nz: 0.5, line: 'def' },

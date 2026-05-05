@@ -22,7 +22,7 @@ const WELCOME_EXP_GRANT = 500_000; // saldo inicial de EXP pra cada manager que 
  * Verifica server-side se este manager já recebeu o welcome pack.
  * Guard primário — independente do localStorage.
  */
-async function hasServerGrant(): Promise<boolean> {
+export async function hasServerGrant(): Promise<boolean> {
   const sb = getSupabase();
   if (!sb) return false;
   const { data: sessData } = await sb.auth.getSession();

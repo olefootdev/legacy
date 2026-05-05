@@ -64,7 +64,7 @@ export function PenaltyShootSVG({
       className="w-full max-w-[920px] h-auto"
       style={{
         filter: 'drop-shadow(0 8px 0 rgba(0,0,0,0.08))',
-        maxHeight: '52vh',
+        maxHeight: 'min(42dvh, 320px)',
       }}
     >
       <defs>

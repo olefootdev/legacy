@@ -162,6 +162,8 @@ export interface OpponentStub {
    * usam estes jogadores no lugar do roster sintético (cérebro + atributos).
    */
   genesisAwayPlayers?: PlayerEntity[];
+  /** Formação tática do adversário — usada no modo Expert para posicionar os jogadores visitantes. */
+  formationScheme?: string;
 }
 
 export interface Fixture {

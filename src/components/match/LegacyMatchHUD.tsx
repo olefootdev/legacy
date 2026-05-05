@@ -16,8 +16,8 @@ interface LegacyMatchHUDProps {
   possession: 'home' | 'away';
   ballX: number;
   phase?: 'playing' | 'halftime' | 'fulltime';
-  cameraMode?: 'aerial' | 'broadcast';
-  onCameraChange?: (mode: 'aerial' | 'broadcast') => void;
+  cameraMode?: 'aerial' | 'broadcast' | 'firstperson';
+  onCameraChange?: (mode: 'aerial' | 'broadcast' | 'firstperson') => void;
   /** Called when user picks an away club */
   onAwayClubChange?: (club: { name: string; logo: string }) => void;
   awayClub?: { name: string; logo: string } | null;
@@ -139,10 +139,10 @@ export function LegacyMatchHUD({
             {/* Camera toggle inline — pequeno */}
             {onCameraChange && (
               <div style={{ display: 'flex', gap: 2 }}>
-                {(['aerial', 'broadcast'] as const).map((m) => (
+                {(['aerial', 'firstperson', 'broadcast'] as const).map((m) => (
                   <button key={m} type="button" onClick={() => onCameraChange(m)}
                     style={{ background: cameraMode === m ? NEON : 'rgba(255,255,255,0.06)', color: cameraMode === m ? '#000' : 'rgba(255,255,255,0.35)', border: 'none', fontFamily: 'var(--font-display)', fontSize: 7, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '2px 6px', cursor: 'pointer', transition: 'all 150ms' }}>
-                    {m === 'aerial' ? 'AER' : 'BRD'}
+                    {m === 'aerial' ? 'AER' : m === 'firstperson' ? 'CINE' : 'BRD'}
                   </button>
                 ))}
               </div>

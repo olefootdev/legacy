@@ -45,7 +45,7 @@ function SmartBar({ label, value, subtitle }: {
         fontVariantNumeric: 'tabular-nums',
         transition: 'color 600ms ease',
       }}>
-        {value}
+        {Math.round(value)}
       </div>
       {/* Horizontal bar */}
       <div style={{
@@ -53,7 +53,7 @@ function SmartBar({ label, value, subtitle }: {
         background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden',
       }}>
         <div style={{
-          width: `${value}%`, height: '100%', background: color,
+          width: `${Math.min(100, Math.round(value))}%`, height: '100%', background: color,
           transition: 'width 600ms ease, background 600ms ease',
           borderRadius: 2,
         }} />

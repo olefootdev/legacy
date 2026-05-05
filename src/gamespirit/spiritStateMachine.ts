@@ -16,7 +16,7 @@ import type {
 
 /**
  * Taxas-alvo por 90' (partida rápida, ~56 ticks efetivos):
- *   Golos:     2–4 total      (shot weights + pGoalAway ≈ 2.8)
+ *   Golos:     3–6 total      (shot weights + pGoalAway ≈ 4.2)
  *   Amarelos:  3–5 total      (CARD_PROB_HOME 3.5% + CARD_PROB_AWAY 2.5% → ~3.4)
  *   Vermelhos: ~0.15/jogo     (6% de cada cartão → ~1 a cada 7 jogos)
  *   Lesões:    ~0.3/jogo      (fatigue >72, 6%)
@@ -25,13 +25,13 @@ import type {
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.062,
-  post_in: 0.028,
-  save: 0.11,
-  block: 0.165,
-  wide: 0.36,
-  post_out: 0.055,
-  miss_far: 0.22,
+  goal: 0.088,
+  post_in: 0.038,
+  save: 0.13,
+  block: 0.155,
+  wide: 0.32,
+  post_out: 0.052,
+  miss_far: 0.217,
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
