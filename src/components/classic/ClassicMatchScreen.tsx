@@ -364,6 +364,17 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   // Quando true, próximo evento dispara após 3s (gol, bola fora — jogadores
   // "pensam" e se reposicionam). Setado dentro do fireEvent.
   const pendingPauseRef = useRef(false);
+  // Pausa REAL — fireEvent checa antes de disparar. Usado no intervalo
+  // (jogadores ficam parados no campo durante o countdown 3-2-1).
+  const pausedRef = useRef(false);
+  // Zoom sutil quando vai sair chute — campo "se aproxima" por ~900ms.
+  // Só CSS scale do container do campo. Jogadores continuam fixos em % —
+  // a regra de ouro é preservada porque é o VIEWPORT que zoom-in, não a
+  // câmera de jogo (que não existe).
+  const [cameraZoom, setCameraZoom] = useState(false);
+  // Goleiro reinicia o jogo após wide/save/corner — força próximo evento
+  // ser o GK do time que defendeu/tomou bola decidindo distribuição.
+  const goalkeeperRestartRef = useRef<{ team: 'home' | 'away' } | null>(null);
   // Primeiro evento da partida é SEMPRE kickoff: HOME atacante → meio-campo.
   // Identidade da bola sair pelo centro do campo, não roleta.
   const kickoffPendingRef = useRef(true);
@@ -404,7 +415,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [goalFlash, setGoalFlash]   = useState(false);
   const [dangerFlash, setDangerFlash] = useState(false);
   // Overlay de intervalo/início de 2º tempo
-  const [periodOverlay, setPeriodOverlay] = useState<{ label: string; sub: string } | null>(null);
+  const [periodOverlay, setPeriodOverlay] = useState<{ label: string; sub: string; countdown?: number } | null>(null);
   // Último gatilho tático — exibido brevemente no campo
   const [lastTacticalTrigger, setLastTacticalTrigger] = useState<import('@/engine/classic/types').TacticalTrigger>(null);
   const chainRef    = useRef<EventChainContext | null>(null);
@@ -445,15 +456,26 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         if (next === HALF1_END + 1) {
           setPeriod('INTERVALO');
           setExtraMinute(0);
-          setPeriodOverlay({ label: 'INTERVALO', sub: 'Jogo parado — 2º tempo em breve' });
-          setTimeout(() => setPeriodOverlay(null), 4000);
+          // Pausa real: jogo congela, jogadores ficam onde estão.
+          pausedRef.current = true;
+          setPeriodOverlay({ label: 'INTERVALO', sub: '2º TEMPO EM 3', countdown: 3 });
+          // Countdown 3, 2, 1 — atualiza o overlay
+          let cd = 3;
+          const tick = setInterval(() => {
+            cd -= 1;
+            if (cd > 0) setPeriodOverlay({ label: 'INTERVALO', sub: `2º TEMPO EM ${cd}`, countdown: cd });
+            else {
+              clearInterval(tick);
+              setPeriodOverlay(null);
+              setPeriod('2º TEMPO');
+              kickoffPendingRef.current = true; // 2º tempo começa com HOME atacante → meio
+              pausedRef.current = false;
+            }
+          }, 1000);
         }
-        if (next === HALF1_END + HALF1_EXTRA + 1) {
-          setPeriod('2º TEMPO');
-          setExtraMinute(0);
-          setPeriodOverlay({ label: '2º TEMPO', sub: 'Bola rolando — 45 minutos pela frente' });
-          setTimeout(() => setPeriodOverlay(null), 3500);
-        }
+        // (Removido: o setPeriodOverlay 2º TEMPO agora é gerado dentro do
+        // tick acima, ao final do countdown. Não precisa mais de trigger
+        // separado em HALF1_END + HALF1_EXTRA + 1.)
         // Acréscimos 1º tempo: 46, 47, 48 → exibe 45+1, 45+2, 45+3
         if (next > HALF1_END && next <= HALF1_END + HALF1_EXTRA) {
           setExtraMinute(next - HALF1_END);
@@ -510,7 +532,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   }, []);
 
   // ── Mini-heatmap ───────────────────────────────────────────────────────────
+  // Re-runs quando matchOver flipa de true→false ("Jogar Novamente" recria
+  // o canvas). Mesma lógica do rAF abaixo.
   useEffect(() => {
+    if (matchOver) return;
     const t = setInterval(() => {
       const mini = miniCanvasRef.current;
       if (!mini) return;
@@ -522,10 +547,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       heatRef.current.renderMini(mCtx, mini.width / FIELD_W_LOGIC, mini.height / FIELD_H_LOGIC);
     }, 3000);
     return () => clearInterval(t);
-  }, []);
+  }, [matchOver]);
 
   // ── rAF loop — ball + canvas (NO camera, static field) ────────────────────
+  // Quando matchOver flipa true→false ("Jogar Novamente"), o canvas é
+  // recriado pelo conditional render. ctx capturado no closure morre. Por
+  // isso esse effect depende de matchOver — re-roda pra capturar o NOVO ctx.
   useEffect(() => {
+    if (matchOver) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -572,12 +601,17 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
 
     rafRef.current = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [matchOver]);
 
   // ── Game event loop ────────────────────────────────────────────────────────
   // Lê estado quente via refs — fireEvent é estável (não rebuilda no clock).
   const fireEvent = useCallback(() => {
     if (!runningRef.current) return;
+    // Pausado (intervalo, countdown) — reagenda checagem em 1s
+    if (pausedRef.current) {
+      loopRef.current = setTimeout(fireEvent, 1000);
+      return;
+    }
 
     const activeSkills = skillsRef.current
       .filter(s => s.active)
@@ -620,6 +654,41 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           rationale: 'kickoff: HOME striker → midfield',
         };
         result = { event: kickoffEvt, nextSequence: null, receiverId: receiver.id };
+      } else if (goalkeeperRestartRef.current) {
+        // ─── GOLEIRO REINICIA — após wide/save/corner ──────────────────
+        // Goleiro do time que tomou bola decide: chutão pro meio OU sai
+        // pelo pé pra um lateral livre. Adversário ATACANTE de minutos
+        // anteriores fica posicionado naturalmente (sem mover).
+        const restartTeam = goalkeeperRestartRef.current.team;
+        goalkeeperRestartRef.current = null;
+        const teamPlayers = prev.filter(p => p.team === restartTeam);
+        const gk = teamPlayers.find(p => p.role === 'GK') ?? teamPlayers[0];
+        const fbs = teamPlayers.filter(p => p.role === 'LB' || p.role === 'RB');
+        const cms = teamPlayers.filter(p => p.role === 'CM' || p.role === 'DM');
+        // Decisão: 60% sai pelo pé pro FB livre / 40% chutão pro CM
+        const goesShort = Math.random() < 0.60 && fbs.length > 0;
+        const target = goesShort
+          ? fbs[Math.floor(Math.random() * fbs.length)]
+          : (cms.find(c => c.role === 'CM') ?? cms[0] ?? teamPlayers[1]);
+        const gkText = goesShort
+          ? `${gk.shortName} sai pelo pé — toca pro ${target.shortName}`
+          : `${gk.shortName} bate o tiro de meta — chutão pro ${target.shortName}`;
+        const gkEvt: MatchEvent = {
+          id: `evt_gk_${Date.now()}`,
+          minute,
+          type: 'pass',
+          team: restartTeam,
+          playerId: gk.id,
+          playerName: gk.shortName,
+          archetype: gk.archetype,
+          text: gkText,
+          ballX: target.position.x,
+          ballY: target.position.y,
+          receiverPlayerId: target.id,
+          passSubtype: goesShort ? 'curto' : 'planejado',
+          rationale: `gk-restart ${restartTeam}: ${goesShort ? 'short to FB' : 'long to mid'}`,
+        };
+        result = { event: gkEvt, nextSequence: null, receiverId: target.id };
       } else {
         result = generateEvent(prev, minute, score, possession, {
           activeSkills,
@@ -735,6 +804,20 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       if (evt.type === 'goal' || evt.type === 'wide' || evt.type === 'post' ||
           evt.type === 'save' || evt.type === 'corner') {
         pendingPauseRef.current = true;
+      }
+      // Zoom sutil em todo evento de chute — câmera "se aproxima" da bola
+      // por ~900ms. Cria tensão visual no momento da finalização.
+      if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' ||
+          evt.type === 'post' || evt.type === 'wide') {
+        setCameraZoom(true);
+        setTimeout(() => setCameraZoom(false), 900);
+      }
+      // Goleiro reinicia: wide (tiro de meta), save (goleiro com bola),
+      // corner (escanteio chega no GK adversário em última instância).
+      // Próximo evento força GK do time defensor distribuir.
+      if (evt.type === 'wide' || evt.type === 'save' || evt.type === 'corner') {
+        const conceding: 'home' | 'away' = evt.team === 'home' ? 'away' : 'home';
+        goalkeeperRestartRef.current = { team: conceding };
       }
 
       // Atualiza memória da partida (Fase 4): cumulativo de gols, virada,
@@ -1102,6 +1185,13 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 setCoachReading(null);
                 setPeriodOverlay(null);
                 setLastTacticalTrigger(null);
+                // Reset visual state — bola volta ao centro, heatmap zerado,
+                // trail limpo. Sem isso o canvas começa estranho na 2ª partida.
+                ballRef.current = { x: 300, y: 200, targetX: 300, targetY: 200 };
+                trailRef.current = [];
+                heatRef.current = new HeatmapEngine();
+                passAnimRef.current = { kind: 'default', startX: 300, startY: 200, startedAt: 0, durationEst: 600 };
+                pendingPauseRef.current = false;
               }}
               style={{
                 width:'100%', padding:'16px',
@@ -1246,6 +1336,11 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           borderTop:'1px solid var(--c-border-accent)',
           borderBottom:'1px solid var(--c-border-accent)',
           animation: dangerFlash ? 'c-dangerPulse 0.8s ease' : undefined,
+          // Zoom sutil quando há chute — viewport se aproxima por ~900ms.
+          // Jogadores em % seguem fixos relativos ao container.
+          transform: cameraZoom ? 'scale(1.05)' : 'scale(1)',
+          transition: 'transform 0.4s cubic-bezier(0.32,0,0.32,1)',
+          transformOrigin: 'center',
         }}>
           {/* Canvas estático */}
           <canvas
@@ -1507,6 +1602,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               <div style={{ ...T_BODY, fontSize:12, color:'var(--c-text-sec)' }}>
                 {periodOverlay.sub}
               </div>
+              {/* Counter grande quando há countdown */}
+              {typeof periodOverlay.countdown === 'number' && (
+                <div style={{ ...T_HERO, fontStyle:'italic', fontSize:64, fontWeight:700, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em', marginTop:8, animation:'c-fadeInDown 0.3s ease' }}>
+                  {periodOverlay.countdown}
+                </div>
+              )}
               <div style={{ display:'flex', gap:16, marginTop:4 }}>
                 <span style={{ ...T_HERO, fontSize:32, color:'var(--c-text-primary)', letterSpacing:'-0.04em' }}>
                   {score.home} — {score.away}

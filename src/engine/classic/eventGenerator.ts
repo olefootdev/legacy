@@ -307,16 +307,37 @@ export function generateEvent(
     const cleanLine = hasCleanShot(player, allPlayers.filter(p => p.team !== team), attackDir);
     const outcome = resolveShot(player, cleanLine, minute);
 
+    // Linha de gol do oponente
+    const oppGoalX = team === 'home' ? FIELD_W_LOGIC : 0;
+    const goalY = FIELD_H_LOGIC / 2;
+    const oppGK = allPlayers.find(p => p.team !== team && p.role === 'GK');
+
     if (outcome === 'goal') {
       type = 'goal';
       ballPos = goalMouthPos(team);
-    } else if (outcome === 'save')      type = 'save';
-    else if (outcome === 'post')       type = 'post';
-    else if (outcome === 'wide')       type = 'wide';
-    else if (outcome === 'rebound')    type = 'rebound';
-    else if (outcome === 'corner_def') type = 'corner';
-    // ballPos já é goalmouth pra todos os outcomes
-    if (type !== 'goal') ballPos = goalMouthPos(team);
+    } else if (outcome === 'save') {
+      type = 'save';
+      // Bola fica no goleiro adversário
+      ballPos = oppGK ? { x: oppGK.position.x, y: oppGK.position.y } : goalMouthPos(team);
+    } else if (outcome === 'post') {
+      type = 'post';
+      // Bola na trave — perto do gol, levemente desviado
+      ballPos = { x: team === 'home' ? FIELD_W_LOGIC - 35 : 35, y: goalY + (rng() < 0.5 ? -28 : 28) };
+    } else if (outcome === 'wide') {
+      type = 'wide';
+      // Bola PRA FORA do gol — sai do campo (off-pitch). Visual mostra
+      // a bola indo além da linha de fundo, gerando cobrança de tiro de meta.
+      const offsetY = rng() < 0.5 ? -90 : 90; // sai pra um dos lados
+      ballPos = { x: oppGoalX + (team === 'home' ? 10 : -10), y: goalY + offsetY };
+    } else if (outcome === 'rebound') {
+      type = 'rebound';
+      // Sobra na área — perto da grande área, bola viva
+      ballPos = { x: team === 'home' ? FIELD_W_LOGIC - 90 : 90, y: goalY + (rng() - 0.5) * 80 };
+    } else if (outcome === 'corner_def') {
+      type = 'corner';
+      // Bola no canto do campo
+      ballPos = { x: oppGoalX + (team === 'home' ? -10 : 10), y: rng() < 0.5 ? 8 : FIELD_H_LOGIC - 8 };
+    }
     receiverId = null;
   }
 
