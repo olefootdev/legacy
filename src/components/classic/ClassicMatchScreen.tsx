@@ -19,6 +19,7 @@ import type {
 } from '@/engine/classic/types';
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
 import { generateEvent, applyEventToPlayers } from '@/engine/classic/eventGenerator';
+import { computeTeamPhase, teamShift } from '@/engine/classic/decisionEngine';
 import { HeatmapEngine } from '@/engine/classic/heatmapEngine';
 
 // ─── Design tokens scoped to Classic mode ─────────────────────────────────────
@@ -383,6 +384,20 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const loopRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clockRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Modulação do passe — lerp factor + arco do cruzamento
+  // curto=0.12, rapido=0.22, planejado=0.10, cruzamento=0.10 com Y-arc
+  const passAnimRef = useRef<{
+    kind: 'curto' | 'rapido' | 'planejado' | 'cruzamento' | 'shot' | 'default';
+    startX: number;
+    startY: number;
+    startedAt: number;
+    durationEst: number;
+  }>({ kind: 'default', startX: 300, startY: 200, startedAt: 0, durationEst: 600 });
+
+  // Fase tática de cada time — usado pro micro-movimento do bloco
+  const [homePhase, setHomePhase] = useState<'BUILDUP'|'CONSOLIDATION'|'ATTACKING'|'DEFENDING'|'TRANSITION'>('CONSOLIDATION');
+  const [awayPhase, setAwayPhase] = useState<'BUILDUP'|'CONSOLIDATION'|'ATTACKING'|'DEFENDING'|'TRANSITION'>('CONSOLIDATION');
+
   // ── Clock: 1 real second = 1 match minute ─────────────────────────────────
   useEffect(() => {
     if (!running || matchOver) return;
@@ -466,8 +481,29 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     function frame() {
       const ball = ballRef.current;
       const prevX = ball.x, prevY = ball.y;
-      ball.x += (ball.targetX - ball.x) * BALL_LERP;
-      ball.y += (ball.targetY - ball.y) * BALL_LERP;
+
+      // Lerp factor varia por tipo de passe
+      const anim = passAnimRef.current;
+      const lerp = anim.kind === 'rapido'   ? 0.22
+                 : anim.kind === 'planejado'? 0.10
+                 : anim.kind === 'shot'     ? 0.28
+                 : anim.kind === 'cruzamento' ? 0.10
+                 : BALL_LERP;
+
+      ball.x += (ball.targetX - ball.x) * lerp;
+      ball.y += (ball.targetY - ball.y) * lerp;
+
+      // Arco do cruzamento: aplica offset Y parabólico durante a viagem
+      let renderY = ball.y;
+      if (anim.kind === 'cruzamento') {
+        const totalDx = anim.startX === ball.targetX ? 1 : Math.abs(ball.targetX - anim.startX);
+        const traveled = Math.abs(ball.x - anim.startX);
+        const t = Math.max(0, Math.min(1, traveled / totalDx)); // 0..1
+        const arcHeight = 28; // px de "altura" da parábola
+        const arc = -arcHeight * 4 * t * (1 - t); // parábola invertida
+        renderY = ball.y + arc;
+      }
+
       if (Math.abs(ball.x - prevX) > 0.5 || Math.abs(ball.y - prevY) > 0.5) {
         trailRef.current.push({ x: prevX, y: prevY, opacity: 0.8 });
         if (trailRef.current.length > TRAIL_MAX) trailRef.current.shift();
@@ -476,7 +512,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
 
       ctx.clearRect(0, 0, FIELD_W_LOGIC, FIELD_H_LOGIC);
       drawField(ctx);
-      drawBall(ctx, ball, trailRef.current);
+      drawBall(ctx, { ...ball, y: renderY }, trailRef.current);
 
       rafRef.current = requestAnimationFrame(frame);
     }
@@ -507,13 +543,43 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       // Avança ou reseta a sequência de jogada
       sequenceRef.current = nextSequence;
 
+      // Atualiza animação da bola conforme o subtipo do passe
+      const passKind: 'curto' | 'rapido' | 'planejado' | 'cruzamento' | 'shot' | 'default' =
+        (evt.type === 'goal' || evt.type === 'shot' || evt.type === 'save' ||
+         evt.type === 'post' || evt.type === 'wide' || evt.type === 'rebound')
+          ? 'shot'
+        : evt.passSubtype === 'cruzamento' ? 'cruzamento'
+        : evt.passSubtype === 'rapido'     ? 'rapido'
+        : evt.passSubtype === 'planejado'  ? 'planejado'
+        : evt.passSubtype === 'curto'      ? 'curto'
+        : 'default';
+
+      passAnimRef.current = {
+        kind: passKind,
+        startX: ballRef.current.x,
+        startY: ballRef.current.y,
+        startedAt: Date.now(),
+        durationEst: passKind === 'rapido' ? 350 : passKind === 'planejado' ? 800 : 600,
+      };
+
       ballRef.current.targetX = evt.ballX;
       ballRef.current.targetY = evt.ballY;
       heatRef.current.accumulate(evt.ballX, evt.ballY);
 
-      // CORREÇÃO: em passes, destaca o RECEPTOR (onde a bola vai chegar)
-      // Em outros eventos, destaca o ator principal
-      if (evt.type === 'pass' && receiverId) {
+      // Atualiza fases táticas dos times — micro-movimento do bloco
+      const ballHolder = prev.find(p => p.id === evt.playerId);
+      if (ballHolder) {
+        const ballPosForPhase = { x: evt.ballX, y: evt.ballY };
+        // Fase é do time DO PORTADOR vs do time adversário
+        const homePh = computeTeamPhase('home', ballHolder, ballPosForPhase);
+        const awayPh = computeTeamPhase('away', ballHolder, ballPosForPhase);
+        setHomePhase(homePh);
+        setAwayPhase(awayPh);
+      }
+
+      // Em passes, destaca o RECEPTOR (onde a bola vai chegar)
+      // Em outros eventos (chute, defesa, etc), destaca o ator principal
+      if ((evt.type === 'pass' || evt.type === 'cross') && receiverId) {
         const receiver = prev.find(p => p.id === receiverId);
         if (receiver) setHighlightPlayer(receiver);
       } else {
@@ -521,8 +587,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         if (actor) setHighlightPlayer(actor);
       }
 
-      // Linha de passe: portador → receptor
-      if (evt.type === 'pass' && evt.playerId && receiverId) {
+      // Linha de passe: portador → receptor (também pra cruzamento)
+      if ((evt.type === 'pass' || evt.type === 'cross') && evt.playerId && receiverId) {
         setLastPassPair([evt.playerId, receiverId]);
       } else {
         setLastPassPair(null);
@@ -961,10 +1027,19 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               })}
           </svg>
 
-          {/* Player nodes (FIXED, no movement) */}
+          {/* Player nodes — posição-base FIXA, mas o BLOCO inteiro do time
+              se contrai/expande por fase tática (Phase 2: micro-movimento) */}
           {players.map(p => {
-            const leftPct = (p.position.x / FIELD_W_LOGIC) * 100;
-            const topPct  = (p.position.y / FIELD_H_LOGIC) * 100;
+            // Shift por fase do time (BUILDUP/CONSOLIDATION/ATTACKING/DEFENDING)
+            const phase = p.team === 'home' ? homePhase : awayPhase;
+            const shift = teamShift(p.team, phase);
+            // x: desloca o bloco inteiro na direção de ataque
+            const shiftedX = p.position.x + shift.dx * FIELD_W_LOGIC;
+            // y: comprime/expande em torno do meio do campo (200)
+            const yCenter = FIELD_H_LOGIC / 2;
+            const shiftedY = p.position.y + (yCenter - p.position.y) * shift.compress;
+            const leftPct = (shiftedX / FIELD_W_LOGIC) * 100;
+            const topPct  = (shiftedY / FIELD_H_LOGIC) * 100;
             const isHL = highlightPlayer?.id === p.id;
             const isLegacyTarget = legacyPulse?.player.id === p.id;
             const NODE = 26;
@@ -1008,9 +1083,11 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 display:'flex', alignItems:'center', justifyContent:'center',
                 fontFamily:'var(--cf-body)', fontSize:10, fontWeight:700,
                 pointerEvents:'none',
+                // Phase 2: micro-movimento do bloco — left/top transitionam suavemente
+                // quando a fase tática do time muda (1.4s para sentir como onda)
                 transition: repositioning
                   ? 'left 0.9s cubic-bezier(0.4,0,0.2,1), top 0.9s cubic-bezier(0.4,0,0.2,1)'
-                  : 'border-color 0.3s ease, background 0.3s ease',
+                  : 'left 1.4s cubic-bezier(0.32,0,0.32,1), top 1.4s cubic-bezier(0.32,0,0.32,1), border-color 0.3s ease, background 0.3s ease',
                 animation: isLegacyTarget
                   ? 'c-legacyCore 1.2s ease'
                   : isHot

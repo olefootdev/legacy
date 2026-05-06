@@ -1,7 +1,8 @@
-import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, EventChainContext, PassStyle } from './types';
+import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, EventChainContext, PassStyle, PassSubtype } from './types';
 import { ARCHETYPES } from './archetypes';
 import { generateNarration } from './narration';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
+import { decideNextAction, resolveShot, hasCleanShot } from './decisionEngine';
 import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 
 let _eventCounter = 0;
@@ -252,34 +253,76 @@ export function generateEvent(
 
   // Portador: jogador na zona atual (quem tem a bola agora)
   const player = pickPlayerForZone(allPlayers, currentZone, team);
-  const eventType = chooseEventType(player, minute, score, activeSkills, chain, passStyle, zoneIndex, sequence.zones.length);
 
-  let type = eventType;
-  let ballPos: { x: number; y: number };
-  let receiverId: number | null = null;
+  // ─── EVENTOS DEFENSIVOS (decisão fora do portador): chain-driven ────────
+  // Se o último evento foi pressão alta E o time ATACANTE perdeu posse,
+  // pode virar tackle/interception. Decisão pelo eventGenerator antigo
+  // continua valendo, mas agora intercala com decisões inteligentes.
+  const r = rng();
+  const defensiveTrigger =
+    chain?.lastType === 'pressure' && r < 0.30 ? 'tackle' :
+    chain?.lastType === 'cross' && r < 0.20 ? 'danger' :
+    activeSkills.includes('press') && r < 0.10 ? 'interception' :
+    null;
 
-  if (type === 'shot' && isGoal(player, type, score, minute)) {
-    type = 'goal';
-    // Bola vai para a boca do gol adversário
-    ballPos = goalMouthPos(team);
-  } else if (type === 'shot' || type === 'cross' || type === 'danger') {
-    ballPos = goalMouthPos(team);
-  } else if (type === 'pass' && !isLastZone) {
-    // CORREÇÃO PRINCIPAL: bola vai EXATAMENTE para o receptor
-    // (sem jitter — evita disconnect entre balão de nome e posição da bola)
-    const nextZone = sequence.zones[zoneIndex + 1];
-    const receiver = pickPlayerForZone(allPlayers, nextZone, team, player.id);
-    receiverId = receiver.id;
-    ballPos = {
-      x: receiver.position.x,
-      y: receiver.position.y,
-    };
-  } else {
-    // tackle, interception, foul, pressure — bola fica perto do portador
-    ballPos = {
+  if (defensiveTrigger) {
+    const ballPos = {
       x: Math.max(20, Math.min(FIELD_W_LOGIC - 20, player.position.x + (rng() - 0.5) * 25)),
       y: Math.max(20, Math.min(FIELD_H_LOGIC - 20, player.position.y + (rng() - 0.5) * 25)),
     };
+    const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
+    const playerProfile = narrativeProfiles?.get(player.id);
+    const text = generateNarration(defensiveTrigger, player.archetype, player.shortName, teamName, minute, score, playerProfile);
+    const event: MatchEvent = {
+      id: `evt_${++_eventCounter}`,
+      minute, type: defensiveTrigger, team,
+      playerId: player.id, playerName: player.shortName, archetype: player.archetype,
+      text, ballX: ballPos.x, ballY: ballPos.y,
+    };
+    return { event, nextSequence: null, receiverId: null };
+  }
+
+  // ─── DECISÃO INTELIGENTE DO PORTADOR ───────────────────────────────────
+  const attackDir: 1 | -1 = team === 'home' ? 1 : -1;
+  const decision = decideNextAction({
+    players: allPlayers,
+    ballHolder: player,
+    attackDir,
+    sequence: { zones: sequence.zones, styleKey: passStyle },
+    zoneIndex,
+    chain,
+    minute,
+    score,
+    activeSkills,
+    passStyle,
+  }, ZONE_ROLES);
+
+  let type: EventType = decision.action;
+  const passSubtype: PassSubtype | undefined = decision.passSubtype;
+  let receiverId: number | null = decision.target?.id ?? null;
+  let ballPos = decision.ballPos;
+
+  // ─── Resolução de chute com diversidade de outcomes ─────────────────────
+  if (type === 'shot') {
+    const cleanLine = hasCleanShot(player, allPlayers.filter(p => p.team !== team), attackDir);
+    const outcome = resolveShot(player, cleanLine, minute);
+
+    if (outcome === 'goal') {
+      type = 'goal';
+      ballPos = goalMouthPos(team);
+    } else if (outcome === 'save')      type = 'save';
+    else if (outcome === 'post')       type = 'post';
+    else if (outcome === 'wide')       type = 'wide';
+    else if (outcome === 'rebound')    type = 'rebound';
+    else if (outcome === 'corner_def') type = 'corner';
+    // ballPos já é goalmouth pra todos os outcomes
+    if (type !== 'goal') ballPos = goalMouthPos(team);
+    receiverId = null;
+  }
+
+  if (type === 'cross') {
+    // Cruzamento já tem ballPos do receptor (decideNextAction calculou)
+    // Mantém receiverId do decision
   }
 
   const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
@@ -298,11 +341,15 @@ export function generateEvent(
     ballX: ballPos.x,
     ballY: ballPos.y,
     receiverPlayerId: receiverId ?? undefined,
+    passSubtype,
+    rationale: decision.rationale,
   };
 
-  // Avança a sequência se foi um passe, senão reseta
-  const sequenceEnded = type === 'goal' || type === 'shot' || type === 'tackle' ||
-    type === 'interception' || type === 'foul' || isLastZone;
+  // Avança sequência se passe; reseta nos eventos terminais
+  const sequenceEnded =
+    type === 'goal' || type === 'shot' || type === 'save' || type === 'post' ||
+    type === 'wide' || type === 'rebound' || type === 'corner' || type === 'cross' ||
+    type === 'tackle' || type === 'interception' || type === 'foul' || isLastZone;
 
   const nextSequence = sequenceEnded
     ? null

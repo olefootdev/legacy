@@ -19,7 +19,31 @@ export type EventType =
   | 'corner'
   | 'foul'
   | 'pressure'
-  | 'cross';
+  | 'cross'
+  | 'save'        // chute defendido pelo goleiro
+  | 'post'        // bola na trave
+  | 'wide'        // bola para fora
+  | 'rebound';    // sobra após chute
+
+/**
+ * Subtipo de passe — diferencia a INTENÇÃO e o VISUAL.
+ * - curto:      passe normal, bola viaja em velocidade média
+ * - rapido:     1-toque sob pressão, bola voa rápido
+ * - planejado:  MAESTRO/VETERAN escolhem com calma — linha de visão pulsa antes
+ * - cruzamento: bola arqueia da ala pra área (parábola Y)
+ */
+export type PassSubtype = 'curto' | 'rapido' | 'planejado' | 'cruzamento';
+
+/**
+ * Fase tática da equipe — usada pelo micro-movimento do bloco.
+ * O time não corre, mas se contrai/expande baseado em quem tem a bola e onde.
+ */
+export type TeamPhase =
+  | 'BUILDUP'         // construção atrás, time mantém forma base
+  | 'CONSOLIDATION'   // bola na linha do meio, leve avanço
+  | 'ATTACKING'       // bola no terço final, time inteiro avança
+  | 'DEFENDING'       // adversário no nosso terço final, time recua + contrai
+  | 'TRANSITION';     // momento de virada, posição neutra
 
 export interface ClassicPlayer {
   id: number;
@@ -89,6 +113,8 @@ export interface MatchEvent {
   ballX: number;
   ballY: number;
   receiverPlayerId?: number; // receptor do passe — bola vai até ele
+  passSubtype?: PassSubtype; // intenção do passe (visual + lógica)
+  rationale?: string;        // racional da decisão — pra Coach AI futuro
 }
 
 export interface MatchStats {

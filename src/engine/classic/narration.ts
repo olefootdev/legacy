@@ -191,6 +191,10 @@ const GENERAL_NARRATION: Record<string, string[]> = {
   tackle:       ['{name} se antecipa!', 'Disputa no meio-campo — {name} vence.', 'Duelo físico intenso.'],
   interception: ['{name} intercepta com inteligência!', 'Interceptação — {team} recupera a bola!'],
   cross:        ['Cruzamento na área!', 'Bola levantada — {team} ataca!', '{name} levanta na grande área.'],
+  save:         ['Goleiro defende!', 'Defesa difícil — quase gol!', '{name} pega firme com o goleiro.', 'Goleiro espalma o chute do {name}!'],
+  post:         ['NA TRAVE! {name} quase marcou!', 'Bola explode na trave!', 'Centímetros — bate na madeira!'],
+  wide:         ['Pra fora! {name} mandou no alto.', '{name} chuta — bola passa raspando!', 'Mandou pra galera — {name} desperdiçou.'],
+  rebound:      ['Rebote na área — segue o jogo!', '{name} chutou, sobrou pra área.', 'Bola viva após defesa parcial.'],
 };
 
 function pick(arr: string[]): string {
