@@ -35,6 +35,10 @@ export interface ClassicPlayer {
   confidence: number; // 0-100, momentum tracker
   onFire?: boolean;  // confidence > 85 after a key action
   isStar?: boolean;
+  /** Foto do jogador (formato card) — quando ausente, UI cai num placeholder. */
+  portraitUrl?: string;
+  /** Foto circular (token) — preferida pra nó no campo. */
+  portraitTokenUrl?: string;
 }
 
 // Tipo de passe ativo — controla como a bola progride pelo campo

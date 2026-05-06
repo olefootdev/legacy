@@ -126,6 +126,8 @@ function entityToClassicAt(
     confidence,
     isStar,
     onFire: confidence >= 88,
+    portraitUrl:      p.portraitUrl,
+    portraitTokenUrl: p.portraitTokenUrl,
   };
 }
 

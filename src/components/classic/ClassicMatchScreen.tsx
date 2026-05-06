@@ -603,9 +603,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
     .filter(p => p.team === 'home' && p.id !== star.id)
     .sort((a, b) => b.confidence - a.confidence)[0] ?? players[8];
 
-  // Gera URL de avatar determinístico baseado no nome do jogador
-  function avatarUrl(name: string, size = 80): string {
-    const seed = encodeURIComponent(name.toLowerCase().replace(/\s/g, '-'));
+  // Foto do jogador real (portraitUrl) com fallback determinístico em pixel-art
+  // pros jogadores demo (TIGRES/ALVORADA sem foto associada).
+  function playerPhoto(p: ClassicPlayer | undefined, size = 120): string {
+    if (p?.portraitUrl)      return p.portraitUrl;
+    if (p?.portraitTokenUrl) return p.portraitTokenUrl;
+    const seed = encodeURIComponent((p?.name ?? '').toLowerCase().replace(/\s/g, '-'));
     return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}&size=${size}&backgroundColor=1a1a1a`;
   }
 
@@ -662,35 +665,37 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
             </div>
             <div style={{ display:'flex', gap:14, alignItems:'center', background:'var(--c-bg-surface)', border:'1px solid var(--c-border-accent)', borderRadius:8, padding:'14px', marginBottom:14 }}>
               {/* Foto MVP */}
-              <div style={{ width:72, height:72, borderRadius:6, overflow:'hidden', flexShrink:0, border:'1px solid var(--c-border-accent)', background:'rgba(253,225,0,0.04)' }}>
+              <div style={{ width:96, height:120, borderRadius:6, overflow:'hidden', flexShrink:0, border:'1px solid var(--c-border-accent)', background:'#000' }}>
                 <img
-                  src={avatarUrl(mvpPlayer.name, 120)}
+                  src={playerPhoto(mvpPlayer, 240)}
                   alt={mvpPlayer.shortName}
-                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated' }}
+                  loading="lazy"
+                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering: mvpPlayer.portraitUrl ? 'auto' : 'pixelated' }}
                 />
               </div>
               <div style={{ flex:1, minWidth:0 }}>
-                {/* OVR + nome */}
-                <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:4 }}>
-                  <span style={{ ...T_HERO, fontSize:28, color:'var(--c-accent)', lineHeight:1 }}>{mvpPlayer.ovr}</span>
-                  <span style={{ ...T_DISPLAY, fontSize:13, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em' }}>{mvpPlayer.shortName}</span>
+                {/* OVR grande + nome */}
+                <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:4 }}>
+                  <span style={{ ...T_HERO, fontSize:44, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.03em' }}>{mvpPlayer.ovr}</span>
+                  <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
+                    <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em' }}>OVR</span>
+                    <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{mvpPlayer.shortName}</span>
+                  </div>
                 </div>
-                <div style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', marginBottom:8 }}>
+                <div style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', marginBottom:10 }}>
                   {mvpPlayer.role} · {mvpPlayer.archetype} · {mvpPlayer.team === 'home' ? homeTeam : awayTeam}
                 </div>
-                {/* Confiança acumulada como nota */}
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div style={{ flex:1, height:3, background:'var(--c-bg-elevated)', borderRadius:2 }}>
-                    <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${mvpPlayer.confidence}%` }} />
-                  </div>
-                  <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.12em' }}>
-                    {(6.0 + (mvpPlayer.confidence / 100) * 4).toFixed(1)}
+                {/* Rating editorial — número GIGANTE em Moret italic */}
+                <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+                  <span style={{ ...T_HERO, fontSize:48, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.03em' }}>
+                    {(6.0 + (mvpPlayer.confidence / 100) * 4).toFixed(2)}
                   </span>
+                  <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.24em' }}>RATING</span>
                 </div>
               </div>
             </div>
 
-            {/* Stats resumo */}
+            {/* Stats resumo — números grandes e impactantes (Moret italic editorial) */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)', marginBottom:24 }}>
               {[
                 { label:'POSSE',    home:`${stats.possession.home}%`, away:`${stats.possession.away}%` },
@@ -700,11 +705,11 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
                 { label:'FALTAS',   home:`${stats.fouls.home}`,       away:`${stats.fouls.away}` },
                 { label:'CANTOS',   home:`${stats.corners.home}`,     away:`${stats.corners.away}` },
               ].map((s, i) => (
-                <div key={i} style={{ background:'var(--c-bg-surface)', padding:'10px 12px' }}>
-                  <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.20em', marginBottom:4 }}>{s.label}</div>
-                  <div style={{ display:'flex', justifyContent:'space-between' }}>
-                    <span style={{ ...T_HERO, fontSize:14, color:'var(--c-accent)' }}>{s.home}</span>
-                    <span style={{ ...T_HERO, fontSize:14, color:'var(--c-text-sec)' }}>{s.away}</span>
+                <div key={i} style={{ background:'var(--c-bg-surface)', padding:'14px 14px 16px' }}>
+                  <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.24em', marginBottom:8 }}>{s.label}</div>
+                  <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:6 }}>
+                    <span style={{ ...T_HERO, fontSize:34, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.03em' }}>{s.home}</span>
+                    <span style={{ ...T_HERO, fontSize:24, color:'var(--c-text-sec)', lineHeight:1, letterSpacing:'-0.02em' }}>{s.away}</span>
                   </div>
                 </div>
               ))}
@@ -1053,9 +1058,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
           <div style={{ display:'grid', gridTemplateColumns:'112px 1fr', minHeight:128 }}>
             <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
               <img
-                src={avatarUrl(star.name, 200)}
+                src={playerPhoto(star, 240)}
                 alt={star.shortName}
-                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(35%) contrast(1.05)' }}
+                loading="lazy"
+                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering: star.portraitUrl ? 'auto' : 'pixelated', filter: star.portraitUrl ? 'contrast(1.05)' : 'grayscale(35%) contrast(1.05)' }}
               />
               <div aria-hidden style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.55) 100%)' }} />
               <div style={{ position:'absolute', top:6, left:8, lineHeight:0.9 }}>
@@ -1114,9 +1120,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
           <div style={{ display:'grid', gridTemplateColumns:'48px 1fr auto', alignItems:'center', gap:10, padding:'8px 14px', borderTop:'1px solid var(--c-border)', background:'rgba(255,255,255,0.015)' }}>
             <div style={{ position:'relative', width:48, height:40, borderRadius:3, overflow:'hidden', background:'#000' }}>
               <img
-                src={avatarUrl(secondStar.name, 80)}
+                src={playerPhoto(secondStar, 120)}
                 alt={secondStar.shortName}
-                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(50%)' }}
+                loading="lazy"
+                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering: secondStar.portraitUrl ? 'auto' : 'pixelated', filter: secondStar.portraitUrl ? 'contrast(1.05)' : 'grayscale(50%)' }}
               />
               <div style={{ position:'absolute', top:2, left:3, ...T_HERO, fontStyle:'italic', fontSize:14, color:'#FFFFFF', lineHeight:1, textShadow:'0 1px 3px rgba(0,0,0,0.95)' }}>
                 {secondStar.ovr}
