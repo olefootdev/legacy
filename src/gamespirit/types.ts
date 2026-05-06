@@ -5,6 +5,7 @@ import type { CausalMatchEvent } from '@/match/causal/matchCausalTypes';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import type { PenaltyState, SpiritOverlay, SpiritPhase } from '@/gamespirit/spiritSnapshotTypes';
 import type { MotorTelemetryRecord } from '@/match/motorActionOutcome';
+import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 
 export type ProposedAction =
   | 'recycle'
@@ -114,6 +115,20 @@ export interface SpiritContext {
    * Modifica chances de gol, fadiga, contra-ataques, pressão e defesa.
    */
   tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
+
+  /**
+   * Perfil narrativo do jogador com a bola — arquétipo cognitivo, traço de
+   * personalidade, intenção, humor e atributos-chave. Injetado por
+   * `buildSpiritContext` quando `onBall` está presente no roster.
+   * Consumido pela geração de narrativa para frases ricas e específicas.
+   */
+  onBallNarrativeProfile?: PlayerNarrativeProfile | null;
+
+  /**
+   * Perfis narrativos de todos os jogadores da casa em campo.
+   * Permite ao GameSpirit referenciar qualquer jogador por nome + traço.
+   */
+  squadNarrativeProfiles?: Map<string, PlayerNarrativeProfile>;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */

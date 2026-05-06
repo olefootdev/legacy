@@ -8,6 +8,8 @@ import type { PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import type { ClassicPlayer, ArchetypeId } from './types';
 import { FORMATION_SLOTS, FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
+import { buildPlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
+import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 
 /** Posição PT (atrs jogo) → role EN (engine CLASSIC). */
 export function derivedRoleFromPos(posRaw: string): string {
@@ -237,4 +239,56 @@ export function buildSyntheticAwayTeam(
       isStar: idx === 9, // ST como destaque
     };
   });
+}
+
+/**
+ * Constrói um mapa numericId → PlayerNarrativeProfile para os titulares da casa.
+ * Usado pelo ClassicMatchScreen para enriquecer a narração com dados reais dos agentes.
+ */
+export function buildClassicNarrativeProfiles(
+  playersById: Record<string, PlayerEntity>,
+  lineup: Record<string, string>,
+): Map<number, PlayerNarrativeProfile> {
+  const map = new Map<number, PlayerNarrativeProfile>();
+  for (const playerId of Object.values(lineup)) {
+    if (!playerId) continue;
+    const entity = playersById[playerId];
+    if (!entity) continue;
+    const numId = stableNumericId(entity.id);
+    const pitchProxy = {
+      playerId: entity.id,
+      slotId: '',
+      name: entity.name,
+      num: entity.num,
+      pos: entity.pos,
+      x: 50,
+      y: 50,
+      fatigue: entity.fatigue ?? 35,
+      role: derivedRoleToEngineRole(derivedRoleFromPos(entity.pos)),
+      archetype: entity.archetype,
+      attributes: {
+        passeCurto:  entity.attrs.passe       ?? 60,
+        passeLongo:  entity.attrs.passe       ?? 60,
+        cruzamento:  entity.attrs.passe       ?? 60,
+        marcacao:    entity.attrs.marcacao    ?? 60,
+        velocidade:  entity.attrs.velocidade  ?? 60,
+        fairPlay:    entity.attrs.fairPlay    ?? 70,
+        drible:      entity.attrs.drible      ?? 60,
+        finalizacao: entity.attrs.finalizacao ?? 60,
+        fisico:      entity.attrs.fisico      ?? 60,
+        tatico:      entity.attrs.tatico      ?? 60,
+        mentalidade: entity.attrs.mentalidade ?? 60,
+        confianca:   entity.attrs.confianca   ?? 60,
+      },
+    } as import('@/engine/types').PitchPlayerState;
+    map.set(numId, buildPlayerNarrativeProfile(pitchProxy, entity));
+  }
+  return map;
+}
+
+function derivedRoleToEngineRole(role: string): 'attack' | 'mid' | 'def' | 'gk' {
+  if (role === 'GK') return 'gk';
+  if (['CB', 'LB', 'RB'].includes(role)) return 'def';
+  if (['DM', 'CM'].includes(role)) return 'mid';
+  return 'attack';
 }

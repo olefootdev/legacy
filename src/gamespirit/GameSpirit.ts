@@ -42,6 +42,7 @@ import type { AgentSnapshot } from '@/simulation/InteractionResolver';
 import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
 import { enrichNarrative } from './contextualNarrative';
 import { detectSpecialEvent, applySpecialEventEffect } from '@/match/specialEvents';
+import { buildPlayerNarrativeProfile, buildSquadNarrativeProfiles } from '@/gamespirit/playerNarrativeProfile';
 import { PlayerProgressionManager, SIGNATURE_MOVES, type SignatureMoveType } from '@/progression/playerProgression';
 import {
   applyIntensityToShotChance,
@@ -381,27 +382,165 @@ function narrativeFor(
   ctx?: SpiritContext,
 ): string {
   const mate = ctx ? secondaryMate(ctx, ctx.onBall?.playerId) : undefined;
+  const profile = ctx?.onBallNarrativeProfile;
+
+  // Enriquece o nome com traço de personalidade quando o perfil está disponível
+  const richName = profile
+    ? enrichNameWithProfile(name, profile, action, minute, ctx)
+    : name;
+
   const sit = SEED_ACTION_MAP[action];
   if (sit) {
-    const line = pickLine(sit, { min: minute, from: name, to: mate, team: homeShort }, minute);
+    const line = pickLine(sit, { min: minute, from: richName, to: mate, team: homeShort }, minute);
     if (line) return line;
   }
   switch (action) {
     case 'shot':
-      return T.shot({ min: minute, shooter: name });
+      return narrativeShotRich(minute, richName, profile);
     case 'progress':
-      return T.progress({ min: minute, carrier: name, receiver: mate });
+      return narrativeProgressRich(minute, richName, mate, profile);
     case 'recycle':
-      return T.recycle({ min: minute, passer: name, receiver: mate });
+      return T.recycle({ min: minute, passer: richName, receiver: mate });
     case 'press':
       return T.press({ min: minute, team: homeShort, recoverer: mate });
     case 'clear':
-      return T.clear({ min: minute, defender: mate });
+      return narrativeClearRich(minute, mate, profile);
     case 'counter':
-      return T.counter({ min: minute, leader: name });
+      return narrativeCounterRich(minute, richName, profile);
     default:
-      return T.recycle({ min: minute, passer: name });
+      return T.recycle({ min: minute, passer: richName });
   }
+}
+
+/** Enriquece o nome com contexto do perfil narrativo para frases mais ricas. */
+function enrichNameWithProfile(
+  name: string,
+  profile: import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile,
+  action: ProposedAction,
+  minute: number,
+  ctx?: SpiritContext,
+): string {
+  const { trait, mood, isLegacy } = profile;
+
+  // Lenda sempre ganha destaque
+  if (isLegacy) return `${name} (lenda)`;
+
+  // Momentos decisivos com sangue frio
+  if (trait === 'sangue_frio' && (action === 'shot' || action === 'counter') && minute > 70) {
+    return `${name}, gelado`;
+  }
+  // Finalizador em posição de chute
+  if (trait === 'finalizador' && action === 'shot') {
+    return `${name}, o finalizador`;
+  }
+  // Em chamas — qualquer ação
+  if (mood === 'em_chamas') {
+    return `${name} (em chamas)`;
+  }
+  // Destruidor recuperando bola
+  if (trait === 'destruidor' && action === 'press') {
+    return `${name}, o destruidor`;
+  }
+  // Criativo em progressão
+  if (trait === 'criativo' && action === 'progress') {
+    return `${name}, com visão`;
+  }
+  // Guerreiro cansado mas lutando
+  if (trait === 'guerreiro' && mood === 'pressionado') {
+    return `${name}, no limite`;
+  }
+
+  return name;
+}
+
+function narrativeShotRich(
+  minute: number,
+  name: string,
+  profile?: import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile | null,
+): string {
+  if (!profile) return T.shot({ min: minute, shooter: name });
+  const { trait, attrs, mood } = profile;
+
+  if (trait === 'finalizador' && attrs.finalizacao >= 82) {
+    return `${minute}' — ${name} finaliza com a precisão que é sua marca!`;
+  }
+  if (trait === 'sangue_frio') {
+    return `${minute}' — ${name} arrisca sem hesitar — frieza total!`;
+  }
+  if (trait === 'criativo' && attrs.tatico >= 75) {
+    return `${minute}' — ${name} cria o espaço do nada e finaliza!`;
+  }
+  if (mood === 'em_chamas') {
+    return `${minute}' — ${name} está em chamas — chuta com tudo!`;
+  }
+  if (mood === 'pressionado' && attrs.mentalidade >= 70) {
+    return `${minute}' — ${name} cansado, mas não desiste — finaliza!`;
+  }
+  return T.shot({ min: minute, shooter: name });
+}
+
+function narrativeProgressRich(
+  minute: number,
+  name: string,
+  mate: string | undefined,
+  profile?: import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile | null,
+): string {
+  if (!profile) return T.progress({ min: minute, carrier: name, receiver: mate });
+  const { trait, attrs } = profile;
+
+  if (trait === 'criativo' && attrs.passe >= 78) {
+    return mate
+      ? `${minute}' — ${name} enxerga o corredor e lança ${mate} em profundidade!`
+      : `${minute}' — ${name} conduz com visão e abre o jogo!`;
+  }
+  if (trait === 'guerreiro' && attrs.velocidade >= 75) {
+    return mate
+      ? `${minute}' — ${name} não para de correr — serve ${mate} no espaço!`
+      : `${minute}' — ${name} avança com determinação!`;
+  }
+  if (trait === 'imprevisivel') {
+    return mate
+      ? `${minute}' — ${name} surpreende todo mundo e acha ${mate}!`
+      : `${minute}' — ${name} conduz de forma imprevisível!`;
+  }
+  return T.progress({ min: minute, carrier: name, receiver: mate });
+}
+
+function narrativeClearRich(
+  minute: number,
+  mate: string | undefined,
+  profile?: import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile | null,
+): string {
+  if (!profile) return T.clear({ min: minute, defender: mate });
+  const { trait } = profile;
+
+  if (trait === 'destruidor') {
+    return `${minute}' — ${profile.name} corta com autoridade — perigo eliminado!`;
+  }
+  if (trait === 'experiente') {
+    return `${minute}' — ${profile.name} lê a jogada antes de todo mundo e afasta!`;
+  }
+  return T.clear({ min: minute, defender: mate });
+}
+
+function narrativeCounterRich(
+  minute: number,
+  name: string,
+  profile?: import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile | null,
+): string {
+  if (!profile) return T.counter({ min: minute, leader: name });
+  const { trait, attrs } = profile;
+
+  if (trait === 'finalizador' && attrs.velocidade >= 72) {
+    return `${minute}' — ${name} explode em velocidade no contra-ataque!`;
+  }
+  if (trait === 'guerreiro') {
+    return `${minute}' — ${name} lidera a transição — motor que não para!`;
+  }
+  if (trait === 'sangue_frio') {
+    return `${minute}' — ${name} conduz o contra-ataque com frieza cirúrgica!`;
+  }
+  return T.counter({ min: minute, leader: name });
 }
 
 export function buildSpiritContext(input: {
@@ -472,6 +611,13 @@ export function buildSpiritContext(input: {
     }
   }
 
+  // Perfis narrativos — extraídos dos agentes, zero tokens
+  const squadNarrativeProfiles = buildSquadNarrativeProfiles(input.homePlayers, input.homeRoster);
+  const onBallNarrativeProfile = input.onBall
+    ? (squadNarrativeProfiles.get(input.onBall.playerId) ??
+       buildPlayerNarrativeProfile(input.onBall, input.homeRoster.find((e) => e.id === input.onBall!.playerId)))
+    : null;
+
   return {
     minute: input.minute,
     homeScore: input.homeScore,
@@ -506,6 +652,8 @@ export function buildSpiritContext(input: {
     pendingFreeKickForSide: input.pendingFreeKickForSide,
     smartfieldActionHint: input.smartfieldActionHint,
     tacticalIntensity: input.tacticalIntensity,
+    onBallNarrativeProfile,
+    squadNarrativeProfiles,
   };
 }
 
@@ -559,6 +707,85 @@ function detectCounter(
   return false;
 }
 
+/**
+ * Narrativa de gol enriquecida com o perfil do marcador.
+ * Usa traço, humor, arquétipo cognitivo e contexto da partida para frases únicas.
+ */
+function buildRichGoalNarrative(
+  minute: number,
+  scorerName: string,
+  profile: import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile,
+  buildUp: GoalBuildUp,
+  ctx: SpiritContext,
+): string | null {
+  const { trait, mood, cognitiveArchetype, attrs, isLegacy, cardArchetype } = profile;
+  const scoreDiff = ctx.homeScore - ctx.awayScore; // antes do gol
+  const isDecisive = minute > 75 && Math.abs(scoreDiff) <= 1;
+  const isComeback = scoreDiff < 0;
+  const isCounter = buildUp === 'counter';
+
+  // Lenda marcando
+  if (isLegacy) {
+    return `${minute}' — A LENDA FALA! ${scorerName} mostra por que é diferente — GOOOOOL!`;
+  }
+
+  // Gol decisivo nos minutos finais
+  if (isDecisive && trait === 'sangue_frio') {
+    return `${minute}' — Nos momentos que importam, ${scorerName} não treme. GOOOOOL!`;
+  }
+  if (isDecisive && mood === 'em_chamas') {
+    return `${minute}' — ${scorerName} está em chamas e decide o jogo! GOOOOOL!`;
+  }
+  if (isDecisive) {
+    return `${minute}' — GOOOOOL! ${scorerName} decide nos minutos finais!`;
+  }
+
+  // Virada / empate
+  if (isComeback) {
+    if (trait === 'guerreiro') {
+      return `${minute}' — ${scorerName} não desiste nunca — GOOOOOL! O time acredita!`;
+    }
+    return `${minute}' — GOOOOOL! ${scorerName} empata — a partida está viva!`;
+  }
+
+  // Contra-ataque
+  if (isCounter) {
+    if (trait === 'finalizador' && attrs.velocidade >= 72) {
+      return `${minute}' — Velocidade e frieza — ${scorerName} explode no contra-ataque! GOOOOOL!`;
+    }
+    return `${minute}' — Transição fulminante! ${scorerName} não perdoa — GOOOOOL!`;
+  }
+
+  // Por arquétipo cognitivo
+  if (cognitiveArchetype === 'finalizador') {
+    return `${minute}' — ${scorerName} estava esperando esse momento. GOOOOOL — instinto puro!`;
+  }
+  if (cognitiveArchetype === 'criador' && attrs.tatico >= 75) {
+    return `${minute}' — ${scorerName} criou e finalizou — inteligência total! GOOOOOL!`;
+  }
+  if (cognitiveArchetype === 'executor') {
+    return `${minute}' — ${scorerName} executou com perfeição — GOOOOOL!`;
+  }
+
+  // Por traço
+  if (trait === 'imprevisivel') {
+    return `${minute}' — Ninguém esperava! ${scorerName} surpreende todo mundo — GOOOOOL!`;
+  }
+  if (trait === 'agressivo' && attrs.fisico >= 75) {
+    return `${minute}' — Na força e na raça — ${scorerName} empurra para o gol! GOOOOOL!`;
+  }
+
+  // Carta especial
+  if (cardArchetype === 'meme') {
+    return `${minute}' — ATÉ ELE! ${scorerName} marca e a torcida vai à loucura! GOOOOOL!`;
+  }
+  if (cardArchetype === 'novo_talento') {
+    return `${minute}' — O jovem ${scorerName} mostra que veio para ficar! GOOOOOL!`;
+  }
+
+  return null; // fallback para o sistema padrão
+}
+
 interface CommitGoalInput {
   scorerSide: PossessionSide;
   minute: number;
@@ -600,6 +827,7 @@ function commitGoal(input: CommitGoalInput): {
 
   const gTeam = scorerSide === 'home' ? homeShort : awayShort;
   const gParams = { min: minute, from: scorerName, team: gTeam };
+  const profile = ctx.onBallNarrativeProfile;
 
   let narrative: string;
   if (variant === 'post_in') {
@@ -608,7 +836,13 @@ function commitGoal(input: CommitGoalInput): {
   } else if (variant === 'keeper_error') {
     narrative = `${minute}' — Falha clamorosa do goleiro! ${scorerName} aproveita e empurra para o gol.`;
   } else {
-    narrative = pickLine(['goal_simple', 'goal_beautiful'], gParams, minute)
+    // Narrativa de gol enriquecida com perfil do marcador
+    const richGoalNarrative = profile && scorerSide === 'home'
+      ? buildRichGoalNarrative(minute, scorerName, profile, buildUp, ctx)
+      : null;
+
+    narrative = richGoalNarrative
+      ?? pickLine(['goal_simple', 'goal_beautiful'], gParams, minute)
       ?? (scorerSide === 'home'
         ? T.goalPositional({ min: minute, scorer: scorerName })
         : T.goalAwayPositional({ min: minute, scorer: scorerName, team: awayShort }));
