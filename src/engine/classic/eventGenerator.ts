@@ -1,4 +1,4 @@
-import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, EventChainContext, PassStyle, PassSubtype } from './types';
+import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, EventChainContext, PassStyle, PassSubtype, MatchStats } from './types';
 import { ARCHETYPES } from './archetypes';
 import { generateNarration } from './narration';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
@@ -327,7 +327,8 @@ export function generateEvent(
 
   const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
   const playerProfile = narrativeProfiles?.get(player.id);
-  const text = generateNarration(type, player.archetype, player.shortName, teamName, minute, score, playerProfile);
+  const tacticalTrigger = decision.tacticalTrigger ?? null;
+  const text = generateNarration(type, player.archetype, player.shortName, teamName, minute, score, playerProfile, tacticalTrigger);
 
   const event: MatchEvent = {
     id: `evt_${++_eventCounter}`,
@@ -343,13 +344,14 @@ export function generateEvent(
     receiverPlayerId: receiverId ?? undefined,
     passSubtype,
     rationale: decision.rationale,
+    tacticalTrigger,
   };
 
   // Avança sequência se passe; reseta nos eventos terminais
   const sequenceEnded =
     type === 'goal' || type === 'shot' || type === 'save' || type === 'post' ||
     type === 'wide' || type === 'rebound' || type === 'corner' || type === 'cross' ||
-    type === 'tackle' || type === 'interception' || type === 'foul' || isLastZone;
+    type === 'tackle' || type === 'interception' || type === 'foul' || type === 'duel' || isLastZone;
 
   const nextSequence = sequenceEnded
     ? null
@@ -363,19 +365,92 @@ export function applyEventToPlayers(
   evt: MatchEvent,
 ): ClassicPlayer[] {
   return players.map(p => {
-    if (p.id !== evt.playerId) return p;
+    const isActor = p.id === evt.playerId;
+    const isReceiver = p.id === evt.receiverPlayerId;
+    if (!isActor && !isReceiver) return p;
 
-    let fatigue = Math.min(100, p.fatigue + (evt.type === 'pressure' || evt.type === 'tackle' ? 3 : 1));
+    let fatigue = p.fatigue;
     let confidence = p.confidence;
+    const ms = p.matchStats ?? { goals:0, shots:0, passes:0, tackles:0, interceptions:0, fouls:0, duelsWon:0, tikTakCount:0, longBallCount:0 };
 
-    if (evt.type === 'goal')       confidence = Math.min(100, confidence + 20);
-    else if (evt.type === 'interception' || evt.type === 'tackle') confidence = Math.min(100, confidence + 8);
-    else if (evt.type === 'shot')  confidence = Math.min(100, confidence + 4);
-    else if (evt.type === 'pass' && p.archetype === 'FINISHER' && evt.minute > 80) confidence = Math.max(0, confidence - 8);
+    if (isActor) {
+      fatigue = Math.min(100, fatigue + (evt.type === 'pressure' || evt.type === 'tackle' || evt.type === 'duel' ? 3 : 1));
 
-    if (fatigue > 80) confidence = Math.max(0, confidence - 3);
+      if (evt.type === 'goal')         { confidence = Math.min(100, confidence + 20); }
+      else if (evt.type === 'interception' || evt.type === 'tackle') { confidence = Math.min(100, confidence + 8); }
+      else if (evt.type === 'shot')    { confidence = Math.min(100, confidence + 4); }
+      else if (evt.type === 'duel')    { confidence = Math.min(100, confidence + 6); }
+      else if (evt.type === 'pass' && p.archetype === 'FINISHER' && evt.minute > 80) { confidence = Math.max(0, confidence - 8); }
 
-    const onFire = confidence > 85;
-    return { ...p, fatigue, confidence, onFire };
+      if (fatigue > 80) confidence = Math.max(0, confidence - 3);
+
+      // Acumula stats individuais
+      const newMs = { ...ms };
+      if (evt.type === 'goal')         newMs.goals++;
+      if (evt.type === 'shot' || evt.type === 'goal') newMs.shots++;
+      if (evt.type === 'pass' || evt.type === 'cross') newMs.passes++;
+      if (evt.type === 'tackle')       newMs.tackles++;
+      if (evt.type === 'interception') newMs.interceptions++;
+      if (evt.type === 'foul')         newMs.fouls++;
+      if (evt.tacticalTrigger === 'duel_win') newMs.duelsWon++;
+      if (evt.tacticalTrigger === 'tiktak')   newMs.tikTakCount++;
+      if (evt.tacticalTrigger === 'long_ball') newMs.longBallCount++;
+
+      const onFire = confidence > 85;
+      return { ...p, fatigue, confidence, onFire, matchStats: newMs };
+    }
+
+    // Receptor do passe: leve boost de confiança
+    if (isReceiver && (evt.type === 'pass' || evt.type === 'cross')) {
+      confidence = Math.min(100, confidence + 2);
+      const newMs = { ...ms, passes: ms.passes + 1 };
+      return { ...p, confidence, matchStats: newMs };
+    }
+
+    return p;
   });
+}
+
+/**
+ * Deriva MatchStats incrementais a partir de um evento.
+ * Chamado no ClassicMatchScreen para atualizar stats em tempo real.
+ */
+export function deriveStatsDelta(
+  evt: MatchEvent,
+  currentStats: MatchStats,
+  possession: 'home' | 'away',
+): MatchStats {
+  const isHome = evt.team === 'home';
+  const s = { ...currentStats };
+  s.shots         = { ...s.shots };
+  s.shotsOnTarget = { ...s.shotsOnTarget };
+  s.passes        = { ...s.passes };
+  s.fouls         = { ...s.fouls };
+  s.corners       = { ...s.corners };
+  s.possession    = { ...s.possession };
+
+  if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' || evt.type === 'post' || evt.type === 'wide' || evt.type === 'rebound') {
+    if (isHome) s.shots.home++; else s.shots.away++;
+  }
+  if (evt.type === 'goal' || evt.type === 'save') {
+    if (isHome) s.shotsOnTarget.home++; else s.shotsOnTarget.away++;
+  }
+  if (evt.type === 'pass' || evt.type === 'cross') {
+    if (isHome) s.passes.home++; else s.passes.away++;
+  }
+  if (evt.type === 'foul') {
+    if (isHome) s.fouls.home++; else s.fouls.away++;
+  }
+  if (evt.type === 'corner') {
+    if (isHome) s.corners.home++; else s.corners.away++;
+  }
+
+  // Posse: recalcula baseado em quem tem mais passes acumulados
+  const totalPasses = s.passes.home + s.passes.away;
+  if (totalPasses > 0) {
+    s.possession.home = Math.round((s.passes.home / totalPasses) * 100);
+    s.possession.away = 100 - s.possession.home;
+  }
+
+  return s;
 }

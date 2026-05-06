@@ -78,20 +78,68 @@ const HOME_433_SLOTS: RawSlot[] = [
   { id:11, pct:[0.52,0.83], role:'LW', archetype:'BOX_INVADER', name:'Lima',      shortName:'LIMA',      number:11, ovr:83 },
 ];
 
-// AWAY: Alvorada FC — 4-3-3, bloco médio defensivo
-const AWAY_433_SLOTS: RawSlot[] = [
-  { id:21, pct:[0.95,0.50], role:'GK', archetype:'COLD_BLOOD',  name:'Pereira',    shortName:'PEREIRA',   number:1,  ovr:76 },
-  { id:22, pct:[0.78,0.10], role:'LB', archetype:'ENGINE',      name:'Alves',      shortName:'ALVES',     number:3,  ovr:72 },
-  { id:23, pct:[0.82,0.40], role:'CB', archetype:'VETERAN',     name:'Costa',      shortName:'COSTA',     number:5,  ovr:78 },
-  { id:24, pct:[0.82,0.60], role:'CB', archetype:'DESTROYER',   name:'Oliveira',   shortName:'OLIVEIRA',  number:4,  ovr:79 },
-  { id:25, pct:[0.78,0.88], role:'RB', archetype:'ENGINE',      name:'Santos',     shortName:'SANTOS',    number:2,  ovr:71 },
-  { id:26, pct:[0.66,0.50], role:'DM', archetype:'MAESTRO',     name:'Cavalcanti', shortName:'CAVA',      number:10, ovr:84 },
-  { id:28, pct:[0.70,0.30], role:'CM', archetype:'ENGINE',      name:'Nunes',      shortName:'NUNES',     number:8,  ovr:75 },
-  { id:30, pct:[0.70,0.70], role:'CM', archetype:'HUNTER',      name:'Ribeiro',    shortName:'RIBEIRO',   number:6,  ovr:77 },
-  { id:27, pct:[0.62,0.22], role:'LW', archetype:'BOX_INVADER', name:'Mendes',     shortName:'MENDES',    number:11, ovr:80 },
-  { id:29, pct:[0.50,0.55], role:'ST', archetype:'FINISHER',    name:'Rocha',      shortName:'ROCHA',     number:9,  ovr:86 },
-  { id:31, pct:[0.62,0.78], role:'RW', archetype:'WILD',        name:'Dias',       shortName:'DIAS',      number:7,  ovr:81 },
-];
+// AWAY: Alvorada FC — formação sorteada a cada partida entre 4 opções
+// Cada slot espelha o HOME (xPct invertido para AWAY)
+const AWAY_SLOT_SETS: Record<string, RawSlot[]> = {
+  '4-3-3': [
+    { id:21, pct:[0.95,0.50], role:'GK', archetype:'COLD_BLOOD',  name:'Pereira',    shortName:'PEREIRA',   number:1,  ovr:76 },
+    { id:22, pct:[0.78,0.10], role:'LB', archetype:'ENGINE',      name:'Alves',      shortName:'ALVES',     number:3,  ovr:72 },
+    { id:23, pct:[0.82,0.40], role:'CB', archetype:'VETERAN',     name:'Costa',      shortName:'COSTA',     number:5,  ovr:78 },
+    { id:24, pct:[0.82,0.60], role:'CB', archetype:'DESTROYER',   name:'Oliveira',   shortName:'OLIVEIRA',  number:4,  ovr:79 },
+    { id:25, pct:[0.78,0.88], role:'RB', archetype:'ENGINE',      name:'Santos',     shortName:'SANTOS',    number:2,  ovr:71 },
+    { id:26, pct:[0.66,0.50], role:'DM', archetype:'MAESTRO',     name:'Cavalcanti', shortName:'CAVA',      number:10, ovr:84 },
+    { id:28, pct:[0.70,0.30], role:'CM', archetype:'ENGINE',      name:'Nunes',      shortName:'NUNES',     number:8,  ovr:75 },
+    { id:30, pct:[0.70,0.70], role:'CM', archetype:'HUNTER',      name:'Ribeiro',    shortName:'RIBEIRO',   number:6,  ovr:77 },
+    { id:27, pct:[0.62,0.22], role:'LW', archetype:'BOX_INVADER', name:'Mendes',     shortName:'MENDES',    number:11, ovr:80 },
+    { id:29, pct:[0.50,0.55], role:'ST', archetype:'FINISHER',    name:'Rocha',      shortName:'ROCHA',     number:9,  ovr:86 },
+    { id:31, pct:[0.62,0.78], role:'RW', archetype:'WILD',        name:'Dias',       shortName:'DIAS',      number:7,  ovr:81 },
+  ],
+  '4-4-2': [
+    { id:21, pct:[0.95,0.50], role:'GK', archetype:'COLD_BLOOD',  name:'Pereira',    shortName:'PEREIRA',   number:1,  ovr:76 },
+    { id:22, pct:[0.72,0.10], role:'LB', archetype:'ENGINE',      name:'Alves',      shortName:'ALVES',     number:3,  ovr:72 },
+    { id:23, pct:[0.82,0.38], role:'CB', archetype:'VETERAN',     name:'Costa',      shortName:'COSTA',     number:5,  ovr:78 },
+    { id:24, pct:[0.82,0.62], role:'CB', archetype:'DESTROYER',   name:'Oliveira',   shortName:'OLIVEIRA',  number:4,  ovr:79 },
+    { id:25, pct:[0.72,0.90], role:'RB', archetype:'ENGINE',      name:'Santos',     shortName:'SANTOS',    number:2,  ovr:71 },
+    { id:26, pct:[0.56,0.12], role:'LW', archetype:'WILD',        name:'Mendes',     shortName:'MENDES',    number:11, ovr:80 },
+    { id:28, pct:[0.62,0.38], role:'CM', archetype:'MAESTRO',     name:'Cavalcanti', shortName:'CAVA',      number:10, ovr:84 },
+    { id:30, pct:[0.62,0.62], role:'CM', archetype:'HUNTER',      name:'Ribeiro',    shortName:'RIBEIRO',   number:6,  ovr:77 },
+    { id:27, pct:[0.56,0.88], role:'RW', archetype:'ENGINE',      name:'Nunes',      shortName:'NUNES',     number:8,  ovr:75 },
+    { id:29, pct:[0.42,0.35], role:'ST', archetype:'FINISHER',    name:'Rocha',      shortName:'ROCHA',     number:9,  ovr:86 },
+    { id:31, pct:[0.42,0.65], role:'ST', archetype:'BOX_INVADER', name:'Dias',       shortName:'DIAS',      number:7,  ovr:81 },
+  ],
+  '4-2-3-1': [
+    { id:21, pct:[0.95,0.50], role:'GK', archetype:'COLD_BLOOD',  name:'Pereira',    shortName:'PEREIRA',   number:1,  ovr:76 },
+    { id:22, pct:[0.72,0.10], role:'LB', archetype:'ENGINE',      name:'Alves',      shortName:'ALVES',     number:3,  ovr:72 },
+    { id:23, pct:[0.82,0.38], role:'CB', archetype:'VETERAN',     name:'Costa',      shortName:'COSTA',     number:5,  ovr:78 },
+    { id:24, pct:[0.82,0.62], role:'CB', archetype:'DESTROYER',   name:'Oliveira',   shortName:'OLIVEIRA',  number:4,  ovr:79 },
+    { id:25, pct:[0.72,0.90], role:'RB', archetype:'ENGINE',      name:'Santos',     shortName:'SANTOS',    number:2,  ovr:71 },
+    { id:26, pct:[0.64,0.38], role:'DM', archetype:'HUNTER',      name:'Ribeiro',    shortName:'RIBEIRO',   number:6,  ovr:77 },
+    { id:28, pct:[0.64,0.62], role:'DM', archetype:'DESTROYER',   name:'Nunes',      shortName:'NUNES',     number:8,  ovr:75 },
+    { id:27, pct:[0.50,0.15], role:'LW', archetype:'WILD',        name:'Mendes',     shortName:'MENDES',    number:11, ovr:80 },
+    { id:30, pct:[0.52,0.50], role:'AM', archetype:'MAESTRO',     name:'Cavalcanti', shortName:'CAVA',      number:10, ovr:84 },
+    { id:31, pct:[0.50,0.85], role:'RW', archetype:'BOX_INVADER', name:'Dias',       shortName:'DIAS',      number:7,  ovr:81 },
+    { id:29, pct:[0.40,0.50], role:'ST', archetype:'FINISHER',    name:'Rocha',      shortName:'ROCHA',     number:9,  ovr:86 },
+  ],
+  '5-3-2': [
+    { id:21, pct:[0.95,0.50], role:'GK', archetype:'COLD_BLOOD',  name:'Pereira',    shortName:'PEREIRA',   number:1,  ovr:76 },
+    { id:22, pct:[0.78,0.08], role:'LB', archetype:'ENGINE',      name:'Alves',      shortName:'ALVES',     number:3,  ovr:72 },
+    { id:23, pct:[0.80,0.30], role:'CB', archetype:'VETERAN',     name:'Costa',      shortName:'COSTA',     number:5,  ovr:78 },
+    { id:24, pct:[0.82,0.50], role:'CB', archetype:'DESTROYER',   name:'Oliveira',   shortName:'OLIVEIRA',  number:4,  ovr:79 },
+    { id:32, pct:[0.80,0.70], role:'CB', archetype:'DESTROYER',   name:'Barros',     shortName:'BARROS',    number:15, ovr:74 },
+    { id:25, pct:[0.78,0.92], role:'RB', archetype:'ENGINE',      name:'Santos',     shortName:'SANTOS',    number:2,  ovr:71 },
+    { id:26, pct:[0.60,0.30], role:'CM', archetype:'MAESTRO',     name:'Cavalcanti', shortName:'CAVA',      number:10, ovr:84 },
+    { id:28, pct:[0.60,0.50], role:'DM', archetype:'HUNTER',      name:'Ribeiro',    shortName:'RIBEIRO',   number:6,  ovr:77 },
+    { id:30, pct:[0.60,0.70], role:'CM', archetype:'ENGINE',      name:'Nunes',      shortName:'NUNES',     number:8,  ovr:75 },
+    { id:29, pct:[0.44,0.35], role:'ST', archetype:'FINISHER',    name:'Rocha',      shortName:'ROCHA',     number:9,  ovr:86 },
+    { id:31, pct:[0.44,0.65], role:'ST', archetype:'BOX_INVADER', name:'Dias',       shortName:'DIAS',      number:7,  ovr:81 },
+  ],
+};
+
+const AWAY_FORMATIONS = Object.keys(AWAY_SLOT_SETS) as Array<keyof typeof AWAY_SLOT_SETS>;
+
+function pickAwayFormation(): string {
+  return AWAY_FORMATIONS[Math.floor(Math.random() * AWAY_FORMATIONS.length)];
+}
 
 function buildPlayers(slots: RawSlot[], team: 'home' | 'away'): ClassicPlayer[] {
   return slots.map(s => ({
@@ -115,7 +163,13 @@ export function getHomePlayers(): ClassicPlayer[] {
 }
 
 export function getAwayPlayers(): ClassicPlayer[] {
-  return buildPlayers(AWAY_433_SLOTS, 'away');
+  const formation = pickAwayFormation();
+  return buildPlayers(AWAY_SLOT_SETS[formation], 'away');
+}
+
+/** Retorna a formação atual do AWAY (para exibição no modal). */
+export function getAwayFormation(): string {
+  return pickAwayFormation();
 }
 
 // Returns repositioned players for a given formation, preserving identity

@@ -25,6 +25,7 @@ import type {
   PassStyle,
   MatchScore,
   PlayerZone,
+  TacticalTrigger,
 } from './types';
 import { zoneFromRole } from './types';
 import { ARCHETYPES } from './archetypes';
@@ -51,6 +52,7 @@ export interface Decision {
   passSubtype?: PassSubtype;
   ballPos: { x: number; y: number };
   rationale: string;
+  tacticalTrigger?: TacticalTrigger;
 }
 
 // ─── Métricas de avaliação (puras, testáveis) ─────────────────────────────────
@@ -306,6 +308,43 @@ export function decideNextAction(
     };
   }
 
+  // ─── GATILHO: Chute obrigatório na zona de ataque ─────────────────────────
+  // Atacante na zona final SEM opção de passe válida → DEVE finalizar.
+  // Evita partidas 0x0 por falta de decisão.
+  if (holderZone === 'attack' && xRel >= 0.60) {
+    const attackersAhead = teammates.filter(t => {
+      const tZone = zoneFromRole(t.role);
+      const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
+      return tZone === 'attack' && tXRel >= 0.55 && computeFreedom(t, opponents) > 0.35;
+    });
+    if (attackersAhead.length === 0 || Math.random() < 0.55) {
+      return {
+        action: 'shot',
+        ballPos: goalMouthPos(teamSide),
+        rationale: `${ballHolder.shortName} → CHUTE OBRIGATÓRIO (zona ataque, sem saída)`,
+        tacticalTrigger: 'forced_shot',
+      };
+    }
+  }
+
+  // ─── GATILHO: Duelo defensivo — defensor luta pela bola sem sair do lugar ─
+  // Defensor na zona de defesa com adversário próximo → duelo no lugar.
+  if (holderZone === 'defense') {
+    const nearbyAttacker = opponents.find(o => {
+      const oZone = zoneFromRole(o.role);
+      return (oZone === 'attack' || oZone === 'creative') &&
+             distance(ballHolder.position, o.position) < 60;
+    });
+    if (nearbyAttacker && Math.random() < 0.35) {
+      return {
+        action: 'duel',
+        ballPos: { x: ballHolder.position.x, y: ballHolder.position.y },
+        rationale: `${ballHolder.shortName} → DUELO vs ${nearbyAttacker.shortName}`,
+        tacticalTrigger: 'duel_win',
+      };
+    }
+  }
+
   // ─── Avaliação de companheiros para passe ─────────────────────────────────
   const scored = teammates.map(t => {
     const freedom = computeFreedom(t, opponents);
@@ -395,6 +434,7 @@ export function decideNextAction(
 
   // ─── Subtipo do passe ─────────────────────────────────────────────────────
   let subtype: PassSubtype;
+  let tacticalTrigger: TacticalTrigger = null;
 
   // CRUZAMENTO: portador na ala (y<100 ou y>300) E receptor na área final
   const inFlank = ballHolder.position.y < 100 || ballHolder.position.y > 300;
@@ -402,16 +442,63 @@ export function decideNextAction(
   const targetInBox = teamSide === 'home' ? targetX > 460 : targetX < 140;
   const inFinalThird = teamSide === 'home' ? ballHolder.position.x > 360 : ballHolder.position.x < 240;
 
-  if (inFlank && inFinalThird && targetInBox) {
+  // ─── GATILHO: Bola longa — lateral cruza de um lado ao outro ─────────────
+  // LB/RB na ala oposta com receptor no outro corredor → lançamento diagonal
+  const isLateral = ballHolder.role === 'LB' || ballHolder.role === 'RB';
+  const targetOnOppositeSide = isLateral && (
+    (ballHolder.position.y < 150 && target.position.y > 250) ||
+    (ballHolder.position.y > 250 && target.position.y < 150)
+  );
+  if (isLateral && targetOnOppositeSide && Math.random() < 0.65) {
+    subtype = 'planejado';
+    tacticalTrigger = 'long_ball';
+  }
+  // ─── GATILHO: Tik-tak — meio de campo toca de primeira ───────────────────
+  // CM/DM sob pressão ou em TIKTAK style → passe de 1 toque
+  else if (
+    (holderZone === 'creative') &&
+    (passStyle === 'TIKTAK' || underPressure) &&
+    picked.dist < 120 &&
+    Math.random() < 0.60
+  ) {
+    subtype = 'rapido';
+    tacticalTrigger = 'tiktak';
+  }
+  // ─── GATILHO: Falso 9 — atacante segura, recua pro meio e chuta ──────────
+  // ST com archetype FINISHER/COLD_BLOOD recebe passe, segura 3s e chuta
+  else if (
+    holderZone === 'attack' &&
+    (ballHolder.archetype === 'FINISHER' || ballHolder.archetype === 'COLD_BLOOD') &&
+    xRel >= 0.45 && xRel < 0.60 &&
+    Math.random() < 0.40
+  ) {
+    // Falso 9: devolve pro meio e o meio chuta de primeira
+    const midfielders = teammates.filter(t => zoneFromRole(t.role) === 'creative');
+    if (midfielders.length > 0) {
+      const mid = midfielders.sort((a, b) =>
+        computeFreedom(b, opponents) - computeFreedom(a, opponents)
+      )[0];
+      return {
+        action: 'shot',
+        target: mid,
+        passSubtype: 'rapido',
+        ballPos: goalMouthPos(teamSide),
+        rationale: `${ballHolder.shortName} → FALSO 9 → ${mid.shortName} chuta de primeira`,
+        tacticalTrigger: 'false9',
+      };
+    }
+    subtype = 'curto';
+  }
+  else if (inFlank && inFinalThird && targetInBox) {
     subtype = 'cruzamento';
   } else if (underPressure) {
-    subtype = 'rapido'; // 1-toque sob pressão
+    subtype = 'rapido';
   } else if ((cfg.passFreq >= 0.85 && cfg.slowsRhythm) && minute < 80) {
-    subtype = 'planejado'; // MAESTRO/VETERAN com tempo
+    subtype = 'planejado';
   } else if (passStyle === 'TIKTAK') {
     subtype = 'curto';
   } else if (passStyle === 'LONGO' && picked.dist > 200) {
-    subtype = 'planejado'; // chutão calculado
+    subtype = 'planejado';
   } else {
     subtype = 'curto';
   }
@@ -422,6 +509,7 @@ export function decideNextAction(
     passSubtype: subtype,
     ballPos: { x: target.position.x, y: target.position.y },
     rationale: `${ballHolder.shortName} → ${target.shortName} [${subtype}] f=${picked.freedom.toFixed(2)} p=${picked.progress.toFixed(2)} t=${picked.threat.toFixed(2)} c=${picked.coherence.toFixed(2)}`,
+    tacticalTrigger,
   };
 }
 

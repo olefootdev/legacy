@@ -121,6 +121,41 @@ function contextNarration(
   const isClosing = minute > 85;
   const isFirstGoal = score.home === 0 && score.away === 0;
 
+  // ── Contexto temporal ────────────────────────────────────────────────────
+  const isOpening   = minute <= 5;
+  const isHalfTime  = minute >= 43 && minute <= 48;
+  const isFinalPush = minute >= 80 && minute <= 90;
+  const isExtraTime = minute > 90;
+  const tightGame   = Math.abs(score.home - score.away) <= 1 && minute > 60;
+
+  if (type === 'pass' && isOpening) {
+    return `${team} começa a construir — primeiros toques do jogo.`;
+  }
+  if (type === 'pressure' && isOpening) {
+    return `${name} pressiona desde o início — ${team} quer impor o ritmo.`;
+  }
+  if (type === 'pass' && isHalfTime && !isUrgent) {
+    return `${name} circula antes do intervalo — ${team} administra.`;
+  }
+  if (type === 'shot' && isHalfTime) {
+    return `${name} tenta antes do apito — ${team} quer o gol do intervalo!`;
+  }
+  if (type === 'pass' && isFinalPush && tightGame) {
+    return `${name} mantém a posse — cada toque vale ouro agora.`;
+  }
+  if (type === 'tackle' && isFinalPush) {
+    return `${name} não deixa o adversário respirar — pressão total nos minutos finais!`;
+  }
+  if (type === 'pass' && isExtraTime) {
+    return `${name} circula nos acréscimos — ${team} segura o resultado.`;
+  }
+  if (type === 'shot' && isExtraTime) {
+    return `${name} CHUTA NOS ACRÉSCIMOS — pode ser o gol da vitória!`;
+  }
+  if (type === 'duel') {
+    return `${name} entra no duelo — briga pela bola sem sair do lugar!`;
+  }
+
   if (type === 'goal') {
     // Gol com perfil rico
     if (profile) {
@@ -146,9 +181,11 @@ function contextNarration(
       if (isClosing) return `GOOOL NOS ACRÉSCIMOS! ${name} — ${team}!`;
     }
 
+    if (isFirstGoal && isOpening) return `GOOOL RELÂMPAGO! ${name} MARCA LOGO DE INÍCIO — ${team}!`;
     if (isFirstGoal) return `${team} ABRE O PLACAR! ${name} MARCA O PRIMEIRO!`;
     if (isUrgent) return `${name} EMPATA! ${team} ACREDITA! GOOOL!`;
     if (isClosing) return `GOOOL NOS ACRÉSCIMOS! ${name} — ${team}!`;
+    if (tightGame) return `GOOOL! ${name} QUEBRA O EQUILÍBRIO — ${team} NA FRENTE!`;
     return null;
   }
 
@@ -195,6 +232,13 @@ const GENERAL_NARRATION: Record<string, string[]> = {
   post:         ['NA TRAVE! {name} quase marcou!', 'Bola explode na trave!', 'Centímetros — bate na madeira!'],
   wide:         ['Pra fora! {name} mandou no alto.', '{name} chuta — bola passa raspando!', 'Mandou pra galera — {name} desperdiçou.'],
   rebound:      ['Rebote na área — segue o jogo!', '{name} chutou, sobrou pra área.', 'Bola viva após defesa parcial.'],
+  duel:         ['{name} briga pela bola — duelo no campo!', '{name} não sai do lugar — disputa intensa!', 'Duelo físico — {name} segura a posição!'],
+  // Gatilhos táticos especiais
+  tiktak:       ['{name} de primeira — tik-tak no meio!', '{name} toca de primeira — circulação rápida!', 'Um toque só — {name} acelera o jogo!'],
+  long_ball:    ['{name} lança de lado a lado — bola longa!', '{name} muda o jogo com lançamento diagonal!', 'Bola longa de {name} — muda o corredor!'],
+  false9:       ['{name} segura, gira e chuta — falso 9 em ação!', '{name} recua, cria espaço e finaliza!', 'Falso 9! {name} engana a defesa e chuta!'],
+  forced_shot:  ['{name} tem que chutar — zona de ataque!', '{name} não tem saída — finaliza!', '{name} na área — obrigado a chutar!'],
+  duel_win:     ['{name} ganha o duelo sem sair do lugar!', '{name} segura a posição — duelo ganho!', '{name} firme — recupera a bola no duelo!'],
 };
 
 function pick(arr: string[]): string {
@@ -213,7 +257,14 @@ export function generateNarration(
   minute = 0,
   score: MatchScore = { home: 0, away: 0 },
   profile?: PlayerNarrativeProfile,
+  tacticalTrigger?: import('./types').TacticalTrigger,
 ): string {
+  // 0. Gatilho tático especial — narração específica da mecânica
+  if (tacticalTrigger && tacticalTrigger !== null) {
+    const triggerLines = GENERAL_NARRATION[tacticalTrigger];
+    if (triggerLines) return fill(pick(triggerLines), { name, team });
+  }
+
   // 1. Context layer — momentos urgentes/dramáticos com perfil rico
   const ctx = contextNarration(type, name, team, minute, score, profile);
   if (ctx) return ctx;

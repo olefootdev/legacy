@@ -17,8 +17,9 @@ import type {
   BallState, TrailPoint, SkillEntry,
   ClassicMatchConfig, ManagerSkillId, EventChainContext,
 } from '@/engine/classic/types';
+import { emptyPlayerMatchStats } from '@/engine/classic/types';
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
-import { generateEvent, applyEventToPlayers } from '@/engine/classic/eventGenerator';
+import { generateEvent, applyEventToPlayers, deriveStatsDelta } from '@/engine/classic/eventGenerator';
 import { computeTeamPhase, playerShift } from '@/engine/classic/decisionEngine';
 import { createMatchStory, updateMatchStory, storyBeatsForCoach } from '@/engine/classic/matchStory';
 import type { MatchStory } from '@/engine/classic/matchStory';
@@ -341,8 +342,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
 
   // ── State ──────────────────────────────────────────────────────────────────
   const initialPlayers = (homePlayers && awayPlayers && homePlayers.length === 11 && awayPlayers.length === 11)
-    ? [...homePlayers, ...awayPlayers]
-    : [...getHomePlayers(), ...getAwayPlayers()];
+    ? [...homePlayers, ...awayPlayers].map(p => ({ ...p, matchStats: emptyPlayerMatchStats() }))
+    : [...getHomePlayers(), ...getAwayPlayers()].map(p => ({ ...p, matchStats: emptyPlayerMatchStats() }));
   const [players, setPlayers] = useState<ClassicPlayer[]>(initialPlayers);
   const [latestEvent, setLatestEvent] = useState<MatchEvent | null>(null);
   const [eventFeed, setEventFeed] = useState<MatchEvent[]>([]);
@@ -366,13 +367,13 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   // Primeiro evento da partida é SEMPRE kickoff: HOME atacante → meio-campo.
   // Identidade da bola sair pelo centro do campo, não roleta.
   const kickoffPendingRef = useRef(true);
-  const [stats, setStats]     = useState<MatchStats>({
-    possession:    { home: 58, away: 42 },
-    shots:         { home: 9,  away: 6  },
-    shotsOnTarget: { home: 4,  away: 2  },
-    passes:        { home: 267, away: 184 },
-    fouls:         { home: 8,  away: 11  },
-    corners:       { home: 4,  away: 2  },
+  const [stats, setStats] = useState<MatchStats>({
+    possession:    { home: 50, away: 50 },
+    shots:         { home: 0,  away: 0  },
+    shotsOnTarget: { home: 0,  away: 0  },
+    passes:        { home: 0,  away: 0  },
+    fouls:         { home: 0,  away: 0  },
+    corners:       { home: 0,  away: 0  },
   });
   const [possession, setPossession] = useState<'home' | 'away'>('home');
   const [passStyle, setPassStyle] = useState<import('@/engine/classic/types').PassStyle>('TIKTAK');
@@ -386,12 +387,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const possessionRef = useRef(possession);
   const skillsRef = useRef(skills);
   const passStyleRef = useRef(passStyle);
+  const statsRef = useRef(stats);
   useEffect(() => { runningRef.current = running; }, [running]);
   useEffect(() => { minuteRef.current = minute; }, [minute]);
   useEffect(() => { scoreRef.current = score; }, [score]);
   useEffect(() => { possessionRef.current = possession; }, [possession]);
   useEffect(() => { skillsRef.current = skills; }, [skills]);
   useEffect(() => { passStyleRef.current = passStyle; }, [passStyle]);
+  useEffect(() => { statsRef.current = stats; }, [stats]);
   const [highlightPlayer, setHighlightPlayer] = useState<ClassicPlayer | null>(null);
   const [coachModal, setCoachModal]     = useState(false);
   const [formationModal, setFormationModal] = useState(false);
@@ -400,6 +403,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [legacyPulse, setLegacyPulse] = useState<{ key: number; player: ClassicPlayer } | null>(null);
   const [goalFlash, setGoalFlash]   = useState(false);
   const [dangerFlash, setDangerFlash] = useState(false);
+  // Overlay de intervalo/início de 2º tempo
+  const [periodOverlay, setPeriodOverlay] = useState<{ label: string; sub: string } | null>(null);
+  // Último gatilho tático — exibido brevemente no campo
+  const [lastTacticalTrigger, setLastTacticalTrigger] = useState<import('@/engine/classic/types').TacticalTrigger>(null);
   const chainRef    = useRef<EventChainContext | null>(null);
   const sequenceRef = useRef<{ zones: string[]; index: number } | null>(null);
 
@@ -438,10 +445,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         if (next === HALF1_END + 1) {
           setPeriod('INTERVALO');
           setExtraMinute(0);
+          setPeriodOverlay({ label: 'INTERVALO', sub: 'Jogo parado — 2º tempo em breve' });
+          setTimeout(() => setPeriodOverlay(null), 4000);
         }
         if (next === HALF1_END + HALF1_EXTRA + 1) {
           setPeriod('2º TEMPO');
           setExtraMinute(0);
+          setPeriodOverlay({ label: '2º TEMPO', sub: 'Bola rolando — 45 minutos pela frente' });
+          setTimeout(() => setPeriodOverlay(null), 3500);
         }
         // Acréscimos 1º tempo: 46, 47, 48 → exibe 45+1, 45+2, 45+3
         if (next > HALF1_END && next <= HALF1_END + HALF1_EXTRA) {
@@ -691,19 +702,19 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         setTimeout(() => setCoachPing(false), 4000);
       }
 
-      setStats(s => {
-        const ns = { ...s };
-        if (evt.type === 'shot' || evt.type === 'goal') {
-          ns.shots = { ...ns.shots, [evt.team]: ns.shots[evt.team] + 1 };
-          if (evt.type === 'goal' || Math.random() < 0.5)
-            ns.shotsOnTarget = { ...ns.shotsOnTarget, [evt.team]: ns.shotsOnTarget[evt.team] + 1 };
-        }
-        if (evt.type === 'foul')   ns.fouls   = { ...ns.fouls,   [evt.team]: ns.fouls[evt.team]   + 1 };
-        if (evt.type === 'corner') ns.corners = { ...ns.corners, [evt.team]: ns.corners[evt.team] + 1 };
-        if (evt.type === 'pass')   ns.passes  = { ...ns.passes,  [evt.team]: ns.passes[evt.team]  + 1 };
-        if (Math.random() < 0.3) setPossession(p => p === 'home' ? 'away' : 'home');
-        return ns;
-      });
+      setStats(s => deriveStatsDelta(evt, s, possessionRef.current));
+      // Posse: time com mais passes tem a bola
+      if (evt.type === 'pass' || evt.type === 'cross') {
+        setPossession(evt.team);
+      } else if (evt.type === 'tackle' || evt.type === 'interception' || evt.type === 'duel') {
+        setPossession(evt.team === 'home' ? 'away' : 'home');
+      }
+
+      // Gatilho tático — exibe badge breve no campo
+      if (evt.tacticalTrigger) {
+        setLastTacticalTrigger(evt.tacticalTrigger);
+        setTimeout(() => setLastTacticalTrigger(null), 2200);
+      }
 
       if (evt.type === 'goal') {
         setScore(prev2 => ({ ...prev2, [evt.team]: prev2[evt.team] + 1 }));
@@ -836,17 +847,21 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     return () => { cancelled = true; clearTimeout(first); clearInterval(interval); };
   }, [running, matchOver]);
 
+  // Feedback visual imediato do coach quando skill é ativada
+  const [coachFeedback, setCoachFeedback] = useState<string | null>(null);
+
   const toggleSkill = useCallback((id: string) => {
     setSkills(prev => prev.map(s => (s.id === id && s.remaining === 0) ? { ...s, active: true, remaining: s.cooldown } : s));
-    // Coach reacts to skill activation
     const reactions: Record<string, string> = {
-      counter: 'Contra-ataque ativado! Atacantes em posição de profundidade.',
-      press:   'Pressão alta ligada. HUNTER e DESTROYER vão dominar o meio.',
-      offens:  'Foco ofensivo. FINISHER e WILD com liberdade total.',
-      cross:   'Bola na área! BOX_INVADER vai aparecer no segundo pau.',
+      counter: 'CONTRA ATAQUE — atacantes em profundidade imediata.',
+      press:   'PRESSÃO ALTA — HUNTER e DESTROYER dominam o meio.',
+      offens:  'FOCO OFENSIVO — FINISHER e WILD com liberdade total.',
+      cross:   'BOLA NA ÁREA — BOX_INVADER no segundo pau.',
     };
     if (reactions[id]) {
-      // coach ping já notifica — leitura disponível no modal
+      setCoachFeedback(reactions[id]);
+      setCoachPing(true);
+      setTimeout(() => setCoachFeedback(null), 3500);
     }
   }, []);
 
@@ -970,7 +985,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             </div>
 
             {/* Stats resumo — números grandes e impactantes (Moret italic editorial) */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)', marginBottom:24 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)', marginBottom:16 }}>
               {[
                 { label:'POSSE',    home:`${stats.possession.home}%`, away:`${stats.possession.away}%` },
                 { label:'CHUTES',   home:`${stats.shots.home}`,       away:`${stats.shots.away}` },
@@ -988,6 +1003,52 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 </div>
               ))}
             </div>
+
+            {/* Stats individuais — top performers da partida */}
+            {(() => {
+              const homePlayers2 = players
+                .filter(p => p.team === 'home' && p.matchStats)
+                .sort((a, b) => (b.matchStats!.goals * 10 + b.matchStats!.shots * 2 + b.matchStats!.passes) -
+                                (a.matchStats!.goals * 10 + a.matchStats!.shots * 2 + a.matchStats!.passes))
+                .slice(0, 4);
+              if (homePlayers2.length === 0) return null;
+              return (
+                <div style={{ marginBottom:20, padding:'0 18px' }}>
+                  <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.28em', marginBottom:10 }}>
+                    DESTAQUES INDIVIDUAIS
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {homePlayers2.map(p => {
+                      const ms = p.matchStats!;
+                      const rating = (6.0 + (p.confidence / 100) * 4).toFixed(1);
+                      return (
+                        <div key={p.id} style={{
+                          display:'grid', gridTemplateColumns:'28px 1fr auto',
+                          alignItems:'center', gap:10,
+                          background:'var(--c-bg-surface)',
+                          border:'1px solid var(--c-border)',
+                          borderRadius:6, padding:'8px 12px',
+                        }}>
+                          <span style={{ ...T_HERO, fontSize:18, color:'var(--c-accent)', lineHeight:1 }}>{p.number}</span>
+                          <div>
+                            <div style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.08em' }}>{p.shortName}</div>
+                            <div style={{ ...T_BODY, fontSize:10, color:'var(--c-text-muted)', marginTop:2, display:'flex', gap:8 }}>
+                              {ms.goals > 0 && <span>⚽ {ms.goals}</span>}
+                              {ms.shots > 0 && <span>🎯 {ms.shots}</span>}
+                              <span>↗ {ms.passes}</span>
+                              {ms.tackles > 0 && <span>⚔ {ms.tackles}</span>}
+                              {ms.duelsWon > 0 && <span>🛡 {ms.duelsWon}</span>}
+                              {ms.tikTakCount > 0 && <span>⚡ {ms.tikTakCount}</span>}
+                            </div>
+                          </div>
+                          <span style={{ ...T_HERO, fontSize:22, color: p.onFire ? 'var(--c-accent)' : 'var(--c-text-sec)', lineHeight:1 }}>{rating}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* CTAs */}
@@ -1003,15 +1064,19 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 setMatchOver(false);
                 setMvp(null);
                 setRunning(true);
-                setPlayers([...getHomePlayers(), ...getAwayPlayers()]);
+                setPlayers([...getHomePlayers(), ...getAwayPlayers()].map(p => ({ ...p, matchStats: emptyPlayerMatchStats() })));
                 setEventFeed([]);
                 setLatestEvent(null);
+                setStats({ possession:{home:50,away:50}, shots:{home:0,away:0}, shotsOnTarget:{home:0,away:0}, passes:{home:0,away:0}, fouls:{home:0,away:0}, corners:{home:0,away:0} });
+                setPossession('home');
                 chainRef.current = null;
                 sequenceRef.current = null;
                 matchStoryRef.current = createMatchStory();
                 leaguePointsAppliedRef.current = false;
                 kickoffPendingRef.current = true;
                 setCoachReading(null);
+                setPeriodOverlay(null);
+                setLastTacticalTrigger(null);
               }}
               style={{
                 width:'100%', padding:'16px',
@@ -1351,11 +1416,66 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             </div>
           )}
 
-          {/* Mini heatmap */}
-          <div style={{ position:'absolute', bottom:20, left:8, width:80, height:60, background:'rgba(0,0,0,0.75)', border:'1px solid var(--c-border)', borderRadius:4, overflow:'hidden' }}>
-            <canvas ref={miniCanvasRef} width={80} height={60} style={{ position:'absolute', top:0, left:0 }} />
-            <span style={{ position:'absolute', bottom:3, left:'50%', transform:'translateX(-50%)', ...T_DISPLAY, fontSize:7, color:'var(--c-text-muted)', letterSpacing:'0.14em', whiteSpace:'nowrap' }}>ZONA QUENTE</span>
+          {/* Mini heatmap — ZONA QUENTE: campo oculto onde o jogo acontece.
+              Jogadores não aparecem aqui, mas cada evento acumula calor.
+              O manager lê por onde o time está atacando sem ver o campo ao vivo. */}
+          <div style={{ position:'absolute', bottom:20, left:8, width:96, height:72, background:'rgba(0,0,0,0.88)', border:'1px solid rgba(253,225,0,0.30)', borderRadius:4, overflow:'hidden' }}>
+            <canvas ref={miniCanvasRef} width={96} height={72} style={{ position:'absolute', top:0, left:0 }} />
+            {/* Label duplo: título + corredor dominante */}
+            <span style={{ position:'absolute', bottom:3, left:'50%', transform:'translateX(-50%)', ...T_DISPLAY, fontSize:7, color:'rgba(253,225,0,0.70)', letterSpacing:'0.14em', whiteSpace:'nowrap' }}>ZONA QUENTE</span>
           </div>
+
+          {/* Badge de gatilho tático — aparece brevemente no campo */}
+          {lastTacticalTrigger && (() => {
+            const labels: Record<string, string> = {
+              tiktak: 'TIK-TAK',
+              long_ball: 'BOLA LONGA',
+              false9: 'FALSO 9',
+              forced_shot: 'CHUTE!',
+              duel_win: 'DUELO GANHO',
+            };
+            const label = labels[lastTacticalTrigger] ?? lastTacticalTrigger.toUpperCase();
+            return (
+              <div style={{
+                position:'absolute', top:'50%', left:'50%',
+                transform:'translate(-50%,-50%)',
+                background:'rgba(0,0,0,0.88)',
+                border:'1px solid var(--c-accent)',
+                borderRadius:4, padding:'4px 12px',
+                ...T_DISPLAY, fontSize:11, fontWeight:900,
+                color:'var(--c-accent)', letterSpacing:'0.22em',
+                whiteSpace:'nowrap', pointerEvents:'none',
+                zIndex:8,
+                animation:'c-fadeInDown 0.2s ease',
+              }}>
+                {label}
+              </div>
+            );
+          })()}
+
+          {/* Overlay de período — intervalo e início do 2º tempo */}
+          {periodOverlay && (
+            <div style={{
+              position:'absolute', inset:0,
+              background:'rgba(0,0,0,0.82)',
+              display:'flex', flexDirection:'column',
+              alignItems:'center', justifyContent:'center',
+              gap:6, zIndex:10,
+              animation:'c-fadeInDown 0.3s ease',
+            }}>
+              <div style={{ ...T_DISPLAY, fontSize:22, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.28em' }}>
+                {periodOverlay.label}
+              </div>
+              <div style={{ ...T_BODY, fontSize:12, color:'var(--c-text-sec)' }}>
+                {periodOverlay.sub}
+              </div>
+              <div style={{ display:'flex', gap:16, marginTop:4 }}>
+                <span style={{ ...T_HERO, fontSize:32, color:'var(--c-text-primary)', letterSpacing:'-0.04em' }}>
+                  {score.home} — {score.away}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Possession timeline bar */}
           <div style={{ position:'absolute', bottom:0, left:0, right:0, height:4, background:'var(--c-bg-elevated)' }}>
@@ -1364,6 +1484,23 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         </div>
 
         {/* (Placar expandido removido — score agora vive nos crests laterais)  */}
+
+        {/* ── Coach feedback — reação imediata quando skill é ativada ──── */}
+        {coachFeedback && (
+          <div style={{
+            margin:'8px 12px 0',
+            padding:'10px 14px',
+            background:'rgba(253,225,0,0.08)',
+            border:'1px solid rgba(253,225,0,0.40)',
+            borderLeft:'3px solid var(--c-accent)',
+            borderRadius:6,
+            display:'flex', alignItems:'center', gap:10,
+            animation:'c-fadeInDown 0.25s ease',
+          }}>
+            <Brain size={14} color="var(--c-accent)" />
+            <span style={{ ...T_BODY, fontSize:12, color:'var(--c-text-primary)', flex:1 }}>{coachFeedback}</span>
+          </div>
+        )}
 
         {/* ── Vitrines do museu vivo: cards modulares com rail amarelo ──── */}
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:'12px 12px 4px' }}>

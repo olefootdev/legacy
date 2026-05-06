@@ -39,7 +39,20 @@ export type EventType =
   | 'save'        // chute defendido pelo goleiro
   | 'post'        // bola na trave
   | 'wide'        // bola para fora
-  | 'rebound';    // sobra após chute
+  | 'rebound'     // sobra após chute
+  | 'duel';       // duelo defensivo — defensor luta pela bola sem sair do lugar
+
+/**
+ * Gatilho tático especial — identifica a mecânica que gerou o evento.
+ * Usado para narração específica e acumulação de stats individuais.
+ */
+export type TacticalTrigger =
+  | 'tiktak'       // meio de campo toca de primeira
+  | 'long_ball'    // lateral cruza de um lado ao outro
+  | 'false9'       // falso 9 segura e chuta de primeira pro meio
+  | 'forced_shot'  // atacante na zona de ataque obrigado a finalizar
+  | 'duel_win'     // defensor ganha duelo sem sair do lugar
+  | null;
 
 /**
  * Subtipo de passe — diferencia a INTENÇÃO e o VISUAL.
@@ -61,6 +74,22 @@ export type TeamPhase =
   | 'DEFENDING'       // adversário no nosso terço final, time recua + contrai
   | 'TRANSITION';     // momento de virada, posição neutra
 
+/** Métricas individuais acumuladas durante a partida — exibidas no pós-jogo. */
+export interface PlayerMatchStats {
+  goals: number;
+  shots: number;
+  passes: number;
+  tackles: number;
+  interceptions: number;
+  fouls: number;
+  /** Duelos defensivos ganhos (sem sair do lugar). */
+  duelsWon: number;
+  /** Tik-tak de primeira executados. */
+  tikTakCount: number;
+  /** Bolas longas cruzadas de lateral a lateral. */
+  longBallCount: number;
+}
+
 export interface ClassicPlayer {
   id: number;
   name: string;
@@ -75,10 +104,16 @@ export interface ClassicPlayer {
   confidence: number; // 0-100, momentum tracker
   onFire?: boolean;  // confidence > 85 after a key action
   isStar?: boolean;
+  /** Métricas individuais acumuladas durante a partida. */
+  matchStats?: PlayerMatchStats;
   /** Foto do jogador (formato card) — quando ausente, UI cai num placeholder. */
   portraitUrl?: string;
   /** Foto circular (token) — preferida pra nó no campo. */
   portraitTokenUrl?: string;
+}
+
+export function emptyPlayerMatchStats(): PlayerMatchStats {
+  return { goals:0, shots:0, passes:0, tackles:0, interceptions:0, fouls:0, duelsWon:0, tikTakCount:0, longBallCount:0 };
 }
 
 // Tipo de passe ativo — controla como a bola progride pelo campo
@@ -131,6 +166,7 @@ export interface MatchEvent {
   receiverPlayerId?: number; // receptor do passe — bola vai até ele
   passSubtype?: PassSubtype; // intenção do passe (visual + lógica)
   rationale?: string;        // racional da decisão — pra Coach AI futuro
+  tacticalTrigger?: TacticalTrigger; // gatilho tático especial que gerou o evento
 }
 
 export interface MatchStats {
