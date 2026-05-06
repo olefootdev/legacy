@@ -812,6 +812,12 @@ async function tick(): Promise<void> {
   }
 
   // ─── Liga oficial ────────────────────────────────────────────────────
+  // Cobre o caso current_league_round=null com todas as rodadas finished → nova season
+  if (state.status === 'active' && !state.currentLeagueRound) {
+    await tryTransitionToNewSeason(state, nowMs);
+    return;
+  }
+
   if (state.status === 'active' && state.currentLeagueRound) {
     // Recuperar rodadas anteriores travadas em 'live' antes de avançar
     if (await recoverStaleRounds(state, state.leagueRounds, state.currentLeagueRound, applyLeagueResults, (n) => { state.currentLeagueRound = n; }, nowMs)) return;
