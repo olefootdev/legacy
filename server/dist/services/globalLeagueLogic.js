@@ -110,9 +110,11 @@ export function generateLeagueRounds(teams, nowMs) {
     }
     if (byDivision.size === 0)
         return rounds;
-    const maxTeamsInDivision = Math.max(...Array.from(byDivision.values()).map(t => t.length));
-    if (maxTeamsInDivision < 2)
+    // Considera só divisões com pelo menos 2 times para calcular o número de rodadas
+    const divisionsWithMatches = Array.from(byDivision.values()).filter(t => t.length >= 2);
+    if (divisionsWithMatches.length === 0)
         return rounds;
+    const maxTeamsInDivision = Math.max(...divisionsWithMatches.map(t => t.length));
     const totalRounds = (maxTeamsInDivision - 1) * 2;
     const firstKickoff = getNextRoundTime(nowMs);
     for (let roundNumber = 1; roundNumber <= totalRounds; roundNumber++) {

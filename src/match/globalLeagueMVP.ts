@@ -122,7 +122,8 @@ export function createGlobalTeam(
   managerId: string,
   clubName: string,
   clubShort: string,
-  overall: number
+  overall: number,
+  division?: number
 ): GlobalTeam {
   return {
     id: `gt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -130,6 +131,7 @@ export function createGlobalTeam(
     clubName,
     clubShort,
     overall,
+    division,
     playoffPoints: 0,
     playoffMatchesPlayed: 0,
     playoffWins: 0,
@@ -167,7 +169,10 @@ export function createGlobalLeagueMVP(): GlobalLeagueMVPState {
   };
 }
 
-/** Registrar novo time. NÃO inicia playoffs automaticamente — admin controla. */
+/** Registrar novo time.
+ * Se a liga já está active, entra direto na Divisão 3 para jogar imediatamente.
+ * Se está em waiting_teams/playoffs, entra sem divisão (será distribuído nos playoffs).
+ */
 export function registerTeam(
   league: GlobalLeagueMVPState,
   managerId: string,
@@ -179,7 +184,8 @@ export function registerTeam(
     return league;
   }
 
-  const newTeam = createGlobalTeam(managerId, clubName, clubShort, overall);
+  const division = league.status === 'active' ? 3 : undefined;
+  const newTeam = createGlobalTeam(managerId, clubName, clubShort, overall, division);
   return {
     ...league,
     teams: [...league.teams, newTeam],
@@ -392,8 +398,10 @@ export function generateLeagueRounds(teams: GlobalTeam[]): LeagueRound[] {
     }
   }
 
-  // Calcular número de rodadas (n-1 para turno, n-1 para returno)
-  const maxTeamsInDivision = Math.max(...Array.from(byDivision.values()).map(t => t.length));
+  // Considera só divisões com pelo menos 2 times para calcular o número de rodadas
+  const divisionsWithMatches = Array.from(byDivision.values()).filter(t => t.length >= 2);
+  if (divisionsWithMatches.length === 0) return rounds;
+  const maxTeamsInDivision = Math.max(...divisionsWithMatches.map(t => t.length));
   const totalRounds = (maxTeamsInDivision - 1) * 2;
 
   for (let roundNumber = 1; roundNumber <= totalRounds; roundNumber++) {
