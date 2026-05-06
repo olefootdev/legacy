@@ -74,6 +74,38 @@ export type TeamPhase =
   | 'DEFENDING'       // adversário no nosso terço final, time recua + contrai
   | 'TRANSITION';     // momento de virada, posição neutra
 
+/**
+ * Estado mental do agente — DERIVADO de lastInvolvedMinute + anxiousScore +
+ * confidence/fatigue. Não é armazenado independentemente: é computado a cada
+ * evento. Gera bias na decisão e visual sutil no campo.
+ *
+ *   idle:       não envolvido recentemente (>5min)
+ *   aware:      recebeu bola ou foi alvo nos últimos 2-5min
+ *   engaged:    sequência ativa (3+ envolvimentos nos últimos 2min)
+ *   anxious:    adversário pressionando há vários eventos (anxiousScore > 60)
+ *   on_fire:    confidence alta + recentemente envolvido
+ *   recovering: após chute/falta sofrida (recovers in 1-2min)
+ */
+export type PlayerMentalState =
+  | 'idle'
+  | 'aware'
+  | 'engaged'
+  | 'anxious'
+  | 'on_fire'
+  | 'recovering';
+
+/** Tracking individual leve — só campos persistentes; o `state` é derivado. */
+export interface PlayerMental {
+  /** Último minuto que o jogador foi ator OU receptor de algum evento. */
+  lastInvolvedMinute: number;
+  /** Eventos nos últimos 2 minutos (proxy de "engagement"). */
+  recentInvolvement: number;
+  /** Pressão sofrida acumulada (0-100, decai com tempo). */
+  anxiousScore: number;
+  /** Último chute do jogador — entra em 'recovering' por 1-2min. */
+  lastShotMinute: number;
+}
+
 /** Métricas individuais acumuladas durante a partida — exibidas no pós-jogo. */
 export interface PlayerMatchStats {
   goals: number;
@@ -106,6 +138,8 @@ export interface ClassicPlayer {
   isStar?: boolean;
   /** Métricas individuais acumuladas durante a partida. */
   matchStats?: PlayerMatchStats;
+  /** Tracking mental leve — alimenta o estado FSM derivado. */
+  mental?: PlayerMental;
   /** Foto do jogador (formato card) — quando ausente, UI cai num placeholder. */
   portraitUrl?: string;
   /** Foto circular (token) — preferida pra nó no campo. */
@@ -114,6 +148,39 @@ export interface ClassicPlayer {
 
 export function emptyPlayerMatchStats(): PlayerMatchStats {
   return { goals:0, shots:0, passes:0, tackles:0, interceptions:0, fouls:0, duelsWon:0, tikTakCount:0, longBallCount:0 };
+}
+
+export function emptyPlayerMental(): PlayerMental {
+  return { lastInvolvedMinute: -10, recentInvolvement: 0, anxiousScore: 0, lastShotMinute: -10 };
+}
+
+/**
+ * Deriva o estado mental atual a partir do tracking + atributos do jogador.
+ * Pure function — testável.
+ */
+export function deriveMentalState(
+  player: ClassicPlayer,
+  currentMinute: number,
+): PlayerMentalState {
+  const m = player.mental;
+  if (!m) return 'idle';
+
+  // Recovering: chutou recentemente (1-2min)
+  if (currentMinute - m.lastShotMinute < 2) return 'recovering';
+
+  // On fire: confidence alta + envolvido recentemente
+  if (player.onFire && currentMinute - m.lastInvolvedMinute < 4) return 'on_fire';
+
+  // Anxious: pressão sofrida sustentada
+  if (m.anxiousScore > 60) return 'anxious';
+
+  // Engaged: 3+ envolvimentos nos últimos 2min
+  if (m.recentInvolvement >= 3 && currentMinute - m.lastInvolvedMinute < 2) return 'engaged';
+
+  // Aware: envolvido nos últimos 5min
+  if (currentMinute - m.lastInvolvedMinute < 5) return 'aware';
+
+  return 'idle';
 }
 
 // Tipo de passe ativo — controla como a bola progride pelo campo

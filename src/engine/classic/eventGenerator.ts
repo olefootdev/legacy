@@ -1,4 +1,4 @@
-import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, EventChainContext, PassStyle, PassSubtype, MatchStats } from './types';
+import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, EventChainContext, PassStyle, PassSubtype, MatchStats, PlayerMental } from './types';
 import { ARCHETYPES } from './archetypes';
 import { generateNarration } from './narration';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
@@ -409,7 +409,29 @@ export function applyEventToPlayers(
   return players.map(p => {
     const isActor = p.id === evt.playerId;
     const isReceiver = p.id === evt.receiverPlayerId;
-    if (!isActor && !isReceiver) return p;
+    // Mental decai/atualiza pra TODOS (não só ator/receptor) — recentInvolvement
+    // e anxiousScore drift naturalmente.
+    const baseMental = p.mental ?? { lastInvolvedMinute: -10, recentInvolvement: 0, anxiousScore: 0, lastShotMinute: -10 };
+    const minutesSinceInvolved = evt.minute - baseMental.lastInvolvedMinute;
+    const decayedRecent = minutesSinceInvolved > 2 ? 0 : baseMental.recentInvolvement;
+    const decayedAnxious = Math.max(0, baseMental.anxiousScore - 4); // -4/evento
+
+    if (!isActor && !isReceiver) {
+      // Adversário próximo da bola → ansioso (pressão sustentada).
+      // Eventos perigosos (shot/danger/cross/goal) elevam mais.
+      const isOpposingTeam = p.team !== evt.team;
+      const distToBall = Math.hypot(p.position.x - evt.ballX, p.position.y - evt.ballY);
+      let anxiousScore = decayedAnxious;
+      if (isOpposingTeam && distToBall < 80) {
+        const aggressive = evt.type === 'shot' || evt.type === 'danger' || evt.type === 'cross' || evt.type === 'goal';
+        anxiousScore = Math.min(100, anxiousScore + (aggressive ? 14 : 6));
+      }
+      const mental = { ...baseMental, recentInvolvement: decayedRecent, anxiousScore };
+      return mental.recentInvolvement === baseMental.recentInvolvement &&
+             mental.anxiousScore === baseMental.anxiousScore
+        ? p
+        : { ...p, mental };
+    }
 
     let fatigue = p.fatigue;
     let confidence = p.confidence;
@@ -439,14 +461,29 @@ export function applyEventToPlayers(
       if (evt.tacticalTrigger === 'long_ball') newMs.longBallCount++;
 
       const onFire = confidence > 85;
-      return { ...p, fatigue, confidence, onFire, matchStats: newMs };
+      // Mental do ator: envolvimento + tipo do evento
+      const isShootEvent = evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' || evt.type === 'post' || evt.type === 'wide';
+      const isAggressionFromOpponent = false; // ator gerou, não sofreu
+      const mental: PlayerMental = {
+        lastInvolvedMinute: evt.minute,
+        recentInvolvement: decayedRecent + 1,
+        anxiousScore: isAggressionFromOpponent ? Math.min(100, decayedAnxious + 12) : decayedAnxious,
+        lastShotMinute: isShootEvent ? evt.minute : baseMental.lastShotMinute,
+      };
+      return { ...p, fatigue, confidence, onFire, matchStats: newMs, mental };
     }
 
-    // Receptor do passe: leve boost de confiança
+    // Receptor do passe: leve boost de confiança + mental aware/engaged
     if (isReceiver && (evt.type === 'pass' || evt.type === 'cross')) {
       confidence = Math.min(100, confidence + 2);
       const newMs = { ...ms, passes: ms.passes + 1 };
-      return { ...p, confidence, matchStats: newMs };
+      const mental: PlayerMental = {
+        lastInvolvedMinute: evt.minute,
+        recentInvolvement: decayedRecent + 1,
+        anxiousScore: decayedAnxious,
+        lastShotMinute: baseMental.lastShotMinute,
+      };
+      return { ...p, confidence, matchStats: newMs, mental };
     }
 
     return p;

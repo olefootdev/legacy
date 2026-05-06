@@ -27,7 +27,7 @@ import type {
   PlayerZone,
   TacticalTrigger,
 } from './types';
-import { zoneFromRole } from './types';
+import { zoneFromRole, deriveMentalState } from './types';
 import { ARCHETYPES } from './archetypes';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
 
@@ -300,11 +300,18 @@ export function decideNextAction(
   }
   // holderZone === 'defense' → shotProb = 0 (zagueiro não chuta)
 
+  // Modulação mental do PORTADOR: on_fire arrisca mais, anxious chuta menos
+  const holderMental = deriveMentalState(ballHolder, minute);
+  if (holderMental === 'on_fire')      shotProb *= 1.20;
+  else if (holderMental === 'engaged') shotProb *= 1.10;
+  else if (holderMental === 'anxious') shotProb *= 0.55;     // sob pressão → passa
+  else if (holderMental === 'recovering') shotProb *= 0.40;  // acabou de chutar
+
   if (Math.random() < shotProb) {
     return {
       action: 'shot',
       ballPos: goalMouthPos(teamSide),
-      rationale: `${ballHolder.shortName} (${ballHolder.archetype}, ${holderZone}) → CHUTE @ ${(shotProb*100).toFixed(0)}%`,
+      rationale: `${ballHolder.shortName} (${ballHolder.archetype}, ${holderZone}, ${holderMental}) → CHUTE @ ${(shotProb*100).toFixed(0)}%`,
     };
   }
 
@@ -402,6 +409,19 @@ export function decideNextAction(
       else                            weight *= 0.85;
     }
 
+    // ─── BIAS POR ESTADO MENTAL DO RECEPTOR (FSM Light) ──────────────────
+    // Jogador "engaged" ou "aware" tem 1.20-1.35× peso — ele JÁ está no jogo,
+    // sabe o que está acontecendo. Já o "idle" perde 30% — está desligado.
+    // Ansioso perde 25% (não dá pra confiar a bola num jogador sob pressão).
+    // On fire ganha 1.45× — está vendendo bola e já gerou momentos.
+    const targetMental = deriveMentalState(t, minute);
+    if (targetMental === 'on_fire')      weight *= 1.45;
+    else if (targetMental === 'engaged') weight *= 1.30;
+    else if (targetMental === 'aware')   weight *= 1.15;
+    else if (targetMental === 'idle')    weight *= 0.70;
+    else if (targetMental === 'anxious') weight *= 0.75;
+    else if (targetMental === 'recovering') weight *= 0.85;
+
     return { player: t, weight, freedom, progress, threat, coherence, dist };
   });
 
@@ -478,8 +498,8 @@ export function decideNextAction(
   }
   else if (inFlank && inFinalThird && targetInBox) {
     subtype = 'cruzamento';
-  } else if (underPressure) {
-    subtype = 'rapido';
+  } else if (underPressure || holderMental === 'anxious') {
+    subtype = 'rapido'; // pressionado OU mentalmente sob estresse → 1-toque
   } else if ((cfg.passFreq >= 0.85 && cfg.slowsRhythm) && minute < 80) {
     subtype = 'planejado';
   } else if (passStyle === 'TIKTAK') {

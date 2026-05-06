@@ -17,7 +17,7 @@ import type {
   BallState, TrailPoint, SkillEntry,
   ClassicMatchConfig, ManagerSkillId, EventChainContext,
 } from '@/engine/classic/types';
-import { emptyPlayerMatchStats } from '@/engine/classic/types';
+import { emptyPlayerMatchStats, deriveMentalState } from '@/engine/classic/types';
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
 import { generateEvent, applyEventToPlayers, deriveStatsDelta } from '@/engine/classic/eventGenerator';
 import { computeTeamPhase, playerShift } from '@/engine/classic/decisionEngine';
@@ -1318,28 +1318,41 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             const isExhausted = p.fatigue > 82;
             const isHot = !!p.onFire;
             const isStarPlayer = !!p.isStar;
+            // FSM Light: estado mental derivado — aura sutil no campo
+            const mentalState = deriveMentalState(p, minute);
+            const isEngaged = mentalState === 'engaged';
+            const isAnxious = mentalState === 'anxious';
+            const isAware   = mentalState === 'aware';
 
-            // Borda:
-            // - cansado → vermelho fraco pulsante
-            // - on fire → amarelo neon fixo (aura faz o brilho)
-            // - destaque ativo → branco mais forte
-            // - resto → branco/cinza neutro
+            // Borda: prioridade exhausted > onFire > anxious > engaged > HL > base
             const borderColor = isExhausted
               ? 'rgba(239,68,68,0.60)'
               : isHot
               ? 'rgba(253,225,0,0.95)'
+              : isAnxious
+              ? 'rgba(239,68,68,0.45)'                // vermelho sutil — pressionado
+              : isEngaged
+              ? 'rgba(253,225,0,0.55)'                // amarelo médio — no jogo
               : isHL
               ? 'rgba(255,255,255,0.85)'
+              : isAware
+              ? 'rgba(255,255,255,0.55)'
               : 'rgba(255,255,255,0.35)';
 
             const bgColor = isHot
               ? 'rgba(253,225,0,0.16)'
+              : isEngaged
+              ? 'rgba(253,225,0,0.08)'
+              : isAnxious
+              ? 'rgba(239,68,68,0.08)'
               : isHL
               ? 'rgba(255,255,255,0.14)'
               : 'rgba(255,255,255,0.06)';
 
             const shadow = isHL && !isLegacyTarget && !isHot
               ? '0 0 0 1.5px rgba(255,255,255,0.4)'
+              : isEngaged
+              ? '0 0 8px rgba(253,225,0,0.30)'
               : '0 1px 3px rgba(0,0,0,0.6)';
 
             return (
