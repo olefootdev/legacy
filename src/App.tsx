@@ -102,6 +102,7 @@ const GatTab = lazy(() => import('./pages/wallet/GatTab').then((m) => ({ default
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchLive = lazy(() => import('./pages/MatchLive').then((m) => ({ default: m.MatchLive })));
+const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ default: m.MatchClassic })));
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
@@ -502,6 +503,8 @@ export default function App() {
             <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
             <Route path="/postgame" element={<Postgame />} />
             </Route>
+            {/* Fullscreen match modes — sem GameShell (sem nav global) */}
+            <Route path="/match/classic" element={<MatchClassic />} />
           </Route>
           <Route
             path="/dev/field-lab"

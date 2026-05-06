@@ -32,6 +32,14 @@ type ModeEntry = {
 
 const MODES: ReadonlyArray<ModeEntry> = [
   {
+    id: 'classic',
+    label: 'Classic',
+    description: 'Simulação retrô-inteligente · sistema operacional de futebol',
+    status: 'available',
+    to: '/match/classic',
+    glyph: '◈',
+  },
+  {
     id: 'penalty',
     label: 'Pênalti',
     description: 'Disputa cinematográfica · cobrador × goleiro',
@@ -52,7 +60,7 @@ const MODES: ReadonlyArray<ModeEntry> = [
   {
     id: 'legacy',
     label: 'Legacy',
-    description: 'Partida ao vivo · simulação tática 2D',
+    description: 'Em breve · partida ao vivo · simulação tática 2D',
     status: 'soon',
     glyph: '✦',
   },
