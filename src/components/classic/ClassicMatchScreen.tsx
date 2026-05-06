@@ -295,19 +295,26 @@ function ModuleCard({
 // ─── Main Component ────────────────────────────────────────────────────────────
 interface Props {
   config?: Partial<ClassicMatchConfig>;
+  /** 11 titulares casa pré-construídos (manager real). Fallback = TIGRES demo. */
+  homePlayers?: ClassicPlayer[];
+  /** 11 titulares visitantes pré-construídos (oponente real / sintético). */
+  awayPlayers?: ClassicPlayer[];
   onExit?: () => void;
 }
 
-export function ClassicMatchScreen({ config, onExit }: Props) {
+export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }: Props) {
   const homeTeam    = config?.homeTeam    ?? 'TIGRES';
   const awayTeam    = config?.awayTeam    ?? 'ALVORADA FC';
   const round       = config?.round       ?? 12;
   const competition = config?.competition ?? 'CLASSIC LEAGUE';
-  const homeShort   = shortInitials(homeTeam);
-  const awayShort   = shortInitials(awayTeam);
+  const homeShort   = config?.homeShort   ?? shortInitials(homeTeam);
+  const awayShort   = config?.awayShort   ?? shortInitials(awayTeam);
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [players, setPlayers] = useState<ClassicPlayer[]>(() => [...getHomePlayers(), ...getAwayPlayers()]);
+  const initialPlayers = (homePlayers && awayPlayers && homePlayers.length === 11 && awayPlayers.length === 11)
+    ? [...homePlayers, ...awayPlayers]
+    : [...getHomePlayers(), ...getAwayPlayers()];
+  const [players, setPlayers] = useState<ClassicPlayer[]>(initialPlayers);
   const [latestEvent, setLatestEvent] = useState<MatchEvent | null>(null);
   const [eventFeed, setEventFeed] = useState<MatchEvent[]>([]);
   const [score, setScore]     = useState<MatchScore>({ home: 0, away: 0 });

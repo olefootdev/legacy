@@ -129,4 +129,7 @@ export interface ClassicMatchConfig {
   awayManager: string;
   round: number;
   competition: string;
+  /** Iniciais opcionais para os crests; se omitido, derivado do nome. */
+  homeShort?: string;
+  awayShort?: string;
 }
