@@ -360,10 +360,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const matchStoryRef = useRef<MatchStory>(createMatchStory());
   const dispatch = useGameDispatch();
   const leaguePointsAppliedRef = useRef(false); // evita aplicar 2x se matchOver mudar
-  // Quando true, próximo evento dispara após 3s (kickoff, gol, bola fora —
-  // jogadores "pensam" e se reposicionam). Setado dentro do fireEvent quando
-  // o evento atual é wide/post/goal/save.
+  // Quando true, próximo evento dispara após 3s (gol, bola fora — jogadores
+  // "pensam" e se reposicionam). Setado dentro do fireEvent.
   const pendingPauseRef = useRef(false);
+  // Primeiro evento da partida é SEMPRE kickoff: HOME atacante → meio-campo.
+  // Identidade da bola sair pelo centro do campo, não roleta.
+  const kickoffPendingRef = useRef(true);
   const [stats, setStats]     = useState<MatchStats>({
     possession:    { home: 58, away: 42 },
     shots:         { home: 9,  away: 6  },
@@ -555,13 +557,47 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       .map(s => s.id as ManagerSkillId);
 
     setPlayers(prev => {
-      const result = generateEvent(prev, minute, score, possession, {
-        activeSkills,
-        chain: chainRef.current,
-        passStyle,
-        sequence: sequenceRef.current ?? undefined,
-        narrativeProfiles: homeNarrativeProfiles,
-      });
+      // ─── KICKOFF: primeiro evento da partida é HOME atacante → meio-campo ─
+      // Identidade do início, não roleta. Bola sai do círculo central.
+      let result;
+      if (kickoffPendingRef.current) {
+        kickoffPendingRef.current = false;
+        const home = prev.filter(p => p.team === 'home');
+        const striker = home.find(p => p.role === 'ST') ?? home.find(p => p.role === 'CM') ?? home[0];
+        const cms = home.filter(p => p.role === 'CM' || p.role === 'DM');
+        // Pega o CM mais perto do striker — passe natural pra trás
+        const receiver = cms.length > 0
+          ? cms.slice().sort((a, b) =>
+              Math.hypot(a.position.x - striker.position.x, a.position.y - striker.position.y)
+              - Math.hypot(b.position.x - striker.position.x, b.position.y - striker.position.y),
+            )[0]
+          : home.find(p => p.role !== 'ST') ?? home[1];
+
+        const kickoffEvt: MatchEvent = {
+          id: 'evt_kickoff',
+          minute: 0,
+          type: 'pass',
+          team: 'home',
+          playerId: striker.id,
+          playerName: striker.shortName,
+          archetype: striker.archetype,
+          text: `${striker.shortName} dá início à partida — toca para ${receiver.shortName}.`,
+          ballX: receiver.position.x,
+          ballY: receiver.position.y,
+          receiverPlayerId: receiver.id,
+          passSubtype: 'curto',
+          rationale: 'kickoff: HOME striker → midfield',
+        };
+        result = { event: kickoffEvt, nextSequence: null, receiverId: receiver.id };
+      } else {
+        result = generateEvent(prev, minute, score, possession, {
+          activeSkills,
+          chain: chainRef.current,
+          passStyle,
+          sequence: sequenceRef.current ?? undefined,
+          narrativeProfiles: homeNarrativeProfiles,
+        });
+      }
 
       const { event: evt, nextSequence, receiverId } = result;
 
@@ -705,8 +741,11 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   }, [running, minute, score, possession, skills, passStyle]);
 
   useEffect(() => {
-    // KICKOFF: 3 segundos pros jogadores pensarem antes do primeiro evento
-    loopRef.current = setTimeout(fireEvent, 3000);
+    // 1.2s respiro inicial pro DOM montar e jogadores aparecerem.
+    // O primeiro evento é o KICKOFF (HOME atacante → meio) — controlado por
+    // kickoffPendingRef.current. Não usar timer maior aqui porque essa effect
+    // re-roda quando fireEvent rebuilds e clobbera o timer interno seguinte.
+    loopRef.current = setTimeout(fireEvent, 1200);
     return () => clearTimeout(loopRef.current ?? undefined);
   }, [fireEvent]);
 
@@ -947,6 +986,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 sequenceRef.current = null;
                 matchStoryRef.current = createMatchStory();
                 leaguePointsAppliedRef.current = false;
+                kickoffPendingRef.current = true;
                 setCoachReading(null);
               }}
               style={{
