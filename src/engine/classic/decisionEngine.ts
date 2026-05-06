@@ -24,7 +24,9 @@ import type {
   ManagerSkillId,
   PassStyle,
   MatchScore,
+  PlayerZone,
 } from './types';
+import { zoneFromRole } from './types';
 import { ARCHETYPES } from './archetypes';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
 
@@ -248,39 +250,59 @@ export function decideNextAction(
   const underPressure = isUnderPressure(ballHolder, opponents);
   const cleanShot = hasCleanShot(ballHolder, opponents, attackDir);
 
-  // ─── Casos defensivos: tackle / interception / pressure ───────────────────
-  // Não é o portador que decide isso — a roleta antiga ainda gera esses
-  // eventos quando a bola é "perdida". Aqui focamos em ATAQUE.
-  // (eventGenerator.ts ainda decide eventos defensivos via chain)
+  // ─── Zona do portador — base da lógica binária do CLASSIC ──────────────
+  const holderZone: PlayerZone = zoneFromRole(ballHolder.role);
 
-  // ─── Decisão de finalização (chute) ───────────────────────────────────────
+  // Posição relativa da bola: 0 = backline própria, 1 = backline adversária
+  const xRel = teamSide === 'home'
+    ? ballHolder.position.x / FIELD_W_LOGIC
+    : 1 - ballHolder.position.x / FIELD_W_LOGIC;
+
+  // ─── Decisão de finalização (chute) — POR ZONA ─────────────────────────
   const isFinisher = cfg.shotFreq >= 0.7;
   const isWild = cfg.unpredictable;
+  const isMaestro = cfg.passFreq >= 0.85 && cfg.slowsRhythm;
+  const isBoxInvader = cfg.aerialFreq >= 0.7;
   const inFinalZone = sequence !== null && zoneIndex >= sequence.zones.length - 1;
   const chainShot =
     chain?.lastType === 'corner' ||
     chain?.lastType === 'cross' ||
     chain?.lastType === 'foul' ||
     chain?.lastType === 'rebound';
-
-  // Manager skill FOCO OFENSIVO sobe agressividade no chute
   const focusBoost = activeSkills.includes('offens');
 
-  const wantsToShoot =
-    cleanShot &&
-    !underPressure &&
-    (
-      (isFinisher && (inFinalZone || chainShot || focusBoost)) ||
-      (inFinalZone && (chainShot || isWild)) ||
-      (chainShot && (isFinisher || isWild)) ||
-      (focusBoost && Math.random() < 0.4 && cfg.shotFreq >= 0.5)
-    );
+  // Probabilidade de tentar chutar agora (decisão psicológica do agente)
+  // Atacante (zona attack) PRECISA finalizar — não toca pra trás. Meio chuta
+  // moderado de fora. Defesa NUNCA chuta.
+  let shotProb = 0;
+  if (holderZone === 'attack' && xRel >= 0.55) {
+    // Em terço final adversário, atacante busca chute
+    shotProb = isFinisher ? 0.65
+             : isBoxInvader ? 0.55
+             : isWild ? 0.55
+             : 0.42; // mesmo um ponta "comum" tenta o gol
+    if (cleanShot) shotProb += 0.12;
+    if (underPressure) shotProb -= 0.18;  // pressionado prefere passe rápido
+    if (chainShot) shotProb += 0.20;       // após corner/cross/rebote
+    if (focusBoost) shotProb += 0.15;
+    if (ballHolder.onFire) shotProb += 0.15;
+  } else if (holderZone === 'creative' && xRel >= 0.55) {
+    // Meio na zona final tenta chute moderado, principalmente de fora
+    shotProb = isMaestro ? 0.32
+             : isWild ? 0.40
+             : 0.18;
+    if (cleanShot) shotProb += 0.10;
+    if (underPressure) shotProb -= 0.10;
+    if (chainShot) shotProb += 0.18;
+    if (focusBoost) shotProb += 0.12;
+  }
+  // holderZone === 'defense' → shotProb = 0 (zagueiro não chuta)
 
-  if (wantsToShoot) {
+  if (Math.random() < shotProb) {
     return {
       action: 'shot',
       ballPos: goalMouthPos(teamSide),
-      rationale: `${ballHolder.shortName} (${ballHolder.archetype}): chute em zona ${zoneIndex} — linha limpa, sem pressão`,
+      rationale: `${ballHolder.shortName} (${ballHolder.archetype}, ${holderZone}) → CHUTE @ ${(shotProb*100).toFixed(0)}%`,
     };
   }
 
@@ -292,32 +314,53 @@ export function decideNextAction(
     const coherence = computePassCoherence(t, zoneIndex, sequence, ZONE_ROLES);
     const dist = distance(ballHolder.position, t.position);
 
-    // Pesos por arquétipo do PORTADOR
+    // Pesos base por arquétipo do PORTADOR
     let weight: number;
     if (cfg.shotFreq >= 0.7) {
-      // FINISHER/COLD_BLOOD: prefere passar pra quem tem chance de gol ou tá livre na frente
       weight = threat * 0.50 + freedom * 0.25 + progress * 0.25;
     } else if (cfg.passFreq >= 0.85 && cfg.slowsRhythm) {
-      // MAESTRO/VETERAN: criativo — equilibra progresso e coerência
       weight = progress * 0.35 + coherence * 0.30 + freedom * 0.25 + threat * 0.10;
     } else if (cfg.unpredictable) {
-      // WILD: arrisca — quebra coerência se vê threat ou progresso alto
       weight = progress * 0.40 + threat * 0.40 + (1 - coherence) * 0.20;
     } else if (cfg.tackleFreq >= 0.8) {
-      // DESTROYER: jogo simples, segurança total
       weight = freedom * 0.55 + coherence * 0.30 + progress * 0.15;
     } else if (cfg.aerialFreq >= 0.7) {
-      // BOX_INVADER: corre pra área — prefere passar pra quem cria
       weight = threat * 0.40 + progress * 0.35 + freedom * 0.25;
     } else {
-      // ENGINE/HUNTER/COLD_BLOOD: balanceado, prefere segurança
       weight = freedom * 0.40 + coherence * 0.35 + progress * 0.25;
     }
 
-    // Penalidades de distância
-    if (dist < 35) weight *= 0.45;       // muito perto, passe inútil
-    if (dist > 260) weight *= 0.55;      // muito longe, risco alto
-    if (dist > 350) weight *= 0.30;      // praticamente um chutão
+    // ─── BIAS POR ZONA — núcleo do conceito binário ──────────────────────
+    const targetZone = zoneFromRole(t.role);
+
+    // DEFESA com posse: prefere passar pra DEFESA (lateral), CRIATIVA (DM/CM),
+    // ATRAI pressão. Evita longas pra ATAQUE diretamente (só sob skill LONGO).
+    if (holderZone === 'defense') {
+      if (targetZone === 'creative') weight *= 1.45;
+      if (targetZone === 'defense') weight *= 1.10;
+      if (targetZone === 'attack' && passStyle !== 'LONGO') weight *= 0.55;
+      if (targetZone === 'attack' && passStyle === 'LONGO') weight *= 1.30;
+    }
+
+    // CRIATIVA com posse: É ONDE O JOGO ACONTECE — busca o atacante/ponta
+    if (holderZone === 'creative') {
+      if (targetZone === 'attack') weight *= 1.55;     // bola pra frente
+      if (targetZone === 'creative') weight *= 1.05;   // troca lateral OK
+      if (targetZone === 'defense') weight *= 0.50;    // só recicla se fechado
+    }
+
+    // ATAQUE com posse: NUNCA toca pra trás (penalidade brutal). Se for passar,
+    // troca com outro atacante OU devolve pra criativa só se SEM linha mesmo.
+    if (holderZone === 'attack') {
+      if (targetZone === 'attack') weight *= 1.35;
+      if (targetZone === 'creative') weight *= 0.55;   // só se sem outra opção
+      if (targetZone === 'defense') weight *= 0.10;    // proibido pelos princípios
+    }
+
+    // Penalidades de distância (mantém)
+    if (dist < 35) weight *= 0.45;
+    if (dist > 260) weight *= 0.55;
+    if (dist > 350) weight *= 0.30;
 
     // Bônus de continuidade de sequência tática
     if (sequence && zoneIndex < sequence.zones.length - 1) {
@@ -325,9 +368,13 @@ export function decideNextAction(
       if ((ZONE_ROLES[nextZone] ?? []).includes(t.role)) weight *= 1.25;
     }
 
-    // Penalty quando passa pra TRÁS (na direção contrária ao ataque)
+    // Penalty pra trás — escala por zona do PORTADOR (atacante quase nunca)
     const backwards = (t.position.x - ballHolder.position.x) * attackDir < -20;
-    if (backwards) weight *= 0.65;
+    if (backwards) {
+      if (holderZone === 'attack')   weight *= 0.18;  // atacante NÃO toca pra trás
+      else if (holderZone === 'creative') weight *= 0.55;
+      else                            weight *= 0.85;
+    }
 
     return { player: t, weight, freedom, progress, threat, coherence, dist };
   });
@@ -435,29 +482,71 @@ export function computeTeamPhase(
 }
 
 /**
- * Shift do time baseado na fase. Não move o jogador individualmente —
- * desloca o BLOCO inteiro. Aplicar a TODOS os jogadores do time.
- *
- * Retorna offsets em FRAÇÃO do campo lógico (somar a base.x, base.y).
- *  - x positivo = pra frente na direção de ataque
- *  - compress = quanto puxa a linha defensiva pra cima e o ataque pra trás
- *               (contração vertical em torno de y=center)
+ * (Legado — substituído por playerShift). Mantido temporariamente para
+ * compatibilidade com chamadas existentes. Devolve neutro.
  */
 export function teamShift(
-  team: 'home' | 'away',
-  phase: TeamPhase,
+  _team: 'home' | 'away',
+  _phase: TeamPhase,
 ): { dx: number; compress: number } {
+  return { dx: 0, compress: 0 };
+}
+
+/**
+ * Shift POR JOGADOR baseado em (zona, posse, posição da bola).
+ *
+ * Princípio binário do CLASSIC:
+ *  - Time ATACANDO segue a bola pra frente, GRADUALMENTE
+ *  - Time DEFENDENDO recua + fecha o gol, GRADUALMENTE
+ *  - Cada zona tem magnitude própria (defesa cauteloso, ataque agressivo)
+ *
+ * @param player    jogador a deslocar
+ * @param ballPos   posição atual da bola (x, y em coords lógicas 600x400)
+ * @param holderTeam time que tem a bola
+ */
+export function playerShift(
+  player: ClassicPlayer,
+  ballPos: { x: number; y: number },
+  holderTeam: 'home' | 'away',
+): { dx: number; dy: number } {
+  const team = player.team;
   const dir = team === 'home' ? 1 : -1;
-  switch (phase) {
-    case 'BUILDUP':
-      return { dx: 0, compress: 0 };
-    case 'CONSOLIDATION':
-      return { dx: dir * 0.025, compress: 0 };
-    case 'ATTACKING':
-      return { dx: dir * 0.06, compress: -0.04 }; // expande pra criar espaço
-    case 'DEFENDING':
-      return { dx: -dir * 0.045, compress: 0.06 }; // recua + comprime
-    case 'TRANSITION':
-      return { dx: 0, compress: 0 };
+  const zone = zoneFromRole(player.role);
+  const isAttacking = holderTeam === team;
+
+  // Posição relativa da bola pro time deste jogador (0 = nossa backline, 1 = deles)
+  const xRelOurs = team === 'home'
+    ? ballPos.x / FIELD_W_LOGIC
+    : 1 - ballPos.x / FIELD_W_LOGIC;
+
+  // ─── ATACANDO ────────────────────────────────────────────────────────
+  // Time inteiro avança gradualmente conforme bola progride.
+  // Defesa avança POUCO (não se expõe). Criativa avança MÉDIO. Ataque já tá lá,
+  // mas se aproxima da área quando bola entra no terço final.
+  if (isAttacking) {
+    // base de avanço proporcional ao avanço da bola, dosado por zona
+    const ballProgress = Math.max(0, xRelOurs - 0.30); // só conta após sair da própria área
+    const baseDx =
+      zone === 'defense'  ? ballProgress * 0.04   // até +4% só
+      : zone === 'creative' ? ballProgress * 0.07 // até +7%
+      : ballProgress * 0.05;                       // ataque já posicionado
+    return { dx: dir * baseDx, dy: 0 };
   }
+
+  // ─── DEFENDENDO ──────────────────────────────────────────────────────
+  // Time recua proporcionalmente a quanto a bola está perto da nossa área.
+  // Defesa recua POUCO (já está atrás, fecha vertical). Criativa recua MÉDIO
+  // (forma bloco). Ataque recua MAIS (pra ajudar) OU pressiona alto se mentalidade.
+  const ballThreat = Math.max(0, 1 - xRelOurs); // 1 quando bola na nossa área
+  const baseDx =
+    zone === 'defense'  ? -ballThreat * 0.025   // -2.5% no pior caso
+    : zone === 'creative' ? -ballThreat * 0.05  // -5%
+    : -ballThreat * 0.07;                        // -7% (ataque ajuda na marcação)
+
+  // Compressão vertical leve: defesa fecha o miolo quando bola perto da área
+  const compress = zone === 'defense' ? ballThreat * 0.04 : 0;
+  const yCenter = FIELD_H_LOGIC / 2;
+  const dy = (yCenter - player.position.y) * compress / FIELD_H_LOGIC;
+
+  return { dx: dir * baseDx, dy };
 }

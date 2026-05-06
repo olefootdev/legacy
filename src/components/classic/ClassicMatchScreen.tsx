@@ -19,7 +19,7 @@ import type {
 } from '@/engine/classic/types';
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
 import { generateEvent, applyEventToPlayers } from '@/engine/classic/eventGenerator';
-import { computeTeamPhase, teamShift } from '@/engine/classic/decisionEngine';
+import { computeTeamPhase, playerShift } from '@/engine/classic/decisionEngine';
 import { createMatchStory, updateMatchStory, storyBeatsForCoach } from '@/engine/classic/matchStory';
 import type { MatchStory } from '@/engine/classic/matchStory';
 import { useGameDispatch } from '@/game/store';
@@ -360,6 +360,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const matchStoryRef = useRef<MatchStory>(createMatchStory());
   const dispatch = useGameDispatch();
   const leaguePointsAppliedRef = useRef(false); // evita aplicar 2x se matchOver mudar
+  // Quando true, próximo evento dispara após 3s (kickoff, gol, bola fora —
+  // jogadores "pensam" e se reposicionam). Setado dentro do fireEvent quando
+  // o evento atual é wide/post/goal/save.
+  const pendingPauseRef = useRef(false);
   const [stats, setStats]     = useState<MatchStats>({
     possession:    { home: 58, away: 42 },
     shots:         { home: 9,  away: 6  },
@@ -658,6 +662,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       setLatestEvent(evt);
       setEventFeed(prev2 => [evt, ...prev2].slice(0, FEED_MAX));
 
+      // Pausa de 3s após eventos que param o jogo: gol (festa+kickoff),
+      // chute pra fora (tiro de meta), trave (rebote), defesa (goleiro decide).
+      // Jogadores se reposicionam suavemente nesses 3s — beleza do conceito.
+      if (evt.type === 'goal' || evt.type === 'wide' || evt.type === 'post' ||
+          evt.type === 'save' || evt.type === 'corner') {
+        pendingPauseRef.current = true;
+      }
+
       // Atualiza memória da partida (Fase 4): cumulativo de gols, virada,
       // pressão sustentada, flank attack, on fire, turnover crítico.
       const updatedPlayers = applyEventToPlayers(prev, evt);
@@ -666,17 +678,35 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       return updatedPlayers;
     });
 
-    // Intervalo menor quando há sequência em andamento (jogada fluindo)
+    // Intervalo: pausas de 3s pra bola fora / gol / pensar — momentos onde
+    // o tempo respira e os jogadores se reposicionam. O resto fluí rápido.
     const inSequence = sequenceRef.current !== null;
-    const interval = inSequence
-      ? 1200 + Math.random() * 800   // passe rápido dentro da jogada
-      : EVENT_INTERVAL_MIN + Math.random() * EVENT_INTERVAL_RANGE;
+    const lastEventRef = sequenceRef.current; // ref state já capturado antes
+    let interval: number;
+    // Detectamos o tipo do último evento via state já atualizado (escopo do setTimeout)
+    const lastTypeForPause = (() => {
+      // após bola fora ou gol, força pausa de 3s (goleiro pensando / kickoff)
+      // (o "type" desse evento foi setado em setLatestEvent antes deste setTimeout)
+      // ref imediato: setLatestEvent é assíncrono mas o valor está no state interno
+      return null; // placeholder — abaixo usa pendingPauseRef
+    })();
+
+    if (pendingPauseRef.current) {
+      interval = 3000; // 3 segundos de pensamento
+      pendingPauseRef.current = false;
+    } else if (inSequence) {
+      interval = 1200 + Math.random() * 800;
+    } else {
+      interval = EVENT_INTERVAL_MIN + Math.random() * EVENT_INTERVAL_RANGE;
+    }
 
     loopRef.current = setTimeout(fireEvent, interval);
+    void lastEventRef; void lastTypeForPause; // not needed — pendingPauseRef é a fonte
   }, [running, minute, score, possession, skills, passStyle]);
 
   useEffect(() => {
-    loopRef.current = setTimeout(fireEvent, 800);
+    // KICKOFF: 3 segundos pros jogadores pensarem antes do primeiro evento
+    loopRef.current = setTimeout(fireEvent, 3000);
     return () => clearTimeout(loopRef.current ?? undefined);
   }, [fireEvent]);
 
@@ -1119,17 +1149,16 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               })}
           </svg>
 
-          {/* Player nodes — posição-base FIXA, mas o BLOCO inteiro do time
-              se contrai/expande por fase tática (Phase 2: micro-movimento) */}
+          {/* Player nodes — posição-base FIXA, mas cada zona do time se desloca
+              gradualmente seguindo a posse e a posição da bola. Atacando avança,
+              defendendo recua. Movimento sutil, sempre baseado em quem tem a bola. */}
           {players.map(p => {
-            // Shift por fase do time (BUILDUP/CONSOLIDATION/ATTACKING/DEFENDING)
-            const phase = p.team === 'home' ? homePhase : awayPhase;
-            const shift = teamShift(p.team, phase);
-            // x: desloca o bloco inteiro na direção de ataque
+            // Time que tem a bola = time do último ator com posse (latestEvent)
+            const holderTeam: 'home' | 'away' = latestEvent?.team ?? 'home';
+            const ballPosNow = { x: ballRef.current.targetX, y: ballRef.current.targetY };
+            const shift = playerShift(p, ballPosNow, holderTeam);
             const shiftedX = p.position.x + shift.dx * FIELD_W_LOGIC;
-            // y: comprime/expande em torno do meio do campo (200)
-            const yCenter = FIELD_H_LOGIC / 2;
-            const shiftedY = p.position.y + (yCenter - p.position.y) * shift.compress;
+            const shiftedY = p.position.y + shift.dy * FIELD_H_LOGIC;
             const leftPct = (shiftedX / FIELD_W_LOGIC) * 100;
             const topPct  = (shiftedY / FIELD_H_LOGIC) * 100;
             const isHL = highlightPlayer?.id === p.id;

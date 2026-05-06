@@ -9,6 +9,22 @@ export type ArchetypeId =
   | 'WILD'
   | 'BOX_INVADER';
 
+/**
+ * As 3 zonas verticais do CLASSIC. Toda decisão e todo movimento
+ * resolve a partir disto + ataque/defesa.
+ *   - defense:  GK, LB, CB, RB → constrói saída ou recupera/limpa
+ *   - creative: DM, CM         → conecta defesa ↔ ataque, é onde o jogo acontece
+ *   - attack:   LW, ST, RW     → finaliza (sem tocar pra trás) ou pressiona alto
+ */
+export type PlayerZone = 'defense' | 'creative' | 'attack';
+
+export function zoneFromRole(role: string): PlayerZone {
+  const r = (role ?? '').toUpperCase();
+  if (r === 'GK' || r === 'LB' || r === 'RB' || r === 'CB') return 'defense';
+  if (r === 'DM' || r === 'CM' || r === 'AM' || r === 'MEI') return 'creative';
+  return 'attack'; // LW, RW, ST, fallback
+}
+
 export type EventType =
   | 'pass'
   | 'shot'
