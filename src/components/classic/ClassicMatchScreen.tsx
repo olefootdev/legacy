@@ -351,6 +351,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [matchOver, setMatchOver] = useState(false);
   const [mvp, setMvp] = useState<ClassicPlayer | null>(null);
   const [coachPing, setCoachPing] = useState(false);
+  const [coachReading, setCoachReading] = useState<import('@/lib/classicCoachClient').CoachReading | null>(null);
+  const [coachReadingFresh, setCoachReadingFresh] = useState(false); // dot + glow ativo
   const [lastPassPair, setLastPassPair] = useState<[number,number] | null>(null);
   const [stats, setStats]     = useState<MatchStats>({
     possession:    { home: 58, away: 42 },
@@ -653,6 +655,67 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     loopRef.current = setTimeout(fireEvent, 800);
     return () => clearTimeout(loopRef.current ?? undefined);
   }, [fireEvent]);
+
+  // ─── Coach AI inteligente — leitura tática via Anthropic Haiku ──────────
+  // Refs evitam que o setTimeout/setInterval seja cancelado a cada evento.
+  // Effect roda 1x quando running muda; lê refs (sempre atualizadas) na hora.
+  const snapshotRef = useRef({ homeTeam, awayTeam, score, minute, period, stats, passStyle, skills, players, latestEvent });
+  useEffect(() => {
+    snapshotRef.current = { homeTeam, awayTeam, score, minute, period, stats, passStyle, skills, players, latestEvent };
+  });
+
+  useEffect(() => {
+    if (!running || matchOver) return;
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        const { fetchClassicCoachReading } = await import('@/lib/classicCoachClient');
+        const snap = snapshotRef.current;
+        const homeTeamPlayers = snap.players.filter(p => p.team === 'home');
+        const keyPlayers = [...homeTeamPlayers]
+          .sort((a, b) => {
+            const aS = (a.onFire ? 100 : 0) + (a.isStar ? 80 : 0) + (a.fatigue > 75 ? 60 : 0) + a.confidence * 0.3;
+            const bS = (b.onFire ? 100 : 0) + (b.isStar ? 80 : 0) + (b.fatigue > 75 ? 60 : 0) + b.confidence * 0.3;
+            return bS - aS;
+          })
+          .slice(0, 4)
+          .map(p => ({
+            name: p.shortName, role: p.role, archetype: p.archetype, ovr: p.ovr,
+            fatigue: p.fatigue, confidence: p.confidence,
+            onFire: p.onFire, isStar: p.isStar,
+          }));
+
+        const reading = await fetchClassicCoachReading({
+          homeTeam: snap.homeTeam, awayTeam: snap.awayTeam,
+          score: snap.score, minute: snap.minute, period: snap.period,
+          possession: snap.stats.possession,
+          shots: snap.stats.shots,
+          shotsOnTarget: snap.stats.shotsOnTarget,
+          passStyle: snap.passStyle,
+          mentalidade: 'EQUILIBRADO',
+          activeSkills: snap.skills.filter(s => s.active).map(s => s.id),
+          keyPlayers,
+          lastEvent: snap.latestEvent ? {
+            type: snap.latestEvent.type,
+            playerName: snap.latestEvent.playerName,
+            minute: snap.latestEvent.minute,
+          } : undefined,
+        });
+        if (cancelled || !reading) return;
+        setCoachReading(reading);
+        setCoachReadingFresh(true);
+        setCoachPing(true);
+      } catch (err) {
+        // silenciado — fallback é os templates if/else
+      }
+    }
+
+    // Primeira leitura aos ~12s, depois a cada ~30s
+    const first = setTimeout(tick, 12_000);
+    const interval = setInterval(tick, 30_000);
+    return () => { cancelled = true; clearTimeout(first); clearInterval(interval); };
+  }, [running, matchOver]);
 
   const toggleSkill = useCallback((id: string) => {
     setSkills(prev => prev.map(s => (s.id === id && s.remaining === 0) ? { ...s, active: true, remaining: s.cooldown } : s));
@@ -1378,7 +1441,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           display:'grid', gridTemplateColumns:'1fr 1fr 1fr', zIndex:100,
         }}>
           {[
-            { id:'coach',  label:'COACH AI',  Icon: Brain,       onClick: () => { setCoachModal(true); setCoachPing(false); } },
+            { id:'coach',  label:'COACH AI',  Icon: Brain,       onClick: () => { setCoachModal(true); setCoachPing(false); setCoachReadingFresh(false); } },
             { id:'legacy', label:'LEGACY',    Icon: Sparkles,    onClick: triggerLegacy            },
             { id:'form',   label:'FORMAÇÃO', Icon: LayoutGrid,  onClick: () => setFormationModal(true) },
           ].map((tab, idx) => {
@@ -1463,7 +1526,62 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 <span style={{ ...T_HERO, fontSize:16, color:'var(--c-text-primary)' }}>{awayTeam}</span>
               </div>
 
-              {/* Leituras táticas — geradas a partir do estado atual */}
+              {/* ── Leitura inteligente (Anthropic Haiku) — destaque editorial ── */}
+              {coachReading && (() => {
+                const toneColor = coachReading.tone === 'urgent' || coachReading.tone === 'alert'
+                  ? 'var(--c-danger)'
+                  : coachReading.tone === 'positive'
+                  ? 'var(--c-ok)'
+                  : 'var(--c-accent)';
+                return (
+                  <div style={{
+                    background:'linear-gradient(180deg, rgba(253,225,0,0.06) 0%, rgba(253,225,0,0.02) 100%)',
+                    border:`1px solid ${toneColor}33`,
+                    borderLeft:`3px solid ${toneColor}`,
+                    borderRadius:8,
+                    padding:'14px 16px',
+                    marginBottom:16,
+                  }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                      <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:900, color: toneColor, letterSpacing:'0.28em' }}>
+                        ANÁLISE · {coachReading.tone.toUpperCase()}
+                      </span>
+                      <span aria-hidden style={{ flex:1, height:1, background:`${toneColor}33`, marginLeft:6 }} />
+                    </div>
+                    {/* Headline em Moret italic editorial */}
+                    <div style={{
+                      ...T_HERO, fontStyle:'italic', fontWeight:700,
+                      fontSize:22, color:'var(--c-text-primary)',
+                      lineHeight:1.15, letterSpacing:'-0.02em',
+                      marginBottom:8,
+                    }}>
+                      {coachReading.headline}
+                    </div>
+                    {/* Reading em Inter */}
+                    <p style={{
+                      ...T_BODY, fontSize:13, color:'var(--c-text-primary)',
+                      lineHeight:1.5, margin:0, opacity:0.92,
+                    }}>
+                      {coachReading.reading}
+                    </p>
+                    {/* Suggestion como CTA Agency uppercase */}
+                    <div style={{
+                      marginTop:12, padding:'8px 12px',
+                      border:`1px solid ${toneColor}66`,
+                      borderRadius:4,
+                      background:`${toneColor}0A`,
+                      ...T_DISPLAY, fontSize:11, fontWeight:900,
+                      color: toneColor, letterSpacing:'0.20em',
+                      display:'flex', alignItems:'center', justifyContent:'space-between',
+                    }}>
+                      <span>{coachReading.suggestion}</span>
+                      <span aria-hidden style={{ fontSize:10, opacity:0.7 }}>›</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Leituras complementares (templates if/else — fallback sempre presente) */}
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {(() => {
                   const homePoss = stats.possession.home;

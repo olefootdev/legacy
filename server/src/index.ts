@@ -1,4 +1,7 @@
-import 'dotenv/config';
+// Override permite que server/.env sobrescreva variáveis vazias do shell parent
+// (ex: Claude Code dev env exporta ANTHROPIC_API_KEY="" pra sandbox).
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -14,6 +17,7 @@ import { marketRoutes } from './routes/market.js';
 import { voiceRoutes } from './routes/voice.js';
 import { assistantRoutes } from './routes/assistant.js';
 import { coachRoutes } from './routes/coach.js';
+import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
@@ -84,6 +88,7 @@ app.route('/', marketRoutes);
 app.route('/api/voice', voiceRoutes);
 app.route('/api/assistant', assistantRoutes);
 app.route('/api/coach', coachRoutes);
+app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
 
