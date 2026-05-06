@@ -10,7 +10,7 @@ import {
   Zap, Target, Crosshair,
   ChevronRight, ChevronDown, X,
   Wifi, AlertTriangle, Goal as GoalIcon, Swords, Repeat, Footprints,
-  Flame,
+  Flame, ArrowUpRight,
 } from 'lucide-react';
 import type {
   ClassicPlayer, MatchEvent, MatchStats, MatchScore,
@@ -1032,13 +1032,35 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                           <span style={{ ...T_HERO, fontSize:18, color:'var(--c-accent)', lineHeight:1 }}>{p.number}</span>
                           <div>
                             <div style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.08em' }}>{p.shortName}</div>
-                            <div style={{ ...T_BODY, fontSize:10, color:'var(--c-text-muted)', marginTop:2, display:'flex', gap:8 }}>
-                              {ms.goals > 0 && <span>⚽ {ms.goals}</span>}
-                              {ms.shots > 0 && <span>🎯 {ms.shots}</span>}
-                              <span>↗ {ms.passes}</span>
-                              {ms.tackles > 0 && <span>⚔ {ms.tackles}</span>}
-                              {ms.duelsWon > 0 && <span>🛡 {ms.duelsWon}</span>}
-                              {ms.tikTakCount > 0 && <span>⚡ {ms.tikTakCount}</span>}
+                            <div style={{ ...T_BODY, fontSize:10, color:'var(--c-text-muted)', marginTop:2, display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                              {ms.goals > 0 && (
+                                <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                                  <GoalIcon size={11} /> {ms.goals}
+                                </span>
+                              )}
+                              {ms.shots > 0 && (
+                                <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                                  <Target size={11} /> {ms.shots}
+                                </span>
+                              )}
+                              <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                                <ArrowUpRight size={11} /> {ms.passes}
+                              </span>
+                              {ms.tackles > 0 && (
+                                <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                                  <Swords size={11} /> {ms.tackles}
+                                </span>
+                              )}
+                              {ms.duelsWon > 0 && (
+                                <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                                  <Shield size={11} /> {ms.duelsWon}
+                                </span>
+                              )}
+                              {ms.tikTakCount > 0 && (
+                                <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}>
+                                  <Zap size={11} /> {ms.tikTakCount}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <span style={{ ...T_HERO, fontSize:22, color: p.onFire ? 'var(--c-accent)' : 'var(--c-text-sec)', lineHeight:1 }}>{rating}</span>

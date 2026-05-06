@@ -347,6 +347,48 @@ export function generateEvent(
     tacticalTrigger,
   };
 
+  // ─── CONTRA-EVENTO: Duelo defensivo ─────────────────────────────────────
+  // Quando o ATACANTE adversário (este `team`) está com a bola no terço
+  // final do oponente E há um defensor adversário a < 60px, nosso defensor
+  // pode entrar em duelo SEM SAIR DO LUGAR. Substitui o evento original
+  // por um `duel` do defensor (team flip).
+  const xRelInOpposing = team === 'home'
+    ? ballPos.x / FIELD_W_LOGIC
+    : 1 - ballPos.x / FIELD_W_LOGIC;
+  if (xRelInOpposing >= 0.66 && type !== 'goal' && type !== 'duel') {
+    const opposingTeam: 'home' | 'away' = team === 'home' ? 'away' : 'home';
+    const opposingDefenders = allPlayers.filter(p =>
+      p.team === opposingTeam &&
+      (p.role === 'CB' || p.role === 'LB' || p.role === 'RB' || p.role === 'DM') &&
+      Math.hypot(p.position.x - ballPos.x, p.position.y - ballPos.y) < 60,
+    );
+    if (opposingDefenders.length > 0 && rng() < 0.30) {
+      // Defensor mais próximo entra no duelo
+      const defender = opposingDefenders.sort((a, b) =>
+        Math.hypot(a.position.x - ballPos.x, a.position.y - ballPos.y) -
+        Math.hypot(b.position.x - ballPos.x, b.position.y - ballPos.y),
+      )[0];
+      const opposingTeamName = opposingTeam === 'home' ? 'Tigres' : 'Alvorada';
+      const defProfile = narrativeProfiles?.get(defender.id);
+      const duelText = generateNarration('duel', defender.archetype, defender.shortName, opposingTeamName, minute, score, defProfile);
+      const duelEvent: MatchEvent = {
+        id: `evt_${++_eventCounter}`,
+        minute,
+        type: 'duel',
+        team: opposingTeam,
+        playerId: defender.id,
+        playerName: defender.shortName,
+        archetype: defender.archetype,
+        text: duelText,
+        ballX: defender.position.x,
+        ballY: defender.position.y,
+        rationale: `Duelo: ${defender.shortName} (${defender.role}) intercepta ataque de ${player.shortName}`,
+        tacticalTrigger: 'duel_win',
+      };
+      return { event: duelEvent, nextSequence: null, receiverId: null };
+    }
+  }
+
   // Avança sequência se passe; reseta nos eventos terminais
   const sequenceEnded =
     type === 'goal' || type === 'shot' || type === 'save' || type === 'post' ||

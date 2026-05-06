@@ -327,23 +327,10 @@ export function decideNextAction(
     }
   }
 
-  // ─── GATILHO: Duelo defensivo — defensor luta pela bola sem sair do lugar ─
-  // Defensor na zona de defesa com adversário próximo → duelo no lugar.
-  if (holderZone === 'defense') {
-    const nearbyAttacker = opponents.find(o => {
-      const oZone = zoneFromRole(o.role);
-      return (oZone === 'attack' || oZone === 'creative') &&
-             distance(ballHolder.position, o.position) < 60;
-    });
-    if (nearbyAttacker && Math.random() < 0.35) {
-      return {
-        action: 'duel',
-        ballPos: { x: ballHolder.position.x, y: ballHolder.position.y },
-        rationale: `${ballHolder.shortName} → DUELO vs ${nearbyAttacker.shortName}`,
-        tacticalTrigger: 'duel_win',
-      };
-    }
-  }
+  // (Lógica antiga de duel removida — estava invertida. O duelo é
+  // contra-evento: dispara em eventGenerator quando ATACANTE adversário
+  // está com a bola perto do nosso defensor, não quando nosso defensor
+  // já tem a bola.)
 
   // ─── Avaliação de companheiros para passe ─────────────────────────────────
   const scored = teammates.map(t => {

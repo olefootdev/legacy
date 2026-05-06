@@ -48,6 +48,11 @@ export function MatchClassic() {
         return bv - av;
       })[0]?.id;
 
+    // AWAY ganha formação aleatória entre as 4 disponíveis — variedade real
+    // (não fica preso em 4-3-3). HOME mantém 4-3-3 como base do manager.
+    const awayFormationOptions = ['4-3-3', '4-4-2', '4-2-3-1', '5-3-2'] as const;
+    const awayFormation = awayFormationOptions[Math.floor(Math.random() * awayFormationOptions.length)];
+
     const home = buildClassicTeamFromLineup(playersById, lineup, {
       team: 'home',
       starterId,
@@ -57,12 +62,12 @@ export function MatchClassic() {
     const away = fixture?.opponent?.genesisAwayPlayers && fixture.opponent.genesisAwayPlayers.length >= 11
       ? buildClassicTeamFromSquad(fixture.opponent.genesisAwayPlayers, {
           team: 'away',
-          formation: '4-3-3',
+          formation: awayFormation,
         })
       : buildSyntheticAwayTeam(
           fixture?.opponent?.shortName ?? fixture?.awayName ?? 'ADVERSÁRIO',
           fixture?.opponent?.strength ?? 75,
-          { team: 'away', formation: '4-3-3' },
+          { team: 'away', formation: awayFormation },
         );
 
     if (home.length !== 11 || away.length !== 11) {

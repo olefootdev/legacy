@@ -137,8 +137,14 @@ const AWAY_SLOT_SETS: Record<string, RawSlot[]> = {
 
 const AWAY_FORMATIONS = Object.keys(AWAY_SLOT_SETS) as Array<keyof typeof AWAY_SLOT_SETS>;
 
+// Cache da última formação sorteada — pra getAwayFormation() retornar a
+// formação REALMENTE em uso, não sortear nova. Atualizado em getAwayPlayers().
+let _lastAwayFormation: string = '4-3-3';
+
 function pickAwayFormation(): string {
-  return AWAY_FORMATIONS[Math.floor(Math.random() * AWAY_FORMATIONS.length)];
+  const f = AWAY_FORMATIONS[Math.floor(Math.random() * AWAY_FORMATIONS.length)];
+  _lastAwayFormation = f;
+  return f;
 }
 
 function buildPlayers(slots: RawSlot[], team: 'home' | 'away'): ClassicPlayer[] {
@@ -167,9 +173,9 @@ export function getAwayPlayers(): ClassicPlayer[] {
   return buildPlayers(AWAY_SLOT_SETS[formation], 'away');
 }
 
-/** Retorna a formação atual do AWAY (para exibição no modal). */
+/** Retorna a formação realmente em uso pelo AWAY (cacheada do último pick). */
 export function getAwayFormation(): string {
-  return pickAwayFormation();
+  return _lastAwayFormation;
 }
 
 // Returns repositioned players for a given formation, preserving identity
