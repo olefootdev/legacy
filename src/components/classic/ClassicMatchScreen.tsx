@@ -6,15 +6,15 @@ import {
 } from 'react';
 import {
   Brain, Sparkles, LayoutGrid,
-  Pause, Play, Star, Shield,
+  Star, Shield,
   Zap, Target, Crosshair,
-  ChevronRight, ChevronDown, ChevronUp, X,
+  ChevronRight, ChevronDown, X,
   Wifi, AlertTriangle, Goal as GoalIcon, Swords, Repeat, Footprints,
   Flame,
 } from 'lucide-react';
 import type {
   ClassicPlayer, MatchEvent, MatchStats, MatchScore,
-  BallState, TrailPoint, SkillEntry, SubEntry, QuickInstruction,
+  BallState, TrailPoint, SkillEntry,
   ClassicMatchConfig, ManagerSkillId, EventChainContext,
 } from '@/engine/classic/types';
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
@@ -111,18 +111,6 @@ const SKILLS_INIT: SkillEntry[] = [
   { id:'press',   label:'PRESSÃO ALTA',          icon:'shield',    cooldown:15, active:false, remaining:0 },
   { id:'offens',  label:'FOCO OFENSIVO',          icon:'target',    cooldown:20, active:false, remaining:0 },
   { id:'cross',   label:'BOLA NA ÁREA',           icon:'crosshair', cooldown:15, active:false, remaining:0 },
-];
-
-const SUBS_INIT: SubEntry[] = [
-  { number:7,  name:'TATAJUBA', fatigue:82, trend:'up'   },
-  { number:9,  name:'R. SILVA', fatigue:75, trend:'up'   },
-  { number:21, name:'M. JUNIOR',fatigue:68, trend:'down' },
-];
-
-const INSTRUCTIONS: QuickInstruction[] = [
-  { id:'def', label:'LINHA DEFENSIVA NORMAL' },
-  { id:'man', label:'MARCAÇÃO INDIVIDUAL'    },
-  { id:'clr', label:'TIRAR MARCADOR'         },
 ];
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as const;
@@ -813,8 +801,8 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                 title="Tempo comprimido — 90 minutos em 1m30s reais"
                 style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'inline-flex', alignItems:'center', gap:5 }}
               >
-                <span style={{ width:14, height:1.5, background:'var(--c-accent)', borderRadius:1, transformOrigin:'left center', animation: running ? 'c-tempo-tick 1.4s ease-in-out infinite' : undefined, opacity: running ? 1 : 0.25 }} />
-                {running ? 'TEMPO 36:1' : 'PAUSADO'}
+                <span style={{ width:14, height:1.5, background:'var(--c-accent)', borderRadius:1, transformOrigin:'left center', animation: 'c-tempo-tick 1.4s ease-in-out infinite' }} />
+                TEMPO 36:1
               </span>
             </div>
             <div style={{ ...T_HERO, fontSize:44, color: extraMinute > 0 ? 'var(--c-danger)' : minute >= 85 ? 'var(--c-danger)' : 'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em', transition:'color 0.5s' }}>
@@ -830,16 +818,6 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
 
           {/* AWAY crest + initials */}
           <ClubCrest color="var(--c-team-away)" initials={awayShort} side="away" />
-
-          {/* Pause */}
-          <button
-            type="button"
-            onClick={() => setRunning(r => !r)}
-            aria-label={running ? 'Pausar partida' : 'Retomar partida'}
-            style={{ position:'absolute', top:10, right:10, width:28, height:28, border:'1px solid var(--c-accent)', borderRadius:4, background:'transparent', color:'var(--c-accent)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
-          >
-            {running ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-          </button>
         </div>
 
         {/* ── [C] Campo tático estático ──────────────────────────────────
@@ -1060,60 +1038,94 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
           <span style={{ ...T_HERO, fontSize:26, color:'var(--c-text-primary)', lineHeight:1, letterSpacing:'-0.02em', flex:1, textAlign:'right' }}>{awayTeam}</span>
         </div>
 
-        {/* ── [E] Terminal de narração — últimas 4 ações ────────────────── */}
-        <div style={{ background:'#0A0A0A', borderBottom:'1px solid var(--c-border)', padding:'8px 0', minHeight:88 }}>
-          <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em', padding:'0 14px 6px', display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ width:5, height:5, borderRadius:'50%', background:'var(--c-ok)', display:'inline-block', animation:'c-pulse 2s infinite' }} />
-            LIVE FEED
-          </div>
-          {eventFeed.length === 0 ? (
-            <div style={{ padding:'8px 14px', ...T_BODY, fontSize:11, color:'var(--c-text-muted)' }}>
-              _ aguardando o apito inicial…
-            </div>
-          ) : (
-            eventFeed.map((evt, i) => {
-              const isLatest = i === 0;
-              const accentColor = evt.type === 'goal'
-                ? 'var(--c-accent)'
-                : evt.type === 'shot' || evt.type === 'danger'
-                ? 'var(--c-danger)'
-                : evt.type === 'interception' || evt.type === 'tackle'
-                ? 'var(--c-ok)'
-                : 'var(--c-text-muted)';
-              return (
-                <div
-                  key={evt.id}
-                  style={{
-                    display:'flex', alignItems:'baseline', gap:8,
-                    padding:'3px 14px',
-                    opacity: isLatest ? 1 : 0.38 + (0.2 * (FEED_MAX - i)),
-                    animation: isLatest ? 'c-terminal-in 0.2s ease' : undefined,
-                    background: isLatest && evt.type === 'goal' ? 'rgba(253,225,0,0.04)' : undefined,
-                  }}
-                >
-                  <span style={{ ...T_DISPLAY, fontSize:9, color: accentColor, minWidth:22, letterSpacing:'0.04em', flexShrink:0 }}>
-                    {evt.minute}'
-                  </span>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color: accentColor, flexShrink:0, letterSpacing:'0.08em' }}>
-                    [{evt.type.toUpperCase()}]
-                  </span>
-                  <span style={{
-                    ...T_BODY,
-                    fontSize: isLatest ? 12 : 11,
-                    fontWeight: isLatest && evt.type === 'goal' ? 700 : 400,
-                    color: isLatest ? 'var(--c-text-primary)' : 'var(--c-text-sec)',
-                    lineHeight: 1.4,
-                  }}>
-                    {evt.text}
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
-
         {/* ── Vitrines do museu vivo: cards modulares com rail amarelo ──── */}
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:'12px 12px 4px' }}>
+
+        {/* ── Jogador em ação — primeiro card, logo abaixo do placar ───── */}
+        <ModuleCard eyebrow={star.onFire ? 'JOIA EM CHAMA' : 'JOGADOR EM AÇÃO'} noPadding>
+          <div style={{ display:'grid', gridTemplateColumns:'112px 1fr', minHeight:128 }}>
+            <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
+              <img
+                src={avatarUrl(star.name, 200)}
+                alt={star.shortName}
+                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(35%) contrast(1.05)' }}
+              />
+              <div aria-hidden style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.55) 100%)' }} />
+              <div style={{ position:'absolute', top:6, left:8, lineHeight:0.9 }}>
+                <div style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:36, color:'#FFFFFF', letterSpacing:'-0.02em', textShadow:'0 2px 6px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)' }}>
+                  {star.ovr}
+                </div>
+                <div style={{ ...T_DISPLAY, fontSize:8, color:'rgba(255,255,255,0.85)', letterSpacing:'0.22em', marginTop:1, textShadow:'0 1px 3px rgba(0,0,0,0.8)' }}>OVR</div>
+              </div>
+              <div style={{ position:'absolute', bottom:6, left:6, background:'rgba(0,0,0,0.85)', padding:'2px 6px', ...T_DISPLAY, fontSize:8, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.18em', borderRadius:2 }}>
+                {star.role}
+              </div>
+              {star.isStar && (
+                <div style={{ position:'absolute', top:6, right:6, background:'var(--c-accent)', color:'#0D0D0D', padding:'2px 5px', borderRadius:2, ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.16em', display:'flex', alignItems:'center', gap:3, boxShadow:'0 0 12px rgba(253,225,0,0.45)' }}>
+                  <Star size={8} fill="currentColor" /> MVP
+                </div>
+              )}
+              {star.onFire && !star.isStar && (
+                <div style={{ position:'absolute', top:6, right:6, background:'#FB923C', color:'#0D0D0D', padding:'2px 5px', borderRadius:2, ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.14em', display:'flex', alignItems:'center', gap:3 }}>
+                  <Flame size={8} fill="currentColor" /> CHAMA
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', justifyContent:'space-between', minWidth:0 }}>
+              <div>
+                <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.26em', marginBottom:4 }}>{star.archetype}</div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:6 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.04em', flexShrink:0 }}>{star.number}</span>
+                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{star.shortName}</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+                  <span style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:26, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em' }}>
+                    {(6.0 + (star.confidence / 100) * 4).toFixed(2)}
+                  </span>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em' }}>RATING</span>
+                </div>
+              </div>
+              <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:5 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>FADIGA</span>
+                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
+                    <div style={{ height:'100%', background: star.fatigue > 70 ? 'var(--c-danger)' : 'var(--c-warning)', borderRadius:1, width:`${star.fatigue}%`, transition:'width 1s' }} />
+                  </div>
+                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.fatigue}%</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>CONFIANÇA</span>
+                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
+                    <div style={{ height:'100%', background:'var(--c-ok)', borderRadius:1, width:`${star.confidence}%`, transition:'width 1s' }} />
+                  </div>
+                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.confidence}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'48px 1fr auto', alignItems:'center', gap:10, padding:'8px 14px', borderTop:'1px solid var(--c-border)', background:'rgba(255,255,255,0.015)' }}>
+            <div style={{ position:'relative', width:48, height:40, borderRadius:3, overflow:'hidden', background:'#000' }}>
+              <img
+                src={avatarUrl(secondStar.name, 80)}
+                alt={secondStar.shortName}
+                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(50%)' }}
+              />
+              <div style={{ position:'absolute', top:2, left:3, ...T_HERO, fontStyle:'italic', fontSize:14, color:'#FFFFFF', lineHeight:1, textShadow:'0 1px 3px rgba(0,0,0,0.95)' }}>
+                {secondStar.ovr}
+              </div>
+            </div>
+            <div>
+              <div style={{ ...T_DISPLAY, fontSize:11, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                {secondStar.number} {secondStar.shortName}
+              </div>
+              <div style={{ ...T_BODY, fontSize:9, color:'var(--c-text-muted)', marginTop:1 }}>
+                {secondStar.role} · {secondStar.archetype}
+              </div>
+            </div>
+            <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.18em' }}>SEGUNDO</span>
+          </div>
+        </ModuleCard>
 
         {/* ── [F] Stats carousel ───────────────────────────────────────── */}
         <ModuleCard eyebrow="ESTATÍSTICAS · AO VIVO" noPadding meta={
@@ -1144,139 +1156,6 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
           </div>
         </ModuleCard>
 
-        {/* ── Jogador em ação — view-player-card pattern, full width ───── */}
-        <ModuleCard eyebrow={star.onFire ? 'JOIA EM CHAMA' : 'JOGADOR EM AÇÃO'} noPadding>
-          <div style={{ display:'grid', gridTemplateColumns:'112px 1fr', minHeight:128 }}>
-            {/* Foto + OVR overlay (pattern do view-player-card) */}
-            <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
-              <img
-                src={avatarUrl(star.name, 200)}
-                alt={star.shortName}
-                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(35%) contrast(1.05)' }}
-              />
-              {/* Vinheta inferior pra dar peso ao texto da posição */}
-              <div aria-hidden style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.55) 100%)' }} />
-              {/* OVR top-left — Moret italic grande, drop-shadow forte */}
-              <div style={{ position:'absolute', top:6, left:8, lineHeight:0.9 }}>
-                <div style={{
-                  ...T_HERO, fontStyle:'italic', fontWeight:700,
-                  fontSize:36, color:'#FFFFFF', letterSpacing:'-0.02em',
-                  textShadow:'0 2px 6px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)',
-                }}>
-                  {star.ovr}
-                </div>
-                <div style={{ ...T_DISPLAY, fontSize:8, color:'rgba(255,255,255,0.85)', letterSpacing:'0.22em', marginTop:1, textShadow:'0 1px 3px rgba(0,0,0,0.8)' }}>
-                  OVR
-                </div>
-              </div>
-              {/* Posição bottom-left em pílula preta */}
-              <div style={{
-                position:'absolute', bottom:6, left:6,
-                background:'rgba(0,0,0,0.85)', padding:'2px 6px',
-                ...T_DISPLAY, fontSize:8, fontWeight:900,
-                color:'var(--c-text-primary)', letterSpacing:'0.18em',
-                borderRadius:2,
-              }}>
-                {star.role}
-              </div>
-              {/* Star MVP top-right */}
-              {star.isStar && (
-                <div style={{
-                  position:'absolute', top:6, right:6,
-                  background:'var(--c-accent)', color:'#0D0D0D',
-                  padding:'2px 5px', borderRadius:2,
-                  ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.16em',
-                  display:'flex', alignItems:'center', gap:3,
-                  boxShadow:'0 0 12px rgba(253,225,0,0.45)',
-                }}>
-                  <Star size={8} fill="currentColor" /> MVP
-                </div>
-              )}
-              {/* OnFire selo top-right (laranja) */}
-              {star.onFire && !star.isStar && (
-                <div style={{
-                  position:'absolute', top:6, right:6,
-                  background:'#FB923C', color:'#0D0D0D',
-                  padding:'2px 5px', borderRadius:2,
-                  ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.14em',
-                  display:'flex', alignItems:'center', gap:3,
-                }}>
-                  <Flame size={8} fill="currentColor" /> CHAMA
-                </div>
-              )}
-            </div>
-
-            {/* Info à direita — eyebrow + nome + rating + stats */}
-            <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', justifyContent:'space-between', minWidth:0 }}>
-              <div>
-                <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.26em', marginBottom:4 }}>
-                  {star.archetype}
-                </div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:6 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.04em', flexShrink:0 }}>
-                    {star.number}
-                  </span>
-                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                    {star.shortName}
-                  </span>
-                </div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                  <span style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:26, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em' }}>
-                    {(6.0 + (star.confidence / 100) * 4).toFixed(2)}
-                  </span>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em' }}>RATING</span>
-                </div>
-              </div>
-
-              {/* Stats minimalistas: fadiga + confiança em barras tabulares */}
-              <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:5 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>FADIGA</span>
-                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
-                    <div style={{ height:'100%', background: star.fatigue > 70 ? 'var(--c-danger)' : 'var(--c-warning)', borderRadius:1, width:`${star.fatigue}%`, transition:'width 1s' }} />
-                  </div>
-                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.fatigue}%</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>CONFIANÇA</span>
-                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
-                    <div style={{ height:'100%', background:'var(--c-ok)', borderRadius:1, width:`${star.confidence}%`, transition:'width 1s' }} />
-                  </div>
-                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.confidence}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Segundo destaque — em rodapé compacto */}
-          <div style={{
-            display:'grid', gridTemplateColumns:'48px 1fr auto',
-            alignItems:'center', gap:10,
-            padding:'8px 14px',
-            borderTop:'1px solid var(--c-border)',
-            background:'rgba(255,255,255,0.015)',
-          }}>
-            <div style={{ position:'relative', width:48, height:40, borderRadius:3, overflow:'hidden', background:'#000' }}>
-              <img
-                src={avatarUrl(secondStar.name, 80)}
-                alt={secondStar.shortName}
-                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(50%)' }}
-              />
-              <div style={{ position:'absolute', top:2, left:3, ...T_HERO, fontStyle:'italic', fontSize:14, color:'#FFFFFF', lineHeight:1, textShadow:'0 1px 3px rgba(0,0,0,0.95)' }}>
-                {secondStar.ovr}
-              </div>
-            </div>
-            <div>
-              <div style={{ ...T_DISPLAY, fontSize:11, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                {secondStar.number} {secondStar.shortName}
-              </div>
-              <div style={{ ...T_BODY, fontSize:9, color:'var(--c-text-muted)', marginTop:1 }}>
-                {secondStar.role} · {secondStar.archetype}
-              </div>
-            </div>
-            <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.18em' }}>SEGUNDO</span>
-          </div>
-        </ModuleCard>
 
         {/* ── [G] Operação Tática — agora 2 cols: Tipo de Passe | Skills ─ */}
         <ModuleCard eyebrow="OPERAÇÃO TÁTICA" noPadding>
@@ -1343,33 +1222,6 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
             </div>
           </div>
         </ModuleCard>
-
-        {/* ── [H] Subs + Instruções (2 cards lado a lado) ──────────────── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-          {/* Substituições */}
-          <ModuleCard eyebrow="SUBSTITUIÇÕES">
-            {SUBS_INIT.map((sub, i) => (
-              <div key={sub.number} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 0', borderBottom: i < SUBS_INIT.length - 1 ? '1px solid var(--c-border)' : 'none' }}>
-                <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', minWidth:18, fontVariantNumeric:'tabular-nums' }}>{sub.number}</span>
-                <span style={{ ...T_DISPLAY, fontSize:11, fontWeight:700, color:'var(--c-text-primary)', letterSpacing:'0.08em', flex:1 }}>{sub.name}</span>
-                <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums' }}>{sub.fatigue}%</span>
-                <span style={{ display:'flex', alignItems:'center', color: sub.trend === 'up' ? 'var(--c-ok)' : sub.trend === 'down' ? 'var(--c-danger)' : 'var(--c-text-sec)' }}>
-                  {sub.trend === 'up' ? <ChevronUp size={12} /> : sub.trend === 'down' ? <ChevronDown size={12} /> : '—'}
-                </span>
-              </div>
-            ))}
-          </ModuleCard>
-
-          {/* Instruções */}
-          <ModuleCard eyebrow="INSTRUÇÕES" tone="neutral">
-            {INSTRUCTIONS.map((inst, i) => (
-              <div key={inst.id} style={{ ...T_DISPLAY, fontSize:11, fontWeight:600, color:'var(--c-text-primary)', letterSpacing:'0.08em', padding:'8px 0', borderBottom: i < INSTRUCTIONS.length - 1 ? '1px solid var(--c-border)' : 'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span>{inst.label}</span>
-                <ChevronRight size={12} color="var(--c-text-muted)" />
-              </div>
-            ))}
-          </ModuleCard>
-        </div>
 
         </div>
 
@@ -1581,17 +1433,15 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                 ))}
               </ul>
 
-              {onExit && (
-                <div style={{ padding:'12px 18px 0', borderTop:'1px solid var(--c-border)' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setFormationModal(false); onExit(); }}
-                    style={{ width:'100%', padding:'10px 0', background:'transparent', border:'1px solid var(--c-border)', color:'var(--c-text-sec)', borderRadius:4, cursor:'pointer', ...T_DISPLAY, fontSize:10, letterSpacing:'0.18em' }}
-                  >
-                    SAIR DA PARTIDA
-                  </button>
-                </div>
-              )}
+              <div style={{ padding:'12px 18px 0', borderTop:'1px solid var(--c-border)' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormationModal(false)}
+                  style={{ width:'100%', padding:'10px 0', background:'transparent', border:'1px solid var(--c-border)', color:'var(--c-text-primary)', borderRadius:4, cursor:'pointer', ...T_DISPLAY, fontSize:10, letterSpacing:'0.22em', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}
+                >
+                  <ChevronDown size={11} style={{ transform:'rotate(90deg)' }} /> VOLTAR
+                </button>
+              </div>
             </div>
           </div>
         )}
