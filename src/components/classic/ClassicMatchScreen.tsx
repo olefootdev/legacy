@@ -20,6 +20,9 @@ import type {
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
 import { generateEvent, applyEventToPlayers } from '@/engine/classic/eventGenerator';
 import { computeTeamPhase, teamShift } from '@/engine/classic/decisionEngine';
+import { createMatchStory, updateMatchStory, storyBeatsForCoach } from '@/engine/classic/matchStory';
+import type { MatchStory } from '@/engine/classic/matchStory';
+import { useGameDispatch } from '@/game/store';
 import { HeatmapEngine } from '@/engine/classic/heatmapEngine';
 
 // ─── Design tokens scoped to Classic mode ─────────────────────────────────────
@@ -354,6 +357,9 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [coachReading, setCoachReading] = useState<import('@/lib/classicCoachClient').CoachReading | null>(null);
   const [coachReadingFresh, setCoachReadingFresh] = useState(false); // dot + glow ativo
   const [lastPassPair, setLastPassPair] = useState<[number,number] | null>(null);
+  const matchStoryRef = useRef<MatchStory>(createMatchStory());
+  const dispatch = useGameDispatch();
+  const leaguePointsAppliedRef = useRef(false); // evita aplicar 2x se matchOver mudar
   const [stats, setStats]     = useState<MatchStats>({
     possession:    { home: 58, away: 42 },
     shots:         { home: 9,  away: 6  },
@@ -439,7 +445,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     return () => clearInterval(clockRef.current ?? undefined);
   }, [running, matchOver]);
 
-  // ── MVP: calculado quando a partida termina ────────────────────────────────
+  // ── MVP + pontos da liga: calculados quando a partida termina ──────────
   useEffect(() => {
     if (!matchOver) return;
     setPlayers(prev => {
@@ -448,7 +454,20 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       setMvp(best ?? null);
       return prev;
     });
-  }, [matchOver]);
+
+    // Aplica pontos da liga olefoot (Fase 4) — vitórias 3pt, empate 1pt,
+    // derrota 0pt. Manager vê os pontos crescerem nas partidas casuais.
+    if (!leaguePointsAppliedRef.current) {
+      leaguePointsAppliedRef.current = true;
+      const result: 'win' | 'draw' | 'loss' =
+        score.home > score.away ? 'win' :
+        score.home < score.away ? 'loss' : 'draw';
+      dispatch({
+        type: 'APPLY_CASUAL_RESULT_TO_LEAGUE',
+        result: { scoreHome: score.home, scoreAway: score.away, result },
+      });
+    }
+  }, [matchOver, score, dispatch]);
 
   // ── Skill cooldown ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -639,7 +658,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       setLatestEvent(evt);
       setEventFeed(prev2 => [evt, ...prev2].slice(0, FEED_MAX));
 
-      return applyEventToPlayers(prev, evt);
+      // Atualiza memória da partida (Fase 4): cumulativo de gols, virada,
+      // pressão sustentada, flank attack, on fire, turnover crítico.
+      const updatedPlayers = applyEventToPlayers(prev, evt);
+      matchStoryRef.current = updateMatchStory(matchStoryRef.current, evt, updatedPlayers, score);
+
+      return updatedPlayers;
     });
 
     // Intervalo menor quando há sequência em andamento (jogada fluindo)
@@ -686,6 +710,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             onFire: p.onFire, isStar: p.isStar,
           }));
 
+        const storyBeats = storyBeatsForCoach(matchStoryRef.current, snap.minute);
         const reading = await fetchClassicCoachReading({
           homeTeam: snap.homeTeam, awayTeam: snap.awayTeam,
           score: snap.score, minute: snap.minute, period: snap.period,
@@ -701,6 +726,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             playerName: snap.latestEvent.playerName,
             minute: snap.latestEvent.minute,
           } : undefined,
+          storyBeats,
         });
         if (cancelled || !reading) return;
         setCoachReading(reading);
@@ -889,6 +915,9 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 setLatestEvent(null);
                 chainRef.current = null;
                 sequenceRef.current = null;
+                matchStoryRef.current = createMatchStory();
+                leaguePointsAppliedRef.current = false;
+                setCoachReading(null);
               }}
               style={{
                 width:'100%', padding:'16px',

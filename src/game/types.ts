@@ -659,6 +659,7 @@ export type GameAction =
   | { type: 'ADMIN_SIMULATE_FRIEND_REQUEST'; managerId: string; clubName: string }
   | { type: 'ADMIN_ADD_FRIEND'; managerId: string; clubName: string }
   | { type: 'ADMIN_SET_LEAGUE_SEASON'; partial: Partial<import('@/match/leagueSeason').LeagueSeasonState> }
+  | { type: 'APPLY_CASUAL_RESULT_TO_LEAGUE'; result: { scoreHome: number; scoreAway: number; result: 'win' | 'draw' | 'loss' } }
   | { type: 'ADMIN_SET_FORM'; form: import('@/entities/types').FormLetter[] }
   | { type: 'ADMIN_PATCH_CLUB'; partial: Partial<import('@/entities/types').ClubEntity> }
   /** Simula depósito fiat→BRO no SPOT (ledger FIAT_DEPOSIT + crédito SPOT). */

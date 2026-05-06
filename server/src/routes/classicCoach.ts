@@ -71,6 +71,13 @@ REGRAS:
 - Suggestion: 2-4 palavras em UPPERCASE (comando de ação). Ex: "ATIVAR PRESSÃO ALTA", "TROCAR PRO COUNTER", "SEGURA O JOGO".
 - Tone: "positive" (vencendo bem), "neutral" (estado normal), "urgent" (precisa agir), "alert" (perigo).
 
+MEMÓRIA DA PARTIDA:
+Quando o snapshot incluir "Momentos da partida", REFERENCIE pelo menos um deles na sua reading se for relevante. Exemplos esperados:
+  - "Como falaste antes, a ala esquerda continua exposta"
+  - "GOMES já marcou aos 23' — agora pode dobrar"
+  - "Eles voltaram a pressionar como tinham feito no 1º tempo"
+Trate o histórico como um técnico que LEMBRA o jogo, não como um robô que lê stats. Não cite TODOS os momentos — pega o mais relevante pra sustentar sua leitura.
+
 NÃO ESCREVA: chat, saudações, "Olá manager", explicações longas, markdown.
 Responda APENAS o JSON.`;
 
@@ -85,7 +92,7 @@ Jogadores-chave (HOME):
 ${snapshot.keyPlayers.map(p => `- ${p.name} (${p.role}, ${p.archetype}, OVR ${p.ovr}): fadiga ${p.fatigue}%, confiança ${p.confidence}%${p.onFire ? ' [ON FIRE]' : ''}${p.isStar ? ' [STAR]' : ''}`).join('\n')}
 
 ${snapshot.lastEvent ? `Última ação: ${snapshot.lastEvent.type}${snapshot.lastEvent.playerName ? ` por ${snapshot.lastEvent.playerName}` : ''} aos ${snapshot.lastEvent.minute}'` : ''}
-${snapshot.storyBeats && snapshot.storyBeats.length > 0 ? `Momentos da partida: ${snapshot.storyBeats.join(' · ')}` : ''}
+${snapshot.storyBeats && snapshot.storyBeats.length > 0 ? `Momentos da partida (memória cumulativa, mais antigo → mais recente):\n${snapshot.storyBeats.map(b => `  • ${b}`).join('\n')}` : ''}
 
 Lê a partida e devolve JSON:
 {

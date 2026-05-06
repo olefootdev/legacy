@@ -3907,6 +3907,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         leagueSeason: { ...state.leagueSeason, ...action.partial },
       };
     }
+    case 'APPLY_CASUAL_RESULT_TO_LEAGUE': {
+      // Resultado de partida casual (CLASSIC / Quick) que conta na liga
+      // olefoot — manager passa a querer vencer mesmo nos modos rápidos.
+      const leagueSeason = applyResultToLeagueSeason(state.leagueSeason, {
+        scoreHome: action.result.scoreHome,
+        scoreAway: action.result.scoreAway,
+        result: action.result.result,
+      });
+      return { ...state, leagueSeason };
+    }
     case 'ADMIN_SET_FORM': {
       return { ...state, form: [...action.form].slice(0, 10) };
     }
