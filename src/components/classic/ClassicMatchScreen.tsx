@@ -7,13 +7,18 @@ import {
 import {
   Brain, Sparkles, LayoutGrid,
   Pause, Play, Star, Shield,
-  Zap, Target, Crosshair, Box,
+  Zap, Target, Crosshair,
   ChevronRight, ChevronDown, ChevronUp, X,
-  Wifi, AlertTriangle, Goal as GoalIcon, Swords, Repeat, Footprints, Send,
+  Wifi, AlertTriangle, Goal as GoalIcon, Swords, Repeat, Footprints,
+  Flame,
 } from 'lucide-react';
-import type { ClassicPlayer, MatchEvent, MatchStats, MatchScore, BallState, TrailPoint, SkillEntry, SubEntry, QuickInstruction, ClassicMatchConfig } from '@/engine/classic/types';
-import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC } from '@/engine/classic/formations';
-import { generateEvent } from '@/engine/classic/eventGenerator';
+import type {
+  ClassicPlayer, MatchEvent, MatchStats, MatchScore,
+  BallState, TrailPoint, SkillEntry, SubEntry, QuickInstruction,
+  ClassicMatchConfig, ManagerSkillId, EventChainContext,
+} from '@/engine/classic/types';
+import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
+import { generateEvent, applyEventToPlayers } from '@/engine/classic/eventGenerator';
 import { HeatmapEngine } from '@/engine/classic/heatmapEngine';
 
 // ─── Design tokens scoped to Classic mode ─────────────────────────────────────
@@ -55,13 +60,51 @@ const CSS_VARS = `
   0%,100% { box-shadow: 0 0 0 3px rgba(253,225,0,0.55), 0 0 24px rgba(253,225,0,0.45); }
   50%     { box-shadow: 0 0 0 5px rgba(253,225,0,0.85), 0 0 36px rgba(253,225,0,0.75); }
 }
+@keyframes c-onFire {
+  0%,100% { border-color: rgba(251,146,60,0.9); }
+  50%     { border-color: rgba(253,225,0,0.9); }
+}
+@keyframes c-fatigue-pulse {
+  0%,100% { border-color: rgba(239,68,68,0.5); }
+  50%     { border-color: rgba(239,68,68,0.15); }
+}
+@keyframes c-reposition {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+@keyframes c-coach-ping {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.4; transform: scale(0.7); }
+}
+@keyframes c-terminal-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes c-tempo-tick {
+  0%,100% { transform: scaleX(0.15); opacity: 0.4; }
+  50%     { transform: scaleX(1);    opacity: 1;   }
+}
+@keyframes c-card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 `;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const EVENT_INTERVAL_MIN   = 1800;
-const EVENT_INTERVAL_RANGE = 2200;
+// Clock: 1 real second = 1 match minute
+const CLOCK_TICK_MS        = 1000;
+const EVENT_INTERVAL_MIN   = 4000;
+const EVENT_INTERVAL_RANGE = 3000;
 const TRAIL_MAX  = 8;
 const BALL_LERP  = 0.12;
+const FEED_MAX   = 4;
+
+// Match structure: 45+3 first half, 45+5 second half
+const HALF1_END   = 45;
+const HALF1_EXTRA = 3;   // acréscimos 1º tempo
+const HALF2_END   = 90;
+const HALF2_EXTRA = 5;   // acréscimos 2º tempo
+const MATCH_END   = HALF2_END + HALF2_EXTRA; // 95 real minutes total
 
 const SKILLS_INIT: SkillEntry[] = [
   { id:'counter', label:'CONTRA ATAQUE RÁPIDO', icon:'zap',       cooldown:10, active:false, remaining:0 },
@@ -85,8 +128,33 @@ const INSTRUCTIONS: QuickInstruction[] = [
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as const;
 type FormationId = typeof FORMATIONS[number];
 
-const MENTALIDADES = ['DEFENSIVO', 'EQUILIBRADO', 'OFENSIVO'] as const;
-type Mentalidade = typeof MENTALIDADES[number];
+// 4 estilos de passe — baseados nos princípios do AP-FOOTBALL-KNOWLEDGE
+const PASS_STYLES = [
+  {
+    id: 'TIKTAK' as const,
+    label: 'TIK-TAK',
+    desc: 'Circulação curta zona a zona',
+    icon: 'repeat',
+  },
+  {
+    id: 'LONGO' as const,
+    label: 'LONGO',
+    desc: 'Lançamento direto em profundidade',
+    icon: 'send',
+  },
+  {
+    id: 'LATERAL' as const,
+    label: 'LATERAL',
+    desc: 'Amplitude nos corredores',
+    icon: 'chevron-right',
+  },
+  {
+    id: 'COUNTER' as const,
+    label: 'COUNTER',
+    desc: 'Transição ofensiva rápida',
+    icon: 'zap',
+  },
+] as const;
 
 // ─── Field drawing ─────────────────────────────────────────────────────────────
 function drawField(ctx: CanvasRenderingContext2D, W = FIELD_W_LOGIC, H = FIELD_H_LOGIC) {
@@ -184,6 +252,58 @@ function ClubCrest({ color, initials, side }: { color: string; initials: string;
   );
 }
 
+// ─── ModuleCard ───────────────────────────────────────────────────────────────
+// Card modular Legacy Tech: rail amarelo 3px à esquerda, borda fina, cantos
+// suaves, eyebrow Agency uppercase tracking-wide. Cada seção é uma "vitrine"
+// do museu vivo do futebol.
+type ModuleCardTone = 'accent' | 'neutral' | 'danger';
+function ModuleCard({
+  eyebrow,
+  meta,
+  tone = 'accent',
+  noPadding = false,
+  children,
+  style,
+}: {
+  eyebrow?: string;
+  meta?: React.ReactNode;
+  tone?: ModuleCardTone;
+  noPadding?: boolean;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
+  const railColor = tone === 'danger' ? 'var(--c-danger)' : tone === 'neutral' ? 'rgba(255,255,255,0.18)' : 'var(--c-accent)';
+  return (
+    <div style={{
+      background:'var(--c-bg-surface)',
+      border:'1px solid var(--c-border)',
+      borderLeft:`3px solid ${railColor}`,
+      borderRadius:8,
+      animation:'c-card-in 0.32s ease',
+      overflow:'hidden',
+      ...style,
+    }}>
+      {(eyebrow || meta) && (
+        <div style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
+          padding:'10px 14px 8px',
+          borderBottom:'1px solid var(--c-border)',
+        }}>
+          {eyebrow && (
+            <span style={{ ...T_DISPLAY, fontSize:9, fontWeight:900, color: tone === 'danger' ? 'var(--c-danger)' : 'var(--c-accent)', letterSpacing:'0.26em' }}>
+              {eyebrow}
+            </span>
+          )}
+          {meta && <div>{meta}</div>}
+        </div>
+      )}
+      <div style={{ padding: noPadding ? 0 : '12px 14px' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 interface Props {
   config?: Partial<ClassicMatchConfig>;
@@ -199,13 +319,18 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
   const awayShort   = shortInitials(awayTeam);
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [players]  = useState<ClassicPlayer[]>(() => [...getHomePlayers(), ...getAwayPlayers()]);
+  const [players, setPlayers] = useState<ClassicPlayer[]>(() => [...getHomePlayers(), ...getAwayPlayers()]);
   const [latestEvent, setLatestEvent] = useState<MatchEvent | null>(null);
+  const [eventFeed, setEventFeed] = useState<MatchEvent[]>([]);
   const [score, setScore]     = useState<MatchScore>({ home: 0, away: 0 });
-  const [minute, setMinute]   = useState(78);
-  const [seconds, setSeconds] = useState(24);
-  const [period]              = useState<string>('2º TEMPO');
+  const [minute, setMinute]   = useState(0);
+  const [extraMinute, setExtraMinute] = useState(0); // acréscimos exibidos
+  const [period, setPeriod]   = useState<string>('1º TEMPO');
   const [running, setRunning] = useState(true);
+  const [matchOver, setMatchOver] = useState(false);
+  const [mvp, setMvp] = useState<ClassicPlayer | null>(null);
+  const [coachPing, setCoachPing] = useState(false);
+  const [lastPassPair, setLastPassPair] = useState<[number,number] | null>(null);
   const [stats, setStats]     = useState<MatchStats>({
     possession:    { home: 58, away: 42 },
     shots:         { home: 9,  away: 6  },
@@ -215,21 +340,18 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
     corners:       { home: 4,  away: 2  },
   });
   const [possession, setPossession] = useState<'home' | 'away'>('home');
-  const [mentalidade, setMentalidade] = useState<Mentalidade>('EQUILIBRADO');
-  const [mentalSlider, setMentalSlider] = useState(50);
-  const [intensidade, setIntensidade]   = useState(60);
+  const [passStyle, setPassStyle] = useState<import('@/engine/classic/types').PassStyle>('TIKTAK');
   const [skills, setSkills]   = useState<SkillEntry[]>(SKILLS_INIT);
   const [highlightPlayer, setHighlightPlayer] = useState<ClassicPlayer | null>(null);
   const [coachModal, setCoachModal]     = useState(false);
   const [formationModal, setFormationModal] = useState(false);
   const [activeFormation, setActiveFormation] = useState<FormationId>('4-3-3');
+  const [repositioning, setRepositioning] = useState(false);
   const [legacyPulse, setLegacyPulse] = useState<{ key: number; player: ClassicPlayer } | null>(null);
-  const [coachMessages, setCoachMessages] = useState<Array<{role:'ai'|'user', text:string}>>([
-    { role:'ai', text:'Estamos dominando as laterais. Continua a explorar o espaço nas costas deles.' },
-  ]);
-  const [chatInput, setChatInput]   = useState('');
   const [goalFlash, setGoalFlash]   = useState(false);
   const [dangerFlash, setDangerFlash] = useState(false);
+  const chainRef    = useRef<EventChainContext | null>(null);
+  const sequenceRef = useRef<{ zones: string[]; index: number } | null>(null);
 
   // ── Canvas / animation refs ────────────────────────────────────────────────
   const canvasRef     = useRef<HTMLCanvasElement>(null);
@@ -241,14 +363,55 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
   const loopRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clockRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Clock (5× speed) ───────────────────────────────────────────────────────
+  // ── Clock: 1 real second = 1 match minute ─────────────────────────────────
   useEffect(() => {
-    if (!running) return;
+    if (!running || matchOver) return;
     clockRef.current = setInterval(() => {
-      setSeconds(s => { if (s >= 59) { setMinute(m => m + 1); return 0; } return s + 1; });
-    }, 200);
+      setMinute(m => {
+        const next = m + 1;
+
+        // Transições de período
+        if (next === HALF1_END + 1) {
+          setPeriod('INTERVALO');
+          setExtraMinute(0);
+        }
+        if (next === HALF1_END + HALF1_EXTRA + 1) {
+          setPeriod('2º TEMPO');
+          setExtraMinute(0);
+        }
+        // Acréscimos 1º tempo: 46, 47, 48 → exibe 45+1, 45+2, 45+3
+        if (next > HALF1_END && next <= HALF1_END + HALF1_EXTRA) {
+          setExtraMinute(next - HALF1_END);
+        }
+        // Acréscimos 2º tempo: 91..95 → exibe 90+1..90+5
+        if (next > HALF2_END && next <= MATCH_END) {
+          setExtraMinute(next - HALF2_END);
+          setPeriod('2º TEMPO');
+        }
+        // Fim da partida
+        if (next > MATCH_END) {
+          setMatchOver(true);
+          setRunning(false);
+          // Calcula MVP: jogador home com maior confiança acumulada
+          setMvp(prev2 => prev2); // será calculado abaixo via setPlayers snapshot
+          return MATCH_END;
+        }
+        return next;
+      });
+    }, CLOCK_TICK_MS);
     return () => clearInterval(clockRef.current ?? undefined);
-  }, [running]);
+  }, [running, matchOver]);
+
+  // ── MVP: calculado quando a partida termina ────────────────────────────────
+  useEffect(() => {
+    if (!matchOver) return;
+    setPlayers(prev => {
+      // MVP = jogador com maior confiança de qualquer time
+      const best = [...prev].sort((a, b) => b.confidence - a.confidence)[0];
+      setMvp(best ?? null);
+      return prev;
+    });
+  }, [matchOver]);
 
   // ── Skill cooldown ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -293,7 +456,6 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
 
       ctx.clearRect(0, 0, FIELD_W_LOGIC, FIELD_H_LOGIC);
       drawField(ctx);
-      heatRef.current.render(ctx);
       drawBall(ctx, ball, trailRef.current);
 
       rafRef.current = requestAnimationFrame(frame);
@@ -306,72 +468,128 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
   // ── Game event loop ────────────────────────────────────────────────────────
   const fireEvent = useCallback(() => {
     if (!running) return;
-    const evt = generateEvent(players, minute, score, possession);
 
-    ballRef.current.targetX = evt.ballX;
-    ballRef.current.targetY = evt.ballY;
-    heatRef.current.accumulate(evt.ballX, evt.ballY);
+    const activeSkills = skills
+      .filter(s => s.active)
+      .map(s => s.id as ManagerSkillId);
 
-    const actor = players.find(p => p.id === evt.playerId);
-    if (actor) setHighlightPlayer(actor);
+    setPlayers(prev => {
+      const result = generateEvent(prev, minute, score, possession, {
+        activeSkills,
+        chain: chainRef.current,
+        passStyle,
+        sequence: sequenceRef.current ?? undefined,
+      });
 
-    setStats(prev => {
-      const ns = { ...prev };
-      if (evt.type === 'shot' || evt.type === 'goal') {
-        ns.shots = { ...ns.shots, [evt.team]: ns.shots[evt.team] + 1 };
-        if (evt.type === 'goal' || Math.random() < 0.5)
-          ns.shotsOnTarget = { ...ns.shotsOnTarget, [evt.team]: ns.shotsOnTarget[evt.team] + 1 };
+      const { event: evt, nextSequence, receiverId } = result;
+
+      // Avança ou reseta a sequência de jogada
+      sequenceRef.current = nextSequence;
+
+      ballRef.current.targetX = evt.ballX;
+      ballRef.current.targetY = evt.ballY;
+      heatRef.current.accumulate(evt.ballX, evt.ballY);
+
+      // CORREÇÃO: em passes, destaca o RECEPTOR (onde a bola vai chegar)
+      // Em outros eventos, destaca o ator principal
+      if (evt.type === 'pass' && receiverId) {
+        const receiver = prev.find(p => p.id === receiverId);
+        if (receiver) setHighlightPlayer(receiver);
+      } else {
+        const actor = prev.find(p => p.id === evt.playerId);
+        if (actor) setHighlightPlayer(actor);
       }
-      if (evt.type === 'foul')   ns.fouls   = { ...ns.fouls,   [evt.team]: ns.fouls[evt.team]   + 1 };
-      if (evt.type === 'corner') ns.corners = { ...ns.corners, [evt.team]: ns.corners[evt.team] + 1 };
-      if (evt.type === 'pass')   ns.passes  = { ...ns.passes,  [evt.team]: ns.passes[evt.team]  + 1 };
-      if (Math.random() < 0.3) setPossession(p => p === 'home' ? 'away' : 'home');
-      return ns;
+
+      // Linha de passe: portador → receptor
+      if (evt.type === 'pass' && evt.playerId && receiverId) {
+        setLastPassPair([evt.playerId, receiverId]);
+      } else {
+        setLastPassPair(null);
+      }
+
+      // Update chain context
+      chainRef.current = {
+        lastType: evt.type,
+        lastTeam: evt.team,
+        chainCount: chainRef.current?.lastTeam === evt.team ? (chainRef.current.chainCount + 1) : 1,
+      };
+
+      // Coach ping em situações críticas
+      const isCritical = evt.type === 'goal' || evt.type === 'danger' ||
+        (evt.type === 'shot' && minute > 75) ||
+        (evt.type === 'foul' && minute > 80);
+      if (isCritical) {
+        setCoachPing(true);
+        setTimeout(() => setCoachPing(false), 4000);
+      }
+
+      setStats(s => {
+        const ns = { ...s };
+        if (evt.type === 'shot' || evt.type === 'goal') {
+          ns.shots = { ...ns.shots, [evt.team]: ns.shots[evt.team] + 1 };
+          if (evt.type === 'goal' || Math.random() < 0.5)
+            ns.shotsOnTarget = { ...ns.shotsOnTarget, [evt.team]: ns.shotsOnTarget[evt.team] + 1 };
+        }
+        if (evt.type === 'foul')   ns.fouls   = { ...ns.fouls,   [evt.team]: ns.fouls[evt.team]   + 1 };
+        if (evt.type === 'corner') ns.corners = { ...ns.corners, [evt.team]: ns.corners[evt.team] + 1 };
+        if (evt.type === 'pass')   ns.passes  = { ...ns.passes,  [evt.team]: ns.passes[evt.team]  + 1 };
+        if (Math.random() < 0.3) setPossession(p => p === 'home' ? 'away' : 'home');
+        return ns;
+      });
+
+      if (evt.type === 'goal') {
+        setScore(prev2 => ({ ...prev2, [evt.team]: prev2[evt.team] + 1 }));
+        setGoalFlash(true);
+        setTimeout(() => setGoalFlash(false), 1500);
+      }
+      if (evt.type === 'danger' || evt.type === 'shot') {
+        setDangerFlash(true);
+        setTimeout(() => setDangerFlash(false), 800);
+      }
+
+      setLatestEvent(evt);
+      setEventFeed(prev2 => [evt, ...prev2].slice(0, FEED_MAX));
+
+      return applyEventToPlayers(prev, evt);
     });
 
-    if (evt.type === 'goal') {
-      setScore(prev => ({ ...prev, [evt.team]: prev[evt.team] + 1 }));
-      setGoalFlash(true);
-      setTimeout(() => setGoalFlash(false), 1500);
-    }
-    if (evt.type === 'danger' || evt.type === 'shot') {
-      setDangerFlash(true);
-      setTimeout(() => setDangerFlash(false), 800);
-    }
+    // Intervalo menor quando há sequência em andamento (jogada fluindo)
+    const inSequence = sequenceRef.current !== null;
+    const interval = inSequence
+      ? 1200 + Math.random() * 800   // passe rápido dentro da jogada
+      : EVENT_INTERVAL_MIN + Math.random() * EVENT_INTERVAL_RANGE;
 
-    setLatestEvent(evt);
-    loopRef.current = setTimeout(fireEvent, EVENT_INTERVAL_MIN + Math.random() * EVENT_INTERVAL_RANGE);
-  }, [running, players, minute, score, possession]);
+    loopRef.current = setTimeout(fireEvent, interval);
+  }, [running, minute, score, possession, skills, passStyle]);
 
   useEffect(() => {
     loopRef.current = setTimeout(fireEvent, 800);
     return () => clearTimeout(loopRef.current ?? undefined);
   }, [fireEvent]);
 
-  // ── Coach chat ─────────────────────────────────────────────────────────────
-  const sendChat = useCallback(() => {
-    if (!chatInput.trim()) return;
-    const userMsg = chatInput.trim();
-    setChatInput('');
-    setCoachMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setTimeout(() => {
-      const replies = [
-        `A pressão no meio-campo está a funcionar. Mantém o bloco compacto.`,
-        `${awayTeam} está exposta nas laterais. Explora com cruzamentos.`,
-        `Troca o volante se a fadiga subir mais — o ENGINE está no limite.`,
-        `Bloquear o MAESTRO deles é a chave para o segundo tempo.`,
-      ];
-      setCoachMessages(prev => [...prev, { role: 'ai', text: replies[Math.floor(Math.random() * replies.length)] }]);
-    }, 900);
-  }, [chatInput, awayTeam]);
-
-  const handleMentalSlider = useCallback((v: number) => {
-    setMentalSlider(v);
-    setMentalidade(v < 33 ? 'DEFENSIVO' : v < 67 ? 'EQUILIBRADO' : 'OFENSIVO');
-  }, []);
-
   const toggleSkill = useCallback((id: string) => {
     setSkills(prev => prev.map(s => (s.id === id && s.remaining === 0) ? { ...s, active: true, remaining: s.cooldown } : s));
+    // Coach reacts to skill activation
+    const reactions: Record<string, string> = {
+      counter: 'Contra-ataque ativado! Atacantes em posição de profundidade.',
+      press:   'Pressão alta ligada. HUNTER e DESTROYER vão dominar o meio.',
+      offens:  'Foco ofensivo. FINISHER e WILD com liberdade total.',
+      cross:   'Bola na área! BOX_INVADER vai aparecer no segundo pau.',
+    };
+    if (reactions[id]) {
+      // coach ping já notifica — leitura disponível no modal
+    }
+  }, []);
+
+  const applyFormation = useCallback((formation: FormationId) => {
+    setActiveFormation(formation);
+    setFormationModal(false);
+    setRepositioning(true);
+    setPlayers(prev => {
+      const withHome = repositionForFormation(prev, formation, 'home');
+      return repositionForFormation(withHome, formation, 'away');
+    });
+    setTimeout(() => setRepositioning(false), 1200);
   }, []);
 
   // ── Legacy skill — pulse on highlighted/star player ────────────────────────
@@ -385,8 +603,165 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
 
   const FIELD_VIEWPORT_H = 280;
   const star = highlightPlayer ?? players.find(p => p.isStar) ?? players[7];
+  // Segundo destaque: jogador com maior confiança que não seja o star
+  const secondStar = players
+    .filter(p => p.team === 'home' && p.id !== star.id)
+    .sort((a, b) => b.confidence - a.confidence)[0] ?? players[8];
+
+  // Gera URL de avatar determinístico baseado no nome do jogador
+  function avatarUrl(name: string, size = 80): string {
+    const seed = encodeURIComponent(name.toLowerCase().replace(/\s/g, '-'));
+    return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}&size=${size}&backgroundColor=1a1a1a`;
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  // Tela de fim de partida
+  if (matchOver) {
+    const homeWon  = score.home > score.away;
+    const awayWon  = score.away > score.home;
+    const isDraw   = score.home === score.away;
+    const resultLabel = isDraw ? 'EMPATE' : homeWon ? `${homeTeam} VENCE` : `${awayTeam} VENCE`;
+    const resultColor = isDraw ? 'var(--c-text-sec)' : homeWon ? 'var(--c-accent)' : 'var(--c-team-away)';
+    const mvpPlayer = mvp ?? star;
+
+    return (
+      <>
+        <style>{CSS_VARS}</style>
+        <div
+          className="classic-mode"
+          style={{
+            fontFamily: 'var(--cf-body)',
+            background: 'var(--c-bg-primary)',
+            color: 'var(--c-text-primary)',
+            minHeight: '100svh',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'c-fadeInDown 0.4s ease',
+          }}
+        >
+          {/* Header resultado */}
+          <div style={{ background:'var(--c-bg-surface)', borderBottom:'1px solid var(--c-border)', padding:'20px 18px 16px', textAlign:'center' }}>
+            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.28em', marginBottom:6 }}>
+              {competition} · JORNADA {round} · APITO FINAL
+            </div>
+            {/* Placar final */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:16, marginBottom:10 }}>
+              <span style={{ ...T_HERO, fontSize:18, color:'var(--c-text-primary)', flex:1, textAlign:'right' }}>{homeTeam}</span>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ ...T_HERO, fontSize:52, color: homeWon ? 'var(--c-accent)' : 'var(--c-text-primary)', lineHeight:1, letterSpacing:'-0.04em' }}>{score.home}</span>
+                <span style={{ ...T_BODY, fontSize:22, color:'var(--c-text-muted)' }}>—</span>
+                <span style={{ ...T_HERO, fontSize:52, color: awayWon ? 'var(--c-accent)' : 'var(--c-text-primary)', lineHeight:1, letterSpacing:'-0.04em' }}>{score.away}</span>
+              </div>
+              <span style={{ ...T_HERO, fontSize:18, color:'var(--c-text-primary)', flex:1, textAlign:'left' }}>{awayTeam}</span>
+            </div>
+            <div style={{ ...T_DISPLAY, fontSize:13, fontWeight:900, color: resultColor, letterSpacing:'0.22em' }}>
+              {resultLabel}
+            </div>
+          </div>
+
+          {/* MVP */}
+          <div style={{ padding:'18px 18px 0' }}>
+            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.28em', marginBottom:10 }}>
+              MELHOR DA PARTIDA
+            </div>
+            <div style={{ display:'flex', gap:14, alignItems:'center', background:'var(--c-bg-surface)', border:'1px solid var(--c-border-accent)', borderRadius:8, padding:'14px', marginBottom:14 }}>
+              {/* Foto MVP */}
+              <div style={{ width:72, height:72, borderRadius:6, overflow:'hidden', flexShrink:0, border:'1px solid var(--c-border-accent)', background:'rgba(253,225,0,0.04)' }}>
+                <img
+                  src={avatarUrl(mvpPlayer.name, 120)}
+                  alt={mvpPlayer.shortName}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated' }}
+                />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                {/* OVR + nome */}
+                <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:4 }}>
+                  <span style={{ ...T_HERO, fontSize:28, color:'var(--c-accent)', lineHeight:1 }}>{mvpPlayer.ovr}</span>
+                  <span style={{ ...T_DISPLAY, fontSize:13, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em' }}>{mvpPlayer.shortName}</span>
+                </div>
+                <div style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', marginBottom:8 }}>
+                  {mvpPlayer.role} · {mvpPlayer.archetype} · {mvpPlayer.team === 'home' ? homeTeam : awayTeam}
+                </div>
+                {/* Confiança acumulada como nota */}
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ flex:1, height:3, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+                    <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${mvpPlayer.confidence}%` }} />
+                  </div>
+                  <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.12em' }}>
+                    {(6.0 + (mvpPlayer.confidence / 100) * 4).toFixed(1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats resumo */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)', marginBottom:24 }}>
+              {[
+                { label:'POSSE',    home:`${stats.possession.home}%`, away:`${stats.possession.away}%` },
+                { label:'CHUTES',   home:`${stats.shots.home}`,       away:`${stats.shots.away}` },
+                { label:'NO ALVO',  home:`${stats.shotsOnTarget.home}`, away:`${stats.shotsOnTarget.away}` },
+                { label:'PASSES',   home:`${stats.passes.home}`,      away:`${stats.passes.away}` },
+                { label:'FALTAS',   home:`${stats.fouls.home}`,       away:`${stats.fouls.away}` },
+                { label:'CANTOS',   home:`${stats.corners.home}`,     away:`${stats.corners.away}` },
+              ].map((s, i) => (
+                <div key={i} style={{ background:'var(--c-bg-surface)', padding:'10px 12px' }}>
+                  <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.20em', marginBottom:4 }}>{s.label}</div>
+                  <div style={{ display:'flex', justifyContent:'space-between' }}>
+                    <span style={{ ...T_HERO, fontSize:14, color:'var(--c-accent)' }}>{s.home}</span>
+                    <span style={{ ...T_HERO, fontSize:14, color:'var(--c-text-sec)' }}>{s.away}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTAs */}
+          <div style={{ marginTop:'auto', padding:'0 18px 32px', display:'flex', flexDirection:'column', gap:10 }}>
+            <button
+              type="button"
+              onClick={() => {
+                // Reset completo
+                setScore({ home:0, away:0 });
+                setMinute(0);
+                setExtraMinute(0);
+                setPeriod('1º TEMPO');
+                setMatchOver(false);
+                setMvp(null);
+                setRunning(true);
+                setPlayers([...getHomePlayers(), ...getAwayPlayers()]);
+                setEventFeed([]);
+                setLatestEvent(null);
+                chainRef.current = null;
+                sequenceRef.current = null;
+              }}
+              style={{
+                width:'100%', padding:'16px',
+                background:'var(--c-accent)', color:'#0D0D0D',
+                border:'none', borderRadius:6, cursor:'pointer',
+                ...T_DISPLAY, fontSize:13, fontWeight:900, letterSpacing:'0.22em',
+              }}
+            >
+              JOGAR NOVAMENTE
+            </button>
+            <button
+              type="button"
+              onClick={onExit}
+              style={{
+                width:'100%', padding:'16px',
+                background:'transparent', color:'var(--c-text-primary)',
+                border:'1px solid var(--c-border)', borderRadius:6, cursor:'pointer',
+                ...T_DISPLAY, fontSize:13, fontWeight:700, letterSpacing:'0.22em',
+              }}
+            >
+              HOME
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <style>{CSS_VARS}</style>
@@ -431,9 +806,22 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
 
           {/* Center — clock em Moret italic */}
           <div style={{ textAlign:'center' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.24em', marginBottom:4 }}>JORNADA {round}</div>
-            <div style={{ ...T_HERO, fontSize:44, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em' }}>
-              {padTime(minute)}:{padTime(seconds)}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:4 }}>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.24em' }}>JORNADA {round}</span>
+              <span aria-hidden style={{ width:3, height:3, borderRadius:'50%', background:'var(--c-text-muted)' }} />
+              <span
+                title="Tempo comprimido — 90 minutos em 1m30s reais"
+                style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'inline-flex', alignItems:'center', gap:5 }}
+              >
+                <span style={{ width:14, height:1.5, background:'var(--c-accent)', borderRadius:1, transformOrigin:'left center', animation: running ? 'c-tempo-tick 1.4s ease-in-out infinite' : undefined, opacity: running ? 1 : 0.25 }} />
+                {running ? 'TEMPO 36:1' : 'PAUSADO'}
+              </span>
+            </div>
+            <div style={{ ...T_HERO, fontSize:44, color: extraMinute > 0 ? 'var(--c-danger)' : minute >= 85 ? 'var(--c-danger)' : 'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em', transition:'color 0.5s' }}>
+              {extraMinute > 0
+                ? <>{padTime(extraMinute > HALF1_EXTRA ? HALF2_END : HALF1_END)}<span style={{ fontSize:22, opacity:0.7 }}>+{extraMinute}</span></>
+                : <>{padTime(Math.min(minute, period === '2º TEMPO' ? HALF2_END : HALF1_END))}<span style={{ fontSize:28, opacity:0.6 }}>'</span></>
+              }
             </div>
             <div style={{ display:'inline-block', ...T_DISPLAY, fontSize:11, fontWeight:700, color:'var(--c-text-primary)', borderBottom:'2px solid var(--c-accent)', paddingBottom:2, marginTop:5, letterSpacing:'0.18em' }}>
               {period}
@@ -475,6 +863,52 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
             style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', display:'block' }}
           />
 
+          {/* Connection lines — pass pair + coverage links */}
+          <svg
+            aria-hidden
+            style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:1 }}
+            viewBox={`0 0 ${FIELD_W_LOGIC} ${FIELD_H_LOGIC}`}
+            preserveAspectRatio="none"
+          >
+            {/* Pass connection: thin dashed line between passer and receiver */}
+            {lastPassPair && (() => {
+              const a = players.find(p => p.id === lastPassPair[0]);
+              const b = players.find(p => p.id === lastPassPair[1]);
+              if (!a || !b) return null;
+              return (
+                <line
+                  x1={a.position.x} y1={a.position.y}
+                  x2={b.position.x} y2={b.position.y}
+                  stroke="rgba(255,255,255,0.18)"
+                  strokeWidth="1"
+                  strokeDasharray="4 4"
+                />
+              );
+            })()}
+            {/* Coverage links: CB↔CB and DM↔nearby defenders — always visible, very faint */}
+            {players
+              .filter(p => p.role === 'CB' || p.role === 'DM')
+              .map(p => {
+                const teammates = players.filter(t =>
+                  t.team === p.team && t.id !== p.id &&
+                  (t.role === 'CB' || t.role === 'DM' || t.role === 'LB' || t.role === 'RB')
+                );
+                return teammates.map(t => {
+                  const dist = Math.hypot(p.position.x - t.position.x, p.position.y - t.position.y);
+                  if (dist > 160) return null;
+                  return (
+                    <line
+                      key={`cov-${p.id}-${t.id}`}
+                      x1={p.position.x} y1={p.position.y}
+                      x2={t.position.x} y2={t.position.y}
+                      stroke="rgba(255,255,255,0.06)"
+                      strokeWidth="0.8"
+                    />
+                  );
+                });
+              })}
+          </svg>
+
           {/* Player nodes (FIXED, no movement) */}
           {players.map(p => {
             const leftPct = (p.position.x / FIELD_W_LOGIC) * 100;
@@ -482,6 +916,23 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
             const isHL = highlightPlayer?.id === p.id;
             const isLegacyTarget = legacyPulse?.player.id === p.id;
             const NODE = 26;
+            const isExhausted = p.fatigue > 82;
+
+            // Todos os jogadores: branco/cinza neutro — sem amarelo
+            const borderColor = isExhausted
+              ? 'rgba(239,68,68,0.55)'
+              : isHL
+              ? 'rgba(255,255,255,0.85)'
+              : 'rgba(255,255,255,0.35)';
+
+            const bgColor = isHL
+              ? 'rgba(255,255,255,0.14)'
+              : 'rgba(255,255,255,0.06)';
+
+            const shadow = isHL && !isLegacyTarget
+              ? '0 0 0 1.5px rgba(255,255,255,0.4)'
+              : '0 1px 3px rgba(0,0,0,0.6)';
+
             return (
               <div key={p.id} style={{
                 position:'absolute',
@@ -489,23 +940,27 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                 transform: 'translate(-50%,-50%)',
                 width: NODE, height: NODE,
                 borderRadius:'50%',
-                border: `2px solid ${p.team === 'home' ? 'var(--c-team-home)' : 'var(--c-team-away)'}`,
-                background: p.team === 'home' ? 'rgba(253,225,0,0.16)' : 'rgba(255,255,255,0.10)',
-                color: p.team === 'home' ? 'var(--c-team-home)' : 'var(--c-team-away)',
+                border: `1.5px solid ${borderColor}`,
+                background: bgColor,
+                color: 'rgba(255,255,255,0.90)',
                 display:'flex', alignItems:'center', justifyContent:'center',
                 fontFamily:'var(--cf-body)', fontSize:10, fontWeight:700,
                 pointerEvents:'none',
-                animation: isLegacyTarget ? 'c-legacyCore 1.2s ease' : undefined,
-                boxShadow: isHL && !isLegacyTarget
-                  ? '0 0 0 3px rgba(253,225,0,0.5), 0 0 18px rgba(253,225,0,0.4)'
-                  : '0 1px 4px rgba(0,0,0,0.4)',
-                transition: 'box-shadow 0.3s',
+                transition: repositioning
+                  ? 'left 0.9s cubic-bezier(0.4,0,0.2,1), top 0.9s cubic-bezier(0.4,0,0.2,1)'
+                  : 'border-color 0.3s ease, background 0.3s ease',
+                animation: isLegacyTarget
+                  ? 'c-legacyCore 1.2s ease'
+                  : isExhausted
+                  ? 'c-fatigue-pulse 1.4s ease infinite'
+                  : repositioning
+                  ? 'c-reposition 0.6s ease'
+                  : undefined,
+                boxShadow: shadow,
+                opacity: p.fatigue > 85 ? 0.7 : 1,
                 zIndex: isLegacyTarget ? 6 : isHL ? 5 : 2,
               }}>
                 {p.number}
-                {p.isStar && (
-                  <Star size={10} color="var(--c-accent)" fill="currentColor" style={{ position:'absolute', top:-9, right:-5 }} />
-                )}
                 <span style={{
                   position:'absolute',
                   top:'calc(100% + 2px)',
@@ -513,7 +968,7 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                   transform:'translateX(-50%)',
                   fontFamily:'var(--cf-body)',
                   fontSize:8, fontWeight:600,
-                  color:'var(--c-text-primary)',
+                  color: isHL ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.40)',
                   whiteSpace:'nowrap',
                   textShadow:'0 1px 3px rgba(0,0,0,0.95)',
                   letterSpacing:'0.04em',
@@ -604,155 +1059,244 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
           </div>
           <span style={{ ...T_HERO, fontSize:26, color:'var(--c-text-primary)', lineHeight:1, letterSpacing:'-0.02em', flex:1, textAlign:'right' }}>{awayTeam}</span>
         </div>
-        <div style={{ textAlign:'center', ...T_BODY, fontSize:11, color:'var(--c-text-sec)', padding:'4px 0 8px', background:'var(--c-bg-surface)', borderBottom:'1px solid var(--c-border)', fontVariantNumeric:'tabular-nums' }}>
-          {padTime(minute)}:{padTime(seconds)}
-        </div>
 
-        {/* ── [E] Narrativa — APENAS 1 evento visível por vez ───────────── */}
-        <div style={{ background:'var(--c-bg-surface)', borderBottom:'1px solid var(--c-border)', minHeight:54 }}>
-          {latestEvent ? (
-            <div
-              key={latestEvent.id}
-              style={{
-                display:'flex', alignItems:'center', gap:12, padding:'12px 18px',
-                animation:'c-fadeInDown 0.25s ease',
-                background: latestEvent.type === 'goal' ? 'rgba(253,225,0,0.06)' : undefined,
-                borderLeft:
-                  latestEvent.type === 'goal' ? '3px solid var(--c-accent)'
-                  : latestEvent.type === 'shot' || latestEvent.type === 'danger' ? '3px solid var(--c-danger)'
-                  : '3px solid transparent',
-              }}>
-              <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', minWidth:24, fontVariantNumeric:'tabular-nums' }}>{latestEvent.minute}'</span>
-              <span style={{ width:18, display:'flex', alignItems:'center', justifyContent:'center', color: latestEvent.type === 'goal' ? 'var(--c-accent)' : 'var(--c-text-sec)' }}>
-                <EventIcon type={latestEvent.type} />
-              </span>
-              <span style={{ ...T_BODY, fontSize: latestEvent.type === 'goal' ? 15 : 13.5, fontWeight: latestEvent.type === 'goal' ? 700 : 500, color: latestEvent.type === 'goal' ? 'var(--c-accent)' : 'var(--c-text-primary)', flex:1, lineHeight:1.35 }}>
-                {latestEvent.text}
-              </span>
+        {/* ── [E] Terminal de narração — últimas 4 ações ────────────────── */}
+        <div style={{ background:'#0A0A0A', borderBottom:'1px solid var(--c-border)', padding:'8px 0', minHeight:88 }}>
+          <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em', padding:'0 14px 6px', display:'flex', alignItems:'center', gap:6 }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:'var(--c-ok)', display:'inline-block', animation:'c-pulse 2s infinite' }} />
+            LIVE FEED
+          </div>
+          {eventFeed.length === 0 ? (
+            <div style={{ padding:'8px 14px', ...T_BODY, fontSize:11, color:'var(--c-text-muted)' }}>
+              _ aguardando o apito inicial…
             </div>
           ) : (
-            <div style={{ padding:'18px', ...T_BODY, fontSize:12, color:'var(--c-text-muted)', textAlign:'center' }}>
-              Aguardando o apito inicial…
-            </div>
+            eventFeed.map((evt, i) => {
+              const isLatest = i === 0;
+              const accentColor = evt.type === 'goal'
+                ? 'var(--c-accent)'
+                : evt.type === 'shot' || evt.type === 'danger'
+                ? 'var(--c-danger)'
+                : evt.type === 'interception' || evt.type === 'tackle'
+                ? 'var(--c-ok)'
+                : 'var(--c-text-muted)';
+              return (
+                <div
+                  key={evt.id}
+                  style={{
+                    display:'flex', alignItems:'baseline', gap:8,
+                    padding:'3px 14px',
+                    opacity: isLatest ? 1 : 0.38 + (0.2 * (FEED_MAX - i)),
+                    animation: isLatest ? 'c-terminal-in 0.2s ease' : undefined,
+                    background: isLatest && evt.type === 'goal' ? 'rgba(253,225,0,0.04)' : undefined,
+                  }}
+                >
+                  <span style={{ ...T_DISPLAY, fontSize:9, color: accentColor, minWidth:22, letterSpacing:'0.04em', flexShrink:0 }}>
+                    {evt.minute}'
+                  </span>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color: accentColor, flexShrink:0, letterSpacing:'0.08em' }}>
+                    [{evt.type.toUpperCase()}]
+                  </span>
+                  <span style={{
+                    ...T_BODY,
+                    fontSize: isLatest ? 12 : 11,
+                    fontWeight: isLatest && evt.type === 'goal' ? 700 : 400,
+                    color: isLatest ? 'var(--c-text-primary)' : 'var(--c-text-sec)',
+                    lineHeight: 1.4,
+                  }}>
+                    {evt.text}
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
 
+        {/* ── Vitrines do museu vivo: cards modulares com rail amarelo ──── */}
+        <div style={{ display:'flex', flexDirection:'column', gap:10, padding:'12px 12px 4px' }}>
+
         {/* ── [F] Stats carousel ───────────────────────────────────────── */}
-        <div style={{ display:'flex', overflowX:'auto', scrollSnapType:'x mandatory', gap:1, background:'var(--c-border)' }}>
-          {[
-            { label:'POSSE DE BOLA', home:stats.possession.home,    away:stats.possession.away,    fmt:(v:number)=>`${v}%` },
-            { label:'FINALIZAÇÕES',  home:stats.shots.home,         away:stats.shots.away,         fmt:(v:number)=>`${v}`  },
-            { label:'NO ALVO',       home:stats.shotsOnTarget.home, away:stats.shotsOnTarget.away, fmt:(v:number)=>`${v}`  },
-            { label:'PASSES CERTOS', home:stats.passes.home,        away:stats.passes.away,        fmt:(v:number)=>`${v}`  },
-            { label:'FALTAS',        home:stats.fouls.home,         away:stats.fouls.away,         fmt:(v:number)=>`${v}`  },
-          ].map((stat, i) => {
-            const total = stat.home + stat.away || 1;
-            return (
-              <div key={i} style={{ minWidth:122, flexShrink:0, background:'var(--c-bg-surface)', padding:'12px 14px', scrollSnapAlign:'start' }}>
-                <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.22em', marginBottom:6 }}>{stat.label}</div>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                  <span style={{ ...T_HERO, fontSize:15, color:'var(--c-team-home)' }}>{stat.fmt(stat.home)}</span>
-                  <span style={{ ...T_HERO, fontSize:15, color:'var(--c-team-away)' }}>{stat.fmt(stat.away)}</span>
+        <ModuleCard eyebrow="ESTATÍSTICAS · AO VIVO" noPadding meta={
+          <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.10em' }}>arrasta →</span>
+        }>
+          <div style={{ display:'flex', overflowX:'auto', scrollSnapType:'x mandatory' }}>
+            {[
+              { label:'POSSE DE BOLA', home:stats.possession.home,    away:stats.possession.away,    fmt:(v:number)=>`${v}%` },
+              { label:'FINALIZAÇÕES',  home:stats.shots.home,         away:stats.shots.away,         fmt:(v:number)=>`${v}`  },
+              { label:'NO ALVO',       home:stats.shotsOnTarget.home, away:stats.shotsOnTarget.away, fmt:(v:number)=>`${v}`  },
+              { label:'PASSES CERTOS', home:stats.passes.home,        away:stats.passes.away,        fmt:(v:number)=>`${v}`  },
+              { label:'FALTAS',        home:stats.fouls.home,         away:stats.fouls.away,         fmt:(v:number)=>`${v}`  },
+            ].map((stat, i) => {
+              const total = stat.home + stat.away || 1;
+              return (
+                <div key={i} style={{ minWidth:120, flexShrink:0, padding:'12px 14px', scrollSnapAlign:'start', borderRight: i < 4 ? '1px solid var(--c-border)' : 'none' }}>
+                  <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.22em', marginBottom:6 }}>{stat.label}</div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                    <span style={{ ...T_HERO, fontSize:15, color:'var(--c-team-home)' }}>{stat.fmt(stat.home)}</span>
+                    <span style={{ ...T_HERO, fontSize:15, color:'var(--c-team-away)' }}>{stat.fmt(stat.away)}</span>
+                  </div>
+                  <div style={{ height:3, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+                    <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${(stat.home / total) * 100}%`, transition:'width 1s ease' }} />
+                  </div>
                 </div>
-                <div style={{ height:3, background:'var(--c-bg-elevated)', borderRadius:2 }}>
-                  <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${(stat.home / total) * 100}%`, transition:'width 1s ease' }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </ModuleCard>
 
-        {/* ── [G] Painel tático — 3 cols (Mentalidade · Destaque · Skills) */}
+        {/* ── [G] Painel tático — 3 cols (Tipo de Passe · Destaque · Skills) */}
+        <ModuleCard eyebrow="OPERAÇÃO TÁTICA" noPadding>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)' }}>
-          {/* Mentalidade */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'12px 10px' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>MENTALIDADE</div>
-            <div style={{ ...T_DISPLAY, fontSize:12, fontWeight:700, color:'var(--c-text-primary)', marginBottom:10, letterSpacing:'0.12em' }}>{mentalidade}</div>
-            <input
-              type="range" min={0} max={100} value={mentalSlider}
-              onChange={e => handleMentalSlider(Number(e.target.value))}
-              style={{ width:'100%', height:3, appearance:'none', background:`linear-gradient(to right, var(--c-accent) ${mentalSlider}%, var(--c-bg-elevated) ${mentalSlider}%)`, borderRadius:2, outline:'none', cursor:'pointer' }}
-            />
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginTop:14, marginBottom:4 }}>INTENSIDADE</div>
-            <div style={{ ...T_DISPLAY, fontSize:11, color:'var(--c-text-primary)', marginBottom:6, letterSpacing:'0.10em' }}>ALTA</div>
-            <input
-              type="range" min={0} max={100} value={intensidade}
-              onChange={e => setIntensidade(Number(e.target.value))}
-              style={{ width:'100%', height:3, appearance:'none', background:`linear-gradient(to right, var(--c-accent) ${intensidade}%, var(--c-bg-elevated) ${intensidade}%)`, borderRadius:2, outline:'none', cursor:'pointer' }}
-            />
+          {/* Tipo de Passe — 4 botões distribuídos para alinhar com Destaque */}
+          <div style={{ background:'var(--c-bg-surface)', padding:'10px 8px', display:'flex', flexDirection:'column' }}>
+            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>TIPO DE PASSE</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:4, flex:1 }}>
+              {PASS_STYLES.map(ps => {
+                const isActive = passStyle === ps.id;
+                return (
+                  <button
+                    key={ps.id}
+                    type="button"
+                    onClick={() => { setPassStyle(ps.id); sequenceRef.current = null; }}
+                    style={{
+                      flex:1, width:'100%', padding:'0 8px',
+                      border: isActive ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
+                      borderLeft: isActive ? '3px solid var(--c-accent)' : '3px solid transparent',
+                      borderRadius:3, background: isActive ? 'rgba(253,225,0,0.07)' : 'transparent',
+                      cursor:'pointer', textAlign:'left',
+                      display:'flex', flexDirection:'column', justifyContent:'center',
+                    }}
+                  >
+                    <div style={{ ...T_DISPLAY, fontSize:9, fontWeight:900, color: isActive ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>
+                      {ps.label}
+                    </div>
+                    <div style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', marginTop:1, lineHeight:1.3 }}>
+                      {ps.desc}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Destaque */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'12px 10px' }}>
+          {/* Destaque — padrão PlayerCard: [foto | divisor 3px | OVR+nome] */}
+          <div style={{ background:'var(--c-bg-surface)', padding:'10px 8px', display:'flex', flexDirection:'column' }}>
             <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>DESTAQUE</div>
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-              <div style={{ width:34, height:34, borderRadius:4, background:'rgba(253,225,0,0.09)', border:'1px solid var(--c-accent)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <Shield size={18} color="var(--c-accent)" />
+
+            {/* Card principal — layout horizontal igual ao PlayerCard */}
+            <div style={{
+              display:'grid', gridTemplateColumns:'56px 3px 1fr',
+              minHeight:72, marginBottom:6,
+              border:'1px solid var(--c-border-accent)',
+              borderRadius:4, overflow:'hidden',
+              background:'var(--c-bg-elevated)',
+            }}>
+              {/* Foto */}
+              <div style={{ background:'#0A0A0A', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                <img
+                  src={avatarUrl(star.name, 120)}
+                  alt={star.shortName}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(20%)' }}
+                />
               </div>
-              <div>
-                <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.12em', display:'flex', alignItems:'center', gap:3 }}>
-                  <Star size={9} fill="currentColor" /> {star.shortName}
+              {/* Divisor amarelo 3px */}
+              <div style={{ background:'var(--c-accent)' }} />
+              {/* Info + OVR */}
+              <div style={{ display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'6px 8px' }}>
+                <div>
+                  <div style={{
+                    ...T_HERO, fontStyle:'italic', fontWeight:700,
+                    fontSize:15, letterSpacing:'0.01em',
+                    color:'var(--c-text-primary)', lineHeight:1.2,
+                  }}>
+                    {star.shortName}
+                  </div>
+                  <div style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', marginTop:2 }}>
+                    {star.role} · {star.archetype}
+                  </div>
                 </div>
-                <div style={{ ...T_BODY, fontSize:10, color:'var(--c-text-sec)' }}>{star.role}</div>
+                <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
+                  <div style={{ lineHeight:1 }}>
+                    <div style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.12em', textTransform:'uppercase' }}>OVR</div>
+                    <div style={{ ...T_HERO, fontStyle:'italic', fontSize:28, color:'var(--c-accent)', lineHeight:1 }}>
+                      {star.ovr}
+                    </div>
+                  </div>
+                  {star.onFire && (
+                    <div style={{ display:'flex', alignItems:'center', gap:2, marginBottom:2 }}>
+                      <Flame size={8} color="#FB923C" fill="#FB923C" />
+                      <span style={{ ...T_DISPLAY, fontSize:7, color:'#FB923C' }}>CHAMA</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div style={{ ...T_HERO, fontSize:26, color:'var(--c-accent)', textAlign:'center', marginBottom:8, letterSpacing:'-0.02em' }}>
-              {(7.5 + (star.confidence / 100) * 2).toFixed(1)}
-            </div>
-            <div style={{ marginBottom:4 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-sec)', letterSpacing:'0.16em' }}>FADIGA</span>
-                <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums' }}>{star.fatigue}%</span>
+
+            {/* Segundo destaque — mesmo padrão, menor */}
+            <div style={{
+              display:'grid', gridTemplateColumns:'40px 3px 1fr',
+              height:48,
+              border:'1px solid var(--c-border)',
+              borderRadius:3, overflow:'hidden',
+              background:'var(--c-bg-elevated)',
+            }}>
+              <div style={{ background:'#0A0A0A', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                <img
+                  src={avatarUrl(secondStar.name, 80)}
+                  alt={secondStar.shortName}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(40%)', opacity:0.85 }}
+                />
               </div>
-              <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
-                <div style={{ height:'100%', background:'var(--c-warning)', borderRadius:2, width:`${star.fatigue}%`, transition:'width 1s' }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-sec)', letterSpacing:'0.16em' }}>CONFIANÇA</span>
-                <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums' }}>{star.confidence}%</span>
-              </div>
-              <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
-                <div style={{ height:'100%', background:'var(--c-ok)', borderRadius:2, width:`${star.confidence}%`, transition:'width 1s' }} />
+              <div style={{ background:'rgba(253,225,0,0.35)' }} />
+              <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'4px 8px' }}>
+                <div style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:12, color:'var(--c-text-primary)', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {secondStar.shortName}
+                </div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:5, marginTop:1 }}>
+                  <span style={{ ...T_HERO, fontStyle:'italic', fontSize:16, color:'var(--c-accent)', lineHeight:1 }}>{secondStar.ovr}</span>
+                  <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)' }}>{secondStar.role}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Skills */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'12px 10px' }}>
+          {/* Skills — botões distribuídos para alinhar com Destaque */}
+          <div style={{ background:'var(--c-bg-surface)', padding:'10px 8px', display:'flex', flexDirection:'column' }}>
             <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>SKILLS</div>
-            {skills.map(sk => (
-              <button
-                key={sk.id}
-                type="button"
-                onClick={() => toggleSkill(sk.id)}
-                style={{
-                  display:'flex', alignItems:'center', gap:5, width:'100%', padding:'6px 8px', marginBottom:4,
-                  border: sk.active ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
-                  borderRadius:4, background: sk.active ? 'rgba(253,225,0,0.07)' : 'transparent',
-                  cursor: sk.remaining > 0 ? 'not-allowed' : 'pointer',
-                  opacity: sk.remaining > 0 ? 0.55 : 1,
-                  color: sk.active ? 'var(--c-accent)' : 'var(--c-text-primary)',
-                }}
-              >
-                <SkillIcon icon={sk.icon} />
-                <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:700, textAlign:'left', flex:1, letterSpacing:'0.10em' }}>{sk.label}</span>
-                <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums' }}>
-                  {sk.remaining > 0 ? `${sk.remaining}s` : `${sk.cooldown}s ›`}
-                </span>
-              </button>
-            ))}
+            <div style={{ display:'flex', flexDirection:'column', gap:4, flex:1 }}>
+              {skills.map(sk => (
+                <button
+                  key={sk.id}
+                  type="button"
+                  onClick={() => toggleSkill(sk.id)}
+                  style={{
+                    flex:1, display:'flex', alignItems:'center', gap:5, width:'100%', padding:'0 8px',
+                    border: sk.active ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
+                    borderLeft: sk.active ? '3px solid var(--c-accent)' : '3px solid transparent',
+                    borderRadius:3, background: sk.active ? 'rgba(253,225,0,0.07)' : 'transparent',
+                    cursor: sk.remaining > 0 ? 'not-allowed' : 'pointer',
+                    opacity: sk.remaining > 0 ? 0.55 : 1,
+                    color: sk.active ? 'var(--c-accent)' : 'var(--c-text-primary)',
+                  }}
+                >
+                  <SkillIcon icon={sk.icon} />
+                  <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:700, textAlign:'left', flex:1, letterSpacing:'0.10em', lineHeight:1.3 }}>{sk.label}</span>
+                  <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', flexShrink:0 }}>
+                    {sk.remaining > 0 ? `${sk.remaining}s` : `${sk.cooldown}s ›`}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+        </ModuleCard>
 
-        {/* ── [H] Subs + Instruções (Coach IA removido — agora só no nav) ─ */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:'var(--c-border)' }}>
+        {/* ── [H] Subs + Instruções (2 cards lado a lado) ──────────────── */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
           {/* Substituições */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'12px 14px' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>SUBSTITUIÇÕES</div>
-            {SUBS_INIT.map(sub => (
-              <div key={sub.number} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 0', borderBottom:'1px solid var(--c-border)' }}>
+          <ModuleCard eyebrow="SUBSTITUIÇÕES">
+            {SUBS_INIT.map((sub, i) => (
+              <div key={sub.number} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 0', borderBottom: i < SUBS_INIT.length - 1 ? '1px solid var(--c-border)' : 'none' }}>
                 <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', minWidth:18, fontVariantNumeric:'tabular-nums' }}>{sub.number}</span>
                 <span style={{ ...T_DISPLAY, fontSize:11, fontWeight:700, color:'var(--c-text-primary)', letterSpacing:'0.08em', flex:1 }}>{sub.name}</span>
                 <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums' }}>{sub.fatigue}%</span>
@@ -761,18 +1305,19 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                 </span>
               </div>
             ))}
-          </div>
+          </ModuleCard>
 
           {/* Instruções */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'12px 14px' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>INSTRUÇÕES</div>
-            {INSTRUCTIONS.map(inst => (
-              <div key={inst.id} style={{ ...T_DISPLAY, fontSize:11, fontWeight:600, color:'var(--c-text-primary)', letterSpacing:'0.08em', padding:'8px 0', borderBottom:'1px solid var(--c-border)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <ModuleCard eyebrow="INSTRUÇÕES" tone="neutral">
+            {INSTRUCTIONS.map((inst, i) => (
+              <div key={inst.id} style={{ ...T_DISPLAY, fontSize:11, fontWeight:600, color:'var(--c-text-primary)', letterSpacing:'0.08em', padding:'8px 0', borderBottom: i < INSTRUCTIONS.length - 1 ? '1px solid var(--c-border)' : 'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <span>{inst.label}</span>
                 <ChevronRight size={12} color="var(--c-text-muted)" />
               </div>
             ))}
-          </div>
+          </ModuleCard>
+        </div>
+
         </div>
 
         {/* ── [I] Bottom nav — 3 botões: Coach AI · Legacy · Formação ──── */}
@@ -784,7 +1329,7 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
           display:'grid', gridTemplateColumns:'1fr 1fr 1fr', zIndex:100,
         }}>
           {[
-            { id:'coach',  label:'COACH AI',  Icon: Brain,       onClick: () => setCoachModal(true) },
+            { id:'coach',  label:'COACH AI',  Icon: Brain,       onClick: () => { setCoachModal(true); setCoachPing(false); } },
             { id:'legacy', label:'LEGACY',    Icon: Sparkles,    onClick: triggerLegacy            },
             { id:'form',   label:'FORMAÇÃO', Icon: LayoutGrid,  onClick: () => setFormationModal(true) },
           ].map((tab, idx) => (
@@ -795,21 +1340,36 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
               style={{
                 display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
                 cursor:'pointer', position:'relative', background:'transparent', border:'none',
-                color:'var(--c-accent)',
+                color: tab.id === 'coach' && coachPing ? 'var(--c-accent)' : 'var(--c-accent)',
                 borderLeft: idx > 0 ? '1px solid var(--c-border)' : 'none',
               }}
             >
-              <tab.Icon size={20} strokeWidth={2} />
-              <span style={{ ...T_DISPLAY, fontSize:9, fontWeight:800, letterSpacing:'0.18em', color:'var(--c-accent)' }}>
+              <div style={{ position:'relative' }}>
+                <tab.Icon size={20} strokeWidth={2} />
+                {tab.id === 'coach' && coachPing && (
+                  <span style={{
+                    position:'absolute', top:-3, right:-3,
+                    width:7, height:7, borderRadius:'50%',
+                    background:'var(--c-accent)',
+                    animation:'c-coach-ping 0.8s ease infinite',
+                    display:'block',
+                  }} />
+                )}
+              </div>
+              <span style={{ ...T_DISPLAY, fontSize:9, fontWeight:800, letterSpacing:'0.18em', color: tab.id === 'coach' && coachPing ? 'var(--c-accent)' : 'var(--c-accent)' }}>
                 {tab.label}
               </span>
             </button>
           ))}
         </div>
 
-        {/* ── Coach Modal — slide-up from bottom ────────────────────────── */}
+        {/* ── Coach Modal — leitura tática, sem chat ────────────────────── */}
         {coachModal && (
-          <div role="dialog" aria-modal="true" aria-labelledby="coach-modal-title" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', zIndex:200, display:'flex', flexDirection:'column' }} onClick={() => setCoachModal(false)}>
+          <div
+            role="dialog" aria-modal="true" aria-labelledby="coach-modal-title"
+            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', zIndex:200, display:'flex', flexDirection:'column' }}
+            onClick={() => setCoachModal(false)}
+          >
             <div
               onClick={e => e.stopPropagation()}
               style={{
@@ -818,14 +1378,14 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                 borderTop:'3px solid var(--c-accent)',
                 borderRadius:'16px 16px 0 0',
                 animation:'c-slideUp 0.28s ease-out',
-                padding:'18px 18px 24px',
-                maxHeight:'85vh',
-                display:'flex', flexDirection:'column',
-              }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                padding:'18px 18px 28px',
+              }}
+            >
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <Brain size={18} color="var(--c-accent)" />
-                  <span id="coach-modal-title" style={{ ...T_DISPLAY, fontSize:12, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.26em' }}>COACH AI</span>
+                  <span id="coach-modal-title" style={{ ...T_DISPLAY, fontSize:12, fontWeight:900, color:'var(--c-accent)', letterSpacing:'0.26em' }}>LEITURA DO JOGO</span>
                 </div>
                 <button
                   type="button"
@@ -837,51 +1397,79 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                 </button>
               </div>
 
-              <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10, marginBottom:12, minHeight:120, maxHeight:260 }}>
-                {coachMessages.map((msg, i) => (
-                  <div key={i} style={{
-                    alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                    background: msg.role === 'user' ? 'rgba(253,225,0,0.07)' : 'var(--c-bg-primary)',
-                    border: msg.role === 'user' ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
-                    borderLeft: msg.role === 'ai' ? '3px solid var(--c-accent)' : undefined,
-                    borderRadius:8, padding:'10px 14px',
-                    ...T_BODY, fontSize:13, color:'var(--c-text-primary)', maxWidth:'85%', lineHeight:1.5,
-                  }}>
-                    {msg.text}
-                  </div>
-                ))}
+              {/* Placar + minuto atual */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:16, marginBottom:16, padding:'10px', background:'var(--c-bg-primary)', borderRadius:6 }}>
+                <span style={{ ...T_HERO, fontSize:16, color:'var(--c-text-primary)' }}>{homeTeam}</span>
+                <span style={{ ...T_HERO, fontSize:36, color:'var(--c-accent)', letterSpacing:'-0.04em' }}>{score.home} — {score.away}</span>
+                <span style={{ ...T_HERO, fontSize:16, color:'var(--c-text-primary)' }}>{awayTeam}</span>
               </div>
 
-              {/* Quick chips */}
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:10 }}>
-                {['O que sugeres?', 'Como parar o ataque deles?', 'Hora de substituir?', 'A pressão funciona?'].map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setChatInput(chip)}
-                    style={{ padding:'6px 12px', border:'1px solid var(--c-border-accent)', borderRadius:20, ...T_BODY, fontSize:11, color:'var(--c-accent)', cursor:'pointer', background:'rgba(253,225,0,0.05)' }}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
+              {/* Leituras táticas — geradas a partir do estado atual */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {(() => {
+                  const homePoss = stats.possession.home;
+                  const homeShots = stats.shots.home;
+                  const awayShots = stats.shots.away;
+                  const homeGoals = score.home;
+                  const awayGoals = score.away;
+                  const isLosing = homeGoals < awayGoals;
+                  const isWinning = homeGoals > awayGoals;
+                  const isDraw = homeGoals === awayGoals;
+                  const lateGame = minute > 70;
+                  const extraTime = extraMinute > 0;
 
-              <div style={{ display:'flex', gap:8 }}>
-                <input
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendChat()}
-                  placeholder="Fala com o técnico…"
-                  style={{ flex:1, background:'var(--c-bg-primary)', border:'1px solid var(--c-border)', borderRadius:4, padding:'10px 14px', color:'var(--c-text-primary)', ...T_BODY, fontSize:13, outline:'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={sendChat}
-                  aria-label="Enviar"
-                  style={{ padding:'10px 16px', background:'var(--c-accent)', color:'#0D0D0D', border:'none', borderRadius:4, cursor:'pointer', display:'flex', alignItems:'center', gap:6, ...T_DISPLAY, fontSize:11, fontWeight:900, letterSpacing:'0.16em' }}
-                >
-                  <Send size={12} /> ENVIAR
-                </button>
+                  const readings: Array<{ icon: string; label: string; text: string; color?: string }> = [];
+
+                  // Posse
+                  if (homePoss > 60) {
+                    readings.push({ icon:'●', label:'POSSE', text:`${homePoss}% de posse. Domínio claro — usa a bola para esgotar o adversário.` });
+                  } else if (homePoss < 40) {
+                    readings.push({ icon:'●', label:'POSSE', text:`Só ${homePoss}% de posse. Estás a jogar no limite — considera mudar para COUNTER.`, color:'var(--c-danger)' });
+                  } else {
+                    readings.push({ icon:'●', label:'POSSE', text:`${homePoss}% de posse. Equilíbrio no meio-campo. Mantém a pressão.` });
+                  }
+
+                  // Chutes
+                  if (awayShots > homeShots + 3) {
+                    readings.push({ icon:'▲', label:'PERIGO', text:`Adversário com ${awayShots} finalizações. Linha defensiva está exposta — fecha o corredor central.`, color:'var(--c-danger)' });
+                  } else if (homeShots > awayShots + 3) {
+                    readings.push({ icon:'▲', label:'PRESSÃO', text:`${homeShots} finalizações. Estás a dominar a Zona 14 — continua a atacar os half-spaces.`, color:'var(--c-ok)' });
+                  }
+
+                  // Resultado + tempo
+                  if (isLosing && lateGame) {
+                    readings.push({ icon:'!', label:'URGÊNCIA', text:`A perder com ${minute > 80 ? 'menos de 10' : 'menos de 20'} minutos. Muda para TIKTAK e sobe os laterais.`, color:'var(--c-danger)' });
+                  } else if (isWinning && lateGame) {
+                    readings.push({ icon:'✓', label:'GESTÃO', text:`A vencer. Usa LATERAL para circular e gastar tempo — não arrisques transições.`, color:'var(--c-ok)' });
+                  } else if (isDraw && lateGame) {
+                    readings.push({ icon:'!', label:'DECISÃO', text:`Empate nos minutos finais. Hora de arriscar — activa FOCO OFENSIVO e vai à Zona 14.` });
+                  }
+
+                  // Acréscimos
+                  if (extraTime) {
+                    readings.push({ icon:'⚡', label:'ACRÉSCIMOS', text:`Estamos nos acréscimos. Cada segundo conta — pressão máxima, sem recuo.`, color:'var(--c-danger)' });
+                  }
+
+                  // Tipo de passe activo
+                  const psInfo = PASS_STYLES.find(p => p.id === passStyle);
+                  if (psInfo) {
+                    readings.push({ icon:'→', label:'ESTILO', text:`${psInfo.label} activo: ${psInfo.desc}. ${passStyle === 'TIKTAK' ? 'Aciona mais jogadores antes do chute.' : passStyle === 'COUNTER' ? 'Transição rápida — mantém profundidade.' : passStyle === 'LATERAL' ? 'Usa os corredores para criar superioridade.' : 'Lançamento directo — exige ST forte no hold-up.'}` });
+                  }
+
+                  return readings.map((r, i) => (
+                    <div key={i} style={{
+                      display:'flex', gap:10, alignItems:'flex-start',
+                      padding:'10px 12px',
+                      background:'var(--c-bg-primary)',
+                      border:`1px solid ${r.color ? r.color + '44' : 'var(--c-border)'}`,
+                      borderLeft:`3px solid ${r.color ?? 'var(--c-accent)'}`,
+                      borderRadius:4,
+                    }}>
+                      <span style={{ ...T_DISPLAY, fontSize:9, color: r.color ?? 'var(--c-accent)', letterSpacing:'0.16em', flexShrink:0, marginTop:1 }}>{r.label}</span>
+                      <span style={{ ...T_BODY, fontSize:12, color:'var(--c-text-primary)', lineHeight:1.5 }}>{r.text}</span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           </div>
@@ -920,7 +1508,7 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
                   <li key={f}>
                     <button
                       type="button"
-                      onClick={() => { setActiveFormation(f); setFormationModal(false); }}
+                      onClick={() => applyFormation(f)}
                       style={{
                         width:'100%', padding:'14px 22px',
                         background: activeFormation === f ? 'rgba(253,225,0,0.06)' : 'transparent',
