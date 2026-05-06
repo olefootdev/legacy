@@ -2,6 +2,7 @@ import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, 
 import { ARCHETYPES } from './archetypes';
 import { generateNarration } from './narration';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
+import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 
 let _eventCounter = 0;
 
@@ -207,6 +208,8 @@ export interface GenerateEventOptions {
   passStyle?: PassStyle;
   // Sequência em andamento — se fornecida, continua a jogada
   sequence?: { zones: string[]; index: number };
+  // Perfis narrativos dos jogadores — enriquece as frases geradas
+  narrativeProfiles?: Map<number, PlayerNarrativeProfile>;
 }
 
 export interface GenerateEventResult {
@@ -225,6 +228,7 @@ export function generateEvent(
   opts: GenerateEventOptions = {},
 ): GenerateEventResult {
   const { activeSkills = [], chain = null, passStyle = 'TIKTAK' } = opts;
+  const narrativeProfiles = opts.narrativeProfiles;
 
   const counterActive = activeSkills.includes('counter');
   const possessionBias = counterActive ? 0.45 : 0.55;
@@ -261,14 +265,14 @@ export function generateEvent(
   } else if (type === 'shot' || type === 'cross' || type === 'danger') {
     ballPos = goalMouthPos(team);
   } else if (type === 'pass' && !isLastZone) {
-    // CORREÇÃO PRINCIPAL: bola vai para a zona do RECEPTOR, não do portador
+    // CORREÇÃO PRINCIPAL: bola vai EXATAMENTE para o receptor
+    // (sem jitter — evita disconnect entre balão de nome e posição da bola)
     const nextZone = sequence.zones[zoneIndex + 1];
     const receiver = pickPlayerForZone(allPlayers, nextZone, team, player.id);
     receiverId = receiver.id;
-    // A bola vai para onde o receptor está — posição real do jogador
     ballPos = {
-      x: receiver.position.x + (rng() - 0.5) * 15,
-      y: receiver.position.y + (rng() - 0.5) * 15,
+      x: receiver.position.x,
+      y: receiver.position.y,
     };
   } else {
     // tackle, interception, foul, pressure — bola fica perto do portador
@@ -279,7 +283,8 @@ export function generateEvent(
   }
 
   const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
-  const text = generateNarration(type, player.archetype, player.shortName, teamName, minute, score);
+  const playerProfile = narrativeProfiles?.get(player.id);
+  const text = generateNarration(type, player.archetype, player.shortName, teamName, minute, score, playerProfile);
 
   const event: MatchEvent = {
     id: `evt_${++_eventCounter}`,

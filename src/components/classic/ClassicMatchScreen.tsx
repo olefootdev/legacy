@@ -64,9 +64,19 @@ const CSS_VARS = `
   0%,100% { border-color: rgba(251,146,60,0.9); }
   50%     { border-color: rgba(253,225,0,0.9); }
 }
+@keyframes c-confidence-aura {
+  0%,100% { box-shadow: 0 0 0 0 rgba(253,225,0,0.55), 0 0 18px rgba(253,225,0,0.55); }
+  50%     { box-shadow: 0 0 0 4px rgba(253,225,0,0.15), 0 0 26px rgba(253,225,0,0.85); }
+}
 @keyframes c-fatigue-pulse {
-  0%,100% { border-color: rgba(239,68,68,0.5); }
-  50%     { border-color: rgba(239,68,68,0.15); }
+  0%,100% { border-color: rgba(239,68,68,0.55); transform: translate(-50%,-50%) translateX(0); }
+  25%     { border-color: rgba(239,68,68,0.20); transform: translate(-50%,-50%) translateX(0.6px); }
+  50%     { border-color: rgba(239,68,68,0.55); transform: translate(-50%,-50%) translateX(0); }
+  75%     { border-color: rgba(239,68,68,0.20); transform: translate(-50%,-50%) translateX(-0.6px); }
+}
+@keyframes c-pass-line {
+  0%   { stroke-dashoffset: 24; opacity: 0.95; }
+  100% { stroke-dashoffset: 0;  opacity: 0.30; }
 }
 @keyframes c-reposition {
   from { opacity: 0.4; }
@@ -217,44 +227,36 @@ const T_HERO: React.CSSProperties    = { fontFamily: 'var(--cf-hero)', fontStyle
 const T_BODY: React.CSSProperties    = { fontFamily: 'var(--cf-body)' };
 
 // ─── Crest component (no emoji — Legacy Tech style) ───────────────────────────
-function ClubCrest({ color, initials, side, crestUrl, scoreEl }: {
+function ClubCrest({ color, initials, crestUrl, size = 56 }: {
   color: string;
   initials: string;
-  side: 'home' | 'away';
   crestUrl?: string | null;
-  scoreEl?: React.ReactNode;
+  size?: number;
 }) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, minWidth:54 }}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, minWidth:size }}>
       <div style={{
-        width:48, height:48,
-        borderRadius: crestUrl ? 8 : '6px 6px 16px 16px',
-        border:`1.5px solid ${color}`,
-        background: crestUrl
-          ? '#000'
-          : side === 'home' ? 'rgba(253,225,0,0.10)' : 'rgba(255,255,255,0.06)',
+        width: size, height: size,
         display:'flex', alignItems:'center', justifyContent:'center',
-        overflow:'hidden',
         position:'relative',
       }}>
         {crestUrl ? (
           <img
             src={crestUrl}
             alt={initials}
-            style={{ width:'80%', height:'80%', objectFit:'contain' }}
             loading="lazy"
+            style={{ width:'100%', height:'100%', objectFit:'contain', filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }}
           />
         ) : (
           <>
-            <Shield size={22} color={color} strokeWidth={2} fill="none" />
-            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', ...T_DISPLAY, fontSize:10, fontWeight:900, color, letterSpacing:'0.04em' }}>
+            <Shield size={size * 0.85} color={color} strokeWidth={1.8} fill="none" />
+            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', ...T_DISPLAY, fontSize: Math.round(size * 0.28), fontWeight:900, color, letterSpacing:'0.04em' }}>
               {initials.charAt(0)}
             </div>
           </>
         )}
       </div>
-      {scoreEl}
-      <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:800, color:'var(--c-text-primary)', letterSpacing:'0.20em' }}>
+      <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:800, color:'var(--c-text-primary)', letterSpacing:'0.22em' }}>
         {initials}
       </span>
     </div>
@@ -320,10 +322,12 @@ interface Props {
   homePlayers?: ClassicPlayer[];
   /** 11 titulares visitantes pré-construídos (oponente real / sintético). */
   awayPlayers?: ClassicPlayer[];
+  /** Perfis narrativos dos jogadores da casa — enriquece frases do motor. */
+  homeNarrativeProfiles?: Map<number, import('@/gamespirit/playerNarrativeProfile').PlayerNarrativeProfile>;
   onExit?: () => void;
 }
 
-export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }: Props) {
+export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarrativeProfiles, onExit }: Props) {
   const homeTeam    = config?.homeTeam    ?? 'TIGRES';
   const awayTeam    = config?.awayTeam    ?? 'ALVORADA FC';
   const round       = config?.round       ?? 12;
@@ -495,6 +499,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
         chain: chainRef.current,
         passStyle,
         sequence: sequenceRef.current ?? undefined,
+        narrativeProfiles: homeNarrativeProfiles,
       });
 
       const { event: evt, nextSequence, receiverId } = result;
@@ -800,14 +805,20 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
           animation: goalFlash ? 'c-goalFlash 1.5s ease' : undefined,
         }}
       >
-        {/* ── [A] Status bar ─────────────────────────────────────────────── */}
+        {/* ── [A] Status bar — Classic League + cronômetro dinâmico ────── */}
         <div style={{ height: 24, background: '#0A0A0A', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px' }}>
           <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'flex', alignItems:'center', gap:5 }}>
             <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--c-danger)', display:'inline-block', animation:'c-pulse 1s infinite' }} />
             REC
           </span>
-          <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.18em' }}>
-            OLEFOOT · {competition}
+          <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.20em', display:'inline-flex', alignItems:'center', gap:8 }}>
+            {competition}
+            <span aria-hidden style={{ width:3, height:3, borderRadius:'50%', background:'var(--c-text-muted)' }} />
+            <span style={{ color:'var(--c-accent)', fontVariantNumeric:'tabular-nums' }}>
+              {extraMinute > 0
+                ? `${padTime(extraMinute > HALF1_EXTRA ? HALF2_END : HALF1_END)}+${extraMinute}'`
+                : `${padTime(Math.min(minute, period === '2º TEMPO' ? HALF2_END : HALF1_END))}'`}
+            </span>
           </span>
           <button
             type="button"
@@ -823,70 +834,62 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
           </button>
         </div>
 
-        {/* ── [B] Top bar — placar lateral em Moret + cronômetro Agency ── */}
+        {/* ── [B] Top bar — BRASÃO · SCORE · CLOCK · SCORE · BRASÃO ────── */}
         <div style={{
-          display:'grid', gridTemplateColumns:'1fr auto 1fr',
-          alignItems:'center', padding:'14px 16px', gap:12,
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'16px 18px', gap:8,
           background:'linear-gradient(180deg,#111 0%,#0D0D0D 100%)',
-          borderBottom:'1px solid var(--c-border)', minHeight:114,
+          borderBottom:'1px solid var(--c-border)',
+          minHeight:130,
         }}>
-          {/* HOME — crest + score Moret yellow + initials */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-start', gap:12 }}>
-            <ClubCrest
-              color="var(--c-team-home)"
-              initials={homeShort}
-              side="home"
-              crestUrl={config?.homeCrestUrl}
-              scoreEl={
-                <span style={{ ...T_HERO, fontSize:34, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em' }}>
-                  {score.home}
-                </span>
-              }
-            />
-          </div>
+          {/* HOME crest + initials */}
+          <ClubCrest
+            color="var(--c-team-home)"
+            initials={homeShort}
+            crestUrl={config?.homeCrestUrl}
+            size={62}
+          />
 
-          {/* Center — cronômetro em AGENCY (display) e período sublinhado */}
-          <div style={{ textAlign:'center', minWidth:108 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:4 }}>
-              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.24em' }}>JORNADA {round}</span>
-              <span aria-hidden style={{ width:3, height:3, borderRadius:'50%', background:'var(--c-text-muted)' }} />
-              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'inline-flex', alignItems:'center', gap:5 }}>
-                <span style={{ width:12, height:1.5, background:'var(--c-accent)', borderRadius:1, transformOrigin:'left center', animation:'c-tempo-tick 1.4s ease-in-out infinite' }} />
-                36:1
-              </span>
+          {/* Score HOME — Moret italic amarelo */}
+          <span style={{ ...T_HERO, fontSize:54, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em', minWidth:36, textAlign:'center' }}>
+            {score.home}
+          </span>
+
+          {/* Center — cronômetro em AGENCY + jornada/período */}
+          <div style={{ textAlign:'center', flex:'0 1 auto', minWidth:88 }}>
+            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.22em', marginBottom:3 }}>
+              JORNADA {round}
             </div>
             <div style={{
               ...T_DISPLAY,
-              fontSize:42, fontWeight:900,
+              fontSize:34, fontWeight:900,
               color: extraMinute > 0 || minute >= 85 ? 'var(--c-danger)' : 'var(--c-text-primary)',
               lineHeight:1, letterSpacing:'0.04em',
               transition:'color 0.5s',
               fontVariantNumeric:'tabular-nums',
             }}>
               {extraMinute > 0
-                ? <>{padTime(extraMinute > HALF1_EXTRA ? HALF2_END : HALF1_END)}<span style={{ fontSize:22, opacity:0.7 }}>+{extraMinute}</span></>
-                : <>{padTime(Math.min(minute, period === '2º TEMPO' ? HALF2_END : HALF1_END))}<span style={{ fontSize:24, opacity:0.6, marginLeft:2 }}>'</span></>
+                ? <>{padTime(extraMinute > HALF1_EXTRA ? HALF2_END : HALF1_END)}<span style={{ fontSize:18, opacity:0.7 }}>+{extraMinute}</span></>
+                : <>{padTime(Math.min(minute, period === '2º TEMPO' ? HALF2_END : HALF1_END))}<span style={{ fontSize:18, opacity:0.6, marginLeft:1 }}>'</span></>
               }
             </div>
-            <div style={{ display:'inline-block', ...T_DISPLAY, fontSize:10, fontWeight:700, color:'var(--c-text-primary)', borderBottom:'2px solid var(--c-accent)', paddingBottom:2, marginTop:6, letterSpacing:'0.18em' }}>
+            <div style={{ display:'inline-block', ...T_DISPLAY, fontSize:9, fontWeight:700, color:'var(--c-text-primary)', borderBottom:'2px solid var(--c-accent)', paddingBottom:2, marginTop:5, letterSpacing:'0.18em' }}>
               {period}
             </div>
           </div>
 
-          {/* AWAY — score Moret yellow + crest + initials */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:12 }}>
-            <ClubCrest
-              color="var(--c-team-away)"
-              initials={awayShort}
-              side="away"
-              crestUrl={config?.awayCrestUrl}
-              scoreEl={
-                <span style={{ ...T_HERO, fontSize:34, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em' }}>
-                  {score.away}
-                </span>
-              }
-            />
-          </div>
+          {/* Score AWAY — Moret italic amarelo */}
+          <span style={{ ...T_HERO, fontSize:54, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em', minWidth:36, textAlign:'center' }}>
+            {score.away}
+          </span>
+
+          {/* AWAY crest + initials */}
+          <ClubCrest
+            color="var(--c-team-away)"
+            initials={awayShort}
+            crestUrl={config?.awayCrestUrl}
+            size={62}
+          />
         </div>
 
         {/* ── [C] Campo tático estático ──────────────────────────────────
@@ -917,18 +920,20 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
             viewBox={`0 0 ${FIELD_W_LOGIC} ${FIELD_H_LOGIC}`}
             preserveAspectRatio="none"
           >
-            {/* Pass connection: thin dashed line between passer and receiver */}
+            {/* Pass connection: linha amarela tracejada com flow visível */}
             {lastPassPair && (() => {
               const a = players.find(p => p.id === lastPassPair[0]);
               const b = players.find(p => p.id === lastPassPair[1]);
               if (!a || !b) return null;
               return (
                 <line
+                  key={`pass-${lastPassPair[0]}-${lastPassPair[1]}`}
                   x1={a.position.x} y1={a.position.y}
                   x2={b.position.x} y2={b.position.y}
-                  stroke="rgba(255,255,255,0.18)"
-                  strokeWidth="1"
-                  strokeDasharray="4 4"
+                  stroke="rgba(253,225,0,0.85)"
+                  strokeWidth="1.4"
+                  strokeDasharray="6 4"
+                  style={{ animation:'c-pass-line 1.2s ease-out forwards' }}
                 />
               );
             })()}
@@ -964,19 +969,29 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
             const isLegacyTarget = legacyPulse?.player.id === p.id;
             const NODE = 26;
             const isExhausted = p.fatigue > 82;
+            const isHot = !!p.onFire;
+            const isStarPlayer = !!p.isStar;
 
-            // Todos os jogadores: branco/cinza neutro — sem amarelo
+            // Borda:
+            // - cansado → vermelho fraco pulsante
+            // - on fire → amarelo neon fixo (aura faz o brilho)
+            // - destaque ativo → branco mais forte
+            // - resto → branco/cinza neutro
             const borderColor = isExhausted
-              ? 'rgba(239,68,68,0.55)'
+              ? 'rgba(239,68,68,0.60)'
+              : isHot
+              ? 'rgba(253,225,0,0.95)'
               : isHL
               ? 'rgba(255,255,255,0.85)'
               : 'rgba(255,255,255,0.35)';
 
-            const bgColor = isHL
+            const bgColor = isHot
+              ? 'rgba(253,225,0,0.16)'
+              : isHL
               ? 'rgba(255,255,255,0.14)'
               : 'rgba(255,255,255,0.06)';
 
-            const shadow = isHL && !isLegacyTarget
+            const shadow = isHL && !isLegacyTarget && !isHot
               ? '0 0 0 1.5px rgba(255,255,255,0.4)'
               : '0 1px 3px rgba(0,0,0,0.6)';
 
@@ -998,6 +1013,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
                   : 'border-color 0.3s ease, background 0.3s ease',
                 animation: isLegacyTarget
                   ? 'c-legacyCore 1.2s ease'
+                  : isHot
+                  ? 'c-confidence-aura 1.8s ease-in-out infinite'
                   : isExhausted
                   ? 'c-fatigue-pulse 1.4s ease infinite'
                   : repositioning
@@ -1287,35 +1304,45 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
             { id:'coach',  label:'COACH AI',  Icon: Brain,       onClick: () => { setCoachModal(true); setCoachPing(false); } },
             { id:'legacy', label:'LEGACY',    Icon: Sparkles,    onClick: triggerLegacy            },
             { id:'form',   label:'FORMAÇÃO', Icon: LayoutGrid,  onClick: () => setFormationModal(true) },
-          ].map((tab, idx) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={tab.onClick}
-              style={{
-                display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
-                cursor:'pointer', position:'relative', background:'transparent', border:'none',
-                color: tab.id === 'coach' && coachPing ? 'var(--c-accent)' : 'var(--c-accent)',
-                borderLeft: idx > 0 ? '1px solid var(--c-border)' : 'none',
-              }}
-            >
-              <div style={{ position:'relative' }}>
-                <tab.Icon size={20} strokeWidth={2} />
-                {tab.id === 'coach' && coachPing && (
-                  <span style={{
-                    position:'absolute', top:-3, right:-3,
-                    width:7, height:7, borderRadius:'50%',
-                    background:'var(--c-accent)',
-                    animation:'c-coach-ping 0.8s ease infinite',
-                    display:'block',
-                  }} />
-                )}
-              </div>
-              <span style={{ ...T_DISPLAY, fontSize:9, fontWeight:800, letterSpacing:'0.18em', color: tab.id === 'coach' && coachPing ? 'var(--c-accent)' : 'var(--c-accent)' }}>
-                {tab.label}
-              </span>
-            </button>
-          ))}
+          ].map((tab, idx) => {
+            const isCoachAlert = tab.id === 'coach' && coachPing;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={tab.onClick}
+                aria-label={isCoachAlert ? `${tab.label} — leitura tática nova` : tab.label}
+                style={{
+                  display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
+                  cursor:'pointer', position:'relative', background: isCoachAlert ? 'rgba(253,225,0,0.06)' : 'transparent', border:'none',
+                  color: 'var(--c-accent)',
+                  borderLeft: idx > 0 ? '1px solid var(--c-border)' : 'none',
+                  transition: 'background 0.2s',
+                }}
+              >
+                <div style={{ position:'relative', filter: isCoachAlert ? 'drop-shadow(0 0 6px rgba(253,225,0,0.85))' : undefined, transition:'filter 0.3s' }}>
+                  <tab.Icon size={20} strokeWidth={isCoachAlert ? 2.4 : 2} />
+                  {isCoachAlert && (
+                    <span style={{
+                      position:'absolute', top:-4, right:-4,
+                      width:10, height:10, borderRadius:'50%',
+                      background:'var(--c-accent)',
+                      boxShadow:'0 0 0 2px #000, 0 0 12px rgba(253,225,0,0.85)',
+                      animation:'c-coach-ping 0.9s ease-in-out infinite',
+                      display:'block',
+                    }} />
+                  )}
+                </div>
+                <span style={{
+                  ...T_DISPLAY, fontSize:9, fontWeight:800, letterSpacing:'0.18em',
+                  color:'var(--c-accent)',
+                  textShadow: isCoachAlert ? '0 0 6px rgba(253,225,0,0.8)' : undefined,
+                }}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Coach Modal — leitura tática, sem chat ────────────────────── */}

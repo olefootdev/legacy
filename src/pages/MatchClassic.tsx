@@ -8,6 +8,7 @@ import {
   buildClassicTeamFromLineup,
   buildClassicTeamFromSquad,
   buildSyntheticAwayTeam,
+  buildClassicNarrativeProfiles,
 } from '@/engine/classic/realPlayers';
 import type { ClassicPlayer } from '@/engine/classic/types';
 
@@ -30,9 +31,10 @@ export function MatchClassic() {
   const teams = useMemo<{
     home: ClassicPlayer[] | undefined;
     away: ClassicPlayer[] | undefined;
+    homeNarrativeProfiles: ReturnType<typeof buildClassicNarrativeProfiles> | undefined;
   }>(() => {
     if (!playersById || Object.keys(playersById).length === 0) {
-      return { home: undefined, away: undefined };
+      return { home: undefined, away: undefined, homeNarrativeProfiles: undefined };
     }
     const lineup = mergeLineupWithDefaults(lineupRaw ?? {}, playersById);
 
@@ -64,9 +66,12 @@ export function MatchClassic() {
         );
 
     if (home.length !== 11 || away.length !== 11) {
-      return { home: undefined, away: undefined };
+      return { home: undefined, away: undefined, homeNarrativeProfiles: undefined };
     }
-    return { home, away };
+
+    const homeNarrativeProfiles = buildClassicNarrativeProfiles(playersById, lineup);
+
+    return { home, away, homeNarrativeProfiles };
   }, [playersById, lineupRaw, fixture]);
 
   const homeTeamName    = club?.name      ?? 'TIGRES';
@@ -92,6 +97,7 @@ export function MatchClassic() {
       }}
       homePlayers={teams.home}
       awayPlayers={teams.away}
+      homeNarrativeProfiles={teams.homeNarrativeProfiles}
       onExit={() => navigate('/', { replace: true })}
     />
   );
