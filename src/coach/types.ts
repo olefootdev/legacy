@@ -130,6 +130,19 @@ export interface TeamContext {
   averageInjuryRisk: number;
   averageOverall: number;
 
+  // Squad resumido (titulares + banco)
+  squadList?: Array<{
+    name: string;
+    pos: string;
+    ovr: number;
+    fatigue: number;
+    injured: boolean;
+    age?: number;
+  }>;
+
+  // Formação atual
+  formation?: string;
+
   // Staff
   staffLevels: Record<StaffRoleId, number>;
   staffSlotsAvailable: number;
@@ -162,4 +175,22 @@ export interface TeamContext {
     scoreAgainst: number;
   }>;
   recentForm?: Array<'W' | 'D' | 'L'>;
+
+  // Liga Global
+  leaguePosition?: number;
+  leaguePoints?: number;
+  leagueDivision?: number;
+  leagueMatchesPlayed?: number;
+  leagueWins?: number;
+  leagueDraws?: number;
+  leagueLosses?: number;
+  leagueGoalsFor?: number;
+  leagueGoalsAgainst?: number;
+  leagueSeasonName?: string;
+  leagueStatus?: string;
+  leagueRecentForm?: Array<'W' | 'D' | 'L'>;
+
+  // Clube
+  clubName?: string;
+  managerName?: string;
 }

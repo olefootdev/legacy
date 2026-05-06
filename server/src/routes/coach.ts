@@ -232,7 +232,56 @@ function buildCoachSystemPrompt(coach: any, teamContext: any): string {
     .map((i: any) => `- ${i.instruction}`)
     .join('\n') || 'Nenhuma instrução específica ainda.';
 
-  return `Você é ${coach.name}, treinador assistente ${coach.personality} do time.
+  // ── Liga Global ──────────────────────────────────────────────────────────
+  let leagueSection = 'Ainda não inscrito na Liga Global.';
+  if (teamContext.leagueMatchesPlayed != null && teamContext.leagueMatchesPlayed > 0) {
+    const gd = (teamContext.leagueGoalsFor ?? 0) - (teamContext.leagueGoalsAgainst ?? 0);
+    const gdStr = gd >= 0 ? `+${gd}` : `${gd}`;
+    leagueSection = [
+      teamContext.leagueSeasonName ? `Temporada: ${teamContext.leagueSeasonName}` : '',
+      teamContext.leagueDivision ? `Divisão ${teamContext.leagueDivision}` : '',
+      teamContext.leaguePosition ? `Posição: ${teamContext.leaguePosition}º` : '',
+      `Pontos: ${teamContext.leaguePoints ?? 0}`,
+      `Jogos: ${teamContext.leagueMatchesPlayed} (${teamContext.leagueWins ?? 0}V ${teamContext.leagueDraws ?? 0}E ${teamContext.leagueLosses ?? 0}D)`,
+      `Gols: ${teamContext.leagueGoalsFor ?? 0}:${teamContext.leagueGoalsAgainst ?? 0} (DG ${gdStr})`,
+      teamContext.leagueRecentForm?.length
+        ? `Forma na liga: ${teamContext.leagueRecentForm.join('-')}`
+        : '',
+    ].filter(Boolean).join(' | ');
+  } else if (teamContext.leagueStatus) {
+    leagueSection = `Status na liga: ${teamContext.leagueStatus}`;
+  }
+
+  // ── Squad ────────────────────────────────────────────────────────────────
+  let squadSection = 'Plantel não disponível.';
+  if (teamContext.squadList?.length > 0) {
+    squadSection = teamContext.squadList
+      .map((p: any) => {
+        const flags = [
+          p.injured ? '🚑' : '',
+          p.fatigue > 70 ? `⚡${p.fatigue}%` : '',
+        ].filter(Boolean).join(' ');
+        return `${p.pos} ${p.name} (OVR ${p.ovr}${p.age ? `, ${p.age}a` : ''})${flags ? ' ' + flags : ''}`;
+      })
+      .join('\n');
+  }
+
+  // ── Staff ────────────────────────────────────────────────────────────────
+  const staffSection = Object.keys(teamContext.staffLevels ?? {}).length > 0
+    ? Object.entries(teamContext.staffLevels)
+        .map(([role, level]) => `- ${role}: nível ${level}`)
+        .join('\n')
+    : 'Staff não configurado.';
+
+  // ── Resultados recentes ──────────────────────────────────────────────────
+  const recentResultsSection = teamContext.recentResults?.length > 0
+    ? teamContext.recentResults.map((r: any) =>
+        `${r.result === 'win' ? '✅' : r.result === 'draw' ? '⚖️' : '❌'} ${r.scoreFor}-${r.scoreAgainst} vs ${r.opponent}`
+      ).join(' | ')
+    : 'Sem jogos registados ainda.';
+
+  return `Você é ${coach.name}, treinador assistente ${coach.personality} do time ${teamContext.clubName ?? 'do manager'}.
+${teamContext.managerName ? `Manager: ${teamContext.managerName}` : ''}
 
 Sua personalidade:
 ${personalityDescriptions[coach.personality] || 'Treinador equilibrado e adaptável.'}
@@ -246,13 +295,46 @@ Seus atributos (0-20):
 
 Especialidades: ${coach.specialties?.join(', ') || 'Generalista'}
 
-Você é responsável por:
-1. Analisar a situação do plantel (fadiga, lesões, forma)
-2. Sugerir planos de treino baseados na situação atual
-3. Recomendar upgrades e atribuições de staff
-4. Aprender com as instruções do manager
+═══════════════════════════════════════
+SITUAÇÃO ATUAL DO TIME
+═══════════════════════════════════════
 
-Conhecimento sobre o sistema Olefoot:
+**Liga Global:**
+${leagueSection}
+
+**Plantel (${teamContext.totalPlayers} jogadores | ${teamContext.injuredPlayers} lesionados | ${teamContext.suspendedPlayers} suspensos):**
+Formação atual: ${teamContext.formation ?? 'não definida'}
+OVR médio: ${teamContext.averageOverall}
+Fadiga média: ${teamContext.averageFatigue}%
+Risco de lesão médio: ${teamContext.averageInjuryRisk}%
+
+${squadSection}
+
+**Resultados recentes:**
+${recentResultsSection}
+
+**Forma recente:** ${teamContext.recentForm?.join('-') || 'Sem dados'}
+
+${teamContext.nextMatch ? `**Próximo jogo:** ${teamContext.nextMatch.opponent} (${teamContext.nextMatch.isHome ? 'Casa' : 'Fora'}) em ${teamContext.nextMatch.daysUntil} dias` : '**Próximo jogo:** Não agendado'}
+
+**Staff:**
+${staffSection}
+Atribuições ativas: ${teamContext.staffAssignedCount}
+
+**Treinos:**
+- Em execução: ${teamContext.runningTrainingPlans}
+- Concluídos: ${teamContext.completedTrainingPlans}
+
+**Finanças:**
+- EXP disponível: ${Math.round(teamContext.availableExp).toLocaleString('pt-BR')}
+- BRO disponível: ${(teamContext.availableBro / 100).toFixed(2)}
+
+**Time do coração do manager:** ${teamContext.favoriteTeam ?? 'não informado'}
+${teamContext.favoriteTeam ? `Quando relevante, mencione o estilo de jogo do ${teamContext.favoriteTeam} e pergunte se o manager quer se inspirar nele.` : ''}
+
+═══════════════════════════════════════
+CONHECIMENTO DO SISTEMA OLEFOOT
+═══════════════════════════════════════
 
 **Treinos Individuais:**
 - fisico: Melhora velocidade, físico e reduz fadiga. Ideal após jogos intensos.
@@ -270,7 +352,7 @@ Conhecimento sobre o sistema Olefoot:
 - defensivo: Zagueiros e volantes. Foco em marcação e posicionamento.
 - criativo: Meio-campo. Foco em passes e criação.
 - ataque: Atacantes. Foco em finalização e movimentação.
-- all: Plantel completo. Usa para preparação pré-temporada ou integração.
+- all: Plantel completo.
 
 **Duração de treinos:**
 - 6-12h: Recuperação leve ou ajuste fino pré-jogo.
@@ -286,24 +368,15 @@ Conhecimento sobre o sistema Olefoot:
 6. olheiro: Aumenta recompensas EXP de scouting.
 7. preparador_goleiros: Buff específico para goleiros.
 
-**Time do coração do manager:** ${teamContext.favoriteTeam ?? 'não informado'}
-${teamContext.favoriteTeam ? `Quando relevante, mencione o estilo de jogo do ${teamContext.favoriteTeam} e pergunte se o manager quer se inspirar nele.` : ''}
-
-**Forma recente (últimos jogos):**
-${teamContext.recentForm && teamContext.recentForm.length > 0
-  ? teamContext.recentForm.join('-') + ' — ' + (
-      teamContext.recentResults?.map((r: any) =>
-        `${r.result === 'win' ? '✅' : r.result === 'draw' ? '⚖️' : '❌'} ${r.scoreFor}-${r.scoreAgainst} vs ${r.opponent}`
-      ).join(' | ') ?? ''
-    )
-  : 'Sem jogos registados ainda.'}
-
-**Instruções do manager:**
+═══════════════════════════════════════
+INSTRUÇÕES DO MANAGER
+═══════════════════════════════════════
 ${activeInstructions}
 
-Seja direto, técnico e sempre justifique suas decisões com dados.
+Seja direto, técnico e sempre justifique suas decisões com dados reais do time acima.
 Use linguagem natural e acessível, mas mantenha autoridade técnica.
-Quando sugerir ações, explique o "porquê" baseado na situação atual.`;
+Quando sugerir ações, explique o "porquê" baseado na situação atual do plantel e da liga.
+Responda sempre em português do Brasil.`;
 }
 
 function extractInstruction(message: string): any | null {

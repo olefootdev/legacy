@@ -770,6 +770,15 @@ function CoachInlineChat() {
   const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam);
   const players = useGameStore((s) => s.players);
   const finance = useGameStore((s) => s.finance);
+  const playerHealth = useGameStore((s) => s.playerHealth);
+  const managerTrainingPlans = useGameStore((s) => s.manager?.trainingPlans);
+  const managerStaff = useGameStore((s) => s.manager?.staff);
+  const results = useGameStore((s) => s.results);
+  const form = useGameStore((s) => s.form);
+  const nextFixture = useGameStore((s) => s.nextFixture);
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const club = useGameStore((s) => s.club);
+  const formationScheme = useGameStore((s) => s.manager?.formationScheme);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -795,10 +804,23 @@ function CoachInlineChat() {
   // Monta TeamContext a partir do estado do jogo
   function buildTeamContext(): TeamContext {
     const allPlayers = Object.values(players);
-    const injured = allPlayers.filter((p) => (p.injuryRisk ?? 0) > 80).length;
-    const avgFatigue = allPlayers.length
-      ? allPlayers.reduce((sum, p) => sum + (p.fatigue ?? 0), 0) / allPlayers.length
-      : 0;
+
+    // Saúde dos jogadores via playerHealth (SSOT)
+    let totalFatigue = 0;
+    let totalInjuryRisk = 0;
+    let injuredCount = 0;
+    let suspendedCount = 0;
+    for (const p of allPlayers) {
+      const h = playerHealth?.[p.id];
+      const fatigue = h?.fatigue ?? p.fatigue ?? 0;
+      const injuryRisk = h?.injuryRisk ?? p.injuryRisk ?? 0;
+      totalFatigue += fatigue;
+      totalInjuryRisk += injuryRisk;
+      if ((h?.outForMatches ?? p.outForMatches ?? 0) > 0) injuredCount++;
+      if ((h?.suspendedMatches ?? 0) > 0) suspendedCount++;
+    }
+    const avgFatigue = allPlayers.length ? totalFatigue / allPlayers.length : 0;
+    const avgInjuryRisk = allPlayers.length ? totalInjuryRisk / allPlayers.length : 0;
     const avgOvr = allPlayers.length
       ? allPlayers.reduce((sum, p) => {
           const vals = Object.values(p.attrs);
@@ -806,22 +828,125 @@ function CoachInlineChat() {
         }, 0) / allPlayers.length
       : 0;
 
+    // Squad resumido (top 18 por OVR)
+    const squadList = [...allPlayers]
+      .sort((a, b) => {
+        const ovrA = Object.values(a.attrs).reduce((s: number, v) => s + (v as number), 0) / Object.values(a.attrs).length;
+        const ovrB = Object.values(b.attrs).reduce((s: number, v) => s + (v as number), 0) / Object.values(b.attrs).length;
+        return ovrB - ovrA;
+      })
+      .slice(0, 18)
+      .map((p) => {
+        const h = playerHealth?.[p.id];
+        const fatigue = h?.fatigue ?? p.fatigue ?? 0;
+        const injured = (h?.outForMatches ?? p.outForMatches ?? 0) > 0;
+        const vals = Object.values(p.attrs);
+        const pOvr = Math.round(vals.reduce((a: number, b) => a + (b as number), 0) / vals.length);
+        return { name: p.name, pos: p.pos, ovr: pOvr, fatigue: Math.round(fatigue), injured, age: p.age };
+      });
+
+    // Staff
+    const staffState = managerStaff;
+    const staffLevels = staffState?.roles ?? ({} as any);
+    const staffAssignedCount = staffState
+      ? Object.values(staffState.assignedByPlayer).reduce((sum, arr) => sum + arr.length, 0)
+      : 0;
+
+    // Treinos
+    const trainingPlans = managerTrainingPlans ?? [];
+    const runningTrainingPlans = trainingPlans.filter((t) => t.status === 'running').length;
+    const completedTrainingPlans = trainingPlans.filter((t) => t.status === 'completed').length;
+
+    // Próximo jogo
+    let nextMatch: TeamContext['nextMatch'] | undefined;
+    if (nextFixture) {
+      nextMatch = {
+        opponent: nextFixture.opponent?.name ?? nextFixture.opponent?.shortName ?? 'Adversário',
+        isHome: nextFixture.isHome ?? true,
+        daysUntil: 0,
+      };
+    }
+
+    // Resultados recentes
+    const last5 = results.slice(-5);
+    const recentResults = last5.map((r) => ({
+      opponent: r.home === (club?.name ?? '') ? r.away : r.home,
+      result: r.result as 'win' | 'draw' | 'loss',
+      scoreFor: r.result === 'win' ? Math.max(r.scoreHome, r.scoreAway) : r.result === 'loss' ? Math.min(r.scoreHome, r.scoreAway) : r.scoreHome,
+      scoreAgainst: r.result === 'win' ? Math.min(r.scoreHome, r.scoreAway) : r.result === 'loss' ? Math.max(r.scoreHome, r.scoreAway) : r.scoreAway,
+    }));
+    const recentForm = form.slice(-5) as Array<'W' | 'D' | 'L'>;
+
+    // Liga Global MVP
+    let leaguePosition: number | undefined;
+    let leaguePoints: number | undefined;
+    let leagueDivision: number | undefined;
+    let leagueMatchesPlayed: number | undefined;
+    let leagueWins: number | undefined;
+    let leagueDraws: number | undefined;
+    let leagueLosses: number | undefined;
+    let leagueGoalsFor: number | undefined;
+    let leagueGoalsAgainst: number | undefined;
+    let leagueSeasonName: string | undefined;
+    let leagueStatus: string | undefined;
+    let leagueRecentForm: Array<'W' | 'D' | 'L'> | undefined;
+
+    if (globalLeagueMVP) {
+      leagueStatus = globalLeagueMVP.status;
+      leagueSeasonName = globalLeagueMVP.seasonId;
+      // Encontra o time do manager pelo nome do clube
+      const myTeam = globalLeagueMVP.teams.find(
+        (t) => t.clubName === (club?.name ?? '')
+      );
+      if (myTeam) {
+        leaguePosition = myTeam.position;
+        leaguePoints = myTeam.points;
+        leagueDivision = myTeam.division;
+        leagueMatchesPlayed = myTeam.matchesPlayed;
+        leagueWins = myTeam.wins;
+        leagueDraws = myTeam.draws;
+        leagueLosses = myTeam.losses;
+        leagueGoalsFor = myTeam.goalsFor;
+        leagueGoalsAgainst = myTeam.goalsAgainst;
+        leagueRecentForm = myTeam.recentForm as Array<'W' | 'D' | 'L'>;
+      }
+    }
+
     return {
       totalPlayers: allPlayers.length,
-      injuredPlayers: injured,
-      suspendedPlayers: 0,
+      injuredPlayers: injuredCount,
+      suspendedPlayers: suspendedCount,
       averageFatigue: Math.round(avgFatigue),
-      averageInjuryRisk: Math.round(avgFatigue * 0.6),
+      averageInjuryRisk: Math.round(avgInjuryRisk),
       averageOverall: Math.round(avgOvr),
-      staffLevels: {} as any,
+      squadList,
+      formation: formationScheme ?? undefined,
+      staffLevels,
       staffSlotsAvailable: 0,
-      staffAssignedCount: 0,
-      runningTrainingPlans: 0,
-      completedTrainingPlans: 0,
+      staffAssignedCount,
+      runningTrainingPlans,
+      completedTrainingPlans,
       trainingCenterLevel: 1,
       availableExp: finance.ole ?? 0,
       availableBro: finance.broCents ?? 0,
       favoriteTeam: favoriteRealTeam?.name,
+      nextMatch,
+      recentResults,
+      recentForm,
+      leaguePosition,
+      leaguePoints,
+      leagueDivision,
+      leagueMatchesPlayed,
+      leagueWins,
+      leagueDraws,
+      leagueLosses,
+      leagueGoalsFor,
+      leagueGoalsAgainst,
+      leagueSeasonName,
+      leagueStatus,
+      leagueRecentForm,
+      clubName: club?.name,
+      managerName: undefined,
     };
   }
 
