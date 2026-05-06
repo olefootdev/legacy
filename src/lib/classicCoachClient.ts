@@ -40,6 +40,8 @@ export interface ClassicCoachSnapshot {
     confidence: number;
     onFire?: boolean;
     isStar?: boolean;
+    /** Estado mental derivado (FSM Light) — informa o tom da leitura. */
+    mental?: 'idle' | 'aware' | 'engaged' | 'anxious' | 'on_fire' | 'recovering';
   }>;
   lastEvent?: { type: string; playerName?: string; minute: number };
   storyBeats?: string[];

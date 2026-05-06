@@ -32,8 +32,13 @@ interface ClassicSnapshot {
   passStyle: 'TIKTAK' | 'LONGO' | 'LATERAL' | 'COUNTER';
   mentalidade: 'DEFENSIVO' | 'EQUILIBRADO' | 'OFENSIVO';
   activeSkills: string[];     // ['counter', 'press', ...]
-  /** Top 3 jogadores do HOME por relevância (onFire, fadiga crítica, ou MVP). */
-  keyPlayers: Array<{ name: string; role: string; archetype: string; ovr: number; fatigue: number; confidence: number; onFire?: boolean; isStar?: boolean }>;
+  /** Top 3 jogadores do HOME por relevância (onFire, fadiga crítica, MVP, FSM engaged). */
+  keyPlayers: Array<{
+    name: string; role: string; archetype: string; ovr: number;
+    fatigue: number; confidence: number;
+    onFire?: boolean; isStar?: boolean;
+    mental?: 'idle' | 'aware' | 'engaged' | 'anxious' | 'on_fire' | 'recovering';
+  }>;
   /** Última ação relevante. */
   lastEvent?: { type: string; playerName?: string; minute: number };
   /** Eventos cumulativos: gols, viradas, momentos críticos. */
@@ -78,6 +83,9 @@ Quando o snapshot incluir "Momentos da partida", REFERENCIE pelo menos um deles 
   - "Eles voltaram a pressionar como tinham feito no 1º tempo"
 Trate o histórico como um técnico que LEMBRA o jogo, não como um robô que lê stats. Não cite TODOS os momentos — pega o mais relevante pra sustentar sua leitura.
 
+ESTADO MENTAL DOS JOGADORES (FSM):
+Tags como [ENGAGED], [ANXIOUS], [ON FIRE], [RECOVERING] indicam o momento mental do jogador. Use isso pra dar profundidade: jogador ANXIOUS está sob pressão (sugere passe rápido, troca, ou apoio). ENGAGED está dominando o jogo (deixa ele com a bola). ON FIRE é decisão de ataque. RECOVERING precisa de tempo. Cite na reading quando for relevante: "P. MORAES está engaged — bola passa por ele" ou "GOMES anxious depois de errar — precisa de apoio".
+
 NÃO ESCREVA: chat, saudações, "Olá manager", explicações longas, markdown.
 Responda APENAS o JSON.`;
 
@@ -89,7 +97,12 @@ Mentalidade ativa: ${snapshot.mentalidade} · Tipo de passe: ${snapshot.passStyl
 ${snapshot.activeSkills.length > 0 ? `Skills ativas: ${snapshot.activeSkills.join(', ')}` : 'Nenhuma skill ativa'}
 
 Jogadores-chave (HOME):
-${snapshot.keyPlayers.map(p => `- ${p.name} (${p.role}, ${p.archetype}, OVR ${p.ovr}): fadiga ${p.fatigue}%, confiança ${p.confidence}%${p.onFire ? ' [ON FIRE]' : ''}${p.isStar ? ' [STAR]' : ''}`).join('\n')}
+${snapshot.keyPlayers.map(p => {
+  const mentalTag = p.mental && p.mental !== 'idle' && p.mental !== 'aware'
+    ? ` [${p.mental.toUpperCase().replace('_', ' ')}]`
+    : '';
+  return `- ${p.name} (${p.role}, ${p.archetype}, OVR ${p.ovr}): fadiga ${p.fatigue}%, confiança ${p.confidence}%${p.onFire ? ' [ON FIRE]' : ''}${p.isStar ? ' [STAR]' : ''}${mentalTag}`;
+}).join('\n')}
 
 ${snapshot.lastEvent ? `Última ação: ${snapshot.lastEvent.type}${snapshot.lastEvent.playerName ? ` por ${snapshot.lastEvent.playerName}` : ''} aos ${snapshot.lastEvent.minute}'` : ''}
 ${snapshot.storyBeats && snapshot.storyBeats.length > 0 ? `Momentos da partida (memória cumulativa, mais antigo → mais recente):\n${snapshot.storyBeats.map(b => `  • ${b}`).join('\n')}` : ''}

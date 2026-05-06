@@ -803,15 +803,18 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         const homeTeamPlayers = snap.players.filter(p => p.team === 'home');
         const keyPlayers = [...homeTeamPlayers]
           .sort((a, b) => {
-            const aS = (a.onFire ? 100 : 0) + (a.isStar ? 80 : 0) + (a.fatigue > 75 ? 60 : 0) + a.confidence * 0.3;
-            const bS = (b.onFire ? 100 : 0) + (b.isStar ? 80 : 0) + (b.fatigue > 75 ? 60 : 0) + b.confidence * 0.3;
+            const aS = (a.onFire ? 100 : 0) + (a.isStar ? 80 : 0) + (a.fatigue > 75 ? 60 : 0) +
+                       (a.mental?.recentInvolvement ?? 0) * 12 + a.confidence * 0.3;
+            const bS = (b.onFire ? 100 : 0) + (b.isStar ? 80 : 0) + (b.fatigue > 75 ? 60 : 0) +
+                       (b.mental?.recentInvolvement ?? 0) * 12 + b.confidence * 0.3;
             return bS - aS;
           })
           .slice(0, 4)
           .map(p => ({
             name: p.shortName, role: p.role, archetype: p.archetype, ovr: p.ovr,
-            fatigue: p.fatigue, confidence: p.confidence,
+            fatigue: Math.round(p.fatigue), confidence: Math.round(p.confidence),
             onFire: p.onFire, isStar: p.isStar,
+            mental: deriveMentalState(p, snap.minute), // FSM Light no payload
           }));
 
         const storyBeats = storyBeatsForCoach(matchStoryRef.current, snap.minute);
