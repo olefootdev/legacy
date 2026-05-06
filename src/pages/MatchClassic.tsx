@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClassicMatchScreen } from '@/components/classic/ClassicMatchScreen';
 import { useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import {
   buildClassicTeamFromLineup,
   buildClassicTeamFromSquad,
@@ -24,6 +25,7 @@ export function MatchClassic() {
   const fixture       = useGameStore(s => s.nextFixture);
   const profile       = useGameStore(s => s.userSettings?.managerProfile);
   const leagueSeason  = useGameStore(s => s.leagueSeason);
+  const homeCrestUrl  = useGameStore(s => matchdayHomeCrestUrl(s.userSettings));
 
   const teams = useMemo<{
     home: ClassicPlayer[] | undefined;
@@ -81,6 +83,8 @@ export function MatchClassic() {
         awayTeam:     awayTeamName,
         homeShort:    homeTeamShort,
         awayShort:    awayTeamShort,
+        homeCrestUrl,
+        awayCrestUrl: fixture?.opponent?.supporterCrestUrl ?? null,
         homeManager,
         awayManager:  'CPU',
         round,

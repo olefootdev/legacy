@@ -136,4 +136,7 @@ export interface ClassicMatchConfig {
   /** Iniciais opcionais para os crests; se omitido, derivado do nome. */
   homeShort?: string;
   awayShort?: string;
+  /** Brasão do time do coração (HOME) ou supporter crest (AWAY). */
+  homeCrestUrl?: string | null;
+  awayCrestUrl?: string | null;
 }

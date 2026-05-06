@@ -217,22 +217,43 @@ const T_HERO: React.CSSProperties    = { fontFamily: 'var(--cf-hero)', fontStyle
 const T_BODY: React.CSSProperties    = { fontFamily: 'var(--cf-body)' };
 
 // ─── Crest component (no emoji — Legacy Tech style) ───────────────────────────
-function ClubCrest({ color, initials, side }: { color: string; initials: string; side: 'home' | 'away' }) {
+function ClubCrest({ color, initials, side, crestUrl, scoreEl }: {
+  color: string;
+  initials: string;
+  side: 'home' | 'away';
+  crestUrl?: string | null;
+  scoreEl?: React.ReactNode;
+}) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, minWidth:48 }}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, minWidth:54 }}>
       <div style={{
-        width:42, height:42,
-        borderRadius:'6px 6px 16px 16px',  // shield-ish silhouette
+        width:48, height:48,
+        borderRadius: crestUrl ? 8 : '6px 6px 16px 16px',
         border:`1.5px solid ${color}`,
-        background: side === 'home' ? 'rgba(253,225,0,0.10)' : 'rgba(255,255,255,0.06)',
+        background: crestUrl
+          ? '#000'
+          : side === 'home' ? 'rgba(253,225,0,0.10)' : 'rgba(255,255,255,0.06)',
         display:'flex', alignItems:'center', justifyContent:'center',
+        overflow:'hidden',
         position:'relative',
       }}>
-        <Shield size={20} color={color} strokeWidth={2} fill="none" />
-        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', ...T_DISPLAY, fontSize:9, fontWeight:900, color, letterSpacing:'0.04em' }}>
-          {initials.charAt(0)}
-        </div>
+        {crestUrl ? (
+          <img
+            src={crestUrl}
+            alt={initials}
+            style={{ width:'80%', height:'80%', objectFit:'contain' }}
+            loading="lazy"
+          />
+        ) : (
+          <>
+            <Shield size={22} color={color} strokeWidth={2} fill="none" />
+            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', ...T_DISPLAY, fontSize:10, fontWeight:900, color, letterSpacing:'0.04em' }}>
+              {initials.charAt(0)}
+            </div>
+          </>
+        )}
       </div>
+      {scoreEl}
       <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:800, color:'var(--c-text-primary)', letterSpacing:'0.20em' }}>
         {initials}
       </span>
@@ -780,7 +801,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
         }}
       >
         {/* ── [A] Status bar ─────────────────────────────────────────────── */}
-        <div style={{ height: 22, background: '#0A0A0A', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px' }}>
+        <div style={{ height: 24, background: '#0A0A0A', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 14px' }}>
           <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'flex', alignItems:'center', gap:5 }}>
             <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--c-danger)', display:'inline-block', animation:'c-pulse 1s infinite' }} />
             REC
@@ -788,48 +809,84 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
           <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.18em' }}>
             OLEFOOT · {competition}
           </span>
-          <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-ok)', letterSpacing:'0.16em', display:'flex', alignItems:'center', gap:4 }}>
-            <Wifi size={9} /> ONLINE
-          </span>
+          <button
+            type="button"
+            onClick={onExit}
+            aria-label="Sair da partida"
+            style={{
+              background:'transparent', border:'none', cursor:'pointer',
+              ...T_DISPLAY, fontSize:9, color:'var(--c-danger)', letterSpacing:'0.18em',
+              display:'flex', alignItems:'center', gap:4, padding:'2px 0',
+            }}
+          >
+            <X size={10} strokeWidth={2.5} /> SAIR DA PARTIDA
+          </button>
         </div>
 
-        {/* ── [B] Top bar — clock + crests ─────────────────────────────── */}
+        {/* ── [B] Top bar — placar lateral em Moret + cronômetro Agency ── */}
         <div style={{
-          display:'grid', gridTemplateColumns:'auto 1fr auto',
-          alignItems:'center', padding:'12px 14px', gap:14,
+          display:'grid', gridTemplateColumns:'1fr auto 1fr',
+          alignItems:'center', padding:'14px 16px', gap:12,
           background:'linear-gradient(180deg,#111 0%,#0D0D0D 100%)',
-          borderBottom:'1px solid var(--c-border)', minHeight:104,
-          position:'relative',
+          borderBottom:'1px solid var(--c-border)', minHeight:114,
         }}>
-          {/* HOME crest + initials */}
-          <ClubCrest color="var(--c-team-home)" initials={homeShort} side="home" />
+          {/* HOME — crest + score Moret yellow + initials */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-start', gap:12 }}>
+            <ClubCrest
+              color="var(--c-team-home)"
+              initials={homeShort}
+              side="home"
+              crestUrl={config?.homeCrestUrl}
+              scoreEl={
+                <span style={{ ...T_HERO, fontSize:34, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em' }}>
+                  {score.home}
+                </span>
+              }
+            />
+          </div>
 
-          {/* Center — clock em Moret italic */}
-          <div style={{ textAlign:'center' }}>
+          {/* Center — cronômetro em AGENCY (display) e período sublinhado */}
+          <div style={{ textAlign:'center', minWidth:108 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:4 }}>
               <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.24em' }}>JORNADA {round}</span>
               <span aria-hidden style={{ width:3, height:3, borderRadius:'50%', background:'var(--c-text-muted)' }} />
-              <span
-                title="Tempo comprimido — 90 minutos em 1m30s reais"
-                style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'inline-flex', alignItems:'center', gap:5 }}
-              >
-                <span style={{ width:14, height:1.5, background:'var(--c-accent)', borderRadius:1, transformOrigin:'left center', animation: 'c-tempo-tick 1.4s ease-in-out infinite' }} />
-                TEMPO 36:1
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', display:'inline-flex', alignItems:'center', gap:5 }}>
+                <span style={{ width:12, height:1.5, background:'var(--c-accent)', borderRadius:1, transformOrigin:'left center', animation:'c-tempo-tick 1.4s ease-in-out infinite' }} />
+                36:1
               </span>
             </div>
-            <div style={{ ...T_HERO, fontSize:44, color: extraMinute > 0 ? 'var(--c-danger)' : minute >= 85 ? 'var(--c-danger)' : 'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em', transition:'color 0.5s' }}>
+            <div style={{
+              ...T_DISPLAY,
+              fontSize:42, fontWeight:900,
+              color: extraMinute > 0 || minute >= 85 ? 'var(--c-danger)' : 'var(--c-text-primary)',
+              lineHeight:1, letterSpacing:'0.04em',
+              transition:'color 0.5s',
+              fontVariantNumeric:'tabular-nums',
+            }}>
               {extraMinute > 0
                 ? <>{padTime(extraMinute > HALF1_EXTRA ? HALF2_END : HALF1_END)}<span style={{ fontSize:22, opacity:0.7 }}>+{extraMinute}</span></>
-                : <>{padTime(Math.min(minute, period === '2º TEMPO' ? HALF2_END : HALF1_END))}<span style={{ fontSize:28, opacity:0.6 }}>'</span></>
+                : <>{padTime(Math.min(minute, period === '2º TEMPO' ? HALF2_END : HALF1_END))}<span style={{ fontSize:24, opacity:0.6, marginLeft:2 }}>'</span></>
               }
             </div>
-            <div style={{ display:'inline-block', ...T_DISPLAY, fontSize:11, fontWeight:700, color:'var(--c-text-primary)', borderBottom:'2px solid var(--c-accent)', paddingBottom:2, marginTop:5, letterSpacing:'0.18em' }}>
+            <div style={{ display:'inline-block', ...T_DISPLAY, fontSize:10, fontWeight:700, color:'var(--c-text-primary)', borderBottom:'2px solid var(--c-accent)', paddingBottom:2, marginTop:6, letterSpacing:'0.18em' }}>
               {period}
             </div>
           </div>
 
-          {/* AWAY crest + initials */}
-          <ClubCrest color="var(--c-team-away)" initials={awayShort} side="away" />
+          {/* AWAY — score Moret yellow + crest + initials */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:12 }}>
+            <ClubCrest
+              color="var(--c-team-away)"
+              initials={awayShort}
+              side="away"
+              crestUrl={config?.awayCrestUrl}
+              scoreEl={
+                <span style={{ ...T_HERO, fontSize:34, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em' }}>
+                  {score.away}
+                </span>
+              }
+            />
+          </div>
         </div>
 
         {/* ── [C] Campo tático estático ──────────────────────────────────
@@ -1015,18 +1072,6 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
             </div>
           )}
 
-          {/* Field labels */}
-          <div style={{ position:'absolute', top:8, left:8, background:'rgba(0,0,0,0.65)', border:'1px solid var(--c-border)', borderRadius:4, ...T_DISPLAY, fontSize:9, padding:'4px 9px', color:'var(--c-text-primary)', display:'flex', alignItems:'center', gap:6, letterSpacing:'0.16em' }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--c-danger)', display:'inline-block', animation:'c-pulse 1s infinite' }} />
-            REC · ACTION MOTION
-          </div>
-          <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,0.65)', border:'1px solid var(--c-accent)', borderRadius:4, ...T_DISPLAY, fontSize:9, padding:'4px 9px', color:'var(--c-accent)', letterSpacing:'0.16em', display:'flex', alignItems:'center', gap:4 }}>
-            FOCO ATAQUE <ChevronRight size={11} />
-          </div>
-          <div style={{ position:'absolute', bottom:14, right:8, background:'rgba(0,0,0,0.65)', border:'1px solid var(--c-border)', borderRadius:4, ...T_DISPLAY, fontSize:9, padding:'4px 9px', color:'var(--c-accent)', letterSpacing:'0.12em', display:'flex', alignItems:'center', gap:4 }}>
-            1X <ChevronRight size={11} />
-          </div>
-
           {/* Mini heatmap */}
           <div style={{ position:'absolute', bottom:20, left:8, width:80, height:60, background:'rgba(0,0,0,0.75)', border:'1px solid var(--c-border)', borderRadius:4, overflow:'hidden' }}>
             <canvas ref={miniCanvasRef} width={80} height={60} style={{ position:'absolute', top:0, left:0 }} />
@@ -1039,16 +1084,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, onExit }:
           </div>
         </div>
 
-        {/* ── [D] Placar expandido — team names em Moret · sem glow ───── */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', background:'var(--c-bg-surface)', borderBottom:'1px solid var(--c-border)', gap:12 }}>
-          <span style={{ ...T_HERO, fontSize:26, color:'var(--c-text-primary)', lineHeight:1, letterSpacing:'-0.02em', flex:1 }}>{homeTeam}</span>
-          <div style={{ display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-            <span style={{ ...T_HERO, fontSize:48, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em' }}>{score.home}</span>
-            <span style={{ fontFamily:'var(--cf-body)', fontSize:20, color:'var(--c-text-sec)', lineHeight:1 }}>—</span>
-            <span style={{ ...T_HERO, fontSize:48, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.04em' }}>{score.away}</span>
-          </div>
-          <span style={{ ...T_HERO, fontSize:26, color:'var(--c-text-primary)', lineHeight:1, letterSpacing:'-0.02em', flex:1, textAlign:'right' }}>{awayTeam}</span>
-        </div>
+        {/* (Placar expandido removido — score agora vive nos crests laterais)  */}
 
         {/* ── Vitrines do museu vivo: cards modulares com rail amarelo ──── */}
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:'12px 12px 4px' }}>
