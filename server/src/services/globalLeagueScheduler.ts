@@ -745,6 +745,40 @@ async function persistTeamsAndState(state: LeagueState): Promise<void> {
   }
 }
 
+/**
+ * Recuperação de inconsistência: se current_round = N mas rodada N-1 ainda
+ * está 'live', o scheduler reiniciou durante aquela rodada. Finaliza N-1
+ * antes de continuar para evitar o travamento que ocorreu em 2026-05-06.
+ */
+async function recoverStaleRounds(
+  state: LeagueState,
+  rounds: Round[],
+  currentRoundNumber: number,
+  applyResults: (teams: GlobalTeam[], fixtures: Fixture[]) => GlobalTeam[],
+  setCurrentRound: (n: number | undefined) => void,
+  nowMs: number,
+): Promise<boolean> {
+  const stale = rounds.filter(
+    r => r.roundNumber < currentRoundNumber && r.status === 'live'
+  );
+  if (stale.length === 0) return false;
+
+  for (const round of stale) {
+    console.warn(`[scheduler] RECOVERY: finalizando rodada ${round.kind} ${round.roundNumber} travada em 'live'`);
+    round.fixtures = round.fixtures.map(f => {
+      const goals = f.events.filter(e => e.type === 'goal');
+      const scoreHome = goals.filter(e => e.side === 'home').length;
+      const scoreAway = goals.filter(e => e.side === 'away').length;
+      return { ...f, currentMinute: 90, scoreHome, scoreAway, status: 'finished' as FixtureStatus, finishedAtMs: nowMs };
+    });
+    round.status = 'finished';
+    round.finishedAtMs = nowMs;
+    state.teams = applyResults(state.teams, round.fixtures);
+    await persistRound(state, round, { persistTeams: true });
+  }
+  return true;
+}
+
 /** Tick principal — avança o estado da liga */
 async function tick(): Promise<void> {
   const state = await loadState();
@@ -757,6 +791,9 @@ async function tick(): Promise<void> {
 
   // ─── Playoffs ────────────────────────────────────────────────────────
   if (state.status === 'playoffs' && state.currentPlayoffRound) {
+    // Recuperar rodadas anteriores travadas em 'live' antes de avançar
+    if (await recoverStaleRounds(state, state.playoffRounds, state.currentPlayoffRound, applyPlayoffResults, (n) => { state.currentPlayoffRound = n; }, nowMs)) return;
+
     const round = state.playoffRounds.find(r => r.roundNumber === state.currentPlayoffRound);
     if (round) {
       const changed = await processRound(
@@ -776,6 +813,9 @@ async function tick(): Promise<void> {
 
   // ─── Liga oficial ────────────────────────────────────────────────────
   if (state.status === 'active' && state.currentLeagueRound) {
+    // Recuperar rodadas anteriores travadas em 'live' antes de avançar
+    if (await recoverStaleRounds(state, state.leagueRounds, state.currentLeagueRound, applyLeagueResults, (n) => { state.currentLeagueRound = n; }, nowMs)) return;
+
     const round = state.leagueRounds.find(r => r.roundNumber === state.currentLeagueRound);
     if (round) {
       const changed = await processRound(
