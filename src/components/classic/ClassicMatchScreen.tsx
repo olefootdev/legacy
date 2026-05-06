@@ -377,6 +377,21 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [possession, setPossession] = useState<'home' | 'away'>('home');
   const [passStyle, setPassStyle] = useState<import('@/engine/classic/types').PassStyle>('TIKTAK');
   const [skills, setSkills]   = useState<SkillEntry[]>(SKILLS_INIT);
+
+  // Refs pra estado quente lido pelo fireEvent — evita que o useCallback
+  // rebuilde a cada tick do clock (minute), o que clobberava o setTimeout.
+  const runningRef = useRef(running);
+  const minuteRef = useRef(minute);
+  const scoreRef = useRef(score);
+  const possessionRef = useRef(possession);
+  const skillsRef = useRef(skills);
+  const passStyleRef = useRef(passStyle);
+  useEffect(() => { runningRef.current = running; }, [running]);
+  useEffect(() => { minuteRef.current = minute; }, [minute]);
+  useEffect(() => { scoreRef.current = score; }, [score]);
+  useEffect(() => { possessionRef.current = possession; }, [possession]);
+  useEffect(() => { skillsRef.current = skills; }, [skills]);
+  useEffect(() => { passStyleRef.current = passStyle; }, [passStyle]);
   const [highlightPlayer, setHighlightPlayer] = useState<ClassicPlayer | null>(null);
   const [coachModal, setCoachModal]     = useState(false);
   const [formationModal, setFormationModal] = useState(false);
@@ -549,12 +564,17 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   }, []);
 
   // ── Game event loop ────────────────────────────────────────────────────────
+  // Lê estado quente via refs — fireEvent é estável (não rebuilda no clock).
   const fireEvent = useCallback(() => {
-    if (!running) return;
+    if (!runningRef.current) return;
 
-    const activeSkills = skills
+    const activeSkills = skillsRef.current
       .filter(s => s.active)
       .map(s => s.id as ManagerSkillId);
+    const minute = minuteRef.current;
+    const score = scoreRef.current;
+    const possession = possessionRef.current;
+    const passStyle = passStyleRef.current;
 
     setPlayers(prev => {
       // ─── KICKOFF: primeiro evento da partida é HOME atacante → meio-campo ─
@@ -738,7 +758,11 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
 
     loopRef.current = setTimeout(fireEvent, interval);
     void lastEventRef; void lastTypeForPause; // not needed — pendingPauseRef é a fonte
-  }, [running, minute, score, possession, skills, passStyle]);
+    // Deps vazias — fireEvent é estável (estado quente vem dos refs acima).
+    // Garante que o useEffect que faz setTimeout(fireEvent, 1200) NÃO seja
+    // re-executado a cada tick do clock (que clobberava o timer).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeNarrativeProfiles]);
 
   useEffect(() => {
     // 1.2s respiro inicial pro DOM montar e jogadores aparecerem.
@@ -1396,14 +1420,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                   <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
                     <div style={{ height:'100%', background: star.fatigue > 70 ? 'var(--c-danger)' : 'var(--c-warning)', borderRadius:1, width:`${star.fatigue}%`, transition:'width 1s' }} />
                   </div>
-                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.fatigue}%</span>
+                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{Math.round(star.fatigue)}%</span>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>CONFIANÇA</span>
                   <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
                     <div style={{ height:'100%', background:'var(--c-ok)', borderRadius:1, width:`${star.confidence}%`, transition:'width 1s' }} />
                   </div>
-                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.confidence}%</span>
+                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{Math.round(star.confidence)}%</span>
                 </div>
               </div>
             </div>
