@@ -1144,151 +1144,204 @@ export function ClassicMatchScreen({ config, onExit }: Props) {
           </div>
         </ModuleCard>
 
-        {/* ── [G] Painel tático — 3 cols (Tipo de Passe · Destaque · Skills) */}
+        {/* ── Jogador em ação — view-player-card pattern, full width ───── */}
+        <ModuleCard eyebrow={star.onFire ? 'JOIA EM CHAMA' : 'JOGADOR EM AÇÃO'} noPadding>
+          <div style={{ display:'grid', gridTemplateColumns:'112px 1fr', minHeight:128 }}>
+            {/* Foto + OVR overlay (pattern do view-player-card) */}
+            <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
+              <img
+                src={avatarUrl(star.name, 200)}
+                alt={star.shortName}
+                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(35%) contrast(1.05)' }}
+              />
+              {/* Vinheta inferior pra dar peso ao texto da posição */}
+              <div aria-hidden style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.55) 100%)' }} />
+              {/* OVR top-left — Moret italic grande, drop-shadow forte */}
+              <div style={{ position:'absolute', top:6, left:8, lineHeight:0.9 }}>
+                <div style={{
+                  ...T_HERO, fontStyle:'italic', fontWeight:700,
+                  fontSize:36, color:'#FFFFFF', letterSpacing:'-0.02em',
+                  textShadow:'0 2px 6px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)',
+                }}>
+                  {star.ovr}
+                </div>
+                <div style={{ ...T_DISPLAY, fontSize:8, color:'rgba(255,255,255,0.85)', letterSpacing:'0.22em', marginTop:1, textShadow:'0 1px 3px rgba(0,0,0,0.8)' }}>
+                  OVR
+                </div>
+              </div>
+              {/* Posição bottom-left em pílula preta */}
+              <div style={{
+                position:'absolute', bottom:6, left:6,
+                background:'rgba(0,0,0,0.85)', padding:'2px 6px',
+                ...T_DISPLAY, fontSize:8, fontWeight:900,
+                color:'var(--c-text-primary)', letterSpacing:'0.18em',
+                borderRadius:2,
+              }}>
+                {star.role}
+              </div>
+              {/* Star MVP top-right */}
+              {star.isStar && (
+                <div style={{
+                  position:'absolute', top:6, right:6,
+                  background:'var(--c-accent)', color:'#0D0D0D',
+                  padding:'2px 5px', borderRadius:2,
+                  ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.16em',
+                  display:'flex', alignItems:'center', gap:3,
+                  boxShadow:'0 0 12px rgba(253,225,0,0.45)',
+                }}>
+                  <Star size={8} fill="currentColor" /> MVP
+                </div>
+              )}
+              {/* OnFire selo top-right (laranja) */}
+              {star.onFire && !star.isStar && (
+                <div style={{
+                  position:'absolute', top:6, right:6,
+                  background:'#FB923C', color:'#0D0D0D',
+                  padding:'2px 5px', borderRadius:2,
+                  ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.14em',
+                  display:'flex', alignItems:'center', gap:3,
+                }}>
+                  <Flame size={8} fill="currentColor" /> CHAMA
+                </div>
+              )}
+            </div>
+
+            {/* Info à direita — eyebrow + nome + rating + stats */}
+            <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', justifyContent:'space-between', minWidth:0 }}>
+              <div>
+                <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.26em', marginBottom:4 }}>
+                  {star.archetype}
+                </div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:6 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.04em', flexShrink:0 }}>
+                    {star.number}
+                  </span>
+                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {star.shortName}
+                  </span>
+                </div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+                  <span style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:26, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em' }}>
+                    {(6.0 + (star.confidence / 100) * 4).toFixed(2)}
+                  </span>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em' }}>RATING</span>
+                </div>
+              </div>
+
+              {/* Stats minimalistas: fadiga + confiança em barras tabulares */}
+              <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:5 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>FADIGA</span>
+                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
+                    <div style={{ height:'100%', background: star.fatigue > 70 ? 'var(--c-danger)' : 'var(--c-warning)', borderRadius:1, width:`${star.fatigue}%`, transition:'width 1s' }} />
+                  </div>
+                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.fatigue}%</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>CONFIANÇA</span>
+                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
+                    <div style={{ height:'100%', background:'var(--c-ok)', borderRadius:1, width:`${star.confidence}%`, transition:'width 1s' }} />
+                  </div>
+                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{star.confidence}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Segundo destaque — em rodapé compacto */}
+          <div style={{
+            display:'grid', gridTemplateColumns:'48px 1fr auto',
+            alignItems:'center', gap:10,
+            padding:'8px 14px',
+            borderTop:'1px solid var(--c-border)',
+            background:'rgba(255,255,255,0.015)',
+          }}>
+            <div style={{ position:'relative', width:48, height:40, borderRadius:3, overflow:'hidden', background:'#000' }}>
+              <img
+                src={avatarUrl(secondStar.name, 80)}
+                alt={secondStar.shortName}
+                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(50%)' }}
+              />
+              <div style={{ position:'absolute', top:2, left:3, ...T_HERO, fontStyle:'italic', fontSize:14, color:'#FFFFFF', lineHeight:1, textShadow:'0 1px 3px rgba(0,0,0,0.95)' }}>
+                {secondStar.ovr}
+              </div>
+            </div>
+            <div>
+              <div style={{ ...T_DISPLAY, fontSize:11, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                {secondStar.number} {secondStar.shortName}
+              </div>
+              <div style={{ ...T_BODY, fontSize:9, color:'var(--c-text-muted)', marginTop:1 }}>
+                {secondStar.role} · {secondStar.archetype}
+              </div>
+            </div>
+            <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.18em' }}>SEGUNDO</span>
+          </div>
+        </ModuleCard>
+
+        {/* ── [G] Operação Tática — agora 2 cols: Tipo de Passe | Skills ─ */}
         <ModuleCard eyebrow="OPERAÇÃO TÁTICA" noPadding>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)' }}>
-          {/* Tipo de Passe — 4 botões distribuídos para alinhar com Destaque */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'10px 8px', display:'flex', flexDirection:'column' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>TIPO DE PASSE</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:4, flex:1 }}>
-              {PASS_STYLES.map(ps => {
-                const isActive = passStyle === ps.id;
-                return (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:'var(--c-border)' }}>
+            {/* Tipo de Passe — só título maior, sem descritivo */}
+            <div style={{ background:'var(--c-bg-surface)', padding:'10px 12px', display:'flex', flexDirection:'column' }}>
+              <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:10 }}>TIPO DE PASSE</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6, flex:1 }}>
+                {PASS_STYLES.map(ps => {
+                  const isActive = passStyle === ps.id;
+                  return (
+                    <button
+                      key={ps.id}
+                      type="button"
+                      onClick={() => { setPassStyle(ps.id); sequenceRef.current = null; }}
+                      style={{
+                        flex:1, width:'100%', padding:'10px 12px',
+                        border: isActive ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
+                        borderLeft: isActive ? '3px solid var(--c-accent)' : '3px solid transparent',
+                        borderRadius:4, background: isActive ? 'rgba(253,225,0,0.08)' : 'transparent',
+                        cursor:'pointer', textAlign:'left',
+                        boxShadow: isActive ? '0 0 14px rgba(253,225,0,0.18)' : undefined,
+                        transition:'all 0.18s',
+                      }}
+                    >
+                      <span style={{ ...T_DISPLAY, fontSize:13, fontWeight:900, color: isActive ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.16em' }}>
+                        {ps.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Skills — mantém ícone + cooldown */}
+            <div style={{ background:'var(--c-bg-surface)', padding:'10px 12px', display:'flex', flexDirection:'column' }}>
+              <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:10 }}>SKILLS</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6, flex:1 }}>
+                {skills.map(sk => (
                   <button
-                    key={ps.id}
+                    key={sk.id}
                     type="button"
-                    onClick={() => { setPassStyle(ps.id); sequenceRef.current = null; }}
+                    onClick={() => toggleSkill(sk.id)}
                     style={{
-                      flex:1, width:'100%', padding:'0 8px',
-                      border: isActive ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
-                      borderLeft: isActive ? '3px solid var(--c-accent)' : '3px solid transparent',
-                      borderRadius:3, background: isActive ? 'rgba(253,225,0,0.07)' : 'transparent',
-                      cursor:'pointer', textAlign:'left',
-                      display:'flex', flexDirection:'column', justifyContent:'center',
+                      flex:1, display:'flex', alignItems:'center', gap:8, width:'100%', padding:'10px 12px',
+                      border: sk.active ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
+                      borderLeft: sk.active ? '3px solid var(--c-accent)' : '3px solid transparent',
+                      borderRadius:4, background: sk.active ? 'rgba(253,225,0,0.08)' : 'transparent',
+                      cursor: sk.remaining > 0 ? 'not-allowed' : 'pointer',
+                      opacity: sk.remaining > 0 ? 0.5 : 1,
+                      color: sk.active ? 'var(--c-accent)' : 'var(--c-text-primary)',
+                      boxShadow: sk.active ? '0 0 14px rgba(253,225,0,0.18)' : undefined,
+                      transition:'all 0.18s',
                     }}
                   >
-                    <div style={{ ...T_DISPLAY, fontSize:9, fontWeight:900, color: isActive ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>
-                      {ps.label}
-                    </div>
-                    <div style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', marginTop:1, lineHeight:1.3 }}>
-                      {ps.desc}
-                    </div>
+                    <SkillIcon icon={sk.icon} />
+                    <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, textAlign:'left', flex:1, letterSpacing:'0.12em', lineHeight:1.2 }}>{sk.label}</span>
+                    <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', flexShrink:0 }}>
+                      {sk.remaining > 0 ? `${sk.remaining}s` : `${sk.cooldown}s`}
+                    </span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Destaque — padrão PlayerCard: [foto | divisor 3px | OVR+nome] */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'10px 8px', display:'flex', flexDirection:'column' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>DESTAQUE</div>
-
-            {/* Card principal — layout horizontal igual ao PlayerCard */}
-            <div style={{
-              display:'grid', gridTemplateColumns:'56px 3px 1fr',
-              minHeight:72, marginBottom:6,
-              border:'1px solid var(--c-border-accent)',
-              borderRadius:4, overflow:'hidden',
-              background:'var(--c-bg-elevated)',
-            }}>
-              {/* Foto */}
-              <div style={{ background:'#0A0A0A', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                <img
-                  src={avatarUrl(star.name, 120)}
-                  alt={star.shortName}
-                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(20%)' }}
-                />
-              </div>
-              {/* Divisor amarelo 3px */}
-              <div style={{ background:'var(--c-accent)' }} />
-              {/* Info + OVR */}
-              <div style={{ display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'6px 8px' }}>
-                <div>
-                  <div style={{
-                    ...T_HERO, fontStyle:'italic', fontWeight:700,
-                    fontSize:15, letterSpacing:'0.01em',
-                    color:'var(--c-text-primary)', lineHeight:1.2,
-                  }}>
-                    {star.shortName}
-                  </div>
-                  <div style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', marginTop:2 }}>
-                    {star.role} · {star.archetype}
-                  </div>
-                </div>
-                <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
-                  <div style={{ lineHeight:1 }}>
-                    <div style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.12em', textTransform:'uppercase' }}>OVR</div>
-                    <div style={{ ...T_HERO, fontStyle:'italic', fontSize:28, color:'var(--c-accent)', lineHeight:1 }}>
-                      {star.ovr}
-                    </div>
-                  </div>
-                  {star.onFire && (
-                    <div style={{ display:'flex', alignItems:'center', gap:2, marginBottom:2 }}>
-                      <Flame size={8} color="#FB923C" fill="#FB923C" />
-                      <span style={{ ...T_DISPLAY, fontSize:7, color:'#FB923C' }}>CHAMA</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Segundo destaque — mesmo padrão, menor */}
-            <div style={{
-              display:'grid', gridTemplateColumns:'40px 3px 1fr',
-              height:48,
-              border:'1px solid var(--c-border)',
-              borderRadius:3, overflow:'hidden',
-              background:'var(--c-bg-elevated)',
-            }}>
-              <div style={{ background:'#0A0A0A', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                <img
-                  src={avatarUrl(secondStar.name, 80)}
-                  alt={secondStar.shortName}
-                  style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering:'pixelated', filter:'grayscale(40%)', opacity:0.85 }}
-                />
-              </div>
-              <div style={{ background:'rgba(253,225,0,0.35)' }} />
-              <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', padding:'4px 8px' }}>
-                <div style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:12, color:'var(--c-text-primary)', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                  {secondStar.shortName}
-                </div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:5, marginTop:1 }}>
-                  <span style={{ ...T_HERO, fontStyle:'italic', fontSize:16, color:'var(--c-accent)', lineHeight:1 }}>{secondStar.ovr}</span>
-                  <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)' }}>{secondStar.role}</span>
-                </div>
+                ))}
               </div>
             </div>
           </div>
-
-          {/* Skills — botões distribuídos para alinhar com Destaque */}
-          <div style={{ background:'var(--c-bg-surface)', padding:'10px 8px', display:'flex', flexDirection:'column' }}>
-            <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:8 }}>SKILLS</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:4, flex:1 }}>
-              {skills.map(sk => (
-                <button
-                  key={sk.id}
-                  type="button"
-                  onClick={() => toggleSkill(sk.id)}
-                  style={{
-                    flex:1, display:'flex', alignItems:'center', gap:5, width:'100%', padding:'0 8px',
-                    border: sk.active ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
-                    borderLeft: sk.active ? '3px solid var(--c-accent)' : '3px solid transparent',
-                    borderRadius:3, background: sk.active ? 'rgba(253,225,0,0.07)' : 'transparent',
-                    cursor: sk.remaining > 0 ? 'not-allowed' : 'pointer',
-                    opacity: sk.remaining > 0 ? 0.55 : 1,
-                    color: sk.active ? 'var(--c-accent)' : 'var(--c-text-primary)',
-                  }}
-                >
-                  <SkillIcon icon={sk.icon} />
-                  <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:700, textAlign:'left', flex:1, letterSpacing:'0.10em', lineHeight:1.3 }}>{sk.label}</span>
-                  <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', flexShrink:0 }}>
-                    {sk.remaining > 0 ? `${sk.remaining}s` : `${sk.cooldown}s ›`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
         </ModuleCard>
 
         {/* ── [H] Subs + Instruções (2 cards lado a lado) ──────────────── */}
