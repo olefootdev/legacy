@@ -55,6 +55,16 @@ export interface GlobalTeam {
   // Forma recente
   recentForm: Array<'W' | 'D' | 'L'>;
 
+  // Estatísticas ALL-TIME — JAMAIS zeram entre temporadas
+  allTimePoints: number;
+  allTimeMatchesPlayed: number;
+  allTimeWins: number;
+  allTimeDraws: number;
+  allTimeLosses: number;
+  allTimeGoalsFor: number;
+  allTimeGoalsAgainst: number;
+  allTimeSeasonsPlayed: number;
+
   // Timestamps
   registeredAt: number;
 }
@@ -103,6 +113,16 @@ export interface GlobalLeagueMVPState {
   promotionPercentage: number; // 10%
   relegationPercentage: number; // 10%
 
+  // Slots fixos por dia (Etapa 2)
+  matchSlots?: string[];        // ['05:30','11:00','15:00','19:00','21:30']
+  slotDurationMin?: number;     // 30
+  currentOlefootDay?: string;   // YYYY-MM-DD UTC
+
+  // Competição longa (Etapa 3) — pontos somam até o fim, all-time perpétuo
+  competitionId?: string;            // 'competition_<ts>'
+  competitionStartedAt?: number;     // epoch ms
+  competitionDurationDays?: number;  // 7
+
   createdAt: number;
   lastUpdated: number;
 }
@@ -148,6 +168,14 @@ export function createGlobalTeam(
     goalsAgainst: 0,
     goalDifference: 0,
     recentForm: [],
+    allTimePoints: 0,
+    allTimeMatchesPlayed: 0,
+    allTimeWins: 0,
+    allTimeDraws: 0,
+    allTimeLosses: 0,
+    allTimeGoalsFor: 0,
+    allTimeGoalsAgainst: 0,
+    allTimeSeasonsPlayed: 0,
     registeredAt: Date.now(),
   };
 }
@@ -296,6 +324,14 @@ export function updatePlayoffStats(
     playoffLosses: team.playoffLosses + (!isWin && !isDraw ? 1 : 0),
     playoffGoalsFor: team.playoffGoalsFor + goalsFor,
     playoffGoalsAgainst: team.playoffGoalsAgainst + goalsAgainst,
+    // ALL-TIME — playoff também conta
+    allTimePoints: (team.allTimePoints ?? 0) + points,
+    allTimeMatchesPlayed: (team.allTimeMatchesPlayed ?? 0) + 1,
+    allTimeWins: (team.allTimeWins ?? 0) + (isWin ? 1 : 0),
+    allTimeDraws: (team.allTimeDraws ?? 0) + (isDraw ? 1 : 0),
+    allTimeLosses: (team.allTimeLosses ?? 0) + (!isWin && !isDraw ? 1 : 0),
+    allTimeGoalsFor: (team.allTimeGoalsFor ?? 0) + goalsFor,
+    allTimeGoalsAgainst: (team.allTimeGoalsAgainst ?? 0) + goalsAgainst,
   };
 }
 
@@ -494,6 +530,14 @@ export function updateLeagueStats(
     goalsAgainst: team.goalsAgainst + goalsAgainst,
     goalDifference: team.goalDifference + (goalsFor - goalsAgainst),
     recentForm: newForm,
+    // ALL-TIME — soma sempre, nunca reseta
+    allTimePoints: (team.allTimePoints ?? 0) + points,
+    allTimeMatchesPlayed: (team.allTimeMatchesPlayed ?? 0) + 1,
+    allTimeWins: (team.allTimeWins ?? 0) + (isWin ? 1 : 0),
+    allTimeDraws: (team.allTimeDraws ?? 0) + (isDraw ? 1 : 0),
+    allTimeLosses: (team.allTimeLosses ?? 0) + (isLoss ? 1 : 0),
+    allTimeGoalsFor: (team.allTimeGoalsFor ?? 0) + goalsFor,
+    allTimeGoalsAgainst: (team.allTimeGoalsAgainst ?? 0) + goalsAgainst,
   };
 }
 
@@ -615,7 +659,7 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
       updatedTeams.push({
         ...team,
         division: newDivision,
-        // Reset stats para nova temporada
+        // Reset stats da temporada para reorganizar divisões
         points: 0,
         matchesPlayed: 0,
         wins: 0,
@@ -627,6 +671,15 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
         recentForm: [],
         position: undefined,
         previousPosition: undefined,
+        // ALL-TIME preservado + +1 temporada concluída
+        allTimePoints: team.allTimePoints ?? 0,
+        allTimeMatchesPlayed: team.allTimeMatchesPlayed ?? 0,
+        allTimeWins: team.allTimeWins ?? 0,
+        allTimeDraws: team.allTimeDraws ?? 0,
+        allTimeLosses: team.allTimeLosses ?? 0,
+        allTimeGoalsFor: team.allTimeGoalsFor ?? 0,
+        allTimeGoalsAgainst: team.allTimeGoalsAgainst ?? 0,
+        allTimeSeasonsPlayed: (team.allTimeSeasonsPlayed ?? 0) + 1,
       });
     });
   }

@@ -64,3 +64,4 @@ GoogleService-Info.plist
 
 # MCP per-user config
 .mcp.json
+scripts/calibration/raw/

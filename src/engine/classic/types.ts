@@ -40,6 +40,7 @@ export type EventType =
   | 'post'        // bola na trave
   | 'wide'        // bola para fora
   | 'rebound'     // sobra após chute
+  | 'blocked'     // chute bloqueado por defensor (calibração real)
   | 'duel';       // duelo defensivo — defensor luta pela bola sem sair do lugar
 
 /**

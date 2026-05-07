@@ -108,8 +108,9 @@ const CSS_VARS = `
 // ─── Constants ────────────────────────────────────────────────────────────────
 // Clock: 1 real second = 1 match minute
 const CLOCK_TICK_MS        = 1000;
-const EVENT_INTERVAL_MIN   = 4000;
-const EVENT_INTERVAL_RANGE = 3000;
+// Pacing arcade: jogadores pensam rápido, jogo flui — 2x mais ágil
+const EVENT_INTERVAL_MIN   = 1500;  // 4000 → 1500 (nova sequência)
+const EVENT_INTERVAL_RANGE = 1200;  // 3000 → 1200 (variação randômica)
 const TRAIL_MAX  = 8;
 const BALL_LERP  = 0.12;
 const FEED_MAX   = 4;
@@ -180,20 +181,15 @@ function drawField(ctx: CanvasRenderingContext2D, W = FIELD_W_LOGIC, H = FIELD_H
   ctx.fillRect(W - 20, H / 2 - 20, 14, 40);
 }
 
-function drawBall(ctx: CanvasRenderingContext2D, ball: BallState, trail: TrailPoint[]) {
+function drawBall(ctx: CanvasRenderingContext2D, _ball: BallState, trail: TrailPoint[]) {
+  // Apenas o rastro fica no canvas (atrás dos tokens, OK).
+  // A bola em si é renderizada num div separado com zIndex alto (ver JSX).
   for (const p of trail) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(253,225,0,${p.opacity * 0.35})`;
+    ctx.fillStyle = `rgba(255,255,255,${p.opacity * 0.45})`;
     ctx.fill();
   }
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, 7, 0, Math.PI * 2);
-  ctx.fillStyle = '#FDE100';
-  ctx.shadowColor = 'rgba(253,225,0,0.9)';
-  ctx.shadowBlur = 14;
-  ctx.fill();
-  ctx.shadowBlur = 0;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -424,6 +420,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   // ── Canvas / animation refs ────────────────────────────────────────────────
   const canvasRef     = useRef<HTMLCanvasElement>(null);
   const miniCanvasRef = useRef<HTMLCanvasElement>(null);
+  const ballDivRef    = useRef<HTMLDivElement>(null);
   const ballRef    = useRef<BallState>({ x: 300, y: 200, targetX: 300, targetY: 200 });
   const trailRef   = useRef<TrailPoint[]>([]);
   const heatRef    = useRef(new HeatmapEngine());
@@ -479,6 +476,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         // Acréscimos 1º tempo: 46, 47, 48 → exibe 45+1, 45+2, 45+3
         if (next > HALF1_END && next <= HALF1_END + HALF1_EXTRA) {
           setExtraMinute(next - HALF1_END);
+        }
+        // 2º tempo normal: 49-90 → reseta acréscimos do 1º tempo
+        if (next > HALF1_END + HALF1_EXTRA && next <= HALF2_END) {
+          setExtraMinute(0);
         }
         // Acréscimos 2º tempo: 91..95 → exibe 90+1..90+5
         if (next > HALF2_END && next <= MATCH_END) {
@@ -596,6 +597,15 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       drawField(ctx);
       drawBall(ctx, { ...ball, y: renderY }, trailRef.current);
 
+      // Ball div — % do tamanho do campo, atualizado direto via DOM (sem re-render)
+      const bd = ballDivRef.current;
+      if (bd) {
+        const leftPct = (ball.x / FIELD_W_LOGIC) * 100;
+        const topPct  = (renderY / FIELD_H_LOGIC) * 100;
+        bd.style.left = `${leftPct}%`;
+        bd.style.top  = `${topPct}%`;
+      }
+
       rafRef.current = requestAnimationFrame(frame);
     }
 
@@ -707,7 +717,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       // Atualiza animação da bola conforme o subtipo do passe
       const passKind: 'curto' | 'rapido' | 'planejado' | 'cruzamento' | 'shot' | 'default' =
         (evt.type === 'goal' || evt.type === 'shot' || evt.type === 'save' ||
-         evt.type === 'post' || evt.type === 'wide' || evt.type === 'rebound')
+         evt.type === 'post' || evt.type === 'wide' || evt.type === 'rebound' || evt.type === 'blocked')
           ? 'shot'
         : evt.passSubtype === 'cruzamento' ? 'cruzamento'
         : evt.passSubtype === 'rapido'     ? 'rapido'
@@ -808,7 +818,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       // Zoom sutil em todo evento de chute — câmera "se aproxima" da bola
       // por ~900ms. Cria tensão visual no momento da finalização.
       if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' ||
-          evt.type === 'post' || evt.type === 'wide') {
+          evt.type === 'post' || evt.type === 'wide' || evt.type === 'blocked') {
         setCameraZoom(true);
         setTimeout(() => setCameraZoom(false), 900);
       }
@@ -842,10 +852,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     })();
 
     if (pendingPauseRef.current) {
-      interval = 3000; // 3 segundos de pensamento
+      interval = 1500; // pausa pós-gol/bola fora — 3s → 1.5s
       pendingPauseRef.current = false;
     } else if (inSequence) {
-      interval = 1200 + Math.random() * 800;
+      interval = 600 + Math.random() * 500;  // 1200-2000 → 600-1100 (rápido, fluido)
     } else {
       interval = EVENT_INTERVAL_MIN + Math.random() * EVENT_INTERVAL_RANGE;
     }
@@ -1437,15 +1447,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               ? 'rgba(255,255,255,0.55)'
               : 'rgba(255,255,255,0.35)';
 
-            const bgColor = isHot
-              ? 'rgba(253,225,0,0.16)'
-              : isEngaged
-              ? 'rgba(253,225,0,0.08)'
-              : isAnxious
-              ? 'rgba(239,68,68,0.08)'
-              : isHL
-              ? 'rgba(255,255,255,0.14)'
-              : 'rgba(255,255,255,0.06)';
+            // Cores do time: HOME = preto com miolo amarelo / AWAY = amarelo com miolo preto
+            const isHome = p.team === 'home';
+            const teamOuter = isHome ? '#0A0A0A' : '#FDE100';
+            const teamInner = isHome ? '#FDE100' : '#0A0A0A';
+            const numberColor = isHome ? '#0A0A0A' : '#FDE100';
+            const bgColor = teamOuter;
 
             const shadow = isHL && !isLegacyTarget && !isHot
               ? '0 0 0 1.5px rgba(255,255,255,0.4)'
@@ -1462,9 +1469,9 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 borderRadius:'50%',
                 border: `1.5px solid ${borderColor}`,
                 background: bgColor,
-                color: 'rgba(255,255,255,0.90)',
+                color: numberColor,
                 display:'flex', alignItems:'center', justifyContent:'center',
-                fontFamily:'var(--cf-body)', fontSize:10, fontWeight:700,
+                fontFamily:'var(--cf-body)', fontSize:10, fontWeight:800,
                 pointerEvents:'none',
                 // Phase 2: micro-movimento do bloco — left/top transitionam suavemente
                 // quando a fase tática do time muda (1.4s para sentir como onda)
@@ -1484,7 +1491,18 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 opacity: p.fatigue > 85 ? 0.7 : 1,
                 zIndex: isLegacyTarget ? 6 : isHL ? 5 : 2,
               }}>
-                {p.number}
+                {/* Círculo interno — cor invertida do time */}
+                <div style={{
+                  width: 16, height: 16,
+                  borderRadius:'50%',
+                  background: teamInner,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize: 9, fontWeight: 800,
+                  color: numberColor,
+                  lineHeight: 1,
+                }}>
+                  {p.number}
+                </div>
                 <span style={{
                   position:'absolute',
                   top:'calc(100% + 2px)',
@@ -1502,6 +1520,24 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               </div>
             );
           })}
+
+          {/* Bola — div absoluto, sempre acima dos tokens */}
+          <div
+            ref={ballDivRef}
+            aria-hidden
+            style={{
+              position:'absolute',
+              left:'50%', top:'50%',
+              width:14, height:14,
+              transform:'translate(-50%,-50%)',
+              borderRadius:'50%',
+              background:'#FFFFFF',
+              boxShadow:'0 0 8px rgba(255,255,255,0.95), 0 0 16px rgba(255,255,255,0.6), 0 1px 2px rgba(0,0,0,0.5)',
+              pointerEvents:'none',
+              zIndex: 9,
+              willChange:'left, top',
+            }}
+          />
 
           {/* Legacy radial pulse */}
           {legacyPulse && (() => {
@@ -1548,15 +1584,6 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               <ChevronDown size={11} style={{ position:'absolute', bottom:-10, left:'50%', transform:'translateX(-50%)', color:'var(--c-accent)' }} />
             </div>
           )}
-
-          {/* Mini heatmap — ZONA QUENTE: campo oculto onde o jogo acontece.
-              Jogadores não aparecem aqui, mas cada evento acumula calor.
-              O manager lê por onde o time está atacando sem ver o campo ao vivo. */}
-          <div style={{ position:'absolute', bottom:20, left:8, width:96, height:72, background:'rgba(0,0,0,0.88)', border:'1px solid rgba(253,225,0,0.30)', borderRadius:4, overflow:'hidden' }}>
-            <canvas ref={miniCanvasRef} width={96} height={72} style={{ position:'absolute', top:0, left:0 }} />
-            {/* Label duplo: título + corredor dominante */}
-            <span style={{ position:'absolute', bottom:3, left:'50%', transform:'translateX(-50%)', ...T_DISPLAY, fontSize:7, color:'rgba(253,225,0,0.70)', letterSpacing:'0.14em', whiteSpace:'nowrap' }}>ZONA QUENTE</span>
-          </div>
 
           {/* Badge de gatilho tático — aparece brevemente no campo */}
           {lastTacticalTrigger && (() => {

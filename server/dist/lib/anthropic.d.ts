@@ -20,8 +20,13 @@ export interface AnthropicCallOptions {
     model: ModelKey;
     /** System prompt — identidade e regras do agente. */
     system: string;
-    /** Conteúdo do usuário — pergunta/contexto. */
+    /** Conteúdo do usuário — pergunta/contexto. Ignorado se `messages` for fornecido. */
     user: string;
+    /** Histórico de conversa nativo da API. Quando fornecido, substitui `user`. */
+    messages?: Array<{
+        role: 'user' | 'assistant';
+        content: string;
+    }>;
     /** Máximo de tokens de resposta. Default 1024. */
     maxTokens?: number;
     /** Criatividade 0.0–1.0. Default 0.7 pra narrativa; use 0.3 pra JSON estrito. */

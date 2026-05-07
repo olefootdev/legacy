@@ -2,7 +2,8 @@ import type { ClassicPlayer, MatchEvent, EventType, MatchScore, ManagerSkillId, 
 import { ARCHETYPES } from './archetypes';
 import { generateNarration } from './narration';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
-import { decideNextAction, resolveShot, hasCleanShot } from './decisionEngine';
+import { decideNextAction, resolveShot, hasCleanShot, isUnderPressure } from './decisionEngine';
+import { resolvePass } from './resolvePass';
 import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 
 let _eventCounter = 0;
@@ -52,26 +53,31 @@ const ZONE_POS: Record<string, { x: number; y: number }> = {
 // COUNTER: transição ofensiva rápida após recuperação (Transição Ofensiva)
 const PASS_SEQUENCES: Record<PassStyle, string[][]> = {
   TIKTAK: [
-    ['Z1C', 'Z2C', 'Z2HS', 'Z3C', 'Z3HS', 'Z4C'],   // construção central com half-spaces
-    ['Z1C', 'Z2E', 'Z2C', 'Z3C', 'Z3HS', 'Z4C'],    // saída pela esquerda, centraliza
-    ['Z1C', 'Z2D', 'Z2C', 'Z3C', 'Z3HS', 'Z4C'],    // saída pela direita, centraliza
-    ['Z2C', 'Z2HS', 'Z3HS', 'Z3C', 'Z4HS', 'Z4C'],  // half-space dominante
+    ['Z2C', 'Z3C', 'Z4C'],              // construção rápida central (3 toques)
+    ['Z2C', 'Z3HS', 'Z4C'],             // half-space direto
+    ['Z3C', 'Z3HS', 'Z4C'],             // já no meio — 2 toques pro gol
+    ['Z2E', 'Z3C', 'Z4C'],              // saída lateral, centraliza
+    ['Z2D', 'Z3C', 'Z4C'],              // saída lateral direita
+    ['Z1C', 'Z2C', 'Z3C', 'Z4C'],      // construção longa (rara, 4 toques)
+    ['Z3HS', 'Z4HS', 'Z4C'],            // half-space direto ao gol
   ],
   LONGO: [
     ['Z1C', 'Z4C'],           // lançamento direto ao ST
+    ['Z2C', 'Z4C'],           // chutão do meio
     ['Z1C', 'Z3C', 'Z4C'],   // longo com apoio no meio
     ['Z2C', 'Z4E'],           // diagonal longa para a ponta
     ['Z2C', 'Z4D'],           // diagonal longa para a ponta direita
   ],
   LATERAL: [
-    ['Z2C', 'Z2E', 'Z3E', 'Z3C', 'Z4C'],   // amplitude esquerda → centraliza
-    ['Z2C', 'Z2D', 'Z3D', 'Z3C', 'Z4C'],   // amplitude direita → centraliza
-    ['Z3C', 'Z3E', 'Z4E', 'Z4C'],           // cruzamento da esquerda
-    ['Z3C', 'Z3D', 'Z4D', 'Z4C'],           // cruzamento da direita
-    ['Z2E', 'Z2D', 'Z3D', 'Z4C'],           // mudança de corredor (basculamento)
+    ['Z3C', 'Z3E', 'Z4C'],              // cruzamento rápido da esquerda
+    ['Z3C', 'Z3D', 'Z4C'],              // cruzamento rápido da direita
+    ['Z2C', 'Z3E', 'Z4E', 'Z4C'],      // amplitude esquerda
+    ['Z2C', 'Z3D', 'Z4D', 'Z4C'],      // amplitude direita
+    ['Z2E', 'Z3D', 'Z4C'],             // mudança de corredor rápida
   ],
   COUNTER: [
-    ['Z2C', 'Z3C', 'Z4C'],   // transição rápida central
+    ['Z2C', 'Z4C'],           // contra-ataque direto
+    ['Z3C', 'Z4C'],           // transição imediata
     ['Z1C', 'Z3E', 'Z4C'],   // contra-ataque pela esquerda
     ['Z1C', 'Z3D', 'Z4C'],   // contra-ataque pela direita
     ['Z2C', 'Z4HS', 'Z4C'],  // profundidade direta ao half-space
@@ -173,15 +179,15 @@ function chooseEventType(
 
   const r = rng();
   const weights: Array<[EventType, number]> = [
-    ['shot',         cfg.shotFreq * tension * 0.25 * fatigueFactor * confBoost * offensBoost * chainShotBoost * shotZoneBoost],
-    ['pass',         cfg.passFreq * 0.35 * chainPassBoost * stylePassBoost],
-    ['tackle',       cfg.tackleFreq * 0.2 * chainTackleBoost],
-    ['interception', cfg.interceptionFreq * 0.15 * pressBoost],
-    ['cross',        0.1 * crossBoost * styleCrossBoost],
-    ['pressure',     cfg.pressureFreq * 0.1 * pressBoost],
-    ['foul',         cfg.foulFreq * 0.1 * foulBoost],
-    ['corner',       0.04],
-    ['danger',       isFinalizingZone ? 0.12 : 0.02],
+    ['shot',         cfg.shotFreq * tension * 0.35 * fatigueFactor * confBoost * offensBoost * chainShotBoost * shotZoneBoost],  // 0.25→0.35 mais chutes
+    ['pass',         cfg.passFreq * 0.30 * chainPassBoost * stylePassBoost],  // 0.35→0.30 menos passes mortos
+    ['tackle',       cfg.tackleFreq * 0.18 * chainTackleBoost],
+    ['interception', cfg.interceptionFreq * 0.12 * pressBoost],  // menos interceptações (resetam jogo)
+    ['cross',        0.12 * crossBoost * styleCrossBoost],  // mais cruzamentos → mais chutes de área
+    ['pressure',     cfg.pressureFreq * 0.10 * pressBoost],
+    ['foul',         cfg.foulFreq * 0.07 * foulBoost],  // 0.10→0.07 menos paradas
+    ['corner',       0.05],  // mais escanteios
+    ['danger',       isFinalizingZone ? 0.15 : 0.04],  // mais momentos de perigo
   ];
 
   const total = weights.reduce((s, [, w]) => s + w, 0);
@@ -193,15 +199,7 @@ function chooseEventType(
   return 'pass';
 }
 
-function isGoal(player: ClassicPlayer, type: EventType, score: MatchScore, minute: number): boolean {
-  if (type !== 'shot') return false;
-  const cfg = ARCHETYPES[player.archetype];
-  const base = 0.18;
-  const confBonus = player.onFire ? 0.08 : 0;
-  const urgencyBonus = (score.home !== score.away && minute > 75) ? 0.04 : 0;
-  const bonus = cfg.shotFreq * 0.12 + (cfg.stressImmune ? 0.04 : 0) + confBonus + urgencyBonus;
-  return rng() < base + bonus;
-}
+// isGoal removido — substituído por resolveShot() calibrado no decisionEngine.
 
 export interface GenerateEventOptions {
   activeSkills?: ManagerSkillId[];
@@ -260,9 +258,9 @@ export function generateEvent(
   // continua valendo, mas agora intercala com decisões inteligentes.
   const r = rng();
   const defensiveTrigger =
-    chain?.lastType === 'pressure' && r < 0.30 ? 'tackle' :
-    chain?.lastType === 'cross' && r < 0.20 ? 'danger' :
-    activeSkills.includes('press') && r < 0.10 ? 'interception' :
+    chain?.lastType === 'pressure' && r < 0.18 ? 'tackle' :
+    chain?.lastType === 'cross' && r < 0.15 ? 'danger' :
+    activeSkills.includes('press') && r < 0.06 ? 'interception' :
     null;
 
   if (defensiveTrigger) {
@@ -302,10 +300,10 @@ export function generateEvent(
   let receiverId: number | null = decision.target?.id ?? null;
   let ballPos = decision.ballPos;
 
-  // ─── Resolução de chute com diversidade de outcomes ─────────────────────
+  // ─── Resolução de chute com diversidade de outcomes (calibrado) ─────────
   if (type === 'shot') {
     const cleanLine = hasCleanShot(player, allPlayers.filter(p => p.team !== team), attackDir);
-    const outcome = resolveShot(player, cleanLine, minute);
+    const outcome = resolveShot(player, cleanLine, minute, attackDir);
 
     // Linha de gol do oponente
     const oppGoalX = team === 'home' ? FIELD_W_LOGIC : 0;
@@ -317,25 +315,26 @@ export function generateEvent(
       ballPos = goalMouthPos(team);
     } else if (outcome === 'save') {
       type = 'save';
-      // Bola fica no goleiro adversário
       ballPos = oppGK ? { x: oppGK.position.x, y: oppGK.position.y } : goalMouthPos(team);
+    } else if (outcome === 'blocked') {
+      type = 'blocked';
+      // Bloqueado por defensor — bola sobra perto do atirador
+      ballPos = {
+        x: Math.max(20, Math.min(FIELD_W_LOGIC - 20, player.position.x + (rng() - 0.5) * 40)),
+        y: Math.max(20, Math.min(FIELD_H_LOGIC - 20, player.position.y + (rng() - 0.5) * 40)),
+      };
     } else if (outcome === 'post') {
       type = 'post';
-      // Bola na trave — perto do gol, levemente desviado
       ballPos = { x: team === 'home' ? FIELD_W_LOGIC - 35 : 35, y: goalY + (rng() < 0.5 ? -28 : 28) };
     } else if (outcome === 'wide') {
       type = 'wide';
-      // Bola PRA FORA do gol — sai do campo (off-pitch). Visual mostra
-      // a bola indo além da linha de fundo, gerando cobrança de tiro de meta.
-      const offsetY = rng() < 0.5 ? -90 : 90; // sai pra um dos lados
+      const offsetY = rng() < 0.5 ? -90 : 90;
       ballPos = { x: oppGoalX + (team === 'home' ? 10 : -10), y: goalY + offsetY };
     } else if (outcome === 'rebound') {
       type = 'rebound';
-      // Sobra na área — perto da grande área, bola viva
       ballPos = { x: team === 'home' ? FIELD_W_LOGIC - 90 : 90, y: goalY + (rng() - 0.5) * 80 };
     } else if (outcome === 'corner_def') {
       type = 'corner';
-      // Bola no canto do campo
       ballPos = { x: oppGoalX + (team === 'home' ? -10 : 10), y: rng() < 0.5 ? 8 : FIELD_H_LOGIC - 8 };
     }
     receiverId = null;
@@ -344,6 +343,73 @@ export function generateEvent(
   if (type === 'cross') {
     // Cruzamento já tem ballPos do receptor (decideNextAction calculou)
     // Mantém receiverId do decision
+  }
+
+  // ─── Resolução de passe — o passe CHEGA ao receptor? ─────────────────────
+  if ((type === 'pass' || type === 'cross') && decision.target) {
+    const opponents = allPlayers.filter(p => p.team !== team);
+    const passResult = resolvePass(
+      {
+        passer: player,
+        receiver: decision.target,
+        subtype: passSubtype ?? 'curto',
+        distance: Math.hypot(
+          player.position.x - decision.target.position.x,
+          player.position.y - decision.target.position.y,
+        ),
+        underPressure: isUnderPressure(player, opponents),
+        minute,
+      },
+      opponents,
+    );
+
+    if (passResult.outcome === 'intercepted' && passResult.interceptedBy) {
+      // Defensor intercepta — posse inverte
+      const defName = passResult.interceptedBy.shortName;
+      const defTeam = passResult.interceptedBy.team;
+      const defTeamName = defTeam === 'home' ? 'Tigres' : 'Alvorada';
+      const defProfile = narrativeProfiles?.get(passResult.interceptedBy.id);
+      const interceptText = generateNarration(
+        'interception', passResult.interceptedBy.archetype,
+        defName, defTeamName, minute, score, defProfile,
+      );
+      const interceptEvent: MatchEvent = {
+        id: `evt_${++_eventCounter}`,
+        minute,
+        type: 'interception',
+        team: defTeam,
+        playerId: passResult.interceptedBy.id,
+        playerName: defName,
+        archetype: passResult.interceptedBy.archetype,
+        text: interceptText,
+        ballX: passResult.interceptedBy.position.x,
+        ballY: passResult.interceptedBy.position.y,
+        rationale: `Passe ${passSubtype} de ${player.shortName} interceptado por ${defName}`,
+      };
+      return { event: interceptEvent, nextSequence: null, receiverId: passResult.interceptedBy.id };
+    }
+
+    if (passResult.outcome === 'out_of_play') {
+      // Bola sai — lateral para o time adversário (simplificado)
+      const outTeam: 'home' | 'away' = team === 'home' ? 'away' : 'home';
+      const outTeamName = outTeam === 'home' ? 'Tigres' : 'Alvorada';
+      const midY = (player.position.y + (decision.target?.position.y ?? player.position.y)) / 2;
+      const outX = midY < FIELD_H_LOGIC / 2 ? 10 : FIELD_W_LOGIC - 10; // lateral
+      const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
+      const outText = `Passe de ${player.shortName} sai pela lateral — reposição ${outTeamName}.`;
+      const outEvent: MatchEvent = {
+        id: `evt_${++_eventCounter}`,
+        minute,
+        type: 'pass', // lateral é um passe de reposição
+        team: outTeam,
+        text: outText,
+        ballX: Math.max(20, Math.min(FIELD_W_LOGIC - 20, (player.position.x + (decision.target?.position.x ?? player.position.x)) / 2)),
+        ballY: Math.max(20, Math.min(FIELD_H_LOGIC - 20, midY)),
+        rationale: `Passe ${passSubtype} de ${player.shortName} saiu de campo`,
+      };
+      return { event: outEvent, nextSequence: null, receiverId: null };
+    }
+    // passResult.outcome === 'completed' → continua normalmente
   }
 
   const teamName = team === 'home' ? 'Tigres' : 'Alvorada';
@@ -383,7 +449,7 @@ export function generateEvent(
       (p.role === 'CB' || p.role === 'LB' || p.role === 'RB' || p.role === 'DM') &&
       Math.hypot(p.position.x - ballPos.x, p.position.y - ballPos.y) < 60,
     );
-    if (opposingDefenders.length > 0 && rng() < 0.30) {
+    if (opposingDefenders.length > 0 && rng() < 0.18) {
       // Defensor mais próximo entra no duelo
       const defender = opposingDefenders.sort((a, b) =>
         Math.hypot(a.position.x - ballPos.x, a.position.y - ballPos.y) -
@@ -414,7 +480,8 @@ export function generateEvent(
   const sequenceEnded =
     type === 'goal' || type === 'shot' || type === 'save' || type === 'post' ||
     type === 'wide' || type === 'rebound' || type === 'corner' || type === 'cross' ||
-    type === 'tackle' || type === 'interception' || type === 'foul' || type === 'duel' || isLastZone;
+    type === 'tackle' || type === 'interception' || type === 'foul' || type === 'duel' ||
+    type === 'blocked' || isLastZone;
 
   const nextSequence = sequenceEnded
     ? null
@@ -483,7 +550,7 @@ export function applyEventToPlayers(
 
       const onFire = confidence > 85;
       // Mental do ator: envolvimento + tipo do evento
-      const isShootEvent = evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' || evt.type === 'post' || evt.type === 'wide';
+      const isShootEvent = evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' || evt.type === 'post' || evt.type === 'wide' || evt.type === 'blocked';
       const isAggressionFromOpponent = false; // ator gerou, não sofreu
       const mental: PlayerMental = {
         lastInvolvedMinute: evt.minute,
@@ -529,7 +596,7 @@ export function deriveStatsDelta(
   s.corners       = { ...s.corners };
   s.possession    = { ...s.possession };
 
-  if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' || evt.type === 'post' || evt.type === 'wide' || evt.type === 'rebound') {
+  if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' || evt.type === 'post' || evt.type === 'wide' || evt.type === 'rebound' || evt.type === 'blocked') {
     if (isHome) s.shots.home++; else s.shots.away++;
   }
   if (evt.type === 'goal' || evt.type === 'save') {

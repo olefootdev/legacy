@@ -11,7 +11,15 @@ let _client: SupabaseClient | null = null;
 export function getSupabase(): SupabaseClient | null {
   if (_client) return _client;
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-  _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      // Disable navigator.locks in dev to avoid AbortError on Vite hot-reload.
+      // Multiple module reloads compete for the same lock and steal it from each other.
+      lock: import.meta.env.DEV
+        ? (name, acquireTimeout, fn) => fn()
+        : undefined,
+    },
+  });
   return _client;
 }
 

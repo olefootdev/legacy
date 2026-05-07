@@ -17,6 +17,140 @@ import { SCHEDULER_CONFIG } from '@/match/globalRoundScheduler';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
+// ─── Slot helpers (cliente — espelho da Edge Function) ──────────────────────
+function nextSlotKickoffMs(nowMs: number, slots: string[], slotDurationMin: number): number | null {
+  if (!slots || slots.length === 0) return null;
+  const durationMs = slotDurationMin * 60_000;
+  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    const day = new Date(nowMs);
+    day.setUTCDate(day.getUTCDate() + dayOffset);
+    day.setUTCHours(0, 0, 0, 0);
+    const sortedSlots = [...slots].sort();
+    for (const slot of sortedSlots) {
+      const [h, m] = slot.split(':').map(Number);
+      const slotStart = new Date(day);
+      slotStart.setUTCHours(h, m, 0, 0);
+      const start = slotStart.getTime();
+      const end = start + durationMs;
+      if (nowMs >= end) continue;
+      return Math.max(nowMs, start);
+    }
+  }
+  return null;
+}
+
+function isInSlot(nowMs: number, slots: string[], slotDurationMin: number): { active: boolean; slotName: string | null; endMs: number | null } {
+  const durationMs = slotDurationMin * 60_000;
+  for (const slot of slots ?? []) {
+    const [h, m] = slot.split(':').map(Number);
+    const day = new Date(nowMs);
+    day.setUTCHours(h, m, 0, 0);
+    const start = day.getTime();
+    const end = start + durationMs;
+    if (nowMs >= start && nowMs < end) {
+      return { active: true, slotName: slot, endMs: end };
+    }
+  }
+  return { active: false, slotName: null, endMs: null };
+}
+
+function formatCountdown(ms: number): string {
+  if (ms < 0) return '00:00:00';
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function NextSlotBanner({ slots, slotDurationMin, currentDay, competitionStartedAt, competitionDurationDays }: {
+  slots?: string[];
+  slotDurationMin?: number;
+  currentDay?: string;
+  competitionStartedAt?: number;
+  competitionDurationDays?: number;
+}) {
+  const [tick, setTick] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const slotsArr = slots ?? ['05:30', '11:00', '15:00', '19:00', '21:30'];
+  const duration = slotDurationMin ?? 30;
+  const inSlot = isInSlot(tick, slotsArr, duration);
+  const nextMs = nextSlotKickoffMs(tick, slotsArr, duration);
+  const today = currentDay ?? new Date(tick).toISOString().slice(0, 10);
+
+  // Competition window
+  const compEndsMs = competitionStartedAt && competitionDurationDays
+    ? competitionStartedAt + competitionDurationDays * 86_400_000
+    : null;
+  const compMsLeft = compEndsMs ? compEndsMs - tick : null;
+  const compDaysLeft = compMsLeft != null ? Math.max(0, Math.ceil(compMsLeft / 86_400_000)) : null;
+
+  return (
+    <div className="bg-deep-black border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-display uppercase tracking-wider text-white/40">Dia OleFoot</span>
+          <span className="font-mono text-sm text-white/80">{today} UTC</span>
+        </div>
+        <span className="w-px h-8 bg-white/10" />
+        <div className="flex flex-col">
+          <span className="text-[10px] font-display uppercase tracking-wider text-white/40">
+            {inSlot.active ? 'Slot ao vivo' : 'Próximo slot'}
+          </span>
+          {inSlot.active ? (
+            <span className="font-mono text-sm font-bold text-neon-green">
+              {inSlot.slotName} — termina em {formatCountdown((inSlot.endMs ?? tick) - tick)}
+            </span>
+          ) : nextMs ? (
+            <span className="font-mono text-sm font-bold text-neon-yellow">
+              {new Date(nextMs).toISOString().slice(11, 16)} UTC — em {formatCountdown(nextMs - tick)}
+            </span>
+          ) : (
+            <span className="font-mono text-sm text-white/50">—</span>
+          )}
+        </div>
+        {compDaysLeft != null && (
+          <>
+            <span className="w-px h-8 bg-white/10" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-display uppercase tracking-wider text-white/40">Competição termina em</span>
+              <span className="font-mono text-sm font-bold text-neon-yellow">
+                {compDaysLeft}d {compMsLeft != null ? formatCountdown(compMsLeft % 86_400_000) : ''}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 text-[9px] text-white/50 font-mono uppercase tracking-wider">
+        <span>SLOTS:</span>
+        {slotsArr.map((s, i) => {
+          const [h, m] = s.split(':').map(Number);
+          const day = new Date(tick);
+          day.setUTCHours(h, m, 0, 0);
+          const isPast = tick >= day.getTime() + duration * 60_000;
+          const isCurrent = inSlot.slotName === s;
+          return (
+            <span
+              key={i}
+              className={`px-1.5 py-0.5 rounded ${
+                isCurrent ? 'bg-neon-green/20 text-neon-green border border-neon-green/40' :
+                isPast ? 'bg-white/5 text-white/30' :
+                'bg-neon-yellow/10 text-neon-yellow/80 border border-neon-yellow/30'
+              }`}
+            >
+              {s}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // Mock helpers removidos. Server (Railway) agora gera playoffs/rodadas
 // automaticamente quando teams >= min_teams_required no banco.
 // A tela é uma vitrine read-only do estado real, hidratado via Realtime.
@@ -24,67 +158,73 @@ type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: GlobalFixture; index: number }) {
   const lastEvent = fixture.events[fixture.events.length - 1];
   const hasGoal = fixture.scoreHome > 0 || fixture.scoreAway > 0;
+  const isLive = fixture.currentMinute > 0 && fixture.currentMinute < 90;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="sports-panel rounded-lg p-4 hover:border-neon-yellow/30 transition-all group"
+      className={`sports-panel rounded-lg p-4 transition-all group min-w-0 ${
+        isLive
+          ? 'border border-neon-green/40 shadow-[0_0_12px_rgba(0,255,128,0.08)]'
+          : 'hover:border-neon-yellow/30'
+      }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-text-soft uppercase tracking-wider font-display">
+      <div className="flex items-center justify-between mb-3 min-w-0">
+        <span className="text-xs text-text-soft uppercase tracking-wider font-display truncate">
           Divisão {fixture.division}
         </span>
-        <div className="flex items-center gap-2">
-          <Clock className="w-3 h-3 text-neon-green" />
-          <span className="font-serif-hero font-bold text-white text-lg">
+        <div className="flex items-center gap-2 shrink-0">
+          <Clock className={`w-3 h-3 ${isLive ? 'text-neon-green' : 'text-white/40'}`} />
+          <span className={`font-serif-hero font-bold text-lg ${isLive ? 'text-neon-green' : 'text-white/60'}`}>
             {fixture.currentMinute}'
           </span>
+          {isLive && <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />}
         </div>
       </div>
 
       {/* Placar */}
-      <div className="flex items-center justify-between gap-4 mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
         {/* Time Casa */}
-        <div className="flex-1 text-left">
-          <p className="font-serif-hero text-xl font-bold text-white truncate group-hover:text-neon-yellow transition-colors uppercase">
+        <div className="flex-1 text-left min-w-0">
+          <p className="font-serif-hero text-base sm:text-xl font-bold text-white truncate group-hover:text-neon-yellow transition-colors uppercase">
             {fixture.homeTeamName}
           </p>
-          <p className="text-sm text-text-soft mt-1">
-            OVR <span className="text-neon-yellow font-serif-hero font-bold text-xl">{fixture.homeOverall}</span>
+          <p className="text-xs sm:text-sm text-text-soft mt-1">
+            OVR <span className="text-neon-yellow font-serif-hero font-bold text-base sm:text-xl">{fixture.homeOverall}</span>
           </p>
         </div>
 
         {/* Placar Central */}
-        <div className="flex items-center gap-3 px-4 py-2 bg-deep-black rounded-md border border-white/5">
+        <div className="flex items-center gap-2 px-3 py-2 bg-deep-black rounded-md border border-white/5 shrink-0">
           <motion.span
             key={`home-${fixture.scoreHome}`}
             initial={{ scale: hasGoal ? 1.5 : 1 }}
             animate={{ scale: 1 }}
-            className="font-serif-hero text-5xl font-bold text-neon-yellow"
+            className="font-serif-hero text-3xl sm:text-5xl font-bold text-neon-yellow"
           >
             {fixture.scoreHome}
           </motion.span>
-          <span className="text-text-muted text-2xl">×</span>
+          <span className="text-text-muted text-lg sm:text-2xl">×</span>
           <motion.span
             key={`away-${fixture.scoreAway}`}
             initial={{ scale: hasGoal ? 1.5 : 1 }}
             animate={{ scale: 1 }}
-            className="font-serif-hero text-5xl font-bold text-neon-yellow"
+            className="font-serif-hero text-3xl sm:text-5xl font-bold text-neon-yellow"
           >
             {fixture.scoreAway}
           </motion.span>
         </div>
 
         {/* Time Visitante */}
-        <div className="flex-1 text-right">
-          <p className="font-serif-hero text-xl font-bold text-white truncate group-hover:text-neon-yellow transition-colors uppercase">
+        <div className="flex-1 text-right min-w-0">
+          <p className="font-serif-hero text-base sm:text-xl font-bold text-white truncate group-hover:text-neon-yellow transition-colors uppercase">
             {fixture.awayTeamName}
           </p>
-          <p className="text-sm text-text-soft mt-1">
-            OVR <span className="text-neon-yellow font-serif-hero font-bold text-xl">{fixture.awayOverall}</span>
+          <p className="text-xs sm:text-sm text-text-soft mt-1">
+            OVR <span className="text-neon-yellow font-serif-hero font-bold text-base sm:text-xl">{fixture.awayOverall}</span>
           </p>
         </div>
       </div>
@@ -144,18 +284,20 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
       </div>
 
       {/* Tabela */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto -mx-0">
+        <table className="w-full min-w-[340px]">
           <thead className="bg-black/20">
             <tr className="text-left">
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">#</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">Time</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">J</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">V</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">E</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">D</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">SG</th>
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">PTS</th>
+              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">#</th>
+              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60">Time</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">J</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">V</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">E</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">D</th>
+              <th className="px-1 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">SG</th>
+              <th className="px-2 sm:px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/60 text-center">
+                PTS
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -186,9 +328,9 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
                   key={team.id}
                   className={`border-t border-white/5 hover:bg-white/5 transition-colors ${bgClass} ${borderClass}`}
                 >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-white/60">{team.position}</span>
+                  <td className="px-2 sm:px-4 py-2 sm:py-3">
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-xs sm:text-sm text-white/60">{team.position}</span>
                       {positionChange > 0 && (
                         <ArrowUp className="w-3 h-3 text-emerald-400" strokeWidth={3} />
                       )}
@@ -197,34 +339,44 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 max-w-[100px] sm:max-w-none">
                     <div>
-                      <p className="font-display text-sm font-bold text-white">{team.clubName}</p>
-                      <p className="text-xs text-white/40">{team.clubShort}</p>
+                      <p className="font-display text-xs sm:text-sm font-bold text-white truncate">{team.clubName}</p>
+                      <p className="text-[10px] text-white/40">{team.clubShort}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-mono text-sm text-white/80">{team.matchesPlayed}</span>
+                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                    <span className="font-mono text-xs sm:text-sm text-white/80">{team.matchesPlayed}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-mono text-sm text-emerald-400">{team.wins}</span>
+                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                    <span className="font-mono text-xs sm:text-sm text-emerald-400">{team.wins}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-mono text-sm text-amber-400">{team.draws}</span>
+                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                    <span className="font-mono text-xs sm:text-sm text-amber-400">{team.draws}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-mono text-sm text-red-400">{team.losses}</span>
+                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                    <span className="font-mono text-xs sm:text-sm text-red-400">{team.losses}</span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`font-mono text-sm ${
+                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                    <span className={`font-mono text-xs sm:text-sm ${
                       team.goalDifference > 0 ? 'text-emerald-400' :
                       team.goalDifference < 0 ? 'text-red-400' : 'text-white/60'
                     }`}>
                       {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-serif-hero text-base font-bold text-neon-yellow">{team.points}</span>
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
+                    <div className="flex flex-col items-center leading-tight">
+                      <span
+                        className="font-serif-hero text-base sm:text-lg font-bold text-neon-yellow"
+                        title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                      >
+                        {team.allTimePoints ?? 0}
+                      </span>
+                      <span className="font-mono text-[9px] text-white/40 mt-0.5">
+                        {team.points} (rodada)
+                      </span>
+                    </div>
                   </td>
                 </tr>
               );
@@ -300,24 +452,31 @@ function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | u
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="sports-panel rounded-lg p-4 border border-white/10 flex items-center justify-between gap-4"
+      className="sports-panel rounded-lg p-4 border border-white/10"
     >
-      <div className="flex items-center gap-3">
-        {isLive && <Activity className="w-5 h-5 text-neon-green animate-pulse" />}
-        {isFinished && <Trophy className="w-5 h-5 text-neon-yellow" />}
-        {isScheduled && <Clock className="w-5 h-5 text-white/40" />}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">
-            {isLive ? 'Ao Vivo' : isFinished ? 'Próxima rodada em' : 'Kickoff em'}
-          </p>
-          <p className={`font-serif-hero text-2xl font-bold ${isLive ? 'text-neon-green' : isFinished ? 'text-neon-yellow' : 'text-white'}`}>
-            {isLive ? `${round.fixtures[0]?.currentMinute ?? 0}'` : countdown}
-          </p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          {isLive && <Activity className="w-5 h-5 text-neon-green animate-pulse shrink-0" />}
+          {isFinished && <Trophy className="w-5 h-5 text-neon-yellow shrink-0" />}
+          {isScheduled && <Clock className="w-5 h-5 text-white/40 shrink-0" />}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">
+              {isLive ? 'Ao Vivo' : isFinished ? 'Próxima rodada em' : 'Kickoff em'}
+            </p>
+            <p className={`font-serif-hero text-2xl font-bold ${isLive ? 'text-neon-green' : isFinished ? 'text-neon-yellow' : 'text-white'}`}>
+              {isLive ? `${round.fixtures[0]?.currentMinute ?? 0}'` : countdown}
+            </p>
+          </div>
+        </div>
+
+        <div className="text-right">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">Rodada</p>
+          <p className="font-serif-hero text-2xl font-bold text-white">{round.roundNumber}<span className="text-white/30 text-sm">/{totalRounds}</span></p>
         </div>
       </div>
 
-      {/* Progresso das rodadas */}
-      <div className="flex items-center gap-1.5">
+      {/* Progresso das rodadas — linha separada para não comprimir em mobile */}
+      <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-0.5">
         {Array.from({ length: totalRounds }, (_, i) => {
           const r = i + 1;
           const isCurrent = r === round.roundNumber;
@@ -325,7 +484,7 @@ function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | u
           return (
             <div
               key={r}
-              className={`h-1.5 rounded-full transition-all ${
+              className={`h-1.5 rounded-full transition-all shrink-0 ${
                 isDone ? 'w-4 bg-neon-yellow' :
                 isCurrent ? 'w-6 bg-neon-green' :
                 'w-4 bg-white/20'
@@ -333,11 +492,6 @@ function PlayoffRoundStatusBar({ round, totalRounds }: { round: PlayoffRound | u
             />
           );
         })}
-      </div>
-
-      <div className="text-right">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-display">Rodada</p>
-        <p className="font-serif-hero text-2xl font-bold text-white">{round.roundNumber}<span className="text-white/30 text-sm">/{totalRounds}</span></p>
       </div>
     </motion.div>
   );
@@ -416,7 +570,19 @@ function ProjectedDivisionMini({
                     {sg > 0 ? '+' : ''}{sg}
                   </span>
                 </td>
-                <td className="px-2 py-1.5 text-center font-serif-hero font-bold text-neon-yellow">{team.playoffPoints}</td>
+                <td className="px-2 py-1.5 text-center">
+                  <div className="flex flex-col items-center leading-tight">
+                    <span
+                      className="font-serif-hero text-base font-bold text-neon-yellow"
+                      title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                    >
+                      {team.allTimePoints ?? 0}
+                    </span>
+                    <span className="font-mono text-[8px] text-white/40">
+                      {team.playoffPoints} (rodada)
+                    </span>
+                  </div>
+                </td>
               </tr>
             );
           })}
@@ -517,7 +683,7 @@ export default function MatchGlobal() {
     const ready = teamsNow >= minTeams;
 
     return (
-      <div className="mx-auto min-w-0 w-full max-w-4xl px-3 sm:px-4 lg:px-6 py-16 text-center">
+      <div className="mx-auto min-w-0 w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-16 text-center overflow-x-hidden">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -569,9 +735,18 @@ export default function MatchGlobal() {
     const totalRounds = globalLeagueMVP.playoffRounds.length;
 
     return (
-      <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
+      <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-6 md:pb-8">
         {/* Hero */}
-        <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
+        <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
+          {/* Watermark */}
+          <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
+            <span
+              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
+              style={{ fontSize: 'clamp(120px, 24vw, 360px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
+            >
+              GLOBAL
+            </span>
+          </div>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -583,13 +758,23 @@ export default function MatchGlobal() {
             <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
               Liga Global
             </h1>
-            <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-2">
+            <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
+            <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
               {round?.status === 'live' ? 'Ao Vivo Agora' :
                round?.status === 'finished' ? 'Rodada Encerrada' :
                'Aguardando Kickoff'}
             </p>
           </motion.div>
         </section>
+
+        {/* Slot banner — Etapa 2 */}
+        <NextSlotBanner
+          slots={globalLeagueMVP.matchSlots}
+          slotDurationMin={globalLeagueMVP.slotDurationMin}
+          currentDay={globalLeagueMVP.currentOlefootDay}
+          competitionStartedAt={globalLeagueMVP.competitionStartedAt}
+          competitionDurationDays={globalLeagueMVP.competitionDurationDays}
+        />
 
         {/* Status bar da rodada */}
         <PlayoffRoundStatusBar round={round} totalRounds={totalRounds} />
@@ -635,22 +820,42 @@ export default function MatchGlobal() {
   const currentRound = currentLeagueRound;
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
+    <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-6 md:pb-8">
       {/* Hero */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
+      <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
+        {/* Watermark */}
+        <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
+          <span
+            className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
+            style={{ fontSize: 'clamp(120px, 24vw, 360px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
+          >
+            GLOBAL
+          </span>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black/60 mb-4">
+            Liga Global · Temporada 2026
+          </p>
           <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
             Liga LEGACY
           </h1>
-          <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-2">
-            Rodadas a cada 5min · Temporada 2026
+          <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
+          <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
+            Rodadas em slots · Temporada 2026
           </p>
         </motion.div>
       </section>
+
+      {/* Slot banner — Etapa 2 */}
+      <NextSlotBanner
+        slots={globalLeagueMVP.matchSlots}
+        slotDurationMin={globalLeagueMVP.slotDurationMin}
+        currentDay={globalLeagueMVP.currentOlefootDay}
+      />
 
       {/* Filtros */}
       {currentRound && (

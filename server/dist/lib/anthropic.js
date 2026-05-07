@@ -14,7 +14,7 @@ import Anthropic from '@anthropic-ai/sdk';
 // IDs ficam em ENV pra permitir override sem redeploy.
 // Defaults: família Claude 4 (sonnet-4-6 pra qualidade, haiku-4-5 pra custo).
 const DEFAULT_SONNET = 'claude-sonnet-4-6';
-const DEFAULT_HAIKU = 'claude-haiku-4-5-20251001';
+const DEFAULT_HAIKU = 'claude-haiku-4-5';
 export const MODELS = {
     sonnet: process.env.ANTHROPIC_MODEL_SONNET ?? DEFAULT_SONNET,
     haiku: process.env.ANTHROPIC_MODEL_HAIKU ?? DEFAULT_HAIKU,
@@ -54,7 +54,7 @@ export async function callAnthropic(opts) {
             max_tokens: opts.maxTokens ?? 1024,
             temperature: opts.temperature ?? (opts.expectJson ? 0.3 : 0.7),
             system: opts.system,
-            messages: [{ role: 'user', content: opts.user }],
+            messages: opts.messages ?? [{ role: 'user', content: opts.user }],
         }, { signal: abort.signal });
         const text = response.content
             .filter((b) => b.type === 'text')

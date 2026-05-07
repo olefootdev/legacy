@@ -6,10 +6,14 @@ const buckets = new Map();
 export function rateLimit(maxPerMinute) {
     const refillMs = 60_000;
     return async (c, next) => {
-        // Em produção Cloudflare Workers: cf-connecting-ip é confiável (injetado pelo edge)
-        // Em Node local: usar x-forwarded-for apenas se não houver cf-connecting-ip
+        // Prioridade: header injetado por edge confiável → header de proxy →
+        // socket.remoteAddress do Node (dev sem proxy). Cloudflare em prod
+        // sempre injeta cf-connecting-ip; Railway sempre injeta x-forwarded-for.
+        const incoming = c.env?.incoming;
+        const socketIp = incoming?.socket?.remoteAddress;
         const ip = c.req.header('cf-connecting-ip') ??
             c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
+            socketIp ??
             'unknown';
         // Rejeitar se não conseguir identificar IP (previne bypass via header spoofing)
         if (ip === 'unknown') {

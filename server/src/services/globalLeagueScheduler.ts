@@ -97,6 +97,15 @@ interface GlobalTeam {
   registeredAt: number;
   division?: number;
   position?: number;
+  // ALL-TIME — não zera entre temporadas
+  allTimePoints: number;
+  allTimeMatchesPlayed: number;
+  allTimeWins: number;
+  allTimeDraws: number;
+  allTimeLosses: number;
+  allTimeGoalsFor: number;
+  allTimeGoalsAgainst: number;
+  allTimeSeasonsPlayed: number;
 }
 
 interface LeagueState {
@@ -170,15 +179,24 @@ function applyPlayoffResults(teams: GlobalTeam[], fixtures: Fixture[]): GlobalTe
     const won = scored > conceded;
     const drew = scored === conceded;
 
+    const pointsGained = won ? 3 : drew ? 1 : 0;
     return {
       ...team,
       playoffMatchesPlayed: team.playoffMatchesPlayed + 1,
-      playoffPoints: team.playoffPoints + (won ? 3 : drew ? 1 : 0),
+      playoffPoints: team.playoffPoints + pointsGained,
       playoffWins: team.playoffWins + (won ? 1 : 0),
       playoffDraws: team.playoffDraws + (drew ? 1 : 0),
       playoffLosses: team.playoffLosses + (!won && !drew ? 1 : 0),
       playoffGoalsFor: team.playoffGoalsFor + scored,
       playoffGoalsAgainst: team.playoffGoalsAgainst + conceded,
+      // ALL-TIME — playoffs também contam
+      allTimePoints: (team.allTimePoints ?? 0) + pointsGained,
+      allTimeMatchesPlayed: (team.allTimeMatchesPlayed ?? 0) + 1,
+      allTimeWins: (team.allTimeWins ?? 0) + (won ? 1 : 0),
+      allTimeDraws: (team.allTimeDraws ?? 0) + (drew ? 1 : 0),
+      allTimeLosses: (team.allTimeLosses ?? 0) + (!won && !drew ? 1 : 0),
+      allTimeGoalsFor: (team.allTimeGoalsFor ?? 0) + scored,
+      allTimeGoalsAgainst: (team.allTimeGoalsAgainst ?? 0) + conceded,
     };
   });
 }
@@ -196,10 +214,11 @@ function applyLeagueResults(teams: GlobalTeam[], fixtures: Fixture[]): GlobalTea
     const drew = scored === conceded;
     const result: 'W' | 'D' | 'L' = won ? 'W' : drew ? 'D' : 'L';
 
+    const pointsGained = won ? 3 : drew ? 1 : 0;
     return {
       ...team,
       matchesPlayed: team.matchesPlayed + 1,
-      points: team.points + (won ? 3 : drew ? 1 : 0),
+      points: team.points + pointsGained,
       wins: team.wins + (won ? 1 : 0),
       draws: team.draws + (drew ? 1 : 0),
       losses: team.losses + (!won && !drew ? 1 : 0),
@@ -207,6 +226,14 @@ function applyLeagueResults(teams: GlobalTeam[], fixtures: Fixture[]): GlobalTea
       goalsAgainst: team.goalsAgainst + conceded,
       goalDifference: (team.goalsFor + scored) - (team.goalsAgainst + conceded),
       recentForm: [...team.recentForm.slice(-4), result],
+      // ALL-TIME — soma sempre
+      allTimePoints: (team.allTimePoints ?? 0) + pointsGained,
+      allTimeMatchesPlayed: (team.allTimeMatchesPlayed ?? 0) + 1,
+      allTimeWins: (team.allTimeWins ?? 0) + (won ? 1 : 0),
+      allTimeDraws: (team.allTimeDraws ?? 0) + (drew ? 1 : 0),
+      allTimeLosses: (team.allTimeLosses ?? 0) + (!won && !drew ? 1 : 0),
+      allTimeGoalsFor: (team.allTimeGoalsFor ?? 0) + scored,
+      allTimeGoalsAgainst: (team.allTimeGoalsAgainst ?? 0) + conceded,
     };
   });
 }
@@ -258,6 +285,15 @@ async function loadState(): Promise<LeagueState | null> {
     goalDifference: Number(r.goal_difference ?? 0),
     recentForm: (r.recent_form as string[]) ?? [],
     registeredAt: r.registered_at ? new Date(String(r.registered_at)).getTime() : Date.now(),
+    // ALL-TIME — sempre 0 se coluna não existir ainda
+    allTimePoints: Number(r.all_time_points ?? 0),
+    allTimeMatchesPlayed: Number(r.all_time_matches_played ?? 0),
+    allTimeWins: Number(r.all_time_wins ?? 0),
+    allTimeDraws: Number(r.all_time_draws ?? 0),
+    allTimeLosses: Number(r.all_time_losses ?? 0),
+    allTimeGoalsFor: Number(r.all_time_goals_for ?? 0),
+    allTimeGoalsAgainst: Number(r.all_time_goals_against ?? 0),
+    allTimeSeasonsPlayed: Number(r.all_time_seasons_played ?? 0),
   }));
 
   // Indexar eventos por fixture
@@ -450,6 +486,15 @@ async function persistRound(state: LeagueState, round: Round, options: { persist
         goal_difference: t.goalDifference,
         recent_form: t.recentForm,
         registered_at: new Date(t.registeredAt).toISOString(),
+        // ALL-TIME
+        all_time_points: t.allTimePoints ?? 0,
+        all_time_matches_played: t.allTimeMatchesPlayed ?? 0,
+        all_time_wins: t.allTimeWins ?? 0,
+        all_time_draws: t.allTimeDraws ?? 0,
+        all_time_losses: t.allTimeLosses ?? 0,
+        all_time_goals_for: t.allTimeGoalsFor ?? 0,
+        all_time_goals_against: t.allTimeGoalsAgainst ?? 0,
+        all_time_seasons_played: t.allTimeSeasonsPlayed ?? 0,
       })),
       { onConflict: 'id' }
     );
@@ -572,12 +617,31 @@ function teamToLite(t: GlobalTeam): GlobalTeamLite {
     wins: t.wins, draws: t.draws, losses: t.losses,
     goalsFor: t.goalsFor, goalsAgainst: t.goalsAgainst, goalDifference: t.goalDifference,
     recentForm: t.recentForm, registeredAt: t.registeredAt,
+    // ALL-TIME — encaminha entre temporadas
+    allTimePoints: t.allTimePoints,
+    allTimeMatchesPlayed: t.allTimeMatchesPlayed,
+    allTimeWins: t.allTimeWins,
+    allTimeDraws: t.allTimeDraws,
+    allTimeLosses: t.allTimeLosses,
+    allTimeGoalsFor: t.allTimeGoalsFor,
+    allTimeGoalsAgainst: t.allTimeGoalsAgainst,
+    allTimeSeasonsPlayed: t.allTimeSeasonsPlayed,
   };
 }
 
-/** Converte de volta para o formato interno */
+/** Converte de volta para o formato interno (preenche defaults all-time se faltarem) */
 function liteToTeam(l: GlobalTeamLite): GlobalTeam {
-  return l as GlobalTeam;
+  return {
+    ...l,
+    allTimePoints: l.allTimePoints ?? 0,
+    allTimeMatchesPlayed: l.allTimeMatchesPlayed ?? 0,
+    allTimeWins: l.allTimeWins ?? 0,
+    allTimeDraws: l.allTimeDraws ?? 0,
+    allTimeLosses: l.allTimeLosses ?? 0,
+    allTimeGoalsFor: l.allTimeGoalsFor ?? 0,
+    allTimeGoalsAgainst: l.allTimeGoalsAgainst ?? 0,
+    allTimeSeasonsPlayed: l.allTimeSeasonsPlayed ?? 0,
+  } as GlobalTeam;
 }
 
 /** Converte rodada da lib para o formato interno do scheduler */
@@ -739,6 +803,15 @@ async function persistTeamsAndState(state: LeagueState): Promise<void> {
         goals_for: t.goalsFor, goals_against: t.goalsAgainst, goal_difference: t.goalDifference,
         recent_form: t.recentForm,
         registered_at: new Date(t.registeredAt).toISOString(),
+        // ALL-TIME — preserva entre temporadas
+        all_time_points: t.allTimePoints ?? 0,
+        all_time_matches_played: t.allTimeMatchesPlayed ?? 0,
+        all_time_wins: t.allTimeWins ?? 0,
+        all_time_draws: t.allTimeDraws ?? 0,
+        all_time_losses: t.allTimeLosses ?? 0,
+        all_time_goals_for: t.allTimeGoalsFor ?? 0,
+        all_time_goals_against: t.allTimeGoalsAgainst ?? 0,
+        all_time_seasons_played: t.allTimeSeasonsPlayed ?? 0,
       })),
       { onConflict: 'id' }
     );

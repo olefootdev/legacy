@@ -277,28 +277,31 @@ export function decideNextAction(
   // Atacante (zona attack) PRECISA finalizar — não toca pra trás. Meio chuta
   // moderado de fora. Defesa NUNCA chuta.
   let shotProb = 0;
-  if (holderZone === 'attack' && xRel >= 0.55) {
-    // Em terço final adversário, atacante busca chute
-    shotProb = isFinisher ? 0.65
-             : isBoxInvader ? 0.55
-             : isWild ? 0.55
-             : 0.42; // mesmo um ponta "comum" tenta o gol
-    if (cleanShot) shotProb += 0.12;
-    if (underPressure) shotProb -= 0.18;  // pressionado prefere passe rápido
-    if (chainShot) shotProb += 0.20;       // após corner/cross/rebote
-    if (focusBoost) shotProb += 0.15;
-    if (ballHolder.onFire) shotProb += 0.15;
-  } else if (holderZone === 'creative' && xRel >= 0.55) {
-    // Meio na zona final tenta chute moderado, principalmente de fora
+  if (holderZone === 'attack' && xRel >= 0.50) {
+    // Atacante no terço final adversário — QUER chutar
+    shotProb = isFinisher ? 0.85
+             : isBoxInvader ? 0.75
+             : isWild ? 0.72
+             : 0.62;
+    if (cleanShot) shotProb += 0.18;
+    if (underPressure) shotProb -= 0.06;
+    if (chainShot) shotProb += 0.28;
+    if (focusBoost) shotProb += 0.20;
+    if (ballHolder.onFire) shotProb += 0.22;
+    if (xRel >= 0.70) shotProb += 0.18;   // dentro da área = decisão clara
+  } else if (holderZone === 'creative' && xRel >= 0.60) {
+    // SÓ chuta de FORA da área quando claramente no terço final
+    // xRel 0.60 = bola já passou da linha de impedimento (~ borda da área)
     shotProb = isMaestro ? 0.32
-             : isWild ? 0.40
-             : 0.18;
-    if (cleanShot) shotProb += 0.10;
+             : isWild ? 0.45
+             : 0.22;
+    if (cleanShot) shotProb += 0.16;       // só com linha limpa pro gol
+    else shotProb *= 0.40;                  // sem linha limpa, dificilmente
     if (underPressure) shotProb -= 0.10;
-    if (chainShot) shotProb += 0.18;
-    if (focusBoost) shotProb += 0.12;
+    if (chainShot) shotProb += 0.22;
+    if (focusBoost) shotProb += 0.14;
   }
-  // holderZone === 'defense' → shotProb = 0 (zagueiro não chuta)
+  // holderZone === 'defense' → shotProb SEMPRE 0 (zagueiro NÃO chuta no gol)
 
   // Modulação mental do PORTADOR: on_fire arrisca mais, anxious chuta menos
   const holderMental = deriveMentalState(ballHolder, minute);
@@ -315,23 +318,29 @@ export function decideNextAction(
     };
   }
 
-  // ─── GATILHO: Chute obrigatório na zona de ataque ─────────────────────────
-  // Atacante na zona final SEM opção de passe válida → DEVE finalizar.
-  // Evita partidas 0x0 por falta de decisão.
-  if (holderZone === 'attack' && xRel >= 0.60) {
+  // ─── GATILHO: Chute obrigatório no TERÇO FINAL ───────────────────────────
+  // SÓ no terço final claro (xRel >= 0.58) — antes disso, atacante combina
+  // com outros atacantes ou cruza (a lógica de pass abaixo cuida).
+  if (holderZone === 'attack' && xRel >= 0.58) {
     const attackersAhead = teammates.filter(t => {
       const tZone = zoneFromRole(t.role);
       const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
-      return tZone === 'attack' && tXRel >= 0.55 && computeFreedom(t, opponents) > 0.35;
+      const isAhead = (t.position.x - ballHolder.position.x) * attackDir > 20;
+      return tZone === 'attack' && tXRel >= 0.62 && isAhead && computeFreedom(t, opponents) > 0.40;
     });
-    if (attackersAhead.length === 0 || Math.random() < 0.55) {
+
+    const inFlank = ballHolder.position.y < 110 || ballHolder.position.y > 290;
+
+    // Sem atacante mais avançado → ele mesmo finaliza (já está no terço final)
+    if (attackersAhead.length === 0 && !inFlank) {
       return {
         action: 'shot',
         ballPos: goalMouthPos(teamSide),
-        rationale: `${ballHolder.shortName} → CHUTE OBRIGATÓRIO (zona ataque, sem saída)`,
+        rationale: `${ballHolder.shortName} → FINALIZAÇÃO (terço final, sem atacante avante)`,
         tacticalTrigger: 'forced_shot',
       };
     }
+    // Senão: deixa pass logic escolher (cross se na ala, combinação se central)
   }
 
   // (Lógica antiga de duel removida — estava invertida. O duelo é
@@ -366,47 +375,104 @@ export function decideNextAction(
     // ─── BIAS POR ZONA — núcleo do conceito binário ──────────────────────
     const targetZone = zoneFromRole(t.role);
 
-    // DEFESA com posse: prefere passar pra DEFESA (lateral), CRIATIVA (DM/CM),
-    // ATRAI pressão. Evita longas pra ATAQUE diretamente (só sob skill LONGO).
+    // DEFESA com posse: BUILDUP OBRIGATÓRIO. Constrói pela criativa.
+    // Pular pro ataque é PROIBIDO (exceto LONGO ativado).
     if (holderZone === 'defense') {
-      if (targetZone === 'creative') weight *= 1.45;
-      if (targetZone === 'defense') weight *= 1.10;
-      if (targetZone === 'attack' && passStyle !== 'LONGO') weight *= 0.55;
-      if (targetZone === 'attack' && passStyle === 'LONGO') weight *= 1.30;
+      if (targetZone === 'creative') weight *= 1.80;          // canônico — saída pelo meio
+      if (targetZone === 'defense') weight *= 1.15;           // troca lateral pela defesa
+      if (targetZone === 'attack' && passStyle !== 'LONGO') weight *= 0.05;  // PROIBIDO — pular zona
+      if (targetZone === 'attack' && passStyle === 'LONGO') weight *= 1.35;  // só com skill LONGO
     }
 
     // CRIATIVA com posse: É ONDE O JOGO ACONTECE — busca o atacante/ponta
     if (holderZone === 'creative') {
-      if (targetZone === 'attack') weight *= 1.55;     // bola pra frente
+      if (targetZone === 'attack') {
+        weight *= 1.55;
+        // ─── PASSE NA PROFUNDIDADE (through ball) ───────────────────────
+        // Atacante AHEAD com espaço E em zona ofensiva → bola na medida.
+        // Esta é a JOGADA MÁGICA: meio enxerga, atacante corre, gol.
+        const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
+        const isAhead = (t.position.x - ballHolder.position.x) * attackDir > 30;
+        const hasSpace = freedom > 0.55;
+        const inFinalThird = tXRel >= 0.60;
+        if (isAhead && hasSpace && inFinalThird) {
+          weight *= 2.0;  // dobra — esta é a jogada que vira gol
+        }
+      }
       if (targetZone === 'creative') weight *= 1.05;   // troca lateral OK
-      if (targetZone === 'defense') weight *= 0.50;    // só recicla se fechado
+      if (targetZone === 'defense') weight *= 0.40;    // só recicla se realmente fechado
     }
 
-    // ATAQUE com posse: NUNCA toca pra trás (penalidade brutal). Se for passar,
-    // troca com outro atacante OU devolve pra criativa só se SEM linha mesmo.
+    // ATAQUE com posse: NUNCA toca pra trás. Troca com outro atacante OU
+    // devolve pra criativa SÓ se for um meio AVANÇADO (xRel >= 0.55).
     if (holderZone === 'attack') {
-      if (targetZone === 'attack') weight *= 1.35;
-      if (targetZone === 'creative') weight *= 0.55;   // só se sem outra opção
-      if (targetZone === 'defense') weight *= 0.10;    // proibido pelos princípios
+      if (targetZone === 'attack') weight *= 1.55;     // outro atacante = preferido
+      if (targetZone === 'creative') {
+        const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
+        // Só passa pra meio se ele estiver AVANÇADO (não recuando pra trás)
+        weight *= tXRel >= 0.55 ? 0.65 : 0.10;
+      }
+      if (targetZone === 'defense') weight *= 0.001;   // PROIBIDO — atacante não larga pra trás
     }
 
-    // Penalidades de distância (mantém)
-    if (dist < 35) weight *= 0.45;
-    if (dist > 260) weight *= 0.55;
-    if (dist > 350) weight *= 0.30;
+    // ─── COMBINAÇÃO DE ALA (tabelinha) ─────────────────────────────────
+    // Lateral ↔ ponta no mesmo corredor → tabelinha clássica
+    const holderOnLeft = ballHolder.position.y < 130;
+    const holderOnRight = ballHolder.position.y > 270;
+    const targetOnLeft = t.position.y < 130;
+    const targetOnRight = t.position.y > 270;
+    const sameWing = (holderOnLeft && targetOnLeft) || (holderOnRight && targetOnRight);
+    const isWingPair =
+      (ballHolder.role === 'LB' && t.role === 'LW') ||
+      (ballHolder.role === 'LW' && t.role === 'LB') ||
+      (ballHolder.role === 'RB' && t.role === 'RW') ||
+      (ballHolder.role === 'RW' && t.role === 'RB');
+    if (sameWing && isWingPair) weight *= 1.45;  // tabelinha de ala
 
-    // Bônus de continuidade de sequência tática
+    // ─── DISTÂNCIA — MENTALIDADE BUILDUP ─────────────────────────────────
+    // Curto = construção (recompensado). Longo = chutão (proibido sem LONGO).
+    if (dist < 35) weight *= 0.45;                                    // colado demais
+    else if (dist >= 60 && dist <= 160) weight *= 1.30;                // SWEET SPOT do buildup
+    else if (dist >= 160 && dist <= 220) weight *= 1.05;               // passe médio OK
+    else if (dist > 220 && dist <= 280) weight *= 0.45;                // longo já é problemático
+    else if (dist > 280 && dist <= 350) weight *= 0.15;                // chutão — quase banido
+    else if (dist > 350) {
+      weight *= passStyle === 'LONGO' ? 0.40 : 0.02;                   // só LONGO permite
+    }
+
+    // ─── COERÊNCIA DE SEQUÊNCIA — siga o plano tático ────────────────────
+    // Bônus FORTE por respeitar a progressão zona-a-zona definida.
     if (sequence && zoneIndex < sequence.zones.length - 1) {
       const nextZone = sequence.zones[zoneIndex + 1];
-      if ((ZONE_ROLES[nextZone] ?? []).includes(t.role)) weight *= 1.25;
+      if ((ZONE_ROLES[nextZone] ?? []).includes(t.role)) weight *= 1.50;
     }
 
-    // Penalty pra trás — escala por zona do PORTADOR (atacante quase nunca)
-    const backwards = (t.position.x - ballHolder.position.x) * attackDir < -20;
+    // ─── ANTI-PULA-ZONA — buildup precisa atravessar o meio ──────────────
+    // Defesa→Ataque direto, criativa→defesa estranhos: já tratados acima.
+    // Reforço explícito quando há um meio LIVRE no caminho.
+    if (holderZone === 'defense' && targetZone === 'attack' && passStyle !== 'LONGO') {
+      const midfielderFree = teammates.some(m => {
+        if (zoneFromRole(m.role) !== 'creative') return false;
+        return computeFreedom(m, opponents) > 0.45;
+      });
+      if (midfielderFree) weight *= 0.20;  // tem opção legítima — chutão é covardia
+    }
+
+    // Penalty pra trás — REGRA DE OURO: ATACANTE NUNCA TOCA PRA TRÁS
+    const backwardsDelta = (t.position.x - ballHolder.position.x) * attackDir;
+    const backwards = backwardsDelta < -20;
+    const stronglyBackwards = backwardsDelta < -60;  // 60px = significativo
     if (backwards) {
-      if (holderZone === 'attack')   weight *= 0.18;  // atacante NÃO toca pra trás
-      else if (holderZone === 'creative') weight *= 0.55;
-      else                            weight *= 0.85;
+      if (holderZone === 'attack') {
+        // Atacante: passe pra trás é PROIBIDO. weight ~0 elimina da escolha.
+        weight *= 0.001;
+      } else if (holderZone === 'creative') {
+        // Criativa: pode reciclar levemente pra trás, mas evita longo.
+        weight *= stronglyBackwards ? 0.20 : 0.50;
+      } else {
+        // Defesa: pode passar pra trás (pro goleiro, recompor)
+        weight *= 0.85;
+      }
     }
 
     // ─── BIAS POR ESTADO MENTAL DO RECEPTOR (FSM Light) ──────────────────
@@ -520,35 +586,86 @@ export function decideNextAction(
   };
 }
 
-// ─── Resolução de chute (diversidade de outcomes) ─────────────────────────────
+// ─── Resolução de chute (calibrado com dados reais) ──────────────────────────
 
-export type ShotOutcome = 'goal' | 'save' | 'post' | 'wide' | 'rebound' | 'corner_def';
+import { SHOT_ZONE_DISTRIBUTIONS, type ShotZone, type ShotOutcomeCalibrated } from './calibrationData';
+import { ovrModifier } from './ovrModifier';
+
+export type ShotOutcome = ShotOutcomeCalibrated;
+
+export function classifyShotZone(
+  shooter: ClassicPlayer,
+  attackDir: 1 | -1,
+): ShotZone {
+  const xRel = attackDir > 0
+    ? shooter.position.x / FIELD_W_LOGIC
+    : 1 - shooter.position.x / FIELD_W_LOGIC;
+  if (xRel >= 0.85) return 'box';
+  if (xRel >= 0.72) return 'edge';
+  return 'outside';
+}
 
 export function resolveShot(
   shooter: ClassicPlayer,
   hadCleanLine: boolean,
   minute: number,
+  attackDir?: 1 | -1,
 ): ShotOutcome {
   const cfg = ARCHETYPES[shooter.archetype];
+  const dir = attackDir ?? (shooter.team === 'home' ? 1 : -1);
+  const zone = classifyShotZone(shooter, dir);
+  const dist = SHOT_ZONE_DISTRIBUTIONS[zone];
 
-  // Probabilidade de gol — quality compounding
-  let goalProb = 0.16;
-  if (shooter.onFire) goalProb += 0.08;
-  if (cfg.shotFreq >= 0.85) goalProb += 0.10;
-  if (cfg.stressImmune) goalProb += 0.05;
-  if (hadCleanLine) goalProb += 0.06;
-  if (shooter.fatigue > 70) goalProb -= 0.05;
-  if (minute > 85) goalProb += 0.03; // dramaticidade dos finais
+  // GUARDA: zagueiro NÃO chuta no gol — chute vira "wide" (chutão)
+  const shooterZone = zoneFromRole(shooter.role);
+  if (shooterZone === 'defense') return 'wide';
+
+  // Probabilidade de gol — base calibrada + modificadores
+  let goalProb = dist.goalRate;
+
+  // OVR modula efetividade do chute
+  goalProb *= ovrModifier(shooter.ovr);
+
+  // Arquétipo: finalizadores natos convertem mais
+  if (cfg.shotFreq >= 0.85) goalProb *= 1.30;
+  else if (cfg.shotFreq >= 0.7) goalProb *= 1.15;
+  if (cfg.stressImmune) goalProb *= 1.12;
+
+  // Contexto do jogo
+  if (shooter.onFire) goalProb *= 1.25;
+  if (hadCleanLine) goalProb *= 1.20;
+  if (shooter.fatigue > 70) goalProb *= 0.90;   // menos penalidade de fadiga (jogo, não sim)
+  if (shooter.fatigue > 85) goalProb *= 0.88;
+
+  // ── Drama dos minutos finais ──────────────────────────────────────────
+  // Últimos 15min: tudo fica mais intenso. É quando o jogo se decide.
+  if (minute > 75) goalProb *= 1.10;
+  if (minute > 85) goalProb *= 1.15;   // +26.5% composto nos últimos 5min
+  if (minute > 90) goalProb *= 1.20;   // acréscimos = tensão máxima
+
+  // Clamp — até 38% (arcade permite mais que 35%)
+  goalProb = Math.max(0.02, Math.min(0.38, goalProb));
 
   const r = Math.random();
   if (r < goalProb) return 'goal';
 
-  // Distribuir o restante: save 38% / wide 28% / post 6% / rebound 14% / corner 14%
-  const r2 = Math.random();
-  if (r2 < 0.38) return 'save';
-  if (r2 < 0.66) return 'wide';
-  if (r2 < 0.72) return 'post';
-  if (r2 < 0.86) return 'rebound';
+  // Non-goal outcomes — distribuição calibrada
+  const remaining = 1 - goalProb;
+  const saveW    = dist.saveRate;
+  const blockedW = dist.blockedRate;
+  const wideW    = dist.wideRate;
+  const postW    = dist.postRate;
+  const reboundW = dist.reboundRate;
+  const cornerW  = dist.cornerRate;
+  const totalW   = saveW + blockedW + wideW + postW + reboundW + cornerW;
+
+  const r2 = Math.random() * totalW;
+  let acc = 0;
+  acc += saveW;    if (r2 < acc) return 'save';
+  acc += blockedW; if (r2 < acc) return 'blocked';
+  acc += wideW;    if (r2 < acc) return 'wide';
+  acc += postW;    if (r2 < acc) return 'post';
+  acc += reboundW; if (r2 < acc) return 'rebound';
   return 'corner_def';
 }
 

@@ -45,6 +45,15 @@ function teamToRow(team: GlobalTeam) {
     goal_difference: team.goalDifference,
     recent_form: team.recentForm,
     registered_at: new Date(team.registeredAt).toISOString(),
+    // ALL-TIME — preserva entre temporadas
+    all_time_points: team.allTimePoints ?? 0,
+    all_time_matches_played: team.allTimeMatchesPlayed ?? 0,
+    all_time_wins: team.allTimeWins ?? 0,
+    all_time_draws: team.allTimeDraws ?? 0,
+    all_time_losses: team.allTimeLosses ?? 0,
+    all_time_goals_for: team.allTimeGoalsFor ?? 0,
+    all_time_goals_against: team.allTimeGoalsAgainst ?? 0,
+    all_time_seasons_played: team.allTimeSeasonsPlayed ?? 0,
   };
 }
 
@@ -254,6 +263,15 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       goalDifference: Number(r.goal_difference ?? 0),
       recentForm: (r.recent_form as Array<'W' | 'D' | 'L'>) ?? [],
       registeredAt: r.registered_at ? new Date(String(r.registered_at)).getTime() : Date.now(),
+      // ALL-TIME — fallback 0 antes da migration
+      allTimePoints: Number(r.all_time_points ?? 0),
+      allTimeMatchesPlayed: Number(r.all_time_matches_played ?? 0),
+      allTimeWins: Number(r.all_time_wins ?? 0),
+      allTimeDraws: Number(r.all_time_draws ?? 0),
+      allTimeLosses: Number(r.all_time_losses ?? 0),
+      allTimeGoalsFor: Number(r.all_time_goals_for ?? 0),
+      allTimeGoalsAgainst: Number(r.all_time_goals_against ?? 0),
+      allTimeSeasonsPlayed: Number(r.all_time_seasons_played ?? 0),
     }));
 
     // Indexar fixtures e eventos por round_id
@@ -339,6 +357,14 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       teamsPerDivision: Number(stateRow.teams_per_division ?? 11),
       promotionPercentage: Number(stateRow.promotion_percentage ?? 0.1),
       relegationPercentage: Number(stateRow.relegation_percentage ?? 0.1),
+      // Slots (Etapa 2)
+      matchSlots: Array.isArray(stateRow.match_slots) ? stateRow.match_slots as string[] : undefined,
+      slotDurationMin: stateRow.slot_duration_min == null ? undefined : Number(stateRow.slot_duration_min),
+      currentOlefootDay: stateRow.current_olefoot_day == null ? undefined : String(stateRow.current_olefoot_day),
+      // Competição (Etapa 3)
+      competitionId: stateRow.competition_id == null ? undefined : String(stateRow.competition_id),
+      competitionStartedAt: stateRow.competition_started_at ? new Date(String(stateRow.competition_started_at)).getTime() : undefined,
+      competitionDurationDays: stateRow.competition_duration_days == null ? undefined : Number(stateRow.competition_duration_days),
       createdAt: stateRow.created_at ? new Date(String(stateRow.created_at)).getTime() : Date.now(),
       lastUpdated: stateRow.updated_at ? new Date(String(stateRow.updated_at)).getTime() : Date.now(),
     };

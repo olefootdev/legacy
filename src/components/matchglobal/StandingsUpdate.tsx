@@ -160,8 +160,16 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
                           <div className="text-center text-sm font-mono text-gray-300">
                             {team.goalsFor - team.goalsAgainst > 0 ? '+' : ''}{team.goalsFor - team.goalsAgainst}
                           </div>
-                          <div className="text-center text-sm font-bold font-mono text-neon-yellow">
-                            {team.points}
+                          <div className="flex flex-col items-center leading-tight">
+                            <span
+                              className="text-base font-bold font-mono text-neon-yellow"
+                              title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                            >
+                              {team.allTimePoints ?? 0}
+                            </span>
+                            <span className="font-mono text-[9px] text-white/40 mt-0.5">
+                              {team.points} (rodada)
+                            </span>
                           </div>
                         </motion.div>
                       );

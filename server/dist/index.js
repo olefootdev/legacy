@@ -1,4 +1,7 @@
-import 'dotenv/config';
+// Override permite que server/.env sobrescreva variáveis vazias do shell parent
+// (ex: Claude Code dev env exporta ANTHROPIC_API_KEY="" pra sandbox).
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -14,9 +17,11 @@ import { marketRoutes } from './routes/market.js';
 import { voiceRoutes } from './routes/voice.js';
 import { assistantRoutes } from './routes/assistant.js';
 import { coachRoutes } from './routes/coach.js';
+import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
+import { startGlobalLeagueScheduler } from './services/globalLeagueScheduler.js';
 const app = new Hono();
 /**
  * Retorna um matcher de origin: dado o Origin do request, devolve a string
@@ -73,11 +78,13 @@ app.route('/', marketRoutes);
 app.route('/api/voice', voiceRoutes);
 app.route('/api/assistant', assistantRoutes);
 app.route('/api/coach', coachRoutes);
+app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
 const port = Number(process.env.PORT) || 4000;
 serve({ fetch: app.fetch, port }, () => {
     console.log(`[olefoot-server] listening on http://localhost:${port}`);
     getSupabaseAdmin(); // aciona validação de conectividade no startup
+    startGlobalLeagueScheduler(); // inicia scheduler da liga global
 });
 //# sourceMappingURL=index.js.map

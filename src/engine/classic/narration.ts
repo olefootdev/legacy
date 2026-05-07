@@ -232,6 +232,7 @@ const GENERAL_NARRATION: Record<string, string[]> = {
   post:         ['NA TRAVE! {name} quase marcou!', 'Bola explode na trave!', 'Centímetros — bate na madeira!'],
   wide:         ['Pra fora! {name} mandou no alto.', '{name} chuta — bola passa raspando!', 'Mandou pra galera — {name} desperdiçou.'],
   rebound:      ['Rebote na área — segue o jogo!', '{name} chutou, sobrou pra área.', 'Bola viva após defesa parcial.'],
+  blocked:      ['Chute bloqueado pela defesa!', '{name} chuta — defensor bloqueia!', 'Bloqueio firme — {team} trava a finalização!', 'Corpo no chute! Defensor anula {name}!'],
   duel:         ['{name} briga pela bola — duelo no campo!', '{name} não sai do lugar — disputa intensa!', 'Duelo físico — {name} segura a posição!'],
   // Gatilhos táticos especiais
   tiktak:       ['{name} de primeira — tik-tak no meio!', '{name} toca de primeira — circulação rápida!', 'Um toque só — {name} acelera o jogo!'],

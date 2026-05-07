@@ -34,6 +34,15 @@ export interface GlobalTeamLite {
   goalDifference: number;
   recentForm: string[];
   registeredAt: number;
+  // ALL-TIME — preservado entre temporadas
+  allTimePoints?: number;
+  allTimeMatchesPlayed?: number;
+  allTimeWins?: number;
+  allTimeDraws?: number;
+  allTimeLosses?: number;
+  allTimeGoalsFor?: number;
+  allTimeGoalsAgainst?: number;
+  allTimeSeasonsPlayed?: number;
 }
 
 export interface FixtureLite {
@@ -294,6 +303,16 @@ export function applyPromotionRelegation(
         goalDifference: 0,
         recentForm: [],
         position: undefined,
+        // ALL-TIME preservado + +1 temporada concluída (campos podem não existir
+        // se time foi carregado do banco antes da migration; usa fallback 0)
+        allTimePoints: team.allTimePoints ?? 0,
+        allTimeMatchesPlayed: team.allTimeMatchesPlayed ?? 0,
+        allTimeWins: team.allTimeWins ?? 0,
+        allTimeDraws: team.allTimeDraws ?? 0,
+        allTimeLosses: team.allTimeLosses ?? 0,
+        allTimeGoalsFor: team.allTimeGoalsFor ?? 0,
+        allTimeGoalsAgainst: team.allTimeGoalsAgainst ?? 0,
+        allTimeSeasonsPlayed: (team.allTimeSeasonsPlayed ?? 0) + 1,
       });
     });
   }
