@@ -215,6 +215,30 @@ export async function persistGlobalLeagueSnapshot(league: GlobalLeagueMVPState):
  * Carrega o estado da Liga Global do Supabase (para hidratação no boot).
  * Retorna null se não houver liga registrada ou se Supabase não está configurado.
  */
+/**
+ * Registra (upsert) UM time na Liga Global do Supabase.
+ * Chamado quando o manager finaliza a cerimônia de abertura — assim a Liga Global
+ * enxerga o time imediatamente e o auto-start pode incluir ele na próxima rodada.
+ */
+export async function upsertGlobalTeamInSupabase(team: GlobalTeam): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'supabase-not-configured' };
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: 'no-client' };
+
+  try {
+    const { error } = await supabase
+      .from('global_league_teams')
+      .upsert(teamToRow(team), { onConflict: 'manager_id' });
+    if (error) {
+      console.warn('[globalLeague] upsertGlobalTeamInSupabase error:', error.message);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPState | null> {
   if (!isSupabaseConfigured()) return null;
   const supabase = getSupabase();

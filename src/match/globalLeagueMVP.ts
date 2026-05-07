@@ -640,6 +640,16 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
   // Processar cada divisão
   for (let division = 1; division <= 3; division++) {
     const divTeams = byDivision.get(division) || [];
+    // ORDENA pela classificação real (DESC: pontos > V > SG > GP) antes de
+    // calcular promoção/rebaixamento. Sem isso, a ordem do Map é a de inserção
+    // e o pior pode acabar promovido / o melhor rebaixado.
+    divTeams.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+      if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+      return a.clubName.localeCompare(b.clubName);
+    });
     const teamsCount = divTeams.length;
     const promotionCount = Math.ceil(teamsCount * league.promotionPercentage);
     const relegationCount = Math.ceil(teamsCount * league.relegationPercentage);
@@ -647,11 +657,11 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
     divTeams.forEach((team, index) => {
       let newDivision = division;
 
-      // Promoção (top 10%)
+      // Promoção (top 10%) — sobe pra divisão de cima (número menor)
       if (division > 1 && index < promotionCount) {
         newDivision = division - 1;
       }
-      // Rebaixamento (bottom 10%)
+      // Rebaixamento (bottom 10%) — desce pra divisão de baixo (número maior)
       else if (division < 3 && index >= teamsCount - relegationCount) {
         newDivision = division + 1;
       }

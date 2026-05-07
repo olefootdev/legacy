@@ -28,20 +28,20 @@ export function StandingsUpdate({ isOpen, onClose, roundNumber, divisions }: Sta
     const change = getPositionChange(team);
     const position = team.position;
 
-    // Líder
-    if (position === 1) return 'bg-neon-yellow/20 border-l-4 border-neon-yellow';
+    // Rebaixamento (últimos 10% ≈ 3 em 30) — vermelho com opacidade
+    if (position > divisionSize - 3) return 'bg-red-600/30 border-l-4 border-red-500/70';
 
-    // Zona de promoção (top 3)
-    if (position <= 3) return 'bg-neon-green/10 border-l-4 border-neon-green';
+    // Promoção (top 10% ≈ 3 em 30) — borda amarela
+    if (position <= 3) return 'bg-neon-yellow/[0.04] border-l-4 border-neon-yellow';
 
-    // Zona de rebaixamento (últimos 3)
-    if (position > divisionSize - 3) return 'bg-red-500/10 border-l-4 border-red-500';
+    // Líder em destaque (override só visual de posição 1)
+    if (position === 1) return 'bg-neon-yellow/10 border-l-4 border-neon-yellow';
 
     // Subiu muito (3+ posições)
-    if (change >= 3) return 'bg-neon-green/5 border-l-2 border-neon-green/50';
+    if (change >= 3) return 'bg-neon-yellow/[0.04] border-l-2 border-neon-yellow/50';
 
     // Caiu muito (3+ posições)
-    if (change <= -3) return 'bg-red-500/5 border-l-2 border-red-500/50';
+    if (change <= -3) return 'bg-red-500/10 border-l-2 border-red-500/50';
 
     return 'border-l-2 border-transparent';
   };

@@ -253,8 +253,17 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
 }
 
 function DivisionStandings({ division, teams }: { division: number; teams: GlobalTeam[] }) {
-  const promotionCount = Math.ceil(teams.length * 0.1);
-  const relegationCount = Math.ceil(teams.length * 0.1);
+  // ORDENA pela classificação real antes de renderizar — sem isso, o index do
+  // map é a ordem de inserção e os destaques (líder/promo/rele) ficam errados.
+  const sortedTeams = useMemo(() => [...teams].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    return a.clubName.localeCompare(b.clubName);
+  }), [teams]);
+  const promotionCount = Math.ceil(sortedTeams.length * 0.1);
+  const relegationCount = Math.ceil(sortedTeams.length * 0.1);
 
   const divisionColor = division === 1 ? 'neon-yellow' : division === 2 ? 'blue-400' : 'white/60';
   const divisionName = division === 1 ? 'Elite' : division === 2 ? 'Intermediária' : 'Acesso';
@@ -301,22 +310,22 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
             </tr>
           </thead>
           <tbody>
-            {teams.map((team, index) => {
+            {sortedTeams.map((team, index) => {
               const isPromotion = division > 1 && index < promotionCount;
-              const isRelegation = division < 3 && index >= teams.length - relegationCount;
+              const isRelegation = division < 3 && index >= sortedTeams.length - relegationCount;
               const isLeader = index === 0;
 
               let bgClass = '';
-              let borderClass = '';
-              if (isLeader) {
+              let borderClass = 'border-l-4 border-l-transparent';
+              if (isRelegation) {
+                bgClass = 'bg-red-600/30';                              // vermelho com opacidade
+                borderClass = 'border-l-4 border-l-red-500/70';
+              } else if (isPromotion) {
+                borderClass = 'border-l-4 border-l-neon-yellow';         // borda amarela
+                bgClass = 'bg-neon-yellow/[0.04]';
+              } else if (isLeader) {
                 bgClass = 'bg-neon-yellow/10';
                 borderClass = 'border-l-4 border-l-neon-yellow';
-              } else if (isPromotion) {
-                bgClass = 'bg-emerald-500/10';
-                borderClass = 'border-l-4 border-l-emerald-500';
-              } else if (isRelegation) {
-                bgClass = 'bg-red-500/10';
-                borderClass = 'border-l-4 border-l-red-500';
               }
 
               const positionChange = team.previousPosition
@@ -547,13 +556,22 @@ function ProjectedDivisionMini({
           {teams.map((team, index) => {
             const sg = team.playoffGoalsFor - team.playoffGoalsAgainst;
             const isLeader = index === 0;
+            // Promoção: top N (não na 1ª divisão — já está no topo)
             const isPromotion = division > 1 && index < promoCount;
+            // Rebaixamento: bottom N (não na última divisão — já está no fundo)
             const isRelegation = division < totalDivisions && index >= teams.length - releCount;
             let rowBg = '';
-            let rowBorder = '';
-            if (isLeader) { rowBg = 'bg-neon-yellow/10'; rowBorder = 'border-l-2 border-l-neon-yellow'; }
-            else if (isPromotion) { rowBg = 'bg-emerald-500/10'; rowBorder = 'border-l-2 border-l-emerald-500'; }
-            else if (isRelegation) { rowBg = 'bg-red-500/10'; rowBorder = 'border-l-2 border-l-red-500'; }
+            let rowBorder = 'border-l-2 border-l-transparent';
+            if (isRelegation) {
+              rowBg = 'bg-red-600/30';                           // vermelho com opacidade
+              rowBorder = 'border-l-2 border-l-red-500/70';
+            } else if (isPromotion) {
+              rowBorder = 'border-l-4 border-l-neon-yellow';     // borda amarela
+              rowBg = 'bg-neon-yellow/[0.04]';
+            } else if (isLeader) {
+              rowBg = 'bg-neon-yellow/10';
+              rowBorder = 'border-l-2 border-l-neon-yellow';
+            }
             return (
               <tr key={team.id} className={`border-t border-white/5 ${rowBg} ${rowBorder}`}>
                 <td className="px-2 py-1.5"><span className="font-mono text-white/60">{index + 1}</span></td>
