@@ -21,7 +21,9 @@ import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
-import { startGlobalLeagueScheduler } from './services/globalLeagueScheduler.js';
+// Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
+// gerenciada autonomamente pela Edge Function v7 do Supabase + pg_cron.
+// Ver supabase/functions/global-league-tick/index.ts.
 const app = new Hono();
 /**
  * Retorna um matcher de origin: dado o Origin do request, devolve a string
@@ -85,6 +87,5 @@ const port = Number(process.env.PORT) || 4000;
 serve({ fetch: app.fetch, port }, () => {
     console.log(`[olefoot-server] listening on http://localhost:${port}`);
     getSupabaseAdmin(); // aciona validação de conectividade no startup
-    startGlobalLeagueScheduler(); // inicia scheduler da liga global
 });
 //# sourceMappingURL=index.js.map
