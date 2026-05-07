@@ -1,12 +1,12 @@
 import type { CoachAgent, TeamContext, ManagerInstruction } from './types';
 
-// Em dev preferimos localhost:4000. Em produção, usa VITE_OLEFOOT_API_URL
-// (mesmo padrão de classicCoachClient). Antes usava VITE_API_BASE_URL que
-// nunca é setado pelo deploy script — caía no localhost:4000 e dava
-// "Failed to load" pra usuário em produção.
-const API_BASE = import.meta.env.DEV
-  ? 'http://localhost:4000'
-  : (import.meta.env.VITE_OLEFOOT_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:4000');
+// Prioriza VITE_OLEFOOT_API_URL sempre (inclusive em dev) — assim o dev que
+// não roda o server local também consegue testar contra o Railway.
+// Fallback localhost só se nenhuma env var estiver definida.
+const API_BASE =
+  import.meta.env.VITE_OLEFOOT_API_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:4000';
 
 export interface CoachChatResponse {
   ok: boolean;
