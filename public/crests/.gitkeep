@@ -1,0 +1,3 @@
+# Brasões dos clubes (PNG por id do API-Sports).
+# Populados rodando `npm run crests:download`. Os arquivos baixados ficam
+# versionados no git para que o app funcione sem dependência de CDN externo.

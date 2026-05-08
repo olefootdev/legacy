@@ -1,28 +1,21 @@
 import type { UserSettings } from '@/game/types';
+import { localCrestUrl } from './crestUrl';
 
 /**
  * Escudo ao lado do "teu" clube em matchday, ligas e partida rápida:
  * usa o logo do time do coração cadastrado.
  *
- * TESTE LOCAL: Se não houver time cadastrado, usa Corinthians ou Manchester aleatoriamente.
+ * Se não houver time cadastrado, alterna entre Corinthians e Manchester
+ * City (apenas para visualização durante desenvolvimento).
  */
 export function matchdayHomeCrestUrl(
   settings: Pick<UserSettings, 'favoriteRealTeam'>,
 ): string | null {
   const heart = settings.favoriteRealTeam?.logo?.trim();
-
-  // Se houver time do coração cadastrado, usa ele
   if (heart) return heart;
 
-  // TESTE LOCAL: Brasões de fallback para desenvolvimento
-  const testCrests = [
-    // Corinthians
-    'https://media.api-sports.io/football/teams/131.png',
-    // Manchester City
-    'https://media.api-sports.io/football/teams/50.png',
-  ];
-
-  // Alterna entre Corinthians e Manchester baseado no timestamp
+  // Fallback de visualização — Corinthians (131) e Manchester City (50).
+  const testCrests = [localCrestUrl(131), localCrestUrl(50)];
   const index = Math.floor(Date.now() / 10000) % testCrests.length;
   return testCrests[index];
 }
