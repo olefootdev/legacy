@@ -1,9 +1,12 @@
 import type { FavoriteRealTeamRef } from '@/game/types';
+import { localCrestUrl } from './crestUrl';
 
 /**
  * Catálogo de ligas × clubes para o step 3 do Cadastro (time do coração).
- * IDs são do API-Sports (https://media.api-sports.io/football/teams/{id}.png).
- * Se um logo falhar, o `<img>` esconde via onError — só o nome fica.
+ *
+ * Os IDs seguem a numeração do API-Sports e os PNGs vivem em
+ * `public/crests/{id}.png`. Para baixá-los, rode `npm run crests:download`.
+ * Se um logo faltar, o `<img>` esconde via onError — só o nome fica.
  */
 
 export interface LeagueBucket {
@@ -15,7 +18,7 @@ export interface LeagueBucket {
 }
 
 function team(id: number, name: string): FavoriteRealTeamRef {
-  return { id, name, logo: `https://media.api-sports.io/football/teams/${id}.png` };
+  return { id, name, logo: localCrestUrl(id) };
 }
 
 export const SELECAO_BRASIL: FavoriteRealTeamRef = team(6, 'Seleção Brasil');

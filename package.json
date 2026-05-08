@@ -49,7 +49,8 @@
     "genesis:apply-pinata-folder-cid": "node scripts/apply-genesis-from-pinata-folder-cid.mjs",
     "genesis:repair-pinata-token-from-card-url": "node scripts/repair-genesis-pinata-token-from-card-url.mjs",
     "deploy:cloudflare": "VITE_OLEFOOT_API_URL=https://legacy-production-de1e.up.railway.app VITE_SUPABASE_URL=$(grep VITE_SUPABASE_URL .env | cut -d= -f2- | tr -d '\"') VITE_SUPABASE_ANON_KEY=$(grep VITE_SUPABASE_ANON_KEY .env | cut -d= -f2- | tr -d '\"') npm run build && wrangler deploy",
-    "generate:assets": "tsx scripts/generateAssetsFreepik.ts"
+    "generate:assets": "tsx scripts/generateAssetsFreepik.ts",
+    "crests:download": "node scripts/download-crests.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
