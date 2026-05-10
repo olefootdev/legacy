@@ -296,6 +296,10 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       allTimeGoalsFor: Number(r.all_time_goals_for ?? 0),
       allTimeGoalsAgainst: Number(r.all_time_goals_against ?? 0),
       allTimeSeasonsPlayed: Number(r.all_time_seasons_played ?? 0),
+      injuryRoundsRemaining: Number(r.injury_rounds_remaining ?? 0),
+      injuryModifier: Number(r.injury_modifier ?? 0),
+      yellowCardCount: Number(r.yellow_card_count ?? 0),
+      suspensionRoundsRemaining: Number(r.suspension_rounds_remaining ?? 0),
     }));
 
     // Indexar fixtures e eventos por round_id

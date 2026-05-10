@@ -416,29 +416,18 @@ Deno.serve(async (_req: Request) => {
     await supabase.from('global_league_state').update({ current_olefoot_day: today }).eq('id', 'current');
   }
 
-  // 0. FIM DE COMPETIÇÃO
+  // 0. FIM DE COMPETIÇÃO — pausa para análise (não reseta automaticamente)
   if (competitionEnded) {
-    const { data: teamsData } = await supabase.from('global_league_teams').select('*');
-    const teams = (teamsData as TeamRow[]) ?? [];
-    const reset = applyCompetitionReset(teams);
-    const newSeasonId = `season_${now}`;
-    const newCompetitionId = `competition_${now}`;
-    await supabase.from('global_league_events').delete().neq('id', '');
-    await supabase.from('global_league_fixtures').delete().neq('id', '');
-    await supabase.from('global_league_rounds').delete().neq('id', '');
-    await supabase.from('global_league_teams').upsert(reset as any, { onConflict: 'id' });
-    await supabase.from('global_league_state').update({
-      season_id: newSeasonId,
-      season_name: `OLEFOOT LIGA — ${newSeasonId}`,
-      status: 'waiting_teams',
-      current_playoff_round: null, current_league_round: null,
-      competition_id: newCompetitionId,
-      competition_started_at: new Date(now).toISOString(),
-    }).eq('id', 'current');
+    // Só muda status se ainda não estiver em season_ended
+    if (state.status !== 'season_ended') {
+      await supabase.from('global_league_state').update({
+        status: 'season_ended',
+      }).eq('id', 'current');
+    }
     return new Response(JSON.stringify({
-      ok: true, step: 'competition-end',
-      newCompetitionId, newSeasonId,
-      competitionDurationDays: state.competition_duration_days ?? 7,
+      ok: true, step: 'competition-ended-paused',
+      reason: 'competition window expired — awaiting manual season start from admin',
+      competitionId: state.competition_id,
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -494,32 +483,30 @@ Deno.serve(async (_req: Request) => {
     }
   }
 
-  // 3. SEASON-ENDED → SOFT promo/rele (carry-over)
+  // 3. TODAS RODADAS FINALIZADAS → season_ended (não reseta automaticamente)
   if (state.status === 'active') {
     const { data: lRounds } = await supabase
       .from('global_league_rounds').select('id, status, round_type')
       .eq('season_id', state.season_id).eq('round_type', 'league');
     const allFinished = (lRounds ?? []).length > 0 && (lRounds ?? []).every(r => r.status === 'finished');
     if (allFinished) {
-      const { data: teamsData } = await supabase.from('global_league_teams').select('*');
-      const teams = (teamsData as TeamRow[]) ?? [];
-      const reorganized = applyPromotionRelegationSoft(teams, promoPct, relePct);
-      const newSeasonId = `season_${now}`;
-      await supabase.from('global_league_events').delete().neq('id', '');
-      await supabase.from('global_league_fixtures').delete().neq('id', '');
-      await supabase.from('global_league_rounds').delete().neq('id', '');
-      await supabase.from('global_league_teams').upsert(reorganized as any, { onConflict: 'id' });
       await supabase.from('global_league_state').update({
-        season_id: newSeasonId,
-        season_name: `OLEFOOT LIGA — ${newSeasonId}`,
-        status: 'waiting_teams',
-        current_playoff_round: null, current_league_round: null,
+        status: 'season_ended',
       }).eq('id', 'current');
       return new Response(JSON.stringify({
-        ok: true, step: 'soft-season-end', newSeasonId,
-        carryOver: 'season points preserved within competition',
+        ok: true, step: 'season-ended-paused',
+        reason: 'all league rounds finished — awaiting manual season start from admin',
+        seasonId: state.season_id,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
+  }
+
+  // Não processa rodadas se a temporada está encerrada
+  if (state.status === 'season_ended') {
+    return new Response(JSON.stringify({
+      ok: true, step: 'idle', reason: 'season-ended',
+      status: 'season_ended',
+    }), { headers: { 'Content-Type': 'application/json' } });
   }
 
   // 4. PROCESSA RODADA PENDENTE

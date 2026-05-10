@@ -4518,8 +4518,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'RESET':
       return createInitialGameState();
 
-    // ============================================================================
-    // Coach Agent Actions
+    case 'GLOBAL_LEAGUE_MATCH_RESULT': {
+      // Aplica o mesmo delta de torcida usado nas partidas locais.
+      // Vitória: +3 a +5 | Empate: -1 | Derrota: -4 a -6
+      // Goleada (3+ gols de diferença) dá bônus extra.
+      const goalDiff = action.goalsFor - action.goalsAgainst;
+      const crowdDelta = action.win
+        ? Math.min(5, 3 + Math.floor(Math.max(0, goalDiff - 1)))
+        : action.draw
+        ? -1
+        : Math.max(-6, -4 - Math.floor(Math.max(0, -goalDiff - 1)));
+      const newSupportPercent = Math.min(99, Math.max(0, state.crowd.supportPercent + crowdDelta));
+      return {
+        ...state,
+        crowd: { supportPercent: newSupportPercent, moodLabel: crowdMood(newSupportPercent) },
+      };
+    }
+
+
     // ============================================================================
 
     case 'COACH_GENERATE_HEALTH_ACTIONS': {

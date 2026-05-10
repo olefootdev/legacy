@@ -81,6 +81,119 @@ globalLeagueRoutes.post('/cycle', async (c) => {
 });
 
 /**
+ * POST /start-season — inicia uma nova temporada.
+ * Deleta fixtures/eventos/rodadas antigas, faz soft reset dos times,
+ * e atualiza global_league_state com os novos parâmetros.
+ * Body: { seasonName, durationDays, slots, slotDurationMin, minTeamsRequired }
+ */
+globalLeagueRoutes.post('/start-season', async (c) => {
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ error: 'Supabase não configurado' }, 503);
+
+  const body = await c.req.json().catch(() => null);
+  if (!body?.seasonName) {
+    return c.json({ error: 'seasonName é obrigatório' }, 400);
+  }
+
+  const seasonName: string = String(body.seasonName);
+  const durationDays: number = Number(body.durationDays ?? 7);
+  const slots: string[] = Array.isArray(body.slots)
+    ? body.slots.map(String)
+    : ['05:30', '11:00', '15:00', '19:00', '21:30'];
+  const slotDurationMin: number = Number(body.slotDurationMin ?? 30);
+  const minTeamsRequired: number = Number(body.minTeamsRequired ?? 2);
+  const seasonId = `season_${Date.now()}`;
+
+  // 1. Deletar fixtures e eventos da season atual
+  const { data: stateData } = await sb
+    .from('global_league_state')
+    .select('season_id')
+    .eq('id', 'current')
+    .maybeSingle();
+
+  if (stateData?.season_id) {
+    // Buscar rodadas da season atual para deletar fixtures/eventos
+    const { data: rounds } = await sb
+      .from('global_league_rounds')
+      .select('id')
+      .eq('season_id', stateData.season_id);
+
+    if (rounds && rounds.length > 0) {
+      const roundIds = rounds.map((r: { id: string }) => r.id);
+
+      // Deletar eventos das fixtures dessas rodadas
+      const { data: fixtures } = await sb
+        .from('global_league_fixtures')
+        .select('id')
+        .in('round_id', roundIds);
+
+      if (fixtures && fixtures.length > 0) {
+        const fixtureIds = fixtures.map((f: { id: string }) => f.id);
+        await sb.from('global_league_fixture_events').delete().in('fixture_id', fixtureIds);
+        await sb.from('global_league_fixtures').delete().in('id', fixtureIds);
+      }
+
+      // Deletar rodadas
+      await sb.from('global_league_rounds').delete().in('id', roundIds);
+    }
+  }
+
+  // 2. Soft reset dos times: zerar stats de temporada, preservar all-time e divisões
+  const { error: resetError } = await sb
+    .from('global_league_teams')
+    .update({
+      points: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goals_for: 0,
+      goals_against: 0,
+      goal_difference: 0,
+      matches_played: 0,
+      playoff_points: 0,
+      playoff_wins: 0,
+      playoff_draws: 0,
+      playoff_losses: 0,
+      playoff_goals_for: 0,
+      playoff_goals_against: 0,
+      playoff_matches_played: 0,
+      position: null,
+      previous_position: null,
+    })
+    .neq('id', '00000000-0000-0000-0000-000000000000'); // update all rows
+
+  if (resetError) {
+    console.error('[start-season] Erro ao resetar times:', resetError.message);
+    return c.json({ error: `Erro ao resetar times: ${resetError.message}` }, 500);
+  }
+
+  // 3. Atualizar global_league_state
+  const { error: stateError } = await sb
+    .from('global_league_state')
+    .upsert({
+      id: 'current',
+      status: 'waiting_teams',
+      season_id: seasonId,
+      season_name: seasonName,
+      competition_started_at: new Date().toISOString(),
+      competition_duration_days: durationDays,
+      match_slots: slots,
+      slot_duration_min: slotDurationMin,
+      min_teams_required: minTeamsRequired,
+      current_playoff_round: null,
+      current_league_round: null,
+    });
+
+  if (stateError) {
+    console.error('[start-season] Erro ao atualizar estado:', stateError.message);
+    return c.json({ error: `Erro ao atualizar estado: ${stateError.message}` }, 500);
+  }
+
+  console.log(`[start-season] Nova temporada iniciada: ${seasonId} — ${seasonName}`);
+  return c.json({ ok: true, seasonId, seasonName });
+});
+
+/**
  * POST /enroll — inscreve um clube na liga global.
  * Body: { managerId, clubName, clubShort, overall }
  * Idempotente via onConflict: manager_id.

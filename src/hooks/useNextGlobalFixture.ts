@@ -28,6 +28,10 @@ export interface GlobalNextFixture {
   myTeamName: string;
   myTeamId: string;
   division: string;
+  injuryRoundsRemaining: number;
+  injuryModifier: number;
+  yellowCardCount: number;
+  suspensionRoundsRemaining: number;
 }
 
 export function useNextGlobalFixture(): GlobalNextFixture | null {
@@ -97,6 +101,10 @@ export function useNextGlobalFixture(): GlobalNextFixture | null {
         myTeamName: myTeam.clubName,
         myTeamId: myTeam.id,
         division: fx.division,
+        injuryRoundsRemaining: myTeam.injuryRoundsRemaining ?? 0,
+        injuryModifier: myTeam.injuryModifier ?? 0,
+        yellowCardCount: myTeam.yellowCardCount ?? 0,
+        suspensionRoundsRemaining: myTeam.suspensionRoundsRemaining ?? 0,
       };
     }
 

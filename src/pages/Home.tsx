@@ -1023,8 +1023,12 @@ export function Home() {
         const awayShort = isGlobal
           ? (nextGlobal.isHome ? nextGlobal.opponentShort : club.shortName ?? club.name.slice(0, 3))
           : opponentShort;
-        const renderHomeCrest = isGlobal ? null : (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null));
-        const renderAwayCrest = isGlobal ? null : (awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null));
+        const renderHomeCrest = isGlobal
+          ? (nextGlobal.isHome ? (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null)) : null)
+          : (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null));
+        const renderAwayCrest = isGlobal
+          ? (nextGlobal.isHome ? null : (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null)))
+          : (awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null));
         const ctaLink = isGlobal ? '/match/global' : '/match/quick';
         const ctaLabel = isGlobal ? 'Ver Liga Global' : 'Partida rápida';
 
@@ -1082,6 +1086,27 @@ export function Home() {
                 <p className="text-white/40 text-xs font-mono">
                   OVR adversário: <span className="text-neon-yellow font-bold">{nextGlobal.opponentOverall}</span>
                 </p>
+              )}
+
+              {/* Penalidades ativas do time do manager */}
+              {isGlobal && (nextGlobal.injuryRoundsRemaining > 0 || nextGlobal.suspensionRoundsRemaining > 0 || nextGlobal.yellowCardCount > 0) && (
+                <div className="flex flex-wrap justify-center gap-2 text-[10px] font-mono">
+                  {nextGlobal.suspensionRoundsRemaining > 0 && (
+                    <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">
+                      🚫 Suspenso {nextGlobal.suspensionRoundsRemaining} rod.
+                    </span>
+                  )}
+                  {nextGlobal.injuryRoundsRemaining > 0 && (
+                    <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full">
+                      🚑 Lesão {nextGlobal.injuryRoundsRemaining} rod. ({nextGlobal.injuryModifier} OVR)
+                    </span>
+                  )}
+                  {nextGlobal.yellowCardCount > 0 && nextGlobal.yellowCardCount < 3 && (
+                    <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full">
+                      🟡 {nextGlobal.yellowCardCount}/3 amarelos
+                    </span>
+                  )}
+                </div>
               )}
 
               {/* Ações */}

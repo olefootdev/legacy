@@ -20,6 +20,12 @@ import {
   AtSign,
   Brain,
   Loader2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
+  ShieldAlert,
+  Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
@@ -164,12 +170,83 @@ function NewsWidget() {
   const form = useGameStore((s) => s.form);
   const results = useGameStore((s) => s.results);
   const ranking = useGameStore((s) => s.competitiveRanking);
+  const nextGlobal = useNextGlobalFixture();
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const club = useGameStore((s) => s.club);
 
   const headlines = useMemo(() => {
     const items: Array<{ text: string; icon: React.ElementType; color: string }> = [];
 
+    // Headlines da Global League têm prioridade
+    if (globalLeagueMVP && globalLeagueMVP.status !== 'waiting_teams') {
+      const managerId = managerProfile?.email ?? club?.id;
+      const myTeam = managerId
+        ? globalLeagueMVP.teams.find((t) => t.managerId === managerId)
+        : null;
+
+      if (myTeam) {
+        // Subiu/desceu de posição
+        if (myTeam.position != null && myTeam.previousPosition != null) {
+          const diff = myTeam.previousPosition - myTeam.position;
+          if (diff > 0) {
+            items.push({
+              text: `Subiu ${diff} posição${diff > 1 ? 'ões' : ''} na Liga Global — agora ${myTeam.position}º`,
+              icon: TrendingUp,
+              color: 'text-green-400',
+            });
+          } else if (diff < 0) {
+            items.push({
+              text: `Caiu ${Math.abs(diff)} posição${Math.abs(diff) > 1 ? 'ões' : ''} na Liga Global — ${myTeam.position}º`,
+              icon: TrendingDown,
+              color: 'text-red-400',
+            });
+          }
+        }
+
+        // Suspensão ativa
+        if (myTeam.suspensionRoundsRemaining > 0) {
+          items.push({
+            text: `Suspensão ativa — perde ${myTeam.suspensionRoundsRemaining} rodada${myTeam.suspensionRoundsRemaining > 1 ? 's' : ''} na Liga Global`,
+            icon: ShieldAlert,
+            color: 'text-red-400',
+          });
+        }
+
+        // Lesão ativa
+        if (myTeam.injuryRoundsRemaining > 0) {
+          const mod = myTeam.injuryModifier < 0 ? myTeam.injuryModifier : -myTeam.injuryModifier;
+          items.push({
+            text: `Lesão: ${mod} OVR por ${myTeam.injuryRoundsRemaining} rodada${myTeam.injuryRoundsRemaining > 1 ? 's' : ''} na Liga Global`,
+            icon: AlertTriangle,
+            color: 'text-orange-400',
+          });
+        }
+
+        // Próximo adversário é líder ou muito forte
+        if (nextGlobal && nextGlobal.opponentOverall >= myTeam.overall + 5) {
+          items.push({
+            text: `Próximo adversário ${nextGlobal.opponentName} é favorito (OVR ${nextGlobal.opponentOverall}) — joga pelo contra-ataque`,
+            icon: AlertTriangle,
+            color: 'text-yellow-400',
+          });
+        }
+
+        // Sequência de vitórias na liga
+        const streak = myTeam.recentForm.slice(-3).filter((r) => r === 'W').length;
+        if (streak === 3) {
+          items.push({
+            text: `${myTeam.clubName} em chamas — 3 vitórias seguidas na Liga Global`,
+            icon: Flame,
+            color: 'text-neon-yellow',
+          });
+        }
+      }
+    }
+
+    // Headlines locais como complemento
     const last = results[results.length - 1];
-    if (last) {
+    if (last && items.length < 3) {
       if (last.result === 'win') {
         items.push({
           text: `${last.home} vence ${last.scoreHome}–${last.scoreAway} e mantém pressão na tabela`,
@@ -192,7 +269,7 @@ function NewsWidget() {
     }
 
     const recentWins = (form.slice(-5)).filter((r) => r === 'W').length;
-    if (recentWins >= 3) {
+    if (recentWins >= 3 && items.length < 3) {
       items.push({
         text: `${recentWins} vitórias nos últimos jogos — sequência em chamas`,
         icon: Flame,
@@ -200,7 +277,7 @@ function NewsWidget() {
       });
     }
 
-    if (ranking && ranking.currentWinStreak >= 2) {
+    if (ranking && ranking.currentWinStreak >= 2 && items.length < 3) {
       items.push({
         text: `Sequência de ${ranking.currentWinStreak} vitórias consecutivas no modo competitivo`,
         icon: Trophy,
@@ -217,7 +294,7 @@ function NewsWidget() {
     }
 
     return items.slice(0, 3);
-  }, [results, form, ranking, clubName]);
+  }, [results, form, ranking, clubName, globalLeagueMVP, managerProfile, club, nextGlobal]);
 
   return (
     <div>
@@ -244,37 +321,80 @@ function NewsWidget() {
 function FormWidget() {
   const form = useGameStore((s) => s.form);
   const ranking = useGameStore((s) => s.competitiveRanking);
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const club = useGameStore((s) => s.club);
 
-  const last5 = form.slice(-5);
+  const globalForm = useMemo(() => {
+    if (!globalLeagueMVP || globalLeagueMVP.status === 'waiting_teams') return null;
+    const managerId = managerProfile?.email ?? club?.id;
+    if (!managerId) return null;
+    const myTeam = globalLeagueMVP.teams.find((t) => t.managerId === managerId);
+    return myTeam?.recentForm?.slice(-5) ?? null;
+  }, [globalLeagueMVP, managerProfile, club]);
+
+  const last5Local = form.slice(-5);
+  const hasGlobal = globalForm && globalForm.length > 0;
 
   return (
     <div>
       <SectionHeader label="FORMA RECENTE" icon={Flame} />
-      {last5.length === 0 ? (
+
+      {/* Liga Global */}
+      {hasGlobal && (
+        <div className="mb-3">
+          <div
+            className="text-white/35 tracking-[0.18em] uppercase mb-1.5"
+            style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+          >
+            Liga Global
+          </div>
+          <div className="flex gap-1.5">
+            {globalForm.map((r, i) => (
+              <div
+                key={i}
+                className={cn('flex items-center justify-center rounded-sm shrink-0', formColor(r as 'W' | 'D' | 'L'))}
+                style={{ width: 24, height: 24 }}
+              >
+                <span className="text-black font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}>
+                  {formLabel(r as 'W' | 'D' | 'L')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Local */}
+      {last5Local.length === 0 && !hasGlobal ? (
         <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
           Nenhuma partida jogada.
         </p>
-      ) : (
-        <div className="flex gap-1.5 mb-3">
-          {last5.map((r, i) => (
+      ) : last5Local.length > 0 ? (
+        <div className="mb-3">
+          {hasGlobal && (
             <div
-              key={i}
-              className={cn(
-                'flex items-center justify-center rounded-sm shrink-0',
-                formColor(r),
-              )}
-              style={{ width: 24, height: 24 }}
+              className="text-white/35 tracking-[0.18em] uppercase mb-1.5"
+              style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
             >
-              <span
-                className="text-black font-bold"
-                style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
-              >
-                {formLabel(r)}
-              </span>
+              Local
             </div>
-          ))}
+          )}
+          <div className="flex gap-1.5">
+            {last5Local.map((r, i) => (
+              <div
+                key={i}
+                className={cn('flex items-center justify-center rounded-sm shrink-0', formColor(r))}
+                style={{ width: 24, height: 24 }}
+              >
+                <span className="text-black font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}>
+                  {formLabel(r)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      ) : null}
 
       {ranking && ranking.matchesPlayed > 0 && (
         <div className="grid grid-cols-3 gap-1 text-center">
@@ -301,6 +421,188 @@ function FormWidget() {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Widget: Posição na Liga Global ──────────────────────────────────────────
+
+function LeaguePositionWidget() {
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const club = useGameStore((s) => s.club);
+  const navigate = useNavigate();
+
+  const data = useMemo(() => {
+    if (!globalLeagueMVP || globalLeagueMVP.status === 'waiting_teams') return null;
+    const managerId = managerProfile?.email ?? club?.id;
+    if (!managerId) return null;
+    const myTeam = globalLeagueMVP.teams.find((t) => t.managerId === managerId);
+    if (!myTeam || myTeam.position == null) return null;
+    const diff = myTeam.previousPosition != null ? myTeam.previousPosition - myTeam.position : 0;
+    return { position: myTeam.position, points: myTeam.points, diff, division: myTeam.division };
+  }, [globalLeagueMVP, managerProfile, club]);
+
+  if (!data) return null;
+
+  const TrendIcon = data.diff > 0 ? TrendingUp : data.diff < 0 ? TrendingDown : Minus;
+  const trendColor = data.diff > 0 ? 'text-green-400' : data.diff < 0 ? 'text-red-400' : 'text-white/35';
+
+  return (
+    <div>
+      <SectionHeader label="LIGA GLOBAL" icon={Trophy} />
+      <button
+        type="button"
+        onClick={() => navigate('/match/global')}
+        className="w-full flex items-center gap-3 border border-white/10 bg-white/[0.02] px-3 py-2 hover:border-neon-yellow/30 transition-all"
+        style={{ borderRadius: 'var(--radius-sm)' }}
+      >
+        <div className="flex flex-col items-center shrink-0">
+          <div
+            className="tabular-nums italic text-neon-yellow leading-none"
+            style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '28px' }}
+          >
+            {data.position}º
+          </div>
+          <div
+            className="text-white/35 tracking-[0.14em] mt-0.5"
+            style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+          >
+            POSIÇÃO
+          </div>
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="tabular-nums text-white/75"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 600 }}
+            >
+              {data.points} pts
+            </span>
+            <TrendIcon className={cn('w-3 h-3', trendColor)} strokeWidth={2.5} />
+            {data.diff !== 0 && (
+              <span className={cn('tabular-nums', trendColor)} style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
+                {data.diff > 0 ? '+' : ''}{data.diff}
+              </span>
+            )}
+          </div>
+          {data.division != null && (
+            <div
+              className="text-white/35 tracking-[0.14em] mt-0.5"
+              style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+            >
+              DIVISÃO {data.division}
+            </div>
+          )}
+        </div>
+        <ChevronRight className="w-3.5 h-3.5 text-white/25 shrink-0" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+// ─── Widget: Penalidades ativas ──────────────────────────────────────────────
+
+function PenaltiesWidget() {
+  const nextGlobal = useNextGlobalFixture();
+
+  if (!nextGlobal) return null;
+  const { injuryRoundsRemaining, injuryModifier, yellowCardCount, suspensionRoundsRemaining } = nextGlobal;
+  const hasAny = injuryRoundsRemaining > 0 || suspensionRoundsRemaining > 0 || yellowCardCount >= 2;
+  if (!hasAny) return null;
+
+  return (
+    <div>
+      <SectionHeader label="ALERTAS" icon={ShieldAlert} />
+      <div className="space-y-1.5">
+        {suspensionRoundsRemaining > 0 && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 border border-red-500/30 bg-red-500/[0.06]" style={{ borderRadius: 'var(--radius-sm)' }}>
+            <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" strokeWidth={2} />
+            <span className="text-red-300" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+              Suspenso — perde {suspensionRoundsRemaining} rodada{suspensionRoundsRemaining > 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+        {injuryRoundsRemaining > 0 && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 border border-orange-500/30 bg-orange-500/[0.06]" style={{ borderRadius: 'var(--radius-sm)' }}>
+            <AlertTriangle className="w-3.5 h-3.5 text-orange-400 shrink-0" strokeWidth={2} />
+            <span className="text-orange-300" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+              Lesão: {injuryModifier < 0 ? injuryModifier : -injuryModifier} OVR por {injuryRoundsRemaining} rodada{injuryRoundsRemaining > 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+        {yellowCardCount >= 2 && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 border border-yellow-500/30 bg-yellow-500/[0.06]" style={{ borderRadius: 'var(--radius-sm)' }}>
+            <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" strokeWidth={2} />
+            <span className="text-yellow-300" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+              {yellowCardCount} cartões amarelos — risco de suspensão
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Widget: Countdown próximo jogo ──────────────────────────────────────────
+
+function CountdownWidget() {
+  const nextGlobal = useNextGlobalFixture();
+  const navigate = useNavigate();
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!nextGlobal) return;
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, [nextGlobal]);
+
+  if (!nextGlobal) return null;
+
+  const diff = nextGlobal.scheduledKickoffMs - now;
+  if (diff <= 0) return null;
+
+  const hours = Math.floor(diff / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  const label = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/match/global')}
+      className="w-full flex items-center gap-2.5 border border-neon-yellow/20 bg-neon-yellow/[0.04] px-3 py-2 hover:border-neon-yellow/40 transition-all"
+      style={{ borderRadius: 'var(--radius-sm)' }}
+    >
+      <Timer className="w-4 h-4 text-neon-yellow shrink-0" strokeWidth={2} />
+      <div className="flex-1 min-w-0 text-left">
+        <div
+          className="text-white/75 leading-none"
+          style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
+        >
+          Próximo jogo em
+        </div>
+        <div
+          className="tabular-nums italic text-neon-yellow leading-none mt-0.5"
+          style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '18px' }}
+        >
+          {label}
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        <div
+          className="text-white/55 tracking-wide uppercase truncate max-w-[60px]"
+          style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
+        >
+          vs {nextGlobal.opponentShort}
+        </div>
+        <div
+          className="text-white/35"
+          style={{ fontFamily: 'var(--font-sans)', fontSize: '9px' }}
+        >
+          Rd {nextGlobal.roundNumber}
+        </div>
+      </div>
+      <ChevronRight className="w-3.5 h-3.5 text-white/25 shrink-0" strokeWidth={2} />
+    </button>
   );
 }
 
@@ -601,6 +903,29 @@ function MatchAnalysisWidget() {
       >
         {verdict}
       </div>
+
+      {/* Chip tático — sugere conversa com o coach */}
+      {nextGlobal && Math.abs(ourOvr - opponentStrength) >= 3 && (
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.querySelector<HTMLTextAreaElement>('[placeholder*="treinador"]');
+            if (el) {
+              const suggestion = ourOvr < opponentStrength
+                ? `Meu próximo adversário (${nextGlobal.opponentName}) tem OVR ${opponentStrength}. Que tática usar?`
+                : `Vou enfrentar ${nextGlobal.opponentName} (OVR ${opponentStrength}). Como explorar a vantagem?`;
+              el.value = suggestion;
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.focus();
+            }
+          }}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 border border-neon-yellow/25 bg-neon-yellow/[0.05] text-neon-yellow/80 hover:border-neon-yellow/50 hover:text-neon-yellow transition-all py-1.5"
+          style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '0.15em' }}
+        >
+          <Brain className="w-3 h-3" strokeWidth={2} />
+          PEDIR SUGESTÃO TÁTICA
+        </button>
+      )}
     </div>
   );
 }
@@ -1676,6 +2001,10 @@ function HubBody({ onClose }: { onClose?: () => void }) {
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <NewsWidget />
+        <div className="h-px bg-white/[0.06]" />
+        <CountdownWidget />
+        <LeaguePositionWidget />
+        <PenaltiesWidget />
         <div className="h-px bg-white/[0.06]" />
         <FormWidget />
         <div className="h-px bg-white/[0.06]" />

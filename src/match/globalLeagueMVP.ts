@@ -65,6 +65,12 @@ export interface GlobalTeam {
   allTimeGoalsAgainst: number;
   allTimeSeasonsPlayed: number;
 
+  // Penalidades ativas
+  injuryRoundsRemaining: number;
+  injuryModifier: number;
+  yellowCardCount: number;
+  suspensionRoundsRemaining: number;
+
   // Timestamps
   registeredAt: number;
 }
@@ -94,6 +100,7 @@ export interface LeagueRound {
 /** Estado completo da liga global MVP */
 export interface GlobalLeagueMVPState {
   seasonId: string;
+  seasonName?: string;
   status: GlobalLeagueStatus;
 
   // Times cadastrados
@@ -176,6 +183,10 @@ export function createGlobalTeam(
     allTimeGoalsFor: 0,
     allTimeGoalsAgainst: 0,
     allTimeSeasonsPlayed: 0,
+    injuryRoundsRemaining: 0,
+    injuryModifier: 0,
+    yellowCardCount: 0,
+    suspensionRoundsRemaining: 0,
     registeredAt: Date.now(),
   };
 }

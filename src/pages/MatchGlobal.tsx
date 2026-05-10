@@ -7,9 +7,9 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useGameStore } from '@/game/store';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Activity, Clock, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trophy, Activity, Clock, ArrowUp, ArrowDown, History } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import type { GlobalTeam, PlayoffRound } from '@/match/globalLeagueMVP';
@@ -681,18 +681,35 @@ function formatMs(ms: number): string {
 export default function MatchGlobal() {
   const navigate = useNavigate();
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const club = useGameStore((s) => s.club);
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
+
+  const managerId = managerProfile?.email ?? club?.id;
+  const myTeamId = globalLeagueMVP?.teams.find(t => t.managerId === managerId)?.id ?? null;
 
   // Hooks devem ser chamados na mesma ordem em todo render — sem returns antes deles.
   const currentLeagueRound = globalLeagueMVP?.status === 'active'
     ? globalLeagueMVP.leagueRounds.find(r => r.roundNumber === globalLeagueMVP.currentLeagueRound)
     : undefined;
+
+  // Última rodada finalizada (para mostrar resultados reais em vez de 0x0)
+  const lastFinishedRound = useMemo(() => {
+    if (!globalLeagueMVP) return undefined;
+    const finished = globalLeagueMVP.leagueRounds
+      .filter(r => r.status === 'finished')
+      .sort((a, b) => b.roundNumber - a.roundNumber);
+    return finished[0];
+  }, [globalLeagueMVP]);
+
   const filteredFixtures = useMemo(() => {
-    if (!currentLeagueRound) return [];
-    if (filterMode === 'all') return currentLeagueRound.fixtures;
+    // Prioridade: última rodada finalizada > rodada atual scheduled
+    const source = lastFinishedRound ?? currentLeagueRound;
+    if (!source) return [];
+    if (filterMode === 'all') return source.fixtures;
     const divisionNumber = filterMode.split('_')[1];
-    return currentLeagueRound.fixtures.filter(f => f.division === divisionNumber);
-  }, [currentLeagueRound, filterMode]);
+    return source.fixtures.filter(f => f.division === divisionNumber);
+  }, [lastFinishedRound, currentLeagueRound, filterMode]);
 
   // Verificar status da liga
   if (!globalLeagueMVP || globalLeagueMVP.status === 'waiting_teams') {
@@ -831,6 +848,165 @@ export default function MatchGlobal() {
     );
   }
 
+  if (globalLeagueMVP.status === 'season_ended') {
+    const div1Teams = [...globalLeagueMVP.teams]
+      .filter(t => t.division === 1)
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+        return b.goalsFor - a.goalsFor;
+      });
+
+    // Campeão: líder da divisão 1, ou time com mais allTimePoints se não houver div1
+    const champion = div1Teams[0] ?? [...globalLeagueMVP.teams].sort((a, b) => (b.allTimePoints ?? 0) - (a.allTimePoints ?? 0))[0];
+    const podium = div1Teams.slice(0, 3);
+
+    const allTeams = globalLeagueMVP.teams;
+    const totalMatches = allTeams.reduce((s, t) => s + (t.matchesPlayed ?? 0), 0) / 2;
+    const totalGoals = allTeams.reduce((s, t) => s + (t.goalsFor ?? 0), 0);
+    const topScorer = [...allTeams].sort((a, b) => (b.goalsFor ?? 0) - (a.goalsFor ?? 0))[0];
+
+    return (
+      <div className="mx-auto min-w-0 w-full max-w-4xl space-y-8 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-10">
+        {/* Hero */}
+        <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
+          <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
+            <span
+              className="font-display font-black uppercase whitespace-nowrap text-black/[0.04]"
+              style={{ fontSize: 'clamp(80px, 18vw, 280px)', lineHeight: '0.85', letterSpacing: '-0.02em' }}
+            >
+              FIM
+            </span>
+          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-center"
+          >
+            <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-black/60 mb-3">
+              Liga Global
+            </p>
+            <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
+              Temporada Encerrada
+            </h1>
+            <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
+            {globalLeagueMVP.seasonName && (
+              <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
+                {globalLeagueMVP.seasonName}
+              </p>
+            )}
+          </motion.div>
+        </section>
+
+        {/* Campeão */}
+        {champion && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="sports-panel rounded-lg p-6 border border-neon-yellow/40 shadow-[0_0_24px_rgba(255,220,0,0.08)] text-center"
+          >
+            <Trophy className="w-10 h-10 text-neon-yellow mx-auto mb-3" />
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1">Campeão</p>
+            <h2 className="font-display text-3xl sm:text-4xl font-black uppercase text-neon-yellow">
+              {champion.clubName}
+            </h2>
+            <p className="font-mono text-sm text-white/60 mt-2">
+              {champion.points} pts · {champion.wins}V {champion.draws}E {champion.losses}D
+            </p>
+          </motion.div>
+        )}
+
+        {/* Pódio divisão 1 */}
+        {podium.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="sports-panel rounded-lg overflow-hidden"
+          >
+            <div className="bg-deep-black px-5 py-3 border-b border-white/10 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-neon-yellow" />
+              <h3 className="font-display text-xs font-bold uppercase tracking-wider text-white">
+                Pódio · Divisão 1
+              </h3>
+            </div>
+            <div className="divide-y divide-white/5">
+              {podium.map((team, idx) => (
+                <div key={team.id} className={`flex items-center gap-4 px-5 py-4 ${idx === 0 ? 'bg-neon-yellow/10' : ''}`}>
+                  <span className={`font-serif-hero text-2xl font-bold w-8 shrink-0 ${
+                    idx === 0 ? 'text-neon-yellow' : idx === 1 ? 'text-white/60' : 'text-white/40'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display text-sm font-bold uppercase text-white truncate">{team.clubName}</p>
+                    <p className="font-mono text-[10px] text-white/40">{team.clubShort}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-serif-hero text-xl font-bold text-neon-yellow">{team.points}</p>
+                    <p className="font-mono text-[10px] text-white/40">{team.wins}V {team.draws}E {team.losses}D</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Stats da temporada */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-3 gap-3"
+        >
+          <div className="sports-panel rounded-lg p-4 text-center">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Partidas</p>
+            <p className="font-serif-hero text-3xl font-bold text-white">{Math.round(totalMatches)}</p>
+          </div>
+          <div className="sports-panel rounded-lg p-4 text-center">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Gols</p>
+            <p className="font-serif-hero text-3xl font-bold text-neon-yellow">{totalGoals}</p>
+          </div>
+          <div className="sports-panel rounded-lg p-4 text-center">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Maior Ataque</p>
+            <p className="font-serif-hero text-lg font-bold text-white truncate">{topScorer?.clubShort ?? '—'}</p>
+            <p className="font-mono text-[10px] text-white/40">{topScorer?.goalsFor ?? 0} gols</p>
+          </div>
+        </motion.div>
+
+        {/* Links e mensagem */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="space-y-4"
+        >
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link
+              to="/match/global/history"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel border border-white/10 text-white/70 hover:text-neon-yellow hover:border-neon-yellow/40 transition-all"
+            >
+              <History className="w-4 h-4" />
+              Histórico de Rodadas
+            </Link>
+            <Link
+              to="/match/global/all-time"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel border border-white/10 text-white/70 hover:text-neon-yellow hover:border-neon-yellow/40 transition-all"
+            >
+              <Trophy className="w-4 h-4" />
+              Ranking All-Time
+            </Link>
+          </div>
+          <p className="text-center font-display text-[11px] uppercase tracking-[0.2em] text-white/30">
+            Nova temporada em breve · Acompanhe os canais oficiais
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
   // Liga ativa - mostrar divisões
   const division1Teams = globalLeagueMVP.teams.filter(t => t.division === 1);
   const division2Teams = globalLeagueMVP.teams.filter(t => t.division === 2);
@@ -876,14 +1052,12 @@ export default function MatchGlobal() {
       />
 
       {/* Filtros */}
-      {currentRound && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
+      {(lastFinishedRound ?? currentRound) && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           <button
             onClick={() => setFilterMode('all')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'all'
-                ? 'bg-neon-yellow text-black'
-                : 'bg-panel text-white/60 hover:text-white'
+              filterMode === 'all' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
             Todas
@@ -891,9 +1065,7 @@ export default function MatchGlobal() {
           <button
             onClick={() => setFilterMode('division_1')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_1'
-                ? 'bg-neon-yellow text-black'
-                : 'bg-panel text-white/60 hover:text-white'
+              filterMode === 'division_1' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
             Divisão 1
@@ -901,9 +1073,7 @@ export default function MatchGlobal() {
           <button
             onClick={() => setFilterMode('division_2')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_2'
-                ? 'bg-blue-400 text-black'
-                : 'bg-panel text-white/60 hover:text-white'
+              filterMode === 'division_2' ? 'bg-blue-400 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
             Divisão 2
@@ -911,22 +1081,70 @@ export default function MatchGlobal() {
           <button
             onClick={() => setFilterMode('division_3')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_3'
-                ? 'bg-white/20 text-white'
-                : 'bg-panel text-white/60 hover:text-white'
+              filterMode === 'division_3' ? 'bg-white/20 text-white' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
             Divisão 3
           </button>
+
+          {/* Links de navegação */}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <Link
+              to="/match/global/all-time"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel text-white/60 hover:text-neon-yellow hover:border-neon-yellow/40 border border-white/10 transition-all"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              All-Time
+            </Link>
+            <Link
+              to="/match/global/history"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider bg-panel text-white/60 hover:text-neon-yellow hover:border-neon-yellow/40 border border-white/10 transition-all"
+            >
+              <History className="w-3.5 h-3.5" />
+              Histórico
+            </Link>
+          </div>
         </div>
       )}
 
-      {/* Partidas da Rodada Atual */}
-      {currentRound && filteredFixtures.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredFixtures.map((fixture, index) => (
-            <FixtureCard key={fixture.id} fixture={fixture} index={index} />
-          ))}
+      {/* Partidas — última rodada finalizada ou rodada atual */}
+      {filteredFixtures.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              {lastFinishedRound ? (
+                <>
+                  <Trophy className="w-4 h-4 text-neon-yellow" />
+                  <span className="font-display text-xs font-bold uppercase tracking-wider text-white/70">
+                    Rodada {lastFinishedRound.roundNumber} · Resultados
+                  </span>
+                  {myTeamId && lastFinishedRound.fixtures.some(f => f.homeTeamId === myTeamId || f.awayTeamId === myTeamId) && (
+                    <span className="text-[9px] bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      Seu jogo
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Clock className="w-4 h-4 text-white/40" />
+                  <span className="font-display text-xs font-bold uppercase tracking-wider text-white/50">
+                    Rodada {currentRound?.roundNumber} · Aguardando kickoff
+                  </span>
+                </>
+              )}
+            </div>
+            <Link
+              to="/match/global/history"
+              className="text-[10px] text-white/40 hover:text-neon-yellow transition-colors font-display uppercase tracking-wider flex items-center gap-1"
+            >
+              <History className="w-3 h-3" /> Ver todas
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredFixtures.map((fixture, index) => (
+              <FixtureCard key={fixture.id} fixture={fixture} index={index} />
+            ))}
+          </div>
         </div>
       )}
 

@@ -23,6 +23,7 @@ import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
 import { useGlobalPlayoffScheduler } from './hooks/useGlobalPlayoffScheduler';
 import { useAutoRegisterGlobalLeague } from './hooks/useAutoRegisterGlobalLeague';
+import { useGlobalLeagueCrowdSync } from './hooks/useGlobalLeagueCrowdSync';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
 
 /**
@@ -109,6 +110,9 @@ const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ de
 const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
 const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
+const GlobalLeagueHistory = lazy(() => import('./pages/GlobalLeagueHistory').then((m) => ({ default: m.default })));
+const GlobalLeagueClubProfile = lazy(() => import('./pages/GlobalLeagueClubProfile').then((m) => ({ default: m.default })));
+const GlobalLeagueAllTime = lazy(() => import('./pages/GlobalLeagueAllTime').then((m) => ({ default: m.default })));
 const OlefootLeague = lazy(() => import('./pages/OlefootLeague').then((m) => ({ default: m.default })));
 const OlefootRanked = lazy(() => import('./pages/OlefootRanked').then((m) => ({ default: m.default })));
 const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
@@ -230,6 +234,7 @@ function GlobalSchedulerMount() {
   useGlobalRoundScheduler();
   useGlobalPlayoffScheduler();
   useAutoRegisterGlobalLeague();
+  useGlobalLeagueCrowdSync();
   return null;
 }
 
@@ -497,6 +502,9 @@ export default function App() {
             <Route path="/match/penalty-v2" element={<Navigate to="/match/penalty" replace />} />
             <Route path="/match/global" element={<MatchGlobal />} />
             <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
+            <Route path="/match/global/history" element={<GlobalLeagueHistory />} />
+            <Route path="/match/global/all-time" element={<GlobalLeagueAllTime />} />
+            <Route path="/match/global/club/:teamId" element={<GlobalLeagueClubProfile />} />
             <Route path="/match/olefoot-liga" element={<OlefootLeague />} />
             <Route path="/olefoot/ranked" element={<OlefootRanked />} />
             <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />

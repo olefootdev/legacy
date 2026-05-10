@@ -606,6 +606,8 @@ export type GameAction =
   /** Substitui o estado por um save importado (JSON). Validação mínima em `persistence`. */
   | { type: 'IMPORT_GAME_STATE'; state: OlefootGameState }
   | { type: 'RESET' }
+  // Global League — resultado real da liga atualiza torcida local
+  | { type: 'GLOBAL_LEAGUE_MATCH_RESULT'; win: boolean; draw: boolean; goalsFor: number; goalsAgainst: number }
   // Coach Agent Actions
   | { type: 'COACH_ADD_PENDING_ACTION'; action: CoachAction }
   | { type: 'COACH_GENERATE_HEALTH_ACTIONS' }

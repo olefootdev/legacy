@@ -385,6 +385,150 @@ export function AdminGlobalPanel() {
           )}
         </>
       )}
+
+      {/* ─── Nova Temporada ─────────────────────────────────────────── */}
+      <NewSeasonSection />
+    </div>
+  );
+}
+
+function NewSeasonSection() {
+  const [seasonName, setSeasonName] = useState('');
+  const [durationDays, setDurationDays] = useState(7);
+  const [slots, setSlots] = useState('05:30,11:00,15:00,19:00,21:30');
+  const [slotDurationMin, setSlotDurationMin] = useState(30);
+  const [minTeamsRequired, setMinTeamsRequired] = useState(2);
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleStartNewSeason = async () => {
+    if (!seasonName.trim()) {
+      setFeedback({ type: 'error', message: 'Nome da temporada é obrigatório.' });
+      return;
+    }
+    setLoading(true);
+    setFeedback(null);
+
+    const baseUrl = import.meta.env.VITE_OLEFOOT_API_URL || '';
+    try {
+      const res = await fetch(`${baseUrl}/api/global-league/start-season`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seasonName: seasonName.trim(),
+          durationDays,
+          slots: slots.split(',').map(s => s.trim()),
+          slotDurationMin,
+          minTeamsRequired,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setFeedback({ type: 'success', message: `Temporada "${data.seasonName}" iniciada com sucesso.` });
+        setSeasonName('');
+      } else {
+        setFeedback({ type: 'error', message: data.error ?? 'Erro desconhecido ao iniciar temporada.' });
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Falha de rede.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+      <div className="flex items-center gap-3 mb-2">
+        <Plus className="h-5 w-5 text-neon-yellow" />
+        <h3 className="font-display text-base font-bold uppercase tracking-wider text-white">
+          Iniciar Nova Temporada
+        </h3>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Nome da Temporada</label>
+          <input
+            type="text"
+            value={seasonName}
+            onChange={(e) => setSeasonName(e.target.value)}
+            placeholder="OLEFOOT LIGA S2 · 2026"
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-neon-yellow/50 focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Duração (dias)</label>
+          <input
+            type="number"
+            value={durationDays}
+            onChange={(e) => setDurationDays(Number(e.target.value))}
+            min={1}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Slots (separados por vírgula)</label>
+          <input
+            type="text"
+            value={slots}
+            onChange={(e) => setSlots(e.target.value)}
+            placeholder="05:30,11:00,15:00,19:00,21:30"
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-neon-yellow/50 focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Duração do Slot (min)</label>
+          <input
+            type="number"
+            value={slotDurationMin}
+            onChange={(e) => setSlotDurationMin(Number(e.target.value))}
+            min={5}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Min. Times Necessários</label>
+          <input
+            type="number"
+            value={minTeamsRequired}
+            onChange={(e) => setMinTeamsRequired(Number(e.target.value))}
+            min={2}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 pt-2">
+        <button
+          onClick={handleStartNewSeason}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-lg bg-neon-yellow px-5 py-2.5 text-xs font-black uppercase text-black hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          {loading ? 'Iniciando...' : 'Iniciar Temporada'}
+        </button>
+
+        <AnimatePresence>
+          {feedback && (
+            <motion.span
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0 }}
+              className={cn(
+                'text-xs font-bold',
+                feedback.type === 'success' ? 'text-neon-green' : 'text-red-400'
+              )}
+            >
+              {feedback.type === 'success' ? <CheckCircle className="inline w-3.5 h-3.5 mr-1" /> : <AlertCircle className="inline w-3.5 h-3.5 mr-1" />}
+              {feedback.message}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
