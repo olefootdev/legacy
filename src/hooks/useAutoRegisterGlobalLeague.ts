@@ -14,7 +14,6 @@ import { useEffect, useRef } from 'react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { upsertGlobalTeamInSupabase } from '@/supabase/globalLeague';
-import { createGlobalTeam } from '@/match/globalLeagueMVP';
 
 export function useAutoRegisterGlobalLeague() {
   const dispatch = useGameDispatch();
@@ -34,11 +33,6 @@ export function useAutoRegisterGlobalLeague() {
     const managerId = managerProfile?.email ?? club?.id;
     if (!managerId) return;
 
-    // Já está na liga local
-    const alreadyRegisteredLocally = globalLeagueMVP.teams.some(t => t.managerId === managerId);
-
-    registeredRef.current = true;
-
     const allPlayers = Object.values(players ?? {});
     const avgOverall = allPlayers.length > 0
       ? Math.round(allPlayers.reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) / allPlayers.length)
@@ -47,8 +41,11 @@ export function useAutoRegisterGlobalLeague() {
     const clubName = club?.name ?? 'Olefoot FC';
     const clubShort = club?.shortName ?? clubName.slice(0, 3).toUpperCase();
 
-    // 1. Registra localmente (se ainda não está)
-    if (!alreadyRegisteredLocally) {
+    // Reutiliza o time já existente no store (preserva o ID do Supabase).
+    // Só cria novo objeto se o manager ainda não está na liga local.
+    const existingTeam = globalLeagueMVP.teams.find(t => t.managerId === managerId);
+
+    if (!existingTeam) {
       dispatch({
         type: 'REGISTER_GLOBAL_TEAM',
         managerId,
@@ -58,12 +55,24 @@ export function useAutoRegisterGlobalLeague() {
       });
     }
 
-    // 2. Persiste no Supabase (idempotente via onConflict: manager_id).
-    //    Sem isso, a Edge Function não vê o time e nunca inclui na rodada.
-    const teamForSupabase = createGlobalTeam(managerId, clubName, clubShort, avgOverall);
-    void upsertGlobalTeamInSupabase(teamForSupabase).then((res) => {
+    registeredRef.current = true;
+
+    // Upsert no Supabase usando o time existente (ID estável) ou os dados
+    // atuais do clube. onConflict: manager_id garante idempotência.
+    const teamToUpsert = existingTeam
+      ? { ...existingTeam, clubName, clubShort, overall: avgOverall }
+      : { id: `gt_${managerId.replace(/[^a-z0-9]/gi, '_')}`, managerId, clubName, clubShort, overall: avgOverall,
+          playoffPoints: 0, playoffMatchesPlayed: 0, playoffWins: 0, playoffDraws: 0, playoffLosses: 0,
+          playoffGoalsFor: 0, playoffGoalsAgainst: 0, points: 0, matchesPlayed: 0, wins: 0, draws: 0,
+          losses: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, recentForm: [] as Array<'W'|'D'|'L'>,
+          allTimePoints: 0, allTimeMatchesPlayed: 0, allTimeWins: 0, allTimeDraws: 0, allTimeLosses: 0,
+          allTimeGoalsFor: 0, allTimeGoalsAgainst: 0, allTimeSeasonsPlayed: 0, registeredAt: Date.now() };
+
+    void upsertGlobalTeamInSupabase(teamToUpsert).then((res) => {
       if (!res.ok) {
         console.warn('[autoRegister] failed to register team in supabase:', res.error);
+        // Permite retry na próxima sessão
+        registeredRef.current = false;
       } else {
         console.log('[autoRegister] team registered in Liga Global:', clubName);
       }

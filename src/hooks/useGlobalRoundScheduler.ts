@@ -29,6 +29,10 @@ import {
 } from '@/coach/globalMatchIntegration';
 import { CoachConversationEngine } from '@/coach/coachConversation';
 
+// Quando VITE_OLEFOOT_API_URL está definido, a Edge Function do Supabase é
+// autoritativa. Este hook só atua como fallback em dev local sem API URL.
+const SERVER_DRIVEN = Boolean(import.meta.env.VITE_OLEFOOT_API_URL);
+
 /**
  * Hook principal do scheduler
  * Deve ser montado no App.tsx para rodar globalmente
@@ -43,6 +47,8 @@ export function useGlobalRoundScheduler() {
   const postMatchReportSentRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
+    // Edge Function é autoritativa em produção e dev com API URL configurada.
+    if (SERVER_DRIVEN) return;
     if (!olefootLeague) return;
 
     // Tick a cada 1 segundo para verificar estado das rodadas

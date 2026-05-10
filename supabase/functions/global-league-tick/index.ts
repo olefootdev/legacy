@@ -85,6 +85,8 @@ interface TeamRow {
   goals_for: number; goals_against: number; goal_difference: number;
   recent_form: ('W' | 'D' | 'L')[];
   injury_modifier: number; injury_rounds_remaining: number;
+  yellow_card_count: number; // acúmulo de amarelos — zera após suspensão
+  suspension_rounds_remaining: number; // rodadas de suspensão pendentes
   all_time_points?: number; all_time_matches_played?: number;
   all_time_wins?: number; all_time_draws?: number; all_time_losses?: number;
   all_time_goals_for?: number; all_time_goals_against?: number;
@@ -105,8 +107,10 @@ interface StateRow {
 }
 
 function effectiveOverall(team: TeamRow): number {
-  const mod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
-  return Math.max(40, team.overall + mod);
+  // Time suspenso joga com plantel reserva (-5 OVR)
+  const suspMod = (team.suspension_rounds_remaining ?? 0) > 0 ? -5 : 0;
+  const injMod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
+  return Math.max(40, team.overall + injMod + suspMod);
 }
 function poissonGoals(expected: number): number {
   const L = Math.exp(-expected);
@@ -307,6 +311,31 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   };
   for (let i = 0; i < homeGoals; i++) placeGoal('home', i, homeGoals);
   for (let i = 0; i < awayGoals; i++) placeGoal('away', i, awayGoals);
+
+  // Cartões amarelos (15% chance por time)
+  let home_yellow = false;
+  let away_yellow = false;
+  if (Math.random() < 0.15) {
+    home_yellow = true;
+    const minute = Math.floor(10 + Math.random() * 80);
+    events.push({
+      id: `evt_${fx.id}_home_yc_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'yellow_card', minute, side: 'home',
+      text: `🟡 Cartão amarelo — ${fx.home_team_name}`, highlight: false,
+      timestamp_ms: kickoffMs + minute * 1000,
+    });
+  }
+  if (Math.random() < 0.15) {
+    away_yellow = true;
+    const minute = Math.floor(10 + Math.random() * 80);
+    events.push({
+      id: `evt_${fx.id}_away_yc_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'yellow_card', minute, side: 'away',
+      text: `🟡 Cartão amarelo — ${fx.away_team_name}`, highlight: false,
+      timestamp_ms: kickoffMs + minute * 1000,
+    });
+  }
+
   let injured_side: 'home' | 'away' | null = null;
   if (Math.random() < 0.08) {
     injured_side = Math.random() < 0.5 ? 'home' : 'away';
@@ -319,7 +348,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
     });
   }
   events.sort((a, b) => (a.minute as number) - (b.minute as number));
-  return { score_home: homeGoals, score_away: awayGoals, events, injured_side };
+  return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow };
 }
 
 function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean): TeamRow {
@@ -519,7 +548,21 @@ Deno.serve(async (_req: Request) => {
 
   const round = pending[0] as RoundRow;
   const isPlayoff = round.round_type === 'playoff';
-  await supabase.from('global_league_rounds').update({ status: 'live', actual_kickoff_ms: now }).eq('id', round.id);
+
+  // Lock idempotente: tenta mover status scheduled → live atomicamente.
+  // Se outro tick já processou esta rodada, o update afeta 0 linhas e pulamos.
+  const { count: lockCount } = await supabase
+    .from('global_league_rounds')
+    .update({ status: 'live', actual_kickoff_ms: now })
+    .eq('id', round.id)
+    .eq('status', 'scheduled') // só atualiza se ainda 'scheduled'
+    .select('id', { count: 'exact', head: true });
+  if (!lockCount || lockCount === 0) {
+    return new Response(JSON.stringify({
+      ok: true, step: 'skip-duplicate', roundId: round.id,
+      reason: 'round already processed by concurrent tick',
+    }), { headers: { 'Content-Type': 'application/json' } });
+  }
 
   const { data: fixtures, error: fxErr } = await supabase
     .from('global_league_fixtures').select('*').eq('round_id', round.id);
@@ -536,6 +579,7 @@ Deno.serve(async (_req: Request) => {
   const eventsToInsert: any[] = [];
   const teamDelta = new Map<string, { gf: number; ga: number }>();
   const newInjuries = new Map<string, { modifier: number; rounds: number }>();
+  const yellowsThisRound = new Map<string, number>(); // teamId → amarelos nesta rodada
 
   for (const fx of fixtures as FixtureRow[]) {
     const home = teamById.get(fx.home_team_id);
@@ -557,6 +601,9 @@ Deno.serve(async (_req: Request) => {
         rounds: existing && existing.rounds > rounds ? existing.rounds : rounds,
       });
     }
+    // Acumular amarelos por time nesta rodada
+    if (sim.home_yellow) yellowsThisRound.set(fx.home_team_id, (yellowsThisRound.get(fx.home_team_id) ?? 0) + 1);
+    if (sim.away_yellow) yellowsThisRound.set(fx.away_team_id, (yellowsThisRound.get(fx.away_team_id) ?? 0) + 1);
   }
   if (fixturesUpdated.length > 0) await supabase.from('global_league_fixtures').upsert(fixturesUpdated as any, { onConflict: 'id' });
   if (eventsToInsert.length > 0) await supabase.from('global_league_events').upsert(eventsToInsert as any, { onConflict: 'id' });
@@ -564,6 +611,21 @@ Deno.serve(async (_req: Request) => {
     const updated = Array.from(teamById.values()).map((t) => {
       const d = teamDelta.get(t.id);
       let next = d ? updateTeamRow(t, d.gf, d.ga, isPlayoff) : t;
+      // Decrementar suspensão pendente
+      if (next.suspension_rounds_remaining > 0) {
+        next = { ...next, suspension_rounds_remaining: next.suspension_rounds_remaining - 1 };
+      }
+      // Aplicar amarelos desta rodada e verificar acúmulo (3 = 1 rodada suspensão)
+      const newYellows = yellowsThisRound.get(next.id) ?? 0;
+      if (newYellows > 0) {
+        const totalYellows = (next.yellow_card_count ?? 0) + newYellows;
+        if (totalYellows >= 3) {
+          next = { ...next, yellow_card_count: 0, suspension_rounds_remaining: (next.suspension_rounds_remaining ?? 0) + 1 };
+        } else {
+          next = { ...next, yellow_card_count: totalYellows };
+        }
+      }
+      // Decrementar lesão pendente
       if (next.injury_rounds_remaining > 0) {
         const remaining = next.injury_rounds_remaining - 1;
         next = { ...next, injury_rounds_remaining: remaining, injury_modifier: remaining === 0 ? 0 : next.injury_modifier };

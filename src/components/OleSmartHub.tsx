@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { useGameDispatch } from '@/game/store';
+import { useNextGlobalFixture } from '@/hooks/useNextGlobalFixture';
 import { formatOle } from '@/systems/economy';
 import { computeUsername, findProfileByUsername } from '@/supabase/managerUsername';
 import { chatWithCoach } from '@/coach/coachApi';
@@ -411,12 +412,34 @@ function MatchAnalysisWidget() {
   const ranking = useGameStore((s) => s.competitiveRanking);
   const clubName = useGameStore((s) => s.club?.name ?? 'Nós');
 
+  // Dados reais da Global League têm prioridade sobre o fixture estático (TITANS mock)
+  const nextGlobal = useNextGlobalFixture();
+  const opponentShort = nextGlobal?.opponentShort ?? nextFixture?.opponent?.shortName ?? 'ADV';
+  const opponentStrength = nextGlobal?.opponentOverall ?? nextFixture?.opponent?.strength ?? 70;
+  const kickoffLabel = nextGlobal
+    ? (() => {
+        const d = new Date(nextGlobal.scheduledKickoffMs);
+        const today = new Date();
+        const isToday = d.toDateString() === today.toDateString();
+        const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return isToday ? `Hoje, ${timeStr}` : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
+      })()
+    : (nextFixture?.kickoffLabel ?? '');
+  const competitionLabel = nextGlobal
+    ? (nextGlobal.roundType === 'playoff'
+        ? `Liga Global · Playoffs Rd ${nextGlobal.roundNumber}`
+        : `Liga Global · Rodada ${nextGlobal.roundNumber}`)
+    : (nextFixture?.competition ?? 'Liga');
+
+  // Sem nenhuma fonte de dados: não renderiza
+  const hasData = !!nextGlobal || !!nextFixture;
+
   const { ourOvr, comparisons, verdict } = useMemo(() => {
-    if (!nextFixture) return { ourOvr: 0, comparisons: [], verdict: '' };
+    if (!hasData) return { ourOvr: 0, comparisons: [], verdict: '' };
 
     const lineupIds = Object.values(lineup);
     const starters = lineupIds.map((id) => players[id]).filter(Boolean);
-    const strength = nextFixture.opponent.strength;
+    const strength = opponentStrength;
 
     function avg(keys: Array<keyof import('@/entities/types').PlayerAttributes>) {
       if (starters.length === 0) return 50;
@@ -428,7 +451,7 @@ function MatchAnalysisWidget() {
 
     const totalOvr = starters.length > 0
       ? Math.round(starters.map((p) => ovr(p.attrs)).reduce((a, b) => a + b, 0) / starters.length)
-      : (nextFixture.opponent.highlightPlayer?.ovr ?? strength);
+      : (nextFixture?.opponent?.highlightPlayer?.ovr ?? strength);
 
     const winStreak = ranking?.currentWinStreak ?? 0;
 
@@ -466,26 +489,19 @@ function MatchAnalysisWidget() {
         ? 'Desafio difícil. Joga pelo contra-ataque.'
         : 'Equilíbrio total. Detalhe decide.';
 
-    const vColor = totalOvr > strength
-      ? 'text-green-400'
-      : totalOvr < strength - 5
-        ? 'text-red-400'
-        : 'text-yellow-400';
-
-    return { ourOvr: totalOvr, comparisons: rows, verdict: v, verdictColor: vColor };
-  }, [nextFixture, players, lineup, ranking]);
+    return { ourOvr: totalOvr, comparisons: rows, verdict: v };
+  }, [hasData, opponentStrength, players, lineup, ranking, nextFixture]);
 
   const verdictColor = useMemo(() => {
-    if (!nextFixture) return 'text-white/35';
-    const strength = nextFixture.opponent.strength;
-    return ourOvr > strength
+    if (!hasData) return 'text-white/35';
+    return ourOvr > opponentStrength
       ? 'text-green-400'
-      : ourOvr < strength - 5
+      : ourOvr < opponentStrength - 5
         ? 'text-red-400'
         : 'text-yellow-400';
-  }, [ourOvr, nextFixture]);
+  }, [ourOvr, opponentStrength, hasData]);
 
-  if (!nextFixture) return null;
+  if (!hasData) return null;
 
   return (
     <div>
@@ -494,7 +510,7 @@ function MatchAnalysisWidget() {
         className="text-white/45 mb-2 tracking-[0.1em]"
         style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
       >
-        {nextFixture.kickoffLabel} · {nextFixture.competition}
+        {kickoffLabel} · {competitionLabel}
       </div>
 
       {/* Confronto visual */}
@@ -524,13 +540,13 @@ function MatchAnalysisWidget() {
             className="text-white/85 leading-none tracking-wide uppercase truncate max-w-[80px]"
             style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
           >
-            {nextFixture.opponent.shortName}
+            {opponentShort}
           </div>
           <div
             className="tabular-nums italic text-white/65 leading-none mt-0.5"
             style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '22px' }}
           >
-            {nextFixture.opponent.strength}
+            {opponentStrength}
           </div>
         </div>
       </div>

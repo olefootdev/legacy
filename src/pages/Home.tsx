@@ -7,6 +7,7 @@ import { formatExp, FRIENDLY_CHALLENGE_BRO_FEE_RATE, friendlyChallengeBroFeeCent
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
+import { useNextGlobalFixture } from '@/hooks/useNextGlobalFixture';
 import {
   createFriendlyChallenge,
   FRIENDLY_CHALLENGE_TTL_SEC,
@@ -164,6 +165,9 @@ export function Home() {
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+
+  // Próxima partida real da Global League — sobrepõe o fixture estático (TITANS mock)
+  const nextGlobal = useNextGlobalFixture();
   /** Sprint C — Fase A: dados extras pro mini-painel manager. */
   const playerSeasonLedger = useGameStore((s) => s.playerSeasonLedger);
   const formGlobal = useGameStore((s) => s.form);
@@ -990,110 +994,113 @@ export function Home() {
       </div>
 
       <DashboardGrid>
-      {/* PRÓXIMA PARTIDA — wide */}
-      {fixture?.opponent ? (
-        <DashboardSection
-          size="wide"
-          ariaLabel="Próxima partida"
-          className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
-        >
-          <div className="w-full max-w-full min-w-0 px-3 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
-            {/* Eyebrow centralizado */}
-            <div
-              className="ole-eyebrow !text-neon-yellow"
-              style={{ fontFamily: 'var(--font-ui)' }}
-            >
-              <span>Próxima partida · {fixture.kickoffLabel}</span>
-            </div>
+      {/* PRÓXIMA PARTIDA — wide
+          Prioridade: Global League real > fixture estático (TITANS mock) */}
+      {(nextGlobal || fixture?.opponent) ? (() => {
+        // Dados resolvidos: Global League tem prioridade sobre o mock estático
+        const isGlobal = !!nextGlobal;
+        const kickoffLabel = isGlobal
+          ? (() => {
+              const d = new Date(nextGlobal.scheduledKickoffMs);
+              const today = new Date();
+              const isToday = d.toDateString() === today.toDateString();
+              const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+              return isToday ? `Hoje, ${timeStr}` : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
+            })()
+          : fixture.kickoffLabel;
+        const opponentShort = isGlobal
+          ? nextGlobal.opponentShort
+          : (fixture.opponent.shortName ?? fixture.opponent.name).slice(0, 3).toUpperCase();
+        const opponentName = isGlobal ? nextGlobal.opponentName : fixture.opponent.name;
+        const competitionLabel = isGlobal
+          ? (nextGlobal.roundType === 'playoff'
+              ? `Liga Global · Playoffs Rd ${nextGlobal.roundNumber}`
+              : `Liga Global · Rodada ${nextGlobal.roundNumber}${nextGlobal.division !== 'playoff' ? ` · Div ${nextGlobal.division}` : ''}`)
+          : `${fixture.competition} · ${fixture.venue}`;
+        const homeShort = isGlobal
+          ? (nextGlobal.isHome ? club.shortName ?? club.name.slice(0, 3) : nextGlobal.opponentShort)
+          : (club.shortName ?? club.name).slice(0, 3);
+        const awayShort = isGlobal
+          ? (nextGlobal.isHome ? nextGlobal.opponentShort : club.shortName ?? club.name.slice(0, 3))
+          : opponentShort;
+        const renderHomeCrest = isGlobal ? null : (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null));
+        const renderAwayCrest = isGlobal ? null : (awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null));
+        const ctaLink = isGlobal ? '/match/global' : '/match/quick';
+        const ctaLabel = isGlobal ? 'Ver Liga Global' : 'Partida rápida';
 
-            {/* Duelo: [crest] CASA × VISITANTE [crest] — brasões reais quando houver
-                (em DEV, fallback nos crests Wikimedia pra preview) */}
-            {(() => {
-              const renderHomeCrest = homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null);
-              const renderAwayCrest = awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null);
-              return (
-            <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-full min-w-0">
-              {renderHomeCrest ? (
-                <img
-                  src={renderHomeCrest}
-                  alt={club.name}
-                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
-                  referrerPolicy="no-referrer"
-                  draggable={false}
-                />
-              ) : (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
-                  <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
-                    {(club.shortName ?? club.name).slice(0, 3).toUpperCase()}
-                  </span>
-                </div>
+        return (
+          <DashboardSection
+            size="wide"
+            ariaLabel="Próxima partida"
+            className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
+          >
+            <div className="w-full max-w-full min-w-0 px-3 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
+              {/* Eyebrow */}
+              <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
+                <span>Próxima partida · {kickoffLabel}</span>
+              </div>
+
+              {/* Duelo: [crest/sigla] CASA × VISITANTE [crest/sigla] */}
+              <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-full min-w-0">
+                {renderHomeCrest ? (
+                  <img src={renderHomeCrest} alt={club.name}
+                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                    referrerPolicy="no-referrer" draggable={false} />
+                ) : (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
+                    <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
+                      {homeShort.slice(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <span className="text-neon-yellow/85 leading-none select-none"
+                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
+                    fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-0.04em', transform: 'translateY(-0.04em)' }}>
+                  ×
+                </span>
+                {renderAwayCrest ? (
+                  <img src={renderAwayCrest} alt={opponentName}
+                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
+                    referrerPolicy="no-referrer" draggable={false} />
+                ) : (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
+                    <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
+                      {awayShort.slice(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Liga + contexto */}
+              <p className="text-white/55 uppercase"
+                style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', letterSpacing: '0.22em', fontWeight: 600 }}>
+                {competitionLabel}
+              </p>
+
+              {/* OVR adversário (só Global League) */}
+              {isGlobal && (
+                <p className="text-white/40 text-xs font-mono">
+                  OVR adversário: <span className="text-neon-yellow font-bold">{nextGlobal.opponentOverall}</span>
+                </p>
               )}
-              <span
-                className="text-neon-yellow/85 leading-none select-none"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontStyle: 'italic',
-                  fontSize: 'clamp(28px, 4.5vw, 44px)',
-                  letterSpacing: '-0.04em',
-                  transform: 'translateY(-0.04em)',
-                }}
-              >
-                ×
-              </span>
-              {renderAwayCrest ? (
-                <img
-                  src={renderAwayCrest}
-                  alt={fixture.opponent.name}
-                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
-                  referrerPolicy="no-referrer"
-                  draggable={false}
-                />
-              ) : (
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
-                  <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
-                    {(fixture.opponent.shortName ?? fixture.opponent.name)
-                      .slice(0, 3)
-                      .toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-              );
-            })()}
 
-            {/* Liga + Estádio — abaixo dos ícones, centralizado */}
-            <p
-              className="text-white/55 uppercase"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '11px',
-                letterSpacing: '0.22em',
-                fontWeight: 600,
-              }}
-            >
-              {fixture.competition} · {fixture.venue}
-            </p>
-
-            {/* Ações centralizadas */}
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1">
-              <Link
-                to="/match/quick"
-                className="bg-neon-yellow text-black hover:bg-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                Partida rápida
-              </Link>
-              <Link
-                to="/team"
-                className="bg-deep-black border border-[var(--color-border)] text-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                Ver táticas
-              </Link>
+              {/* Ações */}
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1">
+                <Link to={ctaLink}
+                  className="bg-neon-yellow text-black hover:bg-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
+                  style={{ borderRadius: 'var(--radius-sm)' }}>
+                  {ctaLabel}
+                </Link>
+                <Link to="/team"
+                  className="bg-deep-black border border-[var(--color-border)] text-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
+                  style={{ borderRadius: 'var(--radius-sm)' }}>
+                  Ver táticas
+                </Link>
+              </div>
             </div>
-          </div>
-        </DashboardSection>
-      ) : null}
+          </DashboardSection>
+        );
+      })() : null}
 
       </DashboardGrid>
 

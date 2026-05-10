@@ -18,6 +18,7 @@
     "test:awareness": "tsx src/smartfield/runAwarenessSelfTest.ts",
     "test:skill-engine": "tsx src/skills/runSkillEngineSelfTest.ts",
     "test:structural": "tsx src/simulation/runStructuralSelfTest.ts",
+    "test:global-league": "tsx --env-file=server/.env scripts/test-global-league-cycle.ts",
     "test:turnover": "tsx src/simulation/runPickPlayAfterTurnoverTest.ts",
     "test:collective-individual": "tsx src/playerDecision/runCollectiveIndividualSelfTest.ts",
     "test:attribute-impact": "tsx src/simulation/runAttributeImpactSelfTest.ts",
