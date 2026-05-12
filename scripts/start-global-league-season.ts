@@ -224,6 +224,7 @@ async function startSeason() {
   const slots = argValue('slots', DEFAULT_SLOTS.join(',')).split(',').map(s => s.trim()).filter(Boolean);
   const slotDurationMin = Number(argValue('slotDurationMin', '30'));
   const minTeamsRequired = Number(argValue('minTeamsRequired', '2'));
+  const fullReset = process.argv.includes('--fullReset') || process.argv.includes('--full-reset');
   const seasonId = `season_${Date.now()}`;
 
   const { data: state } = await sb.from('global_league_state').select('season_id').eq('id', 'current').maybeSingle();
@@ -241,7 +242,7 @@ async function startSeason() {
     }
   }
 
-  const { error: resetErr } = await sb.from('global_league_teams').update({
+  const resetPayload: Record<string, unknown> = {
     points: 0,
     wins: 0,
     draws: 0,
@@ -260,7 +261,25 @@ async function startSeason() {
     division: null,
     position: null,
     previous_position: null,
-  }).neq('id', '00000000-0000-0000-0000-000000000000');
+    recent_form: [],
+    yellow_card_count: 0,
+    suspension_rounds_remaining: 0,
+    injury_modifier: 0,
+    injury_rounds_remaining: 0,
+  };
+  if (fullReset) {
+    Object.assign(resetPayload, {
+      all_time_points: 0,
+      all_time_matches_played: 0,
+      all_time_wins: 0,
+      all_time_draws: 0,
+      all_time_losses: 0,
+      all_time_goals_for: 0,
+      all_time_goals_against: 0,
+      all_time_seasons_played: 0,
+    });
+  }
+  const { error: resetErr } = await sb.from('global_league_teams').update(resetPayload).neq('id', '00000000-0000-0000-0000-000000000000');
   if (resetErr) throw resetErr;
 
   const nowIso = new Date().toISOString();
@@ -280,7 +299,7 @@ async function startSeason() {
   });
   if (stateErr) throw stateErr;
 
-  return { seasonId, seasonName, durationDays, slots, slotDurationMin, minTeamsRequired, startedAt: nowIso };
+  return { seasonId, seasonName, durationDays, slots, slotDurationMin, minTeamsRequired, fullReset, startedAt: nowIso };
 }
 
 async function main() {

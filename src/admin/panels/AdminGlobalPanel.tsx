@@ -490,6 +490,7 @@ function NewSeasonSection() {
   const [slots, setSlots] = useState('05:30,11:00,15:00,19:00,21:30');
   const [slotDurationMin, setSlotDurationMin] = useState(30);
   const [minTeamsRequired, setMinTeamsRequired] = useState(2);
+  const [fullReset, setFullReset] = useState(false);
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem('olefoot_global_league_admin_token') ?? '');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -498,6 +499,12 @@ function NewSeasonSection() {
     if (!seasonName.trim()) {
       setFeedback({ type: 'error', message: 'Nome da temporada é obrigatório.' });
       return;
+    }
+    if (fullReset) {
+      const confirmed = window.confirm(
+        'NUKE TOTAL: vai zerar TUDO de todos os times (pontos, vitórias, saldo, forma, amarelos, lesões, all-time e divisões). Igualdade absoluta. Confirma?'
+      );
+      if (!confirmed) return;
     }
     setLoading(true);
     setFeedback(null);
@@ -519,12 +526,17 @@ function NewSeasonSection() {
           slots: slots.split(',').map(s => s.trim()),
           slotDurationMin,
           minTeamsRequired,
+          fullReset,
         }),
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setFeedback({ type: 'success', message: `Temporada "${data.seasonName}" iniciada com sucesso.` });
+        setFeedback({
+          type: 'success',
+          message: `Temporada "${data.seasonName}" iniciada${data.fullReset ? ' com NUKE TOTAL' : ''}.`,
+        });
         setSeasonName('');
+        setFullReset(false);
       } else {
         setFeedback({ type: 'error', message: data.error ?? 'Erro desconhecido ao iniciar temporada.' });
       }
@@ -606,6 +618,23 @@ function NewSeasonSection() {
             className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
           />
         </div>
+
+        <label className="sm:col-span-2 flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2.5 cursor-pointer hover:bg-red-500/10 transition-colors">
+          <input
+            type="checkbox"
+            checked={fullReset}
+            onChange={(e) => setFullReset(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-red-500"
+          />
+          <div className="flex-1 space-y-0.5">
+            <div className="text-xs font-black uppercase tracking-wider text-red-300">
+              Nuke Total (estreia oficial)
+            </div>
+            <div className="text-[11px] text-white/60 leading-relaxed">
+              Zera TUDO de todos os times — pontos, vitórias, saldo, forma, amarelos, suspensões, lesões, all-time e divisões. Igualdade absoluta. Use só pra primeira liga oficial; para seasons seguintes, deixe desmarcado (carry-over normal de divisão/all-time).
+            </div>
+          </div>
+        </label>
       </div>
 
       <div className="flex items-center gap-4 pt-2">

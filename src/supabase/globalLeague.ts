@@ -220,7 +220,23 @@ export async function persistGlobalLeagueSnapshot(league: GlobalLeagueMVPState):
  * Chamado quando o manager finaliza a cerimônia de abertura — assim a Liga Global
  * enxerga o time imediatamente e o auto-start pode incluir ele na próxima rodada.
  */
-export async function upsertGlobalTeamInSupabase(team: GlobalTeam): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Registra (upsert) APENAS a identidade do time — id, manager_id, club_name,
+ * club_short, overall, registered_at. NUNCA envia pontos, vitórias, forma,
+ * divisão, all-time ou qualquer stat: a Edge Function é a única autoridade.
+ *
+ * Em INSERT, colunas de stats pegam os DEFAULT 0 do schema; em UPDATE elas
+ * ficam intocadas — o cliente não pode reescrever o ranking com state local
+ * desatualizado.
+ */
+export async function registerGlobalTeamIdentity(opts: {
+  id: string;
+  managerId: string;
+  clubName: string;
+  clubShort: string;
+  overall: number;
+  registeredAt?: number;
+}): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'supabase-not-configured' };
   const supabase = getSupabase();
   if (!supabase) return { ok: false, error: 'no-client' };
@@ -228,9 +244,16 @@ export async function upsertGlobalTeamInSupabase(team: GlobalTeam): Promise<{ ok
   try {
     const { error } = await supabase
       .from('global_league_teams')
-      .upsert(teamToRow(team), { onConflict: 'manager_id' });
+      .upsert({
+        id: opts.id,
+        manager_id: opts.managerId,
+        club_name: opts.clubName,
+        club_short: opts.clubShort,
+        overall: opts.overall,
+        registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
+      }, { onConflict: 'manager_id' });
     if (error) {
-      console.warn('[globalLeague] upsertGlobalTeamInSupabase error:', error.message);
+      console.warn('[globalLeague] registerGlobalTeamIdentity error:', error.message);
       return { ok: false, error: error.message };
     }
     return { ok: true };

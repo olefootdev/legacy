@@ -204,6 +204,9 @@ globalLeagueRoutes.post('/start-season', async (c) => {
     : ['05:30', '11:00', '15:00', '19:00', '21:30'];
   const slotDurationMin: number = Number(body.slotDurationMin ?? 30);
   const minTeamsRequired: number = Number(body.minTeamsRequired ?? 2);
+  // fullReset=true zera all_time_* + division pra estreia oficial. Default (false)
+  // preserva carry-over de all-time e divisão entre seasons da mesma competição.
+  const fullReset: boolean = body.fullReset === true;
   const seasonId = `season_${Date.now()}`;
 
   // 1. Deletar fixtures e eventos da season atual
@@ -240,28 +243,49 @@ globalLeagueRoutes.post('/start-season', async (c) => {
     }
   }
 
-  // 2. Soft reset dos times: zerar stats de temporada, preservar all-time e divisões
+  // 2. Reset dos times. Stats de season e mecânicas (form, amarelos, suspensão,
+  //    lesões) SEMPRE zeram entre seasons. fullReset adicionalmente zera
+  //    all_time_* e division (estreia oficial / nuke total).
+  const resetPayload: Record<string, unknown> = {
+    points: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goals_for: 0,
+    goals_against: 0,
+    goal_difference: 0,
+    matches_played: 0,
+    playoff_points: 0,
+    playoff_wins: 0,
+    playoff_draws: 0,
+    playoff_losses: 0,
+    playoff_goals_for: 0,
+    playoff_goals_against: 0,
+    playoff_matches_played: 0,
+    position: null,
+    previous_position: null,
+    recent_form: [],
+    yellow_card_count: 0,
+    suspension_rounds_remaining: 0,
+    injury_modifier: 0,
+    injury_rounds_remaining: 0,
+  };
+  if (fullReset) {
+    Object.assign(resetPayload, {
+      division: null,
+      all_time_points: 0,
+      all_time_matches_played: 0,
+      all_time_wins: 0,
+      all_time_draws: 0,
+      all_time_losses: 0,
+      all_time_goals_for: 0,
+      all_time_goals_against: 0,
+      all_time_seasons_played: 0,
+    });
+  }
   const { error: resetError } = await sb
     .from('global_league_teams')
-    .update({
-      points: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goals_for: 0,
-      goals_against: 0,
-      goal_difference: 0,
-      matches_played: 0,
-      playoff_points: 0,
-      playoff_wins: 0,
-      playoff_draws: 0,
-      playoff_losses: 0,
-      playoff_goals_for: 0,
-      playoff_goals_against: 0,
-      playoff_matches_played: 0,
-      position: null,
-      previous_position: null,
-    })
+    .update(resetPayload)
     .neq('id', '00000000-0000-0000-0000-000000000000'); // update all rows
 
   if (resetError) {
@@ -292,8 +316,8 @@ globalLeagueRoutes.post('/start-season', async (c) => {
     return c.json({ error: `Erro ao atualizar estado: ${stateError.message}` }, 500);
   }
 
-  console.log(`[start-season] Nova temporada iniciada: ${seasonId} — ${seasonName}`);
-  return c.json({ ok: true, seasonId, seasonName });
+  console.log(`[start-season] Nova temporada iniciada: ${seasonId} — ${seasonName}${fullReset ? ' (FULL RESET)' : ''}`);
+  return c.json({ ok: true, seasonId, seasonName, fullReset });
 });
 
 /**
