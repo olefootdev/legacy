@@ -331,7 +331,7 @@ export function Transfer() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   /** Sprint B-4: visualização do catálogo "Genesis em foco" — grade ou lista horizontal. */
-  const [genesisViewMode, setGenesisViewMode] = useState<'grid' | 'list'>('grid');
+  const [genesisViewMode, setGenesisViewMode] = useState<'grid' | 'list'>('list');
   const purchaseBannerHideTimerRef = useRef<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<MockAuctionPlayer | null>(null);
   const [discoveryVisibleCount, setDiscoveryVisibleCount] = useState(initialDiscoveryVisibleMap);

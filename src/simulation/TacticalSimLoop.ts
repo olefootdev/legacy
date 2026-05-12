@@ -347,7 +347,7 @@ function roleFromSlotId(slot: string): string {
 function def_pressingApplies(
   _carrier: AgentSnapshot,
   pressing: NonNullable<TacticalManagerParams['pressing']>,
-  simState: { homeScore?: number; awayScore?: number; lastTurnoverTickAgo?: number } & Record<string, unknown>,
+  simState: { homeScore?: number; awayScore?: number; lastTurnoverTickAgo?: number; recentTurnoverTicks?: number },
 ): boolean {
   const triggers = pressing.triggers;
   // Sempre aplica modulação baseline (intensidade + zone) — triggers só amplificam.

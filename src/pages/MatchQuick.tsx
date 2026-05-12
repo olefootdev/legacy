@@ -152,7 +152,6 @@ function PlayerEventStrip({ badges }: { badges: QuickEventBadge[] }) {
         return (
           <Plus
             key={`i-${i}`}
-            title="Lesão"
             className="w-3 h-3 text-red-400 rotate-45 stroke-[3]"
             aria-label="Lesão"
           />
@@ -1873,7 +1872,7 @@ export function MatchQuick() {
     if (!live) return null;
     const ev = live.events[0];
     if (!ev || (ev.kind !== 'goal_home' && ev.kind !== 'goal_away')) return null;
-    const side = ev.kind === 'goal_home' ? 'home' : 'away';
+    const side: 'home' | 'away' = ev.kind === 'goal_home' ? 'home' : 'away';
     let scorerName = 'Marcador';
     let scorerNumber: number | undefined;
     let scorerPortraitUrl: string | undefined;

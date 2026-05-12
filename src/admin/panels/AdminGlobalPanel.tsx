@@ -24,6 +24,7 @@ import {
   Zap,
   AlertCircle,
   CheckCircle,
+  Users,
 } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { createOlefootLeague } from '@/match/olefootLeague';
@@ -31,6 +32,7 @@ import { formatRoundTime, getTimeUntilNextRound } from '@/match/globalRoundSched
 import type { GlobalFixture } from '@/match/globalMatch';
 import { cn } from '@/lib/utils';
 import { persistGlobalLeagueState } from '@/supabase/globalLeagueState';
+import { fetchOnboardingAudit, type OnboardingAuditResult } from '@/supabase/adminCore';
 
 export function AdminGlobalPanel() {
   const dispatch = useGameDispatch();
@@ -386,8 +388,98 @@ export function AdminGlobalPanel() {
         </>
       )}
 
+      {/* ─── Auditoria de Onboarding ──────────────────────────────── */}
+      <OnboardingAuditSection />
+
       {/* ─── Nova Temporada ─────────────────────────────────────────── */}
       <NewSeasonSection />
+    </div>
+  );
+}
+
+function OnboardingAuditSection() {
+  const [audit, setAudit] = useState<OnboardingAuditResult | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const runAudit = async () => {
+    setLoading(true);
+    const result = await fetchOnboardingAudit();
+    setAudit(result);
+    setLoading(false);
+  };
+
+  return (
+    <div className="mt-6 p-4 rounded-lg border border-white/10 bg-black/30">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-display font-bold uppercase tracking-wider text-white/90 flex items-center gap-2">
+          <Users className="w-4 h-4 text-neon-yellow" />
+          Auditoria de Onboarding
+        </h3>
+        <button
+          type="button"
+          onClick={runAudit}
+          disabled={loading}
+          className="text-xs px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white/80 font-display uppercase tracking-wider transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Carregando...' : 'Executar'}
+        </button>
+      </div>
+
+      {audit && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded bg-white/5 border border-white/10 text-center">
+              <div className="text-lg font-bold text-white">{audit.totalManagers}</div>
+              <div className="text-[10px] uppercase tracking-wider text-white/50">Managers</div>
+            </div>
+            <div className="p-3 rounded bg-white/5 border border-white/10 text-center">
+              <div className="text-lg font-bold text-neon-green">{audit.inGlobalLeague}</div>
+              <div className="text-[10px] uppercase tracking-wider text-white/50">Na Liga</div>
+            </div>
+            <div className="p-3 rounded bg-white/5 border border-white/10 text-center">
+              <div className="text-lg font-bold text-red-400">{audit.withoutLeagueTeam}</div>
+              <div className="text-[10px] uppercase tracking-wider text-white/50">Sem Time</div>
+            </div>
+            <div className="p-3 rounded bg-white/5 border border-white/10 text-center">
+              <div className="text-lg font-bold text-neon-yellow">{audit.withWelcomePack}</div>
+              <div className="text-[10px] uppercase tracking-wider text-white/50">Welcome Pack</div>
+            </div>
+          </div>
+
+          {audit.orphans.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-white/60 mb-2">
+                Managers sem time na liga ({audit.orphans.length}):
+              </p>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {audit.orphans.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center gap-2 px-2 py-1 rounded bg-red-900/20 border border-red-500/20 text-xs"
+                  >
+                    <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
+                    <span className="text-white/80 truncate">{o.displayName}</span>
+                    <span className="text-white/40 truncate">({o.clubName})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {audit.orphans.length === 0 && (
+            <p className="text-xs text-neon-green/80 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Todos os managers estão na liga global.
+            </p>
+          )}
+        </div>
+      )}
+
+      {!audit && !loading && (
+        <p className="text-xs text-white/40">
+          Clique em "Executar" para verificar managers cadastrados vs liga global.
+        </p>
+      )}
     </div>
   );
 }

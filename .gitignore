@@ -4,6 +4,7 @@ dist/
 !server/dist/
 coverage/
 .DS_Store
+._*
 *.log
 
 # Ambientes e segredos (Admin, APIs, Supabase service role, senhas locais)

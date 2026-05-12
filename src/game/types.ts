@@ -580,7 +580,7 @@ export type GameAction =
       type: 'START_FRIENDLY_CHALLENGE';
       opponentName: string;
       opponentId: string;
-      mode: 'live' | 'quick';
+      mode: 'live' | 'quick' | 'penalty';
       currency: 'BRO' | 'EXP';
       /** BRO: valor em unidades BRO (ex.: 10.5). EXP: valor inteiro de EXP. */
       prizeAmount: number;
@@ -589,7 +589,7 @@ export type GameAction =
   | {
       type: 'REFUND_FRIENDLY_CHALLENGE';
       opponentName: string;
-      mode: 'live' | 'quick';
+      mode: 'live' | 'quick' | 'penalty';
       currency: 'BRO' | 'EXP';
       prizeAmount: number;
     }

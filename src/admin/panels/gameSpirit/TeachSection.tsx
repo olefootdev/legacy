@@ -368,9 +368,9 @@ export function TeachSection({
                   Guardado em localStorage · ativo na próxima partida · visível nos contadores acima.
                 </p>
               </>
-            ) : (
+            ) : 'error' in applyStatus ? (
               <p className="text-sm text-rose-300">{applyStatus.error}</p>
-            )}
+            ) : null}
           </div>
         </div>
       ) : null}

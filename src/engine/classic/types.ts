@@ -192,7 +192,7 @@ export function deriveMentalState(
 export type PassStyle = 'LONGO' | 'TIKTAK' | 'LATERAL' | 'COUNTER';
 
 // Skill IDs that map to tactical triggers
-export type ManagerSkillId = 'counter' | 'press' | 'offens' | 'cross';
+export type ManagerSkillId = 'counter' | 'press' | 'offens' | 'cross' | 'hold' | 'wing';
 
 // Last event context for chained event logic
 export interface EventChainContext {
@@ -235,6 +235,9 @@ export interface MatchEvent {
   passSubtype?: PassSubtype; // intenção do passe (visual + lógica)
   rationale?: string;        // racional da decisão — pra Coach AI futuro
   tacticalTrigger?: TacticalTrigger; // gatilho tático especial que gerou o evento
+  skillActivated?: string;   // skill do arquétipo que ativou neste evento
+  chanceCreated?: boolean;   // chance criada explicitamente nesta ação ou no build-up imediato
+  causalTrace?: string[];     // trilha QA: chance_created -> shot_decision -> ...
 }
 
 export interface MatchStats {

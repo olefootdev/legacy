@@ -40,6 +40,7 @@ import type { MarketActivity } from '@/market/socialTrade';
 import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
+import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,

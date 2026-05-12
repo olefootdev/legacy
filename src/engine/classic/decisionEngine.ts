@@ -30,6 +30,8 @@ import type {
 import { zoneFromRole, deriveMentalState } from './types';
 import { ARCHETYPES } from './archetypes';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
+import { resolveSkillEffect } from './skillEffects';
+import { computeGoalIntent, canAttackerBackpass, shouldWingerCutInside } from './attackFeeling';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -53,6 +55,7 @@ export interface Decision {
   ballPos: { x: number; y: number };
   rationale: string;
   tacticalTrigger?: TacticalTrigger;
+  skillActivated?: string;
 }
 
 // ─── Métricas de avaliação (puras, testáveis) ─────────────────────────────────
@@ -260,7 +263,89 @@ export function decideNextAction(
     ? ballHolder.position.x / FIELD_W_LOGIC
     : 1 - ballHolder.position.x / FIELD_W_LOGIC;
 
-  // ─── Decisão de finalização (chute) — POR ZONA ─────────────────────────
+  // ─── PLAY INTENTION — camada de inteligência tática ────────────────────
+  // Determina a intenção da jogada baseado em posição, role e contexto.
+  // Guia toda a decisão subsequente (passe, chute, recuo).
+  type PlayIntention = 'build_up' | 'progress' | 'create_chance' | 'attack_box' | 'finish' | 'reset_possession';
+
+  const role = ballHolder.role.toUpperCase();
+  const isAttacker = holderZone === 'attack';
+  const isCreative = holderZone === 'creative';
+  const isDefender = holderZone === 'defense';
+  const isGKorFB = role === 'GK' || role === 'LB' || role === 'RB';
+
+  let intention: PlayIntention;
+
+  if (xRel < 0.35) {
+    intention = 'build_up';
+  } else if (xRel < 0.55) {
+    intention = isCreative || isDefender ? 'progress' : 'create_chance';
+  } else if (xRel < 0.65) {
+    // Zona de transição: atacantes já pensam em gol
+    intention = isAttacker ? 'attack_box' : isCreative ? 'create_chance' : 'progress';
+  } else if (xRel < 0.70) {
+    intention = isAttacker ? 'attack_box' : 'create_chance';
+  } else {
+    // Na ZA (xRel >= 0.70)
+    if (isGKorFB) {
+      intention = 'create_chance'; // laterais/GK nunca finalizam
+    } else if (isAttacker && xRel >= 0.80) {
+      intention = 'finish'; // atacante cara a cara = finaliza
+    } else if (isAttacker) {
+      intention = 'attack_box';
+    } else if (isCreative && xRel >= 0.75) {
+      intention = 'attack_box'; // meia avançado pode atacar área
+    } else {
+      intention = 'create_chance';
+    }
+  }
+
+  // Se sob pressão total e sem opção progressiva → reset
+  // EXCEÇÃO: atacantes em zona ofensiva NÃO resetam — tentam finalizar ou driblar
+  const progressiveTargets = teammates.filter(t => {
+    const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
+    return tXRel > xRel + 0.05 && computeFreedom(t, opponents) > 0.3;
+  });
+  if (underPressure && progressiveTargets.length === 0 && intention !== 'finish') {
+    if (isAttacker && xRel >= 0.60) {
+      // Atacante pressionado na zona ofensiva: tenta finalizar, não recua
+      intention = xRel >= 0.70 ? 'finish' : 'attack_box';
+    } else {
+      intention = 'reset_possession';
+    }
+  }
+
+  // ─── xG simplificado — qualidade da chance de gol ──────────────────────
+  const goalX = attackDir > 0 ? FIELD_W_LOGIC : 0;
+  const goalY = FIELD_H_LOGIC / 2;
+  const distToGoal = distance(ballHolder.position, { x: goalX, y: goalY });
+  const angleToGoal = Math.abs(Math.atan2(goalY - ballHolder.position.y, goalX - ballHolder.position.x));
+  const xG = Math.max(0, (1 - distToGoal / 300)) * Math.max(0, (1 - angleToGoal / (Math.PI / 2)));
+
+  // ─── ATTACK FEELING — intenção ofensiva baseada em atributos ───────────
+  // Atacantes pensam "gol primeiro". O goalIntent modifica shotProb e
+  // bloqueia recuo desnecessário.
+  const goalIntent = (isAttacker || isCreative) && xRel >= 0.55
+    ? computeGoalIntent(
+        ballHolder, opponents, attackDir, activeSkills,
+        chain?.lastType ?? null,
+      )
+    : null;
+
+  // Attack feeling pode elevar a intenção do portador
+  if (goalIntent) {
+    if (goalIntent.decision === 'shoot' && intention !== 'finish' && xRel >= 0.70) {
+      intention = 'finish';
+    } else if (goalIntent.decision === 'enter_box' && intention === 'create_chance') {
+      intention = 'attack_box';
+    }
+  }
+
+  // ─── Skill Effect — ativação de habilidade do arquétipo ────────────────
+  const skillActivated = resolveSkillEffect(ballHolder, intention, xG);
+  const skillBias = skillActivated?.biasOverride ?? {};
+
+  // ─── Decisão de finalização (chute) — POR ZONA + INTENÇÃO + xG ─────────
   const isFinisher = cfg.shotFreq >= 0.7;
   const isWild = cfg.unpredictable;
   const isMaestro = cfg.passFreq >= 0.85 && cfg.slowsRhythm;
@@ -273,71 +358,78 @@ export function decideNextAction(
     chain?.lastType === 'rebound';
   const focusBoost = activeSkills.includes('offens');
 
-  // Probabilidade de tentar chutar agora (decisão psicológica do agente)
-  // Atacante (zona attack) PRECISA finalizar — não toca pra trás. Meio chuta
-  // moderado de fora. Defesa NUNCA chuta.
+  // Probabilidade de tentar chutar — guiada por intenção + xG.
+  // Só chuta se intenção é 'finish' ou 'attack_box' E xG é suficiente.
   let shotProb = 0;
-  if (holderZone === 'attack' && xRel >= 0.50) {
-    // Atacante no terço final adversário — QUER chutar
-    shotProb = isFinisher ? 0.85
-             : isBoxInvader ? 0.75
-             : isWild ? 0.72
-             : 0.62;
-    if (cleanShot) shotProb += 0.18;
+
+  if (isGKorFB || intention === 'build_up' || intention === 'progress' || intention === 'reset_possession') {
+    // Nunca chuta nestas intenções
+    shotProb = 0;
+  } else if (intention === 'finish') {
+    // Intenção clara de finalizar — xG alto
+    shotProb = 0.90;
+    if (skillBias.shotProb) shotProb *= skillBias.shotProb;
+  } else if ((intention === 'attack_box' || intention === 'create_chance') && xRel >= 0.70) {
+    // Na ZA com intenção ofensiva — xG decide
+    if (xG >= 0.40) {
+      shotProb = 0.92; // posição de gol clara — chuta obrigatoriamente
+    } else if (xG >= 0.20) {
+      shotProb = isFinisher ? 0.80 : isBoxInvader ? 0.72 : isWild ? 0.68 : 0.58;
+    } else if (xG >= 0.08) {
+      shotProb = isFinisher ? 0.45 : isWild ? 0.40 : 0.25; // chance média — reduzida
+    } else {
+      shotProb = 0.05; // xG muito baixo — prefere passe
+    }
+    if (cleanShot) shotProb += 0.15;
     if (underPressure) shotProb -= 0.06;
-    if (chainShot) shotProb += 0.28;
-    if (focusBoost) shotProb += 0.20;
-    if (ballHolder.onFire) shotProb += 0.22;
-    if (xRel >= 0.70) shotProb += 0.18;   // dentro da área = decisão clara
-  } else if (holderZone === 'creative' && xRel >= 0.60) {
-    // SÓ chuta de FORA da área quando claramente no terço final
-    // xRel 0.60 = bola já passou da linha de impedimento (~ borda da área)
-    shotProb = isMaestro ? 0.32
-             : isWild ? 0.45
-             : 0.22;
-    if (cleanShot) shotProb += 0.16;       // só com linha limpa pro gol
-    else shotProb *= 0.40;                  // sem linha limpa, dificilmente
-    if (underPressure) shotProb -= 0.10;
-    if (chainShot) shotProb += 0.22;
-    if (focusBoost) shotProb += 0.14;
+    if (chainShot) shotProb += 0.25;
+    if (focusBoost) shotProb += 0.15;
+    if (ballHolder.onFire) shotProb += 0.18;
+    if (skillBias.shotProb) shotProb *= skillBias.shotProb;
   }
   // holderZone === 'defense' → shotProb SEMPRE 0 (zagueiro NÃO chuta no gol)
+
+  // ─── ATTACK FEELING OVERRIDE — goalIntent pode forçar shotProb ─────────
+  if (goalIntent?.shotProbOverride != null && shotProb < goalIntent.shotProbOverride) {
+    shotProb = goalIntent.shotProbOverride;
+  }
 
   // Modulação mental do PORTADOR: on_fire arrisca mais, anxious chuta menos
   const holderMental = deriveMentalState(ballHolder, minute);
   if (holderMental === 'on_fire')      shotProb *= 1.20;
   else if (holderMental === 'engaged') shotProb *= 1.10;
   else if (holderMental === 'anxious') shotProb *= 0.55;     // sob pressão → passa
-  else if (holderMental === 'recovering') shotProb *= 0.40;  // acabou de chutar
+  else if (holderMental === 'recovering') shotProb *= 0.75;  // acabou de chutar mas ainda tenta
 
   if (Math.random() < shotProb) {
     return {
       action: 'shot',
       ballPos: goalMouthPos(teamSide),
-      rationale: `${ballHolder.shortName} (${ballHolder.archetype}, ${holderZone}, ${holderMental}) → CHUTE @ ${(shotProb*100).toFixed(0)}%`,
+      rationale: `${ballHolder.shortName} (${ballHolder.archetype}, ${intention}, xG=${xG.toFixed(2)}) → CHUTE @ ${(shotProb*100).toFixed(0)}%${goalIntent ? ` | ${goalIntent.rationale}` : ''}`,
+      skillActivated: skillActivated?.label ?? undefined,
     };
   }
 
-  // ─── GATILHO: Chute obrigatório no TERÇO FINAL ───────────────────────────
-  // SÓ no terço final claro (xRel >= 0.58) — antes disso, atacante combina
-  // com outros atacantes ou cruza (a lógica de pass abaixo cuida).
-  if (holderZone === 'attack' && xRel >= 0.58) {
+  // ─── GATILHO: Chute obrigatório na ZA (com xG mínimo) ──────────────────
+  // Atacante na ZA sem opção de passe progressivo → finaliza se xG > 0.10
+  if (holderZone === 'attack' && xRel >= 0.70 && xG >= 0.10) {
     const attackersAhead = teammates.filter(t => {
       const tZone = zoneFromRole(t.role);
       const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
       const isAhead = (t.position.x - ballHolder.position.x) * attackDir > 20;
-      return tZone === 'attack' && tXRel >= 0.62 && isAhead && computeFreedom(t, opponents) > 0.40;
+      return tZone === 'attack' && tXRel >= 0.72 && isAhead && computeFreedom(t, opponents) > 0.40;
     });
 
     const inFlank = ballHolder.position.y < 110 || ballHolder.position.y > 290;
 
-    // Sem atacante mais avançado → ele mesmo finaliza (já está no terço final)
+    // Sem atacante mais avançado → ele mesmo finaliza
     if (attackersAhead.length === 0 && !inFlank) {
       return {
         action: 'shot',
         ballPos: goalMouthPos(teamSide),
-        rationale: `${ballHolder.shortName} → FINALIZAÇÃO (terço final, sem atacante avante)`,
+        rationale: `${ballHolder.shortName} → FINALIZAÇÃO (${intention}, xG=${xG.toFixed(2)}, sem opção)`,
         tacticalTrigger: 'forced_shot',
+        skillActivated: skillActivated?.label ?? undefined,
       };
     }
     // Senão: deixa pass logic escolher (cross se na ala, combinação se central)
@@ -372,47 +464,65 @@ export function decideNextAction(
       weight = freedom * 0.40 + coherence * 0.35 + progress * 0.25;
     }
 
-    // ─── BIAS POR ZONA — núcleo do conceito binário ──────────────────────
+    // ─── BIAS POR ZONA + INTENÇÃO — núcleo da inteligência ─────────────────
     const targetZone = zoneFromRole(t.role);
+    const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
 
-    // DEFESA com posse: BUILDUP OBRIGATÓRIO. Constrói pela criativa.
-    // Pular pro ataque é PROIBIDO (exceto LONGO ativado).
-    if (holderZone === 'defense') {
-      if (targetZone === 'creative') weight *= 1.80;          // canônico — saída pelo meio
-      if (targetZone === 'defense') weight *= 1.15;           // troca lateral pela defesa
-      if (targetZone === 'attack' && passStyle !== 'LONGO') weight *= 0.05;  // PROIBIDO — pular zona
-      if (targetZone === 'attack' && passStyle === 'LONGO') weight *= 1.35;  // só com skill LONGO
-    }
-
-    // CRIATIVA com posse: É ONDE O JOGO ACONTECE — busca o atacante/ponta
-    if (holderZone === 'creative') {
+    // Intenção modula os pesos de zona (camada principal de inteligência)
+    if (intention === 'build_up') {
+      // Saída de bola: DEVE ir para creative. Proibido pular para attack.
+      if (targetZone === 'creative') weight *= 2.0;
+      if (targetZone === 'defense') weight *= 1.15;
+      if (targetZone === 'attack' && passStyle !== 'LONGO') {
+        // Exceção: lateral pode sair jogando pelo ponta do mesmo corredor
+        const isWingPairBuildUp =
+          (ballHolder.role === 'LB' && t.role === 'LW') ||
+          (ballHolder.role === 'RB' && t.role === 'RW');
+        weight *= isWingPairBuildUp ? 1.8 : 0.02;
+      }
+      if (targetZone === 'attack' && passStyle === 'LONGO') weight *= 1.35;
+    } else if (intention === 'progress') {
+      // Progressão: buscar meias avançados e atacantes
+      if (targetZone === 'attack') weight *= 2.0;
+      if (targetZone === 'creative' && tXRel > xRel) weight *= 1.8; // meia mais avançado
+      if (targetZone === 'creative' && tXRel <= xRel) weight *= 0.6; // meia recuado
+      if (targetZone === 'defense') weight *= 0.20;
+    } else if (intention === 'create_chance') {
+      // Criação: atacantes na ZA recebem peso máximo
       if (targetZone === 'attack') {
-        weight *= 1.55;
-        // ─── PASSE NA PROFUNDIDADE (through ball) ───────────────────────
-        // Atacante AHEAD com espaço E em zona ofensiva → bola na medida.
-        // Esta é a JOGADA MÁGICA: meio enxerga, atacante corre, gol.
-        const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
+        weight *= 3.0;
+        // Through-ball: atacante à frente com espaço
         const isAhead = (t.position.x - ballHolder.position.x) * attackDir > 30;
-        const hasSpace = freedom > 0.55;
-        const inFinalThird = tXRel >= 0.60;
-        if (isAhead && hasSpace && inFinalThird) {
-          weight *= 2.0;  // dobra — esta é a jogada que vira gol
+        const hasSpace = freedom > 0.50;
+        if (isAhead && hasSpace && tXRel >= 0.65) {
+          weight *= 2.5; // jogada que vira gol
         }
       }
-      if (targetZone === 'creative') weight *= 1.05;   // troca lateral OK
-      if (targetZone === 'defense') weight *= 0.40;    // só recicla se realmente fechado
+      if (targetZone === 'creative' && tXRel >= 0.55) weight *= 1.2; // meia avançado OK
+      if (targetZone === 'creative' && tXRel < 0.55) weight *= 0.35;
+      if (targetZone === 'defense') weight *= 0.10;
+    } else if (intention === 'attack_box') {
+      // Invasão da área: ST/LW/RW em posição de xG alto
+      if (targetZone === 'attack') {
+        weight *= 2.5;
+        // Jogador em posição de gol (xG alto) recebe peso máximo
+        const tDistToGoal = distance(t.position, { x: goalX, y: goalY });
+        if (tDistToGoal < 150 && freedom > 0.4) weight *= 4.0;
+      }
+      if (targetZone === 'creative' && tXRel >= 0.60) weight *= 0.8;
+      if (targetZone === 'creative' && tXRel < 0.60) weight *= 0.10;
+      if (targetZone === 'defense') weight *= 0.001;
+    } else if (intention === 'reset_possession') {
+      // Reciclar: buscar opção segura atrás
+      if (targetZone === 'defense') weight *= 2.0;
+      if (targetZone === 'creative' && tXRel < xRel) weight *= 1.8; // meia recuado
+      if (targetZone === 'creative' && tXRel >= xRel) weight *= 0.8;
+      if (targetZone === 'attack') weight *= 0.15;
     }
 
-    // ATAQUE com posse: NUNCA toca pra trás. Troca com outro atacante OU
-    // devolve pra criativa SÓ se for um meio AVANÇADO (xRel >= 0.55).
-    if (holderZone === 'attack') {
-      if (targetZone === 'attack') weight *= 1.55;     // outro atacante = preferido
-      if (targetZone === 'creative') {
-        const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
-        // Só passa pra meio se ele estiver AVANÇADO (não recuando pra trás)
-        weight *= tXRel >= 0.55 ? 0.65 : 0.10;
-      }
-      if (targetZone === 'defense') weight *= 0.001;   // PROIBIDO — atacante não larga pra trás
+    // Skill bias: passWeight amplifica peso geral do passe progressivo
+    if (skillBias.passWeight && targetZone === 'attack') {
+      weight *= skillBias.passWeight;
     }
 
     // ─── COMBINAÇÃO DE ALA (tabelinha) ─────────────────────────────────
@@ -463,7 +573,14 @@ export function decideNextAction(
     const backwards = backwardsDelta < -20;
     const stronglyBackwards = backwardsDelta < -60;  // 60px = significativo
     if (backwards) {
-      if (holderZone === 'attack') {
+      if (goalIntent?.antiBackpass) {
+        // Attack Feeling ativo: proibido recuar (área/pequena área)
+        // Exceção: completamente cercado (2+ adversários a < 25px)
+        const closeOpps = opponents.filter(o =>
+          distance(ballHolder.position, o.position) < 25
+        ).length;
+        weight *= closeOpps >= 2 ? 0.15 : 0.001;
+      } else if (holderZone === 'attack') {
         // Atacante: passe pra trás é PROIBIDO. weight ~0 elimina da escolha.
         weight *= 0.001;
       } else if (holderZone === 'creative') {
@@ -545,19 +662,20 @@ export function decideNextAction(
     xRel >= 0.45 && xRel < 0.60 &&
     Math.random() < 0.40
   ) {
-    // Falso 9: devolve pro meio e o meio chuta de primeira
+    // Falso 9: devolve pro meio; o próximo evento decide se o meia finaliza.
     const midfielders = teammates.filter(t => zoneFromRole(t.role) === 'creative');
     if (midfielders.length > 0) {
       const mid = midfielders.sort((a, b) =>
         computeFreedom(b, opponents) - computeFreedom(a, opponents)
       )[0];
       return {
-        action: 'shot',
+        action: 'pass',
         target: mid,
         passSubtype: 'rapido',
-        ballPos: goalMouthPos(teamSide),
-        rationale: `${ballHolder.shortName} → FALSO 9 → ${mid.shortName} chuta de primeira`,
+        ballPos: { x: mid.position.x, y: mid.position.y },
+        rationale: `${ballHolder.shortName} → FALSO 9 → ${mid.shortName} recebe de frente`,
         tacticalTrigger: 'false9',
+        skillActivated: skillActivated?.label ?? undefined,
       };
     }
     subtype = 'curto';
@@ -576,13 +694,50 @@ export function decideNextAction(
     subtype = 'curto';
   }
 
+  // ─── WINGER CUT-INSIDE — ponta corta para dentro e finaliza ────────────
+  // Se o attack feeling indica que o ponta deve cortar, converte o passe
+  // em chute (o ponta conduz para dentro e finaliza).
+  if (subtype === 'cruzamento' && shouldWingerCutInside(ballHolder, opponents, attackDir)) {
+    return {
+      action: 'shot',
+      ballPos: goalMouthPos(teamSide),
+      rationale: `${ballHolder.shortName} corta para dentro e finaliza! [cut-inside]`,
+      skillActivated: skillActivated?.label ?? undefined,
+    };
+  }
+
+  // ─── ATTACK FEELING: layoff → passe-chave para atacante melhor posicionado
+  if (goalIntent?.decision === 'layoff' && holderZone === 'attack') {
+    // Busca companheiro com melhor xG na área
+    const betterOption = teammates
+      .filter(t => {
+        const tZone = zoneFromRole(t.role);
+        const tXRel = teamSide === 'home' ? t.position.x / FIELD_W_LOGIC : 1 - t.position.x / FIELD_W_LOGIC;
+        return (tZone === 'attack' || tZone === 'creative') && tXRel >= 0.65 &&
+          computeFreedom(t, opponents) > 0.35;
+      })
+      .sort((a, b) => computeScoringThreat(b, opponents, attackDir) - computeScoringThreat(a, opponents, attackDir))[0];
+
+    if (betterOption) {
+      return {
+        action: 'pass',
+        target: betterOption,
+        passSubtype: 'rapido',
+        ballPos: { x: betterOption.position.x, y: betterOption.position.y },
+        rationale: `${ballHolder.shortName} → layoff → ${betterOption.shortName} [attack_feeling]`,
+        skillActivated: skillActivated?.label ?? undefined,
+      };
+    }
+  }
+
   return {
     action: subtype === 'cruzamento' ? 'cross' : 'pass',
     target,
     passSubtype: subtype,
     ballPos: { x: target.position.x, y: target.position.y },
-    rationale: `${ballHolder.shortName} → ${target.shortName} [${subtype}] f=${picked.freedom.toFixed(2)} p=${picked.progress.toFixed(2)} t=${picked.threat.toFixed(2)} c=${picked.coherence.toFixed(2)}`,
+    rationale: `${ballHolder.shortName} → ${target.shortName} [${intention}/${subtype}] f=${picked.freedom.toFixed(2)} p=${picked.progress.toFixed(2)} t=${picked.threat.toFixed(2)}`,
     tacticalTrigger,
+    skillActivated: skillActivated?.label ?? undefined,
   };
 }
 

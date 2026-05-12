@@ -17,7 +17,7 @@ export type FriendlyChallengeRow = {
   challenged_club_id: string;
   challenger_club_name: string;
   challenged_club_name: string;
-  mode: 'quick' | 'live';
+  mode: 'quick' | 'live' | 'penalty';
   bet_currency: 'BRO' | 'EXP';
   bet_bro_cents: number | null;
   bet_exp: number | null;
@@ -85,7 +85,7 @@ export async function createFriendlyChallenge(input: {
   challengedClubId: string;
   challengedClubName: string;
   challengerClubName: string;
-  mode: 'quick' | 'live';
+  mode: 'quick' | 'live' | 'penalty';
   betCurrency: 'BRO' | 'EXP';
   betBroCents: number | null;
   betExp: number | null;

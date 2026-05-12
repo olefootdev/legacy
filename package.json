@@ -28,6 +28,8 @@
     "test:tactical-live-moments": "tsx src/simulation/runTacticalLiveNaturalMomentsSelfTest.ts",
     "test:possession-invariant": "tsx src/match/runPossessionInvariantSelfTest.ts",
     "test:deliberation": "tsx src/playerDecision/runDeliberationSelfTest.ts",
+    "test:classic-qa": "tsx src/engine/classic/qa/classicQA.test.ts",
+    "qa:classic": "tsx src/engine/classic/qa/runClassicQA.ts",
     "test:spatial-goals": "tsx src/match/runSpatialGoalsSelfTest.ts",
     "test:player-speed": "tsx src/match/runPlayerSpeedSelfTest.ts",
     "test:live-story": "tsx src/gamespirit/runLiveStorySelfTest.ts",

@@ -166,3 +166,47 @@ export async function setPlatformConfig(key: string, value: Record<string, unkno
   }
   return true;
 }
+
+export interface OnboardingAuditResult {
+  totalManagers: number;
+  inGlobalLeague: number;
+  withoutLeagueTeam: number;
+  withWelcomePack: number;
+  orphans: Array<{ id: string; displayName: string; clubName: string }>;
+}
+
+export async function fetchOnboardingAudit(): Promise<OnboardingAuditResult | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  try {
+    const [profilesRes, teamsRes, grantsRes] = await Promise.all([
+      sb.from('profiles').select('id, display_name, club_name'),
+      sb.from('global_league_teams').select('manager_id'),
+      sb.from('welcome_pack_grants').select('user_id'),
+    ]);
+
+    const profiles = (profilesRes.data ?? []) as Array<{ id: string; display_name: string | null; club_name: string | null }>;
+    const teamManagerIds = new Set((teamsRes.data ?? []).map((t: { manager_id: string }) => t.manager_id));
+    const grantUserIds = new Set((grantsRes.data ?? []).map((g: { user_id: string }) => g.user_id));
+
+    const orphans = profiles
+      .filter((p) => !teamManagerIds.has(p.id))
+      .map((p) => ({
+        id: p.id,
+        displayName: p.display_name ?? '(sem nome)',
+        clubName: p.club_name ?? '(sem clube)',
+      }));
+
+    return {
+      totalManagers: profiles.length,
+      inGlobalLeague: teamManagerIds.size,
+      withoutLeagueTeam: orphans.length,
+      withWelcomePack: grantUserIds.size,
+      orphans,
+    };
+  } catch (err) {
+    console.warn('[adminCore] onboarding audit failed:', err);
+    return null;
+  }
+}

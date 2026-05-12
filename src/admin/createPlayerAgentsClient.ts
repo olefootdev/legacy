@@ -95,7 +95,7 @@ export async function runScoutAgent(input: {
 
 export async function runAttributesAgent(input: {
   research: ScoutResearch;
-  targetRarity?: 'comum' | 'raro' | 'epico' | 'mitico';
+  targetRarity?: AdminRarityTier;
 }): Promise<AttributesResult> {
   const r = await post<{ attrs: AttributesResult }>('/api/admin/player/attributes', input);
   return r.attrs;

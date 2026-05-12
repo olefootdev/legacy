@@ -4,6 +4,7 @@ import { generateNarration } from './narration';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
 import { decideNextAction, resolveShot, hasCleanShot, isUnderPressure } from './decisionEngine';
 import { resolvePass } from './resolvePass';
+import { tryResolveDuel, type DuelResult } from './duelSystem';
 import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
 
 let _eventCounter = 0;
@@ -56,24 +57,34 @@ const PASS_SEQUENCES: Record<PassStyle, string[][]> = {
     ['Z2C', 'Z3C', 'Z4C'],              // construção rápida central (3 toques)
     ['Z2C', 'Z3HS', 'Z4C'],             // half-space direto
     ['Z3C', 'Z3HS', 'Z4C'],             // já no meio — 2 toques pro gol
-    ['Z2E', 'Z3C', 'Z4C'],              // saída lateral, centraliza
-    ['Z2D', 'Z3C', 'Z4C'],              // saída lateral direita
-    ['Z1C', 'Z2C', 'Z3C', 'Z4C'],      // construção longa (rara, 4 toques)
+    ['Z2E', 'Z3E', 'Z4C'],              // saída lateral esquerda, ponta cruza
+    ['Z2D', 'Z3D', 'Z4C'],              // saída lateral direita, ponta cruza
+    ['Z1E', 'Z2E', 'Z3E', 'Z4C'],      // lateral esquerdo inicia, sobe pela ala
+    ['Z1D', 'Z2D', 'Z3D', 'Z4C'],      // lateral direito inicia, sobe pela ala
+    ['Z1C', 'Z2C', 'Z3C', 'Z4C'],      // construção longa central (4 toques)
     ['Z3HS', 'Z4HS', 'Z4C'],            // half-space direto ao gol
+    ['Z2E', 'Z3C', 'Z4C'],              // saída lateral, centraliza
   ],
   LONGO: [
     ['Z1C', 'Z4C'],           // lançamento direto ao ST
     ['Z2C', 'Z4C'],           // chutão do meio
     ['Z1C', 'Z3C', 'Z4C'],   // longo com apoio no meio
-    ['Z2C', 'Z4E'],           // diagonal longa para a ponta
+    ['Z2C', 'Z4E'],           // diagonal longa para a ponta esquerda
     ['Z2C', 'Z4D'],           // diagonal longa para a ponta direita
+    ['Z1E', 'Z4E'],           // lateral lança direto na ponta
+    ['Z1D', 'Z4D'],           // lateral lança direto na ponta direita
   ],
   LATERAL: [
-    ['Z3C', 'Z3E', 'Z4C'],              // cruzamento rápido da esquerda
-    ['Z3C', 'Z3D', 'Z4C'],              // cruzamento rápido da direita
-    ['Z2C', 'Z3E', 'Z4E', 'Z4C'],      // amplitude esquerda
-    ['Z2C', 'Z3D', 'Z4D', 'Z4C'],      // amplitude direita
-    ['Z2E', 'Z3D', 'Z4C'],             // mudança de corredor rápida
+    ['Z1E', 'Z2E', 'Z3E', 'Z4E', 'Z4C'],  // overlap esquerdo completo
+    ['Z1D', 'Z2D', 'Z3D', 'Z4D', 'Z4C'],  // overlap direito completo
+    ['Z2E', 'Z3E', 'Z4E', 'Z4C'],          // lateral sobe, ponta cruza
+    ['Z2D', 'Z3D', 'Z4D', 'Z4C'],          // lateral sobe direita, ponta cruza
+    ['Z3C', 'Z3E', 'Z4E', 'Z4C'],          // inversão para esquerda
+    ['Z3C', 'Z3D', 'Z4D', 'Z4C'],          // inversão para direita
+    ['Z2E', 'Z3E', 'Z3C', 'Z4C'],          // ala esquerda corta por dentro
+    ['Z2D', 'Z3D', 'Z3C', 'Z4C'],          // ala direita corta por dentro
+    ['Z1E', 'Z3D', 'Z4D', 'Z4C'],          // mudança de corredor longa
+    ['Z1D', 'Z3E', 'Z4E', 'Z4C'],          // mudança de corredor longa inversa
   ],
   COUNTER: [
     ['Z2C', 'Z4C'],           // contra-ataque direto
@@ -81,25 +92,27 @@ const PASS_SEQUENCES: Record<PassStyle, string[][]> = {
     ['Z1C', 'Z3E', 'Z4C'],   // contra-ataque pela esquerda
     ['Z1C', 'Z3D', 'Z4C'],   // contra-ataque pela direita
     ['Z2C', 'Z4HS', 'Z4C'],  // profundidade direta ao half-space
+    ['Z1E', 'Z3E', 'Z4E', 'Z4C'],  // contra pela ala esquerda
+    ['Z1D', 'Z3D', 'Z4D', 'Z4C'],  // contra pela ala direita
   ],
 };
 
 // Roles por zona — quem deve receber a bola em cada zona (seção 7 AP-FOOTBALL-KNOWLEDGE)
 const ZONE_ROLES: Record<string, string[]> = {
-  Z1C:  ['GK', 'CB'],
-  Z1E:  ['GK', 'LB'],
-  Z1D:  ['GK', 'RB'],
-  Z2C:  ['CB', 'DM', 'CM'],
-  Z2E:  ['LB', 'LW', 'CM'],
-  Z2D:  ['RB', 'RW', 'CM'],
+  Z1C:  ['CB', 'GK'],
+  Z1E:  ['LB'],
+  Z1D:  ['RB'],
+  Z2C:  ['DM', 'CM', 'CB'],
+  Z2E:  ['LB', 'LW'],
+  Z2D:  ['RB', 'RW'],
   Z2HS: ['CM', 'DM'],
-  Z3C:  ['CM', 'DM', 'ST'],
-  Z3E:  ['LW', 'LB', 'CM'],
-  Z3D:  ['RW', 'RB', 'CM'],
+  Z3C:  ['CM', 'ST', 'DM'],
+  Z3E:  ['LW', 'LB'],
+  Z3D:  ['RW', 'RB'],
   Z3HS: ['CM', 'ST', 'LW', 'RW'],
-  Z4C:  ['ST', 'CM', 'LW', 'RW'],  // Zona 14
-  Z4E:  ['LW', 'ST'],
-  Z4D:  ['RW', 'ST'],
+  Z4C:  ['ST', 'LW', 'RW', 'CM'],
+  Z4E:  ['LW', 'LB', 'ST'],
+  Z4D:  ['RW', 'RB', 'ST'],
   Z4HS: ['ST', 'LW', 'RW', 'CM'],
 };
 
@@ -118,6 +131,33 @@ function goalMouthPos(team: 'home' | 'away'): { x: number; y: number } {
     x: team === 'home' ? FIELD_W_LOGIC - 30 : 30,
     y: FIELD_H_LOGIC / 2 + (rng() - 0.5) * 60,
   };
+}
+
+function isChanceCreatingEvent(type: EventType, rationale?: string | null, tacticalTrigger?: string | null): boolean {
+  return type === 'cross' || type === 'danger' || type === 'rebound' || type === 'corner' ||
+    tacticalTrigger === 'false9' ||
+    !!rationale?.includes('create_chance') ||
+    !!rationale?.includes('attack_box') ||
+    !!rationale?.includes('through_ball');
+}
+
+function shotCausalTrace(type: EventType, chanceCreated: boolean): string[] | undefined {
+  if (!(type === 'goal' || type === 'shot' || type === 'save' || type === 'post' ||
+        type === 'wide' || type === 'blocked' || type === 'rebound' || type === 'corner')) {
+    return chanceCreated ? ['chance_created'] : undefined;
+  }
+  return [
+    ...(chanceCreated ? ['chance_created'] : []),
+    'shot_decision',
+    'shot_start',
+    'ball_flight',
+    'mini_slowmo',
+    'shot_resolution',
+    'result_reveal',
+    ...(type === 'goal' ? ['score_update'] : []),
+    'timeline_update',
+    'event_feed_update',
+  ];
 }
 
 // Escolhe o jogador mais adequado para a zona atual da sequência
@@ -200,6 +240,131 @@ function chooseEventType(
 }
 
 // isGoal removido — substituído por resolveShot() calibrado no decisionEngine.
+
+// ── Aplica resultado do duelo ao fluxo de eventos ────────────────────────────
+
+function applyDuelToEvent(
+  duel: DuelResult,
+  attacker: ClassicPlayer,
+  allPlayers: ClassicPlayer[],
+  attackTeam: 'home' | 'away',
+  minute: number,
+  score: MatchScore,
+  ballPos: { x: number; y: number },
+  narrativeProfiles?: Map<number, PlayerNarrativeProfile>,
+): GenerateEventResult | null {
+  const opposingTeam: 'home' | 'away' = attackTeam === 'home' ? 'away' : 'home';
+
+  // Outcomes que mudam posse → evento do defensor
+  const defenderWins: string[] = [
+    'tackle_won', 'interception', 'possession_lost', 'blocked_shot',
+    'keeper_save', 'aerial_win_defender', 'forced_back_pass', 'forced_bad_pass',
+    'cross_blocked',
+  ];
+
+  // Outcomes que geram falta → evento de falta
+  const foulOutcomes: string[] = ['foul', 'yellow_card', 'red_card'];
+
+  if (foulOutcomes.includes(duel.outcome)) {
+    const teamName = attackTeam === 'home' ? 'Tigres' : 'Alvorada';
+    const text = `Falta em ${attacker.shortName}! ${duel.foulSeverity === 'yellow' ? 'Cartão amarelo!' : duel.foulSeverity === 'red' ? 'CARTÃO VERMELHO!' : 'Falta marcada.'}`;
+    const event: MatchEvent = {
+      id: `evt_${++_eventCounter}`,
+      minute,
+      type: 'foul',
+      team: opposingTeam,
+      playerId: attacker.id,
+      playerName: attacker.shortName,
+      archetype: attacker.archetype,
+      text,
+      ballX: ballPos.x,
+      ballY: ballPos.y,
+      rationale: duel.log,
+    };
+    return { event, nextSequence: null, receiverId: null };
+  }
+
+  if (defenderWins.includes(duel.outcome)) {
+    // Encontra o defensor que ganhou
+    const defenders = allPlayers.filter(p =>
+      p.team === opposingTeam &&
+      p.role !== 'GK' &&
+      Math.hypot(p.position.x - ballPos.x, p.position.y - ballPos.y) < 80,
+    );
+    const defender = defenders.sort((a, b) =>
+      Math.hypot(a.position.x - ballPos.x, a.position.y - ballPos.y) -
+      Math.hypot(b.position.x - ballPos.x, b.position.y - ballPos.y),
+    )[0];
+
+    if (!defender) return null;
+
+    const isKeeperSave = duel.outcome === 'keeper_save';
+    const actor = isKeeperSave
+      ? allPlayers.find(p => p.team === opposingTeam && p.role === 'GK') ?? defender
+      : defender;
+
+    const eventType: EventType = duel.outcome === 'interception' ? 'interception'
+      : duel.outcome === 'tackle_won' ? 'tackle'
+      : duel.outcome === 'blocked_shot' ? 'blocked'
+      : duel.outcome === 'keeper_save' ? 'save'
+      : 'duel';
+
+    const defTeamName = opposingTeam === 'home' ? 'Tigres' : 'Alvorada';
+    const defProfile = narrativeProfiles?.get(actor.id);
+    const text = generateNarration(eventType, actor.archetype, actor.shortName, defTeamName, minute, score, defProfile, eventType === 'duel' ? 'duel_win' : null);
+
+    const event: MatchEvent = {
+      id: `evt_${++_eventCounter}`,
+      minute,
+      type: eventType,
+      team: opposingTeam,
+      playerId: actor.id,
+      playerName: actor.shortName,
+      archetype: actor.archetype,
+      text,
+      ballX: actor.position.x,
+      ballY: actor.position.y,
+      rationale: duel.log,
+      tacticalTrigger: eventType === 'duel' ? 'duel_win' : null,
+      chanceCreated: eventType === 'save' || eventType === 'blocked',
+      causalTrace: shotCausalTrace(eventType, eventType === 'save' || eventType === 'blocked'),
+    };
+    return { event, nextSequence: null, receiverId: null };
+  }
+
+  // Attacker wins — outcomes like successful_dribble, chance_created, keeper_beaten
+  // These don't replace the event, they let it flow through (the original event proceeds)
+  // But for chance_created and successful_dribble, we can boost the event
+  if (duel.outcome === 'keeper_beaten') {
+    // Attacker beats keeper → force goal resolution
+    const teamName = attackTeam === 'home' ? 'Tigres' : 'Alvorada';
+    const playerProfile = narrativeProfiles?.get(attacker.id);
+    const text = generateNarration('goal', attacker.archetype, attacker.shortName, teamName, minute, score, playerProfile);
+    const goalPos = {
+      x: attackTeam === 'home' ? FIELD_W_LOGIC - 30 : 30,
+      y: FIELD_H_LOGIC / 2 + (rng() - 0.5) * 60,
+    };
+    const event: MatchEvent = {
+      id: `evt_${++_eventCounter}`,
+      minute,
+      type: 'goal',
+      team: attackTeam,
+      playerId: attacker.id,
+      playerName: attacker.shortName,
+      archetype: attacker.archetype,
+      text,
+      ballX: goalPos.x,
+      ballY: goalPos.y,
+      rationale: duel.log,
+      chanceCreated: true,
+      causalTrace: shotCausalTrace('goal', true),
+    };
+    return { event, nextSequence: null, receiverId: null };
+  }
+
+  // Other attacker wins: let the original event proceed (return null)
+  return null;
+}
 
 export interface GenerateEventOptions {
   activeSkills?: ManagerSkillId[];
@@ -301,6 +466,27 @@ export function generateEvent(
   let ballPos = decision.ballPos;
 
   // ─── Resolução de chute com diversidade de outcomes (calibrado) ─────────
+  // REGRA DE ZONA: só pode chutar ao gol se estiver na ZA (xRel >= 0.70).
+  // Se o decision engine retornou 'shot' mas o jogador não está na ZA,
+  // cancela o chute e força um passe (construção de jogada).
+  const xRelShooter = team === 'home'
+    ? player.position.x / FIELD_W_LOGIC
+    : 1 - player.position.x / FIELD_W_LOGIC;
+
+  if (type === 'shot' && xRelShooter < 0.70) {
+    // Jogador fora da ZA — não pode chutar. Converte em passe progressivo.
+    type = 'pass';
+    const ahead = allPlayers.filter(p =>
+      p.team === team && p.id !== player.id &&
+      ((team === 'home' ? p.position.x > player.position.x : p.position.x < player.position.x))
+    );
+    const target = ahead.length > 0
+      ? ahead[Math.floor(Math.random() * ahead.length)]
+      : allPlayers.find(p => p.team === team && p.id !== player.id) ?? player;
+    receiverId = target.id;
+    ballPos = { x: target.position.x, y: target.position.y };
+  }
+
   if (type === 'shot') {
     const cleanLine = hasCleanShot(player, allPlayers.filter(p => p.team !== team), attackDir);
     const outcome = resolveShot(player, cleanLine, minute, attackDir);
@@ -416,6 +602,7 @@ export function generateEvent(
   const playerProfile = narrativeProfiles?.get(player.id);
   const tacticalTrigger = decision.tacticalTrigger ?? null;
   const text = generateNarration(type, player.archetype, player.shortName, teamName, minute, score, playerProfile, tacticalTrigger);
+  const chanceCreated = isChanceCreatingEvent(type, decision.rationale, tacticalTrigger);
 
   const event: MatchEvent = {
     id: `evt_${++_eventCounter}`,
@@ -432,48 +619,36 @@ export function generateEvent(
     passSubtype,
     rationale: decision.rationale,
     tacticalTrigger,
+    skillActivated: decision.skillActivated,
+    chanceCreated,
+    causalTrace: shotCausalTrace(type, chanceCreated),
   };
 
-  // ─── CONTRA-EVENTO: Duelo defensivo ─────────────────────────────────────
-  // Quando o ATACANTE adversário (este `team`) está com a bola no terço
-  // final do oponente E há um defensor adversário a < 60px, nosso defensor
-  // pode entrar em duelo SEM SAIR DO LUGAR. Substitui o evento original
-  // por um `duel` do defensor (team flip).
-  const xRelInOpposing = team === 'home'
-    ? ballPos.x / FIELD_W_LOGIC
-    : 1 - ballPos.x / FIELD_W_LOGIC;
-  if (xRelInOpposing >= 0.66 && type !== 'goal' && type !== 'duel') {
-    const opposingTeam: 'home' | 'away' = team === 'home' ? 'away' : 'home';
-    const opposingDefenders = allPlayers.filter(p =>
-      p.team === opposingTeam &&
-      (p.role === 'CB' || p.role === 'LB' || p.role === 'RB' || p.role === 'DM') &&
-      Math.hypot(p.position.x - ballPos.x, p.position.y - ballPos.y) < 60,
+  // ─── SISTEMA DE DUELOS — campo inteiro ──────────────────────────────────
+  // Cada ação importante pode gerar oposição baseada em atributos.
+  // Um duelo principal por jogada, um defensor primário.
+  const duelResult = tryResolveDuel({
+    ballHolder: player,
+    allPlayers,
+    eventType: type,
+    team,
+    ballPos,
+    minute,
+    chain,
+    score,
+  });
+
+  if (duelResult && duelResult.shouldNarrate) {
+    // Duelo disparou e é narrativamente relevante — pode alterar o evento
+    const duelEvent = applyDuelToEvent(
+      duelResult, player, allPlayers, team, minute, score, ballPos, narrativeProfiles,
     );
-    if (opposingDefenders.length > 0 && rng() < 0.18) {
-      // Defensor mais próximo entra no duelo
-      const defender = opposingDefenders.sort((a, b) =>
-        Math.hypot(a.position.x - ballPos.x, a.position.y - ballPos.y) -
-        Math.hypot(b.position.x - ballPos.x, b.position.y - ballPos.y),
-      )[0];
-      const opposingTeamName = opposingTeam === 'home' ? 'Tigres' : 'Alvorada';
-      const defProfile = narrativeProfiles?.get(defender.id);
-      const duelText = generateNarration('duel', defender.archetype, defender.shortName, opposingTeamName, minute, score, defProfile);
-      const duelEvent: MatchEvent = {
-        id: `evt_${++_eventCounter}`,
-        minute,
-        type: 'duel',
-        team: opposingTeam,
-        playerId: defender.id,
-        playerName: defender.shortName,
-        archetype: defender.archetype,
-        text: duelText,
-        ballX: defender.position.x,
-        ballY: defender.position.y,
-        rationale: `Duelo: ${defender.shortName} (${defender.role}) intercepta ataque de ${player.shortName}`,
-        tacticalTrigger: 'duel_win',
-      };
-      return { event: duelEvent, nextSequence: null, receiverId: null };
-    }
+    if (duelEvent) return duelEvent;
+  }
+
+  // Duelo resolvido internamente (atacante venceu) — enriquece rationale
+  if (duelResult && !duelResult.shouldNarrate) {
+    event.rationale = `${event.rationale ?? ''} | ${duelResult.log}`;
   }
 
   // Avança sequência se passe; reseta nos eventos terminais

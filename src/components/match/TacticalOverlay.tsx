@@ -355,7 +355,7 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
 
             {roleExp && <>
               <PSec label="MISSÃO">
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.7)', lineHeight:1.4 }}>{roleExp.mission}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.7)', lineHeight:1.4 }}>{roleExp.matchMission.summary}</div>
               </PSec>
 
               {roleExp.behavioralLimits && (
@@ -363,7 +363,7 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
                   <PGrid>
                     <PCell label="MAX CHASE" v={`${roleExp.behavioralLimits.maxDistToChaseBall}u`} />
                     <PCell label="RECOVERY" v={`${(roleExp.behavioralLimits.recoveryPriority*100).toFixed(0)}%`} />
-                    <PCell label="AGGRESSION" v={`${(roleExp.behavioralLimits.aggressionLevel*100).toFixed(0)}%`} />
+                    <PCell label="AGGRESSION" v={`${(roleExp.matchMission.aggressionLevel*100).toFixed(0)}%`} />
                   </PGrid>
                 </PSec>
               )}
@@ -371,7 +371,7 @@ export function TacticalOverlay({ homePlayers, awayPlayers, ballX = 50, ballY = 
               {roleExp.zoneResponsibility && (
                 <PSec label="ZONA BASE">
                   <PGrid>
-                    <PCell label="BASE" v={`(${roleExp.zoneResponsibility.baseZone.x},${roleExp.zoneResponsibility.baseZone.y})`} />
+                    <PCell label="BASE" v={`(${roleExp.zoneResponsibility.basePosition.x},${roleExp.zoneResponsibility.basePosition.y})`} />
                     <PCell label="MAX ROAM" v={`${roleExp.zoneResponsibility.maxRoamDistance}u`} />
                   </PGrid>
                 </PSec>

@@ -140,15 +140,16 @@ export async function fetchOpponentSquads(params: {
     const [minOvr, maxOvr] = params.ovrRange;
     const results: OpponentSquadEntry[] = [];
 
-    for (const row of (data ?? []) as Array<{
+    for (const row of (data ?? []) as unknown as Array<{
       user_id: string;
       players: PlayerEntity[];
       lineup: Record<string, string>;
       formation_scheme: FormationSchemeId | null;
-      profiles: { club_name: string | null; club_short: string | null };
+      profiles: { club_name: string | null; club_short: string | null } | Array<{ club_name: string | null; club_short: string | null }>;
     }>) {
       const players = Array.isArray(row.players) ? row.players as PlayerEntity[] : [];
       const lineup = (row.lineup as Record<string, string>) ?? {};
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
 
       // Calcula OVR médio dos jogadores no lineup
       const lineupPlayers = Object.values(lineup)
@@ -165,8 +166,8 @@ export async function fetchOpponentSquads(params: {
 
       results.push({
         userId: row.user_id,
-        clubName: row.profiles?.club_name ?? 'Clube Visitante',
-        clubShort: row.profiles?.club_short ?? 'VIS',
+        clubName: profile?.club_name ?? 'Clube Visitante',
+        clubShort: profile?.club_short ?? 'VIS',
         players,
         lineup,
         formationScheme: row.formation_scheme,

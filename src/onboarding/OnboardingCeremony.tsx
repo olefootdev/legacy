@@ -124,6 +124,7 @@ export function OnboardingCeremony() {
   const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
   const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
   const clubInitials = deriveInitials(clubName);
+  const managerDay = useGameStore((s) => s.userSettings?.managerDay ?? 1);
   const hydrationDone = useSquadHydrationDone();
 
   const startedRef = useRef(false);
@@ -191,10 +192,10 @@ export function OnboardingCeremony() {
         });
         return;
       }
-      // Grava hasDoneOnboarding imediatamente para evitar re-trigger em reloads
+      // Guard anti-re-trigger no mesmo reload (hasDoneOnboarding só grava no finish)
       dispatchGame({
         type: 'SET_USER_SETTINGS',
-        partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION, hasDoneOnboarding: true },
+        partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
       });
       setActive(true);
     })();
@@ -208,12 +209,17 @@ export function OnboardingCeremony() {
         setPhase({ kind: 'error' });
         return;
       }
-      setPhase({ kind: 'intro', pkg });
+      // Dia 2+: skip animações, vai direto para o grant
+      if (managerDay > 1) {
+        setPhase({ kind: 'outro', pkg });
+      } else {
+        setPhase({ kind: 'intro', pkg });
+      }
     } catch (err) {
       console.warn('[onboarding] buildPackage failed:', err);
       setPhase({ kind: 'error' });
     }
-  }, []);
+  }, [managerDay]);
 
   useEffect(() => {
     if (!active) return;
@@ -275,7 +281,7 @@ export function OnboardingCeremony() {
         animation: 'olefoot-fade-in 400ms both',
       }}
     >
-      <CloseButton onClick={() => setAskingExit(true)} />
+      {managerDay <= 1 && <CloseButton onClick={() => setAskingExit(true)} />}
       {phase.kind === 'loading' && <LoadingChapter />}
       {phase.kind === 'error' && <ErrorChapter onRetry={startBuild} />}
       {phase.kind === 'intro' && (

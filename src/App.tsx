@@ -24,6 +24,8 @@ import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
 import { useGlobalPlayoffScheduler } from './hooks/useGlobalPlayoffScheduler';
 import { useAutoRegisterGlobalLeague } from './hooks/useAutoRegisterGlobalLeague';
 import { useGlobalLeagueCrowdSync } from './hooks/useGlobalLeagueCrowdSync';
+import { useRecoverOrphanManager } from './onboarding/recoverOrphanManager';
+import { useNpcMarketActivity } from './market/npcMarketActivity';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
 
 /**
@@ -102,7 +104,6 @@ const ReferralTab = lazy(() => import('./pages/wallet/ReferralTab').then((m) => 
 const GatTab = lazy(() => import('./pages/wallet/GatTab').then((m) => ({ default: m.GatTab })));
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
-const MatchLive = lazy(() => import('./pages/MatchLive').then((m) => ({ default: m.MatchLive })));
 const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ default: m.MatchClassic })));
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
@@ -170,8 +171,19 @@ function RequireAdmin() {
 
 function RequireRegistration() {
   const hasProfile = useGameStore((s) => !!s.userSettings?.managerProfile);
+  const hasSquad = useGameStore((s) => Object.keys(s.players ?? {}).length > 0);
   const registered = isDevRegistrationBypassed() || hasProfile;
   if (!registered) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
+
+/**
+ * Guard adicional: bloqueia rotas internas se o manager não tem plantel.
+ * Redireciona para Home onde a OnboardingCeremony (overlay global) vai abrir.
+ */
+function RequireSquad() {
+  const hasSquad = useGameStore((s) => Object.keys(s.players ?? {}).length > 0);
+  if (!hasSquad && !isDevRegistrationBypassed()) return <Navigate to="/" replace />;
   return <Outlet />;
 }
 
@@ -235,6 +247,8 @@ function GlobalSchedulerMount() {
   useGlobalPlayoffScheduler();
   useAutoRegisterGlobalLeague();
   useGlobalLeagueCrowdSync();
+  useRecoverOrphanManager();
+  useNpcMarketActivity();
   return null;
 }
 
@@ -399,6 +413,7 @@ export default function App() {
             <Route element={<GameShell />}>
               <Route path="/" element={<Home />} />
 
+            <Route element={<RequireSquad />}>
             {/* Hub pages */}
             <Route path="/clube" element={<ClubHub />} />
             <Route path="/competicao" element={<CompetitionHub />} />
@@ -481,10 +496,7 @@ export default function App() {
               }
             />
             <Route path="/match/legacy" element={<FieldViewPreview />} />
-            <Route path="/match/live" element={<MatchLive />} />
             <Route path="/match" element={<LiveMatch />} />
-            <Route path="/match/test2d" element={<Navigate to="/match/live" replace />} />
-            <Route path="/match/ultralive2d" element={<Navigate to="/match/live" replace />} />
             <Route path="/match/auto" element={<MatchAuto />} />
             <Route
               path="/match/quick"
@@ -510,7 +522,8 @@ export default function App() {
             <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />
             <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
             <Route path="/postgame" element={<Postgame />} />
-            </Route>
+            </Route>{/* /RequireSquad */}
+            </Route>{/* /GameShell */}
             {/* Fullscreen match modes — sem GameShell (sem nav global) */}
             <Route path="/match/classic" element={<MatchClassic />} />
           </Route>

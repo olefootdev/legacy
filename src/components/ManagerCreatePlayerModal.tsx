@@ -348,7 +348,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                       )}
                       aria-invalid={trimmed.length >= 2 && !namePolicy.ok}
                     />
-                    {trimmed.length >= 2 && !namePolicy.ok ? (
+                    {trimmed.length >= 2 && 'reason' in namePolicy ? (
                       <p className="text-[10px] leading-snug text-red-300/90">{namePolicy.reason}</p>
                     ) : null}
                   </label>

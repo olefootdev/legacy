@@ -15,5 +15,5 @@ export async function loadGameSpiritKnowledge(): Promise<GameSpiritKnowledgeRoot
   const raw = await fetchAllPlatformConfig();
   const val = raw[GAMESPIRIT_KNOWLEDGE_KEY];
   if (!val || typeof val !== 'object') return null;
-  return val as GameSpiritKnowledgeRoot;
+  return val as unknown as GameSpiritKnowledgeRoot;
 }

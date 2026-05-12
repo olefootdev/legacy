@@ -20,11 +20,17 @@ import type {
 import { emptyPlayerMatchStats, deriveMentalState } from '@/engine/classic/types';
 import { getHomePlayers, getAwayPlayers, FIELD_W_LOGIC, FIELD_H_LOGIC, repositionForFormation } from '@/engine/classic/formations';
 import { generateEvent, applyEventToPlayers, deriveStatsDelta } from '@/engine/classic/eventGenerator';
-import { computeTeamPhase, playerShift } from '@/engine/classic/decisionEngine';
+import { computeTeamPhase } from '@/engine/classic/decisionEngine';
 import { createMatchStory, updateMatchStory, storyBeatsForCoach } from '@/engine/classic/matchStory';
 import type { MatchStory } from '@/engine/classic/matchStory';
+import { computeEventBasedEvolution } from '@/engine/classic/postMatchEvolution';
 import { useGameDispatch } from '@/game/store';
 import { HeatmapEngine } from '@/engine/classic/heatmapEngine';
+import {
+  tickAllAgents,
+  extractBasePositions,
+  resetPlayersToBase,
+} from '@/engine/classic/playerAgent';
 
 // ─── Design tokens scoped to Classic mode ─────────────────────────────────────
 // Fonts: Agency FB (display) · Moret italic (numbers/score) · Inter (body)
@@ -83,6 +89,16 @@ const CSS_VARS = `
   0%   { stroke-dashoffset: 24; opacity: 0.95; }
   100% { stroke-dashoffset: 0;  opacity: 0.30; }
 }
+@keyframes c-shot-vignette {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes c-shot-pulse {
+  0%,100% { box-shadow: inset 0 0 30px rgba(255,200,50,0); }
+  50%     { box-shadow: inset 0 0 30px rgba(255,200,50,0.12); }
+}
 @keyframes c-reposition {
   from { opacity: 0.4; }
   to   { opacity: 1; }
@@ -114,6 +130,7 @@ const EVENT_INTERVAL_RANGE = 1200;  // 3000 → 1200 (variação randômica)
 const TRAIL_MAX  = 8;
 const BALL_LERP  = 0.12;
 const FEED_MAX   = 4;
+const TIMELINE_MAX = 10;
 
 // Match structure: 45+3 first half, 45+5 second half
 const HALF1_END   = 45;
@@ -122,11 +139,58 @@ const HALF2_END   = 90;
 const HALF2_EXTRA = 5;   // acréscimos 2º tempo
 const MATCH_END   = HALF2_END + HALF2_EXTRA; // 95 real minutes total
 
+function timelinePriority(evt: MatchEvent): number {
+  if (evt.type === 'goal') return 100;
+  if (evt.type === 'save' || evt.type === 'post') return 86;
+  if (evt.type === 'blocked' || evt.type === 'wide') return 76;
+  if (evt.skillActivated) return 72;
+  if (evt.type === 'duel' || evt.type === 'interception' || evt.type === 'tackle') return 64;
+  if (evt.chanceCreated || evt.type === 'danger' || evt.type === 'cross' || evt.type === 'shot') return 56;
+  return 20;
+}
+
+function shouldEnterTimeline(evt: MatchEvent): boolean {
+  return timelinePriority(evt) >= 50;
+}
+
+function addTimelineSlot(prev: MatchEvent[], evt: MatchEvent): MatchEvent[] {
+  if (!shouldEnterTimeline(evt)) return prev;
+  if (prev.some(slot => slot.id === evt.id)) return prev;
+
+  const next = [...prev, evt].sort((a, b) => {
+    const periodA = Math.floor(Math.min(a.minute, 90) / 15);
+    const periodB = Math.floor(Math.min(b.minute, 90) / 15);
+    if (periodA !== periodB && prev.length < TIMELINE_MAX) return periodA - periodB;
+    const priorityDelta = timelinePriority(b) - timelinePriority(a);
+    return priorityDelta || a.minute - b.minute;
+  });
+
+  if (next.length <= TIMELINE_MAX) {
+    return next.sort((a, b) => a.minute - b.minute);
+  }
+
+  const keep = next
+    .slice(0, TIMELINE_MAX)
+    .sort((a, b) => a.minute - b.minute);
+  return keep;
+}
+
+function formatSkillTag(evt: MatchEvent): string | null {
+  if (evt.skillActivated) return `${evt.skillActivated} activated`;
+  if (evt.tacticalTrigger === 'forced_shot') return 'Box Striker attacked the box';
+  if (evt.tacticalTrigger === 'false9') return 'False 9 created space';
+  if (evt.tacticalTrigger === 'tiktak') return 'Creative Passer activated';
+  if (evt.tacticalTrigger === 'duel_win') return 'Defensive Duel won';
+  return null;
+}
+
 const SKILLS_INIT: SkillEntry[] = [
-  { id:'counter', label:'CONTRA ATAQUE RÁPIDO', icon:'zap',       cooldown:10, active:false, remaining:0 },
-  { id:'press',   label:'PRESSÃO ALTA',          icon:'shield',    cooldown:15, active:false, remaining:0 },
-  { id:'offens',  label:'FOCO OFENSIVO',          icon:'target',    cooldown:20, active:false, remaining:0 },
-  { id:'cross',   label:'BOLA NA ÁREA',           icon:'crosshair', cooldown:15, active:false, remaining:0 },
+  { id:'counter', label:'CONTRA ATAQUE',   icon:'zap',        cooldown:10, active:false, remaining:0 },
+  { id:'press',   label:'PRESSÃO ALTA',    icon:'shield',     cooldown:15, active:false, remaining:0 },
+  { id:'offens',  label:'FOCO OFENSIVO',   icon:'target',     cooldown:20, active:false, remaining:0 },
+  { id:'cross',   label:'BOLA NA ÁREA',    icon:'crosshair',  cooldown:15, active:false, remaining:0 },
+  { id:'hold',    label:'SEGURAR JOGO',    icon:'footprints', cooldown:12, active:false, remaining:0 },
+  { id:'wing',    label:'EXPLORAR ALAS',   icon:'arrowup',    cooldown:12, active:false, remaining:0 },
 ];
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as const;
@@ -209,11 +273,13 @@ function EventIcon({ type, size = 14 }: { type: string; size?: number }) {
 }
 function SkillIcon({ icon, size = 12 }: { icon: string; size?: number }) {
   switch (icon) {
-    case 'zap':       return <Zap       size={size} />;
-    case 'shield':    return <Shield    size={size} />;
-    case 'target':    return <Target    size={size} />;
-    case 'crosshair': return <Crosshair size={size} />;
-    default:          return <Zap       size={size} />;
+    case 'zap':        return <Zap          size={size} />;
+    case 'shield':     return <Shield       size={size} />;
+    case 'target':     return <Target       size={size} />;
+    case 'crosshair':  return <Crosshair    size={size} />;
+    case 'footprints': return <Footprints   size={size} />;
+    case 'arrowup':    return <ArrowUpRight size={size} />;
+    default:           return <Zap          size={size} />;
   }
 }
 
@@ -343,6 +409,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [players, setPlayers] = useState<ClassicPlayer[]>(initialPlayers);
   const [latestEvent, setLatestEvent] = useState<MatchEvent | null>(null);
   const [eventFeed, setEventFeed] = useState<MatchEvent[]>([]);
+  const matchEventsRef = useRef<MatchEvent[]>([]);
   const [score, setScore]     = useState<MatchScore>({ home: 0, away: 0 });
   const [minute, setMinute]   = useState(0);
   const [extraMinute, setExtraMinute] = useState(0); // acréscimos exibidos
@@ -359,7 +426,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const leaguePointsAppliedRef = useRef(false); // evita aplicar 2x se matchOver mudar
   // Quando true, próximo evento dispara após 3s (gol, bola fora — jogadores
   // "pensam" e se reposicionam). Setado dentro do fireEvent.
-  const pendingPauseRef = useRef(false);
+  const pendingPauseRef = useRef<number>(0); // ms de pausa até próximo evento (0 = sem pausa)
   // Pausa REAL — fireEvent checa antes de disparar. Usado no intervalo
   // (jogadores ficam parados no campo durante o countdown 3-2-1).
   const pausedRef = useRef(false);
@@ -368,12 +435,15 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   // a regra de ouro é preservada porque é o VIEWPORT que zoom-in, não a
   // câmera de jogo (que não existe).
   const [cameraZoom, setCameraZoom] = useState(false);
+  const [showZones, setShowZones] = useState(false);
   // Goleiro reinicia o jogo após wide/save/corner — força próximo evento
   // ser o GK do time que defendeu/tomou bola decidindo distribuição.
   const goalkeeperRestartRef = useRef<{ team: 'home' | 'away' } | null>(null);
   // Primeiro evento da partida é SEMPRE kickoff: HOME atacante → meio-campo.
   // Identidade da bola sair pelo centro do campo, não roleta.
   const kickoffPendingRef = useRef(true);
+  /** Time que faz o próximo kickoff (quem sofreu gol ou início de tempo). */
+  const kickoffTeamRef = useRef<'home' | 'away'>('home');
   const [stats, setStats] = useState<MatchStats>({
     possession:    { home: 50, away: 50 },
     shots:         { home: 0,  away: 0  },
@@ -409,13 +479,25 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const [repositioning, setRepositioning] = useState(false);
   const [legacyPulse, setLegacyPulse] = useState<{ key: number; player: ClassicPlayer } | null>(null);
   const [goalFlash, setGoalFlash]   = useState(false);
+  const [goalOverlay, setGoalOverlay] = useState<{ type: 'goal' | 'wide' | 'save'; playerName: string } | null>(null);
   const [dangerFlash, setDangerFlash] = useState(false);
   // Overlay de intervalo/início de 2º tempo
   const [periodOverlay, setPeriodOverlay] = useState<{ label: string; sub: string; countdown?: number } | null>(null);
   // Último gatilho tático — exibido brevemente no campo
   const [lastTacticalTrigger, setLastTacticalTrigger] = useState<import('@/engine/classic/types').TacticalTrigger>(null);
+  const [lastSkillActivated, setLastSkillActivated] = useState<string | null>(null);
+  const [timelineSlots, setTimelineSlots] = useState<MatchEvent[]>([]);
   const chainRef    = useRef<EventChainContext | null>(null);
   const sequenceRef = useRef<{ zones: string[]; index: number } | null>(null);
+
+  // ── Shot Sequence State Machine ────────────────────────────────────────────
+  // Fases: idle → shot_flight → shot_slowmo → shot_resolved → idle
+  // Resultado só aparece DEPOIS do chute visualmente completar.
+  type ShotSequencePhase = 'idle' | 'shot_flight' | 'shot_slowmo' | 'shot_resolved';
+  const [shotSequencePhase, setShotSequencePhase] = useState<ShotSequencePhase>('idle');
+  const shotSequenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shotSequencePhaseRef = useRef<ShotSequencePhase>('idle');
+  useEffect(() => { shotSequencePhaseRef.current = shotSequencePhase; }, [shotSequencePhase]);
 
   // ── Canvas / animation refs ────────────────────────────────────────────────
   const canvasRef     = useRef<HTMLCanvasElement>(null);
@@ -427,6 +509,62 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
   const rafRef     = useRef<number>(0);
   const loopRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clockRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Ball Carrier: quem tem a bola agora ────────────────────────────────────
+  const carrierIdRef = useRef<number | null>(null);
+  /** Quando a bola está em trânsito (pass/cross), não seguir o carrier até chegar. */
+  const ballInTransitRef = useRef(false);
+
+  // ── Agent Base Positions (âncora da formação) ───────────────────────────────
+  const basePositionsRef = useRef<Map<number, { x: number; y: number }> | null>(null);
+
+  // ── Movement Loop: agentes se movem continuamente a 15fps ──────────────────
+  const agentLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tokenRefsMap = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (!running || matchOver) return;
+
+    // Inicializa base positions na primeira vez
+    if (!basePositionsRef.current) {
+      basePositionsRef.current = extractBasePositions(players);
+      // Carrier inicial: striker do home (quem faz o kickoff)
+      const striker = players.find(p => p.team === 'home' && p.role === 'ST')
+        ?? players.find(p => p.team === 'home' && p.role === 'CM');
+      if (striker) carrierIdRef.current = striker.id;
+    }
+
+    agentLoopRef.current = setInterval(() => {
+      setPlayers(prev => {
+        const base = basePositionsRef.current;
+        if (!base) return prev;
+
+        const moved = tickAllAgents(prev, {
+          ball: { x: ballRef.current.targetX, y: ballRef.current.targetY },
+          possession: possessionRef.current,
+          minute: minuteRef.current,
+          carrierId: carrierIdRef.current,
+        }, base);
+
+        // Bola segue o portador entre eventos (não durante passes em trânsito)
+        if (!ballInTransitRef.current) {
+          const carrier = carrierIdRef.current != null
+            ? moved.find(p => p.id === carrierIdRef.current)
+            : null;
+          if (carrier) {
+            ballRef.current.targetX = carrier.position.x;
+            ballRef.current.targetY = carrier.position.y;
+          }
+        }
+
+        return moved;
+      });
+    }, 66); // ~15fps
+
+    return () => {
+      if (agentLoopRef.current) clearInterval(agentLoopRef.current);
+    };
+  }, [running, matchOver]);
 
   // Modulação do passe — lerp factor + arco do cruzamento
   // curto=0.12, rapido=0.22, planejado=0.10, cruzamento=0.10 com Y-arc
@@ -453,8 +591,19 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         if (next === HALF1_END + 1) {
           setPeriod('INTERVALO');
           setExtraMinute(0);
-          // Pausa real: jogo congela, jogadores ficam onde estão.
+          // Pausa real: jogo congela, jogadores voltam às posições.
           pausedRef.current = true;
+          // Jogadores voltam para formação no intervalo
+          const base = basePositionsRef.current;
+          if (base) {
+            setPlayers(prev => resetPlayersToBase(prev, base));
+          }
+          ballRef.current.targetX = FIELD_W_LOGIC / 2;
+          ballRef.current.targetY = FIELD_H_LOGIC / 2;
+          ballRef.current.x = FIELD_W_LOGIC / 2;
+          ballRef.current.y = FIELD_H_LOGIC / 2;
+          carrierIdRef.current = null;
+          ballInTransitRef.current = false;
           setPeriodOverlay({ label: 'INTERVALO', sub: '2º TEMPO EM 3', countdown: 3 });
           // Countdown 3, 2, 1 — atualiza o overlay
           let cd = 3;
@@ -465,7 +614,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               clearInterval(tick);
               setPeriodOverlay(null);
               setPeriod('2º TEMPO');
-              kickoffPendingRef.current = true; // 2º tempo começa com HOME atacante → meio
+              kickoffPendingRef.current = true;
+              kickoffTeamRef.current = 'away'; // 2º tempo: away faz o kickoff
               pausedRef.current = false;
             }
           }, 1000);
@@ -500,7 +650,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     return () => clearInterval(clockRef.current ?? undefined);
   }, [running, matchOver]);
 
-  // ── MVP + pontos da liga: calculados quando a partida termina ──────────
+  // ── MVP + pontos da liga + evolução pós-partida ────────────────────────
   useEffect(() => {
     if (!matchOver) return;
     setPlayers(prev => {
@@ -510,13 +660,24 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       return prev;
     });
 
+    // Evolução pós-partida baseada em eventos (Prioridade 2)
+    const result: 'win' | 'draw' | 'loss' =
+      score.home > score.away ? 'win' :
+      score.home < score.away ? 'loss' : 'draw';
+
+    setPlayers(prev => {
+      const gains = computeEventBasedEvolution(matchEventsRef.current, prev, result);
+      // Log para debug — visível no DevTools
+      if (import.meta.env.DEV && gains.length > 0) {
+        console.info('[EVOLUTION] Match result:', result, '| Players evolved:', gains.length);
+      }
+      return prev; // ganhos são aplicados via reducer (FINALIZE_MATCH)
+    });
+
     // Aplica pontos da liga olefoot (Fase 4) — vitórias 3pt, empate 1pt,
     // derrota 0pt. Manager vê os pontos crescerem nas partidas casuais.
     if (!leaguePointsAppliedRef.current) {
       leaguePointsAppliedRef.current = true;
-      const result: 'win' | 'draw' | 'loss' =
-        score.home > score.away ? 'win' :
-        score.home < score.away ? 'loss' : 'draw';
       dispatch({
         type: 'APPLY_CASUAL_RESULT_TO_LEAGUE',
         result: { scoreHome: score.home, scoreAway: score.away, result },
@@ -565,13 +726,24 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       const ball = ballRef.current;
       const prevX = ball.x, prevY = ball.y;
 
-      // Lerp factor varia por tipo de passe
+      // Lerp factor varia por tipo de passe — mais lento para parecer real
       const anim = passAnimRef.current;
-      const lerp = anim.kind === 'rapido'   ? 0.22
-                 : anim.kind === 'planejado'? 0.10
-                 : anim.kind === 'shot'     ? 0.28
-                 : anim.kind === 'cruzamento' ? 0.10
-                 : BALL_LERP;
+      // Distância restante: passes longos desaceleram naturalmente com lerp
+      const remaining = Math.hypot(ball.targetX - ball.x, ball.targetY - ball.y);
+      // Base lerp por tipo
+      const baseLerp = anim.kind === 'rapido'     ? 0.14
+                     : anim.kind === 'planejado'  ? 0.06
+                     : anim.kind === 'shot'       ? 0.08  // chute lento e dramático
+                     : anim.kind === 'cruzamento' ? 0.07
+                     : 0.08;
+      // Desacelera quando perto (bola "morre" no pé do receptor)
+      let lerp = remaining > 100 ? baseLerp : baseLerp * 0.7;
+      // Shot sequence slow-mo: bola desacelera durante suspense
+      if (shotSequencePhaseRef.current === 'shot_slowmo') {
+        lerp *= 0.35;
+      } else if (shotSequencePhaseRef.current === 'shot_flight') {
+        lerp *= 0.75;
+      }
 
       ball.x += (ball.targetX - ball.x) * lerp;
       ball.y += (ball.targetY - ball.y) * lerp;
@@ -637,31 +809,32 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       let result;
       if (kickoffPendingRef.current) {
         kickoffPendingRef.current = false;
-        const home = prev.filter(p => p.team === 'home');
-        const striker = home.find(p => p.role === 'ST') ?? home.find(p => p.role === 'CM') ?? home[0];
-        const cms = home.filter(p => p.role === 'CM' || p.role === 'DM');
+        const kickTeam = kickoffTeamRef.current;
+        const teamPlayers = prev.filter(p => p.team === kickTeam);
+        const striker = teamPlayers.find(p => p.role === 'ST') ?? teamPlayers.find(p => p.role === 'CM') ?? teamPlayers[0];
+        const cms = teamPlayers.filter(p => p.role === 'CM' || p.role === 'DM');
         // Pega o CM mais perto do striker — passe natural pra trás
         const receiver = cms.length > 0
           ? cms.slice().sort((a, b) =>
               Math.hypot(a.position.x - striker.position.x, a.position.y - striker.position.y)
               - Math.hypot(b.position.x - striker.position.x, b.position.y - striker.position.y),
             )[0]
-          : home.find(p => p.role !== 'ST') ?? home[1];
+          : teamPlayers.find(p => p.role !== 'ST') ?? teamPlayers[1];
 
         const kickoffEvt: MatchEvent = {
-          id: 'evt_kickoff',
-          minute: 0,
+          id: `evt_kickoff_${Date.now()}`,
+          minute,
           type: 'pass',
-          team: 'home',
+          team: kickTeam,
           playerId: striker.id,
           playerName: striker.shortName,
           archetype: striker.archetype,
-          text: `${striker.shortName} dá início à partida — toca para ${receiver.shortName}.`,
+          text: `${striker.shortName} dá início — toca para ${receiver.shortName}.`,
           ballX: receiver.position.x,
           ballY: receiver.position.y,
           receiverPlayerId: receiver.id,
           passSubtype: 'curto',
-          rationale: 'kickoff: HOME striker → midfield',
+          rationale: `kickoff: ${kickTeam} striker → midfield`,
         };
         result = { event: kickoffEvt, nextSequence: null, receiverId: receiver.id };
       } else if (goalkeeperRestartRef.current) {
@@ -730,12 +903,31 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         startX: ballRef.current.x,
         startY: ballRef.current.y,
         startedAt: Date.now(),
-        durationEst: passKind === 'rapido' ? 350 : passKind === 'planejado' ? 800 : 600,
+        durationEst: passKind === 'shot' ? 1200 : passKind === 'rapido' ? 350 : passKind === 'planejado' ? 800 : 600,
       };
 
       ballRef.current.targetX = evt.ballX;
       ballRef.current.targetY = evt.ballY;
       heatRef.current.accumulate(evt.ballX, evt.ballY);
+
+      // Ball carrier: quem tem a bola após este evento
+      if (evt.type === 'pass' || evt.type === 'cross') {
+        // Bola em trânsito → receptor terá a bola quando chegar
+        carrierIdRef.current = receiverId ?? evt.playerId;
+        ballInTransitRef.current = true;
+        // Libera trânsito após a duração estimada do passe
+        const transitMs = passAnimRef.current.durationEst || 600;
+        setTimeout(() => { ballInTransitRef.current = false; }, transitMs);
+      } else if (evt.type === 'tackle' || evt.type === 'interception' || evt.type === 'duel') {
+        carrierIdRef.current = evt.playerId;
+        ballInTransitRef.current = false;
+      } else if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'wide' || evt.type === 'post' || evt.type === 'save' || evt.type === 'blocked') {
+        carrierIdRef.current = null;
+        ballInTransitRef.current = false;
+      } else {
+        carrierIdRef.current = evt.playerId;
+        ballInTransitRef.current = false;
+      }
 
       // Atualiza fases táticas dos times — micro-movimento do bloco
       const ballHolder = prev.find(p => p.id === evt.playerId);
@@ -781,7 +973,6 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         setTimeout(() => setCoachPing(false), 4000);
       }
 
-      setStats(s => deriveStatsDelta(evt, s, possessionRef.current));
       // Posse: time com mais passes tem a bola
       if (evt.type === 'pass' || evt.type === 'cross') {
         setPossession(evt.team);
@@ -794,40 +985,131 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         setLastTacticalTrigger(evt.tacticalTrigger);
         setTimeout(() => setLastTacticalTrigger(null), 2200);
       }
-
-      if (evt.type === 'goal') {
-        setScore(prev2 => ({ ...prev2, [evt.team]: prev2[evt.team] + 1 }));
-        setGoalFlash(true);
-        setTimeout(() => setGoalFlash(false), 1500);
-      }
-      if (evt.type === 'danger' || evt.type === 'shot') {
-        setDangerFlash(true);
-        setTimeout(() => setDangerFlash(false), 800);
+      // Skill activation — exibe como badge separado
+      if (evt.skillActivated && !evt.tacticalTrigger) {
+        setLastSkillActivated(evt.skillActivated);
+        setTimeout(() => setLastSkillActivated(null), 2200);
       }
 
-      setLatestEvent(evt);
-      setEventFeed(prev2 => [evt, ...prev2].slice(0, FEED_MAX));
+      // ─── SHOT SEQUENCE: micro cinematográfico de finalização ─────────────
+      // Resultado só aparece DEPOIS do chute. Sequência:
+      // shot_flight (300ms) → shot_slowmo (500ms) → shot_resolved (reveal)
+      const isShotSequenceEvent = evt.type === 'goal' || evt.type === 'save' ||
+        evt.type === 'wide' || evt.type === 'post' || evt.type === 'blocked';
 
-      // Pausa de 3s após eventos que param o jogo: gol (festa+kickoff),
-      // chute pra fora (tiro de meta), trave (rebote), defesa (goleiro decide).
-      // Jogadores se reposicionam suavemente nesses 3s — beleza do conceito.
-      if (evt.type === 'goal' || evt.type === 'wide' || evt.type === 'post' ||
-          evt.type === 'save' || evt.type === 'corner') {
-        pendingPauseRef.current = true;
-      }
-      // Zoom sutil em todo evento de chute — câmera "se aproxima" da bola
-      // por ~900ms. Cria tensão visual no momento da finalização.
-      if (evt.type === 'shot' || evt.type === 'goal' || evt.type === 'save' ||
-          evt.type === 'post' || evt.type === 'wide' || evt.type === 'blocked') {
+      if (isShotSequenceEvent) {
+        // Fase 1: ball flight — bola inicia trajetória
+        setShotSequencePhase('shot_flight');
         setCameraZoom(true);
-        setTimeout(() => setCameraZoom(false), 900);
-      }
-      // Goleiro reinicia: wide (tiro de meta), save (goleiro com bola),
-      // corner (escanteio chega no GK adversário em última instância).
-      // Próximo evento força GK do time defensor distribuir.
-      if (evt.type === 'wide' || evt.type === 'save' || evt.type === 'corner') {
-        const conceding: 'home' | 'away' = evt.team === 'home' ? 'away' : 'home';
-        goalkeeperRestartRef.current = { team: conceding };
+        setDangerFlash(true);
+
+        // Fase 2: slow motion — suspense (após 300ms de voo)
+        const slowmoDelay = 300;
+        const slowmoDuration = 500;
+        const revealDelay = slowmoDelay + slowmoDuration; // 800ms total
+
+        shotSequenceTimerRef.current = setTimeout(() => {
+          setShotSequencePhase('shot_slowmo');
+        }, slowmoDelay);
+
+        // Fase 3: resolved — revela resultado
+        setTimeout(() => {
+          setShotSequencePhase('shot_resolved');
+          setDangerFlash(false);
+          setCameraZoom(false);
+
+          // AGORA atualiza score, feed, timeline, stats
+          setStats(s => deriveStatsDelta(evt, s, possessionRef.current));
+
+          if (evt.type === 'goal') {
+            setScore(prev2 => ({ ...prev2, [evt.team]: prev2[evt.team] + 1 }));
+            setGoalFlash(true);
+            setTimeout(() => setGoalFlash(false), 1500);
+            setTimeout(() => {
+              setGoalOverlay({ type: 'goal', playerName: evt.playerName ?? '' });
+              setTimeout(() => setGoalOverlay(null), 3000);
+            }, 400); // overlay 400ms após reveal (bola já "entrou")
+            setTimeout(() => {
+              ballRef.current.targetX = FIELD_W_LOGIC / 2;
+              ballRef.current.targetY = FIELD_H_LOGIC / 2;
+              carrierIdRef.current = null;
+              ballInTransitRef.current = false;
+              kickoffPendingRef.current = true;
+              kickoffTeamRef.current = evt.team === 'home' ? 'away' : 'home';
+              const base = basePositionsRef.current;
+              if (base) {
+                setPlayers(prev2 => resetPlayersToBase(prev2, base));
+              }
+            }, 3800);
+          }
+
+          if (evt.type === 'wide' || evt.type === 'post') {
+            setTimeout(() => {
+              setGoalOverlay({ type: 'wide', playerName: evt.playerName ?? '' });
+              setTimeout(() => setGoalOverlay(null), 2000);
+            }, 400);
+          }
+
+          if (evt.type === 'save') {
+            setTimeout(() => {
+              setGoalOverlay({ type: 'save', playerName: evt.playerName ?? '' });
+              setTimeout(() => setGoalOverlay(null), 2000);
+            }, 400);
+          }
+
+          // Feed e timeline só após resultado revelado
+          matchEventsRef.current = [...matchEventsRef.current, evt];
+          setLatestEvent(evt);
+          setEventFeed(prev2 => [evt, ...prev2].slice(0, FEED_MAX));
+          setTimelineSlots(prev2 => addTimelineSlot(prev2, evt));
+
+          // Volta ao idle após reveal
+          setTimeout(() => setShotSequencePhase('idle'), 300);
+        }, revealDelay);
+
+        // Pausa do próximo evento: inclui tempo da sequência + respiro
+        if (evt.type === 'goal') {
+          pendingPauseRef.current = revealDelay + 4800; // sequência + festa + kickoff
+        } else {
+          pendingPauseRef.current = revealDelay + 3200; // sequência + banner + respiro
+        }
+
+        // Goleiro reinicia após wide/save/corner
+        if (evt.type === 'wide' || evt.type === 'save') {
+          const conceding: 'home' | 'away' = evt.team === 'home' ? 'away' : 'home';
+          goalkeeperRestartRef.current = { team: conceding };
+          setTimeout(() => {
+            const gkX = conceding === 'home' ? 40 : FIELD_W_LOGIC - 40;
+            ballRef.current.targetX = gkX;
+            ballRef.current.targetY = FIELD_H_LOGIC / 2;
+            carrierIdRef.current = null;
+            ballInTransitRef.current = false;
+          }, revealDelay + 800);
+        }
+      } else {
+        // ─── Eventos NÃO-chute: fluxo normal (imediato) ─────────────────────
+        if (evt.type === 'danger' || evt.type === 'shot') {
+          setDangerFlash(true);
+          setTimeout(() => setDangerFlash(false), 800);
+        }
+
+        matchEventsRef.current = [...matchEventsRef.current, evt];
+        setLatestEvent(evt);
+        setEventFeed(prev2 => [evt, ...prev2].slice(0, FEED_MAX));
+        setTimelineSlots(prev2 => addTimelineSlot(prev2, evt));
+
+        if (evt.type === 'corner') {
+          pendingPauseRef.current = 2000;
+          const conceding: 'home' | 'away' = evt.team === 'home' ? 'away' : 'home';
+          goalkeeperRestartRef.current = { team: conceding };
+          const gkX = conceding === 'home' ? 40 : FIELD_W_LOGIC - 40;
+          ballRef.current.targetX = gkX;
+          ballRef.current.targetY = FIELD_H_LOGIC / 2;
+          carrierIdRef.current = null;
+          ballInTransitRef.current = false;
+        }
+
+        setStats(s => deriveStatsDelta(evt, s, possessionRef.current));
       }
 
       // Atualiza memória da partida (Fase 4): cumulativo de gols, virada,
@@ -835,6 +1117,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
       const updatedPlayers = applyEventToPlayers(prev, evt);
       matchStoryRef.current = updateMatchStory(matchStoryRef.current, evt, updatedPlayers, score);
 
+      // Agentes se movem continuamente via movement loop (15fps).
+      // Aqui só atualizamos fatigue/confidence/mental — posição é do loop.
       return updatedPlayers;
     });
 
@@ -852,8 +1136,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     })();
 
     if (pendingPauseRef.current) {
-      interval = 1500; // pausa pós-gol/bola fora — 3s → 1.5s
-      pendingPauseRef.current = false;
+      interval = pendingPauseRef.current; // pausa dinâmica (ms) até reinício
+      pendingPauseRef.current = 0;
     } else if (inSequence) {
       interval = 600 + Math.random() * 500;  // 1200-2000 → 600-1100 (rápido, fluido)
     } else {
@@ -988,6 +1272,12 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     .filter(p => p.team === 'home' && p.id !== star.id)
     .sort((a, b) => b.confidence - a.confidence)[0] ?? players[8];
 
+  // Energia média do time home (100 - fadiga média)
+  const homePlayersForEnergy = players.filter(p => p.team === 'home');
+  const avgEnergy = homePlayersForEnergy.length > 0
+    ? Math.round(100 - homePlayersForEnergy.reduce((s, p) => s + p.fatigue, 0) / homePlayersForEnergy.length)
+    : 100;
+
   // Foto do jogador real (portraitUrl) com fallback determinístico em pixel-art
   // pros jogadores demo (TIGRES/ALVORADA sem foto associada).
   function playerPhoto(p: ClassicPlayer | undefined, size = 120): string {
@@ -1007,6 +1297,15 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
     const resultLabel = isDraw ? 'EMPATE' : homeWon ? `${homeTeam} VENCE` : `${awayTeam} VENCE`;
     const resultColor = isDraw ? 'var(--c-text-sec)' : homeWon ? 'var(--c-accent)' : 'var(--c-team-away)';
     const mvpPlayer = mvp ?? star;
+    const fullMatchEvents = matchEventsRef.current;
+    const keyMoment = fullMatchEvents.find(e => e.type === 'goal') ??
+      fullMatchEvents.find(e => e.type === 'save' || e.type === 'post' || e.skillActivated) ??
+      fullMatchEvents[fullMatchEvents.length - 1] ??
+      null;
+    const tacticalPattern = passStyle === 'LATERAL' ? 'Amplitude e cruzamentos'
+      : passStyle === 'LONGO' ? 'Jogo vertical'
+      : passStyle === 'COUNTER' ? 'Transição rápida'
+      : 'Circulação curta';
 
     return (
       <>
@@ -1040,6 +1339,24 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             </div>
             <div style={{ ...T_DISPLAY, fontSize:13, fontWeight:900, color: resultColor, letterSpacing:'0.22em' }}>
               {resultLabel}
+            </div>
+          </div>
+
+          <div style={{ padding:'14px 18px 0' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              {[
+                { label:'FINAL SCORE', value:`${score.home} - ${score.away}` },
+                { label:'KEY MOMENT', value:keyMoment ? `${keyMoment.minute}' ${keyMoment.text}` : 'Partida sem grande ruptura' },
+                { label:'MAN OF THE MATCH', value:mvpPlayer.shortName },
+                { label:'TACTICAL PATTERN', value:tacticalPattern },
+              ].map(item => (
+                <div key={item.label} style={{ background:'var(--c-bg-surface)', border:'1px solid var(--c-border)', borderRadius:6, padding:'10px 12px', minWidth:0 }}>
+                  <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-accent)', letterSpacing:'0.18em', marginBottom:5 }}>{item.label}</div>
+                  <div style={{ ...T_BODY, fontSize:11, color:'var(--c-text-primary)', lineHeight:1.25, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -1184,6 +1501,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 setRunning(true);
                 setPlayers([...getHomePlayers(), ...getAwayPlayers()].map(p => ({ ...p, matchStats: emptyPlayerMatchStats() })));
                 setEventFeed([]);
+                matchEventsRef.current = [];
+                setTimelineSlots([]);
                 setLatestEvent(null);
                 setStats({ possession:{home:50,away:50}, shots:{home:0,away:0}, shotsOnTarget:{home:0,away:0}, passes:{home:0,away:0}, fouls:{home:0,away:0}, corners:{home:0,away:0} });
                 setPossession('home');
@@ -1201,7 +1520,7 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 trailRef.current = [];
                 heatRef.current = new HeatmapEngine();
                 passAnimRef.current = { kind: 'default', startX: 300, startY: 200, startedAt: 0, durationEst: 600 };
-                pendingPauseRef.current = false;
+                pendingPauseRef.current = 0;
               }}
               style={{
                 width:'100%', padding:'16px',
@@ -1348,8 +1667,14 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           animation: dangerFlash ? 'c-dangerPulse 0.8s ease' : undefined,
           // Zoom sutil quando há chute — viewport se aproxima por ~900ms.
           // Jogadores em % seguem fixos relativos ao container.
-          transform: cameraZoom ? 'scale(1.05)' : 'scale(1)',
-          transition: 'transform 0.4s cubic-bezier(0.32,0,0.32,1)',
+          // Shot sequence: zoom progressivo durante voo e slow-mo
+          transform: shotSequencePhase === 'shot_slowmo' ? 'scale(1.07)'
+            : shotSequencePhase === 'shot_flight' ? 'scale(1.04)'
+            : cameraZoom ? 'scale(1.05)'
+            : 'scale(1)',
+          transition: shotSequencePhase === 'shot_slowmo'
+            ? 'transform 0.5s cubic-bezier(0.16,1,0.3,1)'
+            : 'transform 0.4s cubic-bezier(0.32,0,0.32,1)',
           transformOrigin: 'center',
         }}>
           {/* Canvas estático */}
@@ -1359,6 +1684,52 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             height={FIELD_H_LOGIC}
             style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', display:'block' }}
           />
+
+          {/* Shot sequence vignette — suspense visual durante finalização */}
+          {shotSequencePhase !== 'idle' && (
+            <div style={{
+              position:'absolute', top:0, left:0, width:'100%', height:'100%',
+              pointerEvents:'none', zIndex:50,
+              background: shotSequencePhase === 'shot_slowmo'
+                ? 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35) 100%)'
+                : 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.18) 100%)',
+              animation: 'c-shot-vignette 0.8s ease forwards',
+              transition: 'background 0.3s ease',
+            }} />
+          )}
+
+          {/* Zone overlay — ZD / ZC / ZA com % de gol */}
+          {showZones && (
+            <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:1 }}>
+              {/* ZD — Defensive Zone (0-40%) */}
+              <div style={{ position:'absolute', left:'0%', top:0, width:'40%', height:'100%', background:'rgba(59,130,246,0.12)', borderRight:'1px dashed rgba(59,130,246,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ fontSize:11, fontWeight:800, color:'rgba(59,130,246,0.7)', letterSpacing:'0.1em' }}>ZD</span>
+              </div>
+              {/* ZC — Creative Zone (40-70%) */}
+              <div style={{ position:'absolute', left:'40%', top:0, width:'30%', height:'100%', background:'rgba(253,225,0,0.08)', borderRight:'1px dashed rgba(253,225,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <span style={{ fontSize:11, fontWeight:800, color:'rgba(253,225,0,0.6)', letterSpacing:'0.1em' }}>ZC</span>
+              </div>
+              {/* ZA — Attack Zone (70-100%) com % de gol */}
+              <div style={{ position:'absolute', left:'70%', top:0, width:'30%', height:'100%', background:'rgba(239,68,68,0.10)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2 }}>
+                <span style={{ fontSize:11, fontWeight:800, color:'rgba(239,68,68,0.7)', letterSpacing:'0.1em' }}>ZA</span>
+                <span style={{ fontSize:9, fontWeight:700, color:'rgba(239,68,68,0.55)' }}>GOL 12-35%</span>
+              </div>
+            </div>
+          )}
+
+          {/* Toggle zonas */}
+          <button
+            onClick={() => setShowZones(z => !z)}
+            style={{
+              position:'absolute', top:4, right:4, zIndex:10,
+              background: showZones ? 'rgba(253,225,0,0.9)' : 'rgba(0,0,0,0.5)',
+              color: showZones ? '#000' : '#fff',
+              border:'none', borderRadius:4, padding:'2px 6px',
+              fontSize:9, fontWeight:700, cursor:'pointer', letterSpacing:'0.05em',
+            }}
+          >
+            {showZones ? 'ZONES ✓' : 'ZONES'}
+          </button>
 
           {/* Connection lines — pass pair + coverage links */}
           <svg
@@ -1412,14 +1783,9 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               gradualmente seguindo a posse e a posição da bola. Atacando avança,
               defendendo recua. Movimento sutil, sempre baseado em quem tem a bola. */}
           {players.map(p => {
-            // Time que tem a bola = time do último ator com posse (latestEvent)
-            const holderTeam: 'home' | 'away' = latestEvent?.team ?? 'home';
-            const ballPosNow = { x: ballRef.current.targetX, y: ballRef.current.targetY };
-            const shift = playerShift(p, ballPosNow, holderTeam);
-            const shiftedX = p.position.x + shift.dx * FIELD_W_LOGIC;
-            const shiftedY = p.position.y + shift.dy * FIELD_H_LOGIC;
-            const leftPct = (shiftedX / FIELD_W_LOGIC) * 100;
-            const topPct  = (shiftedY / FIELD_H_LOGIC) * 100;
+            // Agentes autônomos controlam posição — playerShift desabilitado
+            const leftPct = (p.position.x / FIELD_W_LOGIC) * 100;
+            const topPct  = (p.position.y / FIELD_H_LOGIC) * 100;
             const isHL = highlightPlayer?.id === p.id;
             const isLegacyTarget = legacyPulse?.player.id === p.id;
             const NODE = 26;
@@ -1447,12 +1813,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
               ? 'rgba(255,255,255,0.55)'
               : 'rgba(255,255,255,0.35)';
 
-            // Cores do time: HOME = preto com miolo amarelo / AWAY = amarelo com miolo preto
+            // Cores do time: HOME = amarelo sólido / AWAY = preto sólido
             const isHome = p.team === 'home';
-            const teamOuter = isHome ? '#0A0A0A' : '#FDE100';
-            const teamInner = isHome ? '#FDE100' : '#0A0A0A';
-            const numberColor = isHome ? '#0A0A0A' : '#FDE100';
-            const bgColor = teamOuter;
+            const bgColor = isHome ? '#FDE100' : '#0A0A0A';
+            const numberColor = isHome ? '#0A0A0A' : '#FFFFFF';
 
             const shadow = isHL && !isLegacyTarget && !isHot
               ? '0 0 0 1.5px rgba(255,255,255,0.4)'
@@ -1473,11 +1837,8 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 display:'flex', alignItems:'center', justifyContent:'center',
                 fontFamily:'var(--cf-body)', fontSize:10, fontWeight:800,
                 pointerEvents:'none',
-                // Phase 2: micro-movimento do bloco — left/top transitionam suavemente
-                // quando a fase tática do time muda (1.4s para sentir como onda)
-                transition: repositioning
-                  ? 'left 0.9s cubic-bezier(0.4,0,0.2,1), top 0.9s cubic-bezier(0.4,0,0.2,1)'
-                  : 'left 1.4s cubic-bezier(0.32,0,0.32,1), top 1.4s cubic-bezier(0.32,0,0.32,1), border-color 0.3s ease, background 0.3s ease',
+                // Movimento contínuo via agent loop (15fps) — sem transition em left/top
+                transition: 'border-color 0.3s ease, background 0.3s ease',
                 animation: isLegacyTarget
                   ? 'c-legacyCore 1.2s ease'
                   : isHot
@@ -1491,11 +1852,10 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
                 opacity: p.fatigue > 85 ? 0.7 : 1,
                 zIndex: isLegacyTarget ? 6 : isHL ? 5 : 2,
               }}>
-                {/* Círculo interno — cor invertida do time */}
+                {/* Número do jogador */}
                 <div style={{
                   width: 16, height: 16,
                   borderRadius:'50%',
-                  background: teamInner,
                   display:'flex', alignItems:'center', justifyContent:'center',
                   fontSize: 9, fontWeight: 800,
                   color: numberColor,
@@ -1613,6 +1973,24 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             );
           })()}
 
+          {/* Skill activation badge */}
+          {lastSkillActivated && !lastTacticalTrigger && (
+            <div style={{
+              position:'absolute', top:'50%', left:'50%',
+              transform:'translate(-50%,-50%)',
+              background:'rgba(20,60,20,0.92)',
+              border:'1px solid #4ade80',
+              borderRadius:4, padding:'4px 12px',
+              ...T_DISPLAY, fontSize:10, fontWeight:800,
+              color:'#4ade80', letterSpacing:'0.18em',
+              whiteSpace:'nowrap', pointerEvents:'none',
+              zIndex:8,
+              animation:'c-fadeInDown 0.2s ease',
+            }}>
+              ⚡ {lastSkillActivated.toUpperCase()}
+            </div>
+          )}
+
           {/* Overlay de período — intervalo e início do 2º tempo */}
           {periodOverlay && (
             <div style={{
@@ -1643,6 +2021,49 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
             </div>
           )}
 
+          {/* Overlay GOL / PRA FORA / DEFENDEU */}
+          {goalOverlay && (
+            <div style={{
+              position:'absolute', inset:0,
+              background: goalOverlay.type === 'goal' ? '#0A0A0A'
+                        : goalOverlay.type === 'save' ? '#1a5c1a'
+                        : '#FDE100',
+              display:'flex', flexDirection:'column',
+              alignItems:'center', justifyContent:'center',
+              gap:8, zIndex:12,
+              animation:'c-fadeInDown 0.3s ease',
+            }}>
+              {goalOverlay.type === 'goal' ? (
+                <>
+                  <div style={{ ...T_HERO, fontSize:48, fontWeight:900, fontStyle:'italic', color:'#FDE100', letterSpacing:'-0.02em', lineHeight:1, textTransform:'uppercase' }}>
+                    GOOOOL!
+                  </div>
+                  <div style={{ ...T_DISPLAY, fontSize:16, fontWeight:700, color:'#fff', letterSpacing:'0.12em', marginTop:4 }}>
+                    {goalOverlay.playerName}
+                  </div>
+                </>
+              ) : goalOverlay.type === 'save' ? (
+                <>
+                  <div style={{ ...T_HERO, fontSize:38, fontWeight:900, fontStyle:'italic', color:'#fff', letterSpacing:'-0.02em', lineHeight:1, textTransform:'uppercase' }}>
+                    DEFENDEU!
+                  </div>
+                  <div style={{ ...T_DISPLAY, fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.7)', letterSpacing:'0.1em', marginTop:2 }}>
+                    {goalOverlay.playerName}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ ...T_HERO, fontSize:38, fontWeight:900, fontStyle:'italic', color:'#0A0A0A', letterSpacing:'-0.02em', lineHeight:1, textTransform:'uppercase' }}>
+                    PRA FORAAAA!
+                  </div>
+                  <div style={{ ...T_DISPLAY, fontSize:13, fontWeight:700, color:'rgba(0,0,0,0.6)', letterSpacing:'0.1em', marginTop:2 }}>
+                    {goalOverlay.playerName}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Possession timeline bar */}
           <div style={{ position:'absolute', bottom:0, left:0, right:0, height:4, background:'var(--c-bg-elevated)' }}>
             <div style={{ height:'100%', background:'var(--c-team-home)', width:`${stats.possession.home}%`, transition:'width 0.8s ease' }} />
@@ -1668,192 +2089,328 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
           </div>
         )}
 
-        {/* ── Vitrines do museu vivo: cards modulares com rail amarelo ──── */}
-        <div style={{ display:'flex', flexDirection:'column', gap:10, padding:'12px 12px 4px' }}>
-
-        {/* ── Jogador em ação — primeiro card, logo abaixo do placar ───── */}
-        <ModuleCard eyebrow={star.onFire ? 'JOIA EM CHAMA' : 'JOGADOR EM AÇÃO'} noPadding>
-          <div style={{ display:'grid', gridTemplateColumns:'112px 1fr', minHeight:128 }}>
-            <div style={{ position:'relative', background:'#000', overflow:'hidden' }}>
-              <img
-                src={playerPhoto(star, 240)}
-                alt={star.shortName}
-                loading="lazy"
-                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering: star.portraitUrl ? 'auto' : 'pixelated', filter: star.portraitUrl ? 'contrast(1.05)' : 'grayscale(35%) contrast(1.05)' }}
-              />
-              <div aria-hidden style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.55) 100%)' }} />
-              <div style={{ position:'absolute', top:6, left:8, lineHeight:0.9 }}>
-                <div style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:36, color:'#FFFFFF', letterSpacing:'-0.02em', textShadow:'0 2px 6px rgba(0,0,0,0.85), 0 0 12px rgba(0,0,0,0.5)' }}>
-                  {star.ovr}
-                </div>
-                <div style={{ ...T_DISPLAY, fontSize:8, color:'rgba(255,255,255,0.85)', letterSpacing:'0.22em', marginTop:1, textShadow:'0 1px 3px rgba(0,0,0,0.8)' }}>OVR</div>
-              </div>
-              <div style={{ position:'absolute', bottom:6, left:6, background:'rgba(0,0,0,0.85)', padding:'2px 6px', ...T_DISPLAY, fontSize:8, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.18em', borderRadius:2 }}>
-                {star.role}
-              </div>
-              {star.isStar && (
-                <div style={{ position:'absolute', top:6, right:6, background:'var(--c-accent)', color:'#0D0D0D', padding:'2px 5px', borderRadius:2, ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.16em', display:'flex', alignItems:'center', gap:3, boxShadow:'0 0 12px rgba(253,225,0,0.45)' }}>
-                  <Star size={8} fill="currentColor" /> MVP
-                </div>
+        {/* ── EVENTO ATUAL — narrativa curta do momento ──────────────────── */}
+        <div style={{
+          padding:'10px 14px',
+          background:'#0A0A0A',
+          borderBottom:'1px solid var(--c-border)',
+          minHeight:38,
+          display:'flex', alignItems:'center', gap:8,
+          overflow:'hidden',
+        }}>
+          {latestEvent ? (
+            <>
+              <span style={{ ...T_DISPLAY, fontSize:11, fontWeight:900, color:'var(--c-accent)', fontVariantNumeric:'tabular-nums', flexShrink:0 }}>
+                {latestEvent.minute}'
+              </span>
+              {latestEvent.skillActivated && (
+                <span style={{ ...T_DISPLAY, fontSize:9, fontWeight:800, color:'#4ade80', letterSpacing:'0.10em', flexShrink:0 }}>
+                  ⚡
+                </span>
               )}
-              {star.onFire && !star.isStar && (
-                <div style={{ position:'absolute', top:6, right:6, background:'#FB923C', color:'#0D0D0D', padding:'2px 5px', borderRadius:2, ...T_DISPLAY, fontSize:8, fontWeight:900, letterSpacing:'0.14em', display:'flex', alignItems:'center', gap:3 }}>
-                  <Flame size={8} fill="currentColor" /> CHAMA
-                </div>
+              {formatSkillTag(latestEvent) && (
+                <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:900, color:'#4ade80', letterSpacing:'0.08em', flexShrink:0 }}>
+                  {formatSkillTag(latestEvent)}
+                </span>
               )}
-            </div>
+              <span style={{ ...T_BODY, fontSize:12, color:'var(--c-text-primary)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:1 }}>
+                {latestEvent.text}
+              </span>
+            </>
+          ) : (
+            <span style={{ ...T_BODY, fontSize:11, color:'var(--c-text-muted)', fontStyle:'italic' }}>
+              Aguardando início...
+            </span>
+          )}
+        </div>
 
-            <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', justifyContent:'space-between', minWidth:0 }}>
-              <div>
-                <div style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.26em', marginBottom:4 }}>{star.archetype}</div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:6 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.04em', flexShrink:0 }}>{star.number}</span>
-                  <span style={{ ...T_DISPLAY, fontSize:14, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{star.shortName}</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                  <span style={{ ...T_HERO, fontStyle:'italic', fontWeight:700, fontSize:26, color:'var(--c-accent)', lineHeight:1, letterSpacing:'-0.02em' }}>
-                    {(6.0 + (star.confidence / 100) * 4).toFixed(2)}
-                  </span>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.22em' }}>RATING</span>
-                </div>
-              </div>
-              <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:5 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>FADIGA</span>
-                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
-                    <div style={{ height:'100%', background: star.fatigue > 70 ? 'var(--c-danger)' : 'var(--c-warning)', borderRadius:1, width:`${star.fatigue}%`, transition:'width 1s' }} />
-                  </div>
-                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{Math.round(star.fatigue)}%</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.16em', minWidth:54 }}>CONFIANÇA</span>
-                  <div style={{ flex:1, height:2, background:'var(--c-bg-elevated)', borderRadius:1 }}>
-                    <div style={{ height:'100%', background:'var(--c-ok)', borderRadius:1, width:`${star.confidence}%`, transition:'width 1s' }} />
-                  </div>
-                  <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', minWidth:30, textAlign:'right' }}>{Math.round(star.confidence)}%</span>
-                </div>
-              </div>
+        {/* ── TIMELINE VIVA — barra horizontal com eventos marcados ───────── */}
+        <div style={{
+          padding:'8px 14px 10px',
+          background:'var(--c-bg-primary)',
+          borderBottom:'1px solid var(--c-border)',
+        }}>
+          {/* Barra de progresso do jogo */}
+          <div style={{ position:'relative', height:28, display:'flex', alignItems:'center' }}>
+            {/* Track */}
+            <div style={{ position:'absolute', left:0, right:0, top:'50%', transform:'translateY(-50%)', height:3, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+              <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${Math.min(100, (minute / 90) * 100)}%`, transition:'width 1s ease', opacity:0.6 }} />
             </div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'48px 1fr auto', alignItems:'center', gap:10, padding:'8px 14px', borderTop:'1px solid var(--c-border)', background:'rgba(255,255,255,0.015)' }}>
-            <div style={{ position:'relative', width:48, height:40, borderRadius:3, overflow:'hidden', background:'#000' }}>
-              <img
-                src={playerPhoto(secondStar, 120)}
-                alt={secondStar.shortName}
-                loading="lazy"
-                style={{ width:'100%', height:'100%', objectFit:'cover', imageRendering: secondStar.portraitUrl ? 'auto' : 'pixelated', filter: secondStar.portraitUrl ? 'contrast(1.05)' : 'grayscale(50%)' }}
-              />
-              <div style={{ position:'absolute', top:2, left:3, ...T_HERO, fontStyle:'italic', fontSize:14, color:'#FFFFFF', lineHeight:1, textShadow:'0 1px 3px rgba(0,0,0,0.95)' }}>
-                {secondStar.ovr}
-              </div>
-            </div>
-            <div>
-              <div style={{ ...T_DISPLAY, fontSize:11, fontWeight:900, color:'var(--c-text-primary)', letterSpacing:'0.10em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                {secondStar.number} {secondStar.shortName}
-              </div>
-              <div style={{ ...T_BODY, fontSize:9, color:'var(--c-text-muted)', marginTop:1 }}>
-                {secondStar.role} · {secondStar.archetype}
-              </div>
-            </div>
-            <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.18em' }}>SEGUNDO</span>
-          </div>
-        </ModuleCard>
-
-        {/* ── [F] Stats carousel ───────────────────────────────────────── */}
-        <ModuleCard eyebrow="ESTATÍSTICAS · AO VIVO" noPadding meta={
-          <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-muted)', letterSpacing:'0.10em' }}>arrasta →</span>
-        }>
-          <div style={{ display:'flex', overflowX:'auto', scrollSnapType:'x mandatory' }}>
-            {[
-              { label:'POSSE DE BOLA', home:stats.possession.home,    away:stats.possession.away,    fmt:(v:number)=>`${v}%` },
-              { label:'FINALIZAÇÕES',  home:stats.shots.home,         away:stats.shots.away,         fmt:(v:number)=>`${v}`  },
-              { label:'NO ALVO',       home:stats.shotsOnTarget.home, away:stats.shotsOnTarget.away, fmt:(v:number)=>`${v}`  },
-              { label:'PASSES CERTOS', home:stats.passes.home,        away:stats.passes.away,        fmt:(v:number)=>`${v}`  },
-              { label:'FALTAS',        home:stats.fouls.home,         away:stats.fouls.away,         fmt:(v:number)=>`${v}`  },
-            ].map((stat, i) => {
-              const total = stat.home + stat.away || 1;
+            {/* Marcadores de eventos na timeline */}
+            {timelineSlots.length === 0 && (
+              <span style={{
+                position:'absolute', left:'50%', top:'50%',
+                transform:'translate(-50%,-50%)',
+                ...T_BODY, fontSize:10, color:'var(--c-text-muted)', fontStyle:'italic',
+                whiteSpace:'nowrap',
+              }}>
+                A partida ainda está se estudando.
+              </span>
+            )}
+            {timelineSlots.map((slot, i) => {
+              const pos = Math.min(98, Math.max(2, (slot.minute / 90) * 100));
+              const isGoal = slot.type === 'goal';
+              const isSave = slot.type === 'save' || slot.type === 'interception';
+              const isDanger = slot.type === 'shot' || slot.type === 'wide' || slot.type === 'post';
+              const isSkill = !!slot.skillActivated || slot.tacticalTrigger === 'forced_shot' || slot.tacticalTrigger === 'duel_win';
+              const dotColor = isGoal ? 'var(--c-accent)' : isSave ? '#22c55e' : isDanger ? '#ef4444' : 'var(--c-text-sec)';
               return (
-                <div key={i} style={{ minWidth:120, flexShrink:0, padding:'12px 14px', scrollSnapAlign:'start', borderRight: i < 4 ? '1px solid var(--c-border)' : 'none' }}>
-                  <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-text-sec)', letterSpacing:'0.22em', marginBottom:6 }}>{stat.label}</div>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
-                    <span style={{ ...T_HERO, fontSize:15, color:'var(--c-team-home)' }}>{stat.fmt(stat.home)}</span>
-                    <span style={{ ...T_HERO, fontSize:15, color:'var(--c-team-away)' }}>{stat.fmt(stat.away)}</span>
-                  </div>
-                  <div style={{ height:3, background:'var(--c-bg-elevated)', borderRadius:2 }}>
-                    <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${(stat.home / total) * 100}%`, transition:'width 1s ease' }} />
-                  </div>
+                <div
+                  key={i}
+                  style={{
+                    position:'absolute', left:`${pos}%`, top:'50%',
+                    transform:'translate(-50%,-50%)',
+                    width: isGoal ? 18 : 8, height: isGoal ? 18 : 8,
+                    borderRadius:'50%',
+                    background: isGoal ? 'var(--c-accent)' : dotColor,
+                    border: isGoal ? '2px solid #0A0A0A' : 'none',
+                    boxShadow: isGoal ? '0 0 12px rgba(253,225,0,0.8), 0 0 4px rgba(253,225,0,0.4)'
+                      : isSkill ? '0 0 10px rgba(74,222,128,0.55)'
+                      : isSave ? '0 0 8px rgba(34,197,94,0.45)'
+                      : undefined,
+                    animation: isGoal || isSave || isSkill ? 'c-shot-pulse 1.2s ease' : undefined,
+                    zIndex: isGoal ? 3 : 1,
+                    transition:'all 0.3s',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                  }}
+                  title={`${slot.minute}' — ${slot.type}`}
+                >
+                  {isGoal && <GoalIcon size={10} color="#0A0A0A" strokeWidth={2.5} />}
                 </div>
               );
             })}
+            {/* Indicador de minuto atual */}
+            <div style={{
+              position:'absolute', left:`${Math.min(98, (minute / 90) * 100)}%`, top:'50%',
+              transform:'translate(-50%,-50%)',
+              width:4, height:16, borderRadius:2,
+              background:'var(--c-text-primary)', opacity:0.8,
+              transition:'left 1s ease',
+            }} />
           </div>
-        </ModuleCard>
+          {/* Labels */}
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:2 }}>
+            <span style={{ ...T_DISPLAY, fontSize:7, color:'var(--c-text-muted)', letterSpacing:'0.12em' }}>0'</span>
+            <span style={{ ...T_DISPLAY, fontSize:7, color:'var(--c-text-muted)', letterSpacing:'0.12em' }}>45'</span>
+            <span style={{ ...T_DISPLAY, fontSize:7, color:'var(--c-text-muted)', letterSpacing:'0.12em' }}>90'</span>
+          </div>
+        </div>
 
+        {/* ── HERO CARDS — Interações Táticas ────────────────────────────── */}
+        <div style={{ padding:'12px 12px 8px', display:'flex', flexDirection:'column', gap:10 }}>
 
-        {/* ── [G] Operação Tática — agora 2 cols: Tipo de Passe | Skills ─ */}
-        <ModuleCard eyebrow="OPERAÇÃO TÁTICA" noPadding>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:'var(--c-border)' }}>
-            {/* Tipo de Passe — só título maior, sem descritivo */}
-            <div style={{ background:'var(--c-bg-surface)', padding:'10px 12px', display:'flex', flexDirection:'column' }}>
-              <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:10 }}>TIPO DE PASSE</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:6, flex:1 }}>
-                {PASS_STYLES.map(ps => {
-                  const isActive = passStyle === ps.id;
-                  return (
-                    <button
-                      key={ps.id}
-                      type="button"
-                      onClick={() => { setPassStyle(ps.id); sequenceRef.current = null; }}
-                      style={{
-                        flex:1, width:'100%', padding:'10px 12px',
-                        border: isActive ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
-                        borderLeft: isActive ? '3px solid var(--c-accent)' : '3px solid transparent',
-                        borderRadius:4, background: isActive ? 'rgba(253,225,0,0.08)' : 'transparent',
-                        cursor:'pointer', textAlign:'left',
-                        boxShadow: isActive ? '0 0 14px rgba(253,225,0,0.18)' : undefined,
-                        transition:'all 0.18s',
-                      }}
-                    >
-                      <span style={{ ...T_DISPLAY, fontSize:13, fontWeight:900, color: isActive ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.16em' }}>
-                        {ps.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Card 1: MENTALIDADE TÁTICA — controle de postura do time */}
+          <div style={{
+            background:'var(--c-bg-surface)', border:'1px solid var(--c-border)',
+            borderRadius:8, overflow:'hidden',
+          }}>
+            <div style={{ padding:'10px 14px 8px', borderBottom:'1px solid var(--c-border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>MENTALIDADE</span>
+              <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>
+                {passStyle === 'TIKTAK' ? 'TOQUE RÁPIDO' : passStyle === 'LONGO' ? 'DIRETO' : passStyle === 'LATERAL' ? 'AMPLITUDE' : 'CONTRA-ATAQUE'}
+              </span>
             </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:1, background:'var(--c-border)' }}>
+              {PASS_STYLES.map(ps => {
+                const isActive = passStyle === ps.id;
+                const IconMap: Record<string, React.ReactNode> = {
+                  TIKTAK: <Repeat size={18} strokeWidth={1.6} />,
+                  LONGO: <ArrowUpRight size={18} strokeWidth={1.6} />,
+                  LATERAL: <ChevronRight size={18} strokeWidth={1.6} />,
+                  COUNTER: <Zap size={18} strokeWidth={1.6} />,
+                };
+                return (
+                  <button
+                    key={ps.id}
+                    type="button"
+                    onClick={() => { setPassStyle(ps.id); sequenceRef.current = null; }}
+                    style={{
+                      padding:'14px 8px',
+                      background: isActive ? 'rgba(253,225,0,0.10)' : 'var(--c-bg-surface)',
+                      border:'none', cursor:'pointer',
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                      borderBottom: isActive ? '2px solid var(--c-accent)' : '2px solid transparent',
+                      transition:'all 0.15s',
+                      color: isActive ? 'var(--c-accent)' : 'var(--c-text-sec)',
+                    }}
+                  >
+                    <span style={{ opacity: isActive ? 1 : 0.5, lineHeight:1 }}>{IconMap[ps.id]}</span>
+                    <span style={{ ...T_DISPLAY, fontSize:9, fontWeight:800, color: isActive ? 'var(--c-accent)' : 'var(--c-text-sec)', letterSpacing:'0.10em' }}>
+                      {ps.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-            {/* Skills — mantém ícone + cooldown */}
-            <div style={{ background:'var(--c-bg-surface)', padding:'10px 12px', display:'flex', flexDirection:'column' }}>
-              <div style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.24em', marginBottom:10 }}>SKILLS</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:6, flex:1 }}>
-                {skills.map(sk => (
+          {/* Card 2: SKILLS ATIVAS — habilidades do manager */}
+          <div style={{
+            background:'var(--c-bg-surface)', border:'1px solid var(--c-border)',
+            borderRadius:8, overflow:'hidden',
+          }}>
+            <div style={{ padding:'10px 14px 8px', borderBottom:'1px solid var(--c-border)' }}>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>HABILIDADES DO COACH</span>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:1, background:'var(--c-border)' }}>
+              {skills.map(sk => {
+                const onCooldown = sk.remaining > 0;
+                return (
                   <button
                     key={sk.id}
                     type="button"
                     onClick={() => toggleSkill(sk.id)}
                     style={{
-                      flex:1, display:'flex', alignItems:'center', gap:8, width:'100%', padding:'10px 12px',
-                      border: sk.active ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
-                      borderLeft: sk.active ? '3px solid var(--c-accent)' : '3px solid transparent',
-                      borderRadius:4, background: sk.active ? 'rgba(253,225,0,0.08)' : 'transparent',
-                      cursor: sk.remaining > 0 ? 'not-allowed' : 'pointer',
-                      opacity: sk.remaining > 0 ? 0.5 : 1,
-                      color: sk.active ? 'var(--c-accent)' : 'var(--c-text-primary)',
-                      boxShadow: sk.active ? '0 0 14px rgba(253,225,0,0.18)' : undefined,
-                      transition:'all 0.18s',
+                      padding:'12px 8px',
+                      background: sk.active ? 'rgba(253,225,0,0.10)' : 'var(--c-bg-surface)',
+                      border:'none',
+                      cursor: onCooldown ? 'not-allowed' : 'pointer',
+                      opacity: onCooldown ? 0.4 : 1,
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+                      borderBottom: sk.active ? '2px solid var(--c-accent)' : '2px solid transparent',
+                      transition:'all 0.15s',
                     }}
                   >
-                    <SkillIcon icon={sk.icon} />
-                    <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, textAlign:'left', flex:1, letterSpacing:'0.12em', lineHeight:1.2 }}>{sk.label}</span>
-                    <span style={{ ...T_BODY, fontSize:9, color:'var(--c-text-sec)', fontVariantNumeric:'tabular-nums', flexShrink:0 }}>
-                      {sk.remaining > 0 ? `${sk.remaining}s` : `${sk.cooldown}s`}
+                    <div style={{ fontSize:16, lineHeight:1, filter: sk.active ? 'drop-shadow(0 0 4px rgba(253,225,0,0.6))' : undefined }}>
+                      <SkillIcon icon={sk.icon} />
+                    </div>
+                    <span style={{ ...T_DISPLAY, fontSize:8, fontWeight:800, color: sk.active ? 'var(--c-accent)' : 'var(--c-text-sec)', letterSpacing:'0.08em', textAlign:'center', lineHeight:1.2 }}>
+                      {sk.label}
                     </span>
+                    {onCooldown && (
+                      <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)' }}>{sk.remaining}s</span>
+                    )}
                   </button>
-                ))}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Card 3: PAINEL AO VIVO — stats + energia + momentum */}
+          <div style={{
+            background:'var(--c-bg-surface)', border:'1px solid var(--c-border)',
+            borderRadius:8, padding:'12px 14px',
+          }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+              <span style={{ ...T_DISPLAY, fontSize:9, color:'var(--c-accent)', letterSpacing:'0.22em', fontWeight:900 }}>AO VIVO</span>
+              <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>
+                {stats.possession.home > 58 ? 'DOMINANDO' : stats.possession.home < 42 ? 'SOB PRESSÃO' : 'EQUILIBRADO'}
+              </span>
+            </div>
+            {/* Stats grid */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              {/* Posse */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>POSSE</span>
+                  <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)' }}>{stats.possession.home}%</span>
+                </div>
+                <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+                  <div style={{ height:'100%', background:'var(--c-accent)', borderRadius:2, width:`${stats.possession.home}%`, transition:'width 1s', opacity:0.8 }} />
+                </div>
+              </div>
+              {/* Energia */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>ENERGIA</span>
+                  <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: avgEnergy < 40 ? 'var(--c-danger)' : avgEnergy < 60 ? 'var(--c-warning)' : 'var(--c-text-primary)' }}>{avgEnergy}%</span>
+                </div>
+                <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+                  <div style={{ height:'100%', background: avgEnergy < 40 ? 'var(--c-danger)' : avgEnergy < 60 ? 'var(--c-warning)' : 'var(--c-ok)', borderRadius:2, width:`${avgEnergy}%`, transition:'width 1s' }} />
+                </div>
+              </div>
+              {/* Finalizações */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>CHUTES</span>
+                  <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)' }}>{stats.shots.home} — {stats.shots.away}</span>
+                </div>
+                <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+                  <div style={{ height:'100%', background:'var(--c-team-home)', borderRadius:2, width:`${(stats.shots.home / (stats.shots.home + stats.shots.away || 1)) * 100}%`, transition:'width 1s', opacity:0.7 }} />
+                </div>
+              </div>
+              {/* Passes */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ ...T_DISPLAY, fontSize:8, color:'var(--c-text-muted)', letterSpacing:'0.14em' }}>PASSES</span>
+                  <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color:'var(--c-text-primary)' }}>{stats.passes.home} — {stats.passes.away}</span>
+                </div>
+                <div style={{ height:4, background:'var(--c-bg-elevated)', borderRadius:2 }}>
+                  <div style={{ height:'100%', background:'var(--c-team-home)', borderRadius:2, width:`${(stats.passes.home / (stats.passes.home + stats.passes.away || 1)) * 100}%`, transition:'width 1s', opacity:0.7 }} />
+                </div>
               </div>
             </div>
           </div>
-        </ModuleCard>
+
+          {/* Card 4: AÇÕES RÁPIDAS — botões com efeito real no jogo */}
+          <div style={{
+            display:'grid', gridTemplateColumns:'1fr 1fr', gap:8,
+          }}>
+            <button
+              type="button"
+              onClick={() => { setPassStyle('LONGO'); sequenceRef.current = null; }}
+              style={{
+                padding:'14px 12px',
+                background: passStyle === 'LONGO' ? 'rgba(239,68,68,0.12)' : 'var(--c-bg-surface)',
+                border: passStyle === 'LONGO' ? '1px solid #ef4444' : '1px solid var(--c-border)',
+                borderRadius:8, cursor:'pointer',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                transition:'all 0.15s',
+              }}
+            >
+              <Swords size={20} color={passStyle === 'LONGO' ? '#ef4444' : 'var(--c-text-sec)'} strokeWidth={1.8} />
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'LONGO' ? '#ef4444' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>ATACAR</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Jogo vertical, bola longa</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPassStyle('TIKTAK'); sequenceRef.current = null; }}
+              style={{
+                padding:'14px 12px',
+                background: passStyle === 'TIKTAK' ? 'rgba(253,225,0,0.12)' : 'var(--c-bg-surface)',
+                border: passStyle === 'TIKTAK' ? '1px solid var(--c-accent)' : '1px solid var(--c-border)',
+                borderRadius:8, cursor:'pointer',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                transition:'all 0.15s',
+              }}
+            >
+              <Zap size={20} color={passStyle === 'TIKTAK' ? 'var(--c-accent)' : 'var(--c-text-sec)'} strokeWidth={1.8} />
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'TIKTAK' ? 'var(--c-accent)' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>PRESSIONAR</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Toque rápido, intensidade</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPassStyle('LATERAL'); sequenceRef.current = null; }}
+              style={{
+                padding:'14px 12px',
+                background: passStyle === 'LATERAL' ? 'rgba(59,130,246,0.12)' : 'var(--c-bg-surface)',
+                border: passStyle === 'LATERAL' ? '1px solid #3b82f6' : '1px solid var(--c-border)',
+                borderRadius:8, cursor:'pointer',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                transition:'all 0.15s',
+              }}
+            >
+              <ChevronRight size={20} color={passStyle === 'LATERAL' ? '#3b82f6' : 'var(--c-text-sec)'} strokeWidth={1.8} />
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'LATERAL' ? '#3b82f6' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>AMPLITUDE</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Jogo pelas alas, cruzamentos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPassStyle('COUNTER'); sequenceRef.current = null; }}
+              style={{
+                padding:'14px 12px',
+                background: passStyle === 'COUNTER' ? 'rgba(34,197,94,0.12)' : 'var(--c-bg-surface)',
+                border: passStyle === 'COUNTER' ? '1px solid #22c55e' : '1px solid var(--c-border)',
+                borderRadius:8, cursor:'pointer',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                transition:'all 0.15s',
+              }}
+            >
+              <Repeat size={20} color={passStyle === 'COUNTER' ? '#22c55e' : 'var(--c-text-sec)'} strokeWidth={1.8} />
+              <span style={{ ...T_DISPLAY, fontSize:10, fontWeight:900, color: passStyle === 'COUNTER' ? '#22c55e' : 'var(--c-text-primary)', letterSpacing:'0.14em' }}>CONTRA</span>
+              <span style={{ ...T_BODY, fontSize:8, color:'var(--c-text-muted)', textAlign:'center' }}>Transição rápida, velocidade</span>
+            </button>
+          </div>
 
         </div>
 
