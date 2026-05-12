@@ -228,7 +228,22 @@ async function startSeason() {
   const seasonId = `season_${Date.now()}`;
 
   const { data: state } = await sb.from('global_league_state').select('season_id').eq('id', 'current').maybeSingle();
-  if (state?.season_id) {
+
+  if (fullReset) {
+    // Purge total: apaga TODOS os rounds/fixtures/events (inclusive órfãos de seasons antigas).
+    // Garante estreia oficial sem detritos de testes anteriores.
+    const { data: allRounds } = await sb.from('global_league_rounds').select('id');
+    const allRoundIds = (allRounds ?? []).map((r: { id: string }) => r.id);
+    if (allRoundIds.length > 0) {
+      const { data: allFixtures } = await sb.from('global_league_fixtures').select('id').in('round_id', allRoundIds);
+      const allFixtureIds = (allFixtures ?? []).map((f: { id: string }) => f.id);
+      if (allFixtureIds.length > 0) {
+        await sb.from('global_league_events').delete().in('fixture_id', allFixtureIds);
+        await sb.from('global_league_fixtures').delete().in('id', allFixtureIds);
+      }
+      await sb.from('global_league_rounds').delete().in('id', allRoundIds);
+    }
+  } else if (state?.season_id) {
     const { data: rounds } = await sb.from('global_league_rounds').select('id').eq('season_id', state.season_id);
     const roundIds = (rounds ?? []).map((r: { id: string }) => r.id);
     if (roundIds.length > 0) {
