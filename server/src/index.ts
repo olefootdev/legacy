@@ -76,7 +76,7 @@ app.use(
   cors({
     origin: buildOriginMatcher(),
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Olefoot-Pinata-Upload-Token', 'X-Requested-With'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token', 'X-Olefoot-Pinata-Upload-Token', 'X-Requested-With'],
   }),
 );
 

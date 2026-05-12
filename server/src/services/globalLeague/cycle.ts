@@ -1,9 +1,10 @@
 ﻿import type { SupabaseClient } from '@supabase/supabase-js';
-import type { TeamRow, RoundRow, FixtureRow, StateRow, CycleResult } from './types.js';
+import type { TeamRow, RoundRow, FixtureRow, StateRow, CycleResult, FixtureStatus } from './types.js';
 import { simulateFixture, updateTeamRow, effectiveOverall } from './simulate.js';
 
 const ROUND_INTERVAL_MS = 5 * 60 * 1000;
 const SIM_DURATION_MS = 90_000;
+const STALE_LIVE_ROUND_MS = 10 * 60 * 1000;
 const NEW_ID = () => 'gf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 
 function nextKickoff(fromMs: number): number {
@@ -23,7 +24,7 @@ function generatePlayoffFixtures(teams: TeamRow[], seasonId: string, nowMs: numb
     lastKickoff = kickoffMs;
     const roundId = 'playoff_' + seasonId + '_' + rn;
     rounds.push({ id: roundId, season_id: seasonId, round_number: rn,
-      round_type: 'playoff', phase, status: 'scheduled', scheduled_kickoff_ms: kickoffMs });
+      round_type: 'playoff', phase, is_returning: isReturn, status: 'scheduled', scheduled_kickoff_ms: kickoffMs } as Omit<RoundRow, 'actual_kickoff_ms' | 'finished_at_ms'>);
     const half = Math.floor(n / 2);
     const turnRound = isReturn ? rn - 3 : rn;
     const rotated = [...teams];
@@ -73,7 +74,7 @@ function generateLeagueFixtures(teams: TeamRow[], seasonId: string, nowMs: numbe
     lastKickoff = kickoffMs;
     const roundId = 'league_' + seasonId + '_' + rn;
     rounds.push({ id: roundId, season_id: seasonId, round_number: rn,
-      round_type: 'league', phase: null, status: 'scheduled', scheduled_kickoff_ms: kickoffMs });
+      round_type: 'league', phase: null, is_returning: isReturn, status: 'scheduled', scheduled_kickoff_ms: kickoffMs } as Omit<RoundRow, 'actual_kickoff_ms' | 'finished_at_ms'>);
     for (const [, divTeams] of byDiv) {
       const n = divTeams.length;
       if (n < 2) continue;
@@ -104,6 +105,9 @@ export async function runGlobalLeagueCycle(sb: SupabaseClient): Promise<CycleRes
     return { ok: false, step: 'load-state', error: stateErr?.message ?? 'no state' };
   }
   const state = stateData as StateRow;
+
+  const recovered = await recoverStaleLiveRound(sb, now);
+  if (recovered) return recovered;
 
   if (state.status === 'waiting_teams') {
     const { data: teamsData } = await sb.from('global_league_teams').select('*');
@@ -271,24 +275,121 @@ export async function runGlobalLeagueCycle(sb: SupabaseClient): Promise<CycleRes
   return { ok: true, step: 'process-round', roundId: round.id, fixtures: fixturesUpdated.length, events: eventsToInsert.length };
 }
 
+export async function recoverStaleLiveRound(
+  sb: SupabaseClient,
+  now = Date.now(),
+): Promise<CycleResult | null> {
+  const staleBefore = now - STALE_LIVE_ROUND_MS;
+  const { data: staleRounds, error } = await sb
+    .from('global_league_rounds')
+    .select('*')
+    .eq('status', 'live')
+    .lte('actual_kickoff_ms', staleBefore)
+    .order('actual_kickoff_ms', { ascending: true })
+    .limit(1);
+
+  if (error) {
+    console.error('[cycle] stale-live lookup failed:', error.message);
+    return { ok: false, step: 'recover-stale-live', error: error.message };
+  }
+  if (!staleRounds || staleRounds.length === 0) return null;
+
+  const round = staleRounds[0] as RoundRow;
+  const { data: fixtures, error: fxErr } = await sb
+    .from('global_league_fixtures')
+    .select('id,status')
+    .eq('round_id', round.id);
+
+  if (fxErr) {
+    console.error('[cycle] stale-live fixtures lookup failed:', fxErr.message);
+    return { ok: false, step: 'recover-stale-live', roundId: round.id, error: fxErr.message };
+  }
+
+  const fixtureRows = (fixtures ?? []) as Array<{ id: string; status: FixtureStatus }>;
+  const finishedCount = fixtureRows.filter(f => f.status === 'finished').length;
+  const liveCount = fixtureRows.filter(f => f.status === 'live').length;
+
+  if (fixtureRows.length > 0 && finishedCount === fixtureRows.length) {
+    await sb
+      .from('global_league_rounds')
+      .update({ status: 'finished', finished_at_ms: now })
+      .eq('id', round.id)
+      .eq('status', 'live');
+
+    const stateUpdate: Record<string, unknown> = {};
+    if (round.round_type === 'playoff') stateUpdate.current_playoff_round = round.round_number + 1;
+    else stateUpdate.current_league_round = round.round_number + 1;
+    await sb.from('global_league_state').update(stateUpdate).eq('id', 'current');
+
+    return {
+      ok: true,
+      step: 'recover-stale-live',
+      roundId: round.id,
+      fixtures: fixtureRows.length,
+      reason: 'round was live but all fixtures were already finished',
+    };
+  }
+
+  if (finishedCount === 0) {
+    if (liveCount > 0) {
+      await sb
+        .from('global_league_fixtures')
+        .update({ status: 'scheduled', kickoff_ms: null })
+        .eq('round_id', round.id)
+        .neq('status', 'finished');
+    }
+
+    await sb
+      .from('global_league_rounds')
+      .update({ status: 'scheduled', actual_kickoff_ms: null })
+      .eq('id', round.id)
+      .eq('status', 'live');
+
+    return {
+      ok: true,
+      step: 'recover-stale-live',
+      roundId: round.id,
+      fixtures: fixtureRows.length,
+      reason: 'round lock was stale before any fixture finished; reset for retry',
+    };
+  }
+
+  return {
+    ok: true,
+    step: 'recover-stale-live',
+    skipped: true,
+    roundId: round.id,
+    fixtures: fixtureRows.length,
+    reason: `mixed fixture state (${finishedCount}/${fixtureRows.length} finished); manual audit required`,
+  };
+}
+
 export async function enrollClubInGlobalLeague(
   sb: SupabaseClient,
   opts: { managerId: string; clubName: string; clubShort: string; overall: number },
 ): Promise<{ ok: boolean; teamId?: string; error?: string }> {
-  const teamId = 'gt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  const { data: existing } = await sb
+    .from('global_league_teams')
+    .select('*')
+    .eq('manager_id', opts.managerId)
+    .maybeSingle();
+  const existingTeam = existing as TeamRow | null;
+  const teamId = existingTeam?.id ?? ('gt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
   const team: TeamRow = {
+    ...(existingTeam ?? {
+      division: null, position: null, previous_position: null,
+      playoff_points: 0, playoff_matches_played: 0, playoff_wins: 0,
+      playoff_draws: 0, playoff_losses: 0, playoff_goals_for: 0, playoff_goals_against: 0,
+      points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
+      goals_for: 0, goals_against: 0, goal_difference: 0,
+      recent_form: [], injury_modifier: 0, injury_rounds_remaining: 0,
+      yellow_card_count: 0, suspension_rounds_remaining: 0,
+      all_time_points: 0, all_time_matches_played: 0, all_time_wins: 0,
+      all_time_draws: 0, all_time_losses: 0, all_time_goals_for: 0,
+      all_time_goals_against: 0, all_time_seasons_played: 0,
+    }),
     id: teamId, manager_id: opts.managerId,
     club_name: opts.clubName, club_short: opts.clubShort, overall: opts.overall,
-    division: null, position: null, previous_position: null,
-    playoff_points: 0, playoff_matches_played: 0, playoff_wins: 0,
-    playoff_draws: 0, playoff_losses: 0, playoff_goals_for: 0, playoff_goals_against: 0,
-    points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
-    goals_for: 0, goals_against: 0, goal_difference: 0,
-    recent_form: [], injury_modifier: 0, injury_rounds_remaining: 0,
-    yellow_card_count: 0, suspension_rounds_remaining: 0,
-    all_time_points: 0, all_time_matches_played: 0, all_time_wins: 0,
-    all_time_draws: 0, all_time_losses: 0, all_time_goals_for: 0,
-    all_time_goals_against: 0, all_time_seasons_played: 0,
   };
   const { error } = await sb.from('global_league_teams').upsert(team as never, { onConflict: 'manager_id' });
   if (error) { console.error('[enrollClub] failed:', error.message); return { ok: false, error: error.message }; }

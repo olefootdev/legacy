@@ -490,6 +490,7 @@ function NewSeasonSection() {
   const [slots, setSlots] = useState('05:30,11:00,15:00,19:00,21:30');
   const [slotDurationMin, setSlotDurationMin] = useState(30);
   const [minTeamsRequired, setMinTeamsRequired] = useState(2);
+  const [adminToken, setAdminToken] = useState(() => localStorage.getItem('olefoot_global_league_admin_token') ?? '');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -500,12 +501,18 @@ function NewSeasonSection() {
     }
     setLoading(true);
     setFeedback(null);
+    if (!adminToken.trim()) {
+      setFeedback({ type: 'error', message: 'Admin API token obrigatório para iniciar temporada.' });
+      setLoading(false);
+      return;
+    }
+    localStorage.setItem('olefoot_global_league_admin_token', adminToken.trim());
 
     const baseUrl = import.meta.env.VITE_OLEFOOT_API_URL || '';
     try {
       const res = await fetch(`${baseUrl}/api/global-league/start-season`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken.trim() },
         body: JSON.stringify({
           seasonName: seasonName.trim(),
           durationDays,
@@ -545,6 +552,17 @@ function NewSeasonSection() {
             value={seasonName}
             onChange={(e) => setSeasonName(e.target.value)}
             placeholder="OLEFOOT LIGA S2 · 2026"
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-neon-yellow/50 focus:outline-none"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Admin API Token</label>
+          <input
+            type="password"
+            value={adminToken}
+            onChange={(e) => setAdminToken(e.target.value)}
+            placeholder="Token operacional"
             className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-neon-yellow/50 focus:outline-none"
           />
         </div>

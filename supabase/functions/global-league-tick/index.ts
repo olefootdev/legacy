@@ -21,6 +21,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const ROUND_INTERVAL_MS = 5 * 60 * 1000;
 const SIM_DURATION_MS = 90_000;
+const STALE_LIVE_ROUND_MS = 10 * 60 * 1000;
 const NEW_ID = () => `gf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 function slotStartMs(dayDate: Date, hhmm: string): number {
@@ -143,7 +144,7 @@ function generatePlayoffRoundsAndFixtures(
     const roundId = `playoff_${seasonId}_${roundNumber}`;
     rounds.push({
       id: roundId, season_id: seasonId, round_number: roundNumber, round_type: 'playoff',
-      phase, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
+      phase, is_returning: isReturning, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
       actual_kickoff_ms: null, finished_at_ms: null,
     });
     for (let i = 0; i < half; i++) {
@@ -204,7 +205,7 @@ function generateLeagueRoundsAndFixtures(
     const roundId = `league_${seasonId}_${roundNumber}`;
     rounds.push({
       id: roundId, season_id: seasonId, round_number: roundNumber, round_type: 'league',
-      phase: null, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
+      phase: null, is_returning: isReturning, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
       actual_kickoff_ms: null, finished_at_ms: null,
     });
     for (const [, divTeams] of byDivision) {
@@ -389,6 +390,86 @@ function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean
   };
 }
 
+async function recoverStaleLiveRound(supabase: any, now: number) {
+  const staleBefore = now - STALE_LIVE_ROUND_MS;
+  const { data: staleRounds, error } = await supabase
+    .from('global_league_rounds')
+    .select('*')
+    .eq('status', 'live')
+    .lte('actual_kickoff_ms', staleBefore)
+    .order('actual_kickoff_ms', { ascending: true })
+    .limit(1);
+
+  if (error) return { ok: false, step: 'recover-stale-live', error: error.message };
+  if (!staleRounds || staleRounds.length === 0) return null;
+
+  const round = staleRounds[0] as RoundRow;
+  const { data: fixtures, error: fxErr } = await supabase
+    .from('global_league_fixtures')
+    .select('id,status')
+    .eq('round_id', round.id);
+
+  if (fxErr) return { ok: false, step: 'recover-stale-live', roundId: round.id, error: fxErr.message };
+
+  const fixtureRows = (fixtures ?? []) as Array<{ id: string; status: string }>;
+  const finishedCount = fixtureRows.filter(f => f.status === 'finished').length;
+  const liveCount = fixtureRows.filter(f => f.status === 'live').length;
+
+  if (fixtureRows.length > 0 && finishedCount === fixtureRows.length) {
+    await supabase
+      .from('global_league_rounds')
+      .update({ status: 'finished', finished_at_ms: now })
+      .eq('id', round.id)
+      .eq('status', 'live');
+
+    const stateUpdate: Record<string, unknown> = {};
+    if (round.round_type === 'playoff') stateUpdate.current_playoff_round = round.round_number + 1;
+    else stateUpdate.current_league_round = round.round_number + 1;
+    await supabase.from('global_league_state').update(stateUpdate).eq('id', 'current');
+
+    return {
+      ok: true,
+      step: 'recover-stale-live',
+      roundId: round.id,
+      fixtures: fixtureRows.length,
+      reason: 'round was live but all fixtures were already finished',
+    };
+  }
+
+  if (finishedCount === 0) {
+    if (liveCount > 0) {
+      await supabase
+        .from('global_league_fixtures')
+        .update({ status: 'scheduled', kickoff_ms: null })
+        .eq('round_id', round.id)
+        .neq('status', 'finished');
+    }
+
+    await supabase
+      .from('global_league_rounds')
+      .update({ status: 'scheduled', actual_kickoff_ms: null })
+      .eq('id', round.id)
+      .eq('status', 'live');
+
+    return {
+      ok: true,
+      step: 'recover-stale-live',
+      roundId: round.id,
+      fixtures: fixtureRows.length,
+      reason: 'round lock was stale before any fixture finished; reset for retry',
+    };
+  }
+
+  return {
+    ok: true,
+    step: 'recover-stale-live',
+    skipped: true,
+    roundId: round.id,
+    fixtures: fixtureRows.length,
+    reason: `mixed fixture state (${finishedCount}/${fixtureRows.length} finished); manual audit required`,
+  };
+}
+
 Deno.serve(async (_req: Request) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -414,6 +495,11 @@ Deno.serve(async (_req: Request) => {
   const today = utcDateString(now);
   if (state.current_olefoot_day !== today) {
     await supabase.from('global_league_state').update({ current_olefoot_day: today }).eq('id', 'current');
+  }
+
+  const recovered = await recoverStaleLiveRound(supabase, now);
+  if (recovered) {
+    return new Response(JSON.stringify(recovered), { headers: { 'Content-Type': 'application/json' } });
   }
 
   // 0. FIM DE COMPETIÇÃO — pausa para análise (não reseta automaticamente)
