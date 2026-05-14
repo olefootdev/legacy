@@ -91,6 +91,30 @@ export interface LeagueRound {
   finishedAtMs?: number;
 }
 
+/**
+ * Rodada que o usuário deve VER (com placar), e não a próxima a ser processada.
+ * O Edge Function avança currentPlayoffRound/currentLeagueRound para N+1 assim
+ * que a rodada N termina — logo o ponteiro aponta para uma rodada futura ainda
+ * sem resultado. Para exibição, a ordem de preferência é: rodada ao vivo → a
+ * última rodada já jogada → a rodada do ponteiro → a primeira rodada.
+ */
+export function pickDisplayRound<
+  T extends { roundNumber: number; status: 'scheduled' | 'live' | 'finished' },
+>(rounds: T[], pointer: number | undefined): T | undefined {
+  if (rounds.length === 0) return undefined;
+  const live = rounds.find((r) => r.status === 'live');
+  if (live) return live;
+  const finished = rounds.filter((r) => r.status === 'finished');
+  if (finished.length > 0) {
+    return finished.reduce((a, b) => (b.roundNumber > a.roundNumber ? b : a));
+  }
+  if (pointer != null) {
+    const byPointer = rounds.find((r) => r.roundNumber === pointer);
+    if (byPointer) return byPointer;
+  }
+  return rounds.reduce((a, b) => (b.roundNumber < a.roundNumber ? b : a));
+}
+
 /** Estado completo da liga global MVP */
 export interface GlobalLeagueMVPState {
   seasonId: string;

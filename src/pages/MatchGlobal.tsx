@@ -13,6 +13,7 @@ import { Trophy, Activity, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import type { GlobalTeam, PlayoffRound } from '@/match/globalLeagueMVP';
+import { pickDisplayRound } from '@/match/globalLeagueMVP';
 import { SCHEDULER_CONFIG } from '@/match/globalRoundScheduler';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
@@ -685,7 +686,7 @@ export default function MatchGlobal() {
 
   // Hooks devem ser chamados na mesma ordem em todo render — sem returns antes deles.
   const currentLeagueRound = globalLeagueMVP?.status === 'active'
-    ? globalLeagueMVP.leagueRounds.find(r => r.roundNumber === globalLeagueMVP.currentLeagueRound)
+    ? pickDisplayRound(globalLeagueMVP.leagueRounds, globalLeagueMVP.currentLeagueRound)
     : undefined;
   const filteredFixtures = useMemo(() => {
     if (!currentLeagueRound) return [];
@@ -748,8 +749,8 @@ export default function MatchGlobal() {
   }
 
   if (globalLeagueMVP.status === 'playoffs') {
-    const roundNumber = globalLeagueMVP.currentPlayoffRound ?? 1;
-    const round = globalLeagueMVP.playoffRounds.find(r => r.roundNumber === roundNumber);
+    const round = pickDisplayRound(globalLeagueMVP.playoffRounds, globalLeagueMVP.currentPlayoffRound);
+    const roundNumber = round?.roundNumber ?? globalLeagueMVP.currentPlayoffRound ?? 1;
     const totalRounds = globalLeagueMVP.playoffRounds.length;
 
     return (

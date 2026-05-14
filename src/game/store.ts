@@ -5,24 +5,8 @@ import { gameReducer } from './reducer';
 import { loadGameState, saveGameState } from './persistence';
 import { insertMatch } from '@/supabase/matchPersistence';
 import { isSupabaseConfigured } from '@/supabase/client';
-import { persistGlobalLeagueSnapshot } from '@/supabase/globalLeague';
 import { persistManagerSquad } from '@/supabase/managerSquad';
 import { persistManagerGameState, type ManagerGameStateSnapshot } from '@/supabase/managerGameState';
-
-const GLOBAL_LEAGUE_PERSIST_ACTIONS = new Set<GameAction['type']>([
-  'INIT_GLOBAL_LEAGUE_MVP',
-  'REGISTER_GLOBAL_TEAM',
-  'ADMIN_START_GLOBAL_PLAYOFFS',
-  'START_GLOBAL_PLAYOFF_ROUND',
-  'FINISH_GLOBAL_PLAYOFF_ROUND',
-  'RESCHEDULE_PLAYOFF_ROUND',
-  'SET_GLOBAL_LEAGUE_MVP_MIN_TEAMS',
-  'GRANT_ONBOARDING_PACKAGE',
-  'START_GLOBAL_LEAGUE_ROUND',
-  'FINISH_GLOBAL_LEAGUE_ROUND',
-  'APPLY_GLOBAL_PROMOTION_RELEGATION',
-  'RESET_GLOBAL_LEAGUE_MVP',
-]);
 
 // Actions que disparam persistência dos slices críticos no Supabase
 const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
@@ -192,9 +176,9 @@ export function dispatchGame(action: GameAction): void {
   }
   saveGameState(state);
 
-  if (GLOBAL_LEAGUE_PERSIST_ACTIONS.has(action.type) && state.globalLeagueMVP) {
-    void persistGlobalLeagueSnapshot(state.globalLeagueMVP);
-  }
+  // A Liga Global é autoritativa no backend (Edge Function global-league-tick).
+  // O frontend só lê (hidratação + realtime) e registra o próprio time via
+  // upsertGlobalTeamInSupabase — nunca reescreve o snapshot da liga.
 
   if (GAME_STATE_PERSIST_ACTIONS.has(action.type)) {
     scheduleGameStatePersist();
