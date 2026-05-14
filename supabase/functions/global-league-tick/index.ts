@@ -21,6 +21,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const ROUND_INTERVAL_MS = 5 * 60 * 1000;
 const SIM_DURATION_MS = 90_000;
+const STALE_LIVE_ROUND_MS = 10 * 60 * 1000;
 const NEW_ID = () => `gf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 function slotStartMs(dayDate: Date, hhmm: string): number {
@@ -85,6 +86,8 @@ interface TeamRow {
   goals_for: number; goals_against: number; goal_difference: number;
   recent_form: ('W' | 'D' | 'L')[];
   injury_modifier: number; injury_rounds_remaining: number;
+  yellow_card_count: number; // acúmulo de amarelos — zera após suspensão
+  suspension_rounds_remaining: number; // rodadas de suspensão pendentes
   all_time_points?: number; all_time_matches_played?: number;
   all_time_wins?: number; all_time_draws?: number; all_time_losses?: number;
   all_time_goals_for?: number; all_time_goals_against?: number;
@@ -105,8 +108,10 @@ interface StateRow {
 }
 
 function effectiveOverall(team: TeamRow): number {
-  const mod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
-  return Math.max(40, team.overall + mod);
+  // Time suspenso joga com plantel reserva (-5 OVR)
+  const suspMod = (team.suspension_rounds_remaining ?? 0) > 0 ? -5 : 0;
+  const injMod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
+  return Math.max(40, team.overall + injMod + suspMod);
 }
 function poissonGoals(expected: number): number {
   const L = Math.exp(-expected);
@@ -139,7 +144,7 @@ function generatePlayoffRoundsAndFixtures(
     const roundId = `playoff_${seasonId}_${roundNumber}`;
     rounds.push({
       id: roundId, season_id: seasonId, round_number: roundNumber, round_type: 'playoff',
-      phase, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
+      phase, is_returning: isReturning, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
       actual_kickoff_ms: null, finished_at_ms: null,
     });
     for (let i = 0; i < half; i++) {
@@ -200,7 +205,7 @@ function generateLeagueRoundsAndFixtures(
     const roundId = `league_${seasonId}_${roundNumber}`;
     rounds.push({
       id: roundId, season_id: seasonId, round_number: roundNumber, round_type: 'league',
-      phase: null, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
+      phase: null, is_returning: isReturning, status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
       actual_kickoff_ms: null, finished_at_ms: null,
     });
     for (const [, divTeams] of byDivision) {
@@ -307,6 +312,31 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   };
   for (let i = 0; i < homeGoals; i++) placeGoal('home', i, homeGoals);
   for (let i = 0; i < awayGoals; i++) placeGoal('away', i, awayGoals);
+
+  // Cartões amarelos (15% chance por time)
+  let home_yellow = false;
+  let away_yellow = false;
+  if (Math.random() < 0.15) {
+    home_yellow = true;
+    const minute = Math.floor(10 + Math.random() * 80);
+    events.push({
+      id: `evt_${fx.id}_home_yc_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'yellow_card', minute, side: 'home',
+      text: `🟡 Cartão amarelo — ${fx.home_team_name}`, highlight: false,
+      timestamp_ms: kickoffMs + minute * 1000,
+    });
+  }
+  if (Math.random() < 0.15) {
+    away_yellow = true;
+    const minute = Math.floor(10 + Math.random() * 80);
+    events.push({
+      id: `evt_${fx.id}_away_yc_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'yellow_card', minute, side: 'away',
+      text: `🟡 Cartão amarelo — ${fx.away_team_name}`, highlight: false,
+      timestamp_ms: kickoffMs + minute * 1000,
+    });
+  }
+
   let injured_side: 'home' | 'away' | null = null;
   if (Math.random() < 0.08) {
     injured_side = Math.random() < 0.5 ? 'home' : 'away';
@@ -319,7 +349,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
     });
   }
   events.sort((a, b) => (a.minute as number) - (b.minute as number));
-  return { score_home: homeGoals, score_away: awayGoals, events, injured_side };
+  return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow };
 }
 
 function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean): TeamRow {
@@ -360,6 +390,86 @@ function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean
   };
 }
 
+async function recoverStaleLiveRound(supabase: any, now: number) {
+  const staleBefore = now - STALE_LIVE_ROUND_MS;
+  const { data: staleRounds, error } = await supabase
+    .from('global_league_rounds')
+    .select('*')
+    .eq('status', 'live')
+    .lte('actual_kickoff_ms', staleBefore)
+    .order('actual_kickoff_ms', { ascending: true })
+    .limit(1);
+
+  if (error) return { ok: false, step: 'recover-stale-live', error: error.message };
+  if (!staleRounds || staleRounds.length === 0) return null;
+
+  const round = staleRounds[0] as RoundRow;
+  const { data: fixtures, error: fxErr } = await supabase
+    .from('global_league_fixtures')
+    .select('id,status')
+    .eq('round_id', round.id);
+
+  if (fxErr) return { ok: false, step: 'recover-stale-live', roundId: round.id, error: fxErr.message };
+
+  const fixtureRows = (fixtures ?? []) as Array<{ id: string; status: string }>;
+  const finishedCount = fixtureRows.filter(f => f.status === 'finished').length;
+  const liveCount = fixtureRows.filter(f => f.status === 'live').length;
+
+  if (fixtureRows.length > 0 && finishedCount === fixtureRows.length) {
+    await supabase
+      .from('global_league_rounds')
+      .update({ status: 'finished', finished_at_ms: now })
+      .eq('id', round.id)
+      .eq('status', 'live');
+
+    const stateUpdate: Record<string, unknown> = {};
+    if (round.round_type === 'playoff') stateUpdate.current_playoff_round = round.round_number + 1;
+    else stateUpdate.current_league_round = round.round_number + 1;
+    await supabase.from('global_league_state').update(stateUpdate).eq('id', 'current');
+
+    return {
+      ok: true,
+      step: 'recover-stale-live',
+      roundId: round.id,
+      fixtures: fixtureRows.length,
+      reason: 'round was live but all fixtures were already finished',
+    };
+  }
+
+  if (finishedCount === 0) {
+    if (liveCount > 0) {
+      await supabase
+        .from('global_league_fixtures')
+        .update({ status: 'scheduled', kickoff_ms: null })
+        .eq('round_id', round.id)
+        .neq('status', 'finished');
+    }
+
+    await supabase
+      .from('global_league_rounds')
+      .update({ status: 'scheduled', actual_kickoff_ms: null })
+      .eq('id', round.id)
+      .eq('status', 'live');
+
+    return {
+      ok: true,
+      step: 'recover-stale-live',
+      roundId: round.id,
+      fixtures: fixtureRows.length,
+      reason: 'round lock was stale before any fixture finished; reset for retry',
+    };
+  }
+
+  return {
+    ok: true,
+    step: 'recover-stale-live',
+    skipped: true,
+    roundId: round.id,
+    fixtures: fixtureRows.length,
+    reason: `mixed fixture state (${finishedCount}/${fixtureRows.length} finished); manual audit required`,
+  };
+}
+
 Deno.serve(async (_req: Request) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -387,29 +497,23 @@ Deno.serve(async (_req: Request) => {
     await supabase.from('global_league_state').update({ current_olefoot_day: today }).eq('id', 'current');
   }
 
-  // 0. FIM DE COMPETIÇÃO
+  const recovered = await recoverStaleLiveRound(supabase, now);
+  if (recovered) {
+    return new Response(JSON.stringify(recovered), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // 0. FIM DE COMPETIÇÃO — pausa para análise (não reseta automaticamente)
   if (competitionEnded) {
-    const { data: teamsData } = await supabase.from('global_league_teams').select('*');
-    const teams = (teamsData as TeamRow[]) ?? [];
-    const reset = applyCompetitionReset(teams);
-    const newSeasonId = `season_${now}`;
-    const newCompetitionId = `competition_${now}`;
-    await supabase.from('global_league_events').delete().neq('id', '');
-    await supabase.from('global_league_fixtures').delete().neq('id', '');
-    await supabase.from('global_league_rounds').delete().neq('id', '');
-    await supabase.from('global_league_teams').upsert(reset as any, { onConflict: 'id' });
-    await supabase.from('global_league_state').update({
-      season_id: newSeasonId,
-      season_name: `OLEFOOT LIGA — ${newSeasonId}`,
-      status: 'waiting_teams',
-      current_playoff_round: null, current_league_round: null,
-      competition_id: newCompetitionId,
-      competition_started_at: new Date(now).toISOString(),
-    }).eq('id', 'current');
+    // Só muda status se ainda não estiver em season_ended
+    if (state.status !== 'season_ended') {
+      await supabase.from('global_league_state').update({
+        status: 'season_ended',
+      }).eq('id', 'current');
+    }
     return new Response(JSON.stringify({
-      ok: true, step: 'competition-end',
-      newCompetitionId, newSeasonId,
-      competitionDurationDays: state.competition_duration_days ?? 7,
+      ok: true, step: 'competition-ended-paused',
+      reason: 'competition window expired — awaiting manual season start from admin',
+      competitionId: state.competition_id,
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -465,32 +569,30 @@ Deno.serve(async (_req: Request) => {
     }
   }
 
-  // 3. SEASON-ENDED → SOFT promo/rele (carry-over)
+  // 3. TODAS RODADAS FINALIZADAS → season_ended (não reseta automaticamente)
   if (state.status === 'active') {
     const { data: lRounds } = await supabase
       .from('global_league_rounds').select('id, status, round_type')
       .eq('season_id', state.season_id).eq('round_type', 'league');
     const allFinished = (lRounds ?? []).length > 0 && (lRounds ?? []).every(r => r.status === 'finished');
     if (allFinished) {
-      const { data: teamsData } = await supabase.from('global_league_teams').select('*');
-      const teams = (teamsData as TeamRow[]) ?? [];
-      const reorganized = applyPromotionRelegationSoft(teams, promoPct, relePct);
-      const newSeasonId = `season_${now}`;
-      await supabase.from('global_league_events').delete().neq('id', '');
-      await supabase.from('global_league_fixtures').delete().neq('id', '');
-      await supabase.from('global_league_rounds').delete().neq('id', '');
-      await supabase.from('global_league_teams').upsert(reorganized as any, { onConflict: 'id' });
       await supabase.from('global_league_state').update({
-        season_id: newSeasonId,
-        season_name: `OLEFOOT LIGA — ${newSeasonId}`,
-        status: 'waiting_teams',
-        current_playoff_round: null, current_league_round: null,
+        status: 'season_ended',
       }).eq('id', 'current');
       return new Response(JSON.stringify({
-        ok: true, step: 'soft-season-end', newSeasonId,
-        carryOver: 'season points preserved within competition',
+        ok: true, step: 'season-ended-paused',
+        reason: 'all league rounds finished — awaiting manual season start from admin',
+        seasonId: state.season_id,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
+  }
+
+  // Não processa rodadas se a temporada está encerrada
+  if (state.status === 'season_ended') {
+    return new Response(JSON.stringify({
+      ok: true, step: 'idle', reason: 'season-ended',
+      status: 'season_ended',
+    }), { headers: { 'Content-Type': 'application/json' } });
   }
 
   // 4. PROCESSA RODADA PENDENTE
@@ -519,7 +621,31 @@ Deno.serve(async (_req: Request) => {
 
   const round = pending[0] as RoundRow;
   const isPlayoff = round.round_type === 'playoff';
-  await supabase.from('global_league_rounds').update({ status: 'live', actual_kickoff_ms: now }).eq('id', round.id);
+
+  // Lock idempotente: move a rodada scheduled → live atomicamente.
+  // IMPORTANTE: usa `.select('id')` SEM `{ head, count }`. O `.select` que vem
+  // depois de um `.update` (PostgrestTransformBuilder) ignora o 2º argumento —
+  // então `count` voltava sempre `null`, a função achava que o lock tinha
+  // falhado, retornava 'skip-duplicate' e abandonava a rodada presa em 'live'
+  // (loop infinito com recover-stale-live; a liga nunca pontuava). Aqui
+  // checamos `lockedRows.length`: 1 = lock obtido, 0 = outro tick já pegou.
+  const { data: lockedRows, error: lockErr } = await supabase
+    .from('global_league_rounds')
+    .update({ status: 'live', actual_kickoff_ms: now })
+    .eq('id', round.id)
+    .eq('status', 'scheduled') // só atualiza se ainda 'scheduled'
+    .select('id');
+  if (lockErr) {
+    return new Response(JSON.stringify({
+      ok: false, step: 'lock-round', roundId: round.id, error: lockErr.message,
+    }), { status: 500 });
+  }
+  if (!lockedRows || lockedRows.length === 0) {
+    return new Response(JSON.stringify({
+      ok: true, step: 'skip-duplicate', roundId: round.id,
+      reason: 'round already processed by concurrent tick',
+    }), { headers: { 'Content-Type': 'application/json' } });
+  }
 
   const { data: fixtures, error: fxErr } = await supabase
     .from('global_league_fixtures').select('*').eq('round_id', round.id);
@@ -536,6 +662,7 @@ Deno.serve(async (_req: Request) => {
   const eventsToInsert: any[] = [];
   const teamDelta = new Map<string, { gf: number; ga: number }>();
   const newInjuries = new Map<string, { modifier: number; rounds: number }>();
+  const yellowsThisRound = new Map<string, number>(); // teamId → amarelos nesta rodada
 
   for (const fx of fixtures as FixtureRow[]) {
     const home = teamById.get(fx.home_team_id);
@@ -557,6 +684,9 @@ Deno.serve(async (_req: Request) => {
         rounds: existing && existing.rounds > rounds ? existing.rounds : rounds,
       });
     }
+    // Acumular amarelos por time nesta rodada
+    if (sim.home_yellow) yellowsThisRound.set(fx.home_team_id, (yellowsThisRound.get(fx.home_team_id) ?? 0) + 1);
+    if (sim.away_yellow) yellowsThisRound.set(fx.away_team_id, (yellowsThisRound.get(fx.away_team_id) ?? 0) + 1);
   }
   if (fixturesUpdated.length > 0) await supabase.from('global_league_fixtures').upsert(fixturesUpdated as any, { onConflict: 'id' });
   if (eventsToInsert.length > 0) await supabase.from('global_league_events').upsert(eventsToInsert as any, { onConflict: 'id' });
@@ -564,6 +694,21 @@ Deno.serve(async (_req: Request) => {
     const updated = Array.from(teamById.values()).map((t) => {
       const d = teamDelta.get(t.id);
       let next = d ? updateTeamRow(t, d.gf, d.ga, isPlayoff) : t;
+      // Decrementar suspensão pendente
+      if (next.suspension_rounds_remaining > 0) {
+        next = { ...next, suspension_rounds_remaining: next.suspension_rounds_remaining - 1 };
+      }
+      // Aplicar amarelos desta rodada e verificar acúmulo (3 = 1 rodada suspensão)
+      const newYellows = yellowsThisRound.get(next.id) ?? 0;
+      if (newYellows > 0) {
+        const totalYellows = (next.yellow_card_count ?? 0) + newYellows;
+        if (totalYellows >= 3) {
+          next = { ...next, yellow_card_count: 0, suspension_rounds_remaining: (next.suspension_rounds_remaining ?? 0) + 1 };
+        } else {
+          next = { ...next, yellow_card_count: totalYellows };
+        }
+      }
+      // Decrementar lesão pendente
       if (next.injury_rounds_remaining > 0) {
         const remaining = next.injury_rounds_remaining - 1;
         next = { ...next, injury_rounds_remaining: remaining, injury_modifier: remaining === 0 ? 0 : next.injury_modifier };
