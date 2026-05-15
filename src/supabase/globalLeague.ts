@@ -242,20 +242,34 @@ export async function registerGlobalTeamIdentity(opts: {
   if (!supabase) return { ok: false, error: 'no-client' };
 
   try {
+    // Checar se o time já existe e qual o status atual da liga
+    const [{ data: existingTeam }, { data: stateRow }] = await Promise.all([
+      supabase.from('global_league_teams').select('id').eq('manager_id', opts.managerId).maybeSingle(),
+      supabase.from('global_league_state').select('status').eq('id', SINGLETON_STATE_ID).maybeSingle(),
+    ]);
+
+    const leagueStatus = (stateRow as { status?: string } | null)?.status;
+    const isNewTeam = !existingTeam;
+    const autoDiv3 = isNewTeam && leagueStatus === 'active' ? 3 : undefined;
+
+    const row: Record<string, unknown> = {
+      id: opts.id,
+      manager_id: opts.managerId,
+      club_name: opts.clubName,
+      club_short: opts.clubShort,
+      overall: opts.overall,
+      registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
+    };
+    if (autoDiv3 !== undefined) row.division = autoDiv3;
+
     const { error } = await supabase
       .from('global_league_teams')
-      .upsert({
-        id: opts.id,
-        manager_id: opts.managerId,
-        club_name: opts.clubName,
-        club_short: opts.clubShort,
-        overall: opts.overall,
-        registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
-      }, { onConflict: 'manager_id' });
+      .upsert(row, { onConflict: 'manager_id' });
     if (error) {
       console.warn('[globalLeague] registerGlobalTeamIdentity error:', error.message);
       return { ok: false, error: error.message };
     }
+    if (autoDiv3) console.log('[globalLeague] new team auto-assigned to division 3:', opts.clubName);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };

@@ -133,7 +133,47 @@ export function LegacyRoundBanner() {
 
   const phaseLabel = league?.status === 'playoffs' ? 'Playoffs' : 'Liga';
 
-  if (!league || !round) return null;
+  if (!league) return null;
+
+  // Quando não há rodadas ainda (waiting_teams / início de season), mostra banner de espera
+  if (!round) {
+    const isWaiting = league.status === 'waiting_teams';
+    const teamCount = league.teams?.length ?? 0;
+    return (
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden border border-neon-yellow/30 sports-panel"
+        style={{ borderRadius: 'var(--radius-sm, 6px)' }}
+      >
+        <GameBannerBackdrop slot="leagues_header" imageOpacity={0.18} />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/55 to-black/85" aria-hidden />
+        <div className="relative z-10 p-5">
+          <div className="flex items-center gap-2 text-amber-400">
+            <Clock className="h-4 w-4 shrink-0" />
+            <span className="font-display text-[10px] font-black uppercase tracking-[0.25em]">
+              Liga LEGACY · {isWaiting ? 'Aguardando times' : 'Preparando rodadas'}
+            </span>
+          </div>
+          <h2 className="ole-headline-italic mt-2 text-white" style={{ fontSize: 'clamp(20px, 5vw, 30px)' }}>
+            {isWaiting ? 'Nova temporada a caminho' : 'Gerando rodadas…'}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-white/60">
+            {isWaiting
+              ? `${teamCount} time${teamCount !== 1 ? 's' : ''} cadastrado${teamCount !== 1 ? 's' : ''} · playoffs iniciam automaticamente`
+              : 'A liga está processando a próxima fase. Recarregue em alguns instantes.'}
+          </p>
+          <Link
+            to="/leagues"
+            className="mt-4 inline-flex items-center gap-2 border border-neon-yellow/40 px-4 py-2 font-display text-[11px] font-black uppercase tracking-[0.2em] text-neon-yellow hover:bg-neon-yellow hover:text-black transition-colors"
+          >
+            Ver Liga
+            <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </motion.section>
+    );
+  }
 
   const phase = derivePhase(round, now);
   const meta = PHASE_META[phase];

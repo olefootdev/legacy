@@ -488,9 +488,11 @@ Deno.serve(async (_req: Request) => {
   const promoPct = Number(state.promotion_percentage);
   const relePct = Number(state.relegation_percentage);
   const competitionStartedMs = state.competition_started_at ? new Date(state.competition_started_at).getTime() : now;
-  const competitionDurationMs = (state.competition_duration_days ?? 7) * 86_400_000;
-  const competitionEndsMs = competitionStartedMs + competitionDurationMs;
-  const competitionEnded = now >= competitionEndsMs;
+  const rawDurationDays = state.competition_duration_days ?? 0;
+  const hasEndDate = rawDurationDays > 0;
+  const competitionDurationMs = hasEndDate ? rawDurationDays * 86_400_000 : Infinity;
+  const competitionEndsMs = hasEndDate ? competitionStartedMs + competitionDurationMs : Infinity;
+  const competitionEnded = hasEndDate && now >= competitionEndsMs;
 
   const today = utcDateString(now);
   if (state.current_olefoot_day !== today) {
@@ -587,6 +589,21 @@ Deno.serve(async (_req: Request) => {
     }
   }
 
+  // AUTO-ASSIGN: novos times sem divisão entram na Divisão 3 quando liga está active
+  if (state.status === 'active') {
+    const { data: unassigned } = await supabase
+      .from('global_league_teams')
+      .select('id')
+      .is('division', null);
+    if (unassigned && unassigned.length > 0) {
+      const ids = unassigned.map((t: { id: string }) => t.id);
+      await supabase
+        .from('global_league_teams')
+        .update({ division: 3 })
+        .in('id', ids);
+    }
+  }
+
   // Não processa rodadas se a temporada está encerrada
   if (state.status === 'season_ended') {
     return new Response(JSON.stringify({
@@ -614,8 +631,9 @@ Deno.serve(async (_req: Request) => {
       msUntilNext: nextKickoff - now,
       slots, slotDurationMin,
       competitionId: state.competition_id,
-      competitionEndsAtUtc: new Date(competitionEndsMs).toISOString(),
-      competitionEndsInMs: competitionEndsMs - now,
+      competitionEndsAtUtc: hasEndDate ? new Date(competitionEndsMs).toISOString() : null,
+      competitionEndsInMs: hasEndDate ? competitionEndsMs - now : null,
+      perpetual: !hasEndDate,
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -726,6 +744,7 @@ Deno.serve(async (_req: Request) => {
     roundId: round.id, type: round.round_type,
     fixtures: fixturesUpdated.length, events: eventsToInsert.length,
     nextRound: round.round_number + 1, currentDay: today,
-    competitionEndsInMs: competitionEndsMs - now,
+    competitionEndsInMs: hasEndDate ? competitionEndsMs - now : null,
+    perpetual: !hasEndDate,
   }), { headers: { 'Content-Type': 'application/json' } });
 });

@@ -198,7 +198,8 @@ globalLeagueRoutes.post('/start-season', async (c) => {
   }
 
   const seasonName: string = String(body.seasonName);
-  const durationDays: number = Number(body.durationDays ?? 10);
+  // durationDays=0 ou null → liga perpétua (sem data de fim)
+  const durationDays: number = Number(body.durationDays ?? 0);
   const slots: string[] = Array.isArray(body.slots)
     ? body.slots.map(String)
     : ['05:30', '11:00', '15:00', '19:00', '21:30'];

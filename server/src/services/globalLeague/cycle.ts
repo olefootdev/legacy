@@ -368,16 +368,17 @@ export async function enrollClubInGlobalLeague(
   sb: SupabaseClient,
   opts: { managerId: string; clubName: string; clubShort: string; overall: number },
 ): Promise<{ ok: boolean; teamId?: string; error?: string }> {
-  const { data: existing } = await sb
-    .from('global_league_teams')
-    .select('*')
-    .eq('manager_id', opts.managerId)
-    .maybeSingle();
+  const [{ data: existing }, { data: stateData }] = await Promise.all([
+    sb.from('global_league_teams').select('*').eq('manager_id', opts.managerId).maybeSingle(),
+    sb.from('global_league_state').select('status').eq('id', 'current').maybeSingle(),
+  ]);
   const existingTeam = existing as TeamRow | null;
+  const leagueStatus = (stateData as { status?: string } | null)?.status;
+  const autoDiv3 = !existingTeam && leagueStatus === 'active' ? 3 : null;
   const teamId = existingTeam?.id ?? ('gt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
   const team: TeamRow = {
     ...(existingTeam ?? {
-      division: null, position: null, previous_position: null,
+      division: autoDiv3, position: null, previous_position: null,
       playoff_points: 0, playoff_matches_played: 0, playoff_wins: 0,
       playoff_draws: 0, playoff_losses: 0, playoff_goals_for: 0, playoff_goals_against: 0,
       points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
