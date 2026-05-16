@@ -316,7 +316,7 @@ export function Home() {
       } else if (globalLeagueMVP.status === 'playoffs') {
         ligaValue = 'Playoffs';
         ligaTone = 'warning';
-      } else if (globalLeagueMVP.status === 'league_active') {
+      } else if (globalLeagueMVP.status === 'active') {
         ligaValue = 'Em curso';
         ligaTone = 'success';
       } else {

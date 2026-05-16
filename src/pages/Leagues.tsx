@@ -569,7 +569,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
       ? { label: 'Aguardando cadastros', tone: 'text-neon-yellow border-neon-yellow/40 bg-neon-yellow/10' }
       : status === 'playoffs'
         ? { label: 'Playoffs em curso', tone: 'text-fuchsia-300 border-fuchsia-400/40 bg-fuchsia-500/10' }
-        : status === 'league_active'
+        : status === 'active'
           ? { label: 'Liga em curso', tone: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10' }
           : { label: 'Temporada encerrada', tone: 'text-white/65 border-white/15 bg-white/[0.03]' };
 
@@ -628,7 +628,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
                   ? `${teamsCount}/${minTeamsRequired} times`
                   : status === 'playoffs'
                     ? 'playoffs'
-                    : status === 'league_active'
+                    : status === 'active'
                       ? 'em disputa'
                       : 'encerrada'}
               </span>
@@ -674,7 +674,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
             ? 'Entrar na Liga'
             : status === 'playoffs'
               ? 'Ver Playoffs'
-              : status === 'league_active'
+              : status === 'active'
                 ? 'Ver Tabela'
                 : 'Ver Resultado'}
         </Link>

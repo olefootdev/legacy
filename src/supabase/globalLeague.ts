@@ -1,13 +1,8 @@
 /**
- * Persistência da Liga Global no Supabase.
- *
- * Estratégia MVP: após cada ação relevante (registro, início/fim de rodada,
- * promoção/rebaixamento), fazemos upsert do snapshot completo no DB. É mais
- * tráfego que o necessário, mas idempotente e simples — suficiente para
- * dezenas de times.
- *
- * Próxima iteração pode otimizar: upsert só do delta (time específico,
- * fixture específico) e usar diff entre estado anterior/atual.
+ * Leitura da Liga Global do Supabase (hidratação) + registro de identidade
+ * do time do manager. A Edge Function `global-league-tick` é a ÚNICA fonte
+ * de verdade para ranking, pontos, fixtures, eventos. O frontend nunca
+ * reescreve esse estado — só lê.
  */
 
 import { getSupabase, isSupabaseConfigured } from './client';
@@ -16,218 +11,16 @@ import type { GlobalFixture, GlobalMatchEvent } from '@/match/globalMatch';
 
 const SINGLETON_STATE_ID = 'current';
 
-// ─── Mapeadores camelCase ↔ snake_case ───────────────────────────────────
-
-function teamToRow(team: GlobalTeam) {
-  return {
-    id: team.id,
-    manager_id: team.managerId,
-    club_name: team.clubName,
-    club_short: team.clubShort,
-    overall: team.overall,
-    division: team.division ?? null,
-    position: team.position ?? null,
-    previous_position: team.previousPosition ?? null,
-    playoff_points: team.playoffPoints,
-    playoff_matches_played: team.playoffMatchesPlayed,
-    playoff_wins: team.playoffWins,
-    playoff_draws: team.playoffDraws,
-    playoff_losses: team.playoffLosses,
-    playoff_goals_for: team.playoffGoalsFor,
-    playoff_goals_against: team.playoffGoalsAgainst,
-    points: team.points,
-    matches_played: team.matchesPlayed,
-    wins: team.wins,
-    draws: team.draws,
-    losses: team.losses,
-    goals_for: team.goalsFor,
-    goals_against: team.goalsAgainst,
-    goal_difference: team.goalDifference,
-    recent_form: team.recentForm,
-    registered_at: new Date(team.registeredAt).toISOString(),
-    // ALL-TIME — preserva entre temporadas
-    all_time_points: team.allTimePoints ?? 0,
-    all_time_matches_played: team.allTimeMatchesPlayed ?? 0,
-    all_time_wins: team.allTimeWins ?? 0,
-    all_time_draws: team.allTimeDraws ?? 0,
-    all_time_losses: team.allTimeLosses ?? 0,
-    all_time_goals_for: team.allTimeGoalsFor ?? 0,
-    all_time_goals_against: team.allTimeGoalsAgainst ?? 0,
-    all_time_seasons_played: team.allTimeSeasonsPlayed ?? 0,
-  };
-}
-
-function playoffRoundToRow(round: PlayoffRound, seasonId: string) {
-  return {
-    id: `playoff_${seasonId}_${round.roundNumber}`,
-    season_id: seasonId,
-    round_number: round.roundNumber,
-    round_type: 'playoff' as const,
-    phase: round.phase,
-    is_returning: round.roundNumber > 3,
-    status: round.status,
-    scheduled_kickoff_ms: round.scheduledKickoffMs,
-    actual_kickoff_ms: round.actualKickoffMs ?? null,
-    finished_at_ms: round.finishedAtMs ?? null,
-  };
-}
-
-function leagueRoundToRow(round: LeagueRound, seasonId: string) {
-  return {
-    id: `league_${seasonId}_${round.roundNumber}`,
-    season_id: seasonId,
-    round_number: round.roundNumber,
-    round_type: 'league' as const,
-    phase: null,
-    is_returning: false,
-    status: round.status,
-    scheduled_kickoff_ms: round.scheduledKickoffMs,
-    actual_kickoff_ms: round.actualKickoffMs ?? null,
-    finished_at_ms: round.finishedAtMs ?? null,
-  };
-}
-
-function fixtureToRow(fixture: GlobalFixture, roundId: string) {
-  return {
-    id: fixture.id,
-    round_id: roundId,
-    division: fixture.division,
-    home_team_id: fixture.homeTeamId,
-    away_team_id: fixture.awayTeamId,
-    home_team_name: fixture.homeTeamName,
-    away_team_name: fixture.awayTeamName,
-    home_overall: fixture.homeOverall,
-    away_overall: fixture.awayOverall,
-    score_home: fixture.scoreHome,
-    score_away: fixture.scoreAway,
-    current_minute: fixture.currentMinute,
-    status: fixture.status,
-    kickoff_ms: fixture.kickoffMs ?? null,
-    finished_at_ms: fixture.finishedAtMs ?? null,
-  };
-}
-
-function eventToRow(event: GlobalMatchEvent) {
-  return {
-    id: event.id,
-    fixture_id: event.fixtureId,
-    event_type: event.type,
-    minute: event.minute,
-    side: event.side,
-    player_name: event.playerName ?? null,
-    player_id: event.playerId ?? null,
-    text: event.text,
-    highlight: event.highlight ?? false,
-    timestamp_ms: event.timestampMs,
-  };
-}
-
-function leagueStateRow(league: GlobalLeagueMVPState) {
-  return {
-    id: SINGLETON_STATE_ID,
-    season_id: league.seasonId,
-    season_name: `OLEFOOT LIGA — ${league.seasonId}`,
-    status: league.status,
-    min_teams_required: league.minTeamsRequired,
-    teams_per_division: league.teamsPerDivision,
-    promotion_percentage: league.promotionPercentage,
-    relegation_percentage: league.relegationPercentage,
-    current_playoff_round: league.currentPlayoffRound ?? null,
-    current_league_round: league.currentLeagueRound ?? null,
-  };
-}
-
 // ─── Operações públicas ──────────────────────────────────────────────────
 
 /**
- * Persiste snapshot completo da liga no Supabase.
- * Fire-and-forget: erros são logados mas não interrompem o caller.
- */
-export async function persistGlobalLeagueSnapshot(league: GlobalLeagueMVPState): Promise<void> {
-  if (!isSupabaseConfigured()) return;
-  const supabase = getSupabase();
-  if (!supabase) return;
-
-  try {
-    // 1) Estado singleton
-    const { error: stateErr } = await supabase
-      .from('global_league_state')
-      .upsert(leagueStateRow(league), { onConflict: 'id' });
-    if (stateErr) console.warn('[globalLeague] state upsert', stateErr.message);
-
-    // 2) Times
-    if (league.teams.length > 0) {
-      const { error: teamsErr } = await supabase
-        .from('global_league_teams')
-        .upsert(league.teams.map(teamToRow), { onConflict: 'id' });
-      if (teamsErr) console.warn('[globalLeague] teams upsert', teamsErr.message);
-    }
-
-    // 3) Rodadas (playoffs + liga)
-    const allRounds = [
-      ...league.playoffRounds.map((r) => playoffRoundToRow(r, league.seasonId)),
-      ...league.leagueRounds.map((r) => leagueRoundToRow(r, league.seasonId)),
-    ];
-    if (allRounds.length > 0) {
-      const { error: roundsErr } = await supabase
-        .from('global_league_rounds')
-        .upsert(allRounds, { onConflict: 'id' });
-      if (roundsErr) console.warn('[globalLeague] rounds upsert', roundsErr.message);
-    }
-
-    // 4) Fixtures
-    const allFixtures: ReturnType<typeof fixtureToRow>[] = [];
-    const allEvents: ReturnType<typeof eventToRow>[] = [];
-    for (const round of league.playoffRounds) {
-      const roundId = `playoff_${league.seasonId}_${round.roundNumber}`;
-      for (const f of round.fixtures) {
-        allFixtures.push(fixtureToRow(f, roundId));
-        for (const e of f.events) allEvents.push(eventToRow(e));
-      }
-    }
-    for (const round of league.leagueRounds) {
-      const roundId = `league_${league.seasonId}_${round.roundNumber}`;
-      for (const f of round.fixtures) {
-        allFixtures.push(fixtureToRow(f, roundId));
-        for (const e of f.events) allEvents.push(eventToRow(e));
-      }
-    }
-    if (allFixtures.length > 0) {
-      const { error: fxErr } = await supabase
-        .from('global_league_fixtures')
-        .upsert(allFixtures, { onConflict: 'id' });
-      if (fxErr) console.warn('[globalLeague] fixtures upsert', fxErr.message);
-    }
-
-    // 5) Eventos (append-only, mas usamos upsert por id pra ser idempotente)
-    if (allEvents.length > 0) {
-      const { error: evErr } = await supabase
-        .from('global_league_events')
-        .upsert(allEvents, { onConflict: 'id' });
-      if (evErr) console.warn('[globalLeague] events upsert', evErr.message);
-    }
-  } catch (err) {
-    console.warn('[globalLeague] persistGlobalLeagueSnapshot failed', err);
-  }
-}
-
-/**
- * Carrega o estado da Liga Global do Supabase (para hidratação no boot).
- * Retorna null se não houver liga registrada ou se Supabase não está configurado.
- */
-/**
- * Registra (upsert) UM time na Liga Global do Supabase.
- * Chamado quando o manager finaliza a cerimônia de abertura — assim a Liga Global
- * enxerga o time imediatamente e o auto-start pode incluir ele na próxima rodada.
- */
-/**
- * Registra (upsert) APENAS a identidade do time — id, manager_id, club_name,
- * club_short, overall, registered_at. NUNCA envia pontos, vitórias, forma,
- * divisão, all-time ou qualquer stat: a Edge Function é a única autoridade.
+ * Registra a identidade do time do manager — apenas se ainda NÃO existe
+ * (insert-if-absent). Se já existe linha com o mesmo manager_id, NÃO faz
+ * nada: nunca mutar a PK (id) de um time existente — fixtures/events
+ * referenciam essa PK e seriam orfanados.
  *
- * Em INSERT, colunas de stats pegam os DEFAULT 0 do schema; em UPDATE elas
- * ficam intocadas — o cliente não pode reescrever o ranking com state local
- * desatualizado.
+ * Stats (pontos, vitórias, divisão, all-time) NUNCA saem do cliente. A
+ * Edge Function é a única autoridade sobre o ranking.
  */
 export async function registerGlobalTeamIdentity(opts: {
   id: string;
@@ -242,19 +35,32 @@ export async function registerGlobalTeamIdentity(opts: {
   if (!supabase) return { ok: false, error: 'no-client' };
 
   try {
-    const { error } = await supabase
+    const { data: existing, error: selErr } = await supabase
       .from('global_league_teams')
-      .upsert({
+      .select('id')
+      .eq('manager_id', opts.managerId)
+      .maybeSingle();
+    if (selErr) {
+      console.warn('[globalLeague] registerGlobalTeamIdentity select error:', selErr.message);
+      return { ok: false, error: selErr.message };
+    }
+    if (existing) {
+      // Time já existe — não tocar. Mutar a PK orfana fixtures/events.
+      return { ok: true };
+    }
+    const { error: insErr } = await supabase
+      .from('global_league_teams')
+      .insert({
         id: opts.id,
         manager_id: opts.managerId,
         club_name: opts.clubName,
         club_short: opts.clubShort,
         overall: opts.overall,
         registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
-      }, { onConflict: 'manager_id' });
-    if (error) {
-      console.warn('[globalLeague] registerGlobalTeamIdentity error:', error.message);
-      return { ok: false, error: error.message };
+      });
+    if (insErr) {
+      console.warn('[globalLeague] registerGlobalTeamIdentity insert error:', insErr.message);
+      return { ok: false, error: insErr.message };
     }
     return { ok: true };
   } catch (err) {

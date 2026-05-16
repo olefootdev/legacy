@@ -16,7 +16,6 @@ export type GlobalLeagueStatus =
   | 'waiting_teams'      // Aguardando 32 times
   | 'playoffs'           // Playoffs em andamento (3 rodadas)
   | 'active'             // Liga oficial ativa
-  | 'league_active'      // Alias legacy — equivale a 'active'
   | 'season_ended';      // Temporada finalizada
 
 /** Fase dos playoffs */

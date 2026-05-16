@@ -31,7 +31,14 @@ function slotStartMs(dayDate: Date, hhmm: string): number {
   return d.getTime();
 }
 
-function nextSlotAlignedKickoff(fromMs: number, slots: string[], durationMin: number): number {
+function nextSlotAlignedKickoff(fromMs: number, _slots: string[], _durationMin: number): number {
+  // NONSTOP MODE: ignora slots e roda 5 em 5 minutos, sem pausa.
+  // Para reativar slots horários, restaurar versão anterior desta função.
+  return fromMs + ROUND_INTERVAL_MS;
+}
+
+// (Mantido para referência caso slots voltem)
+function _legacySlotAlignedKickoff(fromMs: number, slots: string[], durationMin: number): number {
   if (!slots || slots.length === 0) {
     return Math.ceil((fromMs + 1000) / ROUND_INTERVAL_MS) * ROUND_INTERVAL_MS;
   }
@@ -164,7 +171,12 @@ function generatePlayoffRoundsAndFixtures(
 }
 
 function distributeIntoDivisions(teams: TeamRow[], totalDivisions = 3): TeamRow[] {
+  // Primário: overall (mais alto = divisão 1) — funciona para 1ª distribuição
+  // quando todos os playoff_* são 0 (modo "só liga, sem playoffs").
+  // Secundário: playoff_points/wins/gd para preservar critério antigo se algum dia
+  // os playoffs voltarem.
   const sorted = [...teams].sort((a, b) => {
+    if (b.overall !== a.overall) return b.overall - a.overall;
     if (b.playoff_points !== a.playoff_points) return b.playoff_points - a.playoff_points;
     if (b.playoff_wins !== a.playoff_wins) return b.playoff_wins - a.playoff_wins;
     const aDiff = a.playoff_goals_for - a.playoff_goals_against;
@@ -502,97 +514,96 @@ Deno.serve(async (_req: Request) => {
     return new Response(JSON.stringify(recovered), { headers: { 'Content-Type': 'application/json' } });
   }
 
-  // 0. FIM DE COMPETIÇÃO — pausa para análise (não reseta automaticamente)
-  if (competitionEnded) {
-    // Só muda status se ainda não estiver em season_ended
-    if (state.status !== 'season_ended') {
-      await supabase.from('global_league_state').update({
-        status: 'season_ended',
-      }).eq('id', 'current');
-    }
-    return new Response(JSON.stringify({
-      ok: true, step: 'competition-ended-paused',
-      reason: 'competition window expired — awaiting manual season start from admin',
-      competitionId: state.competition_id,
-    }), { headers: { 'Content-Type': 'application/json' } });
-  }
+  // NONSTOP MODE — competition_duration_days é IGNORADO.
+  // (variável competitionEnded calculada acima fica intencionalmente não-usada)
+  void competitionEnded;
 
-  // 1. AUTO-START PLAYOFFS
-  if (state.status === 'waiting_teams') {
+  // 1. AUTO-START LIGA (modo "só liga, sem playoffs")
+  // waiting_teams ou season_ended → distribui times em divisões e gera rodadas de liga
+  if (state.status === 'waiting_teams' || state.status === 'season_ended') {
     const { data: teamsData } = await supabase.from('global_league_teams').select('*');
     const teams = (teamsData as TeamRow[]) ?? [];
-    if (teams.length < state.min_teams_required || teams.length < 2) {
-      return new Response(JSON.stringify({ ok: true, step: 'auto-start', reason: 'not-enough-teams', teamCount: teams.length, min: state.min_teams_required }), { headers: { 'Content-Type': 'application/json' } });
+    if (teams.length < Math.max(2, state.min_teams_required ?? 2)) {
+      return new Response(JSON.stringify({
+        ok: true, step: 'auto-start', reason: 'not-enough-teams',
+        teamCount: teams.length, min: state.min_teams_required,
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
-    const { data: existingRounds } = await supabase
-      .from('global_league_rounds').select('id').eq('season_id', state.season_id).limit(1);
-    if (existingRounds && existingRounds.length > 0) {
-      await supabase.from('global_league_state').update({ status: 'playoffs', current_playoff_round: 1 }).eq('id', 'current');
-      return new Response(JSON.stringify({ ok: true, step: 'auto-start', action: 'promote-status-existing-rounds' }), { headers: { 'Content-Type': 'application/json' } });
+    // Se for restart (vinha de season_ended/active), abre nova season_id limpa
+    const isRestart = state.status === 'season_ended';
+    const seasonId = isRestart ? `season_${now}` : state.season_id;
+
+    if (isRestart) {
+      // SOFT promo/rele (preserva stats da temporada anterior) + nova season
+      const reorganized = applyPromotionRelegationSoft(teams, promoPct, relePct);
+      await supabase.from('global_league_events').delete().neq('id', '');
+      await supabase.from('global_league_fixtures').delete().neq('id', '');
+      await supabase.from('global_league_rounds').delete().neq('id', '');
+      await supabase.from('global_league_teams').upsert(reorganized as any, { onConflict: 'id' });
+    } else {
+      // Primeira vez: distribuir por overall em divisões
+      const distributed = distributeIntoDivisions(teams);
+      await supabase.from('global_league_teams').upsert(distributed as any, { onConflict: 'id' });
     }
-    const { rounds, fixtures } = generatePlayoffRoundsAndFixtures(teams, state.season_id, now, slots, slotDurationMin);
+
+    // Recarrega times com a divisão atualizada
+    const { data: teamsAfter } = await supabase.from('global_league_teams').select('*');
+    const teamsWithDiv = (teamsAfter as TeamRow[]) ?? [];
+
+    const { rounds, fixtures } = generateLeagueRoundsAndFixtures(teamsWithDiv, seasonId, now, slots, slotDurationMin);
     if (rounds.length === 0) {
-      return new Response(JSON.stringify({ ok: true, step: 'auto-start', reason: 'gen-empty' }), { headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({
+        ok: true, step: 'auto-start', reason: 'gen-empty',
+        teamCount: teamsWithDiv.length,
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
     await supabase.from('global_league_rounds').upsert(rounds as any, { onConflict: 'id' });
     if (fixtures.length > 0) await supabase.from('global_league_fixtures').upsert(fixtures as any, { onConflict: 'id' });
-    await supabase.from('global_league_state').update({ status: 'playoffs', current_playoff_round: 1 }).eq('id', 'current');
+    await supabase.from('global_league_state').update({
+      status: 'active',
+      season_id: seasonId,
+      season_name: `OLEFOOT LIGA — ${seasonId}`,
+      current_playoff_round: null,
+      current_league_round: 1,
+    }).eq('id', 'current');
     return new Response(JSON.stringify({
-      ok: true, step: 'auto-start', action: 'created-playoffs',
-      rounds: rounds.length, fixtures: fixtures.length,
+      ok: true, step: 'auto-start', action: isRestart ? 'restarted-league' : 'created-league',
+      seasonId, rounds: rounds.length, fixtures: fixtures.length,
       firstKickoffUtc: new Date(rounds[0].scheduled_kickoff_ms).toISOString(),
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 
-  // 2. TRANSIÇÃO PLAYOFFS → ACTIVE
+  // 2. (PLAYOFFS DESATIVADO em modo nonstop "só liga")
+  // Se por algum motivo state.status === 'playoffs', força flip para 'active'
+  // e deixa o próximo tick processar as rodadas existentes.
   if (state.status === 'playoffs') {
-    const { data: pRounds } = await supabase
-      .from('global_league_rounds').select('id, status, round_type')
-      .eq('season_id', state.season_id).eq('round_type', 'playoff');
-    const allFinished = (pRounds ?? []).length > 0 && (pRounds ?? []).every(r => r.status === 'finished');
-    if (allFinished) {
-      const { data: teamsData } = await supabase.from('global_league_teams').select('*');
-      const teams = (teamsData as TeamRow[]) ?? [];
-      const distributed = distributeIntoDivisions(teams);
-      const { rounds, fixtures } = generateLeagueRoundsAndFixtures(distributed, state.season_id, now, slots, slotDurationMin);
-      await supabase.from('global_league_teams').upsert(distributed as any, { onConflict: 'id' });
-      if (rounds.length > 0) await supabase.from('global_league_rounds').upsert(rounds as any, { onConflict: 'id' });
-      if (fixtures.length > 0) await supabase.from('global_league_fixtures').upsert(fixtures as any, { onConflict: 'id' });
-      await supabase.from('global_league_state').update({
-        status: 'active', current_playoff_round: null,
-        current_league_round: rounds.length > 0 ? 1 : null,
-      }).eq('id', 'current');
-      return new Response(JSON.stringify({
-        ok: true, step: 'transition-to-league',
-        rounds: rounds.length, fixtures: fixtures.length,
-      }), { headers: { 'Content-Type': 'application/json' } });
-    }
+    await supabase.from('global_league_state').update({
+      status: 'active', current_playoff_round: null,
+    }).eq('id', 'current');
+    return new Response(JSON.stringify({
+      ok: true, step: 'force-active', reason: 'nonstop-mode-skips-playoffs',
+    }), { headers: { 'Content-Type': 'application/json' } });
   }
 
-  // 3. TODAS RODADAS FINALIZADAS → season_ended (não reseta automaticamente)
+  // 3. TODAS RODADAS DA LIGA FINALIZADAS → REGENERA (loop sem pausa)
   if (state.status === 'active') {
     const { data: lRounds } = await supabase
       .from('global_league_rounds').select('id, status, round_type')
       .eq('season_id', state.season_id).eq('round_type', 'league');
     const allFinished = (lRounds ?? []).length > 0 && (lRounds ?? []).every(r => r.status === 'finished');
     if (allFinished) {
+      // Não pausa — vira season_ended e o próximo bloco de auto-start (acima)
+      // já trata o restart na MESMA invocação? Não: já saímos do bloco 1.
+      // Setamos season_ended e devolvemos — próximo tick (em 1 min) reinicia.
       await supabase.from('global_league_state').update({
         status: 'season_ended',
       }).eq('id', 'current');
       return new Response(JSON.stringify({
-        ok: true, step: 'season-ended-paused',
-        reason: 'all league rounds finished — awaiting manual season start from admin',
+        ok: true, step: 'season-finished-will-restart',
+        reason: 'all league rounds finished — next tick will restart the league',
         seasonId: state.season_id,
       }), { headers: { 'Content-Type': 'application/json' } });
     }
-  }
-
-  // Não processa rodadas se a temporada está encerrada
-  if (state.status === 'season_ended') {
-    return new Response(JSON.stringify({
-      ok: true, step: 'idle', reason: 'season-ended',
-      status: 'season_ended',
-    }), { headers: { 'Content-Type': 'application/json' } });
   }
 
   // 4. PROCESSA RODADA PENDENTE
@@ -623,14 +634,22 @@ Deno.serve(async (_req: Request) => {
   const isPlayoff = round.round_type === 'playoff';
 
   // Lock idempotente: tenta mover status scheduled → live atomicamente.
-  // Se outro tick já processou esta rodada, o update afeta 0 linhas e pulamos.
-  const { count: lockCount } = await supabase
+  // .select('id') depois de .update() retorna as linhas afetadas. Não usar
+  // { count, head } aqui — o PostgrestTransformBuilder ignora o 2º argumento
+  // após um .update() e count volta null, fazendo a função abandonar a
+  // rodada que ela mesma acabou de pôr em 'live' (loop infinito).
+  const { data: lockedRows, error: lockErr } = await supabase
     .from('global_league_rounds')
     .update({ status: 'live', actual_kickoff_ms: now })
     .eq('id', round.id)
     .eq('status', 'scheduled') // só atualiza se ainda 'scheduled'
-    .select('id', { count: 'exact', head: true });
-  if (!lockCount || lockCount === 0) {
+    .select('id');
+  if (lockErr) {
+    return new Response(JSON.stringify({
+      ok: false, step: 'lock-round', roundId: round.id, error: lockErr.message,
+    }), { status: 500 });
+  }
+  if (!lockedRows || lockedRows.length === 0) {
     return new Response(JSON.stringify({
       ok: true, step: 'skip-duplicate', roundId: round.id,
       reason: 'round already processed by concurrent tick',
