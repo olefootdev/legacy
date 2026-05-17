@@ -6,8 +6,13 @@ import type { PlayerAttributes, PlayerBehavior, PlayerEntity, PlayerStrongFoot }
 
 /** OVR máximo na criação (Academia OLE + prospects NPC). */
 export const MANAGER_PROSPECT_CREATE_MAX_OVR = 70;
-/** OVR máximo após evolução (treinos, jogos) para `managerCreated`. */
-export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 88;
+/**
+ * OVR máximo após evolução (treinos, jogos) para `managerCreated`.
+ * Cap baixo (75) é intencional: evita que a Academia OLE infle o mercado
+ * com prospects que rivalizam com cartas Genesis premium. Janela de evolução
+ * útil = 5 pontos (70 criação → 75 cap).
+ */
+export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 75;
 
 /**
  * Slots simultâneos da Academia OLE: até 5 prospects criados/ativos no
