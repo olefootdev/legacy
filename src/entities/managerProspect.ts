@@ -265,6 +265,58 @@ export interface ManagerProspectHeritageBrief {
 
 export const MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN = 8;
 
+/**
+ * Heritage funcional (P5 do audit) — cada região da Academia OLE biaseia
+ * um atributo do prospect na criação. O bias é pré-scaling (antes do cap
+ * OVR 70), então o efeito final é uma "assinatura" de perfil: o atributo
+ * da região fica visivelmente mais alto, os outros caem proporcionalmente
+ * pra manter o cap. Sem inflate de OVR total — só shift de perfil.
+ */
+export const HERITAGE_ATTR_BIAS: Record<ManagerProspectPortraitStyleRegion, keyof PlayerAttributes> = {
+  europa: 'tatico',              // disciplina tática
+  africa_subsariana: 'velocidade', // atletismo
+  americas_sul: 'drible',         // técnica/samba
+  americas_outras: 'finalizacao', // pragmatismo go-getter
+  mena: 'mentalidade',            // resiliência
+  asia: 'passe',                  // precisão
+  oceania: 'fisico',              // físico/rugby
+};
+
+/** Quanto soma no atributo bias da região (visível no perfil final). */
+const HERITAGE_BIAS_BOOST = 3;
+/** Quanto se desconta de um attr menor pra compensar e manter OVR estável. */
+const HERITAGE_BIAS_COUNTER = 2;
+
+/**
+ * Aplica a "assinatura" do heritage: soma `HERITAGE_BIAS_BOOST` no attr da
+ * região e desconta `HERITAGE_BIAS_COUNTER` do attr mais baixo (não-bias)
+ * pra balancear. Net é um shift de perfil com efeito quase nulo no OVR
+ * (~+0.3 round → 0).
+ *
+ * Aplicado DEPOIS do scaling pra não ser comido por `scaleAttrsToMaxOvr`
+ * (que reduz os attrs mais altos primeiro — exatamente onde o bias estaria).
+ */
+export function applyHeritageBias(
+  attrs: PlayerAttributes,
+  region: ManagerProspectPortraitStyleRegion | undefined,
+): PlayerAttributes {
+  if (!region) return attrs;
+  const biasAttr = HERITAGE_ATTR_BIAS[region];
+  if (!biasAttr) return attrs;
+  // Encontra attr mais baixo entre os não-bias pra contrabalanço.
+  let counterAttr: keyof PlayerAttributes | null = null;
+  let counterVal = Infinity;
+  for (const k of ATTR_KEYS) {
+    if (k === biasAttr) continue;
+    const v = attrs[k] ?? 0;
+    if (v < counterVal) { counterVal = v; counterAttr = k; }
+  }
+  const next = { ...attrs };
+  next[biasAttr] = Math.min(99, (next[biasAttr] ?? 0) + HERITAGE_BIAS_BOOST);
+  if (counterAttr) next[counterAttr] = Math.max(35, (next[counterAttr] ?? 0) - HERITAGE_BIAS_COUNTER);
+  return next;
+}
+
 export function isValidManagerHeritage(h: ManagerProspectHeritageBrief | undefined): boolean {
   if (!h) return false;
   if (!PORTRAIT_STYLE_REGION_LABELS[h.portraitStyleRegion]) return false;
@@ -398,6 +450,11 @@ export function buildManagerCreatedPlayerEntity(
     attrs = applyDevelopmentBias(attrs, payload.developmentBias ?? 50);
     attrs = scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_CREATE_MAX_OVR);
   }
+  // P5 — heritage bias: shift de perfil aplicado DEPOIS do scaling.
+  // applyHeritageBias usa contrabalanço (+3 bias, -2 attr mais baixo)
+  // pra manter OVR quase estável. Aplicar antes do scaling seria comido
+  // pelo scaling top-heavy (que reduz os maiores attrs primeiro).
+  attrs = applyHeritageBias(attrs, payload.heritage?.portraitStyleRegion);
 
   const mintOvr = overallFromAttributes(attrs);
   const tier = (payload.contractMatches ?? 10) as ManagerProspectContractGames;

@@ -31,6 +31,8 @@ import {
 import { validateAcademyProspectName } from '@/entities/managerProspectReservedNames';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp } from '@/systems/economy';
+import { getSupabase } from '@/supabase/client';
+import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import {
   hairStylePromptFromCatalogId,
   hairStyleSelectLabel,
@@ -266,8 +268,12 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const hairDisplayLabel =
     selectedHairCatalogEntry != null ? hairStyleSelectLabel(selectedHairCatalogEntry) : hairChoice || null;
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!canSubmit || submitting) return;
+    setServerError(null);
     const payload: ManagerProspectCreatePayload = {
       name: trimmed,
       age,
@@ -284,9 +290,56 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
       visualBrief,
       contractMatches,
     };
-    dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload });
-    onClose();
-    resetForm();
+
+    setSubmitting(true);
+    try {
+      // P3 — validação server-side antes do dispatch. Não-bloqueante se
+      // server não configurado (dev local sem token). Em prod (Railway +
+      // sessão Supabase) o server enforce nome, OVR cap, heritage, tier
+      // e cooldown de 30s por usuário.
+      const sb = getSupabase();
+      const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+      const base = olefootApiBase();
+      const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
+      if (serverUrl && token) {
+        const overall = overallFromAttributes(tunedAttrs);
+        let res: { ok: boolean; error?: string; cooldown_seconds?: number } | null = null;
+        try {
+          const r = await fetch(`${serverUrl}/api/academy/create`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              name: trimmed,
+              pos,
+              overall,
+              contract_tier: contractMatches,
+              heritage: {
+                portraitStyleRegion,
+                originText: originText.trim(),
+                originTags: [...originTags],
+              },
+            }),
+          });
+          res = (await r.json()) as typeof res;
+        } catch {
+          setServerError('Falha de rede ao validar criação. Tenta novamente.');
+          return;
+        }
+        if (!res?.ok) {
+          setServerError(res?.error ?? 'Não foi possível validar a criação.');
+          return;
+        }
+      }
+      // Server ok (ou bypass dev) — dispatcha localmente
+      dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload });
+      onClose();
+      resetForm();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const stepLabel =
@@ -851,26 +904,34 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                 </div>
               ) : null}
               {step === 'review' ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep('tune')}
-                    className="flex shrink-0 items-center justify-center rounded-lg border border-white/20 px-3 py-3 text-white/80 hover:bg-white/10"
-                    aria-label="Voltar"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canSubmit}
-                    onClick={handleSubmit}
-                    className={cn(
-                      'btn-primary flex-1 py-3 font-display text-sm font-black uppercase tracking-wide',
-                      !canSubmit && 'pointer-events-none opacity-40',
-                    )}
-                  >
-                    Criar jogador
-                  </button>
+                <div className="flex flex-col gap-2">
+                  {serverError ? (
+                    <div className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-[12px] text-red-200">
+                      {serverError}
+                    </div>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep('tune')}
+                      disabled={submitting}
+                      className="flex shrink-0 items-center justify-center rounded-lg border border-white/20 px-3 py-3 text-white/80 hover:bg-white/10 disabled:opacity-40"
+                      aria-label="Voltar"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canSubmit || submitting}
+                      onClick={handleSubmit}
+                      className={cn(
+                        'btn-primary flex-1 py-3 font-display text-sm font-black uppercase tracking-wide',
+                        (!canSubmit || submitting) && 'pointer-events-none opacity-40',
+                      )}
+                    >
+                      {submitting ? 'Validando…' : 'Criar jogador'}
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
