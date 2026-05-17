@@ -142,6 +142,13 @@ import {
 } from '@/wallet/olexp';
 import { writeSwapKycToStorage } from '@/wallet/swapKycStorage';
 import { registerSponsor as walletRegisterSponsor } from '@/wallet/referral';
+// Imports estáticos — substituem chamadas legadas de require() que quebravam
+// no browser ("require is not defined") quando os reducers eram acionados.
+import { registerTeam } from '@/match/globalLeagueMVP';
+import { finalizeRound, advanceToNextRound } from '@/match/olefootLeague';
+import { createScheduledRound, autoAdvanceRound } from '@/match/globalRoundScheduler';
+import { simulateGlobalRound } from '@/match/globalMatchSimulator';
+import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import { transferBroByReferralCode } from '@/wallet/peerTransfer';
 import { registerGatBase, accrueGatDaily } from '@/wallet/gat';
 import { simulateFiatDeposit, simulateFiatWithdrawal } from '@/wallet/adminFiatFlow';
@@ -3751,7 +3758,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const clubShort = state.club.shortName ?? clubName.slice(0, 3).toUpperCase();
       let globalLeagueMVP = state.globalLeagueMVP;
       if (globalLeagueMVP && !globalLeagueMVP.teams.some(t => t.managerId === managerId)) {
-        const { registerTeam } = require('@/match/globalLeagueMVP');
         globalLeagueMVP = registerTeam(globalLeagueMVP, managerId, clubName, clubShort, avgOverall);
       }
 
@@ -3958,7 +3964,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'FINALIZE_OLEFOOT_ROUND': {
       if (!state.olefootLeague) return state;
-      const { finalizeRound } = require('@/match/olefootLeague');
       const updated = finalizeRound(state.olefootLeague, action.roundNumber, action.fixtures);
       return {
         ...state,
@@ -3968,7 +3973,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'ADVANCE_OLEFOOT_ROUND': {
       if (!state.olefootLeague) return state;
-      const { advanceToNextRound } = require('@/match/olefootLeague');
       const updated = advanceToNextRound(state.olefootLeague);
       return {
         ...state,
@@ -3978,7 +3982,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'CREATE_GLOBAL_ROUND': {
       if (!state.olefootLeague) return state;
-      const { createScheduledRound } = require('@/match/globalRoundScheduler');
       const newRound = createScheduledRound(state.olefootLeague, action.scheduledKickoffMs);
       return {
         ...state,
@@ -4006,7 +4009,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'START_GLOBAL_ROUND': {
       if (!state.globalLeague?.currentRound) return state;
-      const { simulateGlobalRound } = require('@/match/globalMatchSimulator');
       const kickoffMs = Date.now();
       const { updatedFixtures, allEvents, highlights } = simulateGlobalRound(
         state.globalLeague.currentRound.fixtures,
@@ -4038,7 +4040,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!state.globalLeague?.currentRound || state.globalLeague.currentRound.status !== 'live') {
         return state;
       }
-      const { GLOBAL_MATCH_CONSTANTS } = require('@/match/globalMatch');
       const currentRound = state.globalLeague.currentRound;
       const elapsed = action.nowMs - (currentRound.actualKickoffMs ?? 0);
       const currentMinute = Math.floor(elapsed / GLOBAL_MATCH_CONSTANTS.GAME_MINUTE_MS);
@@ -4081,7 +4082,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
 
       // Atualizar OLEFOOT LIGA com os resultados
-      const { finalizeRound } = require('@/match/olefootLeague');
       const updatedLeague = finalizeRound(
         state.olefootLeague,
         currentRound.roundNumber,
@@ -4100,7 +4100,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'ADVANCE_GLOBAL_ROUND': {
       if (!state.globalLeague || !state.olefootLeague) return state;
-      const { autoAdvanceRound } = require('@/match/globalRoundScheduler');
       const { globalLeague, olefootLeague } = autoAdvanceRound(
         state.globalLeague,
         state.olefootLeague,
@@ -4958,7 +4957,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'UPDATE_GLOBAL_PLAYOFF_LIVE': {
       if (!state.globalLeagueMVP || state.globalLeagueMVP.status !== 'playoffs') return state;
-      const { GLOBAL_MATCH_CONSTANTS } = require('@/match/globalMatch');
       const roundNumber = state.globalLeagueMVP.currentPlayoffRound;
       if (!roundNumber) return state;
       const round = state.globalLeagueMVP.playoffRounds.find(r => r.roundNumber === roundNumber);

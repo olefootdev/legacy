@@ -27,7 +27,7 @@ import {
 import type { GlobalFixture } from '@/match/globalMatch';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
-import type { OlefootLeagueTeam } from '@/match/olefootLeague';
+import { createOlefootLeague, type OlefootLeagueTeam } from '@/match/olefootLeague';
 
 type ViewMode = 'fixtures' | 'standings';
 
@@ -334,7 +334,6 @@ export default function OlefootLeague() {
   // Se não existe liga, criar (apenas uma vez)
   useEffect(() => {
     if (!olefootLeague) {
-      const { createOlefootLeague } = require('@/match/olefootLeague');
       const newLeague = createOlefootLeague();
       dispatch({ type: 'SET_OLEFOOT_LEAGUE', payload: newLeague });
     }
