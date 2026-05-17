@@ -289,9 +289,10 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       ),
     );
   }
-  for (const id of Object.keys(players)) {
-    if (!id.startsWith('genesis-')) delete players[id];
-  }
+  // NOTA: havia aqui um filtro `if (!id.startsWith('genesis-')) delete` que
+  // wipava jogadores criados na Academia (`mgr_*`), prospects NPC (`npc_*`),
+  // bots e qualquer compra de listing de outro manager. Removido — jogadores
+  // só são deletados explicitamente via reducer (sell/dispense/transfer).
   const lineup = sanitizeLineupForRoster(raw.lineup ?? {}, players);
   const rawFsEarly = raw.manager?.formationScheme;
   const resolvedFormationScheme: FormationSchemeId =

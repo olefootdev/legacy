@@ -76,6 +76,33 @@ export function applyHydratedSquad(input: {
   emit();
 }
 
+/**
+ * Faz MERGE de jogadores remotos no estado local: adiciona qualquer player
+ * presente em `remotePlayers` que não esteja em `state.players`, sem
+ * sobrescrever os que já existem localmente. Usado para recuperar jogadores
+ * comprados que sumiram do localStorage por filtros antigos ou cache stale.
+ *
+ * Retorna a lista de IDs que foram recuperados (vazia se nada faltava).
+ */
+export function mergeRemoteSquadIntoLocal(
+  remotePlayers: Record<string, OlefootGameState['players'][string]>,
+): string[] {
+  const localIds = new Set(Object.keys(state.players));
+  const recovered: string[] = [];
+  const next: typeof state.players = { ...state.players };
+  for (const [id, p] of Object.entries(remotePlayers)) {
+    if (!localIds.has(id)) {
+      next[id] = p;
+      recovered.push(id);
+    }
+  }
+  if (recovered.length === 0) return [];
+  state = { ...state, players: next };
+  saveGameState(state);
+  emit();
+  return recovered;
+}
+
 /** Hidrata slices críticos vindos do Supabase sem reentrar no reducer. */
 export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
   const local = state;
