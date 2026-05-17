@@ -23,17 +23,30 @@ export function marketMakerDiscountRate(pos: string, ovr: number): number {
   return 0.35;                      // OVR < 65: 35%
 }
 
+/** Bônus em EXP por cada ponto de OVR evoluído acima do mintOverall. */
+const EVOLUTION_BONUS_EXP_PER_OVR = 20_000;
+
 /**
  * Calcula a oferta do Market Maker para um jogador.
- * Usa o mintOverall como base de preço (valor de mint, não atual).
- * Arredonda a 1 000 EXP.
+ *
+ * Duas componentes recompensam evolução real (treino + partidas):
+ *   - Base usa o OVR ATUAL (não o mintOverall): manda o sinal correto
+ *     de "preço por capacidade atual"
+ *   - Bônus de evolução: cada ponto de OVR acima do mintOverall paga
+ *     +20k EXP extra. Treinar um prospect de 70 → 75 antes de vender
+ *     adiciona ~+150k EXP na oferta.
+ *
+ * O desconto continua dinâmico (20–35% via marketMakerDiscountRate)
+ * em cima da soma base + bônus. Arredonda a 1 000 EXP.
  */
 export function calcMarketMakerOffer(player: PlayerEntity): number {
   const ovr = overallFromAttributes(player.attrs);
   const mintOvr = player.mintOverall ?? ovr;
-  const basePrice = genesisListingPriceExpFromMintOverall(mintOvr);
+  const basePrice = genesisListingPriceExpFromMintOverall(ovr);
+  const evolutionBonus = Math.max(0, ovr - mintOvr) * EVOLUTION_BONUS_EXP_PER_OVR;
+  const grossPrice = basePrice + evolutionBonus;
   const discount = marketMakerDiscountRate(player.pos, ovr);
-  const offer = Math.round(basePrice * (1 - discount) / 1000) * 1000;
+  const offer = Math.round((grossPrice * (1 - discount)) / 1000) * 1000;
   return Math.max(10_000, offer); // mínimo 10k EXP
 }
 
