@@ -65,12 +65,37 @@ marketRoutes.post('/api/market/buy', rateLimit(20), async (c) => {
   });
 
   if (insertErr) {
-    // Código 23505 = violação de unique (compra duplicada)
+    // Código 23505 = violação de unique (compra duplicada).
+    // Cleanup defensivo: a listagem PRECISA ficar listed_on_market=false
+    // mesmo nesse caminho — saves antigos podem ter ficado com
+    // market_purchases inserido mas listed_on_market ainda true, deixando
+    // o jogador aparecendo no mercado e o usuário travado em "já adquirido".
     if (insertErr.code === '23505') {
-      return c.json({ ok: false, error: 'Jogador já adquirido.' }, 409);
+      await sb
+        .from('genesis_market_players')
+        .update({ listed_on_market: false })
+        .eq('id', genesisId);
+      return c.json({
+        ok: false,
+        error: 'Jogador já adquirido.',
+        genesis_id: genesisId,
+        price_exp: priceExp,
+        mint_overall: mintOverall,
+        already_purchased: true,
+      }, 409);
     }
     console.error('[market/buy] insert error:', insertErr.message);
     return c.json({ ok: false, error: 'Erro ao registar compra.' }, 500);
+  }
+
+  // Tira do mercado pra ninguém mais comprar a mesma carta.
+  const { error: unlistErr } = await sb
+    .from('genesis_market_players')
+    .update({ listed_on_market: false })
+    .eq('id', genesisId);
+  if (unlistErr) {
+    // Compra já está registada — não falhar aqui, só logar.
+    console.error('[market/buy] unlist error:', unlistErr.message);
   }
 
   return c.json({ ok: true, price_exp: priceExp, mint_overall: mintOverall });

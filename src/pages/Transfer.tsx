@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import type { AuctionCurrency } from '@/economy/model';
 import { formatExp } from '@/systems/economy';
 import { MEMORABLE_TROPHY_SLOTS, type MemorableTrophyId } from '@/trophies/memorableCatalog';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { fetchListedGenesisEntitiesByCatalogId, fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
 import { TransferLegaciesTab } from './TransferLegaciesTab';
@@ -601,9 +601,35 @@ export function Transfer() {
             return;
           }
           if (!serverRes?.ok) {
-            const msg = serverRes?.error === 'Jogador já adquirido.'
-              ? 'Este jogador já está no teu plantel.'
-              : serverRes?.error === 'Jogador não está à venda.'
+            // SELF-HEAL pra "Jogador já adquirido": o servidor confirma que
+            // a compra já foi registada (market_purchases unique violation),
+            // mas o jogador pode ter sumido do plantel local (filtro genesis
+            // antigo, cache stale, persistManagerSquad que falhou). Em vez
+            // de bloquear o usuário, traz o jogador de volta SEM cobrar
+            // EXP de novo.
+            const isAlreadyPurchased =
+              (serverRes as unknown as { already_purchased?: boolean })?.already_purchased === true ||
+              serverRes?.error === 'Jogador já adquirido.';
+            if (isAlreadyPurchased) {
+              const pid = entity.id; // genesis-${cid}
+              const fresh = getGameState();
+              if (!fresh.players[pid]) {
+                dispatch({
+                  type: 'MERGE_PLAYERS',
+                  players: { [pid]: { ...entity, listedOnMarket: false } },
+                });
+                console.log('[market/buy] self-heal: jogador recuperado do servidor:', entity.name);
+                showPurchaseCompleteBanner();
+                setSelectedPlayer(null);
+                setIsPurchasing(false);
+                return;
+              }
+              setPurchaseError('Este jogador já está no teu plantel.');
+              setIsPurchasing(false);
+              return;
+            }
+
+            const msg = serverRes?.error === 'Jogador não está à venda.'
               ? 'Este jogador já não está disponível.'
               : serverRes?.error === 'Unauthorized'
               ? 'Sessão expirada. Faz login novamente.'
