@@ -3,6 +3,17 @@ import { overallFromAttributes } from '@/entities/player';
 import type { PlayerEntity } from '@/entities/types';
 import { resolvePersistClubId } from '@/supabase/matchPersistence';
 
+/** Listagem de Academia OLE de OUTRO manager, visível no marketplace. */
+export interface OtherManagerListing {
+  listingId: string;
+  sellerClubId: string;
+  gamePlayerId: string;
+  priceExp: number;
+  mintOverall: number;
+  listedAtIso: string;
+  player: PlayerEntity;
+}
+
 /**
  * Snapshot persistido em `academy_managers.player_snapshot` — campos usados pelo
  * motor / `PlayerEntity`; versão para evolução do schema sem quebrar leitores.
@@ -112,4 +123,44 @@ export async function registerAcademyManagerListing(input: {
     const message = e instanceof Error ? e.message : String(e);
     return { ok: false, reason: 'request_error', message };
   }
+}
+
+/**
+ * Lê listagens de Academia OLE de OUTROS managers (não o próprio).
+ * Filtra listed_on_market=true e exclui club_id do próprio comprador.
+ * Reconstrói PlayerEntity a partir do JSON em player_snapshot.
+ */
+export async function fetchOtherManagerListings(myClubId: string | null): Promise<OtherManagerListing[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  let query = sb
+    .from('academy_managers')
+    .select('listing_id, club_id, game_player_id, price_exp, mint_overall, listed_at, player_snapshot')
+    .eq('listed_on_market', true)
+    .order('listed_at', { ascending: false })
+    .limit(100);
+  if (myClubId) query = query.neq('club_id', myClubId);
+  const { data, error } = await query;
+  if (error) {
+    console.warn('[academyManagers] fetchOtherManagerListings:', error.message);
+    return [];
+  }
+  const rows = (data ?? []) as Array<{
+    listing_id: string;
+    club_id: string;
+    game_player_id: string;
+    price_exp: number;
+    mint_overall: number;
+    listed_at: string;
+    player_snapshot: PlayerEntity;
+  }>;
+  return rows.map((r) => ({
+    listingId: r.listing_id,
+    sellerClubId: r.club_id,
+    gamePlayerId: r.game_player_id,
+    priceExp: Number(r.price_exp),
+    mintOverall: Number(r.mint_overall),
+    listedAtIso: r.listed_at,
+    player: r.player_snapshot,
+  }));
 }

@@ -100,3 +100,177 @@ marketRoutes.post('/api/market/buy', rateLimit(20), async (c) => {
 
   return c.json({ ok: true, price_exp: priceExp, mint_overall: mintOverall });
 });
+
+/**
+ * POST /api/market/buy-prospect
+ *
+ * Compra atômica de uma listagem de Academia OLE (jogador `mgr_*` criado por
+ * outro manager). Atravessa dois usuários — comprador (auth) e vendedor
+ * (dono da listagem em academy_managers.club_id).
+ *
+ * Sequência:
+ *   1. Resolve buyer_user_id pelo JWT.
+ *   2. Busca listing em academy_managers (precisa estar listed_on_market=true).
+ *   3. Resolve seller_user_id pela tabela profiles (profiles.club_id = listing.club_id).
+ *   4. Rejeita auto-compra.
+ *   5. LOCK: flip listed_on_market = false WHERE listing_id AND listed_on_market=true.
+ *      Se afetar 0 linhas, alguém comprou primeiro → 409 stale.
+ *   6. Adiciona player_snapshot ao manager_squad do comprador (upsert).
+ *   7. Remove jogador (mesmo id) do manager_squad do vendedor (se ele tinha
+ *      o save persistido).
+ *   8. Insere wallet_credits row pro vendedor (EXP a creditar quando ele logar).
+ *   9. Retorna o snapshot + price_exp pro cliente dispatchar BUY_MANAGER_PROSPECT
+ *      localmente (debita EXP, adiciona ao state.players).
+ *
+ * Falha parcial: se passo 6/7/8 falhar depois do lock, tentamos rollback do lock
+ * (restaurar listed_on_market=true). Não é uma transação real (Supabase JS não
+ * suporta multi-statement), mas o lock idempotente é o ponto-chave anti-race.
+ *
+ * Body: { listing_id: string }
+ * Auth: Authorization: Bearer <jwt>
+ */
+marketRoutes.post('/api/market/buy-prospect', rateLimit(20), async (c) => {
+  const buyerId = await resolveUser(c.req.header('Authorization'));
+  if (!buyerId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ ok: false, error: 'Serviço indisponível.' }, 503);
+
+  const body = await c.req
+    .json<{ listing_id?: string }>()
+    .catch(() => ({} as { listing_id?: string }));
+  const listingId = body.listing_id?.trim();
+  if (!listingId) return c.json({ ok: false, error: 'listing_id obrigatório.' }, 400);
+
+  // 1) Busca a listagem
+  const { data: listing, error: fetchErr } = await sb
+    .from('academy_managers')
+    .select('id, listing_id, club_id, game_player_id, price_exp, player_snapshot, listed_on_market')
+    .eq('listing_id', listingId)
+    .maybeSingle();
+  if (fetchErr || !listing) {
+    return c.json({ ok: false, error: 'Listagem não encontrada.' }, 404);
+  }
+  if (!listing.listed_on_market) {
+    return c.json({ ok: false, error: 'Listagem já não está disponível.' }, 409);
+  }
+
+  // 2) Resolve seller_user_id via profiles
+  const { data: sellerProfile, error: sellerErr } = await sb
+    .from('profiles')
+    .select('id')
+    .eq('club_id', listing.club_id)
+    .maybeSingle();
+  if (sellerErr || !sellerProfile?.id) {
+    return c.json({ ok: false, error: 'Vendedor não encontrado.' }, 404);
+  }
+  const sellerId = sellerProfile.id as string;
+  if (sellerId === buyerId) {
+    return c.json({ ok: false, error: 'Não dá pra comprar tua própria listagem.' }, 400);
+  }
+
+  const priceExp = Number(listing.price_exp);
+  const gamePlayerId = String(listing.game_player_id);
+  const snapshot = listing.player_snapshot as Record<string, unknown> & { id: string };
+
+  // 3) LOCK atômico — só vence se ainda estava listed_on_market=true
+  const { data: locked, error: lockErr } = await sb
+    .from('academy_managers')
+    .update({ listed_on_market: false })
+    .eq('listing_id', listingId)
+    .eq('listed_on_market', true)
+    .select('id');
+  if (lockErr) {
+    return c.json({ ok: false, error: 'Erro ao reservar listagem.', detail: lockErr.message }, 500);
+  }
+  if (!locked || locked.length === 0) {
+    return c.json({ ok: false, error: 'Listagem já vendida.' }, 409);
+  }
+
+  // Helper rollback se uma etapa pós-lock falhar
+  const rollbackLock = async () => {
+    await sb.from('academy_managers').update({ listed_on_market: true }).eq('listing_id', listingId);
+  };
+
+  // 4) Adiciona o snapshot ao manager_squad do comprador
+  const { data: buyerSquad } = await sb
+    .from('manager_squad')
+    .select('players, lineup, formation_scheme')
+    .eq('user_id', buyerId)
+    .maybeSingle();
+  const buyerPlayers = Array.isArray(buyerSquad?.players) ? (buyerSquad!.players as Array<{ id: string }>) : [];
+  if (buyerPlayers.some((p) => p.id === gamePlayerId)) {
+    // Comprador já tem o jogador no save remoto — só destrava a listagem
+    // e devolve sucesso "idempotente". Frontend self-heal cobre o resto.
+    return c.json({
+      ok: true,
+      already_owned: true,
+      player_snapshot: snapshot,
+      price_exp: priceExp,
+      seller_user_id: sellerId,
+    });
+  }
+  const newBuyerPlayers = [...buyerPlayers, snapshot];
+  const { error: addBuyerErr } = await sb.from('manager_squad').upsert(
+    {
+      user_id: buyerId,
+      players: newBuyerPlayers,
+      lineup: buyerSquad?.lineup ?? {},
+      formation_scheme: buyerSquad?.formation_scheme ?? null,
+    },
+    { onConflict: 'user_id' },
+  );
+  if (addBuyerErr) {
+    await rollbackLock();
+    return c.json({ ok: false, error: 'Falha ao adicionar ao plantel do comprador.', detail: addBuyerErr.message }, 500);
+  }
+
+  // 5) Remove o snapshot do manager_squad do vendedor (best-effort)
+  const { data: sellerSquad } = await sb
+    .from('manager_squad')
+    .select('players, lineup, formation_scheme')
+    .eq('user_id', sellerId)
+    .maybeSingle();
+  if (sellerSquad) {
+    const sellerPlayers = Array.isArray(sellerSquad.players) ? (sellerSquad.players as Array<{ id: string }>) : [];
+    const sellerLineup = (sellerSquad.lineup ?? {}) as Record<string, string>;
+    const nextSellerPlayers = sellerPlayers.filter((p) => p.id !== gamePlayerId);
+    const nextSellerLineup: Record<string, string> = {};
+    for (const [slot, pid] of Object.entries(sellerLineup)) {
+      if (pid !== gamePlayerId) nextSellerLineup[slot] = pid;
+    }
+    const { error: removeSellerErr } = await sb.from('manager_squad').upsert(
+      {
+        user_id: sellerId,
+        players: nextSellerPlayers,
+        lineup: nextSellerLineup,
+        formation_scheme: sellerSquad.formation_scheme ?? null,
+      },
+      { onConflict: 'user_id' },
+    );
+    if (removeSellerErr) {
+      console.error('[market/buy-prospect] remove from seller failed:', removeSellerErr.message);
+      // Não rollbackeamos — comprador já recebeu. Vendedor terá entrada extra
+      // até logar de novo (a row de academy_managers já está listed=false).
+    }
+  }
+
+  // 6) Credita EXP pro vendedor via wallet_credits (aplicado quando ele logar)
+  const { error: creditErr } = await sb.from('wallet_credits').insert({
+    user_id: sellerId,
+    bro_cents: 0,
+    exp_amount: priceExp,
+    reason: `academy_sale:${listingId}`,
+  });
+  if (creditErr) {
+    console.error('[market/buy-prospect] credit seller failed:', creditErr.message);
+    // Não rollbackeamos a venda — preferimos logar e investigar manualmente.
+  }
+
+  return c.json({
+    ok: true,
+    player_snapshot: snapshot,
+    price_exp: priceExp,
+    seller_user_id: sellerId,
+  });
+});

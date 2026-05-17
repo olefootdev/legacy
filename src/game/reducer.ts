@@ -2240,6 +2240,28 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
+    case 'BUY_MANAGER_PROSPECT': {
+      // Server já fez a transferência cross-user. Aqui só:
+      //  - garante saldo (server não checa EXP do comprador hoje — finance é local-only)
+      //  - adiciona o jogador ao plantel local (idempotente: se já existe, no-op)
+      //  - debita o preço do EXP local
+      const pid = action.player.id;
+      if (state.players[pid]) return state; // já no plantel: no-op (idempotente)
+      if (state.finance.ole < action.priceExp) return state;
+      const finance = withExpHistory(
+        addOle(state.finance, -action.priceExp),
+        -action.priceExp,
+        'mercado_academia',
+      );
+      return {
+        ...state,
+        finance,
+        players: {
+          ...state.players,
+          [pid]: { ...action.player, listedOnMarket: false },
+        },
+      };
+    }
     case 'APPLY_LEGACY_LEARNED': {
       const ATTR_KEYS: Array<keyof import('@/entities/types').PlayerAttributes> = [
         'passe', 'marcacao', 'velocidade', 'drible', 'finalizacao',

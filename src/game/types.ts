@@ -745,6 +745,16 @@ export type GameAction =
       mintOverall: number;
     }
   | {
+      // Compra de Academia OLE de OUTRO manager — server já fez a transferência
+      // cross-user (academy_managers listed=false, manager_squad atualizado,
+      // wallet_credits criado pro vendedor). Este action só atualiza o estado
+      // local do comprador: adiciona ao plantel e debita EXP.
+      type: 'BUY_MANAGER_PROSPECT';
+      player: import('@/entities/types').PlayerEntity;
+      priceExp: number;
+      listingId: string;
+    }
+  | {
       type: 'BUY_LEGACY_PLAYER';
       player: import('@/entities/types').PlayerEntity;
       priceExp: number;

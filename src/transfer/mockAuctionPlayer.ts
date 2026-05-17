@@ -24,7 +24,7 @@ export interface MockAuctionPlayer {
   category?: 'gold' | 'silver' | 'bronze';
   bio?: string;
   memorableTrophyIds?: MemorableTrophyId[];
-  marketKind?: 'mock' | 'manager_own' | 'manager_npc' | 'genesis';
+  marketKind?: 'mock' | 'manager_own' | 'manager_npc' | 'genesis' | 'manager_other';
   managerListingId?: string;
   managerPlayerId?: string;
   /** Catálogo `genesis_market_players.id` (ex. GEN-001). */

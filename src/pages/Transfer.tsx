@@ -21,6 +21,7 @@ import { MEMORABLE_TROPHY_SLOTS, type MemorableTrophyId } from '@/trophies/memor
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { fetchListedGenesisEntitiesByCatalogId, fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
+import { fetchOtherManagerListings, type OtherManagerListing } from '@/supabase/academyManagers';
 import { TransferLegaciesTab } from './TransferLegaciesTab';
 import { usePlatformConfig } from '@/admin/platformConfigStore';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
@@ -78,13 +79,15 @@ function playerEntityToManagerMockAuction(
   p: PlayerEntity,
   cardId: number,
   priceExp: number,
-  marketKind: 'manager_own' | 'manager_npc',
+  marketKind: 'manager_own' | 'manager_npc' | 'manager_other',
   opts: { managerListingId?: string; managerPlayerId?: string; listedAtIso?: string },
 ): MockAuctionPlayer {
   const ovr = overallFromAttributes(p.attrs);
   const style = ovr >= 68 ? 'white' : 'gray-400';
   const category: MockAuctionPlayer['category'] = ovr >= 70 ? 'gold' : ovr >= 65 ? 'silver' : 'bronze';
   const ageLabel = p.age != null ? String(p.age) : '—';
+  const clubLabel =
+    marketKind === 'manager_own' ? 'OLE FC' : marketKind === 'manager_other' ? 'Academia OLE' : 'Rede OLE';
   return {
     id: cardId,
     name: p.name,
@@ -106,7 +109,7 @@ function playerEntityToManagerMockAuction(
     history: [
       {
         year: ageLabel,
-        club: marketKind === 'manager_own' ? 'OLE FC' : 'Rede OLE',
+        club: clubLabel,
         apps: 0,
         goals: 0,
       },
@@ -117,6 +120,8 @@ function playerEntityToManagerMockAuction(
         ? p.managerCreated
           ? 'Prospect da tua Academia OLE.'
           : 'Jogador do teu plantel no mercado EXP.'
+        : marketKind === 'manager_other'
+        ? 'Prospect de outro manager — Academia OLE.'
         : 'Prospect da rede de managers OLE.'),
     memorableTrophyIds: [],
     marketKind,
@@ -348,34 +353,39 @@ export function Transfer() {
 
   const [genesisAuctionCards, setGenesisAuctionCards] = useState<MockAuctionPlayer[]>([]);
   const [genesisListedEntities, setGenesisListedEntities] = useState<Record<string, PlayerEntity>>({});
+  const [otherManagerListings, setOtherManagerListings] = useState<OtherManagerListing[]>([]);
   const [marketTab, setMarketTab] = useState<HeroTab>('genesis');
   const { flags } = usePlatformConfig();
   const legacyMarketEnabled = flags.LEGACY_MARKET && flags.LEGACY_DNA;
+  const localClubId = useGameStore((s) => s.club?.id ?? null);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       setGenesisAuctionCards([]);
       setGenesisListedEntities({});
+      setOtherManagerListings([]);
       return;
     }
     let cancelled = false;
-    void Promise.all([fetchGenesisMarketAuctionCards(), fetchListedGenesisEntitiesByCatalogId()]).then(
-      ([cards, byCatalog]) => {
-        if (cancelled) return;
-        setGenesisAuctionCards(cards);
-        setGenesisListedEntities(byCatalog);
-      },
-    );
+    void Promise.all([
+      fetchGenesisMarketAuctionCards(),
+      fetchListedGenesisEntitiesByCatalogId(),
+      fetchOtherManagerListings(localClubId),
+    ]).then(([cards, byCatalog, others]) => {
+      if (cancelled) return;
+      setGenesisAuctionCards(cards);
+      setGenesisListedEntities(byCatalog);
+      setOtherManagerListings(others);
+    });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [localClubId]);
 
   const managerAuctionCards = useMemo(() => {
-    // Apenas listagens do próprio utilizador (jogadores genesis relistados).
-    // NPC offers (jogadores criados pelo sistema) removidos — mercado é exclusivamente Genesis.
     const out: MockAuctionPlayer[] = [];
     let nid = 9_000_001;
+    // (a) Listagens do próprio utilizador (botão DELIST_MANAGER_PROSPECT no clique)
     for (const l of managerProspectMarket.ownListings) {
       const pl = playersById[l.playerId];
       if (!pl) continue;
@@ -387,8 +397,18 @@ export function Transfer() {
         }),
       );
     }
+    // (b) Listagens de OUTROS managers (compra via /api/market/buy-prospect)
+    for (const l of otherManagerListings) {
+      out.push(
+        playerEntityToManagerMockAuction(l.player, nid++, l.priceExp, 'manager_other', {
+          managerListingId: l.listingId,
+          managerPlayerId: l.gamePlayerId,
+          listedAtIso: l.listedAtIso,
+        }),
+      );
+    }
     return out;
-  }, [managerProspectMarket.ownListings, playersById]);
+  }, [managerProspectMarket.ownListings, playersById, otherManagerListings]);
 
   const ownedGenesisCatalogIds = useMemo(
     () =>
@@ -677,8 +697,97 @@ export function Transfer() {
     if (selectedPlayer.marketKind === 'manager_own' && selectedPlayer.managerListingId) {
       dispatch({ type: 'DELIST_MANAGER_PROSPECT', listingId: selectedPlayer.managerListingId });
       setSelectedPlayer(null);
+      return;
     }
-  }, [selectedPlayer, genesisListedEntities, oleBal, dispatch, showPurchaseCompleteBanner, clubName]);
+
+    if (selectedPlayer.marketKind === 'manager_other' && selectedPlayer.managerListingId) {
+      // Compra de Academia OLE de outro manager — exige server endpoint
+      // pra fazer a transferência cross-user atomicamente (player_snapshot
+      // vai pro plantel do comprador, credita EXP no vendedor via wallet_credits).
+      const listingId = selectedPlayer.managerListingId;
+      const listing = otherManagerListings.find((l) => l.listingId === listingId);
+      if (!listing) {
+        setPurchaseError('Listagem não encontrada — recarregue a página.');
+        return;
+      }
+      if (oleBal < listing.priceExp) {
+        setPurchaseError('Saldo EXP insuficiente para esta compra.');
+        return;
+      }
+      setIsPurchasing(true);
+      setPurchaseError(null);
+      try {
+        const sb = getSupabase();
+        const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+        const base = olefootApiBase();
+        const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
+        if (!serverUrl || !token) {
+          setPurchaseError('Compra de Academia exige sessão autenticada — faz login.');
+          return;
+        }
+        let serverRes: {
+          ok: boolean;
+          player_snapshot?: PlayerEntity;
+          price_exp?: number;
+          already_owned?: boolean;
+          error?: string;
+        } | null = null;
+        try {
+          const r = await fetch(`${serverUrl}/api/market/buy-prospect`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ listing_id: listingId }),
+          });
+          serverRes = (await r.json()) as typeof serverRes;
+        } catch {
+          setPurchaseError('Falha de rede. Verifica a tua ligação e tenta novamente.');
+          return;
+        }
+        if (!serverRes?.ok) {
+          setPurchaseError(serverRes?.error ?? 'Não foi possível concluir a compra. Tenta novamente.');
+          return;
+        }
+
+        // Self-heal: se already_owned no remoto, ainda dispatcha localmente
+        // (não cobra de novo — já tem) para garantir presença no plantel.
+        const snap = (serverRes.player_snapshot ?? listing.player) as PlayerEntity;
+        const priceCharged = serverRes.already_owned ? 0 : Number(serverRes.price_exp ?? listing.priceExp);
+        dispatch({
+          type: 'BUY_MANAGER_PROSPECT',
+          player: snap,
+          priceExp: priceCharged,
+          listingId,
+        });
+
+        // Atualiza o pool local removendo a listagem comprada
+        setOtherManagerListings((prev) => prev.filter((l) => l.listingId !== listingId));
+
+        void (async () => {
+          const userId = sb ? (await sb.auth.getSession()).data.session?.user.id : undefined;
+          void recordMarketActivity({
+            type: 'purchase',
+            managerId: userId ?? null,
+            managerName: clubName,
+            clubName,
+            playerName: snap.name,
+            playerOvr: overallFromAttributes(snap.attrs),
+            playerPos: snap.pos,
+            priceExp: priceCharged,
+          });
+        })();
+
+        trackGrowthCommerce('transfer_player', 0, { grossBroCents: priceCharged, label: snap.name });
+        showPurchaseCompleteBanner();
+        setSelectedPlayer(null);
+      } finally {
+        setIsPurchasing(false);
+      }
+      return;
+    }
+  }, [selectedPlayer, genesisListedEntities, otherManagerListings, oleBal, dispatch, showPurchaseCompleteBanner, clubName]);
 
   type TransferTabKey = 'genesis' | 'legacies' | 'newbies' | 'highlights';
   const TAB_META: Record<TransferTabKey, { num: string; subtitle: string; eyebrow: string }> = {
