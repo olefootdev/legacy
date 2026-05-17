@@ -9,12 +9,14 @@ import {
   applyBehaviorToAttrs,
   applyDevelopmentBias,
   baseAttrsForPosition,
+  countActiveAcademyProspects,
   DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN,
   MANAGER_PROSPECT_CREATE_MAX_OVR,
   MANAGER_PROSPECT_EVOLVED_MAX_OVR,
   MANAGER_PROSPECT_MAX_AGE,
   MANAGER_PROSPECT_MIN_AGE,
+  MAX_ACTIVE_ACADEMY_PROSPECTS,
   PORTRAIT_STYLE_REGION_LABELS,
   scaleAttrsToMaxOvr,
   type ManagerProspectCreatePayload,
@@ -127,6 +129,9 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const createCostExp = useGameStore(
     (s) => s.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   );
+  const academyUsed = useGameStore((s) => countActiveAcademyProspects(s.players));
+  const academyCap = MAX_ACTIVE_ACADEMY_PROSPECTS;
+  const academyFull = academyUsed >= academyCap;
 
   const [step, setStep] = useState<Step>('identity');
   const [name, setName] = useState('');
@@ -231,7 +236,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const namePolicy = useMemo(() => validateAcademyProspectName(trimmed), [trimmed]);
   const canAdvanceIdentity = trimmed.length >= 2 && namePolicy.ok;
   const heritageValid = originText.trim().length >= MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN;
-  const canSubmit = canAdvanceIdentity && canAfford && heritageValid;
+  const canSubmit = canAdvanceIdentity && canAfford && heritageValid && !academyFull;
 
   const toggleOriginTag = useCallback((tag: string) => {
     setOriginTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -310,15 +315,40 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Fechar"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <span
+                  title={
+                    academyFull
+                      ? `Academia cheia (${academyUsed}/${academyCap}). Vende um prospect ao Market Maker pra liberar slot.`
+                      : `Slots da Academia: ${academyUsed}/${academyCap}`
+                  }
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider',
+                    academyFull
+                      ? 'border-red-500/50 bg-red-900/30 text-red-300'
+                      : 'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow',
+                  )}
+                >
+                  SLOT {academyUsed}/{academyCap}
+                </span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
+
+            {academyFull && (
+              <div className="border-b border-red-500/40 bg-red-950/40 px-4 py-3 text-[12px] text-red-200">
+                Academia cheia ({academyUsed}/{academyCap}). Vende um prospect ao{' '}
+                <span className="font-bold">Market Maker</span> (botão "Anunciar" no card do jogador)
+                para liberar slot e criar outro.
+              </div>
+            )}
 
             <div
               ref={modalBodyScrollRef}

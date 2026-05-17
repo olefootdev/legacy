@@ -8,6 +8,28 @@ import type { PlayerAttributes, PlayerBehavior, PlayerEntity, PlayerStrongFoot }
 export const MANAGER_PROSPECT_CREATE_MAX_OVR = 70;
 /** OVR máximo após evolução (treinos, jogos) para `managerCreated`. */
 export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 88;
+
+/**
+ * Slots simultâneos da Academia OLE: até 5 prospects criados/ativos no
+ * plantel ao mesmo tempo. Para criar o 6º, o manager precisa primeiro
+ * vender um existente (ao Market Maker ou outro manager), liberando o slot.
+ */
+export const MAX_ACTIVE_ACADEMY_PROSPECTS = 5;
+
+/**
+ * Conta os prospects da Academia que ocupam slot. Considera tanto o prefixo
+ * de id `mgr_` quanto a flag `managerCreated` para ser defensivo contra saves
+ * antigos / dados parciais.
+ */
+export function countActiveAcademyProspects(
+  players: Record<string, { id: string; managerCreated?: boolean }>,
+): number {
+  let n = 0;
+  for (const p of Object.values(players)) {
+    if (p.id.startsWith('mgr_') || p.managerCreated === true) n += 1;
+  }
+  return n;
+}
 /** @deprecated Usa CREATE vs EVOLVED; mantido para texto “máx. evoluído” em alguns ecrãs. */
 export const MANAGER_PROSPECT_MAX_OVR = MANAGER_PROSPECT_EVOLVED_MAX_OVR;
 /** Idade no cartão / ficha (Academia OLE e prospects geridos). */

@@ -14,10 +14,12 @@ import {
   buildManagerCreatedPlayerEntity,
   buildNpcManagerProspectSnapshot,
   buildProspectAdminArtPrompt,
+  countActiveAcademyProspects,
   DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   isValidManagerHeritage,
   MANAGER_PROSPECT_CREATE_MAX_OVR,
   MANAGER_PROSPECT_EVOLVED_MAX_OVR,
+  MAX_ACTIVE_ACADEMY_PROSPECTS,
   scaleAttrsToMaxOvr,
   type ManagerProspectHeritageBrief,
 } from '@/entities/managerProspect';
@@ -2034,6 +2036,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
     }
     case 'CREATE_MANAGER_PROSPECT': {
+      // Slot da Academia OLE — máximo 5 prospects ativos por vez.
+      // Pra criar o 6º, manager precisa vender um ao Market Maker
+      // ou listar pra outro manager primeiro.
+      if (countActiveAcademyProspects(state.players) >= MAX_ACTIVE_ACADEMY_PROSPECTS) return state;
       const cost = Math.max(
         0,
         Math.round(state.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP),

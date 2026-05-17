@@ -61,6 +61,10 @@ import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
 import { calcMarketMakerOffer, marketMakerDiscountLabel } from '@/market/marketMaker';
+import {
+  countActiveAcademyProspects,
+  MAX_ACTIVE_ACADEMY_PROSPECTS,
+} from '@/entities/managerProspect';
 import { formatExp } from '@/systems/economy';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
@@ -305,6 +309,8 @@ export function Team() {
               setFormationModalOpen(true);
             }}
             onCreatePlayer={() => setCreateProspectOpen(true)}
+            academyUsed={countActiveAcademyProspects(playersById)}
+            academyCap={MAX_ACTIVE_ACADEMY_PROSPECTS}
           />
         }
       />
@@ -1418,6 +1424,8 @@ function PlantelHero({
   favoriteRealTeamName,
   onChooseFormation,
   onCreatePlayer,
+  academyUsed,
+  academyCap,
 }: {
   clubName: string;
   clubShort: string;
@@ -1429,7 +1437,10 @@ function PlantelHero({
   favoriteRealTeamName?: string;
   onChooseFormation: () => void;
   onCreatePlayer: () => void;
+  academyUsed: number;
+  academyCap: number;
 }) {
+  const academyFull = academyUsed >= academyCap;
   const watermark = (clubShort?.trim() || clubName.slice(0, 3)).toUpperCase();
   const xiAvgLabel = startersCount === 0 ? '—' : Math.round(xiAvgOverall).toString();
   return (
@@ -1600,10 +1611,25 @@ function PlantelHero({
           <button
             type="button"
             onClick={onCreatePlayer}
-            className="inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-black/10 transition-colors"
+            disabled={academyFull}
+            title={academyFull
+              ? `Academia cheia (${academyUsed}/${academyCap}). Vende um jogador ao Market Maker pra liberar slot.`
+              : `Academia: ${academyUsed}/${academyCap} slots usados`}
+            className={`inline-flex items-center justify-center border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors ${
+              academyFull
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-black/10'
+            }`}
             style={{ fontFamily: 'var(--font-display)', borderRadius: 'var(--radius-sm)' }}
           >
             Criar jogador
+            <span
+              className={`ml-2 inline-flex items-center justify-center px-2 py-[2px] text-[10px] font-mono rounded ${
+                academyFull ? 'bg-red-900/80 text-red-100' : 'bg-black/15 text-black/75'
+              }`}
+            >
+              {academyUsed}/{academyCap}
+            </span>
           </button>
           {favoriteRealTeamName ? (
             <Link
