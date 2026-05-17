@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { useNextGlobalFixture } from '@/hooks/useNextGlobalFixture';
+import { useCrowdSupport } from '@/hooks/useCrowdSupport';
 import {
   createFriendlyChallenge,
   FRIENDLY_CHALLENGE_TTL_SEC,
@@ -160,7 +161,7 @@ export function Home() {
   const dispatch = useGameDispatch();
   const navigate = useNavigate();
   const finance = useGameStore((s) => s.finance);
-  const crowd = useGameStore((s) => s.crowd);
+  const crowd = useCrowdSupport();
   const results = useGameStore((s) => s.results);
   const inbox = useGameStore((s) => s.inbox);
   const fixture = useGameStore((s) => s.nextFixture);
