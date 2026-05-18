@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, TrendingUp, Shield, ChevronRight } from 'lucide-react';
+import { Trophy, TrendingUp, Shield, ChevronRight, Globe, Layers, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
@@ -8,6 +8,7 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import type { AdminLeagueConfig, KnockoutRound, LeagueScope } from '@/match/adminLeagues';
 import { BackButton } from '@/components/BackButton';
+import { LocalLeagueSection } from '@/components/leagues/LocalLeagueSection';
 import {
   goalDiff,
   isLeagueVisibleInPlayerApp,
@@ -181,6 +182,33 @@ const TAB_META: Record<Exclude<LeagueScope, 'world'>, { num: string; eyebrow: st
   state:    { num: '02', eyebrow: 'Competições · Estadual', subtitle: 'pelo estado.', quote: '“rivalidades regionais — onde tudo começa.”' },
 };
 
+// Sprint 7 — As 3 ligas que o usuário quer em destaque no topo de /competicao/ligas.
+type PrimaryLeagueTab = 'global' | 'classic' | 'fast';
+
+const PRIMARY_LEAGUE_TABS: { id: PrimaryLeagueTab; label: string; icon: typeof Globe; subtitle: string; quote: string }[] = [
+  {
+    id: 'global',
+    label: 'Liga Global',
+    icon: Globe,
+    subtitle: 'pelo mundo.',
+    quote: 'A liga autoritativa — managers reais em divisões com promoção e rebaixamento.',
+  },
+  {
+    id: 'classic',
+    label: 'Liga Classic',
+    icon: Layers,
+    subtitle: 'no campo 2D.',
+    quote: 'Cada partida CLASSIC soma pontos — ranking eterno de managers táticos.',
+  },
+  {
+    id: 'fast',
+    label: 'Fast Liga',
+    icon: Zap,
+    subtitle: 'partida rápida.',
+    quote: 'Cada partida RÁPIDA soma pontos — quem joga mais, sobe mais rápido.',
+  },
+];
+
 export function Leagues() {
   const club = useGameStore((s) => s.club);
   const leagueSeason = useGameStore((s) => s.leagueSeason);
@@ -201,6 +229,10 @@ export function Leagues() {
 
   const [scopeTab, setScopeTab] = useState<Exclude<LeagueScope, 'world'>>('national');
   const tabMeta = TAB_META[scopeTab];
+
+  // Sprint 7 — tab principal entre as 3 ligas que o jogo prioriza pra launch.
+  const [primaryTab, setPrimaryTab] = useState<PrimaryLeagueTab>('global');
+  const primaryMeta = PRIMARY_LEAGUE_TABS.find((t) => t.id === primaryTab)!;
 
   const orderedLeagues = useMemo(() => {
     const inTab = playerLeagues.filter((l) => l.scope === scopeTab);
@@ -244,7 +276,7 @@ export function Leagues() {
             </span>
             <AnimatePresence mode="wait">
               <motion.span
-                key={tabMeta.subtitle}
+                key={primaryMeta.subtitle}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -257,7 +289,7 @@ export function Leagues() {
                   letterSpacing: '-0.02em',
                 }}
               >
-                {tabMeta.subtitle}
+                {primaryMeta.subtitle}
               </motion.span>
             </AnimatePresence>
           </h1>
@@ -266,62 +298,79 @@ export function Leagues() {
             className="text-white/55 max-w-md mt-4"
             style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
           >
-            {tabMeta.quote.replace(/“|”/g, '')}
+            {primaryMeta.quote.replace(/“|”/g, '')}
           </p>
         </div>
 
-        {/* Tabs — pílulas (sem ícones) */}
+        {/* Tabs PRIMÁRIAS — LIGA GLOBAL / LIGA CLASSIC / FAST LIGA */}
         <div className="p-4 border-b border-white/10 flex flex-wrap gap-2">
-          {PLAYER_SCOPE_TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setScopeTab(t.id)}
-              className={cn(
-                'inline-flex items-center rounded-[var(--radius-pill)] px-5 py-2 font-display text-[11px] font-black uppercase tracking-[0.22em] transition-all',
-                scopeTab === t.id
-                  ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
-                  : 'border border-white/15 bg-white/[0.03] text-white/65 hover:border-neon-yellow/40 hover:text-white',
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+          {PRIMARY_LEAGUE_TABS.map((t) => {
+            const TabIcon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setPrimaryTab(t.id)}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-5 py-2 font-display text-[11px] font-black uppercase tracking-[0.22em] transition-all',
+                  primaryTab === t.id
+                    ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
+                    : 'border border-white/15 bg-white/[0.03] text-white/65 hover:border-neon-yellow/40 hover:text-white',
+                )}
+              >
+                <TabIcon className="w-3.5 h-3.5" />
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </motion.div>
 
-      {/* ── OLEFOOT LIGA (Liga Global MVP) — sempre visível ── */}
-      <OlefootLigaSection
-        teams={globalLeagueMVP?.teams ?? []}
-        status={globalLeagueMVP?.status ?? 'waiting_teams'}
-        minTeamsRequired={globalLeagueMVP?.minTeamsRequired ?? 32}
-      />
+      {/* ── Conteúdo da tab primária selecionada ── */}
+      {primaryTab === 'global' && (
+        <OlefootLigaSection
+          teams={globalLeagueMVP?.teams ?? []}
+          status={globalLeagueMVP?.status ?? 'waiting_teams'}
+          minTeamsRequired={globalLeagueMVP?.minTeamsRequired ?? 32}
+        />
+      )}
+      {primaryTab === 'classic' && <LocalLeagueSection league="classic" />}
+      {primaryTab === 'fast'    && <LocalLeagueSection league="fast" />}
 
-      {/* ── Ligas locais (Classic + Fast) — atalho dedicado ── */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="border border-white/10 bg-panel p-5"
-        style={{ borderRadius: 'var(--radius-md)' }}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="font-display font-black uppercase tracking-[0.18em] text-sm text-white">
-              Ligas locais
-            </h3>
-            <p className="text-xs text-gray-400 mt-1 leading-snug">
-              Pontos somam toda partida CLASSIC e RÁPIDA — ranking global de managers.
-            </p>
+      {/* ── Ligas locais (Nacionais / Estaduais) — seção secundária ── */}
+      <section className="border border-white/10 bg-panel overflow-hidden" style={{ borderRadius: 'var(--radius-md)' }}>
+        <div className="bg-black/30 px-5 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">
+                Outras competições
+              </p>
+              <h2 className="font-display font-black uppercase tracking-[0.18em] text-sm text-white">
+                Ligas regionais
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PLAYER_SCOPE_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setScopeTab(t.id)}
+                  className={cn(
+                    'inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] transition-all',
+                    scopeTab === t.id
+                      ? 'bg-white/10 text-white border border-white/30'
+                      : 'border border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/80',
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <Link
-            to="/ligas-locais"
-            className="shrink-0 inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow text-black px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] hover:opacity-90"
-          >
-            Ver ligas
-          </Link>
+          <p className="text-xs text-gray-400 mt-2 leading-snug">
+            {tabMeta.quote.replace(/“|”/g, '')}
+          </p>
         </div>
-      </motion.section>
 
       {/* ── Estado vazio (sem ligas extras no save) ── */}
       {isEmpty ? (
@@ -559,6 +608,7 @@ export function Leagues() {
           );
         })}
       </div>
+      </section>
     </div>
   );
 }
