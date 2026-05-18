@@ -4201,6 +4201,17 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       });
       return { ...state, managerProspectArtQueue };
     }
+    case 'ADMIN_PLAYER_CREATION_SET_PROMOTIONAL': {
+      const url = action.promotionalCardUrl.trim();
+      if (url && !url.startsWith('data:image/') && !/^https?:\/\//i.test(url)) return state;
+      const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) => {
+        if (r.id !== action.requestId) return r;
+        // Pode ser definido em qualquer fase do queue (admin pode preencher
+        // antes ou depois de Lançar). Url vazia = limpa o campo.
+        return { ...r, promotionalCardUrl: url || undefined };
+      });
+      return { ...state, managerProspectArtQueue };
+    }
     case 'ADMIN_PLAYER_CREATION_VALIDATE': {
       const managerProspectArtQueue = (state.managerProspectArtQueue ?? []).map((r) => {
         if (r.id !== action.requestId) return r;
@@ -4252,6 +4263,34 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           : r,
       );
 
+      // Inbox: notifica o manager que a carta da Academia chegou. Inclui
+      // payload `academy` com URLs + texto pré-formatado pra share.
+      // deepLink abre o modal de entrega via /clube/elenco?academyDelivery=<id>
+      const shareText = [
+        `🎁 Acabei de receber minha carta da Academia OLE!`,
+        `Conheça ${pl.name}, ${pl.pos} da minha Academia.`,
+        `Joga em #Olefoot — o teu time, a tua história.`,
+      ].join('\n');
+      const deliveryInbox = makeInboxItem(
+        `academy-delivery-${action.requestId}`,
+        'ACADEMY_CARD_DELIVERED',
+        'PLANTEL',
+        `🎁 Carta da Academia OLE: ${pl.name}`,
+        {
+          tag: 'ACADEMIA',
+          body: 'Tua carta foi entregue pela equipa Olefoot. Compartilha e mostra o teu jogador pro mundo!',
+          deepLink: `/clube/elenco?academyDelivery=${action.requestId}`,
+          colorClass: 'text-neon-yellow',
+          academy: {
+            playerId: req.playerId,
+            playerName: pl.name,
+            portraitUrl: draft,
+            promotionalUrl: req.promotionalCardUrl,
+            shareText,
+          },
+        },
+      );
+
       return {
         ...state,
         lineup,
@@ -4264,6 +4303,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             ...state.managerProspectMarket.ownListings,
           ],
         },
+        inbox: [deliveryInbox, ...state.inbox].slice(0, 14),
       };
     }
     case 'ADMIN_PATCH_NEXT_FIXTURE': {

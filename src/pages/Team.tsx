@@ -21,7 +21,7 @@ import {
   Crosshair,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -56,6 +56,7 @@ const PRESET_ICONS: Record<PlayingStylePresetId, LucideIcon> = {
 };
 import { suggestBestLineup } from '@/team/suggestBestLineup';
 import { ManagerCreatePlayerModal } from '@/components/ManagerCreatePlayerModal';
+import { AcademyCardDeliveryModal } from '@/components/AcademyCardDeliveryModal';
 import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
@@ -75,6 +76,7 @@ export function Team() {
   useTrackScreen('screen_team');
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
   const playersById = useGameStore((s) => s.players);
   const playerHealth = useGameStore((s) => s.playerHealth);
   const lineupSaved = useGameStore((s) => s.lineup);
@@ -83,6 +85,21 @@ export function Team() {
   const club = useGameStore((s) => s.club);
   const currentPresetId: PlayingStylePresetId = tacticalStyle?.presetId ?? 'balanced';
   const favoriteRealTeam = useGameStore((s) => s.userSettings.favoriteRealTeam);
+  const inbox = useGameStore((s) => s.inbox);
+
+  // ?academyDelivery=<requestId> abre o modal de entrega da carta da Academia.
+  // Vem do deepLink da inbox notification ACADEMY_CARD_DELIVERED.
+  const deliveryRequestId = searchParams.get('academyDelivery');
+  const deliveryItem = useMemo(() => {
+    if (!deliveryRequestId) return null;
+    const expectedId = `academy-delivery-${deliveryRequestId}`;
+    return inbox.find((i) => i.id === expectedId && i.academy) ?? null;
+  }, [deliveryRequestId, inbox]);
+  const closeDeliveryModal = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('academyDelivery');
+    setSearchParams(next, { replace: true });
+  };
 
   const maxOvr = useMemo(() => {
     const vals = Object.values(playersById);
@@ -1180,6 +1197,14 @@ export function Team() {
       </AnimatePresence>
 
       <ManagerCreatePlayerModal open={createProspectOpen} onClose={() => setCreateProspectOpen(false)} />
+      <AcademyCardDeliveryModal
+        open={!!deliveryItem?.academy}
+        onClose={closeDeliveryModal}
+        playerName={deliveryItem?.academy?.playerName ?? ''}
+        portraitUrl={deliveryItem?.academy?.portraitUrl}
+        promotionalUrl={deliveryItem?.academy?.promotionalUrl}
+        shareText={deliveryItem?.academy?.shareText ?? ''}
+      />
 
       <AnimatePresence>
         {sheetPlayerId ? (

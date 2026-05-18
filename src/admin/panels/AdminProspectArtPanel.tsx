@@ -30,15 +30,21 @@ function stepLabel(step: ManagerProspectArtRequest['playerCreationStep']): strin
 function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntity | undefined }) {
   const dispatch = useGameDispatch();
   const [draft, setDraft] = useState(r.draftPortraitUrl ?? '');
+  const [promo, setPromo] = useState(r.promotionalCardUrl ?? '');
   const [launchPriceExp, setLaunchPriceExp] = useState('500000');
   const [remoteError, setRemoteError] = useState<string | null>(null);
   useEffect(() => {
     setDraft(r.draftPortraitUrl ?? '');
   }, [r.id, r.draftPortraitUrl]);
+  useEffect(() => {
+    setPromo(r.promotionalCardUrl ?? '');
+  }, [r.id, r.promotionalCardUrl]);
 
   const canSavePhoto =
     (r.playerCreationStep === 'awaiting_photo' || r.playerCreationStep === 'photo_uploaded') &&
     (draft.trim().startsWith('data:image/') || /^https?:\/\//i.test(draft.trim()));
+  const canSavePromo =
+    promo.trim() === '' || promo.trim().startsWith('data:image/') || /^https?:\/\//i.test(promo.trim());
 
   return (
     <li
@@ -121,7 +127,7 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
       {r.playerCreationStep !== 'launched' ? (
         <div className="mt-3 space-y-2 rounded-lg border border-white/10 bg-black/30 p-3">
           <label className="block space-y-1">
-            <span className="text-[10px] font-bold uppercase text-gray-500">URL do retrato (data URL ou https)</span>
+            <span className="text-[10px] font-bold uppercase text-gray-500">URL do retrato do jogo (data URL ou https)</span>
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -129,6 +135,47 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
               className="w-full resize-none rounded-lg border border-white/15 bg-black/50 px-2 py-2 font-mono text-[10px] text-white outline-none focus:border-neon-yellow"
               placeholder="data:image/jpeg;base64,... ou https://..."
             />
+          </label>
+          <label className="block space-y-1">
+            <span className="text-[10px] font-bold uppercase text-gray-500">
+              URL do card promocional <span className="text-white/40">(opcional — versão social media pro manager compartilhar)</span>
+            </span>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promo}
+                onChange={(e) => setPromo(e.target.value)}
+                className="flex-1 rounded-lg border border-white/15 bg-black/50 px-2 py-2 font-mono text-[10px] text-white outline-none focus:border-neon-yellow"
+                placeholder="https://... (pode ficar vazio)"
+              />
+              <button
+                type="button"
+                disabled={!canSavePromo || promo.trim() === (r.promotionalCardUrl ?? '')}
+                onClick={() =>
+                  dispatch({
+                    type: 'ADMIN_PLAYER_CREATION_SET_PROMOTIONAL',
+                    requestId: r.id,
+                    promotionalCardUrl: promo.trim(),
+                  })
+                }
+                className={cn(
+                  'rounded-lg border border-fuchsia-500/40 px-3 py-1.5 text-[10px] font-bold uppercase text-fuchsia-200 hover:bg-fuchsia-500/10',
+                  (!canSavePromo || promo.trim() === (r.promotionalCardUrl ?? '')) && 'pointer-events-none opacity-40',
+                )}
+              >
+                Guardar promo
+              </button>
+            </div>
+            {r.promotionalCardUrl ? (
+              <a
+                href={r.promotionalCardUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block text-[9px] uppercase tracking-wider text-fuchsia-300/70 underline hover:text-fuchsia-200"
+              >
+                Ver card promocional atual
+              </a>
+            ) : null}
           </label>
           <div className="flex flex-wrap gap-2">
             <button

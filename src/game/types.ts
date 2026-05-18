@@ -213,6 +213,12 @@ export interface ManagerProspectArtRequest {
    * Ausente em saves antigos / fluxo legacy.
    */
   selfieUrl?: string;
+  /**
+   * URL do "card promocional" que o admin sobe junto com a carta de jogo.
+   * Versão social-media-ready (com texto/branding) pro manager compartilhar
+   * em Instagram/X. Aparece no inbox quando a carta é lançada.
+   */
+  promotionalCardUrl?: string;
   /** Após «Lançar no jogo» + mercado: metadados da listagem local / Supabase. */
   marketListingId?: string;
   marketPriceExp?: number;
@@ -693,6 +699,7 @@ export type GameAction =
   | { type: 'ADMIN_SET_MANAGER_PROSPECT_CONFIG'; createCostExp: number }
   | { type: 'ADMIN_MARK_PROSPECT_ART_FULFILLED'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_SET_PHOTO'; requestId: string; portraitUrl: string }
+  | { type: 'ADMIN_PLAYER_CREATION_SET_PROMOTIONAL'; requestId: string; promotionalCardUrl: string }
   | { type: 'ADMIN_PLAYER_CREATION_VALIDATE'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_APPROVE'; requestId: string }
   | { type: 'ADMIN_PLAYER_CREATION_LAUNCH'; requestId: string; priceExp?: number }

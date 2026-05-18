@@ -84,7 +84,8 @@ export type InboxMessageType =
   | 'SOCIAL_INVITE_SENT'
   | 'SOCIAL_INVITE_ACCEPTED_NOTICE'
   | 'STAFF_ADVICE'
-  | 'ADMIN_BROADCAST';
+  | 'ADMIN_BROADCAST'
+  | 'ACADEMY_CARD_DELIVERED';
 
 export type SuggestedActionKind = 'OPEN_TRAINING' | 'APPLY_PRESET';
 
@@ -123,6 +124,19 @@ export interface InboxItem {
    * Usado para pós-jogo (EXP/staff) — placar e desfecho ficam no histórico de jogos / liga.
    */
   hideFromHomeFeed?: boolean;
+  /**
+   * Payload específico de `ACADEMY_CARD_DELIVERED` — quando a equipa entrega
+   * a carta da Academia OLE feita à mão. Mostrado em modal dedicado ao
+   * clicar no item (via deepLink). Inclui URL da carta + variante promo +
+   * texto pré-formatado pra compartilhar.
+   */
+  academy?: {
+    playerId: string;
+    playerName: string;
+    portraitUrl?: string;
+    promotionalUrl?: string;
+    shareText: string;
+  };
 }
 
 export const INBOX_CATEGORY_LABELS: Record<InboxCategory, string> = {
