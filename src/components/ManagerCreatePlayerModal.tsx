@@ -909,18 +909,45 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     )}
                   </dl>
                   <p className="text-[10px] leading-relaxed text-gray-500">
-                    Entra no plantel assim; o retrato do cartão fica num pedido interno para colar e aprovar.
+                    Próximo passo: tira uma foto pra IA estilizar a carta do teu jogador.
                   </p>
                 </>
               ) : null}
 
-              <div
-                className={cn(
-                  'rounded-lg border px-3 py-2 text-[10px]',
-                  canAfford ? 'border-white/10 bg-black/30 text-gray-400' : 'border-red-500/40 bg-red-950/30 text-red-200',
-                )}
-              >
-                Custo base:{' '}
+              {step === 'photo' ? (
+                <>
+                  {serverError ? (
+                    <div className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-[12px] text-red-200">
+                      {serverError}
+                    </div>
+                  ) : null}
+                  {generatingArt ? (
+                    <div className="flex flex-col items-center justify-center gap-3 rounded border border-neon-yellow/40 bg-neon-yellow/5 p-8 text-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow border-t-transparent" />
+                      <p className="text-sm text-white/90">Gerando arte da carta…</p>
+                      <p className="text-[11px] text-white/60">
+                        Pode levar até 30 segundos. Não fecha o modal.
+                      </p>
+                    </div>
+                  ) : (
+                    <AcademyPhotoCapture
+                      backgroundUrl="/academy/template-background.png"
+                      jerseyUrl="/academy/template-jersey.png"
+                      onComposed={(blob) => void handleGeneratePortrait(blob)}
+                      onCancel={() => setStep('review')}
+                    />
+                  )}
+                </>
+              ) : null}
+
+              {step !== 'photo' ? (
+                <div
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-[10px]',
+                    canAfford ? 'border-white/10 bg-black/30 text-gray-400' : 'border-red-500/40 bg-red-950/30 text-red-200',
+                  )}
+                >
+                  Custo base:{' '}
                 <span className="font-display font-black text-neon-yellow">{formatExp(createCostExp)} EXP</span>
                 {contractPremiumExp > 0 ? (
                   <>
@@ -935,7 +962,8 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                 {' · '}
                 Saldo: <span className="text-white">{formatExp(oleBal)} EXP</span>
                 {!canAfford ? <span className="mt-1 block">EXP não chega.</span> : null}
-              </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="shrink-0 space-y-2 border-t border-white/10 bg-black/40 px-4 py-3">
@@ -1007,31 +1035,8 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                 </div>
               ) : null}
 
-              {step === 'photo' ? (
-                <div className="flex flex-col gap-3">
-                  {serverError ? (
-                    <div className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-[12px] text-red-200">
-                      {serverError}
-                    </div>
-                  ) : null}
-                  {generatingArt ? (
-                    <div className="flex flex-col items-center justify-center gap-3 rounded border border-neon-yellow/40 bg-neon-yellow/5 p-8 text-center">
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow border-t-transparent" />
-                      <p className="text-sm text-white/90">Gerando arte da carta…</p>
-                      <p className="text-[11px] text-white/60">
-                        Pode levar até 30 segundos. Não fecha o modal.
-                      </p>
-                    </div>
-                  ) : (
-                    <AcademyPhotoCapture
-                      backgroundUrl="/academy/template-background.png"
-                      jerseyUrl="/academy/template-jersey.png"
-                      onComposed={(blob) => void handleGeneratePortrait(blob)}
-                      onCancel={() => setStep('review')}
-                    />
-                  )}
-                </div>
-              ) : null}
+              {/* step === 'photo': UI fica no body (AcademyPhotoCapture tem
+                 controles próprios). Bottom dispensa botão extra. */}
             </div>
           </motion.div>
         </div>
