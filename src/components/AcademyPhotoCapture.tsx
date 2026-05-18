@@ -2,17 +2,19 @@
  * AcademyPhotoCapture
  *
  * Passo 4 da criação de jogador da Academia OLE. Fluxo:
- *   1. idle: botão "Iniciar câmera" pede permissão getUserMedia
- *   2. streaming: video ao vivo + overlay translúcido do template + "Capturar"
- *   3. positioning: snapshot da face + drag/scale sobre o template fixo
- *   4. composed: callback onComposed(blob) — composição final webp/png
+ *   1. idle: 2 opções — câmera ao vivo (getUserMedia) OU upload (com
+ *      `capture="user"` que abre câmera selfie nativa no mobile).
+ *   2. streaming: video ao vivo + overlay translúcido + "Capturar".
+ *   3. positioning: snapshot da face + drag/scale sobre template fixo.
+ *   4. composed: callback onComposed(blob) — composição final.
  *
- * Composição = layer bg PNG + face posicionada + jersey PNG (overlay alpha).
- * Pattern de canvas 2D + pointer events copiado de AdminGenesisPortraitsPanel
- * (não usamos libs externas tipo react-easy-crop pra manter o bundle leve).
+ * Composição = layer bg PNG + face posicionada + jersey PNG (overlay).
+ * No mobile, prefere upload via input file com `capture="user"` —
+ * getUserMedia é menos confiável em Safari iOS / Android Chrome velho.
+ * Pattern de canvas 2D copiado de AdminGenesisPortraitsPanel.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, RotateCcw, ZoomIn, ZoomOut, Check, X, Loader2 } from 'lucide-react';
+import { Camera, RotateCcw, ZoomIn, ZoomOut, Check, X, Loader2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CARD_W = 600;
@@ -53,6 +55,7 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
   const jerseyImgRef = useRef<HTMLImageElement | null>(null);
   const draggingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Pre-carrega as imagens do template uma vez
   useEffect(() => {
@@ -104,6 +107,49 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
     }
   }, []);
 
+  /**
+   * Handler comum: recebe um Blob (de webcam OU upload), gera Image,
+   * entra no estado de positioning.
+   */
+  const loadFaceBlob = useCallback((blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      faceImgRef.current = img;
+      setFaceUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      setCrop(DEFAULT_CROP);
+      setStage('positioning');
+      stopStream();
+      setTimeout(() => renderPreview(DEFAULT_CROP), 50);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setErrorMsg('Não foi possível ler a imagem. Tenta outra.');
+    };
+    img.src = url;
+  }, [stopStream]);
+
+  /**
+   * Trigger do input file. capture="user" hint pro browser abrir câmera
+   * frontal nativa no mobile (iOS Safari, Android Chrome). Em desktop
+   * abre file picker normal.
+   */
+  const onFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Selecione um arquivo de imagem.');
+      return;
+    }
+    setErrorMsg(null);
+    loadFaceBlob(file);
+    // Limpa o value pra permitir re-upload do mesmo arquivo
+    e.target.value = '';
+  }, [loadFaceBlob]);
+
   const capture = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -119,25 +165,8 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
     ctx.translate(w, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, w, h);
-    c.toBlob(
-      (blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => {
-          faceImgRef.current = img;
-          setFaceUrl(url);
-          setCrop(DEFAULT_CROP);
-          setStage('positioning');
-          stopStream();
-          // Renderiza preview inicial
-          setTimeout(() => renderPreview(DEFAULT_CROP), 50);
-        };
-        img.src = url;
-      },
-      'image/png',
-    );
-  }, [stopStream]);
+    c.toBlob((blob) => { if (blob) loadFaceBlob(blob); }, 'image/png');
+  }, [loadFaceBlob]);
 
   const renderPreview = useCallback((c: CropState) => {
     const canvas = previewRef.current;
@@ -153,14 +182,18 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
       ctx.fillRect(0, 0, CARD_W, CARD_H);
     }
     // Layer 2: face (posicionada/escalada)
+    // Default = 42% da largura, centralizada horizontalmente, posição vertical
+    // no upper-third (onde fica o rosto numa carta de jogador). User pode
+    // ajustar via drag/zoom.
     if (faceImgRef.current) {
       const img = faceImgRef.current;
       const imgAspect = img.naturalWidth / img.naturalHeight;
-      const baseSize = CARD_W * 0.7; // face cobre ~70% da largura por padrão
+      const baseSize = CARD_W * 0.42;
       let drawW = baseSize * c.scale;
       let drawH = drawW / imgAspect;
       const drawX = (CARD_W - drawW) / 2 + c.offsetX * CARD_W;
-      const drawY = (CARD_H * 0.25 - drawH / 2) + c.offsetY * CARD_H;
+      // Centro vertical em ~33% da altura (centro do rosto em carta vertical)
+      const drawY = (CARD_H * 0.33 - drawH / 2) + c.offsetY * CARD_H;
       ctx.drawImage(img, drawX, drawY, drawW, drawH);
     }
     // Layer 3: jersey overlay
@@ -236,20 +269,48 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Input file escondido — capture="user" abre câmera selfie nativa no mobile */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        onChange={onFileSelected}
+        className="hidden"
+      />
+
       {/* IDLE */}
       {stage === 'idle' && (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-white/15 bg-deep-black/50 p-6 text-center">
           <Camera className="h-10 w-10 text-neon-yellow" aria-hidden />
           <p className="text-sm text-white/80">
-            Tira uma selfie pra ser a base da arte da carta. Vai precisar de permissão de câmera.
+            Tira uma selfie pra ser a base da arte do teu cartão.
           </p>
-          <button
-            type="button"
-            onClick={() => void startCamera()}
-            className="btn-primary px-5 py-2.5 font-display text-xs font-black uppercase tracking-wider"
-          >
-            Iniciar câmera
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 font-display text-xs font-black uppercase tracking-wider"
+            >
+              <Upload className="h-4 w-4" />
+              Tirar foto / Carregar
+            </button>
+            <button
+              type="button"
+              onClick={() => void startCamera()}
+              className="inline-flex items-center justify-center gap-2 border border-white/30 px-5 py-2.5 font-display text-xs font-black uppercase tracking-wider text-white/85 hover:bg-white/10"
+            >
+              <Camera className="h-4 w-4" />
+              Câmera ao vivo
+            </button>
+          </div>
+          <p className="text-[10px] leading-relaxed text-white/50">
+            No celular o botão "Tirar foto" abre a câmera frontal direto.<br />
+            No PC abre o explorador de arquivos pra escolher uma imagem.
+          </p>
+          {errorMsg && (
+            <p className="text-[11px] text-red-300">{errorMsg}</p>
+          )}
           {onCancel && (
             <button
               type="button"
@@ -262,21 +323,31 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
         </div>
       )}
 
-      {/* PERMISSION DENIED */}
+      {/* PERMISSION DENIED — oferece upload como fallback */}
       {stage === 'permission-denied' && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/40 p-5 text-center">
           <X className="h-6 w-6 text-red-300" aria-hidden />
           <p className="text-sm text-red-200">{errorMsg ?? 'Câmera indisponível.'}</p>
           <p className="text-[11px] text-red-200/70">
-            Habilita a permissão de câmera nas configurações do browser e tenta de novo.
+            Sem problema — usa o botão de upload pra escolher uma foto do device.
           </p>
-          <button
-            type="button"
-            onClick={() => void startCamera()}
-            className="btn-primary px-4 py-2 text-xs font-black uppercase tracking-wider"
-          >
-            Tentar de novo
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-wider"
+            >
+              <Upload className="h-4 w-4" />
+              Carregar foto
+            </button>
+            <button
+              type="button"
+              onClick={() => void startCamera()}
+              className="border border-red-300/40 px-4 py-2 text-xs uppercase tracking-wider text-red-200 hover:bg-red-500/20"
+            >
+              Tentar câmera de novo
+            </button>
+          </div>
         </div>
       )}
 

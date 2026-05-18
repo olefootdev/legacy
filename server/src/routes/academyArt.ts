@@ -21,7 +21,46 @@ const COOLDOWN_MS = 30_000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 /**
- * Addendum de safety augmentado no prompt antes de mandar pro Freepik.
+ * CINEMATIC PROMPT — esse é o "poder comercial" do produto. Direciona o
+ * Freepik Seedream pra produzir um cartão premium de nível EA Sports / FIFA
+ * Ultimate Team, usando a composta como referência (rosto + camisa + fundo).
+ *
+ * Estrutura: setup técnico → uso da referência → estilo visual → lighting
+ * → background → composição → mood → qualidade.
+ */
+const CINEMATIC_PROMPT_ADDENDUM = [
+  '',
+  '— CINEMATIC PREMIUM SPORTS CARD STYLE —',
+  'Generate a photorealistic stylized digital portrait — quality of EA Sports FIFA Ultimate Team / Pro Evolution Soccer top-tier trading card.',
+  '',
+  'REFERENCE USAGE (CRITICAL):',
+  '- Use the reference image as base composition: PRESERVE the manager\'s face from the photo, PRESERVE the jersey design and color, PRESERVE the background palette.',
+  '- The subject in the reference IS the player — do NOT replace the face. Enhance it: better lighting, sharper details, pro retouching, but same identity.',
+  '- Compose subject in three-quarter or front view, confident gaze, mature athletic look.',
+  '',
+  'LIGHTING:',
+  '- Dramatic studio lighting with rim light on shoulders/hair.',
+  '- Soft key light on face from front-right, deep contrast on opposite cheek.',
+  '- Subtle volumetric haze for cinematic depth.',
+  '',
+  'COLOR & MOOD:',
+  '- Match the reference jersey colors faithfully.',
+  '- Background: stadium atmosphere, soft motion blur of crowd/lights, deep blacks (#0A0A0A) and accent neon yellow (#FBE100) — Olefoot brand.',
+  '- Color grading: cinematic teal-and-orange undertones, premium magazine cover feel.',
+  '',
+  'COMPOSITION:',
+  '- Subject occupies upper 60% of frame, bust + shoulders crop.',
+  '- Sharp focus on eyes, gradual focus fall-off to background.',
+  '- Symmetric, hero-shot framing.',
+  '',
+  'QUALITY:',
+  '- 8K resolution feel, ultra-detailed skin texture, fabric weave on jersey, micro-expressions in eyes.',
+  '- Professional retouching, no plastic look, no over-smoothing.',
+  '- Output: vertical aspect 3:4 like a collectible card.',
+].join('\n');
+
+/**
+ * Addendum de safety. Aplicado SEMPRE em conjunto com o cinematográfico.
  * Cobre as 4 regras do produto:
  *   1. Adulto (18+)
  *   2. Sem rosto de jogador famoso
@@ -30,12 +69,11 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
  */
 const SAFETY_PROMPT_ADDENDUM = [
   '',
-  '— STRICT REQUIREMENTS —',
-  '- Subject must appear as an adult athlete, 22-35 years old, with mature facial features.',
-  '- DO NOT make the subject resemble any real famous athlete, sports celebrity, or public figure.',
-  '- Preserve the reference photo facial features faithfully — no distortion, no caricature, no exaggeration.',
-  '- Clean, professional sports trading card aesthetic. No profanity, no NSFW content, no offensive imagery.',
-  '- Premium digital art / stylized 3D render. Studio lighting. Focus on bust and shoulders.',
+  '— STRICT SAFETY REQUIREMENTS (NON-NEGOTIABLE) —',
+  '- Subject must appear as an adult athlete, 22-35 years old, with mature facial features. Never depict a minor.',
+  '- DO NOT make the subject resemble any real famous athlete (Cristiano Ronaldo, Messi, Neymar, Pelé, Mbappé, Haaland, etc), sports celebrity, or public figure. The face must be the reference manager\'s face only.',
+  '- Preserve the reference photo facial features faithfully — no distortion, no caricature, no exaggeration of proportions, no surreal warping.',
+  '- No profanity, no offensive symbols, no NSFW content, no weapons, no political imagery.',
 ].join('\n');
 
 /** Cooldown in-memory por user_id pra geração de arte (caro: ~10-30s + custo $). */
@@ -179,8 +217,9 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
   // Marca cooldown ANTES de chamar Freepik (custo: 1 imagem ainda assim conta)
   userCooldown.set(userId, now);
 
-  // Augmenta prompt com safety addendum
-  const augmentedPrompt = `${prompt}\n${SAFETY_PROMPT_ADDENDUM}`;
+  // Augmenta prompt: prompt original do form + cinematográfico (qualidade) +
+  // safety (não-negociável). Ordem importa: safety por último pra ter peso.
+  const augmentedPrompt = `${prompt}\n${CINEMATIC_PROMPT_ADDENDUM}\n${SAFETY_PROMPT_ADDENDUM}`;
 
   // Converte composta pra base64 pra Freepik
   const refBuffer = Buffer.from(await composedImage.arrayBuffer());
