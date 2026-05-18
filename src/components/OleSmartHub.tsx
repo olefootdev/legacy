@@ -1461,7 +1461,7 @@ function CoachInlineChat() {
           {/* Histórico de mensagens */}
           <div
             ref={scrollRef}
-            className="flex flex-col gap-1.5 overflow-y-auto"
+            className="flex flex-col gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
             style={{ maxHeight: 180 }}
           >
             {localMessages.slice(-12).map((m, i) => (
@@ -1605,7 +1605,7 @@ function ManagerContactPicker({
       </p>
 
       {friends.length > 0 && (
-        <div className="space-y-1 max-h-28 overflow-y-auto">
+        <div className="space-y-1 max-h-28 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {friends.map((f) => (
             <div
               key={f.username}
