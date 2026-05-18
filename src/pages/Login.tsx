@@ -6,7 +6,6 @@ import { useGameDispatch } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
-import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
 
 // A/B Test: 3 propostas de valor
 type ValueProposition = 'nostalgia' | 'ai' | 'speed';
@@ -215,13 +214,11 @@ export function Login() {
       } catch (e) {
         console.warn('[Login] referral code sync skipped', e);
       }
-      // Se plantel vazio (novo dispositivo), tenta re-aplicar welcome pack.
-      const welcome = await tryGrantWelcomeGenesisPack();
-      if (welcome.ok === false) {
-        const ignorable =
-          welcome.reason === 'already_granted' || welcome.reason === 'squad_not_empty';
-        if (!ignorable) console.warn('[Login] welcome genesis pack:', welcome.reason);
-      }
+      // [2026-05-18] Auto-grant silencioso REMOVIDO. Se o plantel está vazio,
+      // o OnboardingCeremony entra em cena e o manager passa pelos 6 capítulos
+      // (sorteio EXP → 25 pioneiros → top 3 → daily bonus → boas-vindas).
+      // Cerimônia só roda 1× por user (gate `welcomeGenesisPackVersion` no
+      // userSettings + tabela `welcome_pack_grants` no Supabase).
       navigate('/', { replace: true });
     } finally {
       setBusy(false);

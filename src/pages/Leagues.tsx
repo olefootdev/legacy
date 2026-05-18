@@ -578,7 +578,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
       ? '/liga-global/registro'
       : status === 'playoffs'
         ? '/liga-global/playoffs'
-        : '/match/olefoot-liga';
+        : '/match/global';
 
   return (
     <motion.section

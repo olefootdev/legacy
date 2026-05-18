@@ -12,7 +12,6 @@ import {
   normalizeReferralCode,
 } from '@/wallet/referralCode';
 import { PRESET_LABEL_PT } from '@/tactics/playingStyle';
-import { tryGrantWelcomeGenesisPack } from '@/game/welcomeGenesisPack';
 import { syncProfileManagerFirstName } from '@/supabase/profileDisplayName';
 import { LEAGUE_BUCKETS, SELECAO_BRASIL } from '@/settings/worldClubs';
 import type { FavoriteRealTeamRef } from '@/game/types';
@@ -459,12 +458,10 @@ export function Cadastro() {
       });
       dispatch({ type: 'SET_LINEUP', lineup: { ...lineup }, formationScheme });
 
-      const welcome = await tryGrantWelcomeGenesisPack();
-      if (welcome.ok === false) {
-        const ignorable =
-          welcome.reason === 'already_granted' || welcome.reason === 'squad_not_empty';
-        if (!ignorable) console.warn('[Cadastro] welcome genesis pack:', welcome.reason);
-      }
+      // [2026-05-18] Auto-grant silencioso REMOVIDO. O novo manager cai na
+      // Home com plantel vazio → OnboardingCeremony entra automaticamente
+      // (6 capítulos: intro, sorteio EXP, 25 pioneiros, top 3, daily bonus,
+      // boas-vindas). Não duplicar a entrega do pack aqui.
 
       await syncProfileManagerFirstName(firstName.trim());
 
