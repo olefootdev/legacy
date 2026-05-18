@@ -18,6 +18,13 @@ const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'SET_OLEFOOT_LEAGUE',
   'SHOP_PURCHASE_ITEM',
   'SAVE_TACTIC_PLAN',
+  // Academia OLE — queue + inbox persistem cross-browser
+  'CREATE_MANAGER_PROSPECT',
+  'ADMIN_PLAYER_CREATION_SET_PHOTO',
+  'ADMIN_PLAYER_CREATION_SET_PROMOTIONAL',
+  'ADMIN_PLAYER_CREATION_VALIDATE',
+  'ADMIN_PLAYER_CREATION_APPROVE',
+  'ADMIN_PLAYER_CREATION_LAUNCH',
 ]);
 
 type Listener = () => void;
@@ -124,6 +131,11 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     shopInventory:              remote.shopInventory                               ?? local.shopInventory,
     olefootLeague:              remote.olefootLeague                               ?? local.olefootLeague,
     managerRelationByPlayer:    remote.managerRelation                             ?? local.managerRelationByPlayer,
+    // Academy queue: merge defensivo — usa o array maior (evita perder
+    // entries criadas em outro browser se o local tiver menos).
+    managerProspectArtQueue:    mergeAcademyQueue(local.managerProspectArtQueue, remote.managerProspectArtQueue),
+    // Inbox: merge por id, remoto tem prioridade (notificações novas vencem).
+    inbox:                      mergeInbox(local.inbox, remote.inbox),
     manager: {
       ...local.manager,
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,
@@ -132,6 +144,61 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
   };
   saveGameState(state);
   emit();
+}
+
+/**
+ * Merge defensivo da queue da Academia.
+ * Une por id (Map), preservando entries dos dois lados. Em conflito,
+ * remoto vence se step é "mais avançado" (launched > approved > validated
+ * > photo_uploaded > awaiting_photo). Garante que admin processing em
+ * outro browser não é descartado pelo local stale.
+ */
+function mergeAcademyQueue(
+  local: OlefootGameState['managerProspectArtQueue'] | undefined,
+  remote: OlefootGameState['managerProspectArtQueue'] | null | undefined,
+): OlefootGameState['managerProspectArtQueue'] {
+  const a = Array.isArray(local) ? local : [];
+  const b = Array.isArray(remote) ? remote : [];
+  if (a.length === 0) return b;
+  if (b.length === 0) return a;
+  const STEP_RANK: Record<string, number> = {
+    awaiting_photo: 0,
+    photo_uploaded: 1,
+    validated: 2,
+    approved: 3,
+    launched: 4,
+  };
+  const byId = new Map<string, typeof a[number]>();
+  for (const x of a) byId.set(x.id, x);
+  for (const x of b) {
+    const existing = byId.get(x.id);
+    if (!existing) byId.set(x.id, x);
+    else {
+      const lr = STEP_RANK[existing.playerCreationStep] ?? 0;
+      const rr = STEP_RANK[x.playerCreationStep] ?? 0;
+      byId.set(x.id, rr >= lr ? x : existing);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+/**
+ * Merge defensivo do inbox: união por id, remoto vence em conflito
+ * (notificação nova de outro browser tem precedência). Cap 14 como
+ * no reducer.
+ */
+function mergeInbox(
+  local: OlefootGameState['inbox'] | undefined,
+  remote: OlefootGameState['inbox'] | null | undefined,
+): OlefootGameState['inbox'] {
+  const a = Array.isArray(local) ? local : [];
+  const b = Array.isArray(remote) ? remote : [];
+  if (a.length === 0) return b.slice(0, 14);
+  if (b.length === 0) return a;
+  const byId = new Map<string, typeof a[number]>();
+  for (const x of a) byId.set(x.id, x);
+  for (const x of b) byId.set(x.id, x); // remoto sobrescreve
+  return Array.from(byId.values()).slice(0, 14);
 }
 
 // ─── Debounced manager_game_state persistence ─────────────────────────
