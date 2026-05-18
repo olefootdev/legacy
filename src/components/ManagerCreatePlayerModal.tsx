@@ -275,7 +275,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
 
   /** Constrói o payload final usado tanto na validação quanto no dispatch. */
-  const buildPayload = (portraitUrl?: string): ManagerProspectCreatePayload => ({
+  const buildPayload = (opts: { portraitUrl?: string; selfieUrl?: string }): ManagerProspectCreatePayload => ({
     name: trimmed,
     age,
     country,
@@ -290,7 +290,8 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     },
     visualBrief,
     contractMatches,
-    ...(portraitUrl ? { portraitUrl } : {}),
+    ...(opts.portraitUrl ? { portraitUrl: opts.portraitUrl } : {}),
+    ...(opts.selfieUrl ? { selfieUrl: opts.selfieUrl } : {}),
   });
 
   /**
@@ -347,13 +348,15 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   };
 
   /**
-   * Recebe a SELFIE BLOB do AcademyPhotoCapture (apenas a foto da face,
-   * sem composição local). Adiciona jersey + background como references
-   * separados e manda os 3 pro /api/academy/generate-portrait. O Freepik
-   * (Seedream v4 i2i) combina as 3 imagens + prompt na carta final.
+   * Modo CONCIERGE (default): faz upload da selfie no Pinata via
+   * /api/academy/upload-selfie e dispatcha CREATE_MANAGER_PROSPECT com
+   * selfieUrl. Prospect entra na fila do admin (não no plantel com foto
+   * pronta) — admin gera a carta premium externamente e uploadeia depois
+   * via AdminProspectArtPanel.
    *
-   * Sem server configurado (dev local sem token), pula a geração e dispatcha
-   * sem foto (cai no fluxo legacy admin).
+   * Fluxo Freepik automatizado (/api/academy/generate-portrait) ainda está
+   * deployado e funcional, mas não é chamado por aqui — qualidade premium
+   * vence agilidade nesta fase.
    */
   const handleGeneratePortrait = async (selfieBlob: Blob) => {
     if (generatingArt) return;
@@ -364,55 +367,23 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
       const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
       const base = olefootApiBase();
       const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
-      let portraitUrl: string | undefined;
+      let selfieUrl: string | undefined;
       if (serverUrl && token) {
-        // Server espera 3 references separadas — busca os PNGs do template
-        // do próprio site (mesma origem) e adiciona ao multipart.
-        const [jerseyRes, bgRes] = await Promise.all([
-          fetch('/academy/template-jersey.png'),
-          fetch('/academy/template-background.png'),
-        ]);
-        if (!jerseyRes.ok || !bgRes.ok) {
-          setServerError('Não foi possível carregar os templates de carta. Recarrega a página.');
-          return;
-        }
-        const [jerseyBlob, bgBlob] = await Promise.all([jerseyRes.blob(), bgRes.blob()]);
-
         const form = new FormData();
         form.append('selfie_image', selfieBlob, 'selfie.jpg');
-        form.append('jersey_image', jerseyBlob, 'jersey.png');
-        form.append('background_image', bgBlob, 'background.png');
-        const prompt = buildProspectAdminArtPrompt({
-          name: trimmed,
-          pos,
-          age,
-          country,
-          strongFoot,
-          behavior,
-          attrs: tunedAttrs,
-          heritage: {
-            portraitStyleRegion,
-            originTags: [...originTags],
-            originText: originText.trim(),
-          },
-          visual: visualBrief,
-        });
-        form.append('prompt', prompt);
         form.append('prospect_meta', JSON.stringify({ name: trimmed, pos }));
-        let res: { ok: boolean; portrait_url?: string; error?: string; detail?: string } | null = null;
+        let res: { ok: boolean; selfie_url?: string; error?: string; detail?: string } | null = null;
         let httpStatus: number | null = null;
         try {
-          const r = await fetch(`${serverUrl}/api/academy/generate-portrait`, {
+          const r = await fetch(`${serverUrl}/api/academy/upload-selfie`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: form,
           });
           httpStatus = r.status;
-          // Tenta parsear JSON — se vier HTML (404, 502), cai no catch interno
           try {
             res = (await r.json()) as typeof res;
           } catch {
-            // Resposta não-JSON (ex: 404 página de erro do Cloudflare/Railway)
             const text = await r.text().catch(() => '');
             setServerError(
               `Servidor devolveu resposta inválida (HTTP ${r.status}). ${
@@ -424,27 +395,22 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
         } catch (e) {
           const msg = e instanceof Error ? e.message : 'erro desconhecido';
           setServerError(
-            `Falha de rede ao chamar geração de arte: ${msg}. ` +
+            `Falha de rede ao enviar selfie: ${msg}. ` +
               `Verifica se o servidor está no ar (${serverUrl}/health).`,
           );
           return;
         }
-        if (!res?.ok || !res.portrait_url) {
-          // Mensagens server-side comuns + dica de causa:
-          //  503 "FREEPIK_API_KEY não configurada" → setar env no Railway
-          //  502 "Freepik 4xx/5xx" → endpoint Seedream errado ou key inválida
-          //  429 "Aguarda Xs" → cooldown
+        if (!res?.ok || !res.selfie_url) {
           const httpInfo = httpStatus ? ` [HTTP ${httpStatus}]` : '';
           const detail = res?.detail ? ` (${res.detail})` : '';
-          setServerError(
-            `${res?.error ?? 'Falha na geração de arte.'}${httpInfo}${detail}`,
-          );
+          setServerError(`${res?.error ?? 'Falha no upload da selfie.'}${httpInfo}${detail}`);
           return;
         }
-        portraitUrl = res.portrait_url;
+        selfieUrl = res.selfie_url;
       }
-      // Dispatcha com (ou sem) portraitUrl — reducer pula admin queue se vier preenchida
-      dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload: buildPayload(portraitUrl) });
+      // Dispatcha com selfieUrl (modo concierge — vai pra queue do admin).
+      // Sem portraitUrl → reducer cria entry em managerProspectArtQueue.
+      dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload: buildPayload({ selfieUrl }) });
       onClose();
       resetForm();
     } finally {
@@ -965,9 +931,9 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                   {generatingArt ? (
                     <div className="flex flex-col items-center justify-center gap-3 rounded border border-neon-yellow/40 bg-neon-yellow/5 p-8 text-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow border-t-transparent" />
-                      <p className="text-sm text-white/90">Gerando arte da carta…</p>
+                      <p className="text-sm text-white/90">Enviando selfie…</p>
                       <p className="text-[11px] text-white/60">
-                        Pode levar até 30 segundos. Não fecha o modal.
+                        Tua carta premium é feita à mão e entregue em breve no plantel.
                       </p>
                     </div>
                   ) : (

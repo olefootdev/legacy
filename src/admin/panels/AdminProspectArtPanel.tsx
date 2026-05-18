@@ -82,6 +82,29 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
             ) : null}
             <div className="mt-1 text-white/85">{r.heritage.originText}</div>
           </div>
+          {r.selfieUrl ? (
+            <div className="mt-2 rounded-lg border border-neon-yellow/30 bg-neon-yellow/5 p-2">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow/90">
+                  Selfie do manager (referência)
+                </span>
+                <a
+                  href={r.selfieUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[9px] uppercase tracking-wider text-neon-yellow/70 underline hover:text-neon-yellow"
+                >
+                  Abrir original
+                </a>
+              </div>
+              <img
+                src={r.selfieUrl}
+                alt="Selfie do manager"
+                className="block max-h-48 w-auto rounded border border-white/15"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button

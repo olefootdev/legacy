@@ -146,7 +146,11 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
         <div className="flex flex-col items-center gap-4 rounded-lg border border-white/15 bg-deep-black/50 p-6 text-center">
           <Camera className="h-10 w-10 text-neon-yellow" aria-hidden />
           <p className="text-sm text-white/85">
-            Tira uma selfie clara da tua face. A IA vai usar como referência pra gerar a carta cinematográfica.
+            Tira uma selfie <strong>próxima do rosto</strong>, em local <strong>bem iluminado</strong>.
+          </p>
+          <p className="text-[11px] leading-relaxed text-white/60">
+            A foto vai ser usada como referência pra criar tua carta premium.<br />
+            Quanto melhor a iluminação e a resolução, melhor o resultado.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
@@ -266,8 +270,8 @@ export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
             )}
           </div>
           <p className="text-center text-[10px] leading-relaxed text-neon-yellow/70">
-            ⚡ Esta foto vai pra IA junto com a camisa e o fundo Olefoot.<br />
-            O resultado é uma carta cinematográfica premium (estilo FIFA Ultimate Team).
+            ⚡ Tua selfie vai pra equipa Olefoot.<br />
+            A carta premium é feita à mão e entregue no teu plantel em breve.
           </p>
           <div className="flex gap-2">
             <button

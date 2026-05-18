@@ -183,6 +183,92 @@ async function callFreepikSeedream(opts: {
  *
  * Auth: Bearer Supabase. env: FREEPIK_API_KEY, PINATA_JWT.
  */
+/**
+ * POST /api/academy/upload-selfie
+ *
+ * Modo CONCIERGE — só faz upload da selfie do manager no Pinata. NÃO chama
+ * Freepik. A arte final é gerada manualmente pelo admin (qualidade premium
+ * curada) e uploadeada via AdminProspectArtPanel.
+ *
+ * Mais leve que /generate-portrait: 1 file, sem polling, sem custo Freepik.
+ * Trade-off: latência humana (admin) em vez de IA instantânea.
+ *
+ * Body multipart:
+ *   - selfie_image  (File)   — face do manager
+ *   - prospect_meta (string JSON opcional) — { name, pos } pra audit
+ *
+ * Auth: Bearer Supabase. env: PINATA_JWT.
+ */
+academyArtRoutes.post('/api/academy/upload-selfie', rateLimit(10), async (c) => {
+  const pinataJwt = process.env.PINATA_JWT?.trim();
+  if (!pinataJwt) return c.json({ ok: false, error: 'PINATA_JWT não configurada.' }, 503);
+
+  const userId = await resolveUser(c.req.header('Authorization'));
+  if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const now = Date.now();
+
+  let body: Record<string, string | File>;
+  try {
+    body = (await c.req.parseBody()) as Record<string, string | File>;
+  } catch (e) {
+    return c.json({ ok: false, error: `Corpo multipart inválido: ${e instanceof Error ? e.message : ''}` }, 400);
+  }
+
+  const selfie = body.selfie_image;
+  if (!(selfie instanceof File)) return c.json({ ok: false, error: 'selfie_image obrigatório.' }, 400);
+  if (selfie.size > MAX_IMAGE_BYTES) {
+    return c.json({ ok: false, error: `selfie muito grande (${Math.round(selfie.size / 1024)} KB, máx. ${MAX_IMAGE_BYTES / 1024 / 1024} MB).` }, 413);
+  }
+
+  let prospectMeta: { name?: string; pos?: string } = {};
+  if (typeof body.prospect_meta === 'string' && body.prospect_meta.trim()) {
+    try { prospectMeta = JSON.parse(body.prospect_meta) as typeof prospectMeta; } catch { /* ignore */ }
+  }
+
+  const filename = `academy_selfie_${userId.slice(0, 8)}_${now}.jpg`;
+  const ab = await selfie.arrayBuffer();
+  const gatewayPrefix = (process.env.PINATA_GATEWAY_PREFIX?.trim() || 'https://gateway.pinata.cloud/ipfs/').replace(/\/?$/, '/');
+  const upload = await uploadBufferToPinata({
+    jwt: pinataJwt,
+    buffer: ab,
+    filename,
+    mimeType: selfie.type || 'image/jpeg',
+    network: 'public',
+    gatewayPrefix,
+    logContext: { entityType: 'academy_prospect_selfie', entityId: userId },
+  });
+  if (!upload.ok) {
+    console.error('[academy/upload-selfie] Pinata upload failed:', upload.message);
+    return c.json({ ok: false, error: `Falha no upload: ${upload.message}` }, 502);
+  }
+
+  // Audit log
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    void sb.from('audit_log').insert({
+      operation: 'CREATE',
+      table_name: 'academy_prospect_selfie',
+      row_id: `${userId}:${now}`,
+      user_id: userId,
+      new_data: {
+        name: prospectMeta.name,
+        pos: prospectMeta.pos,
+        pinata_cid: upload.data.cid,
+        selfie_url: upload.publicUrl,
+      },
+    }).then(({ error }) => {
+      if (error) console.error('[academy/upload-selfie] audit log error:', error.message);
+    });
+  }
+
+  return c.json({
+    ok: true,
+    selfie_url: upload.publicUrl,
+    pinata_cid: upload.data.cid,
+  });
+});
+
 academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) => {
   const freepikKey = process.env.FREEPIK_API_KEY?.trim();
   const pinataJwt = process.env.PINATA_JWT?.trim();

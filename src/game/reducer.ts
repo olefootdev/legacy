@@ -2099,12 +2099,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         id: requestId,
         playerId: built.id,
         createdAtIso,
-        playerCreationStep: 'awaiting_photo',
+        // Se a selfie já chegou, pula direto pra 'photo_uploaded' (admin já
+        // tem material pra trabalhar). Caso contrário fica em 'awaiting_photo'.
+        playerCreationStep: action.payload.selfieUrl ? 'photo_uploaded' : 'awaiting_photo',
         adminArtPrompt,
         attributesSnapshot: { ...built.attrs },
         visualBrief: action.payload.visualBrief,
         heritage: heritageBrief,
         draftPortraitUrl: undefined,
+        selfieUrl: action.payload.selfieUrl,
       };
       const prevQueue = state.managerProspectArtQueue ?? [];
       const managerProspectArtQueue = [queueEntry, ...prevQueue].slice(0, 200);

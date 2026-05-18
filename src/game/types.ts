@@ -207,6 +207,12 @@ export interface ManagerProspectArtRequest {
   heritage: ManagerProspectHeritageBrief;
   /** Rascunho do retrato (data URL ou https) antes de «Lançar». */
   draftPortraitUrl?: string | null;
+  /**
+   * URL pública (Pinata) da selfie que o manager mandou no modo concierge.
+   * Admin usa como referência pra criar a carta premium externamente.
+   * Ausente em saves antigos / fluxo legacy.
+   */
+  selfieUrl?: string;
   /** Após «Lançar no jogo» + mercado: metadados da listagem local / Supabase. */
   marketListingId?: string;
   marketPriceExp?: number;

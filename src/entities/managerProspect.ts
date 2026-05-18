@@ -349,6 +349,13 @@ export type ManagerProspectCreatePayload = {
    * admin gera/cola via AdminProspectArtPanel.
    */
   portraitUrl?: string;
+  /**
+   * URL pública (Pinata) da selfie do manager — modo CONCIERGE.
+   * Vai pro queue do admin como referência pra arte manual. Quando presente
+   * SEM portraitUrl, o reducer cria entry na queue (não pula). Quando AMBOS
+   * portraitUrl + selfieUrl presentes, portraitUrl ganha (auto Freepik).
+   */
+  selfieUrl?: string;
 };
 
 function strongFootPt(f: PlayerStrongFoot): string {
