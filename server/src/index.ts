@@ -67,12 +67,8 @@ function buildOriginMatcher(): (origin: string) => string | null {
   return (origin: string) => (set.has(origin) ? origin : null);
 }
 
-app.use('*', securityHeaders);
-// Voice routes precisam de limite maior (áudio até 25MB)
-app.use('/api/voice/transcribe', bodyLimit(26 * 1024 * 1024)); // 26 MB para áudio
-app.use('*', bodyLimit(65_536)); // 64 KB máximo por request padrão
-app.use('*', csrfGuard);
-
+// CORS PRIMEIRO — qualquer 4xx/5xx posterior precisa de CORS headers
+// (caso contrário o browser bloqueia com "Load failed" sem mostrar o erro real).
 app.use(
   '*',
   cors({
@@ -81,6 +77,23 @@ app.use(
     allowHeaders: ['Content-Type', 'Authorization', 'X-Admin-Token', 'X-Olefoot-Pinata-Upload-Token', 'X-Requested-With'],
   }),
 );
+
+app.use('*', securityHeaders);
+
+// bodyLimit POR ROTA (não global). Hono executa todos os middlewares que
+// matcham — se tivermos um '*' bodyLimit pequeno, ele bate em TUDO mesmo
+// que rotas específicas tenham seus limites próprios maiores. Por isso
+// fazemos rota-a-rota:
+//
+//  - Rotas com upload de mídia: limite explícito (10-26 MB)
+//  - Rotas JSON normais: sem bodyLimit (validação no handler; payloads
+//    típicos ficam abaixo de 4 KB; Cloudflare/Railway têm limites de
+//    infra acima disso pra DoS)
+app.use('/api/voice/transcribe', bodyLimit(26 * 1024 * 1024));        // áudio
+app.use('/api/media/pinata/upload', bodyLimit(10 * 1024 * 1024));     // imagem genesis
+app.use('/api/academy/generate-portrait', bodyLimit(10 * 1024 * 1024)); // selfie composta
+
+app.use('*', csrfGuard);
 
 app.route('/', healthRoutes);
 app.route('/', matchRoutes);
