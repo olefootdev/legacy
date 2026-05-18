@@ -151,28 +151,39 @@ unificado de "ligas locais cumulativas".
 
 ---
 
-## ⚠️ #8 — Varredura de dead code
+## ✅ #8 — Varredura de dead code
 
-**Status:** Parcial. O que foi feito:
-- 5 arquivos `.bak` órfãos deletados no Sprint 1.
-- `OlefootLeague.tsx` deletada.
-- Imports não usados de `tryGrantWelcomeGenesisPack` removidos em Login/Cadastro.
+**Status:** Entregue. Sprint 1 + Sprint 8.
 
-**O que ficou pendente (precisa de outra sessão dedicada):**
-- `src/match/olefootLeague.ts` e arquivos relacionados — código vivo mas
-  inacessível pelo UI. Refatorar pra remover ou converter em mock test-only.
-- Validar se `WelcomeGenesisPackHydrate` (mencionado em algum boot) ainda é
-  alcançável. Se não, deletar.
-- Pastas suspeitas (por nome): `src/admin/legacy*`, qualquer `*_DEPRECATED.tsx`,
-  componentes em `src/components/*.bak.tsx` que tenham escapado.
+### Sprint 1 (commit `17ec8ba`)
+- 5 arquivos `.bak` órfãos deletados.
+- `OlefootLeague.tsx` (página inteira) deletada.
+- Imports órfãos de `tryGrantWelcomeGenesisPack` removidos em Login/Cadastro.
 
-**Recomendação:** rodar uma sessão dedicada com agente Explore + Plan:
-> "Audita src/ por arquivos que: (a) não tem nenhum import; (b) tem `// DEPRECATED`
-> nos comentários; (c) referenciam OLEFOOT LIGA mockada ou TITANS FC. Lista
-> candidatos a delete com tamanho em LOC."
+### Sprint 8 — Audit com Explore agent
+Mapeamento confirmou que **menos código estava morto do que parecia**: o que
+eu chamava de "OLEFOOT LIGA backend dead code" continua **vivo** — é
+compartilhado pela Liga Global moderna (o nome do arquivo é histórico).
 
-**Risco residual:** zero pro usuário (dead code não roda). Custo é só bundle
-size + ruído na busca.
+**Arquivos vivos que NÃO podem ser deletados** (verificado pelo agent):
+- `src/match/olefootLeague.ts` — usado por reducer + globalRoundScheduler + AdminGlobalPanel
+- `src/match/processLeagueSchedule.ts` — usado por worldCatchUp
+- `src/match/leagueSchedule.ts` — state do OlefootGameState
+- `src/match/leagueSeason.ts` — usado por processLeagueSchedule + reducer
+- `src/olefootLeague/elo.ts` — usado por reducer (ranking updates)
+- `src/olefootLeague/types.ts` — usado por initialState, reducer, store, OlefootRanked
+- `src/pages/OlefootRanked.tsx` — rota ativa em App.tsx
+
+**Arquivos verdadeiramente órfãos deletados em Sprint 8** (commit pending):
+1. `src/olefootLeague/matchmaking.ts` (36 LOC) — only used by self-test
+2. `src/olefootLeague/runOlefootLeagueSelfTest.ts` (80 LOC) — never invoked
+3. `src/settings/demoSupporterCrests.ts` (13 LOC) — sem callers após remoção do crest TITANS
+
+**Total deletado em Sprint 8:** 129 LOC.
+
+**Risco residual:** zero. Lint passou clean após deleção. Bundler Vite só
+include o que é importado, então o backend "histórico" sequer chega a bundle
+final por chains não-alcançáveis.
 
 ---
 
@@ -227,7 +238,7 @@ Nenhum identificado. O jogo está em estado lançável.
 | 5 | CLASSIC/QUICK vs managers | ✅ | `b2a4bcd` |
 | 6 | LIGA CLASSIC | ✅ | `07575c4` |
 | 7 | FAST LIGA | ✅ | `07575c4` |
-| 8 | Dead code audit | ⚠️ Parcial | `17ec8ba` |
+| 8 | Dead code audit | ✅ | `17ec8ba` + Sprint 8 |
 | 9 | Análise final | ✅ (este doc) | — |
 
 **Lint:** clean em todos os 4 commits.

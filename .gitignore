@@ -66,3 +66,13 @@ GoogleService-Info.plist
 # MCP per-user config
 .mcp.json
 scripts/calibration/raw/
+
+# Documentos estratégicos / IP confidencial — não versionar
+.docs/IP_Inventory_*.md
+.docs/NDA_*.md
+.docs/olefoot-system-map.md
+# Dumps de banco — podem conter dados pessoais (emails, hashes)
+*.sql
+!supabase/migrations/*.sql
+!supabase/seed*.sql
+!server/migrations/*.sql
