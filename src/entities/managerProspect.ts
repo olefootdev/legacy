@@ -341,6 +341,14 @@ export type ManagerProspectCreatePayload = {
   visualBrief?: ManagerProspectVisualBrief;
   /** Duração do contrato em jogos (10 / 70 / 150 / 250); omissão = 10. */
   contractMatches?: ManagerProspectContractGames;
+  /**
+   * URL pública do retrato já gerado (Pinata via /api/academy/generate-portrait).
+   * Quando presente, o reducer seta direto em player.portraitUrl e PULA o
+   * managerProspectArtQueue — o admin não precisa processar manualmente.
+   * Quando ausente, fluxo legacy: prospect entra no plantel sem foto e o
+   * admin gera/cola via AdminProspectArtPanel.
+   */
+  portraitUrl?: string;
 };
 
 function strongFootPt(f: PlayerStrongFoot): string {
@@ -475,6 +483,9 @@ export function buildManagerCreatedPlayerEntity(
     bio: markAsManagerCreated ? `Academia OLE · ${age} anos` : `Rede OLE · ${age} anos`,
     listedOnMarket: false,
     fatigue: 12,
+    // Quando vier do fluxo automatizado de arte (P2), o portraitUrl já está
+    // hospedado no Pinata — propaga direto pro player.
+    ...(payload.portraitUrl ? { portraitUrl: payload.portraitUrl } : {}),
     ...contractFieldsForManagerProspectTier(tier),
   });
 }

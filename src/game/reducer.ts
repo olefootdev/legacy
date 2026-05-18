@@ -2085,6 +2085,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             originText:
               'Registo interno sem bloco de origem do fluxo Academia — completar nota no painel Jogadores da Academia.',
           };
+      // P2 — se a foto JÁ veio gerada pelo pipeline automatizado (Freepik +
+      // Pinata via POST /api/academy/generate-portrait), pula o queue do admin.
+      // Caso contrário, cai no fluxo legacy (admin processa manualmente).
+      if (action.payload.portraitUrl) {
+        return {
+          ...state,
+          finance,
+          players: { ...state.players, [built.id]: built },
+        };
+      }
       const queueEntry: ManagerProspectArtRequest = {
         id: requestId,
         playerId: built.id,

@@ -9,6 +9,7 @@ import {
   applyBehaviorToAttrs,
   applyDevelopmentBias,
   baseAttrsForPosition,
+  buildProspectAdminArtPrompt,
   countActiveAcademyProspects,
   DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN,
@@ -23,6 +24,7 @@ import {
   type ManagerProspectPortraitStyleRegion,
   type ManagerProspectVisualBrief,
 } from '@/entities/managerProspect';
+import { AcademyPhotoCapture } from '@/components/AcademyPhotoCapture';
 import {
   MANAGER_PROSPECT_CONTRACT_GAMES,
   managerProspectContractPremiumExp,
@@ -102,7 +104,7 @@ const ATTR_SLIDERS: { key: keyof PlayerAttributes; label: string }[] = [
   { key: 'fairPlay', label: 'Fair play' },
 ];
 
-type Step = 'identity' | 'tune' | 'review';
+type Step = 'identity' | 'tune' | 'review' | 'photo';
 
 type Props = {
   open: boolean;
@@ -269,34 +271,38 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     selectedHairCatalogEntry != null ? hairStyleSelectLabel(selectedHairCatalogEntry) : hairChoice || null;
 
   const [submitting, setSubmitting] = useState(false);
+  const [generatingArt, setGeneratingArt] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  /** Constrói o payload final usado tanto na validação quanto no dispatch. */
+  const buildPayload = (portraitUrl?: string): ManagerProspectCreatePayload => ({
+    name: trimmed,
+    age,
+    country,
+    strongFoot,
+    pos,
+    behavior,
+    attrs: { ...tunedAttrs },
+    heritage: {
+      portraitStyleRegion,
+      originTags: [...originTags],
+      originText: originText.trim(),
+    },
+    visualBrief,
+    contractMatches,
+    ...(portraitUrl ? { portraitUrl } : {}),
+  });
+
+  /**
+   * Passo 3 → Passo 4 (foto). Valida server-side primeiro (P3); em sucesso
+   * navega pra fase de captura de selfie. Sem server configurado (dev local
+   * sem token), pula validação e segue direto pra foto.
+   */
+  const handleProceedToPhoto = async () => {
     if (!canSubmit || submitting) return;
     setServerError(null);
-    const payload: ManagerProspectCreatePayload = {
-      name: trimmed,
-      age,
-      country,
-      strongFoot,
-      pos,
-      behavior,
-      attrs: { ...tunedAttrs },
-      heritage: {
-        portraitStyleRegion,
-        originTags: [...originTags],
-        originText: originText.trim(),
-      },
-      visualBrief,
-      contractMatches,
-    };
-
     setSubmitting(true);
     try {
-      // P3 — validação server-side antes do dispatch. Não-bloqueante se
-      // server não configurado (dev local sem token). Em prod (Railway +
-      // sessão Supabase) o server enforce nome, OVR cap, heritage, tier
-      // e cooldown de 30s por usuário.
       const sb = getSupabase();
       const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
       const base = olefootApiBase();
@@ -333,17 +339,83 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
           return;
         }
       }
-      // Server ok (ou bypass dev) — dispatcha localmente
-      dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload });
-      onClose();
-      resetForm();
+      // Validação ok — vai pro passo de foto
+      setStep('photo');
     } finally {
       setSubmitting(false);
     }
   };
 
+  /**
+   * Recebe o blob composto (selfie + camisa + fundo) do AcademyPhotoCapture,
+   * envia pro /api/academy/generate-portrait (Freepik i2i + Pinata), recebe
+   * a URL pública, dispatcha CREATE_MANAGER_PROSPECT com portraitUrl pronta.
+   *
+   * Sem server configurado (dev local sem token), pula a geração e dispatcha
+   * sem foto (cai no fluxo legacy admin).
+   */
+  const handleGeneratePortrait = async (composedBlob: Blob) => {
+    if (generatingArt) return;
+    setServerError(null);
+    setGeneratingArt(true);
+    try {
+      const sb = getSupabase();
+      const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+      const base = olefootApiBase();
+      const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
+      let portraitUrl: string | undefined;
+      if (serverUrl && token) {
+        const form = new FormData();
+        form.append('composed_image', composedBlob, 'composed.png');
+        const prompt = buildProspectAdminArtPrompt({
+          name: trimmed,
+          pos,
+          age,
+          country,
+          strongFoot,
+          behavior,
+          attrs: tunedAttrs,
+          heritage: {
+            portraitStyleRegion,
+            originTags: [...originTags],
+            originText: originText.trim(),
+          },
+          visual: visualBrief,
+        });
+        form.append('prompt', prompt);
+        form.append('prospect_meta', JSON.stringify({ name: trimmed, pos }));
+        let res: { ok: boolean; portrait_url?: string; error?: string } | null = null;
+        try {
+          const r = await fetch(`${serverUrl}/api/academy/generate-portrait`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: form,
+          });
+          res = (await r.json()) as typeof res;
+        } catch {
+          setServerError('Falha de rede ao gerar arte. Tenta novamente.');
+          return;
+        }
+        if (!res?.ok || !res.portrait_url) {
+          setServerError(res?.error ?? 'Falha na geração de arte.');
+          return;
+        }
+        portraitUrl = res.portrait_url;
+      }
+      // Dispatcha com (ou sem) portraitUrl — reducer pula admin queue se vier preenchida
+      dispatch({ type: 'CREATE_MANAGER_PROSPECT', payload: buildPayload(portraitUrl) });
+      onClose();
+      resetForm();
+    } finally {
+      setGeneratingArt(false);
+    }
+  };
+
   const stepLabel =
-    step === 'identity' ? '1 · Ficha' : step === 'tune' ? '2 · Atributos' : '3 · Revisão';
+    step === 'identity' ? '1 · Ficha'
+    : step === 'tune' ? '2 · Atributos'
+    : step === 'review' ? '3 · Revisão'
+    : '4 · Foto';
 
   return (
     <AnimatePresence>
@@ -923,15 +995,41 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     <button
                       type="button"
                       disabled={!canSubmit || submitting}
-                      onClick={handleSubmit}
+                      onClick={handleProceedToPhoto}
                       className={cn(
                         'btn-primary flex-1 py-3 font-display text-sm font-black uppercase tracking-wide',
                         (!canSubmit || submitting) && 'pointer-events-none opacity-40',
                       )}
                     >
-                      {submitting ? 'Validando…' : 'Criar jogador'}
+                      {submitting ? 'Validando…' : 'Continuar pra foto →'}
                     </button>
                   </div>
+                </div>
+              ) : null}
+
+              {step === 'photo' ? (
+                <div className="flex flex-col gap-3">
+                  {serverError ? (
+                    <div className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-[12px] text-red-200">
+                      {serverError}
+                    </div>
+                  ) : null}
+                  {generatingArt ? (
+                    <div className="flex flex-col items-center justify-center gap-3 rounded border border-neon-yellow/40 bg-neon-yellow/5 p-8 text-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow border-t-transparent" />
+                      <p className="text-sm text-white/90">Gerando arte da carta…</p>
+                      <p className="text-[11px] text-white/60">
+                        Pode levar até 30 segundos. Não fecha o modal.
+                      </p>
+                    </div>
+                  ) : (
+                    <AcademyPhotoCapture
+                      backgroundUrl="/academy/template-background.png"
+                      jerseyUrl="/academy/template-jersey.png"
+                      onComposed={(blob) => void handleGeneratePortrait(blob)}
+                      onCancel={() => setStep('review')}
+                    />
+                  )}
                 </div>
               ) : null}
             </div>
