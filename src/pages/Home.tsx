@@ -174,6 +174,7 @@ export function Home() {
   const playerSeasonLedger = useGameStore((s) => s.playerSeasonLedger);
   const formGlobal = useGameStore((s) => s.form);
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const localLeagues = useGameStore((s) => s.localLeagues);
   const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const awayCrestUrl = useGameStore(
     (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
@@ -350,8 +351,24 @@ export function Home() {
         href: '/competicao/ligas',
         tone: ligaTone,
       },
+      {
+        label: 'Liga Classic',
+        value: localLeagues?.classic?.points
+          ? `${localLeagues.classic.points} pts`
+          : '0 pts',
+        href: '/ligas-locais',
+        tone: 'accent' as const,
+      },
+      {
+        label: 'Fast Liga',
+        value: localLeagues?.fast?.points
+          ? `${localLeagues.fast.points} pts`
+          : '0 pts',
+        href: '/ligas-locais',
+        tone: 'accent' as const,
+      },
     ];
-  }, [players, club.name, club.id, finance.ole, formGlobal, globalLeagueMVP]);
+  }, [players, club.name, club.id, finance.ole, formGlobal, globalLeagueMVP, localLeagues]);
 
   /** Sprint C Fase F: sem CTAs no destaque (visual mais limpo). */
   const highlightCtas = useMemo(
