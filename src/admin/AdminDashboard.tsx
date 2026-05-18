@@ -141,7 +141,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     icon: Rocket,
     subTabs: [
       { id: 'global', label: 'Global' },
-      { id: 'olefootLiga', label: 'Olefoot Liga' },
+      { id: 'olefootLiga', label: 'Liga Global (legado)' },
       { id: 'security', label: 'Segurança' },
       { id: 'platformConfig', label: 'Plataforma' },
       { id: 'broadcast', label: 'Broadcast' },

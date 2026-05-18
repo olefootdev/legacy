@@ -87,7 +87,7 @@ export function AdminOlefootLigaPanel() {
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Olefoot Liga · MVP</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Liga Global · MVP</p>
             <h2 className="mt-1 font-display text-xl font-black text-white">{league.seasonId}</h2>
           </div>
           <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase ${status.tone}`}>

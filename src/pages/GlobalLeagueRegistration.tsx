@@ -100,7 +100,7 @@ export default function GlobalLeagueRegistration() {
                     letterSpacing: '0.005em',
                   }}
                 >
-                  OLEFOOT LIGA
+                  LIGA GLOBAL
                 </span>
                 <AnimatePresence mode="wait">
                   <motion.span

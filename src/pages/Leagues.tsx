@@ -331,7 +331,7 @@ export function Leagues() {
         >
           <p className="text-sm text-gray-400 leading-relaxed">
             Sem ligas regionais ou nacionais configuradas no save. A
-            <strong className="text-white"> OLEFOOT LIGA</strong> acima fica sempre disponível, e novas
+            <strong className="text-white"> LIGA GLOBAL</strong> acima fica sempre disponível, e novas
             competições podem ser criadas em <code className="text-neon-yellow">/admin</code>.
           </p>
         </section>
@@ -639,7 +639,7 @@ function OlefootLigaSection({ teams, status, minTeamsRequired }: OlefootLigaSect
                   letterSpacing: '0.005em',
                 }}
               >
-                OLEFOOT LIGA
+                LIGA GLOBAL
               </span>
               <span
                 className="block italic text-neon-yellow mt-0.5"

@@ -345,7 +345,7 @@ export function Home() {
         tone: 'accent' as const,
       },
       {
-        label: 'Olefoot Liga',
+        label: 'Liga Global',
         value: ligaValue,
         href: '/competicao/ligas',
         tone: ligaTone,

@@ -183,7 +183,7 @@ export function AdminGlobalPanel() {
             className="inline-flex items-center gap-2 rounded-lg bg-neon-yellow px-6 py-3 font-display text-sm font-black uppercase text-black hover:bg-white"
           >
             <Plus className="h-5 w-5" />
-            Criar OLEFOOT LIGA
+            Criar LIGA GLOBAL
           </button>
         </div>
       ) : (
@@ -563,7 +563,7 @@ function NewSeasonSection() {
             type="text"
             value={seasonName}
             onChange={(e) => setSeasonName(e.target.value)}
-            placeholder="OLEFOOT LIGA S2 · 2026"
+            placeholder="LIGA GLOBAL S2 · 2026"
             className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-neon-yellow/50 focus:outline-none"
           />
         </div>
