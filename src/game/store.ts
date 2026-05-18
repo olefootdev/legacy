@@ -25,6 +25,8 @@ const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'ADMIN_PLAYER_CREATION_VALIDATE',
   'ADMIN_PLAYER_CREATION_APPROVE',
   'ADMIN_PLAYER_CREATION_LAUNCH',
+  // Liga Global — marcos pagos persistem cross-browser (evita duplo claim)
+  'CLAIM_GLOBAL_LEAGUE_MILESTONES',
 ]);
 
 type Listener = () => void;
@@ -136,6 +138,9 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     managerProspectArtQueue:    mergeAcademyQueue(local.managerProspectArtQueue, remote.managerProspectArtQueue),
     // Inbox: merge por id, remoto tem prioridade (notificações novas vencem).
     inbox:                      mergeInbox(local.inbox, remote.inbox),
+    // Milestones Liga Global: união de IDs (jamais regredir um marco já
+    // pago em qualquer browser).
+    globalLeagueMilestonesClaimed: mergeMilestoneIds(local.globalLeagueMilestonesClaimed, remote.globalLeagueMilestonesClaimed),
     manager: {
       ...local.manager,
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,
@@ -180,6 +185,20 @@ function mergeAcademyQueue(
     }
   }
   return Array.from(byId.values());
+}
+
+/**
+ * Merge defensivo dos IDs de marcos da Liga Global já reclamados.
+ * União monotônica — jamais regredir um marco pago.
+ */
+function mergeMilestoneIds(
+  local: string[] | undefined,
+  remote: string[] | null | undefined,
+): string[] {
+  const a = Array.isArray(local) ? local : [];
+  const b = Array.isArray(remote) ? remote : [];
+  if (a.length === 0 && b.length === 0) return [];
+  return Array.from(new Set([...a, ...b]));
 }
 
 /**

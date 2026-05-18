@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ClassicMatchScreen } from '@/components/classic/ClassicMatchScreen';
 import { useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
@@ -11,22 +11,59 @@ import {
   buildClassicNarrativeProfiles,
 } from '@/engine/classic/realPlayers';
 import type { ClassicPlayer } from '@/engine/classic/types';
+import type { OpponentStub } from '@/entities/types';
+import { overallFromAttributes } from '@/entities/player';
 
 /**
  * Modo CLASSIC — usa o plantel real do manager + adversário do `nextFixture`.
- * Cai pra demo (TIGRES vs ALVORADA FC) quando não há manager logado.
+ * Se o usuário entrar direto sem passar pelo QuickSearchModal, auto-busca um
+ * manager real (fallback bot do pool) para nunca cair no TITANS FC mock.
  */
 export function MatchClassic() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Estado do manager
   const playersById   = useGameStore(s => s.players);
   const lineupRaw     = useGameStore(s => s.lineup);
   const club          = useGameStore(s => s.club);
-  const fixture       = useGameStore(s => s.nextFixture);
+  const fixtureBase   = useGameStore(s => s.nextFixture);
   const profile       = useGameStore(s => s.userSettings?.managerProfile);
   const leagueSeason  = useGameStore(s => s.leagueSeason);
   const homeCrestUrl  = useGameStore(s => matchdayHomeCrestUrl(s.userSettings));
+
+  // PvP assíncrono via navigate state (QuickSearchModal) + auto-busca on mount
+  const pvpStubFromState = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
+  const isPlaceholderOpponent =
+    !pvpStubFromState && fixtureBase?.opponent?.id === 'placeholder-opponent';
+
+  useEffect(() => {
+    if (!isPlaceholderOpponent || autoOpponent) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+        const { getSupabase } = await import('@/supabase/client');
+        const sb = getSupabase();
+        const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+        const myOverall = Math.round(
+          Object.values(playersById).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+            Math.max(1, Object.keys(playersById).length),
+        );
+        const match = await quickFindOpponent(club.id, myOverall || 70, userId);
+        if (!cancelled) setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
+      } catch (err) {
+        console.warn('[MatchClassic] auto opponent search failed', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isPlaceholderOpponent, autoOpponent, club.id, playersById]);
+
+  const opponentOverride = pvpStubFromState ?? autoOpponent;
+  const fixture = opponentOverride
+    ? { ...fixtureBase, opponent: opponentOverride, awayName: opponentOverride.name }
+    : fixtureBase;
 
   const teams = useMemo<{
     home: ClassicPlayer[] | undefined;

@@ -23,6 +23,7 @@ import { isDevRegistrationBypassed } from './lib/devRegistrationBypass';
 import { useGlobalRoundScheduler } from './hooks/useGlobalRoundScheduler';
 import { useGlobalPlayoffScheduler } from './hooks/useGlobalPlayoffScheduler';
 import { useAutoRegisterGlobalLeague } from './hooks/useAutoRegisterGlobalLeague';
+import { useGlobalLeagueMilestoneRewards } from './hooks/useGlobalLeagueMilestoneRewards';
 import { useGlobalLeagueCrowdSync } from './hooks/useGlobalLeagueCrowdSync';
 import { useRecoverOrphanManager } from './onboarding/recoverOrphanManager';
 import { useNpcMarketActivity } from './market/npcMarketActivity';
@@ -245,6 +246,7 @@ function GlobalSchedulerMount() {
   useGlobalRoundScheduler();
   useGlobalPlayoffScheduler();
   useAutoRegisterGlobalLeague();
+  useGlobalLeagueMilestoneRewards();
   useGlobalLeagueCrowdSync();
   useRecoverOrphanManager();
   useNpcMarketActivity();

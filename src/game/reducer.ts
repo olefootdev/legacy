@@ -147,6 +147,13 @@ import { registerSponsor as walletRegisterSponsor } from '@/wallet/referral';
 // Imports estáticos — substituem chamadas legadas de require() que quebravam
 // no browser ("require is not defined") quando os reducers eram acionados.
 import { registerTeam } from '@/match/globalLeagueMVP';
+import {
+  milestoneExpReward,
+  milestoneInboxBody,
+  milestoneInboxTitle,
+  milestoneLabel,
+  parseMilestoneId,
+} from '@/match/globalLeagueMilestones';
 import { finalizeRound, advanceToNextRound } from '@/match/olefootLeague';
 import { createScheduledRound, autoAdvanceRound } from '@/match/globalRoundScheduler';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
@@ -5018,6 +5025,32 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         action.clubShort,
         action.overall
       );
+
+    case 'CLAIM_GLOBAL_LEAGUE_MILESTONES': {
+      const already = new Set(state.globalLeagueMilestonesClaimed ?? []);
+      const fresh = action.milestoneIds.filter((id) => !already.has(id));
+      if (fresh.length === 0) return state;
+
+      let finance = state.finance;
+      const newNotes = fresh.map((id) => {
+        const parsed = parseMilestoneId(id);
+        if (!parsed) return null;
+        const reward = milestoneExpReward(parsed.threshold);
+        finance = grantEarnedExp(finance, reward);
+        finance = withExpHistory(finance, reward, `Liga Global · ${milestoneLabel(parsed.category, parsed.threshold)}`);
+        return makeInboxItem(
+          `gl-milestone-${id}-${Date.now()}`,
+          'SEASON_MILESTONE',
+          'COMPETIÇÃO',
+          milestoneInboxTitle(parsed.category, parsed.threshold),
+          { body: milestoneInboxBody(parsed.category, parsed.threshold, reward) },
+        );
+      }).filter((x): x is NonNullable<typeof x> => x != null);
+
+      const inbox = newNotes.length > 0 ? [...newNotes, ...state.inbox].slice(0, 14) : state.inbox;
+      const claimed = [...(state.globalLeagueMilestonesClaimed ?? []), ...fresh];
+      return { ...state, finance, inbox, globalLeagueMilestonesClaimed: claimed };
+    }
 
     case 'ADMIN_START_GLOBAL_PLAYOFFS':
       return handleAdminStartGlobalPlayoffs(state);

@@ -360,6 +360,11 @@ export interface OlefootGameState {
   olefootLeague?: import('@/match/olefootLeague').OlefootLeagueState;
   /** Estado da Liga Global MVP (sistema de playoffs + divisões + promoção/rebaixamento). */
   globalLeagueMVP?: import('@/match/globalLeagueMVP').GlobalLeagueMVPState;
+  /**
+   * IDs dos marcos da Liga Global já reclamados pelo manager (ex.: `gl_matches_10`).
+   * Persistido em `manager_game_state` pra evitar duplo claim cross-browser.
+   */
+  globalLeagueMilestonesClaimed?: string[];
 }
 
 export type GameAction =
@@ -810,6 +815,7 @@ export type GameAction =
   | { type: 'HYDRATE_GLOBAL_LEAGUE_MVP'; payload: import('@/match/globalLeagueMVP').GlobalLeagueMVPState }
   | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
   | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
+  | { type: 'CLAIM_GLOBAL_LEAGUE_MILESTONES'; milestoneIds: string[] }
   | { type: 'ADMIN_START_GLOBAL_PLAYOFFS' }
   | { type: 'SET_GLOBAL_LEAGUE_MVP_MIN_TEAMS'; minTeams: number }
   | { type: 'START_GLOBAL_PLAYOFF_ROUND'; roundNumber: number }

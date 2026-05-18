@@ -23,6 +23,7 @@ export interface ManagerGameStateSnapshot {
   staff:                    OlefootGameState['manager']['staff'] | null;
   managerProspectArtQueue:  OlefootGameState['managerProspectArtQueue'] | null;
   inbox:                    OlefootGameState['inbox'] | null;
+  globalLeagueMilestonesClaimed: string[] | null;
 }
 
 async function currentUserId(): Promise<string | null> {
@@ -58,6 +59,7 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
       staff:                       s.manager.staff ?? null,
       manager_prospect_art_queue:  s.managerProspectArtQueue ?? null,
       inbox:                       s.inbox ?? null,
+      global_league_milestones_claimed: s.globalLeagueMilestonesClaimed ?? null,
     },
     { onConflict: 'user_id' },
   );
@@ -98,5 +100,6 @@ export async function loadManagerGameState(): Promise<ManagerGameStateSnapshot |
     staff:                   (data.staff                        as OlefootGameState['manager']['staff'])   ?? null,
     managerProspectArtQueue: (data.manager_prospect_art_queue   as OlefootGameState['managerProspectArtQueue']) ?? null,
     inbox:                   (data.inbox                        as OlefootGameState['inbox'])               ?? null,
+    globalLeagueMilestonesClaimed: (data.global_league_milestones_claimed as string[]) ?? null,
   };
 }

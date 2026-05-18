@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
-import { quickFindOpponent, type OpponentMatch } from '@/match/friendlyMatchmaking';
+import { quickFindOpponent, type OpponentMatch, opponentMatchToStub } from '@/match/friendlyMatchmaking';
 import { overallFromAttributes } from '@/entities/player';
 import { formatExp } from '@/systems/economy';
 
@@ -56,15 +56,11 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
   const handleConfirm = () => {
     if (!opponent) return;
 
-    const isHumanOpponent = opponent.type !== 'bot';
     const path = mode === 'penalty' ? '/match/penalty' : '/match/quick';
-
-    // Para times reais, passa o stub via state para a partida usar o plantel real
-    if (opponent.type === 'real_manager') {
-      navigate(path, { state: { pvpOpponentStub: opponent.stub } });
-    } else {
-      navigate(path);
-    }
+    // Passa SEMPRE um stub no navigate state (manager, online ou bot). Isso
+    // garante que MatchQuick nunca caia no DEFAULT_OPPONENT placeholder.
+    const stub = opponentMatchToStub(opponent, myOverall);
+    navigate(path, { state: { pvpOpponentStub: stub } });
     onClose();
   };
 

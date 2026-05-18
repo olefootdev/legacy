@@ -5,6 +5,30 @@ import type { OpponentStub } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import { fetchOpponentSquads } from '@/supabase/managerSquad';
 
+/**
+ * Converte qualquer `OpponentMatch` em `OpponentStub` para passar via
+ * navigate state (mantém o adversário consistente entre tela de busca e
+ * MatchQuick/MatchClassic — evita cair no DEFAULT_OPPONENT placeholder).
+ */
+export function opponentMatchToStub(m: OpponentMatch, myOverall: number): OpponentStub {
+  if (m.type === 'real_manager') return m.stub;
+  if (m.type === 'online') {
+    return {
+      id: m.club.club_id,
+      name: m.club.name,
+      shortName: m.club.short_name,
+      strength: Math.max(50, myOverall - m.ovrDiff),
+    };
+  }
+  // bot
+  return {
+    id: m.bot.id,
+    name: m.bot.name,
+    shortName: m.bot.shortName,
+    strength: m.bot.avgOverall,
+  };
+}
+
 export type MatchmakingMode = 'quick' | 'penalty';
 
 export interface MatchmakingParams {

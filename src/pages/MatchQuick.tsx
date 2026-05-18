@@ -667,7 +667,43 @@ export function MatchQuick() {
 
   // PvP assíncrono: adversário real passado via navigate state
   const location = useLocation();
-  const pvpStub = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const pvpStubFromState = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+
+  // [2026-05-18] Auto-buscar adversário se o usuário caiu direto em /match/quick
+  // sem passar pelo QuickSearchModal. Evita o TITANS FC mock e segue a regra:
+  // sempre buscar um manager real (fallback: bot do pool, nunca placeholder).
+  const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
+  const [autoSearching, setAutoSearching] = useState(false);
+  const isPlaceholderOpponent =
+    !pvpStubFromState && fixtureBase.opponent.id === 'placeholder-opponent';
+
+  useEffect(() => {
+    if (!isPlaceholderOpponent || autoOpponent || autoSearching) return;
+    let cancelled = false;
+    setAutoSearching(true);
+    (async () => {
+      try {
+        const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+        const { getSupabase } = await import('@/supabase/client');
+        const sb = getSupabase();
+        const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+        const myOverall = Math.round(
+          Object.values(playersById).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+            Math.max(1, Object.keys(playersById).length),
+        );
+        const match = await quickFindOpponent(club.id, myOverall || 70, userId);
+        if (cancelled) return;
+        setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
+      } catch (err) {
+        console.warn('[MatchQuick] auto opponent search failed', err);
+      } finally {
+        if (!cancelled) setAutoSearching(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isPlaceholderOpponent, autoOpponent, autoSearching, club.id, playersById]);
+
+  const pvpStub = pvpStubFromState ?? autoOpponent;
   const fixture = pvpStub
     ? { ...fixtureBase, opponent: pvpStub, awayName: pvpStub.name }
     : fixtureBase;

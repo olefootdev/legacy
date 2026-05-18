@@ -1,5 +1,4 @@
 import type { ClubEntity, Fixture, OpponentStub, PlayerEntity } from './types';
-import { DEMO_REAL_MADRID_LOGO } from '@/settings/demoSupporterCrests';
 
 export const DEFAULT_CLUB: ClubEntity = {
   id: 'ole-fc',
@@ -9,13 +8,14 @@ export const DEFAULT_CLUB: ClubEntity = {
   stadium: 'Estádio Neo Arena',
 };
 
+// [2026-05-18] TITANS FC mockada removida. O placeholder padrão fica neutro;
+// MatchQuick e MatchClassic auto-buscam um adversário (manager real → bot)
+// no mount via `quickFindOpponent`, então este stub raramente é exibido.
 export const DEFAULT_OPPONENT: OpponentStub = {
-  id: 'titans',
-  name: 'TITANS FC',
-  shortName: 'TITANS',
-  strength: 78,
-  highlightPlayer: { name: 'MOREIRA', ovr: 79 },
-  supporterCrestUrl: DEMO_REAL_MADRID_LOGO,
+  id: 'placeholder-opponent',
+  name: 'Buscando…',
+  shortName: '...',
+  strength: 70,
 };
 
 export function defaultFixture(): Fixture {
@@ -32,17 +32,12 @@ export function defaultFixture(): Fixture {
 }
 
 /**
- * Garante `supporterCrestUrl` para TITANS FC (id `titans`, `t1` na liga, ou nome com “TITANS”).
- * Não mistura outros campos do adversário padrão — só completa o escudo de visualização.
+ * Normaliza o stub do adversário. TITANS-specific crest injection removido
+ * em 2026-05-18 junto com a remoção da TITANS FC mockada.
  */
 export function normalizeOpponentStub(o: OpponentStub | undefined | null): OpponentStub {
   if (!o || typeof o !== 'object' || !o.id) {
     return { ...DEFAULT_OPPONENT };
-  }
-  const nameU = o.name.trim().toUpperCase();
-  const titansLike = o.id === 'titans' || o.id === 't1' || nameU.includes('TITANS');
-  if (titansLike && !o.supporterCrestUrl?.trim()) {
-    return { ...o, supporterCrestUrl: DEMO_REAL_MADRID_LOGO };
   }
   return { ...o };
 }
