@@ -181,20 +181,38 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
       ctx.fillStyle = '#0A0A0A';
       ctx.fillRect(0, 0, CARD_W, CARD_H);
     }
-    // Layer 2: face (posicionada/escalada)
-    // Default = 42% da largura, centralizada horizontalmente, posição vertical
-    // no upper-third (onde fica o rosto numa carta de jogador). User pode
-    // ajustar via drag/zoom.
+    // Layer 2: face com MÁSCARA CIRCULAR — esconde o fundo do selfie
+    // (quarto, parede, etc) e dá um look limpo de "headshot" pra Freepik
+    // consumir como referência. Diâmetro 38% da largura, centro vertical
+    // em ~28% da altura (área da cabeça do jogador na carta).
     if (faceImgRef.current) {
       const img = faceImgRef.current;
+      ctx.save();
+      const baseRadius = CARD_W * 0.19; // 228px diametro padrão
+      const radius = baseRadius * c.scale;
+      const cx = CARD_W / 2 + c.offsetX * CARD_W;
+      const cy = CARD_H * 0.28 + c.offsetY * CARD_H;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      // Cover-fit: face preenche o círculo inteiro (sem barras)
       const imgAspect = img.naturalWidth / img.naturalHeight;
-      const baseSize = CARD_W * 0.42;
-      let drawW = baseSize * c.scale;
-      let drawH = drawW / imgAspect;
-      const drawX = (CARD_W - drawW) / 2 + c.offsetX * CARD_W;
-      // Centro vertical em ~33% da altura (centro do rosto em carta vertical)
-      const drawY = (CARD_H * 0.33 - drawH / 2) + c.offsetY * CARD_H;
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      const drawSize = radius * 2;
+      let drawW = drawSize;
+      let drawH = drawSize;
+      if (imgAspect > 1) drawW = drawSize * imgAspect;
+      else drawH = drawSize / imgAspect;
+      ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+      ctx.restore();
+      // Subtle ring pra integrar visualmente
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
     }
     // Layer 3: jersey overlay
     if (jerseyImgRef.current) {
@@ -416,7 +434,11 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
             </div>
           )}
           <p className="text-center text-[11px] text-white/60">
-            Arrasta a foto pra posicionar · usa zoom pra escalar
+            Arrasta o rosto pra posicionar · usa zoom pra escalar
+          </p>
+          <p className="text-center text-[10px] leading-relaxed text-neon-yellow/70">
+            ⚡ Esta é só a <strong>referência</strong> que vai pra IA.<br />
+            O resultado final será uma carta cinematográfica premium (8K, estilo FIFA).
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button

@@ -384,20 +384,46 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
         });
         form.append('prompt', prompt);
         form.append('prospect_meta', JSON.stringify({ name: trimmed, pos }));
-        let res: { ok: boolean; portrait_url?: string; error?: string } | null = null;
+        let res: { ok: boolean; portrait_url?: string; error?: string; detail?: string } | null = null;
+        let httpStatus: number | null = null;
         try {
           const r = await fetch(`${serverUrl}/api/academy/generate-portrait`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: form,
           });
-          res = (await r.json()) as typeof res;
-        } catch {
-          setServerError('Falha de rede ao gerar arte. Tenta novamente.');
+          httpStatus = r.status;
+          // Tenta parsear JSON — se vier HTML (404, 502), cai no catch interno
+          try {
+            res = (await r.json()) as typeof res;
+          } catch {
+            // Resposta não-JSON (ex: 404 página de erro do Cloudflare/Railway)
+            const text = await r.text().catch(() => '');
+            setServerError(
+              `Servidor devolveu resposta inválida (HTTP ${r.status}). ${
+                text.length > 0 ? text.slice(0, 200) : 'Endpoint pode não estar deployado ainda.'
+              }`,
+            );
+            return;
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'erro desconhecido';
+          setServerError(
+            `Falha de rede ao chamar geração de arte: ${msg}. ` +
+              `Verifica se o servidor está no ar (${serverUrl}/health).`,
+          );
           return;
         }
         if (!res?.ok || !res.portrait_url) {
-          setServerError(res?.error ?? 'Falha na geração de arte.');
+          // Mensagens server-side comuns + dica de causa:
+          //  503 "FREEPIK_API_KEY não configurada" → setar env no Railway
+          //  502 "Freepik 4xx/5xx" → endpoint Seedream errado ou key inválida
+          //  429 "Aguarda Xs" → cooldown
+          const httpInfo = httpStatus ? ` [HTTP ${httpStatus}]` : '';
+          const detail = res?.detail ? ` (${res.detail})` : '';
+          setServerError(
+            `${res?.error ?? 'Falha na geração de arte.'}${httpInfo}${detail}`,
+          );
           return;
         }
         portraitUrl = res.portrait_url;
