@@ -672,36 +672,42 @@ export function MatchQuick() {
   // [2026-05-18] Auto-buscar adversário se o usuário caiu direto em /match/quick
   // sem passar pelo QuickSearchModal. Evita o TITANS FC mock e segue a regra:
   // sempre buscar um manager real (fallback: bot do pool, nunca placeholder).
+  //
+  // Fix 2026-05-18b: useRef em vez de state nas deps — antes `playersById` +
+  // `autoSearching` recriavam o effect a cada render, gerando loop infinito
+  // de busca que congelava a UI (botões da Home pareciam mortos).
   const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
-  const [autoSearching, setAutoSearching] = useState(false);
+  const autoSearchTriedRef = useRef(false);
   const isPlaceholderOpponent =
     !pvpStubFromState && fixtureBase.opponent.id === 'placeholder-opponent';
 
   useEffect(() => {
-    if (!isPlaceholderOpponent || autoOpponent || autoSearching) return;
+    if (!isPlaceholderOpponent || autoSearchTriedRef.current) return;
+    autoSearchTriedRef.current = true;
     let cancelled = false;
-    setAutoSearching(true);
     (async () => {
       try {
         const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
         const { getSupabase } = await import('@/supabase/client');
         const sb = getSupabase();
         const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+        // Snapshot do plantel atual — não entra nas deps pra evitar loop
+        const snapshot = getGameState().players;
         const myOverall = Math.round(
-          Object.values(playersById).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
-            Math.max(1, Object.keys(playersById).length),
+          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+            Math.max(1, Object.keys(snapshot).length),
         );
         const match = await quickFindOpponent(club.id, myOverall || 70, userId);
         if (cancelled) return;
         setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
       } catch (err) {
         console.warn('[MatchQuick] auto opponent search failed', err);
-      } finally {
-        if (!cancelled) setAutoSearching(false);
+        // Solta o ref pra permitir nova tentativa (1× só) se o user voltar pra rota
+        autoSearchTriedRef.current = false;
       }
     })();
     return () => { cancelled = true; };
-  }, [isPlaceholderOpponent, autoOpponent, autoSearching, club.id, playersById]);
+  }, [isPlaceholderOpponent, club.id]);
 
   const pvpStub = pvpStubFromState ?? autoOpponent;
   const fixture = pvpStub

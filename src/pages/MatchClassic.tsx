@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClassicMatchScreen } from '@/components/classic/ClassicMatchScreen';
 import { useGameStore } from '@/game/store';
@@ -33,32 +33,39 @@ export function MatchClassic() {
   const homeCrestUrl  = useGameStore(s => matchdayHomeCrestUrl(s.userSettings));
 
   // PvP assíncrono via navigate state (QuickSearchModal) + auto-busca on mount
+  // Fix 2026-05-18b: useRef pra evitar loop (playersById muda referência a cada
+  // update do store → effect retrigger → setState → loop infinito).
   const pvpStubFromState = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
   const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
+  const autoSearchTriedRef = useRef(false);
   const isPlaceholderOpponent =
     !pvpStubFromState && fixtureBase?.opponent?.id === 'placeholder-opponent';
 
   useEffect(() => {
-    if (!isPlaceholderOpponent || autoOpponent) return;
+    if (!isPlaceholderOpponent || autoSearchTriedRef.current) return;
+    autoSearchTriedRef.current = true;
     let cancelled = false;
     (async () => {
       try {
         const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
         const { getSupabase } = await import('@/supabase/client');
+        const { getGameState } = await import('@/game/store');
         const sb = getSupabase();
         const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+        const snapshot = getGameState().players;
         const myOverall = Math.round(
-          Object.values(playersById).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
-            Math.max(1, Object.keys(playersById).length),
+          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+            Math.max(1, Object.keys(snapshot).length),
         );
         const match = await quickFindOpponent(club.id, myOverall || 70, userId);
         if (!cancelled) setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
       } catch (err) {
         console.warn('[MatchClassic] auto opponent search failed', err);
+        autoSearchTriedRef.current = false;
       }
     })();
     return () => { cancelled = true; };
-  }, [isPlaceholderOpponent, autoOpponent, club.id, playersById]);
+  }, [isPlaceholderOpponent, club.id]);
 
   const opponentOverride = pvpStubFromState ?? autoOpponent;
   const fixture = opponentOverride
