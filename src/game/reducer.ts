@@ -154,6 +154,10 @@ import {
   milestoneLabel,
   parseMilestoneId,
 } from '@/match/globalLeagueMilestones';
+import {
+  applyResultToLocalLeague,
+  emptyLocalLeaguesState,
+} from '@/match/localLeagues';
 import { finalizeRound, advanceToNextRound } from '@/match/olefootLeague';
 import { createScheduledRound, autoAdvanceRound } from '@/match/globalRoundScheduler';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
@@ -1935,6 +1939,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         }
       }
 
+      // FAST LIGA — modo QUICK soma pontos em local league dedicada.
+      let localLeagues = state.localLeagues ?? emptyLocalLeaguesState();
+      if (lm.mode === 'quick') {
+        const ll = homeWin ? 'win' : draw ? 'draw' : 'loss';
+        localLeagues = {
+          ...localLeagues,
+          fast: applyResultToLocalLeague(localLeagues.fast, ll, lm.homeScore, lm.awayScore),
+        };
+      }
+
       // Gerar propostas proativas do Coach baseadas em saúde pós-jogo.
       const stateAfterMatch: OlefootGameState = {
         ...state,
@@ -1953,6 +1967,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         dailyChallenges,
         streakChallenges,
         competitiveRanking,
+        localLeagues,
       };
       let manager = stateAfterMatch.manager;
       if (manager.coach) {
@@ -5026,6 +5041,19 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         action.overall
       );
 
+    case 'RECORD_LOCAL_LEAGUE_RESULT': {
+      const prev = state.localLeagues ?? emptyLocalLeaguesState();
+      const updated = applyResultToLocalLeague(
+        prev[action.league],
+        action.result,
+        action.goalsFor,
+        action.goalsAgainst,
+      );
+      return {
+        ...state,
+        localLeagues: { ...prev, [action.league]: updated },
+      };
+    }
     case 'CLAIM_GLOBAL_LEAGUE_MILESTONES': {
       const already = new Set(state.globalLeagueMilestonesClaimed ?? []);
       const fresh = action.milestoneIds.filter((id) => !already.has(id));

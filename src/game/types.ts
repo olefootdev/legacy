@@ -365,6 +365,11 @@ export interface OlefootGameState {
    * Persistido em `manager_game_state` pra evitar duplo claim cross-browser.
    */
   globalLeagueMilestonesClaimed?: string[];
+  /**
+   * LIGA CLASSIC + FAST LIGA — cumulativas, pontos somam partida a partida
+   * nos modos CLASSIC e QUICK respectivamente. Persistido cross-browser.
+   */
+  localLeagues?: import('@/match/localLeagues').LocalLeaguesState;
 }
 
 export type GameAction =
@@ -816,6 +821,13 @@ export type GameAction =
   | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
   | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
   | { type: 'CLAIM_GLOBAL_LEAGUE_MILESTONES'; milestoneIds: string[] }
+  | {
+      type: 'RECORD_LOCAL_LEAGUE_RESULT';
+      league: import('@/match/localLeagues').LocalLeagueId;
+      result: import('@/match/localLeagues').LocalLeagueResult;
+      goalsFor: number;
+      goalsAgainst: number;
+    }
   | { type: 'ADMIN_START_GLOBAL_PLAYOFFS' }
   | { type: 'SET_GLOBAL_LEAGUE_MVP_MIN_TEAMS'; minTeams: number }
   | { type: 'START_GLOBAL_PLAYOFF_ROUND'; roundNumber: number }

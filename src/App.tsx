@@ -115,6 +115,7 @@ const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) 
 const GlobalLeagueHistory = lazy(() => import('./pages/GlobalLeagueHistory').then((m) => ({ default: m.default })));
 const GlobalLeagueClubProfile = lazy(() => import('./pages/GlobalLeagueClubProfile').then((m) => ({ default: m.default })));
 const GlobalLeagueAllTime = lazy(() => import('./pages/GlobalLeagueAllTime').then((m) => ({ default: m.default })));
+const LocalLeagues = lazy(() => import('./pages/LocalLeagues').then((m) => ({ default: m.default })));
 const OlefootRanked = lazy(() => import('./pages/OlefootRanked').then((m) => ({ default: m.default })));
 const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
 const GlobalLeaguePlayoffs = lazy(() => import('./pages/GlobalLeaguePlayoffs').then((m) => ({ default: m.default })));
@@ -517,6 +518,7 @@ export default function App() {
             <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
             <Route path="/match/global/history" element={<GlobalLeagueHistory />} />
             <Route path="/match/global/all-time" element={<GlobalLeagueAllTime />} />
+            <Route path="/ligas-locais" element={<LocalLeagues />} />
             <Route path="/match/global/club/:teamId" element={<GlobalLeagueClubProfile />} />
             {/* OLEFOOT LIGA mockada (Flamengo/Palmeiras/...) deletada em 2026-05-18 — manter apenas Liga Global com managers reais. Redireciona pra /match/global. */}
             <Route path="/match/olefoot-liga" element={<Navigate to="/match/global" replace />} />

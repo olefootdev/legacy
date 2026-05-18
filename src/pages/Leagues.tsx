@@ -297,6 +297,32 @@ export function Leagues() {
         minTeamsRequired={globalLeagueMVP?.minTeamsRequired ?? 32}
       />
 
+      {/* ── Ligas locais (Classic + Fast) — atalho dedicado ── */}
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="border border-white/10 bg-panel p-5"
+        style={{ borderRadius: 'var(--radius-md)' }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-display font-black uppercase tracking-[0.18em] text-sm text-white">
+              Ligas locais
+            </h3>
+            <p className="text-xs text-gray-400 mt-1 leading-snug">
+              Pontos somam toda partida CLASSIC e RÁPIDA — ranking global de managers.
+            </p>
+          </div>
+          <Link
+            to="/ligas-locais"
+            className="shrink-0 inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow text-black px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] hover:opacity-90"
+          >
+            Ver ligas
+          </Link>
+        </div>
+      </motion.section>
+
       {/* ── Estado vazio (sem ligas extras no save) ── */}
       {isEmpty ? (
         <section

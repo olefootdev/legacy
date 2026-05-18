@@ -27,6 +27,8 @@ const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'ADMIN_PLAYER_CREATION_LAUNCH',
   // Liga Global — marcos pagos persistem cross-browser (evita duplo claim)
   'CLAIM_GLOBAL_LEAGUE_MILESTONES',
+  // Liga Classic / Fast Liga — placar acumulado persiste cross-browser
+  'RECORD_LOCAL_LEAGUE_RESULT',
 ]);
 
 type Listener = () => void;
@@ -141,6 +143,8 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     // Milestones Liga Global: união de IDs (jamais regredir um marco já
     // pago em qualquer browser).
     globalLeagueMilestonesClaimed: mergeMilestoneIds(local.globalLeagueMilestonesClaimed, remote.globalLeagueMilestonesClaimed),
+    // Liga Classic / Fast Liga: usa o lado com mais partidas (jamais regredir).
+    localLeagues: mergeLocalLeagues(local.localLeagues, remote.localLeagues),
     manager: {
       ...local.manager,
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,
@@ -185,6 +189,25 @@ function mergeAcademyQueue(
     }
   }
   return Array.from(byId.values());
+}
+
+/**
+ * Merge defensivo das ligas locais (classic + fast).
+ * Pega o lado com mais partidas jogadas em cada liga — jamais regride placar.
+ */
+function mergeLocalLeagues(
+  local: OlefootGameState['localLeagues'] | undefined,
+  remote: OlefootGameState['localLeagues'] | null | undefined,
+): OlefootGameState['localLeagues'] {
+  if (!local && !remote) return undefined;
+  if (!local) return remote ?? undefined;
+  if (!remote) return local;
+  const pick = (a: typeof local.classic, b: typeof local.classic) =>
+    (a?.played ?? 0) >= (b?.played ?? 0) ? a : b;
+  return {
+    classic: pick(local.classic, remote.classic),
+    fast:    pick(local.fast,    remote.fast),
+  };
 }
 
 /**

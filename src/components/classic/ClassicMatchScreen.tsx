@@ -682,6 +682,15 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         type: 'APPLY_CASUAL_RESULT_TO_LEAGUE',
         result: { scoreHome: score.home, scoreAway: score.away, result },
       });
+      // LIGA CLASSIC — placar conta nessa league dedicada (separada do
+      // tracking da leagueSeason histórica).
+      dispatch({
+        type: 'RECORD_LOCAL_LEAGUE_RESULT',
+        league: 'classic',
+        result,
+        goalsFor: score.home,
+        goalsAgainst: score.away,
+      });
     }
   }, [matchOver, score, dispatch]);
 
