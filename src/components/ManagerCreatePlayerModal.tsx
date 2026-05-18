@@ -347,14 +347,15 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   };
 
   /**
-   * Recebe o blob composto (selfie + camisa + fundo) do AcademyPhotoCapture,
-   * envia pro /api/academy/generate-portrait (Freepik i2i + Pinata), recebe
-   * a URL pública, dispatcha CREATE_MANAGER_PROSPECT com portraitUrl pronta.
+   * Recebe a SELFIE BLOB do AcademyPhotoCapture (apenas a foto da face,
+   * sem composição local). Adiciona jersey + background como references
+   * separados e manda os 3 pro /api/academy/generate-portrait. O Freepik
+   * (Seedream v4 i2i) combina as 3 imagens + prompt na carta final.
    *
    * Sem server configurado (dev local sem token), pula a geração e dispatcha
    * sem foto (cai no fluxo legacy admin).
    */
-  const handleGeneratePortrait = async (composedBlob: Blob) => {
+  const handleGeneratePortrait = async (selfieBlob: Blob) => {
     if (generatingArt) return;
     setServerError(null);
     setGeneratingArt(true);
@@ -365,8 +366,22 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
       const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
       let portraitUrl: string | undefined;
       if (serverUrl && token) {
+        // Server espera 3 references separadas — busca os PNGs do template
+        // do próprio site (mesma origem) e adiciona ao multipart.
+        const [jerseyRes, bgRes] = await Promise.all([
+          fetch('/academy/template-jersey.png'),
+          fetch('/academy/template-background.png'),
+        ]);
+        if (!jerseyRes.ok || !bgRes.ok) {
+          setServerError('Não foi possível carregar os templates de carta. Recarrega a página.');
+          return;
+        }
+        const [jerseyBlob, bgBlob] = await Promise.all([jerseyRes.blob(), bgRes.blob()]);
+
         const form = new FormData();
-        form.append('composed_image', composedBlob, 'composed.png');
+        form.append('selfie_image', selfieBlob, 'selfie.jpg');
+        form.append('jersey_image', jerseyBlob, 'jersey.png');
+        form.append('background_image', bgBlob, 'background.png');
         const prompt = buildProspectAdminArtPrompt({
           name: trimmed,
           pos,
@@ -957,9 +972,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     </div>
                   ) : (
                     <AcademyPhotoCapture
-                      backgroundUrl="/academy/template-background.png"
-                      jerseyUrl="/academy/template-jersey.png"
-                      onComposed={(blob) => void handleGeneratePortrait(blob)}
+                      onCaptured={(blob) => void handleGeneratePortrait(blob)}
                       onCancel={() => setStep('review')}
                     />
                   )}

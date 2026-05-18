@@ -1,73 +1,41 @@
 /**
  * AcademyPhotoCapture
  *
- * Passo 4 da criação de jogador da Academia OLE. Fluxo:
- *   1. idle: 2 opções — câmera ao vivo (getUserMedia) OU upload (com
- *      `capture="user"` que abre câmera selfie nativa no mobile).
- *   2. streaming: video ao vivo + overlay translúcido + "Capturar".
- *   3. positioning: snapshot da face + drag/scale sobre template fixo.
- *   4. composed: callback onComposed(blob) — composição final.
+ * Captura uma SELFIE do manager pra mandar pro Freepik como reference.
+ * NÃO compõe localmente — o Freepik faz a composição (selfie + camisa +
+ * fundo) com 3 reference images separadas.
  *
- * Composição = layer bg PNG + face posicionada + jersey PNG (overlay).
- * No mobile, prefere upload via input file com `capture="user"` —
- * getUserMedia é menos confiável em Safari iOS / Android Chrome velho.
- * Pattern de canvas 2D copiado de AdminGenesisPortraitsPanel.
+ * Fluxo:
+ *   1. idle:     2 botões (câmera ao vivo OU upload com capture="user")
+ *   2. streaming: video preview + Capturar
+ *   3. preview:  selfie capturada + Retake ou Confirmar
+ *   4. composing: callback onCaptured(blob) — caller envia pro server
+ *
+ * No mobile, o upload com capture="user" abre câmera frontal nativa —
+ * mais confiável que getUserMedia (Safari iOS, Chrome Android).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, RotateCcw, ZoomIn, ZoomOut, Check, X, Loader2, Upload } from 'lucide-react';
+import { Camera, Check, X, Loader2, Upload, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const CARD_W = 600;
-const CARD_H = 800;
-
-interface CropState {
-  offsetX: number; // -0.5 a 0.5 (fração do tamanho do canvas)
-  offsetY: number;
-  scale: number;   // 0.5 a 2.5
-}
-
-const DEFAULT_CROP: CropState = { offsetX: 0, offsetY: 0, scale: 1 };
-
 interface Props {
-  /** URL pública do PNG de fundo (camada inferior). */
-  backgroundUrl: string;
-  /** URL pública do PNG da camisa com transparência onde vai o rosto. */
-  jerseyUrl: string;
-  /** Callback chamado quando o manager confirma a composição. */
-  onComposed: (blob: Blob) => void;
+  /** Callback chamado quando o manager confirma a selfie. */
+  onCaptured: (selfieBlob: Blob) => void;
   /** Callback opcional pra cancelar/voltar passo. */
   onCancel?: () => void;
 }
 
-type Stage = 'idle' | 'streaming' | 'permission-denied' | 'positioning' | 'composing';
+type Stage = 'idle' | 'streaming' | 'permission-denied' | 'preview' | 'composing';
 
-export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCancel }: Props) {
+export function AcademyPhotoCapture({ onCaptured, onCancel }: Props) {
   const [stage, setStage] = useState<Stage>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [faceUrl, setFaceUrl] = useState<string | null>(null);
-  const [crop, setCrop] = useState<CropState>(DEFAULT_CROP);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewBlobRef = useRef<Blob | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const previewRef = useRef<HTMLCanvasElement | null>(null);
-  const faceImgRef = useRef<HTMLImageElement | null>(null);
-  const bgImgRef = useRef<HTMLImageElement | null>(null);
-  const jerseyImgRef = useRef<HTMLImageElement | null>(null);
-  const draggingRef = useRef(false);
-  const lastPosRef = useRef({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Pre-carrega as imagens do template uma vez
-  useEffect(() => {
-    const bg = new Image();
-    bg.crossOrigin = 'anonymous';
-    bg.src = backgroundUrl;
-    bg.onload = () => { bgImgRef.current = bg; };
-    const jersey = new Image();
-    jersey.crossOrigin = 'anonymous';
-    jersey.src = jerseyUrl;
-    jersey.onload = () => { jerseyImgRef.current = jersey; };
-  }, [backgroundUrl, jerseyUrl]);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -77,6 +45,21 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
   }, []);
 
   useEffect(() => () => stopStream(), [stopStream]);
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const setPreviewFromBlob = useCallback((blob: Blob) => {
+    previewBlobRef.current = blob;
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(blob);
+    });
+    setStage('preview');
+    stopStream();
+  }, [stopStream]);
 
   const startCamera = useCallback(async () => {
     setErrorMsg(null);
@@ -92,7 +75,6 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
       });
       streamRef.current = stream;
       setStage('streaming');
-      // Aguarda o React renderizar o <video> antes de atribuir o srcObject
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -100,55 +82,10 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
         }
       }, 50);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn('[AcademyPhotoCapture] getUserMedia:', msg);
       setStage('permission-denied');
-      setErrorMsg('Permissão de câmera negada ou nenhuma câmera disponível.');
+      setErrorMsg(`Permissão de câmera negada: ${e instanceof Error ? e.message : 'erro desconhecido'}`);
     }
   }, []);
-
-  /**
-   * Handler comum: recebe um Blob (de webcam OU upload), gera Image,
-   * entra no estado de positioning.
-   */
-  const loadFaceBlob = useCallback((blob: Blob) => {
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      faceImgRef.current = img;
-      setFaceUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return url;
-      });
-      setCrop(DEFAULT_CROP);
-      setStage('positioning');
-      stopStream();
-      setTimeout(() => renderPreview(DEFAULT_CROP), 50);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      setErrorMsg('Não foi possível ler a imagem. Tenta outra.');
-    };
-    img.src = url;
-  }, [stopStream]);
-
-  /**
-   * Trigger do input file. capture="user" hint pro browser abrir câmera
-   * frontal nativa no mobile (iOS Safari, Android Chrome). Em desktop
-   * abre file picker normal.
-   */
-  const onFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setErrorMsg('Selecione um arquivo de imagem.');
-      return;
-    }
-    setErrorMsg(null);
-    loadFaceBlob(file);
-    // Limpa o value pra permitir re-upload do mesmo arquivo
-    e.target.value = '';
-  }, [loadFaceBlob]);
 
   const capture = useCallback(() => {
     const video = videoRef.current;
@@ -161,133 +98,40 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
     c.height = h;
     const ctx = c.getContext('2d');
     if (!ctx) return;
-    // Espelha horizontalmente pra ficar mais natural (selfie mode)
     ctx.translate(w, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, w, h);
-    c.toBlob((blob) => { if (blob) loadFaceBlob(blob); }, 'image/png');
-  }, [loadFaceBlob]);
+    // JPEG comprimido — selfies via PNG ficam grandes demais
+    c.toBlob((blob) => { if (blob) setPreviewFromBlob(blob); }, 'image/jpeg', 0.88);
+  }, [setPreviewFromBlob]);
 
-  const renderPreview = useCallback((c: CropState) => {
-    const canvas = previewRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, CARD_W, CARD_H);
-    // Layer 1: background
-    if (bgImgRef.current) {
-      ctx.drawImage(bgImgRef.current, 0, 0, CARD_W, CARD_H);
-    } else {
-      ctx.fillStyle = '#0A0A0A';
-      ctx.fillRect(0, 0, CARD_W, CARD_H);
+  const onFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Selecione um arquivo de imagem.');
+      return;
     }
-    // Layer 2: face com MÁSCARA CIRCULAR — esconde o fundo do selfie
-    // (quarto, parede, etc) e dá um look limpo de "headshot" pra Freepik
-    // consumir como referência. Diâmetro 38% da largura, centro vertical
-    // em ~28% da altura (área da cabeça do jogador na carta).
-    if (faceImgRef.current) {
-      const img = faceImgRef.current;
-      ctx.save();
-      const baseRadius = CARD_W * 0.19; // 228px diametro padrão
-      const radius = baseRadius * c.scale;
-      const cx = CARD_W / 2 + c.offsetX * CARD_W;
-      const cy = CARD_H * 0.28 + c.offsetY * CARD_H;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      // Cover-fit: face preenche o círculo inteiro (sem barras)
-      const imgAspect = img.naturalWidth / img.naturalHeight;
-      const drawSize = radius * 2;
-      let drawW = drawSize;
-      let drawH = drawSize;
-      if (imgAspect > 1) drawW = drawSize * imgAspect;
-      else drawH = drawSize / imgAspect;
-      ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
-      ctx.restore();
-      // Subtle ring pra integrar visualmente
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-    }
-    // Layer 3: jersey overlay
-    if (jerseyImgRef.current) {
-      ctx.drawImage(jerseyImgRef.current, 0, 0, CARD_W, CARD_H);
-    }
-  }, []);
-
-  // Re-render quando crop muda
-  useEffect(() => {
-    if (stage === 'positioning') renderPreview(crop);
-  }, [crop, stage, renderPreview]);
-
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (stage !== 'positioning') return;
-    draggingRef.current = true;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, [stage]);
-
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!draggingRef.current || stage !== 'positioning') return;
-    const dx = e.clientX - lastPosRef.current.x;
-    const dy = e.clientY - lastPosRef.current.y;
-    lastPosRef.current = { x: e.clientX, y: e.clientY };
-    const rect = e.currentTarget.getBoundingClientRect();
-    setCrop((prev) => ({
-      ...prev,
-      offsetX: Math.max(-0.5, Math.min(0.5, prev.offsetX + dx / rect.width)),
-      offsetY: Math.max(-0.5, Math.min(0.5, prev.offsetY + dy / rect.height)),
-    }));
-  }, [stage]);
-
-  const onPointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    draggingRef.current = false;
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  }, []);
-
-  const adjustScale = useCallback((delta: number) => {
-    setCrop((prev) => ({ ...prev, scale: Math.max(0.5, Math.min(2.5, prev.scale + delta)) }));
-  }, []);
-
-  const reset = useCallback(() => setCrop(DEFAULT_CROP), []);
-
-  const confirm = useCallback(() => {
-    const canvas = previewRef.current;
-    if (!canvas) return;
-    setStage('composing');
-    // Renderiza em alta resolução pra mandar pro Freepik
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          setStage('positioning');
-          setErrorMsg('Falha ao compor imagem. Tenta de novo.');
-          return;
-        }
-        onComposed(blob);
-        // Limpa URL temporário da face
-        if (faceUrl) URL.revokeObjectURL(faceUrl);
-      },
-      'image/png',
-      0.92,
-    );
-  }, [onComposed, faceUrl]);
+    setErrorMsg(null);
+    setPreviewFromBlob(file);
+    e.target.value = '';
+  }, [setPreviewFromBlob]);
 
   const retake = useCallback(() => {
-    if (faceUrl) URL.revokeObjectURL(faceUrl);
-    setFaceUrl(null);
-    faceImgRef.current = null;
-    setCrop(DEFAULT_CROP);
-    void startCamera();
-  }, [faceUrl, startCamera]);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewBlobRef.current = null;
+    setPreviewUrl(null);
+    setStage('idle');
+  }, [previewUrl]);
+
+  const confirm = useCallback(() => {
+    if (!previewBlobRef.current) return;
+    setStage('composing');
+    onCaptured(previewBlobRef.current);
+  }, [onCaptured]);
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Input file escondido — capture="user" abre câmera selfie nativa no mobile */}
       <input
         ref={fileInputRef}
         type="file"
@@ -301,8 +145,8 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
       {stage === 'idle' && (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-white/15 bg-deep-black/50 p-6 text-center">
           <Camera className="h-10 w-10 text-neon-yellow" aria-hidden />
-          <p className="text-sm text-white/80">
-            Tira uma selfie pra ser a base da arte do teu cartão.
+          <p className="text-sm text-white/85">
+            Tira uma selfie clara da tua face. A IA vai usar como referência pra gerar a carta cinematográfica.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
@@ -323,12 +167,10 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
             </button>
           </div>
           <p className="text-[10px] leading-relaxed text-white/50">
-            No celular o botão "Tirar foto" abre a câmera frontal direto.<br />
+            No celular o botão "Tirar foto" abre a câmera frontal nativa.<br />
             No PC abre o explorador de arquivos pra escolher uma imagem.
           </p>
-          {errorMsg && (
-            <p className="text-[11px] text-red-300">{errorMsg}</p>
-          )}
+          {errorMsg && <p className="text-[11px] text-red-300">{errorMsg}</p>}
           {onCancel && (
             <button
               type="button"
@@ -341,7 +183,7 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
         </div>
       )}
 
-      {/* PERMISSION DENIED — oferece upload como fallback */}
+      {/* PERMISSION DENIED */}
       {stage === 'permission-denied' && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/40 p-5 text-center">
           <X className="h-6 w-6 text-red-300" aria-hidden />
@@ -379,7 +221,7 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
               playsInline
               muted
               className="block max-h-[60vh] w-auto"
-              style={{ transform: 'scaleX(-1)' }} /* mirror preview */
+              style={{ transform: 'scaleX(-1)' }}
             />
             <div className="pointer-events-none absolute inset-0 border-4 border-dashed border-neon-yellow/40" />
           </div>
@@ -405,22 +247,17 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
         </div>
       )}
 
-      {/* POSITIONING — drag/scale + preview composto */}
-      {(stage === 'positioning' || stage === 'composing') && (
+      {/* PREVIEW — selfie capturada, escolher Retake ou Confirmar */}
+      {(stage === 'preview' || stage === 'composing') && previewUrl && (
         <div className="flex flex-col items-center gap-3">
-          <div className="relative">
-            <canvas
-              ref={previewRef}
-              width={CARD_W}
-              height={CARD_H}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
+          <div className="relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-deep-black">
+            <img
+              src={previewUrl}
+              alt="Selfie capturada"
               className={cn(
-                'block max-h-[60vh] w-auto rounded border border-white/15 bg-deep-black select-none',
-                stage === 'positioning' ? 'cursor-move' : 'cursor-wait opacity-70',
+                'block max-h-[60vh] w-auto',
+                stage === 'composing' && 'opacity-60',
               )}
-              style={{ touchAction: 'none' }}
             />
             {stage === 'composing' && (
               <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/40">
@@ -428,62 +265,28 @@ export function AcademyPhotoCapture({ backgroundUrl, jerseyUrl, onComposed, onCa
               </div>
             )}
           </div>
-          {errorMsg && (
-            <div className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-[12px] text-red-200">
-              {errorMsg}
-            </div>
-          )}
-          <p className="text-center text-[11px] text-white/60">
-            Arrasta o rosto pra posicionar · usa zoom pra escalar
-          </p>
           <p className="text-center text-[10px] leading-relaxed text-neon-yellow/70">
-            ⚡ Esta é só a <strong>referência</strong> que vai pra IA.<br />
-            O resultado final será uma carta cinematográfica premium (8K, estilo FIFA).
+            ⚡ Esta foto vai pra IA junto com a camisa e o fundo Olefoot.<br />
+            O resultado é uma carta cinematográfica premium (estilo FIFA Ultimate Team).
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => adjustScale(-0.1)}
-              disabled={stage !== 'positioning'}
-              className="rounded border border-white/30 p-2 text-white/80 hover:bg-white/10 disabled:opacity-40"
-              aria-label="Diminuir"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => adjustScale(0.1)}
-              disabled={stage !== 'positioning'}
-              className="rounded border border-white/30 p-2 text-white/80 hover:bg-white/10 disabled:opacity-40"
-              aria-label="Aumentar"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={reset}
-              disabled={stage !== 'positioning'}
-              className="rounded border border-white/30 p-2 text-white/80 hover:bg-white/10 disabled:opacity-40"
-              aria-label="Resetar"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </button>
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={retake}
-              disabled={stage !== 'positioning'}
-              className="border border-white/30 px-3 py-2 text-[11px] uppercase tracking-wider text-white/80 hover:bg-white/10 disabled:opacity-40"
+              disabled={stage === 'composing'}
+              className="inline-flex items-center gap-1 border border-white/30 px-4 py-2 text-xs uppercase tracking-wider text-white/85 hover:bg-white/10 disabled:opacity-40"
             >
+              <RefreshCw className="h-3 w-3" />
               Tirar de novo
             </button>
             <button
               type="button"
               onClick={confirm}
-              disabled={stage !== 'positioning'}
+              disabled={stage === 'composing'}
               className="btn-primary inline-flex items-center gap-1 px-5 py-2 text-xs font-black uppercase tracking-wider disabled:opacity-40"
             >
               <Check className="h-3 w-3" />
-              Confirmar
+              {stage === 'composing' ? 'Enviando…' : 'Confirmar'}
             </button>
           </div>
         </div>

@@ -6,77 +6,55 @@ import { uploadBufferToPinata } from '../services/pinata/uploadToPinata.js';
 export const academyArtRoutes = new Hono();
 
 /**
- * Endpoint da Freepik image-to-image (Seedream v4).
+ * Freepik Seedream v4 edit (image-to-image multi-reference).
  *
- * Confirmar via dashboard Freepik se for outro nome — esse é o padrão dos
- * endpoints recentes ("text-to-image/<model>-edit" pra edição/i2i).
- *
- * Resposta esperada (sync): { data: [{ base64 }] }
- * Resposta esperada (async): { data: { task_id, status } } — implementar
- * polling em sprint futuro se Freepik mudar pra async.
+ * Padrão ASYNC: POST devolve { data: { task_id, status: 'CREATED' } }.
+ * Cliente polla GET /v1/ai/text-to-image/seedream-v4-edit/{task_id} até
+ * status='COMPLETED' ou timeout.
  */
-const FREEPIK_I2I_ENDPOINT = 'https://api.freepik.com/v1/ai/text-to-image/seedream-v4-edit';
-const FREEPIK_TIMEOUT_MS = 60_000;
+const FREEPIK_BASE = 'https://api.freepik.com/v1/ai/text-to-image';
+const FREEPIK_MODEL_PATH = 'seedream-v4-edit';
+const FREEPIK_TIMEOUT_MS = 90_000;
+const POLL_INTERVAL_MS = 2_500;
 const COOLDOWN_MS = 30_000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MIN_PROMPT_LEN = 10;
 
 /**
- * CINEMATIC PROMPT — esse é o "poder comercial" do produto. Direciona o
- * Freepik Seedream pra produzir um cartão premium de nível EA Sports / FIFA
- * Ultimate Team, usando a composta como referência (rosto + camisa + fundo).
- *
- * Estrutura: setup técnico → uso da referência → estilo visual → lighting
- * → background → composição → mood → qualidade.
+ * PROMPT do entregável.
+ * Estrutura tripla: roles dos 3 references → o que fazer → entregável.
+ * Cada bloco é explícito porque Seedream responde melhor a instruções
+ * estruturadas que a parágrafos.
  */
-const CINEMATIC_PROMPT_ADDENDUM = [
-  '',
-  '— CINEMATIC PREMIUM SPORTS CARD STYLE —',
-  'Generate a photorealistic stylized digital portrait — quality of EA Sports FIFA Ultimate Team / Pro Evolution Soccer top-tier trading card.',
-  '',
-  'REFERENCE USAGE (CRITICAL):',
-  '- Use the reference image as base composition: PRESERVE the manager\'s face from the photo, PRESERVE the jersey design and color, PRESERVE the background palette.',
-  '- The subject in the reference IS the player — do NOT replace the face. Enhance it: better lighting, sharper details, pro retouching, but same identity.',
-  '- Compose subject in three-quarter or front view, confident gaze, mature athletic look.',
-  '',
-  'LIGHTING:',
-  '- Dramatic studio lighting with rim light on shoulders/hair.',
-  '- Soft key light on face from front-right, deep contrast on opposite cheek.',
-  '- Subtle volumetric haze for cinematic depth.',
-  '',
-  'COLOR & MOOD:',
-  '- Match the reference jersey colors faithfully.',
-  '- Background: stadium atmosphere, soft motion blur of crowd/lights, deep blacks (#0A0A0A) and accent neon yellow (#FBE100) — Olefoot brand.',
-  '- Color grading: cinematic teal-and-orange undertones, premium magazine cover feel.',
-  '',
-  'COMPOSITION:',
-  '- Subject occupies upper 60% of frame, bust + shoulders crop.',
-  '- Sharp focus on eyes, gradual focus fall-off to background.',
-  '- Symmetric, hero-shot framing.',
-  '',
-  'QUALITY:',
-  '- 8K resolution feel, ultra-detailed skin texture, fabric weave on jersey, micro-expressions in eyes.',
-  '- Professional retouching, no plastic look, no over-smoothing.',
-  '- Output: vertical aspect 3:4 like a collectible card.',
-].join('\n');
+function buildFreepikPrompt(originalFormPrompt: string): string {
+  return [
+    '— TASK BRIEF —',
+    'You will receive 3 reference images:',
+    '  1. SELFIE — the manager\'s face. PRESERVE this face identity exactly. Do not invent a different face. Do not resemble any real famous athlete.',
+    '  2. JERSEY — the official Olefoot football shirt the player must be wearing. PRESERVE the jersey colors, logo, and stripe design exactly.',
+    '  3. BACKGROUND — the atmospheric backdrop for the card. PRESERVE the visual style and color palette.',
+    '',
+    '— WHAT TO GENERATE —',
+    'A cinematic premium football trading card — EA Sports FIFA Ultimate Team quality.',
+    'Compose: the manager from reference #1, wearing the jersey from reference #2, against the background style from reference #3.',
+    'Bust + shoulders crop, three-quarter view or front facing, confident gaze, mature adult athlete (22-35 yo).',
+    'Photorealistic stylized digital painting / 3D render hybrid.',
+    'Dramatic studio lighting: rim light on shoulders, soft key light on face, deep contrast shadows.',
+    'Sharp focus on eyes, gradual fall-off to background.',
+    'Color grading: cinematic teal-orange, neon yellow (#FBE100) and deep black (#0A0A0A) accents.',
+    '',
+    '— DELIVERABLE —',
+    'Single image. Vertical 3:4 aspect ratio. Ultra-detailed, 8K resolution feel.',
+    'Sharp skin texture, fabric weave on jersey, micro-expressions in eyes.',
+    'No text overlays. No additional logos beyond what\'s in the jersey reference.',
+    'Subject must look like an ADULT (never a minor). Faithful facial features (no distortion, no caricature).',
+    'Clean professional sports magazine cover quality.',
+    '',
+    '— EXTRA CONTEXT FROM FORM —',
+    originalFormPrompt,
+  ].join('\n');
+}
 
-/**
- * Addendum de safety. Aplicado SEMPRE em conjunto com o cinematográfico.
- * Cobre as 4 regras do produto:
- *   1. Adulto (18+)
- *   2. Sem rosto de jogador famoso
- *   3. Sem distorção
- *   4. Sem palavrões / conteúdo NSFW
- */
-const SAFETY_PROMPT_ADDENDUM = [
-  '',
-  '— STRICT SAFETY REQUIREMENTS (NON-NEGOTIABLE) —',
-  '- Subject must appear as an adult athlete, 22-35 years old, with mature facial features. Never depict a minor.',
-  '- DO NOT make the subject resemble any real famous athlete (Cristiano Ronaldo, Messi, Neymar, Pelé, Mbappé, Haaland, etc), sports celebrity, or public figure. The face must be the reference manager\'s face only.',
-  '- Preserve the reference photo facial features faithfully — no distortion, no caricature, no exaggeration of proportions, no surreal warping.',
-  '- No profanity, no offensive symbols, no NSFW content, no weapons, no political imagery.',
-].join('\n');
-
-/** Cooldown in-memory por user_id pra geração de arte (caro: ~10-30s + custo $). */
 const userCooldown = new Map<string, number>();
 
 async function resolveUser(authHeader: string | undefined): Promise<string | null> {
@@ -89,27 +67,31 @@ async function resolveUser(authHeader: string | undefined): Promise<string | nul
   return data.user.id;
 }
 
-interface FreepikI2iResponse {
-  data?:
-    | Array<{ base64?: string; url?: string }>
-    | { task_id?: string; status?: string }
-    | { generated?: Array<{ base64?: string; url?: string }> };
+interface FreepikTaskResponse {
+  data?: {
+    task_id?: string;
+    status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | string;
+    generated?: string[]; // URLs ou base64 quando COMPLETED
+  };
+  error?: { message?: string };
 }
 
 /**
- * Chama Freepik i2i. Trata tanto resposta sync (data: [...]) quanto async
- * (task_id) — pra async retorna o task_id pro caller decidir o que fazer
- * (MVP só lida com sync; async seria sprint extra).
+ * POST + polling no Freepik. Aceita 3 reference images.
+ * Devolve Buffer da imagem final ou erro descritivo.
  */
-async function callFreepikI2i(opts: {
+async function callFreepikSeedream(opts: {
   apiKey: string;
   prompt: string;
-  referenceImageBase64: string;
+  referenceImagesBase64: string[]; // [selfie, jersey, background]
 }): Promise<{ ok: true; imageBuffer: Buffer } | { ok: false; error: string; status?: number }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FREEPIK_TIMEOUT_MS);
+  const postUrl = `${FREEPIK_BASE}/${FREEPIK_MODEL_PATH}`;
+  const startedAt = Date.now();
+
+  // 1) POST inicial → task_id
+  let taskId: string;
   try {
-    const r = await fetch(FREEPIK_I2I_ENDPOINT, {
+    const r = await fetch(postUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -117,51 +99,89 @@ async function callFreepikI2i(opts: {
       },
       body: JSON.stringify({
         prompt: opts.prompt,
-        reference_images: [opts.referenceImageBase64],
-        aspect_ratio: 'square_1_1',
+        reference_images: opts.referenceImagesBase64,
+        aspect_ratio: 'portrait_3_4',
         num_images: 1,
       }),
-      signal: controller.signal,
     });
     if (!r.ok) {
       const body = await r.text().catch(() => '');
-      return { ok: false, error: `Freepik ${r.status}: ${body.slice(0, 300)}`, status: r.status };
+      return { ok: false, error: `Freepik POST ${r.status}: ${body.slice(0, 300)}`, status: r.status };
     }
-    const json = (await r.json()) as FreepikI2iResponse;
-    const arr = Array.isArray(json.data) ? json.data : (json.data as { generated?: unknown[] } | undefined)?.generated;
-    if (Array.isArray(arr) && arr.length > 0) {
-      const first = arr[0] as { base64?: string };
-      if (first.base64) {
-        return { ok: true, imageBuffer: Buffer.from(first.base64, 'base64') };
-      }
+    const json = (await r.json()) as FreepikTaskResponse;
+    const tid = json.data?.task_id;
+    if (!tid) {
+      return { ok: false, error: 'Freepik POST sem task_id. Endpoint pode estar errado.' };
     }
-    // Async path (task_id) ainda não suportado no MVP
-    return { ok: false, error: 'Resposta Freepik sem imagem sync — endpoint pode estar em modo async.' };
+    taskId = tid;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: `Freepik call failed: ${msg}` };
-  } finally {
-    clearTimeout(timer);
+    return { ok: false, error: `Freepik POST falhou: ${e instanceof Error ? e.message : String(e)}` };
   }
+
+  // 2) Poll GET até COMPLETED, FAILED ou timeout
+  const getUrl = `${postUrl}/${taskId}`;
+  while (Date.now() - startedAt < FREEPIK_TIMEOUT_MS) {
+    await new Promise((res) => setTimeout(res, POLL_INTERVAL_MS));
+    try {
+      const r = await fetch(getUrl, {
+        headers: { 'x-freepik-api-key': opts.apiKey },
+      });
+      if (!r.ok) {
+        const body = await r.text().catch(() => '');
+        return { ok: false, error: `Freepik GET ${r.status}: ${body.slice(0, 200)}`, status: r.status };
+      }
+      const json = (await r.json()) as FreepikTaskResponse;
+      const status = json.data?.status;
+      if (status === 'COMPLETED') {
+        const generated = json.data?.generated;
+        if (!generated || generated.length === 0) {
+          return { ok: false, error: 'Freepik COMPLETED mas sem imagem em `generated`.' };
+        }
+        const first = generated[0];
+        // generated[0] pode ser URL https ou base64 — testar
+        if (first.startsWith('http')) {
+          try {
+            const imgRes = await fetch(first);
+            if (!imgRes.ok) {
+              return { ok: false, error: `Falha ao baixar imagem do Freepik: ${imgRes.status}` };
+            }
+            const buf = Buffer.from(await imgRes.arrayBuffer());
+            return { ok: true, imageBuffer: buf };
+          } catch (e) {
+            return { ok: false, error: `Falha ao baixar imagem: ${e instanceof Error ? e.message : String(e)}` };
+          }
+        }
+        // base64
+        return { ok: true, imageBuffer: Buffer.from(first, 'base64') };
+      }
+      if (status === 'FAILED') {
+        return { ok: false, error: `Freepik task FAILED: ${json.error?.message ?? 'sem detalhes'}` };
+      }
+      // CREATED / IN_PROGRESS — continua polling
+    } catch (e) {
+      // Erros de rede em poll: tenta de novo até timeout
+      console.warn('[academy/generate-portrait] poll error (retrying):', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return { ok: false, error: `Timeout (${FREEPIK_TIMEOUT_MS / 1000}s) esperando Freepik gerar arte.` };
 }
 
 /**
  * POST /api/academy/generate-portrait
  *
- * Pipeline atômico (do ponto de vista do cliente):
- *   1. Recebe a foto composta (selfie + camisa + fundo) do cliente
- *   2. Augmenta o adminArtPrompt com SAFETY_PROMPT_ADDENDUM
- *   3. Chama Freepik i2i passando a composta como reference
- *   4. Upload do output pro Pinata
- *   5. Devolve URL pública pro cliente dispatchar CREATE_MANAGER_PROSPECT
+ * Multipart com 3 imagens separadas. Server combina como reference_images
+ * pro Freepik Seedream v4 edit (multi-reference i2i). Async polling.
+ * Output vai pro Pinata.
  *
  * Body multipart:
- *   - composed_image (File): a composição feita no canvas do cliente
- *   - prompt (string): o adminArtPrompt do passo 3 do modal
- *   - prospect_meta (string JSON, opcional): { name, pos } pra audit
+ *   - selfie_image     (File)   — face do manager
+ *   - jersey_image     (File)   — camisa OLE de referência
+ *   - background_image (File)   — fundo do card de referência
+ *   - prompt           (string) — buildProspectAdminArtPrompt do form
+ *   - prospect_meta    (string JSON opcional)
  *
- * Auth: Authorization: Bearer <jwt>
- * env requerido: FREEPIK_API_KEY, PINATA_JWT
+ * Auth: Bearer Supabase. env: FREEPIK_API_KEY, PINATA_JWT.
  */
 academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) => {
   const freepikKey = process.env.FREEPIK_API_KEY?.trim();
@@ -172,7 +192,6 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
   const userId = await resolveUser(c.req.header('Authorization'));
   if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
-  // Cooldown por usuário (anti-spam de geração cara)
   const now = Date.now();
   const last = userCooldown.get(userId) ?? 0;
   if (now - last < COOLDOWN_MS) {
@@ -183,71 +202,67 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
     );
   }
 
-  const contentLength = Number(c.req.header('content-length') ?? 0);
-  if (contentLength > MAX_IMAGE_BYTES) {
-    return c.json({ ok: false, error: 'Imagem muito grande (máx. 8 MB).' }, 413);
-  }
-
   let body: Record<string, string | File>;
   try {
     body = (await c.req.parseBody()) as Record<string, string | File>;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'parseBody failed';
-    return c.json({ ok: false, error: `Corpo multipart inválido: ${msg}` }, 400);
+    return c.json({ ok: false, error: `Corpo multipart inválido: ${e instanceof Error ? e.message : ''}` }, 400);
   }
 
-  const composedImage = body.composed_image;
-  if (!composedImage || typeof composedImage === 'string' || !(composedImage instanceof File)) {
-    return c.json({ ok: false, error: 'Campo "composed_image" obrigatório (file).' }, 400);
+  const selfie = body.selfie_image;
+  const jersey = body.jersey_image;
+  const background = body.background_image;
+  if (!(selfie instanceof File)) return c.json({ ok: false, error: 'selfie_image obrigatório.' }, 400);
+  if (!(jersey instanceof File)) return c.json({ ok: false, error: 'jersey_image obrigatório.' }, 400);
+  if (!(background instanceof File)) return c.json({ ok: false, error: 'background_image obrigatório.' }, 400);
+  for (const [name, f] of [['selfie', selfie], ['jersey', jersey], ['background', background]] as const) {
+    if (f.size > MAX_IMAGE_BYTES) {
+      return c.json({ ok: false, error: `${name} muito grande (${Math.round(f.size / 1024)} KB, máx. ${MAX_IMAGE_BYTES / 1024 / 1024} MB).` }, 413);
+    }
   }
-  const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
-  if (prompt.length < 10) {
-    return c.json({ ok: false, error: 'Campo "prompt" obrigatório (mínimo 10 caracteres).' }, 400);
+
+  const formPrompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
+  if (formPrompt.length < MIN_PROMPT_LEN) {
+    return c.json({ ok: false, error: 'Campo "prompt" obrigatório (>= 10 chars).' }, 400);
   }
 
   let prospectMeta: { name?: string; pos?: string } = {};
   if (typeof body.prospect_meta === 'string' && body.prospect_meta.trim()) {
-    try {
-      prospectMeta = JSON.parse(body.prospect_meta) as typeof prospectMeta;
-    } catch {
-      // Não bloqueia se meta vier malformada — só é usado pra log/nome
-    }
+    try { prospectMeta = JSON.parse(body.prospect_meta) as typeof prospectMeta; } catch { /* ignore */ }
   }
 
-  // Marca cooldown ANTES de chamar Freepik (custo: 1 imagem ainda assim conta)
+  // Marca cooldown ANTES de gerar (custo $ acontece mesmo se falhar)
   userCooldown.set(userId, now);
 
-  // Augmenta prompt: prompt original do form + cinematográfico (qualidade) +
-  // safety (não-negociável). Ordem importa: safety por último pra ter peso.
-  const augmentedPrompt = `${prompt}\n${CINEMATIC_PROMPT_ADDENDUM}\n${SAFETY_PROMPT_ADDENDUM}`;
+  // Converte os 3 files pra base64
+  const [selfieB64, jerseyB64, bgB64] = await Promise.all([
+    selfie.arrayBuffer().then((b) => Buffer.from(b).toString('base64')),
+    jersey.arrayBuffer().then((b) => Buffer.from(b).toString('base64')),
+    background.arrayBuffer().then((b) => Buffer.from(b).toString('base64')),
+  ]);
 
-  // Converte composta pra base64 pra Freepik
-  const refBuffer = Buffer.from(await composedImage.arrayBuffer());
-  const refBase64 = refBuffer.toString('base64');
+  const fullPrompt = buildFreepikPrompt(formPrompt);
 
-  const generated = await callFreepikI2i({
+  const generated = await callFreepikSeedream({
     apiKey: freepikKey,
-    prompt: augmentedPrompt,
-    referenceImageBase64: refBase64,
+    prompt: fullPrompt,
+    referenceImagesBase64: [selfieB64, jerseyB64, bgB64],
   });
   if (!generated.ok) {
     console.error('[academy/generate-portrait] Freepik failed:', generated.error);
-    return c.json({ ok: false, error: `Falha na geração: ${generated.error}` }, 502);
+    return c.json({ ok: false, error: `Falha na geração: ${generated.error}`, detail: generated.error }, 502);
   }
 
-  // Upload do resultado pro Pinata
+  // Upload Pinata
   const filename = `academy_${userId.slice(0, 8)}_${now}.png`;
-  const arrayBufferOut = generated.imageBuffer.buffer.slice(
+  const ab = generated.imageBuffer.buffer.slice(
     generated.imageBuffer.byteOffset,
     generated.imageBuffer.byteOffset + generated.imageBuffer.byteLength,
   ) as ArrayBuffer;
-  const gatewayPrefix = (process.env.PINATA_GATEWAY_PREFIX?.trim() || 'https://gateway.pinata.cloud/ipfs/').replace(
-    /\/?$/,
-    '/',
-  );
+  const gatewayPrefix = (process.env.PINATA_GATEWAY_PREFIX?.trim() || 'https://gateway.pinata.cloud/ipfs/').replace(/\/?$/, '/');
   const upload = await uploadBufferToPinata({
     jwt: pinataJwt,
-    buffer: arrayBufferOut,
+    buffer: ab,
     filename,
     mimeType: 'image/png',
     network: 'public',
@@ -259,26 +274,24 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
     return c.json({ ok: false, error: `Falha no upload da imagem: ${upload.message}` }, 502);
   }
 
-  // Audit log (best-effort, não bloqueia resposta)
+  // Audit (best-effort)
   const sb = getSupabaseAdmin();
   if (sb) {
-    void sb
-      .from('audit_log')
-      .insert({
-        operation: 'CREATE',
-        table_name: 'academy_prospect_portrait',
-        row_id: `${userId}:${now}`,
-        user_id: userId,
-        new_data: {
-          name: prospectMeta.name,
-          pos: prospectMeta.pos,
-          pinata_cid: upload.data.cid,
-          portrait_url: upload.publicUrl,
-        },
-      })
-      .then(({ error }) => {
-        if (error) console.error('[academy/generate-portrait] audit log error:', error.message);
-      });
+    void sb.from('audit_log').insert({
+      operation: 'CREATE',
+      table_name: 'academy_prospect_portrait',
+      row_id: `${userId}:${now}`,
+      user_id: userId,
+      new_data: {
+        name: prospectMeta.name,
+        pos: prospectMeta.pos,
+        pinata_cid: upload.data.cid,
+        portrait_url: upload.publicUrl,
+        freepik_endpoint: FREEPIK_MODEL_PATH,
+      },
+    }).then(({ error }) => {
+      if (error) console.error('[academy/generate-portrait] audit log error:', error.message);
+    });
   }
 
   return c.json({
