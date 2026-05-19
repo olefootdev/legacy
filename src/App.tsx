@@ -15,6 +15,7 @@ import { AnnouncementsHydrate } from './game/AnnouncementsHydrate';
 import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { ManagerGameStateHydrator } from './game/ManagerGameStateHydrator';
+import { PersistenceGuard } from './game/PersistenceGuard';
 import { PlatformDataHydrator } from './game/PlatformDataHydrator';
 import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
@@ -359,6 +360,7 @@ export default function App() {
         <OnboardingCeremony />
         <ManagerSquadHydrator />
         <ManagerGameStateHydrator />
+        <PersistenceGuard />
         <PlatformDataHydrator />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />

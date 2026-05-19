@@ -3,8 +3,7 @@ import { dispatchGame, getGameState, useGameStore, useSquadHydrationDone } from 
 import { isSupabaseConfigured } from '@/supabase/client';
 import { makeInboxItem } from '@/game/inboxItem';
 import { hasServerGrant, claimWelcomePackSlot } from '@/game/welcomeGenesisPack';
-import { persistManagerGameState } from '@/supabase/managerGameState';
-import { persistManagerSquad } from '@/supabase/managerSquad';
+import { flushAllPersistence } from '@/game/flushPersistence';
 import { buildOnboardingPackage, type OnboardingPackage } from './buildOnboardingPackage';
 import {
   IntroChapter,
@@ -130,6 +129,7 @@ export function OnboardingCeremony() {
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [askingExit, setAskingExit] = useState(false);
   const [active, setActive] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   // Aguarda 1.5s após hydration antes de avaliar — garante que jogadores do Supabase chegaram
   const [hydrationSettled, setHydrationSettled] = useState(false);
 
@@ -219,8 +219,10 @@ export function OnboardingCeremony() {
     void startBuild();
   }, [active, startBuild]);
 
-  const finish = useCallback(() => {
+  const finish = useCallback(async () => {
     if (phase.kind !== 'outro') return;
+    if (finishing) return;
+    setFinishing(true);
     const pkg = phase.pkg;
     dispatchGame({
       type: 'GRANT_ONBOARDING_PACKAGE',
@@ -233,25 +235,12 @@ export function OnboardingCeremony() {
       type: 'SET_USER_SETTINGS',
       partial: { hasDoneOnboarding: true },
     });
-    // FIX 2026-05-18c: registrar o grant no Supabase (`welcome_pack_grants`)
-    // pra impedir que a cerimônia abra de novo quando o user deslogar e
-    // logar em outro browser/device. Fire-and-forget — falha não bloqueia
-    // a UX (a hasDoneOnboarding local ainda protege na mesma sessão).
     void claimWelcomePackSlot().then((slot) => {
       if (!slot) {
         console.warn('[OnboardingCeremony] claim_welcome_pack falhou — pode reabrir noutro browser');
       }
     });
-    // FIX 2026-05-18e: FORÇA persist imediato no Supabase, sem esperar o
-    // debounce de 1.5s/2s. Sem isso, se o user faz logout em <2s após o
-    // finish da cerimônia, perde TUDO (EXP + plantel) ao logar de novo.
-    const state = getGameState();
-    void persistManagerSquad({
-      players: state.players,
-      lineup: state.lineup,
-      formationScheme: state.manager.formationScheme,
-    });
-    void persistManagerGameState(state);
+    await flushAllPersistence();
     const note = makeInboxItem(
       `welcome-onboarding-${Date.now()}`,
       'SHOP_PACK',
@@ -264,7 +253,7 @@ export function OnboardingCeremony() {
     );
     dispatchGame({ type: 'INBOX_PREPEND', item: note });
     setActive(false);
-  }, [phase]);
+  }, [phase, finishing]);
 
   const claimDay1 = useCallback(() => {
     dispatchGame({ type: 'CLAIM_DAILY_BONUS', streakDay: 1, claimMs: Date.now() });
@@ -310,6 +299,7 @@ export function OnboardingCeremony() {
         <OutroChapter
           managerName={managerProfile?.firstName ?? 'treinador'}
           onFinish={finish}
+          finishing={finishing}
         />
       )}
       {askingExit && (

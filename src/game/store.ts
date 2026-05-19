@@ -212,8 +212,8 @@ function mergeAcademyQueue(
 }
 
 /**
- * Merge defensivo do `finance` — usa o lado com MAIOR `expLifetimeEarned`.
- * Sem isso, logout/login num browser novo zera EXP do user.
+ * Merge granular do `finance` — campos monotônicos usam MAX, BRO usa o lado
+ * mais atualizado (proxy: maior expLifetimeEarned). Evita zerar BRO legítimo.
  */
 function pickHigherFinance(
   local: OlefootGameState['finance'] | undefined,
@@ -223,8 +223,14 @@ function pickHigherFinance(
   if (!local) return remote;
   const localLifetime = local.expLifetimeEarned ?? 0;
   const remoteLifetime = remote.expLifetimeEarned ?? 0;
-  // Lifetime é monotônico — só cresce. Maior vence.
-  return remoteLifetime > localLifetime ? remote : local;
+  const remoteIsNewer = remoteLifetime > localLifetime;
+  return {
+    ...(remoteIsNewer ? remote : local),
+    expLifetimeEarned: Math.max(localLifetime, remoteLifetime),
+    ole: Math.max(local.ole ?? 0, remote.ole ?? 0),
+    broCents: remoteIsNewer ? (remote.broCents ?? 0) : (local.broCents ?? 0),
+    wallet: local.wallet ?? remote.wallet,
+  };
 }
 
 /**
@@ -331,6 +337,11 @@ export function resetGameStateHydration(): void {
   if (gameStatePersistTimer) { clearTimeout(gameStatePersistTimer); gameStatePersistTimer = null; }
 }
 
+/** Cancela todos os timers de persist debounced pendentes. Usado pelo flush síncrono antes de logout. */
+export function cancelPendingPersistTimers(): void {
+  if (gameStatePersistTimer) { clearTimeout(gameStatePersistTimer); gameStatePersistTimer = null; }
+  if (squadPersistTimer) { clearTimeout(squadPersistTimer); squadPersistTimer = null; }
+}
 
 let lastPersistedPlayersRef: OlefootGameState['players'] | null = null;
 let lastPersistedLineupRef: OlefootGameState['lineup'] | null = null;

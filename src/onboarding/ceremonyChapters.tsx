@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { OnboardingPackage } from './buildOnboardingPackage';
 import type { RarityTier } from './draftStarterSquad';
 import { STARTER_EXP_TIERS } from './rollStarterExp';
@@ -37,12 +37,13 @@ function ChapterLabel({ children }: { children: string }) {
   );
 }
 
-function NextButton({ children, onClick }: { children: string; onClick: () => void }) {
+function NextButton({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-10 py-4 -skew-x-6 hover:bg-white transition-all"
+      disabled={disabled}
+      className="bg-neon-yellow text-black font-display font-bold uppercase tracking-wider px-10 py-4 -skew-x-6 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-wait"
       style={{ fontSize: '18px', letterSpacing: '0.18em' }}
     >
       <span className="inline-block skew-x-6">{children}</span>
@@ -715,7 +716,7 @@ export function DailyBonusChapter(props: { onClaim: () => void; onNext: () => vo
 }
 
 /* ───────────────────── Capítulo: Outro ───────────────────── */
-export function OutroChapter(props: { managerName: string; onFinish: () => void }) {
+export function OutroChapter(props: { managerName: string; onFinish: () => void; finishing?: boolean }) {
   return (
     <StageWrap>
       <div className="flex flex-col items-center text-center gap-8">
@@ -732,7 +733,9 @@ export function OutroChapter(props: { managerName: string; onFinish: () => void 
           <br />
           <span className="text-neon-yellow">{props.managerName}</span>
         </h1>
-        <NextButton onClick={props.onFinish}>Acessar painel</NextButton>
+        <NextButton onClick={props.onFinish} disabled={props.finishing}>
+          {props.finishing ? 'Salvando...' : 'Acessar painel'}
+        </NextButton>
       </div>
     </StageWrap>
   );

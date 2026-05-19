@@ -97,13 +97,25 @@ export async function checkEmailExists(email: string): Promise<boolean> {
   return Boolean(data);
 }
 
+/**
+ * Logout canônico: flush persist → reset gates → signOut → limpa localStorage.
+ * Deve ser a ÚNICA função de logout chamada em todo o app.
+ */
 export async function signOutGame(): Promise<void> {
+  const { flushAllPersistence } = await import('@/game/flushPersistence');
+  const { resetSquadHydrationDone, resetGameStateHydration } = await import('@/game/store');
+  await flushAllPersistence();
+  resetGameStateHydration();
+  resetSquadHydrationDone();
   const sb = getSupabase();
   if (sb) {
     try { await sb.auth.signOut(); } catch { /* noop */ }
   }
-  const { resetSquadHydrationDone } = await import('@/game/store');
-  resetSquadHydrationDone();
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('olefoot'))
+      .forEach((k) => localStorage.removeItem(k));
+  } catch { /* noop */ }
 }
 
 export async function saveOnboardingProfile(input: {

@@ -27,6 +27,7 @@ import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 import { getGameState, useGameStore } from '@/game/store';
 import { formatExp } from '@/systems/economy';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
+import { signOutGame } from '@/supabase/auth';
 import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayName';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
@@ -159,16 +160,13 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleSignOut = async () => {
-    const sb = getSupabase();
-    if (sb) {
-      try { await sb.auth.signOut(); } catch { /* noop */ }
-    }
-    // Limpa todo o save local para evitar estado inconsistente
+    setSigningOut(true);
     try {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('olefoot'));
-      keys.forEach(k => localStorage.removeItem(k));
-    } catch { /* noop */ }
+      await signOutGame();
+    } catch { /* timeout ou erro — prossegue */ }
     window.location.href = '/login';
   };
 
@@ -226,6 +224,14 @@ export function Layout({ children }: { children: ReactNode }) {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {signingOut && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-neon-yellow" />
+            <span className="text-sm text-white/70">Salvando progresso...</span>
+          </div>
+        </div>
+      )}
 
       {/* Desktop Sidebar — visible only at ≥1024px */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-panel border border-white/5 overflow-x-hidden overflow-y-visible border-r border-white/10 fixed h-screen z-50 rounded-none">
