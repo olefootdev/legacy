@@ -26,6 +26,8 @@ import { useGlobalPlayoffScheduler } from './hooks/useGlobalPlayoffScheduler';
 import { useAutoRegisterGlobalLeague } from './hooks/useAutoRegisterGlobalLeague';
 import { useGlobalLeagueMilestoneRewards } from './hooks/useGlobalLeagueMilestoneRewards';
 import { useGlobalLeagueCrowdSync } from './hooks/useGlobalLeagueCrowdSync';
+import { useGlobalConsequencesSync } from './hooks/useGlobalConsequencesSync';
+import { EmergencyTransferWindow } from './components/EmergencyTransferWindow';
 import { useRecoverOrphanManager } from './onboarding/recoverOrphanManager';
 import { useNpcMarketActivity } from './market/npcMarketActivity';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
@@ -258,6 +260,7 @@ function GlobalSchedulerMount() {
   useAutoRegisterGlobalLeague();
   useGlobalLeagueMilestoneRewards();
   useGlobalLeagueCrowdSync();
+  useGlobalConsequencesSync();
   useRecoverOrphanManager();
   useNpcMarketActivity();
   return null;
@@ -365,6 +368,7 @@ export default function App() {
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
         <AnnouncementsHydrate />
+        <EmergencyTransferWindow />
         <Routes>
           <Route
             path="/admin/login"

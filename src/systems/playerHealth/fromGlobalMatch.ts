@@ -1,9 +1,35 @@
 import type { GlobalFixture } from '@/match/globalMatch';
-import type { MatchOutcomeEvent } from './types';
+import type { MatchOutcomeEvent, PlayerHealth } from './types';
+import type { InjurySeverity } from '@/systems/injury';
+
+/**
+ * Determina severidade da lesão baseada na fadiga do jogador.
+ * Fadiga alta → maior chance de lesão grave.
+ */
+function rollInjurySeverityFromFatigue(fatigue: number): InjurySeverity {
+  const roll = Math.random();
+  if (fatigue >= 80) {
+    // Exausto: 30% leve, 40% forte, 30% gravíssima
+    if (roll < 0.3) return 'leve';
+    if (roll < 0.7) return 'forte';
+    return 'gravissima';
+  }
+  if (fatigue >= 50) {
+    // Cansado: 50% leve, 35% forte, 15% gravíssima
+    if (roll < 0.5) return 'leve';
+    if (roll < 0.85) return 'forte';
+    return 'gravissima';
+  }
+  // Fresco: 70% leve, 25% forte, 5% gravíssima
+  if (roll < 0.7) return 'leve';
+  if (roll < 0.95) return 'forte';
+  return 'gravissima';
+}
 
 /**
  * Converte fixtures finalizadas da Liga Global em `MatchOutcomeEvent[]`.
  * Filtra apenas jogadores do clube do manager (homeClubId).
+ * Usa playerHealth para determinar severidade dinâmica de lesões.
  */
 export function globalFixturesToHealthEvents(opts: {
   fixtures: GlobalFixture[];
@@ -11,9 +37,11 @@ export function globalFixturesToHealthEvents(opts: {
   homeClubId: string;
   /** Liga em que rodam estes fixtures (para escopo de cartões amarelos). */
   leagueId: string;
+  /** Mapa de saúde atual — usado para severidade dinâmica de lesões. */
+  playerHealth?: Record<string, PlayerHealth>;
   now?: number;
 }): MatchOutcomeEvent[] {
-  const { fixtures, homeClubId, leagueId } = opts;
+  const { fixtures, homeClubId, leagueId, playerHealth } = opts;
   const at = opts.now ?? Date.now();
   const out: MatchOutcomeEvent[] = [];
 
@@ -21,9 +49,6 @@ export function globalFixturesToHealthEvents(opts: {
     const homeIsClub = fx.homeTeamId === homeClubId;
     const awayIsClub = fx.awayTeamId === homeClubId;
     if (!homeIsClub && !awayIsClub) continue;
-
-    // Played: aproximação — todos os 11 do clube jogaram 90.
-    // (sem roster por fixture aqui; melhor é calcular minutos no caller que conhece a escalação)
 
     for (const ev of fx.events) {
       if (!ev.playerId) continue;
@@ -44,9 +69,11 @@ export function globalFixturesToHealthEvents(opts: {
         case 'red_card':
           out.push({ ...base, type: 'red_card', reason: 'direct' });
           break;
-        case 'injury':
-          out.push({ ...base, type: 'injury', severity: 'leve' });
+        case 'injury': {
+          const fatigue = playerHealth?.[ev.playerId]?.fatigue ?? 0;
+          out.push({ ...base, type: 'injury', severity: rollInjurySeverityFromFatigue(fatigue) });
           break;
+        }
         default:
           break;
       }

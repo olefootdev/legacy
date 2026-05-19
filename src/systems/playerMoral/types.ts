@@ -13,6 +13,8 @@ export interface PlayerMoral {
   streak: number;
   /** Timestamp do último resultado que afetou esta moral. */
   lastResultAt: number;
+  /** Boa/má fase: positivo = boas atuações seguidas, negativo = ruins. Buff/debuff a partir de |3|. */
+  formStreak: number;
 }
 
 export type MatchResult = 'win' | 'draw' | 'loss';
@@ -24,6 +26,7 @@ export function createDefaultMoral(playerId: string, now: number = Date.now()): 
     moral: 50,
     momentum: 0,
     streak: 0,
+    formStreak: 0,
     lastResultAt: now,
   };
 }
@@ -76,4 +79,32 @@ export function decayMomentum(p: PlayerMoral): PlayerMoral {
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
+}
+
+/**
+ * Atualiza form streak de um jogador.
+ * good=true (vitória sem cartão/lesão): incrementa. good=false: decrementa.
+ * Capped em [-5, +5].
+ */
+export function updateFormStreak(prev: PlayerMoral, good: boolean): PlayerMoral {
+  const fs = prev.formStreak ?? 0;
+  const raw = good
+    ? (fs < 0 ? 1 : fs + 1)
+    : (fs > 0 ? -1 : fs - 1);
+  const next = Math.max(-5, Math.min(5, raw));
+  return { ...prev, formStreak: next };
+}
+
+/**
+ * Multiplicador de atributos baseado na form streak.
+ * |formStreak| >= 3 → ±5% por nível acima de 2.
+ * Ex: formStreak=3 → 1.05, formStreak=5 → 1.15, formStreak=-3 → 0.95
+ */
+export function formStreakMultiplier(formStreak: number): number {
+  const fs = formStreak ?? 0;
+  const abs = Math.abs(fs);
+  if (abs < 3) return 1;
+  const levels = abs - 2;
+  const delta = levels * 0.05;
+  return fs > 0 ? 1 + delta : 1 - delta;
 }

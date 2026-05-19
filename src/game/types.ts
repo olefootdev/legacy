@@ -366,11 +366,20 @@ export interface OlefootGameState {
    * Persistido em `manager_game_state` pra evitar duplo claim cross-browser.
    */
   globalLeagueMilestonesClaimed?: string[];
+  /** Última rodada da Liga Global processada pelo consequences sync. Persistido para evitar reprocessamento. */
+  lastProcessedGlobalRound?: string;
   /**
    * LIGA CLASSIC + FAST LIGA — cumulativas, pontos somam partida a partida
    * nos modos CLASSIC e QUICK respectivamente. Persistido cross-browser.
    */
   localLeagues?: import('@/match/localLeagues').LocalLeaguesState;
+  /** Fila de ofertas de reforço emergencial (lesão grave em titular na Liga Global). Máx 3. */
+  emergencyTransferOffers?: Array<{
+    injuredPlayerId: string;
+    injuredPlayerName: string;
+    zone: import('@/entities/types').TacticalZone;
+    createdAt: number;
+  }>;
 }
 
 export type GameAction =
@@ -837,4 +846,34 @@ export type GameAction =
   | { type: 'UPDATE_GLOBAL_LEAGUE_LIVE'; nowMs: number }
   | { type: 'FINISH_GLOBAL_LEAGUE_ROUND'; roundNumber: number; finishedFixtures: import('@/match/globalMatch').GlobalFixture[] }
   | { type: 'APPLY_GLOBAL_PROMOTION_RELEGATION' }
-  | { type: 'RESET_GLOBAL_LEAGUE_MVP' };
+  | { type: 'RESET_GLOBAL_LEAGUE_MVP' }
+  | {
+      type: 'APPLY_GLOBAL_ROUND_MORAL';
+      result: import('@/systems/playerMoral/types').MatchResult;
+      playerIds: string[];
+    }
+  | { type: 'TICK_HEALTH_RECOVERY' }
+  | {
+      type: 'UPDATE_PLAYER_FORM_STREAK';
+      updates: Array<{ playerId: string; good: boolean }>;
+    }
+  | {
+      type: 'PUSH_INBOX_ITEMS';
+      items: import('./inboxTypes').InboxItem[];
+    }
+  | {
+      type: 'SET_EMERGENCY_TRANSFER_OFFER';
+      offer: {
+        injuredPlayerId: string;
+        injuredPlayerName: string;
+        zone: import('@/entities/types').TacticalZone;
+        createdAt: number;
+      };
+    }
+  | {
+      type: 'DISMISS_EMERGENCY_TRANSFER';
+    }
+  | {
+      type: 'SET_LAST_PROCESSED_GLOBAL_ROUND';
+      roundKey: string;
+    };

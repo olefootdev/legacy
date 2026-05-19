@@ -95,6 +95,8 @@ interface TeamRow {
   injury_modifier: number; injury_rounds_remaining: number;
   yellow_card_count: number; // acúmulo de amarelos — zera após suspensão
   suspension_rounds_remaining: number; // rodadas de suspensão pendentes
+  available_player_count: number; // jogadores disponíveis (synced pelo cliente)
+  rivalry_encounters?: Record<string, number>; // teamId → nº de confrontos na temporada
   all_time_points?: number; all_time_matches_played?: number;
   all_time_wins?: number; all_time_draws?: number; all_time_losses?: number;
   all_time_goals_for?: number; all_time_goals_against?: number;
@@ -301,10 +303,17 @@ function applyCompetitionReset(teams: TeamRow[]): TeamRow[] {
     points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
     goals_for: 0, goals_against: 0, goal_difference: 0,
     recent_form: [], position: null, previous_position: null,
+    rivalry_encounters: {},
   }));
 }
 
-function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kickoffMs: number) {
+function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kickoffMs: number, opts?: { isRivalry?: boolean }) {
+  const isRivalry = opts?.isRivalry ?? false;
+  // Rivalidade: probabilidades aumentadas
+  const yellowProb = isRivalry ? 0.25 : 0.15;
+  const redProb = isRivalry ? 0.08 : 0.03;
+  const injuryProb = isRivalry ? 0.15 : 0.08;
+
   const homeAdvantage = 3;
   const diff = (effHome + homeAdvantage) - effAway;
   const homeExpected = Math.max(0.2, 1.4 + diff / 22);
@@ -325,10 +334,10 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   for (let i = 0; i < homeGoals; i++) placeGoal('home', i, homeGoals);
   for (let i = 0; i < awayGoals; i++) placeGoal('away', i, awayGoals);
 
-  // Cartões amarelos (15% chance por time)
+  // Cartões amarelos
   let home_yellow = false;
   let away_yellow = false;
-  if (Math.random() < 0.15) {
+  if (Math.random() < yellowProb) {
     home_yellow = true;
     const minute = Math.floor(10 + Math.random() * 80);
     events.push({
@@ -338,7 +347,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
       timestamp_ms: kickoffMs + minute * 1000,
     });
   }
-  if (Math.random() < 0.15) {
+  if (Math.random() < yellowProb) {
     away_yellow = true;
     const minute = Math.floor(10 + Math.random() * 80);
     events.push({
@@ -349,8 +358,33 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
     });
   }
 
+  // Cartões vermelhos
+  let home_red = false;
+  let away_red = false;
+  if (Math.random() < redProb) {
+    home_red = true;
+    const minute = Math.floor(20 + Math.random() * 70);
+    events.push({
+      id: `evt_${fx.id}_home_rc_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'red_card', minute, side: 'home',
+      text: `🟥 Cartão vermelho — ${fx.home_team_name}`, highlight: true,
+      timestamp_ms: kickoffMs + minute * 1000,
+    });
+  }
+  if (Math.random() < redProb) {
+    away_red = true;
+    const minute = Math.floor(20 + Math.random() * 70);
+    events.push({
+      id: `evt_${fx.id}_away_rc_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'red_card', minute, side: 'away',
+      text: `🟥 Cartão vermelho — ${fx.away_team_name}`, highlight: true,
+      timestamp_ms: kickoffMs + minute * 1000,
+    });
+  }
+
+  // Lesões
   let injured_side: 'home' | 'away' | null = null;
-  if (Math.random() < 0.08) {
+  if (Math.random() < injuryProb) {
     injured_side = Math.random() < 0.5 ? 'home' : 'away';
     const minute = Math.floor(10 + Math.random() * 80);
     events.push({
@@ -361,7 +395,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
     });
   }
   events.sort((a, b) => (a.minute as number) - (b.minute as number));
-  return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow };
+  return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow, home_red, away_red };
 }
 
 function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean): TeamRow {
@@ -672,13 +706,61 @@ Deno.serve(async (_req: Request) => {
   const teamDelta = new Map<string, { gf: number; ga: number }>();
   const newInjuries = new Map<string, { modifier: number; rounds: number }>();
   const yellowsThisRound = new Map<string, number>(); // teamId → amarelos nesta rodada
+  const redsThisRound = new Map<string, number>(); // teamId → vermelhos nesta rodada
 
   for (const fx of fixtures as FixtureRow[]) {
     const home = teamById.get(fx.home_team_id);
     const away = teamById.get(fx.away_team_id);
+
+    // Ponto 4: WO — elenco incompleto (<11 disponíveis) = derrota 3x0
+    // Fallback: se available_player_count é o default (25) mas há suspensões/lesões ativas,
+    // estima conservadoramente para evitar que defaults stale mascarem um WO real.
+    const homeAvailable = home?.available_player_count != null && home.available_player_count !== 25
+      ? home.available_player_count
+      : Math.max(0, 25 - (home?.suspension_rounds_remaining ?? 0) * 2 - (home?.injury_rounds_remaining ?? 0) * 2);
+    const awayAvailable = away?.available_player_count != null && away.available_player_count !== 25
+      ? away.available_player_count
+      : Math.max(0, 25 - (away?.suspension_rounds_remaining ?? 0) * 2 - (away?.injury_rounds_remaining ?? 0) * 2);
+    const homeWO = homeAvailable < 11;
+    const awayWO = awayAvailable < 11;
+
+    if (homeWO || awayWO) {
+      // WO: time com elenco incompleto perde 0x3
+      const woScoreHome = homeWO ? 0 : 3;
+      const woScoreAway = awayWO ? 0 : 3;
+      const woEvents: any[] = [];
+      if (homeWO) {
+        woEvents.push({
+          id: `evt_${fx.id}_home_wo_${now}`,
+          fixture_id: fx.id, event_type: 'walkover', minute: 0, side: 'home',
+          text: `⚠️ WO — ${fx.home_team_name} sem elenco mínimo (${homeAvailable}/11)`, highlight: true,
+          timestamp_ms: now,
+        });
+      }
+      if (awayWO) {
+        woEvents.push({
+          id: `evt_${fx.id}_away_wo_${now}`,
+          fixture_id: fx.id, event_type: 'walkover', minute: 0, side: 'away',
+          text: `⚠️ WO — ${fx.away_team_name} sem elenco mínimo (${awayAvailable}/11)`, highlight: true,
+          timestamp_ms: now,
+        });
+      }
+      fixturesUpdated.push({ ...fx, score_home: woScoreHome, score_away: woScoreAway, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS });
+      for (const ev of woEvents) eventsToInsert.push(ev);
+      const ha = teamDelta.get(fx.home_team_id) ?? { gf: 0, ga: 0 }; ha.gf += woScoreHome; ha.ga += woScoreAway; teamDelta.set(fx.home_team_id, ha);
+      const aa = teamDelta.get(fx.away_team_id) ?? { gf: 0, ga: 0 }; aa.gf += woScoreAway; aa.ga += woScoreHome; teamDelta.set(fx.away_team_id, aa);
+      continue;
+    }
+
+    // Ponto 10: Rivalidade — 3+ confrontos na temporada = clássico
+    const homeEncounters = home?.rivalry_encounters ?? {};
+    const awayEncounters = away?.rivalry_encounters ?? {};
+    const encounterCount = (homeEncounters[fx.away_team_id] ?? 0);
+    const isRivalry = encounterCount >= 2; // 3º+ confronto (0-indexed: 0,1,2...)
+
     const effH = home ? effectiveOverall(home) : fx.home_overall;
     const effA = away ? effectiveOverall(away) : fx.away_overall;
-    const sim = simulateFixture(fx, effH, effA, now);
+    const sim = simulateFixture(fx, effH, effA, now, { isRivalry });
     fixturesUpdated.push({ ...fx, score_home: sim.score_home, score_away: sim.score_away, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS });
     for (const ev of sim.events) eventsToInsert.push(ev);
     const ha = teamDelta.get(fx.home_team_id) ?? { gf: 0, ga: 0 }; ha.gf += sim.score_home; ha.ga += sim.score_away; teamDelta.set(fx.home_team_id, ha);
@@ -696,10 +778,24 @@ Deno.serve(async (_req: Request) => {
     // Acumular amarelos por time nesta rodada
     if (sim.home_yellow) yellowsThisRound.set(fx.home_team_id, (yellowsThisRound.get(fx.home_team_id) ?? 0) + 1);
     if (sim.away_yellow) yellowsThisRound.set(fx.away_team_id, (yellowsThisRound.get(fx.away_team_id) ?? 0) + 1);
+    // Acumular vermelhos
+    if (sim.home_red) redsThisRound.set(fx.home_team_id, (redsThisRound.get(fx.home_team_id) ?? 0) + 1);
+    if (sim.away_red) redsThisRound.set(fx.away_team_id, (redsThisRound.get(fx.away_team_id) ?? 0) + 1);
   }
   if (fixturesUpdated.length > 0) await supabase.from('global_league_fixtures').upsert(fixturesUpdated as any, { onConflict: 'id' });
   if (eventsToInsert.length > 0) await supabase.from('global_league_events').upsert(eventsToInsert as any, { onConflict: 'id' });
   if (teamById.size > 0) {
+    // Construir mapa de confrontos desta rodada para atualizar rivalry_encounters
+    const encountersThisRound = new Map<string, string[]>(); // teamId → [opponentIds]
+    for (const fx of fixtures as FixtureRow[]) {
+      const homeOpps = encountersThisRound.get(fx.home_team_id) ?? [];
+      homeOpps.push(fx.away_team_id);
+      encountersThisRound.set(fx.home_team_id, homeOpps);
+      const awayOpps = encountersThisRound.get(fx.away_team_id) ?? [];
+      awayOpps.push(fx.home_team_id);
+      encountersThisRound.set(fx.away_team_id, awayOpps);
+    }
+
     const updated = Array.from(teamById.values()).map((t) => {
       const d = teamDelta.get(t.id);
       let next = d ? updateTeamRow(t, d.gf, d.ga, isPlayoff) : t;
@@ -717,6 +813,11 @@ Deno.serve(async (_req: Request) => {
           next = { ...next, yellow_card_count: totalYellows };
         }
       }
+      // Aplicar vermelhos desta rodada (cada vermelho = +1 rodada suspensão)
+      const newReds = redsThisRound.get(next.id) ?? 0;
+      if (newReds > 0) {
+        next = { ...next, suspension_rounds_remaining: (next.suspension_rounds_remaining ?? 0) + newReds };
+      }
       // Decrementar lesão pendente
       if (next.injury_rounds_remaining > 0) {
         const remaining = next.injury_rounds_remaining - 1;
@@ -729,6 +830,15 @@ Deno.serve(async (_req: Request) => {
           injury_modifier: next.injury_modifier < fresh.modifier ? next.injury_modifier : fresh.modifier,
           injury_rounds_remaining: next.injury_rounds_remaining > fresh.rounds ? next.injury_rounds_remaining : fresh.rounds,
         };
+      }
+      // Atualizar rivalry_encounters
+      const opponents = encountersThisRound.get(next.id) ?? [];
+      if (opponents.length > 0) {
+        const encounters = { ...(next.rivalry_encounters ?? {}) };
+        for (const oppId of opponents) {
+          encounters[oppId] = (encounters[oppId] ?? 0) + 1;
+        }
+        next = { ...next, rivalry_encounters: encounters };
       }
       return next;
     });

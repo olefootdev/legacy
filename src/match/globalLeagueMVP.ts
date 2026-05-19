@@ -69,6 +69,10 @@ export interface GlobalTeam {
   injuryModifier: number;
   yellowCardCount: number;
   suspensionRoundsRemaining: number;
+  /** Jogadores disponíveis (synced pelo cliente). Edge Function usa para WO. */
+  availablePlayerCount?: number;
+  /** Confrontos na temporada: opponentTeamId → nº de vezes. Rivalidade a partir de 3. */
+  rivalryEncounters?: Record<string, number>;
 
   // Timestamps
   registeredAt: number;

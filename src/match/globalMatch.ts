@@ -42,7 +42,8 @@ export type GlobalEventType =
   | 'injury'
   | 'substitution'
   | 'pressure'
-  | 'miss';
+  | 'miss'
+  | 'walkover';
 
 /** Evento que acontece durante a rodada */
 export interface GlobalMatchEvent {

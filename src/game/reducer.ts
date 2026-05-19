@@ -46,7 +46,7 @@ import {
 import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
 import { applyHealthEffect } from '@/systems/playerHealth/reducer';
 import { generateProactiveHealthActions } from '@/coach/proactiveHealthActions';
-import { applyMatchResultToMoral, createDefaultMoral } from '@/systems/playerMoral/types';
+import { applyMatchResultToMoral, createDefaultMoral, updateFormStreak } from '@/systems/playerMoral/types';
 import type { MatchResult, PlayerMoral } from '@/systems/playerMoral/types';
 import {
   OLEFOOT_LEAGUE_CONSTANTS,
@@ -600,6 +600,46 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!action.events.length) return state;
       const { next } = applyHealthConsequences(state.playerHealth, action.events);
       return { ...state, playerHealth: next };
+    }
+    case 'TICK_HEALTH_RECOVERY': {
+      const medicalLevel = state.structures?.medical_dept ?? 1;
+      const medicalBonusPct = (medicalLevel - 1) * 10; // cada nível = +10% recuperação
+      const next = tickHealthRecovery(state.playerHealth, { medicalBonusPct });
+      return { ...state, playerHealth: next };
+    }
+    case 'APPLY_GLOBAL_ROUND_MORAL': {
+      const playerMoral = { ...(state.playerMoral ?? {}) };
+      for (const pid of action.playerIds) {
+        const prev = playerMoral[pid] ?? createDefaultMoral(pid);
+        playerMoral[pid] = applyMatchResultToMoral(prev, action.result);
+      }
+      return { ...state, playerMoral };
+    }
+    case 'UPDATE_PLAYER_FORM_STREAK': {
+      const playerMoral = { ...(state.playerMoral ?? {}) };
+      for (const { playerId, good } of action.updates) {
+        const prev = playerMoral[playerId] ?? createDefaultMoral(playerId);
+        playerMoral[playerId] = updateFormStreak(prev, good);
+      }
+      return { ...state, playerMoral };
+    }
+    case 'PUSH_INBOX_ITEMS': {
+      if (!action.items.length) return state;
+      const inbox = [...action.items, ...state.inbox].slice(0, 24);
+      return { ...state, inbox };
+    }
+    case 'SET_EMERGENCY_TRANSFER_OFFER': {
+      const current = state.emergencyTransferOffers ?? [];
+      if (current.length >= 3) return state; // max 3 na fila
+      return { ...state, emergencyTransferOffers: [...current, action.offer] };
+    }
+    case 'DISMISS_EMERGENCY_TRANSFER': {
+      const current = state.emergencyTransferOffers ?? [];
+      if (current.length <= 1) return { ...state, emergencyTransferOffers: [] };
+      return { ...state, emergencyTransferOffers: current.slice(1) };
+    }
+    case 'SET_LAST_PROCESSED_GLOBAL_ROUND': {
+      return { ...state, lastProcessedGlobalRound: action.roundKey };
     }
     case 'SET_LINEUP': {
       const lineup = { ...action.lineup };
