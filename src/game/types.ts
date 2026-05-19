@@ -118,8 +118,9 @@ export interface UserSettings {
   /** Time do coração — escudo via API-Football quando disponível. */
   favoriteRealTeam?: FavoriteRealTeamRef | null;
   /**
-   * Pack Genesis de boas-vindas (cadastro): `1` = já entregue com a versão actual de `WELCOME_GENESIS_PACK_VERSION`.
-   * Omitido/`0` = ainda não aplicado (plantel vazio + Supabase).
+   * @deprecated Removido em 2026-05-18 — use `hasDoneOnboarding` + tabela
+   * Supabase `welcome_pack_grants`. Mantido no tipo apenas para hidratar
+   * saves antigos sem quebrar parsing; sempre ignorado em runtime.
    */
   welcomeGenesisPackVersion?: number;
   /**
@@ -388,16 +389,13 @@ export type GameAction =
        *   - merge dos 25 jogadores Genesis
        *   - +EXP da roleta inicial
        *   - lineup default
-       *   - marca welcomeGenesisPackVersion para idempotência
-       *
-       * Usado pela cerimônia (PR2). PR1 só introduz o action.
+       *   - hasDoneOnboarding=true (gate único — welcomeGenesisPackVersion descontinuado)
        */
       type: 'GRANT_ONBOARDING_PACKAGE';
       players: Record<string, import('@/entities/types').PlayerEntity>;
       lineup: Record<string, string>;
       formationScheme?: import('@/match-engine/types').FormationSchemeId;
       starterExpAmount: number;
-      welcomePackVersion: number;
     }
   | {
       /**

@@ -217,7 +217,7 @@ export function Login() {
       // [2026-05-18] Auto-grant silencioso REMOVIDO. Se o plantel está vazio,
       // o OnboardingCeremony entra em cena e o manager passa pelos 6 capítulos
       // (sorteio EXP → 25 pioneiros → top 3 → daily bonus → boas-vindas).
-      // Cerimônia só roda 1× por user (gate `welcomeGenesisPackVersion` no
+      // Cerimônia só roda 1× por user (gate `hasDoneOnboarding` em
       // userSettings + tabela `welcome_pack_grants` no Supabase).
       navigate('/', { replace: true });
     } finally {

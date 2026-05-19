@@ -26,7 +26,7 @@ export interface ManagerGameStateSnapshot {
   globalLeagueMilestonesClaimed: string[] | null;
   localLeagues:             OlefootGameState['localLeagues'] | null;
   /** Gate cross-browser pra OnboardingCeremony — evita reabrir após logout. */
-  onboardingFlags:          { welcomeGenesisPackVersion?: number; hasDoneOnboarding?: boolean } | null;
+  onboardingFlags:          { hasDoneOnboarding?: boolean } | null;
 }
 
 async function currentUserId(): Promise<string | null> {
@@ -65,8 +65,7 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
       global_league_milestones_claimed: s.globalLeagueMilestonesClaimed ?? null,
       local_leagues:               s.localLeagues ?? null,
       onboarding_flags:            {
-        welcomeGenesisPackVersion: s.userSettings?.welcomeGenesisPackVersion ?? 0,
-        hasDoneOnboarding:          s.userSettings?.hasDoneOnboarding ?? false,
+        hasDoneOnboarding: s.userSettings?.hasDoneOnboarding ?? false,
       },
     },
     { onConflict: 'user_id' },

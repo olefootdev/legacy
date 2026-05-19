@@ -3835,7 +3835,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         globalLeagueMVP,
         userSettings: {
           ...state.userSettings,
-          welcomeGenesisPackVersion: action.welcomePackVersion,
+          hasDoneOnboarding: true,
         },
       };
     }

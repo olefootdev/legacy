@@ -4,19 +4,15 @@ import { dispatchGame, useGameStore, useSquadHydrationDone } from '@/game/store'
 /**
  * Recovery de managers órfãos.
  *
- * Detecta managers que ficaram sem plantel por qualquer motivo:
- * 1. hasDoneOnboarding=true mas players=0 (fechou browser no meio)
- * 2. welcomeGenesisPackVersion marcado mas hasDoneOnboarding=false e players=0
- *    (saiu pelo botão X da cerimônia)
+ * Detecta manager com perfil + flag hasDoneOnboarding=true + players=0
+ * (algo deu errado: localStorage limpou, browser fechou no meio, etc).
  *
- * Em ambos os casos, reseta as flags para que a cerimônia reabra.
- * Aguarda hydration + 1.5s settle para não resetar antes dos jogadores
- * chegarem do Supabase.
+ * Reseta a flag pra que a cerimônia reabra. Aguarda hydration + 1.5s
+ * settle pra não resetar antes dos jogadores chegarem do Supabase.
  */
 export function useRecoverOrphanManager() {
   const hasProfile = useGameStore((s) => !!s.userSettings?.managerProfile);
   const hasDoneOnboarding = useGameStore((s) => s.userSettings?.hasDoneOnboarding ?? false);
-  const welcomePackVersion = useGameStore((s) => s.userSettings?.welcomeGenesisPackVersion ?? 0);
   const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
   const hydrationDone = useSquadHydrationDone();
   const recoveredRef = useRef(false);
@@ -33,16 +29,12 @@ export function useRecoverOrphanManager() {
     if (!settled) return;
     if (!hasProfile) return;
     if (playersCount > 0) return;
-
-    // Caso 1: completou onboarding mas ficou sem jogadores
-    // Caso 2: marcou welcomePackVersion (saiu pelo X) mas não completou
-    const needsRecovery = hasDoneOnboarding || (welcomePackVersion > 0 && !hasDoneOnboarding);
-    if (!needsRecovery) return;
+    if (!hasDoneOnboarding) return; // já está em estado limpo — cerimônia abre
 
     recoveredRef.current = true;
     dispatchGame({
       type: 'SET_USER_SETTINGS',
-      partial: { hasDoneOnboarding: false, welcomeGenesisPackVersion: 0 },
+      partial: { hasDoneOnboarding: false },
     });
-  }, [settled, hasProfile, playersCount, hasDoneOnboarding, welcomePackVersion]);
+  }, [settled, hasProfile, playersCount, hasDoneOnboarding]);
 }

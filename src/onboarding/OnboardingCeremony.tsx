@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { dispatchGame, getGameState, useGameStore, useSquadHydrationDone } from '@/game/store';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { makeInboxItem } from '@/game/inboxItem';
-import { WELCOME_GENESIS_PACK_VERSION, hasServerGrant, claimWelcomePackSlot } from '@/game/welcomeGenesisPack';
+import { hasServerGrant, claimWelcomePackSlot } from '@/game/welcomeGenesisPack';
 import { buildOnboardingPackage, type OnboardingPackage } from './buildOnboardingPackage';
 import {
   IntroChapter,
@@ -19,13 +19,12 @@ import {
  * Cerimônia editorial de onboarding.
  *
  * Substitui o `WelcomeGenesisPackHydrate` silencioso. Disparada quando o
- * manager tem perfil mas plantel vazio + welcomeGenesisPackVersion < target.
+ * manager tem perfil mas plantel vazio + nunca completou onboarding.
  *
  * UX rules:
  *   - Não tem skip livre. Botão X abre modal de confirmação ("você ficará sem
- *     time"). Sair confirma com `welcomeGenesisPackVersion = bypass marker`?
- *     Não — só fecha. Pack continua pendente; pode rodar de novo na próxima
- *     sessão. Se ele insiste, o admin resolve.
+ *     time"). Sair confirma só fecha. Pack continua pendente; pode rodar de
+ *     novo na próxima sessão. Se ele insiste, o admin resolve.
  *   - O `GRANT_ONBOARDING_PACKAGE` só é dispatched no botão "Entrar no clube"
  *     (final). Antes disso, o package fica em memória — se o cara fechar o
  *     navegador, perde os sorteios e roda de novo.
@@ -117,9 +116,6 @@ function deriveInitials(clubName: string): string {
 
 export function OnboardingCeremony() {
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
-  const welcomePackVersion = useGameStore(
-    (s) => s.userSettings?.welcomeGenesisPackVersion ?? 0,
-  );
   const hasDoneOnboarding = useGameStore((s) => s.userSettings?.hasDoneOnboarding ?? false);
   const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
   const clubName = useGameStore((s) => s.club?.name ?? 'Olefoot FC');
@@ -146,7 +142,7 @@ export function OnboardingCeremony() {
     if (playersCount > 0 && !hasDoneOnboarding) {
       dispatchGame({
         type: 'SET_USER_SETTINGS',
-        partial: { hasDoneOnboarding: true, welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+        partial: { hasDoneOnboarding: true },
       });
     }
     // Fechar cerimônia se abriu por engano e jogadores já existem
@@ -164,13 +160,13 @@ export function OnboardingCeremony() {
   }
 
   // Detecta condição de gatilho. Aguarda hydration + 1.5s de settle antes de avaliar.
+  // Gate único: hasDoneOnboarding (local + cross-browser) + welcome_pack_grants (Supabase).
   useEffect(() => {
     if (!hydrationSettled) return;
     if (startedRef.current) return;
     if (!isSupabaseConfigured()) return;
     if (!managerProfile) return;
     if (hasDoneOnboarding) return;
-    if (welcomePackVersion >= WELCOME_GENESIS_PACK_VERSION) return;
     if (playersCount > 0) return;
     startedRef.current = true;
     void (async () => {
@@ -179,7 +175,7 @@ export function OnboardingCeremony() {
       if (currentCount > 0) {
         dispatchGame({
           type: 'SET_USER_SETTINGS',
-          partial: { hasDoneOnboarding: true, welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
+          partial: { hasDoneOnboarding: true },
         });
         return;
       }
@@ -188,18 +184,13 @@ export function OnboardingCeremony() {
       if (alreadyGranted) {
         dispatchGame({
           type: 'SET_USER_SETTINGS',
-          partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION, hasDoneOnboarding: true },
+          partial: { hasDoneOnboarding: true },
         });
         return;
       }
-      // Guard anti-re-trigger no mesmo reload (hasDoneOnboarding só grava no finish)
-      dispatchGame({
-        type: 'SET_USER_SETTINGS',
-        partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
-      });
       setActive(true);
     })();
-  }, [hydrationSettled, managerProfile, hasDoneOnboarding, playersCount, welcomePackVersion]);
+  }, [hydrationSettled, managerProfile, hasDoneOnboarding, playersCount]);
 
   const startBuild = useCallback(async () => {
     setPhase({ kind: 'loading' });
@@ -235,7 +226,6 @@ export function OnboardingCeremony() {
       lineup: pkg.lineup,
       formationScheme: getGameState().manager.formationScheme,
       starterExpAmount: pkg.expTier.amount,
-      welcomePackVersion: WELCOME_GENESIS_PACK_VERSION,
     });
     dispatchGame({
       type: 'SET_USER_SETTINGS',
@@ -317,11 +307,9 @@ export function OnboardingCeremony() {
             setAskingExit(false);
             setActive(false);
             startedRef.current = true; // não retentar nesta sessão
-            // Grava marcador para não abrir em sessões futuras
-            dispatchGame({
-              type: 'SET_USER_SETTINGS',
-              partial: { welcomeGenesisPackVersion: WELCOME_GENESIS_PACK_VERSION },
-            });
+            // Nota: se ele saiu sem pegar o pack, hasDoneOnboarding fica false
+            // e cerimônia pode rodar de novo em sessão futura. Isso é proposital
+            // (vai ficar sem time se não voltar). Admin pode resetar se preciso.
           }}
         />
       )}
