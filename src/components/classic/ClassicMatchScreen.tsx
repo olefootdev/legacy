@@ -691,6 +691,16 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         goalsFor: score.home,
         goalsAgainst: score.away,
       });
+
+      // Persist inverse result to opponent's Classic Liga (async PvP)
+      const oppUserId = config?.opponentUserId;
+      if (oppUserId) {
+        const oppResult: 'win' | 'draw' | 'loss' =
+          result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
+        import('@/supabase/managerGameState').then(({ persistOpponentQuickMatchResult }) => {
+          persistOpponentQuickMatchResult(oppUserId, oppResult, score.away, score.home, 'classic');
+        });
+      }
     }
   }, [matchOver, score, dispatch]);
 

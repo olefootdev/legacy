@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClassicMatchScreen } from '@/components/classic/ClassicMatchScreen';
-import { useGameStore } from '@/game/store';
+import { useGameStore, useGameDispatch } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import {
@@ -31,6 +31,7 @@ export function MatchClassic() {
   const profile       = useGameStore(s => s.userSettings?.managerProfile);
   const leagueSeason  = useGameStore(s => s.leagueSeason);
   const homeCrestUrl  = useGameStore(s => matchdayHomeCrestUrl(s.userSettings));
+  const dispatch      = useGameDispatch();
 
   // PvP assíncrono via navigate state (QuickSearchModal) + auto-busca on mount
   // Fix 2026-05-18b: useRef pra evitar loop (playersById muda referência a cada
@@ -58,10 +59,31 @@ export function MatchClassic() {
             Math.max(1, Object.keys(snapshot).length),
         );
         const match = await quickFindOpponent(club.id, myOverall || 70, userId);
-        if (!cancelled) setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
+        if (cancelled) return;
+        const stub = opponentMatchToStub(match, myOverall || 70);
+        setAutoOpponent(stub);
+        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       } catch (err) {
-        console.warn('[MatchClassic] auto opponent search failed', err);
-        autoSearchTriedRef.current = false;
+        console.warn('[MatchClassic] auto opponent search failed, using bot fallback', err);
+        if (cancelled) return;
+        try {
+          const { getMatchingBotTeam } = await import('@/match/botTeams');
+          const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+          const { getGameState } = await import('@/game/store');
+          const snapshot = getGameState().players;
+          const myOverall = Math.round(
+            Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+              Math.max(1, Object.keys(snapshot).length),
+          ) || 70;
+          const bot = getMatchingBotTeam(myOverall, 15);
+          const stub = opponentMatchToStub({ type: 'bot', bot }, myOverall);
+          setAutoOpponent(stub);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        } catch {
+          const fallback = { id: 'bot-olefc', name: 'OLE FC', shortName: 'OLE', strength: 70 };
+          setAutoOpponent(fallback);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: fallback, awayName: fallback.name } });
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -143,6 +165,7 @@ export function MatchClassic() {
         awayManager:  'CPU',
         round,
         competition:  'CLASSIC LEAGUE',
+        opponentUserId: fixture?.opponent?.genesisAwayPlayers?.length ? fixture.opponent.id : null,
       }}
       homePlayers={teams.home}
       awayPlayers={teams.away}

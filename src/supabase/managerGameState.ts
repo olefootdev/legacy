@@ -159,6 +159,7 @@ export async function persistOpponentQuickMatchResult(
   opponentResult: LocalLeagueResult,
   goalsFor: number,
   goalsAgainst: number,
+  league: 'fast' | 'classic' = 'fast',
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
   const sb = getSupabase();
@@ -179,9 +180,9 @@ export async function persistOpponentQuickMatchResult(
 
     const existing = (data?.local_leagues as LocalLeaguesState | null) ?? emptyLocalLeaguesState();
 
-    // 2. Aplicar resultado inverso na fast league do adversário
-    const updatedFast = applyResultToLocalLeague(existing.fast, opponentResult, goalsFor, goalsAgainst);
-    const updatedLocalLeagues: LocalLeaguesState = { ...existing, fast: updatedFast };
+    // 2. Aplicar resultado inverso na league do adversário
+    const updatedLeague = applyResultToLocalLeague(existing[league], opponentResult, goalsFor, goalsAgainst);
+    const updatedLocalLeagues: LocalLeaguesState = { ...existing, [league]: updatedLeague };
 
     // 3. Upsert — cria row se o adversário ainda não tem manager_game_state
     const { error: writeErr } = await sb.from('manager_game_state').upsert(
@@ -195,7 +196,7 @@ export async function persistOpponentQuickMatchResult(
     if (writeErr) {
       console.warn('[persistOpponentQuickMatchResult] write falhou:', writeErr.message);
     } else {
-      console.info('[persistOpponentQuickMatchResult] OK para', opponentUserId, opponentResult);
+      console.info('[persistOpponentQuickMatchResult] OK para', opponentUserId, opponentResult, league);
     }
   } catch (err) {
     console.warn('[persistOpponentQuickMatchResult] exception:', err);

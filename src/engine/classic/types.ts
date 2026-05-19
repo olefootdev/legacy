@@ -288,4 +288,6 @@ export interface ClassicMatchConfig {
   /** Brasão do time do coração (HOME) ou supporter crest (AWAY). */
   homeCrestUrl?: string | null;
   awayCrestUrl?: string | null;
+  /** User ID do adversário (para persistir resultado inverso no PvP assíncrono). */
+  opponentUserId?: string | null;
 }
