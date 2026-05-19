@@ -179,12 +179,20 @@ function RequireRegistration() {
 }
 
 /**
- * Guard adicional: bloqueia rotas internas se o manager não tem plantel.
- * Redireciona para Home onde a OnboardingCeremony (overlay global) vai abrir.
+ * [2026-05-18] Guard relaxado.
+ *
+ * Antes redirecionava TODA rota interna pra `/` quando `players === {}`.
+ * Problema: enquanto a hidratação do Supabase manager_squad ainda não
+ * chegou, o user clicava em qualquer botão do menu e VOLTAVA pra Home
+ * silenciosamente — parecia que "nada funcionava".
+ *
+ * Agora só bloqueia se o manager NÃO TIVER perfil (ou seja, usuário
+ * realmente não-logado). Páginas internas já tratam empty squad
+ * defensivamente (mostram estado vazio + CTA pra completar cerimônia).
  */
 function RequireSquad() {
-  const hasSquad = useGameStore((s) => Object.keys(s.players ?? {}).length > 0);
-  if (!hasSquad && !isDevRegistrationBypassed()) return <Navigate to="/" replace />;
+  const hasProfile = useGameStore((s) => !!s.userSettings?.managerProfile);
+  if (!hasProfile && !isDevRegistrationBypassed()) return <Navigate to="/" replace />;
   return <Outlet />;
 }
 
