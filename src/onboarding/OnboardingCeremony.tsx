@@ -151,6 +151,20 @@ export function OnboardingCeremony() {
     }
   }, [playersCount, hasDoneOnboarding]);
 
+  // Recovery: manager antigo que perdeu o plantel (0 players + hasDoneOnboarding=true).
+  // Reseta o flag para re-disparar a cerimônia e dar novo pack.
+  useEffect(() => {
+    if (!hydrationSettled) return;
+    if (!managerProfile) return;
+    if (playersCount > 0) return;
+    if (!hasDoneOnboarding) return;
+    // Manager com 0 jogadores mas marcado como "já fez onboarding" → resetar
+    dispatchGame({
+      type: 'SET_USER_SETTINGS',
+      partial: { hasDoneOnboarding: false },
+    });
+  }, [hydrationSettled, managerProfile, playersCount, hasDoneOnboarding]);
+
   // Reseta o guard quando o perfil muda (logout → login de outra conta).
   const profileId = managerProfile?.email;
   if (profileId !== lastProfileRef.current) {
@@ -180,8 +194,10 @@ export function OnboardingCeremony() {
         return;
       }
       // Guard server-side: se já recebeu o pack em qualquer sessão/device, não abre.
+      // EXCETO se o manager tem 0 jogadores (recovery de plantel perdido).
       const alreadyGranted = await hasServerGrant();
-      if (alreadyGranted) {
+      const currentCountAfterCheck = Object.keys(getGameState().players ?? {}).length;
+      if (alreadyGranted && currentCountAfterCheck > 0) {
         dispatchGame({
           type: 'SET_USER_SETTINGS',
           partial: { hasDoneOnboarding: true },
