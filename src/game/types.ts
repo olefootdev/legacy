@@ -819,6 +819,7 @@ export type GameAction =
   | { type: 'INIT_GLOBAL_LEAGUE_MVP' }
   | { type: 'REGISTER_GLOBAL_TEAM'; managerId: string; clubName: string; clubShort: string; overall: number }
   | { type: 'CLAIM_GLOBAL_LEAGUE_MILESTONES'; milestoneIds: string[] }
+  | { type: 'CLAIM_GLOBAL_LEAGUE_MILESTONES_SILENT'; milestoneIds: string[] }
   | {
       type: 'RECORD_LOCAL_LEAGUE_RESULT';
       league: import('@/match/localLeagues').LocalLeagueId;

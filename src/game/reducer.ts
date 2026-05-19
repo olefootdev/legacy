@@ -5054,6 +5054,19 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         localLeagues: { ...prev, [action.league]: updated },
       };
     }
+    case 'CLAIM_GLOBAL_LEAGUE_MILESTONES_SILENT': {
+      // Baseline silenciosa — marca marcos como vistos SEM grant EXP nem inbox.
+      // Usado quando o user entra na liga global pela 1ª vez e o time já tem
+      // stats retroativas (Edge Function simulou partidas). Daqui em diante,
+      // só marcos NOVOS pagam.
+      const already = new Set(state.globalLeagueMilestonesClaimed ?? []);
+      const fresh = action.milestoneIds.filter((id) => !already.has(id));
+      if (fresh.length === 0) return state;
+      return {
+        ...state,
+        globalLeagueMilestonesClaimed: [...(state.globalLeagueMilestonesClaimed ?? []), ...fresh],
+      };
+    }
     case 'CLAIM_GLOBAL_LEAGUE_MILESTONES': {
       const already = new Set(state.globalLeagueMilestonesClaimed ?? []);
       const fresh = action.milestoneIds.filter((id) => !already.has(id));

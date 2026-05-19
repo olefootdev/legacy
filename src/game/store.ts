@@ -27,6 +27,7 @@ const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'ADMIN_PLAYER_CREATION_LAUNCH',
   // Liga Global — marcos pagos persistem cross-browser (evita duplo claim)
   'CLAIM_GLOBAL_LEAGUE_MILESTONES',
+  'CLAIM_GLOBAL_LEAGUE_MILESTONES_SILENT',
   // Liga Classic / Fast Liga — placar acumulado persiste cross-browser
   'RECORD_LOCAL_LEAGUE_RESULT',
   // Flag de onboarding (hasDoneOnboarding) — persistir cross-browser pra
