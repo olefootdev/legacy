@@ -27,6 +27,8 @@ export interface ManagerGameStateSnapshot {
   localLeagues:             OlefootGameState['localLeagues'] | null;
   /** Gate cross-browser pra OnboardingCeremony — evita reabrir após logout. */
   onboardingFlags:          { hasDoneOnboarding?: boolean } | null;
+  /** Saldo do manager (ole, broCents, expLifetimeEarned, etc) — sem isto, logout zera tudo. */
+  finance:                  OlefootGameState['finance'] | null;
 }
 
 async function currentUserId(): Promise<string | null> {
@@ -67,6 +69,7 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
       onboarding_flags:            {
         hasDoneOnboarding: s.userSettings?.hasDoneOnboarding ?? false,
       },
+      finance:                     s.finance ?? null,
     },
     { onConflict: 'user_id' },
   );
@@ -110,5 +113,6 @@ export async function loadManagerGameState(): Promise<ManagerGameStateSnapshot |
     globalLeagueMilestonesClaimed: (data.global_league_milestones_claimed as string[]) ?? null,
     localLeagues: (data.local_leagues as OlefootGameState['localLeagues']) ?? null,
     onboardingFlags: (data.onboarding_flags as ManagerGameStateSnapshot['onboardingFlags']) ?? null,
+    finance: (data.finance as OlefootGameState['finance']) ?? null,
   };
 }

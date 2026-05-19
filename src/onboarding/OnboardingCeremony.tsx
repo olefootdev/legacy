@@ -3,6 +3,8 @@ import { dispatchGame, getGameState, useGameStore, useSquadHydrationDone } from 
 import { isSupabaseConfigured } from '@/supabase/client';
 import { makeInboxItem } from '@/game/inboxItem';
 import { hasServerGrant, claimWelcomePackSlot } from '@/game/welcomeGenesisPack';
+import { persistManagerGameState } from '@/supabase/managerGameState';
+import { persistManagerSquad } from '@/supabase/managerSquad';
 import { buildOnboardingPackage, type OnboardingPackage } from './buildOnboardingPackage';
 import {
   IntroChapter,
@@ -240,6 +242,16 @@ export function OnboardingCeremony() {
         console.warn('[OnboardingCeremony] claim_welcome_pack falhou — pode reabrir noutro browser');
       }
     });
+    // FIX 2026-05-18e: FORÇA persist imediato no Supabase, sem esperar o
+    // debounce de 1.5s/2s. Sem isso, se o user faz logout em <2s após o
+    // finish da cerimônia, perde TUDO (EXP + plantel) ao logar de novo.
+    const state = getGameState();
+    void persistManagerSquad({
+      players: state.players,
+      lineup: state.lineup,
+      formationScheme: state.manager.formationScheme,
+    });
+    void persistManagerGameState(state);
     const note = makeInboxItem(
       `welcome-onboarding-${Date.now()}`,
       'SHOP_PACK',

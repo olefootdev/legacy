@@ -159,6 +159,10 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
         (local.userSettings?.hasDoneOnboarding ?? false) ||
         (remote.onboardingFlags?.hasDoneOnboarding ?? false),
     },
+    // Finance: usa o lado com MAIOR expLifetimeEarned — monotônico, jamais
+    // regredir. Se o user fez cerimônia em outro browser e ganhou EXP, e o
+    // local zerou (localStorage limpo no logout), o remoto vence.
+    finance: pickHigherFinance(local.finance, remote.finance),
     manager: {
       ...local.manager,
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,
@@ -203,6 +207,22 @@ function mergeAcademyQueue(
     }
   }
   return Array.from(byId.values());
+}
+
+/**
+ * Merge defensivo do `finance` — usa o lado com MAIOR `expLifetimeEarned`.
+ * Sem isso, logout/login num browser novo zera EXP do user.
+ */
+function pickHigherFinance(
+  local: OlefootGameState['finance'] | undefined,
+  remote: OlefootGameState['finance'] | null | undefined,
+): OlefootGameState['finance'] {
+  if (!remote) return local!;
+  if (!local) return remote;
+  const localLifetime = local.expLifetimeEarned ?? 0;
+  const remoteLifetime = remote.expLifetimeEarned ?? 0;
+  // Lifetime é monotônico — só cresce. Maior vence.
+  return remoteLifetime > localLifetime ? remote : local;
 }
 
 /**
