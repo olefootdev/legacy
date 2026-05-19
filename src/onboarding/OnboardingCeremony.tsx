@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { dispatchGame, getGameState, useGameStore, useSquadHydrationDone } from '@/game/store';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { makeInboxItem } from '@/game/inboxItem';
-import { WELCOME_GENESIS_PACK_VERSION, hasServerGrant } from '@/game/welcomeGenesisPack';
+import { WELCOME_GENESIS_PACK_VERSION, hasServerGrant, claimWelcomePackSlot } from '@/game/welcomeGenesisPack';
 import { buildOnboardingPackage, type OnboardingPackage } from './buildOnboardingPackage';
 import {
   IntroChapter,
@@ -240,6 +240,15 @@ export function OnboardingCeremony() {
     dispatchGame({
       type: 'SET_USER_SETTINGS',
       partial: { hasDoneOnboarding: true },
+    });
+    // FIX 2026-05-18c: registrar o grant no Supabase (`welcome_pack_grants`)
+    // pra impedir que a cerimônia abra de novo quando o user deslogar e
+    // logar em outro browser/device. Fire-and-forget — falha não bloqueia
+    // a UX (a hasDoneOnboarding local ainda protege na mesma sessão).
+    void claimWelcomePackSlot().then((slot) => {
+      if (!slot) {
+        console.warn('[OnboardingCeremony] claim_welcome_pack falhou — pode reabrir noutro browser');
+      }
     });
     const note = makeInboxItem(
       `welcome-onboarding-${Date.now()}`,

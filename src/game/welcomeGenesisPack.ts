@@ -44,7 +44,7 @@ export async function hasServerGrant(): Promise<boolean> {
  * getUser() (faz round-trip ao server e pode falhar logo depois do signup
  * por causa de propagação do token).
  */
-async function claimWelcomePackSlot(): Promise<
+export async function claimWelcomePackSlot(): Promise<
   { claimed: boolean; remaining: number } | null
 > {
   const sb = getSupabase();

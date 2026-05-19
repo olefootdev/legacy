@@ -29,6 +29,10 @@ const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
   'CLAIM_GLOBAL_LEAGUE_MILESTONES',
   // Liga Classic / Fast Liga — placar acumulado persiste cross-browser
   'RECORD_LOCAL_LEAGUE_RESULT',
+  // Flags de onboarding (welcomeGenesisPackVersion, hasDoneOnboarding) —
+  // persistir cross-browser pra cerimônia não reabrir após logout.
+  'GRANT_ONBOARDING_PACKAGE',
+  'SET_USER_SETTINGS',
 ]);
 
 type Listener = () => void;
@@ -145,6 +149,19 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     globalLeagueMilestonesClaimed: mergeMilestoneIds(local.globalLeagueMilestonesClaimed, remote.globalLeagueMilestonesClaimed),
     // Liga Classic / Fast Liga: usa o lado com mais partidas (jamais regredir).
     localLeagues: mergeLocalLeagues(local.localLeagues, remote.localLeagues),
+    // Flags de onboarding: MAX entre local e remote — proteção monotônica.
+    // Se remoto disse "já fez onboarding", isso vence sempre (evita cerimônia
+    // reabrir após logout/login num browser limpo).
+    userSettings: {
+      ...local.userSettings,
+      welcomeGenesisPackVersion: Math.max(
+        local.userSettings?.welcomeGenesisPackVersion ?? 0,
+        remote.onboardingFlags?.welcomeGenesisPackVersion ?? 0,
+      ),
+      hasDoneOnboarding:
+        (local.userSettings?.hasDoneOnboarding ?? false) ||
+        (remote.onboardingFlags?.hasDoneOnboarding ?? false),
+    },
     manager: {
       ...local.manager,
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,
