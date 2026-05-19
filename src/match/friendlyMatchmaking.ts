@@ -1,9 +1,8 @@
 import { getSupabase } from '@/supabase/client';
-import { getBotTeamById, getMatchingBotTeam, type BotTeamDefinition } from './botTeams';
+import { getMatchingBotTeam, generateBotSquad, type BotTeamDefinition } from './botTeams';
 import type { ClubSearchHit } from '@/supabase/friendlyChallenges';
 import type { OpponentStub } from '@/entities/types';
-import { overallFromAttributes } from '@/entities/player';
-import { fetchOpponentSquads } from '@/supabase/managerSquad';
+import type { FormationSchemeId } from '@/match-engine/types';
 
 /**
  * Converte qualquer `OpponentMatch` em `OpponentStub` para passar via
@@ -44,37 +43,86 @@ export type OpponentMatch =
   | { type: 'online'; club: ClubSearchHit; ovrDiff: number }
   | { type: 'bot'; bot: BotTeamDefinition };
 
-/**
- * Monta um OpponentStub a partir de um squad real do banco.
- */
-function squadToOpponentStub(entry: {
-  userId: string;
-  clubName: string;
-  clubShort: string;
-  players: import('@/entities/types').PlayerEntity[];
-  lineup: Record<string, string>;
-  avgOvr: number;
-}): OpponentStub {
-  const lineupPlayers = Object.values(entry.lineup)
-    .map(id => entry.players.find(p => p.id === id))
-    .filter((p): p is import('@/entities/types').PlayerEntity => !!p);
+const FORMATIONS: FormationSchemeId[] = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2'];
 
-  return {
-    id: entry.userId,
-    name: entry.clubName,
-    shortName: entry.clubShort,
-    strength: entry.avgOvr,
-    genesisAwayPlayers: lineupPlayers,
-  };
+/**
+ * Busca adversário real da Liga Global e gera squad sintético.
+ * global_league_teams tem leitura pública (sem RLS), contém managers reais.
+ */
+async function findGlobalLeagueOpponent(
+  myUserId: string | undefined,
+  myOverall: number,
+  maxOvrDiff: number,
+): Promise<OpponentMatch | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  try {
+    let query = sb
+      .from('global_league_teams')
+      .select('id, manager_id, club_name, club_short, overall')
+      .gte('overall', Math.max(40, myOverall - maxOvrDiff))
+      .lte('overall', Math.min(99, myOverall + maxOvrDiff))
+      .limit(10);
+
+    if (myUserId) {
+      query = query.neq('manager_id', myUserId);
+    }
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) return null;
+
+    const valid = (data as Array<{
+      id: string; manager_id: string; club_name: string; club_short: string; overall: number;
+    }>).filter(t =>
+      t.club_name && t.club_name !== 'Buscando…' && t.overall >= 40 && t.overall <= 99
+    );
+
+    if (valid.length === 0) return null;
+
+    const sorted = valid.sort((a, b) =>
+      Math.abs(a.overall - myOverall) - Math.abs(b.overall - myOverall)
+    );
+    const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))]!;
+
+    const formation = FORMATIONS[Math.floor(Math.random() * FORMATIONS.length)]!;
+    const botDef: BotTeamDefinition = {
+      id: `bot-${pick.id}` as any,
+      name: pick.club_name,
+      shortName: pick.club_short,
+      country: 'Brasil',
+      avgOverall: pick.overall,
+      formation,
+      style: 'balanced',
+      description: '',
+    };
+    const squad = generateBotSquad(botDef);
+    const squadPlayers = Object.values(squad);
+    const lineupPlayers = squadPlayers.slice(0, 11);
+
+    const stub: OpponentStub = {
+      id: pick.manager_id,
+      name: pick.club_name,
+      shortName: pick.club_short,
+      strength: pick.overall,
+      genesisAwayPlayers: lineupPlayers,
+      formationScheme: formation,
+    };
+
+    return { type: 'real_manager', stub };
+  } catch (err) {
+    console.warn('[friendlyMatchmaking] global league search failed:', err);
+    return null;
+  }
 }
 
 /**
  * Busca automática de adversário para amistoso.
  *
  * Prioridade:
- * 1. Times reais do banco (manager_squad) com OVR similar (±10) — PvP assíncrono
- * 2. Times reais do banco com OVR similar (±20) — range mais amplo
- * 3. Qualquer time real do banco (sem filtro de OVR) — sempre preferir manager real
+ * 1. Manager real da Liga Global com OVR similar (±10)
+ * 2. Manager real da Liga Global com OVR similar (±20)
+ * 3. Qualquer manager real da Liga Global (±30)
  * 4. Bot aleatório com OVR próximo (último recurso)
  */
 export async function findFriendlyOpponent(
@@ -82,64 +130,25 @@ export async function findFriendlyOpponent(
 ): Promise<OpponentMatch> {
   const { myUserId, myOverall, maxOvrDiff = 10 } = params;
 
-  if (myUserId) {
-    // 1. Times reais (±10)
-    const realTeams = await fetchOpponentSquads({
-      excludeUserId: myUserId,
-      ovrRange: [myOverall - maxOvrDiff, myOverall + maxOvrDiff],
-    });
-    const valid = realTeams.filter(isValidOpponentSquad);
-    if (valid.length > 0) {
-      return { type: 'real_manager', stub: squadToOpponentStub(pickClosest(valid, myOverall)) };
-    }
+  // 1. Liga Global (±10)
+  const close = await findGlobalLeagueOpponent(myUserId, myOverall, maxOvrDiff);
+  if (close) return close;
 
-    // 2. Times reais (±20)
-    const realTeamsWide = await fetchOpponentSquads({
-      excludeUserId: myUserId,
-      ovrRange: [myOverall - 20, myOverall + 20],
-    });
-    const validWide = realTeamsWide.filter(isValidOpponentSquad);
-    if (validWide.length > 0) {
-      return { type: 'real_manager', stub: squadToOpponentStub(pickClosest(validWide, myOverall)) };
-    }
+  // 2. Liga Global (±20)
+  const wide = await findGlobalLeagueOpponent(myUserId, myOverall, 20);
+  if (wide) return wide;
 
-    // 3. Qualquer time real (sem filtro OVR)
-    const allTeams = await fetchOpponentSquads({
-      excludeUserId: myUserId,
-      ovrRange: [0, 99],
-    });
-    const validAll = allTeams.filter(isValidOpponentSquad);
-    if (validAll.length > 0) {
-      return { type: 'real_manager', stub: squadToOpponentStub(pickClosest(validAll, myOverall)) };
-    }
-  }
+  // 3. Liga Global (±30)
+  const veryWide = await findGlobalLeagueOpponent(myUserId, myOverall, 30);
+  if (veryWide) return veryWide;
 
   // 4. Fallback: bot com OVR próximo
   const bot = getMatchingBotTeam(myOverall, 15);
   return { type: 'bot', bot };
 }
 
-function isValidOpponentSquad(entry: import('@/supabase/managerSquad').OpponentSquadEntry): boolean {
-  if (!entry.clubName || entry.clubName === 'Buscando…' || entry.clubName === 'Clube Visitante') return false;
-  if (entry.avgOvr < 40 || entry.avgOvr > 99) return false;
-  const lineupSize = Object.values(entry.lineup).filter(Boolean).length;
-  if (lineupSize < 11) return false;
-  return true;
-}
-
-function pickClosest(
-  teams: import('@/supabase/managerSquad').OpponentSquadEntry[],
-  myOverall: number,
-): import('@/supabase/managerSquad').OpponentSquadEntry {
-  const sorted = [...teams].sort((a, b) =>
-    Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
-  );
-  return sorted[Math.floor(Math.random() * Math.min(3, sorted.length))]!;
-}
-
 /**
  * Busca rápida de adversário (usado no botão "BUSCAR PARTIDA").
- * Retorna imediatamente um bot se não houver times online.
  */
 export async function quickFindOpponent(
   myClubId: string,
