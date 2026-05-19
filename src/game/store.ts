@@ -170,6 +170,8 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     },
   };
   saveGameState(state);
+  // Hidratação completa — libera o gate de persist debounced.
+  markGameStateHydrated();
   emit();
 }
 
@@ -280,13 +282,53 @@ function mergeInbox(
 // ─── Debounced manager_game_state persistence ─────────────────────────
 let gameStatePersistTimer: ReturnType<typeof setTimeout> | null = null;
 
+// FIX 2026-05-18f: gate de hidratação.
+// Antes: ao logar, Login.tsx dispatchava SET_USER_SETTINGS (managerProfile),
+// que disparava persist debounced 2s. Como o localStorage tinha sido limpo
+// no logout, state.finance era 0/vazio. Se a hidratação do Supabase
+// (ManagerGameStateHydrator, async) demorasse >2s, o timer disparava ANTES
+// e persistia estado vazio NO SUPABASE — sobrescrevendo o saldo do user.
+//
+// Agora: scheduleGameStatePersist NÃO faz nada até gameStateHydrated=true.
+// Quando applyHydratedGameState é chamado, libera o gate e enfileira UM
+// persist pra cobrir mudanças que aconteceram durante a hidratação.
+let gameStateHydrated = false;
+let gameStateHasPendingChanges = false;
+
 function scheduleGameStatePersist(): void {
   if (!isSupabaseConfigured()) return;
+  if (!gameStateHydrated) {
+    // Hidratação ainda não terminou — marca pendência mas NÃO persiste agora.
+    gameStateHasPendingChanges = true;
+    return;
+  }
   if (gameStatePersistTimer) clearTimeout(gameStatePersistTimer);
   gameStatePersistTimer = setTimeout(() => {
     gameStatePersistTimer = null;
     void persistManagerGameState(state);
   }, 2000);
+}
+
+function markGameStateHydrated(): void {
+  if (gameStateHydrated) return;
+  gameStateHydrated = true;
+  // Se houve mudanças durante a hidratação, persiste agora (após merge).
+  if (gameStateHasPendingChanges) {
+    gameStateHasPendingChanges = false;
+    scheduleGameStatePersist();
+  }
+}
+
+/** Versão pública pra hidratadores: libera o gate sem precisar passar payload. */
+export function markGameStateHydrationDone(): void {
+  markGameStateHydrated();
+}
+
+/** Útil pra testes / logout: força reset do gate (próxima sessão re-hidrata). */
+export function resetGameStateHydration(): void {
+  gameStateHydrated = false;
+  gameStateHasPendingChanges = false;
+  if (gameStatePersistTimer) { clearTimeout(gameStatePersistTimer); gameStatePersistTimer = null; }
 }
 
 
