@@ -5,6 +5,14 @@
  */
 import { getSupabase, isSupabaseConfigured } from './client';
 import type { OlefootGameState } from '@/game/types';
+import {
+  applyResultToLocalLeague,
+  emptyLocalLeaguesState,
+  type LocalLeagueResult,
+  type LocalLeaguesState,
+} from '@/match/localLeagues';
+import { applyMatchConsequences } from '@/systems/playerHealth/reducer';
+import type { MatchOutcomeEvent, PlayerHealth } from '@/systems/playerHealth/types';
 
 export interface ManagerGameStateSnapshot {
   structures:               OlefootGameState['structures'] | null;
@@ -140,4 +148,107 @@ export async function loadManagerGameState(): Promise<ManagerGameStateSnapshot |
     onboardingFlags: (data.onboarding_flags as ManagerGameStateSnapshot['onboardingFlags']) ?? null,
     finance: (data.finance as OlefootGameState['finance']) ?? null,
   };
+}
+
+/**
+ * Persiste o resultado INVERSO de uma Quick Match na Fast Liga do adversário.
+ * Fire-and-forget — não bloqueia a UI do jogador local.
+ */
+export async function persistOpponentQuickMatchResult(
+  opponentUserId: string,
+  opponentResult: LocalLeagueResult,
+  goalsFor: number,
+  goalsAgainst: number,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const sb = getSupabase();
+  if (!sb) return;
+
+  try {
+    // 1. Ler o state atual do adversário
+    const { data, error: readErr } = await sb
+      .from('manager_game_state')
+      .select('local_leagues')
+      .eq('user_id', opponentUserId)
+      .maybeSingle();
+
+    if (readErr) {
+      console.warn('[persistOpponentQuickMatchResult] read falhou:', readErr.message);
+      return;
+    }
+
+    const existing = (data?.local_leagues as LocalLeaguesState | null) ?? emptyLocalLeaguesState();
+
+    // 2. Aplicar resultado inverso na fast league do adversário
+    const updatedFast = applyResultToLocalLeague(existing.fast, opponentResult, goalsFor, goalsAgainst);
+    const updatedLocalLeagues: LocalLeaguesState = { ...existing, fast: updatedFast };
+
+    // 3. Upsert — cria row se o adversário ainda não tem manager_game_state
+    const { error: writeErr } = await sb.from('manager_game_state').upsert(
+      {
+        user_id: opponentUserId,
+        local_leagues: updatedLocalLeagues,
+      },
+      { onConflict: 'user_id' },
+    );
+
+    if (writeErr) {
+      console.warn('[persistOpponentQuickMatchResult] write falhou:', writeErr.message);
+    } else {
+      console.info('[persistOpponentQuickMatchResult] OK para', opponentUserId, opponentResult);
+    }
+  } catch (err) {
+    console.warn('[persistOpponentQuickMatchResult] exception:', err);
+  }
+}
+
+/**
+ * Persiste eventos de saúde (cartões, lesões) que ocorreram nos jogadores
+ * do adversário durante uma Quick Match.
+ * Fire-and-forget — não bloqueia a UI do jogador local.
+ */
+export async function persistOpponentAwayEvents(
+  opponentUserId: string,
+  events: MatchOutcomeEvent[],
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  if (!events.length) return;
+  const sb = getSupabase();
+  if (!sb) return;
+
+  try {
+    // 1. Ler playerHealth atual do adversário
+    const { data, error: readErr } = await sb
+      .from('manager_game_state')
+      .select('player_health')
+      .eq('user_id', opponentUserId)
+      .maybeSingle();
+
+    if (readErr) {
+      console.warn('[persistOpponentAwayEvents] read falhou:', readErr.message);
+      return;
+    }
+
+    const currentHealth = (data?.player_health as Record<string, PlayerHealth> | null) ?? {};
+
+    // 2. Aplicar consequências de saúde
+    const { next } = applyMatchConsequences(currentHealth, events);
+
+    // 3. Upsert
+    const { error: writeErr } = await sb.from('manager_game_state').upsert(
+      {
+        user_id: opponentUserId,
+        player_health: next,
+      },
+      { onConflict: 'user_id' },
+    );
+
+    if (writeErr) {
+      console.warn('[persistOpponentAwayEvents] write falhou:', writeErr.message);
+    } else {
+      console.info('[persistOpponentAwayEvents] OK —', events.length, 'eventos para', opponentUserId);
+    }
+  } catch (err) {
+    console.warn('[persistOpponentAwayEvents] exception:', err);
+  }
 }

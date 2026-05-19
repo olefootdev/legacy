@@ -701,9 +701,23 @@ export function MatchQuick() {
         if (cancelled) return;
         setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
       } catch (err) {
-        console.warn('[MatchQuick] auto opponent search failed', err);
-        // Solta o ref pra permitir nova tentativa (1× só) se o user voltar pra rota
-        autoSearchTriedRef.current = false;
+        console.warn('[MatchQuick] auto opponent search failed, using bot fallback', err);
+        if (cancelled) return;
+        // Fallback garantido: sempre retorna um bot para nunca mostrar "Buscando..."
+        try {
+          const { getMatchingBotTeam } = await import('@/match/botTeams');
+          const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+          const snapshot = getGameState().players;
+          const myOverall = Math.round(
+            Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+              Math.max(1, Object.keys(snapshot).length),
+          ) || 70;
+          const bot = getMatchingBotTeam(myOverall, 15);
+          setAutoOpponent(opponentMatchToStub({ type: 'bot', bot }, myOverall));
+        } catch {
+          // Último recurso: bot hardcoded
+          setAutoOpponent({ id: 'bot-olefc', name: 'OLE FC', shortName: 'OLE', strength: 70 });
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -1759,6 +1773,36 @@ export function MatchQuick() {
     // Mostrar recompensas instantâneas após 800ms (deixa o summary aparecer primeiro)
     window.setTimeout(() => setShowInstantRewards(true), 800);
     dispatch({ type: 'FINALIZE_MATCH' });
+
+    // ── Persist inverse result + away events to opponent's state (async PvP) ──
+    if (fixture?.opponent?.genesisAwayPlayers?.length) {
+      const oppUserId = fixture.opponent.id;
+      const oppResult: 'win' | 'draw' | 'loss' =
+        live.homeScore > live.awayScore ? 'loss' : live.homeScore < live.awayScore ? 'win' : 'draw';
+      // Fire-and-forget: persist opponent's Fast Liga standing
+      import('@/supabase/managerGameState').then(({ persistOpponentQuickMatchResult }) => {
+        persistOpponentQuickMatchResult(oppUserId, oppResult, live.awayScore, live.homeScore);
+      });
+      // Fire-and-forget: persist cards/injuries that happened to opponent's players
+      const awayHealthEvents = live.events
+        .filter((e) => (e.kind === 'yellow_away' || e.kind === 'red_away') && e.playerId)
+        .map((e) => {
+          const base = {
+            playerId: e.playerId!,
+            matchId: `quick-${Date.now()}`,
+            matchMode: 'quick' as const,
+            at: Date.now() + e.minute * 60_000,
+          };
+          if (e.kind === 'red_away') return { ...base, type: 'red_card' as const, reason: 'direct' as const };
+          return { ...base, type: 'yellow_card' as const, leagueId: 'fast_liga' };
+        });
+      if (awayHealthEvents.length > 0) {
+        import('@/supabase/managerGameState').then(({ persistOpponentAwayEvents }) => {
+          persistOpponentAwayEvents(oppUserId, awayHealthEvents);
+        });
+      }
+    }
+
     trackMissionEvent('fast_match_completed');
     if (live.homeScore > live.awayScore) trackMissionEvent('match_won');
     if (live.homeScore > 0) trackMissionEvent('goal_scored', live.homeScore);
