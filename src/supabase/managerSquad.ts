@@ -148,32 +148,44 @@ export async function fetchOpponentSquads(params: {
   const { excludeUserId, limit = 20 } = params;
 
   try {
-    const { data, error } = await sb
+    // 1. Buscar squads (sem join — profiles FK não existe)
+    const { data: squads, error: sqErr } = await sb
       .from('manager_squad')
-      .select('user_id, players, lineup, formation_scheme, profiles!inner(club_name, club_short)')
+      .select('user_id, players, lineup, formation_scheme')
       .neq('user_id', excludeUserId)
       .limit(limit);
 
-    if (error) {
-      console.warn('[managerSquad] fetchOpponentSquads:', error.message);
+    if (sqErr || !squads || squads.length === 0) {
+      if (sqErr) console.warn('[managerSquad] fetchOpponentSquads:', sqErr.message);
       return [];
     }
 
+    // 2. Buscar nomes dos clubes via global_league_teams
+    const userIds = squads.map((r: any) => r.user_id as string);
+    const { data: teams } = await sb
+      .from('global_league_teams')
+      .select('manager_id, club_name, club_short')
+      .in('manager_id', userIds);
+
+    const teamsByManager: Record<string, { club_name: string; club_short: string }> = {};
+    for (const t of (teams ?? []) as Array<{ manager_id: string; club_name: string; club_short: string }>) {
+      teamsByManager[t.manager_id] = { club_name: t.club_name, club_short: t.club_short };
+    }
+
+    // 3. Montar resultados com filtro de OVR
     const [minOvr, maxOvr] = params.ovrRange;
     const results: OpponentSquadEntry[] = [];
 
-    for (const row of (data ?? []) as unknown as Array<{
+    for (const row of squads as unknown as Array<{
       user_id: string;
       players: PlayerEntity[];
       lineup: Record<string, string>;
       formation_scheme: FormationSchemeId | null;
-      profiles: { club_name: string | null; club_short: string | null } | Array<{ club_name: string | null; club_short: string | null }>;
     }>) {
       const players = Array.isArray(row.players) ? row.players as PlayerEntity[] : [];
       const lineup = (row.lineup as Record<string, string>) ?? {};
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const teamInfo = teamsByManager[row.user_id];
 
-      // Calcula OVR médio dos jogadores no lineup
       const lineupPlayers = Object.values(lineup)
         .map(id => players.find(p => p.id === id))
         .filter((p): p is PlayerEntity => !!p);
@@ -188,8 +200,8 @@ export async function fetchOpponentSquads(params: {
 
       results.push({
         userId: row.user_id,
-        clubName: profile?.club_name ?? 'Clube Visitante',
-        clubShort: profile?.club_short ?? 'VIS',
+        clubName: teamInfo?.club_name ?? 'Clube Rival',
+        clubShort: teamInfo?.club_short ?? 'RIV',
         players,
         lineup,
         formationScheme: row.formation_scheme,

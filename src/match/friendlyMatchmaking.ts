@@ -72,129 +72,69 @@ function squadToOpponentStub(entry: {
  * Busca automática de adversário para amistoso.
  *
  * Prioridade:
- * 1. Times reais do banco com OVR similar (±10) — PvP assíncrono
- * 2. Times reais do banco com OVR similar (±15)
- * 3. Times ONLINE com OVR similar (±10)
- * 4. Times ONLINE com OVR similar (±15)
- * 5. Bot aleatório com OVR próximo (fallback)
+ * 1. Times reais do banco (manager_squad) com OVR similar (±10) — PvP assíncrono
+ * 2. Times reais do banco com OVR similar (±20) — range mais amplo
+ * 3. Qualquer time real do banco (sem filtro de OVR) — sempre preferir manager real
+ * 4. Bot aleatório com OVR próximo (último recurso)
  */
 export async function findFriendlyOpponent(
   params: MatchmakingParams,
 ): Promise<OpponentMatch> {
-  const { myClubId, myUserId, myOverall, maxOvrDiff = 10 } = params;
+  const { myUserId, myOverall, maxOvrDiff = 10 } = params;
 
-  // 1. Times reais do banco (±10)
   if (myUserId) {
+    // 1. Times reais (±10)
     const realTeams = await fetchOpponentSquads({
       excludeUserId: myUserId,
       ovrRange: [myOverall - maxOvrDiff, myOverall + maxOvrDiff],
     });
-    if (realTeams.length > 0) {
-      // Escolhe o mais próximo em OVR, com aleatoriedade para variar
-      const sorted = [...realTeams].sort((a, b) =>
-        Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
-      );
-      // Pega um dos 3 mais próximos aleatoriamente
-      const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
-      return { type: 'real_manager', stub: squadToOpponentStub(pick!) };
+    const valid = realTeams.filter(isValidOpponentSquad);
+    if (valid.length > 0) {
+      return { type: 'real_manager', stub: squadToOpponentStub(pickClosest(valid, myOverall)) };
     }
 
-    // 2. Times reais do banco (±15)
+    // 2. Times reais (±20)
     const realTeamsWide = await fetchOpponentSquads({
       excludeUserId: myUserId,
-      ovrRange: [myOverall - 15, myOverall + 15],
+      ovrRange: [myOverall - 20, myOverall + 20],
     });
-    if (realTeamsWide.length > 0) {
-      const sorted = [...realTeamsWide].sort((a, b) =>
-        Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
-      );
-      const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
-      return { type: 'real_manager', stub: squadToOpponentStub(pick!) };
+    const validWide = realTeamsWide.filter(isValidOpponentSquad);
+    if (validWide.length > 0) {
+      return { type: 'real_manager', stub: squadToOpponentStub(pickClosest(validWide, myOverall)) };
+    }
+
+    // 3. Qualquer time real (sem filtro OVR)
+    const allTeams = await fetchOpponentSquads({
+      excludeUserId: myUserId,
+      ovrRange: [0, 99],
+    });
+    const validAll = allTeams.filter(isValidOpponentSquad);
+    if (validAll.length > 0) {
+      return { type: 'real_manager', stub: squadToOpponentStub(pickClosest(validAll, myOverall)) };
     }
   }
 
-  // 3. Times ONLINE disponíveis (±10)
-  const onlineTeams = await searchOnlineAvailableTeams({
-    ovrRange: [myOverall - maxOvrDiff, myOverall + maxOvrDiff],
-    excludeClubId: myClubId,
-  });
-  if (onlineTeams.length > 0) {
-    const best = pickBestOnlineMatch(onlineTeams, myOverall);
-    return { type: 'online', club: best.club, ovrDiff: best.ovrDiff };
-  }
-
-  // 4. Times ONLINE disponíveis (±15)
-  const onlineTeamsWide = await searchOnlineAvailableTeams({
-    ovrRange: [myOverall - 15, myOverall + 15],
-    excludeClubId: myClubId,
-  });
-  if (onlineTeamsWide.length > 0) {
-    const best = pickBestOnlineMatch(onlineTeamsWide, myOverall);
-    return { type: 'online', club: best.club, ovrDiff: best.ovrDiff };
-  }
-
-  // 5. Fallback: bot com OVR próximo
+  // 4. Fallback: bot com OVR próximo
   const bot = getMatchingBotTeam(myOverall, 15);
   return { type: 'bot', bot };
 }
 
-/**
- * Busca times ONLINE disponíveis no Supabase.
- */
-async function searchOnlineAvailableTeams(params: {
-  ovrRange: [number, number];
-  excludeClubId: string;
-}): Promise<Array<ClubSearchHit & { overall: number }>> {
-  const sb = getSupabase();
-  if (!sb) return [];
-
-  const { ovrRange, excludeClubId } = params;
-  const [minOvr, maxOvr] = ovrRange;
-
-  try {
-    // Buscar clubes com friendly_availability = 'ONLINE'
-    // e overall dentro do range especificado
-    const { data, error } = await sb
-      .from('clubs')
-      .select('club_id, name, short_name, overall')
-      .eq('friendly_availability', 'ONLINE')
-      .gte('overall', minOvr)
-      .lte('overall', maxOvr)
-      .neq('club_id', excludeClubId)
-      .limit(20);
-
-    if (error) {
-      console.warn('[friendlyMatchmaking] search error:', error.message);
-      return [];
-    }
-
-    return (data ?? []).map((row) => ({
-      club_id: row.club_id as string,
-      name: row.name as string,
-      short_name: (row.short_name as string) ?? (row.name as string),
-      overall: (row.overall as number) ?? 70,
-    }));
-  } catch (err) {
-    console.warn('[friendlyMatchmaking] search exception:', err);
-    return [];
-  }
+function isValidOpponentSquad(entry: import('@/supabase/managerSquad').OpponentSquadEntry): boolean {
+  if (!entry.clubName || entry.clubName === 'Buscando…' || entry.clubName === 'Clube Visitante') return false;
+  if (entry.avgOvr < 40 || entry.avgOvr > 99) return false;
+  const lineupSize = Object.values(entry.lineup).filter(Boolean).length;
+  if (lineupSize < 11) return false;
+  return true;
 }
 
-/**
- * Escolhe o melhor match online baseado na diferença de OVR.
- */
-function pickBestOnlineMatch(
-  teams: Array<ClubSearchHit & { overall: number }>,
+function pickClosest(
+  teams: import('@/supabase/managerSquad').OpponentSquadEntry[],
   myOverall: number,
-): { club: ClubSearchHit; ovrDiff: number } {
-  const sorted = teams
-    .map((t) => ({
-      club: t,
-      ovrDiff: Math.abs(t.overall - myOverall),
-    }))
-    .sort((a, b) => a.ovrDiff - b.ovrDiff);
-
-  return sorted[0]!;
+): import('@/supabase/managerSquad').OpponentSquadEntry {
+  const sorted = [...teams].sort((a, b) =>
+    Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
+  );
+  return sorted[Math.floor(Math.random() * Math.min(3, sorted.length))]!;
 }
 
 /**

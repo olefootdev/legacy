@@ -1,7 +1,8 @@
-import { useMemo, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
-import { useGameStore } from '@/game/store';
+import { useCallback, useMemo, useState, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import { getGameState, useGameStore, dispatchGame } from '@/game/store';
+import { overallFromAttributes } from '@/entities/player';
 import { formatExp } from '@/systems/economy';
 import { computeCareerTier } from '@/systems/careerTiers';
 
@@ -146,7 +147,8 @@ export function HomeHeroLegacy(props: {
   const greetingName = managerFirstName ?? 'Manager';
 
   const lastMatch = results[0];
-  const nextOpponentName = fixture?.opponent?.name ?? null;
+  const rawOpponentName = fixture?.opponent?.name ?? null;
+  const nextOpponentName = rawOpponentName && rawOpponentName !== 'Buscando…' ? rawOpponentName : null;
   const nextKickoffLabel = fixture?.kickoffLabel ?? null;
   const competition = fixture?.competition ?? null;
 
@@ -278,8 +280,44 @@ export function HomeHeroLegacy(props: {
       ? 'DERROTA'
       : 'EMPATE';
 
-  const ctaLabel = isDebut ? 'Jogar primeira partida' : 'Próxima partida';
-  const ctaTarget = isDebut ? '/match/quick' : nextOpponentName ? '/match/quick' : '/match/quick';
+  const navigate = useNavigate();
+  const [searching, setSearching] = useState(false);
+
+  const handleSearchMatch = useCallback(async () => {
+    if (searching) return;
+    setSearching(true);
+    try {
+      const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+      const { getSupabase } = await import('@/supabase/client');
+      const sb = getSupabase();
+      const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+      const snapshot = getGameState().players;
+      const myOverall = Math.round(
+        Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+          Math.max(1, Object.keys(snapshot).length),
+      ) || 70;
+      const match = await quickFindOpponent(club!.id, myOverall, userId);
+      const stub = opponentMatchToStub(match, myOverall);
+      dispatchGame({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+      navigate('/match/quick', { state: { pvpOpponentStub: stub } });
+    } catch {
+      try {
+        const { getMatchingBotTeam } = await import('@/match/botTeams');
+        const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+        const snapshot = getGameState().players;
+        const myOverall = Math.round(
+          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+            Math.max(1, Object.keys(snapshot).length),
+        ) || 70;
+        const bot = getMatchingBotTeam(myOverall, 15);
+        const stub = opponentMatchToStub({ type: 'bot', bot }, myOverall);
+        dispatchGame({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        navigate('/match/quick', { state: { pvpOpponentStub: stub } });
+      } catch {
+        navigate('/match/quick');
+      }
+    }
+  }, [searching, club, navigate]);
 
   return (
     <div className="relative w-full">
@@ -450,13 +488,23 @@ export function HomeHeroLegacy(props: {
               </div>
 
               {/* CTA */}
-              <Link
-                to={ctaTarget}
-                className="bg-neon-yellow text-deep-black border-2 border-neon-yellow font-display font-bold uppercase tracking-wider px-8 py-3 -skew-x-6 hover:bg-neon-yellow/90 transition-all"
+              <button
+                onClick={handleSearchMatch}
+                disabled={searching}
+                className="bg-neon-yellow text-deep-black border-2 border-neon-yellow font-display font-bold uppercase tracking-wider px-8 py-3 -skew-x-6 hover:bg-neon-yellow/90 transition-all disabled:opacity-70"
                 style={{ fontSize: 13, letterSpacing: '0.22em' }}
               >
-                <span className="inline-block skew-x-6">{ctaLabel}</span>
-              </Link>
+                <span className="inline-block skew-x-6 flex items-center gap-2">
+                  {searching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Buscando adversário...
+                    </>
+                  ) : (
+                    'Buscar Partida'
+                  )}
+                </span>
+              </button>
 
               {/* Scroll cue */}
               {props.scrollCueTargetId && (

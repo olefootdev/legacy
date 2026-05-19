@@ -699,7 +699,9 @@ export function MatchQuick() {
         );
         const match = await quickFindOpponent(club.id, myOverall || 70, userId);
         if (cancelled) return;
-        setAutoOpponent(opponentMatchToStub(match, myOverall || 70));
+        const stub = opponentMatchToStub(match, myOverall || 70);
+        setAutoOpponent(stub);
+        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       } catch (err) {
         console.warn('[MatchQuick] auto opponent search failed, using bot fallback', err);
         if (cancelled) return;
@@ -713,10 +715,14 @@ export function MatchQuick() {
               Math.max(1, Object.keys(snapshot).length),
           ) || 70;
           const bot = getMatchingBotTeam(myOverall, 15);
-          setAutoOpponent(opponentMatchToStub({ type: 'bot', bot }, myOverall));
+          const stub = opponentMatchToStub({ type: 'bot', bot }, myOverall);
+          setAutoOpponent(stub);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
         } catch {
           // Último recurso: bot hardcoded
-          setAutoOpponent({ id: 'bot-olefc', name: 'OLE FC', shortName: 'OLE', strength: 70 });
+          const fallback = { id: 'bot-olefc', name: 'OLE FC', shortName: 'OLE', strength: 70 };
+          setAutoOpponent(fallback);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: fallback, awayName: fallback.name } });
         }
       }
     })();
