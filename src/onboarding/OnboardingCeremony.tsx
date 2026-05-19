@@ -132,12 +132,14 @@ export function OnboardingCeremony() {
   const [finishing, setFinishing] = useState(false);
   // Aguarda 1.5s após hydration antes de avaliar — garante que jogadores do Supabase chegaram
   const [hydrationSettled, setHydrationSettled] = useState(false);
+  const [settleGen, setSettleGen] = useState(0);
 
   useEffect(() => {
     if (!hydrationDone) return;
+    setHydrationSettled(false);
     const t = setTimeout(() => setHydrationSettled(true), 1500);
     return () => clearTimeout(t);
-  }, [hydrationDone]);
+  }, [hydrationDone, settleGen]);
 
   // Se manager já tem jogadores, gravar flag e nunca abrir
   useEffect(() => {
@@ -158,7 +160,7 @@ export function OnboardingCeremony() {
   if (profileId !== lastProfileRef.current) {
     lastProfileRef.current = profileId;
     startedRef.current = false;
-    setHydrationSettled(false);
+    setSettleGen((g) => g + 1);
   }
 
   // Detecta condição de gatilho. Aguarda hydration + 1.5s de settle antes de avaliar.
