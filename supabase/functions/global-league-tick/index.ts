@@ -570,6 +570,21 @@ Deno.serve(async (_req: Request) => {
     if (isRestart) {
       // SOFT promo/rele (preserva stats da temporada anterior) + nova season
       const reorganized = applyPromotionRelegationSoft(teams, promoPct, relePct);
+      // Incluir times órfãos (registrados mid-season) na 3ª divisão
+      for (const team of reorganized) {
+        if (!team.division) {
+          team.division = 3;
+          team.points = 0;
+          team.matches_played = 0;
+          team.wins = 0;
+          team.draws = 0;
+          team.losses = 0;
+          team.goals_for = 0;
+          team.goals_against = 0;
+          team.goal_difference = 0;
+          team.recent_form = [];
+        }
+      }
       await supabase.from('global_league_events').delete().neq('id', '');
       await supabase.from('global_league_fixtures').delete().neq('id', '');
       await supabase.from('global_league_rounds').delete().neq('id', '');
@@ -637,6 +652,20 @@ Deno.serve(async (_req: Request) => {
         reason: 'all league rounds finished — next tick will restart the league',
         seasonId: state.season_id,
       }), { headers: { 'Content-Type': 'application/json' } });
+    }
+  }
+
+  // 3.5 Incluir times órfãos na 3ª divisão (registrados mid-season, aguardam próxima season)
+  if (state.status === 'active') {
+    const { data: orphanTeams } = await supabase
+      .from('global_league_teams')
+      .select('id')
+      .is('division', null);
+    if (orphanTeams && orphanTeams.length > 0) {
+      await supabase
+        .from('global_league_teams')
+        .update({ division: 3 })
+        .is('division', null);
     }
   }
 

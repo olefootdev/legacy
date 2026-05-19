@@ -143,7 +143,7 @@ import {
   earlyExitOlexpToSpot,
 } from '@/wallet/olexp';
 import { writeSwapKycToStorage } from '@/wallet/swapKycStorage';
-import { registerSponsor as walletRegisterSponsor } from '@/wallet/referral';
+import { registerSponsor as walletRegisterSponsor, applyReferralCredits } from '@/wallet/referral';
 // Imports estáticos — substituem chamadas legadas de require() que quebravam
 // no browser ("require is not defined") quando os reducers eram acionados.
 import { registerTeam } from '@/match/globalLeagueMVP';
@@ -1941,6 +1941,19 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         if (tb > 0) finance = addBroCents(finance, tb);
       }
 
+      // Referral commissions: distribute 5% per level (up to 3) to the referral tree
+      const walletBeforeRef = finance.wallet ?? createInitialWalletState();
+      if (walletBeforeRef.sponsorId) {
+        const walletAfterRef = applyReferralCredits(
+          walletBeforeRef,
+          'self',
+          oleGain,
+          'ole_game',
+          'BRO',
+        );
+        finance = mergeWalletIntoFinance(finance, walletAfterRef, true);
+      }
+
       let inbox = [staffNote, financeNote, ...state.inbox].slice(0, 14);
       if (newTrophies.length > 0) {
         const trophyNote = makeInboxItem(
@@ -2314,10 +2327,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const ovr = overallFromAttributes(action.player.attrs);
       if (Math.abs(ovr - mint) > 1) return state;
       if (state.finance.ole < action.priceExp) return state;
-      const finance = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_genesis');
+      let financeGenesis = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_genesis');
+
+      // Referral commissions on genesis purchase
+      const walletGenesis = financeGenesis.wallet ?? createInitialWalletState();
+      if (walletGenesis.sponsorId) {
+        const walletAfterGenesis = applyReferralCredits(
+          walletGenesis,
+          'self',
+          action.priceExp,
+          'nft_primary',
+          'BRO',
+        );
+        financeGenesis = mergeWalletIntoFinance(financeGenesis, walletAfterGenesis, true);
+      }
+
       return {
         ...state,
-        finance,
+        finance: financeGenesis,
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
@@ -2411,10 +2438,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!pid.startsWith('legacy-')) return state;
       if (state.players[pid]) return state;
       if (state.finance.ole < action.priceExp) return state;
-      const finance = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_legacy');
+      let financeLegacy = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_legacy');
+
+      // Referral commissions on legacy purchase
+      const walletLegacy = financeLegacy.wallet ?? createInitialWalletState();
+      if (walletLegacy.sponsorId) {
+        const walletAfterLegacy = applyReferralCredits(
+          walletLegacy,
+          'self',
+          action.priceExp,
+          'nft_primary',
+          'BRO',
+        );
+        financeLegacy = mergeWalletIntoFinance(financeLegacy, walletAfterLegacy, true);
+      }
+
       return {
         ...state,
-        finance,
+        finance: financeLegacy,
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
@@ -3524,7 +3565,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           ].slice(0, 14),
         };
       }
-      return syncWalletToFinance(state, result.state);
+      // Referral commissions on GAT purchase
+      let walletAfterGat = result.state;
+      if (walletAfterGat.sponsorId) {
+        walletAfterGat = applyReferralCredits(
+          walletAfterGat,
+          'self',
+          action.amountCents,
+          'gat',
+          'BRO',
+        );
+      }
+      return syncWalletToFinance(state, walletAfterGat);
     }
     case 'START_FRIENDLY_CHALLENGE': {
       const opponentName = action.opponentName.trim();
