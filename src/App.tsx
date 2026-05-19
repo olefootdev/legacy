@@ -29,7 +29,6 @@ import { useGlobalLeagueCrowdSync } from './hooks/useGlobalLeagueCrowdSync';
 import { useGlobalConsequencesSync } from './hooks/useGlobalConsequencesSync';
 import { EmergencyTransferWindow } from './components/EmergencyTransferWindow';
 import { useRecoverOrphanManager } from './onboarding/recoverOrphanManager';
-import { useNpcMarketActivity } from './market/npcMarketActivity';
 import { getSupabase, isSupabaseConfigured } from './supabase/client';
 
 /**
@@ -262,7 +261,6 @@ function GlobalSchedulerMount() {
   useGlobalLeagueCrowdSync();
   useGlobalConsequencesSync();
   useRecoverOrphanManager();
-  useNpcMarketActivity();
   return null;
 }
 
