@@ -219,7 +219,9 @@ export function Login() {
       // (sorteio EXP → 25 pioneiros → top 3 → daily bonus → boas-vindas).
       // Cerimônia só roda 1× por user (gate `hasDoneOnboarding` em
       // userSettings + tabela `welcome_pack_grants` no Supabase).
-      navigate('/', { replace: true });
+      // Full reload para que os hydrators re-montem com sessão válida.
+      // Sem isso, os hydrators já rodaram (e falharam) antes do login.
+      window.location.href = '/';
     } finally {
       setBusy(false);
     }

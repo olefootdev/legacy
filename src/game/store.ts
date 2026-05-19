@@ -162,7 +162,11 @@ export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
     // Finance: usa o lado com MAIOR expLifetimeEarned — monotônico, jamais
     // regredir. Se o user fez cerimônia em outro browser e ganhou EXP, e o
     // local zerou (localStorage limpo no logout), o remoto vence.
-    finance: pickHigherFinance(local.finance, remote.finance),
+    finance: (() => {
+      const merged = pickHigherFinance(local.finance, remote.finance);
+      console.info('[applyHydrated] finance merge: local.exp=', local.finance?.expLifetimeEarned ?? 0, 'remote.exp=', remote.finance?.expLifetimeEarned ?? 0, '→ merged.exp=', merged?.expLifetimeEarned ?? 0);
+      return merged;
+    })(),
     manager: {
       ...local.manager,
       savedTactics: remote.savedTactics ?? local.manager.savedTactics,

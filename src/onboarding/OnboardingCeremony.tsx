@@ -129,7 +129,6 @@ export function OnboardingCeremony() {
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const [askingExit, setAskingExit] = useState(false);
   const [active, setActive] = useState(false);
-  const [finishing, setFinishing] = useState(false);
   // Aguarda 1.5s após hydration antes de avaliar — garante que jogadores do Supabase chegaram
   const [hydrationSettled, setHydrationSettled] = useState(false);
   const [settleGen, setSettleGen] = useState(0);
@@ -141,7 +140,8 @@ export function OnboardingCeremony() {
     return () => clearTimeout(t);
   }, [hydrationDone, settleGen]);
 
-  // Se manager já tem jogadores, gravar flag e nunca abrir
+  // Se manager já tem jogadores E cerimônia está ativa mas não deveria, fechar.
+  // Não fecha durante o startBuild (que faz o grant + persist antes de mostrar UI).
   useEffect(() => {
     if (playersCount > 0 && !hasDoneOnboarding) {
       dispatchGame({
@@ -149,11 +149,7 @@ export function OnboardingCeremony() {
         partial: { hasDoneOnboarding: true },
       });
     }
-    // Fechar cerimônia se abriu por engano e jogadores já existem
-    if (playersCount > 0 && active) {
-      setActive(false);
-    }
-  }, [playersCount, hasDoneOnboarding, active]);
+  }, [playersCount, hasDoneOnboarding]);
 
   // Reseta o guard quando o perfil muda (logout → login de outra conta).
   const profileId = managerProfile?.email;
@@ -198,12 +194,33 @@ export function OnboardingCeremony() {
 
   const startBuild = useCallback(async () => {
     setPhase({ kind: 'loading' });
+    console.info('[OnboardingCeremony] startBuild chamado');
     try {
       const pkg = await buildOnboardingPackage();
+      console.info('[OnboardingCeremony] buildOnboardingPackage resultado:', pkg ? `${Object.keys(pkg.players).length} players` : 'NULL');
       if (!pkg) {
         setPhase({ kind: 'error' });
         return;
       }
+      // GRANT IMEDIATO: salva players + EXP no state e persiste no Supabase
+      // ANTES de mostrar qualquer animação. Se o user fechar a cerimônia
+      // em qualquer ponto, os dados já estão seguros.
+      dispatchGame({
+        type: 'GRANT_ONBOARDING_PACKAGE',
+        players: pkg.players,
+        lineup: pkg.lineup,
+        formationScheme: getGameState().manager.formationScheme,
+        starterExpAmount: pkg.expTier.amount,
+      });
+      dispatchGame({
+        type: 'SET_USER_SETTINGS',
+        partial: { hasDoneOnboarding: true },
+      });
+      console.info('[OnboardingCeremony] grant imediato: players=', Object.keys(pkg.players).length, 'exp=', pkg.expTier.amount);
+      void claimWelcomePackSlot();
+      // Persist imediato — não depende do user clicar "Acessar painel"
+      await flushAllPersistence();
+      console.info('[OnboardingCeremony] persist imediato concluído');
       // Dia 2+: skip animações, vai direto para o grant
       if (managerDay > 1) {
         setPhase({ kind: 'outro', pkg });
@@ -221,41 +238,24 @@ export function OnboardingCeremony() {
     void startBuild();
   }, [active, startBuild]);
 
-  const finish = useCallback(async () => {
-    if (phase.kind !== 'outro') return;
-    if (finishing) return;
-    setFinishing(true);
-    const pkg = phase.pkg;
-    dispatchGame({
-      type: 'GRANT_ONBOARDING_PACKAGE',
-      players: pkg.players,
-      lineup: pkg.lineup,
-      formationScheme: getGameState().manager.formationScheme,
-      starterExpAmount: pkg.expTier.amount,
-    });
-    dispatchGame({
-      type: 'SET_USER_SETTINGS',
-      partial: { hasDoneOnboarding: true },
-    });
-    void claimWelcomePackSlot().then((slot) => {
-      if (!slot) {
-        console.warn('[OnboardingCeremony] claim_welcome_pack falhou — pode reabrir noutro browser');
-      }
-    });
-    await flushAllPersistence();
-    const note = makeInboxItem(
-      `welcome-onboarding-${Date.now()}`,
-      'SHOP_PACK',
-      'PLANTEL',
-      'Bem-vindo ao Olefoot',
-      {
-        body: `Recebeste 25 jogadores e ${pkg.expTier.amount.toLocaleString('pt-BR')} EXP iniciais. Veja o plantel em Equipe e jogue o primeiro amistoso quando quiser.`,
-        deepLink: '/team',
-      },
-    );
-    dispatchGame({ type: 'INBOX_PREPEND', item: note });
+  const finish = useCallback(() => {
+    // Grant + persist já foram feitos no startBuild. Aqui só fecha a UI.
+    const pkg = phase.kind === 'outro' ? phase.pkg : null;
+    if (pkg) {
+      const note = makeInboxItem(
+        `welcome-onboarding-${Date.now()}`,
+        'SHOP_PACK',
+        'PLANTEL',
+        'Bem-vindo ao Olefoot',
+        {
+          body: `Recebeste 25 jogadores e ${pkg.expTier.amount.toLocaleString('pt-BR')} EXP iniciais. Veja o plantel em Equipe e jogue o primeiro amistoso quando quiser.`,
+          deepLink: '/team',
+        },
+      );
+      dispatchGame({ type: 'INBOX_PREPEND', item: note });
+    }
     setActive(false);
-  }, [phase, finishing]);
+  }, [phase]);
 
   const claimDay1 = useCallback(() => {
     dispatchGame({ type: 'CLAIM_DAILY_BONUS', streakDay: 1, claimMs: Date.now() });
@@ -301,7 +301,6 @@ export function OnboardingCeremony() {
         <OutroChapter
           managerName={managerProfile?.firstName ?? 'treinador'}
           onFinish={finish}
-          finishing={finishing}
         />
       )}
       {askingExit && (

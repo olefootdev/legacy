@@ -35,7 +35,14 @@ async function currentUserId(): Promise<string | null> {
   const sb = getSupabase();
   if (!sb) return null;
   const { data } = await sb.auth.getSession();
-  return data?.session?.user?.id ?? null;
+  if (data?.session?.user?.id) return data.session.user.id;
+  // Fallback: após signup recente, a sessão pode não estar no storage ainda.
+  await new Promise((r) => setTimeout(r, 500));
+  const { data: retry } = await sb.auth.getSession();
+  if (retry?.session?.user?.id) return retry.session.user.id;
+  // Último recurso: getUser() faz round-trip ao server
+  const { data: userData } = await sb.auth.getUser();
+  return userData?.user?.id ?? null;
 }
 
 export async function persistManagerGameState(s: OlefootGameState): Promise<void> {
@@ -43,9 +50,23 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
   const sb = getSupabase();
   if (!sb) return;
   const uid = await currentUserId();
-  if (!uid) return;
+  if (!uid) {
+    console.warn('[managerGameState] persist: sem uid — abortando');
+    return;
+  }
 
-  const { error } = await sb.from('manager_game_state').upsert(
+  const exp = s.finance?.expLifetimeEarned ?? 0;
+  const hasDone = s.userSettings?.hasDoneOnboarding ?? false;
+  // Guard: nunca sobrescrever com state vazio (0 EXP + onboarding não feito)
+  // se o user já completou onboarding. Protege contra persist debounced
+  // que roda antes da hidratação completar.
+  if (exp === 0 && !hasDone && Object.keys(s.players ?? {}).length === 0) {
+    console.warn('[managerGameState] persist: skip — state vazio (proteção anti-overwrite)');
+    return;
+  }
+  console.info('[managerGameState] persist: uid=', uid, 'exp=', exp, 'hasDoneOnboarding=', hasDone);
+
+  const { error, status, count } = await sb.from('manager_game_state').upsert(
     {
       user_id:                     uid,
       structures:                  s.structures ?? null,
@@ -67,14 +88,18 @@ export async function persistManagerGameState(s: OlefootGameState): Promise<void
       global_league_milestones_claimed: s.globalLeagueMilestonesClaimed ?? null,
       local_leagues:               s.localLeagues ?? null,
       onboarding_flags:            {
-        hasDoneOnboarding: s.userSettings?.hasDoneOnboarding ?? false,
+        hasDoneOnboarding: hasDone,
       },
       finance:                     s.finance ?? null,
     },
-    { onConflict: 'user_id' },
-  );
+    { onConflict: 'user_id', count: 'exact' },
+  ).select('user_id');
 
-  if (error) console.warn('[managerGameState] persist falhou:', error.message);
+  if (error) {
+    console.warn('[managerGameState] persist FALHOU:', error.code, error.message, 'status=', status);
+  } else {
+    console.info('[managerGameState] persist OK — status=', status, 'count=', count);
+  }
 }
 
 export async function loadManagerGameState(): Promise<ManagerGameStateSnapshot | null> {

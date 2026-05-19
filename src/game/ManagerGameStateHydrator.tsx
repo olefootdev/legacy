@@ -17,19 +17,43 @@ import { isSupabaseConfigured } from '@/supabase/client';
 export function ManagerGameStateHydrator() {
   useEffect(() => {
     if (!isSupabaseConfigured()) {
-      // Sem Supabase: nada pra hidratar, libera o gate igualmente.
       markGameStateHydrationDone();
       return;
     }
     let cancelled = false;
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 1000;
     void (async () => {
-      const remote = await loadManagerGameState();
+      let remote: Awaited<ReturnType<typeof loadManagerGameState>> = null;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        remote = await loadManagerGameState();
+        if (cancelled) return;
+        // Se retornou null, pode ser user novo OU sessão não pronta.
+        // Verificar se temos sessão — se não, retry.
+        if (remote === null) {
+          const { getSupabase } = await import('@/supabase/client');
+          const sb = getSupabase();
+          const sess = await sb?.auth.getSession();
+          if (sess?.data?.session?.user?.id) {
+            // Temos sessão mas não há row — user novo legítimo
+            console.info('[GameStateHydrator] user novo (sem row no Supabase)');
+            break;
+          }
+          // Sem sessão — retry
+          if (attempt < MAX_RETRIES - 1) {
+            console.info('[GameStateHydrator] sem sessão, retry em', RETRY_DELAY, 'ms (attempt', attempt + 1, ')');
+            await new Promise((r) => setTimeout(r, RETRY_DELAY));
+            if (cancelled) return;
+            continue;
+          }
+        }
+        break;
+      }
       if (cancelled) return;
+      console.info('[GameStateHydrator] remote=', remote ? { finance: remote.finance, onboardingFlags: remote.onboardingFlags } : 'null');
       if (remote) {
         applyHydratedGameState(remote);
       } else {
-        // User novo (sem row no Supabase) — libera o gate igualmente
-        // pra primeiros dispatches serem persistidos normalmente.
         markGameStateHydrationDone();
       }
     })();

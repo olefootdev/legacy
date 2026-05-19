@@ -30,8 +30,17 @@ export interface ManagerSquadSnapshot {
 async function currentUserId(): Promise<string | null> {
   const sb = getSupabase();
   if (!sb) return null;
+  // Tenta getSession primeiro (lê do storage local, rápido)
   const { data } = await sb.auth.getSession();
-  return data?.session?.user?.id ?? null;
+  if (data?.session?.user?.id) return data.session.user.id;
+  // Fallback: após signup recente, a sessão pode não estar no storage ainda.
+  // Espera 500ms e tenta de novo.
+  await new Promise((r) => setTimeout(r, 500));
+  const { data: retry } = await sb.auth.getSession();
+  if (retry?.session?.user?.id) return retry.session.user.id;
+  // Último recurso: getUser() faz round-trip ao server
+  const { data: userData } = await sb.auth.getUser();
+  return userData?.user?.id ?? null;
 }
 
 /** Upsert do snapshot completo. Silencioso em erro (apenas log). */
@@ -44,10 +53,20 @@ export async function persistManagerSquad(snapshot: {
   const sb = getSupabase();
   if (!sb) return;
   const uid = await currentUserId();
-  if (!uid) return;
+  if (!uid) {
+    console.warn('[managerSquad] persist: sem uid — abortando');
+    return;
+  }
 
   const playersArr = Object.values(snapshot.players);
-  const { error } = await sb
+  // Guard: nunca sobrescrever com 0 players — protege contra persist
+  // debounced que roda antes da hidratação completar.
+  if (playersArr.length === 0) {
+    console.warn('[managerSquad] persist: 0 players — skip (proteção anti-overwrite)');
+    return;
+  }
+  console.info('[managerSquad] persist: uid=', uid, 'players=', playersArr.length);
+  const { error, status, statusText, count } = await sb
     .from('manager_squad')
     .upsert(
       {
@@ -56,11 +75,14 @@ export async function persistManagerSquad(snapshot: {
         lineup: snapshot.lineup,
         formation_scheme: snapshot.formationScheme,
       },
-      { onConflict: 'user_id' },
-    );
+      { onConflict: 'user_id', count: 'exact' },
+    )
+    .select('user_id');
 
   if (error) {
-    console.warn('[managerSquad] persist falhou:', error.message);
+    console.warn('[managerSquad] persist FALHOU:', error.code, error.message, 'status=', status, statusText);
+  } else {
+    console.info('[managerSquad] persist OK — status=', status, 'count=', count);
   }
 }
 

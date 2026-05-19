@@ -30,11 +30,37 @@ export function ManagerSquadHydrator() {
       return;
     }
     let cancelled = false;
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 1000;
     void (async () => {
+      // Esperar sessão estar disponível antes de tentar carregar
+      let hasSession = false;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const { getSupabase } = await import('@/supabase/client');
+        const sb = getSupabase();
+        const sess = await sb?.auth.getSession();
+        if (sess?.data?.session?.user?.id) {
+          hasSession = true;
+          break;
+        }
+        if (cancelled) return;
+        if (attempt < MAX_RETRIES - 1) {
+          console.info('[SquadHydrator] sem sessão, retry em', RETRY_DELAY, 'ms (attempt', attempt + 1, ')');
+          await new Promise((r) => setTimeout(r, RETRY_DELAY));
+          if (cancelled) return;
+        }
+      }
+      if (!hasSession) {
+        console.info('[SquadHydrator] sem sessão após retries — user não autenticado');
+        setSquadHydrationDone();
+        return;
+      }
       const local = getGameState();
       const localHasPlayers = Object.keys(local.players).length > 0;
+      console.info('[SquadHydrator] localHasPlayers=', localHasPlayers);
       const remote = await loadManagerSquad();
       if (cancelled) return;
+      console.info('[SquadHydrator] remote players=', remote ? Object.keys(remote.players).length : 'null');
       if (!remote || Object.keys(remote.players).length === 0) {
         setSquadHydrationDone();
         return;
@@ -48,6 +74,7 @@ export function ManagerSquadHydrator() {
             lineup: remote.lineup,
             formationScheme: remote.formationScheme,
           });
+          console.info('[SquadHydrator] aplicou squad remoto:', Object.keys(remote.players).length, 'jogadores');
         }
       } else {
         // Local já tem jogadores — só adiciona o que estiver faltando.
