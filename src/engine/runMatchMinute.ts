@@ -8,6 +8,7 @@ import type {
 import type { MatchHalf } from '@/match/fieldZones';
 import { buildSpiritContext, gameSpiritTick } from '@/gamespirit/GameSpirit';
 import { getBestAction } from '@/smartfield/decision';
+import type { MatchSituationInput } from '@/gamespirit/situationalIntelligence';
 import type { PlayerEntity } from '@/entities/types';
 import type { TeamTacticalStyle } from '@/tactics/playingStyle';
 import { applyMatchMinuteFatigue } from '@/systems/fatigue';
@@ -269,6 +270,38 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       : 1;
 
   if (shouldTick && canRunSpirit) {
+    // ── Inteligência Situacional: arcos narrativos + pressão acumulada ──
+    const goalEvents = s.events.filter(e => e.kind === 'goal_home' || e.kind === 'goal_away');
+    const lastGoalEv = goalEvents[0];
+    const lastGoalMinute = lastGoalEv?.minute ?? null;
+    const lastGoalSide: 'home' | 'away' | null = lastGoalEv
+      ? (lastGoalEv.kind === 'goal_home' ? 'home' : 'away')
+      : null;
+    const minutesSinceLastGoal = lastGoalMinute != null ? minute - lastGoalMinute : null;
+
+    // Contar chutes sem gol consecutivos (desde último gol de cada lado)
+    let homeShotsWithoutGoal = 0;
+    let awayShotsWithoutGoal = 0;
+    for (const ev of s.events) {
+      if (ev.kind === 'goal_home') break;
+      if (ev.kind === 'shot_home' || (ev.kind === 'narrative' && ev.text?.includes('chut'))) homeShotsWithoutGoal++;
+    }
+    for (const ev of s.events) {
+      if (ev.kind === 'goal_away') break;
+      if (ev.kind === 'shot_away') awayShotsWithoutGoal++;
+    }
+
+    const situational: MatchSituationInput = {
+      minute,
+      homeScore,
+      awayScore,
+      minutesSinceLastGoal,
+      homeShotsWithoutGoal,
+      awayShotsWithoutGoal,
+      lastGoalSide,
+      lastGoalMinute,
+    };
+
     const ctx = buildSpiritContext({
       minute,
       homeScore,
@@ -294,6 +327,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       pendingFreeKickForSide: s.pendingFreeKickForSide ?? null,
       smartfieldActionHint: spiritActionHint,
       tacticalIntensity: input.tacticalIntensity,
+      situational,
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());

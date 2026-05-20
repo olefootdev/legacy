@@ -117,6 +117,12 @@ export interface SpiritContext {
   tacticalIntensity?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel;
 
   /**
+   * Inteligência situacional: dados para arcos narrativos + pressão acumulada.
+   * Injetado por `buildSpiritContext` / `runMatchMinute`.
+   */
+  situational?: import('@/gamespirit/situationalIntelligence').MatchSituationInput;
+
+  /**
    * Perfil narrativo do jogador com a bola — arquétipo cognitivo, traço de
    * personalidade, intenção, humor e atributos-chave. Injetado por
    * `buildSpiritContext` quando `onBall` está presente no roster.

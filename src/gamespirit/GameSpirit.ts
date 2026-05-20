@@ -28,6 +28,7 @@ import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum'
 import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
+import { computeSituationalModifiers, type SituationalModifiers } from '@/gamespirit/situationalIntelligence';
 import { doesLooseControl } from '@/behaviorAI/firstTouchErrors';
 import {
   createTeamPressingState,
@@ -932,11 +933,16 @@ export function gameSpiritTick(
   const nearestDefender = (ctx.awayPlayers ?? [])
     .map((p) => ({ p, d: dist(ctx.ball, { x: p.x, y: p.y }) }))
     .sort((a, b) => a.d - b.d)[0]?.p;
+  // ── Inteligência Situacional: modifica probabilidades baseado no contexto ──
+  const sitMods: SituationalModifiers = ctx.situational
+    ? computeSituationalModifiers(ctx.situational)
+    : { goalChanceMult: 1, foulChanceMult: 1, penaltyChanceMult: 1, homeMomentumBoost: 0, awayMomentumBoost: 0 };
+
   const fairPlay = (nearestDefender?.attributes as any)?.fairPlay ?? 60;
   const aggression = (nearestDefender?.attributes as any)?.aggression ?? 50;
   const profileMult = Math.max(0.55, Math.min(1.65, 1 + (aggression - 50) / 100 - (fairPlay - 60) / 120));
   // Boost da prob de falta perigosa quando bola está mais perto do gol. Aumentado 67%: 0.6 → 1.0
-  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 1.0) * profileMult;
+  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 1.0) * profileMult * sitMods.foulChanceMult;
   // SkillEngine — DEFEND: zagueiro habilidoso reduz prob da falta (tackle limpo).
   if (nearestDefender) {
     const defendRes = resolveSkills({
@@ -955,7 +961,7 @@ export function gameSpiritTick(
   ) {
     // Se a bola está dentro da área (box ou six-yard), todo foul vira pênalti.
     const insideBox = ballZi ? isBox(ballZi) : false;
-    const toPenalty = insideBox || Math.random() < PENALTY_FROM_FOUL_PROB;
+    const toPenalty = insideBox || Math.random() < PENALTY_FROM_FOUL_PROB * sitMods.penaltyChanceMult;
     const takerName = ctx.onBall.name;
     if (toPenalty) {
       L.push({
@@ -1083,6 +1089,12 @@ export function gameSpiritTick(
         gkFactor01: ctx.opponentStrength / 120,
         errorTax,
       });
+
+      // Inteligência situacional: boost na chance de gol
+      if (sitMods.goalChanceMult !== 1) {
+        weights.goal *= sitMods.goalChanceMult;
+        weights.post_in *= sitMods.goalChanceMult;
+      }
 
       // Aplica bônus de evento especial (bicicleta, bomba, etc.)
       if (specialEvent?.effect?.xGBonus) {
