@@ -443,7 +443,8 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   let nextFixture = normalizeFixture(rawState.nextFixture);
   const ga = nextFixture.opponent?.genesisAwayPlayers;
   if (ga?.length) {
-    const clean = ga.filter((p) => p?.id?.startsWith('genesis-'));
+    // Aceitar qualquer player com id válido (genesis-, player_, ou qualquer string não-vazia)
+    const clean = ga.filter((p) => p?.id && typeof p.id === 'string' && p.id.length > 0);
     if (clean.length !== ga.length) {
       nextFixture = normalizeFixture({
         ...nextFixture,
