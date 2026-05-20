@@ -671,7 +671,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
       const squadCheck = evaluateOfficialSquad(st.lineup, st.players);
       const skipSquadGateForQuickTest =
-        (action.mode === 'quick' || action.mode === 'test2d') && isOfficialSquadGateRelaxedForTests();
+        (action.mode === 'quick' || action.mode === 'test2d');
       if (!squadCheck.ok && !skipSquadGateForQuickTest) {
         const inboxWithoutDup = st.inbox.filter((i) => i.id !== 'lineup-requirement-live-match');
         const lineupNote = makeInboxItem(
