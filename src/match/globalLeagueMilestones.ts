@@ -27,11 +27,11 @@ const CATEGORY_LABEL: Record<MilestoneCategory, string> = {
 
 /** EXP entregue por threshold (curva crescente). */
 const EXP_REWARDS: Record<MilestoneThreshold, number> = {
-  10: 500,
-  50: 2_500,
-  100: 7_500,
-  300: 25_000,
-  1000: 100_000,
+  10: 50_000,
+  50: 250_000,
+  100: 750_000,
+  300: 2_500_000,
+  1000: 10_000_000,
 };
 
 export function milestoneId(category: MilestoneCategory, threshold: MilestoneThreshold): GlobalLeagueMilestoneId {
