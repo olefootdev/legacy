@@ -5,6 +5,25 @@ import type { OpponentStub, PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { overallFromAttributes } from '@/entities/player';
 
+// ── Histórico de adversários recentes (evita repetição) ──────────────────────
+const RECENT_OPPONENTS_KEY = 'olefoot_recent_opponents';
+const MAX_RECENT_OPPONENTS = 5;
+
+function getRecentOpponents(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_OPPONENTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function addRecentOpponent(userId: string): void {
+  try {
+    const recent = getRecentOpponents().filter(id => id !== userId);
+    recent.unshift(userId);
+    localStorage.setItem(RECENT_OPPONENTS_KEY, JSON.stringify(recent.slice(0, MAX_RECENT_OPPONENTS)));
+  } catch { /* ignore */ }
+}
+
 /**
  * Converte qualquer `OpponentMatch` em `OpponentStub` para passar via
  * navigate state (mantém o adversário consistente entre tela de busca e
@@ -79,6 +98,7 @@ async function findRealManagerOpponent(
 
     // 3. Filtrar por OVR e validar
     const [minOvr, maxOvr] = [myOverall - maxOvrDiff, myOverall + maxOvrDiff];
+    const recentOpponents = new Set(getRecentOpponents());
     const candidates: Array<{
       userId: string;
       clubName: string;
@@ -101,6 +121,9 @@ async function findRealManagerOpponent(
 
       // Precisa ter nome válido
       if (!teamInfo || !teamInfo.club_name || teamInfo.club_name === 'Buscando…') continue;
+
+      // Evitar repetição: pular adversários recentes
+      if (recentOpponents.has(row.user_id)) continue;
 
       // Precisa ter pelo menos 11 jogadores no plantel
       if (players.length < 11) continue;
@@ -163,6 +186,9 @@ async function findRealManagerOpponent(
       genesisAwayPlayers: realLineupPlayers,
       formationScheme: pick.formationScheme ?? '4-3-3',
     };
+
+    // Registrar adversário no histórico para evitar repetição
+    addRecentOpponent(pick.userId);
 
     return { type: 'real_manager', stub };
   } catch (err) {
