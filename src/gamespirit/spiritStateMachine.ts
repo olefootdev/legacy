@@ -25,21 +25,21 @@ import type {
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.088,
-  post_in: 0.038,
-  save: 0.13,
-  block: 0.155,
-  wide: 0.32,
-  post_out: 0.052,
-  miss_far: 0.217,
+  goal: 0.13,
+  post_in: 0.055,
+  save: 0.14,
+  block: 0.12,
+  wide: 0.26,
+  post_out: 0.06,
+  miss_far: 0.235,
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
- *  Histórico: 4.5% → 5.625% → 7.2% → 12% (Sprint P1: +66% pra dar mais pênaltis no live). */
-export const DANGEROUS_FOUL_PROB = 0.12;
+ *  Histórico: 4.5% → 5.625% → 7.2% → 12% → 18% (mais emoção, mais set pieces). */
+export const DANGEROUS_FOUL_PROB = 0.18;
 /** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
- *  Histórico: 7.5% → 9.375% → 15% → 30% (Sprint P1: +100% pra emoção do novo PenaltyShoot). */
-export const PENALTY_FROM_FOUL_PROB = 0.3;
+ *  Histórico: 7.5% → 9.375% → 15% → 30% → 40% (mais pênaltis decisivos). */
+export const PENALTY_FROM_FOUL_PROB = 0.4;
 
 /** Duração do cartão do marcador na partida rápida; `autoDismissMs` do golo = isto + narrativa (só timer, sem 2.º overlay). */
 export const GOAL_SCORER_OVERLAY_MS = 3000;

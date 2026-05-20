@@ -260,7 +260,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   let live2dDecisionStagnationTicks = s.live2dDecisionStagnationTicks ?? 0;
 
-  const spiritTickP = live2dPitchEarly ? 1 : (input.spiritTickProb ?? 0.62);
+  const spiritTickP = live2dPitchEarly ? 1 : (input.spiritTickProb ?? 0.75);
   /** live2d: sempre resolve uma ação por minuto (evita “congelado” no portador). */
   const shouldTick = !input.skipEvent && (live2dPitchEarly || Math.random() < spiritTickP);
   const autoSimBoost =
