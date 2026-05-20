@@ -6,10 +6,7 @@
 import { getSupabase, isSupabaseConfigured } from './client';
 import type { OlefootGameState } from '@/game/types';
 import {
-  applyResultToLocalLeague,
-  emptyLocalLeaguesState,
   type LocalLeagueResult,
-  type LocalLeaguesState,
 } from '@/match/localLeagues';
 import { applyMatchConsequences } from '@/systems/playerHealth/reducer';
 import type { MatchOutcomeEvent, PlayerHealth } from '@/systems/playerHealth/types';
@@ -166,35 +163,17 @@ export async function persistOpponentQuickMatchResult(
   if (!sb) return;
 
   try {
-    // 1. Ler o state atual do adversário
-    const { data, error: readErr } = await sb
-      .from('manager_game_state')
-      .select('local_leagues')
-      .eq('user_id', opponentUserId)
-      .maybeSingle();
+    // Usa RPC atômica para evitar race condition (read-then-write)
+    const { error } = await sb.rpc('persist_opponent_local_league_result', {
+      p_opponent_user_id: opponentUserId,
+      p_league: league,
+      p_result: opponentResult,
+      p_goals_for: goalsFor,
+      p_goals_against: goalsAgainst,
+    });
 
-    if (readErr) {
-      console.warn('[persistOpponentQuickMatchResult] read falhou:', readErr.message);
-      return;
-    }
-
-    const existing = (data?.local_leagues as LocalLeaguesState | null) ?? emptyLocalLeaguesState();
-
-    // 2. Aplicar resultado inverso na league do adversário
-    const updatedLeague = applyResultToLocalLeague(existing[league], opponentResult, goalsFor, goalsAgainst);
-    const updatedLocalLeagues: LocalLeaguesState = { ...existing, [league]: updatedLeague };
-
-    // 3. Upsert — cria row se o adversário ainda não tem manager_game_state
-    const { error: writeErr } = await sb.from('manager_game_state').upsert(
-      {
-        user_id: opponentUserId,
-        local_leagues: updatedLocalLeagues,
-      },
-      { onConflict: 'user_id' },
-    );
-
-    if (writeErr) {
-      console.warn('[persistOpponentQuickMatchResult] write falhou:', writeErr.message);
+    if (error) {
+      console.warn('[persistOpponentQuickMatchResult] rpc falhou:', error.message);
     } else {
       console.info('[persistOpponentQuickMatchResult] OK para', opponentUserId, opponentResult, league);
     }

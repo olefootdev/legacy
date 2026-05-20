@@ -165,7 +165,7 @@ export function MatchClassic() {
         awayManager:  'CPU',
         round,
         competition:  'CLASSIC LEAGUE',
-        opponentUserId: fixture?.opponent?.genesisAwayPlayers?.length ? fixture.opponent.id : null,
+        opponentUserId: fixture?.opponent?.id && !fixture.opponent.id.startsWith('bot-') && !fixture.opponent.id.startsWith('placeholder') ? fixture.opponent.id : null,
       }}
       homePlayers={teams.home}
       awayPlayers={teams.away}

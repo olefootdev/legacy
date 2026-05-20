@@ -1,26 +1,30 @@
 import { getSupabase } from '@/supabase/client';
 import { getMatchingBotTeam, type BotTeamDefinition } from './botTeams';
-import type { ClubSearchHit } from '@/supabase/friendlyChallenges';
 import type { OpponentStub, PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { overallFromAttributes } from '@/entities/player';
 
-// ── Histórico de adversários recentes (evita repetição) ──────────────────────
-const RECENT_OPPONENTS_KEY = 'olefoot_recent_opponents';
+// ── Histórico de adversários recentes (evita repetição, escopado por user) ───
+const RECENT_OPPONENTS_BASE_KEY = 'olefoot_recent_opponents';
 const MAX_RECENT_OPPONENTS = 5;
 
-function getRecentOpponents(): string[] {
+function recentOpponentsKey(userId?: string): string {
+  return userId ? `${RECENT_OPPONENTS_BASE_KEY}_${userId}` : RECENT_OPPONENTS_BASE_KEY;
+}
+
+function getRecentOpponents(userId?: string): string[] {
   try {
-    const raw = localStorage.getItem(RECENT_OPPONENTS_KEY);
+    const raw = localStorage.getItem(recentOpponentsKey(userId));
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
-export function addRecentOpponent(userId: string): void {
+export function addRecentOpponent(opponentId: string, userId?: string): void {
   try {
-    const recent = getRecentOpponents().filter(id => id !== userId);
-    recent.unshift(userId);
-    localStorage.setItem(RECENT_OPPONENTS_KEY, JSON.stringify(recent.slice(0, MAX_RECENT_OPPONENTS)));
+    const key = recentOpponentsKey(userId);
+    const recent = getRecentOpponents(userId).filter(id => id !== opponentId);
+    recent.unshift(opponentId);
+    localStorage.setItem(key, JSON.stringify(recent.slice(0, MAX_RECENT_OPPONENTS)));
   } catch { /* ignore */ }
 }
 
@@ -31,14 +35,6 @@ export function addRecentOpponent(userId: string): void {
  */
 export function opponentMatchToStub(m: OpponentMatch, myOverall: number): OpponentStub {
   if (m.type === 'real_manager') return m.stub;
-  if (m.type === 'online') {
-    return {
-      id: m.club.club_id,
-      name: m.club.name,
-      shortName: m.club.short_name,
-      strength: Math.max(50, myOverall - m.ovrDiff),
-    };
-  }
   return {
     id: m.bot.id,
     name: m.bot.name,
@@ -59,13 +55,13 @@ export interface MatchmakingParams {
 
 export type OpponentMatch =
   | { type: 'real_manager'; stub: OpponentStub }
-  | { type: 'online'; club: ClubSearchHit; ovrDiff: number }
   | { type: 'bot'; bot: BotTeamDefinition };
 
 /**
  * Busca adversário real REGISTRADO NA LIGA GLOBAL.
  * Só retorna managers que estão em global_league_teams.
  * Usa jogadores REAIS do plantel (manager_squad).
+ * Timeout de 5s para não travar a UI.
  */
 async function findRealManagerOpponent(
   myUserId: string | undefined,
@@ -75,6 +71,9 @@ async function findRealManagerOpponent(
   const sb = getSupabase();
   if (!sb) return null;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
   try {
     // 1. Buscar managers da Liga Global com OVR no range
     let query = sb
@@ -82,7 +81,8 @@ async function findRealManagerOpponent(
       .select('manager_id, club_name, club_short, overall')
       .gte('overall', Math.max(40, myOverall - maxOvrDiff))
       .lte('overall', Math.min(99, myOverall + maxOvrDiff))
-      .limit(20);
+      .limit(20)
+      .abortSignal(controller.signal);
 
     if (myUserId) {
       query = query.neq('manager_id', myUserId);
@@ -92,7 +92,7 @@ async function findRealManagerOpponent(
     if (glErr || !globalTeams || globalTeams.length === 0) return null;
 
     // Filtrar nomes inválidos e adversários recentes
-    const recentOpponents = new Set(getRecentOpponents());
+    const recentOpponents = new Set(getRecentOpponents(myUserId));
     const validTeams = (globalTeams as Array<{
       manager_id: string; club_name: string; club_short: string; overall: number;
     }>).filter(t =>
@@ -110,7 +110,8 @@ async function findRealManagerOpponent(
     const { data: squads, error: sqErr } = await sb
       .from('manager_squad')
       .select('user_id, players, lineup, formation_scheme')
-      .in('user_id', managerIds);
+      .in('user_id', managerIds)
+      .abortSignal(controller.signal);
 
     if (sqErr || !squads || squads.length === 0) return null;
 
@@ -207,12 +208,18 @@ async function findRealManagerOpponent(
     };
 
     // Registrar adversário no histórico para evitar repetição
-    addRecentOpponent(pick.userId);
+    addRecentOpponent(pick.userId, myUserId);
 
     return { type: 'real_manager', stub };
   } catch (err) {
-    console.warn('[friendlyMatchmaking] real manager search failed:', err);
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.warn('[friendlyMatchmaking] timeout (5s) buscando adversário');
+    } else {
+      console.warn('[friendlyMatchmaking] real manager search failed:', err);
+    }
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

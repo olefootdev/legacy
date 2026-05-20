@@ -1781,7 +1781,8 @@ export function MatchQuick() {
     dispatch({ type: 'FINALIZE_MATCH' });
 
     // ── Persist inverse result + away events to opponent's state (async PvP) ──
-    if (fixture?.opponent?.genesisAwayPlayers?.length) {
+    const isRealOpponent = fixture?.opponent?.id && !fixture.opponent.id.startsWith('bot-') && !fixture.opponent.id.startsWith('placeholder');
+    if (isRealOpponent) {
       const oppUserId = fixture.opponent.id;
       const oppResult: 'win' | 'draw' | 'loss' =
         live.homeScore > live.awayScore ? 'loss' : live.homeScore < live.awayScore ? 'win' : 'draw';
