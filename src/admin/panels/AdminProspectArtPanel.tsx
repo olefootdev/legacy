@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Brush, CheckCircle2, ClipboardCopy, ExternalLink } from 'lucide-react';
+import { Brush, CheckCircle2, ClipboardCopy, ExternalLink, RefreshCw } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { registerAcademyManagerListing } from '@/supabase/academyManagers';
+import { fetchAllManagerArtRequests, type GlobalArtRequest } from '@/supabase/managerGameState';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { PORTRAIT_STYLE_REGION_LABELS } from '@/entities/managerProspect';
 import type { PlayerEntity } from '@/entities/types';
@@ -304,9 +305,32 @@ export function AdminProspectArtPanel() {
   const [costDraft, setCostDraft] = useState(String(createCostExp));
   const [showDone, setShowDone] = useState(false);
 
+  // ── Global art requests (todos os managers) ──
+  const [globalRequests, setGlobalRequests] = useState<GlobalArtRequest[]>([]);
+  const [globalLoading, setGlobalLoading] = useState(false);
+
+  const loadGlobalRequests = useCallback(async () => {
+    setGlobalLoading(true);
+    try {
+      const all = await fetchAllManagerArtRequests();
+      setGlobalRequests(all);
+    } finally {
+      setGlobalLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    setCostDraft(String(createCostExp));
-  }, [createCostExp]);
+    void loadGlobalRequests();
+  }, [loadGlobalRequests]);
+
+  const globalPending = useMemo(
+    () => globalRequests.filter((g) => g.request.playerCreationStep !== 'launched'),
+    [globalRequests],
+  );
+  const globalDone = useMemo(
+    () => globalRequests.filter((g) => g.request.playerCreationStep === 'launched'),
+    [globalRequests],
+  );
 
   const pending = useMemo(() => queue.filter((r) => r.playerCreationStep !== 'launched'), [queue]);
   const done = useMemo(() => queue.filter((r) => r.playerCreationStep === 'launched'), [queue]);
@@ -419,6 +443,83 @@ export function AdminProspectArtPanel() {
           ))}
         </ul>
       )}
+
+      {/* ── Pedidos GLOBAIS de todos os managers (Supabase) ── */}
+      <div className="mt-8 border-t border-white/10 pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-black uppercase tracking-tight text-cyan-300">
+              Pedidos de TODOS os managers
+            </h3>
+            <p className="mt-1 text-xs text-white/50">
+              Dados do Supabase (manager_game_state.manager_prospect_art_queue). Mostra jogadores criados por qualquer manager que aguardam foto.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadGlobalRequests()}
+            disabled={globalLoading}
+            className="flex items-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold uppercase text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-50"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', globalLoading && 'animate-spin')} />
+            Atualizar
+          </button>
+        </div>
+
+        <div className="mt-3 text-sm text-white/70">
+          Pendentes: <span className="font-bold text-cyan-300">{globalPending.length}</span>
+          {globalDone.length > 0 && (
+            <span className="ml-2 text-white/40">· {globalDone.length} concluído(s)</span>
+          )}
+        </div>
+
+        {globalPending.length === 0 && !globalLoading ? (
+          <p className="mt-3 rounded-lg border border-white/10 bg-black/20 px-4 py-6 text-center text-sm text-white/45">
+            Nenhum pedido pendente de outros managers.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {globalPending.map((g) => (
+              <li
+                key={`${g.userId}-${g.request.id}`}
+                className="rounded-xl border border-cyan-500/20 bg-black/35 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-display text-sm font-black text-white">
+                        {g.request.heritage?.playerName ?? g.request.playerId}
+                      </span>
+                      <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-cyan-300">
+                        {stepLabel(g.request.playerCreationStep)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-white/50">
+                      <span>Manager: <span className="font-mono text-white/70">{g.userId.slice(0, 8)}…</span></span>
+                      <span>Criado: {new Date(g.request.createdAtIso).toLocaleDateString('pt-BR')}</span>
+                      {g.request.selfieUrl && (
+                        <a href={g.request.selfieUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline">
+                          Ver selfie
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  {g.request.draftPortraitUrl && /^https?:\/\//i.test(g.request.draftPortraitUrl) && (
+                    <img
+                      src={g.request.draftPortraitUrl}
+                      alt="Rascunho"
+                      className="h-16 w-16 rounded-lg border border-white/10 object-cover"
+                    />
+                  )}
+                </div>
+                <pre className="mt-3 max-h-32 overflow-auto rounded-lg border border-white/10 bg-black/50 p-3 text-[10px] leading-relaxed text-white/60 whitespace-pre-wrap">
+                  {g.request.adminArtPrompt}
+                </pre>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

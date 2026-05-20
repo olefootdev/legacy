@@ -253,3 +253,45 @@ export async function persistOpponentAwayEvents(
     console.warn('[persistOpponentAwayEvents] exception:', err);
   }
 }
+
+/**
+ * Busca todas as art requests de TODOS os managers (para o Admin ver pedidos pendentes).
+ * Retorna array com user_id + cada request da fila.
+ */
+export interface GlobalArtRequest {
+  userId: string;
+  request: import('@/game/types').ManagerProspectArtRequest;
+  playerSnapshot: Record<string, unknown> | null;
+}
+
+export async function fetchAllManagerArtRequests(): Promise<GlobalArtRequest[]> {
+  if (!isSupabaseConfigured()) return [];
+  const sb = getSupabase();
+  if (!sb) return [];
+
+  const { data, error } = await sb
+    .from('manager_game_state')
+    .select('user_id, manager_prospect_art_queue')
+    .not('manager_prospect_art_queue', 'is', null);
+
+  if (error) {
+    console.warn('[fetchAllManagerArtRequests] error:', error.message);
+    return [];
+  }
+
+  const results: GlobalArtRequest[] = [];
+  for (const row of (data ?? []) as Array<{ user_id: string; manager_prospect_art_queue: unknown }>) {
+    const queue = row.manager_prospect_art_queue;
+    if (!Array.isArray(queue)) continue;
+    for (const req of queue) {
+      if (!req || typeof req !== 'object' || !('id' in req)) continue;
+      results.push({
+        userId: row.user_id,
+        request: req as import('@/game/types').ManagerProspectArtRequest,
+        playerSnapshot: null,
+      });
+    }
+  }
+
+  return results;
+}
