@@ -1,5 +1,5 @@
 import { getSupabase } from '@/supabase/client';
-import { getMatchingBotTeam, generateBotSquad, type BotTeamDefinition } from './botTeams';
+import { getMatchingBotTeam, type BotTeamDefinition } from './botTeams';
 import type { ClubSearchHit } from '@/supabase/friendlyChallenges';
 import type { OpponentStub, PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
@@ -102,12 +102,20 @@ async function findRealManagerOpponent(
       // Precisa ter nome válido
       if (!teamInfo || !teamInfo.club_name || teamInfo.club_name === 'Buscando…') continue;
 
-      // Pegar jogadores do lineup
-      const lineupPlayers = Object.values(lineup)
+      // Precisa ter pelo menos 11 jogadores no plantel
+      if (players.length < 11) continue;
+
+      // Tentar montar lineup a partir do mapa de lineup
+      let lineupPlayers = Object.values(lineup)
         .map(id => players.find(p => p.id === id))
         .filter((p): p is PlayerEntity => !!p);
 
-      if (lineupPlayers.length < 11) continue;
+      // Se lineup não tem 11, usar os 11 melhores jogadores do plantel
+      if (lineupPlayers.length < 11) {
+        lineupPlayers = [...players]
+          .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs))
+          .slice(0, 11);
+      }
 
       const avgOvr = Math.round(
         lineupPlayers.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / lineupPlayers.length
@@ -135,10 +143,17 @@ async function findRealManagerOpponent(
     const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))]!;
 
     // Montar stub com jogadores REAIS do lineup
-    const realLineupPlayers = Object.values(pick.lineup)
+    let realLineupPlayers = Object.values(pick.lineup)
       .map(id => pick.players.find(p => p.id === id))
       .filter((p): p is PlayerEntity => !!p)
       .slice(0, 11);
+
+    // Fallback: se lineup não resolve 11, usar os melhores do plantel
+    if (realLineupPlayers.length < 11) {
+      realLineupPlayers = [...pick.players]
+        .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs))
+        .slice(0, 11);
+    }
 
     const stub: OpponentStub = {
       id: pick.userId,
@@ -157,87 +172,13 @@ async function findRealManagerOpponent(
 }
 
 /**
- * Fallback: busca nome/OVR de global_league_teams e gera squad sintético.
- * Usado apenas se manager_squad não retornar resultados (RLS ainda bloqueando
- * ou manager sem squad persistido).
- */
-async function findGlobalLeagueFallback(
-  myUserId: string | undefined,
-  myOverall: number,
-  maxOvrDiff: number,
-): Promise<OpponentMatch | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
-
-  try {
-    let query = sb
-      .from('global_league_teams')
-      .select('id, manager_id, club_name, club_short, overall')
-      .gte('overall', Math.max(40, myOverall - maxOvrDiff))
-      .lte('overall', Math.min(99, myOverall + maxOvrDiff))
-      .limit(10);
-
-    if (myUserId) {
-      query = query.neq('manager_id', myUserId);
-    }
-
-    const { data, error } = await query;
-    if (error || !data || data.length === 0) return null;
-
-    const valid = (data as Array<{
-      id: string; manager_id: string; club_name: string; club_short: string; overall: number;
-    }>).filter(t =>
-      t.club_name && t.club_name !== 'Buscando…' && t.overall >= 40 && t.overall <= 99
-    );
-
-    if (valid.length === 0) return null;
-
-    const sorted = valid.sort((a, b) =>
-      Math.abs(a.overall - myOverall) - Math.abs(b.overall - myOverall)
-    );
-    const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))]!;
-
-    // Squad sintético como último recurso (manager não tem squad persistido)
-    const formations: FormationSchemeId[] = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1'];
-    const formation = formations[Math.floor(Math.random() * formations.length)]!;
-    const botDef: BotTeamDefinition = {
-      id: `bot-${pick.id}` as any,
-      name: pick.club_name,
-      shortName: pick.club_short,
-      country: 'Brasil',
-      avgOverall: pick.overall,
-      formation,
-      style: 'balanced',
-      description: '',
-    };
-    const squad = generateBotSquad(botDef);
-    const lineupPlayers = Object.values(squad).slice(0, 11);
-
-    const stub: OpponentStub = {
-      id: pick.manager_id,
-      name: pick.club_name,
-      shortName: pick.club_short,
-      strength: pick.overall,
-      genesisAwayPlayers: lineupPlayers,
-      formationScheme: formation,
-    };
-
-    return { type: 'real_manager', stub };
-  } catch (err) {
-    console.warn('[friendlyMatchmaking] global league fallback failed:', err);
-    return null;
-  }
-}
-
-/**
  * Busca automática de adversário para amistoso.
  *
  * Prioridade:
  * 1. Manager real com squad persistido (jogadores REAIS) — OVR ±10
  * 2. Manager real com squad persistido — OVR ±20
- * 3. Manager da Liga Global (squad sintético) — OVR ±20
- * 4. Manager da Liga Global — OVR ±30
- * 5. Bot (último recurso)
+ * 3. Manager real com squad persistido — OVR ±30 (qualquer)
+ * 4. Bot (último recurso — nunca inventa jogadores para managers reais)
  */
 export async function findFriendlyOpponent(
   params: MatchmakingParams,
@@ -252,15 +193,11 @@ export async function findFriendlyOpponent(
   const realWide = await findRealManagerOpponent(myUserId, myOverall, 20);
   if (realWide) return realWide;
 
-  // 3. Liga Global fallback (±20)
-  const globalClose = await findGlobalLeagueFallback(myUserId, myOverall, 20);
-  if (globalClose) return globalClose;
+  // 3. Squad real (±30)
+  const realVeryWide = await findRealManagerOpponent(myUserId, myOverall, 30);
+  if (realVeryWide) return realVeryWide;
 
-  // 4. Liga Global fallback (±30)
-  const globalWide = await findGlobalLeagueFallback(myUserId, myOverall, 30);
-  if (globalWide) return globalWide;
-
-  // 5. Bot
+  // 4. Bot (último recurso)
   const bot = getMatchingBotTeam(myOverall, 15);
   return { type: 'bot', bot };
 }
