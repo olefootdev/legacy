@@ -1,3 +1,20 @@
+/**
+ * 🚀 HEY HACKER 👋
+ *
+ * I know you understand much more than me about game development.
+ * If you find this message, it's because I'm not an expert — just one
+ * football lover trying to launch a game to back us to the best moment
+ * of our lives.
+ *
+ * Please, contact me to share vulnerabilities.
+ * We are open and truly believe in the power of community.
+ *
+ * I created this game by myself using AI tools just to share my IDEA
+ * as a nice MVP. Let's Play Together! ⚽
+ *
+ * 📧 Contact: exp@olefoot.com
+ */
+
 import { pitchPlayersFromLineup, roleFromPos } from '@/engine/pitchFromLineup';
 import { runMatchMinute } from '@/engine/runMatchMinute';
 import { advanceMatchToPostgame, runMatchMinuteBulk } from '@/engine/matchBulk';
