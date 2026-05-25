@@ -61,6 +61,7 @@ import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
+import { PlayerConsequencesBadge } from '@/components/olefoot-python-mode/PlayerConsequencesBadge';
 import { calcMarketMakerOffer, marketMakerDiscountLabel } from '@/market/marketMaker';
 import {
   countActiveAcademyProspects,
@@ -706,6 +707,9 @@ export function Team() {
                         </span>
                       ) : null}
                     </div>
+
+                    {/* OLEFOOT PYTHON MODE — consequências persistentes do jogador */}
+                    <PlayerConsequencesBadge playerId={player.id} compact={false} />
 
                     {/* DNA do Campeão — grid 2x2 com mais espaço horizontal */}
                     <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 md:gap-x-8 md:gap-y-3">

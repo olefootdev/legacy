@@ -2,6 +2,7 @@ import type { FormationSchemeId } from '@/match-engine/types';
 import type { LiveMatchSnapshot } from '@/engine/types';
 import type { FinanceState } from '@/entities/types';
 import type { ManagerProspectMarketState, OlefootGameState } from './types';
+import { EMPTY_CONSEQUENCE_STORE } from '@/systems/consequences/store';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { defaultUserSettings } from '@/settings/defaultUserSettings';
 import { FORMATION_SCHEME_LIST } from '@/match-engine/formations/catalog';
@@ -130,6 +131,10 @@ export function createInitialGameState(): OlefootGameState {
       current: 'counter',
       changedAtMinute: 0,
     },
+    // OLEFOOT PYTHON MODE — sistemas A + E
+    consequenceStore: EMPTY_CONSEQUENCE_STORE,
+    managerPresence: undefined,
+    lastLoginBonusClaim: undefined,
   };
 }
 

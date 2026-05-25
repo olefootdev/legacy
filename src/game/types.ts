@@ -35,6 +35,8 @@ import type { GlobalLeagueState } from '@/match/globalMatch';
 import type { CompetitiveRankingState } from './competitiveRanking';
 import type { CoachAgent } from '@/coach/types';
 import type { PlayerHealth } from '@/systems/playerHealth/types';
+import type { ConsequenceStoreState, PersistentConsequence } from '@/systems/consequences/types';
+import type { LoginBonusClaimResult, ManagerPresence } from '@/systems/engagement/types';
 
 export type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
 export type { InboxItem, InboxCategory } from './inboxTypes';
@@ -380,6 +382,16 @@ export interface OlefootGameState {
     zone: import('@/entities/types').TacticalZone;
     createdAt: number;
   }>;
+  /**
+   * OLEFOOT PYTHON MODE — Consequências persistentes ativas no clube.
+   * Cada PersistentConsequence tem expires_at em ms epoch; UI/engine
+   * consomem via `applyOverlay` pra obter snapshots vivos.
+   */
+  consequenceStore?: ConsequenceStoreState;
+  /** OLEFOOT PYTHON MODE — Presença do manager (ausência + bonus 3h/1h). */
+  managerPresence?: ManagerPresence;
+  /** Último resultado de claim de login bonus — UI consome após dispatch. */
+  lastLoginBonusClaim?: LoginBonusClaimResult;
 }
 
 export type GameAction =
@@ -876,4 +888,29 @@ export type GameAction =
   | {
       type: 'SET_LAST_PROCESSED_GLOBAL_ROUND';
       roundKey: string;
+    }
+  /**
+   * OLEFOOT PYTHON MODE — Registra presença do manager. Atualiza
+   * `managerPresence.lastLoginAt`, incrementa sessões. UI dispara no mount.
+   */
+  | { type: 'RECORD_CHECK_IN'; managerId: string }
+  /**
+   * OLEFOOT PYTHON MODE — Tenta resgatar bonus de login (3h/1h cycle).
+   * Resultado fica em `state.lastLoginBonusClaim` pra UI consumir.
+   */
+  | { type: 'CLAIM_LOGIN_BONUS' }
+  /** OLEFOOT PYTHON MODE — Limpa lastLoginBonusClaim após UI ler. */
+  | { type: 'CLEAR_LAST_BONUS_CLAIM' }
+  /** OLEFOOT PYTHON MODE — Adiciona consequências (chamado por FINALIZE_MATCH e cronos). */
+  | { type: 'ADD_CONSEQUENCES'; consequences: PersistentConsequence[] }
+  /** OLEFOOT PYTHON MODE — Remove consequências expiradas (idempotente). */
+  | { type: 'TICK_CONSEQUENCES' }
+  /**
+   * OLEFOOT PYTHON MODE — Hidrata estado a partir do Supabase no boot.
+   * Local sempre vence em caso de conflito (preserva trabalho da sessão).
+   */
+  | {
+      type: 'HYDRATE_OLEFOOT_PYTHON_MODE';
+      consequences: PersistentConsequence[];
+      managerPresence: ManagerPresence | null;
     };

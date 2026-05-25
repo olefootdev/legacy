@@ -15,6 +15,7 @@ import { AnnouncementsHydrate } from './game/AnnouncementsHydrate';
 import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { ManagerGameStateHydrator } from './game/ManagerGameStateHydrator';
+import { OlefootPythonModeHydrator } from './game/OlefootPythonModeHydrator';
 import { PersistenceGuard } from './game/PersistenceGuard';
 import { PlatformDataHydrator } from './game/PlatformDataHydrator';
 import { WorldClock } from './game/WorldClock';
@@ -129,6 +130,7 @@ const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.M
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
+const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
@@ -175,6 +177,16 @@ function RequireAdmin() {
 function RequireRegistration() {
   const hasProfile = useGameStore((s) => !!s.userSettings?.managerProfile);
   const hasSquad = useGameStore((s) => Object.keys(s.players ?? {}).length > 0);
+  const managerEmail = useGameStore((s) => s.userSettings?.managerProfile?.email);
+  const dispatch = useGameDispatch();
+
+  // OLEFOOT PYTHON MODE — registra presença + tick de consequências expiradas
+  useEffect(() => {
+    if (!managerEmail) return;
+    dispatch({ type: 'RECORD_CHECK_IN', managerId: managerEmail });
+    dispatch({ type: 'TICK_CONSEQUENCES' });
+  }, [managerEmail, dispatch]);
+
   const registered = isDevRegistrationBypassed() || hasProfile;
   if (!registered) return <Navigate to="/login" replace />;
   return <Outlet />;
@@ -361,6 +373,7 @@ export default function App() {
         <OnboardingCeremony />
         <ManagerSquadHydrator />
         <ManagerGameStateHydrator />
+        <OlefootPythonModeHydrator />
         <PersistenceGuard />
         <PlatformDataHydrator />
         <GenesisCatalogPortraitsHydrate />
@@ -458,6 +471,7 @@ export default function App() {
             <Route path="/manager" element={<Manager />} />
             <Route path="/manager/mensagens" element={<ManagerMessages />} />
             <Route path="/manager/network" element={<ManagerNetwork />} />
+            <Route path="/manager/scouts" element={<ManagerScouts />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
             <Route path="/manager/missoes" element={<Missions />} />
             <Route path="/manager/config" element={<Config />} />

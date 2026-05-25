@@ -13,7 +13,7 @@
 No painel do Worker/Pages → Settings → Environment Variables, definir:
 
 ```bash
-VITE_SUPABASE_URL=https://sgggsylmrdglkhbhcqeg.supabase.co
+VITE_SUPABASE_URL=https://xtuveikgwlgbcleloxia.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_WqsliZKauR8yV-AdLX7JMA_he3KUuow
 VITE_OLEFOOT_API_URL=https://api.olefoot.com
 VITE_ADMIN_EMAIL=olefootdev@gmail.com
@@ -95,5 +95,5 @@ Se deploy falhar:
 ## 🔗 Links Úteis
 
 - Cloudflare Dashboard: https://dash.cloudflare.com
-- Supabase Project: https://supabase.com/dashboard/project/sgggsylmrdglkhbhcqeg
+- Supabase Project: https://supabase.com/dashboard/project/xtuveikgwlgbcleloxia
 - Wrangler Docs: https://developers.cloudflare.com/workers/wrangler/

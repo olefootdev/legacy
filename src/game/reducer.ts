@@ -44,6 +44,25 @@ import {
   tickHealthRecovery,
 } from '@/systems/playerHealth/reducer';
 import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
+// OLEFOOT PYTHON MODE — wire-up dos sistemas A + E
+import {
+  EMPTY_CONSEQUENCE_STORE,
+  addManyConsequences,
+  tickConsequences,
+} from '@/systems/consequences/store';
+import {
+  eventsFromMatchSummary,
+  materializeBatch,
+} from '@/systems/consequences/handlers';
+import { buildImpactSummary } from '@/systems/consequences/fromLiveMatch';
+import { buildGlobalImpactSummary } from '@/systems/consequences/fromGlobalFixture';
+import { recordCheckIn } from '@/systems/engagement/checkIn';
+import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
+import { attemptClaim } from '@/systems/engagement/loginBonus';
+import {
+  shouldApplyAbsenceEffects,
+  buildAbsenceSideEffects,
+} from '@/systems/engagement/absenceEffects';
 import { applyHealthEffect } from '@/systems/playerHealth/reducer';
 import { generateProactiveHealthActions } from '@/coach/proactiveHealthActions';
 import { applyMatchResultToMoral, createDefaultMoral, updateFormStreak } from '@/systems/playerMoral/types';
@@ -2003,6 +2022,25 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
 
       // Gerar propostas proativas do Coach baseadas em saúde pós-jogo.
+      // ─── OLEFOOT PYTHON MODE — gera consequências persistentes ──
+      const managerIdForImpact =
+        state.userSettings?.managerProfile?.email ?? state.club.id ?? 'guest';
+      const impactSummary = buildImpactSummary({
+        lm,
+        scoutResult,
+        managerId: managerIdForImpact,
+        clubId: state.club.id,
+        matchId: state.nextFixture.id ?? `match-${Date.now()}`,
+      });
+      const impactEvents = eventsFromMatchSummary(impactSummary);
+      const newConsequences = materializeBatch(impactEvents);
+      const prevStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const tickedStore = tickConsequences(prevStore, Date.now()).next;
+      const consequenceStore = newConsequences.length
+        ? addManyConsequences(tickedStore, newConsequences)
+        : tickedStore;
+      // ─────────────────────────────────────────────────────────────
+
       const stateAfterMatch: OlefootGameState = {
         ...state,
         finance,
@@ -2021,6 +2059,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         streakChallenges,
         competitiveRanking,
         localLeagues,
+        consequenceStore,
       };
       let manager = stateAfterMatch.manager;
       if (manager.coach) {
@@ -2797,6 +2836,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const yaLvl = state.structures.youth_academy ?? 1;
       const ctLvl = state.structures.training_center ?? 1;
       const medLvl = state.structures.medical_dept ?? 1;
+      // OLEFOOT PYTHON MODE — gate por absence tier (treinos rendem menos / nada)
+      const absenceAtCompletion = evaluateAbsence(state.managerPresence, Date.now());
+      const absenceMult = absenceAtCompletion.effect.trainingMultiplier;
       for (const plan of due) {
         const marketSnap = marketBroSnapshotFromPlayers(players);
         for (const pid of plan.playerIds) {
@@ -2812,7 +2854,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           const boosted = amplifyTrainingResult(
             pl,
             base,
-            trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult,
+            trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult * absenceMult,
           );
           const recovered = applyNutritionRecovery(boosted, state.manager.staff);
           players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(recovered));
@@ -4243,6 +4285,33 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         currentRound.fixtures
       );
 
+      // ─── OLEFOOT PYTHON MODE — gera consequências da partida do manager ─
+      const managerIdForImpact =
+        state.userSettings?.managerProfile?.email ?? state.club.id ?? 'guest';
+      // teamId em fixtures globais segue padrão `gt_${managerId-sanitized}`
+      // (ver src/hooks/useAutoRegisterGlobalLeague.ts). Fallback: globalLeagueMVP
+      // teams que têm managerId.
+      const myTeamId =
+        state.globalLeagueMVP?.teams.find((t) => t.managerId === managerIdForImpact)?.id ??
+        `gt_${managerIdForImpact.replace(/[^a-z0-9]/gi, '_')}`;
+      let consequenceStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      consequenceStore = tickConsequences(consequenceStore, Date.now()).next;
+      for (const fixture of currentRound.fixtures) {
+        if (fixture.status !== 'finished') continue;
+        const summary = buildGlobalImpactSummary({
+          fixture,
+          managerId: managerIdForImpact,
+          clubId: state.club.id,
+          myTeamId,
+        });
+        if (!summary) continue; // fixture não envolve o manager
+        const events = eventsFromMatchSummary(summary);
+        const newConsequences = materializeBatch(events);
+        if (newConsequences.length) {
+          consequenceStore = addManyConsequences(consequenceStore, newConsequences);
+        }
+      }
+
       return {
         ...state,
         globalLeague: {
@@ -4250,6 +4319,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           currentRound: finishedRound,
         },
         olefootLeague: updatedLeague,
+        consequenceStore,
       };
     }
 
@@ -5260,6 +5330,143 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'RESET_GLOBAL_LEAGUE_MVP':
       return handleResetGlobalLeagueMVP(state);
+
+    // ─── OLEFOOT PYTHON MODE ─────────────────────────────────────────
+    case 'RECORD_CHECK_IN': {
+      const now = Date.now();
+      // Avalia ausência ANTES de atualizar lastLoginAt — esse é o tier que
+      // foi atingido enquanto o manager estava fora.
+      const absence = evaluateAbsence(state.managerPresence, now);
+      const prevTier = state.managerPresence?.lastAbsenceTier;
+      const nextPresence = recordCheckIn(state.managerPresence, action.managerId, now);
+
+      // Decide se precisa aplicar efeitos novos (lesões, queda torcida, inbox)
+      if (!shouldApplyAbsenceEffects(prevTier, absence.tier)) {
+        return {
+          ...state,
+          managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+        };
+      }
+
+      // Aplica efeitos REAIS: lesões automáticas + apoio torcida + inbox
+      const eligibleIds = Object.values(state.players)
+        .filter((p) => p.pos !== 'GOL' && !p.outForMatches)
+        .map((p) => p.id);
+      const sideEffects = buildAbsenceSideEffects({
+        managerId: action.managerId,
+        clubId: state.club.id,
+        eligiblePlayerIds: eligibleIds,
+        tier: absence.tier,
+        effect: absence.effect,
+        hoursAbsent: absence.hours,
+        now,
+      });
+
+      // Adiciona consequências ao store
+      const prevStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const newStore = sideEffects.consequences.length
+        ? addManyConsequences(prevStore, sideEffects.consequences)
+        : prevStore;
+
+      // Mescla inbox (novos no topo)
+      const inbox = [...sideEffects.inboxItems, ...state.inbox];
+
+      return {
+        ...state,
+        managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+        consequenceStore: newStore,
+        inbox,
+      };
+    }
+
+    case 'CLAIM_LOGIN_BONUS': {
+      const now = Date.now();
+      // Garante presença mínima (caso UI dispatche antes de RECORD_CHECK_IN)
+      const presence = state.managerPresence ?? recordCheckIn(undefined, 'guest', now);
+      const { result, nextPresence } = attemptClaim(presence, now);
+
+      // Se claim teve sucesso e é EXP, credita no saldo
+      let finance = state.finance;
+      if (result.claimed && result.reward?.kind?.startsWith('exp_') && result.reward.expAmount) {
+        const rounded = Math.round(result.reward.expAmount);
+        finance = {
+          ...finance,
+          ole: Math.max(0, Math.round((finance.ole ?? 0) + rounded)),
+          expLifetimeEarned: (finance.expLifetimeEarned ?? 0) + rounded,
+        };
+      }
+      return {
+        ...state,
+        managerPresence: nextPresence,
+        lastLoginBonusClaim: result,
+        finance,
+      };
+    }
+
+    case 'CLEAR_LAST_BONUS_CLAIM':
+      return { ...state, lastLoginBonusClaim: undefined };
+
+    case 'ADD_CONSEQUENCES': {
+      if (!action.consequences.length) return state;
+      const store = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      return {
+        ...state,
+        consequenceStore: addManyConsequences(store, action.consequences),
+      };
+    }
+
+    case 'TICK_CONSEQUENCES': {
+      const store = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const { next } = tickConsequences(store, Date.now());
+      // Só atualiza se algo expirou (evita re-render desnecessário)
+      if (Object.keys(next.active).length === Object.keys(store.active).length) {
+        return state;
+      }
+      return { ...state, consequenceStore: next };
+    }
+
+    case 'HYDRATE_OLEFOOT_PYTHON_MODE': {
+      // Merge defensivo: local SEMPRE vence em conflito (não regride trabalho da sessão)
+      const localStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const mergedActive: Record<string, typeof localStore.active[string]> = {};
+      // Remote primeiro — pode ser sobrescrito pelo local
+      for (const c of action.consequences) {
+        mergedActive[c.id] = c;
+      }
+      // Local vence
+      for (const [id, c] of Object.entries(localStore.active)) {
+        mergedActive[id] = c;
+      }
+      const mergedStore = { active: mergedActive, lastTickAt: Date.now() };
+
+      // Presence: usa a mais recente (lastLoginAt mais alto)
+      const localPresence = state.managerPresence;
+      let nextPresence = localPresence;
+      if (action.managerPresence) {
+        if (!localPresence || action.managerPresence.lastLoginAt > localPresence.lastLoginAt) {
+          nextPresence = action.managerPresence;
+        } else {
+          // Local mais recente: preserva mas pode reaproveitar streak/sessões do remoto
+          nextPresence = {
+            ...localPresence,
+            totalSessions: Math.max(
+              localPresence.totalSessions,
+              action.managerPresence.totalSessions,
+            ),
+            bonusStreakSlots: Math.max(
+              localPresence.bonusStreakSlots,
+              action.managerPresence.bonusStreakSlots,
+            ),
+          };
+        }
+      }
+
+      return {
+        ...state,
+        consequenceStore: mergedStore,
+        managerPresence: nextPresence,
+      };
+    }
 
     default:
       return state;

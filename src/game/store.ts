@@ -7,6 +7,13 @@ import { insertMatch } from '@/supabase/matchPersistence';
 import { isSupabaseConfigured } from '@/supabase/client';
 import { persistManagerSquad } from '@/supabase/managerSquad';
 import { persistManagerGameState, type ManagerGameStateSnapshot } from '@/supabase/managerGameState';
+// OLEFOOT PYTHON MODE — sync com tabelas dedicadas
+import {
+  persistConsequencesBatch,
+  purgeExpiredConsequences,
+  upsertManagerPresence,
+  logLoginBonusClaim,
+} from '@/supabase/olefootPythonMode';
 
 // Actions que disparam persistência dos slices críticos no Supabase
 const GAME_STATE_PERSIST_ACTIONS = new Set<GameAction['type']>([
@@ -374,7 +381,12 @@ function scheduleManagerSquadPersist(): void {
 }
 
 export function dispatchGame(action: GameAction): void {
+  const prev = state;
   state = gameReducer(state, action);
+
+  // ─── OLEFOOT PYTHON MODE — sync com Supabase (fire-and-forget) ──
+  syncOlefootPythonMode(prev, state, action);
+
   if (action.type === 'START_LIVE_MATCH' && isSupabaseConfigured()) {
     const lm = state.liveMatch;
     const nonce = lm?.matchClientNonce;
@@ -424,4 +436,68 @@ export function useGameStore<T>(selector: (s: OlefootGameState) => T): T {
 
 export function useGameDispatch() {
   return useCallback((a: GameAction) => dispatchGame(a), []);
+}
+
+// ─── OLEFOOT PYTHON MODE — middleware de sync ─────────────────────
+/**
+ * Após cada dispatch, identifica deltas relevantes e dispara writes
+ * fire-and-forget pro Supabase. Não bloqueia UI.
+ *
+ * RLS na cloud sobrescreve manager_id pra auth.uid() — local pode usar
+ * email/clubId, mas servidor sempre grava sob a sessão autenticada.
+ */
+function syncOlefootPythonMode(
+  prev: OlefootGameState,
+  next: OlefootGameState,
+  action: GameAction,
+): void {
+  if (!isSupabaseConfigured()) return;
+
+  switch (action.type) {
+    case 'FINALIZE_MATCH':
+    case 'FINISH_GLOBAL_ROUND':
+    case 'ADD_CONSEQUENCES': {
+      // Detecta IDs novos (presentes em next, ausentes em prev)
+      const prevIds = new Set(Object.keys(prev.consequenceStore?.active ?? {}));
+      const nextActive = next.consequenceStore?.active ?? {};
+      const newOnes = Object.values(nextActive).filter((c) => !prevIds.has(c.id));
+      if (newOnes.length) {
+        void persistConsequencesBatch(newOnes);
+      }
+      return;
+    }
+    case 'TICK_CONSEQUENCES': {
+      // Algum removido? Manda purge
+      const prevCount = Object.keys(prev.consequenceStore?.active ?? {}).length;
+      const nextCount = Object.keys(next.consequenceStore?.active ?? {}).length;
+      if (nextCount < prevCount) {
+        void purgeExpiredConsequences();
+      }
+      return;
+    }
+    case 'RECORD_CHECK_IN': {
+      if (next.managerPresence) {
+        void upsertManagerPresence(next.managerPresence);
+      }
+      // Pode também ter gerado consequências (efeitos de ausência)
+      const prevIds = new Set(Object.keys(prev.consequenceStore?.active ?? {}));
+      const nextActive = next.consequenceStore?.active ?? {};
+      const newOnes = Object.values(nextActive).filter((c) => !prevIds.has(c.id));
+      if (newOnes.length) {
+        void persistConsequencesBatch(newOnes);
+      }
+      return;
+    }
+    case 'CLAIM_LOGIN_BONUS': {
+      if (next.lastLoginBonusClaim?.claimed) {
+        void logLoginBonusClaim(next.lastLoginBonusClaim);
+      }
+      if (next.managerPresence) {
+        void upsertManagerPresence(next.managerPresence);
+      }
+      return;
+    }
+    default:
+      return;
+  }
 }

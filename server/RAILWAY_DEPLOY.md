@@ -17,7 +17,7 @@ match tick, game spirit, admin tools e Pinata. **A Liga MVP não depende dele**
    | `NODE_ENV` | `production` |
    | `PORT` | injetado pela Railway (não precisa setar) |
    | `CORS_ORIGIN` | `https://olefoot-game.olefoot.workers.dev` (o front em CF). **Obrigatória em prod**, sem ela o servidor sai com exit(1). |
-   | `SUPABASE_URL` | `https://sgggsylmrdglkhbhcqeg.supabase.co` |
+   | `SUPABASE_URL` | `https://xtuveikgwlgbcleloxia.supabase.co` |
    | `SUPABASE_ANON_KEY` | (anon JWT) |
    | `SUPABASE_SERVICE_ROLE_KEY` | service role do projeto Supabase |
    | `ANTHROPIC_API_KEY` | requerido para `/api/gamespirit` e `/api/game-spirit/teach` |

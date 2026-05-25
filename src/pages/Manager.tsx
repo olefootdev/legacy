@@ -22,6 +22,7 @@ import {
   Sparkles,
   Users,
   Copy,
+  Brain,
   type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -517,6 +518,49 @@ export function Manager() {
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               Abrir network
+            </span>
+          </div>
+        </motion.button>
+
+        {/* SCOUTS — OLEFOOT PYTHON MODE intelligence hub */}
+        <motion.button
+          type="button"
+          onClick={() => navigate('/manager/scouts')}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
+          style={{
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--color-panel-elevated)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
+          <div className="relative flex flex-col gap-3 p-6 pl-7">
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
+                style={{ fontFamily: 'var(--font-ui)' }}
+              >
+                Inteligência · Python Mode
+              </span>
+              <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-display text-[10px] font-black tracking-[0.18em] text-emerald-400 uppercase">
+                Novo
+              </span>
+            </div>
+            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
+              Scouts
+            </h3>
+            <p className="text-[13px] leading-relaxed text-white/55">
+              Mapa de consequências, relatório da noite e diagnóstico do clube. Atualizado em tempo real.
+            </p>
+            <span
+              className="mt-2 inline-flex w-fit items-center gap-2 bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
+              style={{ borderRadius: 'var(--radius-sm)' }}
+            >
+              <Brain className="w-4 h-4" />
+              Abrir scouts
             </span>
           </div>
         </motion.button>
