@@ -42,6 +42,8 @@ import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
+import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
+import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -865,6 +867,12 @@ export function Home() {
         className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-6"
       >
         <HomeHeroLegacy scrollCueTargetId="home-below-fold" />
+      </section>
+
+      {/* OLEFOOT PYTHON MODE — alerta de ausência + bonus de login */}
+      <section aria-label="Estado do clube" className="space-y-2.5">
+        <AbsenceBanner />
+        <LoginBonusWidget />
       </section>
 
       {/* HERO LEGADO — temporariamente desabilitado pelo HomeHeroLegacy. */}
