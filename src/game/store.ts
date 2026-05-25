@@ -455,6 +455,7 @@ function syncOlefootPythonMode(
 
   switch (action.type) {
     case 'FINALIZE_MATCH':
+    case 'FINISH_GLOBAL_ROUND':
     case 'ADD_CONSEQUENCES': {
       // Detecta IDs novos (presentes em next, ausentes em prev)
       const prevIds = new Set(Object.keys(prev.consequenceStore?.active ?? {}));

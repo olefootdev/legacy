@@ -55,6 +55,7 @@ import {
   materializeBatch,
 } from '@/systems/consequences/handlers';
 import { buildImpactSummary } from '@/systems/consequences/fromLiveMatch';
+import { buildGlobalImpactSummary } from '@/systems/consequences/fromGlobalFixture';
 import { recordCheckIn } from '@/systems/engagement/checkIn';
 import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
 import { attemptClaim } from '@/systems/engagement/loginBonus';
@@ -4284,6 +4285,33 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         currentRound.fixtures
       );
 
+      // ─── OLEFOOT PYTHON MODE — gera consequências da partida do manager ─
+      const managerIdForImpact =
+        state.userSettings?.managerProfile?.email ?? state.club.id ?? 'guest';
+      // teamId em fixtures globais segue padrão `gt_${managerId-sanitized}`
+      // (ver src/hooks/useAutoRegisterGlobalLeague.ts). Fallback: globalLeagueMVP
+      // teams que têm managerId.
+      const myTeamId =
+        state.globalLeagueMVP?.teams.find((t) => t.managerId === managerIdForImpact)?.id ??
+        `gt_${managerIdForImpact.replace(/[^a-z0-9]/gi, '_')}`;
+      let consequenceStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      consequenceStore = tickConsequences(consequenceStore, Date.now()).next;
+      for (const fixture of currentRound.fixtures) {
+        if (fixture.status !== 'finished') continue;
+        const summary = buildGlobalImpactSummary({
+          fixture,
+          managerId: managerIdForImpact,
+          clubId: state.club.id,
+          myTeamId,
+        });
+        if (!summary) continue; // fixture não envolve o manager
+        const events = eventsFromMatchSummary(summary);
+        const newConsequences = materializeBatch(events);
+        if (newConsequences.length) {
+          consequenceStore = addManyConsequences(consequenceStore, newConsequences);
+        }
+      }
+
       return {
         ...state,
         globalLeague: {
@@ -4291,6 +4319,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           currentRound: finishedRound,
         },
         olefootLeague: updatedLeague,
+        consequenceStore,
       };
     }
 

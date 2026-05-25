@@ -11,7 +11,7 @@
 import type { PastResult } from '@/entities/types';
 import type { PersistentConsequence } from '@/systems/consequences/types';
 import { MS_PER_HOUR } from '@/systems/timeCalibration';
-import type { QuickHook, QuickHookKind } from './types';
+import type { QuickHook } from './types';
 
 const MAX_ACTIVE_HOOKS = 3;
 

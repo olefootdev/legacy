@@ -23,7 +23,6 @@ function uuid(): string {
 import type {
   AbsencePenaltyEffect,
   AbsenceTier,
-  ManagerPresence,
 } from './types';
 import type { PersistentConsequence } from '@/systems/consequences/types';
 import type { InboxItem } from '@/game/inboxTypes';

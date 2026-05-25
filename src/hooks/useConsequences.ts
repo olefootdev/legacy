@@ -16,7 +16,6 @@ import {
   computePlayerOverlay,
   computeClubOverlay,
   NEUTRAL_PLAYER_OVERLAY,
-  NEUTRAL_CLUB_OVERLAY,
   type PlayerOverlay,
   type ClubOverlay,
 } from '@/systems/consequences/applyOverlay';
