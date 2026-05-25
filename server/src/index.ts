@@ -22,6 +22,7 @@ import { coachRoutes } from './routes/coach.js';
 import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
+import { insightsRoutes } from './routes/insights.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 // Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
 // gerenciada autonomamente pela Edge Function v7 do Supabase + pg_cron.
@@ -111,6 +112,8 @@ app.route('/api/coach', coachRoutes);
 app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
+// OLEFOOT PYTHON MODE — proxy pro serviço FastAPI /insights
+app.route('/', insightsRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 

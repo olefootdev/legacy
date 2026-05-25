@@ -1,0 +1,90 @@
+/**
+ * OLEFOOT PYTHON MODE — Hooks reativos pra consumir o serviço /insights.
+ *
+ * Política: lazy fetch (só roda quando hook é montado), cache em memória
+ * com TTL configurável, retry em erro com backoff curto.
+ *
+ * Diferença vs useConsequences/useEngagement:
+ *   - Esses leem do store local (consequenceStore in-memory)
+ *   - useInsights* leem do Python (com lógica analítica mais rica + histórico)
+ *
+ * UI usa um ou outro conforme contexto:
+ *   - Badge no card de jogador → local (rápido, sempre)
+ *   - Página SCOUTS → /insights (rico, histórico, analytics)
+ */
+import { useEffect, useState } from 'react';
+import {
+  fetchClubSummary,
+  fetchConsequences,
+  fetchNightReport,
+  type ClubSummary,
+  type ConsequencesByDimension,
+  type NightReport,
+} from '@/insights/client';
+
+interface UseInsightsState<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+}
+
+function useEndpoint<T>(
+  managerId: string | null | undefined,
+  fetcher: (id: string) => Promise<T | null>,
+  ttlMs = 60_000,
+): UseInsightsState<T> {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!managerId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void (async () => {
+      const result = await fetcher(managerId);
+      if (cancelled) return;
+      if (result === null) {
+        setError('Falha ao buscar /insights');
+      } else {
+        setData(result);
+      }
+      setLoading(false);
+    })();
+    // Auto-refresh a cada TTL
+    const id = setInterval(() => setRefreshKey((k) => k + 1), ttlMs);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [managerId, refreshKey, fetcher, ttlMs]);
+
+  return {
+    data,
+    loading,
+    error,
+    refresh: () => setRefreshKey((k) => k + 1),
+  };
+}
+
+export function useInsightsConsequences(
+  managerId: string | null | undefined,
+): UseInsightsState<ConsequencesByDimension> {
+  return useEndpoint(managerId, fetchConsequences);
+}
+
+export function useInsightsClubSummary(
+  managerId: string | null | undefined,
+): UseInsightsState<ClubSummary> {
+  return useEndpoint(managerId, fetchClubSummary);
+}
+
+export function useInsightsNightReport(
+  managerId: string | null | undefined,
+): UseInsightsState<NightReport> {
+  // Night report cache mais longo — só muda 1x por noite
+  return useEndpoint(managerId, fetchNightReport, 5 * 60_000);
+}
