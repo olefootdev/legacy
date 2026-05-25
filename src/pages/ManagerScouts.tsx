@@ -191,12 +191,36 @@ function StatCard({ label, value, hint, tone = 'neutral', Icon }: StatCardProps)
 }
 
 // ─── Dimension section ─────────────────────────────────────────────
+//
+// Tokens em vez de cores hardcoded (DS §3): físico em danger (lesões),
+// psicológico em neon-yellow (acento principal), reputacional em
+// success (mercado em alta), financeiro em warning (atenção monetária).
 
 const DIMENSION_META = {
-  physical: { label: 'Físico', Icon: Activity, accent: 'border-l-red-400' },
-  psychological: { label: 'Psicológico', Icon: Brain, accent: 'border-l-blue-400' },
-  reputational: { label: 'Reputacional', Icon: TrendingUp, accent: 'border-l-emerald-400' },
-  financial: { label: 'Financeiro', Icon: DollarSign, accent: 'border-l-amber-400' },
+  physical: {
+    label: 'Físico',
+    Icon: Activity,
+    rail: 'border-l-[var(--color-danger)]',
+    dot: 'bg-[var(--color-danger)]',
+  },
+  psychological: {
+    label: 'Psicológico',
+    Icon: Brain,
+    rail: 'border-l-neon-yellow',
+    dot: 'bg-neon-yellow',
+  },
+  reputational: {
+    label: 'Reputacional',
+    Icon: TrendingUp,
+    rail: 'border-l-[var(--color-success)]',
+    dot: 'bg-[var(--color-success)]',
+  },
+  financial: {
+    label: 'Financeiro',
+    Icon: DollarSign,
+    rail: 'border-l-[var(--color-warning)]',
+    dot: 'bg-[var(--color-warning)]',
+  },
 } as const;
 
 function formatTimeLeft(ms: number): string {
@@ -216,19 +240,35 @@ function formatKindLabel(kind: string): string {
 
 function ConsequenceRow({ entry }: { entry: InsightsEvaluatedConsequence }) {
   const c = entry.consequence;
-  const isNegative = entry.current_value < 0 || c.kind.includes('drop') || c.kind.includes('out') || c.kind.includes('suspension');
+  const isNegative =
+    entry.current_value < 0 ||
+    c.kind.includes('drop') ||
+    c.kind.includes('out') ||
+    c.kind.includes('suspension');
   return (
-    <div className="flex items-center gap-2 py-1.5">
+    <div className="flex items-center gap-2.5 py-1.5">
       <span
         className={cn(
           'w-1.5 h-1.5 rounded-full shrink-0',
-          isNegative ? 'bg-red-400' : 'bg-emerald-400',
+          isNegative ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-success)]',
         )}
       />
-      <span className="flex-1 text-[12px] text-white/85 truncate">
+      <span
+        className="flex-1 text-white/85 truncate"
+        style={{ fontFamily: 'var(--font-ui)', fontSize: '12.5px' }}
+      >
         {formatKindLabel(c.kind)}
       </span>
-      <span className="text-[10px] text-white/40 font-mono shrink-0">
+      <span
+        className="text-white/45 tabular-nums shrink-0 leading-none"
+        style={{
+          fontFamily: 'var(--font-serif-hero)',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          fontSize: '12px',
+          letterSpacing: '-0.02em',
+        }}
+      >
         {formatTimeLeft(entry.ms_until_expiry)}
       </span>
     </div>
@@ -246,31 +286,70 @@ function DimensionCard({
   return (
     <div
       className={cn(
-        'rounded-sm border border-white/8 border-l-4 bg-[var(--color-card)] p-4',
-        meta.accent,
+        'border border-white/8 border-l-[3px] bg-[var(--color-card)] p-4',
+        meta.rail,
       )}
+      style={{
+        borderRadius: 'var(--radius-md)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+      }}
     >
-      <div className="flex items-center justify-between mb-3">
+      {/* Header com eyebrow Agency tracking-wide */}
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/5">
         <div className="flex items-center gap-2">
-          <meta.Icon size={14} className="text-white/60" />
+          <meta.Icon size={12} className="text-white/65" />
           <span
-            className="text-[10px] uppercase tracking-[0.22em] text-white/55"
-            style={{ fontFamily: 'var(--font-ui)' }}
+            className="text-white/70"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '10px',
+              letterSpacing: '0.28em',
+              textTransform: 'uppercase',
+            }}
           >
             {meta.label}
           </span>
         </div>
-        <span className="text-[11px] text-white/40 tabular-nums">{entries.length}</span>
+        {/* Contador Moret italic */}
+        <span
+          className="text-white/65 tabular-nums leading-none"
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: '18px',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {entries.length}
+        </span>
       </div>
       {entries.length === 0 ? (
-        <div className="text-[11px] text-white/30 italic py-2">Nada ativo.</div>
+        <div
+          className="text-white/35 italic py-2"
+          style={{ fontFamily: 'var(--font-ui)', fontSize: '11.5px' }}
+        >
+          Nada ativo.
+        </div>
       ) : (
-        <div className="space-y-0.5">
+        <div className="space-y-0">
           {entries.slice(0, 8).map((e) => (
             <ConsequenceRow key={e.consequence.id} entry={e} />
           ))}
           {entries.length > 8 && (
-            <div className="text-[10px] text-white/40 pt-1">+ {entries.length - 8} mais…</div>
+            <div
+              className="text-white/40 pt-2 mt-1 border-t border-white/5"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '9px',
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
+            >
+              + {entries.length - 8} mais
+            </div>
           )}
         </div>
       )}
@@ -281,56 +360,116 @@ function DimensionCard({
 // ─── Night report ──────────────────────────────────────────────────
 
 function NightReportSection({ report }: { report: NightReport }) {
+  // Hero card editorial Legacy Tech: eyebrow Agency + headline Moret italic.
+  // Counters em Moret italic. Cards de destaque com rail tonal + Agency uppercase.
+  const time = new Date(report.generated_at).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
   return (
-    <section
+    <motion.section
       aria-label="Relatório da noite"
-      className="rounded-sm border border-white/8 border-l-4 border-l-neon-yellow bg-[var(--color-card)] p-5"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="relative border border-white/8 border-l-[3px] border-l-neon-yellow bg-[var(--color-card)] p-5 sm:p-6 overflow-hidden"
+      style={{
+        borderRadius: 'var(--radius-md)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.18), 0 0 18px rgba(253,225,0,0.06)',
+      }}
     >
-      <div className="flex items-baseline justify-between mb-3">
-        <div>
-          <div
-            className="text-[10px] uppercase tracking-[0.22em] text-neon-yellow/80"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            Relatório da Noite
+      {/* Header editorial */}
+      <header className="flex items-start justify-between gap-3 mb-5">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="block h-px w-6 bg-neon-yellow/55" />
+            <span
+              className="text-neon-yellow"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '10px',
+                letterSpacing: '0.32em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Relatório da Noite
+            </span>
           </div>
+          {/* Headline Moret italic editorial */}
           <h3
-            className="text-xl font-display font-black text-white mt-1"
-            style={{ fontFamily: 'var(--font-display)' }}
+            className="text-white leading-snug"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: 'clamp(20px, 3.2vw, 26px)',
+              letterSpacing: '-0.02em',
+            }}
           >
             {report.one_line_summary}
           </h3>
         </div>
-        <div className="text-[10px] text-white/40 shrink-0 ml-3">
-          <Clock size={11} className="inline mr-1" />
-          {new Date(report.generated_at).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+        {/* Timestamp em Agency */}
+        <div
+          className="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 bg-deep-black/40 border border-white/10 text-white/55"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: '10px',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          <Clock size={10} />
+          {time}
         </div>
+      </header>
+
+      {/* 3 Counters: Resolvidas / Ativas / Novos */}
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        {[
+          { label: 'Resolvidas', value: report.resolved_overnight, color: 'text-[var(--color-success)]' },
+          { label: 'Ativas', value: report.still_active, color: 'text-white' },
+          { label: 'Novos', value: report.new_alerts, color: 'text-[var(--color-warning)]' },
+        ].map((c) => (
+          <div
+            key={c.label}
+            className="text-center p-3 bg-deep-black/40 border border-white/8"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <div
+              className={cn('leading-none tabular-nums', c.color)}
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontStyle: 'italic',
+                fontWeight: 700,
+                fontSize: 'clamp(22px, 3.5vw, 28px)',
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {c.value}
+            </div>
+            <div
+              className="text-white/50 mt-1.5"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '9px',
+                letterSpacing: '0.24em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {c.label}
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="text-center p-2 rounded-sm bg-white/5">
-          <div className="text-2xl font-black font-display text-emerald-400 leading-none">
-            {report.resolved_overnight}
-          </div>
-          <div className="text-[10px] text-white/50 mt-1 uppercase tracking-wider">Resolvidas</div>
-        </div>
-        <div className="text-center p-2 rounded-sm bg-white/5">
-          <div className="text-2xl font-black font-display text-white leading-none">
-            {report.still_active}
-          </div>
-          <div className="text-[10px] text-white/50 mt-1 uppercase tracking-wider">Ativas</div>
-        </div>
-        <div className="text-center p-2 rounded-sm bg-white/5">
-          <div className="text-2xl font-black font-display text-orange-400 leading-none">
-            {report.new_alerts}
-          </div>
-          <div className="text-[10px] text-white/50 mt-1 uppercase tracking-wider">Novos</div>
-        </div>
-      </div>
-
+      {/* Lista de destaques */}
       {report.cards.length > 0 ? (
         <div className="space-y-1.5">
           {report.cards.map((card) => {
@@ -340,32 +479,61 @@ function NightReportSection({ report }: { report: NightReport }) {
                 : card.kind === 'celebration'
                 ? Trophy
                 : Sparkles;
-            const toneClass = {
-              positive: 'text-emerald-400',
-              negative: 'text-orange-400',
-              urgent: 'text-red-400 font-bold',
+            const toneColor = {
+              positive: 'text-[var(--color-success)]',
+              negative: 'text-[var(--color-warning)]',
+              urgent: 'text-[var(--color-danger)]',
               neutral: 'text-white/70',
+            }[card.tone];
+            const toneRail = {
+              positive: 'border-l-[var(--color-success)]',
+              negative: 'border-l-[var(--color-warning)]',
+              urgent: 'border-l-[var(--color-danger)]',
+              neutral: 'border-l-white/20',
             }[card.tone];
             return (
               <div
                 key={card.id}
-                className="flex items-center gap-2.5 py-2 border-t border-white/5 first:border-t-0"
+                className={cn(
+                  'flex items-start gap-3 py-2.5 px-3 border border-white/6 border-l-[3px] bg-deep-black/30',
+                  toneRail,
+                )}
+                style={{ borderRadius: 'var(--radius-sm)' }}
               >
-                <Icon size={14} className={toneClass} />
+                <Icon size={13} className={cn('shrink-0 mt-0.5', toneColor)} />
                 <div className="flex-1 min-w-0">
-                  <div className={cn('text-sm font-medium truncate', toneClass)}>{card.title}</div>
-                  <div className="text-[11px] text-white/45 truncate">{card.subtitle}</div>
+                  <div
+                    className={cn('truncate leading-tight', toneColor)}
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: card.tone === 'urgent' ? 900 : 800,
+                      fontSize: '12px',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {card.title}
+                  </div>
+                  <div
+                    className="text-white/50 truncate mt-0.5"
+                    style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
+                  >
+                    {card.subtitle}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="text-center text-[12px] text-white/40 py-3 italic">
+        <div
+          className="text-center text-white/40 italic py-3"
+          style={{ fontFamily: 'var(--font-ui)', fontSize: '12px' }}
+        >
           Sem destaques no momento.
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
