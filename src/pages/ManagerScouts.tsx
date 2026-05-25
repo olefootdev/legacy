@@ -36,6 +36,7 @@ import {
   useInsightsClubSummary,
   useInsightsConsequences,
   useInsightsNightReport,
+  useInsightsServiceHealth,
 } from '@/hooks/useInsights';
 import {
   useClubConsequences,
@@ -64,19 +65,60 @@ function useAuthUid(): string | null {
 }
 
 // ─── Status badge ──────────────────────────────────────────────────
+//
+// Distingue 4 estados verdadeiros — em vez de um booleano que mistura
+// "serviço up?" com "consegui buscar meus dados?":
+//
+//   service-up  → Python health 200, summary chegou. Tudo OK.
+//   no-auth     → Python health 200, MAS sem JWT do Supabase. Não é offline,
+//                 é o user que não está logado. Badge cinza, tooltip explícito.
+//   data-error  → Python health 200, com JWT, mas summary deu erro
+//                 (RLS, 5xx, timeout). Sinaliza problema de DADOS, não do serviço.
+//   service-down → Python health falhou ou Hono não conseguiu falar com Python.
+//                 Este é o "offline" genuíno.
 
-function PythonStatusBadge({ online, source }: { online: boolean; source: string }) {
+type BadgeState = 'service-up' | 'no-auth' | 'data-error' | 'service-down';
+
+const BADGE_META: Record<BadgeState, { label: string; tooltip: string; cls: string; Icon: typeof Wifi }> = {
+  'service-up': {
+    label: 'Python · online',
+    tooltip: 'Serviço /insights respondendo e dados do clube carregados.',
+    cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    Icon: Wifi,
+  },
+  'no-auth': {
+    label: 'Sem login Supabase',
+    tooltip: 'O serviço /insights está online, mas você precisa estar autenticado no Supabase para ver seus dados.',
+    cls: 'bg-white/5 text-white/50 border-white/15',
+    Icon: WifiOff,
+  },
+  'data-error': {
+    label: 'Sem dados',
+    tooltip: 'Serviço /insights respondeu, mas o resumo do clube falhou (RLS, 5xx ou timeout). Mostrando fallback local.',
+    cls: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+    Icon: AlertTriangle,
+  },
+  'service-down': {
+    label: 'Serviço offline',
+    tooltip: 'O serviço /insights (Python) não respondeu ao health-check. Mostrando dados locais.',
+    cls: 'bg-red-500/10 text-red-300 border-red-500/30',
+    Icon: WifiOff,
+  },
+};
+
+function PythonStatusBadge({ state, detail }: { state: BadgeState; detail?: string | null }) {
+  const meta = BADGE_META[state];
+  const title = detail ? `${meta.tooltip}\n\n${detail}` : meta.tooltip;
   return (
     <div
+      title={title}
       className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-display font-bold uppercase tracking-[0.18em]',
-        online
-          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-          : 'bg-white/5 text-white/40 border border-white/10',
+        'inline-flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-display font-bold uppercase tracking-[0.18em] border cursor-help',
+        meta.cls,
       )}
     >
-      {online ? <Wifi size={11} /> : <WifiOff size={11} />}
-      <span>{source}</span>
+      <meta.Icon size={11} />
+      <span>{meta.label}</span>
     </div>
   );
 }
@@ -357,12 +399,36 @@ export function ManagerScouts() {
   const { data: consequences } = useInsightsConsequences(authUid);
   const { data: nightReport } = useInsightsNightReport(authUid);
 
+  // Probe de saúde do upstream — sem JWT, mede só o serviço
+  const { status: serviceStatus, reason: serviceDownReason, lastCheckedAt } =
+    useInsightsServiceHealth();
+
   // Local fallback (sempre disponível)
   const fallback = LocalFallbackSummary();
 
-  // Detecta se Python está online via summary funcionando
-  const pythonOnline = !!summary;
-  const source = pythonOnline ? 'Python · online' : 'Local · offline';
+  // Estado HONESTO do badge — separa "serviço up" de "consegui buscar meus dados"
+  const badgeState: BadgeState =
+    serviceStatus === 'down'
+      ? 'service-down'
+      : !authUid
+      ? 'no-auth'
+      : summary
+      ? 'service-up'
+      : serviceStatus === 'unknown'
+      ? 'no-auth' // ainda probando — mostra cinza neutro
+      : 'data-error';
+
+  const badgeDetail =
+    badgeState === 'service-down'
+      ? serviceDownReason
+      : badgeState === 'data-error'
+      ? (summaryError ?? null)
+      : lastCheckedAt
+      ? `Última verificação: ${new Date(lastCheckedAt).toLocaleTimeString('pt-BR')}`
+      : null;
+
+  // Compatibilidade interna — algumas condicionais legadas usam pythonOnline
+  const pythonOnline = badgeState === 'service-up';
 
   // Decide qual fonte usar
   const stats: ClubSummary | null = summary ?? {
@@ -417,7 +483,7 @@ export function ManagerScouts() {
               <div className="text-[11px] text-white/45 mt-0.5 truncate">{club.name}</div>
             </div>
           </div>
-          <PythonStatusBadge online={pythonOnline} source={source} />
+          <PythonStatusBadge state={badgeState} detail={badgeDetail} />
         </motion.header>
 
         {/* ── Stats row ──────────────────────────────────────────── */}
@@ -495,10 +561,18 @@ export function ManagerScouts() {
           )}
         </section>
 
-        {/* ── Erro Python (quando aplicável) ─────────────────────── */}
-        {summaryError && !summary && (
+        {/* ── Rodapé de status — explica em texto o que o badge representa ─── */}
+        {badgeState !== 'service-up' && (
           <div className="text-[11px] text-white/40 italic text-center py-2">
-            Serviço /insights offline — mostrando dados locais.
+            {badgeState === 'service-down' && (
+              <>Serviço /insights offline — mostrando dados locais.</>
+            )}
+            {badgeState === 'no-auth' && (
+              <>Sem sessão Supabase ativa — entre na sua conta para ver os dados do serviço /insights.</>
+            )}
+            {badgeState === 'data-error' && (
+              <>Não foi possível carregar o resumo do clube — mostrando fallback local.</>
+            )}
           </div>
         )}
       </div>

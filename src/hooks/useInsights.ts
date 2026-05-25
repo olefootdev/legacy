@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import {
   fetchClubSummary,
   fetchConsequences,
+  fetchInsightsHealth,
   fetchNightReport,
   type ClubSummary,
   type ConsequencesByDimension,
@@ -87,4 +88,51 @@ export function useInsightsNightReport(
 ): UseInsightsState<NightReport> {
   // Night report cache mais longo — só muda 1x por noite
   return useEndpoint(managerId, fetchNightReport, 5 * 60_000);
+}
+
+/**
+ * Probe de saúde do upstream Python — sem JWT, anônimo.
+ *
+ * Diferencia "serviço caiu" de "user não autenticado". Use junto com
+ * `useInsightsClubSummary` pra montar um status badge honesto.
+ *
+ * Status:
+ *   - 'unknown' → ainda nem tentou (mount inicial)
+ *   - 'up'      → /api/insights/health retornou ok:true
+ *   - 'down'    → falha de rede, 5xx, ou ok:false
+ */
+export type InsightsServiceStatus = 'unknown' | 'up' | 'down';
+
+export function useInsightsServiceHealth(pollMs = 60_000): {
+  status: InsightsServiceStatus;
+  reason: string | null;
+  lastCheckedAt: number | null;
+} {
+  const [status, setStatus] = useState<InsightsServiceStatus>('unknown');
+  const [reason, setReason] = useState<string | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const probe = async () => {
+      const r = await fetchInsightsHealth();
+      if (cancelled) return;
+      setLastCheckedAt(Date.now());
+      if (r?.ok) {
+        setStatus('up');
+        setReason(null);
+      } else {
+        setStatus('down');
+        setReason(r?.reason ?? 'serviço não respondeu');
+      }
+    };
+    void probe();
+    const id = setInterval(() => void probe(), pollMs);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [pollMs]);
+
+  return { status, reason, lastCheckedAt };
 }
