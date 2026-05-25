@@ -10,6 +10,8 @@ import { processLeagueScheduleDue } from '@/match/processLeagueSchedule';
 import { mergeWalletIntoFinance } from './financeWalletSync';
 import { effectiveCrowdSupportPercent, medicalDeptRecoverySpeedBonusPercent } from '@/clubStructures/benefits';
 import { staffPhysicalRecoveryBonusPercent, staffRunMatchMinuteEffects } from '@/systems/staffBenefits';
+// OLEFOOT PYTHON MODE — gate de fadiga regenera por absence tier
+import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
 
 /** BRT = UTC-3 */
 const BRT_OFFSET_MS = -3 * 60 * 60 * 1000;
@@ -92,8 +94,12 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
   const medLvl = state.structures.medical_dept ?? 1;
   const staffPhys = staffPhysicalRecoveryBonusPercent(state.manager.staff);
 
+  // OLEFOOT PYTHON MODE — se ausência ≥ moderate_36h, fadiga não regenera off-match
+  const fatigueRegenOk = evaluateAbsence(state.managerPresence, Date.now()).effect.fatigueRegenEnabled;
+
   for (const [id, p] of Object.entries(players)) {
     if (playingIds.has(id) && liveMatch?.phase === 'playing') continue;
+    if (!fatigueRegenOk) continue; // pula recuperação — manager ausente demais
     players[id] = recoverOffMatch(p, gm, medLvl, staffPhys);
   }
 

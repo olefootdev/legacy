@@ -58,6 +58,10 @@ import { buildImpactSummary } from '@/systems/consequences/fromLiveMatch';
 import { recordCheckIn } from '@/systems/engagement/checkIn';
 import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
 import { attemptClaim } from '@/systems/engagement/loginBonus';
+import {
+  shouldApplyAbsenceEffects,
+  buildAbsenceSideEffects,
+} from '@/systems/engagement/absenceEffects';
 import { applyHealthEffect } from '@/systems/playerHealth/reducer';
 import { generateProactiveHealthActions } from '@/coach/proactiveHealthActions';
 import { applyMatchResultToMoral, createDefaultMoral, updateFormStreak } from '@/systems/playerMoral/types';
@@ -2831,6 +2835,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const yaLvl = state.structures.youth_academy ?? 1;
       const ctLvl = state.structures.training_center ?? 1;
       const medLvl = state.structures.medical_dept ?? 1;
+      // OLEFOOT PYTHON MODE — gate por absence tier (treinos rendem menos / nada)
+      const absenceAtCompletion = evaluateAbsence(state.managerPresence, Date.now());
+      const absenceMult = absenceAtCompletion.effect.trainingMultiplier;
       for (const plan of due) {
         const marketSnap = marketBroSnapshotFromPlayers(players);
         for (const pid of plan.playerIds) {
@@ -2846,7 +2853,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           const boosted = amplifyTrainingResult(
             pl,
             base,
-            trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult,
+            trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult * absenceMult,
           );
           const recovered = applyNutritionRecovery(boosted, state.manager.staff);
           players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(recovered));
@@ -5298,12 +5305,48 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     // ─── OLEFOOT PYTHON MODE ─────────────────────────────────────────
     case 'RECORD_CHECK_IN': {
       const now = Date.now();
-      const nextPresence = recordCheckIn(state.managerPresence, action.managerId, now);
-      // Snapshot da ausência ANTES de atualizar lastLoginAt — UI usa pra avisar.
+      // Avalia ausência ANTES de atualizar lastLoginAt — esse é o tier que
+      // foi atingido enquanto o manager estava fora.
       const absence = evaluateAbsence(state.managerPresence, now);
+      const prevTier = state.managerPresence?.lastAbsenceTier;
+      const nextPresence = recordCheckIn(state.managerPresence, action.managerId, now);
+
+      // Decide se precisa aplicar efeitos novos (lesões, queda torcida, inbox)
+      if (!shouldApplyAbsenceEffects(prevTier, absence.tier)) {
+        return {
+          ...state,
+          managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+        };
+      }
+
+      // Aplica efeitos REAIS: lesões automáticas + apoio torcida + inbox
+      const eligibleIds = Object.values(state.players)
+        .filter((p) => p.pos !== 'GOL' && !p.outForMatches)
+        .map((p) => p.id);
+      const sideEffects = buildAbsenceSideEffects({
+        managerId: action.managerId,
+        clubId: state.club.id,
+        eligiblePlayerIds: eligibleIds,
+        tier: absence.tier,
+        effect: absence.effect,
+        hoursAbsent: absence.hours,
+        now,
+      });
+
+      // Adiciona consequências ao store
+      const prevStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const newStore = sideEffects.consequences.length
+        ? addManyConsequences(prevStore, sideEffects.consequences)
+        : prevStore;
+
+      // Mescla inbox (novos no topo)
+      const inbox = [...sideEffects.inboxItems, ...state.inbox];
+
       return {
         ...state,
         managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+        consequenceStore: newStore,
+        inbox,
       };
     }
 

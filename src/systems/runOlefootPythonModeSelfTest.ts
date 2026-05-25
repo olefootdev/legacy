@@ -49,6 +49,11 @@ import {
 } from './engagement/loginBonus';
 import { autoDetectHooks } from './engagement/quickHooks';
 import { EMPTY_PRESENCE, type ManagerPresence } from './engagement/types';
+import {
+  shouldApplyAbsenceEffects,
+  buildAbsenceSideEffects,
+} from './engagement/absenceEffects';
+import { getAbsenceEffect } from './engagement/absencePenalty';
 
 // ─── Test runner ───────────────────────────────────────────────────
 
@@ -416,6 +421,111 @@ function testQuickHooks(): void {
   assert(many[0]!.kind === 'match_starting', 'Primeiro hook é o mais prioritário');
 }
 
+function testAbsenceActiveEffects(): void {
+  section('Sistema E — Penalidades ATIVAS por ausência');
+
+  const t0 = Date.UTC(2026, 4, 27, 18, 0);
+
+  // Sem aplicação prévia, tier normal: não aplica
+  assert(
+    !shouldApplyAbsenceEffects(undefined, 'normal'),
+    'Tier normal não dispara efeitos',
+  );
+  // Tier warning ainda não aplica (só a partir de moderate)
+  assert(
+    !shouldApplyAbsenceEffects(undefined, 'warning_12h'),
+    'Tier warning_12h não dispara side-effects',
+  );
+  assert(
+    !shouldApplyAbsenceEffects(undefined, 'mild_24h'),
+    'Tier mild_24h não dispara side-effects',
+  );
+  // Moderate aplica
+  assert(
+    shouldApplyAbsenceEffects(undefined, 'moderate_36h'),
+    'Tier moderate_36h dispara efeitos pela primeira vez',
+  );
+  // Já aplicou moderate, não re-aplica
+  assert(
+    !shouldApplyAbsenceEffects('moderate_36h', 'moderate_36h'),
+    'Moderate já aplicada não re-dispara',
+  );
+  // Escalou pra heavy — aplica de novo
+  assert(
+    shouldApplyAbsenceEffects('moderate_36h', 'heavy_48h'),
+    'Escalação moderate→heavy dispara novamente',
+  );
+  // Crisis após heavy aplica
+  assert(
+    shouldApplyAbsenceEffects('heavy_48h', 'crisis_72h'),
+    'Escalação heavy→crisis dispara',
+  );
+
+  // Side effects: heavy gera 2 lesões + drop torcida + inbox
+  const sideHeavy = buildAbsenceSideEffects({
+    managerId: 'mgr1',
+    clubId: 'club1',
+    eligiblePlayerIds: ['p1', 'p2', 'p3', 'p4', 'p5'],
+    tier: 'heavy_48h',
+    effect: getAbsenceEffect('heavy_48h'),
+    hoursAbsent: 52,
+    now: t0,
+  });
+  // Heavy: 2 lesões = 2 ImpactEvents → cada injury_light gera 2 templates
+  // (injury_light_out + physical_attr_drop_light) → 4 consequências de lesão
+  // + 1 crowd_support_drop = 5 total
+  const injuryCons = sideHeavy.consequences.filter((c) => c.kind.startsWith('injury_'));
+  assert(injuryCons.length === 2, 'Heavy: 2 lesões "out" geradas');
+  const crowdCons = sideHeavy.consequences.find((c) => c.kind === 'crowd_support_drop');
+  assert(!!crowdCons, 'Heavy: crowd_support_drop gerada');
+  assert(crowdCons!.magnitude === -10, 'Heavy: crowd_support magnitude -10');
+  assert(sideHeavy.inboxItems.length === 1, 'Heavy: 1 item de inbox gerado');
+
+  // Crisis: 3 lesões + -20 crowd
+  const sideCrisis = buildAbsenceSideEffects({
+    managerId: 'mgr1',
+    clubId: 'club1',
+    eligiblePlayerIds: ['p1', 'p2', 'p3', 'p4', 'p5'],
+    tier: 'crisis_72h',
+    effect: getAbsenceEffect('crisis_72h'),
+    hoursAbsent: 80,
+    now: t0,
+  });
+  const crisisInjuries = sideCrisis.consequences.filter((c) => c.kind.startsWith('injury_'));
+  assert(crisisInjuries.length === 3, 'Crisis: 3 lesões "out" geradas');
+  const crisisCrowd = sideCrisis.consequences.find((c) => c.kind === 'crowd_support_drop');
+  assert(crisisCrowd?.magnitude === -20, 'Crisis: crowd_support -20');
+
+  // Eligibles vazios: nenhuma lesão (sem jogadores disponíveis)
+  const sideEmpty = buildAbsenceSideEffects({
+    managerId: 'mgr1',
+    clubId: 'club1',
+    eligiblePlayerIds: [],
+    tier: 'heavy_48h',
+    effect: getAbsenceEffect('heavy_48h'),
+    hoursAbsent: 52,
+    now: t0,
+  });
+  const emptyInjuries = sideEmpty.consequences.filter((c) => c.kind.startsWith('injury_'));
+  assert(emptyInjuries.length === 0, 'Sem jogadores elegíveis: zero lesões');
+  assert(
+    sideEmpty.consequences.some((c) => c.kind === 'crowd_support_drop'),
+    'Mas crowd_support segue ativo (independente de jogadores)',
+  );
+
+  // Treino: multiplier por tier
+  assert(getAbsenceEffect('normal').trainingMultiplier === 1, 'Normal: treino 100%');
+  assert(getAbsenceEffect('warning_12h').trainingMultiplier === 0.9, 'Warning: treino 90%');
+  assert(getAbsenceEffect('mild_24h').trainingMultiplier === 0, 'Mild: treino zerado');
+  assert(getAbsenceEffect('moderate_36h').trainingMultiplier === 0, 'Moderate: treino zerado');
+
+  // Fatigue regen: gate em moderate+
+  assert(getAbsenceEffect('warning_12h').fatigueRegenEnabled, 'Warning: fadiga regenera');
+  assert(getAbsenceEffect('mild_24h').fatigueRegenEnabled, 'Mild: fadiga ainda regenera');
+  assert(!getAbsenceEffect('moderate_36h').fatigueRegenEnabled, 'Moderate: fadiga não regenera');
+  assert(!getAbsenceEffect('heavy_48h').fatigueRegenEnabled, 'Heavy: fadiga não regenera');
+}
+
 // ─── Run ──────────────────────────────────────────────────────────
 
 console.log('═══════════════════════════════════════════════════');
@@ -429,6 +539,7 @@ testConsequencesMvpAndDecay();
 testCheckInAndAbsence();
 testLoginBonus();
 testQuickHooks();
+testAbsenceActiveEffects();
 
 console.log('\n═══════════════════════════════════════════════════');
 console.log(` Resultado: ${passed} passou, ${failed} falhou`);
