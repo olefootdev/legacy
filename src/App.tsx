@@ -15,6 +15,7 @@ import { AnnouncementsHydrate } from './game/AnnouncementsHydrate';
 import { OnboardingCeremony } from './onboarding/OnboardingCeremony';
 import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { ManagerGameStateHydrator } from './game/ManagerGameStateHydrator';
+import { OlefootPythonModeHydrator } from './game/OlefootPythonModeHydrator';
 import { PersistenceGuard } from './game/PersistenceGuard';
 import { PlatformDataHydrator } from './game/PlatformDataHydrator';
 import { WorldClock } from './game/WorldClock';
@@ -371,6 +372,7 @@ export default function App() {
         <OnboardingCeremony />
         <ManagerSquadHydrator />
         <ManagerGameStateHydrator />
+        <OlefootPythonModeHydrator />
         <PersistenceGuard />
         <PlatformDataHydrator />
         <GenesisCatalogPortraitsHydrate />

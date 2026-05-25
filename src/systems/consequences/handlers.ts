@@ -9,10 +9,18 @@ import { MS_PER_HOUR } from '@/systems/timeCalibration';
 import { getCatalogEntry, type ImpactEventKind } from '@/systems/impactCatalog';
 import type { PersistentConsequence } from './types';
 
-let _idCounter = 0;
-function genId(prefix: string): string {
-  _idCounter += 1;
-  return `${prefix}_${Date.now().toString(36)}_${_idCounter.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+/**
+ * UUID v4 — usa crypto.randomUUID quando disponível (browser + node ≥14.17),
+ * cai num polyfill simples em SSR/test legacy.
+ * Coluna `id uuid` em Supabase exige formato UUID válido.
+ */
+function genId(_prefix: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback determinístico-ish (não precisa cripto)
+  const r = () => Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+  return `${r()}${r()}-${r()}-4${r().slice(1)}-${r()}-${r()}${r()}${r()}`;
 }
 
 export interface ImpactEvent {

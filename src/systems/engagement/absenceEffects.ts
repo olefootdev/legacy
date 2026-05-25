@@ -12,6 +12,14 @@
 import { MS_PER_HOUR } from '@/systems/timeCalibration';
 import type { ImpactEvent } from '@/systems/consequences/handlers';
 import { materializeBatch } from '@/systems/consequences/handlers';
+
+function uuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const r = () => Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+  return `${r()}${r()}-${r()}-4${r().slice(1)}-${r()}-${r()}${r()}${r()}`;
+}
 import type {
   AbsencePenaltyEffect,
   AbsenceTier,
@@ -117,7 +125,7 @@ export function buildAbsenceSideEffects(opts: ApplyOpts): AbsenceSideEffects {
   let crowdConsequence: PersistentConsequence | undefined;
   if (opts.effect.crowdSupportDelta < 0) {
     crowdConsequence = {
-      id: `absence_crowd_${opts.tier}_${opts.now}`,
+      id: uuid(),
       managerId: opts.managerId,
       clubId: opts.clubId,
       kind: 'crowd_support_drop',

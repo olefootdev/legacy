@@ -5396,6 +5396,49 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return { ...state, consequenceStore: next };
     }
 
+    case 'HYDRATE_OLEFOOT_PYTHON_MODE': {
+      // Merge defensivo: local SEMPRE vence em conflito (não regride trabalho da sessão)
+      const localStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const mergedActive: Record<string, typeof localStore.active[string]> = {};
+      // Remote primeiro — pode ser sobrescrito pelo local
+      for (const c of action.consequences) {
+        mergedActive[c.id] = c;
+      }
+      // Local vence
+      for (const [id, c] of Object.entries(localStore.active)) {
+        mergedActive[id] = c;
+      }
+      const mergedStore = { active: mergedActive, lastTickAt: Date.now() };
+
+      // Presence: usa a mais recente (lastLoginAt mais alto)
+      const localPresence = state.managerPresence;
+      let nextPresence = localPresence;
+      if (action.managerPresence) {
+        if (!localPresence || action.managerPresence.lastLoginAt > localPresence.lastLoginAt) {
+          nextPresence = action.managerPresence;
+        } else {
+          // Local mais recente: preserva mas pode reaproveitar streak/sessões do remoto
+          nextPresence = {
+            ...localPresence,
+            totalSessions: Math.max(
+              localPresence.totalSessions,
+              action.managerPresence.totalSessions,
+            ),
+            bonusStreakSlots: Math.max(
+              localPresence.bonusStreakSlots,
+              action.managerPresence.bonusStreakSlots,
+            ),
+          };
+        }
+      }
+
+      return {
+        ...state,
+        consequenceStore: mergedStore,
+        managerPresence: nextPresence,
+      };
+    }
+
     default:
       return state;
   }

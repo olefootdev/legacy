@@ -904,4 +904,13 @@ export type GameAction =
   /** OLEFOOT PYTHON MODE — Adiciona consequências (chamado por FINALIZE_MATCH e cronos). */
   | { type: 'ADD_CONSEQUENCES'; consequences: PersistentConsequence[] }
   /** OLEFOOT PYTHON MODE — Remove consequências expiradas (idempotente). */
-  | { type: 'TICK_CONSEQUENCES' };
+  | { type: 'TICK_CONSEQUENCES' }
+  /**
+   * OLEFOOT PYTHON MODE — Hidrata estado a partir do Supabase no boot.
+   * Local sempre vence em caso de conflito (preserva trabalho da sessão).
+   */
+  | {
+      type: 'HYDRATE_OLEFOOT_PYTHON_MODE';
+      consequences: PersistentConsequence[];
+      managerPresence: ManagerPresence | null;
+    };
