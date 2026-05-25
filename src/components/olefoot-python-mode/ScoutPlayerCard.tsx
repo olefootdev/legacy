@@ -1,12 +1,18 @@
 /**
- * Card horizontal do jogador na aba PLANTEL do SCOUTS.
+ * view-player-card Legacy Tech aplicado ao SCOUTS.
  *
- * Mostra dados REAIS do plantel local (OVR, posição, market value, físico,
- * moral, forma) + agregação de consequências ativas do Python (alertas,
- * celebrações, indisponibilidade).
+ * Anatomia (DESIGN_SYSTEM §8.1):
+ *   ┌─────────┬──────────────────────────────────┐
+ *   │  OVR    │  EYEBROW · pos                   │
+ *   │ (Moret  │  NOME (Agency 800 uppercase)     │
+ *   │  italic)│  💰 valor (Moret italic)         │
+ *   │  POS    │  ───────────────────────────────│
+ *   │  chip   │  STATS inline (PAC SHO PAS …)    │
+ *   │ (Agency)│  Bottom: badges de estado        │
+ *   └─────────┴──────────────────────────────────┘
  *
- * Usa padrão view-player-card (memory `pattern_view_player_card`): bloco
- * esquerdo com foto+OVR, bloco direito com info+stats+CTA.
+ * Border-left 3px da cor do estado (neon-yellow / warning / danger / success
+ * / white/15). Hover sobe 0.5px + borda neon. Press scale-[0.98].
  */
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
@@ -29,9 +35,10 @@ import type { SquadPlayerEntry } from '@/insights/client';
 
 interface Props {
   playerId: string;
-  /** Agregação vinda do Python (opcional — pode estar offline). */
   squadEntry?: SquadPlayerEntry;
 }
+
+type Tone = 'neutral' | 'positive' | 'negative' | 'urgent';
 
 function MiniStat({
   Icon,
@@ -42,21 +49,29 @@ function MiniStat({
   Icon: typeof Activity;
   value: string | number;
   label: string;
-  tone?: 'neutral' | 'positive' | 'negative' | 'urgent';
+  tone?: Tone;
 }) {
-  const tones = {
+  const toneColor: Record<Tone, string> = {
     neutral: 'text-white/85',
-    positive: 'text-emerald-400',
-    negative: 'text-orange-400',
-    urgent: 'text-red-400',
+    positive: 'text-[var(--color-success)]',
+    negative: 'text-[var(--color-warning)]',
+    urgent: 'text-[var(--color-danger)]',
   };
   return (
     <div className="flex items-center gap-1 min-w-0">
-      <Icon size={11} className="opacity-60 shrink-0" />
-      <span className={cn('text-[11px] font-display font-bold tabular-nums', tones[tone])}>
+      <Icon size={10} className="opacity-55 shrink-0" />
+      <span
+        className={cn('text-[12px] font-bold tabular-nums leading-none', toneColor[tone])}
+        style={{ fontFamily: 'var(--font-ui)' }}
+      >
         {value}
       </span>
-      <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">{label}</span>
+      <span
+        className="text-[9px] uppercase text-white/40 leading-none"
+        style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.18em' }}
+      >
+        {label}
+      </span>
     </div>
   );
 }
@@ -65,9 +80,9 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
   const navigate = useNavigate();
   const player = useGameStore((s) => s.players?.[playerId]);
   const health = useGameStore((s) => s.playerHealth?.[playerId]);
-  const moral = useGameStore((s) => (s as { playerMoral?: Record<string, unknown> }).playerMoral?.[playerId]) as
-    | { moral?: number; formStreak?: number }
-    | undefined;
+  const moral = useGameStore(
+    (s) => (s as { playerMoral?: Record<string, unknown> }).playerMoral?.[playerId],
+  ) as { moral?: number; formStreak?: number } | undefined;
   const ledger = useGameStore(
     (s) =>
       (s as { playerSeasonLedger?: Record<string, unknown> }).playerSeasonLedger?.[playerId],
@@ -99,17 +114,19 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
   const alerts = squadEntry?.alerts ?? 0;
   const celebrations = squadEntry?.celebrations ?? 0;
 
-  // Bordas + acentos baseados no estado
-  const borderAccent = isUnavailable
-    ? 'border-l-red-400'
+  // Rail amarelo de estado (DS §7.2)
+  const railColor = isUnavailable
+    ? 'border-l-[var(--color-danger)]'
     : alerts > 0
-    ? 'border-l-orange-400'
+    ? 'border-l-[var(--color-warning)]'
     : celebrations > 0
-    ? 'border-l-emerald-400'
-    : 'border-l-white/10';
+    ? 'border-l-[var(--color-success)]'
+    : ovr !== null && ovr >= 80
+    ? 'border-l-neon-yellow'
+    : 'border-l-white/15';
 
-  // Tone do OVR
-  const ovrTone =
+  // OVR cor em Moret italic
+  const ovrColor =
     ovr === null
       ? 'text-white/40'
       : ovr >= 85
@@ -123,61 +140,103 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
   return (
     <motion.button
       type="button"
-      whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.99 }}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       onClick={() => navigate(`/manager/scouts/player/${encodeURIComponent(playerId)}`)}
       className={cn(
-        'group w-full text-left flex items-stretch gap-3 p-3 rounded-sm border border-l-4',
-        'bg-[var(--color-card)] hover:bg-white/[0.04] border-white/8 transition',
-        borderAccent,
+        'group w-full text-left flex items-stretch gap-4 p-4',
+        'border border-l-[3px] border-[var(--color-border)] bg-[var(--color-card)]',
+        'hover:border-neon-yellow/40 transition-all',
+        railColor,
       )}
+      style={{
+        borderRadius: 'var(--radius-md)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+      }}
     >
-      {/* ── Bloco esquerdo: OVR + posição ──────────────────────── */}
-      <div className="shrink-0 w-16 flex flex-col items-center justify-center gap-1">
+      {/* ── Bloco esquerdo: OVR Moret + POS chip Agency ──────── */}
+      <div className="shrink-0 w-14 flex flex-col items-center justify-center gap-1.5 self-center">
         <div
-          className={cn(
-            'text-3xl font-display font-black leading-none tabular-nums',
-            ovrTone,
-          )}
-          style={{ fontFamily: 'var(--font-display)' }}
+          className={cn('leading-none tabular-nums', ovrColor)}
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: 'clamp(30px, 5vw, 38px)',
+            letterSpacing: '-0.03em',
+            textShadow: '0 2px 12px rgba(0,0,0,0.45)',
+          }}
         >
           {ovr ?? '—'}
         </div>
-        <div className="text-[9px] uppercase tracking-[0.18em] text-white/45 font-bold">
+        <div
+          className="px-1.5 py-0.5 bg-white/5 border border-white/10 text-white/75"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: '9px',
+            letterSpacing: '0.22em',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
           {player.pos}
         </div>
       </div>
 
-      {/* ── Bloco direito: info + stats ────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
-        {/* Linha 1: nome + valor de mercado */}
+      {/* ── Bloco direito: header + stats ─────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between gap-2.5 self-stretch">
+        {/* Top: nome + valor + chevron */}
         <div className="flex items-start justify-between gap-2 min-w-0">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-sm font-display font-bold text-white truncate">
+              <span
+                className="truncate text-white"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 900,
+                  fontSize: '13px',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
                 {player.name}
               </span>
               {isUnavailable && (
-                <ShieldOff size={11} className="text-red-400 shrink-0" />
+                <ShieldOff size={11} className="text-[var(--color-danger)] shrink-0" />
               )}
             </div>
-            <div className="text-[10px] text-neon-yellow/80 font-mono mt-0.5 tabular-nums">
-              {mvCents > 0 ? formatBroFromCents(mvCents) : '—'}
-            </div>
+            {mvCents > 0 && (
+              <div
+                className="mt-1 text-neon-yellow/90 tabular-nums leading-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontStyle: 'italic',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {formatBroFromCents(mvCents)}
+              </div>
+            )}
           </div>
           <ChevronRight
             size={16}
-            className="text-white/30 group-hover:text-white/60 transition shrink-0 mt-1"
+            className="text-white/30 group-hover:text-neon-yellow transition shrink-0 mt-0.5"
           />
         </div>
 
-        {/* Linha 2: status físico + moral + forma */}
+        {/* Divisor sutil */}
+        <div className="h-px bg-white/5" />
+
+        {/* Stats row: físico + moral + forma + risco */}
         <div className="flex items-center gap-3 flex-wrap">
           <MiniStat
             Icon={Activity}
             value={`${100 - fatigue}%`}
             label="Físico"
-            tone={fatigue > 70 ? 'urgent' : fatigue > 40 ? 'negative' : 'neutral'}
+            tone={fatigue > 70 ? 'urgent' : fatigue > 40 ? 'negative' : 'positive'}
           />
           <MiniStat
             Icon={Heart}
@@ -201,23 +260,51 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
           )}
         </div>
 
-        {/* Linha 3: temporada (partidas + gols + assists + cards) */}
-        {matches > 0 && (
-          <div className="flex items-center gap-3 text-[10px] text-white/55 tabular-nums">
-            <span>{matches}P</span>
-            {goals > 0 && <span className="text-emerald-400">{goals}G</span>}
-            {assists > 0 && <span className="text-blue-300">{assists}A</span>}
-            {reds > 0 && <span className="text-red-400">{reds}🟥</span>}
+        {/* Bottom: temporada + badges */}
+        {(matches > 0 || alerts > 0 || celebrations > 0) && (
+          <div
+            className="flex items-center gap-3 text-[10px] tabular-nums leading-none pt-1"
+            style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.16em', fontWeight: 700 }}
+          >
+            {matches > 0 && (
+              <span className="text-white/55 uppercase">{matches}P</span>
+            )}
+            {goals > 0 && (
+              <span className="text-[var(--color-success)] uppercase">{goals}G</span>
+            )}
+            {assists > 0 && (
+              <span className="text-blue-300 uppercase">{assists}A</span>
+            )}
+            {reds > 0 && (
+              <span className="text-[var(--color-danger)] uppercase">{reds}V</span>
+            )}
             {celebrations > 0 && (
-              <span className="ml-auto flex items-center gap-1 text-emerald-400">
-                <Sparkles size={9} />
-                {celebrations}
+              <span
+                className={cn(
+                  'ml-auto flex items-center gap-1 px-1.5 py-0.5 bg-[var(--color-success)]/12 text-[var(--color-success)] uppercase',
+                )}
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '9px',
+                  letterSpacing: '0.22em',
+                }}
+              >
+                <Sparkles size={9} /> {celebrations}
               </span>
             )}
             {alerts > 0 && (
-              <span className={cn(celebrations > 0 ? '' : 'ml-auto', 'flex items-center gap-1 text-orange-400')}>
-                <AlertTriangle size={9} />
-                {alerts}
+              <span
+                className={cn(
+                  celebrations > 0 ? '' : 'ml-auto',
+                  'flex items-center gap-1 px-1.5 py-0.5 bg-[var(--color-warning)]/12 text-[var(--color-warning)] uppercase',
+                )}
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '9px',
+                  letterSpacing: '0.22em',
+                }}
+              >
+                <AlertTriangle size={9} /> {alerts}
               </span>
             )}
           </div>

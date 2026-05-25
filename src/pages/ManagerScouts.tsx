@@ -136,35 +136,56 @@ interface StatCardProps {
 }
 
 function StatCard({ label, value, hint, tone = 'neutral', Icon }: StatCardProps) {
+  // Legacy Tech: número em Moret italic, label em Agency uppercase tracking-wide.
   const tones = {
-    neutral: 'text-white border-white/8',
-    positive: 'text-emerald-400 border-emerald-500/30',
-    negative: 'text-orange-400 border-orange-500/30',
-    urgent: 'text-red-400 border-red-500/30',
+    neutral: 'text-white border-white/8 border-l-white/15',
+    positive: 'text-[var(--color-success)] border-[var(--color-success)]/30 border-l-[var(--color-success)]',
+    negative: 'text-[var(--color-warning)] border-[var(--color-warning)]/30 border-l-[var(--color-warning)]',
+    urgent: 'text-[var(--color-danger)] border-[var(--color-danger)]/30 border-l-[var(--color-danger)]',
   };
   return (
     <div
       className={cn(
-        'flex flex-col gap-1.5 p-4 rounded-sm border bg-[var(--color-card)]',
+        'flex flex-col gap-2 p-4 border border-l-[3px] bg-[var(--color-card)]',
         tones[tone],
       )}
+      style={{ borderRadius: 'var(--radius-md)' }}
     >
       <div className="flex items-center gap-2">
-        <Icon size={14} className="opacity-60" />
+        <Icon size={12} className="opacity-65" />
         <span
-          className="text-[10px] uppercase tracking-[0.22em] text-white/55"
-          style={{ fontFamily: 'var(--font-ui)' }}
+          className="text-white/55"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '10px',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            fontWeight: 800,
+          }}
         >
           {label}
         </span>
       </div>
       <div
-        className="text-3xl font-display font-black leading-none"
-        style={{ fontFamily: 'var(--font-display)' }}
+        className="leading-none tabular-nums"
+        style={{
+          fontFamily: 'var(--font-serif-hero)',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          fontSize: 'clamp(28px, 4.5vw, 36px)',
+          letterSpacing: '-0.03em',
+        }}
       >
         {value}
       </div>
-      {hint && <div className="text-[11px] text-white/40">{hint}</div>}
+      {hint && (
+        <div
+          className="text-white/40"
+          style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}
+        >
+          {hint}
+        </div>
+      )}
     </div>
   );
 }
@@ -457,36 +478,68 @@ export function ManagerScouts() {
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
       <div className="w-full min-w-0 mx-auto space-y-5 max-w-5xl px-3 sm:px-4 py-4">
-        {/* ── Header ─────────────────────────────────────────────── */}
+        {/* ── Hero editorial Legacy Tech (DS §7.4) ───────────────── */}
         <motion.header
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex items-center justify-between gap-4"
+          className="flex items-start justify-between gap-4"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={() => navigate('/manager')}
-              className="shrink-0 w-9 h-9 rounded-sm bg-white/5 hover:bg-white/10 grid place-items-center text-white/70 transition"
+              className="shrink-0 w-9 h-9 mt-1 bg-deep-black/60 border border-white/12 hover:border-neon-yellow/40 hover:text-neon-yellow grid place-items-center text-white/70 transition-colors"
+              style={{ borderRadius: 'var(--radius-sm)' }}
               aria-label="Voltar"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={16} />
             </button>
-            <div className="min-w-0">
-              <div
-                className="text-[10px] uppercase tracking-[0.28em] text-neon-yellow/80"
-                style={{ fontFamily: 'var(--font-ui)' }}
-              >
-                Inteligência
+            <div className="min-w-0 flex-1 space-y-1.5">
+              {/* Eyebrow Agency tracking-wide */}
+              <div className="flex items-center gap-2">
+                <span aria-hidden className="block h-px w-8 bg-neon-yellow/55" />
+                <span
+                  className="text-neon-yellow"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 800,
+                    fontSize: '10px',
+                    letterSpacing: '0.32em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Olefoot · Inteligência
+                </span>
               </div>
+              {/* Headline Moret italic */}
               <h1
-                className="text-2xl sm:text-3xl font-display font-black text-white truncate"
-                style={{ fontFamily: 'var(--font-display)' }}
+                className="text-neon-yellow leading-[0.95] truncate"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontStyle: 'italic',
+                  fontWeight: 700,
+                  fontSize: 'clamp(36px, 6vw, 52px)',
+                  letterSpacing: '-0.03em',
+                }}
               >
-                SCOUTS
+                Scouts
               </h1>
-              <div className="text-[11px] text-white/45 mt-0.5 truncate">{club.name}</div>
+              {/* Régua amarela */}
+              <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
+              {/* Metadata: nome do clube */}
+              <div
+                className="text-white/55 truncate pt-1"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: '11px',
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {club.name}
+              </div>
             </div>
           </div>
           <PythonStatusBadge state={badgeState} detail={badgeDetail} />
@@ -527,40 +580,43 @@ export function ManagerScouts() {
         {/* ── Night report (só se Python entregou) ───────────────── */}
         {nightReport && <NightReportSection report={nightReport} />}
 
-        {/* ── Tabs ──────────────────────────────────────────────── */}
+        {/* ── Tabs Legacy Tech (DS §7.6) ────────────────────────── */}
         <div
           role="tablist"
           aria-label="Modo de visualização"
-          className="flex items-center gap-1 p-1 rounded-sm bg-white/3 border border-white/8 w-fit"
+          className="flex items-center gap-1 p-1 bg-deep-black/60 border border-white/10 w-fit"
+          style={{ borderRadius: 'var(--radius-sm)' }}
         >
-          <button
-            role="tab"
-            aria-selected={tab === 'plantel'}
-            type="button"
-            onClick={() => setTab('plantel')}
-            className={cn(
-              'px-3 py-1.5 rounded-sm text-[11px] font-display font-bold uppercase tracking-[0.18em] transition',
-              tab === 'plantel'
-                ? 'bg-neon-yellow/15 text-neon-yellow'
-                : 'text-white/55 hover:text-white/85',
-            )}
-          >
-            Plantel
-          </button>
-          <button
-            role="tab"
-            aria-selected={tab === 'impacto'}
-            type="button"
-            onClick={() => setTab('impacto')}
-            className={cn(
-              'px-3 py-1.5 rounded-sm text-[11px] font-display font-bold uppercase tracking-[0.18em] transition',
-              tab === 'impacto'
-                ? 'bg-neon-yellow/15 text-neon-yellow'
-                : 'text-white/55 hover:text-white/85',
-            )}
-          >
-            Mapa de impacto
-          </button>
+          {(['plantel', 'impacto'] as const).map((t) => {
+            const active = tab === t;
+            const label = t === 'plantel' ? 'Plantel' : 'Mapa de Impacto';
+            return (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={active}
+                type="button"
+                onClick={() => setTab(t)}
+                className={cn(
+                  'px-4 py-2 transition-all',
+                  active
+                    ? 'bg-neon-yellow/[0.08] text-neon-yellow shadow-[0_0_12px_rgba(253,225,0,0.18)]'
+                    : 'text-white/55 hover:text-white',
+                )}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  letterSpacing: '0.24em',
+                  textTransform: 'uppercase',
+                  borderRadius: 'var(--radius-sm)',
+                  borderLeft: active ? '3px solid var(--color-neon-yellow)' : '3px solid transparent',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Conteúdo da tab ──────────────────────────────────── */}

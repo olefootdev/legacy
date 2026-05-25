@@ -107,51 +107,142 @@ function HeroCard({
   isUnavailable: boolean;
   outForMatches: number;
 }) {
+  // Hero editorial Legacy Tech: eyebrow Agency + Nome Moret italic + régua + OVR Moret italic.
   return (
     <motion.section
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="relative rounded-sm border border-white/10 border-l-4 border-l-neon-yellow bg-gradient-to-br from-white/5 to-white/[0.02] p-5"
+      initial={{ scale: 0.97, opacity: 0, y: 8 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+      className={cn(
+        'relative border border-l-[3px] bg-[var(--color-card)] p-5 sm:p-6 overflow-hidden',
+        isUnavailable ? 'border-l-[var(--color-danger)]' : 'border-l-neon-yellow',
+      )}
+      style={{
+        borderRadius: 'var(--radius-md)',
+        boxShadow: '0 24px 48px rgba(0,0,0,0.18)',
+      }}
     >
+      {/* Background watermark — número OVR gigante quase invisível */}
+      <div
+        aria-hidden
+        className="absolute -right-6 top-1/2 -translate-y-1/2 select-none pointer-events-none"
+        style={{
+          fontFamily: 'var(--font-serif-hero)',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          fontSize: '220px',
+          letterSpacing: '-0.05em',
+          color: isUnavailable ? 'rgba(239,68,68,0.04)' : 'rgba(253,225,0,0.05)',
+          lineHeight: 1,
+        }}
+      >
+        {ovr}
+      </div>
+
+      {/* Badge "indisponível" no canto */}
       {isUnavailable && (
-        <div className="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-sm bg-red-500/15 text-red-300 border border-red-500/30 text-[10px] font-display font-bold uppercase tracking-[0.18em]">
-          <ShieldOff size={11} />
-          Indisponível {outForMatches > 0 ? `· ${outForMatches}P` : ''}
+        <div
+          className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-2 py-1 bg-[var(--color-danger)]/15 text-[var(--color-danger)] border border-[var(--color-danger)]/40"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            fontSize: '9px',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          <ShieldOff size={10} />
+          Indisponível{outForMatches > 0 ? ` · ${outForMatches}P` : ''}
         </div>
       )}
-      <div className="flex items-start gap-4">
-        {/* OVR grande */}
-        <div className="shrink-0 w-20 flex flex-col items-center justify-center">
+
+      <div className="relative flex items-start gap-5">
+        {/* OVR Moret italic + POS chip Agency */}
+        <div className="shrink-0 flex flex-col items-center gap-2">
           <div
-            className="text-5xl font-display font-black leading-none text-neon-yellow tabular-nums"
-            style={{ fontFamily: 'var(--font-display)' }}
+            className="text-neon-yellow leading-none tabular-nums"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: 'clamp(56px, 9vw, 84px)',
+              letterSpacing: '-0.04em',
+              textShadow: '0 4px 24px rgba(253,225,0,0.25)',
+            }}
           >
             {ovr}
           </div>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-white/55 mt-1 font-bold">
+          <div
+            className="px-2 py-1 bg-deep-black/60 border border-white/15 text-white/80"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 900,
+              fontSize: '10px',
+              letterSpacing: '0.24em',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
             {pos}
           </div>
         </div>
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div
-            className="text-[10px] uppercase tracking-[0.28em] text-neon-yellow/80"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            Painel de Transparência
+
+        {/* Info: eyebrow + Nome Moret + régua + valor */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="block h-px w-6 bg-neon-yellow/55" />
+            <span
+              className="text-neon-yellow"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '10px',
+                letterSpacing: '0.32em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Painel de Transparência
+            </span>
           </div>
           <h1
-            className="text-2xl sm:text-3xl font-display font-black text-white truncate mt-1"
-            style={{ fontFamily: 'var(--font-display)' }}
+            className="text-white leading-[0.95]"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: 'clamp(32px, 5.5vw, 48px)',
+              letterSpacing: '-0.025em',
+            }}
           >
             {name}
           </h1>
+          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
+
           {marketCents > 0 && (
-            <div className="mt-3 flex items-center gap-1.5 text-neon-yellow/90 font-mono tabular-nums">
-              <DollarSign size={14} />
-              <span className="text-lg font-bold">{formatBroFromCents(marketCents)}</span>
-              <span className="text-[10px] text-white/45 uppercase tracking-wider ml-1">
+            <div className="pt-1.5 flex items-baseline gap-2">
+              <DollarSign size={13} className="text-neon-yellow/80 self-center" />
+              <span
+                className="text-neon-yellow tabular-nums leading-none"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontStyle: 'italic',
+                  fontWeight: 700,
+                  fontSize: 'clamp(22px, 3.5vw, 28px)',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {formatBroFromCents(marketCents)}
+              </span>
+              <span
+                className="text-white/45"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: '9px',
+                  letterSpacing: '0.28em',
+                  textTransform: 'uppercase',
+                }}
+              >
                 valor atual
               </span>
             </div>
@@ -210,38 +301,59 @@ function StatusGrid({
   ] as const;
 
   const toneClass: Record<'urgent' | 'negative' | 'neutral' | 'positive', string> = {
-    urgent: 'text-red-400 border-red-500/30',
-    negative: 'text-orange-400 border-orange-500/30',
-    neutral: 'text-white border-white/8',
-    positive: 'text-emerald-400 border-emerald-500/30',
+    urgent: 'text-[var(--color-danger)] border-[var(--color-danger)]/30 border-l-[var(--color-danger)]',
+    negative: 'text-[var(--color-warning)] border-[var(--color-warning)]/30 border-l-[var(--color-warning)]',
+    neutral: 'text-white border-white/8 border-l-white/15',
+    positive: 'text-[var(--color-success)] border-[var(--color-success)]/30 border-l-[var(--color-success)]',
   };
 
   return (
     <section
       aria-label="Status atual"
-      className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+      className="grid grid-cols-2 sm:grid-cols-4 gap-2.5"
     >
       {cells.map((c) => (
         <div
           key={c.label}
           className={cn(
-            'flex flex-col gap-1.5 p-3 rounded-sm border bg-[var(--color-card)]',
+            'flex flex-col gap-2 p-4 border border-l-[3px] bg-[var(--color-card)]',
             toneClass[c.tone],
           )}
+          style={{ borderRadius: 'var(--radius-md)' }}
         >
           <div className="flex items-center gap-1.5">
-            <c.Icon size={12} className="opacity-60" />
+            <c.Icon size={11} className="opacity-65" />
             <span
-              className="text-[10px] uppercase tracking-[0.22em] text-white/55 font-bold"
-              style={{ fontFamily: 'var(--font-ui)' }}
+              className="text-white/55"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '10px',
+                letterSpacing: '0.24em',
+                textTransform: 'uppercase',
+              }}
             >
               {c.label}
             </span>
           </div>
-          <div className="text-xl font-display font-black leading-none tabular-nums">
+          <div
+            className="leading-none tabular-nums"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: 'clamp(24px, 4vw, 30px)',
+              letterSpacing: '-0.03em',
+            }}
+          >
             {c.value}
           </div>
-          <div className="text-[10px] text-white/40">{c.hint}</div>
+          <div
+            className="text-white/45"
+            style={{ fontFamily: 'var(--font-ui)', fontSize: '10px' }}
+          >
+            {c.hint}
+          </div>
         </div>
       ))}
     </section>
@@ -263,30 +375,56 @@ function SeasonStats({
 }) {
   if (matches === 0) {
     return (
-      <div className="text-[12px] text-white/45 italic p-4 rounded-sm bg-white/3 border border-dashed border-white/10 text-center">
+      <div
+        className="text-white/45 italic p-4 bg-[var(--color-card)] border border-dashed border-white/12 text-center"
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: '12px',
+          borderRadius: 'var(--radius-md)',
+        }}
+      >
         Sem partidas oficiais ainda nesta temporada.
       </div>
     );
   }
   const items = [
     { label: 'Partidas', value: matches, Icon: Calendar, color: 'text-white' },
-    { label: 'Gols', value: goals, Icon: Target, color: 'text-emerald-400' },
+    { label: 'Gols', value: goals, Icon: Target, color: 'text-[var(--color-success)]' },
     { label: 'Assists', value: assists, Icon: Award, color: 'text-blue-300' },
-    { label: 'Amarelos', value: yellows, Icon: AlertTriangle, color: 'text-amber-300' },
-    { label: 'Vermelhos', value: reds, Icon: AlertOctagon, color: 'text-red-400' },
+    { label: 'Amarelos', value: yellows, Icon: AlertTriangle, color: 'text-[var(--color-warning)]' },
+    { label: 'Vermelhos', value: reds, Icon: AlertOctagon, color: 'text-[var(--color-danger)]' },
   ];
   return (
     <section className="grid grid-cols-5 gap-2">
       {items.map((i) => (
         <div
           key={i.label}
-          className="flex flex-col items-center gap-1 p-2 rounded-sm bg-white/3 border border-white/8"
+          className="flex flex-col items-center gap-1.5 p-3 bg-[var(--color-card)] border border-white/8"
+          style={{ borderRadius: 'var(--radius-md)' }}
         >
           <i.Icon size={12} className={cn('opacity-70', i.color)} />
-          <div className={cn('text-lg font-display font-black tabular-nums', i.color)}>
+          <div
+            className={cn('leading-none tabular-nums', i.color)}
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: 'clamp(18px, 3vw, 22px)',
+              letterSpacing: '-0.02em',
+            }}
+          >
             {i.value}
           </div>
-          <div className="text-[9px] uppercase tracking-wider text-white/40 text-center">
+          <div
+            className="text-white/40 text-center"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '9px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+            }}
+          >
             {i.label}
           </div>
         </div>
@@ -418,28 +556,63 @@ function AttrDeltaList({
     'fairPlay',
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
       {keys.map((k) => {
         const now = currentAttrs[k] ?? 0;
         const prev = weekAgoAttrs?.[k] ?? null;
         const delta = prev !== null ? now - prev : null;
         const deltaSign = delta === null ? null : delta > 0 ? '+' : '';
+        const hasDelta = delta !== null && delta !== 0;
         return (
           <div
             key={k}
-            className="flex flex-col gap-0.5 p-2 rounded-sm bg-white/3 border border-white/8"
+            className={cn(
+              'flex flex-col gap-1 p-3 bg-[var(--color-card)] border border-l-[3px]',
+              hasDelta && delta > 0
+                ? 'border-l-[var(--color-success)] border-white/8'
+                : hasDelta && delta < 0
+                ? 'border-l-[var(--color-danger)] border-white/8'
+                : 'border-l-white/12 border-white/8',
+            )}
+            style={{ borderRadius: 'var(--radius-md)' }}
           >
-            <div className="text-[9px] uppercase tracking-wider text-white/40">{k}</div>
+            <div
+              className="text-white/45"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '9px',
+                letterSpacing: '0.24em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {k}
+            </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-display font-black tabular-nums text-white">
+              <span
+                className="text-white leading-none tabular-nums"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontStyle: 'italic',
+                  fontWeight: 700,
+                  fontSize: '22px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 {now}
               </span>
-              {delta !== null && delta !== 0 && (
+              {hasDelta && (
                 <span
                   className={cn(
-                    'text-[10px] font-bold tabular-nums',
-                    delta > 0 ? 'text-emerald-400' : 'text-red-400',
+                    'tabular-nums',
+                    delta > 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
                   )}
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    fontSize: '10px',
+                    letterSpacing: '0.08em',
+                  }}
                 >
                   {deltaSign}
                   {delta}
@@ -522,20 +695,36 @@ function MarketChart({
 // ─── Page ──────────────────────────────────────────────────────────
 
 function SectionHeader({ kicker, title }: { kicker: string; title: string }) {
+  // DS §7.5: rail amarelo 3px à esquerda + headline Moret italic.
   return (
-    <div>
-      <div
-        className="text-[10px] uppercase tracking-[0.28em] text-neon-yellow/80"
-        style={{ fontFamily: 'var(--font-ui)' }}
-      >
-        {kicker}
+    <div className="flex items-stretch gap-3 py-1">
+      <span aria-hidden className="w-[3px] bg-neon-yellow self-stretch min-h-[36px]" />
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <span
+          className="text-neon-yellow leading-none"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: '10px',
+            letterSpacing: '0.32em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {kicker}
+        </span>
+        <h2
+          className="text-white leading-[0.95] mt-1"
+          style={{
+            fontFamily: 'var(--font-serif-hero)',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            fontSize: 'clamp(20px, 3vw, 26px)',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {title}
+        </h2>
       </div>
-      <h2
-        className="text-base font-display font-black text-white mt-0.5"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
-        {title}
-      </h2>
     </div>
   );
 }
@@ -641,13 +830,20 @@ export function ManagerScoutsPlayer() {
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
       <div className="w-full min-w-0 mx-auto space-y-4 max-w-5xl px-3 sm:px-4 py-4">
-        {/* ── Voltar ────────────────────────────────────────────── */}
+        {/* ── Voltar (DS §7.1 ghost link) ────────────────────────── */}
         <button
           type="button"
           onClick={() => navigate('/manager/scouts')}
-          className="inline-flex items-center gap-2 text-[11px] text-white/55 hover:text-white transition"
+          className="inline-flex items-center gap-2 text-white/55 hover:text-neon-yellow transition-colors"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: '11px',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+          }}
         >
-          <ChevronLeft size={14} /> Plantel
+          <ChevronLeft size={13} /> Plantel
         </button>
 
         {/* ── Hero ──────────────────────────────────────────────── */}
@@ -738,11 +934,23 @@ export function ManagerScoutsPlayer() {
           </div>
         </section>
 
-        {/* ── Nota de honestidade ───────────────────────────────── */}
-        <div className="text-[10px] text-white/35 text-center py-2 leading-relaxed">
-          <Brain size={11} className="inline mr-1 opacity-60" />
-          Todos os números vêm de eventos reais — partidas, treinos, decisões.
-          Quando um valor mudar, você vai ver o motivo nesta tela.
+        {/* ── Nota de honestidade (epígrafe Moret italic) ────────── */}
+        <div className="flex flex-col items-center gap-1.5 py-4">
+          <span aria-hidden className="block w-8 h-px bg-neon-yellow/40" />
+          <div
+            className="text-white/55 text-center max-w-md leading-snug px-4"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 400,
+              fontSize: '13px',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            <Brain size={11} className="inline mr-1.5 -mt-0.5 opacity-50" />
+            Todos os números vêm de eventos reais — partidas, treinos, decisões.
+            Quando um valor mudar, você verá o motivo aqui.
+          </div>
         </div>
       </div>
     </div>
