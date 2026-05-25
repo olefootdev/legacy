@@ -35,6 +35,7 @@ import { formatOle } from '@/systems/economy';
 import { computeUsername, findProfileByUsername } from '@/supabase/managerUsername';
 import { chatWithCoach } from '@/coach/coachApi';
 import type { TeamContext } from '@/coach/types';
+import { useClubConsequences } from '@/hooks/useConsequences';
 
 function ovr(attrs: import('@/entities/types').PlayerAttributes): number {
   const vals = Object.values(attrs);
@@ -515,26 +516,59 @@ function PenaltiesWidget() {
       <SectionHeader label="ALERTAS" icon={ShieldAlert} />
       <div className="space-y-1.5">
         {suspensionRoundsRemaining > 0 && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 border border-red-500/30 bg-red-500/[0.06]" style={{ borderRadius: 'var(--radius-sm)' }}>
-            <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" strokeWidth={2} />
-            <span className="text-red-300" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+          <div
+            className="flex items-center gap-2 px-2.5 py-1.5 border border-l-[3px] border-white/8 border-l-[var(--color-danger)] bg-[var(--color-danger)]/8"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-[var(--color-danger)] shrink-0" strokeWidth={2} />
+            <span
+              className="text-[var(--color-danger)]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: '11px',
+                letterSpacing: '0.04em',
+              }}
+            >
               Suspenso — perde {suspensionRoundsRemaining} rodada{suspensionRoundsRemaining > 1 ? 's' : ''}
             </span>
           </div>
         )}
         {injuryRoundsRemaining > 0 && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 border border-orange-500/30 bg-orange-500/[0.06]" style={{ borderRadius: 'var(--radius-sm)' }}>
-            <AlertTriangle className="w-3.5 h-3.5 text-orange-400 shrink-0" strokeWidth={2} />
-            <span className="text-orange-300" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+          <div
+            className="flex items-center gap-2 px-2.5 py-1.5 border border-l-[3px] border-white/8 border-l-[var(--color-warning)] bg-[var(--color-warning)]/8"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-[var(--color-warning)] shrink-0" strokeWidth={2} />
+            <span
+              className="text-[var(--color-warning)]"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: '11px',
+                letterSpacing: '0.04em',
+              }}
+            >
               Lesão: {injuryModifier < 0 ? injuryModifier : -injuryModifier} OVR por {injuryRoundsRemaining} rodada{injuryRoundsRemaining > 1 ? 's' : ''}
             </span>
           </div>
         )}
         {yellowCardCount >= 2 && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 border border-yellow-500/30 bg-yellow-500/[0.06]" style={{ borderRadius: 'var(--radius-sm)' }}>
-            <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" strokeWidth={2} />
-            <span className="text-yellow-300" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
-              {yellowCardCount} cartões amarelos — risco de suspensão
+          <div
+            className="flex items-center gap-2 px-2.5 py-1.5 border border-l-[3px] border-white/8 border-l-neon-yellow bg-neon-yellow/8"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2} />
+            <span
+              className="text-neon-yellow tabular-nums"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: '11px',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {yellowCardCount} amarelos — risco de suspensão
             </span>
           </div>
         )}
@@ -713,6 +747,12 @@ function MatchAnalysisWidget() {
   const lineup = useGameStore((s) => s.lineup);
   const ranking = useGameStore((s) => s.competitiveRanking);
   const clubName = useGameStore((s) => s.club?.name ?? 'Nós');
+  // SCOUTS layer — moral real dos titulares pra cálculo de CONFIANÇA
+  const playerMoral = useGameStore(
+    (s) =>
+      (s as { playerMoral?: Record<string, { moral?: number; formStreak?: number }> })
+        .playerMoral,
+  );
 
   // Dados reais da Global League têm prioridade sobre o fixture estático (TITANS mock)
   const nextGlobal = useNextGlobalFixture();
@@ -757,6 +797,32 @@ function MatchAnalysisWidget() {
 
     const winStreak = ranking?.currentWinStreak ?? 0;
 
+    // CONFIANÇA real: média de moral dos titulares + bônus por formStreak
+    // agregado, com winStreak histórico só como tiebreaker.
+    // Antes era `winStreak * 8 + 50` (fórmula pura, ignorava SCOUTS layer).
+    let confianca: number;
+    if (starters.length > 0 && playerMoral) {
+      let moralSum = 0;
+      let moralCount = 0;
+      let formBonus = 0;
+      for (const p of starters) {
+        const m = playerMoral[p.id];
+        if (m && typeof m.moral === 'number') {
+          moralSum += m.moral;
+          moralCount++;
+        }
+        const fs = m?.formStreak ?? 0;
+        if (fs >= 3) formBonus += 3; // em boa fase puxa pra cima
+        else if (fs <= -3) formBonus -= 4; // má fase puxa mais
+      }
+      const moralAvg = moralCount > 0 ? moralSum / moralCount : 50;
+      // Win streak como tempero (até +8)
+      confianca = Math.max(20, Math.min(99, Math.round(moralAvg + formBonus + Math.min(winStreak, 4) * 2)));
+    } else {
+      // Sem moral data ainda → fallback honesto na confiança técnica + winStreak
+      confianca = Math.min(99, avg(['confianca', 'mentalidade']) + winStreak * 3);
+    }
+
     const rows = [
       {
         label: 'ATAQUE',
@@ -780,7 +846,7 @@ function MatchAnalysisWidget() {
       },
       {
         label: 'CONFIANÇA',
-        ours: Math.min(99, winStreak * 8 + 50),
+        ours: confianca,
         theirs: Math.round(strength * 0.82),
       },
     ];
@@ -792,7 +858,7 @@ function MatchAnalysisWidget() {
         : 'Equilíbrio total. Detalhe decide.';
 
     return { ourOvr: totalOvr, comparisons: rows, verdict: v };
-  }, [hasData, opponentStrength, players, lineup, ranking, nextFixture]);
+  }, [hasData, opponentStrength, players, lineup, ranking, nextFixture, playerMoral]);
 
   const verdictColor = useMemo(() => {
     if (!hasData) return 'text-white/35';
@@ -936,6 +1002,16 @@ function MarketWidget() {
   const navigate = useNavigate();
   const players = useGameStore((s) => s.players);
   const lineup = useGameStore((s) => s.lineup);
+  // SCOUTS layer — histórico de mercado pra calcular tendência
+  const evolutionTimeline = useGameStore(
+    (s) =>
+      (s as {
+        playerEvolutionTimeline?: Record<
+          string,
+          Array<{ atIso: string; marketValueBroCents?: number }>
+        >;
+      }).playerEvolutionTimeline,
+  );
 
   const picks = useMemo(() => {
     const lineupIds = new Set(Object.values(lineup));
@@ -946,6 +1022,29 @@ function MarketWidget() {
       .sort((a, b) => ovr(b.attrs) - ovr(a.attrs))
       .slice(0, 2);
   }, [players, lineup]);
+
+  /**
+   * Tendência de mercado por jogador a partir do playerEvolutionTimeline.
+   * Compara o marketValueBroCents mais recente com o primeiro snapshot disponível.
+   * Retorna pct (positivo = alta, negativo = queda) ou null se sem histórico.
+   */
+  const trendByPlayer = useMemo(() => {
+    const out = new Map<string, number>();
+    if (!evolutionTimeline) return out;
+    for (const p of picks) {
+      const tl = evolutionTimeline[p.id];
+      if (!tl || tl.length < 2) continue;
+      const withMv = tl.filter((pt) => typeof pt.marketValueBroCents === 'number');
+      if (withMv.length < 2) continue;
+      const first = withMv[0].marketValueBroCents as number;
+      const last = withMv[withMv.length - 1].marketValueBroCents as number;
+      if (first <= 0) continue;
+      const pct = ((last - first) / first) * 100;
+      if (Math.abs(pct) < 1) continue; // ignora ruído <1%
+      out.set(p.id, pct);
+    }
+    return out;
+  }, [picks, evolutionTimeline]);
 
   return (
     <div>
@@ -996,13 +1095,35 @@ function MarketWidget() {
                     {p.name}
                   </div>
                   <div
-                    className="text-white/45"
+                    className="text-white/45 flex items-center gap-1.5"
                     style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
                   >
-                    {p.pos}
-                    {p.marketValueExp != null
-                      ? ` · ${formatOle(p.marketValueExp)} EXP`
-                      : ''}
+                    <span className="truncate">
+                      {p.pos}
+                      {p.marketValueExp != null
+                        ? ` · ${formatOle(p.marketValueExp)} EXP`
+                        : ''}
+                    </span>
+                    {/* Tendência de mercado (real, vinda de playerEvolutionTimeline) */}
+                    {(() => {
+                      const pct = trendByPlayer.get(p.id);
+                      if (pct === undefined) return null;
+                      const up = pct > 0;
+                      const Icon = up ? TrendingUp : TrendingDown;
+                      return (
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-0.5 shrink-0 tabular-nums',
+                            up ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]',
+                          )}
+                          title={`Variação no histórico de mercado: ${up ? '+' : ''}${pct.toFixed(1)}%`}
+                        >
+                          <Icon size={9} />
+                          {up ? '+' : ''}
+                          {Math.round(pct)}%
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div
@@ -1112,6 +1233,22 @@ function CoachInlineChat() {
   const players = useGameStore((s) => s.players);
   const finance = useGameStore((s) => s.finance);
   const playerHealth = useGameStore((s) => s.playerHealth);
+  // SCOUTS layer — moral, performance, consequências persistentes
+  const playerMoral = useGameStore(
+    (s) => (s as { playerMoral?: Record<string, { moral?: number; momentum?: number; formStreak?: number }> }).playerMoral,
+  );
+  const playerSeasonLedger = useGameStore(
+    (s) => (s as {
+      playerSeasonLedger?: Record<string, {
+        matchesPlayed?: number;
+        goals?: number;
+        assists?: number;
+        yellowCards?: number;
+        redCards?: number;
+      }>;
+    }).playerSeasonLedger,
+  );
+  const consequenceStore = useGameStore((s) => s.consequenceStore);
   const managerTrainingPlans = useGameStore((s) => s.manager?.trainingPlans);
   const managerStaff = useGameStore((s) => s.manager?.staff);
   const results = useGameStore((s) => s.results);
@@ -1253,6 +1390,110 @@ function CoachInlineChat() {
       }
     }
 
+    // ─── SCOUTS layer — moral agregada + momentum de forma ──────────
+    let totalMoral = 0;
+    let moralCount = 0;
+    let inGoodForm = 0;
+    let inBadForm = 0;
+    for (const p of allPlayers) {
+      const m = playerMoral?.[p.id];
+      if (m && typeof m.moral === 'number') {
+        totalMoral += m.moral;
+        moralCount++;
+      }
+      const fs = m?.formStreak ?? 0;
+      if (fs >= 3) inGoodForm++;
+      else if (fs <= -3) inBadForm++;
+    }
+    const averageMoral = moralCount > 0 ? Math.round(totalMoral / moralCount) : undefined;
+    const formMomentum = moralCount > 0 ? inGoodForm - inBadForm : undefined;
+
+    // ─── Consequências ativas — Coach precisa enxergar pra recomendar ───
+    const now = Date.now();
+    const activeConsequences = consequenceStore?.active
+      ? Object.values(consequenceStore.active).filter((c) => new Date(c.expiresAt).getTime() > now)
+      : [];
+    let activeAlerts = 0;
+    let activeCelebrations = 0;
+    const UNAVAILABILITY_KINDS = new Set([
+      'red_card_suspension',
+      'red_card_suspension_repeat',
+      'injury_light_out',
+      'injury_medium_out',
+      'injury_severe_out',
+      'forced_rest',
+    ]);
+    for (const c of activeConsequences) {
+      if (UNAVAILABILITY_KINDS.has(c.kind) || c.magnitude < 0) activeAlerts++;
+      else if (c.magnitude > 0) activeCelebrations++;
+    }
+
+    // Top 5 jogadores afetados — prioridade pra Coach citar
+    const affectedPlayers = activeConsequences
+      .filter((c) => c.playerId)
+      .map((c) => {
+        const p = players[c.playerId!];
+        if (!p) return null;
+        let kind: 'injury' | 'suspension' | 'low_morale' | 'mvp_streak' | 'market_spike' | 'other' = 'other';
+        let detail = c.kind.replace(/_/g, ' ');
+        if (c.kind.startsWith('injury_')) {
+          kind = 'injury';
+          detail = c.kind === 'injury_severe_out' ? 'lesão grave' : c.kind === 'injury_medium_out' ? 'lesão moderada' : 'lesão leve';
+        } else if (c.kind.includes('suspension')) {
+          kind = 'suspension';
+          detail = 'suspenso por cartão';
+        } else if (c.kind === 'morale_drop_card' || c.kind === 'morale_drop_heavy_defeat') {
+          kind = 'low_morale';
+          detail = 'moral abalada';
+        } else if (c.kind === 'morale_boost_mvp' || c.kind === 'morale_boost_hat_trick') {
+          kind = 'mvp_streak';
+          detail = c.kind === 'morale_boost_hat_trick' ? 'hat-trick recente' : 'eleito MVP';
+        } else if (c.kind === 'market_interest_spike' || c.kind === 'market_value_boost_mvp') {
+          kind = 'market_spike';
+          detail = 'valor de mercado em alta';
+        }
+        return {
+          name: p.name,
+          pos: p.pos,
+          kind,
+          detail,
+          msUntilExpiry: new Date(c.expiresAt).getTime() - now,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => {
+        // Negativos primeiro, depois positivos, depois por urgência (menos tempo restante)
+        const aNeg = a.kind === 'injury' || a.kind === 'suspension' || a.kind === 'low_morale' ? 1 : 0;
+        const bNeg = b.kind === 'injury' || b.kind === 'suspension' || b.kind === 'low_morale' ? 1 : 0;
+        if (aNeg !== bNeg) return bNeg - aNeg;
+        return a.msUntilExpiry - b.msUntilExpiry;
+      })
+      .slice(0, 5);
+
+    // Stats acumulados dos top 5 por OVR — Coach pode citar artilheiro/líder de assists
+    const topByOvr = [...allPlayers]
+      .map((p) => {
+        const vals = Object.values(p.attrs);
+        const pOvr = vals.reduce((a: number, b) => a + (b as number), 0) / vals.length;
+        return { p, ovr: pOvr };
+      })
+      .sort((a, b) => b.ovr - a.ovr)
+      .slice(0, 5);
+    const topPlayerSeasonStats = topByOvr
+      .map(({ p }) => {
+        const L = playerSeasonLedger?.[p.id];
+        if (!L || (L.matchesPlayed ?? 0) === 0) return null;
+        return {
+          name: p.name,
+          goals: L.goals ?? 0,
+          assists: L.assists ?? 0,
+          matchesPlayed: L.matchesPlayed ?? 0,
+          yellowCards: L.yellowCards ?? 0,
+          redCards: L.redCards ?? 0,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
     return {
       totalPlayers: allPlayers.length,
       injuredPlayers: injuredCount,
@@ -1288,6 +1529,13 @@ function CoachInlineChat() {
       leagueRecentForm,
       clubName: club?.name,
       managerName: undefined,
+      // SCOUTS context
+      averageMoral,
+      formMomentum,
+      activeAlerts,
+      activeCelebrations,
+      affectedPlayers: affectedPlayers.length > 0 ? affectedPlayers : undefined,
+      topPlayerSeasonStats: topPlayerSeasonStats.length > 0 ? topPlayerSeasonStats : undefined,
     };
   }
 
@@ -1994,12 +2242,242 @@ function HubHeader({ onClose }: { onClose?: () => void }) {
 
 // ─── Hub body (widgets empilhados) ────────────────────────────────────────────
 
+// ─── SCOUTS Status Widget (Legacy Tech) ───────────────────────────────
+//
+// Eco do painel /manager/scouts no canto do Hub: lê o consequenceStore
+// LOCAL (sempre disponível, sem fetch HTTP) e mostra contagens reais
+// em tempo real. Clique → vai pro SCOUTS.
+
+const UNAVAILABILITY_KINDS_HUB = new Set([
+  'red_card_suspension',
+  'red_card_suspension_repeat',
+  'injury_light_out',
+  'injury_medium_out',
+  'injury_severe_out',
+  'forced_rest',
+]);
+
+function ScoutsStatusWidget() {
+  const navigate = useNavigate();
+  const consequences = useClubConsequences();
+
+  const { total, unavailable, alerts, celebrations, mostUrgent } = useMemo(() => {
+    let alerts = 0;
+    let celebrations = 0;
+    const unavailableSet = new Set<string>();
+    let mostUrgent: { name: string; kind: string; msUntilExpiry: number } | null = null;
+    for (const e of consequences) {
+      const c = e.consequence;
+      if (UNAVAILABILITY_KINDS_HUB.has(c.kind) && c.playerId) {
+        unavailableSet.add(c.playerId);
+      }
+      if (UNAVAILABILITY_KINDS_HUB.has(c.kind) || c.magnitude < 0) {
+        alerts++;
+        if (!mostUrgent || e.msUntilExpiry < mostUrgent.msUntilExpiry) {
+          mostUrgent = {
+            name: c.playerId ? c.playerId.slice(0, 6) : 'Clube',
+            kind: c.kind,
+            msUntilExpiry: e.msUntilExpiry,
+          };
+        }
+      } else if (c.magnitude > 0) {
+        celebrations++;
+      }
+    }
+    return {
+      total: consequences.length,
+      unavailable: unavailableSet.size,
+      alerts,
+      celebrations,
+      mostUrgent,
+    };
+  }, [consequences]);
+
+  // Não mostra widget se nada está acontecendo
+  if (total === 0) return null;
+
+  const railColor =
+    unavailable > 0
+      ? 'border-l-[var(--color-danger)]'
+      : alerts > 0
+        ? 'border-l-[var(--color-warning)]'
+        : 'border-l-neon-yellow';
+
+  return (
+    <motion.button
+      type="button"
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      onClick={() => navigate('/manager/scouts')}
+      className={cn(
+        'group w-full text-left border border-l-[3px] border-white/10 bg-[var(--color-card)] p-3 transition-all',
+        'hover:border-neon-yellow/40',
+        railColor,
+      )}
+      style={{
+        borderRadius: 'var(--radius-md)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+      }}
+      aria-label="Abrir painel SCOUTS"
+    >
+      {/* Eyebrow */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1.5">
+          <span aria-hidden className="block h-px w-4 bg-neon-yellow/55" />
+          <span
+            className="text-neon-yellow"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '9px',
+              letterSpacing: '0.32em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Scouts · plantel
+          </span>
+        </div>
+        <ChevronRight
+          size={12}
+          className="text-white/30 group-hover:text-neon-yellow transition shrink-0"
+        />
+      </div>
+
+      {/* Counts row — Moret italic nos números */}
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        <div className="flex flex-col items-start">
+          <span
+            className={cn(
+              'leading-none tabular-nums',
+              unavailable > 0 ? 'text-[var(--color-danger)]' : 'text-white/70',
+            )}
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: '22px',
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {unavailable}
+          </span>
+          <span
+            className="text-white/45 mt-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '8px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Fora
+          </span>
+        </div>
+        <div className="flex flex-col items-start">
+          <span
+            className={cn(
+              'leading-none tabular-nums',
+              alerts > 3
+                ? 'text-[var(--color-danger)]'
+                : alerts > 0
+                  ? 'text-[var(--color-warning)]'
+                  : 'text-white/70',
+            )}
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: '22px',
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {alerts}
+          </span>
+          <span
+            className="text-white/45 mt-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '8px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Alertas
+          </span>
+        </div>
+        <div className="flex flex-col items-start">
+          <span
+            className={cn(
+              'leading-none tabular-nums',
+              celebrations > 0 ? 'text-[var(--color-success)]' : 'text-white/70',
+            )}
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              fontSize: '22px',
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {celebrations}
+          </span>
+          <span
+            className="text-white/45 mt-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '8px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Em alta
+          </span>
+        </div>
+      </div>
+
+      {/* Hint da consequência mais urgente */}
+      {mostUrgent && (
+        <div
+          className="flex items-center gap-1.5 pt-2 border-t border-white/5 text-white/55"
+          style={{ fontFamily: 'var(--font-ui)', fontSize: '10px' }}
+        >
+          <Timer size={9} className="opacity-50" />
+          <span className="truncate">
+            Mais urgente expira em{' '}
+            <span
+              className="text-white/85 tabular-nums"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontStyle: 'italic',
+                fontWeight: 700,
+              }}
+            >
+              {mostUrgent.msUntilExpiry < 60_000
+                ? '<1m'
+                : mostUrgent.msUntilExpiry < 3_600_000
+                  ? `${Math.floor(mostUrgent.msUntilExpiry / 60_000)}m`
+                  : mostUrgent.msUntilExpiry < 86_400_000
+                    ? `${Math.floor(mostUrgent.msUntilExpiry / 3_600_000)}h`
+                    : `${Math.floor(mostUrgent.msUntilExpiry / 86_400_000)}d`}
+            </span>
+          </span>
+        </div>
+      )}
+    </motion.button>
+  );
+}
+
 function HubBody({ onClose }: { onClose?: () => void }) {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#0D0D0D] border-l border-white/10">
       <HubHeader onClose={onClose} />
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <ScoutsStatusWidget />
         <NewsWidget />
         <div className="h-px bg-white/[0.06]" />
         <CountdownWidget />

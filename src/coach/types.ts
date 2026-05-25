@@ -193,4 +193,34 @@ export interface TeamContext {
   // Clube
   clubName?: string;
   managerName?: string;
+
+  // ─── SCOUTS layer — moral, performance, consequências persistentes ──
+  // Adicionado pra Coach AI ter contexto completo do "estado de prontidão"
+  // antes de recomendar treinos, escalações ou compras de mercado.
+
+  /** Média da moral da squad (0-100). Abaixo de 50 = elenco abalado. */
+  averageMoral?: number;
+  /** Quantos jogadores estão em `formStreak >= 3` (boa fase) menos os em `<= -3`. */
+  formMomentum?: number;
+  /** Total de consequências negativas ativas no clube (lesões, suspensões, queda moral). */
+  activeAlerts?: number;
+  /** Total de consequências positivas ativas (MVPs, hat-tricks, valorização). */
+  activeCelebrations?: number;
+  /** Top 5 jogadores afetados — ajuda Coach a priorizar quem citar. */
+  affectedPlayers?: Array<{
+    name: string;
+    pos: string;
+    kind: 'injury' | 'suspension' | 'low_morale' | 'mvp_streak' | 'market_spike' | 'other';
+    detail: string;
+    msUntilExpiry: number;
+  }>;
+  /** Stats acumulados de temporada do top 5 jogadores por OVR. */
+  topPlayerSeasonStats?: Array<{
+    name: string;
+    goals: number;
+    assists: number;
+    matchesPlayed: number;
+    yellowCards: number;
+    redCards: number;
+  }>;
 }
