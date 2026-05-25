@@ -130,6 +130,7 @@ const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.M
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
+const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
@@ -470,6 +471,7 @@ export default function App() {
             <Route path="/manager" element={<Manager />} />
             <Route path="/manager/mensagens" element={<ManagerMessages />} />
             <Route path="/manager/network" element={<ManagerNetwork />} />
+            <Route path="/manager/scouts" element={<ManagerScouts />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
             <Route path="/manager/missoes" element={<Missions />} />
             <Route path="/manager/config" element={<Config />} />
