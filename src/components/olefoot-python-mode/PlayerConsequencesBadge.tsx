@@ -5,6 +5,10 @@
  * (suspenso, lesionado, moral abalado, MVP em alta, etc.).
  *
  * Compacto: só badge + tempo restante. Tooltip pra detalhes.
+ *
+ * Tipografia Legacy Tech: Agency 800 uppercase tracking-wide nos labels,
+ * Moret italic tabular-nums no tempo. Cores via tokens (--color-danger /
+ * --color-warning / --color-success / --color-neon-yellow).
  */
 import { ShieldOff, Activity, TrendingUp, TrendingDown, BadgeCheck } from 'lucide-react';
 import { usePlayerConsequences } from '@/hooks/useConsequences';
@@ -31,63 +35,71 @@ function getBadgeMeta(c: EvaluatedConsequence): BadgeMeta | null {
   if (kind === 'red_card_suspension' || kind === 'red_card_suspension_repeat') {
     return {
       Icon: ShieldOff,
-      className: 'bg-red-500/15 text-red-400 border-red-500/30',
+      className:
+        'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/35',
       label: 'Suspenso',
     };
   }
   if (kind === 'injury_severe_out') {
     return {
       Icon: Activity,
-      className: 'bg-red-600/15 text-red-500 border-red-600/30',
+      className:
+        'bg-[var(--color-danger)]/15 text-[var(--color-danger)] border-[var(--color-danger)]/40',
       label: 'Lesão grave',
     };
   }
   if (kind === 'injury_medium_out') {
     return {
       Icon: Activity,
-      className: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+      className:
+        'bg-[var(--color-warning)]/12 text-[var(--color-warning)] border-[var(--color-warning)]/35',
       label: 'Lesão moderada',
     };
   }
   if (kind === 'injury_light_out') {
     return {
       Icon: Activity,
-      className: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+      className:
+        'bg-[var(--color-warning)]/10 text-[var(--color-warning)] border-[var(--color-warning)]/30',
       label: 'Lesão leve',
     };
   }
   if (kind === 'forced_rest') {
     return {
       Icon: Activity,
-      className: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      className: 'bg-white/5 text-white/75 border-white/15',
       label: 'Descanso',
     };
   }
   if (kind === 'morale_boost_hat_trick' || kind === 'morale_boost_mvp') {
     return {
       Icon: BadgeCheck,
-      className: 'bg-neon-yellow/15 text-neon-yellow border-neon-yellow/30',
+      className:
+        'bg-neon-yellow/12 text-neon-yellow border-neon-yellow/35 shadow-[0_0_10px_rgba(253,225,0,0.18)]',
       label: kind === 'morale_boost_hat_trick' ? 'Hat-trick' : 'MVP',
     };
   }
   if (kind === 'market_value_boost_mvp' || kind === 'market_value_boost_hat_trick') {
     return {
       Icon: TrendingUp,
-      className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      className:
+        'bg-[var(--color-success)]/12 text-[var(--color-success)] border-[var(--color-success)]/35',
       label: 'Em alta',
     };
   }
   if (kind === 'market_interest_spike') {
     return {
       Icon: TrendingUp,
-      className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      className:
+        'bg-[var(--color-success)]/12 text-[var(--color-success)] border-[var(--color-success)]/35',
       label: 'Cobiçado',
     };
   }
   if (kind.startsWith('market_value_drop')) {
     return {
       Icon: TrendingDown,
-      className: 'bg-red-500/15 text-red-400 border-red-500/30',
+      className:
+        'bg-[var(--color-danger)]/12 text-[var(--color-danger)] border-[var(--color-danger)]/35',
       label: 'Valor em queda',
     };
   }
@@ -104,7 +116,6 @@ export function PlayerConsequencesBadge({ playerId, compact = true }: Props) {
   const consequences = usePlayerConsequences(playerId);
   if (!consequences.length) return null;
 
-  // Ordena: indisponibilidade primeiro, depois magnitude absoluta
   const sorted = [...consequences].sort((a, b) => {
     const aIsUnavail = a.consequence.dimension === 'physical' && a.currentValue > 0;
     const bIsUnavail = b.consequence.dimension === 'physical' && b.currentValue > 0;
@@ -123,14 +134,37 @@ export function PlayerConsequencesBadge({ playerId, compact = true }: Props) {
           <div
             key={c.consequence.id}
             className={cn(
-              'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-[10px] font-medium',
+              'inline-flex items-center gap-1 px-2 py-1 border',
               meta.className,
             )}
+            style={{ borderRadius: 'var(--radius-sm)' }}
             title={`${meta.label} · expira em ${formatTimeLeft(c.msUntilExpiry)}`}
           >
             <meta.Icon size={10} />
-            <span className="truncate max-w-[90px]">{meta.label}</span>
-            <span className="opacity-70">{formatTimeLeft(c.msUntilExpiry)}</span>
+            <span
+              className="truncate max-w-[100px] leading-none"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: '9px',
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {meta.label}
+            </span>
+            <span
+              className="tabular-nums opacity-70 leading-none"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontStyle: 'italic',
+                fontWeight: 700,
+                fontSize: '11px',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {formatTimeLeft(c.msUntilExpiry)}
+            </span>
           </div>
         );
       })}
