@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .config import get_settings
-from .routes import consequences, health, night_report
+from .routes import consequences, health, night_report, player
 
 settings = get_settings()
 logging.basicConfig(level=getattr(logging, settings.log_level, logging.INFO))
@@ -44,6 +44,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(consequences.router)
 app.include_router(night_report.router)
+app.include_router(player.router)
 
 
 @app.get("/", tags=["root"])
@@ -56,6 +57,8 @@ async def root():
             "GET /health",
             "GET /club/{manager_id}/consequences",
             "GET /club/{manager_id}/summary",
+            "GET /club/{manager_id}/squad-overview",
             "GET /club/{manager_id}/night-report",
+            "GET /player/{player_id}/transparency",
         ],
     }

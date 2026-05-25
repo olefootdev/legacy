@@ -37,7 +37,9 @@ import {
   useInsightsConsequences,
   useInsightsNightReport,
   useInsightsServiceHealth,
+  useInsightsSquadOverview,
 } from '@/hooks/useInsights';
+import { ScoutsPlantelTab } from '@/components/olefoot-python-mode/ScoutsPlantelTab';
 import {
   useClubConsequences,
   useConsequenceCounts,
@@ -389,15 +391,19 @@ function LocalFallbackSummary() {
 
 // ─── Main page ─────────────────────────────────────────────────────
 
+type ScoutsTab = 'plantel' | 'impacto';
+
 export function ManagerScouts() {
   const navigate = useNavigate();
   const club = useGameStore((s) => s.club);
   const authUid = useAuthUid();
+  const [tab, setTab] = useState<ScoutsTab>('plantel');
 
   // Python endpoints (passa null se sem auth — hook não dispara fetch)
   const { data: summary, error: summaryError } = useInsightsClubSummary(authUid);
   const { data: consequences } = useInsightsConsequences(authUid);
   const { data: nightReport } = useInsightsNightReport(authUid);
+  const { data: squadOverview } = useInsightsSquadOverview(authUid);
 
   // Probe de saúde do upstream — sem JWT, mede só o serviço
   const { status: serviceStatus, reason: serviceDownReason, lastCheckedAt } =
@@ -521,45 +527,85 @@ export function ManagerScouts() {
         {/* ── Night report (só se Python entregou) ───────────────── */}
         {nightReport && <NightReportSection report={nightReport} />}
 
-        {/* ── Mapa de consequências por dimensão ─────────────────── */}
-        <section aria-label="Mapa de consequências">
-          <div className="flex items-baseline justify-between mb-3">
-            <div>
-              <div
-                className="text-[10px] uppercase tracking-[0.28em] text-white/55"
-                style={{ fontFamily: 'var(--font-ui)' }}
-              >
-                Mapa de Impacto
-              </div>
-              <h2
-                className="text-lg font-display font-black text-white"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Consequências ativas
-              </h2>
-            </div>
-            <div className="text-[11px] text-white/40 tabular-nums">
-              {totalDimensionEntries} total
-            </div>
-          </div>
+        {/* ── Tabs ──────────────────────────────────────────────── */}
+        <div
+          role="tablist"
+          aria-label="Modo de visualização"
+          className="flex items-center gap-1 p-1 rounded-sm bg-white/3 border border-white/8 w-fit"
+        >
+          <button
+            role="tab"
+            aria-selected={tab === 'plantel'}
+            type="button"
+            onClick={() => setTab('plantel')}
+            className={cn(
+              'px-3 py-1.5 rounded-sm text-[11px] font-display font-bold uppercase tracking-[0.18em] transition',
+              tab === 'plantel'
+                ? 'bg-neon-yellow/15 text-neon-yellow'
+                : 'text-white/55 hover:text-white/85',
+            )}
+          >
+            Plantel
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'impacto'}
+            type="button"
+            onClick={() => setTab('impacto')}
+            className={cn(
+              'px-3 py-1.5 rounded-sm text-[11px] font-display font-bold uppercase tracking-[0.18em] transition',
+              tab === 'impacto'
+                ? 'bg-neon-yellow/15 text-neon-yellow'
+                : 'text-white/55 hover:text-white/85',
+            )}
+          >
+            Mapa de impacto
+          </button>
+        </div>
 
-          {totalDimensionEntries === 0 ? (
-            <div className="text-center py-10 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
-              <Sparkles size={24} className="text-white/30 mx-auto mb-2" />
-              <p className="text-sm text-white/55">Nenhuma consequência ativa no momento.</p>
-              <p className="text-[12px] text-white/35 mt-1">
-                Jogue partidas para gerar impactos que sobrevivem entre sessões.
-              </p>
+        {/* ── Conteúdo da tab ──────────────────────────────────── */}
+        {tab === 'plantel' ? (
+          <ScoutsPlantelTab overview={squadOverview} />
+        ) : (
+          <section aria-label="Mapa de consequências">
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <div
+                  className="text-[10px] uppercase tracking-[0.28em] text-white/55"
+                  style={{ fontFamily: 'var(--font-ui)' }}
+                >
+                  Mapa de Impacto
+                </div>
+                <h2
+                  className="text-lg font-display font-black text-white"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  Consequências ativas
+                </h2>
+              </div>
+              <div className="text-[11px] text-white/40 tabular-nums">
+                {totalDimensionEntries} total
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <DimensionCard dimension="physical" entries={byDimension.physical} />
-              <DimensionCard dimension="psychological" entries={byDimension.psychological} />
-              <DimensionCard dimension="reputational" entries={byDimension.reputational} />
-              <DimensionCard dimension="financial" entries={byDimension.financial} />
-            </div>
-          )}
-        </section>
+
+            {totalDimensionEntries === 0 ? (
+              <div className="text-center py-10 px-4 rounded-sm bg-white/3 border border-dashed border-white/10">
+                <Sparkles size={24} className="text-white/30 mx-auto mb-2" />
+                <p className="text-sm text-white/55">Nenhuma consequência ativa no momento.</p>
+                <p className="text-[12px] text-white/35 mt-1">
+                  Jogue partidas para gerar impactos que sobrevivem entre sessões.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <DimensionCard dimension="physical" entries={byDimension.physical} />
+                <DimensionCard dimension="psychological" entries={byDimension.psychological} />
+                <DimensionCard dimension="reputational" entries={byDimension.reputational} />
+                <DimensionCard dimension="financial" entries={byDimension.financial} />
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ── Rodapé de status — explica em texto o que o badge representa ─── */}
         {badgeState !== 'service-up' && (

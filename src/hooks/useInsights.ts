@@ -18,9 +18,13 @@ import {
   fetchConsequences,
   fetchInsightsHealth,
   fetchNightReport,
+  fetchPlayerTransparency,
+  fetchSquadOverview,
   type ClubSummary,
   type ConsequencesByDimension,
   type NightReport,
+  type PlayerTransparency,
+  type SquadOverview,
 } from '@/insights/client';
 
 interface UseInsightsState<T> {
@@ -88,6 +92,18 @@ export function useInsightsNightReport(
 ): UseInsightsState<NightReport> {
   // Night report cache mais longo — só muda 1x por noite
   return useEndpoint(managerId, fetchNightReport, 5 * 60_000);
+}
+
+export function useInsightsSquadOverview(
+  managerId: string | null | undefined,
+): UseInsightsState<SquadOverview> {
+  return useEndpoint(managerId, fetchSquadOverview);
+}
+
+export function useInsightsPlayerTransparency(
+  playerId: string | null | undefined,
+): UseInsightsState<PlayerTransparency> {
+  return useEndpoint(playerId, fetchPlayerTransparency);
 }
 
 /**

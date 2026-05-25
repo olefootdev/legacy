@@ -131,6 +131,7 @@ const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ defaul
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
 const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
+const ManagerScoutsPlayer = lazy(() => import('./pages/ManagerScoutsPlayer').then((m) => ({ default: m.ManagerScoutsPlayer })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
@@ -491,6 +492,7 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/manager/mensagens" element={<ManagerMessages />} />
             <Route path="/manager/network" element={<ManagerNetwork />} />
             <Route path="/manager/scouts" element={<ManagerScouts />} />
+            <Route path="/manager/scouts/player/:playerId" element={<ManagerScoutsPlayer />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
             <Route path="/manager/missoes" element={<Missions />} />
             <Route path="/manager/config" element={<Config />} />

@@ -72,6 +72,60 @@ export interface NightReport {
   new_alerts: number;
 }
 
+// ─── Transparency / squad overview ─────────────────────────────────
+
+export type Severity = 'info' | 'alert' | 'celebration' | 'neutral';
+export type TimelineEventKind = 'consequence_applied' | 'consequence_expired';
+
+export interface ExplainedConsequence {
+  consequence: InsightsConsequence;
+  current_value: number;
+  life_remaining: number;
+  ms_until_expiry: number;
+  title: string;
+  subtitle: string;
+  severity: Severity;
+}
+
+export interface PlayerTimelineEvent {
+  at: string;
+  kind: TimelineEventKind;
+  consequence_id: string;
+  source_event_id: string | null;
+  title: string;
+  subtitle: string;
+  severity: Severity;
+  dimension: Dimension;
+  magnitude: number;
+}
+
+export interface PlayerTransparency {
+  player_id: string;
+  active: ExplainedConsequence[];
+  timeline: PlayerTimelineEvent[];
+  total_active: number;
+  is_unavailable: boolean;
+  most_recent_event_at: string | null;
+}
+
+export interface SquadPlayerEntry {
+  player_id: string;
+  active_count: number;
+  alerts: number;
+  celebrations: number;
+  is_unavailable: boolean;
+  next_expiry_at: string | null;
+  dominant_dimension: Dimension | null;
+}
+
+export interface SquadOverview {
+  manager_id: string;
+  generated_at: string;
+  players: SquadPlayerEntry[];
+  total_players_affected: number;
+  total_unavailable: number;
+}
+
 // ─── HTTP helpers ───────────────────────────────────────────────────
 
 async function authHeader(): Promise<Record<string, string>> {
@@ -116,6 +170,14 @@ export async function fetchClubSummary(managerId: string): Promise<ClubSummary |
 
 export async function fetchNightReport(managerId: string): Promise<NightReport | null> {
   return fetchJson(`/api/insights/club/${encodeURIComponent(managerId)}/night-report`);
+}
+
+export async function fetchSquadOverview(managerId: string): Promise<SquadOverview | null> {
+  return fetchJson(`/api/insights/club/${encodeURIComponent(managerId)}/squad-overview`);
+}
+
+export async function fetchPlayerTransparency(playerId: string): Promise<PlayerTransparency | null> {
+  return fetchJson(`/api/insights/player/${encodeURIComponent(playerId)}/transparency`);
 }
 
 export async function fetchInsightsHealth(): Promise<{ ok: boolean; reason?: string } | null> {

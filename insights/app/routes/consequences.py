@@ -4,6 +4,7 @@ Endpoints de consequências persistentes.
 Todos filtram por manager_id derivado do JWT — RLS-equivalent
 no nível de aplicação (já que usamos service_role server-side).
 """
+from collections import Counter
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
@@ -15,6 +16,8 @@ from ..models import (
     Consequence,
     ConsequencesByDimension,
     EvaluatedConsequence,
+    SquadOverview,
+    SquadPlayerEntry,
 )
 from ..supabase_client import get_supabase, now_iso
 
@@ -102,4 +105,90 @@ async def club_summary(path_manager_id: str, manager_id: ManagerId) -> ClubSumma
         celebrations=celebrations,
         next_expiry_at=next_expiry,
         most_impacted_player_id=most_impacted,
+    )
+
+
+UNAVAILABILITY_KINDS = {
+    "red_card_suspension",
+    "red_card_suspension_repeat",
+    "injury_light_out",
+    "injury_medium_out",
+    "injury_severe_out",
+    "forced_rest",
+}
+
+
+@router.get("/{path_manager_id}/squad-overview", response_model=SquadOverview)
+async def squad_overview(
+    path_manager_id: str, manager_id: ManagerId
+) -> SquadOverview:
+    """
+    Visão por jogador: lista de todos os jogadores com pelo menos 1
+    consequência ativa, agregada por contagens + próxima expiração.
+    Front usa essa rota pra montar a lista de "Plantel" na página SCOUTS.
+    """
+    if path_manager_id != manager_id:
+        raise HTTPException(status_code=403, detail="Manager ID mismatch")
+
+    consequences = await _fetch_active_consequences(manager_id)
+
+    by_player: dict[str, list[Consequence]] = {}
+    for c in consequences:
+        if not c.player_id:
+            continue
+        by_player.setdefault(c.player_id, []).append(c)
+
+    entries: list[SquadPlayerEntry] = []
+    total_unavailable = 0
+
+    for player_id, conseqs in by_player.items():
+        alerts = 0
+        celebrations = 0
+        next_expiry: datetime | None = None
+        dim_counter: Counter[str] = Counter()
+        is_unavailable = False
+
+        for c in conseqs:
+            dim_counter[c.dimension] += 1
+            if c.kind in UNAVAILABILITY_KINDS or c.magnitude < 0:
+                alerts += 1
+            elif c.magnitude > 0:
+                celebrations += 1
+            if c.kind in UNAVAILABILITY_KINDS:
+                is_unavailable = True
+            if next_expiry is None or c.expires_at < next_expiry:
+                next_expiry = c.expires_at
+
+        if is_unavailable:
+            total_unavailable += 1
+
+        dominant = dim_counter.most_common(1)[0][0] if dim_counter else None
+
+        entries.append(
+            SquadPlayerEntry(
+                player_id=player_id,
+                active_count=len(conseqs),
+                alerts=alerts,
+                celebrations=celebrations,
+                is_unavailable=is_unavailable,
+                next_expiry_at=next_expiry,
+                dominant_dimension=dominant,  # type: ignore[arg-type]
+            )
+        )
+
+    # Ordena: indisponíveis primeiro, depois mais alertas, depois mais ativos
+    entries.sort(
+        key=lambda e: (
+            -int(e.is_unavailable),
+            -e.alerts,
+            -e.active_count,
+        )
+    )
+
+    return SquadOverview(
+        manager_id=manager_id,
+        generated_at=datetime.now(timezone.utc),
+        players=entries,
+        total_players_affected=len(entries),
+        total_unavailable=total_unavailable,
     )

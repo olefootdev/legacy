@@ -25,6 +25,12 @@ export interface PlayerEvolutionPoint {
   source: 'match' | 'training_plan' | 'training_light';
   attrs: PlayerAttributes;
   ledger: EvolutionLedgerSlice;
+  /**
+   * Valor de mercado em centavos BRO no instante do snapshot.
+   * Permite reconstruir histórico de preço sem tabela dedicada.
+   * Opcional pra retrocompatibilidade com pontos antigos.
+   */
+  marketValueBroCents?: number;
 }
 
 export type PlayerEvolutionTimelineMap = Record<string, PlayerEvolutionPoint[]>;
@@ -69,11 +75,13 @@ export function appendEvolutionTimelinePoints(
     const pl = players[pid];
     if (!pl) continue;
     const L = ledger[pid] ?? emptyPlayerSeasonLedgerEntry();
+    const mv = (pl as PlayerEntity & { marketValueBroCents?: number }).marketValueBroCents;
     const row: PlayerEvolutionPoint = {
       atIso: now,
       source,
       attrs: cloneAttrs(pl.attrs),
       ledger: sliceFromLedgerEntry(L, mw),
+      ...(typeof mv === 'number' && Number.isFinite(mv) ? { marketValueBroCents: Math.round(mv) } : {}),
     };
     const prev = base[pid] ?? [];
     base[pid] = [...prev, row].slice(-EVOLUTION_TIMELINE_MAX_POINTS);
@@ -145,7 +153,17 @@ export function sanitizePlayerEvolutionTimeline(
       const attrs = sanitizeAttrs((r as PlayerEvolutionPoint).attrs);
       const ledger = sanitizeSlice((r as PlayerEvolutionPoint).ledger);
       if (!attrs || !ledger) continue;
-      cleaned.push({ atIso, source: src, attrs, ledger });
+      const mvRaw = (r as PlayerEvolutionPoint).marketValueBroCents;
+      const mv = typeof mvRaw === 'number' && Number.isFinite(mvRaw) && mvRaw >= 0
+        ? Math.round(mvRaw)
+        : undefined;
+      cleaned.push({
+        atIso,
+        source: src,
+        attrs,
+        ledger,
+        ...(mv !== undefined ? { marketValueBroCents: mv } : {}),
+      });
     }
     if (cleaned.length > 0) out[pid] = cleaned.slice(-EVOLUTION_TIMELINE_MAX_POINTS);
   }
