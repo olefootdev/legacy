@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { WalletSpotToggle } from './WalletSpotToggle';
 import { TradingViewEmbed } from './TradingViewEmbed';
 import { WalletFaq } from './WalletFaq';
+import { Sparkline } from './Sparkline';
 
 export type WalletShellAccount = 'spot' | 'olexp' | 'gat';
 
@@ -12,18 +13,36 @@ export function WalletShell({
   title,
   subtitle,
   heroStats,
+  heroVariant = 'cinematic',
   children,
 }: {
   account: WalletShellAccount;
   title: string;
   subtitle?: string;
-  heroStats?: { label: string; value: string; highlight?: boolean }[];
+  heroStats?: {
+    label: string;
+    value: string;
+    subValue?: string;
+    highlight?: boolean;
+    spark?: number[];
+    sparkPositive?: boolean;
+  }[];
+  /** 'cinematic' = hero alto (88vh). 'compact' = hero menor (~50vh) quando o conteúdo abaixo é rico. */
+  heroVariant?: 'cinematic' | 'compact';
   children: ReactNode;
 }) {
+  const heroMinH =
+    heroVariant === 'compact'
+      ? 'min-h-[52vh] sm:min-h-[58vh]'
+      : 'min-h-[78vh] sm:min-h-[88vh]';
+  const titleSize =
+    heroVariant === 'compact'
+      ? 'clamp(48px, 10vw, 88px)'
+      : 'clamp(64px, 14vw, 120px)';
   return (
     <div className="min-h-screen bg-deep-black">
       {/* ── HERO CINEMATOGRÁFICO ──────────────────────────────────── */}
-      <section className="relative w-full overflow-hidden bg-neon-yellow min-h-[78vh] sm:min-h-[88vh]">
+      <section className={`relative w-full overflow-hidden bg-neon-yellow ${heroMinH}`}>
         {/* Camada amarela sólida */}
         <div className="absolute inset-0 bg-neon-yellow" aria-hidden />
 
@@ -52,7 +71,11 @@ export function WalletShell({
           </div>
 
           {/* Grid: esquerda + direita */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[50vh]">
+          <div
+            className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center ${
+              heroVariant === 'compact' ? 'min-h-[28vh]' : 'min-h-[50vh]'
+            }`}
+          >
             {/* ── ESQUERDA: Título + Descrição ────────────────────────── */}
             <div className="space-y-6 sm:space-y-8">
               {/* Eyebrow */}
@@ -75,7 +98,7 @@ export function WalletShell({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="ole-headline-italic text-black text-center lg:text-left leading-[0.9]"
-                style={{ fontSize: 'clamp(64px, 14vw, 120px)' }}
+                style={{ fontSize: titleSize }}
               >
                 {title}
               </motion.h1>
@@ -120,6 +143,22 @@ export function WalletShell({
                     >
                       {stat.value}
                     </p>
+                    {stat.subValue ? (
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/45 tabular-nums">
+                        {stat.subValue}
+                      </p>
+                    ) : null}
+                    {stat.spark && stat.spark.length > 1 ? (
+                      <div className="mt-3 flex justify-center">
+                        <Sparkline
+                          data={stat.spark}
+                          positive={stat.sparkPositive ?? true}
+                          width={140}
+                          height={28}
+                          className="opacity-80"
+                        />
+                      </div>
+                    ) : null}
                   </motion.div>
                 ))}
               </motion.div>
