@@ -32,9 +32,11 @@ CREATE INDEX IF NOT EXISTS idx_club_consequences_player_expires
   ON public.club_consequences (player_id, expires_at)
   WHERE player_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_club_consequences_dimension_active
-  ON public.club_consequences (dimension, expires_at)
-  WHERE expires_at > now();
+-- Postgres não aceita now() em predicate de index (não é IMMUTABLE).
+-- Index sem WHERE: queries de "consequências ativas por dimensão" continuam
+-- usando este index + filtro WHERE expires_at > now() no runtime.
+CREATE INDEX IF NOT EXISTS idx_club_consequences_dimension_expires
+  ON public.club_consequences (dimension, expires_at);
 
 COMMENT ON TABLE public.club_consequences IS
   'Persistent overlay effects with temporal decay. TS reducer applies overlay; Python /insights aggregates for projections.';
