@@ -44,6 +44,20 @@ import {
   tickHealthRecovery,
 } from '@/systems/playerHealth/reducer';
 import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
+// OLEFOOT PYTHON MODE — wire-up dos sistemas A + E
+import {
+  EMPTY_CONSEQUENCE_STORE,
+  addManyConsequences,
+  tickConsequences,
+} from '@/systems/consequences/store';
+import {
+  eventsFromMatchSummary,
+  materializeBatch,
+} from '@/systems/consequences/handlers';
+import { buildImpactSummary } from '@/systems/consequences/fromLiveMatch';
+import { recordCheckIn } from '@/systems/engagement/checkIn';
+import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
+import { attemptClaim } from '@/systems/engagement/loginBonus';
 import { applyHealthEffect } from '@/systems/playerHealth/reducer';
 import { generateProactiveHealthActions } from '@/coach/proactiveHealthActions';
 import { applyMatchResultToMoral, createDefaultMoral, updateFormStreak } from '@/systems/playerMoral/types';
@@ -2003,6 +2017,25 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
 
       // Gerar propostas proativas do Coach baseadas em saúde pós-jogo.
+      // ─── OLEFOOT PYTHON MODE — gera consequências persistentes ──
+      const managerIdForImpact =
+        state.userSettings?.managerProfile?.email ?? state.club.id ?? 'guest';
+      const impactSummary = buildImpactSummary({
+        lm,
+        scoutResult,
+        managerId: managerIdForImpact,
+        clubId: state.club.id,
+        matchId: state.nextFixture.id ?? `match-${Date.now()}`,
+      });
+      const impactEvents = eventsFromMatchSummary(impactSummary);
+      const newConsequences = materializeBatch(impactEvents);
+      const prevStore = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const tickedStore = tickConsequences(prevStore, Date.now()).next;
+      const consequenceStore = newConsequences.length
+        ? addManyConsequences(tickedStore, newConsequences)
+        : tickedStore;
+      // ─────────────────────────────────────────────────────────────
+
       const stateAfterMatch: OlefootGameState = {
         ...state,
         finance,
@@ -2021,6 +2054,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         streakChallenges,
         competitiveRanking,
         localLeagues,
+        consequenceStore,
       };
       let manager = stateAfterMatch.manager;
       if (manager.coach) {
@@ -5260,6 +5294,64 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
     case 'RESET_GLOBAL_LEAGUE_MVP':
       return handleResetGlobalLeagueMVP(state);
+
+    // ─── OLEFOOT PYTHON MODE ─────────────────────────────────────────
+    case 'RECORD_CHECK_IN': {
+      const now = Date.now();
+      const nextPresence = recordCheckIn(state.managerPresence, action.managerId, now);
+      // Snapshot da ausência ANTES de atualizar lastLoginAt — UI usa pra avisar.
+      const absence = evaluateAbsence(state.managerPresence, now);
+      return {
+        ...state,
+        managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+      };
+    }
+
+    case 'CLAIM_LOGIN_BONUS': {
+      const now = Date.now();
+      // Garante presença mínima (caso UI dispatche antes de RECORD_CHECK_IN)
+      const presence = state.managerPresence ?? recordCheckIn(undefined, 'guest', now);
+      const { result, nextPresence } = attemptClaim(presence, now);
+
+      // Se claim teve sucesso e é EXP, credita no saldo
+      let finance = state.finance;
+      if (result.claimed && result.reward?.kind?.startsWith('exp_') && result.reward.expAmount) {
+        const rounded = Math.round(result.reward.expAmount);
+        finance = {
+          ...finance,
+          ole: Math.max(0, Math.round((finance.ole ?? 0) + rounded)),
+          expLifetimeEarned: (finance.expLifetimeEarned ?? 0) + rounded,
+        };
+      }
+      return {
+        ...state,
+        managerPresence: nextPresence,
+        lastLoginBonusClaim: result,
+        finance,
+      };
+    }
+
+    case 'CLEAR_LAST_BONUS_CLAIM':
+      return { ...state, lastLoginBonusClaim: undefined };
+
+    case 'ADD_CONSEQUENCES': {
+      if (!action.consequences.length) return state;
+      const store = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      return {
+        ...state,
+        consequenceStore: addManyConsequences(store, action.consequences),
+      };
+    }
+
+    case 'TICK_CONSEQUENCES': {
+      const store = state.consequenceStore ?? EMPTY_CONSEQUENCE_STORE;
+      const { next } = tickConsequences(store, Date.now());
+      // Só atualiza se algo expirou (evita re-render desnecessário)
+      if (Object.keys(next.active).length === Object.keys(store.active).length) {
+        return state;
+      }
+      return { ...state, consequenceStore: next };
+    }
 
     default:
       return state;

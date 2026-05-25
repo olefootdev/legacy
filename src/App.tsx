@@ -175,6 +175,16 @@ function RequireAdmin() {
 function RequireRegistration() {
   const hasProfile = useGameStore((s) => !!s.userSettings?.managerProfile);
   const hasSquad = useGameStore((s) => Object.keys(s.players ?? {}).length > 0);
+  const managerEmail = useGameStore((s) => s.userSettings?.managerProfile?.email);
+  const dispatch = useGameDispatch();
+
+  // OLEFOOT PYTHON MODE — registra presença + tick de consequências expiradas
+  useEffect(() => {
+    if (!managerEmail) return;
+    dispatch({ type: 'RECORD_CHECK_IN', managerId: managerEmail });
+    dispatch({ type: 'TICK_CONSEQUENCES' });
+  }, [managerEmail, dispatch]);
+
   const registered = isDevRegistrationBypassed() || hasProfile;
   if (!registered) return <Navigate to="/login" replace />;
   return <Outlet />;
