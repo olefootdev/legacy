@@ -569,6 +569,8 @@ export type GameAction =
   | { type: 'UPDATE_STREAK_CHALLENGES'; currentStreak: number; won: boolean }
   /** Sprint 3: Renovar desafios semanais */
   | { type: 'REFRESH_STREAK_CHALLENGES' }
+  /** Resgatar recompensa de desafio semanal completado (credita reward.ole + reward.exp em finance.ole) */
+  | { type: 'CLAIM_STREAK_CHALLENGE_REWARD'; challengeId: string }
   | { type: 'MERGE_PLAYERS'; players: Record<string, PlayerEntity> }
   /** Substitui o plantel (ex.: sincronizar só com genesis_market_players); sanitiza escalação e mercado. */
   | { type: 'SET_PLAYERS_RECORD'; players: Record<string, PlayerEntity> }

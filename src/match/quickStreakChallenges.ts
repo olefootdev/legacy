@@ -19,6 +19,7 @@ export interface StreakChallenge {
   };
   expiresAt: string;
   completed: boolean;
+  claimed?: boolean;
 }
 
 export interface StreakChallengesState {
@@ -47,7 +48,7 @@ export function generateWeeklyChallenges(): StreakChallenge[] {
       difficulty: 'easy',
       target: 3,
       progress: 0,
-      reward: { ole: 150, exp: 30 },
+      reward: { ole: 2500, exp: 500 },
       expiresAt,
       completed: false,
     },
@@ -58,7 +59,7 @@ export function generateWeeklyChallenges(): StreakChallenge[] {
       difficulty: 'medium',
       target: 5,
       progress: 0,
-      reward: { ole: 500, exp: 100, item: 'rare_contract' },
+      reward: { ole: 8000, exp: 2000, item: 'rare_contract' },
       expiresAt,
       completed: false,
     },
@@ -69,7 +70,7 @@ export function generateWeeklyChallenges(): StreakChallenge[] {
       difficulty: 'hard',
       target: 10,
       progress: 0,
-      reward: { ole: 1500, exp: 300, item: 'epic_pack' },
+      reward: { ole: 25000, exp: 5000, item: 'epic_pack' },
       expiresAt,
       completed: false,
     },

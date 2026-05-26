@@ -30,52 +30,54 @@ const CHALLENGE_TEMPLATES: Record<ChallengeType, { title: string; description: s
     title: 'Vencedor',
     description: 'Vence {target} partidas rápidas',
     targetRange: [2, 5],
-    rewardBase: 150,
+    rewardBase: 1500,
   },
   score_goals: {
     title: 'Artilheiro',
     description: 'Marca {target} golos em partidas rápidas',
     targetRange: [3, 8],
-    rewardBase: 100,
+    rewardBase: 1000,
   },
   win_streak: {
     title: 'Imparável',
     description: 'Conquista uma sequência de {target} vitórias',
     targetRange: [3, 5],
-    rewardBase: 250,
+    rewardBase: 2500,
   },
   clean_sheet: {
     title: 'Muralha',
     description: 'Vence {target} partidas sem sofrer golos',
     targetRange: [1, 3],
-    rewardBase: 200,
+    rewardBase: 2000,
   },
   comeback: {
     title: 'Virada Épica',
     description: 'Vira {target} partidas estando a perder',
     targetRange: [1, 2],
-    rewardBase: 300,
+    rewardBase: 3000,
   },
   dominant_win: {
     title: 'Dominação',
     description: 'Vence por {target}+ golos de diferença',
     targetRange: [3, 5],
-    rewardBase: 200,
+    rewardBase: 2000,
   },
   quick_goals: {
     title: 'Início Fulminante',
     description: 'Marca nos primeiros 15 minutos em {target} partidas',
     targetRange: [2, 4],
-    rewardBase: 150,
+    rewardBase: 1500,
   },
 };
 
 export function generateDailyChallenges(seed: string): DailyChallenge[] {
-  // Use date as seed for consistent daily challenges
-  const hash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  // PRNG determinístico (LCG) — mesma seed = mesmos challenges no dia, mas cada
+  // chamada de rng() avança o estado interno. O algoritmo original usava
+  // Math.sin(hash) que retornava valor constante → while loop infinito.
+  let s = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1;
   const rng = () => {
-    const x = Math.sin(hash) * 10000;
-    return x - Math.floor(x);
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
   };
 
   const types = Object.keys(CHALLENGE_TEMPLATES) as ChallengeType[];
@@ -94,7 +96,7 @@ export function generateDailyChallenges(seed: string): DailyChallenge[] {
     const template = CHALLENGE_TEMPLATES[type];
     const [min, max] = template.targetRange;
     const target = Math.floor(min + rng() * (max - min + 1));
-    const reward = template.rewardBase + Math.floor(rng() * 50);
+    const reward = template.rewardBase + Math.floor(rng() * 500);
 
     return {
       id: `daily_${seed}_${index}`,

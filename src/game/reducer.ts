@@ -932,6 +932,44 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
+    case 'CLAIM_STREAK_CHALLENGE_REWARD': {
+      if (!state.streakChallenges) return state;
+      const challenge = state.streakChallenges.challenges.find((c) => c.id === action.challengeId);
+      if (!challenge || !challenge.completed || challenge.claimed) return state;
+
+      // ole e exp aqui são nomenclatura legada — ambos vão pro mesmo saldo (finance.ole === expBalance).
+      const totalReward = challenge.reward.ole + challenge.reward.exp;
+      let finance = grantEarnedExp(state.finance, totalReward);
+      finance = withExpHistory(finance, totalReward, `Desafio semanal: ${challenge.name}`);
+
+      const challenges = state.streakChallenges.challenges.map((c) =>
+        c.id === action.challengeId ? { ...c, claimed: true } : c,
+      );
+
+      const inbox = [
+        makeInboxItem(
+          `streak-challenge-${Date.now()}`,
+          'FINANCE_EXP_GAIN',
+          'DESAFIOS',
+          `+${totalReward} EXP — ${challenge.name}`,
+          {
+            body: `Completaste o desafio semanal "${challenge.name}". Recompensa creditada.`,
+            deepLink: '/wallet',
+          },
+        ),
+        ...state.inbox,
+      ].slice(0, 14);
+
+      return {
+        ...state,
+        finance,
+        inbox,
+        streakChallenges: {
+          ...state.streakChallenges,
+          challenges,
+        },
+      };
+    }
     case 'BEGIN_PLAY_FROM_PREGAME': {
       if (!state.liveMatch || state.liveMatch.phase !== 'pregame') return state;
       const kick: MatchEventEntry = {

@@ -44,6 +44,9 @@ import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
 import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
+import { DailyChallengesCard } from '@/components/match/DailyChallengesCard';
+import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
+import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -181,6 +184,20 @@ export function Home() {
   const awayCrestUrl = useGameStore(
     (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
   );
+  const dailyChallenges = useGameStore((s) => s.dailyChallenges);
+  const streakChallenges = useGameStore((s) => s.streakChallenges);
+
+  // Inicializa/renova engagement state quando user abre a Home.
+  // Daily reseta por UTC day; streak por semana. Garante que o progress tracker
+  // do reducer encontre o state já populado (ele só atua quando state existe).
+  useEffect(() => {
+    if (!dailyChallenges || shouldResetDailyChallenges(dailyChallenges.lastResetDate)) {
+      dispatch({ type: 'RESET_DAILY_CHALLENGES' });
+    }
+    if (!streakChallenges || shouldRefreshChallenges(streakChallenges)) {
+      dispatch({ type: 'REFRESH_STREAK_CHALLENGES' });
+    }
+  }, [dispatch, dailyChallenges, streakChallenges]);
 
   // Adiciona notificação de boas-vindas na primeira visita
   useEffect(() => {
@@ -869,10 +886,19 @@ export function Home() {
         <HomeHeroLegacy scrollCueTargetId="home-below-fold" />
       </section>
 
-      {/* OLEFOOT PYTHON MODE — alerta de ausência + bonus de login */}
+      {/* OLEFOOT PYTHON MODE — alerta de ausência + bonus de login + desafios diários */}
       <section aria-label="Estado do clube" className="space-y-2.5">
         <AbsenceBanner />
         <LoginBonusWidget />
+        {dailyChallenges && dailyChallenges.challenges.length > 0 && (
+          <DailyChallengesCard
+            challenges={dailyChallenges.challenges}
+            onClaimReward={(challengeId) =>
+              dispatch({ type: 'CLAIM_CHALLENGE_REWARD', challengeId })
+            }
+            compact
+          />
+        )}
       </section>
 
       {/* HERO LEGADO — temporariamente desabilitado pelo HomeHeroLegacy. */}

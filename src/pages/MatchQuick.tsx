@@ -3755,7 +3755,12 @@ export function MatchQuick() {
               className="border border-[var(--color-border)] bg-dark-gray p-4"
               style={{ borderRadius: 'var(--radius-md)' }}
             >
-              <QuickStreakChallengesPanel challenges={streakChallenges.challenges} />
+              <QuickStreakChallengesPanel
+                challenges={streakChallenges.challenges}
+                onClaimReward={(challengeId) =>
+                  dispatch({ type: 'CLAIM_STREAK_CHALLENGE_REWARD', challengeId })
+                }
+              />
             </div>
           )}
 

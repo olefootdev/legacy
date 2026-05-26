@@ -11,9 +11,10 @@ import { cn } from '@/lib/utils';
 
 interface Props {
   challenges: StreakChallenge[];
+  onClaimReward?: (challengeId: string) => void;
 }
 
-export function QuickStreakChallengesPanel({ challenges }: Props) {
+export function QuickStreakChallengesPanel({ challenges, onClaimReward }: Props) {
   const formatTimeRemaining = (expiresAt: string): string => {
     const now = new Date();
     const expires = new Date(expiresAt);
@@ -66,24 +67,42 @@ export function QuickStreakChallengesPanel({ challenges }: Props) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-white">{challenge.name}</span>
-                      {isCompleted && (
+                      {isCompleted && !challenge.claimed && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold">
                           ✓ Completo
+                        </span>
+                      )}
+                      {challenge.claimed && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-bold">
+                          ✓ Resgatado
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-white/60 mt-0.5">{challenge.description}</p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-xs font-bold text-yellow-400">
-                    {challenge.reward.ole} OLE
-                  </div>
-                  <div className="text-xs text-blue-400">{challenge.reward.exp} EXP</div>
-                  {challenge.reward.item && (
-                    <div className="text-xs text-purple-400 mt-0.5">
-                      +{challenge.reward.item}
+                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                  <div>
+                    <div className="text-xs font-bold text-yellow-400">
+                      +{challenge.reward.ole + challenge.reward.exp} EXP
                     </div>
+                    {challenge.reward.item && (
+                      <div className="text-xs text-purple-400 mt-0.5">
+                        +{challenge.reward.item}
+                      </div>
+                    )}
+                  </div>
+                  {isCompleted && !challenge.claimed && onClaimReward && (
+                    <motion.button
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => onClaimReward(challenge.id)}
+                      className="text-[10px] bg-neon-yellow text-black px-2.5 py-1 rounded font-bold uppercase tracking-wider"
+                    >
+                      Resgatar
+                    </motion.button>
                   )}
                 </div>
               </div>
