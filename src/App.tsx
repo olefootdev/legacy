@@ -42,7 +42,14 @@ function SessionGuard() {
   useEffect(() => {
     // Não age em rotas públicas
     const path = window.location.pathname;
-    if (path === '/login' || path === '/cadastro' || path.startsWith('/admin') || path === '/reset-password') return;
+    if (
+      path === '/login' ||
+      path === '/cadastro' ||
+      path.startsWith('/cadastro/') ||
+      path.startsWith('/admin') ||
+      path === '/reset-password'
+    )
+      return;
 
     // Só age se houver save local — sem save não há nada a limpar
     const hasSave = Object.keys(localStorage).some(k => k.startsWith('olefoot'));
@@ -454,6 +461,7 @@ as a nice MVP. Let's Play Together! ⚽
           <Route element={<RedirectIfRegistered />}>
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/cadastro/:inviteCode" element={<Cadastro />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<RequireRegistration />}>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { User, Shield, Heart, ArrowRight, ArrowLeft, Check, Sparkles, Trophy, Users, Briefcase, Mic, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COUNTRY_DIAL_OPTIONS, isoToFlag, type CountryDialOption } from '@/lib/countryDialCodes';
@@ -324,10 +324,17 @@ export function Cadastro() {
   const [initialsTaken, setInitialsTaken] = useState(false);
   const [initialsChecking, setInitialsChecking] = useState(false);
 
+  const { inviteCode: inviteCodeFromPath } = useParams<{ inviteCode?: string }>();
+  const [referrerFromInvite, setReferrerFromInvite] = useState(false);
   useEffect(() => {
-    const p = readPendingReferrerCode();
-    if (p) setReferrerCode(p);
-  }, []);
+    // Prioridade: código no path (/cadastro/:inviteCode) > sessionStorage (legacy).
+    const fromPath = inviteCodeFromPath ? normalizeReferralCode(inviteCodeFromPath) : null;
+    const p = fromPath ?? readPendingReferrerCode();
+    if (p) {
+      setReferrerCode(p);
+      setReferrerFromInvite(true);
+    }
+  }, [inviteCodeFromPath]);
 
   useEffect(() => {
     setEmailTaken(false);
@@ -625,15 +632,25 @@ export function Cadastro() {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-white/65">
-                Código de indicação <span className="text-white/35">(opcional)</span>
+              <span className="mb-1 flex items-center justify-between text-xs font-medium text-white/65">
+                <span>
+                  Código de indicação <span className="text-white/35">(opcional)</span>
+                </span>
+                {referrerFromInvite && normalizeReferralCode(referrerCode) ? (
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                    ✓ Convite aplicado
+                  </span>
+                ) : null}
               </span>
               <input
                 className={inputClass}
                 value={referrerCode}
-                onChange={(e) => setReferrerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5))}
-                placeholder="ex. A3XY2"
-                maxLength={5}
+                onChange={(e) => {
+                  setReferrerCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
+                  setReferrerFromInvite(false);
+                }}
+                placeholder="ex. ABC123XY"
+                maxLength={8}
                 autoComplete="off"
               />
               <p className="mt-1 text-[10px] text-white/35">

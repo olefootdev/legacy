@@ -37,8 +37,11 @@ export function ReferralLanding() {
     }
 
     if (!registered) {
+      // Path-based é mais robusto que sessionStorage (sobrevive in-app browsers, refresh,
+      // redirect de confirmação Supabase, etc). Mantemos o sessionStorage como cinto
+      // duplo caso o usuário, por qualquer motivo, volte pra /cadastro sem o param.
       setPendingReferrerCode(norm);
-      navigate('/cadastro', { replace: true });
+      navigate(`/cadastro/${norm}`, { replace: true });
       return;
     }
     if (!sponsorId && !sponsorDispatchAttempted.current) {

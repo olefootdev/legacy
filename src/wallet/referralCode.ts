@@ -104,7 +104,7 @@ export function inviteLinkForCode(code: string): string {
   const n = normalizeReferralCode(code);
   if (!n) return '';
   if (typeof window !== 'undefined' && window.location?.origin) {
-    return `${window.location.origin}/${n}`;
+    return `${window.location.origin}/cadastro/${n}`;
   }
-  return `/${n}`;
+  return `/cadastro/${n}`;
 }
