@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGameDispatch } from '@/game/store';
+import { useGameDispatch, getGameState } from '@/game/store';
 import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
-import { fetchMyReferralCode } from '@/supabase/referrals';
+import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 
 // A/B Test: 3 propostas de valor
@@ -213,6 +213,16 @@ export function Login() {
         }
       } catch (e) {
         console.warn('[Login] referral code sync skipped', e);
+      }
+      // Sincroniza lifetime EXP local com o servidor. Trigger no banco detecta
+      // delta e credita 5% de comissão pro referrer (se houver).
+      try {
+        const lifetimeLocal = Number(
+          (getGameState().finance as { expLifetimeEarned?: number }).expLifetimeEarned ?? 0,
+        );
+        if (lifetimeLocal > 0) await syncMyExpLifetime(lifetimeLocal);
+      } catch (e) {
+        console.warn('[Login] exp lifetime sync skipped', e);
       }
       // [2026-05-18] Auto-grant silencioso REMOVIDO. Se o plantel está vazio,
       // o OnboardingCeremony entra em cena e o manager passa pelos 6 capítulos

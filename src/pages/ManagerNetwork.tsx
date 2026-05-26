@@ -67,12 +67,20 @@ export function ManagerNetwork() {
     () =>
       serverReferrals.map((r) => ({
         id: r.id,
-        clubName: r.displayName ?? r.clubName ?? 'Manager',
+        displayName: r.displayName ?? 'Manager',
+        clubName: r.clubName ?? null,
         clubShort: r.clubShort,
         level: 1 as number,
         joinedAt: r.createdAt,
+        lifetime: r.expLifetimeEarned,
+        commission: r.commissionEarned,
       })),
     [serverReferrals],
+  );
+
+  const totalCommissionEarned = useMemo(
+    () => referrals.reduce((sum, r) => sum + r.commission, 0),
+    [referrals],
   );
 
   const blockedManagerIds = useMemo(() => {
@@ -466,6 +474,24 @@ export function ManagerNetwork() {
             )}
           </div>
 
+          {/* Comissão total acumulada — destaque quando há indicados */}
+          {!loadingReferrals && referrals.length > 0 && (
+            <div className="bg-gradient-to-r from-neon-yellow/10 to-neon-yellow/5 border border-neon-yellow/30 rounded-sm p-3 flex items-center justify-between">
+              <div>
+                <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
+                  Comissão acumulada da tua rede
+                </p>
+                <p className="text-[10px] text-white/50 mt-0.5">
+                  5% sobre todo EXP ganho pelos teus indicados
+                </p>
+              </div>
+              <p className="font-display text-xl font-black text-neon-yellow tabular-nums tracking-tight">
+                +{totalCommissionEarned.toLocaleString('pt-BR')}
+                <span className="text-[10px] ml-1 text-neon-yellow/70">EXP</span>
+              </p>
+            </div>
+          )}
+
           {loadingReferrals ? (
             <div className="bg-panel border border-dashed border-white/10 rounded-sm p-6 text-center">
               <p className="text-xs text-gray-500 uppercase tracking-wider">A carregar a tua rede…</p>
@@ -494,36 +520,57 @@ export function ManagerNetwork() {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + idx * 0.05 }}
-                  className="flex items-center justify-between gap-3 bg-panel border border-cyan-500/10 rounded-sm p-4 hover:border-cyan-500/30 transition-colors"
+                  className="bg-panel border border-cyan-500/10 rounded-sm p-4 hover:border-cyan-500/30 transition-colors"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display text-sm font-bold text-white truncate">
-                      {ref.clubName}
-                    </p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      {ref.clubShort && (
-                        <>
-                          <span className="font-mono">{ref.clubShort}</span>
-                          <span>·</span>
-                        </>
-                      )}
-                      <span>Nível {ref.level}</span>
-                      <span>·</span>
-                      <span>Entrou em {new Date(ref.joinedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'px-2 py-1 rounded-sm font-display text-[9px] font-black uppercase tracking-wider',
-                        ref.level === 1 && 'bg-cyan-500/20 text-cyan-300',
-                        ref.level === 2 && 'bg-violet-500/20 text-violet-300',
-                        ref.level === 3 && 'bg-purple-500/20 text-purple-300',
-                      )}
-                    >
+                  {/* Header: nome + clube + L1 badge */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-sm font-bold text-white truncate">
+                        {ref.displayName}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mt-0.5">
+                        {ref.clubShort && (
+                          <>
+                            <span className="font-mono text-cyan-300/80">{ref.clubShort}</span>
+                            <span className="text-white/30">·</span>
+                          </>
+                        )}
+                        {ref.clubName && (
+                          <>
+                            <span className="truncate">{ref.clubName}</span>
+                            <span className="text-white/30">·</span>
+                          </>
+                        )}
+                        <span className="whitespace-nowrap">
+                          {new Date(ref.joinedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                        </span>
+                      </p>
+                    </div>
+                    <span className="shrink-0 px-2 py-1 rounded-sm font-display text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300">
                       L{ref.level}
                     </span>
-                    <ArrowRight className="w-4 h-4 text-white/30" />
+                  </div>
+
+                  {/* Stats: EXP do indicado + comissão recebida */}
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/5">
+                    <div className="text-center">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-[0.18em] mb-1">
+                        Já ganhou
+                      </p>
+                      <p className="font-display text-base font-bold text-white tabular-nums">
+                        {ref.lifetime.toLocaleString('pt-BR')}
+                      </p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider">EXP</p>
+                    </div>
+                    <div className="text-center border-l border-white/5">
+                      <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.18em] mb-1">
+                        Tua comissão (5%)
+                      </p>
+                      <p className="font-display text-base font-bold text-neon-yellow tabular-nums">
+                        +{ref.commission.toLocaleString('pt-BR')}
+                      </p>
+                      <p className="text-[9px] text-neon-yellow/70 uppercase tracking-wider">EXP</p>
+                    </div>
                   </div>
                 </motion.div>
               ))}

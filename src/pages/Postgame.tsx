@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Trophy, ArrowRight, Star, Megaphone } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { trackMissionEvent } from '@/progression/trackEvent';
+import { syncMyExpLifetime } from '@/supabase/referrals';
 
 type TeamStats = {
   passesOk: number;
@@ -42,6 +43,9 @@ export default function Postgame() {
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
   const clubName = useGameStore((s) => s.club.name);
+  const expLifetimeEarned = useGameStore(
+    (s) => (s.finance as { expLifetimeEarned?: number }).expLifetimeEarned ?? 0,
+  );
 
   useEffect(() => {
     if (!live) {
@@ -56,6 +60,11 @@ export default function Postgame() {
     const awayScore = live.awayScore ?? 0;
     if (homeScore > awayScore) trackMissionEvent('match_won');
     if (homeScore > 0) trackMissionEvent('goal_scored', homeScore);
+    // Sync lifetime EXP com o servidor. Trigger credita 5% de comissão pro
+    // referrer se houver. Fire-and-forget: não bloqueia UI.
+    if (expLifetimeEarned > 0) {
+      void syncMyExpLifetime(expLifetimeEarned);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {

@@ -19,6 +19,10 @@ export interface ReferredProfile {
   clubName: string | null;
   clubShort: string | null;
   createdAt: string;
+  /** Quanto EXP este indicado já acumulou no jogo (snapshot do server). */
+  expLifetimeEarned: number;
+  /** Quanto o referrer já recebeu de comissão (5%) sobre esse indicado. */
+  commissionEarned: number;
 }
 
 export async function fetchMyReferralCode(): Promise<string | null> {
@@ -47,11 +51,33 @@ export async function fetchMyReferrals(): Promise<ReferredProfile[]> {
     club_name: string | null;
     club_short: string | null;
     created_at: string;
+    exp_lifetime_earned?: number | string | null;
+    commission_earned?: number | string | null;
   }) => ({
     id: row.id,
     displayName: row.display_name ?? null,
     clubName: row.club_name ?? null,
     clubShort: row.club_short ?? null,
     createdAt: row.created_at,
+    expLifetimeEarned: Number(row.exp_lifetime_earned ?? 0),
+    commissionEarned: Number(row.commission_earned ?? 0),
   }));
+}
+
+/**
+ * Sincroniza o lifetime EXP local com o profile do servidor.
+ * Server-side é monotônico: nunca regride. Idempotente — chamar várias vezes
+ * com o mesmo valor é seguro.
+ *
+ * O trigger `profiles_referral_exp_commission_trg` detecta o delta e cria
+ * a comissão de 5% pro referrer (se existir).
+ */
+export async function syncMyExpLifetime(amount: number): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) return;
+  if (!Number.isFinite(amount) || amount < 0) return;
+  const { error } = await sb.rpc('sync_my_exp_lifetime', { p_amount: Math.floor(amount) });
+  if (error) {
+    console.warn('[referrals] syncMyExpLifetime:', error.message);
+  }
 }
