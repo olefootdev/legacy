@@ -3,7 +3,7 @@
  * Solicitações de amizade + Indicações cadastradas + Link de indicação
  * Design system: HERO amarelo editorial + cards padrão do jogo
  */
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Network,
@@ -23,6 +23,7 @@ import { useGameDispatch, useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode, normalizeReferralCode } from '@/wallet/referralCode';
+import { fetchMyReferrals, type ReferredProfile } from '@/supabase/referrals';
 
 export function ManagerNetwork() {
   const dispatch = useGameDispatch();
@@ -44,15 +45,35 @@ export function ManagerNetwork() {
   const myReferralCode = wallet.myReferralCode ?? '';
   const inviteLink = myReferralCode ? inviteLinkForCode(myReferralCode) : '';
 
-  // Indicações cadastradas
-  const referrals = useMemo(() => {
-    return wallet.referralTree.map((node) => ({
-      id: node.userId,
-      clubName: `Clube ${node.userId.slice(0, 6)}`,
-      level: node.level,
-      joinedAt: node.createdAt,
-    }));
-  }, [wallet.referralTree]);
+  // Indicações cadastradas — fonte autoritativa é o Supabase (RPC get_my_referrals).
+  // wallet.referralTree é zustand local e não reflete cadastros via link.
+  const [serverReferrals, setServerReferrals] = useState<ReferredProfile[]>([]);
+  const [loadingReferrals, setLoadingReferrals] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const list = await fetchMyReferrals();
+      if (cancelled) return;
+      setServerReferrals(list);
+      setLoadingReferrals(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const referrals = useMemo(
+    () =>
+      serverReferrals.map((r) => ({
+        id: r.id,
+        clubName: r.displayName ?? r.clubName ?? 'Manager',
+        clubShort: r.clubShort,
+        level: 1 as number,
+        joinedAt: r.createdAt,
+      })),
+    [serverReferrals],
+  );
 
   const blockedManagerIds = useMemo(() => {
     const ids = new Set<string>();
@@ -264,7 +285,7 @@ export function ManagerNetwork() {
                   fontSize: 'clamp(20px, 4vw, 36px)',
                 }}
               >
-                {referrals.length}
+                {loadingReferrals ? '…' : referrals.length}
               </p>
               <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
                 Indicações
@@ -445,7 +466,11 @@ export function ManagerNetwork() {
             )}
           </div>
 
-          {referrals.length === 0 ? (
+          {loadingReferrals ? (
+            <div className="bg-panel border border-dashed border-white/10 rounded-sm p-6 text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-wider">A carregar a tua rede…</p>
+            </div>
+          ) : referrals.length === 0 ? (
             <div className="bg-panel border border-dashed border-white/10 rounded-sm p-6 text-center">
               <Sparkles className="w-10 h-10 text-white/20 mx-auto mb-3" />
               <p className="text-sm text-gray-500 mb-2">Nenhuma indicação ainda</p>
@@ -475,8 +500,16 @@ export function ManagerNetwork() {
                     <p className="font-display text-sm font-bold text-white truncate">
                       {ref.clubName}
                     </p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">
-                      Nível {ref.level} · Entrou em {new Date(ref.joinedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                      {ref.clubShort && (
+                        <>
+                          <span className="font-mono">{ref.clubShort}</span>
+                          <span>·</span>
+                        </>
+                      )}
+                      <span>Nível {ref.level}</span>
+                      <span>·</span>
+                      <span>Entrou em {new Date(ref.joinedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
                     </p>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
