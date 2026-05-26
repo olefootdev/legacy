@@ -206,6 +206,14 @@ export interface FinanceState {
     source: string;
     createdAt: string;
   }>;
+  /**
+   * Renda passiva contínua de estruturas (estádio + megaloja). Tick implícito:
+   * EXP acumula entre `lastClaimAt` e agora, capado em
+   * PASSIVE_INCOME_MAX_OFFLINE_HOURS. Resgatado via CLAIM_PASSIVE_STRUCTURE_INCOME.
+   */
+  passiveIncome?: {
+    lastClaimAt: string;
+  };
   /** BRO em centavos (0,01 BRO); paridade de referência de produto 1 BRO ≈ 1 USD. */
   broCents: number;
   broLifetimeInCents?: number;

@@ -44,6 +44,7 @@ import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
 import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
+import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
 import { DailyChallengesCard } from '@/components/match/DailyChallengesCard';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
@@ -890,6 +891,7 @@ export function Home() {
       <section aria-label="Estado do clube" className="space-y-2.5">
         <AbsenceBanner />
         <LoginBonusWidget />
+        <PassiveIncomeWidget />
         {dailyChallenges && dailyChallenges.challenges.length > 0 && (
           <DailyChallengesCard
             challenges={dailyChallenges.challenges}

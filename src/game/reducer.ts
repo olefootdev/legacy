@@ -128,6 +128,7 @@ import type { ManagerProspectContractGames } from '@/playerContracts/playerContr
 import { tryUpgradeStructure } from '@/clubStructures/upgrade';
 import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { STRUCTURE_LABELS, LEDGER_REASON_EXP, LEDGER_REASON_BRO } from '@/clubStructures/types';
+import { calculatePassiveAccrual } from '@/clubStructures/passiveIncome';
 import { gatCategoryForStructure } from '@/clubStructures/gatCategory';
 import {
   effectiveCrowdSupportPercent,
@@ -3604,6 +3605,38 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const norm = String(action.code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!norm || norm === w.myReferralCode) return state;
       return syncWalletToFinance(state, { ...w, myReferralCode: norm });
+    }
+    case 'CLAIM_PASSIVE_STRUCTURE_INCOME': {
+      const accrued = calculatePassiveAccrual(
+        state.structures,
+        state.finance.passiveIncome?.lastClaimAt ?? null,
+      );
+      const nowIso = new Date().toISOString();
+      if (accrued <= 0) {
+        // Nada a creditar — só inicia o relógio se ainda não existe lastClaimAt
+        if (state.finance.passiveIncome?.lastClaimAt) return state;
+        return {
+          ...state,
+          finance: { ...state.finance, passiveIncome: { lastClaimAt: nowIso } },
+        };
+      }
+      let finance = grantEarnedExp(state.finance, accrued);
+      finance = withExpHistory(finance, accrued, 'Receita de estruturas');
+      finance = { ...finance, passiveIncome: { lastClaimAt: nowIso } };
+      const inbox = [
+        makeInboxItem(
+          `passive-income-${Date.now()}`,
+          'FINANCE_EXP_GAIN',
+          'FINANCEIRO',
+          `+${accrued.toLocaleString('pt-BR')} EXP — receita de estruturas`,
+          {
+            body: `Estádio e megaloja geraram ${accrued.toLocaleString('pt-BR')} EXP enquanto estavas fora.`,
+            deepLink: '/clube/estruturas',
+          },
+        ),
+        ...state.inbox,
+      ].slice(0, 14);
+      return { ...state, finance, inbox };
     }
     case 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP': {
       const amount = Math.floor(action.amount);

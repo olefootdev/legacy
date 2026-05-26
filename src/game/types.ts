@@ -613,6 +613,9 @@ export type GameAction =
    *  via addOle (NÃO via grantEarnedExp) pra não inflar lifetime e evitar
    *  cadeia recursiva de comissão. */
   | { type: 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP'; amount: number }
+  /** Resgata renda passiva acumulada (estádio + megaloja) — credita via
+   *  grantEarnedExp e atualiza finance.passiveIncome.lastClaimAt. */
+  | { type: 'CLAIM_PASSIVE_STRUCTURE_INCOME' }
   /** Envio de SPOT BRO para outro utilizador pelo código de indicação (MVP cliente). */
   | { type: 'WALLET_TRANSFER_BRO_BY_CODE'; recipientCode: string; amountCents: number }
   | { type: 'WALLET_ACCRUE_DAILY'; dateIso: string }
