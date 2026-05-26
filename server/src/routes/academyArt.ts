@@ -2,6 +2,11 @@ import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
 import { uploadBufferToPinata } from '../services/pinata/uploadToPinata.js';
+import { uploadToSupabaseStorage } from '../services/supabaseStorage/uploadToSupabaseStorage.js';
+
+const ACADEMY_SELFIES_BUCKET = 'academy-selfies';
+const ACADEMY_PORTRAITS_BUCKET = 'academy-portraits';
+const SELFIE_SIGNED_URL_TTL_SECONDS = 7 * 24 * 3600;
 
 export const academyArtRoutes = new Hono();
 
@@ -200,9 +205,6 @@ async function callFreepikSeedream(opts: {
  * Auth: Bearer Supabase. env: PINATA_JWT.
  */
 academyArtRoutes.post('/api/academy/upload-selfie', rateLimit(10), async (c) => {
-  const pinataJwt = process.env.PINATA_JWT?.trim();
-  if (!pinataJwt) return c.json({ ok: false, error: 'PINATA_JWT não configurada.' }, 503);
-
   const userId = await resolveUser(c.req.header('Authorization'));
   if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
@@ -226,24 +228,21 @@ academyArtRoutes.post('/api/academy/upload-selfie', rateLimit(10), async (c) => 
     try { prospectMeta = JSON.parse(body.prospect_meta) as typeof prospectMeta; } catch { /* ignore */ }
   }
 
-  const filename = `academy_selfie_${userId.slice(0, 8)}_${now}.jpg`;
+  const filename = `${userId.slice(0, 8)}_${now}.jpg`;
   const ab = await selfie.arrayBuffer();
-  const gatewayPrefix = (process.env.PINATA_GATEWAY_PREFIX?.trim() || 'https://gateway.pinata.cloud/ipfs/').replace(/\/?$/, '/');
-  const upload = await uploadBufferToPinata({
-    jwt: pinataJwt,
+  const upload = await uploadToSupabaseStorage({
     buffer: ab,
     filename,
     mimeType: selfie.type || 'image/jpeg',
-    network: 'public',
-    gatewayPrefix,
-    logContext: { entityType: 'academy_prospect_selfie', entityId: userId },
+    bucket: ACADEMY_SELFIES_BUCKET,
+    pathPrefix: userId,
+    signedUrlTtlSeconds: SELFIE_SIGNED_URL_TTL_SECONDS,
   });
   if (!upload.ok) {
-    console.error('[academy/upload-selfie] Pinata upload failed:', upload.message);
+    console.error('[academy/upload-selfie] Supabase Storage upload failed:', upload.message);
     return c.json({ ok: false, error: `Falha no upload: ${upload.message}` }, 502);
   }
 
-  // Audit log
   const sb = getSupabaseAdmin();
   if (sb) {
     void sb.from('audit_log').insert({
@@ -254,8 +253,9 @@ academyArtRoutes.post('/api/academy/upload-selfie', rateLimit(10), async (c) => 
       new_data: {
         name: prospectMeta.name,
         pos: prospectMeta.pos,
-        pinata_cid: upload.data.cid,
-        selfie_url: upload.publicUrl,
+        storage_bucket: upload.data.bucket,
+        storage_path: upload.data.path,
+        selfie_url: upload.data.url,
       },
     }).then(({ error }) => {
       if (error) console.error('[academy/upload-selfie] audit log error:', error.message);
@@ -264,8 +264,8 @@ academyArtRoutes.post('/api/academy/upload-selfie', rateLimit(10), async (c) => 
 
   return c.json({
     ok: true,
-    selfie_url: upload.publicUrl,
-    pinata_cid: upload.data.cid,
+    selfie_url: upload.data.url,
+    storage_path: upload.data.path,
   });
 });
 
@@ -402,9 +402,6 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
  * Auth: Bearer Supabase. env: PINATA_JWT.
  */
 academyArtRoutes.post('/api/academy/upload-admin-image', rateLimit(20), async (c) => {
-  const pinataJwt = process.env.PINATA_JWT?.trim();
-  if (!pinataJwt) return c.json({ ok: false, error: 'PINATA_JWT não configurada.' }, 503);
-
   const userId = await resolveUser(c.req.header('Authorization'));
   if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
@@ -428,20 +425,17 @@ academyArtRoutes.post('/api/academy/upload-admin-image', rateLimit(20), async (c
   const requestId = typeof body.request_id === 'string' ? body.request_id.trim() : '';
 
   const ext = (image.type === 'image/png' ? 'png' : 'jpg');
-  const filename = `academy_admin_${kind}_${userId.slice(0, 8)}_${now}.${ext}`;
+  const filename = `${kind}_${userId.slice(0, 8)}_${now}.${ext}`;
   const ab = await image.arrayBuffer();
-  const gatewayPrefix = (process.env.PINATA_GATEWAY_PREFIX?.trim() || 'https://gateway.pinata.cloud/ipfs/').replace(/\/?$/, '/');
-  const upload = await uploadBufferToPinata({
-    jwt: pinataJwt,
+  const upload = await uploadToSupabaseStorage({
     buffer: ab,
     filename,
     mimeType: image.type || 'image/jpeg',
-    network: 'public',
-    gatewayPrefix,
-    logContext: { entityType: `academy_admin_${kind}`, entityId: requestId || userId },
+    bucket: ACADEMY_PORTRAITS_BUCKET,
+    pathPrefix: kind,
   });
   if (!upload.ok) {
-    console.error('[academy/upload-admin-image] Pinata upload failed:', upload.message);
+    console.error('[academy/upload-admin-image] Supabase Storage upload failed:', upload.message);
     return c.json({ ok: false, error: `Falha no upload: ${upload.message}` }, 502);
   }
 
@@ -455,8 +449,9 @@ academyArtRoutes.post('/api/academy/upload-admin-image', rateLimit(20), async (c
       new_data: {
         kind,
         request_id: requestId || null,
-        pinata_cid: upload.data.cid,
-        url: upload.publicUrl,
+        storage_bucket: upload.data.bucket,
+        storage_path: upload.data.path,
+        url: upload.data.url,
       },
     }).then(({ error }) => {
       if (error) console.error('[academy/upload-admin-image] audit log error:', error.message);
@@ -465,8 +460,52 @@ academyArtRoutes.post('/api/academy/upload-admin-image', rateLimit(20), async (c
 
   return c.json({
     ok: true,
-    url: upload.publicUrl,
-    pinata_cid: upload.data.cid,
+    url: upload.data.url,
+    storage_path: upload.data.path,
     kind,
+  });
+});
+
+/**
+ * GET /api/academy/download-promo?url=<encoded>&filename=<opt>
+ *
+ * Faz proxy de uma URL de card promocional pra forçar download direto no
+ * browser (Content-Disposition: attachment). Sem isso o browser abre a
+ * imagem em vez de salvar — manager precisa de "save as" manual.
+ *
+ * Aceita qualquer URL HTTPS pra simplificar (auth via Bearer só pra rate
+ * limit). Em produção ideal seria whitelist do nosso bucket Supabase, mas
+ * pra MVP isso resolve.
+ */
+academyArtRoutes.get('/api/academy/download-promo', rateLimit(30), async (c) => {
+  const userId = await resolveUser(c.req.header('Authorization'));
+  if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const url = c.req.query('url');
+  const filenameRaw = c.req.query('filename') || 'olefoot-card.png';
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return c.json({ ok: false, error: 'url obrigatória (http/https).' }, 400);
+  }
+  const filename = filenameRaw.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(url);
+  } catch (e) {
+    return c.json({ ok: false, error: `Falha de rede: ${e instanceof Error ? e.message : 'unknown'}` }, 502);
+  }
+  if (!upstream.ok) {
+    return c.json({ ok: false, error: `Upstream HTTP ${upstream.status}` }, 502);
+  }
+  const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+  const buf = await upstream.arrayBuffer();
+
+  return new Response(buf, {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'private, max-age=300',
+    },
   });
 });

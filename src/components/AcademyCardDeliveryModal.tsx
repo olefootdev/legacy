@@ -12,6 +12,8 @@ import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Share2, Download, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getSupabase } from '@/supabase/client';
+import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 
 interface Props {
   open: boolean;
@@ -22,22 +24,48 @@ interface Props {
   shareText: string;
 }
 
+async function fetchBlobAndSave(blob: Blob, filename: string): Promise<void> {
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
+/**
+ * Tenta baixar a imagem com fallback em camadas:
+ *   1) fetch direto (funciona quando CORS do storage está aberto, ex.: Supabase Storage público)
+ *   2) proxy /api/academy/download-promo (servidor faz fetch + força attachment)
+ *   3) abre em nova aba (último recurso, manager precisa salvar manual)
+ */
 async function downloadImageAs(url: string, filename: string): Promise<void> {
   try {
     const res = await fetch(url, { mode: 'cors' });
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await fetchBlobAndSave(await res.blob(), filename);
+    return;
   } catch {
-    // Fallback: abre em nova aba se CORS bloqueia download direto
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // CORS bloqueou ou upstream falhou — tenta proxy do nosso backend
   }
+  try {
+    const sb = getSupabase();
+    const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+    if (token) {
+      const base = olefootApiBase();
+      const proxyUrl = `${base}/api/academy/download-promo?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(proxyUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        await fetchBlobAndSave(await res.blob(), filename);
+        return;
+      }
+    }
+  } catch {
+    // Proxy falhou — último fallback abaixo
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 export function AcademyCardDeliveryModal({
