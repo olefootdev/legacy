@@ -21,8 +21,10 @@ export interface ReferredProfile {
   createdAt: string;
   /** Quanto EXP este indicado já acumulou no jogo (snapshot do server). */
   expLifetimeEarned: number;
-  /** Quanto o referrer já recebeu de comissão (5%) sobre esse indicado. */
-  commissionEarned: number;
+  /** Comissão ainda resgatável (ledger não-claimed). */
+  commissionPending: number;
+  /** Comissão acumulada total (claimed + pending) — histórico. */
+  commissionTotal: number;
 }
 
 export async function fetchMyReferralCode(): Promise<string | null> {
@@ -52,7 +54,8 @@ export async function fetchMyReferrals(): Promise<ReferredProfile[]> {
     club_short: string | null;
     created_at: string;
     exp_lifetime_earned?: number | string | null;
-    commission_earned?: number | string | null;
+    commission_pending?: number | string | null;
+    commission_total?: number | string | null;
   }) => ({
     id: row.id,
     displayName: row.display_name ?? null,
@@ -60,8 +63,31 @@ export async function fetchMyReferrals(): Promise<ReferredProfile[]> {
     clubShort: row.club_short ?? null,
     createdAt: row.created_at,
     expLifetimeEarned: Number(row.exp_lifetime_earned ?? 0),
-    commissionEarned: Number(row.commission_earned ?? 0),
+    commissionPending: Number(row.commission_pending ?? 0),
+    commissionTotal: Number(row.commission_total ?? 0),
   }));
+}
+
+/**
+ * Resgata comissão pendente. Se referredId for omitido, claim de todos os
+ * indicados de uma vez. Retorna o total resgatado (em EXP).
+ *
+ * O cliente deve fazer dispatch com `addOle` (não grantEarnedExp) — comissão
+ * NÃO conta como EXP "ganho", senão dispararia cadeia de comissão recursiva
+ * pelo trigger no banco (A indicou B, B ganha de C → B claima, vira ganho de B
+ * → A ganha de B etc. Pyramid avoidance).
+ */
+export async function claimMyReferralCommission(referredId?: string): Promise<number> {
+  const sb = getSupabase();
+  if (!sb) return 0;
+  const { data, error } = await sb.rpc('claim_my_referral_commissions', {
+    p_referred_id: referredId ?? null,
+  });
+  if (error) {
+    console.warn('[referrals] claimMyReferralCommission:', error.message);
+    return 0;
+  }
+  return Number(data ?? 0);
 }
 
 /**

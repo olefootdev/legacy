@@ -609,6 +609,10 @@ export type GameAction =
   | { type: 'WALLET_SET_SPONSOR'; sponsorId: string }
   /** Sincroniza o código de indicação local com o autoritativo do servidor. */
   | { type: 'WALLET_SYNC_REFERRAL_CODE'; code: string }
+  /** Crédito de comissão de indicação resgatada do servidor. Vai pro saldo
+   *  via addOle (NÃO via grantEarnedExp) pra não inflar lifetime e evitar
+   *  cadeia recursiva de comissão. */
+  | { type: 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP'; amount: number }
   /** Envio de SPOT BRO para outro utilizador pelo código de indicação (MVP cliente). */
   | { type: 'WALLET_TRANSFER_BRO_BY_CODE'; recipientCode: string; amountCents: number }
   | { type: 'WALLET_ACCRUE_DAILY'; dateIso: string }

@@ -23,7 +23,7 @@ import { useGameDispatch, useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode, normalizeReferralCode } from '@/wallet/referralCode';
-import { fetchMyReferrals, type ReferredProfile } from '@/supabase/referrals';
+import { fetchMyReferrals, claimMyReferralCommission, type ReferredProfile } from '@/supabase/referrals';
 
 export function ManagerNetwork() {
   const dispatch = useGameDispatch();
@@ -73,15 +73,41 @@ export function ManagerNetwork() {
         level: 1 as number,
         joinedAt: r.createdAt,
         lifetime: r.expLifetimeEarned,
-        commission: r.commissionEarned,
+        pending: r.commissionPending,
+        total: r.commissionTotal,
       })),
     [serverReferrals],
   );
 
-  const totalCommissionEarned = useMemo(
-    () => referrals.reduce((sum, r) => sum + r.commission, 0),
+  const totalCommissionPending = useMemo(
+    () => referrals.reduce((sum, r) => sum + r.pending, 0),
     [referrals],
   );
+  const totalCommissionAccumulated = useMemo(
+    () => referrals.reduce((sum, r) => sum + r.total, 0),
+    [referrals],
+  );
+
+  const [claiming, setClaiming] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState<number | null>(null);
+
+  const handleClaimAll = async () => {
+    if (claiming || totalCommissionPending <= 0) return;
+    setClaiming(true);
+    try {
+      const amount = await claimMyReferralCommission();
+      if (amount > 0) {
+        dispatch({ type: 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP', amount });
+        setClaimSuccess(amount);
+        // Refresh do servidor pra zerar os pendings na UI
+        const fresh = await fetchMyReferrals();
+        setServerReferrals(fresh);
+      }
+      setTimeout(() => setClaimSuccess(null), 4000);
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   const blockedManagerIds = useMemo(() => {
     const ids = new Set<string>();
@@ -474,21 +500,50 @@ export function ManagerNetwork() {
             )}
           </div>
 
-          {/* Comissão total acumulada — destaque quando há indicados */}
+          {/* Comissão pendente — destaque com botão Resgatar */}
           {!loadingReferrals && referrals.length > 0 && (
-            <div className="bg-gradient-to-r from-neon-yellow/10 to-neon-yellow/5 border border-neon-yellow/30 rounded-sm p-3 flex items-center justify-between">
-              <div>
-                <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
-                  Comissão acumulada da tua rede
-                </p>
-                <p className="text-[10px] text-white/50 mt-0.5">
-                  5% sobre todo EXP ganho pelos teus indicados
-                </p>
+            <div className="bg-gradient-to-r from-neon-yellow/10 to-neon-yellow/5 border border-neon-yellow/30 rounded-sm p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
+                    Comissão pendente
+                  </p>
+                  <p className="text-[10px] text-white/50 mt-0.5">
+                    5% sobre todo EXP ganho pelos teus indicados
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-display text-xl font-black text-neon-yellow tabular-nums tracking-tight leading-none">
+                    +{totalCommissionPending.toLocaleString('pt-BR')}
+                    <span className="text-[10px] ml-1 text-neon-yellow/70">EXP</span>
+                  </p>
+                  {totalCommissionAccumulated > totalCommissionPending && (
+                    <p className="text-[9px] text-white/40 mt-1">
+                      Total histórico: {totalCommissionAccumulated.toLocaleString('pt-BR')} EXP
+                    </p>
+                  )}
+                </div>
               </div>
-              <p className="font-display text-xl font-black text-neon-yellow tabular-nums tracking-tight">
-                +{totalCommissionEarned.toLocaleString('pt-BR')}
-                <span className="text-[10px] ml-1 text-neon-yellow/70">EXP</span>
-              </p>
+              {totalCommissionPending > 0 && (
+                <motion.button
+                  type="button"
+                  onClick={handleClaimAll}
+                  disabled={claiming}
+                  whileTap={{ scale: 0.97 }}
+                  className="mt-3 w-full bg-neon-yellow text-black py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {claiming ? 'Resgatando…' : 'Resgatar tudo'}
+                </motion.button>
+              )}
+              {claimSuccess !== null && claimSuccess > 0 && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-2 text-[10px] text-emerald-300 font-display uppercase tracking-wider text-center"
+                >
+                  ✓ +{claimSuccess.toLocaleString('pt-BR')} EXP creditados no saldo
+                </motion.p>
+              )}
             </div>
           )}
 
@@ -564,10 +619,10 @@ export function ManagerNetwork() {
                     </div>
                     <div className="text-center border-l border-white/5">
                       <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.18em] mb-1">
-                        Tua comissão (5%)
+                        {ref.pending > 0 ? 'A resgatar (5%)' : 'Já recebido (5%)'}
                       </p>
                       <p className="font-display text-base font-bold text-neon-yellow tabular-nums">
-                        +{ref.commission.toLocaleString('pt-BR')}
+                        +{(ref.pending > 0 ? ref.pending : ref.total).toLocaleString('pt-BR')}
                       </p>
                       <p className="text-[9px] text-neon-yellow/70 uppercase tracking-wider">EXP</p>
                     </div>
