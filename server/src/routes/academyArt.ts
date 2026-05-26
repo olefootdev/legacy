@@ -386,3 +386,87 @@ academyArtRoutes.post('/api/academy/generate-portrait', rateLimit(5), async (c) 
     pinata_cid: upload.data.cid,
   });
 });
+
+/**
+ * POST /api/academy/upload-admin-image
+ *
+ * Upload genérico pelo admin do PNG/JPG final da arte do jogador.
+ * Usado no AdminProspectArtPanel quando o admin gerou a arte em ferramenta
+ * externa (Freepik web, Midjourney, etc) e quer só hospedar pra colar URL.
+ *
+ * Body multipart:
+ *   - image       (File)   — PNG/JPG da arte final
+ *   - kind        (string) — 'portrait' | 'promo' (só pra naming/audit)
+ *   - request_id  (string opcional) — managerProspectArtQueue[].id pra audit
+ *
+ * Auth: Bearer Supabase. env: PINATA_JWT.
+ */
+academyArtRoutes.post('/api/academy/upload-admin-image', rateLimit(20), async (c) => {
+  const pinataJwt = process.env.PINATA_JWT?.trim();
+  if (!pinataJwt) return c.json({ ok: false, error: 'PINATA_JWT não configurada.' }, 503);
+
+  const userId = await resolveUser(c.req.header('Authorization'));
+  if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const now = Date.now();
+
+  let body: Record<string, string | File>;
+  try {
+    body = (await c.req.parseBody()) as Record<string, string | File>;
+  } catch (e) {
+    return c.json({ ok: false, error: `Corpo multipart inválido: ${e instanceof Error ? e.message : ''}` }, 400);
+  }
+
+  const image = body.image;
+  if (!(image instanceof File)) return c.json({ ok: false, error: 'image obrigatório.' }, 400);
+  if (image.size > MAX_IMAGE_BYTES) {
+    return c.json({ ok: false, error: `imagem muito grande (${Math.round(image.size / 1024)} KB, máx. ${MAX_IMAGE_BYTES / 1024 / 1024} MB).` }, 413);
+  }
+
+  const kindRaw = typeof body.kind === 'string' ? body.kind.trim().toLowerCase() : '';
+  const kind: 'portrait' | 'promo' = kindRaw === 'promo' ? 'promo' : 'portrait';
+  const requestId = typeof body.request_id === 'string' ? body.request_id.trim() : '';
+
+  const ext = (image.type === 'image/png' ? 'png' : 'jpg');
+  const filename = `academy_admin_${kind}_${userId.slice(0, 8)}_${now}.${ext}`;
+  const ab = await image.arrayBuffer();
+  const gatewayPrefix = (process.env.PINATA_GATEWAY_PREFIX?.trim() || 'https://gateway.pinata.cloud/ipfs/').replace(/\/?$/, '/');
+  const upload = await uploadBufferToPinata({
+    jwt: pinataJwt,
+    buffer: ab,
+    filename,
+    mimeType: image.type || 'image/jpeg',
+    network: 'public',
+    gatewayPrefix,
+    logContext: { entityType: `academy_admin_${kind}`, entityId: requestId || userId },
+  });
+  if (!upload.ok) {
+    console.error('[academy/upload-admin-image] Pinata upload failed:', upload.message);
+    return c.json({ ok: false, error: `Falha no upload: ${upload.message}` }, 502);
+  }
+
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    void sb.from('audit_log').insert({
+      operation: 'CREATE',
+      table_name: `academy_admin_${kind}`,
+      row_id: `${userId}:${now}`,
+      user_id: userId,
+      new_data: {
+        kind,
+        request_id: requestId || null,
+        pinata_cid: upload.data.cid,
+        url: upload.publicUrl,
+      },
+    }).then(({ error }) => {
+      if (error) console.error('[academy/upload-admin-image] audit log error:', error.message);
+    });
+  }
+
+  return c.json({
+    ok: true,
+    url: upload.publicUrl,
+    pinata_cid: upload.data.cid,
+    kind,
+  });
+});

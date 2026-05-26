@@ -1,15 +1,136 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Brush, CheckCircle2, ClipboardCopy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Brush, CheckCircle2, ClipboardCopy, ExternalLink, Loader2, RefreshCw, Upload } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
-import { isSupabaseConfigured } from '@/supabase/client';
+import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { registerAcademyManagerListing } from '@/supabase/academyManagers';
 import { fetchAllManagerArtRequests, type GlobalArtRequest } from '@/supabase/managerGameState';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { PORTRAIT_STYLE_REGION_LABELS } from '@/entities/managerProspect';
+import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import type { PlayerEntity } from '@/entities/types';
 import type { ManagerProspectArtRequest } from '@/game/types';
 import { formatExp } from '@/systems/economy';
 import { cn } from '@/lib/utils';
+
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Sobe arquivo de imagem pro Pinata via /api/academy/upload-admin-image.
+ * Usado quando admin gerou arte fora (Freepik web, etc) e só quer hospedar.
+ */
+type UploadAdminImageResult =
+  | { ok: true; url: string; error?: undefined }
+  | { ok: false; error: string; url?: undefined };
+
+async function uploadAdminImage(
+  file: File,
+  kind: 'portrait' | 'promo',
+  requestId: string,
+): Promise<UploadAdminImageResult> {
+  const sb = getSupabase();
+  const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+  if (!token) return { ok: false, error: 'Sem sessão Supabase. Faz login.' };
+  const serverUrl = olefootApiBase();
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { ok: false, error: `Ficheiro muito grande (máx. ${MAX_UPLOAD_BYTES / 1024 / 1024} MB).` };
+  }
+  if (!file.type.startsWith('image/')) {
+    return { ok: false, error: 'Só imagens são aceites.' };
+  }
+  const form = new FormData();
+  form.append('image', file, file.name || `${kind}.png`);
+  form.append('kind', kind);
+  if (requestId) form.append('request_id', requestId);
+  try {
+    const r = await fetch(`${serverUrl}/api/academy/upload-admin-image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    const json = (await r.json().catch(() => null)) as { ok?: boolean; url?: string; error?: string } | null;
+    if (!r.ok || !json?.ok || !json.url) {
+      return { ok: false, error: json?.error ?? `HTTP ${r.status}` };
+    }
+    return { ok: true, url: json.url };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Falha de rede.' };
+  }
+}
+
+function ImageDropzone({
+  kind,
+  requestId,
+  label,
+  onUploaded,
+}: {
+  kind: 'portrait' | 'promo';
+  requestId: string;
+  label: string;
+  onUploaded: (url: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setError(null);
+      setBusy(true);
+      const res = await uploadAdminImage(file, kind, requestId);
+      setBusy(false);
+      if (res.ok) {
+        onUploaded(res.url);
+        return;
+      }
+      setError(res.error);
+    },
+    [kind, requestId, onUploaded],
+  );
+
+  return (
+    <div className="space-y-1">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) void handleFile(f);
+        }}
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          'flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-3 text-[10px] font-bold uppercase tracking-wide transition-colors',
+          dragOver
+            ? 'border-neon-yellow bg-neon-yellow/10 text-neon-yellow'
+            : 'border-white/20 bg-black/30 text-white/60 hover:border-neon-yellow/50 hover:text-white/85',
+          busy && 'pointer-events-none opacity-60',
+        )}
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        <span>{busy ? 'A subir…' : label}</span>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleFile(f);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {error ? (
+        <div className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] text-red-300">{error}</div>
+      ) : null}
+    </div>
+  );
+}
 
 function stepLabel(step: ManagerProspectArtRequest['playerCreationStep']): string {
   switch (step) {
@@ -129,6 +250,15 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
         <div className="mt-3 space-y-2 rounded-lg border border-white/10 bg-black/30 p-3">
           <label className="block space-y-1">
             <span className="text-[10px] font-bold uppercase text-gray-500">URL do retrato do jogo (data URL ou https)</span>
+            <ImageDropzone
+              kind="portrait"
+              requestId={r.id}
+              label="Arrasta ou clica — sobe arte do jogador (auto-guarda)"
+              onUploaded={(url) => {
+                setDraft(url);
+                dispatch({ type: 'ADMIN_PLAYER_CREATION_SET_PHOTO', requestId: r.id, portraitUrl: url });
+              }}
+            />
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -141,6 +271,19 @@ function ArtQueueRow({ r, pl }: { r: ManagerProspectArtRequest; pl?: PlayerEntit
             <span className="text-[10px] font-bold uppercase text-gray-500">
               URL do card promocional <span className="text-white/40">(opcional — versão social media pro manager compartilhar)</span>
             </span>
+            <ImageDropzone
+              kind="promo"
+              requestId={r.id}
+              label="Arrasta ou clica — sobe card promocional (auto-guarda)"
+              onUploaded={(url) => {
+                setPromo(url);
+                dispatch({
+                  type: 'ADMIN_PLAYER_CREATION_SET_PROMOTIONAL',
+                  requestId: r.id,
+                  promotionalCardUrl: url,
+                });
+              }}
+            />
             <div className="flex gap-2">
               <input
                 type="text"

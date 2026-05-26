@@ -5,7 +5,7 @@ import { rateLimit } from '../lib/rateLimit.js';
 export const academyRoutes = new Hono();
 
 /** OVR máximo na criação — espelha MANAGER_PROSPECT_CREATE_MAX_OVR do cliente. */
-const MAX_CREATE_OVR = 70;
+const MAX_CREATE_OVR = 60;
 /** Cooldown por usuário entre criações (em ms). */
 const COOLDOWN_MS = 30_000;
 /** Mínimo de caracteres do nome (espelha cliente). */

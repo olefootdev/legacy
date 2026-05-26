@@ -5,12 +5,18 @@ import { contractFieldsForManagerProspectTier } from '@/playerContracts/playerCo
 import type { PlayerAttributes, PlayerBehavior, PlayerEntity, PlayerStrongFoot } from './types';
 
 /** OVR máximo na criação (Academia OLE + prospects NPC). */
-export const MANAGER_PROSPECT_CREATE_MAX_OVR = 70;
+export const MANAGER_PROSPECT_CREATE_MAX_OVR = 60;
+/**
+ * Teto INDIVIDUAL por atributo na criação. Impede o exploit de "super
+ * especialista" (ex.: VEL=99 / resto=35) que cabe em OVR ≤ cap mas quebra
+ * o jogo em uma dimensão. Cada slider e cada validação obedece este limite.
+ */
+export const MANAGER_PROSPECT_CREATE_MAX_ATTR = 60;
 /**
  * OVR máximo após evolução (treinos, jogos) para `managerCreated`.
  * Cap baixo (75) é intencional: evita que a Academia OLE infle o mercado
  * com prospects que rivalizam com cartas Genesis premium. Janela de evolução
- * útil = 5 pontos (70 criação → 75 cap).
+ * útil = 15 pontos (60 criação → 75 cap).
  */
 export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 75;
 
@@ -77,6 +83,22 @@ export function scaleAttrsToMaxOvr(attrs: PlayerAttributes, maxOvr: number): Pla
     }
   }
   return a;
+}
+
+/**
+ * Aplica AMBOS os caps de criação: cada atributo ≤ MANAGER_PROSPECT_CREATE_MAX_ATTR
+ * e o OVR final ≤ MANAGER_PROSPECT_CREATE_MAX_OVR. Bloqueia o exploit do "super
+ * especialista" (ex.: VEL=99 / resto=35 cabendo no OVR cap mas quebrando o jogo).
+ *
+ * Use sempre que receber attrs do fluxo Academia (cliente ou pipeline NPC) antes
+ * de gravar no plantel.
+ */
+export function clampAttrsToCreationCap(attrs: PlayerAttributes): PlayerAttributes {
+  const capped: PlayerAttributes = { ...attrs };
+  for (const k of ATTR_KEYS) {
+    capped[k] = Math.min(MANAGER_PROSPECT_CREATE_MAX_ATTR, clampAttr(capped[k]));
+  }
+  return scaleAttrsToMaxOvr(capped, MANAGER_PROSPECT_CREATE_MAX_OVR);
 }
 
 export function baseAttrsForPosition(pos: string): PlayerAttributes {
@@ -356,6 +378,12 @@ export type ManagerProspectCreatePayload = {
    * portraitUrl + selfieUrl presentes, portraitUrl ganha (auto Freepik).
    */
   selfieUrl?: string;
+  /**
+   * Jogador fictício — manager NÃO marcou "sou esse jogador". Pula a fila do
+   * admin completamente e entra direto no plantel sem foto (PlayerCard mostra
+   * iniciais como placeholder). Útil pra criação rápida estilo Master League.
+   */
+  isFictional?: boolean;
 };
 
 function strongFootPt(f: PlayerStrongFoot): string {
@@ -457,13 +485,13 @@ export function buildManagerCreatedPlayerEntity(
   const country = payload.country.trim().slice(0, 3).toUpperCase() || '—';
   let attrs: PlayerAttributes;
   if (payload.attrs) {
-    attrs = scaleAttrsToMaxOvr({ ...payload.attrs }, MANAGER_PROSPECT_CREATE_MAX_OVR);
+    attrs = clampAttrsToCreationCap({ ...payload.attrs });
   } else {
     attrs = baseAttrsForPosition(payload.pos);
     attrs = applyBehaviorToAttrs(attrs, payload.behavior);
     attrs = applyAgeToAttrs(attrs, age);
     attrs = applyDevelopmentBias(attrs, payload.developmentBias ?? 50);
-    attrs = scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_CREATE_MAX_OVR);
+    attrs = clampAttrsToCreationCap(attrs);
   }
   // P5 — heritage bias: shift de perfil aplicado DEPOIS do scaling.
   // applyHeritageBias usa contrabalanço (+3 bias, -2 attr mais baixo)
@@ -542,5 +570,5 @@ export function buildNpcManagerProspectSnapshot(seed: string, index: number, olh
     return t / 0x1_0000_0000;
   };
   const boosted = applyScoutBonusToNpcAttrs(base.attrs, olheiroLevel, rng);
-  return { ...base, attrs: scaleAttrsToMaxOvr(boosted, MANAGER_PROSPECT_CREATE_MAX_OVR) };
+  return { ...base, attrs: clampAttrsToCreationCap(boosted) };
 }

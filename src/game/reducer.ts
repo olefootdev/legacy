@@ -2226,6 +2226,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           players: { ...state.players, [built.id]: built },
         };
       }
+      // Jogador fictício — manager NÃO marcou "sou esse jogador". Sem foto,
+      // sem fila admin. Vai direto pro plantel; PlayerCard renderiza iniciais.
+      if (action.payload.isFictional) {
+        return {
+          ...state,
+          finance,
+          players: { ...state.players, [built.id]: built },
+        };
+      }
       const queueEntry: ManagerProspectArtRequest = {
         id: requestId,
         playerId: built.id,

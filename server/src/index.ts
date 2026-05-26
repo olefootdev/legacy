@@ -94,6 +94,7 @@ app.use('/api/voice/transcribe', bodyLimit(26 * 1024 * 1024));        // áudio
 app.use('/api/media/pinata/upload', bodyLimit(10 * 1024 * 1024));     // imagem genesis
 app.use('/api/academy/upload-selfie', bodyLimit(10 * 1024 * 1024));   // selfie manager (modo concierge)
 app.use('/api/academy/generate-portrait', bodyLimit(10 * 1024 * 1024)); // selfie + camisa + bg (modo auto)
+app.use('/api/academy/upload-admin-image', bodyLimit(10 * 1024 * 1024)); // arte final do admin (portrait | promo)
 
 app.use('*', csrfGuard);
 

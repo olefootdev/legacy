@@ -13,13 +13,14 @@ import {
   countActiveAcademyProspects,
   DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   MANAGER_HERITAGE_ORIGIN_TEXT_MIN_LEN,
+  MANAGER_PROSPECT_CREATE_MAX_ATTR,
   MANAGER_PROSPECT_CREATE_MAX_OVR,
   MANAGER_PROSPECT_EVOLVED_MAX_OVR,
   MANAGER_PROSPECT_MAX_AGE,
   MANAGER_PROSPECT_MIN_AGE,
   MAX_ACTIVE_ACADEMY_PROSPECTS,
   PORTRAIT_STYLE_REGION_LABELS,
-  scaleAttrsToMaxOvr,
+  clampAttrsToCreationCap,
   type ManagerProspectCreatePayload,
   type ManagerProspectPortraitStyleRegion,
   type ManagerProspectVisualBrief,
@@ -119,7 +120,7 @@ function buildPresetAttrs(pos: string, behavior: PlayerBehavior, age: number): P
   attrs = applyBehaviorToAttrs(attrs, behavior);
   attrs = applyAgeToAttrs(attrs, age);
   attrs = applyDevelopmentBias(attrs, PRESET_DEVELOPMENT_BIAS);
-  return scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_CREATE_MAX_OVR);
+  return clampAttrsToCreationCap(attrs);
 }
 
 function trimBrief(v: string): string | undefined {
@@ -157,6 +158,12 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const [originText, setOriginText] = useState('');
   const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(10);
   const [selectedPreset, setSelectedPreset] = useState('');
+  /**
+   * "Eu sou esse jogador" — marcado pede selfie e cai na fila admin pra gerar
+   * arte premium; desmarcado = fictício, pula passo 4 e vai direto pro plantel
+   * sem foto.
+   */
+  const [isSelfPlayer, setIsSelfPlayer] = useState(false);
 
   /** Corpo com scroll do modal — repõe-se ao topo no passo 2 (Afinar) para não saltar os sliders. */
   const modalBodyScrollRef = useRef<HTMLDivElement>(null);
@@ -201,6 +208,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     setOriginText('');
     setContractMatches(10);
     setSelectedPreset('');
+    setIsSelfPlayer(false);
   }, []);
 
   useEffect(() => {
@@ -223,8 +231,11 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
 
   const setAttrSlider = useCallback((key: keyof PlayerAttributes, raw: number) => {
     setTunedAttrs((prev) => {
-      const next = { ...prev, [key]: Math.round(Math.min(99, Math.max(35, raw))) };
-      return scaleAttrsToMaxOvr(next, MANAGER_PROSPECT_CREATE_MAX_OVR);
+      const next = {
+        ...prev,
+        [key]: Math.round(Math.min(MANAGER_PROSPECT_CREATE_MAX_ATTR, Math.max(35, raw))),
+      };
+      return clampAttrsToCreationCap(next);
     });
   }, []);
 
@@ -340,7 +351,18 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
           return;
         }
       }
-      // Validação ok — vai pro passo de foto
+      // Validação ok.
+      // Fictício → dispatch direto, pula passo 4. PlayerCard mostra iniciais.
+      if (!isSelfPlayer) {
+        dispatch({
+          type: 'CREATE_MANAGER_PROSPECT',
+          payload: { ...buildPayload({}), isFictional: true },
+        });
+        onClose();
+        resetForm();
+        return;
+      }
+      // "Sou esse jogador" → captura selfie no passo 4.
       setStep('photo');
     } finally {
       setSubmitting(false);
@@ -488,6 +510,37 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
             >
               {step === 'identity' ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => setIsSelfPlayer((v) => !v)}
+                    className={cn(
+                      'flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors',
+                      isSelfPlayer
+                        ? 'border-neon-yellow/60 bg-neon-yellow/10'
+                        : 'border-white/15 bg-black/40 hover:border-white/30',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                        isSelfPlayer ? 'border-neon-yellow bg-neon-yellow' : 'border-white/40 bg-transparent',
+                      )}
+                      aria-hidden
+                    >
+                      {isSelfPlayer ? <span className="block h-2 w-2 rounded-sm bg-black" /> : null}
+                    </span>
+                    <span className="flex-1 space-y-0.5">
+                      <span className="block font-display text-[12px] font-black uppercase tracking-wide text-white">
+                        Eu sou esse jogador
+                      </span>
+                      <span className="block text-[10px] leading-relaxed text-gray-400">
+                        {isSelfPlayer
+                          ? 'No fim a gente pede tua selfie pra gerar um cartão premium com tua cara.'
+                          : 'Jogador fictício — só atributos, sem foto. Pula a etapa de selfie e entra direto no plantel.'}
+                      </span>
+                    </span>
+                  </button>
+
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">OVR estimado</span>
                     <span className="font-display text-2xl font-black text-neon-yellow">{previewOvrIdentity}</span>
@@ -652,8 +705,8 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                     <span className="font-display text-2xl font-black text-neon-yellow">{previewOvrTune}</span>
                   </div>
                   <p className="text-[10px] leading-relaxed text-gray-500">
-                    Barras de 35 a 99; o clube equilibra para não passar de OVR {MANAGER_PROSPECT_CREATE_MAX_OVR} na
-                    ficha (evolução futura até {MANAGER_PROSPECT_EVOLVED_MAX_OVR}).
+                    Barras de 35 a {MANAGER_PROSPECT_CREATE_MAX_ATTR}; o clube equilibra para não passar de OVR{' '}
+                    {MANAGER_PROSPECT_CREATE_MAX_OVR} na ficha (evolução futura até {MANAGER_PROSPECT_EVOLVED_MAX_OVR}).
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {ATTR_SLIDERS.map(({ key, label }) => (
@@ -665,7 +718,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
                         <input
                           type="range"
                           min={35}
-                          max={99}
+                          max={MANAGER_PROSPECT_CREATE_MAX_ATTR}
                           value={tunedAttrs[key]}
                           onChange={(e) => setAttrSlider(key, Number(e.target.value))}
                           className="h-2 w-full accent-neon-yellow"
