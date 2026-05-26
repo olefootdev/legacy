@@ -128,28 +128,97 @@ export function applyMatchConsequences(
   return { next, outcomes: Object.values(outcomesById) };
 }
 
-/** Decrementa outForMatches/suspendedMatches após cada jornada (qualquer modo). */
+/** Recuperação base de fadiga por tick (chamado após cada jornada). */
+const FATIGUE_RECOVERY_BASE_PER_TICK = 10;
+/** Recuperação base de injury risk por tick. */
+const INJURY_RISK_RECOVERY_PER_TICK = 2;
+
+/**
+ * Tick pós-jornada: decrementa indisponibilidade (outForMatches/suspendedMatches)
+ * E reduz fadiga + risco de lesão de TODOS os jogadores. Sem esta segunda parte,
+ * jogadores nunca recuperavam (bug histórico) — único caminho era o item de loja.
+ *
+ * medicalBonusPct vem de (medicalDeptLevel - 1) * 10, ou seja:
+ *   L1: 0%   L2: +10%   L3: +20%   L4: +30%   L5: +40%
+ */
 export function tickHealthRecovery(
   prev: Record<string, PlayerHealth>,
   opts: { medicalBonusPct?: number } = {},
 ): Record<string, PlayerHealth> {
   const bonus = opts.medicalBonusPct ?? 0;
+  const fatigueRec = Math.round(FATIGUE_RECOVERY_BASE_PER_TICK * (1 + bonus / 100));
+  const riskRec = Math.round(INJURY_RISK_RECOVERY_PER_TICK * (1 + bonus / 100));
   const next: Record<string, PlayerHealth> = {};
   for (const [id, h] of Object.entries(prev)) {
-    if (h.outForMatches <= 0 && h.suspendedMatches <= 0) {
+    let nextOut = h.outForMatches;
+    let nextSus = h.suspendedMatches;
+    let nextSeverity = h.injurySeverity;
+
+    // Decremento de indisponibilidade só se houver
+    if (h.outForMatches > 0 || h.suspendedMatches > 0) {
+      const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      const fast = bonus > 0 && hash % 100 < bonus;
+      const decOut = fast ? 2 : 1;
+      nextOut = Math.max(0, h.outForMatches - decOut);
+      nextSus = Math.max(0, h.suspendedMatches - 1);
+      nextSeverity = nextOut === 0 ? null : h.injurySeverity;
+    }
+
+    next[id] = recomputeAtRisk({
+      ...h,
+      outForMatches: nextOut,
+      suspendedMatches: nextSus,
+      injurySeverity: nextSeverity,
+      fatigue: Math.max(0, h.fatigue - fatigueRec),
+      injuryRisk: Math.max(0, h.injuryRisk - riskRec),
+    });
+  }
+  return next;
+}
+
+/**
+ * Recuperação off-match no SSOT (playerHealth). Substitui `recoverOffMatch`
+ * em worldCatchUp.ts que mexia em PlayerEntity.fatigue (campo legado invisível
+ * pra UI). Fórmula equivalente, mas agora atualiza o estado autoritativo.
+ *
+ * @param gameMinutes minutos de jogo equivalentes ao tempo offline (cap externo aplica)
+ * @param medicalBonusPct (medicalDeptLevel - 1) * 10
+ * @param staffPhysRecoveryPct bônus do staff
+ * @param playingIds jogadores que estão em partida ativa — não recuperam
+ * @param fatigueRegenEnabled false se manager ausente >36h
+ */
+export function recoverHealthOffMatch(
+  prev: Record<string, PlayerHealth>,
+  playerFisicoById: Record<string, number>,
+  gameMinutes: number,
+  opts: {
+    medicalBonusPct?: number;
+    staffPhysRecoveryPct?: number;
+    playingIds?: Set<string>;
+    fatigueRegenEnabled?: boolean;
+  } = {},
+): Record<string, PlayerHealth> {
+  if (gameMinutes <= 0) return prev;
+  if (opts.fatigueRegenEnabled === false) return prev;
+  const medBonus = opts.medicalBonusPct ?? 0;
+  const staffBonus = opts.staffPhysRecoveryPct ?? 0;
+  const mult = 1 + medBonus / 100 + staffBonus / 100;
+  const g = Math.min(gameMinutes, 360);
+  const playing = opts.playingIds;
+
+  const next: Record<string, PlayerHealth> = {};
+  for (const [id, h] of Object.entries(prev)) {
+    if (playing?.has(id)) {
       next[id] = h;
       continue;
     }
-    const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    const fast = bonus > 0 && hash % 100 < bonus;
-    const dec = fast ? 2 : 1;
-    const newOut = Math.max(0, h.outForMatches - dec);
-    const newSus = Math.max(0, h.suspendedMatches - 1);
+    const fisico = playerFisicoById[id] ?? 50;
+    const rec = (g / 120) * (8 + fisico / 25) * mult;
+    const riskRec = (g / 200) * mult;
     next[id] = recomputeAtRisk({
       ...h,
-      outForMatches: newOut,
-      suspendedMatches: newSus,
-      injurySeverity: newOut === 0 ? null : h.injurySeverity,
+      fatigue: Math.max(0, h.fatigue - rec),
+      injuryRisk: Math.max(0, h.injuryRisk - riskRec),
     });
   }
   return next;

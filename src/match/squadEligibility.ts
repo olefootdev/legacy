@@ -100,17 +100,36 @@ export function trainingWindowLabelForCalendarSlot(hhmm: string): string {
   return 'Janela livre.';
 }
 
+/**
+ * Energia mínima pra jogador entrar em campo. Física exibida = 100 - fatigue,
+ * então MIN_ENERGY_PCT = 25 ↔ MAX_FATIGUE_TO_PLAY = 75.
+ * Força manager a ter elenco maior e/ou investir em recuperação.
+ */
+export const MIN_ENERGY_PCT_TO_PLAY = 25;
+const MAX_FATIGUE_TO_PLAY = 100 - MIN_ENERGY_PCT_TO_PLAY;
+
+/** Razão concreta pela qual o jogador não pode escalar, ou null se disponível. */
+export function unavailableReason(
+  p: PlayerEntity | undefined,
+  health?: Record<string, import('@/systems/playerHealth/types').PlayerHealth>,
+): 'no_player' | 'contract' | 'injured' | 'suspended' | 'exhausted' | null {
+  if (!p) return 'no_player';
+  if (p.contractExpired === true) return 'contract';
+  const fromHealth = health?.[p.id];
+  if (fromHealth) {
+    if (fromHealth.outForMatches > 0) return 'injured';
+    if (fromHealth.suspendedMatches > 0) return 'suspended';
+    if (fromHealth.fatigue >= MAX_FATIGUE_TO_PLAY) return 'exhausted';
+    return null;
+  }
+  return (p.outForMatches ?? 0) > 0 ? 'injured' : null;
+}
+
 function isAvailableForOfficialMatch(
   p: PlayerEntity | undefined,
   health?: Record<string, import('@/systems/playerHealth/types').PlayerHealth>,
 ): boolean {
-  if (!p) return false;
-  if (p.contractExpired === true) return false;
-  const fromHealth = health?.[p.id];
-  if (fromHealth) {
-    return fromHealth.outForMatches <= 0 && fromHealth.suspendedMatches <= 0;
-  }
-  return (p.outForMatches ?? 0) <= 0;
+  return unavailableReason(p, health) === null;
 }
 
 /**
@@ -135,17 +154,26 @@ export function evaluateOfficialSquad(
   const startersAvailable = starterIds.filter((id) => isAvailableForOfficialMatch(playersById[id], health)).length;
   const startersFilled = starterIds.length;
 
+  // Conta as causas específicas pra mensagem mais informativa
+  let exhaustedStarters = 0;
+  for (const id of starterIds) {
+    if (unavailableReason(playersById[id], health) === 'exhausted') exhaustedStarters++;
+  }
+
   const starterSet = new Set(starterIds);
   const benchPool = Object.values(playersById).filter((p) => !starterSet.has(p.id) && isAvailableForOfficialMatch(p, health));
   const benchAvailable = benchPool.length;
 
   if (startersAvailable < 11) {
+    const causeLabel = exhaustedStarters > 0
+      ? `${exhaustedStarters} sem energia (<${MIN_ENERGY_PCT_TO_PLAY}%) + lesões/suspensões`
+      : 'lesões/suspensões';
     return {
       ok: false,
       startersFilled,
       startersAvailable,
       benchAvailable,
-      reason: `Titulares disponíveis: ${startersAvailable}/11 (lesões/suspensões).`,
+      reason: `Titulares disponíveis: ${startersAvailable}/11 (${causeLabel}).`,
     };
   }
   if (benchAvailable < 5) {

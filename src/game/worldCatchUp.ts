@@ -12,6 +12,7 @@ import { effectiveCrowdSupportPercent, medicalDeptRecoverySpeedBonusPercent } fr
 import { staffPhysicalRecoveryBonusPercent, staffRunMatchMinuteEffects } from '@/systems/staffBenefits';
 // OLEFOOT PYTHON MODE — gate de fadiga regenera por absence tier
 import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
+import { recoverHealthOffMatch } from '@/systems/playerHealth/reducer';
 
 /** BRT = UTC-3 */
 const BRT_OFFSET_MS = -3 * 60 * 60 * 1000;
@@ -52,22 +53,9 @@ function applyManagerDayAdvance(
   };
 }
 
-function recoverOffMatch(
-  player: PlayerEntity,
-  gameMinutes: number,
-  medicalDeptLevel: number,
-  staffPhysRecoveryPct: number,
-): PlayerEntity {
-  const g = Math.min(gameMinutes, 360);
-  const mult =
-    1 + medicalDeptRecoverySpeedBonusPercent(medicalDeptLevel) / 100 + staffPhysRecoveryPct / 100;
-  const rec = ((g / 120) * (8 + player.attrs.fisico / 25)) * mult;
-  return {
-    ...player,
-    fatigue: Math.max(0, player.fatigue - rec),
-    injuryRisk: Math.max(0, player.injuryRisk - (g / 200) * mult),
-  };
-}
+// recoverOffMatch removido — agora a recuperação roda em playerHealth (SSOT)
+// via recoverHealthOffMatch. O campo legado PlayerEntity.fatigue é deprecado
+// e não é mais atualizado aqui (UI lê de state.playerHealth).
 
 function homeRosterFromLineupState(state: OlefootGameState): PlayerEntity[] {
   const lu = mergeLineupWithDefaults(state.lineup, state.players);
@@ -97,11 +85,22 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
   // OLEFOOT PYTHON MODE — se ausência ≥ moderate_36h, fadiga não regenera off-match
   const fatigueRegenOk = evaluateAbsence(state.managerPresence, Date.now()).effect.fatigueRegenEnabled;
 
+  // Recuperação off-match agora atualiza playerHealth (SSOT), não PlayerEntity.fatigue.
+  // playerHealth pode estar undefined em saves antigos — só atua se já hidratado.
+  const fisicoById: Record<string, number> = {};
   for (const [id, p] of Object.entries(players)) {
-    if (playingIds.has(id) && liveMatch?.phase === 'playing') continue;
-    if (!fatigueRegenOk) continue; // pula recuperação — manager ausente demais
-    players[id] = recoverOffMatch(p, gm, medLvl, staffPhys);
+    fisicoById[id] = p.attrs.fisico;
   }
+  const activePlayingIds =
+    liveMatch?.phase === 'playing' ? playingIds : new Set<string>();
+  const nextPlayerHealth = state.playerHealth
+    ? recoverHealthOffMatch(state.playerHealth, fisicoById, gm, {
+        medicalBonusPct: medicalDeptRecoverySpeedBonusPercent(medLvl),
+        staffPhysRecoveryPct: staffPhys,
+        playingIds: activePlayingIds,
+        fatigueRegenEnabled: fatigueRegenOk,
+      })
+    : state.playerHealth;
 
   if (
     liveMatch &&
@@ -165,7 +164,15 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
 
   const finance = mergeWalletIntoFinance(state.finance, wallet);
 
-  let next: OlefootGameState = { ...state, players, liveMatch, crowd, finance, lastWorldRealMs: nowMs };
+  let next: OlefootGameState = {
+    ...state,
+    players,
+    liveMatch,
+    crowd,
+    finance,
+    playerHealth: nextPlayerHealth,
+    lastWorldRealMs: nowMs,
+  };
   next = processLeagueScheduleDue(next, nowMs);
   next = { ...next, userSettings: applyManagerDayAdvance(next.userSettings, nowMs) };
   return next;
