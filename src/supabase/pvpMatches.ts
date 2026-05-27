@@ -108,6 +108,65 @@ export async function fetchMyPendingPvpResults(): Promise<PendingPvpResult[]> {
   }));
 }
 
+export interface PvpStandingRow {
+  rank: number;
+  userId: string;
+  displayName: string | null;
+  clubName: string | null;
+  clubShort: string | null;
+  favoriteTeamId: number | null;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDiff: number;
+  points: number;
+}
+
+export async function fetchPvpStandings(mode: PvpMatchMode, limit = 50): Promise<PvpStandingRow[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('get_pvp_standings', { p_mode: mode, p_limit: limit });
+  if (error) {
+    console.warn('[pvpMatches] fetchPvpStandings:', error.message);
+    return [];
+  }
+  if (!Array.isArray(data)) return [];
+  return data.map((row: {
+    rank: number;
+    user_id: string;
+    display_name: string | null;
+    club_name: string | null;
+    club_short: string | null;
+    favorite_team_id: number | null;
+    played: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    goals_for: number;
+    goals_against: number;
+    goal_diff: number;
+    points: number;
+  }) => ({
+    rank: row.rank,
+    userId: row.user_id,
+    displayName: row.display_name,
+    clubName: row.club_name,
+    clubShort: row.club_short,
+    favoriteTeamId: row.favorite_team_id,
+    played: row.played,
+    wins: row.wins,
+    draws: row.draws,
+    losses: row.losses,
+    goalsFor: row.goals_for,
+    goalsAgainst: row.goals_against,
+    goalDiff: row.goal_diff,
+    points: row.points,
+  }));
+}
+
 export async function claimPvpMatchResult(id: string): Promise<number> {
   const sb = getSupabase();
   if (!sb) return 0;

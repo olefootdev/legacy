@@ -700,6 +700,28 @@ export function ClassicMatchScreen({ config, homePlayers, awayPlayers, homeNarra
         import('@/supabase/managerGameState').then(({ persistOpponentQuickMatchResult }) => {
           persistOpponentQuickMatchResult(oppUserId, oppResult, score.away, score.home, 'classic');
         });
+
+        // Registra resultado oficial no ledger pvp_match_results. Server credita
+        // EXP pra A na hora (RPC retorna home reward) e marca B como pendente.
+        // B coleta no próximo login via auto-claim na Home.
+        const opponentLabel = config?.awayTeam ?? 'Manager';
+        import('@/supabase/pvpMatches').then(({ recordPvpMatchResult }) => {
+          void recordPvpMatchResult({
+            mode: 'classic',
+            awayUserId: oppUserId,
+            homeScore: score.home,
+            awayScore: score.away,
+          }).then((res) => {
+            if (!res || res.homeExpReward <= 0) return;
+            dispatch({
+              type: 'WALLET_RECEIVE_PVP_REWARD',
+              amount: res.homeExpReward,
+              mode: 'classic',
+              outcome: result,
+              opponentLabel,
+            });
+          });
+        });
       }
     }
   }, [matchOver, score, dispatch]);

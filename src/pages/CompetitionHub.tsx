@@ -233,13 +233,22 @@ export function CompetitionHub() {
           delay={0.3}
         />
         <HubSectionCard
+          to="/competicao/standings"
+          eyebrow="PvP"
+          title="Liga Rápida & Clássica"
+          description="Tabela de pontos das partidas vs managers. Vitória 3 pts, empate 1 pt."
+          cta="Ver classificação"
+          rail="bg-neon-yellow"
+          delay={0.4}
+        />
+        <HubSectionCard
           to="/liga-global/registro"
           eyebrow="Global"
           title="Liga Global"
           description="Competição mundial com 32 times. Playoffs, divisões e promoção/rebaixamento."
           cta="Entrar na liga"
           rail="bg-fuchsia-400"
-          delay={0.4}
+          delay={0.5}
         />
       </section>
     </div>

@@ -142,6 +142,7 @@ const ManagerScoutsPlayer = lazy(() => import('./pages/ManagerScoutsPlayer').the
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
 const HowToPlay = lazy(() => import('./pages/HowToPlay').then((m) => ({ default: m.HowToPlay })));
 const RankingFull = lazy(() => import('./pages/RankingFull').then((m) => ({ default: m.RankingFull })));
+const PvpStandings = lazy(() => import('./pages/PvpStandings').then((m) => ({ default: m.PvpStandings })));
 const AdminDashboard = lazy(() =>
   import('./admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })),
 );
@@ -488,6 +489,7 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/competicao/ligas" element={<Leagues />} />
             <Route path="/competicao/calendario" element={<CalendarPage />} />
             <Route path="/competicao/ranking" element={<RankingFull />} />
+            <Route path="/competicao/standings" element={<PvpStandings />} />
 
             {/* Mercado subpages */}
             <Route path="/mercado/transfer" element={<Transfer />} />
