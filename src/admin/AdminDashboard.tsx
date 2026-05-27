@@ -41,6 +41,7 @@ import { AdminGenesisPortraitsPanel } from './panels/AdminGenesisPortraitsPanel'
 import { AdminShopPanel } from './panels/AdminShopPanel';
 import { AdminMarketPanel } from './panels/AdminMarketPanel';
 import { AdminLegacyPanel } from './panels/AdminLegacyPanel';
+import { AdminLegendCreatorPanel } from './panels/AdminLegendCreatorPanel';
 import { AdminProfanityPanel } from './panels/AdminProfanityPanel';
 import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
 import { AdminFootballVocabularyPanel } from './panels/AdminFootballVocabularyPanel';
@@ -77,6 +78,7 @@ type SubTabId =
   | 'playerEvolution'
   | 'genesisPortraits'
   | 'legacy'
+  | 'legendCreator'
   | 'skills'
   | 'gameSpirit'
   | 'createPlayerAgents'
@@ -116,6 +118,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
       { id: 'playerEvolution', label: 'Evolução' },
       { id: 'genesisPortraits', label: 'Fotos Genesis' },
       { id: 'legacy', label: 'Legacy DNA' },
+      { id: 'legendCreator', label: 'Legend Creator' },
       { id: 'skills', label: 'Skills' },
     ],
   },
@@ -161,6 +164,8 @@ const HASH_TO_TAB: Record<string, TabId | SubTabId> = {
   shop: 'shop',
   market: 'market',
   legacy: 'legacy',
+  legendCreator: 'legendCreator',
+  'legend-creator': 'legendCreator',
   skills: 'skills',
   profanity: 'profanity',
   learnedPhrases: 'learnedPhrases',
@@ -358,6 +363,7 @@ export function AdminDashboard() {
               {tab === 'jogadores' && subTab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
               {tab === 'jogadores' && subTab === 'genesisPortraits' ? <AdminGenesisPortraitsPanel /> : null}
               {tab === 'jogadores' && subTab === 'legacy' ? <AdminLegacyPanel /> : null}
+              {tab === 'jogadores' && subTab === 'legendCreator' ? <AdminLegendCreatorPanel /> : null}
               {tab === 'jogadores' && subTab === 'skills' ? <AdminSkillsPanel /> : null}
               {tab === 'jogadores' && !subTab ? <AdminProspectArtPanel /> : null}
 
