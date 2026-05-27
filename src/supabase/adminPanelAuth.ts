@@ -16,8 +16,10 @@ const STORAGE_KEY = 'olefoot_admin_panel_session_v1';
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2h (reduzido de 24h por segurança)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 min de inatividade
 
-// Chave de criptografia (em produção, vir de VITE_ADMIN_ENCRYPTION_KEY)
-const ENCRYPTION_KEY = import.meta.env.VITE_ADMIN_ENCRYPTION_KEY || 'olefoot-default-key-change-in-production';
+// Chave de criptografia (em produção, vir de VITE_ADMIN_ENCRYPTION_KEY).
+// `?.` permite que esse módulo seja importado em scripts Node (tsx) sem Vite
+// — `import.meta.env` é undefined em Node, e o fallback string entra.
+const ENCRYPTION_KEY = (import.meta.env?.VITE_ADMIN_ENCRYPTION_KEY as string | undefined) || 'olefoot-default-key-change-in-production';
 
 export interface AdminPanelSession {
   email: string;

@@ -254,9 +254,12 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     0;
 
   // Awareness local: adversários no raio 8 + colega livre adiantado.
-  // Sem ctx.awayPlayers, cai pra `nearbyOpponentDist` como proxy de pressão.
+  // FANTASY V3 FIX (2026-05-27): o proxy `nearbyOpponentDist` era calculado
+  // como `dist(ball, mirrorAttack)` que dá 0 quando ball.x=50 (centro do
+  // campo) → underPressure SEMPRE TRUE → recycle eterno em modo Quick.
+  // Sem awayPlayers, assume SEM pressão (deixa o jogo fluir).
   const oppsNear = ctx.awayPlayers ? countOpponentsWithin(ctx.ball, ctx.awayPlayers, 8) : 0;
-  const underPressure = ctx.awayPlayers ? oppsNear >= 2 : ctx.nearbyOpponentDist < 8;
+  const underPressure = ctx.awayPlayers ? oppsNear >= 2 : false;
   const freeFwd = findFreeForwardTeammate(ctx.onBall, ctx.homePlayers, ctx.awayPlayers, 'home');
 
   /** live2d: após N recycles seguidos, obrigar avanço (condução/passe longo). */
@@ -306,7 +309,8 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       passOverShot +
       dnaRiskBias +
       urgencyByContext;  // Urgência por placar/tempo
-    return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
+    // FANTASY V3: gate base reduzido de 0.52 → 0.32 — chuta mais em zona att.
+    return Math.random() > 0.32 - shotBias ? 'shot' : 'progress';
   }
   // Build-up: só joga longo (clear) se realmente sem opção curta.
   // Urgência: quando perdendo no final, evita clear (prefere progress mesmo sem colega livre).
@@ -333,11 +337,15 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     if (freeFwd) return 'progress';
     // Urgência: quando perdendo no final, reduz recycle sob pressão (prefere arriscar).
     if (underPressure && urgencyByContext <= 0.14) return 'recycle';
-    // Urgência: quando perdendo, aumenta chance de progress no meio-campo.
-    const progressThreshold = urgencyByContext > 0 ? 0.45 : 0.65;
+    // FANTASY V3 (2026-05-27): bola PRECISA chegar à área. Antes 35% progress
+    // → bola girava em mid 90% da partida (zero chutes). Agora 70% progress.
+    const progressThreshold = urgencyByContext > 0 ? 0.20 : 0.30;
     if (Math.random() > progressThreshold) return 'progress';
   }
-  const base: ProposedAction = freeFwd ? 'progress' : (Math.random() > 0.72 ? 'progress' : 'recycle');
+  // FANTASY V3: fallback default deve PROGREDIR mais que retroceder.
+  // Antes: 28% progress / 72% recycle → bola fica parada.
+  // Agora: 60% progress / 40% recycle quando sem colega livre.
+  const base: ProposedAction = freeFwd ? 'progress' : (Math.random() > 0.40 ? 'progress' : 'recycle');
 
   // DNA de lenda: aplica pesos de posição sobre a decisão base (zero tokens, local).
   if (ctx.possession === 'home' && ctx.onBallKnowledge) {
@@ -1373,15 +1381,19 @@ export function gameSpiritTick(
     } else if (action === 'progress') {
       homeStat!.passesOk += 1;
       homeStat!.passesAttempt += 1;
-      let lossChance = 0.14 + errorTax * 0.45 + (ctx.crowdPressure.longPassStress - 1) * 0.08;
+      // FANTASY V3 (2026-05-27): lossChance era 0.14 + tax → bola perdia
+      // 50% das vezes e voltava pra zona mid. Reduzido pra 0.07 + tax (cap 0.25).
+      let lossChance = Math.min(0.25, 0.07 + errorTax * 0.30 + (ctx.crowdPressure.longPassStress - 1) * 0.05);
       if (ctx.test2dTickModifiers && ctx.possession === 'home') {
         lossChance *= ctx.test2dTickModifiers.progressLossMult;
       }
+      // FANTASY V3: pushX em mid aumentado pra GARANTIR chegada à zona att.
+      // Mid antes 8-22 → 14-28 (média 21, chega à zona att em ~2 progress)
       const pushX =
         ctx.ballZone === 'mid'
-          ? 8 + Math.random() * 14
+          ? 14 + Math.random() * 14
           : ctx.ballZone === 'def'
-            ? 6 + Math.random() * 12
+            ? 8 + Math.random() * 14
             : 4 + Math.random() * 10;
       ball = {
         x: Math.min(90, ctx.ball.x + pushX),
@@ -1437,7 +1449,12 @@ export function gameSpiritTick(
           });
         }
         L.push({ type: 'possession_change', payload: { to: 'away', reason: 'progress_loss' } });
-        ball = { x: 40 + Math.random() * 15, y: 25 + Math.random() * 50 };
+        // FANTASY V3: turnover natural — bola volta DEVAGAR pra atrás (não
+        // reset pra mid). Mantém pressão ofensiva da casa quando recuperar.
+        ball = {
+          x: Math.max(20, ctx.ball.x - 12 - Math.random() * 10),
+          y: 25 + Math.random() * 50,
+        };
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'turnover_after_carry' } });
         narrative = pickLine('pass_missed', { min: ctx.minute, from: ctx.onBall?.name ?? 'Casa' }, ctx.minute)
           ?? T.progressLoss({ min: ctx.minute, loser: ctx.onBall?.name ?? 'Casa', winner: awayShort });
@@ -1700,8 +1717,12 @@ export function gameSpiritTick(
       }
     } else if (next === 'home') {
       // Sem restart, mas se posse casa e jogador mais próximo > 12 → snap.
+      // FANTASY V3 FIX (2026-05-27): NÃO snapar quando a bola já está em
+      // zona mid alta / att (x >= 55) — o snap pega o jogador mais próximo
+      // (geralmente MEI/MC fixo em x=50) e ZERA o avanço da bola pra zona
+      // de chute. Resultado anterior: 0 chutes em 90% das partidas.
       const near = nearestHomeToBall(ball, ctx.homePlayers);
-      if (near && near.dist > 12) {
+      if (near && near.dist > 12 && ball.x < 55) {
         ball = { x: near.player.x, y: near.player.y };
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'snap_to_carrier' } });
       }

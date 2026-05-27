@@ -28,21 +28,21 @@ import type {
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.18,        // +38% — gols mais frequentes
-  post_in: 0.05,
-  save: 0.14,
-  block: 0.12,
-  wide: 0.18,        // −31% — menos chutes pra fora
-  post_out: 0.04,
-  miss_far: 0.29,    // pega a diferença pra fechar em 1.0
+  goal: 0.30,        // 2026-05-27 FANTASY V3 — combinado com snap-to-att fix
+  post_in: 0.07,     // mais drama na trave
+  save: 0.13,
+  block: 0.10,
+  wide: 0.12,
+  post_out: 0.03,
+  miss_far: 0.25,
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
- *  Histórico: 4.5% → 5.625% → 7.2% → 12% → 18% → 25% (FANTASY: mais set pieces). */
-export const DANGEROUS_FOUL_PROB = 0.25;
+ *  Histórico: 4.5% → 7.2% → 12% → 25% → 30% (FANTASY V3 2026-05-27). */
+export const DANGEROUS_FOUL_PROB = 0.30;
 /** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
- *  Histórico: 7.5% → 9.375% → 15% → 30% → 40% (mais pênaltis decisivos). */
-export const PENALTY_FROM_FOUL_PROB = 0.4;
+ *  Histórico: 7.5% → 15% → 30% → 40% → 50% (FANTASY V3: mais pênaltis decisivos). */
+export const PENALTY_FROM_FOUL_PROB = 0.5;
 
 /** Duração do cartão do marcador na partida rápida; `autoDismissMs` do golo = isto + narrativa (só timer, sem 2.º overlay). */
 export const GOAL_SCORER_OVERLAY_MS = 3000;
