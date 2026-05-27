@@ -309,8 +309,8 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       passOverShot +
       dnaRiskBias +
       urgencyByContext;  // Urgência por placar/tempo
-    // FANTASY V4 (2026-05-27): gate 0.32 → 0.20 — quase sempre chuta em att.
-    return Math.random() > 0.20 - shotBias ? 'shot' : 'progress';
+    // FANTASY V5 (2026-05-27): 0.20 → 0.28 — V4 chutava demais em sequência.
+    return Math.random() > 0.28 - shotBias ? 'shot' : 'progress';
   }
   // Build-up: só joga longo (clear) se realmente sem opção curta.
   // Urgência: quando perdendo no final, evita clear (prefere progress mesmo sem colega livre).
@@ -1572,12 +1572,12 @@ export function gameSpiritTick(
       const rShot = Math.random();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
-      // FANTASY V4 (2026-05-27): 0.24 → 0.32. Visitante ainda mais agressivo.
+      // FANTASY V5 (2026-05-27): 0.32 → 0.24 — V4 dava 3 gols seguidos do away.
       const pGoalAway =
         awayZone === 'att'
-          ? (0.32 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
+          ? (0.24 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
           : 0;
-      const pWideAway = 0.08;
+      const pWideAway = 0.10;
       if (awayZone === 'att' && rShot < pGoalAway) {
         L.push({
           type: 'shot_attempt',
@@ -1738,9 +1738,10 @@ export function gameSpiritTick(
     ...(consumedCorner && spiritMeta?.pendingCornerForSide === undefined
       ? { pendingCornerForSide: null }
       : {}),
-    ...(consumedFreeKick && spiritMeta?.pendingFreeKickForSide === undefined
-      ? { pendingFreeKickForSide: null }
-      : {}),
+    // V5 (2026-05-27): SEMPRE limpa pendingFreeKickForSide quando consumido
+    // (mesmo que spiritMeta tenha set novo). Evita loop do relógio em 29:00
+    // quando uma falta encadeia outra e o estado fica preso.
+    ...(consumedFreeKick ? { pendingFreeKickForSide: null } : {}),
     ...(lastShotPreview ? { lastShotPreview } : {}),
   };
 

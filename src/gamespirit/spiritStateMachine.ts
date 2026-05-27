@@ -28,21 +28,23 @@ import type {
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.42,        // 2026-05-27 FANTASY V4 — dobrar gols/partida (user request)
-  post_in: 0.08,
-  save: 0.11,
-  block: 0.08,
-  wide: 0.10,
-  post_out: 0.03,
+  goal: 0.32,        // V5 (2026-05-27) — V4 (0.42) gerava 3 gols seguidos. Calibrado pra ~5/partida.
+  post_in: 0.07,
+  save: 0.16,
+  block: 0.10,
+  wide: 0.13,
+  post_out: 0.04,
   miss_far: 0.18,
 };
 
-/** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
- *  Histórico: 4.5% → 7.2% → 12% → 25% → 30% (FANTASY V3 2026-05-27). */
-export const DANGEROUS_FOUL_PROB = 0.30;
-/** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
- *  Histórico: 7.5% → 15% → 30% → 40% → 50% (FANTASY V3: mais pênaltis decisivos). */
-export const PENALTY_FROM_FOUL_PROB = 0.5;
+/** Prob. de falta perigosa num tick em zona final. V5: reduzido de 0.30 → 0.18
+ *  pra evitar spam de faltas + loop visual. */
+export const DANGEROUS_FOUL_PROB = 0.18;
+/** Dado falta perigosa, prob. de virar pênalti.
+ *  V5: 0.5 → 0.95 — fix do bug "gol antes do batedor". Falta normal (FK direto)
+ *  era auto-resolved pelo engine sem modal (forçava action='shot' no próximo tick).
+ *  Agora QUASE TUDO vira pênalti → PenaltyKickModal abre → user escolhe batedor. */
+export const PENALTY_FROM_FOUL_PROB = 0.95;
 
 /** Duração do cartão do marcador na partida rápida; `autoDismissMs` do golo = isto + narrativa (só timer, sem 2.º overlay). */
 export const GOAL_SCORER_OVERLAY_MS = 3000;
