@@ -146,6 +146,14 @@ export interface PlayerEntity {
   skills?: string[];
   /** Perfil de agente offline (comportamento, decisão, aprendizado) */
   agentProfile?: import('@/agents/types').AgentProfile;
+  /**
+   * Switch "jogador simples vs jogador agente". Quando `false`, motores usam
+   * apenas atributos brutos + arquétipo; quando `true` (default p/ raridade
+   * alta/legacy), o `agentProfile` é consumido como bias nos resolvers.
+   * Permite tokenizar campeões reais como agentes ricos sem encarecer cada
+   * peão do elenco.
+   */
+  agentProfileEnabled?: boolean;
 }
 
 export interface OpponentStub {

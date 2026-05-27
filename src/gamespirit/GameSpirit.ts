@@ -39,6 +39,8 @@ import {
   type TeamPressingState,
 } from '@/behaviorAI/pressingTrap';
 import { evaluateTacticalFoul } from '@/behaviorAI/tacticalFoul';
+import { getFatigueState } from '@/match/fatigueState';
+import { agentShotBiasFromProfile } from '@/match/agentBias';
 import type { AgentSnapshot } from '@/simulation/InteractionResolver';
 import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
 import { enrichNarrative } from './contextualNarrative';
@@ -569,6 +571,7 @@ export function buildSpiritContext(input: {
   pendingFreeKickForSide?: SpiritContext['pendingFreeKickForSide'];
   smartfieldActionHint?: SpiritContext['smartfieldActionHint'];
   tacticalIntensity?: TacticalIntensityLevel;
+  situational?: SpiritContext['situational'];
 }): SpiritContext {
   // Overall do time ponderado por role (atacantes pesam ataque, zagueiros pesam defesa).
   // Usa `homePlayers` (MatchPlayerAttributes) quando disponível; fallback pro overall do roster.
@@ -595,10 +598,17 @@ export function buildSpiritContext(input: {
   const crowdPressure = crowdSpiritFromSupport(input.crowdSupport);
 
   // Extrai positionKnowledge do jogador com a bola (quando em posse da casa)
-  const onBallKnowledge =
+  const onBallEntity =
     input.possession === 'home' && input.onBall
-      ? input.homeRoster.find((p) => p.id === input.onBall!.playerId)?.positionKnowledge
+      ? input.homeRoster.find((p) => p.id === input.onBall!.playerId)
       : undefined;
+  const onBallKnowledge = onBallEntity?.positionKnowledge;
+  // AgentProfile do portador — só injeta se a flag estiver ativa (default true).
+  // Permite alternar "jogador simples vs agente" sem mudar engine.
+  const onBallAgentProfile =
+    onBallEntity && onBallEntity.agentProfileEnabled !== false
+      ? (onBallEntity.agentProfile ?? null)
+      : null;
 
   // LegacyDNA: soma o team_booster dos legacies titulares (em `homePlayers`).
   let legacyTeamBooster: Record<string, number> | undefined;
@@ -646,6 +656,7 @@ export function buildSpiritContext(input: {
     live2dStagnationTicks: input.live2dStagnationTicks,
     motorTelemetryTail: input.motorTelemetryTail,
     onBallKnowledge,
+    onBallAgentProfile,
     penaltyCooldownTicks: input.penaltyCooldownTicks,
     legacyTeamBooster,
     momentum: input.momentum,
@@ -655,6 +666,7 @@ export function buildSpiritContext(input: {
     tacticalIntensity: input.tacticalIntensity,
     onBallNarrativeProfile,
     squadNarrativeProfiles,
+    situational: input.situational,
   };
 }
 
@@ -1077,9 +1089,19 @@ export function gameSpiritTick(
       // Fase 2 — Core Gameplay #3: Detecta eventos especiais raros
       const specialEvent = ctx.onBall ? detectSpecialEvent('shot', ctx.onBall, ctx) : null;
 
-      const adjustedShotSkill = skillRes
-        ? Math.min(1, shotSkill * skillRes.modifier)
-        : shotSkill;
+      // Fadiga real do PORTADOR (não média do time): aplica attrMultiplier
+      // ao shotSkill efetivo. Atacante a 95% renderá ~85% num chute;
+      // a tabela alinhada à UI mata o ghost antigo de `attrMultiplier`.
+      const shooterFatigue = ctx.onBall?.fatigue ?? 0;
+      const fatMul = getFatigueState(shooterFatigue).attrMultiplier;
+      // AgentProfile bias: jogador com DNA rico (campeão tokenizado) ganha
+      // boost proporcional à `criticalProfile.finishingConfidence`. Sem profile
+      // ou flag off → bias neutro (1.0).
+      const agentBias = agentShotBiasFromProfile(ctx.onBallAgentProfile);
+      const adjustedShotSkill = Math.min(
+        1,
+        (skillRes ? shotSkill * skillRes.modifier : shotSkill) * fatMul * agentBias,
+      );
       const weights = adjustHomeShotWeights(DEFAULT_HOME_SHOT_WEIGHTS, {
         shotSkill01: adjustedShotSkill,
         zoneAtt: ctx.ballZone === 'att',

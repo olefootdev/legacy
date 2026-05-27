@@ -71,6 +71,12 @@ export interface SpiritContext {
    * Injetado por `buildSpiritContext` quando o jogador tem DNA de lenda treinado.
    */
   onBallKnowledge?: import('@/gamespirit/legacy/positionKnowledgeTypes').PositionKnowledge;
+  /**
+   * AgentProfile do jogador com a bola (DNA individual rico). Quando definido
+   * E `agentProfileEnabled !== false` no PlayerEntity, modula chance de gol,
+   * compostura crítica e risco. É o que separa campeão tokenizado de peão.
+   */
+  onBallAgentProfile?: import('@/agents/types').AgentProfile | null;
   /** Ticks restantes de cooldown pós-pênalti (bloqueia novo pênalti enquanto > 0). */
   penaltyCooldownTicks?: number;
   /**

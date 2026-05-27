@@ -32,6 +32,7 @@ import { overallFromAttributes } from '@/entities/player';
 import { formatBroFromCents } from '@/systems/economy';
 import { cn } from '@/lib/utils';
 import type { SquadPlayerEntry } from '@/insights/client';
+import { getPlayerLevelInfo } from '@/entities/playerLevel';
 
 interface Props {
   playerId: string;
@@ -97,6 +98,10 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
     | undefined;
 
   const ovr = useMemo(() => (player ? overallFromAttributes(player.attrs) : null), [player]);
+  const lvlInfo = useMemo(
+    () => (player ? getPlayerLevelInfo(player.evolutionXp) : null),
+    [player],
+  );
 
   if (!player) return null;
 
@@ -182,6 +187,21 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
         >
           {player.pos}
         </div>
+        {lvlInfo && (
+          <div
+            className="px-1.5 py-0.5 bg-neon-yellow/10 border border-neon-yellow/35 text-neon-yellow"
+            title={`Nível ${lvlInfo.level} · ${lvlInfo.xp} XP (próximo: ${lvlInfo.xpForNext})`}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 900,
+              fontSize: '9px',
+              letterSpacing: '0.18em',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            LV {lvlInfo.level}
+          </div>
+        )}
       </div>
 
       {/* ── Bloco direito: header + stats ─────────────────────── */}

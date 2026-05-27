@@ -3,6 +3,7 @@ import { overallFromAttributes } from './player';
 import { MANAGER_PROSPECT_EVOLVED_MAX_OVR, scaleAttrsToMaxOvr } from './managerProspect';
 import { evolvePositionKnowledgePostMatch } from '@/gamespirit/legacy/positionKnowledgeTypes';
 import type { PositionActionKey, KnowledgeZoneKey } from '@/gamespirit/legacy/positionKnowledgeTypes';
+import { recomputeMarketValue } from '@/economy/marketValue';
 
 /** Pilar 3 (evolução pós-jogo / tectos): mapa de rastreio em `@/lib/veracityPillarsMap`. */
 
@@ -142,11 +143,26 @@ export function applyMatchPerformanceEvolution(
     }
   }
 
-  return {
+  const nextAttrs = bumpAttrsBySwing(player.attrs, swing);
+  const playerAfterAttrs: PlayerEntity = {
     ...player,
-    attrs: bumpAttrsBySwing(player.attrs, swing),
+    attrs: nextAttrs,
     evolutionXp: Math.max(0, (player.evolutionXp ?? 0) + xpGain),
     ...(updatedKnowledge ? { positionKnowledge: updatedKnowledge } : {}),
+  };
+
+  // Preço dinâmico: recalcula marketValueBroCents pós-jogo.
+  // Mantém `marketValueExp` (catálogo Genesis) intacto. Apenas BRO responde
+  // a performance/forma/idade/raridade — mata o "mock" de preço estático.
+  const recentRating = stat?.rating ?? 6.5;
+  const nextMarketValue = recomputeMarketValue(playerAfterAttrs, {
+    recentRatings: [recentRating],
+    outForMatches: player.outForMatches ?? 0,
+  });
+
+  return {
+    ...playerAfterAttrs,
+    marketValueBroCents: nextMarketValue,
   };
 }
 

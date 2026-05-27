@@ -6,6 +6,7 @@ import { decideNextAction, resolveShot, hasCleanShot, isUnderPressure } from './
 import { resolvePass } from './resolvePass';
 import { tryResolveDuel, type DuelResult } from './duelSystem';
 import type { PlayerNarrativeProfile } from '@/gamespirit/playerNarrativeProfile';
+import { getFatigueState } from '@/match/fatigueState';
 
 let _eventCounter = 0;
 
@@ -186,8 +187,12 @@ function chooseEventType(
 ): EventType {
   const cfg = ARCHETYPES[player.archetype];
   const tension = minute > 70 ? 1.4 : 1.0;
-  const fatigueFactor = player.fatigue > 70 ? 0.7 : player.fatigue > 85 ? 0.5 : 1.0;
-  const foulBoost = player.fatigue > 70 ? 1.5 : 1.0;
+  // Fadiga unificada: tabela canônica de `getFatigueState`. attrMultiplier
+  // (1.0 / 0.97 / 0.92 / 0.85) substitui a escada linear antiga e bate com
+  // o que a UI mostra no badge — sem mais drift entre engine e visual.
+  const fatSt = getFatigueState(player.fatigue ?? 0);
+  const fatigueFactor = fatSt.attrMultiplier;
+  const foulBoost = fatSt.level === 'critical' ? 1.6 : fatSt.level === 'exhausted' ? 1.35 : 1.0;
   const confBoost = player.onFire ? 1.35 : 1.0;
 
   const pressBoost   = activeSkills.includes('press')   ? 1.6 : 1.0;

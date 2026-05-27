@@ -278,7 +278,7 @@ function hydrateCardCollections(
 
 function hydrateState(raw: OlefootGameState): OlefootGameState {
   const base = createInitialGameState();
-  const players: OlefootGameState['players'] = { ...base.players };
+  let players: OlefootGameState['players'] = { ...base.players };
   for (const [id, p] of Object.entries(raw.players ?? {})) {
     players[id] = hydrateLegacyGenesisContract(
       clampPlayerToEvolutionCap(
@@ -289,6 +289,10 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
       ),
     );
   }
+  // Garante agentProfile em todo jogador (gera para os que não têm).
+  // É o "plugue" que liga a usina nuclear de DNA do agente — sem isso o
+  // bias em campo sempre retorna 0 porque o cache nunca é populado.
+  players = generateMissingAgentProfiles(players);
   // NOTA: havia aqui um filtro `if (!id.startsWith('genesis-')) delete` que
   // wipava jogadores criados na Academia (`mgr_*`), prospects NPC (`npc_*`),
   // bots e qualquer compra de listing de outro manager. Removido — jogadores

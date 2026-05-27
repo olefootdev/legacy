@@ -12,6 +12,7 @@ import type { ClassicPlayer, ArchetypeId, PassStyle, ManagerSkillId } from './ty
 import { zoneFromRole } from './types';
 import { ARCHETYPES } from './archetypes';
 import { FIELD_W_LOGIC, FIELD_H_LOGIC } from './formations';
+import { getFatigueState } from '@/match/fatigueState';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -112,10 +113,16 @@ export function computeGoalIntent(
   const holderZone = zoneFromRole(player.role);
   const cfg = ARCHETYPES[player.archetype];
 
+  // Fadiga real: tabela canônica `getFatigueState` substitui a penalidade
+  // linear antiga. Permite que cansaço dene atributos (finishing/positioning/
+  // composure) — fadiga vira gameplay, não enfeite.
+  const fatSt = getFatigueState(player.fatigue ?? 0);
+  const fatMul = fatSt.attrMultiplier;
+
   // ─── Componentes do score ──────────────────────────────────────────────
-  const finishing = clamp(player.ovr * (cfg.shotFreq * 0.6 + 0.4), 0, 100);
-  const positioning = clamp(player.ovr * (cfg.positionBonus * 0.5 + 0.5), 0, 100);
-  const composure = cfg.stressImmune ? 85 : clamp(player.confidence * 0.7 + player.ovr * 0.3, 0, 100);
+  const finishing = clamp(player.ovr * (cfg.shotFreq * 0.6 + 0.4) * fatMul, 0, 100);
+  const positioning = clamp(player.ovr * (cfg.positionBonus * 0.5 + 0.5) * fatMul, 0, 100);
+  const composure = cfg.stressImmune ? 85 : clamp((player.confidence * 0.7 + player.ovr * 0.3) * fatMul, 0, 100);
 
   const archetypeBonus = ARCHETYPE_GOAL_BONUS[player.archetype] ?? 0;
   const boxPresence = ARCHETYPE_BOX_PRESENCE[player.archetype] ?? 0;
@@ -145,7 +152,8 @@ export function computeGoalIntent(
   const angleToGoal = Math.abs(Math.atan2(goalY - player.position.y, goalX - player.position.x));
   const badAnglePenalty = angleToGoal > 1.2 ? 15 : angleToGoal > 0.9 ? 8 : 0;
 
-  const fatiguePenalty = player.fatigue > 80 ? 10 : player.fatigue > 65 ? 5 : 0;
+  // Penalidade flat extra na zona vermelha — alinha com risco de lesão da tabela.
+  const fatiguePenalty = fatSt.level === 'critical' ? 12 : fatSt.level === 'exhausted' ? 6 : 0;
 
   // ─── Score final ───────────────────────────────────────────────────────
   const rawScore =
