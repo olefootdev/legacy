@@ -309,8 +309,8 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       passOverShot +
       dnaRiskBias +
       urgencyByContext;  // Urgência por placar/tempo
-    // FANTASY V3: gate base reduzido de 0.52 → 0.32 — chuta mais em zona att.
-    return Math.random() > 0.32 - shotBias ? 'shot' : 'progress';
+    // FANTASY V4 (2026-05-27): gate 0.32 → 0.20 — quase sempre chuta em att.
+    return Math.random() > 0.20 - shotBias ? 'shot' : 'progress';
   }
   // Build-up: só joga longo (clear) se realmente sem opção curta.
   // Urgência: quando perdendo no final, evita clear (prefere progress mesmo sem colega livre).
@@ -1572,13 +1572,12 @@ export function gameSpiritTick(
       const rShot = Math.random();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
-      // FANTASY V2 (2026-05-27): 0.19 → 0.24. Visitante mais agressivo,
-      // jogos mais abertos. Target: 4-6 gols away por partida.
+      // FANTASY V4 (2026-05-27): 0.24 → 0.32. Visitante ainda mais agressivo.
       const pGoalAway =
         awayZone === 'att'
-          ? (0.24 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
+          ? (0.32 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
           : 0;
-      const pWideAway = 0.10;
+      const pWideAway = 0.08;
       if (awayZone === 'att' && rShot < pGoalAway) {
         L.push({
           type: 'shot_attempt',

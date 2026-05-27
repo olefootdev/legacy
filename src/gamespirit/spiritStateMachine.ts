@@ -28,13 +28,13 @@ import type {
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.30,        // 2026-05-27 FANTASY V3 — combinado com snap-to-att fix
-  post_in: 0.07,     // mais drama na trave
-  save: 0.13,
-  block: 0.10,
-  wide: 0.12,
+  goal: 0.42,        // 2026-05-27 FANTASY V4 — dobrar gols/partida (user request)
+  post_in: 0.08,
+  save: 0.11,
+  block: 0.08,
+  wide: 0.10,
   post_out: 0.03,
-  miss_far: 0.25,
+  miss_far: 0.18,
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
