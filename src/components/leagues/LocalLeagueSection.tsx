@@ -56,7 +56,10 @@ export function LocalLeagueSection({ league }: Props) {
   }, [league]);
 
   const meta = META[league];
-  const ctaHref = league === 'classic' ? '/match/classic' : '/match/quick';
+  // 2026-05-27: Classic em "Em breve" — desativa CTA e redireciona pra Quick.
+  const isClassicSoon = league === 'classic';
+  const ctaHref = isClassicSoon ? '/match/quick' : '/match/quick';
+  const ctaLabel = isClassicSoon ? 'Em breve' : meta.ctaLabel;
 
   return (
     <motion.section
@@ -97,12 +100,21 @@ export function LocalLeagueSection({ league }: Props) {
               {myStanding.points} {myStanding.points === 1 ? 'ponto' : 'pontos'}
             </span>
           </h2>
-          <Link
-            to={ctaHref}
-            className="inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow text-black px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] hover:opacity-90"
-          >
-            {meta.ctaLabel}
-          </Link>
+          {isClassicSoon ? (
+            <span
+              className="inline-flex items-center rounded-[var(--radius-pill)] bg-white/10 text-white/50 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] cursor-not-allowed"
+              aria-disabled="true"
+            >
+              {ctaLabel}
+            </span>
+          ) : (
+            <Link
+              to={ctaHref}
+              className="inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow text-black px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] hover:opacity-90"
+            >
+              {ctaLabel}
+            </Link>
+          )}
         </div>
         <p className="text-white/55 max-w-md mt-3" style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}>
           {meta.subtitle}

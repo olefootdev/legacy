@@ -34,9 +34,8 @@ const MODES: ReadonlyArray<ModeEntry> = [
   {
     id: 'classic',
     label: 'Classic',
-    description: 'Simulação retrô-inteligente · sistema operacional de futebol',
-    status: 'available',
-    to: '/match/classic',
+    description: 'Em breve · simulação retrô-inteligente com escolhas táticas',
+    status: 'soon',
     glyph: '◈',
   },
   {
