@@ -127,27 +127,32 @@ export async function adminImportLegend(slug: string, payload: LegendImportPaylo
   return body;
 }
 
-export interface PortraitUploadResponse {
+export interface SetPortraitResponse {
   ok: true;
-  url: string | null;
-  path: string;
+  legacyPlayerId: string;
+  publicUrl: string;
 }
 
 /**
- * Upload da imagem do card de uma fase específica.
- * O server salva no bucket `legacy-player-portraits` e atualiza a row.
+ * Persiste a URL do portrait (já hospedada em Pinata/IPFS via /api/media/pinata/upload)
+ * no row de legacy_players. Substitui o upload Supabase Storage anterior — alinha
+ * com fluxo validado em AdminGenesisPortraitsPanel.
  */
-export async function adminUploadLegendPortrait(legacyPlayerId: string, file: File): Promise<PortraitUploadResponse> {
-  const url = `${olefootApiBase()}/api/admin/legend-portrait`;
-  const form = new FormData();
-  form.append('legacyPlayerId', legacyPlayerId);
-  form.append('file', file);
+export async function adminSetLegacyPortrait(
+  legacyPlayerId: string,
+  publicUrl: string,
+  storagePath?: string,
+): Promise<SetPortraitResponse> {
+  const url = `${olefootApiBase()}/api/admin/legacy-player-set-portrait`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'X-Admin-Token': adminToken() },
-    body: form,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Admin-Token': adminToken(),
+    },
+    body: JSON.stringify({ legacyPlayerId, publicUrl, storagePath }),
   });
-  const body = (await res.json()) as PortraitUploadResponse | { error: string };
+  const body = (await res.json()) as SetPortraitResponse | { error: string };
   if (!res.ok || 'error' in body) {
     throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
   }

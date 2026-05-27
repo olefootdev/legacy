@@ -469,6 +469,56 @@ legendImportRoutes.post('/legend-portrait', async (c) => {
 });
 
 /**
+ * POST /api/admin/legacy-player-set-portrait
+ * Persiste a URL pública do portrait (já hospedado em Pinata/IPFS via /api/media/pinata/upload)
+ * no row de legacy_players. Substitui o upload via Supabase Storage do endpoint
+ * /api/admin/legend-portrait, alinhando com o fluxo já validado em AdminGenesisPortraitsPanel.
+ *
+ * Body JSON: { legacyPlayerId: string, publicUrl: string, storagePath?: string }
+ */
+legendImportRoutes.post('/legacy-player-set-portrait', async (c) => {
+  const authErr = requireAdminToken(c);
+  if (authErr) return authErr;
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ error: 'Supabase admin not configured' }, 503);
+
+  let body: { legacyPlayerId?: unknown; publicUrl?: unknown; storagePath?: unknown };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400);
+  }
+
+  const legacyPlayerId =
+    typeof body.legacyPlayerId === 'string' ? body.legacyPlayerId.trim() : '';
+  const publicUrl = typeof body.publicUrl === 'string' ? body.publicUrl.trim() : '';
+  const storagePath =
+    typeof body.storagePath === 'string' ? body.storagePath.trim() : null;
+
+  if (!legacyPlayerId) return c.json({ error: 'legacyPlayerId required' }, 400);
+  if (!publicUrl || !/^https?:\/\//i.test(publicUrl)) {
+    return c.json({ error: 'publicUrl required (http/https)' }, 400);
+  }
+
+  const { error } = await sb
+    .from('legacy_players')
+    .update({
+      portrait_public_url: publicUrl,
+      portrait_storage_path: storagePath,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', legacyPlayerId);
+
+  if (error) {
+    console.error('[legacy-player-set-portrait] update error:', error.message);
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ ok: true, legacyPlayerId, publicUrl });
+});
+
+/**
  * GET /api/admin/find-user?email=...
  * Busca usuário por e-mail (auth.users) — pra UI do wizard escolher facilitadores/beneficiary.
  * Auth admin obrigatório.

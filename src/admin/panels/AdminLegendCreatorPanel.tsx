@@ -24,7 +24,7 @@ import {
 import {
   adminFindUserByEmail,
   adminImportLegend,
-  adminUploadLegendPortrait,
+  adminSetLegacyPortrait,
   DEFAULT_SPLIT,
   isSplitValid,
   slugify,
@@ -37,6 +37,7 @@ import {
   type LegendSplitEntry,
   type LegendTier,
 } from '../legendCreatorClient';
+import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
 
 const PHASE_LABEL: Record<LegendPhase, string> = {
   revelacao: 'Revelação',
@@ -655,15 +656,29 @@ function PortraitUploader({
       setError('Defina o Slug antes de subir a imagem.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Imagem maior que 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Imagem maior que 10MB.');
       return;
     }
     setError(null);
     setUploading(true);
     try {
-      const res = await adminUploadLegendPortrait(legacyPlayerId, file);
-      onUploaded(res.url);
+      // 1) Upload via Pinata (mesmo fluxo do AdminGenesisPortraitsPanel).
+      const ext = (file.name.match(/\.[a-zA-Z0-9]+$/)?.[0] ?? '').toLowerCase() || '.png';
+      const upload = await uploadImageToPinataViaServer(file, {
+        entityType: 'legacy_player_card',
+        entityId: legacyPlayerId,
+        originalName: `${legacyPlayerId}-card${ext}`,
+        mimeType: file.type || undefined,
+      });
+      if (upload.ok === true) {
+        // 2) Persiste a URL pública no row de legacy_players.
+        await adminSetLegacyPortrait(legacyPlayerId, upload.media.publicUrl);
+        onUploaded(upload.media.publicUrl);
+      } else {
+        const failMsg = (upload as { error: string }).error || 'Falha no upload';
+        setError(failMsg);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -704,12 +719,12 @@ function PortraitUploader({
           ) : currentUrl ? (
             <>
               <RefreshCw size={14} className="text-neon-yellow" />
-              Trocar imagem
+              Trocar imagem (Pinata/IPFS)
             </>
           ) : (
             <>
               <Camera size={14} className="text-neon-yellow" />
-              Subir imagem (jpeg/png/webp, ≤ 5MB)
+              Subir imagem (Pinata/IPFS · jpeg/png/webp · ≤ 10MB)
             </>
           )}
           <input
