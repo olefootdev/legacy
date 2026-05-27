@@ -9,6 +9,19 @@
 
 import { useMemo, useState } from 'react';
 import {
+  Camera,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Coins,
+  RefreshCw,
+  Search,
+  Upload,
+  UserPlus,
+  X,
+  XCircle,
+} from 'lucide-react';
+import {
   adminFindUserByEmail,
   adminImportLegend,
   adminUploadLegendPortrait,
@@ -219,8 +232,9 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
             Tokeniza lendas reais: pesquisa (skill) → 3 fases → lotes Panini → split 4-way.
           </p>
         </div>
-        <label className="cursor-pointer rounded-md border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2 text-sm text-neon-yellow hover:bg-neon-yellow/20">
-          📂 Upload legend.json
+        <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border-2 border-white bg-neon-yellow/10 px-3 py-2 text-sm font-semibold text-neon-yellow hover:bg-neon-yellow/20">
+          <Upload size={16} className="text-neon-yellow" />
+          Upload legend.json
           <input
             type="file"
             accept="application/json"
@@ -235,8 +249,8 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
       </header>
 
       {/* Identidade */}
-      <section className="rounded-lg border border-white/10 bg-deep-black/60 p-4 space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70">Identidade</h3>
+      <section className="rounded-lg border-2 border-white bg-deep-black/60 p-4 space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-white">Identidade</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <LabeledInput
             label="Slug (kebab-case)"
@@ -275,15 +289,19 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
       </section>
 
       {/* CTA */}
-      <section className="sticky bottom-4 z-10 rounded-lg border border-neon-yellow/30 bg-deep-black/95 p-4 backdrop-blur">
+      <section className="sticky bottom-4 z-10 rounded-lg border-2 border-white bg-deep-black/95 p-4 backdrop-blur">
         {error && (
-          <div className="mb-3 rounded border border-red-400/40 bg-red-400/10 p-3 text-sm text-red-300">
-            ✗ {error}
+          <div className="mb-3 flex items-start gap-2 rounded border-2 border-white bg-red-400/15 p-3 text-sm text-red-200">
+            <XCircle size={16} className="mt-0.5 shrink-0 text-neon-yellow" />
+            <span>{error}</span>
           </div>
         )}
         {result && (
-          <div className="mb-3 rounded border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-200">
-            ✓ Importado: {result.inserted.length} cards · {result.lots.length} lotes
+          <div className="mb-3 rounded border-2 border-white bg-emerald-400/15 p-3 text-sm text-emerald-100">
+            <div className="flex items-center gap-2 font-semibold">
+              <Check size={16} className="text-neon-yellow" />
+              Importado: {result.inserted.length} cards · {result.lots.length} lotes
+            </div>
             <ul className="mt-2 space-y-1 text-xs">
               {result.inserted.map((row) => (
                 <li key={row.id}>
@@ -298,9 +316,10 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
           type="button"
           onClick={tokenize}
           disabled={!canSubmit}
-          className="w-full rounded-md bg-neon-yellow px-4 py-3 font-bold text-deep-black transition hover:bg-neon-yellow/90 disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-neon-yellow px-4 py-3 font-bold text-deep-black transition hover:bg-neon-yellow/90 disabled:opacity-40"
         >
-          {submitting ? 'Tokenizando...' : '🪙 Tokenizar (cria 3 cards + 3 lotes)'}
+          <Coins size={20} className="text-deep-black" />
+          {submitting ? 'Tokenizando...' : 'Tokenizar (cria 3 cards + 3 lotes)'}
         </button>
       </section>
     </div>
@@ -326,7 +345,7 @@ function LabeledInput({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-white/15 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/30 focus:border-neon-yellow focus:outline-none"
+        className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
       />
     </label>
   );
@@ -353,7 +372,7 @@ function LabeledNumber({
           const n = Number(e.target.value);
           onChange(Number.isFinite(n) ? n : 0);
         }}
-        className="rounded border border-white/15 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+        className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
       />
     </label>
   );
@@ -376,32 +395,34 @@ function PhaseEditor({
 }) {
   const def = phase.tier ? TIER_DEFAULTS[phase.tier] : null;
   return (
-    <div className="rounded-lg border border-white/10 bg-deep-black/40 overflow-hidden">
+    <div className="rounded-lg border-2 border-white bg-deep-black/40 overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
         className="flex w-full items-center justify-between p-4 text-left hover:bg-white/5"
       >
         <div className="flex items-center gap-3">
-          <span className="rounded bg-neon-yellow/15 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
+          <span className="rounded border-2 border-white bg-neon-yellow/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
             {PHASE_LABEL[phase.phase]}
           </span>
-          <span className="text-sm text-white/80">
-            {phase.entity.name || <em className="text-white/40">(sem nome)</em>}
+          <span className="text-sm text-white">
+            {phase.entity.name || <em className="text-white/50">(sem nome)</em>}
           </span>
           {phase.collectionCode && (
-            <span className="text-xs text-white/50">· {phase.collectionCode}</span>
+            <span className="text-xs text-white/70">· {phase.collectionCode}</span>
           )}
           {phase.tier && (
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-white/70">
               · Tier {phase.tier} · {phase.initialSupply}×{phase.priceUnitCents}¢ {phase.currency}
             </span>
           )}
         </div>
-        <span className="text-xs text-white/40">{expanded ? '▼' : '▶'}</span>
+        {expanded
+          ? <ChevronDown size={18} className="text-neon-yellow" />
+          : <ChevronRight size={18} className="text-neon-yellow" />}
       </button>
       {expanded && (
-        <div className="border-t border-white/10 p-4 space-y-4">
+        <div className="border-t-2 border-white p-4 space-y-4">
           {/* Identidade da fase */}
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold uppercase tracking-wider text-white/60">
@@ -515,10 +536,10 @@ function PhaseEditor({
                   key={t}
                   type="button"
                   onClick={() => onApplyTier(t as LegendTier)}
-                  className={`flex-1 rounded border px-3 py-1.5 text-xs uppercase ${
+                  className={`flex-1 rounded border-2 px-3 py-1.5 text-xs uppercase ${
                     phase.tier === t
-                      ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow'
-                      : 'border-white/20 text-white/60 hover:border-white/40'
+                      ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow font-bold'
+                      : 'border-white text-white hover:bg-white/10'
                   }`}
                 >
                   Tier {t} · {TIER_DEFAULTS[t as LegendTier].supply.toLocaleString()} cópias · $
@@ -537,7 +558,7 @@ function PhaseEditor({
                     const newPrice = c === 'USDT' ? TIER_DEFAULTS[tier].usdtCents : TIER_DEFAULTS[tier].oleUnits;
                     onChange({ currency: c, priceUnitCents: newPrice });
                   }}
-                  className="rounded border border-white/15 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                  className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
                 >
                   <option value="USDT">USDT (cents)</option>
                   <option value="OLEFOOT">OLEFOOT (unidades)</option>
@@ -608,7 +629,7 @@ function TaglineField({
         rows={2}
         placeholder="Ex.: Pilar da linha de três que matou um jejum de 27 anos no Botafogo."
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-white/15 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/30 focus:border-neon-yellow focus:outline-none resize-none"
+        className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none resize-none"
       />
       <span className={`self-end text-[10px] tabular-nums ${tone}`}>
         {len} / {maxLen}
@@ -652,7 +673,7 @@ function PortraitUploader({
 
   return (
     <div className="flex items-end gap-3">
-      <div className="h-20 w-20 shrink-0 overflow-hidden rounded border border-white/15 bg-deep-black flex items-center justify-center">
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded border-2 border-white bg-deep-black flex items-center justify-center">
         {currentUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -661,7 +682,7 @@ function PortraitUploader({
             className="h-full w-full object-cover"
           />
         ) : (
-          <span className="text-[10px] uppercase tracking-wider text-white/30">sem foto</span>
+          <span className="text-[10px] uppercase tracking-wider text-white/40">sem foto</span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 text-xs">
@@ -669,17 +690,28 @@ function PortraitUploader({
           Imagem do card
         </span>
         <label
-          className={`cursor-pointer rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2 text-center text-neon-yellow hover:bg-neon-yellow/20 ${
+          className={`inline-flex items-center justify-center gap-2 cursor-pointer rounded border-2 border-white bg-neon-yellow/10 px-3 py-2 text-center font-semibold text-neon-yellow hover:bg-neon-yellow/20 ${
             uploading || !legacyPlayerId ? 'pointer-events-none opacity-40' : ''
           }`}
         >
-          {uploading
-            ? 'Enviando...'
-            : !legacyPlayerId
-            ? '(defina o slug primeiro)'
-            : currentUrl
-            ? '🔄 Trocar imagem'
-            : '📷 Subir imagem (jpeg/png/webp, ≤ 5MB)'}
+          {uploading ? (
+            <>
+              <RefreshCw size={14} className="text-neon-yellow animate-spin" />
+              Enviando...
+            </>
+          ) : !legacyPlayerId ? (
+            <span className="text-white/50">(defina o slug primeiro)</span>
+          ) : currentUrl ? (
+            <>
+              <RefreshCw size={14} className="text-neon-yellow" />
+              Trocar imagem
+            </>
+          ) : (
+            <>
+              <Camera size={14} className="text-neon-yellow" />
+              Subir imagem (jpeg/png/webp, ≤ 5MB)
+            </>
+          )}
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
@@ -692,9 +724,14 @@ function PortraitUploader({
             }}
           />
         </label>
-        {error && <span className="text-red-300">✗ {error}</span>}
+        {error && (
+          <span className="inline-flex items-center gap-1 text-red-200">
+            <XCircle size={12} className="text-neon-yellow" />
+            {error}
+          </span>
+        )}
         {currentUrl && !error && (
-          <span className="truncate text-[10px] text-white/40" title={currentUrl}>
+          <span className="truncate text-[10px] text-white/50" title={currentUrl}>
             {currentUrl.replace(/.*\/legacy-player-portraits\//, '')}
           </span>
         )}
@@ -753,10 +790,10 @@ function SplitEditor({
   return (
     <div className="space-y-2">
       {split.map((e, i) => (
-        <div key={i} className="flex flex-wrap items-end gap-2 rounded border border-white/10 bg-white/[0.02] p-2">
+        <div key={i} className="flex flex-wrap items-end gap-2 rounded border-2 border-white bg-white/[0.04] p-2">
           <div className="flex flex-col gap-1 text-xs">
             <span className="font-semibold uppercase tracking-wider text-white/60">Kind</span>
-            <span className="rounded bg-white/5 px-2 py-1 text-sm text-white">{e.kind}</span>
+            <span className="rounded border-2 border-white/40 bg-white/10 px-2 py-1 text-sm font-semibold text-white">{e.kind}</span>
           </div>
           <LabeledInput
             label="Label"
@@ -779,18 +816,22 @@ function SplitEditor({
                   placeholder="email@…"
                   value={emailQuery}
                   onChange={(ev) => setEmailQuery(ev.target.value)}
-                  className="w-40 rounded border border-white/15 bg-deep-black px-2 py-1 text-xs text-white placeholder-white/30 focus:border-neon-yellow focus:outline-none"
+                  className="w-40 rounded border-2 border-white/70 bg-deep-black px-2 py-1 text-xs text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => lookupEmail(emailQuery, i)}
-                  className="rounded border border-white/20 px-2 py-1 text-xs text-white/80 hover:border-neon-yellow hover:text-neon-yellow"
+                  className="inline-flex items-center justify-center rounded border-2 border-white px-2 py-1 text-neon-yellow hover:bg-neon-yellow/10"
+                  title="Buscar usuário"
                 >
-                  🔍
+                  <Search size={14} />
                 </button>
               </div>
               {e.user_id && (
-                <span className="text-[10px] text-emerald-300/70">→ {e.user_id.slice(0, 8)}…</span>
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-200">
+                  <Check size={10} className="text-neon-yellow" />
+                  {e.user_id.slice(0, 8)}…
+                </span>
               )}
             </div>
           )}
@@ -798,9 +839,10 @@ function SplitEditor({
             <button
               type="button"
               onClick={() => removeEntry(i)}
-              className="self-end rounded border border-red-400/40 px-2 py-1 text-xs text-red-300 hover:bg-red-400/10"
+              className="self-end inline-flex items-center justify-center rounded border-2 border-white px-2 py-1 text-neon-yellow hover:bg-red-400/15"
+              title="Remover facilitador"
             >
-              ✕
+              <X size={14} />
             </button>
           )}
         </div>
@@ -810,15 +852,25 @@ function SplitEditor({
           type="button"
           onClick={addFacilitator}
           disabled={facilitatorCount >= 5}
-          className="rounded border border-neon-yellow/40 px-3 py-1 text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded border-2 border-white px-3 py-1 font-semibold text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
         >
-          + Facilitador ({facilitatorCount}/5)
+          <UserPlus size={14} className="text-neon-yellow" />
+          Facilitador ({facilitatorCount}/5)
         </button>
-        <span className={total === 100 ? 'text-emerald-300' : 'text-red-300'}>
-          Total: {total.toFixed(1)}% {total === 100 ? '✓' : '(deve somar 100)'}
+        <span
+          className={`inline-flex items-center gap-1 font-semibold ${
+            total === 100 ? 'text-emerald-200' : 'text-red-200'
+          }`}
+        >
+          Total: {total.toFixed(1)}%
+          {total === 100 ? (
+            <Check size={12} className="text-neon-yellow" />
+          ) : (
+            <XCircle size={12} className="text-neon-yellow" />
+          )}
         </span>
       </div>
-      {emailLookup && <p className="text-[11px] text-white/50">{emailLookup}</p>}
+      {emailLookup && <p className="text-[11px] text-white/60">{emailLookup}</p>}
     </div>
   );
 }
