@@ -46,6 +46,8 @@ export interface LegendPhasePayload {
     creatorType?: string;
     age?: number;
     bio?: string;
+    /** Mini-texto de apoio (até ~150 chars). Subtítulo emocional do card. */
+    tagline?: string;
     attrs: {
       passe: number; marcacao: number; velocidade: number; drible: number;
       finalizacao: number; fisico: number; tatico: number; mentalidade: number;
@@ -119,6 +121,33 @@ export async function adminImportLegend(slug: string, payload: LegendImportPaylo
     body: JSON.stringify({ slug, payload }),
   });
   const body = (await res.json()) as LegendImportResponse | { error: string };
+  if (!res.ok || 'error' in body) {
+    throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
+  }
+  return body;
+}
+
+export interface PortraitUploadResponse {
+  ok: true;
+  url: string | null;
+  path: string;
+}
+
+/**
+ * Upload da imagem do card de uma fase específica.
+ * O server salva no bucket `legacy-player-portraits` e atualiza a row.
+ */
+export async function adminUploadLegendPortrait(legacyPlayerId: string, file: File): Promise<PortraitUploadResponse> {
+  const url = `${olefootApiBase()}/api/admin/legend-portrait`;
+  const form = new FormData();
+  form.append('legacyPlayerId', legacyPlayerId);
+  form.append('file', file);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-Admin-Token': adminToken() },
+    body: form,
+  });
+  const body = (await res.json()) as PortraitUploadResponse | { error: string };
   if (!res.ok || 'error' in body) {
     throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
   }

@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 import {
   adminFindUserByEmail,
   adminImportLegend,
+  adminUploadLegendPortrait,
   DEFAULT_SPLIT,
   isSplitValid,
   slugify,
@@ -65,6 +66,7 @@ function emptyPhase(phase: LegendPhase, tier: LegendTier): LegendPhasePayload {
       strongFoot: 'direito',
       creatorType: 'lenda',
       age: 27,
+      tagline: '',
       attrs: emptyAttrs(),
       mintOverall: 70,
       evolutionRate: 1.2,
@@ -100,6 +102,12 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
   const [result, setResult] = useState<LegendImportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<LegendPhase | null>('revelacao');
+  /** URLs de portrait por fase (após upload bem-sucedido). */
+  const [portraits, setPortraits] = useState<Record<LegendPhase, string | null>>({
+    revelacao: null,
+    consolidacao: null,
+    expansao: null,
+  });
 
   function handleFileUpload(file: File) {
     const reader = new FileReader();
@@ -251,6 +259,11 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
           <PhaseEditor
             key={ph.phase}
             phase={ph}
+            slug={slug}
+            portraitUrl={portraits[ph.phase]}
+            onPortraitUploaded={(url) =>
+              setPortraits((prev) => ({ ...prev, [ph.phase]: url }))
+            }
             expanded={expanded === ph.phase}
             onToggle={() => setExpanded(expanded === ph.phase ? null : ph.phase)}
             onChange={(patch) => updatePhase(ph.phase, patch)}
@@ -347,9 +360,13 @@ function LabeledNumber({
 }
 
 function PhaseEditor({
-  phase, expanded, onToggle, onChange, onChangeEntity, onChangeAttr, onApplyTier,
+  phase, slug, portraitUrl, onPortraitUploaded,
+  expanded, onToggle, onChange, onChangeEntity, onChangeAttr, onApplyTier,
 }: {
   phase: LegendPhasePayload;
+  slug: string;
+  portraitUrl: string | null;
+  onPortraitUploaded: (url: string | null) => void;
   expanded: boolean;
   onToggle: () => void;
   onChange: (patch: Partial<LegendPhasePayload>) => void;
@@ -421,11 +438,21 @@ function PhaseEditor({
               onChange={(v) => onChangeEntity({ bio: v })}
               placeholder="Frase curta emocional."
             />
+            <TaglineField
+              value={phase.entity.tagline ?? ''}
+              onChange={(v) => onChangeEntity({ tagline: v })}
+            />
             <LabeledInput
               label="Narrative title"
               value={phase.narrativeTitle ?? ''}
               onChange={(v) => onChange({ narrativeTitle: v })}
               placeholder="O pilar da defesa que matou o jejum"
+            />
+            <PortraitUploader
+              slug={slug}
+              phase={phase.phase}
+              currentUrl={portraitUrl}
+              onUploaded={onPortraitUploaded}
             />
             <LabeledInput
               label="Main club"
@@ -553,6 +580,125 @@ function PhaseEditor({
           </fieldset>
         </div>
       )}
+    </div>
+  );
+}
+
+function TaglineField({
+  value, onChange, maxLen = 150,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  maxLen?: number;
+}) {
+  const len = value.length;
+  const tone =
+    len === 0 ? 'text-white/40'
+    : len > maxLen ? 'text-red-300'
+    : len > maxLen - 20 ? 'text-amber-300'
+    : 'text-emerald-300';
+  return (
+    <label className="flex flex-col gap-1 text-xs">
+      <span className="font-semibold uppercase tracking-wider text-white/60">
+        Tagline (mini-texto de apoio · até {maxLen} chars)
+      </span>
+      <textarea
+        value={value}
+        maxLength={200}
+        rows={2}
+        placeholder="Ex.: Pilar da linha de três que matou um jejum de 27 anos no Botafogo."
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded border border-white/15 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/30 focus:border-neon-yellow focus:outline-none resize-none"
+      />
+      <span className={`self-end text-[10px] tabular-nums ${tone}`}>
+        {len} / {maxLen}
+      </span>
+    </label>
+  );
+}
+
+function PortraitUploader({
+  slug, phase, currentUrl, onUploaded,
+}: {
+  slug: string;
+  phase: LegendPhase;
+  currentUrl: string | null;
+  onUploaded: (url: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const legacyPlayerId = slug ? `legacy-${slug}-${phase}` : null;
+
+  async function handleFile(file: File) {
+    if (!legacyPlayerId) {
+      setError('Defina o Slug antes de subir a imagem.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Imagem maior que 5MB.');
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const res = await adminUploadLegendPortrait(legacyPlayerId, file);
+      onUploaded(res.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex items-end gap-3">
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded border border-white/15 bg-deep-black flex items-center justify-center">
+        {currentUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`${currentUrl}?v=${Date.now()}`}
+            alt="portrait"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="text-[10px] uppercase tracking-wider text-white/30">sem foto</span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-1 text-xs">
+        <span className="font-semibold uppercase tracking-wider text-white/60">
+          Imagem do card
+        </span>
+        <label
+          className={`cursor-pointer rounded border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2 text-center text-neon-yellow hover:bg-neon-yellow/20 ${
+            uploading || !legacyPlayerId ? 'pointer-events-none opacity-40' : ''
+          }`}
+        >
+          {uploading
+            ? 'Enviando...'
+            : !legacyPlayerId
+            ? '(defina o slug primeiro)'
+            : currentUrl
+            ? '🔄 Trocar imagem'
+            : '📷 Subir imagem (jpeg/png/webp, ≤ 5MB)'}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            disabled={uploading || !legacyPlayerId}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFile(f);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        {error && <span className="text-red-300">✗ {error}</span>}
+        {currentUrl && !error && (
+          <span className="truncate text-[10px] text-white/40" title={currentUrl}>
+            {currentUrl.replace(/.*\/legacy-player-portraits\//, '')}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

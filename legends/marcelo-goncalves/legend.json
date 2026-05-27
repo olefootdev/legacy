@@ -54,6 +54,7 @@
         "creatorType": "lenda",
         "age": 27,
         "bio": "Bicampeão mexicano. Desarme e passe rasteiro com a mesma compostura.",
+        "tagline": "Atravessou a fronteira e voltou bicampeão — o zagueiro que ensinou o México a respeitar o passe rasteiro.",
         "attrs": {
           "passe": 68,
           "marcacao": 75,
@@ -178,6 +179,7 @@
         "creatorType": "lenda",
         "age": 29,
         "bio": "Pilar da linha de três do Botafogo campeão brasileiro de 1995. Estrutura tática do título.",
+        "tagline": "Pilar da linha de três que matou um jejum de 27 anos — em 1995, devolveu a taça ao alvinegro.",
         "attrs": {
           "passe": 70,
           "marcacao": 86,
@@ -302,6 +304,7 @@
         "creatorType": "lenda",
         "age": 31,
         "bio": "Vice-campeão mundial 1998. Titular na Copa América. Voz que comanda da defesa.",
+        "tagline": "Titular na Copa América campeã. Vice-mundial em '98. A leitura tática que carregou o Brasil.",
         "attrs": {
           "passe": 78,
           "marcacao": 86,

@@ -79,6 +79,8 @@ interface LegendPhasePayload {
     creatorType?: string;
     age?: number;
     bio?: string;
+    /** Mini-texto de apoio (até 200 chars). Subtítulo emocional do card. */
+    tagline?: string;
     attrs: Record<string, number>;
     mintOverall?: number;
     evolutionRate?: number;
@@ -250,6 +252,7 @@ function buildLegacyRow(slug: string, payload: LegendImportPayload, ph: LegendPh
     creator_label: e.creatorType?.trim() || 'lenda',
     rarity_label: e.rarity?.trim() || 'ultra_raro',
     bio: e.bio?.trim() || null,
+    tagline: e.tagline?.trim()?.slice(0, 200) || null,
     card_supply: pricing.initialSupply,
     evolution_rate: Number.isFinite(e.evolutionRate) ? e.evolutionRate : 1,
     agent_profile: e.agentProfile ?? null,
@@ -372,6 +375,97 @@ legendImportRoutes.post('/legend-import', async (c) => {
     inserted: insertedCards ?? [],
     lots: lotIds,
   });
+});
+
+/**
+ * POST /api/admin/legend-portrait
+ * Upload da imagem do card de uma fase. Salva no bucket `legacy-player-portraits`
+ * e atualiza `legacy_players.portrait_storage_path` + `portrait_public_url`.
+ *
+ * Body (multipart/form-data):
+ *   - legacyPlayerId: string (id da row, ex: legacy-marcelo-goncalves-revelacao)
+ *   - file: image file (jpeg/png/webp/gif, max 5MB)
+ *
+ * Response: { ok: true, url: string, path: string }
+ */
+legendImportRoutes.post('/legend-portrait', async (c) => {
+  const authErr = requireAdminToken(c);
+  if (authErr) return authErr;
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ error: 'Supabase admin not configured' }, 503);
+
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    return c.json({ error: 'multipart/form-data required' }, 400);
+  }
+
+  const legacyPlayerId = form.get('legacyPlayerId');
+  const file = form.get('file');
+  if (typeof legacyPlayerId !== 'string' || !legacyPlayerId.trim()) {
+    return c.json({ error: 'legacyPlayerId required' }, 400);
+  }
+  if (!(file instanceof File)) {
+    return c.json({ error: 'file required' }, 400);
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json({ error: 'file too large (max 5MB)' }, 400);
+  }
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    return c.json({ error: `unsupported mime type: ${file.type}` }, 400);
+  }
+
+  const ext = file.type === 'image/png' ? 'png'
+    : file.type === 'image/webp' ? 'webp'
+    : file.type === 'image/gif' ? 'gif'
+    : 'jpg';
+  // Filename determinístico por jogador — re-upload sobrescreve. Cache-bust via updated_at.
+  const path = `${legacyPlayerId}.${ext}`;
+  const arrayBuffer = await file.arrayBuffer();
+
+  const { error: uploadErr } = await sb.storage
+    .from('legacy-player-portraits')
+    .upload(path, arrayBuffer, {
+      contentType: file.type,
+      upsert: true,
+      cacheControl: 'public, max-age=3600',
+    });
+
+  if (uploadErr) {
+    console.error('[legend-portrait] upload error:', uploadErr.message);
+    return c.json({ error: uploadErr.message }, 500);
+  }
+
+  const { data: pubData } = sb.storage
+    .from('legacy-player-portraits')
+    .getPublicUrl(path);
+  const publicUrl = pubData?.publicUrl ?? null;
+
+  // Atualiza a row (cleanup outras extensões se existirem)
+  const { error: updateErr } = await sb
+    .from('legacy_players')
+    .update({
+      portrait_storage_path: path,
+      portrait_public_url: publicUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', legacyPlayerId);
+
+  if (updateErr) {
+    console.error('[legend-portrait] update row error:', updateErr.message);
+    return c.json({ error: updateErr.message }, 500);
+  }
+
+  // Limpa extensões "concorrentes" (admin trocou de png pra jpg etc)
+  const otherExts = ['png', 'jpg', 'webp', 'gif'].filter((e) => e !== ext);
+  for (const e of otherExts) {
+    await sb.storage.from('legacy-player-portraits').remove([`${legacyPlayerId}.${e}`]).catch(() => undefined);
+  }
+
+  return c.json({ ok: true, url: publicUrl, path });
 });
 
 /**
