@@ -703,27 +703,14 @@ export function MatchQuick() {
         setAutoOpponent(stub);
         dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       } catch (err) {
-        console.warn('[MatchQuick] auto opponent search failed, using bot fallback', err);
+        console.warn('[MatchQuick] auto opponent search failed', err);
         if (cancelled) return;
-        // Fallback garantido: sempre retorna um bot para nunca mostrar "Buscando..."
-        try {
-          const { getMatchingBotTeam } = await import('@/match/botTeams');
-          const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
-          const snapshot = getGameState().players;
-          const myOverall = Math.round(
-            Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
-              Math.max(1, Object.keys(snapshot).length),
-          ) || 70;
-          const bot = getMatchingBotTeam(myOverall, 15);
-          const stub = opponentMatchToStub({ type: 'bot', bot }, myOverall);
-          setAutoOpponent(stub);
-          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
-        } catch {
-          // Último recurso: bot hardcoded
-          const fallback = { id: 'bot-olefc', name: 'OLE FC', shortName: 'OLE', strength: 70 };
-          setAutoOpponent(fallback);
-          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: fallback, awayName: fallback.name } });
-        }
+        // Não cai em bot — UI exibe "Nenhum manager disponível" via NO_OPPONENT_STUB_ID.
+        const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+        const myOverall = 70;
+        const stub = opponentMatchToStub({ type: 'none' }, myOverall);
+        setAutoOpponent(stub);
+        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       }
     })();
     return () => { cancelled = true; };
@@ -962,8 +949,14 @@ export function MatchQuick() {
     }
   }, [fcGate, navigate]);
 
+  // Gate: NUNCA inicia a partida contra placeholder/bot. Só contra manager real
+  // (decisão de produto 2026-05-26). Mostra mensagem clara na UI ao invés.
+  const opponentId = fixture?.opponent?.id;
+  const hasValidOpponent = !!opponentId && opponentId !== 'placeholder-opponent' && opponentId !== 'no-opponent-available';
+
   useEffect(() => {
     if (fcParam && fcGate !== 'ok') return;
+    if (!hasValidOpponent) return; // aguarda matchmaking achar manager real
     finalizedRef.current = false;
     setSummary(null);
     htRef.current = 0;
@@ -1229,7 +1222,7 @@ export function MatchQuick() {
       preKickoffTimersRef.current.forEach(clearTimeout);
       preKickoffTimersRef.current = [];
     };
-  }, [session, dispatch, fcParam, fcGate]);
+  }, [session, dispatch, fcParam, fcGate, hasValidOpponent]);
 
   // Detecta chute defendido/bloqueado pelo texto do evento mais recente
   useEffect(() => {
@@ -1944,11 +1937,15 @@ export function MatchQuick() {
   }, [live?.matchLineupBySlot, live?.homePlayers, live?.sentOffPlayerIds, playersById]);
 
   const awayForce = useMemo(() => {
-    if (!fixture?.opponent) return 72 * 11;
+    if (!fixture?.opponent) return 0;
+    // Enquanto buscando ou sem oponente, não exibir força fantasma (ex: "770")
+    if (fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') {
+      return 0;
+    }
     const baseOvr = fixture.opponent.strength ?? 72;
     const count = (live?.awayRoster ?? []).length || 11;
     return baseOvr * count;
-  }, [live?.awayRoster, fixture?.opponent?.strength]);
+  }, [live?.awayRoster, fixture?.opponent?.strength, fixture?.opponent?.id]);
 
   const eventsChronological = useMemo(() => [...(live?.events ?? [])].reverse(), [live?.events]);
 
@@ -2208,6 +2205,64 @@ export function MatchQuick() {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
         <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">A carregar partida...</p>
+      </div>
+    );
+  }
+
+  // Sem manager real disponível? Mostra tela honesta em vez de jogar contra IA.
+  if (opponentId === 'no-opponent-available') {
+    return (
+      <div className="flex w-full min-h-svh items-center justify-center bg-deep-black px-6">
+        <div className="max-w-md text-center space-y-6">
+          <div className="ole-eyebrow !text-neon-yellow"><span>Partida rápida</span></div>
+          <h1
+            className="text-white italic"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(28px, 5vw, 44px)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+            }}
+          >
+            Nenhum manager disponível
+          </h1>
+          <p className="text-white/65 text-sm leading-relaxed">
+            A Olefoot não tem partidas contra bots. Estamos procurando outro manager pra ti — tenta de novo em alguns segundos.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="bg-neon-yellow text-black px-5 py-2.5 hover:bg-white transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 900,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              Procurar de novo
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="border border-white/15 text-white/80 px-5 py-2.5 hover:border-neon-yellow hover:text-neon-yellow transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              Voltar pra Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

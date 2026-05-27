@@ -33,8 +33,20 @@ export function addRecentOpponent(opponentId: string, userId?: string): void {
  * navigate state (mantém o adversário consistente entre tela de busca e
  * MatchQuick/MatchClassic — evita cair no DEFAULT_OPPONENT placeholder).
  */
+/** Stub especial pra sinalizar "nenhum manager encontrado". UI deve detectar
+ *  via id === NO_OPPONENT_STUB_ID e mostrar mensagem ao invés de jogar. */
+export const NO_OPPONENT_STUB_ID = 'no-opponent-available';
+
 export function opponentMatchToStub(m: OpponentMatch, myOverall: number): OpponentStub {
   if (m.type === 'real_manager') return m.stub;
+  if (m.type === 'none') {
+    return {
+      id: NO_OPPONENT_STUB_ID,
+      name: 'Nenhum manager disponível',
+      shortName: '—',
+      strength: myOverall,
+    };
+  }
   return {
     id: m.bot.id,
     name: m.bot.name,
@@ -55,7 +67,8 @@ export interface MatchmakingParams {
 
 export type OpponentMatch =
   | { type: 'real_manager'; stub: OpponentStub }
-  | { type: 'bot'; bot: BotTeamDefinition };
+  | { type: 'bot'; bot: BotTeamDefinition }
+  | { type: 'none' };
 
 /**
  * Busca adversário real REGISTRADO NA LIGA GLOBAL.
@@ -226,32 +239,27 @@ async function findRealManagerOpponent(
 /**
  * Busca automática de adversário para amistoso.
  *
- * Prioridade:
- * 1. Manager real com squad persistido (jogadores REAIS) — OVR ±10
- * 2. Manager real com squad persistido — OVR ±20
- * 3. Manager real com squad persistido — OVR ±30 (qualquer)
- * 4. Bot (último recurso — nunca inventa jogadores para managers reais)
+ * Decisão de produto (2026-05-26):
+ * 1. Partidas Rápida e Clássica são SEMPRE contra managers reais — sem bots.
+ * 2. Enquanto a base é pequena, é "todos contra todos" — SEM filtro de OVR.
+ *    Filtros por divisão/skill voltam quando houver volume de managers.
+ *
+ * Comportamento:
+ * - Busca qualquer manager registrado na Liga Global (≠ eu, ≠ recentes).
+ * - Se não encontrar ninguém, retorna { type: 'none' } e a UI mostra
+ *   "Nenhum manager disponível" em vez de jogar contra mock.
  */
 export async function findFriendlyOpponent(
   params: MatchmakingParams,
 ): Promise<OpponentMatch> {
-  const { myUserId, myOverall, maxOvrDiff = 10 } = params;
+  const { myUserId, myOverall } = params;
 
-  // 1. Squad real (±10)
-  const real = await findRealManagerOpponent(myUserId, myOverall, maxOvrDiff);
-  if (real) return real;
+  // Busca QUALQUER manager (cap 99 = sem filtro real de OVR)
+  const anyManager = await findRealManagerOpponent(myUserId, myOverall, 99);
+  if (anyManager) return anyManager;
 
-  // 2. Squad real (±20)
-  const realWide = await findRealManagerOpponent(myUserId, myOverall, 20);
-  if (realWide) return realWide;
-
-  // 3. Squad real (±30)
-  const realVeryWide = await findRealManagerOpponent(myUserId, myOverall, 30);
-  if (realVeryWide) return realVeryWide;
-
-  // 4. Bot (último recurso)
-  const bot = getMatchingBotTeam(myOverall, 15);
-  return { type: 'bot', bot };
+  // Nenhum manager disponível — NÃO cai em bot. UI deve tratar.
+  return { type: 'none' };
 }
 
 /**

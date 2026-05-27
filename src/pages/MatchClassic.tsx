@@ -64,26 +64,14 @@ export function MatchClassic() {
         setAutoOpponent(stub);
         dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       } catch (err) {
-        console.warn('[MatchClassic] auto opponent search failed, using bot fallback', err);
+        console.warn('[MatchClassic] auto opponent search failed', err);
         if (cancelled) return;
-        try {
-          const { getMatchingBotTeam } = await import('@/match/botTeams');
-          const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
-          const { getGameState } = await import('@/game/store');
-          const snapshot = getGameState().players;
-          const myOverall = Math.round(
-            Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
-              Math.max(1, Object.keys(snapshot).length),
-          ) || 70;
-          const bot = getMatchingBotTeam(myOverall, 15);
-          const stub = opponentMatchToStub({ type: 'bot', bot }, myOverall);
-          setAutoOpponent(stub);
-          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
-        } catch {
-          const fallback = { id: 'bot-olefc', name: 'OLE FC', shortName: 'OLE', strength: 70 };
-          setAutoOpponent(fallback);
-          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: fallback, awayName: fallback.name } });
-        }
+        // Não cai em bot — UI exibe "Nenhum manager disponível" via NO_OPPONENT_STUB_ID.
+        const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
+        const myOverall = 70;
+        const stub = opponentMatchToStub({ type: 'none' }, myOverall);
+        setAutoOpponent(stub);
+        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       }
     })();
     return () => { cancelled = true; };
@@ -151,6 +139,65 @@ export function MatchClassic() {
   const awayTeamShort   = fixture?.opponent?.shortName ?? awayTeamName.slice(0, 3).toUpperCase();
   const homeManager     = profile?.firstName ? `${profile.firstName}`.toUpperCase() : 'JONES';
   const round           = (leagueSeason?.played ?? 11) + 1;
+
+  // Gate: nunca joga contra placeholder/bot. Mostra mensagem honesta.
+  const opponentId = fixture?.opponent?.id;
+  if (opponentId === 'no-opponent-available') {
+    return (
+      <div className="flex w-full min-h-svh items-center justify-center bg-deep-black px-6">
+        <div className="max-w-md text-center space-y-6">
+          <div className="ole-eyebrow !text-neon-yellow"><span>Partida clássica</span></div>
+          <h1
+            className="text-white italic"
+            style={{
+              fontFamily: 'var(--font-serif-hero)',
+              fontWeight: 700,
+              fontSize: 'clamp(28px, 5vw, 44px)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+            }}
+          >
+            Nenhum manager disponível
+          </h1>
+          <p className="text-white/65 text-sm leading-relaxed">
+            A Olefoot não tem partidas contra bots. Estamos procurando outro manager pra ti — tenta de novo em alguns segundos.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="bg-neon-yellow text-black px-5 py-2.5 hover:bg-white transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 900,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              Procurar de novo
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="border border-white/15 text-white/80 px-5 py-2.5 hover:border-neon-yellow hover:text-neon-yellow transition-colors"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              Voltar pra Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ClassicMatchScreen

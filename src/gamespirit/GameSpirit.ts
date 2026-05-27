@@ -1533,9 +1533,10 @@ export function gameSpiritTick(
       const rShot = Math.random();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
+      // FANTASY MODE: 0.14 → 0.19. Away ameaça mais, menos jogos engessados.
       const pGoalAway =
         awayZone === 'att'
-          ? (0.14 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
+          ? (0.19 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
           : 0;
       const pWideAway = 0.12;
       if (awayZone === 'att' && rShot < pGoalAway) {

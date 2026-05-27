@@ -15,28 +15,31 @@ import type {
 } from './spiritSnapshotTypes';
 
 /**
- * Taxas-alvo por 90' (partida rápida, ~56 ticks efetivos):
- *   Golos:     3–6 total      (shot weights + pGoalAway ≈ 4.2)
- *   Amarelos:  3–5 total      (CARD_PROB_HOME 3.5% + CARD_PROB_AWAY 2.5% → ~3.4)
- *   Vermelhos: ~0.15/jogo     (6% de cada cartão → ~1 a cada 7 jogos)
- *   Lesões:    ~0.3/jogo      (fatigue >72, 6%)
- *   Penalties:  ~0.625/jogo   (DANGEROUS_FOUL × PENALTY_FROM_FOUL × ticks att - aumentado 25%)
+ * Taxas-alvo por 90' (partida rápida, ~75 ticks efetivos com spiritTickProb 0.88):
+ *   Golos:     6–9 total      (shot weights + pGoalAway ≈ 7.5) — FANTASY MODE
+ *   Amarelos:  3–5 total      (CARD_PROB_HOME 3.5% + CARD_PROB_AWAY 2.5%)
+ *   Vermelhos: ~0.15/jogo     (6% de cada cartão)
+ *   Lesões:    ~0.45/jogo     (fatigue >72, 9%)
+ *   Penalties:  ~0.9/jogo     (DANGEROUS_FOUL 25% × PENALTY_FROM_FOUL 40%)
+ *
+ * Filosofia: FANTASY GAME. Mais gols, mais drama, mais lesões — manager
+ * fica engajado. Partidas reais simulam futebol, fantasy deve ser legal.
  */
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.13,
-  post_in: 0.055,
+  goal: 0.18,        // +38% — gols mais frequentes
+  post_in: 0.05,
   save: 0.14,
   block: 0.12,
-  wide: 0.26,
-  post_out: 0.06,
-  miss_far: 0.235,
+  wide: 0.18,        // −31% — menos chutes pra fora
+  post_out: 0.04,
+  miss_far: 0.29,    // pega a diferença pra fechar em 1.0
 };
 
 /** Prob. de falta perigosa num tick em zona final (casa a atacar), antes do remate.
- *  Histórico: 4.5% → 5.625% → 7.2% → 12% → 18% (mais emoção, mais set pieces). */
-export const DANGEROUS_FOUL_PROB = 0.18;
+ *  Histórico: 4.5% → 5.625% → 7.2% → 12% → 18% → 25% (FANTASY: mais set pieces). */
+export const DANGEROUS_FOUL_PROB = 0.25;
 /** Dado falta perigosa, prob. de virar pênalti (senão fica livre / bola parada só narrativa).
  *  Histórico: 7.5% → 9.375% → 15% → 30% → 40% (mais pênaltis decisivos). */
 export const PENALTY_FROM_FOUL_PROB = 0.4;

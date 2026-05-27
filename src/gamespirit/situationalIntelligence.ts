@@ -82,11 +82,12 @@ function detectArc(input: MatchSituationInput): NarrativeArc {
     return 'late_drama';
   }
 
-  // Deadlock: 0-0 após minuto 60, ou empate sem gols há 20+ min
-  if (homeScore === 0 && awayScore === 0 && minute >= 60) {
+  // Deadlock: 0-0 após minuto 45 (FANTASY: drama começa na 2ª metade),
+  // ou empate sem gols há 15+ min (era 20).
+  if (homeScore === 0 && awayScore === 0 && minute >= 45) {
     return 'deadlock';
   }
-  if (total > 0 && input.minutesSinceLastGoal != null && input.minutesSinceLastGoal >= 20 && diff <= 1) {
+  if (total > 0 && input.minutesSinceLastGoal != null && input.minutesSinceLastGoal >= 15 && diff <= 1) {
     return 'deadlock';
   }
 
