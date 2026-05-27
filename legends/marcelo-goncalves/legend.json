@@ -1,0 +1,362 @@
+{
+  "playerName": "Marcelo Gonçalves Costa Lopes",
+  "shortName": "Gonçalves",
+  "collectionId": "mem-marcelo-goncalves-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.lance.com.br/lancepedia/por-onde-anda-goncalves.html",
+    "https://www.transfermarkt.com.br/goncalves/profil/spieler/103561",
+    "https://en.wikipedia.org/wiki/Marcelo_Gonçalves",
+    "https://pt.wikipedia.org/wiki/Marcelo_Gon%C3%A7alves_Costa_Lopes",
+    "https://jogadeterno.wixsite.com/jogadeterno/single-post/2018/02/25/o-glorioso-destino-de-goncalves",
+    "http://www.mgoncalves95.com/the_athlete.asp",
+    "https://www.lance.com.br/lancepedia/titulo-botafogo-brasileiro.html",
+    "https://imortaisdofutebol.com/esquadrao-imortal-botafogo-1995-1998/",
+    "https://imortaisdofutebol.com/selecoes-imortais-brasil-1997-1999/",
+    "https://www.rsssfbrasil.com/sel/brazil199697.htm"
+  ],
+  "inconsistencies": [
+    "Altura: Transfermarkt 1,78m vs Wikipedia 1,80m — adotado 1,80m.",
+    "Brasileirões: Transfermarkt declara 2; Wikipedia/Lance documentam 1 (1995) — adotado 1.",
+    "Cariocas: Lance documenta 1 (1990); Wikipedia/Transfermarkt 2 — adotado 2 (1990 + 1997).",
+    "Copa América 1997: Wikipedia EN sugere reserva; pesquisa cruzada (RSSSF/Imortais) confirma titular em quase todas as partidas — adotado titular."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "Tecos UAG — bicampeão mexicano",
+      "yearStart": 1990,
+      "yearEnd": 1995,
+      "mainClub": "Tecos UAG (México)",
+      "narrativeTitle": "A descoberta do passe rasteiro",
+      "narrative": "Aos 24 anos, Gonçalves cruza a fronteira pra defender o Tecos UAG, time de Guadalajara. Cinco temporadas, 167 jogos, 11 gols. Bicampeão MEXICANO em 1993 e 1994 — feito inédito back-to-back do clube. Fechou a passagem com a CONCACAF Cup Winners' Cup de 1995. É no México que se constrói a fama: 'safe defender in ground passes', decisivo com compostura, marcador que enchia o estádio tanto com os desarmes quanto com a saída de bola pelo chão. Pico físico, leitura ainda em construção, mas já cobrando estatura de líder.",
+      "entity": {
+        "name": "Marcelo Gonçalves Costa Lopes",
+        "num": 4,
+        "pos": "ZAG",
+        "archetype": "lenda",
+        "zone": "def",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 27,
+        "bio": "Bicampeão mexicano. Desarme e passe rasteiro com a mesma compostura.",
+        "attrs": {
+          "passe": 68,
+          "marcacao": 75,
+          "velocidade": 75,
+          "drible": 50,
+          "finalizacao": 64,
+          "fisico": 80,
+          "tatico": 65,
+          "mentalidade": 75,
+          "confianca": 75,
+          "fairPlay": 73
+        },
+        "mintOverall": 70,
+        "evolutionRate": 1.4,
+        "rarity": "ultra_raro",
+        "cardSupply": 50,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["passe", "fisico"],
+        "legacyTeamBooster": {
+          "morale": 4,
+          "defense_pct": 5,
+          "possession_pct": 2
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ZAG",
+          "role": "CB",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["def_third", "own_box", "central"],
+            "spatialAwareness": 75,
+            "scanBeforeReceive": 70,
+            "runTiming": 70,
+            "defensivePositioning": 82
+          },
+          "teamProfile": {
+            "supportCarrier": 75,
+            "tacticalDiscipline": 80,
+            "teamCommunication": 72,
+            "defensiveCover": 82,
+            "collectiveMovement": 78
+          },
+          "individualProfile": {
+            "creativity": 50,
+            "decisionUnderPressure": 78,
+            "ballConfidence": 78,
+            "vision": 68,
+            "technicalExecution": 70
+          },
+          "riskProfile": {
+            "baseRisk": 32,
+            "riskUnderPressure": -8,
+            "riskWhenLosing": 10,
+            "riskWhenWinning": -15,
+            "dribbleVsPass": 12
+          },
+          "criticalProfile": {
+            "criticalComposure": 80,
+            "ego": 45,
+            "crowdPressureReaction": 75,
+            "selfishVsTeam": 25,
+            "finishingConfidence": 65
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-05-26T00:00:00.000Z",
+          "updatedAt": "2026-05-26T00:00:00.000Z",
+          "version": 1
+        },
+        "marketValueBroCents": 93000,
+        "_priceDebug": {
+          "ovr": 70,
+          "age": 27,
+          "rarity": "ultra_raro",
+          "supply": 50,
+          "base": 41119,
+          "rarityMul": 1.8,
+          "ageMul": 1.2,
+          "scarcityMul": 1.05,
+          "final": 93000
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Botafogo 1995 — Campeão Brasileiro",
+      "yearStart": 1995,
+      "yearEnd": 1996,
+      "mainClub": "Botafogo (RJ)",
+      "narrativeTitle": "O pilar da defesa que matou o jejum",
+      "narrative": "Volta ao Botafogo em 1995 e é peça-chave do esquema com linha de três zagueiros — Wilson Gottardo e Gonçalves como pilares, Wilson Goiano e André Silva dando amplitude. Em 61 jogos e 3 gols, forma com Gottardo 'uma das mais eficientes duplas de zaga da história do clube' e ajuda Túlio Maravilha (artilheiro com 23 gols) e o goleiro Wagner a entregar o Brasileirão depois de 27 anos. Marcador firme no chão; ameaça em jogadas aéreas; gols importantes em bola parada. É a fase em que vira ÍCONE — capitão e referência do alvinegro.",
+      "entity": {
+        "name": "Marcelo Gonçalves Costa Lopes",
+        "num": 4,
+        "pos": "ZAG",
+        "archetype": "lenda",
+        "zone": "def",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 29,
+        "bio": "Pilar da linha de três do Botafogo campeão brasileiro de 1995. Estrutura tática do título.",
+        "attrs": {
+          "passe": 70,
+          "marcacao": 86,
+          "velocidade": 72,
+          "drible": 55,
+          "finalizacao": 71,
+          "fisico": 78,
+          "tatico": 78,
+          "mentalidade": 83,
+          "confianca": 79,
+          "fairPlay": 78
+        },
+        "mintOverall": 75,
+        "evolutionRate": 1.4,
+        "rarity": "ultra_raro",
+        "cardSupply": 25,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["marcacao", "mentalidade", "finalizacao"],
+        "legacyTeamBooster": {
+          "morale": 6,
+          "defense_pct": 8,
+          "possession_pct": 3
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ZAG",
+          "role": "CB",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["def_third", "own_box", "central"],
+            "spatialAwareness": 85,
+            "scanBeforeReceive": 75,
+            "runTiming": 75,
+            "defensivePositioning": 90
+          },
+          "teamProfile": {
+            "supportCarrier": 75,
+            "tacticalDiscipline": 90,
+            "teamCommunication": 85,
+            "defensiveCover": 90,
+            "collectiveMovement": 85
+          },
+          "individualProfile": {
+            "creativity": 52,
+            "decisionUnderPressure": 85,
+            "ballConfidence": 78,
+            "vision": 72,
+            "technicalExecution": 72
+          },
+          "riskProfile": {
+            "baseRisk": 35,
+            "riskUnderPressure": -10,
+            "riskWhenLosing": 12,
+            "riskWhenWinning": -18,
+            "dribbleVsPass": 10
+          },
+          "criticalProfile": {
+            "criticalComposure": 88,
+            "ego": 52,
+            "crowdPressureReaction": 82,
+            "selfishVsTeam": 28,
+            "finishingConfidence": 72
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-05-26T00:00:00.000Z",
+          "updatedAt": "2026-05-26T00:00:00.000Z",
+          "version": 1
+        },
+        "marketValueBroCents": 128500,
+        "_priceDebug": {
+          "ovr": 75,
+          "age": 29,
+          "rarity": "ultra_raro",
+          "supply": 25,
+          "base": 56685,
+          "rarityMul": 1.8,
+          "ageMul": 1.2,
+          "scarcityMul": 1.05,
+          "final": 128500
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Seleção Brasileira 1997-98",
+      "yearStart": 1997,
+      "yearEnd": 1998,
+      "mainClub": "Brasil",
+      "narrativeTitle": "O zagueiro do Brasil",
+      "narrative": "Convocado por Zagallo após as atuações no Botafogo, Gonçalves vive ano dourado em 1997: TITULAR em quase todas as partidas da Copa América (campeão), reserva na Copa das Confederações com aparição na semifinal, e título no torneio. Em 1998 é convocado para a Copa do Mundo na França — reserva, mas TITULAR na partida contra a Noruega (primeira fase) e entrou no lugar de Aldair na vitória 4-1 sobre o Chile (oitavas). O Brasil chega à final e fica com o vice. Aos 31-32 anos, leitura tática e mentalidade no topo absoluto; físico já com pouca margem, mas substituído por posicionamento de mestre.",
+      "entity": {
+        "name": "Marcelo Gonçalves Costa Lopes",
+        "num": 4,
+        "pos": "ZAG",
+        "archetype": "lenda",
+        "zone": "def",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 31,
+        "bio": "Vice-campeão mundial 1998. Titular na Copa América. Voz que comanda da defesa.",
+        "attrs": {
+          "passe": 78,
+          "marcacao": 86,
+          "velocidade": 65,
+          "drible": 58,
+          "finalizacao": 73,
+          "fisico": 76,
+          "tatico": 92,
+          "mentalidade": 93,
+          "confianca": 88,
+          "fairPlay": 91
+        },
+        "mintOverall": 80,
+        "evolutionRate": 1.2,
+        "rarity": "epico",
+        "cardSupply": 10,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["tatico", "mentalidade", "marcacao"],
+        "legacyTeamBooster": {
+          "morale": 8,
+          "defense_pct": 9,
+          "possession_pct": 4
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ZAG",
+          "role": "CB",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["def_third", "own_box", "central"],
+            "spatialAwareness": 92,
+            "scanBeforeReceive": 88,
+            "runTiming": 70,
+            "defensivePositioning": 92
+          },
+          "teamProfile": {
+            "supportCarrier": 80,
+            "tacticalDiscipline": 95,
+            "teamCommunication": 90,
+            "defensiveCover": 92,
+            "collectiveMovement": 88
+          },
+          "individualProfile": {
+            "creativity": 55,
+            "decisionUnderPressure": 92,
+            "ballConfidence": 82,
+            "vision": 78,
+            "technicalExecution": 78
+          },
+          "riskProfile": {
+            "baseRisk": 28,
+            "riskUnderPressure": -15,
+            "riskWhenLosing": 8,
+            "riskWhenWinning": -20,
+            "dribbleVsPass": 8
+          },
+          "criticalProfile": {
+            "criticalComposure": 95,
+            "ego": 50,
+            "crowdPressureReaction": 90,
+            "selfishVsTeam": 22,
+            "finishingConfidence": 75
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-05-26T00:00:00.000Z",
+          "updatedAt": "2026-05-26T00:00:00.000Z",
+          "version": 1
+        },
+        "marketValueBroCents": 207000,
+        "_priceDebug": {
+          "ovr": 80,
+          "age": 31,
+          "rarity": "epico",
+          "supply": 10,
+          "base": 75215,
+          "rarityMul": 2.2,
+          "ageMul": 1.0,
+          "scarcityMul": 1.25,
+          "final": 207000
+        }
+      }
+    }
+  ]
+}

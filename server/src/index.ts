@@ -22,6 +22,7 @@ import { coachRoutes } from './routes/coach.js';
 import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
+import { legendImportRoutes } from './routes/legendImport.js';
 import { insightsRoutes } from './routes/insights.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
 // Railway scheduler decomissionado em 2026-05-07. A Liga Global agora é
@@ -113,6 +114,7 @@ app.route('/api/coach', coachRoutes);
 app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
+app.route('/api/admin', legendImportRoutes);
 // OLEFOOT PYTHON MODE — proxy pro serviço FastAPI /insights
 app.route('/', insightsRoutes);
 
