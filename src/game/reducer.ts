@@ -3660,6 +3660,31 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       ].slice(0, 14);
       return { ...state, finance, inbox };
     }
+    case 'WALLET_RECEIVE_PVP_REWARD': {
+      const amount = Math.floor(action.amount);
+      if (!Number.isFinite(amount) || amount <= 0) return state;
+      // grantEarnedExp: conta em lifetime → dispara comissão pro indicador (5%).
+      // Coerente com pacote de design: PvP é "ganho" do manager.
+      const modeLabel = action.mode === 'quick' ? 'Liga Rápida' : 'Liga Clássica';
+      const outcomeLabel = action.outcome === 'win' ? 'Vitória' : action.outcome === 'draw' ? 'Empate' : 'Derrota';
+      let finance = grantEarnedExp(state.finance, amount);
+      finance = withExpHistory(finance, amount, `${outcomeLabel} · ${modeLabel}`);
+      const opponentLine = action.opponentLabel ? ` vs ${action.opponentLabel}` : '';
+      const inbox = [
+        makeInboxItem(
+          `pvp-${action.mode}-${Date.now()}`,
+          'FINANCE_EXP_GAIN',
+          'COMPETIÇÃO',
+          `${outcomeLabel} · ${modeLabel}${opponentLine} (+${amount.toLocaleString('pt-BR')} EXP)`,
+          {
+            body: `Resultado registrado na ${modeLabel}. +${amount.toLocaleString('pt-BR')} EXP creditados.`,
+            deepLink: '/',
+          },
+        ),
+        ...state.inbox,
+      ].slice(0, 14);
+      return { ...state, finance, inbox };
+    }
     case 'WALLET_SET_SPONSOR': {
       const w = walletOf(state);
       const result = walletRegisterSponsor(w, action.sponsorId);

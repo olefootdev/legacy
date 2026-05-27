@@ -48,6 +48,7 @@ import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
 import { DailyChallengesCard } from '@/components/match/DailyChallengesCard';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
+import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMatches';
 
 /**
  * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
@@ -199,6 +200,34 @@ export function Home() {
       dispatch({ type: 'REFRESH_STREAK_CHALLENGES' });
     }
   }, [dispatch, dailyChallenges, streakChallenges]);
+
+  // Auto-claim de resultados PvP pendentes (partidas que outros managers
+  // jogaram contra mim enquanto eu estava offline). Aplica EXP local + marca
+  // como claimed no servidor. Roda 1× no mount.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const pending = await fetchMyPendingPvpResults();
+      if (cancelled || pending.length === 0) return;
+      for (const p of pending) {
+        const claimed = await claimPvpMatchResult(p.id);
+        if (cancelled || claimed <= 0) continue;
+        const outcome: 'win' | 'draw' | 'loss' =
+          p.outcome === 'away_win' ? 'win' : p.outcome === 'draw' ? 'draw' : 'loss';
+        const opponentLabel = p.opponentClubName ?? p.opponentDisplayName ?? 'Manager';
+        dispatch({
+          type: 'WALLET_RECEIVE_PVP_REWARD',
+          amount: claimed,
+          mode: p.mode,
+          outcome,
+          opponentLabel,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
 
   // Adiciona notificação de boas-vindas na primeira visita
   useEffect(() => {

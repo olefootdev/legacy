@@ -613,6 +613,9 @@ export type GameAction =
    *  via addOle (NÃO via grantEarnedExp) pra não inflar lifetime e evitar
    *  cadeia recursiva de comissão. */
   | { type: 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP'; amount: number }
+  /** Reward de partida PvP (Quick/Classic) — vit/empate/derrota. Via
+   *  grantEarnedExp pra contar em lifetime e disparar comissão de referral. */
+  | { type: 'WALLET_RECEIVE_PVP_REWARD'; amount: number; mode: 'quick' | 'classic'; outcome: 'win' | 'draw' | 'loss'; opponentLabel?: string }
   /** Resgata renda passiva acumulada (estádio + megaloja) — credita via
    *  grantEarnedExp e atualiza finance.passiveIncome.lastClaimAt. */
   | { type: 'CLAIM_PASSIVE_STRUCTURE_INCOME' }

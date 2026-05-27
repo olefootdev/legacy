@@ -2,9 +2,10 @@ import { useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Trophy, ArrowRight, Star, Megaphone } from 'lucide-react';
-import { useGameStore } from '@/game/store';
+import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { syncMyExpLifetime } from '@/supabase/referrals';
+import { recordPvpMatchResult } from '@/supabase/pvpMatches';
 
 type TeamStats = {
   passesOk: number;
@@ -40,6 +41,7 @@ const ratingTier = (r: number) => attrTier(r * 10);
 
 export default function Postgame() {
   const navigate = useNavigate();
+  const dispatch = useGameDispatch();
   const live = useGameStore((s) => s.liveMatch);
   const playersById = useGameStore((s) => s.players);
   const clubName = useGameStore((s) => s.club.name);
@@ -60,10 +62,42 @@ export default function Postgame() {
     const awayScore = live.awayScore ?? 0;
     if (homeScore > awayScore) trackMissionEvent('match_won');
     if (homeScore > 0) trackMissionEvent('goal_scored', homeScore);
+
     // Sync lifetime EXP com o servidor. Trigger credita 5% de comissão pro
     // referrer se houver. Fire-and-forget: não bloqueia UI.
     if (expLifetimeEarned > 0) {
       void syncMyExpLifetime(expLifetimeEarned);
+    }
+
+    // Registra resultado PvP no servidor (Quick vs manager real).
+    // Cliente A grava → server insere ledger + B coleta no próximo login.
+    // MatchClassic usa engine separado e não passa por esse Postgame —
+    // integração de Classic fica como follow-up.
+    if (mode === 'quick') {
+      const opponent = getGameState().nextFixture?.opponent;
+      const opponentLabel = opponent?.name ?? opponent?.shortName ?? 'Manager';
+      if (opponent?.id) {
+        void recordPvpMatchResult({
+          mode: 'quick',
+          awayUserId: opponent.id,
+          homeScore,
+          awayScore,
+          awayOverall: opponent.strength ?? null,
+        }).then((res) => {
+          if (!res) return;
+          const outcome: 'win' | 'draw' | 'loss' =
+            res.outcome === 'home_win' ? 'win' : res.outcome === 'draw' ? 'draw' : 'loss';
+          if (res.homeExpReward > 0) {
+            dispatch({
+              type: 'WALLET_RECEIVE_PVP_REWARD',
+              amount: res.homeExpReward,
+              mode: 'quick',
+              outcome,
+              opponentLabel,
+            });
+          }
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
