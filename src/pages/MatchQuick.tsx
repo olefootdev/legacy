@@ -16,6 +16,7 @@ import { computeAwayImpactsFromVirtualLedger, computeHomeImpactsFromLedger } fro
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
+import { MatchFindingOverlay } from '@/components/match/MatchFindingOverlay';
 import {
   fetchFriendlyChallengeById,
   userParticipatesInChallenge,
@@ -2199,17 +2200,21 @@ export function MatchQuick() {
     );
   }
 
-  // Tela de loading só quando não há live E não há summary (FINALIZE_MATCH zera o
-  // liveMatch — sem essa guarda, o postgame nunca aparece e o usuário fica preso).
+  // Loading narrativo real: "Buscando partida → Encontrada → Times em campo →
+  // Torcida vibra → Começa a partida". Auto-completa e dá lugar à partida.
   if (!live && !summary) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
-        <p className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">A carregar partida...</p>
-      </div>
+      <MatchFindingOverlay
+        opponent={pvpStub ?? null}
+        homeShort={club.shortName}
+        onComplete={() => { /* live será criado em paralelo — re-render natural */ }}
+      />
     );
   }
 
-  // Sem manager real disponível? Mostra tela honesta em vez de jogar contra IA.
+  // Branch legado de "Nenhum manager disponível" — matchmaking agora SEMPRE
+  // devolve oponente (manager real ou bot fallback). Mantido por safety nos
+  // saves antigos que ainda carreguem NO_OPPONENT_STUB_ID em location.state.
   if (opponentId === 'no-opponent-available') {
     return (
       <div className="flex w-full min-h-svh items-center justify-center bg-deep-black px-6">

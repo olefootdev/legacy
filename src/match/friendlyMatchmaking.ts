@@ -109,35 +109,32 @@ async function findRealManagerOpponent(
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    // Pega todos managers com squad. JOIN com profiles via FK manager_squad.user_id → profiles.id.
-    // onboarding_data tem favoriteRealTeam (time do coração) — usado pro crest do adversário.
-    let query = sb
-      .from('manager_squad')
-      .select('user_id, players, lineup, formation_scheme, profiles!inner(display_name, club_name, club_short, onboarding_data)')
-      .limit(100)
-      .abortSignal(controller.signal);
+    // RPC SECURITY DEFINER — bypassa RLS de profiles (que só permite ler self).
+    // Retorna manager_squad + campos seguros do profile (display_name, club_name,
+    // club_short, onboarding_data) pra todos managers com >=11 jogadores.
+    const { data: rows, error } = await sb.rpc('find_friendly_opponents', {
+      p_exclude_user_id: myUserId ?? null,
+      p_min_players: 11,
+      p_limit: 50,
+    });
 
-    if (myUserId) {
-      query = query.neq('user_id', myUserId);
+    if (error || !rows || rows.length === 0) {
+      if (error) console.warn('[friendlyMatchmaking] RPC find_friendly_opponents:', error.message);
+      return null;
     }
-
-    const { data: rows, error } = await query;
-    if (error || !rows || rows.length === 0) return null;
 
     const recentOpponents = new Set(getRecentOpponents(myUserId));
 
-    type ProfileMini = {
-      display_name: string | null;
-      club_name: string | null;
-      club_short: string | null;
-      onboarding_data: unknown;
-    };
     type SquadRow = {
       user_id: string;
       players: unknown;
       lineup: unknown;
       formation_scheme: FormationSchemeId | null;
-      profiles: ProfileMini | ProfileMini[];
+      display_name: string | null;
+      club_name: string | null;
+      club_short: string | null;
+      onboarding_data: unknown;
+      player_count: number;
     };
 
     const candidates: Array<{
@@ -158,11 +155,9 @@ async function findRealManagerOpponent(
       if (players.length < 11) continue;
 
       const lineup = (row.lineup && typeof row.lineup === 'object' ? row.lineup : {}) as Record<string, string>;
-      // profiles pode vir como objeto único ou array, dependendo do supabase-js
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-      const clubName = profile?.club_name ?? profile?.display_name ?? 'Manager';
-      const clubShort = profile?.club_short ?? 'MNG';
-      const supporterCrestUrl = favoriteTeamCrestFromOnboarding(profile?.onboarding_data);
+      const clubName = row.club_name ?? row.display_name ?? 'Manager';
+      const clubShort = row.club_short ?? 'MNG';
+      const supporterCrestUrl = favoriteTeamCrestFromOnboarding(row.onboarding_data);
 
       // OVR médio dos 11 titulares (lineup) ou top 11 fallback
       let starters = Object.values(lineup)
@@ -232,29 +227,39 @@ async function findRealManagerOpponent(
 }
 
 /**
- * Busca automática de adversário para amistoso.
+ * Busca automática de adversário para amistoso (Quick + Classic).
  *
- * Decisão de produto (2026-05-26):
- * 1. Partidas Rápida e Clássica são SEMPRE contra managers reais — sem bots.
- * 2. Enquanto a base é pequena, é "todos contra todos" — SEM filtro de OVR.
- *    Filtros por divisão/skill voltam quando houver volume de managers.
- *
- * Comportamento:
- * - Busca qualquer manager registrado na Liga Global (≠ eu, ≠ recentes).
- * - Se não encontrar ninguém, retorna { type: 'none' } e a UI mostra
- *   "Nenhum manager disponível" em vez de jogar contra mock.
+ * Decisão de produto (2026-05-27 — atualizada):
+ * 1. SEMPRE deve devolver uma partida — nada de "Nenhum manager disponível".
+ * 2. Hierarquia de fallback:
+ *    a) Manager real (>=11 jogadores) — squad snapshot, IA joga por ele offline
+ *    b) Manager real (mesmo dos recentes) — relax do filtro se não houver outros
+ *    c) Bot — último recurso (raro, com 40+ managers ativos)
+ * 3. Sem filtro de OVR (todos contra todos enquanto a base é pequena).
  */
 export async function findFriendlyOpponent(
   params: MatchmakingParams,
 ): Promise<OpponentMatch> {
   const { myUserId, myOverall } = params;
 
-  // Busca QUALQUER manager (cap 99 = sem filtro real de OVR)
+  // (a) Manager qualquer (exclui recentes via getRecentOpponents)
   const anyManager = await findRealManagerOpponent(myUserId, myOverall, 99);
   if (anyManager) return anyManager;
 
-  // Nenhum manager disponível — NÃO cai em bot. UI deve tratar.
-  return { type: 'none' };
+  // (b) Relax do filtro de recentes — limpa cache e tenta de novo
+  try {
+    if (myUserId) {
+      localStorage.removeItem(recentOpponentsKey(myUserId));
+    } else {
+      localStorage.removeItem(recentOpponentsKey());
+    }
+  } catch { /* ignore */ }
+  const relaxedManager = await findRealManagerOpponent(myUserId, myOverall, 99);
+  if (relaxedManager) return relaxedManager;
+
+  // (c) Bot — último recurso. Garante que a partida SEMPRE começa.
+  const bot = getMatchingBotTeam(myOverall, 10);
+  return { type: 'bot', bot };
 }
 
 /**

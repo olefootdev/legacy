@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClassicMatchScreen } from '@/components/classic/ClassicMatchScreen';
+import { MatchFindingOverlay } from '@/components/match/MatchFindingOverlay';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
@@ -38,6 +39,7 @@ export function MatchClassic() {
   // update do store → effect retrigger → setState → loop infinito).
   const pvpStubFromState = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
   const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
+  const [overlayDone, setOverlayDone] = useState(false);
   const autoSearchTriedRef = useRef(false);
   const isPlaceholderOpponent =
     !pvpStubFromState && fixtureBase?.opponent?.id === 'placeholder-opponent';
@@ -140,62 +142,16 @@ export function MatchClassic() {
   const homeManager     = profile?.firstName ? `${profile.firstName}`.toUpperCase() : 'JONES';
   const round           = (leagueSeason?.played ?? 11) + 1;
 
-  // Gate: nunca joga contra placeholder/bot. Mostra mensagem honesta.
-  const opponentId = fixture?.opponent?.id;
-  if (opponentId === 'no-opponent-available') {
+  // Overlay narrativo: aparece SEMPRE no mount, até a sequência terminar.
+  // Permite mostrar "Buscando partida → Partida encontrada → Times em campo →
+  // Torcida vibra → Começa a partida". Auto-completa e dá lugar ao jogo.
+  if (!overlayDone) {
     return (
-      <div className="flex w-full min-h-svh items-center justify-center bg-deep-black px-6">
-        <div className="max-w-md text-center space-y-6">
-          <div className="ole-eyebrow !text-neon-yellow"><span>Partida clássica</span></div>
-          <h1
-            className="text-white italic"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: 'clamp(28px, 5vw, 44px)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.05,
-            }}
-          >
-            Nenhum manager disponível
-          </h1>
-          <p className="text-white/65 text-sm leading-relaxed">
-            A Olefoot não tem partidas contra bots. Estamos procurando outro manager pra ti — tenta de novo em alguns segundos.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="bg-neon-yellow text-black px-5 py-2.5 hover:bg-white transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '11px',
-                fontWeight: 900,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              Procurar de novo
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="border border-white/15 text-white/80 px-5 py-2.5 hover:border-neon-yellow hover:text-neon-yellow transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              Voltar pra Home
-            </button>
-          </div>
-        </div>
-      </div>
+      <MatchFindingOverlay
+        opponent={opponentOverride ?? null}
+        homeShort={homeTeamShort}
+        onComplete={() => setOverlayDone(true)}
+      />
     );
   }
 

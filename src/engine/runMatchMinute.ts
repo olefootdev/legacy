@@ -261,8 +261,9 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   let live2dDecisionStagnationTicks = s.live2dDecisionStagnationTicks ?? 0;
 
-  // FANTASY MODE: 0.75 → 0.88. Mais minutos com ação visível, menos "congelado".
-  const spiritTickP = live2dPitchEarly ? 1 : (input.spiritTickProb ?? 0.88);
+  // FANTASY V2 (2026-05-27): 0.88 → 0.94. Quase todo minuto tem ação. Combinado
+  // com goal weight 0.24, alvo 8-12 gols por partida.
+  const spiritTickP = live2dPitchEarly ? 1 : (input.spiritTickProb ?? 0.94);
   /** live2d: sempre resolve uma ação por minuto (evita “congelado” no portador). */
   const shouldTick = !input.skipEvent && (live2dPitchEarly || Math.random() < spiritTickP);
   const autoSimBoost =
@@ -707,7 +708,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       // Lesões por fadiga só após minuto 20 — jogadores não se machucam logo de início por causa de fadiga acumulada
       let injuredSeverity: InjurySeverity | undefined;
       // FANTASY MODE: 0.06 → 0.09. ~0.45 lesão/jogo (era ~0.3).
-      if (!autoSimSlim && shouldTick && minute > 20 && next.fatigue > 72 && Math.random() < 0.09 * autoSimBoost) {
+      if (!autoSimSlim && shouldTick && minute > 20 && next.fatigue > 72 && Math.random() < 0.12 * autoSimBoost) {
         const res = rollMatchInjuryWithSeverity(next, injuryIntensity, { stressMul: injStressMul, riskGrowthMul: injGrowthMul });
         next = res.player;
         if (res.injured) injuredSeverity = res.severity;

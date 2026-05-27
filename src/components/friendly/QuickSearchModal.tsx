@@ -263,14 +263,14 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
                           ? opponent.bot.name
                           : opponent.type === 'real_manager'
                             ? opponent.stub.name
-                            : opponent.club.name}
+                            : '—'}
                       </h5>
                       <p className="text-xs text-gray-400">
                         {opponent.type === 'bot'
                           ? `OVR ${opponent.bot.avgOverall} · ${opponent.bot.country}`
                           : opponent.type === 'real_manager'
                             ? `OVR ${opponent.stub.strength} · Manager`
-                            : `OVR ${myOverall} · Online`}
+                            : '—'}
                       </p>
                       {opponent.type === 'bot' && (
                         <p className="text-[10px] text-gray-500 mt-1">
