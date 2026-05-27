@@ -141,14 +141,29 @@ async function main() {
   }
 
   console.log(`\n✓ Importado com sucesso`);
-  const result = json as { collectionId?: string; inserted?: Array<Record<string, unknown>> };
+  const result = json as {
+    collectionId?: string;
+    inserted?: Array<Record<string, unknown>>;
+    lots?: Array<{ legacy_player_id: string; lot_number: number; lot_id: string | null }>;
+  };
   console.log(`  collection: ${result.collectionId ?? '(unknown)'}`);
   if (result.inserted) {
     for (const row of result.inserted) {
+      const supply = row.card_supply ?? '?';
+      const price = row.price_unit_cents ?? '?';
+      const ccy = row.currency ?? '?';
+      const tier = row.tier ?? '?';
+      const code = row.collection_code ?? '—';
       console.log(
-        `  · ${row.id} — ${row.name} (phase=${row.phase}, mint=${row.mint_overall}, preço=${row.price_bro_cents} cents)`,
+        `  · ${row.id}`,
+      );
+      console.log(
+        `      tier=${tier} · ${code} · ${supply} cópias × ${price} cents ${ccy} (mint OVR ${row.mint_overall})`,
       );
     }
+  }
+  if (result.lots && result.lots.length > 0) {
+    console.log(`  lotes iniciais: ${result.lots.length} criados`);
   }
   console.log(`\nProntinho. O jogador aparece no AdminLegacyPanel.`);
 }
