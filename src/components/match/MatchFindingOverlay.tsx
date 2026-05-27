@@ -26,6 +26,12 @@ interface Props {
   onComplete: () => void;
 }
 
+/**
+ * Tempo máximo (ms) que o overlay fica "Buscando partida...". Se opponent não
+ * chegar até aqui, força avançar (matchmaking travou — partida começa com bot).
+ */
+const SEARCHING_HARD_TIMEOUT_MS = 6000;
+
 type Step = 'searching' | 'found' | 'teams' | 'crowd' | 'kickoff';
 
 const STEP_DURATIONS: Record<Exclude<Step, 'searching'>, number> = {
@@ -44,6 +50,15 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
   useEffect(() => {
     if (opponent && step === 'searching') setStep('found');
   }, [opponent, step]);
+
+  // Safety net: se 'searching' demorar demais (matchmaking travou),
+  // força avançar pra 'found' mesmo sem opponent — partida começa
+  // com fallback (handled em MatchQuick/MatchClassic).
+  useEffect(() => {
+    if (step !== 'searching') return;
+    const id = setTimeout(() => setStep('found'), SEARCHING_HARD_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [step]);
 
   // Timer entre steps após 'found'
   useEffect(() => {
@@ -91,7 +106,7 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
 
   return (
     <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-8 bg-deep-black/95 px-6 py-12 backdrop-blur">
-      {/* Bola olefoot pulsando no centro */}
+      {/* Bola olefoot pulsando no centro — asset de /public/soccer_ball */}
       <motion.div
         className="relative"
         animate={{
@@ -103,7 +118,12 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
           rotate: { duration: 2.5, repeat: Infinity, ease: 'linear' },
         }}
       >
-        <BallSvg className="h-20 w-20 sm:h-24 sm:w-24" />
+        <img
+          src="/soccer_ball/olefoot-Ball.png"
+          alt="Olefoot"
+          className="h-20 w-20 sm:h-24 sm:w-24 select-none drop-shadow-[0_4px_20px_rgba(253,225,0,0.35)]"
+          draggable={false}
+        />
       </motion.div>
 
       {/* Linhas narrativas empilhadas */}
@@ -140,20 +160,3 @@ export function MatchFindingOverlay({ opponent, homeShort, onComplete }: Props) 
   );
 }
 
-function BallSvg({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 100 100" className={className} aria-hidden>
-      <circle cx="50" cy="50" r="46" fill="#000" stroke="#FDE100" strokeWidth="3" />
-      <polygon
-        points="50,22 64,32 60,48 40,48 36,32"
-        fill="#FDE100"
-      />
-      <polygon points="50,52 66,58 60,74 40,74 34,58" fill="#FFF" opacity="0.08" />
-      <line x1="50" y1="22" x2="50" y2="6" stroke="#FDE100" strokeWidth="2" />
-      <line x1="64" y1="32" x2="76" y2="22" stroke="#FDE100" strokeWidth="2" />
-      <line x1="36" y1="32" x2="24" y2="22" stroke="#FDE100" strokeWidth="2" />
-      <line x1="40" y1="48" x2="20" y2="58" stroke="#FDE100" strokeWidth="2" />
-      <line x1="60" y1="48" x2="80" y2="58" stroke="#FDE100" strokeWidth="2" />
-    </svg>
-  );
-}

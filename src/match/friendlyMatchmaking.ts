@@ -105,20 +105,23 @@ async function findRealManagerOpponent(
   const sb = getSupabase();
   if (!sb) return null;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
-
   try {
     // RPC SECURITY DEFINER — bypassa RLS de profiles (que só permite ler self).
-    // Retorna manager_squad + campos seguros do profile (display_name, club_name,
-    // club_short, onboarding_data) pra todos managers com >=11 jogadores.
-    const { data: rows, error } = await sb.rpc('find_friendly_opponents', {
+    // Promise.race garante <3s mesmo se a RPC enroscar (rede ruim / Supabase lento).
+    const rpcCall = sb.rpc('find_friendly_opponents', {
       p_exclude_user_id: myUserId ?? null,
       p_min_players: 11,
       p_limit: 50,
     });
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+      setTimeout(() => resolve({ data: null, error: { message: 'rpc timeout 3s' } }), 3000);
+    });
 
-    if (error || !rows || rows.length === 0) {
+    const result = await Promise.race([rpcCall, timeoutPromise]);
+    const rows = (result as { data: unknown }).data;
+    const error = (result as { error: { message: string } | null }).error;
+
+    if (error || !Array.isArray(rows) || rows.length === 0) {
       if (error) console.warn('[friendlyMatchmaking] RPC find_friendly_opponents:', error.message);
       return null;
     }
@@ -216,13 +219,11 @@ async function findRealManagerOpponent(
     return { type: 'real_manager', stub };
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      console.warn('[friendlyMatchmaking] timeout (5s) buscando adversário');
+      console.warn('[friendlyMatchmaking] timeout buscando adversário');
     } else {
       console.warn('[friendlyMatchmaking] real manager search failed:', err);
     }
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -231,10 +232,11 @@ async function findRealManagerOpponent(
  *
  * Decisão de produto (2026-05-27 — atualizada):
  * 1. SEMPRE deve devolver uma partida — nada de "Nenhum manager disponível".
- * 2. Hierarquia de fallback:
- *    a) Manager real (>=11 jogadores) — squad snapshot, IA joga por ele offline
- *    b) Manager real (mesmo dos recentes) — relax do filtro se não houver outros
- *    c) Bot — último recurso (raro, com 40+ managers ativos)
+ * 2. Hierarquia de fallback (máx 5s total via Promise.race):
+ *    a) Manager real (≥11 jogadores) — squad snapshot, IA joga por ele offline
+ *    b) Manager real (relax do filtro de recentes)
+ *    c) Time da Liga Global — sintetiza squad com base no overall do team
+ *    d) Bot — último recurso (nunca chega aqui com 40+ managers ativos)
  * 3. Sem filtro de OVR (todos contra todos enquanto a base é pequena).
  */
 export async function findFriendlyOpponent(
@@ -257,9 +259,109 @@ export async function findFriendlyOpponent(
   const relaxedManager = await findRealManagerOpponent(myUserId, myOverall, 99);
   if (relaxedManager) return relaxedManager;
 
-  // (c) Bot — último recurso. Garante que a partida SEMPRE começa.
+  // (c) Time da Liga Global — sintetiza adversário a partir do team registrado
+  const globalTeam = await findGlobalLeagueOpponent(myUserId, myOverall);
+  if (globalTeam) return globalTeam;
+
+  // (d) Bot — último recurso. Garante que a partida SEMPRE começa.
   const bot = getMatchingBotTeam(myOverall, 10);
   return { type: 'bot', bot };
+}
+
+/**
+ * Busca um adversário entre os times registrados na Liga Global. Quando o
+ * manager_squad do dono do time não existe ou time é "fantasma", sintetiza
+ * um squad básico baseado em `overall` (suficiente pra Quick/Classic).
+ *
+ * Promise.race garante <2s.
+ */
+async function findGlobalLeagueOpponent(
+  myUserId: string | undefined,
+  myOverall: number,
+): Promise<OpponentMatch | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  void myOverall;
+  try {
+    const queryPromise = sb
+      .from('global_league_teams')
+      .select('id, manager_id, club_name, club_short, overall')
+      .limit(50);
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+      setTimeout(() => resolve({ data: null, error: { message: 'global-league timeout 2s' } }), 2000);
+    });
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    const rows = (result as { data: unknown }).data;
+    const error = (result as { error: { message: string } | null }).error;
+    if (error || !Array.isArray(rows) || rows.length === 0) {
+      if (error) console.warn('[friendlyMatchmaking] Liga Global:', error.message);
+      return null;
+    }
+
+    type TeamRow = { id: string; manager_id: string; club_name: string; club_short: string; overall: number };
+    const candidates = (rows as TeamRow[]).filter(
+      (r) => r.manager_id !== myUserId && Number(r.overall) > 0,
+    );
+    if (candidates.length === 0) return null;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)]!;
+
+    // Sintetiza squad com base no overall do time da Liga Global
+    const syntheticSquad = generateSyntheticSquad(pick.club_short, Number(pick.overall));
+    const stub: OpponentStub = {
+      id: `globalleague-${pick.id}`,
+      name: pick.club_name,
+      shortName: pick.club_short,
+      strength: Number(pick.overall),
+      genesisAwayPlayers: syntheticSquad,
+      formationScheme: '4-3-3',
+      supporterCrestUrl: null,
+    };
+    return { type: 'real_manager', stub };
+  } catch (err) {
+    console.warn('[friendlyMatchmaking] global league fallback failed:', err);
+    return null;
+  }
+}
+
+/** Gera 11 jogadores sintéticos com OVR centrado no valor dado. Suficiente
+ *  pra alimentar o ClassicMatchScreen / MatchQuick quando o squad real não
+ *  está disponível (raro). */
+function generateSyntheticSquad(prefix: string, ovr: number): PlayerEntity[] {
+  const positions: Array<{ pos: string; zone: PlayerEntity['zone'] }> = [
+    { pos: 'GOL', zone: 'gol' },
+    { pos: 'ZAG', zone: 'defesa' },
+    { pos: 'ZAG', zone: 'defesa' },
+    { pos: 'LE',  zone: 'lateral_esq' },
+    { pos: 'LD',  zone: 'lateral_dir' },
+    { pos: 'VOL', zone: 'meio' },
+    { pos: 'MC',  zone: 'meio' },
+    { pos: 'MEI', zone: 'meio' },
+    { pos: 'PE',  zone: 'ataque' },
+    { pos: 'PD',  zone: 'ataque' },
+    { pos: 'ATA', zone: 'ataque' },
+  ];
+  const base = Math.max(40, Math.min(95, ovr));
+  return positions.map(({ pos, zone }, i) => {
+    const variance = Math.floor(Math.random() * 6) - 3; // -3..+2
+    const lvl = Math.max(35, Math.min(99, base + variance));
+    return {
+      id: `gl-syn-${prefix.toLowerCase()}-${i + 1}`,
+      num: i + 1,
+      name: `${prefix} ${pos} ${i + 1}`,
+      pos,
+      archetype: 'profissional',
+      zone,
+      behavior: 'equilibrado',
+      attrs: {
+        passe: lvl, marcacao: lvl, velocidade: lvl, drible: lvl, finalizacao: lvl,
+        fisico: lvl, tatico: lvl, mentalidade: lvl, confianca: lvl, fairPlay: lvl,
+      },
+      fatigue: 0,
+      injuryRisk: 0,
+      evolutionXp: 0,
+      outForMatches: 0,
+    };
+  });
 }
 
 /**
