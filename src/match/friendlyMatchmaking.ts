@@ -3,6 +3,19 @@ import { getMatchingBotTeam, type BotTeamDefinition } from './botTeams';
 import type { OpponentStub, PlayerEntity } from '@/entities/types';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { overallFromAttributes } from '@/entities/player';
+import { localCrestUrl } from '@/settings/crestUrl';
+
+/** Extrai URL do crest do time do coração armazenado em onboarding_data. */
+function favoriteTeamCrestFromOnboarding(onboardingData: unknown): string | null {
+  if (!onboardingData || typeof onboardingData !== 'object') return null;
+  const fav = (onboardingData as { favoriteRealTeam?: { id?: number; logo?: string | null } | null })
+    .favoriteRealTeam;
+  if (!fav) return null;
+  // Prioriza o crest local (resistente a URLs antigas com hotlink-block).
+  if (typeof fav.id === 'number' && fav.id > 0) return localCrestUrl(fav.id);
+  const logo = typeof fav.logo === 'string' ? fav.logo.trim() : '';
+  return logo || null;
+}
 
 // ── Histórico de adversários recentes (evita repetição, escopado por user) ───
 const RECENT_OPPONENTS_BASE_KEY = 'olefoot_recent_opponents';
@@ -97,9 +110,10 @@ async function findRealManagerOpponent(
 
   try {
     // Pega todos managers com squad. JOIN com profiles via FK manager_squad.user_id → profiles.id.
+    // onboarding_data tem favoriteRealTeam (time do coração) — usado pro crest do adversário.
     let query = sb
       .from('manager_squad')
-      .select('user_id, players, lineup, formation_scheme, profiles!inner(display_name, club_name, club_short)')
+      .select('user_id, players, lineup, formation_scheme, profiles!inner(display_name, club_name, club_short, onboarding_data)')
       .limit(100)
       .abortSignal(controller.signal);
 
@@ -112,12 +126,18 @@ async function findRealManagerOpponent(
 
     const recentOpponents = new Set(getRecentOpponents(myUserId));
 
+    type ProfileMini = {
+      display_name: string | null;
+      club_name: string | null;
+      club_short: string | null;
+      onboarding_data: unknown;
+    };
     type SquadRow = {
       user_id: string;
       players: unknown;
       lineup: unknown;
       formation_scheme: FormationSchemeId | null;
-      profiles: { display_name: string | null; club_name: string | null; club_short: string | null } | { display_name: string | null; club_name: string | null; club_short: string | null }[];
+      profiles: ProfileMini | ProfileMini[];
     };
 
     const candidates: Array<{
@@ -128,6 +148,7 @@ async function findRealManagerOpponent(
       lineup: Record<string, string>;
       formationScheme: FormationSchemeId | null;
       avgOvr: number;
+      supporterCrestUrl: string | null;
     }> = [];
 
     for (const row of rows as unknown as SquadRow[]) {
@@ -141,6 +162,7 @@ async function findRealManagerOpponent(
       const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const clubName = profile?.club_name ?? profile?.display_name ?? 'Manager';
       const clubShort = profile?.club_short ?? 'MNG';
+      const supporterCrestUrl = favoriteTeamCrestFromOnboarding(profile?.onboarding_data);
 
       // OVR médio dos 11 titulares (lineup) ou top 11 fallback
       let starters = Object.values(lineup)
@@ -163,6 +185,7 @@ async function findRealManagerOpponent(
         lineup,
         formationScheme: row.formation_scheme,
         avgOvr,
+        supporterCrestUrl,
       });
     }
 
@@ -191,6 +214,7 @@ async function findRealManagerOpponent(
       strength: pick.avgOvr,
       genesisAwayPlayers: realLineupPlayers,
       formationScheme: pick.formationScheme ?? '4-3-3',
+      supporterCrestUrl: pick.supporterCrestUrl,
     };
 
     addRecentOpponent(pick.userId, myUserId);
