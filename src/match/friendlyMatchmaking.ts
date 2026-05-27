@@ -71,15 +71,23 @@ export type OpponentMatch =
   | { type: 'none' };
 
 /**
- * Busca adversário real REGISTRADO NA LIGA GLOBAL.
- * Só retorna managers que estão em global_league_teams.
- * Usa jogadores REAIS do plantel (manager_squad).
+ * Busca adversário real — QUALQUER manager com squad persistido (≥11 jogadores).
+ *
+ * Modelo ASSÍNCRONO: o oponente NÃO precisa estar online. Usamos o snapshot
+ * do plantel dele (manager_squad), e o sistema joga "por ele" enquanto
+ * estiver offline. Quando ele logar, vê o histórico.
+ *
+ * Fonte: manager_squad (todo manager que tem plantel) + JOIN com profiles
+ * pra display_name/club_short. NÃO depende de inscrição na Liga Global.
+ * Sem cap de OVR (todos contra todos enquanto a base é pequena).
+ *
  * Timeout de 5s para não travar a UI.
  */
 async function findRealManagerOpponent(
   myUserId: string | undefined,
   myOverall: number,
-  maxOvrDiff: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _maxOvrDiff: number,
 ): Promise<OpponentMatch | null> {
   const sb = getSupabase();
   if (!sb) return null;
@@ -88,69 +96,30 @@ async function findRealManagerOpponent(
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    // 1. Buscar managers da Liga Global com OVR no range
+    // Pega todos managers com squad. JOIN com profiles via FK manager_squad.user_id → profiles.id.
     let query = sb
-      .from('global_league_teams')
-      .select('manager_id, club_name, club_short, overall')
-      .gte('overall', Math.max(40, myOverall - maxOvrDiff))
-      .lte('overall', Math.min(99, myOverall + maxOvrDiff))
-      .limit(20)
+      .from('manager_squad')
+      .select('user_id, players, lineup, formation_scheme, profiles!inner(display_name, club_name, club_short)')
+      .limit(100)
       .abortSignal(controller.signal);
 
     if (myUserId) {
-      query = query.neq('manager_id', myUserId);
+      query = query.neq('user_id', myUserId);
     }
 
-    const { data: globalTeams, error: glErr } = await query;
-    if (glErr || !globalTeams || globalTeams.length === 0) return null;
+    const { data: rows, error } = await query;
+    if (error || !rows || rows.length === 0) return null;
 
-    // Filtrar nomes inválidos e adversários recentes
     const recentOpponents = new Set(getRecentOpponents(myUserId));
-    const validTeams = (globalTeams as Array<{
-      manager_id: string; club_name: string; club_short: string; overall: number;
-    }>).filter(t =>
-      t.club_name &&
-      t.club_name !== 'Buscando…' &&
-      t.overall >= 40 &&
-      t.overall <= 99 &&
-      !recentOpponents.has(t.manager_id)
-    );
 
-    if (validTeams.length === 0) return null;
-
-    // 2. Buscar squads reais desses managers
-    const managerIds = validTeams.map(t => t.manager_id);
-    const { data: squads, error: sqErr } = await sb
-      .from('manager_squad')
-      .select('user_id, players, lineup, formation_scheme')
-      .in('user_id', managerIds)
-      .abortSignal(controller.signal);
-
-    if (sqErr || !squads || squads.length === 0) return null;
-
-    // Indexar squads por user_id
-    const squadByManager: Record<string, {
-      players: PlayerEntity[];
-      lineup: Record<string, string>;
-      formation_scheme: FormationSchemeId | null;
-    }> = {};
-    for (const row of squads as unknown as Array<{
+    type SquadRow = {
       user_id: string;
-      players: PlayerEntity[];
-      lineup: Record<string, string>;
+      players: unknown;
+      lineup: unknown;
       formation_scheme: FormationSchemeId | null;
-    }>) {
-      const players = Array.isArray(row.players) ? row.players as PlayerEntity[] : [];
-      if (players.length >= 11) {
-        squadByManager[row.user_id] = {
-          players,
-          lineup: (row.lineup as Record<string, string>) ?? {},
-          formation_scheme: row.formation_scheme,
-        };
-      }
-    }
+      profiles: { display_name: string | null; club_name: string | null; club_short: string | null } | { display_name: string | null; club_name: string | null; club_short: string | null }[];
+    };
 
-    // 3. Montar candidatos: só managers da Liga Global COM squad real
     const candidates: Array<{
       userId: string;
       clubName: string;
@@ -161,50 +130,54 @@ async function findRealManagerOpponent(
       avgOvr: number;
     }> = [];
 
-    for (const team of validTeams) {
-      const squad = squadByManager[team.manager_id];
-      if (!squad) continue;
+    for (const row of rows as unknown as SquadRow[]) {
+      if (recentOpponents.has(row.user_id)) continue;
 
-      let lineupPlayers = Object.values(squad.lineup)
-        .map(id => squad.players.find(p => p.id === id))
+      const players = Array.isArray(row.players) ? (row.players as PlayerEntity[]) : [];
+      if (players.length < 11) continue;
+
+      const lineup = (row.lineup && typeof row.lineup === 'object' ? row.lineup : {}) as Record<string, string>;
+      // profiles pode vir como objeto único ou array, dependendo do supabase-js
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const clubName = profile?.club_name ?? profile?.display_name ?? 'Manager';
+      const clubShort = profile?.club_short ?? 'MNG';
+
+      // OVR médio dos 11 titulares (lineup) ou top 11 fallback
+      let starters = Object.values(lineup)
+        .map((id) => players.find((p) => p.id === id))
         .filter((p): p is PlayerEntity => !!p);
-
-      if (lineupPlayers.length < 11) {
-        lineupPlayers = [...squad.players]
+      if (starters.length < 11) {
+        starters = [...players]
           .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs))
           .slice(0, 11);
       }
-
       const avgOvr = Math.round(
-        lineupPlayers.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / lineupPlayers.length
+        starters.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / starters.length,
       );
 
       candidates.push({
-        userId: team.manager_id,
-        clubName: team.club_name,
-        clubShort: team.club_short,
-        players: squad.players,
-        lineup: squad.lineup,
-        formationScheme: squad.formation_scheme,
+        userId: row.user_id,
+        clubName,
+        clubShort,
+        players,
+        lineup,
+        formationScheme: row.formation_scheme,
         avgOvr,
       });
     }
 
     if (candidates.length === 0) return null;
 
-    // Escolher um dos mais próximos em OVR
-    const sorted = candidates.sort((a, b) =>
-      Math.abs(a.avgOvr - myOverall) - Math.abs(b.avgOvr - myOverall)
-    );
-    const pick = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))]!;
+    // Aleatório puro — sem filtro de OVR (todos contra todos).
+    // myOverall fica disponível pra usar em versão futura com matchmaking por skill.
+    void myOverall;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)]!;
 
-    // Montar stub com jogadores REAIS do lineup
+    // Lineup do oponente (top 11 do squad real)
     let realLineupPlayers = Object.values(pick.lineup)
-      .map(id => pick.players.find(p => p.id === id))
+      .map((id) => pick.players.find((p) => p.id === id))
       .filter((p): p is PlayerEntity => !!p)
       .slice(0, 11);
-
-    // Fallback: se lineup não resolve 11, usar os melhores do plantel
     if (realLineupPlayers.length < 11) {
       realLineupPlayers = [...pick.players]
         .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs))
@@ -220,9 +193,7 @@ async function findRealManagerOpponent(
       formationScheme: pick.formationScheme ?? '4-3-3',
     };
 
-    // Registrar adversário no histórico para evitar repetição
     addRecentOpponent(pick.userId, myUserId);
-
     return { type: 'real_manager', stub };
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
