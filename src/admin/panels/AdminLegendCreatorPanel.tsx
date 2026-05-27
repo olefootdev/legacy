@@ -232,7 +232,7 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
             Tokeniza lendas reais: pesquisa (skill) → 3 fases → lotes Panini → split 4-way.
           </p>
         </div>
-        <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border-2 border-white bg-neon-yellow/10 px-3 py-2 text-sm font-semibold text-neon-yellow hover:bg-neon-yellow/20">
+        <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-white/20 bg-neon-yellow/10 px-3 py-2 text-sm font-semibold text-neon-yellow hover:bg-neon-yellow/20">
           <Upload size={16} className="text-neon-yellow" />
           Upload legend.json
           <input
@@ -249,7 +249,7 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
       </header>
 
       {/* Identidade */}
-      <section className="rounded-lg border-2 border-white bg-deep-black/60 p-4 space-y-3">
+      <section className="rounded-lg border border-white/20 bg-deep-black/60 p-4 space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-white">Identidade</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <LabeledInput
@@ -289,15 +289,15 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
       </section>
 
       {/* CTA */}
-      <section className="sticky bottom-4 z-10 rounded-lg border-2 border-white bg-deep-black/95 p-4 backdrop-blur">
+      <section className="sticky bottom-4 z-10 rounded-lg border border-white/20 bg-deep-black/95 p-4 backdrop-blur">
         {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border-2 border-white bg-red-400/15 p-3 text-sm text-red-200">
+          <div className="mb-3 flex items-start gap-2 rounded border border-white/20 bg-red-400/15 p-3 text-sm text-red-200">
             <XCircle size={16} className="mt-0.5 shrink-0 text-neon-yellow" />
             <span>{error}</span>
           </div>
         )}
         {result && (
-          <div className="mb-3 rounded border-2 border-white bg-emerald-400/15 p-3 text-sm text-emerald-100">
+          <div className="mb-3 rounded border border-white/20 bg-emerald-400/15 p-3 text-sm text-emerald-100">
             <div className="flex items-center gap-2 font-semibold">
               <Check size={16} className="text-neon-yellow" />
               Importado: {result.inserted.length} cards · {result.lots.length} lotes
@@ -345,7 +345,7 @@ function LabeledInput({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
+        className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
       />
     </label>
   );
@@ -372,7 +372,7 @@ function LabeledNumber({
           const n = Number(e.target.value);
           onChange(Number.isFinite(n) ? n : 0);
         }}
-        className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+        className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
       />
     </label>
   );
@@ -395,14 +395,14 @@ function PhaseEditor({
 }) {
   const def = phase.tier ? TIER_DEFAULTS[phase.tier] : null;
   return (
-    <div className="rounded-lg border-2 border-white bg-deep-black/40 overflow-hidden">
+    <div className="rounded-lg border border-white/20 bg-deep-black/40 overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
         className="flex w-full items-center justify-between p-4 text-left hover:bg-white/5"
       >
         <div className="flex items-center gap-3">
-          <span className="rounded border-2 border-white bg-neon-yellow/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
+          <span className="rounded border border-white/20 bg-neon-yellow/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
             {PHASE_LABEL[phase.phase]}
           </span>
           <span className="text-sm text-white">
@@ -422,7 +422,7 @@ function PhaseEditor({
           : <ChevronRight size={18} className="text-neon-yellow" />}
       </button>
       {expanded && (
-        <div className="border-t-2 border-white p-4 space-y-4">
+        <div className="border-t border-white/20 p-4 space-y-4">
           {/* Identidade da fase */}
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold uppercase tracking-wider text-white/60">
@@ -536,10 +536,10 @@ function PhaseEditor({
                   key={t}
                   type="button"
                   onClick={() => onApplyTier(t as LegendTier)}
-                  className={`flex-1 rounded border-2 px-3 py-1.5 text-xs uppercase ${
+                  className={`flex-1 rounded border px-3 py-1.5 text-xs uppercase ${
                     phase.tier === t
                       ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow font-bold'
-                      : 'border-white text-white hover:bg-white/10'
+                      : 'border-white/25 text-white/80 hover:bg-white/10'
                   }`}
                 >
                   Tier {t} · {TIER_DEFAULTS[t as LegendTier].supply.toLocaleString()} cópias · $
@@ -558,7 +558,7 @@ function PhaseEditor({
                     const newPrice = c === 'USDT' ? TIER_DEFAULTS[tier].usdtCents : TIER_DEFAULTS[tier].oleUnits;
                     onChange({ currency: c, priceUnitCents: newPrice });
                   }}
-                  className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                  className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
                 >
                   <option value="USDT">USDT (cents)</option>
                   <option value="OLEFOOT">OLEFOOT (unidades)</option>
@@ -629,7 +629,7 @@ function TaglineField({
         rows={2}
         placeholder="Ex.: Pilar da linha de três que matou um jejum de 27 anos no Botafogo."
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border-2 border-white/70 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none resize-none"
+        className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none resize-none"
       />
       <span className={`self-end text-[10px] tabular-nums ${tone}`}>
         {len} / {maxLen}
@@ -673,7 +673,7 @@ function PortraitUploader({
 
   return (
     <div className="flex items-end gap-3">
-      <div className="h-20 w-20 shrink-0 overflow-hidden rounded border-2 border-white bg-deep-black flex items-center justify-center">
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded border border-white/20 bg-deep-black flex items-center justify-center">
         {currentUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -690,7 +690,7 @@ function PortraitUploader({
           Imagem do card
         </span>
         <label
-          className={`inline-flex items-center justify-center gap-2 cursor-pointer rounded border-2 border-white bg-neon-yellow/10 px-3 py-2 text-center font-semibold text-neon-yellow hover:bg-neon-yellow/20 ${
+          className={`inline-flex items-center justify-center gap-2 cursor-pointer rounded border border-white/20 bg-neon-yellow/10 px-3 py-2 text-center font-semibold text-neon-yellow hover:bg-neon-yellow/20 ${
             uploading || !legacyPlayerId ? 'pointer-events-none opacity-40' : ''
           }`}
         >
@@ -790,10 +790,10 @@ function SplitEditor({
   return (
     <div className="space-y-2">
       {split.map((e, i) => (
-        <div key={i} className="flex flex-wrap items-end gap-2 rounded border-2 border-white bg-white/[0.04] p-2">
+        <div key={i} className="flex flex-wrap items-end gap-2 rounded border border-white/20 bg-white/[0.04] p-2">
           <div className="flex flex-col gap-1 text-xs">
             <span className="font-semibold uppercase tracking-wider text-white/60">Kind</span>
-            <span className="rounded border-2 border-white/40 bg-white/10 px-2 py-1 text-sm font-semibold text-white">{e.kind}</span>
+            <span className="rounded border border-white/30 bg-white/10 px-2 py-1 text-sm font-semibold text-white">{e.kind}</span>
           </div>
           <LabeledInput
             label="Label"
@@ -816,12 +816,12 @@ function SplitEditor({
                   placeholder="email@…"
                   value={emailQuery}
                   onChange={(ev) => setEmailQuery(ev.target.value)}
-                  className="w-40 rounded border-2 border-white/70 bg-deep-black px-2 py-1 text-xs text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
+                  className="w-40 rounded border border-white/25 bg-deep-black px-2 py-1 text-xs text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => lookupEmail(emailQuery, i)}
-                  className="inline-flex items-center justify-center rounded border-2 border-white px-2 py-1 text-neon-yellow hover:bg-neon-yellow/10"
+                  className="inline-flex items-center justify-center rounded border border-white/20 px-2 py-1 text-neon-yellow hover:bg-neon-yellow/10"
                   title="Buscar usuário"
                 >
                   <Search size={14} />
@@ -839,7 +839,7 @@ function SplitEditor({
             <button
               type="button"
               onClick={() => removeEntry(i)}
-              className="self-end inline-flex items-center justify-center rounded border-2 border-white px-2 py-1 text-neon-yellow hover:bg-red-400/15"
+              className="self-end inline-flex items-center justify-center rounded border border-white/20 px-2 py-1 text-neon-yellow hover:bg-red-400/15"
               title="Remover facilitador"
             >
               <X size={14} />
@@ -852,7 +852,7 @@ function SplitEditor({
           type="button"
           onClick={addFacilitator}
           disabled={facilitatorCount >= 5}
-          className="inline-flex items-center gap-2 rounded border-2 border-white px-3 py-1 font-semibold text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded border border-white/20 px-3 py-1 font-semibold text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
         >
           <UserPlus size={14} className="text-neon-yellow" />
           Facilitador ({facilitatorCount}/5)
