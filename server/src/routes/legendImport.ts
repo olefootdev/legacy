@@ -469,6 +469,143 @@ legendImportRoutes.post('/legend-portrait', async (c) => {
 });
 
 /**
+ * GET /api/admin/legend-export?slug=<slug>
+ * Reconstrói o LegendImportPayload (formato do legend.json) a partir das rows
+ * de legacy_players que pertencem à mesma lenda (id LIKE legacy-<slug>-%).
+ *
+ * Usado pelo wizard admin pra editar lendas já tokenizadas: admin carrega →
+ * ajusta no form → re-importa (upsert idempotente). Portraits, lotes ativos
+ * e payment_split são incluídos.
+ */
+legendImportRoutes.get('/legend-export', async (c) => {
+  const authErr = requireAdminToken(c);
+  if (authErr) return authErr;
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ error: 'Supabase admin not configured' }, 503);
+
+  const slug = c.req.query('slug')?.trim();
+  if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+    return c.json({ error: 'slug required (kebab-case)' }, 400);
+  }
+
+  // Busca todas as fases dessa lenda
+  const { data: rows, error } = await sb
+    .from('legacy_players')
+    .select('*')
+    .like('id', `legacy-${slug}-%`);
+
+  if (error) {
+    console.error('[legend-export] query error:', error.message);
+    return c.json({ error: error.message }, 500);
+  }
+  if (!rows || rows.length === 0) {
+    return c.json({ error: `nenhuma lenda encontrada para slug=${slug}` }, 404);
+  }
+
+  // Ordena por tier (fallback: alfabético do phase)
+  const sorted = [...rows].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const ta = typeof a.tier === 'number' ? a.tier : 99;
+    const tb = typeof b.tier === 'number' ? b.tier : 99;
+    return ta - tb;
+  });
+
+  // Strip do " — Fase" do display name pra reconstruir nome canônico
+  function stripPhaseLabel(displayName: string | null | undefined): string {
+    if (!displayName) return '';
+    const idx = displayName.lastIndexOf(' — ');
+    return idx > 0 ? displayName.slice(0, idx) : displayName;
+  }
+
+  const phases: LegendPhasePayload[] = sorted.map((r) => {
+    const row = r as Record<string, unknown>;
+    const phase = (typeof row.phase === 'string' ? row.phase : 'revelacao') as Phase;
+    const attrs = (row.attributes ?? {}) as Record<string, number>;
+    return {
+      phase,
+      yearStart: typeof row.year_start === 'number' ? row.year_start : undefined,
+      yearEnd: typeof row.year_end === 'number' ? row.year_end : undefined,
+      mainClub: typeof row.main_club === 'string' ? row.main_club : undefined,
+      narrativeTitle: typeof row.narrative_title === 'string' ? row.narrative_title : undefined,
+      tier: typeof row.tier === 'number' ? (row.tier as 1 | 2 | 3) : undefined,
+      collectionCode: typeof row.collection_code === 'string' ? row.collection_code : undefined,
+      collectionTitle: typeof row.collection_title === 'string' ? row.collection_title : undefined,
+      currency: (typeof row.currency === 'string' ? row.currency : 'USDT') as 'USDT' | 'OLEFOOT',
+      priceUnitCents:
+        typeof row.price_unit_cents === 'number' ? row.price_unit_cents : undefined,
+      initialSupply: typeof row.card_supply === 'number' ? row.card_supply : undefined,
+      paymentSplit: Array.isArray(row.payment_split)
+        ? (row.payment_split as LegendPhasePayload['paymentSplit'])
+        : undefined,
+      beneficiaryUserId:
+        typeof row.beneficiary_user_id === 'string' ? row.beneficiary_user_id : undefined,
+      entity: {
+        name: stripPhaseLabel(typeof row.name === 'string' ? row.name : ''),
+        num: 4,
+        pos: typeof row.pos === 'string' ? row.pos : 'ZAG',
+        archetype: 'lenda',
+        zone: 'def',
+        behavior: 'defensivo',
+        country: typeof row.country === 'string' ? row.country : undefined,
+        strongFoot: typeof row.strong_foot === 'string' ? row.strong_foot : undefined,
+        creatorType: typeof row.creator_label === 'string' ? row.creator_label : 'lenda',
+        age: typeof row.age === 'number' ? row.age : undefined,
+        bio: typeof row.bio === 'string' ? row.bio : undefined,
+        tagline: typeof row.tagline === 'string' ? row.tagline : undefined,
+        attrs: {
+          passe: typeof attrs.passe === 'number' ? attrs.passe : 70,
+          marcacao: typeof attrs.marcacao === 'number' ? attrs.marcacao : 70,
+          velocidade: typeof attrs.velocidade === 'number' ? attrs.velocidade : 70,
+          drible: typeof attrs.drible === 'number' ? attrs.drible : 70,
+          finalizacao: typeof attrs.finalizacao === 'number' ? attrs.finalizacao : 70,
+          fisico: typeof attrs.fisico === 'number' ? attrs.fisico : 70,
+          tatico: typeof attrs.tatico === 'number' ? attrs.tatico : 70,
+          mentalidade: typeof attrs.mentalidade === 'number' ? attrs.mentalidade : 70,
+          confianca: typeof attrs.confianca === 'number' ? attrs.confianca : 70,
+          fairPlay: typeof attrs.fairPlay === 'number' ? attrs.fairPlay : 70,
+        },
+        mintOverall: typeof row.mint_overall === 'number' ? row.mint_overall : undefined,
+        evolutionRate: typeof row.evolution_rate === 'number' ? row.evolution_rate : 1,
+        rarity: typeof row.rarity_label === 'string' ? row.rarity_label : 'ultra_raro',
+        isLegacy: true,
+        legacyTaughtAttributes: Array.isArray(row.taught_attributes)
+          ? (row.taught_attributes as string[])
+          : [],
+        legacyTeamBooster:
+          row.team_booster && typeof row.team_booster === 'object'
+            ? (row.team_booster as Record<string, number>)
+            : {},
+        agentProfileEnabled: row.agent_profile_enabled !== false,
+        agentProfile: row.agent_profile ?? undefined,
+      },
+    };
+  });
+
+  // collectionId vem do primeiro row (todas fases compartilham)
+  const collectionId =
+    typeof (sorted[0] as Record<string, unknown>).collection_id === 'string'
+      ? ((sorted[0] as Record<string, unknown>).collection_id as string)
+      : `mem-${slug}-2026`;
+
+  const payload: LegendImportPayload = {
+    collectionId,
+    collectionKind: 'memorable',
+    phases,
+  };
+
+  // Portraits (se houver) pra UI mostrar preview
+  const portraits: Record<string, string | null> = {};
+  for (const r of sorted) {
+    const row = r as Record<string, unknown>;
+    const ph = typeof row.phase === 'string' ? row.phase : null;
+    const url = typeof row.portrait_public_url === 'string' ? row.portrait_public_url : null;
+    if (ph) portraits[ph] = url;
+  }
+
+  return c.json({ ok: true, slug, payload, portraits });
+});
+
+/**
  * POST /api/admin/legacy-player-set-portrait
  * Persiste a URL pública do portrait (já hospedado em Pinata/IPFS via /api/media/pinata/upload)
  * no row de legacy_players. Substitui o upload via Supabase Storage do endpoint

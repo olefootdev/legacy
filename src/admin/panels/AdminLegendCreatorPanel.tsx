@@ -14,7 +14,9 @@ import {
   ChevronDown,
   ChevronRight,
   Coins,
+  Database,
   RefreshCw,
+  Save,
   Search,
   Upload,
   UserPlus,
@@ -22,6 +24,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import {
+  adminExportLegend,
   adminFindUserByEmail,
   adminImportLegend,
   adminSetLegacyPortrait,
@@ -122,6 +125,36 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
     consolidacao: null,
     expansao: null,
   });
+  /** True quando o payload veio do banco (modo edição) — muda CTA pra "Salvar". */
+  const [isEditing, setIsEditing] = useState(false);
+  const [loadingFromDb, setLoadingFromDb] = useState(false);
+  const [loadSlugInput, setLoadSlugInput] = useState('');
+
+  async function handleLoadFromDb() {
+    const trimmed = loadSlugInput.trim();
+    if (!trimmed || !/^[a-z0-9-]+$/.test(trimmed)) {
+      setError('Slug inválido pra carregar (use kebab-case)');
+      return;
+    }
+    setError(null);
+    setResult(null);
+    setLoadingFromDb(true);
+    try {
+      const res = await adminExportLegend(trimmed);
+      setSlug(res.slug);
+      setPayload(res.payload);
+      setPortraits({
+        revelacao: res.portraits.revelacao ?? null,
+        consolidacao: res.portraits.consolidacao ?? null,
+        expansao: res.portraits.expansao ?? null,
+      });
+      setIsEditing(true);
+    } catch (e) {
+      setError(`Falha ao carregar: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setLoadingFromDb(false);
+    }
+  }
 
   function handleFileUpload(file: File) {
     const reader = new FileReader();
@@ -138,6 +171,7 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         const baseName = parsed.phases[0]?.entity?.name;
         if (!slug && baseName) setSlug(slugify(baseName));
         setError(null);
+        setIsEditing(false); // upload de JSON = modo criação nova (mesmo que upsert)
       } catch (e) {
         setError(`Arquivo inválido: ${e instanceof Error ? e.message : String(e)}`);
       }
@@ -233,21 +267,65 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
             Tokeniza lendas reais: pesquisa (skill) → 3 fases → lotes Panini → split 4-way.
           </p>
         </div>
-        <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-white/20 bg-neon-yellow/10 px-3 py-2 text-sm font-semibold text-neon-yellow hover:bg-neon-yellow/20">
-          <Upload size={16} className="text-neon-yellow" />
-          Upload legend.json
-          <input
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFileUpload(f);
-              e.target.value = '';
-            }}
-          />
-        </label>
+        <div className="flex flex-wrap items-end gap-2">
+          {/* Carregar do banco (edição) */}
+          <div className="flex items-end gap-1">
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="font-semibold uppercase tracking-wider text-white/60">
+                Carregar slug do banco
+              </span>
+              <input
+                type="text"
+                placeholder="marcelo-goncalves"
+                value={loadSlugInput}
+                onChange={(e) => setLoadSlugInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleLoadFromDb();
+                }}
+                className="w-44 rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void handleLoadFromDb()}
+              disabled={loadingFromDb || !loadSlugInput.trim()}
+              className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-neon-yellow/10 px-3 py-1.5 text-sm font-semibold text-neon-yellow hover:bg-neon-yellow/20 disabled:opacity-40"
+            >
+              {loadingFromDb ? (
+                <RefreshCw size={14} className="text-neon-yellow animate-spin" />
+              ) : (
+                <Database size={14} className="text-neon-yellow" />
+              )}
+              Carregar
+            </button>
+          </div>
+
+          <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-white/20 bg-neon-yellow/10 px-3 py-2 text-sm font-semibold text-neon-yellow hover:bg-neon-yellow/20">
+            <Upload size={16} className="text-neon-yellow" />
+            Upload legend.json
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFileUpload(f);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </div>
       </header>
+
+      {isEditing && (
+        <div className="flex items-center gap-2 rounded border border-neon-yellow/40 bg-neon-yellow/10 p-3 text-sm text-neon-yellow">
+          <Database size={16} className="text-neon-yellow" />
+          <span>
+            Editando <b>{slug}</b> do banco. As alterações serão salvas como UPSERT no card e no
+            lote 1 inicial. <span className="text-white/70">Lotes em andamento (≥ 2) não são afetados.</span>
+          </span>
+        </div>
+      )}
 
       {/* Identidade */}
       <section className="rounded-lg border border-white/20 bg-deep-black/60 p-4 space-y-3">
@@ -319,8 +397,18 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
           disabled={!canSubmit}
           className="flex w-full items-center justify-center gap-2 rounded-md bg-neon-yellow px-4 py-3 font-bold text-deep-black transition hover:bg-neon-yellow/90 disabled:opacity-40"
         >
-          <Coins size={20} className="text-deep-black" />
-          {submitting ? 'Tokenizando...' : 'Tokenizar (cria 3 cards + 3 lotes)'}
+          {isEditing ? (
+            <Save size={20} className="text-deep-black" />
+          ) : (
+            <Coins size={20} className="text-deep-black" />
+          )}
+          {submitting
+            ? isEditing
+              ? 'Salvando...'
+              : 'Tokenizando...'
+            : isEditing
+              ? 'Salvar alterações (UPSERT)'
+              : 'Tokenizar (cria 3 cards + 3 lotes)'}
         </button>
       </section>
     </div>

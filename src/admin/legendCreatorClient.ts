@@ -127,6 +127,30 @@ export async function adminImportLegend(slug: string, payload: LegendImportPaylo
   return body;
 }
 
+export interface LegendExportResponse {
+  ok: true;
+  slug: string;
+  payload: LegendImportPayload;
+  portraits: Partial<Record<LegendPhase, string | null>>;
+}
+
+/**
+ * Carrega uma lenda já tokenizada do banco pra edição no wizard.
+ * Retorna o payload no mesmo formato do legend.json + URLs de portrait por fase.
+ */
+export async function adminExportLegend(slug: string): Promise<LegendExportResponse> {
+  const url = `${olefootApiBase()}/api/admin/legend-export?slug=${encodeURIComponent(slug)}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { 'X-Admin-Token': adminToken() },
+  });
+  const body = (await res.json()) as LegendExportResponse | { error: string };
+  if (!res.ok || 'error' in body) {
+    throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
+  }
+  return body;
+}
+
 export interface SetPortraitResponse {
   ok: true;
   legacyPlayerId: string;
