@@ -76,6 +76,108 @@ export function shouldTriggerSetPiece(ctx: MomentTriggerContext): boolean {
   return Math.random() < 0.25;
 }
 
+/**
+ * FIX G: Defensive choice — adversário ataca com bola dentro do nosso terço de defesa.
+ * Manager escolhe postura: bloco baixo (segura) ou pressão alta (rouba mas se expõe).
+ * Dispara quando momentum away > 15 (pressão real do adversário).
+ */
+export function shouldTriggerDefensiveChoice(ctx: MomentTriggerContext): boolean {
+  if (ctx.minute < 8 || ctx.minute > 88) return false;
+  if (ctx.possession !== 'away') return false;
+  const momentumGap = ctx.momentum.away - ctx.momentum.home;
+  if (momentumGap < 15) return false;
+  return Math.random() < 0.22;
+}
+
+export function buildDefensiveChoiceMoment(ctx: MomentTriggerContext): QuickInteractiveMoment {
+  // Pega defensor mais tático/marcador pra calibrar successChance
+  const defenders = ctx.homePlayers.filter((p) => p.role === 'def');
+  const best = defenders.sort(
+    (a, b) => (b.attributes?.marcacao ?? 50) - (a.attributes?.marcacao ?? 50),
+  )[0];
+  const fallback: MatchPlayerAttributes = {
+    passeCurto: 50, passeLongo: 50, cruzamento: 50, marcacao: 50, velocidade: 50,
+    fairPlay: 50, drible: 50, finalizacao: 50, fisico: 50, tatico: 50,
+    mentalidade: 50, confianca: 50,
+  };
+  const attrs = (best?.attributes as MatchPlayerAttributes) ?? fallback;
+  const blockChance = calculateSuccessChance(0.62, attrs, 'marcacao');
+  const pressChance = calculateSuccessChance(0.38, attrs, 'tatico');
+
+  return {
+    id: `defense_${ctx.minute}_${Date.now()}`,
+    minute: ctx.minute,
+    type: 'defensive_choice',
+    context: `Adversário avança com perigo no nosso terço. Linha defensiva pede orientação.`,
+    choices: [
+      {
+        id: 'block_low',
+        label: 'Bloco baixo',
+        description: 'Recua, fecha espaços, segura o resultado',
+        successChance: blockChance,
+        reward: { ole: 18, exp: 6 },
+        momentumImpact: 6,
+      },
+      {
+        id: 'press_high',
+        label: 'Pressão alta',
+        description: 'Sobe a linha, rouba na frente — alto risco/recompensa',
+        successChance: pressChance,
+        reward: { ole: 32, exp: 12 },
+        momentumImpact: 18,
+      },
+    ],
+    timeoutMs: 4500,
+    triggeredAtMs: Date.now(),
+  };
+}
+
+/**
+ * FIX G: Sub timing — sugere substituição quando há titular esgotado e
+ * substituto fresco disponível. Manager decide se troca já ou aguenta.
+ */
+export function shouldTriggerSubTiming(
+  ctx: MomentTriggerContext & { freshBenchCount: number; tiredStarter?: PitchPlayerState },
+): boolean {
+  if (ctx.minute < 55 || ctx.minute > 80) return false;
+  if (!ctx.tiredStarter || ctx.freshBenchCount < 1) return false;
+  return Math.random() < 0.30;
+}
+
+export function buildSubTimingMoment(
+  ctx: MomentTriggerContext,
+  tired: PitchPlayerState,
+): QuickInteractiveMoment {
+  // Sub agora: garante intensidade. Aguentar: economiza vaga de sub, mas
+  // arrisca queda de rendimento + lesão.
+  return {
+    id: `subtiming_${ctx.minute}_${Date.now()}`,
+    minute: ctx.minute,
+    type: 'sub_timing',
+    context: `${tired.name} está visivelmente cansado (${Math.round(tired.fatigue)}% fadiga). Trocar agora?`,
+    choices: [
+      {
+        id: 'sub_now',
+        label: 'Trocar agora',
+        description: 'Mantém intensidade, gasta vaga de substituição',
+        successChance: 0.78,
+        reward: { ole: 14, exp: 5 },
+        momentumImpact: 9,
+      },
+      {
+        id: 'hold_on',
+        label: 'Aguentar mais',
+        description: 'Economiza sub, risco de lesão e queda',
+        successChance: 0.45,
+        reward: { ole: 26, exp: 9 },
+        momentumImpact: -4,
+      },
+    ],
+    timeoutMs: 5000,
+    triggeredAtMs: Date.now(),
+  };
+}
+
 export function buildCounterAttackMoment(
   ctx: MomentTriggerContext,
   attacker: PitchPlayerState,
@@ -197,6 +299,26 @@ export function resolveInteractiveMoment(
     narrative = success
       ? `Cobrança magistral! A bola desvia na barreira e entra!`
       : `A barreira bloqueou. Escanteio para a casa.`;
+  } else if (moment.type === 'defensive_choice') {
+    if (choice.id === 'block_low') {
+      narrative = success
+        ? `Linha cerrada! O zagueiro corta o cruzamento e a defesa respira.`
+        : `Linha baixa permitiu o chute. Goleiro trabalha, mas a pressão continua.`;
+    } else {
+      narrative = success
+        ? `Pressão alta funciona! Roubada na frente e contra-ataque a caminho!`
+        : `Pressão arriscada — adversário furou a linha e criou perigo claro.`;
+    }
+  } else if (moment.type === 'sub_timing') {
+    if (choice.id === 'sub_now') {
+      narrative = success
+        ? `Troca certeira! Sangue novo em campo, intensidade recuperada.`
+        : `Substituição feita, mas o time leva tempo pra encaixar o entrante.`;
+    } else {
+      narrative = success
+        ? `Aguentou bravamente! Cansado, mas decisivo no momento certo.`
+        : `Cansaço cobrou caro — jogador errou jogada chave e baixou a energia da equipe.`;
+    }
   }
 
   return {

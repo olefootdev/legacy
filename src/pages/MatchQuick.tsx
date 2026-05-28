@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Home, LogOut, Plus, Trophy, RotateCcw, X } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
+import { buildFatigueByIdMap } from '@/systems/fatigue';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import type { PitchPlayerState } from '@/engine/types';
 import { roleFromPos } from '@/engine/pitchFromLineup';
@@ -59,8 +60,12 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import {
   shouldTriggerCounterAttack,
   shouldTriggerSetPiece,
+  shouldTriggerDefensiveChoice,
+  shouldTriggerSubTiming,
   buildCounterAttackMoment,
   buildSetPieceMoment,
+  buildDefensiveChoiceMoment,
+  buildSubTimingMoment,
 } from '@/match/quickInteractiveMoments';
 import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
 import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
@@ -1019,6 +1024,18 @@ export function MatchQuick() {
         if (secondYellowAlertRef.current) {
           return;
         }
+        // Pausa hard durante UI bloqueante — sem isso, side-effects do loop
+        // (triggers de assistente, momentos interativos, narrativa) disparam
+        // por trás do modal de pênalti / cobrança e poluem a tela.
+        if (lm.penalty) {
+          return;
+        }
+        if (lm.activeInteractiveMoment) {
+          return;
+        }
+        if (lm.quickInjurySub) {
+          return;
+        }
 
         // ── Triggers do Assistente Técnico ───────────────────────────────
         const shown = shownAssistantEventsRef.current;
@@ -1163,6 +1180,27 @@ export function MatchQuick() {
               });
             if (takers.length >= 2) {
               const moment = buildSetPieceMoment(ctx, takers);
+              dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            }
+          } else if (shouldTriggerDefensiveChoice(ctx)) {
+            // FIX G: pressão adversária no nosso terço → escolha defensiva.
+            const moment = buildDefensiveChoiceMoment(ctx);
+            dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+          } else {
+            // FIX G: sub timing — só dispara se há titular cansado E banco fresco.
+            const tiredStarter = lm.homePlayers
+              .filter((p) => p.role !== 'gk' && p.fatigue >= 78)
+              .sort((a, b) => b.fatigue - a.fatigue)[0];
+            const freshBenchCount = Object.values(playersById).filter((p) => {
+              if (lm.homePlayers.some((hp) => hp.playerId === p.id)) return false;
+              const h = playerHealth?.[p.id];
+              const fat = h?.fatigue ?? p.fatigue ?? 0;
+              const out = h?.outForMatches ?? p.outForMatches ?? 0;
+              return fat < 55 && out === 0;
+            }).length;
+            const subCtx = { ...ctx, tiredStarter, freshBenchCount };
+            if (shouldTriggerSubTiming(subCtx) && tiredStarter) {
+              const moment = buildSubTimingMoment(ctx, tiredStarter);
               dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
             }
           }
@@ -1844,8 +1882,30 @@ export function MatchQuick() {
     if (live?.matchLineupBySlot && Object.keys(live.matchLineupBySlot).length > 0) {
       return new Set(Object.values(live.matchLineupBySlot));
     }
-    return new Set(Object.values(mergeLineupWithDefaults(lineupIds, playersById)));
-  }, [live, lineupIds, playersById]);
+    const fatigueById = buildFatigueByIdMap(playersById, playerHealth);
+    return new Set(Object.values(mergeLineupWithDefaults(lineupIds, playersById, { fatigueById })));
+  }, [live, lineupIds, playersById, playerHealth]);
+
+  // FIX D: alerta preventivo de squad exausto. Conta jogadores que entraram em
+  // campo com fatigue acima do limite confortável (>75). Mostra banner antes do
+  // kickoff e durante a partida em modo quiet.
+  const exhaustedAlert = useMemo(() => {
+    if (!onPitchIds.size) return null;
+    const fatigueById = buildFatigueByIdMap(playersById, playerHealth);
+    let exhaustedStarters = 0;
+    let criticalStarters = 0;
+    for (const pid of onPitchIds) {
+      const f = fatigueById[pid] ?? 0;
+      if (f >= 75) exhaustedStarters++;
+      if (f >= 90) criticalStarters++;
+    }
+    if (criticalStarters === 0 && exhaustedStarters === 0) return null;
+    return {
+      tier: criticalStarters > 0 ? ('critical' as const) : ('warning' as const),
+      exhaustedStarters,
+      criticalStarters,
+    };
+  }, [onPitchIds, playersById, playerHealth]);
 
   const benchCards = useMemo(() => {
     return Object.values(playersById)
@@ -2096,6 +2156,9 @@ export function MatchQuick() {
     (!goalCelebrationActive && !!(live?.spiritOverlay)) ||
     preGoalActive ||
     goalCelebrationActive ||
+    !!live?.quickInjurySub ||
+    !!live?.penalty ||
+    !!live?.activeInteractiveMoment ||
     Date.now() < freezeUntilRef.current;
   const matchClock = (
     <div className="flex flex-col items-center gap-1.5">
@@ -2375,6 +2438,49 @@ export function MatchQuick() {
           <span className="w-12" aria-hidden /> /* spacer pra equilibrar com o ← Home */
         )}
       </div>
+
+      {/* FIX D: Banner de squad exausto — visível pré-jogo e durante a partida */}
+      {showBoard && exhaustedAlert && (
+        <div
+          className={`mb-3 border border-l-[3px] px-4 py-3 flex items-start gap-3 ${
+            exhaustedAlert.tier === 'critical'
+              ? 'border-rose-500/40 border-l-rose-400 bg-rose-500/10'
+              : 'border-amber-500/40 border-l-amber-400 bg-amber-500/10'
+          }`}
+          style={{ borderRadius: 'var(--radius-sm)' }}
+        >
+          <div
+            className={`mt-0.5 text-lg ${
+              exhaustedAlert.tier === 'critical' ? 'text-rose-300' : 'text-amber-300'
+            }`}
+            aria-hidden
+          >
+            ⚠
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className={`font-display uppercase tracking-[0.2em] text-[10px] font-black ${
+                exhaustedAlert.tier === 'critical' ? 'text-rose-300' : 'text-amber-300'
+              }`}
+            >
+              {exhaustedAlert.tier === 'critical' ? 'Squad em risco' : 'Squad cansado'}
+            </p>
+            <p className="text-[12px] text-white/75 mt-0.5">
+              {exhaustedAlert.criticalStarters > 0 ? (
+                <>
+                  {exhaustedAlert.criticalStarters} titular(es) com fadiga ≥90% em campo —
+                  rendimento e risco de lesão comprometidos.
+                </>
+              ) : (
+                <>
+                  {exhaustedAlert.exhaustedStarters} titular(es) cansado(s). Considere descanso
+                  ou substituições rápidas.
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
 
       {showBoard && !live && (
         <div

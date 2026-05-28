@@ -31,6 +31,7 @@ import {
   appendTeamGoalConcededHome,
   appendTeamGoalScoredHome,
 } from '@/match/impactLedger';
+import { pickBallCarrier } from './ballCarrier';
 import {
   redCardBannerOverlay,
   shouldRunSpiritPlayTick,
@@ -50,20 +51,6 @@ function liveMatchHalfFromClock(clock: LiveMatchClockPeriod | undefined, minute:
   if (clock === 'second_half') return 2;
   if (clock === 'first_half' || clock === 'halftime') return 1;
   return minute >= 46 ? 2 : 1;
-}
-
-function nearestToBall(players: PitchPlayerState[], ball: { x: number; y: number }): PitchPlayerState | undefined {
-  if (players.length === 0) return undefined;
-  let best = players[0]!;
-  let bestD = 1e9;
-  for (const p of players) {
-    const d = Math.hypot(p.x - ball.x, p.y - ball.y);
-    if (d < bestD) {
-      bestD = d;
-      best = p;
-    }
-  }
-  return best;
 }
 
 function pickDefender(players: PitchPlayerState[]): PitchPlayerState | undefined {
@@ -148,6 +135,20 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     return { snapshot: s, updatedPlayers: {} };
   }
 
+  /**
+   * Engine pausa sempre que há UI bloqueante de decisão do manager:
+   *   • Pênalti em cobrança (modal aberto)
+   *   • Momento interativo (escolha de jogada)
+   * Sem essa pausa, o reducer gera cartões/lesões/gols POR TRÁS do modal,
+   * que pipocam quando o modal fecha — quebra a sensação de controle.
+   */
+  if (s.mode === 'quick' && s.penalty) {
+    return { snapshot: s, updatedPlayers: {} };
+  }
+  if (s.mode === 'quick' && s.activeInteractiveMoment) {
+    return { snapshot: s, updatedPlayers: {} };
+  }
+
   let quickInjurySub: LiveMatchSnapshot['quickInjurySub'] = s.quickInjurySub ?? null;
 
   /** Partida automática: corta cartões/lesões sintéticos por minuto (GameSpirit mantém-se). */
@@ -200,8 +201,14 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
 
   const updatedPlayers: Record<string, PlayerEntity> = {};
 
+  // BUG 1 fix: pickBallCarrier substitui nearestToBall — antes o mesmo
+  // atacante "perto da bola" virava portador fixo e chutava 3x seguido.
+  // Agora: zona×role + atributos individuais + proximidade + anti-repeat.
+  const prevOnBallId = s.onBallPlayerId;
   const onBall =
-    possession === 'home' ? nearestToBall(s.homePlayers, ball) : undefined;
+    possession === 'home'
+      ? pickBallCarrier({ players: s.homePlayers, ball, side: 'home', prevCarrierId: prevOnBallId })
+      : undefined;
 
   // ── SmartField: pré-decide a ação do portador antes de invocar o Spirit ───
   // `getBestAction` consulta a hierarquia de zonas (goalmouth>six_yard>box>...).
@@ -648,7 +655,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       spiritPhase,
       actionKind: spiritActionKind,
       manager: mgr,
-      onBallPlayerId: possession === 'home' ? nearestToBall(s.homePlayers, ball)?.playerId : undefined,
+      onBallPlayerId: possession === 'home' ? onBall?.playerId : undefined,
       opponentPositions: oppPositions,
       movementKnobs: homeMovementKnobs,
       live2dSpeedMult,
@@ -671,7 +678,15 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
         spiritPhase,
         actionKind: spiritActionKind,
         manager: { tacticalMentality: 55, defensiveLine: 50, tempo: 50 },
-        onBallPlayerId: possession === 'away' ? nearestToBall(awayPitchPlayers, ball)?.playerId : undefined,
+        onBallPlayerId:
+          possession === 'away'
+            ? pickBallCarrier({
+                players: awayPitchPlayers,
+                ball,
+                side: 'away',
+                prevCarrierId: prevOnBallId,
+              })?.playerId
+            : undefined,
         opponentPositions: homePositions,
         live2dSpeedMult,
         pressTowardBall01: possession === 'home' ? 0.42 : undefined,
@@ -844,7 +859,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
           possession,
           ball,
           engineSimPhase: engineSimPhaseNow,
-          onBallPlayerId: possession === 'home' ? nearestToBall(homePlayers, ball)?.playerId : undefined,
+          onBallPlayerId: possession === 'home' ? onBall?.playerId : undefined,
           homePlayers,
           events: [...events],
           homeStats,
@@ -1058,7 +1073,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
     possession,
     ball,
     engineSimPhase,
-    onBallPlayerId: possession === 'home' ? nearestToBall(homePlayers, ball)?.playerId : undefined,
+    onBallPlayerId: possession === 'home' ? onBall?.playerId : undefined,
     homePlayers,
     events,
     homeStats,

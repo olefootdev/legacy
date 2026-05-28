@@ -118,6 +118,7 @@ const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default:
 const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ default: m.MatchClassic })));
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
+const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
 const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
 const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
@@ -570,6 +571,7 @@ as a nice MVP. Let's Play Together! ⚽
                 </ErrorBoundary>
               }
             />
+            <Route path="/match/quick-plan-preview" element={<QuickPlanPreview />} />
             <Route path="/match/penalty" element={<MatchPenaltyV2 />} />
             <Route path="/match/penalty-legacy" element={<MatchPenalty />} />
             <Route path="/match/penalty-v2" element={<Navigate to="/match/penalty" replace />} />

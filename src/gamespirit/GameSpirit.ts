@@ -1057,7 +1057,18 @@ export function gameSpiritTick(
   const legacyAttack01 = (legacyBooster.attack_pct ?? 0) / 100;
   const legacyDefense01 = (legacyBooster.defense_pct ?? 0) / 100;
   const legacyMorale01 = (legacyBooster.morale ?? 0) / 100;
-  const shotSkill = Math.min(1, ctx.homeTeamAvg / 100 + legacyAttack01);
+  // BUG 1 fix: shotSkill agora é dominado pela finalização INDIVIDUAL do batedor
+  // (peso 65%) — antes usava só média do time, fazendo todo mundo chutar com
+  // a mesma nota. Atributos individuais não influenciavam o resultado.
+  // Mistura com média do time (25%) pra preservar efeito de força coletiva,
+  // mais um toque de confiança (10%) que reflete momentum mental.
+  const shooterFin01 = (ctx.onBall?.attributes?.finalizacao ?? 60) / 100;
+  const shooterConf01 = (ctx.onBall?.attributes?.confianca ?? 60) / 100;
+  const teamAvg01 = ctx.homeTeamAvg / 100;
+  const shotSkill = Math.min(
+    1,
+    shooterFin01 * 0.65 + teamAvg01 * 0.25 + shooterConf01 * 0.10 + legacyAttack01,
+  );
   const errorTax = Math.max(0, cp.errorPenalty - legacyDefense01 * 0.5 + (ctx.nearestTeammateDist > 26 ? 0.04 : 0));
   const supportBoost = cp.supportBoost + legacyMorale01;
   let spiritMeta: SpiritSnapshotMeta | undefined;
@@ -1207,6 +1218,20 @@ export function gameSpiritTick(
         const defenseBonus = applyIntensityToDefense(1.0, ctx.tacticalIntensity);
         weights.save *= defenseBonus;
         weights.block *= defenseBonus;
+      }
+
+      // FIX H: momentum alimenta xG. Time dominando (momentum >+25) ganha
+      // boost no chute; time apagado (momentum <-25) tem chute mais nervoso.
+      // Magnitude moderada (±18%) pra não dominar finalização individual.
+      const momHomeRaw = ctx.momentum?.home ?? 0;
+      if (Math.abs(momHomeRaw) > 8) {
+        const momBoost = Math.max(-0.18, Math.min(0.18, momHomeRaw / 100 * 0.7));
+        weights.goal *= 1 + momBoost;
+        weights.post_in *= 1 + momBoost;
+        if (momBoost < 0) {
+          // Time apagado: GK adversário vê mais bolas
+          weights.save *= 1 + Math.abs(momBoost) * 0.5;
+        }
       }
 
       // Radical transparency: agrega em 3 buckets pra barra de preview.

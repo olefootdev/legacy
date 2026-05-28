@@ -8,6 +8,7 @@ import type { Fixture, OpponentStub } from '@/entities/types';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { pitchPlayersFromLineup } from '@/engine/pitchFromLineup';
 import { tripKmForFixture, applyTravelFatigueToSquad } from '@/systems/logistics';
+import { buildFatigueByIdMap } from '@/systems/fatigue';
 import { addBroCents, grantEarnedExp } from '@/systems/economy';
 import { diffNewMemorableTrophyIds, memorableTrophyFinanceReward } from '@/trophies/memorablePrizes';
 import { tickRecoveryMatches } from '@/systems/injury';
@@ -59,7 +60,8 @@ function appendExpHistory(finance: FinanceState, amount: number, source: string)
 }
 
 function homeRosterFromLineupState(state: OlefootGameState): import('@/entities/types').PlayerEntity[] {
-  const lu = mergeLineupWithDefaults(state.lineup, state.players);
+  const fatigueById = buildFatigueByIdMap(state.players, state.playerHealth);
+  const lu = mergeLineupWithDefaults(state.lineup, state.players, { fatigueById });
   const ids = new Set<string>(Object.values(lu));
   return Array.from(ids)
     .map((id) => state.players[id])
@@ -94,7 +96,8 @@ function buildTempFixture(
 }
 
 function woSnapshot(state: OlefootGameState, homeScore: number, awayScore: number): LiveMatchSnapshot {
-  const lu = mergeLineupWithDefaults(state.lineup, state.players);
+  const fatigueById = buildFatigueByIdMap(state.players, state.playerHealth);
+  const lu = mergeLineupWithDefaults(state.lineup, state.players, { fatigueById });
   const fs = state.manager.formationScheme;
   const homePlayers = pitchPlayersFromLineup(lu, state.players, fs);
   return {
@@ -159,7 +162,8 @@ function applyUserMatchResolution(
   } else {
     const travelKm = tripKmForFixture(tempFx);
     players = applyTravelFatigueToSquad(players, travelKm);
-    const lu = mergeLineupWithDefaults(state.lineup, players);
+    const fatigueById = buildFatigueByIdMap(players, state.playerHealth);
+    const lu = mergeLineupWithDefaults(state.lineup, players, { fatigueById });
     const fs = state.manager.formationScheme;
     const homePlayers = pitchPlayersFromLineup(lu, players, fs);
     liveMatch = defaultLiveMatchShell(

@@ -189,10 +189,8 @@ export function PenaltyKickModalV2(props: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex flex-col items-center justify-start overflow-y-auto"
+      className="fixed inset-0 z-[200] bg-deep-black/95 flex items-center justify-center overflow-y-auto"
       style={{
-        // Safe area iOS + dvh (dynamic viewport height) — evita corte com
-        // address bar do Safari e centraliza no notch.
         minHeight: '100dvh',
         paddingTop: 'env(safe-area-inset-top, 0)',
         paddingBottom: 'env(safe-area-inset-bottom, 0)',
@@ -200,13 +198,15 @@ export function PenaltyKickModalV2(props: Props) {
         paddingRight: 'env(safe-area-inset-right, 0)',
       }}
     >
-      <PenaltyShoot
-        key={`shoot-${penalty.takerId}`}
-        headerLabel="Pênalti em jogo"
-        shooter={shooter}
-        keeper={keeper}
-        onResolved={handleResolved}
-      />
+      <div className="w-full max-w-2xl px-3 sm:px-4 py-4 sm:py-6 my-auto">
+        <PenaltyShoot
+          key={`shoot-${penalty.takerId}`}
+          headerLabel="Pênalti em jogo"
+          shooter={shooter}
+          keeper={keeper}
+          onResolved={handleResolved}
+        />
+      </div>
     </div>
   );
 }

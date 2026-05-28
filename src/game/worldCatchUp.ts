@@ -3,6 +3,7 @@ import { gameMinutesFromRealMs } from '@/systems/time';
 import type { PlayerEntity } from '@/entities/types';
 import { runMatchMinute } from '@/engine/runMatchMinute';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
+import { buildFatigueByIdMap } from '@/systems/fatigue';
 import { accrueOlexpDaily } from '@/wallet/olexp';
 import { accrueGatDaily } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
@@ -58,7 +59,8 @@ function applyManagerDayAdvance(
 // e não é mais atualizado aqui (UI lê de state.playerHealth).
 
 function homeRosterFromLineupState(state: OlefootGameState): PlayerEntity[] {
-  const lu = mergeLineupWithDefaults(state.lineup, state.players);
+  const fatigueById = buildFatigueByIdMap(state.players, state.playerHealth);
+  const lu = mergeLineupWithDefaults(state.lineup, state.players, { fatigueById });
   const ids = new Set<string>(Object.values(lu));
   return Array.from(ids)
     .map((id) => state.players[id])

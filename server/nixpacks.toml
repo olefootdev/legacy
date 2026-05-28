@@ -1,0 +1,15 @@
+# Railway/Nixpacks — adiciona Python ao container Node do olefoot-server.
+# Necessário pelo endpoint POST /api/match/quick-plan que invoca
+# server/smartfield/match_simulator.py via spawn child_process.
+#
+# A imagem default detecta Node automaticamente; aqui só adicionamos
+# python3 como pacote extra do Nix. Sem dependências externas (stdlib só).
+
+[phases.setup]
+nixPkgs = ["nodejs", "python3"]
+
+[phases.build]
+cmds = ["npm ci", "npm run build"]
+
+[start]
+cmd = "npm start"

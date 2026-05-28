@@ -24,6 +24,7 @@ import type { GameAction, ManagerProspectArtRequest, OlefootGameState } from './
 import { createInitialGameState, defaultLiveMatchShell } from './initialState';
 import { rehydrateGameState } from './persistence';
 import { awayStartingElevenFromSquad, buildDefaultLineup, mergeLineupWithDefaults } from '@/entities/lineup';
+import { buildFatigueByIdMap, getEffectiveFatigue } from '@/systems/fatigue';
 import { normalizeFixture, normalizeOpponentStub } from '@/entities/team';
 import { overallFromAttributes } from '@/entities/player';
 import type { PlayerEntity } from '@/entities/types';
@@ -58,6 +59,7 @@ import {
 import { tickRecoveryMatches } from '@/systems/injury';
 import {
   applyMatchConsequences as applyHealthConsequences,
+  healthFromLegacyPlayer,
   tickHealthRecovery,
 } from '@/systems/playerHealth/reducer';
 import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
@@ -261,6 +263,39 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/**
+ * Promove a partida para postgame e limpa overlays/pendências que ficariam
+ * "vivos" depois do apito (overlay de gol, modal de pênalti, momento interativo,
+ * substituição por lesão pendente, corner/falta agendados).
+ *
+ * Sem esse cleanup a tela de pós-jogo abre por baixo do overlay residual e o
+ * usuário não vê — ou continua narrando ações depois do fim.
+ */
+function promoteToPostgame(
+  liveMatch: import('@/engine/types').LiveMatchSnapshot,
+  opts: { whistleText?: string; minute?: number } = {},
+): import('@/engine/types').LiveMatchSnapshot {
+  const minute = opts.minute ?? Math.max(liveMatch.minute, 90);
+  const whistle: MatchEventEntry = {
+    id: uid(),
+    minute,
+    text: opts.whistleText ?? `${minute}' — Apito final.`,
+    kind: 'whistle',
+  };
+  return {
+    ...liveMatch,
+    phase: 'postgame',
+    events: [whistle, ...liveMatch.events],
+    spiritOverlay: null,
+    penalty: null,
+    activeInteractiveMoment: null,
+    quickInjurySub: null,
+    preGoalHint: null,
+    pendingCornerForSide: null,
+    pendingFreeKickForSide: null,
+  };
+}
+
 function walletOf(state: OlefootGameState) {
   return state.finance.wallet ?? createInitialWalletState();
 }
@@ -274,7 +309,8 @@ function syncWalletToFinance(state: OlefootGameState, wallet: import('@/wallet/t
 }
 
 function homeRosterFromLineup(state: OlefootGameState): import('@/entities/types').PlayerEntity[] {
-  const lu = mergeLineupWithDefaults(state.lineup, state.players);
+  const fatigueById = buildFatigueByIdMap(state.players, state.playerHealth);
+  const lu = mergeLineupWithDefaults(state.lineup, state.players, { fatigueById });
   const ids = new Set<string>(Object.values(lu));
   return Array.from(ids)
     .map((id) => state.players[id])
@@ -384,13 +420,7 @@ function runTick(state: OlefootGameState): OlefootGameState {
     ? [...newInboxItems, ...state.inbox]
     : state.inbox;
   if (liveMatch.minute >= 90 && liveMatch.phase === 'playing') {
-    const whistle: MatchEventEntry = {
-      id: uid(),
-      minute: 90,
-      text: `90' — Apito final.`,
-      kind: 'whistle',
-    };
-    liveMatch = { ...liveMatch, phase: 'postgame', events: [whistle, ...liveMatch.events] };
+    liveMatch = promoteToPostgame(liveMatch);
   }
   return { ...state, liveMatch, players, inbox };
 }
@@ -723,7 +753,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         );
         return { ...st, inbox: [lineupNote, ...inboxWithoutDup].slice(0, 24) };
       }
-      const lu = mergeLineupWithDefaults(st.lineup, st.players);
+      const fatigueById = buildFatigueByIdMap(st.players, st.playerHealth);
+      const lu = mergeLineupWithDefaults(st.lineup, st.players, { fatigueById });
       const travelKm = tripKmForFixture(st.nextFixture);
       let players = applyTravelFatigueToSquad(st.players, travelKm);
       const fs = st.manager.formationScheme;
@@ -1064,13 +1095,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
 
       if (action.fullTime && nextLive.phase === 'playing') {
-        const whistle: import('@/engine/types').MatchEventEntry = {
-          id: `ft-${Date.now()}`,
-          minute: 90,
-          text: `90' — Apito final.`,
-          kind: 'whistle',
-        };
-        nextLive = { ...nextLive, phase: 'postgame', events: [whistle, ...nextLive.events] };
+        nextLive = promoteToPostgame(nextLive);
       }
       return { ...state, liveMatch: nextLive };
     }
@@ -1294,13 +1319,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let liveMatch = snapshot;
       const players = { ...state.players, ...updatedPlayers };
       if (liveMatch.minute >= 90 && liveMatch.phase === 'playing') {
-        const whistle: MatchEventEntry = {
-          id: uid(),
-          minute: 90,
-          text: `90' — Apito final.`,
-          kind: 'whistle',
-        };
-        liveMatch = { ...liveMatch, phase: 'postgame', events: [whistle, ...liveMatch.events] };
+        liveMatch = promoteToPostgame(liveMatch);
       }
       return { ...state, liveMatch, players };
     }
@@ -1495,7 +1514,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
     case 'END_MATCH_TO_POST': {
       if (!state.liveMatch) return state;
-      return { ...state, liveMatch: { ...state.liveMatch, phase: 'postgame' } };
+      return { ...state, liveMatch: promoteToPostgame(state.liveMatch) };
     }
     case 'FORFEIT_MATCH': {
       const asMode = action.mode;
@@ -1517,6 +1536,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             awayScore: 5,
             minute: Math.max(lm.minute, 90),
             events: [forfeiEv, ...lm.events],
+            spiritOverlay: null,
+            penalty: null,
+            activeInteractiveMoment: null,
+            quickInjurySub: null,
+            preGoalHint: null,
+            pendingCornerForSide: null,
+            pendingFreeKickForSide: null,
           },
         };
       }
@@ -1939,22 +1965,38 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           };
         }
       }
-      // Sync engine-final → SSOT: o engine ainda escreve fatigue/injuryRisk/outForMatches
-      // em PlayerEntity durante a partida. Aqui transcrevemos os valores finais
-      // (já com postNut/tickRecovery aplicados) para o playerHealth, garantindo paridade.
+      // FIX B + C — Sync engine→SSOT primeiro, recovery garantido depois.
+      //
+      // FIX B: cria entry no playerHealth pra QUALQUER jogador (antes pulava
+      // entries que não existiam — bug de jogador novo nunca virar SSOT).
+      //
+      // FIX C: aplica recovery garantido por partida JOGADA, independente de
+      // manager presente/ausente — antes ficava preso na recuperação off-match
+      // que só rodava se presente <36h. Banco recupera mais que titulares.
+      const playedSet = new Set(playedUnique);
+      const POST_MATCH_BASE_RECOVERY = 12;
+      const POST_MATCH_BENCH_BONUS = 18; // banco descansa muito mais
       const syncedHealth: typeof playerHealth = { ...playerHealth };
       for (const [pid, p] of Object.entries(players)) {
-        const cur = syncedHealth[pid];
-        if (!cur) continue;
-        syncedHealth[pid] = {
-          ...cur,
+        const cur = syncedHealth[pid] ?? healthFromLegacyPlayer({
+          id: pid,
           fatigue: p.fatigue,
           injuryRisk: p.injuryRisk,
           outForMatches: p.outForMatches,
-          atRisk: p.fatigue >= 80 || p.injuryRisk >= 70,
+        });
+        const played = playedSet.has(pid);
+        const recovery = POST_MATCH_BASE_RECOVERY + (played ? 0 : POST_MATCH_BENCH_BONUS);
+        const nextFatigue = Math.max(0, p.fatigue - recovery);
+        syncedHealth[pid] = {
+          ...cur,
+          fatigue: nextFatigue,
+          injuryRisk: p.injuryRisk,
+          outForMatches: p.outForMatches,
+          atRisk: nextFatigue >= 80 || p.injuryRisk >= 70,
         };
+        // Espelha no PlayerEntity legacy pra UI antiga ainda mostrar valor coerente.
+        players[pid] = { ...p, fatigue: nextFatigue };
       }
-      // Reatribui via const-block aliasing
       const playerHealthFinal = syncedHealth;
 
       const marketAfterMatch = marketBroSnapshotFromPlayers(players);
