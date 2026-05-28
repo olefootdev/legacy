@@ -64,7 +64,8 @@ export function TransferHeroSlider({ tab, slides, autoPlayMs = 6500 }: TransferH
   }, [autoPlayMs, slides.length]);
 
   if (slides.length === 0) return null;
-  const slide = slides[index]!;
+  // Clamp: index pode estar stale quando slides muda (race com setIndex(0))
+  const slide = slides[index] ?? slides[0]!;
 
   return (
     <section

@@ -7,6 +7,7 @@ import { gatSummary } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
 import { WalletShell } from './wallet/WalletShell';
 import { DepositModal } from './wallet/DepositModal';
+import { PixCheckoutModal } from '@/components/PixCheckoutModal';
 import { SendModal } from './wallet/SendModal';
 import { CryptoCoinCard } from './wallet/CryptoCoinCard';
 import { ActivityStrip } from './wallet/ActivityStrip';
@@ -81,6 +82,8 @@ export function Wallet() {
   const reducedMotion = usePrefersReducedMotion();
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [pixOpen, setPixOpen] = useState(false);
+  const [pixAmountCents, setPixAmountCents] = useState(0);
   const usdBrlQuote = useOlefootUsdBrlQuote(true);
 
   const _olexp = olexpSummary({ ...wallet, spotBroCents: finance.broCents });
@@ -214,7 +217,27 @@ export function Wallet() {
       heroStats={heroStats}
       heroVariant="compact"
     >
-      <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} quote={usdBrlQuote} />
+      <DepositModal
+        open={depositOpen}
+        onClose={() => setDepositOpen(false)}
+        quote={usdBrlQuote}
+        onContinueToPix={(cents) => {
+          setPixAmountCents(cents);
+          setPixOpen(true);
+        }}
+      />
+      <PixCheckoutModal
+        open={pixOpen}
+        productKind="recharge"
+        amountCents={pixAmountCents}
+        title="Depósito Olefoot"
+        description={`Saldo BRO instantâneo após confirmação · R$ ${(pixAmountCents / 100).toFixed(2).replace('.', ',')}`}
+        onClose={() => setPixOpen(false)}
+        onSuccess={() => {
+          setPixOpen(false);
+          // applyPendingCredits no Layout vai pegar o wallet_credit criado pelo webhook
+        }}
+      />
       <SendModal open={sendOpen} onClose={() => setSendOpen(false)} />
 
       {/* ── MATCH COUNTDOWN ──────────────────────────────────────── */}

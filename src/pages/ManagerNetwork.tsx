@@ -120,10 +120,10 @@ import {
 import { getTokenPrice, type TokenEconomyConfig } from '@/economy/tokenEconomyConfig';
 import {
   fetchMyActivationStatus,
-  purchaseActivationPack,
   ACTIVATION_AMOUNT_USD,
   type ActivationStatus,
 } from '@/wallet/activationPack';
+import { PixCheckoutModal } from '@/components/PixCheckoutModal';
 
 const RANK_ICON_MAP: Record<RankIconName, LucideIcon> = {
   Sprout, Zap, Flame, Gem, Trophy, Crown,
@@ -264,7 +264,7 @@ export function ManagerNetwork() {
   const [claimingCareer, setClaimingCareer] = useState(false);
   const [claimingAffiliate, setClaimingAffiliate] = useState(false);
   const [creatingLock, setCreatingLock] = useState(false);
-  const [activating, setActivating] = useState(false);
+  const [pixOpen, setPixOpen] = useState(false);
   const [lockAmount, setLockAmount] = useState<string>('1000');
   const [careerToast, setCareerToast] = useState<string | null>(null);
 
@@ -350,20 +350,14 @@ export function ManagerNetwork() {
     setTimeout(() => setCareerToast(null), 4000);
   };
 
-  const handleActivate = async () => {
-    if (activating) return;
-    setActivating(true);
-    try {
-      const result = await purchaseActivationPack();
-      if (result) {
-        showCareerToast(`Pack ativado — agora você recebe TODAS as comissões 5-5-5%`);
-        await refreshCareer();
-      } else {
-        showCareerToast('Falha ao ativar — tente novamente');
-      }
-    } finally {
-      setActivating(false);
-    }
+  const handleActivate = () => {
+    setPixOpen(true);
+  };
+
+  const handlePixSuccess = async () => {
+    showCareerToast('Pagamento confirmado — sua conta foi ativada');
+    setPixOpen(false);
+    await refreshCareer();
   };
 
   const handleClaimCareer = async () => {
@@ -709,10 +703,9 @@ export function ManagerNetwork() {
           <button
             type="button"
             onClick={handleActivate}
-            disabled={activating}
-            className="w-full bg-amber-400 hover:bg-white text-black py-4 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors disabled:opacity-50"
+            className="w-full bg-amber-400 hover:bg-white text-black py-4 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors"
           >
-            {activating ? 'Ativando…' : `Ativar conta por $${ACTIVATION_AMOUNT_USD}`}
+            Ativar conta por ${ACTIVATION_AMOUNT_USD} (PIX)
           </button>
 
           <p className="text-[10px] text-white/40 mt-3 text-center uppercase tracking-wider">
@@ -1594,6 +1587,18 @@ export function ManagerNetwork() {
           </ul>
         </motion.div>
       </section>
+
+      {/* ── PIX CHECKOUT MODAL ── */}
+      <PixCheckoutModal
+        open={pixOpen}
+        productKind="activation_pack"
+        amountCents={12500}
+        title="Ativação Olefoot"
+        description="Pack vitalício — Plano de Carreira completo"
+        defaultName={club?.name ?? ''}
+        onClose={() => setPixOpen(false)}
+        onSuccess={handlePixSuccess}
+      />
 
       {/* ── MODAL ADICIONAR AMIGO ── */}
       <AnimatePresence>

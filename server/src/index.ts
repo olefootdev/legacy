@@ -9,6 +9,7 @@ import { csrfGuard, securityHeaders } from './lib/securityMiddleware.js';
 import { bodyLimit } from './lib/inputGuards.js';
 import { gameSpiritRoutes } from './routes/gameSpirit.js';
 import { healthRoutes } from './routes/health.js';
+import { paymentsRoutes } from './routes/payments.js';
 import { matchRoutes } from './routes/matches.js';
 import { pinataMediaRoutes } from './routes/pinataMedia.js';
 import { positionCoachRoutes } from './routes/positionCoach.js';
@@ -100,6 +101,7 @@ app.use('/api/academy/upload-admin-image', bodyLimit(10 * 1024 * 1024)); // arte
 app.use('*', csrfGuard);
 
 app.route('/', healthRoutes);
+app.route('/', paymentsRoutes);
 app.route('/', matchRoutes);
 app.route('/', gameSpiritRoutes);
 app.route('/', pinataMediaRoutes);
