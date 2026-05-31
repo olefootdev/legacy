@@ -30,6 +30,7 @@ import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { signOutGame } from '@/supabase/auth';
 import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayName';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
+import { LegacyOlefootWelcomeToast } from '@/components/LegacyOlefootWelcomeToast';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
@@ -232,6 +233,8 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+
+      <LegacyOlefootWelcomeToast />
 
       {/* Desktop Sidebar — visible only at ≥1024px */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-panel border border-white/5 overflow-x-hidden overflow-y-visible border-r border-white/10 fixed h-screen z-50 rounded-none">

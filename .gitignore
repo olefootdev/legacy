@@ -76,3 +76,6 @@ scripts/calibration/raw/
 !supabase/migrations/*.sql
 !supabase/seed*.sql
 !server/migrations/*.sql
+
+# Migration v1 → v11: snapshots locais com bcrypt hashes, emails, wallets, balances
+scripts/migrate-legacy-v1/data/
