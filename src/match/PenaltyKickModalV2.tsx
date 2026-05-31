@@ -178,9 +178,25 @@ export function PenaltyKickModalV2(props: Props) {
   };
 
   function handleResolved(result: PenaltyShootResult) {
-    // Mapeia outcome do novo sistema → rng (engine espera 0-1)
-    // rng < 0.5 = gol | rng > 0.5 = qualquer não-gol
-    const rng = result.outcome === 'goal' ? 0.13 : 0.7;
+    // BUG: o engine usa rollPenaltyOutcome(rng) onde rng entre 0.64–0.72 cai em
+    // 'post_in' (conta como GOL no reducer). O mapeamento antigo enviava 0.7
+    // pra qualquer NÃO-gol, fazendo defesa do goleiro virar gol indevidamente.
+    //
+    // Mapeamento correto por outcome do PenaltyShoot:
+    //   rng 0.0-0.5  → goal
+    //   rng 0.5-0.64 → save
+    //   rng 0.72-0.8 → post_out (NÃO conta gol)
+    //   rng 0.8-0.9  → miss_wide
+    //   rng 0.9-1.0  → miss_far
+    let rng = 0.55;
+    switch (result.outcome) {
+      case 'goal': rng = 0.13; break;
+      case 'save':
+      case 'weak-save': rng = 0.55; break;
+      case 'post': rng = 0.76; break;
+      case 'over-bar': rng = 0.95; break;
+      case 'wide': rng = 0.85; break;
+    }
     // 1.5s pra apreciar o resultado antes de avançar o engine
     window.setTimeout(() => {
       onResolve(rng, penalty.takerName ?? 'Batedor');

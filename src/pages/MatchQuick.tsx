@@ -1003,6 +1003,13 @@ export function MatchQuick() {
       dispatch({ type: 'TICK_MATCH_MINUTE' });
     };
 
+    // Watchdog: a partida rápida toda dura ~100s reais (90 minutos × 1s
+    // + 10s de intervalo). Mesmo com penalty/momento interativo no caminho,
+    // 240s é teto generoso. Se passar disso, algo travou (modal sem callback,
+    // freeze infinito por bug). Força a finalização em vez de obrigar FORFEIT.
+    const matchStartedWallMs = Date.now();
+    const WATCHDOG_MS = 240_000;
+
     const loop = () => {
       clearIv();
       matchLoopStartMsRef.current = Date.now();
@@ -1016,6 +1023,20 @@ export function MatchQuick() {
         }
         if (lm.minute >= 90) {
           clearIv();
+          // FIX final-whistle: se chegamos a 90 com phase ainda 'playing'
+          // (qualquer caminho que tenha contornado a promoção em runTick),
+          // forçamos a transição pra postgame aqui. Sem isso a partida
+          // ficava eternamente em 90' e a única saída era FORFEIT 5x0.
+          if (lm.phase === 'playing') {
+            dispatch({ type: 'END_MATCH_TO_POST' });
+          }
+          return;
+        }
+        // Watchdog: se passou MUITO tempo real sem chegar ao fim, força fim.
+        // Protege contra travamento de modal/freeze sem callback.
+        if (Date.now() - matchStartedWallMs > WATCHDOG_MS) {
+          clearIv();
+          dispatch({ type: 'END_MATCH_TO_POST' });
           return;
         }
         if (Date.now() < freezeUntilRef.current) {
@@ -2150,6 +2171,16 @@ export function MatchQuick() {
   }, [live?.events, awayRoster]);
 
   const minute = live?.minute ?? 0;
+  // CRÍTICO: cada estado que pausa o setInterval do tick PRECISA também congelar
+  // o clock display. Senão o display interpola sem o snapshot avançar — vai
+  // "viajando no tempo" pra frente e quando o snapshot finalmente atualiza,
+  // o display "volta pra trás" pra refletir o tempo real do snapshot.
+  // Sintoma reportado: chega a 70', volta pra 38' quando alerta de 2º amarelo é resolvido.
+  //
+  // v2 (2026-05-30): além do `frozen` derivado de state, passamos `freezeUntilMs`
+  // pro clock para o RAF respeitar o timer mesmo entre renders. Combinado com
+  // o cap de +60s no display (LiveMatchClockDisplay), elimina o time-travel
+  // mesmo quando algum estado de pausa fica fora de sync.
   const clockFrozen =
     quickPreStart !== null ||
     halfTimeUi ||
@@ -2159,6 +2190,7 @@ export function MatchQuick() {
     !!live?.quickInjurySub ||
     !!live?.penalty ||
     !!live?.activeInteractiveMoment ||
+    !!secondYellowAlert ||
     Date.now() < freezeUntilRef.current;
   const matchClock = (
     <div className="flex flex-col items-center gap-1.5">
@@ -2167,6 +2199,7 @@ export function MatchQuick() {
         frozen={clockFrozen}
         phase={live?.phase}
         msPerMinute={MS_PER_MINUTE}
+        freezeUntilMs={freezeUntilRef.current}
       />
       {live?.lastShotPreview && Date.now() - live.lastShotPreview.ts < 3500 ? (
         <ShotProbabilityBar preview={live.lastShotPreview} />

@@ -1592,6 +1592,39 @@ export function gameSpiritTick(
         narrative =
           pickLine(['foul_hard'], { min: ctx.minute, from: tacklerName, to: victimName, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
           ?? `${ctx.minute}' — Entrada agressiva de ${tacklerName}! Falta grave em ${victimName}, o árbitro já busca o cartão.`;
+
+        // BUG FIX: pênalti pro away — antes só home gerava pênalti, away parecia
+        // "cone" porque nunca era contemplado em foul perigoso na sua área.
+        // Detecta foul_hard quando bola está perto do gol do home (ctx.ball.x ≤ 17 ≈ grande área).
+        const awayInsideHomeBox = ctx.ball.x <= 17;
+        const penaltyCooldownOk = !(ctx.penaltyCooldownTicks && ctx.penaltyCooldownTicks > 0);
+        if (awayInsideHomeBox && penaltyCooldownOk && Math.random() < 0.85) {
+          L.push({
+            type: 'phase_change',
+            payload: { from: 'LIVE', to: 'PENALTY' as 'LIVE', reason: 'foul_in_box' },
+          });
+          // Pega o melhor batedor disponível do away (atacante com pos ATA/PD/PE)
+          const awayTaker = awayScorer;
+          return {
+            narrative: `${ctx.minute}' — Pênalti pro ${awayShort}! ${tacklerName} derrubou ${awayTaker.name} na área.`,
+            action: 'recycle',
+            nextPossession: 'away',
+            ball: { ...ctx.ball },
+            causalEvents: [...L.events],
+            spiritMeta: {
+              spiritPhase: 'penalty',
+              penalty: initialPenaltyState('away', awayTaker.name, awayTaker.id),
+              spiritOverlay: penaltyOverlayForStage(
+                'banner',
+                awayTaker.name,
+                ctx.homeShort ?? 'Casa',
+                awayShort,
+                nowMs,
+                2000,
+              ),
+            },
+          };
+        }
       }
     } else {
       const rShot = Math.random();
