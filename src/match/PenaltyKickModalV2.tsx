@@ -91,10 +91,12 @@ export function PenaltyKickModalV2(props: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] bg-deep-black/95 flex items-center justify-center px-6 overflow-y-auto"
+          className="fixed inset-0 z-[200] bg-deep-black/95 flex items-start sm:items-center justify-center px-6 overflow-y-auto"
           style={{
-            // Safe area iOS + dvh — centraliza corretamente no notch
-            minHeight: '100dvh',
+            // svh evita "viewport empurrado" do iOS Safari em portrait inicial.
+            // items-start no mobile garante que o conteúdo principal aparece
+            // no topo (não cortado pela barra do Safari).
+            minHeight: '100svh',
             paddingTop: 'env(safe-area-inset-top, 0)',
             paddingBottom: 'env(safe-area-inset-bottom, 0)',
           }}
@@ -205,22 +207,27 @@ export function PenaltyKickModalV2(props: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-deep-black/95 flex items-center justify-center overflow-y-auto"
+      className="fixed inset-0 z-[200] bg-deep-black/95 flex items-start sm:items-center justify-center overflow-y-auto"
       style={{
-        minHeight: '100dvh',
+        // 100svh evita o "viewport empurrado" do iOS Safari na primeira
+        // carga em portrait (sintoma: modal abria mas conteúdo principal
+        // ficava fora da tela visível, só voltando após rotação). svh é
+        // o menor viewport possível considerando a barra de endereço.
+        minHeight: '100svh',
         paddingTop: 'env(safe-area-inset-top, 0)',
         paddingBottom: 'env(safe-area-inset-bottom, 0)',
         paddingLeft: 'env(safe-area-inset-left, 0)',
         paddingRight: 'env(safe-area-inset-right, 0)',
       }}
     >
-      <div className="w-full max-w-2xl px-3 sm:px-4 py-4 sm:py-6 my-auto">
+      <div className="w-full max-w-2xl px-3 sm:px-4 py-4 sm:py-6">
         <PenaltyShoot
           key={`shoot-${penalty.takerId}`}
           headerLabel="Pênalti em jogo"
           shooter={shooter}
           keeper={keeper}
           onResolved={handleResolved}
+          fullViewport={false}
         />
       </div>
     </div>

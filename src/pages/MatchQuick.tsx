@@ -1420,7 +1420,18 @@ export function MatchQuick() {
 
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live) || live.phase !== 'playing' || summary !== null) return;
-    const rotateMs = live.narrativeArc ? getArcFeedSpeed(live.narrativeArc.arc) : FEED_ROTATE_MS;
+    // Feed adaptativo (2026-05-30 noite): em Partida Rápida o motor pode
+    // gerar 5–10 eventos em poucos segundos (golos, narrativa, momentum…).
+    // FEED_ROTATE_MS=4200 fazia o usuário ver eventos com 15-20s de atraso
+    // em relação ao cronômetro — quebra a sensação de tempo real.
+    // Solução: quando a fila acumular (events além do visível), rotaciona
+    // proporcionalmente mais rápido até esvaziar.
+    const baseRotateMs = live.narrativeArc ? getArcFeedSpeed(live.narrativeArc.arc) : FEED_ROTATE_MS;
+    const eventsLen = Math.min((live.events ?? []).length, FEED_POOL_MAX);
+    const queueDepth = Math.max(0, eventsLen - FEED_VISIBLE_COUNT);
+    // queueDepth=0 → rotação normal; queueDepth=8 → ~1/3 do tempo; piso 900ms.
+    const speedFactor = queueDepth > 0 ? Math.max(0.25, 1 - queueDepth * 0.12) : 1;
+    const rotateMs = Math.max(900, Math.round(baseRotateMs * speedFactor));
     const id = window.setInterval(() => {
       setFeedWindowStart((s) => {
         const evs = getGameState().liveMatch?.events ?? [];
@@ -1432,7 +1443,7 @@ export function MatchQuick() {
       });
     }, rotateMs);
     return () => window.clearInterval(id);
-  }, [live?.mode, live?.phase, live?.narrativeArc?.arc, session, summary]);
+  }, [live?.mode, live?.phase, live?.narrativeArc?.arc, session, summary, (live?.events ?? []).length]);
 
   // Enforce quick-match card rules: direct red on injury, two yellows -> red.
   const _quickEnforcedRef = useRef<Set<string>>(new Set());

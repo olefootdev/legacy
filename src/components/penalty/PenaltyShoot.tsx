@@ -48,6 +48,17 @@ export interface PenaltyShootProps {
    * Default: "Olefoot · Pênalti".
    */
   headerLabel?: string;
+  /**
+   * Quando true (default), o componente ocupa 100dvh (página inteira).
+   * Quando false, ocupa só a altura natural do conteúdo — usar quando
+   * embutido em um modal que JÁ controla o viewport (ex: PenaltyKickModalV2).
+   *
+   * Sintoma corrigido (2026-05-30): no iPhone vertical, o pênalti embutido
+   * herdava 100dvh do filho aninhado dentro de 100dvh do pai, e o flex
+   * `items-center` jogava o conteúdo pra fora da viewport. Só voltava
+   * quando rotacionava (forçando reflow do viewport).
+   */
+  fullViewport?: boolean;
 }
 
 /**
@@ -66,6 +77,7 @@ export function PenaltyShoot({
   onReset,
   autoAdvanceMs,
   headerLabel = 'Olefoot · Pênalti',
+  fullViewport = true,
 }: PenaltyShootProps) {
   const [phase, setPhase] = useState<PenaltyPhase>('pick');
   const [hoveredSlot, setHoveredSlot] = useState<SlotIndex | null>(null);
@@ -274,9 +286,18 @@ export function PenaltyShoot({
       className="bg-neon-yellow flex flex-col items-center px-4 sm:px-6 select-none w-full flex-1"
       style={{
         touchAction: 'none',
-        minHeight: '100dvh',
-        paddingTop: 'max(env(safe-area-inset-top), 12px)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+        // Standalone (página inteira): 100dvh. Embedded em modal: altura
+        // natural — o modal pai cuida do viewport e do safe-area.
+        ...(fullViewport
+          ? {
+              minHeight: '100dvh',
+              paddingTop: 'max(env(safe-area-inset-top), 12px)',
+              paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+            }
+          : {
+              paddingTop: '12px',
+              paddingBottom: '16px',
+            }),
       }}
     >
       {/* Header */}

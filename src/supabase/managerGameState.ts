@@ -182,10 +182,25 @@ export async function persistOpponentQuickMatchResult(
   }
 }
 
+/** RLS bloqueia escritas cross-manager (correto). Detecta esse caso pra não poluir log. */
+function isRlsViolation(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false;
+  if (err.code === '42501') return true;
+  return /row-level security|RLS|policy/i.test(err.message ?? '');
+}
+
 /**
  * Persiste eventos de saúde (cartões, lesões) que ocorreram nos jogadores
  * do adversário durante uma Quick Match.
  * Fire-and-forget — não bloqueia a UI do jogador local.
+ *
+ * TODO (servidor): hoje o cliente tenta escrever direto em manager_game_state
+ * do OUTRO manager, e o RLS bloqueia (comportamento correto — usuário A não
+ * pode editar save do usuário B). Pra fechar essa lacuna sem expor o save,
+ * precisamos de uma edge function ou RPC SECURITY DEFINER que valide o
+ * matchId e aplique as consequências server-side. Enquanto isso, o erro
+ * é silenciado (RLS é esperado) e o adversário só vê os eventos quando
+ * ele próprio reabrir o save local — não há corrupção.
  */
 export async function persistOpponentAwayEvents(
   opponentUserId: string,
@@ -205,7 +220,9 @@ export async function persistOpponentAwayEvents(
       .maybeSingle();
 
     if (readErr) {
-      console.warn('[persistOpponentAwayEvents] read falhou:', readErr.message);
+      if (!isRlsViolation(readErr)) {
+        console.warn('[persistOpponentAwayEvents] read falhou:', readErr.message);
+      }
       return;
     }
 
@@ -214,7 +231,7 @@ export async function persistOpponentAwayEvents(
     // 2. Aplicar consequências de saúde
     const { next } = applyMatchConsequences(currentHealth, events);
 
-    // 3. Upsert
+    // 3. Upsert (esperado falhar por RLS — TODO: mover pra RPC server-side)
     const { error: writeErr } = await sb.from('manager_game_state').upsert(
       {
         user_id: opponentUserId,
@@ -224,7 +241,10 @@ export async function persistOpponentAwayEvents(
     );
 
     if (writeErr) {
-      console.warn('[persistOpponentAwayEvents] write falhou:', writeErr.message);
+      // RLS é esperado aqui (cross-manager write). Outros erros, sim, avisar.
+      if (!isRlsViolation(writeErr)) {
+        console.warn('[persistOpponentAwayEvents] write falhou:', writeErr.message);
+      }
     } else {
       console.info('[persistOpponentAwayEvents] OK —', events.length, 'eventos para', opponentUserId);
     }
