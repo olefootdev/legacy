@@ -39,6 +39,7 @@ import {
 } from '@/gamespirit/spiritStateMachine';
 import { applyScoutEvent, type ScoutTally } from '@/gamespirit/scoutScoring';
 import { computeTacticalPositions, buildAwayPitchPlayers } from './test2d/tacticalPositioning';
+import { synthesizeAwayPitchPlayers, deriveAwayMentality } from '@/match/syntheticAwayAttrs';
 import { computeBallTrajectory, type BallTrajectoryState } from './test2d/ballTrajectory';
 import { visualBeatGeometryFromCausalBatch } from './test2d/visualBeatFromCausal';
 import { isLive2dPitchMode } from './ultralive2d/live2dMode';
@@ -311,6 +312,23 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       lastGoalMinute,
     };
 
+    // FANTASY V6 (2026-06-02): visitante com atributos individuais sintéticos.
+    // Em live2D já temos `awayPitchPlayers` (com attrs reais quando há entities);
+    // em quick/auto montamos um pitch sintético derivado de (OVR clube × posição)
+    // para habilitar awareness: defensor adversário bloqueia, GK individualizado,
+    // artilheiro pesa em pGoalAway. Custo: ~0.1ms por tick (≤11 jogadores).
+    const synthAwayPitch =
+      s.awayPitchPlayers && s.awayPitchPlayers.length > 0 && s.awayPitchPlayers.some((p) => p.attributes)
+        ? s.awayPitchPlayers
+        : synthesizeAwayPitchPlayers(awayRoster, input.opponentStrength);
+    // Mentalidade do visitante (0-100) — base por OVR + ajuste situacional.
+    const awayMentality = deriveAwayMentality({
+      opponentStrength: input.opponentStrength,
+      homeScore,
+      awayScore,
+      minute,
+    });
+
     const ctx = buildSpiritContext({
       minute,
       homeScore,
@@ -322,12 +340,14 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       tacticalMentality: input.tacticalMentality,
       tacticalStyle: input.tacticalStyle,
       opponentStrength: input.opponentStrength,
+      awayMentality,
       homeRoster: input.homeRoster,
       homePlayers: s.homePlayers,
       homeShort: s.homeShort,
       recentFeedLines:
         s.mode === 'auto' ? [] : s.events.slice(0, 10).map((e) => e.text),
       awayRoster,
+      awayPlayers: synthAwayPitch,
       test2dTickModifiers,
       live2dStagnationTicks: live2dPitchEarly ? (s.live2dDecisionStagnationTicks ?? 0) : undefined,
       penaltyCooldownTicks: s.spiritPenaltyCooldownTicks ?? 0,

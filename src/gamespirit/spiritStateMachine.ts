@@ -98,14 +98,36 @@ export function adjustHomeShotWeights(
     supportBoost: number;
     gkFactor01: number;
     errorTax: number;
+    /**
+     * Pressão defensiva agregada dos visitantes próximos à bola (0–1).
+     * 0 = ninguém marcando → xG cheio; 1 = elite ao redor → xG -25%, +block.
+     * Substitui o efeito antes ausente de "defensor adversário individual".
+     */
+    awayDefensePress01?: number;
+    /**
+     * Skill do GK adversário individualizado (0–1). Quando informado,
+     * substitui o `gkFactor01` (que só usava OVR do clube). +save, -error,
+     * -goal proporcional ao goleiro real.
+     */
+    awayGkSkill01?: number;
   },
 ): Record<HomeShotLogicalOutcome, number> {
   const w = { ...base };
   const sk = opts.shotSkill01;
+  const press = Math.max(0, Math.min(1, opts.awayDefensePress01 ?? 0));
+  const gkInd = opts.awayGkSkill01;
+  // Se o GK individualizado foi informado, prefere-o sobre o gkFactor01 do clube.
+  const gkEffective = typeof gkInd === 'number' ? Math.max(0, Math.min(1, gkInd)) : opts.gkFactor01;
+
   w.goal *= 1 + sk * 0.45 + opts.supportBoost * 0.35 + (opts.zoneAtt ? 0.22 : opts.zoneMid ? 0.08 : -0.18);
+  // Defesa adversária reduz xG até 25% quando press≈1.
+  w.goal *= 1 - press * 0.25;
   w.post_in *= 1 + sk * 0.2;
-  w.save *= 1 + opts.gkFactor01 * 0.5;
-  w.block *= 1 + opts.errorTax * 0.25;
+  w.post_in *= 1 - press * 0.18;
+  // Save individualizado por GK real (não só OVR do clube).
+  w.save *= 1 + gkEffective * 0.5;
+  // Defesa próxima aumenta bloqueios (+0.40 quando press≈1).
+  w.block *= 1 + opts.errorTax * 0.25 + press * 0.40;
   w.wide *= 1 + opts.errorTax * 0.2;
   w.post_out *= 1 + sk * 0.05;
   w.miss_far *= 1 + (opts.zoneAtt ? -0.08 : 0.05);

@@ -253,6 +253,17 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     (scoreDiff > 0 && lateGame) ? -0.18 :      // Vencendo no final → menos risco
     0;
 
+  // FANTASY V6 (2026-06-02): fadiga entra na DECISÃO, não só na execução.
+  // Portador exausto (>80%) prefere passe seguro a tentar chute / drible.
+  // Antes: jogador a 95% decidia chutar igual a um fresco; só executava pior.
+  // Agora: cansaço empurra recycle/progress sobre shot (reduz shotBias).
+  const onBallFatigue = ctx.onBall?.fatigue ?? 0;
+  const fatigueShotPenalty =
+    onBallFatigue >= 90 ? -0.18 :  // Crítico: quase não arrisca
+    onBallFatigue >= 80 ? -0.12 :  // Exausto: prefere passe
+    onBallFatigue >= 70 ? -0.06 :  // Cansado: levemente mais conservador
+    0;
+
   // Awareness local: adversários no raio 8 + colega livre adiantado.
   // FANTASY V3 FIX (2026-05-27): o proxy `nearbyOpponentDist` era calculado
   // como `dist(ball, mirrorAttack)` que dá 0 quando ball.x=50 (centro do
@@ -308,7 +319,8 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       awarenessShotBias +
       passOverShot +
       dnaRiskBias +
-      urgencyByContext;  // Urgência por placar/tempo
+      urgencyByContext +  // Urgência por placar/tempo
+      fatigueShotPenalty; // Cansaço empurra pra passe seguro
     // FANTASY V5 (2026-05-27): 0.20 → 0.28 — V4 chutava demais em sequência.
     return Math.random() > 0.28 - shotBias ? 'shot' : 'progress';
   }
@@ -565,11 +577,19 @@ export function buildSpiritContext(input: {
   tacticalMentality: number;
   tacticalStyle?: import('@/tactics/playingStyle').TeamTacticalStyle;
   opponentStrength: number;
+  awayMentality?: number;
   homeRoster: PlayerEntity[];
   homePlayers: PitchPlayerState[];
   homeShort?: string;
   recentFeedLines?: string[];
   awayRoster?: { id: string; num: number; name: string; pos: string }[];
+  /**
+   * Visitante sintético com atributos individuais. Em Quick Mode é montado
+   * por `synthesizeAwayPitchPlayers` (atributos derivados de OVR+pos); em
+   * Live2D vem do `awayPitchPlayers` real. Habilita awareness de marcação
+   * adversária, GK individualizado e pGoalAway baseado no artilheiro.
+   */
+  awayPlayers?: PitchPlayerState[];
   test2dTickModifiers?: SpiritContext['test2dTickModifiers'];
   live2dStagnationTicks?: number;
   motorTelemetryTail?: SpiritContext['motorTelemetryTail'];
@@ -648,6 +668,8 @@ export function buildSpiritContext(input: {
     tacticalMentality: input.tacticalMentality,
     tacticalStyle: input.tacticalStyle,
     opponentStrength: input.opponentStrength,
+    awayMentality: input.awayMentality,
+    awayPlayers: input.awayPlayers,
     homeTeamAvg: avg,
     nearbyOpponentDist: dist(input.ball, mirrorAttack),
     ballZone,
@@ -961,8 +983,11 @@ export function gameSpiritTick(
   const fairPlay = (nearestDefender?.attributes as any)?.fairPlay ?? 60;
   const aggression = (nearestDefender?.attributes as any)?.aggression ?? 50;
   const profileMult = Math.max(0.55, Math.min(1.65, 1 + (aggression - 50) / 100 - (fairPlay - 60) / 120));
+  // FANTASY V6 (2026-06-02): mentalidade do visitante puxa prob de falta perigosa.
+  // Time bunker (vencendo no final) marca mais limpo; time agressivo dá pancada.
+  const awayMentFoulMult = 1 + ((ctx.awayMentality ?? 50) - 50) / 200; // 0.85..1.18
   // Boost da prob de falta perigosa quando bola está mais perto do gol. Aumentado 67%: 0.6 → 1.0
-  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 1.0) * profileMult * sitMods.foulChanceMult;
+  let dangerousFoulProbAdj = DANGEROUS_FOUL_PROB * (1 + danger01 * 1.0) * profileMult * sitMods.foulChanceMult * awayMentFoulMult;
   // SkillEngine — DEFEND: zagueiro habilidoso reduz prob da falta (tackle limpo).
   if (nearestDefender) {
     const defendRes = resolveSkills({
@@ -1121,6 +1146,46 @@ export function gameSpiritTick(
         1,
         (skillRes ? shotSkill * skillRes.modifier : shotSkill) * fatMul * agentBias,
       );
+      // FANTASY V6 (2026-06-02): defesa adversária individualizada modula xG.
+      // Cada defensor visitante (def/gk) dentro de raio 22 da bola contribui
+      // (marcacao + fisico*0.4) / 100 × decaimento_distância. Soma normalizada
+      // para [0,1]. Antes: chute em cima do Araújo = chute em cima de zagueiro
+      // de várzea, contanto que o OVR do clube fosse parecido.
+      let awayDefensePress01: number | undefined;
+      if (ctx.awayPlayers && ctx.awayPlayers.length > 0) {
+        const ballPt = { x: ctx.ball.x, y: ctx.ball.y };
+        let pressSum = 0;
+        let coverContributors = 0;
+        for (const opp of ctx.awayPlayers) {
+          if (opp.role !== 'def' && opp.role !== 'gk' && opp.role !== 'mid') continue;
+          const d = dist(ballPt, { x: opp.x, y: opp.y });
+          if (d > 22) continue;
+          const proximity = Math.max(0, 1 - d / 22);
+          const marc = (opp.attributes?.marcacao ?? 55) / 100;
+          const phys = (opp.attributes?.fisico ?? 55) / 100;
+          const tat = (opp.attributes?.tatico ?? 55) / 100;
+          const defenderQuality = marc * 0.55 + phys * 0.25 + tat * 0.20;
+          pressSum += defenderQuality * proximity;
+          coverContributors += proximity;
+        }
+        // Normaliza por "cobertura efetiva". 1 defensor elite colado = ~0.8;
+        // 2 defensores médios cobrindo = ~0.7; ninguém perto = 0.
+        const denominator = Math.max(0.8, coverContributors);
+        awayDefensePress01 = Math.min(1, pressSum / denominator);
+      }
+
+      // GK adversário individualizado: extrai do roster sintético. Skill =
+      // mistura de mentalidade (reflexos) + tatico (posicionamento) + fisico
+      // (alcance). Quando ausente, cai pro gkFactor01 (OVR do clube).
+      let awayGkSkill01: number | undefined;
+      const awayGk = ctx.awayPlayers?.find((p) => p.role === 'gk');
+      if (awayGk?.attributes) {
+        const mental = (awayGk.attributes.mentalidade ?? 60) / 100;
+        const tat = (awayGk.attributes.tatico ?? 60) / 100;
+        const phys = (awayGk.attributes.fisico ?? 60) / 100;
+        awayGkSkill01 = Math.min(1, mental * 0.5 + tat * 0.3 + phys * 0.2);
+      }
+
       const weights = adjustHomeShotWeights(DEFAULT_HOME_SHOT_WEIGHTS, {
         shotSkill01: adjustedShotSkill,
         zoneAtt: ctx.ballZone === 'att',
@@ -1129,6 +1194,8 @@ export function gameSpiritTick(
         supportBoost,
         gkFactor01: ctx.opponentStrength / 120,
         errorTax,
+        awayDefensePress01,
+        awayGkSkill01,
       });
 
       // Inteligência situacional: boost na chance de gol
@@ -1309,8 +1376,13 @@ export function gameSpiritTick(
         };
       } else if (logical === 'save') {
         // Crítico do goleiro: defende, falha (gol), espalma pra frente ou pra escanteio.
-        const gkSkill01 = Math.min(1, Math.max(0, ctx.opponentStrength / 100));
-        const subtype = rollGkSaveSubtype(Math.random(), gkSkill01);
+        // FANTASY V6: prefere skill individualizada do GK (reflexos + posicionamento)
+        // sobre o OVR do clube. GK ruim erra mais; GK elite quase nunca falha.
+        const gkSkill01 = awayGkSkill01 ?? Math.min(1, Math.max(0, ctx.opponentStrength / 100));
+        // Fadiga do GK também conta (>70% amplifica erros). Quick mode: GK
+        // adversário não acumula fadiga, então 0; live2D pode passar real.
+        const gkFatigue01 = (awayGk?.fatigue ?? 0) / 100;
+        const subtype = rollGkSaveSubtype(Math.random(), gkSkill01, gkFatigue01);
         const shooterName = ctx.onBall?.name ?? 'Atacante';
 
         if (subtype === 'error_goal') {
@@ -1630,10 +1702,23 @@ export function gameSpiritTick(
       const rShot = Math.random();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
+      // FANTASY V6 (2026-06-02): pGoalAway agora pondera artilheiro real do
+      // visitante (finalizacao do atacante sintético) + mentalidade tática do
+      // visitante. Time agressivo (perdendo, ou clube elite no embalo) chuta
+      // mais; time bunker (vencendo no final) raramente arrisca.
+      const awayShooterFin01 = (() => {
+        const shooterPitch = ctx.awayPlayers?.find((p) => p.playerId === awayShooterId);
+        return (shooterPitch?.attributes?.finalizacao ?? 60) / 100;
+      })();
+      const awayMent = ctx.awayMentality ?? 50;
+      // -0.06 (bunker) a +0.08 (agressivo): mentalidade modula chance de chute.
+      const awayMentMod = (awayMent - 50) / 350;
+      // Atacante elite (fin ≥ 80) ganha +30% no pGoalAway base; medíocre (≤60) perde 10%.
+      const finBonus = (awayShooterFin01 - 0.6) * 0.45;
       // FANTASY V5 (2026-05-27): 0.32 → 0.24 — V4 dava 3 gols seguidos do away.
       const pGoalAway =
         awayZone === 'att'
-          ? (0.24 + ctx.opponentStrength / 700 + errorTax * 0.18) * awayNumericRatio
+          ? (0.24 + ctx.opponentStrength / 700 + errorTax * 0.18 + finBonus + awayMentMod) * awayNumericRatio
           : 0;
       const pWideAway = 0.10;
       if (awayZone === 'att' && rShot < pGoalAway) {

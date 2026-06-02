@@ -28,6 +28,13 @@ export interface SpiritContext {
   tacticalMentality: number;
   tacticalStyle?: TeamTacticalStyle;
   opponentStrength: number;
+  /**
+   * Mentalidade tática do visitante (0-100). Derivada de OVR + situação do jogo
+   * (perdendo → ataca, vencendo → bunker). Modula chance de gol away, faltas
+   * agressivas contra o portador da casa e pressão na zona defensiva home.
+   * Quando ausente, fallback neutro (50).
+   */
+  awayMentality?: number;
   homeTeamAvg: number;
   nearbyOpponentDist: number;
   ballZone: BallZone;
