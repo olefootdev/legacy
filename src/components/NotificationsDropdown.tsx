@@ -71,7 +71,7 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
   };
 
   const getLink = () => {
-    if ((notification as any).link) return (notification as any).link;
+    if (notification.deepLink) return notification.deepLink;
 
     switch (notification.category) {
       case 'COMPETIÇÃO':

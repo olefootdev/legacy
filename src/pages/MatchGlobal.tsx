@@ -14,6 +14,10 @@ import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import type { GlobalTeam, PlayoffRound } from '@/match/globalLeagueMVP';
 import { SCHEDULER_CONFIG } from '@/match/globalRoundScheduler';
+import { DailyCycleHero } from '@/components/matchglobal/DailyCycleHero';
+import { CrownsGallery } from '@/components/matchglobal/CrownsGallery';
+import { CoronationModal } from '@/components/matchglobal/CoronationModal';
+import { useCoronationListener } from '@/hooks/useCoronationListener';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
 
@@ -688,6 +692,9 @@ export default function MatchGlobal() {
   const managerId = managerProfile?.email ?? club?.id;
   const myTeamId = globalLeagueMVP?.teams.find(t => t.managerId === managerId)?.id ?? null;
 
+  // Listener Realtime: dispara o CoronationModal quando o manager é coroado.
+  const coronation = useCoronationListener();
+
   // Hooks devem ser chamados na mesma ordem em todo render — sem returns antes deles.
   const currentLeagueRound = globalLeagueMVP?.status === 'active'
     ? globalLeagueMVP.leagueRounds.find(r => r.roundNumber === globalLeagueMVP.currentLeagueRound)
@@ -718,11 +725,13 @@ export default function MatchGlobal() {
     const ready = teamsNow >= minTeams;
 
     return (
-      <div className="mx-auto min-w-0 w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-16 text-center overflow-x-hidden">
+      <div className="mx-auto min-w-0 w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-10 overflow-x-hidden space-y-8">
+        <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
+        <DailyCycleHero />
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
+          className="space-y-6 text-center"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5">
             <Activity className="w-3 h-3 text-neon-green animate-pulse" />
@@ -760,6 +769,7 @@ export default function MatchGlobal() {
             <span className="skew-x-6">Ver registro completo</span>
           </button>
         </motion.div>
+        <CrownsGallery />
       </div>
     );
   }
@@ -771,6 +781,9 @@ export default function MatchGlobal() {
 
     return (
       <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-6 md:pb-8">
+        <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
+        <DailyCycleHero />
+
         {/* Hero */}
         <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
           {/* Watermark */}
@@ -844,6 +857,8 @@ export default function MatchGlobal() {
         {globalLeagueMVP.teams.length > 0 && (
           <ProjectedDivisionsGrid teams={globalLeagueMVP.teams} roundNumber={roundNumber} />
         )}
+
+        <CrownsGallery />
       </div>
     );
   }
@@ -869,6 +884,8 @@ export default function MatchGlobal() {
 
     return (
       <div className="mx-auto min-w-0 w-full max-w-4xl space-y-8 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-10">
+        <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
+        <DailyCycleHero />
         {/* Hero */}
         <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
           <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden" aria-hidden>
@@ -1003,6 +1020,8 @@ export default function MatchGlobal() {
             Nova temporada em breve · Acompanhe os canais oficiais
           </p>
         </motion.div>
+
+        <CrownsGallery />
       </div>
     );
   }
@@ -1015,6 +1034,9 @@ export default function MatchGlobal() {
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-6 md:pb-8">
+      <CoronationModal crown={coronation.crown} onClose={coronation.dismiss} />
+      <DailyCycleHero />
+
       {/* Hero */}
       <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-8 rounded-sm">
         {/* Watermark */}
@@ -1154,6 +1176,8 @@ export default function MatchGlobal() {
         <DivisionStandings division={2} teams={division2Teams} />
         <DivisionStandings division={3} teams={division3Teams} />
       </div>
+
+      <CrownsGallery />
     </div>
   );
 }

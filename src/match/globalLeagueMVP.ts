@@ -64,6 +64,19 @@ export interface GlobalTeam {
   allTimeGoalsAgainst: number;
   allTimeSeasonsPlayed: number;
 
+  // Corrida do Dia Olefoot — zera na virada do dia (BRT), não no fim de season
+  dailyPoints?: number;
+  dailyMatchesPlayed?: number;
+  dailyWins?: number;
+  dailyDraws?: number;
+  dailyLosses?: number;
+  dailyGoalsFor?: number;
+  dailyGoalsAgainst?: number;
+  dailyGoalDifference?: number;
+  // Coroas (campeão do mata-mata diário)
+  seasonCrowns?: number;
+  allTimeCrowns?: number;
+
   // Penalidades ativas
   injuryRoundsRemaining: number;
   injuryModifier: number;
@@ -133,8 +146,47 @@ export interface GlobalLeagueMVPState {
   competitionStartedAt?: number;     // epoch ms
   competitionDurationDays?: number;  // 7
 
+  // Ciclo Diário (Coroa do Dia) — Fase A
+  dailyDate?: string;                          // 'YYYY-MM-DD' BRT do dia corrente
+  dailyPhase?: 'qualifying' | 'knockout' | 'crowned';
+  dailyKoSeasonId?: string;                    // season_id dos rounds daily_ko ('dko_<dia>')
+  dailyKoSize?: number;                        // tamanho do bracket (2,4,8,16,32)
+  dailyQualifyHour?: number;                   // hora BRT do corte (default 19)
+  dailyKoMaxSize?: number;                     // teto do bracket (default 32)
+
   createdAt: number;
   lastUpdated: number;
+}
+
+/** Confronto do mata-mata diário (round_type = 'daily_ko') */
+export interface DailyKnockoutRound {
+  id: string;
+  roundNumber: number;
+  phase: string;                    // 'ko_32' | 'ko_16' | ... | 'ko_2'
+  size: number;                     // nº de times nesta fase
+  fixtures: GlobalFixture[];
+  status: 'scheduled' | 'live' | 'finished';
+  scheduledKickoffMs: number;
+  finishedAtMs?: number;
+}
+
+/** Campeão do Dia — espelha a tabela daily_crowns */
+export interface DailyCrown {
+  id: string;
+  teamId: string;
+  managerId: string;
+  clubName: string;
+  clubShort: string;
+  dailyDate: string;                // 'YYYY-MM-DD' BRT
+  seasonId: string;
+  competitionId?: string;
+  bracketSize: number;
+  runnerUpTeamId?: string;
+  runnerUpClubName?: string;
+  finalScoreHome?: number;
+  finalScoreAway?: number;
+  finalWentToPens: boolean;
+  crownedAtMs: number;
 }
 
 /** Constantes */

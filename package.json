@@ -20,6 +20,7 @@
     "test:skill-engine": "tsx src/skills/runSkillEngineSelfTest.ts",
     "test:structural": "tsx src/simulation/runStructuralSelfTest.ts",
     "test:global-league": "tsx --env-file=server/.env scripts/test-global-league-cycle.ts",
+    "test:daily-knockout": "tsx scripts/test-daily-knockout.ts",
     "global-league:start-season": "tsx --env-file=server/.env scripts/start-global-league-season.ts",
     "test:turnover": "tsx src/simulation/runPickPlayAfterTurnoverTest.ts",
     "test:collective-individual": "tsx src/playerDecision/runCollectiveIndividualSelfTest.ts",

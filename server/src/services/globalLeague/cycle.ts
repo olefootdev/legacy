@@ -155,6 +155,7 @@ export async function runGlobalLeagueCycle(sb: SupabaseClient): Promise<CycleRes
   const { data: pending, error: pendingErr } = await sb
     .from('global_league_rounds').select('*')
     .eq('status', 'scheduled')
+    .neq('round_type', 'daily_ko') // mata-mata diário é exclusivo da Edge Function (pênaltis + avanço de bracket)
     .lte('scheduled_kickoff_ms', now)
     .order('scheduled_kickoff_ms', { ascending: true })
     .limit(1);

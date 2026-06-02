@@ -43,7 +43,9 @@ export type GlobalEventType =
   | 'substitution'
   | 'pressure'
   | 'miss'
-  | 'walkover';
+  | 'walkover'
+  | 'penalty'
+  | 'crown';
 
 /** Evento que acontece durante a rodada */
 export interface GlobalMatchEvent {
@@ -107,6 +109,11 @@ export interface GlobalFixture {
 
   /** Timestamp de fim real */
   finishedAtMs?: number;
+
+  /** Pênaltis — só no mata-mata diário, quando empata no tempo normal */
+  penaltyScoreHome?: number;
+  penaltyScoreAway?: number;
+  wentToPenalties?: boolean;
 }
 
 /** Rodada global completa */

@@ -46,6 +46,7 @@ import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
 import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
 import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
 import { DailyChallengesCard } from '@/components/match/DailyChallengesCard';
+import { DailyCycleWidget } from '@/components/matchglobal/DailyCycleWidget';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
 import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMatches';
@@ -919,6 +920,7 @@ export function Home() {
       {/* OLEFOOT PYTHON MODE — alerta de ausência + bonus de login + desafios diários */}
       <section aria-label="Estado do clube" className="space-y-2.5">
         <AbsenceBanner />
+        <DailyCycleWidget />
         <LoginBonusWidget />
         <PassiveIncomeWidget />
         {dailyChallenges && dailyChallenges.challenges.length > 0 && (

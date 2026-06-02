@@ -24,6 +24,36 @@ const SIM_DURATION_MS = 90_000;
 const STALE_LIVE_ROUND_MS = 10 * 60 * 1000;
 const NEW_ID = () => `gf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+// ── Notificações ao manager (best-effort, nunca quebra o motor) ─────────────
+// Chama a RPC `notify_manager_by_email` que resolve auth.users.id internamente
+// (manager_id é o email — TEXT — em global_league_teams).
+async function notifyManager(
+  supabase: any, email: string | null | undefined, category: string,
+  title: string, message?: string, link?: string, payload?: Record<string, unknown>,
+): Promise<void> {
+  if (!email) return;
+  try {
+    await supabase.rpc('notify_manager_by_email', {
+      p_email: email, p_category: category, p_title: title,
+      p_message: message ?? null, p_link: link ?? null,
+      p_payload: (payload ?? {}) as any,
+    });
+  } catch (err) {
+    console.warn('[notify] failed', email, title, (err as Error).message);
+  }
+}
+
+function dailyPhaseLabel(size: number): string {
+  switch (size) {
+    case 2: return 'Final';
+    case 4: return 'Semifinal';
+    case 8: return 'Quartas';
+    case 16: return 'Oitavas';
+    case 32: return 'Fase de 32';
+    default: return `Fase de ${size}`;
+  }
+}
+
 function slotStartMs(dayDate: Date, hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   const d = new Date(dayDate);
@@ -101,6 +131,11 @@ interface TeamRow {
   all_time_wins?: number; all_time_draws?: number; all_time_losses?: number;
   all_time_goals_for?: number; all_time_goals_against?: number;
   all_time_seasons_played?: number;
+  // Ciclo diário (Coroa do Dia)
+  daily_points?: number; daily_matches_played?: number;
+  daily_wins?: number; daily_draws?: number; daily_losses?: number;
+  daily_goals_for?: number; daily_goals_against?: number; daily_goal_difference?: number;
+  season_crowns?: number; all_time_crowns?: number;
 }
 interface StateRow {
   id: string; season_id: string; season_name: string;
@@ -114,6 +149,13 @@ interface StateRow {
   competition_started_at: string;
   competition_duration_days: number;
   competition_id: string;
+  // Ciclo diário (Coroa do Dia)
+  daily_date?: string | null;
+  daily_phase?: 'qualifying' | 'knockout' | 'crowned';
+  daily_ko_season_id?: string | null;
+  daily_ko_size?: number | null;
+  daily_qualify_hour?: number;
+  daily_ko_max_size?: number;
 }
 
 function effectiveOverall(team: TeamRow): number {
@@ -127,6 +169,237 @@ function poissonGoals(expected: number): number {
   let k = 0; let p = 1;
   do { k++; p *= Math.random(); } while (p > L && k < 8);
   return k - 1;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CICLO DIÁRIO — Mata-Mata + Coroa do Dia
+// Espelho de server/src/services/globalLeague/dailyKnockout.ts (validado por
+// `npm run test:daily-knockout`, 91 checks). Manter os dois em sincronia.
+// ═══════════════════════════════════════════════════════════════════════════
+const BRT_OFFSET_MS = 3 * 60 * 60 * 1000; // horário de Brasília (UTC-3)
+const KO_PHASE_INTERVAL_MS = 30 * 60 * 1000; // 30 min entre fases do mata-mata
+
+function brtDayString(nowMs: number): string {
+  return new Date(nowMs - BRT_OFFSET_MS).toISOString().slice(0, 10);
+}
+function brtHour(nowMs: number): number {
+  return new Date(nowMs - BRT_OFFSET_MS).getUTCHours();
+}
+function isDayRollover(dailyDate: string | null | undefined, nowMs: number): boolean {
+  return brtDayString(nowMs) !== (dailyDate ?? '');
+}
+function shouldOpenKnockout(phase: string, qualifyHour: number, nowMs: number): boolean {
+  return phase === 'qualifying' && brtHour(nowMs) >= qualifyHour;
+}
+function largestPowerOfTwoAtMost(n: number): number {
+  if (n < 2) return 0;
+  let p = 1;
+  while (p * 2 <= n) p *= 2;
+  return p;
+}
+function dailyBracketSize(qualifiersCount: number, maxSize: number): number {
+  return largestPowerOfTwoAtMost(Math.min(qualifiersCount, maxSize));
+}
+function rankDailyTeams(teams: TeamRow[]): TeamRow[] {
+  return [...teams].sort((a, b) => {
+    const ap = a.daily_points ?? 0, bp = b.daily_points ?? 0;
+    if (bp !== ap) return bp - ap;
+    const ad = a.daily_goal_difference ?? 0, bd = b.daily_goal_difference ?? 0;
+    if (bd !== ad) return bd - ad;
+    const af = a.daily_goals_for ?? 0, bf = b.daily_goals_for ?? 0;
+    if (bf !== af) return bf - af;
+    if (b.overall !== a.overall) return b.overall - a.overall;
+    return a.club_name.localeCompare(b.club_name);
+  });
+}
+function selectDailyQualifiers(teams: TeamRow[], maxSize: number): { size: number; qualifiers: TeamRow[] } {
+  const played = teams.filter((t) => (t.daily_matches_played ?? 0) > 0);
+  const ranked = rankDailyTeams(played);
+  const size = dailyBracketSize(ranked.length, maxSize);
+  return { size, qualifiers: ranked.slice(0, size) };
+}
+function standardSeedOrder(n: number): number[] {
+  if (n < 2) return n === 1 ? [1] : [];
+  let seeds = [1, 2];
+  while (seeds.length < n) {
+    const sum = seeds.length * 2 + 1;
+    const next: number[] = [];
+    for (const s of seeds) { next.push(s); next.push(sum - s); }
+    seeds = next;
+  }
+  return seeds;
+}
+function pairAdjacent<T>(items: T[]): Array<[T, T]> {
+  const pairs: Array<[T, T]> = [];
+  for (let i = 0; i + 1 < items.length; i += 2) pairs.push([items[i], items[i + 1]]);
+  return pairs;
+}
+function seedFirstRound<T>(rankedQualifiers: T[]): Array<[T, T]> {
+  const order = standardSeedOrder(rankedQualifiers.length);
+  const arranged = order.map((seed) => rankedQualifiers[seed - 1]);
+  return pairAdjacent(arranged);
+}
+function roundNameFromSize(size: number): string {
+  switch (size) {
+    case 2: return 'Final';
+    case 4: return 'Semifinal';
+    case 8: return 'Quartas de final';
+    case 16: return 'Oitavas de final';
+    case 32: return 'Fase de 32';
+    default: return `Fase de ${size}`;
+  }
+}
+function phaseTagFromSize(size: number): string { return `ko_${size}`; }
+function penaltyConversion(ovr: number): number {
+  return Math.min(0.92, Math.max(0.4, 0.5 + (ovr - 50) * 0.0075));
+}
+function simulateShootout(effHome: number, effAway: number): { home: number; away: number } {
+  const pHome = penaltyConversion(effHome);
+  const pAway = penaltyConversion(effAway);
+  let h = 0; let a = 0;
+  for (let i = 0; i < 5; i++) { if (Math.random() < pHome) h++; if (Math.random() < pAway) a++; }
+  let guard = 0;
+  while (h === a && guard < 100) { if (Math.random() < pHome) h++; if (Math.random() < pAway) a++; guard++; }
+  if (h === a) h++;
+  return { home: h, away: a };
+}
+interface KnockoutMatchResult {
+  scoreHome: number; scoreAway: number;
+  penHome: number | null; penAway: number | null;
+  wentToPens: boolean; winner: 'home' | 'away';
+}
+function simulateKnockoutMatch(effHome: number, effAway: number): KnockoutMatchResult {
+  const diff = (effHome + 3) - effAway;
+  const scoreHome = poissonGoals(Math.max(0.2, 1.4 + diff / 22));
+  const scoreAway = poissonGoals(Math.max(0.2, 1.4 - diff / 22));
+  if (scoreHome !== scoreAway) {
+    return { scoreHome, scoreAway, penHome: null, penAway: null, wentToPens: false, winner: scoreHome > scoreAway ? 'home' : 'away' };
+  }
+  const pens = simulateShootout(effHome, effAway);
+  return { scoreHome, scoreAway, penHome: pens.home, penAway: pens.away, wentToPens: true, winner: pens.home > pens.away ? 'home' : 'away' };
+}
+
+// Monta um round de mata-mata diário (round + fixtures) a partir dos confrontos.
+// IDs determinísticos: o índice do confronto fica no id da fixture para que a
+// ordem do bracket seja recuperável (winners → pairAdjacent → próxima fase).
+function buildDailyKnockoutRound(
+  pairs: Array<[TeamRow, TeamRow]>,
+  dkoSeasonId: string,
+  roundNumber: number,
+  kickoffMs: number,
+) {
+  const size = pairs.length * 2;
+  const roundId = `dko_${dkoSeasonId}_r${roundNumber}`;
+  const round = {
+    id: roundId, season_id: dkoSeasonId, round_number: roundNumber,
+    round_type: 'daily_ko', phase: phaseTagFromSize(size), is_returning: false,
+    status: 'scheduled', scheduled_kickoff_ms: kickoffMs,
+    actual_kickoff_ms: null, finished_at_ms: null,
+  };
+  const fixtures = pairs.map(([home, away], i) => ({
+    id: `dkofx_${dkoSeasonId}_r${roundNumber}_${i}`,
+    round_id: roundId, division: 'daily_ko',
+    home_team_id: home.id, away_team_id: away.id,
+    home_team_name: home.club_name, away_team_name: away.club_name,
+    home_overall: home.overall, away_overall: away.overall,
+    score_home: 0, score_away: 0, current_minute: 0,
+    status: 'scheduled', kickoff_ms: null, finished_at_ms: null,
+  }));
+  return { round, fixtures, size, roundId };
+}
+
+// Índice do confronto a partir do id da fixture (sufixo numérico). Usado para
+// ordenar os vencedores na ordem do bracket antes de gerar a próxima fase.
+function dailyFixtureMatchIndex(fixtureId: string): number {
+  const n = Number(fixtureId.split('_').pop());
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Vencedor de uma fixture daily_ko JÁ FINALIZADA (gols, depois pênaltis).
+function dailyWinnerSide(fx: FixtureRow): 'home' | 'away' | null {
+  if (fx.score_home !== fx.score_away) return fx.score_home > fx.score_away ? 'home' : 'away';
+  const ph = (fx as any).penalty_score_home;
+  const pa = (fx as any).penalty_score_away;
+  const w = (fx as any).went_to_penalties;
+  if (w && ph != null && pa != null) return ph > pa ? 'home' : 'away';
+  return null;
+}
+
+// Avança o bracket ou coroa o campeão a partir das fixtures JÁ FINALIZADAS.
+// Idempotente e à prova de crash: derivar dos placares (não re-simula); a
+// próxima fase usa ids determinísticos (upsert no-op se já existe); a coroa
+// só incrementa season_crowns quando a linha de daily_crowns é nova (a unique
+// por dia barra dupla coroação). Chamada pelo processamento normal E pela
+// recuperação de rounds travados.
+async function advanceOrCrownDailyKo(
+  supabase: any, round: RoundRow, finishedFx: FixtureRow[],
+  teamById: Map<string, TeamRow>, now: number, state: StateRow,
+): Promise<{ step: string; detail?: any }> {
+  const brtDay = brtDayString(now);
+  const ordered = [...finishedFx].sort((a, b) => dailyFixtureMatchIndex(a.id) - dailyFixtureMatchIndex(b.id));
+  const winners: TeamRow[] = [];
+  for (const fx of ordered) {
+    const side = dailyWinnerSide(fx);
+    if (!side) return { step: 'daily-ko-incomplete' }; // sem vencedor → não avança
+    const wid = side === 'home' ? fx.home_team_id : fx.away_team_id;
+    const wt = teamById.get(wid);
+    if (wt) winners.push(wt);
+  }
+  if (winners.length === 0) return { step: 'daily-ko-no-winners' };
+
+  if (winners.length > 1) {
+    const nextPairs = pairAdjacent(winners);
+    const built = buildDailyKnockoutRound(nextPairs, round.season_id, round.round_number + 1, now + KO_PHASE_INTERVAL_MS);
+    await supabase.from('global_league_rounds').upsert([built.round] as any, { onConflict: 'id' });
+    await supabase.from('global_league_fixtures').upsert(built.fixtures as any, { onConflict: 'id' });
+    return { step: 'daily-ko-advance', detail: { to: phaseTagFromSize(built.size) } };
+  }
+
+  // 1 vencedor → CAMPEÃO DO DIA. Insert (não upsert) para detectar se é novo.
+  const champion = winners[0];
+  const finalFx = ordered[0];
+  const runnerUpId = finalFx.home_team_id === champion.id ? finalFx.away_team_id : finalFx.home_team_id;
+  const runnerUp = teamById.get(runnerUpId);
+  const { error: crownErr } = await supabase.from('daily_crowns').insert({
+    id: `crown_${brtDay}`,
+    team_id: champion.id, manager_id: champion.manager_id,
+    club_name: champion.club_name, club_short: champion.club_short,
+    daily_date: brtDay, season_id: state.season_id, competition_id: state.competition_id,
+    bracket_size: state.daily_ko_size ?? winners.length,
+    final_round_id: round.id,
+    runner_up_team_id: runnerUp?.id ?? null,
+    runner_up_club_name: runnerUp?.club_name ?? null,
+    final_score_home: finalFx.score_home, final_score_away: finalFx.score_away,
+    final_went_to_pens: (finalFx as any).went_to_penalties ?? false,
+    crowned_at_ms: now,
+  });
+  if (!crownErr) {
+    // Recém-coroado: incrementa coroas UMA vez e publica o evento.
+    await supabase.from('global_league_teams').update({
+      season_crowns: (champion.season_crowns ?? 0) + 1,
+      all_time_crowns: (champion.all_time_crowns ?? 0) + 1,
+    }).eq('id', champion.id);
+    await supabase.from('global_league_events').upsert([{
+      id: `evt_crown_${brtDay}`, fixture_id: finalFx.id, event_type: 'crown',
+      minute: 90, side: 'home',
+      text: `👑 ${champion.club_name} é o Campeão do Dia!`, highlight: true,
+      timestamp_ms: now + 92 * 1000,
+    }] as any, { onConflict: 'id' });
+    // Notifica o campeão (modal de coroação aciona via Realtime no daily_crowns).
+    const wentToPens = (finalFx as any).went_to_penalties ?? false;
+    const finalLine = wentToPens
+      ? `${finalFx.score_home}–${finalFx.score_away} (pênaltis) vs ${runnerUp?.club_name ?? 'finalista'}`
+      : `${finalFx.score_home}–${finalFx.score_away} vs ${runnerUp?.club_name ?? 'finalista'}`;
+    notifyManager(
+      supabase, champion.manager_id, 'COMPETIÇÃO',
+      `👑 CAMPEÃO DO DIA OLEFOOT!`,
+      `${champion.club_name} venceu a final ${finalLine}. Sua Coroa foi adicionada ao acervo.`,
+      '/match/global',
+      { kind: 'daily_crown', daily_date: brtDay, crown_id: `crown_${brtDay}` },
+    ).catch(() => { /* swallow */ });
+  }
+  await supabase.from('global_league_state').update({ daily_phase: 'crowned' }).eq('id', 'current');
+  return { step: 'daily-ko-crowned', detail: { champion: champion.club_name, fresh: !crownErr } };
 }
 
 function generatePlayoffRoundsAndFixtures(
@@ -398,7 +671,7 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   return { score_home: homeGoals, score_away: awayGoals, events, injured_side, home_yellow, away_yellow, home_red, away_red };
 }
 
-function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean): TeamRow {
+function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean, accrueDaily = false): TeamRow {
   const isWin = gf > ga;
   const isDraw = gf === ga;
   const points = isWin ? 3 : isDraw ? 1 : 0;
@@ -412,6 +685,17 @@ function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean
     all_time_goals_for: (team.all_time_goals_for ?? 0) + gf,
     all_time_goals_against: (team.all_time_goals_against ?? 0) + ga,
   };
+  // Corrida do Dia Olefoot: só partidas de LIGA somam (mata-mata/playoff não).
+  const dailyBase = accrueDaily ? {
+    daily_points: (team.daily_points ?? 0) + points,
+    daily_matches_played: (team.daily_matches_played ?? 0) + 1,
+    daily_wins: (team.daily_wins ?? 0) + (isWin ? 1 : 0),
+    daily_draws: (team.daily_draws ?? 0) + (isDraw ? 1 : 0),
+    daily_losses: (team.daily_losses ?? 0) + (!isWin && !isDraw ? 1 : 0),
+    daily_goals_for: (team.daily_goals_for ?? 0) + gf,
+    daily_goals_against: (team.daily_goals_against ?? 0) + ga,
+    daily_goal_difference: (team.daily_goal_difference ?? 0) + (gf - ga),
+  } : {};
   if (isPlayoff) {
     return {
       ...team, ...allTimeBase,
@@ -426,7 +710,7 @@ function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean
   }
   const newForm = [...(team.recent_form ?? []), result].slice(-5);
   return {
-    ...team, ...allTimeBase,
+    ...team, ...allTimeBase, ...dailyBase,
     points: team.points + points, matches_played: team.matches_played + 1,
     wins: team.wins + (isWin ? 1 : 0), draws: team.draws + (isDraw ? 1 : 0),
     losses: team.losses + (!isWin && !isDraw ? 1 : 0),
@@ -436,7 +720,7 @@ function updateTeamRow(team: TeamRow, gf: number, ga: number, isPlayoff: boolean
   };
 }
 
-async function recoverStaleLiveRound(supabase: any, now: number) {
+async function recoverStaleLiveRound(supabase: any, now: number, state: StateRow) {
   const staleBefore = now - STALE_LIVE_ROUND_MS;
   const { data: staleRounds, error } = await supabase
     .from('global_league_rounds')
@@ -462,6 +746,29 @@ async function recoverStaleLiveRound(supabase: any, now: number) {
   const liveCount = fixtureRows.filter(f => f.status === 'live').length;
 
   if (fixtureRows.length > 0 && finishedCount === fixtureRows.length) {
+    // Mata-mata diário travado em 'live' com tudo finalizado: refaz o
+    // avanço/coroa a partir das fixtures (idempotente) antes de marcar finished.
+    if (round.round_type === 'daily_ko') {
+      const { data: fullFx } = await supabase
+        .from('global_league_fixtures').select('*').eq('round_id', round.id);
+      const ffx = (fullFx as FixtureRow[] | null) ?? [];
+      const ids = new Set<string>();
+      for (const fx of ffx) { ids.add(fx.home_team_id); ids.add(fx.away_team_id); }
+      const { data: teamsData } = await supabase.from('global_league_teams').select('*').in('id', Array.from(ids));
+      const tById = new Map<string, TeamRow>();
+      for (const t of (teamsData as TeamRow[] | null) ?? []) tById.set(t.id, t);
+      const outcome = await advanceOrCrownDailyKo(supabase, round, ffx, tById, now, state);
+      await supabase
+        .from('global_league_rounds')
+        .update({ status: 'finished', finished_at_ms: now })
+        .eq('id', round.id)
+        .eq('status', 'live');
+      return {
+        ok: true, step: 'recover-stale-daily-ko', roundId: round.id,
+        fixtures: ffx.length, reason: outcome.step,
+      };
+    }
+
     await supabase
       .from('global_league_rounds')
       .update({ status: 'finished', finished_at_ms: now })
@@ -543,9 +850,85 @@ Deno.serve(async (_req: Request) => {
     await supabase.from('global_league_state').update({ current_olefoot_day: today }).eq('id', 'current');
   }
 
-  const recovered = await recoverStaleLiveRound(supabase, now);
+  const recovered = await recoverStaleLiveRound(supabase, now, state);
   if (recovered) {
     return new Response(JSON.stringify(recovered), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CICLO DIÁRIO — rollover (meia-noite BRT) + abertura do mata-mata (19h BRT)
+  // Roda ANTES do auto-start/processamento. Cada ação retorna (1 por tick).
+  // ══════════════════════════════════════════════════════════════════════════
+  const qualifyHour = state.daily_qualify_hour ?? 19;
+  const koMaxSize = state.daily_ko_max_size ?? 32;
+  const dailyPhase = state.daily_phase ?? 'qualifying';
+  const brtDay = brtDayString(now);
+
+  // (a) Virou o Dia Olefoot → limpa o mata-mata anterior, zera daily_*, qualifying
+  if (isDayRollover(state.daily_date, now)) {
+    if (state.daily_ko_season_id) {
+      const { data: oldRounds } = await supabase
+        .from('global_league_rounds').select('id').eq('season_id', state.daily_ko_season_id);
+      const oldIds = (oldRounds ?? []).map((r: any) => r.id);
+      if (oldIds.length > 0) {
+        const { data: oldFx } = await supabase
+          .from('global_league_fixtures').select('id').in('round_id', oldIds);
+        const oldFxIds = (oldFx ?? []).map((f: any) => f.id);
+        if (oldFxIds.length > 0) {
+          await supabase.from('global_league_events').delete().in('fixture_id', oldFxIds);
+          await supabase.from('global_league_fixtures').delete().in('id', oldFxIds);
+        }
+        await supabase.from('global_league_rounds').delete().in('id', oldIds);
+      }
+    }
+    await supabase.from('global_league_teams').update({
+      daily_points: 0, daily_matches_played: 0, daily_wins: 0, daily_draws: 0,
+      daily_losses: 0, daily_goals_for: 0, daily_goals_against: 0, daily_goal_difference: 0,
+    }).neq('id', '');
+    await supabase.from('global_league_state').update({
+      daily_date: brtDay, daily_phase: 'qualifying',
+      daily_ko_season_id: null, daily_ko_size: null,
+    }).eq('id', 'current');
+    return new Response(JSON.stringify({
+      ok: true, step: 'daily-rollover', day: brtDay,
+    }), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // (b) Hora do corte (19h BRT) → seleciona top N e abre o mata-mata
+  if (shouldOpenKnockout(dailyPhase, qualifyHour, now)) {
+    const { data: allTeams } = await supabase.from('global_league_teams').select('*');
+    const teams = (allTeams as TeamRow[]) ?? [];
+    const { size, qualifiers } = selectDailyQualifiers(teams, koMaxSize);
+    if (size < 2) {
+      await supabase.from('global_league_state').update({
+        daily_phase: 'crowned', daily_ko_size: 0,
+      }).eq('id', 'current');
+      return new Response(JSON.stringify({
+        ok: true, step: 'daily-knockout-skip', reason: 'not-enough-qualifiers',
+        qualified: qualifiers.length,
+      }), { headers: { 'Content-Type': 'application/json' } });
+    }
+    const dkoSeasonId = `dko_${brtDay}`;
+    const pairs = seedFirstRound(qualifiers);
+    const built = buildDailyKnockoutRound(pairs, dkoSeasonId, 1, now);
+    await supabase.from('global_league_rounds').upsert([built.round] as any, { onConflict: 'id' });
+    await supabase.from('global_league_fixtures').upsert(built.fixtures as any, { onConflict: 'id' });
+    await supabase.from('global_league_state').update({
+      daily_phase: 'knockout', daily_ko_season_id: dkoSeasonId, daily_ko_size: size,
+    }).eq('id', 'current');
+    // Notifica os classificados — fire-and-forget, não bloqueia o motor
+    const phaseName = dailyPhaseLabel(size);
+    Promise.all(qualifiers.map((t, i) => notifyManager(
+      supabase, t.manager_id, 'COMPETIÇÃO',
+      `🏆 Você está no Mata-Mata do Dia!`,
+      `Classificado em ${i + 1}º para a ${phaseName}. Próxima rodada em instantes em /match/global.`,
+      '/match/global',
+      { kind: 'daily_ko_qualified', daily_date: brtDay, rank: i + 1, bracket_size: size },
+    ))).catch(() => { /* swallow */ });
+    return new Response(JSON.stringify({
+      ok: true, step: 'daily-knockout-open', size, fixtures: built.fixtures.length,
+      phase: phaseTagFromSize(size),
+    }), { headers: { 'Content-Type': 'application/json' } });
   }
 
   // NONSTOP MODE — competition_duration_days é IGNORADO.
@@ -555,6 +938,15 @@ Deno.serve(async (_req: Request) => {
   // 1. AUTO-START LIGA (modo "só liga, sem playoffs")
   // waiting_teams ou season_ended → distribui times em divisões e gera rodadas de liga
   if (state.status === 'waiting_teams' || state.status === 'season_ended') {
+    // GUARDA: o restart deleta TODOS os rounds/fixtures. Não pode rodar enquanto
+    // há mata-mata diário vivo (knockout) nem antes da coroação ser exibida
+    // (crowned) — espera a meia-noite BRT (rollover volta a 'qualifying').
+    if (state.status === 'season_ended' && dailyPhase !== 'qualifying') {
+      return new Response(JSON.stringify({
+        ok: true, step: 'restart-deferred', reason: 'daily-knockout-in-progress',
+        dailyPhase,
+      }), { headers: { 'Content-Type': 'application/json' } });
+    }
     const { data: teamsData } = await supabase.from('global_league_teams').select('*');
     const teams = (teamsData as TeamRow[]) ?? [];
     if (teams.length < Math.max(2, state.min_teams_required ?? 2)) {
@@ -640,7 +1032,9 @@ Deno.serve(async (_req: Request) => {
       .from('global_league_rounds').select('id, status, round_type')
       .eq('season_id', state.season_id).eq('round_type', 'league');
     const allFinished = (lRounds ?? []).length > 0 && (lRounds ?? []).every(r => r.status === 'finished');
-    if (allFinished) {
+    // Não vira season_ended durante o mata-mata diário: o restart deletaria o
+    // bracket vivo. Fica 'active' (idle) até a meia-noite BRT zerar a fase.
+    if (allFinished && dailyPhase === 'qualifying') {
       // Não pausa — vira season_ended e o próximo bloco de auto-start (acima)
       // já trata o restart na MESMA invocação? Não: já saímos do bloco 1.
       // Setamos season_ended e devolvemos — próximo tick (em 1 min) reinicia.
@@ -717,6 +1111,111 @@ Deno.serve(async (_req: Request) => {
       ok: true, step: 'skip-duplicate', roundId: round.id,
       reason: 'round already processed by concurrent tick',
     }), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // ── 4a. MATA-MATA DIÁRIO: pênaltis no empate, avança o bracket ou coroa ────
+  if (round.round_type === 'daily_ko') {
+    const { data: koFx, error: koFxErr } = await supabase
+      .from('global_league_fixtures').select('*').eq('round_id', round.id);
+    if (koFxErr || !koFx) {
+      await supabase.from('global_league_rounds').update({ status: 'scheduled', actual_kickoff_ms: null }).eq('id', round.id);
+      return new Response(JSON.stringify({ ok: false, step: 'daily-ko-fetch-fixtures', error: koFxErr?.message }), { status: 500 });
+    }
+    const koTeamIds = new Set<string>();
+    for (const fx of koFx as FixtureRow[]) { koTeamIds.add(fx.home_team_id); koTeamIds.add(fx.away_team_id); }
+    const { data: koTeamsData } = await supabase.from('global_league_teams').select('*').in('id', Array.from(koTeamIds));
+    const koTeamById = new Map<string, TeamRow>();
+    for (const t of (koTeamsData as TeamRow[] | null) ?? []) koTeamById.set(t.id, t);
+
+    const koFxUpdated: any[] = [];
+    const koEvents: any[] = [];
+    // ordena por índice do confronto p/ preservar a ordem do bracket nos avanços
+    const orderedFx = [...(koFx as FixtureRow[])].sort((a, b) => dailyFixtureMatchIndex(a.id) - dailyFixtureMatchIndex(b.id));
+    for (const fx of orderedFx) {
+      const home = koTeamById.get(fx.home_team_id);
+      const away = koTeamById.get(fx.away_team_id);
+      const effH = home ? effectiveOverall(home) : fx.home_overall;
+      const effA = away ? effectiveOverall(away) : fx.away_overall;
+      const m = simulateKnockoutMatch(effH, effA);
+      koFxUpdated.push({
+        ...fx, score_home: m.scoreHome, score_away: m.scoreAway,
+        penalty_score_home: m.penHome, penalty_score_away: m.penAway, went_to_penalties: m.wentToPens,
+        status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS,
+      });
+      const placeGoals = (side: 'home' | 'away', total: number) => {
+        for (let i = 0; i < total; i++) {
+          const minute = Math.max(1, Math.min(90, Math.floor((90 / (total + 1)) * (i + 1))));
+          const teamName = side === 'home' ? fx.home_team_name : fx.away_team_name;
+          koEvents.push({
+            id: `evt_${fx.id}_${side}_g${i}_${now}`, fixture_id: fx.id, event_type: 'goal',
+            minute, side, text: `⚽ GOL! ${teamName} marca!`, highlight: true,
+            timestamp_ms: now + minute * 1000,
+          });
+        }
+      };
+      placeGoals('home', m.scoreHome);
+      placeGoals('away', m.scoreAway);
+      if (m.wentToPens) {
+        koEvents.push({
+          id: `evt_${fx.id}_pens_${now}`, fixture_id: fx.id, event_type: 'penalty',
+          minute: 90, side: m.winner,
+          text: `🥅 Pênaltis: ${fx.home_team_name} ${m.penHome} x ${m.penAway} ${fx.away_team_name}`,
+          highlight: true, timestamp_ms: now + 91 * 1000,
+        });
+      }
+    }
+
+    if (koFxUpdated.length > 0) await supabase.from('global_league_fixtures').upsert(koFxUpdated as any, { onConflict: 'id' });
+    if (koEvents.length > 0) await supabase.from('global_league_events').upsert(koEvents as any, { onConflict: 'id' });
+
+    // Notifica winner/loser de cada fixture (exceto a final — coroação é tratada
+    // pelo advanceOrCrownDailyKo). Fire-and-forget, não bloqueia o motor.
+    const currentSize = koFxUpdated.length * 2;
+    const nextSize = Math.max(2, currentSize / 2);
+    const isFinal = currentSize === 2;
+    const phaseName = dailyPhaseLabel(currentSize);
+    const nextPhaseName = dailyPhaseLabel(nextSize);
+    const notifPromises: Promise<void>[] = [];
+    for (const fx of koFxUpdated as FixtureRow[]) {
+      const side = dailyWinnerSide(fx);
+      if (!side) continue;
+      const winnerId = side === 'home' ? fx.home_team_id : fx.away_team_id;
+      const loserId = side === 'home' ? fx.away_team_id : fx.home_team_id;
+      const winner = koTeamById.get(winnerId);
+      const loser = koTeamById.get(loserId);
+      const scoreLine = (fx as any).went_to_penalties
+        ? `${fx.score_home}–${fx.score_away} (P ${(fx as any).penalty_score_home}–${(fx as any).penalty_score_away})`
+        : `${fx.score_home}–${fx.score_away}`;
+      if (loser && loser.manager_id) {
+        notifPromises.push(notifyManager(
+          supabase, loser.manager_id, 'COMPETIÇÃO',
+          `Eliminado nas ${phaseName}`,
+          `${loser.club_name} ${scoreLine} ${winner?.club_name ?? ''}. Volte amanhã pra disputar a próxima Coroa.`,
+          '/match/global',
+          { kind: 'daily_ko_eliminated', daily_date: brtDay, phase: phaseName },
+        ));
+      }
+      if (!isFinal && winner && winner.manager_id) {
+        notifPromises.push(notifyManager(
+          supabase, winner.manager_id, 'COMPETIÇÃO',
+          `🎯 Você passou às ${nextPhaseName}!`,
+          `${winner.club_name} venceu ${scoreLine} e segue vivo no Mata-Mata do Dia.`,
+          '/match/global',
+          { kind: 'daily_ko_advanced', daily_date: brtDay, to_phase: nextPhaseName },
+        ));
+      }
+    }
+    Promise.all(notifPromises).catch(() => { /* swallow */ });
+
+    // Avança/coroa a partir das fixtures finalizadas (helper idempotente) e SÓ
+    // ENTÃO marca o round finished. Se um crash interromper antes desta última
+    // linha, o round fica 'live' e a recuperação refaz o avanço/coroa sem dano.
+    const outcome = await advanceOrCrownDailyKo(supabase, round, koFxUpdated as FixtureRow[], koTeamById, now, state);
+    await supabase.from('global_league_rounds').update({ status: 'finished', finished_at_ms: now + SIM_DURATION_MS }).eq('id', round.id);
+    return new Response(JSON.stringify({
+      ok: true, step: outcome.step, ...(outcome.detail ?? {}), day: brtDay, matches: koFxUpdated.length,
+    }), { headers: { 'Content-Type': 'application/json' } });
+
   }
 
   const { data: fixtures, error: fxErr } = await supabase
@@ -825,9 +1324,11 @@ Deno.serve(async (_req: Request) => {
       encountersThisRound.set(fx.away_team_id, awayOpps);
     }
 
+    // Corrida do Dia Olefoot: só rodadas de LIGA somam daily_* (playoff/WO não).
+    const accrueDaily = round.round_type === 'league';
     const updated = Array.from(teamById.values()).map((t) => {
       const d = teamDelta.get(t.id);
-      let next = d ? updateTeamRow(t, d.gf, d.ga, isPlayoff) : t;
+      let next = d ? updateTeamRow(t, d.gf, d.ga, isPlayoff, accrueDaily) : t;
       // Decrementar suspensão pendente
       if (next.suspension_rounds_remaining > 0) {
         next = { ...next, suspension_rounds_remaining: next.suspension_rounds_remaining - 1 };

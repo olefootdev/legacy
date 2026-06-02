@@ -6,7 +6,7 @@
  */
 
 import { getSupabase, isSupabaseConfigured } from './client';
-import type { GlobalLeagueMVPState, GlobalTeam, PlayoffRound, LeagueRound } from '@/match/globalLeagueMVP';
+import type { GlobalLeagueMVPState, GlobalTeam, PlayoffRound, LeagueRound, DailyKnockoutRound, DailyCrown } from '@/match/globalLeagueMVP';
 import type { GlobalFixture, GlobalMatchEvent } from '@/match/globalMatch';
 
 const SINGLETON_STATE_ID = 'current';
@@ -131,6 +131,17 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       suspensionRoundsRemaining: Number(r.suspension_rounds_remaining ?? 0),
       availablePlayerCount: r.available_player_count != null ? Number(r.available_player_count) : undefined,
       rivalryEncounters: (r.rivalry_encounters as Record<string, number>) ?? undefined,
+      // Ciclo diário (Coroa do Dia) — fallback 0 antes da migration
+      dailyPoints: Number(r.daily_points ?? 0),
+      dailyMatchesPlayed: Number(r.daily_matches_played ?? 0),
+      dailyWins: Number(r.daily_wins ?? 0),
+      dailyDraws: Number(r.daily_draws ?? 0),
+      dailyLosses: Number(r.daily_losses ?? 0),
+      dailyGoalsFor: Number(r.daily_goals_for ?? 0),
+      dailyGoalsAgainst: Number(r.daily_goals_against ?? 0),
+      dailyGoalDifference: Number(r.daily_goal_difference ?? 0),
+      seasonCrowns: Number(r.season_crowns ?? 0),
+      allTimeCrowns: Number(r.all_time_crowns ?? 0),
     }));
 
     // Indexar fixtures e eventos por round_id
@@ -175,6 +186,9 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
         status: f.status as GlobalFixture['status'],
         kickoffMs: f.kickoff_ms == null ? undefined : Number(f.kickoff_ms),
         finishedAtMs: f.finished_at_ms == null ? undefined : Number(f.finished_at_ms),
+        penaltyScoreHome: f.penalty_score_home == null ? undefined : Number(f.penalty_score_home),
+        penaltyScoreAway: f.penalty_score_away == null ? undefined : Number(f.penalty_score_away),
+        wentToPenalties: Boolean(f.went_to_penalties),
       };
       const list = fixturesByRound.get(roundId) ?? [];
       list.push(fixture);
@@ -224,11 +238,175 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       competitionId: stateRow.competition_id == null ? undefined : String(stateRow.competition_id),
       competitionStartedAt: stateRow.competition_started_at ? new Date(String(stateRow.competition_started_at)).getTime() : undefined,
       competitionDurationDays: stateRow.competition_duration_days == null ? undefined : Number(stateRow.competition_duration_days),
+      // Ciclo Diário (Coroa do Dia) — Fase A
+      dailyDate: stateRow.daily_date == null ? undefined : String(stateRow.daily_date),
+      dailyPhase: (stateRow.daily_phase as GlobalLeagueMVPState['dailyPhase']) ?? 'qualifying',
+      dailyKoSeasonId: stateRow.daily_ko_season_id == null ? undefined : String(stateRow.daily_ko_season_id),
+      dailyKoSize: stateRow.daily_ko_size == null ? undefined : Number(stateRow.daily_ko_size),
+      dailyQualifyHour: stateRow.daily_qualify_hour == null ? 19 : Number(stateRow.daily_qualify_hour),
+      dailyKoMaxSize: stateRow.daily_ko_max_size == null ? 32 : Number(stateRow.daily_ko_max_size),
       createdAt: stateRow.created_at ? new Date(String(stateRow.created_at)).getTime() : Date.now(),
       lastUpdated: stateRow.updated_at ? new Date(String(stateRow.updated_at)).getTime() : Date.now(),
     };
   } catch (err) {
     console.warn('[globalLeague] loadGlobalLeagueFromSupabase failed', err);
     return null;
+  }
+}
+
+/**
+ * Carrega o bracket do Mata-Mata Diário. Os rounds daily_ko vivem em uma
+ * season própria (`dko_<dia>`), separada da liga, então NÃO vêm em
+ * loadGlobalLeagueFromSupabase (que filtra pela season da liga). Use o
+ * `dailyKoSeasonId` do estado para buscar aqui.
+ */
+export async function loadDailyKnockoutFromSupabase(
+  dkoSeasonId: string,
+): Promise<DailyKnockoutRound[]> {
+  if (!isSupabaseConfigured() || !dkoSeasonId) return [];
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  try {
+    const { data: roundsData, error: roundsErr } = await supabase
+      .from('global_league_rounds')
+      .select('*')
+      .eq('season_id', dkoSeasonId)
+      .eq('round_type', 'daily_ko');
+    if (roundsErr || !roundsData || roundsData.length === 0) return [];
+
+    const roundIds = roundsData.map((r: Record<string, unknown>) => String(r.id));
+    const [fixturesRes, eventsRes] = await Promise.all([
+      supabase.from('global_league_fixtures').select('*').in('round_id', roundIds),
+      supabase.from('global_league_events').select('*'),
+    ]);
+
+    const eventsByFixture = new Map<string, GlobalMatchEvent[]>();
+    for (const ev of eventsRes.data ?? []) {
+      const e = ev as Record<string, unknown>;
+      const fxId = String(e.fixture_id);
+      const list = eventsByFixture.get(fxId) ?? [];
+      list.push({
+        id: String(e.id), fixtureId: fxId,
+        type: e.event_type as GlobalMatchEvent['type'],
+        minute: Number(e.minute), timestampMs: Number(e.timestamp_ms),
+        side: e.side as GlobalMatchEvent['side'],
+        playerName: e.player_name ? String(e.player_name) : undefined,
+        playerId: e.player_id ? String(e.player_id) : undefined,
+        text: String(e.text), highlight: Boolean(e.highlight),
+      });
+      eventsByFixture.set(fxId, list);
+    }
+
+    const fixturesByRound = new Map<string, GlobalFixture[]>();
+    for (const fx of fixturesRes.data ?? []) {
+      const f = fx as Record<string, unknown>;
+      const roundId = String(f.round_id);
+      const fixture: GlobalFixture = {
+        id: String(f.id), roundId, division: String(f.division),
+        homeTeamId: String(f.home_team_id), awayTeamId: String(f.away_team_id),
+        homeTeamName: String(f.home_team_name), awayTeamName: String(f.away_team_name),
+        homeOverall: Number(f.home_overall), awayOverall: Number(f.away_overall),
+        scoreHome: Number(f.score_home ?? 0), scoreAway: Number(f.score_away ?? 0),
+        currentMinute: Number(f.current_minute ?? 0),
+        events: eventsByFixture.get(String(f.id)) ?? [],
+        status: f.status as GlobalFixture['status'],
+        kickoffMs: f.kickoff_ms == null ? undefined : Number(f.kickoff_ms),
+        finishedAtMs: f.finished_at_ms == null ? undefined : Number(f.finished_at_ms),
+        penaltyScoreHome: f.penalty_score_home == null ? undefined : Number(f.penalty_score_home),
+        penaltyScoreAway: f.penalty_score_away == null ? undefined : Number(f.penalty_score_away),
+        wentToPenalties: Boolean(f.went_to_penalties),
+      };
+      const list = fixturesByRound.get(roundId) ?? [];
+      list.push(fixture);
+      fixturesByRound.set(roundId, list);
+    }
+
+    const rounds: DailyKnockoutRound[] = (roundsData as Record<string, unknown>[]).map((r) => {
+      const fixtures = fixturesByRound.get(String(r.id)) ?? [];
+      // Ordena fixtures pelo índice do confronto (sufixo do id: dkofx_..._<i>)
+      fixtures.sort((a, b) => {
+        const ai = Number(a.id.split('_').pop()); const bi = Number(b.id.split('_').pop());
+        return (Number.isFinite(ai) ? ai : 0) - (Number.isFinite(bi) ? bi : 0);
+      });
+      const size = fixtures.length * 2;
+      return {
+        id: String(r.id),
+        roundNumber: Number(r.round_number),
+        phase: String(r.phase ?? `ko_${size}`),
+        size,
+        fixtures,
+        status: r.status as DailyKnockoutRound['status'],
+        scheduledKickoffMs: Number(r.scheduled_kickoff_ms),
+        finishedAtMs: r.finished_at_ms == null ? undefined : Number(r.finished_at_ms),
+      };
+    });
+    rounds.sort((a, b) => a.roundNumber - b.roundNumber);
+    return rounds;
+  } catch (err) {
+    console.warn('[globalLeague] loadDailyKnockoutFromSupabase failed', err);
+    return [];
+  }
+}
+
+function mapCrownRow(c: Record<string, unknown>): DailyCrown {
+  return {
+    id: String(c.id),
+    teamId: String(c.team_id),
+    managerId: String(c.manager_id),
+    clubName: String(c.club_name),
+    clubShort: String(c.club_short),
+    dailyDate: String(c.daily_date),
+    seasonId: String(c.season_id),
+    competitionId: c.competition_id == null ? undefined : String(c.competition_id),
+    bracketSize: Number(c.bracket_size ?? 0),
+    runnerUpTeamId: c.runner_up_team_id == null ? undefined : String(c.runner_up_team_id),
+    runnerUpClubName: c.runner_up_club_name == null ? undefined : String(c.runner_up_club_name),
+    finalScoreHome: c.final_score_home == null ? undefined : Number(c.final_score_home),
+    finalScoreAway: c.final_score_away == null ? undefined : Number(c.final_score_away),
+    finalWentToPens: Boolean(c.final_went_to_pens),
+    crownedAtMs: Number(c.crowned_at_ms ?? 0),
+  };
+}
+
+/**
+ * Todas as Coroas do Dia conquistadas por um manager (filtrado por manager_id).
+ * Usado pela seção de Troféus em /manager.
+ */
+export async function loadCrownsForManager(managerId: string, limit = 100): Promise<DailyCrown[]> {
+  if (!isSupabaseConfigured() || !managerId) return [];
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('daily_crowns')
+      .select('*')
+      .eq('manager_id', managerId)
+      .order('crowned_at_ms', { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).map(mapCrownRow);
+  } catch (err) {
+    console.warn('[globalLeague] loadCrownsForManager failed', err);
+    return [];
+  }
+}
+
+/** Últimas Coroas do Dia (campeões do mata-mata diário), mais recentes primeiro. */
+export async function loadRecentCrowns(limit = 3): Promise<DailyCrown[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('daily_crowns')
+      .select('*')
+      .order('crowned_at_ms', { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).map(mapCrownRow);
+  } catch (err) {
+    console.warn('[globalLeague] loadRecentCrowns failed', err);
+    return [];
   }
 }

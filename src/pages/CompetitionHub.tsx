@@ -250,6 +250,15 @@ export function CompetitionHub() {
           rail="bg-fuchsia-400"
           delay={0.5}
         />
+        <HubSectionCard
+          to="/liga-global/hoje"
+          eyebrow="Coroa do Dia"
+          title="Mata-Mata Diário"
+          description="Classificação até as 19h, mata-mata com pênaltis e um campeão por dia. Mais coroas na temporada = título paralelo."
+          cta="Ver a corrida de hoje"
+          rail="bg-neon-yellow"
+          delay={0.6}
+        />
       </section>
     </div>
   );

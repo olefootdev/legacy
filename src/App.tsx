@@ -130,6 +130,8 @@ const LocalLeagues = lazy(() => import('./pages/LocalLeagues').then((m) => ({ de
 const OlefootRanked = lazy(() => import('./pages/OlefootRanked').then((m) => ({ default: m.default })));
 const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
 const GlobalLeaguePlayoffs = lazy(() => import('./pages/GlobalLeaguePlayoffs').then((m) => ({ default: m.default })));
+const GlobalLeagueDaily = lazy(() => import('./pages/GlobalLeagueDaily').then((m) => ({ default: m.default })));
+const GlobalLeagueCrowns = lazy(() => import('./pages/GlobalLeagueCrowns').then((m) => ({ default: m.default })));
 const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m.default })));
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
@@ -586,6 +588,8 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/olefoot/ranked" element={<OlefootRanked />} />
             <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />
             <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
+            <Route path="/liga-global/hoje" element={<GlobalLeagueDaily />} />
+            <Route path="/liga-global/coroas" element={<GlobalLeagueCrowns />} />
             <Route path="/postgame" element={<Postgame />} />
             </Route>{/* /RequireSquad */}
             </Route>{/* /GameShell */}

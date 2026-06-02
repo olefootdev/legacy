@@ -33,6 +33,7 @@ import { useProgressionStore } from '@/progression/progressionStore';
 import { MISSION_CATALOG } from '@/progression/missions/catalog';
 import { COMPETITION_TROPHY_CATALOG } from '@/trophies/competitionCatalog';
 import { MEMORABLE_TROPHY_SLOTS } from '@/trophies/memorableCatalog';
+import { useManagerCrowns } from '@/hooks/useManagerCrowns';
 import { CAREER_TIERS, computeCareerTier, nextCareerTier, tierProgress01 } from '@/systems/careerTiers';
 import { TrophyCard } from '@/components/cards/TrophyCard';
 import { CareerTierBadge } from '@/components/CareerTierBadge';
@@ -64,6 +65,7 @@ export function Manager() {
   const players = useGameStore((s) => s.players);
   const leagueSeason = useGameStore((s) => s.leagueSeason);
   const memorableTrophyUnlockedIds = useGameStore((s) => s.memorableTrophyUnlockedIds);
+  const { crowns: dailyCrowns } = useManagerCrowns();
   const userSettings = useGameStore((s) => s.userSettings);
   const social = useGameStore((s) => s.social);
 
@@ -665,6 +667,71 @@ export function Manager() {
               );
             })}
           </div>
+        </motion.div>
+
+        {/* Coroas do Dia (Liga Global · mata-mata diário) */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-panel border border-white/10 border-l-4 border-l-neon-yellow rounded-sm p-4 sm:p-5 lg:p-6"
+        >
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h3 className="font-display text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+              <Crown className="h-3.5 w-3.5 text-neon-yellow" />
+              Coroas do Dia
+            </h3>
+            {dailyCrowns.length > 0 && (
+              <span className="font-mono text-[10px] text-neon-yellow">
+                {dailyCrowns.length} {dailyCrowns.length === 1 ? 'coroa' : 'coroas'}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400 mb-4">
+            Cada vitória no <span className="text-white/90 font-bold">mata-mata diário</span> da Liga Global vira uma Coroa eterna.
+          </p>
+          {dailyCrowns.length === 0 ? (
+            <div className="bg-black/30 border border-white/5 rounded-sm py-6 px-4 text-center">
+              <Lock className="h-5 w-5 text-gray-600 mx-auto mb-2" />
+              <p className="text-[11px] text-gray-500 uppercase tracking-wider font-display">
+                Nenhuma coroa ainda
+              </p>
+              <p className="text-[10px] text-gray-600 mt-1">
+                Vença o mata-mata das 19h pra ganhar a sua primeira.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {dailyCrowns.map((c, i) => {
+                const [y, m, d] = c.dailyDate.split('-');
+                const displayDate = `${d}/${m}/${y.slice(2)}`;
+                return (
+                  <motion.div
+                    key={c.id}
+                    initial={{ opacity: 0, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.32 + Math.min(i * 0.04, 0.4) }}
+                    className="flex flex-col items-center gap-2 p-2 sm:p-3 rounded-sm border-2 bg-neon-yellow/5 border-neon-yellow/40 hover:border-neon-yellow/60 hover:shadow-[0_0_20px_rgba(253,225,0,0.18)] transition-all"
+                  >
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm bg-gradient-to-br from-neon-yellow via-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]">
+                      <Crown className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-display text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-neon-yellow leading-none">
+                        Campeão
+                      </p>
+                      <p className="font-mono text-[10px] sm:text-[11px] text-white/90 mt-1">
+                        {displayDate}
+                      </p>
+                      <p className="font-mono text-[8px] text-white/40 mt-0.5">
+                        bracket {c.bracketSize}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
 
         {/* Competição */}
