@@ -308,32 +308,6 @@ export function Wallet() {
         </div>
       </section>
 
-      {/* ── SALDO OLEFOOT LEGADO (migração v1 BSC) ──────────────── */}
-      {legacyBalance != null && (
-        <section
-          className="relative overflow-hidden rounded-sm border border-neon-yellow/25 bg-gradient-to-br from-neon-yellow/[0.06] to-transparent p-5"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
-                  Saldo Legado
-                </span>
-                <span className="rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-yellow">
-                  BSC
-                </span>
-              </div>
-              <p className="mt-2 font-display text-2xl font-black tabular-nums text-white sm:text-3xl">
-                {formatCompact(Number(legacyBalance))} <span className="text-neon-yellow text-lg">OLEFOOT</span>
-              </p>
-              <p className="mt-1 text-[11px] text-white/45">
-                {Number(legacyBalance).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} OLEFOOT · ≈ ${oleToUsd(Number(legacyBalance)).toFixed(6)} USD · Snapshot BSC
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── ATIVIDADE RECENTE ─────────────────────────────────────── */}
       <ActivityStrip ledger={wallet.ledger ?? []} limit={3} />
 
