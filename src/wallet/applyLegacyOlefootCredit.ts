@@ -41,6 +41,31 @@ export async function applyLegacyOlefootCredit(): Promise<LegacyOlefootClaim> {
   };
 }
 
+export interface LegacyBalance {
+  balanceHuman: string | null;
+  claimed: boolean;
+}
+
+export async function fetchLegacyBalance(): Promise<LegacyBalance> {
+  const sb = getSupabase();
+  if (!sb) return { balanceHuman: null, claimed: false };
+
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { balanceHuman: null, claimed: false };
+
+  const { data, error } = await sb
+    .from('legacy_olefoot_credits')
+    .select('balance_human, credited_at')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error || !data) return { balanceHuman: null, claimed: false };
+  return {
+    balanceHuman: data.balance_human as string,
+    claimed: data.credited_at != null,
+  };
+}
+
 export function hasShownLegacyToast(): boolean {
   try {
     return localStorage.getItem(STORAGE_KEY) === '1';

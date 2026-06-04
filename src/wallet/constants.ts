@@ -71,6 +71,30 @@ export const GAT_CATEGORY_LABELS: Record<GatCategory, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// OLE — preço interno (imutável)
+// ---------------------------------------------------------------------------
+
+/**
+ * Preço de venda interno do token OLE em USD.
+ * IMUTÁVEL — qualquer alteração requer decisão explícita do fundador.
+ */
+export const OLE_INTERNAL_PRICE_USD = 0.000001;
+
+/** Formata o preço OLE para exibição: "$0.000001" */
+export const OLE_INTERNAL_PRICE_DISPLAY = '$0.000001';
+
+/** Converte quantidade OLE → USD equivalente */
+export function oleToUsd(oleAmount: number): number {
+  return oleAmount * OLE_INTERNAL_PRICE_USD;
+}
+
+/** Converte USD → quantidade OLE equivalente */
+export function usdToOle(usdAmount: number): number {
+  if (usdAmount <= 0) return 0;
+  return usdAmount / OLE_INTERNAL_PRICE_USD;
+}
+
+// ---------------------------------------------------------------------------
 // Geral
 // ---------------------------------------------------------------------------
 

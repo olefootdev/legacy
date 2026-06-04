@@ -24,8 +24,9 @@ import {
 } from './wallet/useWalletPlayerData';
 import { MatchCountdownChip } from './wallet/MatchCountdownChip';
 import { RivalsLeaderboardMini } from './wallet/RivalsLeaderboardMini';
-import { MOCK_MARKETS, formatSpotUsd } from './wallet/walletMockMarkets';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
+import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
+import { OLE_INTERNAL_PRICE_USD, OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 function usePrefersReducedMotion(): boolean {
@@ -86,6 +87,15 @@ export function Wallet() {
   const [pixAmountCents, setPixAmountCents] = useState(0);
   const usdBrlQuote = useOlefootUsdBrlQuote(true);
 
+  const [legacyBalance, setLegacyBalance] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLegacyBalance().then((lb) => {
+      if (!cancelled && lb.balanceHuman) setLegacyBalance(lb.balanceHuman);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const _olexp = olexpSummary({ ...wallet, spotBroCents: finance.broCents });
   const _ref = referralSummary(wallet);
   const gat = gatSummary(wallet);
@@ -132,7 +142,7 @@ export function Wallet() {
     totalOle: squadValuation.totalOle,
     change24h: squadValuation.change24h,
     playerCount: squadValuation.playerCount,
-    spark: squadValuation.spark.length >= 2 ? squadValuation.spark : MOCK_MARKETS.SQUAD.spark,
+    spark: squadValuation.spark.length >= 2 ? squadValuation.spark : [0, 0],
     highlight: squadValuation.highest ?? undefined,
   };
 
@@ -141,8 +151,6 @@ export function Wallet() {
       label: 'Patrimônio Total',
       value: formatPatrimonioUsd(finance.broCents),
       highlight: true,
-      spark: MOCK_MARKETS.PORTFOLIO.spark,
-      sparkPositive: MOCK_MARKETS.PORTFOLIO.change24h >= 0,
     },
     {
       label: 'EXP',
@@ -170,9 +178,7 @@ export function Wallet() {
       logoSrc: '/wallet-btc-logo.png',
       balance: '0.00000000 BTC',
       fiatRef: '≈ $0.00',
-      change24h: MOCK_MARKETS.BTC.change24h,
-      spark: MOCK_MARKETS.BTC.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.BTC.spotUsd!),
+      badge: 'Em breve',
     },
     {
       ticker: 'USDT',
@@ -181,9 +187,6 @@ export function Wallet() {
       balance: formatUsdt(finance.broCents),
       fiatRef: formatUsdtUsdRef(finance.broCents),
       badge: 'Ativa',
-      change24h: MOCK_MARKETS.USDT.change24h,
-      spark: MOCK_MARKETS.USDT.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.USDT.spotUsd!),
     },
     {
       ticker: 'BNB',
@@ -191,21 +194,17 @@ export function Wallet() {
       logoSrc: '/wallet-bnb-logo.png',
       balance: '0.0000 BNB',
       fiatRef: '≈ $0.00',
-      change24h: MOCK_MARKETS.BNB.change24h,
-      spark: MOCK_MARKETS.BNB.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.BNB.spotUsd!),
+      badge: 'Em breve',
     },
     {
       ticker: 'OLE',
       name: 'Olefoot',
       logoSrc: '/wallet-olefoot-logo.png',
-      balance: '0 OLE',
-      fiatRef: 'Moeda oficial • compra jogadores',
+      balance: `${formatCompact(expBalance)} OLE`,
+      fiatRef: `≈ $${oleToUsd(expBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE`,
       highlight: true,
       badge: 'Oficial',
-      change24h: MOCK_MARKETS.OLE.change24h,
-      spark: MOCK_MARKETS.OLE.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.OLE.spotUsd!),
+      spotPrice: OLE_INTERNAL_PRICE_DISPLAY,
     },
   ];
 
@@ -308,6 +307,32 @@ export function Wallet() {
           ))}
         </div>
       </section>
+
+      {/* ── SALDO OLEFOOT LEGADO (migração v1 BSC) ──────────────── */}
+      {legacyBalance != null && (
+        <section
+          className="relative overflow-hidden rounded-sm border border-neon-yellow/25 bg-gradient-to-br from-neon-yellow/[0.06] to-transparent p-5"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
+                  Saldo Legado
+                </span>
+                <span className="rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neon-yellow">
+                  BSC
+                </span>
+              </div>
+              <p className="mt-2 font-display text-2xl font-black tabular-nums text-white sm:text-3xl">
+                {formatCompact(Number(legacyBalance))} <span className="text-neon-yellow text-lg">OLEFOOT</span>
+              </p>
+              <p className="mt-1 text-[11px] text-white/45">
+                {Number(legacyBalance).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} OLEFOOT · ≈ ${oleToUsd(Number(legacyBalance)).toFixed(6)} USD · Snapshot BSC
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── ATIVIDADE RECENTE ─────────────────────────────────────── */}
       <ActivityStrip ledger={wallet.ledger ?? []} limit={3} />
