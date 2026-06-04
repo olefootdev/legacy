@@ -172,6 +172,17 @@ export async function findLeagueByInvite(code: string): Promise<PremiumLeague | 
   return row as unknown as PremiumLeague;
 }
 
-export function inviteLinkForLeague(inviteCode: string): string {
-  return `${window.location.origin}/premiadas?invite=${inviteCode}`;
+export async function findLeagueBySlug(slug: string): Promise<PremiumLeague | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data } = await sb
+    .from('premium_leagues')
+    .select('*')
+    .eq('slug', slug.trim())
+    .maybeSingle();
+  return data as PremiumLeague | null;
+}
+
+export function inviteLinkForLeague(slug: string): string {
+  return `${window.location.origin}/rewards/${slug}`;
 }

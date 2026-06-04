@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown } from 'lucide-react';
 import { useGameStore } from '@/game/store';
@@ -9,7 +9,7 @@ import {
   fetchLeagueDetail,
   createLeague,
   joinLeague,
-  findLeagueByInvite,
+  findLeagueBySlug,
   inviteLinkForLeague,
   type PremiumLeague,
   type PremiumLeagueEntry,
@@ -43,10 +43,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function ShareButton({ inviteCode, compact }: { inviteCode: string; compact?: boolean }) {
+function ShareButton({ slug, compact }: { slug: string; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
   const onShare = async () => {
-    const url = inviteLinkForLeague(inviteCode);
+    const url = inviteLinkForLeague(slug);
     const text = `Entre na minha Liga Premiada no Olefoot! Mata-mata com pote em EXP. ${url}`;
     if (navigator.share) {
       try { await navigator.share({ title: 'Liga Premiada Olefoot', text, url }); return; } catch {}
@@ -369,7 +369,7 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
                 Inscrito · Aguardando {league.max_teams - league.current_teams} times
               </div>
             )}
-            <ShareButton inviteCode={league.invite_code} />
+            <ShareButton slug={league.slug} />
           </div>
 
           {error && <p className="mt-2 text-[12px] text-rose-300">{error}</p>}
@@ -493,7 +493,7 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
 }
 
 export function PremiumLeagues() {
-  const [searchParams] = useSearchParams();
+  const { leagueSlug } = useParams<{ leagueSlug?: string }>();
   const [tab, setTab] = useState<'open' | 'mine'>('open');
   const [leagues, setLeagues] = useState<PremiumLeague[]>([]);
   const [myLeagues, setMyLeagues] = useState<PremiumLeague[]>([]);
@@ -511,12 +511,11 @@ export function PremiumLeagues() {
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    const invite = searchParams.get('invite');
-    if (!invite) return;
-    void findLeagueByInvite(invite).then((l) => {
-      if (l && 'id' in l) setSelectedId(l.id as string);
+    if (!leagueSlug) return;
+    void findLeagueBySlug(leagueSlug).then((l) => {
+      if (l) setSelectedId(l.id);
     });
-  }, [searchParams]);
+  }, [leagueSlug]);
 
   if (selectedId) {
     return (

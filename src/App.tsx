@@ -492,7 +492,9 @@ as a nice MVP. Let's Play Together! ⚽
 
             {/* Competição subpages */}
             <Route path="/competicao/ligas" element={<Leagues />} />
-            <Route path="/premiadas" element={<PremiumLeagues />} />
+            <Route path="/rewards" element={<PremiumLeagues />} />
+            <Route path="/rewards/:leagueSlug" element={<PremiumLeagues />} />
+            <Route path="/premiadas" element={<Navigate to="/rewards" replace />} />
             <Route path="/competicao/calendario" element={<CalendarPage />} />
             <Route path="/competicao/ranking" element={<RankingFull />} />
             <Route path="/competicao/standings" element={<PvpStandings />} />
