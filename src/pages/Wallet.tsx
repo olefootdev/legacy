@@ -22,7 +22,6 @@ import {
   useTopSquadPlayers,
   useUnlockedTrophies,
 } from './wallet/useWalletPlayerData';
-import { MatchCountdownChip } from './wallet/MatchCountdownChip';
 import { RivalsLeaderboardMini } from './wallet/RivalsLeaderboardMini';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
@@ -123,9 +122,6 @@ export function Wallet() {
     ],
   };
 
-
-  // Kickoff mock 4h12min no futuro pro countdown render
-  const mockKickoffIso = new Date(Date.now() + 4 * 3600_000 + 12 * 60_000).toISOString();
 
   const quickActions: QuickAction[] = [
     { key: 'deposit', label: 'Depositar', icon: '↓', accent: 'green', onClick: () => setDepositOpen(true) },
@@ -238,15 +234,6 @@ export function Wallet() {
         }}
       />
       <SendModal open={sendOpen} onClose={() => setSendOpen(false)} />
-
-      {/* ── MATCH COUNTDOWN ──────────────────────────────────────── */}
-      <MatchCountdownChip
-        kickoffIso={mockKickoffIso}
-        opponent="FLA"
-        roundLabel="Round 23"
-        isHome={true}
-        venue="Maracanã"
-      />
 
       {/* ── QUICK ACTIONS (Revolut-style strip) ──────────────────── */}
       <WalletQuickActions actions={quickActions} />
