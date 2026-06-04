@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Trophy, Users, Plus, Copy, Check, ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import {
   fetchOpenLeagues,
@@ -11,6 +12,7 @@ import {
   findLeagueByInvite,
   inviteLinkForLeague,
   type PremiumLeague,
+  type PremiumLeagueEntry,
   type PremiumLeagueFixture,
   type PremiumLeagueChampion,
 } from '@/supabase/premiumLeagues';
@@ -22,71 +24,122 @@ function formatPool(n: number): string {
 }
 
 const SIZE_OPTIONS = [16, 32, 64] as const;
+const RANK_MEDALS = ['🏆', '🥈', '🥉', '4º'];
+const RANK_COLORS = ['text-[#FFD700]', 'text-[#C0C0C0]', 'text-[#CD7F32]', 'text-white/50'];
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    open: { label: 'Aberta', cls: 'border-neon-green/40 text-neon-green bg-neon-green/10' },
-    live: { label: 'Ao Vivo', cls: 'border-red-400/40 text-red-400 bg-red-400/10 animate-pulse' },
-    finished: { label: 'Encerrada', cls: 'border-white/20 text-white/50 bg-white/5' },
+    open: { label: 'Inscrições Abertas', cls: 'border-neon-green/50 text-neon-green bg-neon-green/10' },
+    live: { label: 'Ao Vivo', cls: 'border-red-400/50 text-red-400 bg-red-400/10' },
+    finished: { label: 'Encerrada', cls: 'border-white/20 text-white/40 bg-white/5' },
     cancelled: { label: 'Cancelada', cls: 'border-white/10 text-white/30 bg-white/5' },
   };
   const s = map[status] ?? map.cancelled!;
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${s.cls}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] ${s.cls}`}>
+      {status === 'live' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />}
       {s.label}
     </span>
   );
 }
 
-function LeagueCard({ league, onClick }: { league: PremiumLeague; onClick: () => void }) {
+function ShareButton({ inviteCode, compact }: { inviteCode: string; compact?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const onShare = async () => {
+    const url = inviteLinkForLeague(inviteCode);
+    const text = `Entre na minha Liga Premiada no Olefoot! Mata-mata com pote em EXP. ${url}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Liga Premiada Olefoot', text, url }); return; } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+  if (compact) {
+    return (
+      <button onClick={() => void onShare()} className="flex items-center gap-1.5 rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/20 transition">
+        {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
+        {copied ? 'Copiado!' : 'Convidar'}
+      </button>
+    );
+  }
+  return (
+    <button onClick={() => void onShare()}
+      className="flex items-center justify-center gap-2 w-full rounded-md border border-neon-yellow/30 bg-neon-yellow/10 px-4 py-3 font-display text-[12px] font-bold uppercase tracking-[0.15em] text-neon-yellow hover:bg-neon-yellow/20 transition">
+      {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+      {copied ? 'Link Copiado!' : 'Compartilhar Liga'}
+    </button>
+  );
+}
+
+function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick: () => void; delay: number }) {
   const progress = league.max_teams > 0 ? (league.current_teams / league.max_teams) * 100 : 0;
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
-      className="w-full text-left border border-white/[0.08] bg-[#0b0b0b] p-4 transition hover:border-neon-yellow/30 hover:-translate-y-0.5"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay }}
+      className="w-full text-left sports-panel panel-accent overflow-hidden p-0 hover:-translate-y-0.5 transition-transform"
       style={{ borderRadius: 'var(--radius-card)' }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-neon-yellow shrink-0" />
-            <h3 className="font-display text-[13px] font-bold uppercase tracking-wide text-white truncate">
-              {league.name}
-            </h3>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-neon-yellow/30 bg-neon-yellow/10">
+                <Trophy className="h-4 w-4 text-neon-yellow" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-display text-[15px] font-black uppercase tracking-tight text-white truncate">
+                  {league.name}
+                </h3>
+                <p className="text-[10px] text-white/40 font-display uppercase tracking-[0.12em]">
+                  por {league.creator_club_name}
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="mt-1 text-[11px] text-white/50">
-            Criada por {league.creator_club_name} · {league.max_teams} times · Mata-mata
-          </p>
+          <StatusBadge status={league.status} />
         </div>
-        <StatusBadge status={league.status} />
+
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <div>
+            <p className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Inscrição</p>
+            <p className="mt-0.5 font-display text-[18px] font-black tabular-nums text-neon-yellow leading-none">
+              {formatPool(league.entry_fee)}
+            </p>
+            <p className="text-[9px] text-neon-yellow/50">{league.currency}</p>
+          </div>
+          <div>
+            <p className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Pote</p>
+            <p className="mt-0.5 font-display text-[18px] font-black tabular-nums text-white leading-none">
+              {formatPool(league.total_pool)}
+            </p>
+            <p className="text-[9px] text-white/40">{league.currency}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Times</p>
+            <p className="mt-0.5 font-display text-[18px] font-black tabular-nums text-white leading-none">
+              {league.current_teams}<span className="text-white/30">/{league.max_teams}</span>
+            </p>
+            {league.status === 'live' && league.current_round && (
+              <p className="text-[9px] text-red-400/80">R{league.current_round}/{league.total_rounds}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-neon-yellow/80 to-neon-yellow"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.6, delay: delay + 0.2 }}
+          />
+        </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div>
-          <p className="font-display text-[18px] font-black tabular-nums text-neon-yellow">
-            {formatPool(league.entry_fee)} <span className="text-[11px] text-neon-yellow/70">{league.currency}</span>
-          </p>
-          <p className="text-[10px] text-white/40">Inscrição</p>
-        </div>
-        <div className="text-right">
-          <p className="font-display text-[18px] font-black tabular-nums text-white">
-            {formatPool(league.total_pool)} <span className="text-[11px] text-white/50">{league.currency}</span>
-          </p>
-          <p className="text-[10px] text-white/40">Pote total</p>
-        </div>
-      </div>
-      <div className="mt-2">
-        <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
-          <span>{league.current_teams}/{league.max_teams} times</span>
-          {league.status === 'live' && league.current_round && league.total_rounds && (
-            <span>Round {league.current_round}/{league.total_rounds}</span>
-          )}
-        </div>
-        <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div className="h-full rounded-full bg-neon-yellow/60 transition-all" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-    </button>
+    </motion.button>
   );
 }
 
@@ -104,70 +157,93 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
 
   if (!open) return null;
 
+  const estimatedPool = Number(entryFee) * maxTeams;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
-    setError(null);
+    setBusy(true); setError(null);
     const r = await createLeague({
-      name: name.trim(),
-      maxTeams,
-      entryFee: Number(entryFee),
-      clubName: club?.name ?? 'Clube',
-      clubShort: club?.shortName,
+      name: name.trim(), maxTeams, entryFee: Number(entryFee),
+      clubName: club?.name ?? 'Clube', clubShort: club?.shortName,
     });
     setBusy(false);
-    if (!r.ok) { setError('error' in r ? r.error : 'Erro desconhecido'); return; }
+    if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
     onCreated();
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-white/15 bg-[#0c0c0c] shadow-xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <h2 className="font-display font-bold text-lg text-white">Criar Liga Premiada</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white text-xl">×</button>
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-neon-yellow/20 bg-[#0c0c0c] shadow-[0_0_60px_rgba(253,225,0,0.08)]"
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-neon-yellow" />
+            <h2 className="font-display text-lg font-black uppercase tracking-tight text-white">Criar Liga</h2>
+          </div>
+          <button onClick={onClose} className="text-white/30 hover:text-white text-2xl leading-none">×</button>
         </div>
-        <form onSubmit={(e) => void onSubmit(e)} className="p-5 space-y-4">
+        <form onSubmit={(e) => void onSubmit(e)} className="p-6 space-y-5">
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">Nome da Liga</span>
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Nome da Liga</span>
             <input value={name} onChange={(e) => setName(e.target.value)} required
               placeholder="Ex: Copa dos Campeões"
-              className="mt-1 w-full rounded-md border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white focus:border-neon-yellow/50 focus:outline-none" />
+              className="mt-1.5 w-full rounded-md border border-white/10 bg-deep-black px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-neon-yellow/40 focus:outline-none" />
           </label>
-          <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">Quantidade de Times</span>
-            <div className="mt-1 grid grid-cols-3 gap-2">
+          <div>
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Quantidade de Times</span>
+            <div className="mt-1.5 grid grid-cols-3 gap-2">
               {SIZE_OPTIONS.map((n) => (
                 <button key={n} type="button" onClick={() => setMaxTeams(n)}
-                  className={`rounded-md border py-2.5 font-display text-sm font-bold transition ${maxTeams === n ? 'border-neon-yellow bg-neon-yellow/10 text-neon-yellow' : 'border-white/10 text-white/50 hover:border-white/20'}`}>
+                  className={`rounded-md border py-3 font-display text-[16px] font-black transition ${
+                    maxTeams === n
+                      ? 'border-neon-yellow bg-neon-yellow/15 text-neon-yellow shadow-[0_0_20px_rgba(253,225,0,0.1)]'
+                      : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
+                  }`}>
                   {n}
                 </button>
               ))}
             </div>
-          </label>
-          <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">Valor de Inscrição (EXP)</span>
-            <input type="number" value={entryFee} onChange={(e) => setEntryFee(e.target.value)} required min={100}
-              className="mt-1 w-full rounded-md border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white focus:border-neon-yellow/50 focus:outline-none" />
-          </label>
-          <div className="rounded-md border border-neon-yellow/20 bg-neon-yellow/[0.04] p-3 text-[11px] text-white/60 space-y-1">
-            <p><strong className="text-white">Pote estimado:</strong> {formatPool(Number(entryFee) * maxTeams)} EXP</p>
-            <p>Campeão 40% · Vice 20% · 3º 12% · 4º 8%</p>
-            <p>Você (criador) ganha <strong className="text-neon-yellow">10%</strong> do total</p>
           </div>
+          <label className="block">
+            <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Valor de Inscrição (EXP)</span>
+            <input type="number" value={entryFee} onChange={(e) => setEntryFee(e.target.value)} required min={100}
+              className="mt-1.5 w-full rounded-md border border-white/10 bg-deep-black px-4 py-3 text-sm text-white tabular-nums focus:border-neon-yellow/40 focus:outline-none" />
+          </label>
+
+          <div className="rounded-md border border-neon-yellow/20 bg-neon-yellow/[0.03] p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">Pote Estimado</span>
+              <span className="font-display text-[20px] font-black tabular-nums text-neon-yellow">{formatPool(estimatedPool)} EXP</span>
+            </div>
+            <div className="h-px bg-white/[0.06]" />
+            <div className="grid grid-cols-3 gap-2 text-[10px]">
+              <div><span className="text-[#FFD700]">🏆 40%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.4)}</span></div>
+              <div><span className="text-[#C0C0C0]">🥈 20%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.2)}</span></div>
+              <div><span className="text-[#CD7F32]">🥉 12%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.12)}</span></div>
+            </div>
+            <p className="text-[10px] text-neon-yellow/60">
+              Você ganha <strong className="text-neon-yellow">10%</strong> do pote como criador ({formatPool(estimatedPool * 0.1)} EXP)
+            </p>
+          </div>
+
           {error && (
-            <p className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">{error}</p>
+            <div className="flex items-start gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-[12px] text-rose-200">
+              <span className="text-rose-400">✗</span> {error}
+            </div>
           )}
           <button type="submit" disabled={busy || !name.trim() || !entryFee}
             className="btn-primary w-full disabled:opacity-40 disabled:pointer-events-none">
-            <span className="btn-primary-inner justify-center py-1">
-              {busy ? 'Criando…' : 'Criar Liga'}
+            <span className="btn-primary-inner justify-center py-1.5">
+              {busy ? 'Criando…' : 'Criar Liga Premiada'}
             </span>
           </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -175,42 +251,35 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
 function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () => void }) {
   const club = useGameStore((s) => s.club);
   const [league, setLeague] = useState<PremiumLeague | null>(null);
+  const [entries, setEntries] = useState<PremiumLeagueEntry[]>([]);
   const [fixtures, setFixtures] = useState<PremiumLeagueFixture[]>([]);
   const [champions, setChampions] = useState<PremiumLeagueChampion[]>([]);
-  const [entryCount, setEntryCount] = useState(0);
   const [myEntry, setMyEntry] = useState(false);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     const d = await fetchLeagueDetail(leagueId);
     if (!d) return;
     setLeague(d.league);
+    setEntries(d.entries);
     setFixtures(d.fixtures);
     setChampions(d.champions);
-    setEntryCount(d.entries.length);
     const sb = (await import('@/supabase/client')).getSupabase();
     const { data: { user } } = await sb!.auth.getUser();
     setMyEntry(d.entries.some((e) => e.user_id === user?.id));
   }, [leagueId]);
 
-  useEffect(() => { void load(); const t = setInterval(() => void load(), 10000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { void load(); const t = setInterval(() => void load(), 8000); return () => clearInterval(t); }, [load]);
 
-  if (!league) return <div className="p-6 text-center text-white/40">Carregando…</div>;
+  if (!league) return <div className="py-16 text-center text-white/30 text-sm">Carregando…</div>;
 
   const onJoin = async () => {
     setJoining(true); setError(null);
     const r = await joinLeague({ leagueId, clubName: club?.name ?? 'Clube', clubShort: club?.shortName, overall: 50 });
     setJoining(false);
-    if (!r.ok) { setError('error' in r ? r.error : 'Erro desconhecido'); return; }
+    if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
     void load();
-  };
-
-  const onCopy = () => {
-    void navigator.clipboard.writeText(inviteLinkForLeague(league.invite_code));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const roundLabel = (r: number) => {
@@ -218,112 +287,207 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
     const remaining = league.total_rounds - r + 1;
     if (remaining === 1) return 'Final';
     if (remaining === 2) return 'Semifinal';
-    if (remaining === 3) return 'Quartas';
-    if (remaining === 4) return 'Oitavas';
+    if (remaining === 3) return 'Quartas de Final';
+    if (remaining === 4) return 'Oitavas de Final';
     return `Round ${r}`;
   };
 
   const rounds = [...new Set(fixtures.map((f) => f.round))].sort((a, b) => a - b);
-  const rankEmoji = ['🏆', '🥈', '🥉', '4º'];
 
   return (
     <div className="space-y-5">
-      <button onClick={onBack} className="text-[11px] text-white/50 hover:text-white font-display uppercase tracking-wider">
-        ← Voltar
+      <button onClick={onBack} className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-white/40 hover:text-neon-yellow transition">
+        ← Todas as Ligas
       </button>
 
-      <div className="border border-neon-yellow/20 bg-gradient-to-br from-neon-yellow/[0.04] to-transparent p-5" style={{ borderRadius: 'var(--radius-card)' }}>
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="font-display text-xl font-black uppercase tracking-tight text-white">{league.name}</h2>
-            <p className="mt-1 text-[11px] text-white/50">
-              {league.max_teams} times · Mata-mata · {league.total_rounds} rodadas
-            </p>
+      {/* Hero */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden sports-panel"
+        style={{ borderRadius: 'var(--radius-card-lg)', boxShadow: 'var(--shadow-glow-yellow)' }}
+      >
+        <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow" />
+        <div className="absolute inset-0 bg-gradient-to-br from-neon-yellow/[0.05] via-transparent to-transparent" />
+        <div className="relative p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="h-5 w-5 text-neon-yellow" />
+                <StatusBadge status={league.status} />
+              </div>
+              <h2
+                className="font-display font-black uppercase text-white leading-none"
+                style={{ fontSize: 'clamp(1.5rem, 5vw, 2.2rem)', letterSpacing: '-0.01em' }}
+              >
+                {league.name}
+              </h2>
+              <p className="mt-1 text-[11px] text-white/40">
+                <span className="text-neon-yellow/60">por {league.creator_club_name}</span> · {league.max_teams} times · Mata-mata
+              </p>
+            </div>
           </div>
-          <StatusBadge status={league.status} />
-        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-md bg-black/40 border border-white/[0.06] p-3 text-center">
-            <p className="font-display text-2xl font-black tabular-nums text-neon-yellow">{formatPool(league.total_pool)}</p>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider">Pote {league.currency}</p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-deep-black/60 border border-white/[0.06] p-4 text-center">
+              <p
+                className="tabular-nums text-neon-yellow leading-none"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 'clamp(28px, 6vw, 42px)' }}
+              >
+                {formatPool(league.total_pool)}
+              </p>
+              <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.25em] text-white/35">
+                Pote Total · {league.currency}
+              </p>
+            </div>
+            <div className="rounded-lg bg-deep-black/60 border border-white/[0.06] p-4 text-center">
+              <p
+                className="tabular-nums text-white leading-none"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontSize: 'clamp(28px, 6vw, 42px)' }}
+              >
+                {league.current_teams}<span className="text-white/25">/{league.max_teams}</span>
+              </p>
+              <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.25em] text-white/35">
+                {league.status === 'open' ? 'Inscritos' : league.current_round ? `Round ${league.current_round}/${league.total_rounds}` : 'Times'}
+              </p>
+            </div>
           </div>
-          <div className="rounded-md bg-black/40 border border-white/[0.06] p-3 text-center">
-            <p className="font-display text-2xl font-black tabular-nums text-white">{league.current_teams}/{league.max_teams}</p>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider">Times</p>
-          </div>
-        </div>
 
-        {league.status === 'open' && (
-          <div className="mt-4 flex gap-2">
-            {!myEntry ? (
+          {/* Actions — share ALWAYS visible for participants */}
+          <div className="mt-4 space-y-2">
+            {league.status === 'open' && !myEntry && (
               <button onClick={() => void onJoin()} disabled={joining}
-                className="btn-primary flex-1 disabled:opacity-40">
-                <span className="btn-primary-inner justify-center py-1">
-                  {joining ? 'Entrando…' : `Entrar · ${formatPool(league.entry_fee)} ${league.currency}`}
+                className="btn-primary w-full disabled:opacity-40">
+                <span className="btn-primary-inner justify-center py-1.5">
+                  <Swords className="h-4 w-4" />
+                  {joining ? 'Entrando…' : `Inscrever-se · ${formatPool(league.entry_fee)} ${league.currency}`}
                 </span>
               </button>
-            ) : (
-              <div className="flex-1 rounded-md border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-center text-[12px] font-bold text-neon-green">
-                Inscrito
+            )}
+            {league.status === 'open' && myEntry && (
+              <div className="rounded-md border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-center font-display text-[12px] font-bold uppercase tracking-wider text-neon-green">
+                Inscrito · Aguardando {league.max_teams - league.current_teams} times
               </div>
             )}
-            <button onClick={onCopy}
-              className="shrink-0 rounded-md border border-white/15 bg-black/40 px-4 py-3 text-white/60 hover:text-white transition">
-              {copied ? <Check className="h-4 w-4 text-neon-green" /> : <Copy className="h-4 w-4" />}
-            </button>
+            <ShareButton inviteCode={league.invite_code} />
           </div>
-        )}
 
-        {error && <p className="mt-2 text-[12px] text-rose-300">{error}</p>}
-      </div>
+          {error && <p className="mt-2 text-[12px] text-rose-300">{error}</p>}
+        </div>
+      </motion.div>
 
+      {/* Premiação */}
       {champions.length > 0 && (
         <section className="space-y-2">
-          <h3 className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-neon-yellow/80">Premiação</h3>
-          {champions.map((c) => (
-            <div key={c.rank} className="flex items-center justify-between border border-white/[0.06] bg-[#0b0b0b] px-4 py-3" style={{ borderRadius: 'var(--radius-sm)' }}>
+          <div className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/70">
+            Premiação Final
+          </div>
+          {champions.map((c, i) => (
+            <motion.div
+              key={c.rank}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="flex items-center justify-between sports-panel px-4 py-3"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
               <div className="flex items-center gap-3">
-                <span className="text-lg">{rankEmoji[c.rank - 1]}</span>
-                <span className="font-display text-[13px] font-bold text-white">{c.club_name}</span>
+                <span className={`text-lg ${RANK_COLORS[c.rank - 1]}`}>{RANK_MEDALS[c.rank - 1]}</span>
+                <span className="font-display text-[13px] font-bold uppercase tracking-tight text-white">{c.club_name}</span>
               </div>
-              <span className="font-display text-[14px] font-black tabular-nums text-neon-yellow">
-                {formatPool(c.prize_amount)} {c.currency}
+              <span className="font-display text-[15px] font-black tabular-nums text-neon-yellow">
+                {formatPool(c.prize_amount)} <span className="text-[10px] text-neon-yellow/50">{c.currency}</span>
               </span>
+            </motion.div>
+          ))}
+        </section>
+      )}
+
+      {/* Participantes (quando liga está open) */}
+      {league.status === 'open' && entries.length > 0 && (
+        <section className="space-y-2">
+          <div className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+            Inscritos ({entries.length}/{league.max_teams})
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {entries.map((e, i) => (
+              <div key={e.id} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-[#0b0b0b] px-3 py-2">
+                <span className="font-display text-[10px] font-bold text-white/25 tabular-nums">{i + 1}</span>
+                <span className="text-[11px] font-bold text-white truncate">{e.club_name}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Bracket */}
+      {rounds.length > 0 && (
+        <section className="space-y-4">
+          <div className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+            Bracket Mata-Mata
+          </div>
+          {rounds.map((r) => (
+            <div key={r} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Swords className="h-3.5 w-3.5 text-neon-yellow/50" />
+                <p className="font-display text-[11px] font-bold uppercase tracking-[0.15em] text-neon-yellow/70">
+                  {roundLabel(r)}
+                </p>
+              </div>
+              {fixtures.filter((f) => f.round === r).map((fx, fi) => {
+                const homeWon = fx.winner_entry_id === fx.home_entry_id;
+                const awayWon = fx.winner_entry_id === fx.away_entry_id;
+                return (
+                  <motion.div
+                    key={fx.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: fi * 0.05 }}
+                    className="overflow-hidden border border-white/[0.06] bg-[#0b0b0b]"
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                  >
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+                      <div className={`px-3 py-2.5 text-[12px] font-bold truncate ${homeWon ? 'text-white bg-neon-yellow/[0.06]' : 'text-white/40'}`}>
+                        {fx.home_club_name ?? 'A definir'}
+                      </div>
+                      <div className="px-3 py-2.5 text-center border-x border-white/[0.04]">
+                        {fx.status === 'finished' ? (
+                          <div>
+                            <span className="font-display text-[16px] font-black tabular-nums text-white">
+                              {fx.score_home} - {fx.score_away}
+                            </span>
+                            {fx.went_to_penalties && (
+                              <p className="text-[9px] text-neon-yellow/60">pen {fx.penalty_home}-{fx.penalty_away}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="font-display text-[11px] font-bold text-white/20 uppercase">vs</span>
+                        )}
+                      </div>
+                      <div className={`px-3 py-2.5 text-[12px] font-bold truncate text-right ${awayWon ? 'text-white bg-neon-yellow/[0.06]' : 'text-white/40'}`}>
+                        {fx.away_club_name ?? 'A definir'}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           ))}
         </section>
       )}
 
-      {rounds.length > 0 && (
-        <section className="space-y-3">
-          <h3 className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/50">Bracket</h3>
-          {rounds.map((r) => (
-            <div key={r} className="space-y-2">
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.15em] text-neon-yellow/60">
-                {roundLabel(r)}
-              </p>
-              {fixtures.filter((f) => f.round === r).map((fx) => (
-                <div key={fx.id}
-                  className="flex items-center gap-2 border border-white/[0.06] bg-[#0b0b0b] px-3 py-2 text-[12px]"
-                  style={{ borderRadius: 'var(--radius-sm)' }}>
-                  <span className={`flex-1 truncate ${fx.winner_entry_id === fx.home_entry_id ? 'font-bold text-white' : 'text-white/50'}`}>
-                    {fx.home_club_name ?? 'TBD'}
-                  </span>
-                  <span className="font-display text-[13px] font-black tabular-nums text-white/80 shrink-0">
-                    {fx.status === 'finished'
-                      ? `${fx.score_home} - ${fx.score_away}${fx.went_to_penalties ? ` (${fx.penalty_home}-${fx.penalty_away} pen)` : ''}`
-                      : 'vs'}
-                  </span>
-                  <span className={`flex-1 truncate text-right ${fx.winner_entry_id === fx.away_entry_id ? 'font-bold text-white' : 'text-white/50'}`}>
-                    {fx.away_club_name ?? 'TBD'}
-                  </span>
-                </div>
-              ))}
+      {/* Split info (sempre visível) */}
+      <div className="sports-panel p-4 space-y-2" style={{ borderRadius: 'var(--radius-md)' }}>
+        <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/30">Distribuição do Pote</p>
+        <div className="grid grid-cols-6 gap-1 text-center text-[10px]">
+          {[{ label: '🏆', pct: '40%' }, { label: '🥈', pct: '20%' }, { label: '🥉', pct: '12%' }, { label: '4º', pct: '8%' }, { label: 'Criador', pct: '10%' }, { label: 'Casa', pct: '10%' }].map((s) => (
+            <div key={s.label}>
+              <p className="text-[12px]">{s.label}</p>
+              <p className="font-bold text-white/50 tabular-nums">{s.pct}</p>
             </div>
           ))}
-        </section>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -336,7 +500,6 @@ export function PremiumLeagues() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [inviteResult, setInviteResult] = useState<PremiumLeague | null>(null);
 
   const load = useCallback(async () => {
     const [open, mine] = await Promise.all([fetchOpenLeagues(), fetchMyLeagues()]);
@@ -351,62 +514,96 @@ export function PremiumLeagues() {
     const invite = searchParams.get('invite');
     if (!invite) return;
     void findLeagueByInvite(invite).then((l) => {
-      if (l) { setSelectedId(l.id as string); }
+      if (l && 'id' in l) setSelectedId(l.id as string);
     });
   }, [searchParams]);
 
   if (selectedId) {
     return (
       <div className="mx-auto max-w-lg px-4 py-6">
-        <LeagueDetailView leagueId={selectedId} onBack={() => setSelectedId(null)} />
+        <LeagueDetailView leagueId={selectedId} onBack={() => { setSelectedId(null); void load(); }} />
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-lg px-4 py-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight text-white">Ligas Premiadas</h1>
-          <p className="mt-1 text-[11px] text-white/50">Mata-mata · Pote em EXP · Top 4 premiados</p>
-        </div>
-        <button onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-wider text-neon-yellow hover:bg-neon-yellow/20 transition">
-          <Plus className="h-3.5 w-3.5" /> Criar
-        </button>
-      </div>
+  const displayLeagues = tab === 'open' ? leagues : myLeagues;
 
-      <div className="flex gap-1 rounded-md bg-white/[0.04] p-1">
+  return (
+    <div className="mx-auto max-w-lg px-4 py-6 space-y-6">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.35em] text-neon-yellow/70">
+              Competição Premium
+            </p>
+            <h1
+              className="mt-1 font-display font-black uppercase text-white leading-none"
+              style={{ fontSize: 'clamp(1.8rem, 6vw, 2.5rem)', letterSpacing: '-0.01em' }}
+            >
+              Ligas Premiadas
+            </h1>
+            <p className="mt-1 text-[11px] text-white/40">Mata-mata · Pote em EXP · Top 4 premiados</p>
+          </div>
+          <button onClick={() => setCreateOpen(true)}
+            className="btn-primary disabled:opacity-40">
+            <span className="btn-primary-inner gap-1.5 px-3 py-1">
+              <Plus className="h-3.5 w-3.5" /> Criar
+            </span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-md bg-white/[0.03] border border-white/[0.06] p-1">
         {(['open', 'mine'] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 rounded-sm py-2 font-display text-[11px] font-bold uppercase tracking-wider transition ${tab === t ? 'bg-neon-yellow/15 text-neon-yellow' : 'text-white/40 hover:text-white/60'}`}>
-            {t === 'open' ? 'Abertas' : 'Minhas'}
+            className={`flex-1 rounded-sm py-2.5 font-display text-[11px] font-bold uppercase tracking-[0.18em] transition ${
+              tab === t
+                ? 'bg-neon-yellow/15 text-neon-yellow border border-neon-yellow/20'
+                : 'text-white/30 hover:text-white/50 border border-transparent'
+            }`}>
+            {t === 'open' ? `Abertas (${leagues.length})` : `Minhas (${myLeagues.length})`}
           </button>
         ))}
       </div>
 
+      {/* List */}
       {loading ? (
-        <p className="py-8 text-center text-white/30 text-sm">Carregando ligas…</p>
-      ) : (
-        <div className="space-y-3">
-          {(tab === 'open' ? leagues : myLeagues).map((l) => (
-            <LeagueCard key={l.id} league={l} onClick={() => setSelectedId(l.id)} />
-          ))}
-          {(tab === 'open' ? leagues : myLeagues).length === 0 && (
-            <div className="py-12 text-center space-y-3">
-              <Trophy className="mx-auto h-10 w-10 text-white/15" />
-              <p className="text-sm text-white/40">
-                {tab === 'open' ? 'Nenhuma liga aberta no momento' : 'Você ainda não entrou em nenhuma liga'}
-              </p>
-              {tab === 'open' && (
-                <button onClick={() => setCreateOpen(true)}
-                  className="text-[12px] font-bold text-neon-yellow hover:underline">
-                  Criar a primeira liga →
-                </button>
-              )}
-            </div>
-          )}
+        <div className="py-16 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-neon-yellow/20 border-t-neon-yellow" />
+          <p className="mt-3 text-[11px] text-white/30">Carregando ligas…</p>
         </div>
+      ) : displayLeagues.length > 0 ? (
+        <div className="space-y-3">
+          {displayLeagues.map((l, i) => (
+            <LeagueCard key={l.id} league={l} onClick={() => setSelectedId(l.id)} delay={i * 0.06} />
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="py-16 text-center space-y-4"
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]">
+            <Trophy className="h-7 w-7 text-white/15" />
+          </div>
+          <div>
+            <p className="font-display text-[14px] font-bold uppercase tracking-tight text-white/40">
+              {tab === 'open' ? 'Nenhuma liga aberta' : 'Você ainda não entrou'}
+            </p>
+            <p className="mt-1 text-[11px] text-white/25">
+              {tab === 'open' ? 'Crie a primeira liga premiada' : 'Entre em uma liga aberta ou crie a sua'}
+            </p>
+          </div>
+          {tab === 'open' && (
+            <button onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center gap-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-neon-yellow hover:text-white transition">
+              <Plus className="h-3.5 w-3.5" /> Criar Liga Premiada
+            </button>
+          )}
+        </motion.div>
       )}
 
       <CreateLeagueModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={() => void load()} />
