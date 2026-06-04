@@ -77,7 +77,7 @@ export function RivalsLeaderboardMini({
           ) : null}
         </div>
         <p className="mt-1 text-[12px] text-white/75">
-          <span className="font-bold text-white">+{formatOle(gapToNextOle)} OLE</span>{' '}
+          <span className="font-bold text-white">+{formatOle(gapToNextOle)} EXP</span>{' '}
           <span className="text-white/55">
             pra ultrapassar{' '}
             <span className="font-bold text-white/80">{nextRivalName ?? 'o próximo'}</span>

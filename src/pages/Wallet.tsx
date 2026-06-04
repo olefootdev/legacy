@@ -100,8 +100,8 @@ export function Wallet() {
   const _ref = referralSummary(wallet);
   const gat = gatSummary(wallet);
 
-  // SmartHub usa finance.ole (saldo EXP gastável; nome legado). Mesmo campo aqui pra consistência.
   const expBalance = finance.ole ?? 0;
+  const olefootBalance = legacyBalance != null ? Number(legacyBalance) : 0;
 
   // ── DADOS REAIS DO PLANTEL ────────────────────────────────────
   const squadValuation = useSquadValuation();
@@ -116,10 +116,10 @@ export function Wallet() {
     isHome: true,
     lines: [
       { label: 'Prêmio de vitória', amount: 1200, currency: 'EXP' },
-      { label: 'Bilheteria', amount: 120, currency: 'OLE' },
+      { label: 'Bilheteria', amount: 120, currency: 'EXP' },
       { label: 'Performance individual', amount: 50, currency: 'EXP' },
-      { label: 'Salários do round', amount: -340, currency: 'OLE' },
-      { label: 'Manutenção estádio', amount: -80, currency: 'OLE' },
+      { label: 'Salários do round', amount: -340, currency: 'EXP' },
+      { label: 'Manutenção estádio', amount: -80, currency: 'EXP' },
     ],
   };
 
@@ -197,11 +197,11 @@ export function Wallet() {
       badge: 'Em breve',
     },
     {
-      ticker: 'OLE',
-      name: 'Olefoot',
+      ticker: 'OLEFOOT',
+      name: 'Olefoot Token',
       logoSrc: '/wallet-olefoot-logo.png',
-      balance: `${formatCompact(expBalance)} OLE`,
-      fiatRef: `≈ $${oleToUsd(expBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE`,
+      balance: `${formatCompact(olefootBalance)} OLEFOOT`,
+      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE`,
       highlight: true,
       badge: 'Oficial',
       spotPrice: OLE_INTERNAL_PRICE_DISPLAY,

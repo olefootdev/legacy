@@ -16,7 +16,7 @@ const PER_PAGE = 25;
 type RankingTabId = 'mundial' | 'nacional' | 'estadual';
 
 const TAB_OPTIONS: { id: RankingTabId; label: string }[] = [
-  { id: 'mundial', label: 'Mundial (OLE)' },
+  { id: 'mundial', label: 'Mundial (EXP)' },
   { id: 'nacional', label: LEAGUE_SCOPE_LABELS.national },
   { id: 'estadual', label: LEAGUE_SCOPE_LABELS.state },
 ];
