@@ -259,6 +259,15 @@ export function CompetitionHub() {
           rail="bg-neon-yellow"
           delay={0.6}
         />
+        <HubSectionCard
+          to="/rewards"
+          eyebrow="Premium"
+          title="Liga Premiada"
+          description="Crie ou entre em torneios mata-mata com pote em EXP. Top 4 premiados. Convide amigos e ganhe 10% do pote como criador."
+          cta="Ver ligas premiadas"
+          rail="bg-[#FFD700]"
+          delay={0.7}
+        />
       </section>
     </div>
   );
