@@ -44,6 +44,7 @@ import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
 import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
+import { EngagementBadge } from '@/components/EngagementBadge';
 import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
 import { DailyChallengesCard } from '@/components/match/DailyChallengesCard';
 import { DailyCycleWidget } from '@/components/matchglobal/DailyCycleWidget';
@@ -922,6 +923,7 @@ export function Home() {
         <AbsenceBanner />
         <DailyCycleWidget />
         <LoginBonusWidget />
+        <EngagementBadge />
         <PassiveIncomeWidget />
         {dailyChallenges && dailyChallenges.challenges.length > 0 && (
           <DailyChallengesCard
