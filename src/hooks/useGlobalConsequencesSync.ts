@@ -217,6 +217,21 @@ function applyRoundConsequences(
   }));
   dispatchGame({ type: 'UPDATE_PLAYER_FORM_STREAK', updates: formUpdates });
 
+  // 6b. Daily challenges — atualiza progresso com resultado da Liga Global
+  if (result === 'win') {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'win_matches' });
+  }
+  if (myScore > 0) {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'score_goals', increment: myScore });
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'quick_goals' });
+  }
+  if (result === 'win' && theirScore === 0) {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'clean_sheet' });
+  }
+  if (result === 'win' && (myScore - theirScore) >= 3) {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'dominant_win' });
+  }
+
   // 7. Inbox notifications
   generateInboxNotifications(healthEvents, lineupPlayerIds, playerHealth, players);
 

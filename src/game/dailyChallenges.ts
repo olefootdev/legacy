@@ -21,59 +21,56 @@ export interface DailyChallenge {
 
 export interface DailyChallengesState {
   challenges: DailyChallenge[];
-  lastResetDate: string; // ISO date string
-  streak: number; // consecutive days completing all challenges
+  lastResetDate: string;
+  streak: number;
 }
 
 const CHALLENGE_TEMPLATES: Record<ChallengeType, { title: string; description: string; targetRange: [number, number]; rewardBase: number }> = {
   win_matches: {
     title: 'Vencedor',
-    description: 'Vence {target} partidas rápidas',
-    targetRange: [2, 5],
+    description: 'Vence {target} partidas na Liga Global',
+    targetRange: [3, 8],
     rewardBase: 1500,
   },
   score_goals: {
     title: 'Artilheiro',
-    description: 'Marca {target} golos em partidas rápidas',
-    targetRange: [3, 8],
+    description: 'Marca {target} gols na Liga Global',
+    targetRange: [4, 12],
     rewardBase: 1000,
   },
   win_streak: {
     title: 'Imparável',
-    description: 'Conquista uma sequência de {target} vitórias',
+    description: 'Conquista {target} vitórias consecutivas na Liga Global',
     targetRange: [3, 5],
     rewardBase: 2500,
   },
   clean_sheet: {
     title: 'Muralha',
-    description: 'Vence {target} partidas sem sofrer golos',
+    description: 'Vence {target} partidas sem sofrer gols na Liga Global',
     targetRange: [1, 3],
     rewardBase: 2000,
   },
   comeback: {
     title: 'Virada Épica',
-    description: 'Vira {target} partidas estando a perder',
+    description: 'Vira {target} partidas na Liga Global (perdendo e depois vencendo)',
     targetRange: [1, 2],
     rewardBase: 3000,
   },
   dominant_win: {
     title: 'Dominação',
-    description: 'Vence por {target}+ golos de diferença',
+    description: 'Vence por {target}+ gols de diferença na Liga Global',
     targetRange: [3, 5],
     rewardBase: 2000,
   },
   quick_goals: {
-    title: 'Início Fulminante',
-    description: 'Marca nos primeiros 15 minutos em {target} partidas',
-    targetRange: [2, 4],
+    title: 'Goleador do Dia',
+    description: 'Marca em {target} partidas diferentes na Liga Global hoje',
+    targetRange: [3, 6],
     rewardBase: 1500,
   },
 };
 
 export function generateDailyChallenges(seed: string): DailyChallenge[] {
-  // PRNG determinístico (LCG) — mesma seed = mesmos challenges no dia, mas cada
-  // chamada de rng() avança o estado interno. O algoritmo original usava
-  // Math.sin(hash) que retornava valor constante → while loop infinito.
   let s = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1;
   const rng = () => {
     s = (s * 9301 + 49297) % 233280;
@@ -83,7 +80,6 @@ export function generateDailyChallenges(seed: string): DailyChallenge[] {
   const types = Object.keys(CHALLENGE_TEMPLATES) as ChallengeType[];
   const selectedTypes: ChallengeType[] = [];
 
-  // Select 3 unique challenge types
   while (selectedTypes.length < 3) {
     const idx = Math.floor(rng() * types.length);
     const type = types[idx];
@@ -115,8 +111,6 @@ export function generateDailyChallenges(seed: string): DailyChallenge[] {
 export function shouldResetDailyChallenges(lastResetDate: string): boolean {
   const last = new Date(lastResetDate);
   const now = new Date();
-
-  // Reset if different day (UTC)
   return (
     last.getUTCFullYear() !== now.getUTCFullYear() ||
     last.getUTCMonth() !== now.getUTCMonth() ||
@@ -172,7 +166,6 @@ export function checkChallengeCompletion(
       break;
 
     case 'win_streak':
-      // This is handled by the streak system externally
       break;
 
     case 'clean_sheet':
@@ -198,7 +191,7 @@ export function checkChallengeCompletion(
       break;
 
     case 'quick_goals':
-      if (matchData.firstGoalMinute !== undefined && matchData.firstGoalMinute <= 15) {
+      if (matchData.homeScore > 0) {
         updated = updateChallengeProgress(updated, 'quick_goals');
       }
       break;
