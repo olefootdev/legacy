@@ -147,6 +147,7 @@ export async function createLeague(input: {
   entryFee: number;
   clubName: string;
   clubShort?: string;
+  overall?: number;
 }): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
   const sb = getSupabase();
   if (!sb) return { ok: false, error: 'Supabase não configurado' };
@@ -157,6 +158,7 @@ export async function createLeague(input: {
     p_currency: 'EXP',
     p_club_name: input.clubName,
     p_club_short: input.clubShort ?? null,
+    p_overall: input.overall ?? 50,
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true, data };

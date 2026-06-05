@@ -167,6 +167,7 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
     const r = await createLeague({
       name: name.trim(), maxTeams, entryFee: Number(entryFee),
       clubName: club?.name ?? 'Clube', clubShort: club?.shortName,
+      overall: clubOverall,
     });
     setBusy(false);
     if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
