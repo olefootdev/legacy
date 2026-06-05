@@ -1053,17 +1053,54 @@ Deno.serve(async (_req: Request) => {
     }
   }
 
-  // 3.5 Incluir times órfãos na 3ª divisão (registrados mid-season, aguardam próxima season)
+  // 3.5 Incluir times órfãos na 3ª divisão + gerar fixtures mid-season
   if (state.status === 'active') {
-    const { data: orphanTeams } = await supabase
-      .from('global_league_teams')
-      .select('id')
-      .is('division', null);
-    if (orphanTeams && orphanTeams.length > 0) {
-      await supabase
-        .from('global_league_teams')
-        .update({ division: 3 })
-        .is('division', null);
+    // (a) Setar division=3 para times sem divisão
+    await supabase.from('global_league_teams').update({ division: 3 }).is('division', null);
+
+    // (b) Detectar times na Div 3 sem fixtures nas rodadas futuras e gerar confrontos
+    const [{ data: div3Teams }, { data: scheduledRounds }] = await Promise.all([
+      supabase.from('global_league_teams').select('*').eq('division', 3),
+      supabase.from('global_league_rounds').select('id,round_number,is_returning')
+        .eq('season_id', state.season_id).eq('round_type', 'league').eq('status', 'scheduled')
+        .order('round_number', { ascending: true }),
+    ]);
+    const d3teams = (div3Teams as TeamRow[] | null) ?? [];
+    const futureRounds = (scheduledRounds as Array<{ id: string; round_number: number; is_returning: boolean }>) ?? [];
+    if (d3teams.length >= 2 && futureRounds.length > 0) {
+      const futureRoundIds = futureRounds.map(r => r.id);
+      const { data: existingFx } = await supabase
+        .from('global_league_fixtures').select('home_team_id,away_team_id')
+        .in('round_id', futureRoundIds).eq('division', '3');
+      const teamsWithFx = new Set<string>();
+      for (const fx of (existingFx ?? []) as Array<{ home_team_id: string; away_team_id: string }>) {
+        teamsWithFx.add(fx.home_team_id); teamsWithFx.add(fx.away_team_id);
+      }
+      const newTeams = d3teams.filter(t => !teamsWithFx.has(t.id));
+      const existingDiv3 = d3teams.filter(t => teamsWithFx.has(t.id));
+      if (newTeams.length > 0 && existingDiv3.length > 0) {
+        const fxToInsert: any[] = [];
+        for (const nt of newTeams) {
+          let oppIdx = 0;
+          for (const rd of futureRounds) {
+            if (oppIdx >= existingDiv3.length) oppIdx = 0;
+            const opp = existingDiv3[oppIdx];
+            const [h, a] = rd.is_returning ? [opp, nt] : [nt, opp];
+            fxToInsert.push({
+              id: NEW_ID(), round_id: rd.id, division: '3',
+              home_team_id: h.id, away_team_id: a.id,
+              home_team_name: h.club_name, away_team_name: a.club_name,
+              home_overall: h.overall, away_overall: a.overall,
+              score_home: 0, score_away: 0, current_minute: 0, status: 'scheduled',
+            });
+            oppIdx++;
+          }
+        }
+        if (fxToInsert.length > 0) {
+          await supabase.from('global_league_fixtures').upsert(fxToInsert as any, { onConflict: 'id' });
+          console.log(`[tick] integrateNewTeams: ${fxToInsert.length} fixtures for ${newTeams.map(t => t.club_name).join(', ')}`);
+        }
+      }
     }
   }
 
