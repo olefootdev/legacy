@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown } from 'lucide-react';
+import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown, Star } from 'lucide-react';
 import { useGameStore } from '@/game/store';
+import { overallFromAttributes } from '@/entities/player';
 import {
   fetchOpenLeagues,
   fetchMyLeagues,
@@ -143,10 +144,11 @@ function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick
   );
 }
 
-function CreateLeagueModal({ open, onClose, onCreated }: {
+function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
   open: boolean;
   onClose: () => void;
   onCreated: (leagueId: string) => void;
+  clubOverall: number;
 }) {
   const club = useGameStore((s) => s.club);
   const [name, setName] = useState('');
@@ -190,7 +192,7 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
         <form onSubmit={(e) => void onSubmit(e)} className="p-6 space-y-5">
           <label className="block">
             <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Nome da Liga</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} required
+            <input value={name} onChange={(e) => setName(e.target.value)} required minLength={3} maxLength={40}
               placeholder="Ex: Copa dos Campeões"
               className="mt-1.5 w-full rounded-md border border-white/10 bg-deep-black px-4 py-3 text-sm text-white placeholder:text-white/20 focus:border-neon-yellow/40 focus:outline-none" />
           </label>
@@ -211,7 +213,7 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
           </div>
           <label className="block">
             <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Valor de Inscrição (EXP)</span>
-            <input type="number" value={entryFee} onChange={(e) => setEntryFee(e.target.value)} required min={100}
+            <input type="number" value={entryFee} onChange={(e) => setEntryFee(e.target.value)} required min={100} max={10000000}
               className="mt-1.5 w-full rounded-md border border-white/10 bg-deep-black px-4 py-3 text-sm text-white tabular-nums focus:border-neon-yellow/40 focus:outline-none" />
           </label>
 
@@ -236,7 +238,7 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
               <span className="text-rose-400">✗</span> {error}
             </div>
           )}
-          <button type="submit" disabled={busy || !name.trim() || !entryFee}
+          <button type="submit" disabled={busy || name.trim().length < 3 || !entryFee || Number(entryFee) < 100}
             className="btn-primary w-full disabled:opacity-40 disabled:pointer-events-none">
             <span className="btn-primary-inner justify-center py-1.5">
               {busy ? 'Criando…' : 'Criar Liga Premiada'}
@@ -248,7 +250,7 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
   );
 }
 
-function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () => void }) {
+function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leagueId: string; onBack: () => void; clubOverall: number; justCreated?: boolean }) {
   const club = useGameStore((s) => s.club);
   const [league, setLeague] = useState<PremiumLeague | null>(null);
   const [entries, setEntries] = useState<PremiumLeagueEntry[]>([]);
@@ -257,6 +259,7 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
   const [myEntry, setMyEntry] = useState(false);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCreatedBanner, setShowCreatedBanner] = useState(!!justCreated);
 
   const load = useCallback(async () => {
     const d = await fetchLeagueDetail(leagueId);
@@ -270,13 +273,24 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
     setMyEntry(d.entries.some((e) => e.user_id === user?.id));
   }, [leagueId]);
 
-  useEffect(() => { void load(); const t = setInterval(() => void load(), 8000); return () => clearInterval(t); }, [load]);
+  useEffect(() => {
+    void load();
+    if (!league || league.status !== 'live') return;
+    const t = setInterval(() => void load(), 8000);
+    return () => clearInterval(t);
+  }, [load, league?.status]);
+
+  useEffect(() => {
+    if (!showCreatedBanner) return;
+    const t = setTimeout(() => setShowCreatedBanner(false), 5000);
+    return () => clearTimeout(t);
+  }, [showCreatedBanner]);
 
   if (!league) return <div className="py-16 text-center text-white/30 text-sm">Carregando…</div>;
 
   const onJoin = async () => {
     setJoining(true); setError(null);
-    const r = await joinLeague({ leagueId, clubName: club?.name ?? 'Clube', clubShort: club?.shortName, overall: 50 });
+    const r = await joinLeague({ leagueId, clubName: club?.name ?? 'Clube', clubShort: club?.shortName, overall: clubOverall });
     setJoining(false);
     if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
     void load();
@@ -299,6 +313,13 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
       <button onClick={onBack} className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-white/40 hover:text-neon-yellow transition">
         ← Todas as Ligas
       </button>
+
+      {showCreatedBanner && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          className="rounded-md border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-[12px] text-neon-green font-bold text-center">
+          Liga criada com sucesso! Compartilhe o link para convidar adversários.
+        </motion.div>
+      )}
 
       {/* Hero */}
       <motion.div
@@ -413,7 +434,11 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
             {entries.map((e, i) => (
               <div key={e.id} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-[#0b0b0b] px-3 py-2">
                 <span className="font-display text-[10px] font-bold text-white/25 tabular-nums">{i + 1}</span>
-                <span className="text-[11px] font-bold text-white truncate">{e.club_name}</span>
+                <span className="text-[11px] font-bold text-white truncate flex-1">{e.club_name}</span>
+                {e.user_id === league.creator_id && (
+                  <Star className="h-3 w-3 text-neon-yellow/60 shrink-0" />
+                )}
+                <span className="text-[9px] font-bold text-white/25 tabular-nums shrink-0">{e.overall}</span>
               </div>
             ))}
           </div>
@@ -480,16 +505,32 @@ function LeagueDetailView({ leagueId, onBack }: { leagueId: string; onBack: () =
       <div className="sports-panel p-4 space-y-2" style={{ borderRadius: 'var(--radius-md)' }}>
         <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/30">Distribuição do Pote</p>
         <div className="grid grid-cols-6 gap-1 text-center text-[10px]">
-          {[{ label: '🏆', pct: '40%' }, { label: '🥈', pct: '20%' }, { label: '🥉', pct: '12%' }, { label: '4º', pct: '8%' }, { label: 'Criador', pct: '10%' }, { label: 'Casa', pct: '10%' }].map((s) => (
+          {[
+            { label: '🏆', pct: league.pct_champion },
+            { label: '🥈', pct: league.pct_vice },
+            { label: '🥉', pct: league.pct_third },
+            { label: '4º', pct: league.pct_fourth },
+            { label: 'Criador', pct: league.pct_creator },
+            { label: 'Casa', pct: league.pct_house },
+          ].map((s) => (
             <div key={s.label}>
               <p className="text-[12px]">{s.label}</p>
-              <p className="font-bold text-white/50 tabular-nums">{s.pct}</p>
+              <p className="font-bold text-white/50 tabular-nums">{s.pct}%</p>
             </div>
           ))}
         </div>
       </div>
     </div>
   );
+}
+
+function useClubOverall(): number {
+  const players = useGameStore((s) => s.players);
+  return useMemo(() => {
+    const all = Object.values(players ?? {});
+    if (all.length === 0) return 50;
+    return Math.round(all.reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) / all.length);
+  }, [players]);
 }
 
 export function PremiumLeagues() {
@@ -501,6 +542,8 @@ export function PremiumLeagues() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [slugNotFound, setSlugNotFound] = useState(false);
+  const [justCreated, setJustCreated] = useState(false);
+  const clubOverall = useClubOverall();
 
   const load = useCallback(async () => {
     const [open, mine] = await Promise.all([fetchOpenLeagues(), fetchMyLeagues()]);
@@ -522,7 +565,7 @@ export function PremiumLeagues() {
   if (selectedId) {
     return (
       <div className="mx-auto max-w-lg px-4 py-6">
-        <LeagueDetailView leagueId={selectedId} onBack={() => { setSelectedId(null); void load(); }} />
+        <LeagueDetailView leagueId={selectedId} onBack={() => { setSelectedId(null); setJustCreated(false); void load(); }} clubOverall={clubOverall} justCreated={justCreated} />
       </div>
     );
   }
@@ -615,7 +658,7 @@ export function PremiumLeagues() {
         </motion.div>
       )}
 
-      <CreateLeagueModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(id) => { void load(); if (id) setSelectedId(id); }} />
+      <CreateLeagueModal open={createOpen} onClose={() => setCreateOpen(false)} clubOverall={clubOverall} onCreated={(id) => { setJustCreated(true); void load(); if (id) setSelectedId(id); }} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ export interface PremiumLeague {
   id: string;
   name: string;
   slug: string;
+  creator_id: string;
   creator_club_name: string;
   creator_type: 'manager' | 'admin';
   max_teams: number;
@@ -11,6 +12,12 @@ export interface PremiumLeague {
   entry_fee: number;
   currency: 'EXP' | 'OLE' | 'BRO';
   total_pool: number;
+  pct_champion: number;
+  pct_vice: number;
+  pct_third: number;
+  pct_fourth: number;
+  pct_creator: number;
+  pct_house: number;
   status: 'open' | 'live' | 'finished' | 'cancelled';
   current_round: number | null;
   total_rounds: number | null;
@@ -62,6 +69,20 @@ export interface PremiumLeagueChampion {
   currency: string;
 }
 
+function normalizePremiumLeague(l: PremiumLeague): PremiumLeague {
+  return {
+    ...l,
+    entry_fee: Number(l.entry_fee),
+    total_pool: Number(l.total_pool),
+    pct_champion: Number(l.pct_champion ?? 40),
+    pct_vice: Number(l.pct_vice ?? 20),
+    pct_third: Number(l.pct_third ?? 12),
+    pct_fourth: Number(l.pct_fourth ?? 8),
+    pct_creator: Number(l.pct_creator ?? 10),
+    pct_house: Number(l.pct_house ?? 10),
+  };
+}
+
 export async function fetchOpenLeagues(): Promise<PremiumLeague[]> {
   const sb = getSupabase();
   if (!sb) return [];
@@ -70,7 +91,7 @@ export async function fetchOpenLeagues(): Promise<PremiumLeague[]> {
     .select('*')
     .in('status', ['open', 'live'])
     .order('created_at', { ascending: false });
-  return (data ?? []) as PremiumLeague[];
+  return ((data ?? []) as PremiumLeague[]).map(normalizePremiumLeague);
 }
 
 export async function fetchMyLeagues(): Promise<PremiumLeague[]> {
@@ -92,7 +113,7 @@ export async function fetchMyLeagues(): Promise<PremiumLeague[]> {
     .select('*')
     .in('id', ids)
     .order('created_at', { ascending: false });
-  return (data ?? []) as PremiumLeague[];
+  return ((data ?? []) as PremiumLeague[]).map(normalizePremiumLeague);
 }
 
 export async function fetchLeagueDetail(leagueId: string): Promise<{
@@ -113,7 +134,7 @@ export async function fetchLeagueDetail(leagueId: string): Promise<{
 
   if (!leagueRes.data) return null;
   return {
-    league: leagueRes.data as PremiumLeague,
+    league: normalizePremiumLeague(leagueRes.data as PremiumLeague),
     entries: (entriesRes.data ?? []) as PremiumLeagueEntry[],
     fixtures: (fixturesRes.data ?? []) as PremiumLeagueFixture[],
     champions: (championsRes.data ?? []) as PremiumLeagueChampion[],
@@ -188,14 +209,14 @@ export async function findLeagueBySlug(slug: string): Promise<PremiumLeague | nu
     .select('*')
     .eq('slug', trimmed)
     .maybeSingle();
-  if (data) return data as PremiumLeague;
+  if (data) return normalizePremiumLeague(data as PremiumLeague);
   const { data: fuzzy } = await sb
     .from('premium_leagues')
     .select('*')
     .like('slug', `${trimmed}%`)
     .limit(1)
     .maybeSingle();
-  return (fuzzy ?? null) as PremiumLeague | null;
+  return fuzzy ? normalizePremiumLeague(fuzzy as PremiumLeague) : null;
 }
 
 export function inviteLinkForLeague(slug: string): string {
