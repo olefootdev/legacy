@@ -45,9 +45,11 @@ export async function registerGlobalTeamIdentity(opts: {
       return { ok: false, error: selErr.message };
     }
     if (existing) {
-      // Time já existe — não tocar. Mutar a PK orfana fixtures/events.
       return { ok: true };
     }
+    const { data: stateRow } = await supabase
+      .from('global_league_state').select('status').eq('id', 'current').maybeSingle();
+    const leagueActive = (stateRow as { status: string } | null)?.status === 'active';
     const { error: insErr } = await supabase
       .from('global_league_teams')
       .insert({
@@ -57,6 +59,7 @@ export async function registerGlobalTeamIdentity(opts: {
         club_short: opts.clubShort,
         overall: opts.overall,
         registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
+        ...(leagueActive ? { division: 3 } : {}),
       });
     if (insErr) {
       console.warn('[globalLeague] registerGlobalTeamIdentity insert error:', insErr.message);

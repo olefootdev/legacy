@@ -141,6 +141,13 @@ export async function createLeague(input: {
   return { ok: true, data };
 }
 
+const JOIN_ERROR_MAP: Record<string, string> = {
+  'league is full': 'Liga completa! Todas as vagas foram preenchidas.',
+  'league is not open for entries': 'Liga já iniciou — inscrições encerradas.',
+  'already entered this league': 'Você já está inscrito nesta liga.',
+  'must be authenticated': 'Faça login para se inscrever.',
+};
+
 export async function joinLeague(input: {
   leagueId: string;
   clubName: string;
@@ -155,7 +162,7 @@ export async function joinLeague(input: {
     p_club_short: input.clubShort ?? null,
     p_overall: input.overall ?? 50,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: JOIN_ERROR_MAP[error.message] ?? error.message };
   const result = Array.isArray(data) ? data[0] : data;
   if (result?.league_full) {
     await sb.rpc('start_premium_league', { p_league_id: input.leagueId });
@@ -175,12 +182,20 @@ export async function findLeagueByInvite(code: string): Promise<PremiumLeague | 
 export async function findLeagueBySlug(slug: string): Promise<PremiumLeague | null> {
   const sb = getSupabase();
   if (!sb) return null;
+  const trimmed = slug.trim().toLowerCase();
   const { data } = await sb
     .from('premium_leagues')
     .select('*')
-    .eq('slug', slug.trim())
+    .eq('slug', trimmed)
     .maybeSingle();
-  return data as PremiumLeague | null;
+  if (data) return data as PremiumLeague;
+  const { data: fuzzy } = await sb
+    .from('premium_leagues')
+    .select('*')
+    .like('slug', `${trimmed}%`)
+    .limit(1)
+    .maybeSingle();
+  return (fuzzy ?? null) as PremiumLeague | null;
 }
 
 export function inviteLinkForLeague(slug: string): string {

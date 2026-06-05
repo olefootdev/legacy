@@ -96,6 +96,66 @@ function generateLeagueFixtures(teams: TeamRow[], seasonId: string, nowMs: numbe
   return { rounds, fixtures };
 }
 
+/**
+ * Detecta times na Divisão 3 que não possuem nenhuma fixture nas rodadas
+ * futuras (scheduled) e gera confrontos para eles. Isso garante que times
+ * registrados mid-season comecem a jogar imediatamente.
+ */
+async function integrateNewTeams(sb: SupabaseClient, seasonId: string): Promise<number> {
+  type ScheduledRound = { id: string; round_number: number; is_returning: boolean };
+  const [{ data: div3Teams }, { data: scheduledRounds }] = await Promise.all([
+    sb.from('global_league_teams').select('*').eq('division', 3),
+    sb.from('global_league_rounds').select('id,round_number,is_returning')
+      .eq('season_id', seasonId).eq('round_type', 'league').eq('status', 'scheduled')
+      .order('round_number', { ascending: true }),
+  ]);
+  const teams = (div3Teams as TeamRow[] | null) ?? [];
+  const rounds = (scheduledRounds as ScheduledRound[] | null) ?? [];
+  if (teams.length < 2 || rounds.length === 0) return 0;
+
+  const teamIds = new Set(teams.map(t => t.id));
+  const roundIds = rounds.map(r => r.id);
+  const { data: existingFixtures } = await sb
+    .from('global_league_fixtures').select('home_team_id,away_team_id')
+    .in('round_id', roundIds).eq('division', '3');
+
+  const teamsWithFixtures = new Set<string>();
+  for (const fx of (existingFixtures ?? []) as { home_team_id: string; away_team_id: string }[]) {
+    teamsWithFixtures.add(fx.home_team_id);
+    teamsWithFixtures.add(fx.away_team_id);
+  }
+  const newTeams = teams.filter(t => teamIds.has(t.id) && !teamsWithFixtures.has(t.id));
+  if (newTeams.length === 0) return 0;
+
+  const existingDiv3 = teams.filter(t => teamsWithFixtures.has(t.id));
+  if (existingDiv3.length === 0) return 0;
+
+  const fixturesToInsert: Omit<FixtureRow, 'kickoff_ms' | 'finished_at_ms'>[] = [];
+  for (const newTeam of newTeams) {
+    let opponentIdx = 0;
+    for (const round of rounds) {
+      if (opponentIdx >= existingDiv3.length) opponentIdx = 0;
+      const opponent = existingDiv3[opponentIdx]!;
+      const isReturn = round.is_returning;
+      const [home, away] = isReturn ? [opponent, newTeam] : [newTeam, opponent];
+      fixturesToInsert.push({
+        id: NEW_ID(), round_id: round.id, division: '3',
+        home_team_id: home.id, away_team_id: away.id,
+        home_team_name: home.club_name, away_team_name: away.club_name,
+        home_overall: home.overall, away_overall: away.overall,
+        score_home: 0, score_away: 0, current_minute: 0, status: 'scheduled',
+      });
+      opponentIdx++;
+    }
+  }
+  if (fixturesToInsert.length === 0) return 0;
+
+  const { error } = await sb.from('global_league_fixtures').upsert(fixturesToInsert as never[], { onConflict: 'id' });
+  if (error) { console.error('[cycle] integrateNewTeams upsert failed:', error.message); return 0; }
+  console.log('[cycle] integrateNewTeams: injected ' + fixturesToInsert.length + ' fixtures for ' + newTeams.length + ' new team(s): ' + newTeams.map(t => t.club_name).join(', '));
+  return fixturesToInsert.length;
+}
+
 export async function runGlobalLeagueCycle(sb: SupabaseClient): Promise<CycleResult> {
   const now = Date.now();
   const { data: stateData, error: stateErr } = await sb
@@ -150,6 +210,10 @@ export async function runGlobalLeagueCycle(sb: SupabaseClient): Promise<CycleRes
       }).eq('id', 'current');
       return { ok: true, step: 'transition-to-league', rounds: rounds.length, fixtures: fixtures.length };
     }
+  }
+
+  if (state.status === 'active') {
+    await integrateNewTeams(sb, state.season_id);
   }
 
   const { data: pending, error: pendingErr } = await sb
@@ -369,16 +433,17 @@ export async function enrollClubInGlobalLeague(
   sb: SupabaseClient,
   opts: { managerId: string; clubName: string; clubShort: string; overall: number },
 ): Promise<{ ok: boolean; teamId?: string; error?: string }> {
-  const { data: existing } = await sb
-    .from('global_league_teams')
-    .select('*')
-    .eq('manager_id', opts.managerId)
-    .maybeSingle();
+  const [{ data: existing }, { data: stateData }] = await Promise.all([
+    sb.from('global_league_teams').select('*').eq('manager_id', opts.managerId).maybeSingle(),
+    sb.from('global_league_state').select('status').eq('id', 'current').maybeSingle(),
+  ]);
   const existingTeam = existing as TeamRow | null;
+  const leagueActive = (stateData as { status: string } | null)?.status === 'active';
   const teamId = existingTeam?.id ?? ('gt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
   const team: TeamRow = {
     ...(existingTeam ?? {
-      division: null, position: null, previous_position: null,
+      division: leagueActive ? 3 : null,
+      position: null, previous_position: null,
       playoff_points: 0, playoff_matches_played: 0, playoff_wins: 0,
       playoff_draws: 0, playoff_losses: 0, playoff_goals_for: 0, playoff_goals_against: 0,
       points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
@@ -394,6 +459,6 @@ export async function enrollClubInGlobalLeague(
   };
   const { error } = await sb.from('global_league_teams').upsert(team as never, { onConflict: 'manager_id' });
   if (error) { console.error('[enrollClub] failed:', error.message); return { ok: false, error: error.message }; }
-  console.log('[enrollClub] ' + opts.clubName + ' (' + opts.managerId + ') enrolled, id=' + teamId);
+  console.log('[enrollClub] ' + opts.clubName + ' (' + opts.managerId + ') enrolled, id=' + teamId + (leagueActive ? ' → div3' : ''));
   return { ok: true, teamId };
 }

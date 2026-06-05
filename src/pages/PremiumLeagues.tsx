@@ -500,6 +500,7 @@ export function PremiumLeagues() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [slugNotFound, setSlugNotFound] = useState(false);
 
   const load = useCallback(async () => {
     const [open, mine] = await Promise.all([fetchOpenLeagues(), fetchMyLeagues()]);
@@ -513,7 +514,8 @@ export function PremiumLeagues() {
   useEffect(() => {
     if (!leagueSlug) return;
     void findLeagueBySlug(leagueSlug).then((l) => {
-      if (l) setSelectedId(l.id);
+      if (l) { setSelectedId(l.id); setSlugNotFound(false); }
+      else setSlugNotFound(true);
     });
   }, [leagueSlug]);
 
@@ -552,6 +554,14 @@ export function PremiumLeagues() {
           </button>
         </div>
       </motion.div>
+
+      {slugNotFound && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="rounded-md border border-rose-500/20 bg-rose-500/[0.06] px-4 py-3 text-[12px] text-rose-200">
+          <span className="font-bold">Liga não encontrada.</span>{' '}
+          O link pode estar incorreto. Veja as ligas abertas abaixo:
+        </motion.div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-md bg-white/[0.03] border border-white/[0.06] p-1">
