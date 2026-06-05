@@ -146,7 +146,7 @@ function LeagueCard({ league, onClick, delay }: { league: PremiumLeague; onClick
 function CreateLeagueModal({ open, onClose, onCreated }: {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (leagueId: string) => void;
 }) {
   const club = useGameStore((s) => s.club);
   const [name, setName] = useState('');
@@ -168,7 +168,7 @@ function CreateLeagueModal({ open, onClose, onCreated }: {
     });
     setBusy(false);
     if (!r.ok) { setError('error' in r ? r.error : 'Erro'); return; }
-    onCreated();
+    onCreated(r.data?.id ?? '');
     onClose();
   };
 
@@ -605,7 +605,7 @@ export function PremiumLeagues() {
         </motion.div>
       )}
 
-      <CreateLeagueModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={() => void load()} />
+      <CreateLeagueModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(id) => { void load(); if (id) setSelectedId(id); }} />
     </div>
   );
 }
