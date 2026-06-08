@@ -18,6 +18,10 @@ import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/mat
 import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
 import { MatchFindingOverlay } from '@/components/match/MatchFindingOverlay';
+import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
+import { simulateMatchN } from '@/match/matchMonteCarlo';
+import { computeMatchContextModifiers } from '@/match/contextFactors';
+import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import {
   fetchFriendlyChallengeById,
   userParticipatesInChallenge,
@@ -2051,6 +2055,31 @@ export function MatchQuick() {
     [live?.awayRoster, fixture?.opponent, session],
   );
 
+  // ── Fase 1 PR-B — Predição V/E/D Monte Carlo pré-jogo ──────────────────
+  // Reroda só se mudarem inputs estruturais. Seed deriva do id do fixture pra
+  // o manager ver a MESMA leitura ao reabrir (não muda a cada refresh).
+  const matchPrediction = useMemo(() => {
+    if (!fixture?.opponent || fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') {
+      return null;
+    }
+    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth });
+    if (effective.startersCounted === 0) return null;
+    const mods = computeMatchContextModifiers({
+      isHome: true,
+      effectiveTeamStrength: effective,
+    });
+    const seed = Array.from(fixture.opponent.id).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
+    return simulateMatchN({
+      homeTeamOvr: effective.effectiveOverall,
+      awayTeamOvr: fixture.opponent.strength ?? 72,
+      contextModifiers: mods,
+      effectiveHomeStrength: effective,
+      homeRoster: Object.values(playersById),
+      n: 1000,
+      seed,
+    });
+  }, [fixture?.opponent, playersById, playerHealth]);
+
   const goalScorerOverlayProps = useMemo(() => {
     if (!live) return null;
     const ev = live.events[0];
@@ -2577,16 +2606,25 @@ export function MatchQuick() {
               </Link>
             </div>
           ) : (
-            <p
-              className="italic text-white/55 text-center py-6"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(15px, 2vw, 18px)',
-                lineHeight: 1.4,
-              }}
-            >
-              “a preparar a partida…”
-            </p>
+            <div className="space-y-4">
+              {matchPrediction ? (
+                <MatchPredictionPanel
+                  result={matchPrediction}
+                  homeName={club?.shortName ?? 'Casa'}
+                  awayName={fixture?.opponent?.shortName ?? 'Visitante'}
+                />
+              ) : null}
+              <p
+                className="italic text-white/55 text-center py-2"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontSize: 'clamp(15px, 2vw, 18px)',
+                  lineHeight: 1.4,
+                }}
+              >
+                "a preparar a partida…"
+              </p>
+            </div>
           )}
         </div>
       )}
