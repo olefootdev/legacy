@@ -1082,7 +1082,8 @@ Deno.serve(async (_req: Request) => {
   }
 
   // 3.5 Incluir times órfãos na 3ª divisão + gerar fixtures mid-season
-  if (state.status === 'active') {
+  // Skip em REST: igual blocos 1 e 3, evita carga DB desnecessária à noite.
+  if (!inLeagueRest && state.status === 'active') {
     // (a) Setar division=3 para times sem divisão
     await supabase.from('global_league_teams').update({ division: 3 }).is('division', null);
 
