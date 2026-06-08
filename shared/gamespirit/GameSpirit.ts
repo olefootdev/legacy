@@ -440,6 +440,7 @@ export function buildSpiritContext(input: {
           crowdSupport: input.crowdSupport,
           avgHomeFatigue: avgHomeFatigueRaw,
           tacticalMentality: input.tacticalMentality,
+          opponentStrength: input.opponentStrength,
         },
         input.contextModifiers,
       )
@@ -449,6 +450,7 @@ export function buildSpiritContext(input: {
   const crowdSupportFinal = ctxApplied?.crowdSupport ?? input.crowdSupport;
   const avgHomeFatigue = ctxApplied?.avgHomeFatigue ?? avgHomeFatigueRaw;
   const tacticalMentalityFinal = ctxApplied?.tacticalMentality ?? input.tacticalMentality;
+  const opponentStrengthFinal = ctxApplied?.opponentStrength ?? input.opponentStrength;
 
   const crowdPressure = crowdSpiritFromSupport(crowdSupportFinal);
 
@@ -480,7 +482,7 @@ export function buildSpiritContext(input: {
     crowdSupport: crowdSupportFinal,
     tacticalMentality: tacticalMentalityFinal,
     tacticalStyle: input.tacticalStyle,
-    opponentStrength: input.opponentStrength,
+    opponentStrength: opponentStrengthFinal,
     homeTeamAvg: homeTeamAvgFinal,
     nearbyOpponentDist: dist(input.ball, mirrorAttack),
     ballZone,

@@ -65,6 +65,13 @@ export interface ApplyContextInput {
   crowdSupport: number;
   avgHomeFatigue: number;
   tacticalMentality: number;
+  /**
+   * OVR do adversário. Modulado simetricamente — quando user joga em casa,
+   * opp tem leve buff atacante (pra parecer ameaçador, evita "campo vazio");
+   * defensiva levemente debuffada (parte da vantagem do mando).
+   * Quando user joga fora, opp ganha proteção em casa (defesa + ataque).
+   */
+  opponentStrength: number;
 }
 
 export interface ApplyContextOutput extends ApplyContextInput {
@@ -77,8 +84,11 @@ export interface ApplyContextOutput extends ApplyContextInput {
 // ──────────────────────────────────────────────────────────────────────────
 
 // Mando de campo: ~57% de vitórias mandantes na média histórica.
-const HOME_ADVANTAGE_IN = 1.07;
-const HOME_ADVANTAGE_AWAY = 0.95;
+// CALIBRAÇÃO 2026-06-08: reduzido de 1.07/0.95 → 1.04/0.97. Feedback do
+// usuário: motor live amplificava demais, away parecia "ausente". Mando
+// fica sutil no motor; Monte Carlo (predição) compensa com ratio simétrico.
+const HOME_ADVANTAGE_IN = 1.04;
+const HOME_ADVANTAGE_AWAY = 0.97;
 
 // Descanso — penalidade por congestão de calendário.
 // 1 dia = jogo back-to-back (puxado), 7+ dias = totalmente descansado.
@@ -103,7 +113,7 @@ const IMPORTANCE_MULTS: Record<MatchImportance, number> = {
 
 // Cap final pra garantir nada escapa dos ranges.
 const CAPS = {
-  homeAdvantage: [0.90, 1.15] as const,
+  homeAdvantage: [0.92, 1.10] as const,
   restMultiplier: [0.80, 1.12] as const,
   derbyIntensity: [1.0, 1.25] as const,
   importance: [1.0, 1.20] as const,
@@ -180,22 +190,33 @@ export function applyContextModifiers(
   // Mentalidade tática sobe em jogo importante.
   const tacticalMentality = base.tacticalMentality * mods.importance;
 
+  // Adversário simétrico — recebe o INVERSO do mando + amplificação por
+  // clássico. Resolve "away parece ausente" quando user jogava em casa.
+  //   isHome=true  → opponentMod = 0.96 (~3% mais fraco mas ainda PRESENTE)
+  //                + derby boost (clássico = todos vão pra cima)
+  //   isHome=false → opponentMod = 1.04 (mandante real recebe mando)
+  const opponentSymmetric = 2 - mods.homeAdvantage;
+  const opponentStrength = base.opponentStrength * opponentSymmetric * mods.derbyIntensity;
+
   // Clamps de sanidade pra evitar valores absurdos no motor.
   const clampedHomeAvg = clamp(homeTeamAvg, [0, 100]);
   const clampedCrowd = clamp(crowdSupport, [-1, 1.6]);
   const clampedFatigue = clamp(avgHomeFatigue, [0, 100]);
   const clampedMentality = clamp(tacticalMentality, [0, 1.2]);
+  const clampedOpp = clamp(opponentStrength, [0, 100]);
 
   return {
     homeTeamAvg: clampedHomeAvg,
     crowdSupport: clampedCrowd,
     avgHomeFatigue: clampedFatigue,
     tacticalMentality: clampedMentality,
+    opponentStrength: clampedOpp,
     appliedDelta: {
       homeTeamAvg: clampedHomeAvg - base.homeTeamAvg,
       crowdSupport: clampedCrowd - base.crowdSupport,
       avgHomeFatigue: clampedFatigue - base.avgHomeFatigue,
       tacticalMentality: clampedMentality - base.tacticalMentality,
+      opponentStrength: clampedOpp - base.opponentStrength,
     },
   };
 }

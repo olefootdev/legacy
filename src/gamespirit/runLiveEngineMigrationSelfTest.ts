@@ -76,6 +76,13 @@ const homeRoster: PlayerEntity[] = [
     ctxHome.homeTeamAvg > ctxAway.homeTeamAvg,
     `home=${ctxHome.homeTeamAvg.toFixed(2)} away=${ctxAway.homeTeamAvg.toFixed(2)}`,
   );
+  // Calibração 2026-06-08: opponentStrength deve ser MENOR quando user home
+  // (opp recebe inverso do mando) e MAIOR quando user away.
+  check(
+    'opponentStrength reduzido quando user home (away mais presente que era)',
+    ctxHome.opponentStrength < ctxAway.opponentStrength,
+    `user-home opp=${ctxHome.opponentStrength.toFixed(2)} user-away opp=${ctxAway.opponentStrength.toFixed(2)}`,
+  );
 }
 
 // ─── Test 3: sem contextModifiers ⇒ motor neutro (zero regressão) ──────────

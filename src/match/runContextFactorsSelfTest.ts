@@ -95,23 +95,25 @@ function approx(a: number, b: number, eps = 0.001): boolean {
     breakdown: { homeAdvantage: '', rest: '', derby: '', importance: '', depletion: '' },
   };
   const out = applyContextModifiers(
-    { homeTeamAvg: 100, crowdSupport: 1.0, avgHomeFatigue: 80, tacticalMentality: 1.0 },
+    { homeTeamAvg: 100, crowdSupport: 1.0, avgHomeFatigue: 80, tacticalMentality: 1.0, opponentStrength: 80 },
     extreme,
   );
   check('homeTeamAvg clamped ≤ 100', out.homeTeamAvg <= 100, `got ${out.homeTeamAvg}`);
   check('crowdSupport clamped ≤ 1.6', out.crowdSupport <= 1.6, `got ${out.crowdSupport}`);
   check('avgHomeFatigue clamped ≤ 100', out.avgHomeFatigue <= 100, `got ${out.avgHomeFatigue}`);
   check('tacticalMentality clamped ≤ 1.2', out.tacticalMentality <= 1.2, `got ${out.tacticalMentality}`);
+  check('opponentStrength clamped ≤ 100', out.opponentStrength <= 100, `got ${out.opponentStrength}`);
 }
 
 // ─── Test 7: neutral = no-op ────────────────────────────────────────────────
 {
-  const base = { homeTeamAvg: 75, crowdSupport: 0.5, avgHomeFatigue: 40, tacticalMentality: 0.7 };
+  const base = { homeTeamAvg: 75, crowdSupport: 0.5, avgHomeFatigue: 40, tacticalMentality: 0.7, opponentStrength: 70 };
   const out = applyContextModifiers(base, neutralContextModifiers());
   check('neutral homeTeamAvg unchanged', approx(out.homeTeamAvg, base.homeTeamAvg));
   check('neutral crowdSupport unchanged', approx(out.crowdSupport, base.crowdSupport));
   check('neutral avgHomeFatigue unchanged', approx(out.avgHomeFatigue, base.avgHomeFatigue));
   check('neutral tacticalMentality unchanged', approx(out.tacticalMentality, base.tacticalMentality));
+  check('neutral opponentStrength unchanged', approx(out.opponentStrength, base.opponentStrength));
 }
 
 // ─── Test 8: rest INVERSO em avgHomeFatigue ─────────────────────────────────
@@ -127,11 +129,11 @@ function approx(a: number, b: number, eps = 0.001): boolean {
   };
   const baseFatigue = 50;
   const tiredOut = applyContextModifiers(
-    { homeTeamAvg: 75, crowdSupport: 0, avgHomeFatigue: baseFatigue, tacticalMentality: 1 },
+    { homeTeamAvg: 75, crowdSupport: 0, avgHomeFatigue: baseFatigue, tacticalMentality: 1, opponentStrength: 70 },
     tired,
   );
   const restedOut = applyContextModifiers(
-    { homeTeamAvg: 75, crowdSupport: 0, avgHomeFatigue: baseFatigue, tacticalMentality: 1 },
+    { homeTeamAvg: 75, crowdSupport: 0, avgHomeFatigue: baseFatigue, tacticalMentality: 1, opponentStrength: 70 },
     rested,
   );
   check(
@@ -148,10 +150,41 @@ function approx(a: number, b: number, eps = 0.001): boolean {
     isDerby: true,
     importance: 'final',
   });
-  const base = { homeTeamAvg: 78, crowdSupport: 0.6, avgHomeFatigue: 45, tacticalMentality: 0.8 };
+  const base = { homeTeamAvg: 78, crowdSupport: 0.6, avgHomeFatigue: 45, tacticalMentality: 0.8, opponentStrength: 72 };
   const out = applyContextModifiers(base, mods);
   check('appliedDelta.homeTeamAvg = post - pre', approx(out.appliedDelta.homeTeamAvg, out.homeTeamAvg - base.homeTeamAvg));
   check('appliedDelta.crowdSupport = post - pre', approx(out.appliedDelta.crowdSupport, out.crowdSupport - base.crowdSupport));
+}
+
+// ─── Test 11: opponentStrength simétrico — away presente ─────────────────────
+{
+  const modsHome = computeMatchContextModifiers({ isHome: true });
+  const modsAway = computeMatchContextModifiers({ isHome: false });
+  const base = { homeTeamAvg: 75, crowdSupport: 0.5, avgHomeFatigue: 40, tacticalMentality: 1, opponentStrength: 80 };
+  const outHome = applyContextModifiers(base, modsHome);
+  const outAway = applyContextModifiers(base, modsAway);
+  // isHome=true ⇒ homeAdvantage=1.04 ⇒ opp recebe 0.96 (sutil debuff)
+  // isHome=false ⇒ homeAdvantage=0.97 ⇒ opp recebe 1.03 (sutil buff por ser mandante real)
+  check(
+    'user home: opponentStrength reduzido suavemente (não anula)',
+    outHome.opponentStrength < base.opponentStrength && outHome.opponentStrength >= 0.95 * base.opponentStrength,
+    `user-home opp=${outHome.opponentStrength.toFixed(2)} (base=${base.opponentStrength})`,
+  );
+  check(
+    'user away: opponentStrength aumentado (mandante real)',
+    outAway.opponentStrength > base.opponentStrength,
+    `user-away opp=${outAway.opponentStrength.toFixed(2)} (base=${base.opponentStrength})`,
+  );
+}
+
+// ─── Test 12: homeAdvantage SUTIL (~4%) — não dominante ────────────────────
+{
+  const mods = computeMatchContextModifiers({ isHome: true });
+  check(
+    'homeAdvantage calibrado em 1.04 (suave)',
+    Math.abs(mods.homeAdvantage - 1.04) < 0.001,
+    `homeAdvantage=${mods.homeAdvantage}`,
+  );
 }
 
 // ─── Test 10: daysSinceLastMatchFromHistory ─────────────────────────────────
