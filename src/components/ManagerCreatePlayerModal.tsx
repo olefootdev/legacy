@@ -156,7 +156,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
   const [portraitStyleRegion, setPortraitStyleRegion] = useState<ManagerProspectPortraitStyleRegion>('europa');
   const [originTags, setOriginTags] = useState<string[]>([]);
   const [originText, setOriginText] = useState('');
-  const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(10);
+  const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(50);
   const [selectedPreset, setSelectedPreset] = useState('');
   /**
    * "Eu sou esse jogador" — marcado pede selfie e cai na fila admin pra gerar
@@ -206,7 +206,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
     setPortraitStyleRegion('europa');
     setOriginTags([]);
     setOriginText('');
-    setContractMatches(10);
+    setContractMatches(50);
     setSelectedPreset('');
     setIsSelfPlayer(false);
   }, []);

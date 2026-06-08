@@ -39,7 +39,7 @@ import { sanitizePlayerSeasonLedger } from '@/team/playerSeasonLedger';
 import { sanitizePlayerEvolutionTimeline } from '@/team/playerEvolutionTimeline';
 import { healthFromLegacyPlayer, recomputeAtRisk, emptyHealth } from '@/systems/playerHealth/reducer';
 import type { PlayerHealth } from '@/systems/playerHealth/types';
-import { hydrateLegacyGenesisContract } from '@/playerContracts/playerContracts';
+import { hydrateLegacyGenesisContract, migrateContractToBaseline250 } from '@/playerContracts/playerContracts';
 import { defaultShopCatalog, normalizeShopCatalog } from './shopCatalog';
 import { generateMissingAgentProfiles } from '@/agents/agentProfileLoader';
 import { createDefaultCoachAgent } from '@/coach/defaultCoach';
@@ -280,12 +280,14 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   const base = createInitialGameState();
   let players: OlefootGameState['players'] = { ...base.players };
   for (const [id, p] of Object.entries(raw.players ?? {})) {
-    players[id] = hydrateLegacyGenesisContract(
-      clampPlayerToEvolutionCap(
-        ensureMintOverall({
-          ...p,
-          outForMatches: p.outForMatches ?? 0,
-        }),
+    players[id] = migrateContractToBaseline250(
+      hydrateLegacyGenesisContract(
+        clampPlayerToEvolutionCap(
+          ensureMintOverall({
+            ...p,
+            outForMatches: p.outForMatches ?? 0,
+          }),
+        ),
       ),
     );
   }

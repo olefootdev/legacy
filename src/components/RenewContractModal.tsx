@@ -30,7 +30,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
     (s) => s.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
   );
 
-  const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(10);
+  const [contractMatches, setContractMatches] = useState<ManagerProspectContractGames>(50);
 
   const renewalBaseCost = Math.round(baseCost * 0.5);
   const contractPremium = managerProspectContractPremiumExp(contractMatches);

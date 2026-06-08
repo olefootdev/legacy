@@ -2,21 +2,27 @@ import type { LiveMatchSnapshot } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 
 /** Jogos de contrato padrão do catálogo Genesis (amistosos + oficiais). */
-export const GENESIS_CATALOG_DEFAULT_MATCHES = 70;
+export const GENESIS_CATALOG_DEFAULT_MATCHES = 250;
 
-/** Opções de duração (jogos) para talentos criados pelo manager na Academia OLE. */
-export const MANAGER_PROSPECT_CONTRACT_GAMES = [10, 70, 150, 250] as const;
+/** Baseline de contrato aplicado em rehydrate a todos os jogadores não-vitalícios. */
+export const CONTRACT_BASELINE_GAMES = 250;
+
+/** Opções de duração (jogos) — interação diária forçada via tier curto. */
+export const MANAGER_PROSPECT_CONTRACT_GAMES = [50, 250, 500, 1000] as const;
 export type ManagerProspectContractGames = (typeof MANAGER_PROSPECT_CONTRACT_GAMES)[number];
 
+/** Set de validação (idempotência da migração). */
+export const VALID_CONTRACT_TIERS = new Set<number>([50, 250, 500, 1000]);
+
 /**
- * Prémio em EXP pelo tempo de contrato vs. base 10 jogos (soma ao custo base da Academia).
- * Valores calibrados para cobrar mais por contratos mais longos.
+ * Prémio em EXP pelo tempo de contrato vs. base 50 jogos.
+ * Calibrado para cobrar mais por contratos mais longos.
  */
 export const MANAGER_CONTRACT_PREMIUM_EXP: Record<ManagerProspectContractGames, number> = {
-  10: 0,
-  70: 120_000,
-  150: 320_000,
-  250: 520_000,
+  50: 0,
+  250: 180_000,
+  500: 420_000,
+  1000: 900_000,
 };
 
 export function managerProspectContractPremiumExp(tier: ManagerProspectContractGames): number {
@@ -114,7 +120,7 @@ export function applyHomeContractsAfterMatch(
   return next;
 }
 
-/** Saves antigos: Genesis sem campos de contrato → 70 jogos + id de catálogo. */
+/** Saves antigos: Genesis sem campos de contrato → default + id de catálogo. */
 export function hydrateLegacyGenesisContract(player: PlayerEntity): PlayerEntity {
   if (player.contractIsLifetime) return player;
   if (player.contractMatchesRemaining != null || player.contractExpired) return player;
@@ -125,6 +131,28 @@ export function hydrateLegacyGenesisContract(player: PlayerEntity): PlayerEntity
     contractMatchesRemaining: GENESIS_CATALOG_DEFAULT_MATCHES,
     contractMatchesIncluded: GENESIS_CATALOG_DEFAULT_MATCHES,
     genesisCatalogId: cat,
+    contractExpired: false,
+  };
+}
+
+/**
+ * Migração one-time: garante que todo jogador não-vitalício esteja num tier válido
+ * (50/250/500/1000). Quem está fora do set é resetado para o baseline (250).
+ *
+ * Idempotente: chamadas subsequentes que já têm tier válido são no-op.
+ * Vitalícios são preservados.
+ */
+export function migrateContractToBaseline250(player: PlayerEntity): PlayerEntity {
+  if (player.contractIsLifetime === true) return player;
+  const included = player.contractMatchesIncluded;
+  if (typeof included === 'number' && VALID_CONTRACT_TIERS.has(included) && player.contractMatchesRemaining != null) {
+    return player;
+  }
+  return {
+    ...player,
+    contractMatchesRemaining: CONTRACT_BASELINE_GAMES,
+    contractMatchesIncluded: CONTRACT_BASELINE_GAMES,
+    contractIsLifetime: false,
     contractExpired: false,
   };
 }

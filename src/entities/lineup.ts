@@ -26,6 +26,12 @@ export interface LineupBuildOptions {
   fatigueById?: Record<string, number>;
   /** Patamar máximo aceito pra escalação primária. Default 85. */
   maxFatigue?: number;
+  /**
+   * Modo strict: NÃO improvisa jogador de outra posição. Se o slot não tem jogador puro
+   * disponível (lesionado, contrato vencido ou exausto), o slot fica vazio → o time não pode
+   * jogar oficialmente. Usado em `evaluateOfficialSquad` para forçar interação do manager.
+   */
+  strictPosition?: boolean;
 }
 
 export interface LineupBuildResult {
@@ -34,6 +40,8 @@ export interface LineupBuildResult {
   forcedExhaustedIds: string[];
   /** Squad inteiro está em alerta (>= FATIGUE_SQUAD_WARNING_COUNT exaustos no pool). */
   squadExhaustedWarning: boolean;
+  /** Slots que ficaram vazios por falta de jogador puro (só em strictPosition). */
+  emptySlotIds: string[];
 }
 
 /** Lê fatigue priorizando o SSOT (fatigueById). */
@@ -53,32 +61,41 @@ export function buildDefaultLineupWithMeta(
   opts?: LineupBuildOptions,
 ): LineupBuildResult {
   const maxFatigue = opts?.maxFatigue ?? FATIGUE_EXHAUSTED_THRESHOLD;
-  const pool = Object.values(playersById).filter((p) => (p.outForMatches ?? 0) === 0);
+  const strict = opts?.strictPosition === true;
+  // Em strict, jogador com contrato vencido também sai do pool — não pode improvisar.
+  const pool = Object.values(playersById).filter((p) => {
+    if ((p.outForMatches ?? 0) !== 0) return false;
+    if (strict && p.contractExpired === true) return false;
+    return true;
+  });
   const exhaustedInPool = pool.filter((p) => fatigueOf(p.id, p, opts) > maxFatigue).length;
 
   const used = new Set<string>();
   const lineup: Record<string, string> = {};
   const forcedExhaustedIds: string[] = [];
+  const emptySlotIds: string[] = [];
 
   const isFresh = (p: PlayerEntity) => fatigueOf(p.id, p, opts) <= maxFatigue;
   const tryPick = (predicate: (p: PlayerEntity) => boolean) =>
     pool.find((p) => !used.has(p.id) && predicate(p));
 
   for (const slot of PITCH_SLOT_ORDER) {
-    let pick =
-      // 1) posição certa + fresco
-      tryPick((p) => p.pos === slot.label && isFresh(p)) ??
-      // 2) qualquer posição + fresco
-      tryPick(isFresh) ??
-      // 3) posição certa, exausto (último recurso)
-      tryPick((p) => p.pos === slot.label) ??
-      // 4) qualquer um
-      tryPick(() => true);
+    const pick = strict
+      ? // STRICT: só posição certa. Se ninguém puro, slot fica vazio (time não joga).
+        tryPick((p) => p.pos === slot.label && isFresh(p)) ??
+        tryPick((p) => p.pos === slot.label)
+      : // LEGACY: cascata com improviso.
+        tryPick((p) => p.pos === slot.label && isFresh(p)) ??
+        tryPick(isFresh) ??
+        tryPick((p) => p.pos === slot.label) ??
+        tryPick(() => true);
 
     if (pick) {
       lineup[slot.id] = pick.id;
       used.add(pick.id);
       if (!isFresh(pick)) forcedExhaustedIds.push(pick.id);
+    } else {
+      emptySlotIds.push(slot.id);
     }
   }
 
@@ -86,6 +103,7 @@ export function buildDefaultLineupWithMeta(
     lineup,
     forcedExhaustedIds,
     squadExhaustedWarning: exhaustedInPool >= FATIGUE_SQUAD_WARNING_COUNT,
+    emptySlotIds,
   };
 }
 

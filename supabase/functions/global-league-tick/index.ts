@@ -94,6 +94,26 @@ function utcDateString(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+// ── Ciclo Híbrido (BRT) ────────────────────────────────────────────────────
+// Liga roda 05:30 → 19:00. Daily KO 19:00 → ~21:30. REST 21:30 → 05:30.
+// Em REST: zero processamento de rodada Liga; daily rollover, abertura de KO
+// e progressão de KO ainda funcionam (preservam o ciclo da Coroa do Dia).
+const CYCLE_ACTIVE_START_MIN_BRT = 5 * 60 + 30;   // 05:30
+const CYCLE_REST_START_MIN_BRT = 21 * 60 + 30;    // 21:30
+
+function brtMinutesOfDay(nowMs: number): number {
+  const d = new Date(nowMs);
+  // BRT é UTC-3, sem DST efetivo desde 2019.
+  const totalUtcMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+  return (totalUtcMin - 180 + 1440) % 1440;
+}
+
+function isLeagueRestWindow(nowMs: number): boolean {
+  const t = brtMinutesOfDay(nowMs);
+  // REST: 21:30 ≤ t < 24:00  OU  0 ≤ t < 05:30
+  return t >= CYCLE_REST_START_MIN_BRT || t < CYCLE_ACTIVE_START_MIN_BRT;
+}
+
 interface FixtureRow {
   id: string; round_id: string; division: string;
   home_team_id: string; away_team_id: string;
@@ -935,9 +955,15 @@ Deno.serve(async (_req: Request) => {
   // (variável competitionEnded calculada acima fica intencionalmente não-usada)
   void competitionEnded;
 
+  // ── Ciclo Híbrido: janela REST (21:30 → 05:30 BRT) ────────────────────────
+  // Em REST a Liga DORME — pausa pra descanso/treinamento/relâmpago. Daily
+  // rollover e KO acima já rodaram normalmente; só blindamos o motor da Liga
+  // (auto-start, regen, processamento de rodada league).
+  const inLeagueRest = isLeagueRestWindow(now);
+
   // 1. AUTO-START LIGA (modo "só liga, sem playoffs")
   // waiting_teams ou season_ended → distribui times em divisões e gera rodadas de liga
-  if (state.status === 'waiting_teams' || state.status === 'season_ended') {
+  if (!inLeagueRest && (state.status === 'waiting_teams' || state.status === 'season_ended')) {
     // GUARDA: o restart deleta TODOS os rounds/fixtures. Não pode rodar enquanto
     // há mata-mata diário vivo (knockout) nem antes da coroação ser exibida
     // (crowned) — espera a meia-noite BRT (rollover volta a 'qualifying').
@@ -1027,7 +1053,9 @@ Deno.serve(async (_req: Request) => {
   }
 
   // 3. TODAS RODADAS DA LIGA FINALIZADAS → REGENERA (loop sem pausa)
-  if (state.status === 'active') {
+  // Skip em REST: não vira season_ended durante a noite, evita restart e
+  // mantém o estado limpo pro tick das 05:30 reiniciar a Liga.
+  if (!inLeagueRest && state.status === 'active') {
     const { data: lRounds } = await supabase
       .from('global_league_rounds').select('id, status, round_type')
       .eq('season_id', state.season_id).eq('round_type', 'league');
@@ -1064,19 +1092,26 @@ Deno.serve(async (_req: Request) => {
   }
 
   // 4. PROCESSA RODADA PENDENTE
-  const { data: pending, error: pendingErr } = await supabase
+  // Em REST: ignora rodadas 'league' (Liga dorme), mas processa 'daily_ko'
+  // pra garantir que uma final atrasada ainda fecha.
+  const pendingQuery = supabase
     .from('global_league_rounds').select('*')
     .eq('status', 'scheduled')
     .lte('scheduled_kickoff_ms', now)
     .order('scheduled_kickoff_ms', { ascending: true })
     .limit(1);
+  const { data: pending, error: pendingErr } = await (inLeagueRest
+    ? pendingQuery.neq('round_type', 'league')
+    : pendingQuery);
   if (pendingErr) {
     return new Response(JSON.stringify({ ok: false, step: 'fetch-pending', error: pendingErr.message }), { status: 500 });
   }
   if (!pending || pending.length === 0) {
     const nextKickoff = nextSlotAlignedKickoff(now, slots, slotDurationMin);
     return new Response(JSON.stringify({
-      ok: true, step: 'idle', reason: 'no-pending-rounds',
+      ok: true, step: 'idle',
+      reason: inLeagueRest ? 'league-rest-window' : 'no-pending-rounds',
+      cyclePhase: inLeagueRest ? 'rest' : 'active',
       status: state.status, currentDay: today,
       nextSlotKickoffUtc: new Date(nextKickoff).toISOString(),
       msUntilNext: nextKickoff - now,

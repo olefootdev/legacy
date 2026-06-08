@@ -1,5 +1,5 @@
 import type { PlayerEntity } from '@/entities/types';
-import { mergeLineupWithDefaults, PITCH_SLOT_ORDER } from '@/entities/lineup';
+import { mergeLineupWithDefaults, PITCH_SLOT_ORDER, buildDefaultLineupWithMeta } from '@/entities/lineup';
 
 /** Início da janela oficial do dia de competição (jogos + treinos entre jogos). */
 const OFFICIAL_DAY_START_H = 9;
@@ -163,6 +163,22 @@ export function evaluateOfficialSquad(
   const starterSet = new Set(starterIds);
   const benchPool = Object.values(playersById).filter((p) => !starterSet.has(p.id) && isAvailableForOfficialMatch(p, health));
   const benchAvailable = benchPool.length;
+
+  // STRICT-POSITION: tenta montar XI só com jogadores PUROS na posição (sem improviso).
+  // Se faltar posição pura disponível (contrato/lesão/exausto), o time NÃO joga.
+  const strictBuild = buildDefaultLineupWithMeta(playersById, { strictPosition: true });
+  if (strictBuild.emptySlotIds.length > 0) {
+    const posLabels = strictBuild.emptySlotIds
+      .map((sid) => PITCH_SLOT_ORDER.find((s) => s.id === sid)?.label ?? sid)
+      .join(', ');
+    return {
+      ok: false,
+      startersFilled,
+      startersAvailable,
+      benchAvailable,
+      reason: `Sem jogador puro disponível para: ${posLabels}. Renove contratos ou recupere lesionados — sem improviso.`,
+    };
+  }
 
   if (startersAvailable < 11) {
     const causeLabel = exhaustedStarters > 0
