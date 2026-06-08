@@ -2345,7 +2345,23 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (!player.contractExpired) return state;
       if (!player.managerCreated) return state;
 
-      // Custo de renovação: 50% do custo base + prêmio do contrato
+      // OLEFOOT já foi debitado server-side via RPC `spend_olefoot` ANTES do dispatch.
+      // Reducer só renova o contrato; sem mexer em finance.ole.
+      const paymentMethod = action.paymentMethod ?? 'exp';
+      if (paymentMethod === 'olefoot') {
+        const updatedPlayer: PlayerEntity = {
+          ...player,
+          contractMatchesRemaining: action.contractMatches,
+          contractMatchesIncluded: action.contractMatches,
+          contractExpired: false,
+        };
+        return {
+          ...state,
+          players: { ...state.players, [action.playerId]: updatedPlayer },
+        };
+      }
+
+      // Path EXP — debita finance.ole na mesma transação.
       const baseCost = Math.max(
         0,
         Math.round(state.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP),

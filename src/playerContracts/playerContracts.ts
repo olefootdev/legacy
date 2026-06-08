@@ -30,6 +30,24 @@ export function managerProspectContractPremiumExp(tier: ManagerProspectContractG
 }
 
 /**
+ * Conversão EXP → OLEFOOT pra renovação contratual.
+ *
+ * 1 OLEFOOT = 100 EXP equivalente. Calibrado pra:
+ *  - Tier 50  (5 OLEFOOT)       — acessível, força interação frequente.
+ *  - Tier 250 (~1.805 OLEFOOT)  — mid game.
+ *  - Tier 500 (~4.205 OLEFOOT)  — investimento.
+ *  - Tier 1000 (~9.005 OLEFOOT) — long-term commitment.
+ *
+ * Ajustar EXP_PER_OLEFOOT_FOR_RENEWAL pra recalibrar quando OLEFOOT for listada.
+ */
+export const EXP_PER_OLEFOOT_FOR_RENEWAL = 100;
+
+export function expCostToOlefoot(expCost: number): number {
+  if (!Number.isFinite(expCost) || expCost <= 0) return 0;
+  return Math.ceil(expCost / EXP_PER_OLEFOOT_FOR_RENEWAL);
+}
+
+/**
  * Preço de listagem Genesis em EXP (250k–1M), alinhado ao mint OVR.
  * Escala linear entre OVR 24 e 72 (faixa típica do catálogo), arredondada a 5k EXP.
  */

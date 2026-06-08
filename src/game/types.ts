@@ -787,6 +787,12 @@ export type GameAction =
       type: 'RENEW_MANAGER_PROSPECT_CONTRACT';
       playerId: string;
       contractMatches: import('@/playerContracts/playerContracts').ManagerProspectContractGames;
+      /**
+       * 'exp' debita finance.ole (off-chain, sync).
+       * 'olefoot' pressupõe que o caller JÁ debitou OLEFOOT via RPC `spend_olefoot`
+       * antes de dispatch — reducer só atualiza o contrato. Quando ausente, default 'exp'.
+       */
+      paymentMethod?: 'exp' | 'olefoot';
     }
   | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
