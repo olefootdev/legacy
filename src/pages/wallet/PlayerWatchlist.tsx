@@ -109,7 +109,7 @@ export function PlayerWatchlist({
               ) : null}
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <p className="text-[13px] font-bold text-white tabular-nums">
-                  {formatOle(p.priceOle)} OLE
+                  {formatOle(p.priceOle)} EXP
                 </p>
                 <ChangePill change={p.change24h} compact />
               </div>

@@ -7,7 +7,7 @@ import type { WalletShellAccount } from './WalletShell';
 const FAQ_SPOT: { q: string; a: string }[] = [
   {
     q: 'O que é a conta SPOT?',
-    a: 'É o teu saldo imediato na Olefoot: BRO na plataforma e OLE (ranking). Daqui podes depositar, enviar ou fazer SWAP para OLEXP quando quiseres alocar em Hold.',
+    a: 'É o teu saldo imediato na Olefoot: BRO (dólar interno), EXP (experiência/ranking) e OLEFOOT (token oficial). Daqui podes depositar, enviar ou fazer SWAP para OLEXP quando quiseres alocar em Hold.',
   },
   {
     q: 'O que é OLEXP?',
@@ -22,8 +22,8 @@ const FAQ_SPOT: { q: string; a: string }[] = [
     a: 'Alocar em Hold envolve risco de mercado e de liquidez até ao vencimento. O texto resume isso; tens de confirmar que leste antes de continuar. Não prometemos retorno.',
   },
   {
-    q: 'Qual a diferença entre BRO, OLE e EXP?',
-    a: 'BRO é o token de saldo na carteira. OLE reflete o teu progresso no ranking. EXP é a moeda de jogo (modo carreira) — vê os três saldos na secção Carteira (barra resumo no topo da página Wallet).',
+    q: 'Qual a diferença entre BRO, EXP e OLEFOOT?',
+    a: 'BRO é o dólar interno (1 BRO ≈ 1 USD) para depósitos e saques. EXP é a moeda de experiência — sobe no ranking e compra jogadores. OLEFOOT é o token oficial do jogo ($0.000001/unidade), herdado da carteira BSC.',
   },
   {
     q: 'Quanto tempo demora um depósito ou envio?',

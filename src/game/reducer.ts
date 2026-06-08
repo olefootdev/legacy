@@ -78,6 +78,7 @@ import { buildGlobalImpactSummary } from '@/systems/consequences/fromGlobalFixtu
 import { recordCheckIn } from '@/systems/engagement/checkIn';
 import { evaluateAbsence } from '@/systems/engagement/absencePenalty';
 import { attemptClaim } from '@/systems/engagement/loginBonus';
+import { computeEngagementScore } from '@/systems/engagement/engagementScore';
 import {
   shouldApplyAbsenceEffects,
   buildAbsenceSideEffects,
@@ -5542,11 +5543,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const prevTier = state.managerPresence?.lastAbsenceTier;
       const nextPresence = recordCheckIn(state.managerPresence, action.managerId, now);
 
+      // Engagement score — buff de vitória na Liga Global
+      const totalPlayers = Object.keys(state.players ?? {}).length;
+      const healthyPlayers = Object.values(state.players ?? {}).filter(
+        (p) => !p.outForMatches && p.pos !== 'GOL_RESERVE',
+      ).length;
+      const engScore = computeEngagementScore({
+        presence: nextPresence,
+        totalPlayers,
+        healthyPlayers,
+        lastTrainingAt: (state as any)._lastTrainingAt,
+        lastPurchaseAt: (state as any)._lastPurchaseAt,
+      }, now);
+
       // Decide se precisa aplicar efeitos novos (lesões, queda torcida, inbox)
       if (!shouldApplyAbsenceEffects(prevTier, absence.tier)) {
         return {
           ...state,
-          managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+          managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier, engagementScore: engScore },
         };
       }
 
@@ -5575,7 +5589,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
       return {
         ...state,
-        managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier },
+        managerPresence: { ...nextPresence, lastAbsenceTier: absence.tier, engagementScore: engScore },
         consequenceStore: newStore,
         inbox,
       };

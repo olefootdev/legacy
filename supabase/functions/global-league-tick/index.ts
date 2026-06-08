@@ -146,6 +146,8 @@ interface TeamRow {
   yellow_card_count: number; // acúmulo de amarelos — zera após suspensão
   suspension_rounds_remaining: number; // rodadas de suspensão pendentes
   available_player_count: number; // jogadores disponíveis (synced pelo cliente)
+  available_player_count_updated_at?: string; // timestamp do último sync
+  engagement_score?: number; // 0-100 — buff de engajamento do manager
   rivalry_encounters?: Record<string, number>; // teamId → nº de confrontos na temporada
   all_time_points?: number; all_time_matches_played?: number;
   all_time_wins?: number; all_time_draws?: number; all_time_losses?: number;
@@ -179,10 +181,12 @@ interface StateRow {
 }
 
 function effectiveOverall(team: TeamRow): number {
-  // Time suspenso joga com plantel reserva (-5 OVR)
   const suspMod = (team.suspension_rounds_remaining ?? 0) > 0 ? -5 : 0;
   const injMod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
-  return Math.max(40, team.overall + injMod + suspMod);
+  const base = Math.max(40, team.overall + injMod + suspMod);
+  // Engagement buff: score 0-100 → +0 to +20 OVR
+  const engBuff = Math.min(20, Math.floor((team.engagement_score ?? 0) / 5));
+  return Math.round(base + engBuff);
 }
 function poissonGoals(expected: number): number {
   const L = Math.exp(-expected);
@@ -1077,17 +1081,54 @@ Deno.serve(async (_req: Request) => {
     }
   }
 
-  // 3.5 Incluir times órfãos na 3ª divisão (registrados mid-season, aguardam próxima season)
+  // 3.5 Incluir times órfãos na 3ª divisão + gerar fixtures mid-season
   if (state.status === 'active') {
-    const { data: orphanTeams } = await supabase
-      .from('global_league_teams')
-      .select('id')
-      .is('division', null);
-    if (orphanTeams && orphanTeams.length > 0) {
-      await supabase
-        .from('global_league_teams')
-        .update({ division: 3 })
-        .is('division', null);
+    // (a) Setar division=3 para times sem divisão
+    await supabase.from('global_league_teams').update({ division: 3 }).is('division', null);
+
+    // (b) Detectar times na Div 3 sem fixtures nas rodadas futuras e gerar confrontos
+    const [{ data: div3Teams }, { data: scheduledRounds }] = await Promise.all([
+      supabase.from('global_league_teams').select('*').eq('division', 3),
+      supabase.from('global_league_rounds').select('id,round_number,is_returning')
+        .eq('season_id', state.season_id).eq('round_type', 'league').eq('status', 'scheduled')
+        .order('round_number', { ascending: true }),
+    ]);
+    const d3teams = (div3Teams as TeamRow[] | null) ?? [];
+    const futureRounds = (scheduledRounds as Array<{ id: string; round_number: number; is_returning: boolean }>) ?? [];
+    if (d3teams.length >= 2 && futureRounds.length > 0) {
+      const futureRoundIds = futureRounds.map(r => r.id);
+      const { data: existingFx } = await supabase
+        .from('global_league_fixtures').select('home_team_id,away_team_id')
+        .in('round_id', futureRoundIds).eq('division', '3');
+      const teamsWithFx = new Set<string>();
+      for (const fx of (existingFx ?? []) as Array<{ home_team_id: string; away_team_id: string }>) {
+        teamsWithFx.add(fx.home_team_id); teamsWithFx.add(fx.away_team_id);
+      }
+      const newTeams = d3teams.filter(t => !teamsWithFx.has(t.id));
+      const existingDiv3 = d3teams.filter(t => teamsWithFx.has(t.id));
+      if (newTeams.length > 0 && existingDiv3.length > 0) {
+        const fxToInsert: any[] = [];
+        for (const nt of newTeams) {
+          let oppIdx = 0;
+          for (const rd of futureRounds) {
+            if (oppIdx >= existingDiv3.length) oppIdx = 0;
+            const opp = existingDiv3[oppIdx];
+            const [h, a] = rd.is_returning ? [opp, nt] : [nt, opp];
+            fxToInsert.push({
+              id: NEW_ID(), round_id: rd.id, division: '3',
+              home_team_id: h.id, away_team_id: a.id,
+              home_team_name: h.club_name, away_team_name: a.club_name,
+              home_overall: h.overall, away_overall: a.overall,
+              score_home: 0, score_away: 0, current_minute: 0, status: 'scheduled',
+            });
+            oppIdx++;
+          }
+        }
+        if (fxToInsert.length > 0) {
+          await supabase.from('global_league_fixtures').upsert(fxToInsert as any, { onConflict: 'id' });
+          console.log(`[tick] integrateNewTeams: ${fxToInsert.length} fixtures for ${newTeams.map(t => t.club_name).join(', ')}`);
+        }
+      }
     }
   }
 
@@ -1276,14 +1317,22 @@ Deno.serve(async (_req: Request) => {
     const away = teamById.get(fx.away_team_id);
 
     // Ponto 4: WO — elenco incompleto (<11 disponíveis) = derrota 3x0
-    // Fallback: se available_player_count é o default (25) mas há suspensões/lesões ativas,
-    // estima conservadoramente para evitar que defaults stale mascarem um WO real.
-    const homeAvailable = home?.available_player_count != null && home.available_player_count !== 25
-      ? home.available_player_count
-      : Math.max(0, 25 - (home?.suspension_rounds_remaining ?? 0) * 2 - (home?.injury_rounds_remaining ?? 0) * 2);
-    const awayAvailable = away?.available_player_count != null && away.available_player_count !== 25
-      ? away.available_player_count
-      : Math.max(0, 25 - (away?.suspension_rounds_remaining ?? 0) * 2 - (away?.injury_rounds_remaining ?? 0) * 2);
+    // Se client syncou recentemente, usar o valor real. Senão, estimar com penalidade por stale data.
+    const estimateAvailable = (t: TeamRow | undefined): number => {
+      if (!t) return 25;
+      const synced = t.available_player_count;
+      const updatedAt = t.available_player_count_updated_at ? new Date(t.available_player_count_updated_at).getTime() : 0;
+      const staleHours = updatedAt > 0 ? (now - updatedAt) / (60 * 60 * 1000) : 999;
+      // Client syncou nas últimas 24h → confiar no valor
+      if (synced !== 25 && staleHours < 24) return synced;
+      // Fallback: estimar com penalidade por suspensões/lesões + stale penalty
+      const suspPenalty = (t.suspension_rounds_remaining ?? 0) * 2;
+      const injPenalty = (t.injury_rounds_remaining ?? 0) * 2;
+      const stalePenalty = Math.floor(Math.max(0, staleHours - 24) / 12) * 2;
+      return Math.max(0, 25 - suspPenalty - injPenalty - stalePenalty);
+    };
+    const homeAvailable = estimateAvailable(home);
+    const awayAvailable = estimateAvailable(away);
     const homeWO = homeAvailable < 11;
     const awayWO = awayAvailable < 11;
 

@@ -136,6 +136,7 @@ const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
 const Leagues = lazy(() => import('./pages/Leagues').then((m) => ({ default: m.Leagues })));
+const PremiumLeagues = lazy(() => import('./pages/PremiumLeagues').then((m) => ({ default: m.PremiumLeagues })));
 const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
@@ -491,6 +492,9 @@ as a nice MVP. Let's Play Together! ⚽
 
             {/* Competição subpages */}
             <Route path="/competicao/ligas" element={<Leagues />} />
+            <Route path="/rewards" element={<PremiumLeagues />} />
+            <Route path="/rewards/:leagueSlug" element={<PremiumLeagues />} />
+            <Route path="/premiadas" element={<Navigate to="/rewards" replace />} />
             <Route path="/competicao/calendario" element={<CalendarPage />} />
             <Route path="/competicao/ranking" element={<RankingFull />} />
             <Route path="/competicao/standings" element={<PvpStandings />} />

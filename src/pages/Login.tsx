@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Zap, ShoppingCart, Trophy, Users, Clock, Brain, Rocket, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, getGameState } from '@/game/store';
-import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail } from '@/supabase/auth';
+import { signInWithEmail, fetchOnboardingProfile, sendPasswordResetEmail, saveOnboardingProfile } from '@/supabase/auth';
+import type { FormationSchemeId } from '@/match-engine/types';
 import { fetchMyReferralCode, syncMyExpLifetime } from '@/supabase/referrals';
 import { FORMATION_TACTICAL_DEFAULTS } from '@/tactics/formationDefaults';
 
@@ -109,13 +110,20 @@ function FeatureCard({
 export function Login() {
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
-  const [mode, setMode] = useState<'landing' | 'form' | 'forgot'>('landing');
+  const [mode, setMode] = useState<'landing' | 'form' | 'forgot' | 'complete'>('landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forgotSent, setForgotSent] = useState(false);
+
+  // Mini-cadastro para usuários migrados (auth existe, profile não)
+  const [compFirstName, setCompFirstName] = useState('');
+  const [compLastName, setCompLastName] = useState('');
+  const [compPhone, setCompPhone] = useState('');
+  const [compClubName, setCompClubName] = useState('');
+  const [compFormation, setCompFormation] = useState<FormationSchemeId>('4-3-3');
 
   // A/B Test: rotaciona proposta de valor a cada visita
   const [variant, setVariant] = useState<ValueProposition>('nostalgia');
@@ -177,7 +185,9 @@ export function Login() {
       // Hidrata managerProfile do Supabase pro Zustand local.
       const remote = await fetchOnboardingProfile();
       if (!remote || !remote.onboarding) {
-        setError('Conta existe mas não tem onboarding completo. Cadastra novamente.');
+        // Usuário migrado: auth OK mas sem profile. Mini-cadastro inline.
+        setError(null);
+        setMode('complete');
         return;
       }
       const o = remote.onboarding;
@@ -224,13 +234,66 @@ export function Login() {
       } catch (e) {
         console.warn('[Login] exp lifetime sync skipped', e);
       }
-      // [2026-05-18] Auto-grant silencioso REMOVIDO. Se o plantel está vazio,
-      // o OnboardingCeremony entra em cena e o manager passa pelos 6 capítulos
-      // (sorteio EXP → 25 pioneiros → top 3 → daily bonus → boas-vindas).
-      // Cerimônia só roda 1× por user (gate `hasDoneOnboarding` em
-      // userSettings + tabela `welcome_pack_grants` no Supabase).
       // Full reload para que os hydrators re-montem com sessão válida.
       // Sem isso, os hydrators já rodaram (e falharam) antes do login.
+      window.location.href = '/';
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onCompleteSubmit = async (e: import('react').FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const clubShort = compClubName.trim().split(/\s+/).filter(Boolean).length >= 2
+        ? (compClubName.trim().split(/\s+/)[0]![0]! + compClubName.trim().split(/\s+/)[1]![0]!).toUpperCase()
+        : compClubName.trim().slice(0, 3).toUpperCase();
+
+      const managerProfile = {
+        firstName: compFirstName.trim(),
+        lastName: compLastName.trim(),
+        email: email.trim(),
+        phoneE164: compPhone.trim(),
+      };
+
+      const saveErr = await saveOnboardingProfile({
+        displayName: managerProfile.firstName,
+        clubName: compClubName.trim(),
+        clubShort,
+        onboarding: {
+          managerProfile,
+          favoriteRealTeam: null,
+          formationScheme: compFormation,
+        },
+      });
+      if (saveErr) {
+        setError(saveErr);
+        return;
+      }
+
+      dispatch({
+        type: 'SET_USER_SETTINGS',
+        partial: { managerProfile, favoriteRealTeam: null },
+      });
+      dispatch({
+        type: 'ADMIN_PATCH_CLUB',
+        partial: { name: compClubName.trim(), shortName: clubShort },
+      });
+      const tacticalDefaults = FORMATION_TACTICAL_DEFAULTS[compFormation];
+      dispatch({
+        type: 'SET_MANAGER_SLIDERS',
+        partial: {
+          formationScheme: compFormation,
+          tacticalMentality: tacticalDefaults.tacticalMentality,
+          defensiveLine: tacticalDefaults.defensiveLine,
+          tempo: tacticalDefaults.tempo,
+          tacticalStyle: tacticalDefaults.style,
+        },
+      });
+
       window.location.href = '/';
     } finally {
       setBusy(false);
@@ -385,6 +448,97 @@ export function Login() {
                 )}
               </div>
             </>
+          ) : mode === 'complete' ? (
+            <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />
+              <div className="relative px-5 py-5 pl-6 sm:px-6 sm:py-6 sm:pl-7">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-neon-yellow/30 bg-neon-yellow/10 px-3 py-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neon-yellow" />
+                  <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-neon-yellow">Bem-vindo de volta</span>
+                </div>
+                <h2 className="font-display text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
+                  Completar Cadastro
+                </h2>
+                <p className="mt-2 text-[12px] text-white/60 leading-relaxed">
+                  Encontramos tua conta da era anterior. Completa os dados abaixo para entrar na nova plataforma.
+                </p>
+                <form onSubmit={(e) => void onCompleteSubmit(e)} className="mt-4 space-y-3" autoComplete="on">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Nome</span>
+                      <input
+                        type="text"
+                        autoComplete="given-name"
+                        value={compFirstName}
+                        onChange={(e) => setCompFirstName(e.target.value)}
+                        required
+                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Sobrenome</span>
+                      <input
+                        type="text"
+                        autoComplete="family-name"
+                        value={compLastName}
+                        onChange={(e) => setCompLastName(e.target.value)}
+                        required
+                        className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                      />
+                    </label>
+                  </div>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Telefone (com DDD)</span>
+                    <input
+                      type="tel"
+                      autoComplete="tel"
+                      value={compPhone}
+                      onChange={(e) => setCompPhone(e.target.value)}
+                      placeholder="+5511999999999"
+                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Nome do Clube</span>
+                    <input
+                      type="text"
+                      value={compClubName}
+                      onChange={(e) => setCompClubName(e.target.value)}
+                      required
+                      placeholder="Ex: Olefoot FC"
+                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-white/60">Formação</span>
+                    <select
+                      value={compFormation}
+                      onChange={(e) => setCompFormation(e.target.value as FormationSchemeId)}
+                      className="w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2 text-sm text-white focus:border-neon-yellow/50 focus:outline-none"
+                    >
+                      {(['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-5-1', '5-3-2', '3-4-3'] as FormationSchemeId[]).map((f) => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {error ? (
+                    <div className="flex items-start gap-2 rounded-sm border border-rose-500/50 bg-rose-500/15 px-3 py-2.5 text-[12px] leading-snug text-rose-100">
+                      <span className="shrink-0 text-rose-300">✗</span>
+                      <span className="flex-1">{error}</span>
+                    </div>
+                  ) : null}
+                  <button
+                    type="submit"
+                    disabled={busy || !compFirstName.trim() || !compLastName.trim() || !compClubName.trim()}
+                    className="btn-primary w-full disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    <span className="btn-primary-inner justify-center py-1">
+                      {busy ? 'Salvando…' : 'Entrar na Plataforma'}
+                    </span>
+                  </button>
+                </form>
+              </div>
+            </div>
           ) : mode === 'forgot' ? (
             <div className="relative overflow-hidden rounded-sm border border-white/[0.1] bg-black/70 shadow-[0_16px_40px_rgba(0,0,0,0.55)] backdrop-blur-md">
               <div className="absolute left-0 top-0 h-full w-1 bg-neon-yellow/90" aria-hidden />

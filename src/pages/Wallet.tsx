@@ -22,10 +22,10 @@ import {
   useTopSquadPlayers,
   useUnlockedTrophies,
 } from './wallet/useWalletPlayerData';
-import { MatchCountdownChip } from './wallet/MatchCountdownChip';
 import { RivalsLeaderboardMini } from './wallet/RivalsLeaderboardMini';
-import { MOCK_MARKETS, formatSpotUsd } from './wallet/walletMockMarkets';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
+import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
+import { OLE_INTERNAL_PRICE_USD, OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 function usePrefersReducedMotion(): boolean {
@@ -86,12 +86,21 @@ export function Wallet() {
   const [pixAmountCents, setPixAmountCents] = useState(0);
   const usdBrlQuote = useOlefootUsdBrlQuote(true);
 
+  const [legacyBalance, setLegacyBalance] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLegacyBalance().then((lb) => {
+      if (!cancelled && lb.balanceHuman) setLegacyBalance(lb.balanceHuman);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const _olexp = olexpSummary({ ...wallet, spotBroCents: finance.broCents });
   const _ref = referralSummary(wallet);
   const gat = gatSummary(wallet);
 
-  // SmartHub usa finance.ole (saldo EXP gastável; nome legado). Mesmo campo aqui pra consistência.
   const expBalance = finance.ole ?? 0;
+  const olefootBalance = legacyBalance != null ? Number(legacyBalance) : 0;
 
   // ── DADOS REAIS DO PLANTEL ────────────────────────────────────
   const squadValuation = useSquadValuation();
@@ -106,16 +115,13 @@ export function Wallet() {
     isHome: true,
     lines: [
       { label: 'Prêmio de vitória', amount: 1200, currency: 'EXP' },
-      { label: 'Bilheteria', amount: 120, currency: 'OLE' },
+      { label: 'Bilheteria', amount: 120, currency: 'EXP' },
       { label: 'Performance individual', amount: 50, currency: 'EXP' },
-      { label: 'Salários do round', amount: -340, currency: 'OLE' },
-      { label: 'Manutenção estádio', amount: -80, currency: 'OLE' },
+      { label: 'Salários do round', amount: -340, currency: 'EXP' },
+      { label: 'Manutenção estádio', amount: -80, currency: 'EXP' },
     ],
   };
 
-
-  // Kickoff mock 4h12min no futuro pro countdown render
-  const mockKickoffIso = new Date(Date.now() + 4 * 3600_000 + 12 * 60_000).toISOString();
 
   const quickActions: QuickAction[] = [
     { key: 'deposit', label: 'Depositar', icon: '↓', accent: 'green', onClick: () => setDepositOpen(true) },
@@ -132,7 +138,7 @@ export function Wallet() {
     totalOle: squadValuation.totalOle,
     change24h: squadValuation.change24h,
     playerCount: squadValuation.playerCount,
-    spark: squadValuation.spark.length >= 2 ? squadValuation.spark : MOCK_MARKETS.SQUAD.spark,
+    spark: squadValuation.spark.length >= 2 ? squadValuation.spark : [0, 0],
     highlight: squadValuation.highest ?? undefined,
   };
 
@@ -141,8 +147,6 @@ export function Wallet() {
       label: 'Patrimônio Total',
       value: formatPatrimonioUsd(finance.broCents),
       highlight: true,
-      spark: MOCK_MARKETS.PORTFOLIO.spark,
-      sparkPositive: MOCK_MARKETS.PORTFOLIO.change24h >= 0,
     },
     {
       label: 'EXP',
@@ -170,9 +174,7 @@ export function Wallet() {
       logoSrc: '/wallet-btc-logo.png',
       balance: '0.00000000 BTC',
       fiatRef: '≈ $0.00',
-      change24h: MOCK_MARKETS.BTC.change24h,
-      spark: MOCK_MARKETS.BTC.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.BTC.spotUsd!),
+      badge: 'Em breve',
     },
     {
       ticker: 'USDT',
@@ -181,9 +183,6 @@ export function Wallet() {
       balance: formatUsdt(finance.broCents),
       fiatRef: formatUsdtUsdRef(finance.broCents),
       badge: 'Ativa',
-      change24h: MOCK_MARKETS.USDT.change24h,
-      spark: MOCK_MARKETS.USDT.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.USDT.spotUsd!),
     },
     {
       ticker: 'BNB',
@@ -191,21 +190,17 @@ export function Wallet() {
       logoSrc: '/wallet-bnb-logo.png',
       balance: '0.0000 BNB',
       fiatRef: '≈ $0.00',
-      change24h: MOCK_MARKETS.BNB.change24h,
-      spark: MOCK_MARKETS.BNB.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.BNB.spotUsd!),
+      badge: 'Em breve',
     },
     {
-      ticker: 'OLE',
-      name: 'Olefoot',
+      ticker: 'OLEFOOT',
+      name: 'Olefoot Token',
       logoSrc: '/wallet-olefoot-logo.png',
-      balance: '0 OLE',
-      fiatRef: 'Moeda oficial • compra jogadores',
+      balance: `${formatCompact(olefootBalance)} OLEFOOT`,
+      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE`,
       highlight: true,
       badge: 'Oficial',
-      change24h: MOCK_MARKETS.OLE.change24h,
-      spark: MOCK_MARKETS.OLE.spark,
-      spotPrice: formatSpotUsd(MOCK_MARKETS.OLE.spotUsd!),
+      spotPrice: OLE_INTERNAL_PRICE_DISPLAY,
     },
   ];
 
@@ -239,15 +234,6 @@ export function Wallet() {
         }}
       />
       <SendModal open={sendOpen} onClose={() => setSendOpen(false)} />
-
-      {/* ── MATCH COUNTDOWN ──────────────────────────────────────── */}
-      <MatchCountdownChip
-        kickoffIso={mockKickoffIso}
-        opponent="FLA"
-        roundLabel="Round 23"
-        isHome={true}
-        venue="Maracanã"
-      />
 
       {/* ── QUICK ACTIONS (Revolut-style strip) ──────────────────── */}
       <WalletQuickActions actions={quickActions} />

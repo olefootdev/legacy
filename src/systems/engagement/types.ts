@@ -22,6 +22,8 @@ export interface ManagerPresence {
   absencePenaltyLastAppliedAt?: number;
   /** Última tier registrada — pra UI mostrar evolução. */
   lastAbsenceTier?: AbsenceTier;
+  /** Score de engajamento 0-100 — buff de +0% a +20% na Liga Global. */
+  engagementScore?: number;
 }
 
 export const EMPTY_PRESENCE = (managerId: string): ManagerPresence => ({

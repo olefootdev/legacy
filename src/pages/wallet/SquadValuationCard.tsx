@@ -4,7 +4,7 @@ import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
 
 type SquadValuationCardProps = {
-  /** Valor total do plantel em OLE (mock por enquanto). */
+  /** Valor total do plantel em EXP (mock por enquanto). */
   totalOle: number;
   change24h: number;
   playerCount: number;
@@ -78,11 +78,11 @@ export function SquadValuationCard({
                 fontSize: 'clamp(36px, 7vw, 56px)',
               }}
             >
-              {formatOle(totalOle)} OLE
+              {formatOle(totalOle)} EXP
             </p>
 
             <p className="text-[11px] text-white/55 tabular-nums">
-              {totalOle.toLocaleString('pt-BR')} OLE · valor de mercado
+              {totalOle.toLocaleString('pt-BR')} EXP · valor de mercado
             </p>
 
             {highlight ? (
@@ -100,7 +100,7 @@ export function SquadValuationCard({
                   </p>
                 </div>
                 <p className="text-[12px] font-bold text-neon-yellow tabular-nums">
-                  {formatOle(highlight.valueOle)} OLE
+                  {formatOle(highlight.valueOle)} EXP
                 </p>
               </div>
             ) : null}

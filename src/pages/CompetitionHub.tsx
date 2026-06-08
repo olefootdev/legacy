@@ -7,20 +7,21 @@ import { HubSectionCard } from '@/components/ui/HubSectionCard';
 
 export function CompetitionHub() {
   useTrackScreen('screen_competition_hub');
-  const results = useGameStore((s) => s.results);
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const finance = useGameStore((s) => s.finance);
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerId = useGameStore((s) => s.userSettings?.managerProfile?.email);
+  const myTeam = globalLeagueMVP?.teams.find((t) => t.managerId === managerId);
 
-  const wins = results.filter((r) => r.result === 'win').length;
-  const draws = results.filter((r) => r.result === 'draw').length;
-  const losses = results.filter((r) => r.result === 'loss').length;
-  const totalMatches = results.length;
+  const wins = (myTeam?.wins ?? 0) + (myTeam?.playoffWins ?? 0);
+  const draws = (myTeam?.draws ?? 0) + (myTeam?.playoffDraws ?? 0);
+  const losses = (myTeam?.losses ?? 0) + (myTeam?.playoffLosses ?? 0);
+  const totalMatches = (myTeam?.matchesPlayed ?? 0) + (myTeam?.playoffMatchesPlayed ?? 0);
 
-  // Forma recente (últimos 5)
-  const last5 = results.slice(0, 5);
-  const formStr = last5.length > 0
-    ? last5.map((r) => r.result === 'win' ? 'V' : r.result === 'draw' ? 'E' : 'D').join(' ')
+  const form = myTeam?.recentForm ?? [];
+  const formStr = form.length > 0
+    ? form.slice(0, 5).map((r) => r === 'W' ? 'V' : r === 'D' ? 'E' : 'D').join(' ')
     : '—';
 
   return (
@@ -258,6 +259,15 @@ export function CompetitionHub() {
           cta="Ver a corrida de hoje"
           rail="bg-neon-yellow"
           delay={0.6}
+        />
+        <HubSectionCard
+          to="/rewards"
+          eyebrow="Premium"
+          title="Liga Premiada"
+          description="Crie ou entre em torneios mata-mata com pote em EXP. Top 4 premiados. Convide amigos e ganhe 10% do pote como criador."
+          cta="Ver ligas premiadas"
+          rail="bg-[#FFD700]"
+          delay={0.7}
         />
       </section>
     </div>

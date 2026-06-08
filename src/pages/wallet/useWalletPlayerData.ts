@@ -3,7 +3,6 @@ import { useGameStore } from '@/game/store';
 import type { PlayerEntity } from '@/entities/types';
 import type { PlayerEvolutionTimelineMap } from '@/team/playerEvolutionTimeline';
 import { MEMORABLE_TROPHY_SLOTS, type MemorableTrophyId } from '@/trophies/memorableCatalog';
-import { MOCK_MARKETS } from './walletMockMarkets';
 import type { WatchlistEntry } from './PlayerWatchlist';
 import type { TrophyEntry } from './TrophyShowcase';
 
@@ -195,8 +194,7 @@ export function useTopSquadPlayers(limit = 3): WatchlistEntry[] {
       .sort((a, b) => priceOle(b) - priceOle(a))
       .slice(0, limit);
 
-    // Fallback rotacionado para jogadores sem timeline ainda (treino/jogo ainda não rodou).
-    const sparkFallback = [MOCK_MARKETS.BTC.spark, MOCK_MARKETS.OLE.spark, MOCK_MARKETS.BNB.spark];
+    const sparkFallback = [[0, 0]];
 
     return sorted.map((p, i) => {
       const realSpark = pricesFromTimeline(timeline, p.id);

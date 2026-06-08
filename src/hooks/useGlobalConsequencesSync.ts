@@ -38,14 +38,16 @@ export function useGlobalConsequencesSync() {
   const playerHealth = useGameStore((s) => s.playerHealth);
   const lastProcessedRound = useGameStore((s) => s.lastProcessedGlobalRound);
 
-  // Sync available_player_count para Supabase (debounced, reage a mudanças em playerHealth)
+  const engagementScore = useGameStore((s) => s.managerPresence?.engagementScore ?? 0);
+
+  // Sync available_player_count + engagement_score para Supabase (debounced)
   useEffect(() => {
     if (!club || !players || Object.keys(players).length === 0) return;
     const timer = setTimeout(() => {
-      syncAvailablePlayerCount(players as Record<string, PlayerEntity>, playerHealth);
+      syncTeamStatus(players as Record<string, PlayerEntity>, playerHealth, engagementScore);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [playerHealth, players, club]);
+  }, [playerHealth, players, club, engagementScore]);
 
   useEffect(() => {
     if (!globalLeagueMVP || !club) return;
@@ -215,6 +217,21 @@ function applyRoundConsequences(
   }));
   dispatchGame({ type: 'UPDATE_PLAYER_FORM_STREAK', updates: formUpdates });
 
+  // 6b. Daily challenges — atualiza progresso com resultado da Liga Global
+  if (result === 'win') {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'win_matches' });
+  }
+  if (myScore > 0) {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'score_goals', increment: myScore });
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'quick_goals' });
+  }
+  if (result === 'win' && theirScore === 0) {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'clean_sheet' });
+  }
+  if (result === 'win' && (myScore - theirScore) >= 3) {
+    dispatchGame({ type: 'UPDATE_CHALLENGE_PROGRESS', challengeType: 'dominant_win' });
+  }
+
   // 7. Inbox notifications
   generateInboxNotifications(healthEvents, lineupPlayerIds, playerHealth, players);
 
@@ -318,17 +335,17 @@ function generateInboxNotifications(
 }
 
 /**
- * Sincroniza available_player_count para o Supabase.
- * A Edge Function usa este valor para determinar WO (< 11 = derrota 3x0).
+ * Sincroniza available_player_count + engagement_score para o Supabase.
+ * A Edge Function usa estes valores para WO (< 11 = derrota 3x0) e buff de engajamento.
  */
-async function syncAvailablePlayerCount(
+async function syncTeamStatus(
   players: Record<string, PlayerEntity>,
   playerHealth: Record<string, PlayerHealth>,
+  engagementScore: number,
 ) {
   const sb = getSupabase();
   if (!sb) return;
 
-  // Contar jogadores que NÃO estão lesionados ou suspensos
   let available = 0;
   for (const pid of Object.keys(players)) {
     const h = playerHealth[pid];
@@ -336,7 +353,6 @@ async function syncAvailablePlayerCount(
     available++;
   }
 
-  // Buscar o team_id do manager
   const { data: session } = await sb.auth.getSession();
   const userId = session?.session?.user?.id;
   if (!userId) return;
@@ -350,6 +366,10 @@ async function syncAvailablePlayerCount(
 
   await sb
     .from('global_league_teams')
-    .update({ available_player_count: available })
+    .update({
+      available_player_count: available,
+      available_player_count_updated_at: new Date().toISOString(),
+      engagement_score: engagementScore,
+    })
     .eq('id', team.id);
 }
