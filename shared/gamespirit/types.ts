@@ -117,6 +117,14 @@ export interface SpiritContext {
    * Quando ausente, motor roda neutro (multiplicadores = 1.0).
    */
   contextModifiers?: import('@/match/contextFactors').MatchContextModifiers;
+
+  /**
+   * Fase 1 — RNG seedável injetável. Quando presente, todas as decisões
+   * estocásticas do motor consomem desse RNG (via helper `rngNext`),
+   * garantindo reprodutibilidade pra Monte Carlo. Quando ausente, motor
+   * usa Math.random — comportamento idêntico ao histórico.
+   */
+  rng?: import('./SpiritRng').SpiritRng;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */
