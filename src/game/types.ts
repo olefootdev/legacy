@@ -794,6 +794,15 @@ export type GameAction =
        */
       paymentMethod?: 'exp' | 'olefoot';
     }
+  | {
+      /**
+       * Decrementa 1 jogo de contrato pra cada player ID escalado.
+       * Usado por useGlobalConsequencesSync — uma vez por rodada Liga Global finalizada
+       * (dedupe via lastProcessedGlobalRound).
+       */
+      type: 'APPLY_CONTRACT_DECREMENT_FOR_PLAYED';
+      playerIds: string[];
+    }
   | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
   | { type: 'MARKET_MAKER_ACCEPT'; playerId: string; offerExp: number }

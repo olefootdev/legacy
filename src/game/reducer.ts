@@ -124,6 +124,7 @@ import {
 } from '@/team/playerEvolutionTimeline';
 import {
   applyHomeContractsAfterMatch,
+  decrementContractsForIds,
   genesisListingPriceExpFromMintOverall,
   managerProspectContractPremiumExp,
 } from '@/playerContracts/playerContracts';
@@ -2391,6 +2392,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         finance,
         players: { ...state.players, [action.playerId]: updatedPlayer },
       };
+    }
+    case 'APPLY_CONTRACT_DECREMENT_FOR_PLAYED': {
+      if (!action.playerIds || action.playerIds.length === 0) return state;
+      const next = decrementContractsForIds(state.players, action.playerIds);
+      // decrementContractsForIds devolve a referência original quando nada mudou.
+      if (next === state.players) return state;
+      return { ...state, players: next };
     }
     case 'LIST_MANAGER_PROSPECT': {
       const pl = state.players[action.playerId];

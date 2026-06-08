@@ -128,6 +128,14 @@ function applyRoundConsequences(
   // 1. Tick recovery (decrementa suspensões/lesões de rodadas anteriores)
   dispatchGame({ type: 'TICK_HEALTH_RECOVERY' });
 
+  // 1b. Contratos: decrementa 1 jogo pra cada escalado.
+  // Dedupe garantido por lastProcessedGlobalRound (linha 67 acima) — uma rodada
+  // global = um decremento por jogador participante.
+  dispatchGame({
+    type: 'APPLY_CONTRACT_DECREMENT_FOR_PLAYED',
+    playerIds: lineupPlayerIds as string[],
+  });
+
   // 2. Atribuir eventos do servidor a jogadores individuais
   const healthEvents: MatchOutcomeEvent[] = [];
   const affectedPlayerIds = new Set<string>();

@@ -110,19 +110,21 @@ export function contractFieldsAdminLifetime(): Pick<
   };
 }
 
-/** Conta 1 jogo de contrato por jogador da casa presente em `homeStats` (ou em campo). */
-export function applyHomeContractsAfterMatch(
+/**
+ * Decrementa 1 jogo de contrato pra cada player ID na lista (skip vitalícios e
+ * jogadores sem contrato definido). Marca `contractExpired=true` quando chega a 0.
+ *
+ * Core compartilhado: tanto a versão "fromLiveMatch" (Quick/Live/Auto local)
+ * quanto "fromGlobalMatch" (Liga Global server-side) consomem isso.
+ */
+export function decrementContractsForIds(
   players: Record<string, PlayerEntity>,
-  liveMatch: LiveMatchSnapshot,
+  ids: readonly string[],
 ): Record<string, PlayerEntity> {
-  const statIds = Object.keys(liveMatch.homeStats ?? {});
-  const ids =
-    statIds.length > 0
-      ? statIds
-      : [...new Set((liveMatch.homePlayers ?? []).map((h) => h.playerId).filter(Boolean))];
   if (ids.length === 0) return players;
 
   const next = { ...players };
+  let changed = false;
   for (const pid of ids) {
     const p = next[pid];
     if (!p || p.contractIsLifetime === true) continue;
@@ -134,8 +136,22 @@ export function applyHomeContractsAfterMatch(
       contractMatchesRemaining: rem,
       contractExpired: rem === 0 ? true : p.contractExpired === true,
     };
+    changed = true;
   }
-  return next;
+  return changed ? next : players;
+}
+
+/** Conta 1 jogo de contrato por jogador da casa presente em `homeStats` (ou em campo). */
+export function applyHomeContractsAfterMatch(
+  players: Record<string, PlayerEntity>,
+  liveMatch: LiveMatchSnapshot,
+): Record<string, PlayerEntity> {
+  const statIds = Object.keys(liveMatch.homeStats ?? {});
+  const ids =
+    statIds.length > 0
+      ? statIds
+      : [...new Set((liveMatch.homePlayers ?? []).map((h) => h.playerId).filter(Boolean))];
+  return decrementContractsForIds(players, ids);
 }
 
 /** Saves antigos: Genesis sem campos de contrato → default + id de catálogo. */
