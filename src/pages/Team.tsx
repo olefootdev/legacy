@@ -62,6 +62,7 @@ import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
 import { useTrackScreen, trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
 import { PlayerConsequencesBadge } from '@/components/olefoot-python-mode/PlayerConsequencesBadge';
+import { PlayerStatusBadge } from '@/components/player/PlayerStatusBadge';
 import { calcMarketMakerOffer, marketMakerDiscountLabel } from '@/market/marketMaker';
 import {
   countActiveAcademyProspects,
@@ -585,6 +586,8 @@ export function Team() {
                   { label: 'PAS', val: player.pas },
                   { label: 'FAT', val: player.fatigue },
                 ];
+                const entity = playersById[player.id];
+                const health = entity ? playerHealth[entity.id] : undefined;
                 return (
                 <motion.div
                   key={player.id}
@@ -679,33 +682,7 @@ export function Team() {
                           {player.pos}
                         </p>
                       </button>
-                      {player.outForMatches > 0 ? (
-                        <span
-                          className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-danger)] bg-[rgba(255,61,61,0.1)] text-[var(--color-danger)] uppercase px-1.5 py-0.5"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '9px',
-                            fontWeight: 700,
-                            letterSpacing: '0.18em',
-                            borderRadius: 'var(--radius-sm)',
-                          }}
-                        >
-                          Fora {player.outForMatches}j
-                        </span>
-                      ) : player.injuryRisk >= 70 ? (
-                        <span
-                          className="shrink-0 inline-flex items-center gap-1 border border-[var(--color-warning)] bg-[rgba(255,179,0,0.1)] text-[var(--color-warning)] uppercase px-1.5 py-0.5"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '9px',
-                            fontWeight: 700,
-                            letterSpacing: '0.18em',
-                            borderRadius: 'var(--radius-sm)',
-                          }}
-                        >
-                          Risco {player.injuryRisk}
-                        </span>
-                      ) : null}
+                      {entity ? <PlayerStatusBadge player={entity} health={health} size="sm" /> : null}
                     </div>
 
                     {/* OLEFOOT PYTHON MODE — consequências persistentes do jogador */}

@@ -16,6 +16,7 @@ import {
 } from '@/team/playerSeasonLedger';
 import { VeracityPillarsStrip } from '@/components/VeracityPillarsStrip';
 import { LegacyMentorSection } from '@/legacy/LegacyMentorSection';
+import { PlayerHealthContractSection } from '@/components/player/PlayerHealthContractSection';
 
 function TrendGlyph({ label }: { label: 'up' | 'down' | 'flat' | 'unknown' }) {
   if (label === 'up') return <TrendingUp className="h-4 w-4 text-emerald-400" aria-hidden />;
@@ -426,6 +427,7 @@ export function TeamPlayerSeasonSheet({
             </div>
           </section>
 
+          {player ? <PlayerHealthContractSection player={player} /> : null}
           {player ? <LegacyMentorSection student={player} /> : null}
           {boosterRows.length ? (
             <section className="border border-fuchsia-500/35 bg-fuchsia-950/20 p-4 scroll-snap-section"
