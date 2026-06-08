@@ -41,6 +41,7 @@
     "test:olefoot-league": "tsx src/olefootLeague/runOlefootLeagueSelfTest.ts",
     "test:onboarding": "tsx src/onboarding/runOnboardingSelfTest.ts",
     "test:olefoot-python-mode": "tsx src/systems/runOlefootPythonModeSelfTest.ts",
+    "test:context-factors": "tsx src/match/runContextFactorsSelfTest.ts",
     "dev:server": "npm run dev --prefix server",
     "test:openai": "npm run test:openai --prefix server",
     "test:openai:http": "npm run test:openai:http --prefix server",

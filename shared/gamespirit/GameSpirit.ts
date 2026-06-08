@@ -26,6 +26,7 @@ import { createCausalBatch, type CausalMatchEvent } from '@/match/causal/matchCa
 import { normalizeStyle } from '@/tactics/playingStyle';
 import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum';
 import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
+import { applyContextModifiers } from '@/match/contextFactors';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 import { resolveSkills, tickSkillCooldowns } from '@/skills/skillEngine';
@@ -395,6 +396,12 @@ export function buildSpiritContext(input: {
   pendingCornerForSide?: SpiritContext['pendingCornerForSide'];
   pendingFreeKickForSide?: SpiritContext['pendingFreeKickForSide'];
   smartfieldActionHint?: SpiritContext['smartfieldActionHint'];
+  /**
+   * Fase 3 — Fatores Contextuais. Quando presente, os 4 inputs do peso da
+   * partida (homeTeamAvg, crowdSupport, avgHomeFatigue, tacticalMentality)
+   * passam por applyContextModifiers antes de irem ao SpiritContext.
+   */
+  contextModifiers?: import('@/match/contextFactors').MatchContextModifiers;
 }): SpiritContext {
   // Overall do time ponderado por role (atacantes pesam ataque, zagueiros pesam defesa).
   // Usa `homePlayers` (MatchPlayerAttributes) quando disponível; fallback pro overall do roster.
@@ -410,7 +417,7 @@ export function buildSpiritContext(input: {
     if (input.homeRoster.length === 0) return 78;
     return input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / input.homeRoster.length;
   })();
-  const avgHomeFatigue =
+  const avgHomeFatigueRaw =
     input.homePlayers.length === 0
       ? 48
       : input.homePlayers.reduce((s, p) => s + p.fatigue, 0) / input.homePlayers.length;
@@ -418,7 +425,31 @@ export function buildSpiritContext(input: {
   const ballZone = zoneFromBallX(input.ball.x);
   const nearestTeammateDist = nearestTeammateDistance(input.onBall, input.homePlayers);
   const homeDensityNearBall = densityNearBall(input.ball, input.homePlayers);
-  const crowdPressure = crowdSpiritFromSupport(input.crowdSupport);
+
+  // ── Fase 3: aplica fatores contextuais nos 4 inputs de peso da partida ────
+  // homeTeamAvg ← homeAdvantage × squadDepletion
+  // crowdSupport ← homeAdvantage × derbyIntensity
+  // avgHomeFatigue ← /restMultiplier
+  // tacticalMentality ← × importance
+  // Se sem modificadores, valores ficam idênticos (motor neutro).
+  const ctxApplied = input.contextModifiers
+    ? applyContextModifiers(
+        {
+          homeTeamAvg: avg,
+          crowdSupport: input.crowdSupport,
+          avgHomeFatigue: avgHomeFatigueRaw,
+          tacticalMentality: input.tacticalMentality,
+        },
+        input.contextModifiers,
+      )
+    : null;
+
+  const homeTeamAvgFinal = ctxApplied?.homeTeamAvg ?? avg;
+  const crowdSupportFinal = ctxApplied?.crowdSupport ?? input.crowdSupport;
+  const avgHomeFatigue = ctxApplied?.avgHomeFatigue ?? avgHomeFatigueRaw;
+  const tacticalMentalityFinal = ctxApplied?.tacticalMentality ?? input.tacticalMentality;
+
+  const crowdPressure = crowdSpiritFromSupport(crowdSupportFinal);
 
   // Extrai positionKnowledge do jogador com a bola (quando em posse da casa)
   const onBallKnowledge =
@@ -445,11 +476,11 @@ export function buildSpiritContext(input: {
     possession: input.possession,
     onBall: input.onBall,
     ball: input.ball,
-    crowdSupport: input.crowdSupport,
-    tacticalMentality: input.tacticalMentality,
+    crowdSupport: crowdSupportFinal,
+    tacticalMentality: tacticalMentalityFinal,
     tacticalStyle: input.tacticalStyle,
     opponentStrength: input.opponentStrength,
-    homeTeamAvg: avg,
+    homeTeamAvg: homeTeamAvgFinal,
     nearbyOpponentDist: dist(input.ball, mirrorAttack),
     ballZone,
     ballZoneInfo: zoneAtUI(input.ball.x, input.ball.y, input.possession),
@@ -471,6 +502,7 @@ export function buildSpiritContext(input: {
     pendingCornerForSide: input.pendingCornerForSide,
     pendingFreeKickForSide: input.pendingFreeKickForSide,
     smartfieldActionHint: input.smartfieldActionHint,
+    contextModifiers: input.contextModifiers,
   };
 }
 

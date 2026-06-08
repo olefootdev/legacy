@@ -108,6 +108,15 @@ export interface SpiritContext {
    * Falta perigosa pendente (cobrança direta). Próximo tick força `shot` tipo `placed`.
    */
   pendingFreeKickForSide?: PossessionSide | null;
+
+  /**
+   * Fase 3 — Fatores Contextuais. Modificadores nomeados aplicados em
+   * `homeTeamAvg`, `crowdSupport`, `avgHomeFatigue` e `tacticalMentality`
+   * antes da resolução. Auditável via `breakdown` pra UI de transparência.
+   *
+   * Quando ausente, motor roda neutro (multiplicadores = 1.0).
+   */
+  contextModifiers?: import('@/match/contextFactors').MatchContextModifiers;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */
