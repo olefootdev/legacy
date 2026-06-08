@@ -8,12 +8,36 @@
  * Esconde quando não há novidades (zero ruído na Home).
  */
 
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Activity, ShieldOff, Flame, Coins, Ban, ShieldCheck, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { selectStatusFeed, type StatusFeedItem } from '@/match/availabilityReport';
+import type { PlayerHealth } from '@/systems/playerHealth/types';
+
+const PREV_HEALTH_KEY = 'olefoot.squad.prevHealth.v1';
+
+function readPrevHealth(): Record<string, PlayerHealth> | undefined {
+  if (typeof localStorage === 'undefined') return undefined;
+  try {
+    const raw = localStorage.getItem(PREV_HEALTH_KEY);
+    if (!raw) return undefined;
+    return JSON.parse(raw) as Record<string, PlayerHealth>;
+  } catch {
+    return undefined;
+  }
+}
+
+function writePrevHealth(health: Record<string, PlayerHealth> | undefined) {
+  if (typeof localStorage === 'undefined' || !health) return;
+  try {
+    localStorage.setItem(PREV_HEALTH_KEY, JSON.stringify(health));
+  } catch {
+    /* quota / private mode — ignora */
+  }
+}
 
 const ICON_BY_KIND: Record<StatusFeedItem['kind'], typeof Activity> = {
   injury_in: Activity,
@@ -50,9 +74,23 @@ export function SquadNewsCard() {
   const players = useGameStore((s) => s.players);
   const playerHealth = useGameStore((s) => s.playerHealth);
 
-  // selectStatusFeed sem `previous` → emite só alertas vigentes
-  // (contract_warning, contract_expired). Sem ruído de "transições" no primeiro load.
-  const items = selectStatusFeed({ players, health: playerHealth });
+  // Snapshot anterior persistido em localStorage — assim detectamos
+  // transições reais (X retornou de lesão, Y entrou em recuperação) entre
+  // visitas, e não só alertas vigentes.
+  const previousRef = useRef<Record<string, PlayerHealth> | undefined>(readPrevHealth());
+
+  // Após exibir, atualiza o snapshot pro próximo load.
+  useEffect(() => {
+    if (playerHealth) {
+      writePrevHealth(playerHealth);
+    }
+  }, [playerHealth]);
+
+  const items = selectStatusFeed({
+    players,
+    health: playerHealth,
+    previous: previousRef.current,
+  });
 
   if (items.length === 0) return null;
 

@@ -43,6 +43,7 @@
     "test:olefoot-python-mode": "tsx src/systems/runOlefootPythonModeSelfTest.ts",
     "test:context-factors": "tsx src/match/runContextFactorsSelfTest.ts",
     "test:spirit-rng": "tsx shared/gamespirit/runSpiritRngSelfTest.ts",
+    "test:live-migration": "tsx src/gamespirit/runLiveEngineMigrationSelfTest.ts",
     "test:monte-carlo": "tsx src/match/runMatchMonteCarloSelfTest.ts",
     "dev:server": "npm run dev --prefix server",
     "test:openai": "npm run test:openai --prefix server",

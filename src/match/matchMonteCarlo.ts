@@ -341,3 +341,140 @@ export function simulateMatchN(input: MonteCarloInput): MonteCarloResult {
 
 // Re-export roleFromSlotId pra compat — alguns chamadores podem precisar.
 export { roleFromSlotId };
+
+// ──────────────────────────────────────────────────────────────────────────
+// PR-C — Live recompute V/E/D
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface LiveMonteCarloInput extends MonteCarloInput {
+  currentHomeGoals: number;
+  currentAwayGoals: number;
+  /** 0-90. minutos já jogados. */
+  minutesElapsed: number;
+}
+
+/**
+ * Roda Monte Carlo da PARTIDA RESTANTE: amostra apenas os gols dos minutos
+ * que faltam (xG escalado pelo ratio remaining/90), soma ao placar atual,
+ * e devolve V/E/D + drama atualizados pra UI ao vivo.
+ *
+ * Quando minutesElapsed >= 90, devolve resultado determinístico (placar final
+ * é fixo, V/E/D 0/0/1 conforme ganhador).
+ */
+export function simulateLiveRemainder(input: LiveMonteCarloInput): MonteCarloResult {
+  const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const minutesRemaining = Math.max(0, 90 - input.minutesElapsed);
+
+  // Match terminada — resultado determinístico.
+  if (minutesRemaining <= 0) {
+    const ch = input.currentHomeGoals;
+    const ca = input.currentAwayGoals;
+    const winH = ch > ca ? 1 : 0;
+    const drw = ch === ca ? 1 : 0;
+    const winA = ch < ca ? 1 : 0;
+    return {
+      winHome: winH, draw: drw, winAway: winA,
+      xgHome: ch, xgAway: ca,
+      scoreDist: [{ score: `${ch}-${ca}`, prob: 1, homeGoals: ch, awayGoals: ca }],
+      topHomeScorers: [], topAwayScorers: [],
+      dramaIndex: Math.abs(ch - ca) <= 1 ? 1 : 0,
+      zebra: false, samples: 1,
+      seedUsed: input.seed ?? 0, durationMs: 0,
+    };
+  }
+
+  const n = Math.max(1, Math.floor(input.n ?? 1000));
+  const seed = input.seed ?? Date.now();
+  const rng = new SpiritRng(seed);
+  const remainingRatio = minutesRemaining / 90;
+
+  const ratio = (() => {
+    const safe = (v: number) => Math.max(40, Math.min(99, v));
+    const h = Math.pow(safe(input.homeTeamOvr) - 40, 2);
+    const a = Math.pow(safe(input.awayTeamOvr) - 40, 2);
+    const total = h + a || 1;
+    return { home: (h / total) * 2, away: (a / total) * 2 };
+  })();
+  let xgHomeBase = BASE_TOTAL_XG * (ratio.home / 2) * remainingRatio;
+  let xgAwayBase = BASE_TOTAL_XG * (ratio.away / 2) * remainingRatio;
+
+  // Aplica modificadores (Fase 3).
+  const mods = input.contextModifiers;
+  let xgHome = xgHomeBase;
+  let xgAway = xgAwayBase;
+  if (mods) {
+    xgHome *= mods.homeAdvantage;
+    xgAway *= 2 - mods.homeAdvantage;
+    xgHome *= 0.5 + 0.5 * mods.restMultiplier;
+    xgHome *= 1 + (mods.derbyIntensity - 1) * 0.6;
+    xgAway *= 1 + (mods.derbyIntensity - 1) * 0.6;
+    xgHome *= 1 + (mods.importance - 1) * 0.5;
+  }
+  if (input.effectiveHomeStrength && input.effectiveHomeStrength.depletionMultiplier < 1) {
+    xgHome *= input.effectiveHomeStrength.depletionMultiplier;
+  }
+  xgHome = Math.max(0.01, xgHome);
+  xgAway = Math.max(0.01, xgAway);
+
+  let winH = 0, drw = 0, winA = 0;
+  let drama = 0;
+  let totalGoalsHome = 0;
+  let totalGoalsAway = 0;
+  const scoreFreq = new Map<string, { home: number; away: number; count: number }>();
+
+  for (let i = 0; i < n; i++) {
+    const addH = samplePoisson(xgHome, rng);
+    const addA = samplePoisson(xgAway, rng);
+    const finalH = input.currentHomeGoals + addH;
+    const finalA = input.currentAwayGoals + addA;
+
+    if (finalH > finalA) winH++;
+    else if (finalH < finalA) winA++;
+    else drw++;
+    if (Math.abs(finalH - finalA) <= 1) drama++;
+
+    totalGoalsHome += finalH;
+    totalGoalsAway += finalA;
+
+    const key = `${finalH}-${finalA}`;
+    const existing = scoreFreq.get(key);
+    if (existing) existing.count++;
+    else scoreFreq.set(key, { home: finalH, away: finalA, count: 1 });
+  }
+
+  const winHomeProb = winH / n;
+  const drawProb = drw / n;
+  const winAwayProb = winA / n;
+
+  const scoreDist: ScoreBucket[] = [...scoreFreq.values()]
+    .map((b) => ({ score: `${b.home}-${b.away}`, prob: b.count / n, homeGoals: b.home, awayGoals: b.away }))
+    .sort((a, b) => b.prob - a.prob)
+    .slice(0, 5);
+
+  const dramaIndex = drama / n;
+  const zebraSide: 'home' | 'away' | undefined =
+    winAwayProb >= 0.25 && winHomeProb > winAwayProb
+      ? 'away'
+      : winHomeProb >= 0.25 && winAwayProb > winHomeProb
+        ? 'home'
+        : undefined;
+
+  const t1 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+  return {
+    winHome: winHomeProb,
+    draw: drawProb,
+    winAway: winAwayProb,
+    xgHome: totalGoalsHome / n,
+    xgAway: totalGoalsAway / n,
+    scoreDist,
+    topHomeScorers: [],
+    topAwayScorers: [],
+    dramaIndex,
+    zebra: zebraSide !== undefined,
+    zebraSide,
+    samples: n,
+    seedUsed: seed,
+    durationMs: Math.round(t1 - t0),
+  };
+}

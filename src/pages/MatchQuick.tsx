@@ -19,7 +19,7 @@ import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchF
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
 import { MatchFindingOverlay } from '@/components/match/MatchFindingOverlay';
 import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
-import { simulateMatchN } from '@/match/matchMonteCarlo';
+import { simulateMatchN, simulateLiveRemainder } from '@/match/matchMonteCarlo';
 import { computeMatchContextModifiers } from '@/match/contextFactors';
 import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import {
@@ -2080,6 +2080,35 @@ export function MatchQuick() {
     });
   }, [fixture?.opponent, playersById, playerHealth]);
 
+  // PR-C — Recompute V/E/D AO VIVO. Trigger: mudança de placar OU múltiplos
+  // de 15 min. 500 sims pra ser barato (~5ms). Esconde quando não em playing.
+  const liveMinuteBucket = live?.phase === 'playing' && typeof live.minute === 'number'
+    ? Math.floor(live.minute / 15) * 15
+    : null;
+  const livePrediction = useMemo(() => {
+    if (!live || live.phase !== 'playing') return null;
+    if (!fixture?.opponent || fixture.opponent.id === 'placeholder-opponent' || fixture.opponent.id === 'no-opponent-available') return null;
+    const effective = selectEffectiveTeamStrength({ players: playersById, health: playerHealth });
+    if (effective.startersCounted === 0) return null;
+    const mods = computeMatchContextModifiers({
+      isHome: true,
+      effectiveTeamStrength: effective,
+    });
+    const seedKey = `${fixture.opponent.id}_${live.homeScore}_${live.awayScore}_${liveMinuteBucket}`;
+    const seed = Array.from(seedKey).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 13);
+    return simulateLiveRemainder({
+      homeTeamOvr: effective.effectiveOverall,
+      awayTeamOvr: fixture.opponent.strength ?? 72,
+      contextModifiers: mods,
+      effectiveHomeStrength: effective,
+      n: 500,
+      seed,
+      currentHomeGoals: live.homeScore,
+      currentAwayGoals: live.awayScore,
+      minutesElapsed: live.minute,
+    });
+  }, [live?.phase, live?.homeScore, live?.awayScore, liveMinuteBucket, fixture?.opponent, playersById, playerHealth]);
+
   const goalScorerOverlayProps = useMemo(() => {
     if (!live) return null;
     const ev = live.events[0];
@@ -2782,6 +2811,17 @@ export function MatchQuick() {
           </Fragment>
         ) : null}
       </AnimatePresence>
+
+      {showBoard && live && livePrediction ? (
+        <div className="mb-3">
+          <MatchPredictionPanel
+            result={livePrediction}
+            homeName={club?.shortName ?? 'Casa'}
+            awayName={fixture?.opponent?.shortName ?? 'Visitante'}
+            compact
+          />
+        </div>
+      ) : null}
 
       {showBoard && live && (
         <div data-tutorial-anchor="match-quick-board" className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">

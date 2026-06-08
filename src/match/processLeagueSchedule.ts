@@ -13,6 +13,8 @@ import { addBroCents, grantEarnedExp } from '@/systems/economy';
 import { diffNewMemorableTrophyIds, memorableTrophyFinanceReward } from '@/trophies/memorablePrizes';
 import { tickRecoveryMatches } from '@/systems/injury';
 import { tickHealthRecovery } from '@/systems/playerHealth/reducer';
+import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
+import { computeMatchContextModifiers, daysSinceLastMatchFromHistory } from '@/match/contextFactors';
 import { effectiveCrowdSupportPercent, structureMatchExpBonuses } from '@/clubStructures/benefits';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
 import { appendMemorableTrophyUnlocks } from '@/trophies/memorableCatalog';
@@ -177,6 +179,15 @@ function applyUserMatchResolution(
     );
     liveMatch = { ...liveMatch, mode: 'auto', phase: 'playing' };
     const roster = homeRosterFromLineupState({ ...state, players });
+    // Fase 3 — catch-up offline aplica mando + desfalques.
+    // (rest/daysSince fica fora: simulação em sequência sem timestamps reais.)
+    const catchUpEffective = selectEffectiveTeamStrength({ players, health: state.playerHealth });
+    const catchUpMods = catchUpEffective.startersCounted > 0
+      ? computeMatchContextModifiers({
+          isHome: userHome,
+          effectiveTeamStrength: catchUpEffective,
+        })
+      : undefined;
     const out = advanceMatchToPostgame({
       snapshot: liveMatch,
       homeRoster: roster,
@@ -187,6 +198,7 @@ function applyUserMatchResolution(
       opponentStrength: tempFx.opponent.strength,
       awayShort: tempFx.opponent.shortName,
       opponentId: tempFx.opponent.id,
+      contextModifiers: catchUpMods,
     });
     liveMatch = out.snapshot;
     players = { ...players, ...out.updatedPlayers };

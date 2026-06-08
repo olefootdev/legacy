@@ -8,6 +8,8 @@ import { accrueOlexpDaily } from '@/wallet/olexp';
 import { accrueGatDaily } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
 import { processLeagueScheduleDue } from '@/match/processLeagueSchedule';
+import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
+import { computeMatchContextModifiers } from '@/match/contextFactors';
 import { mergeWalletIntoFinance } from './financeWalletSync';
 import { effectiveCrowdSupportPercent, medicalDeptRecoverySpeedBonusPercent } from '@/clubStructures/benefits';
 import { staffPhysicalRecoveryBonusPercent, staffRunMatchMinuteEffects } from '@/systems/staffBenefits';
@@ -113,6 +115,17 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
     let roster = homeRosterFromLineupState({ ...state, players });
     const maxSim = Math.min(40, Math.floor(gm), 90 - liveMatch.minute);
     const staffFx = staffRunMatchMinuteEffects(state.manager.staff);
+    // Fase 3 — catch-up local também aplica modificadores (mando + desfalques).
+    // Computado UMA VEZ pra todos os ticks do catch-up, evita custo no loop.
+    const cuEffective = selectEffectiveTeamStrength({
+      players, health: state.playerHealth,
+    });
+    const cuMods = cuEffective.startersCounted > 0
+      ? computeMatchContextModifiers({
+          isHome: state.nextFixture.isHome,
+          effectiveTeamStrength: cuEffective,
+        })
+      : undefined;
     for (let i = 0; i < maxSim; i++) {
       const homeRoster = roster.map((r) => players[r.id] ?? r);
       const { snapshot, updatedPlayers } = runMatchMinute({
@@ -130,6 +143,7 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
         awayShort: state.nextFixture.opponent.shortName,
         opponentId: state.nextFixture.opponent.id,
         staffMatchEffects: staffFx,
+        contextModifiers: cuMods,
       });
       liveMatch = snapshot;
       players = { ...players, ...updatedPlayers };

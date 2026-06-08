@@ -406,14 +406,24 @@ function runTick(state: OlefootGameState): OlefootGameState {
   const roster = homeRosterFromLineup(state);
 
   // Fase 3 — fatores contextuais consumidos por GameSpirit dentro do tick.
-  // Cobre mando, desfalques (via força efetiva). Outros fatores (rest, derby,
-  // importance) podem ser plugados quando tivermos os metadados no fixture.
+  // Cobre mando, desfalques, descanso real (via SSOT playerHealth.lastMatchAt).
   const effectiveStrength = selectEffectiveTeamStrength({
     players: state.players, health: state.playerHealth,
   });
+  let daysSinceLastMatch: number | undefined;
+  if (state.playerHealth) {
+    let mostRecent = 0;
+    for (const h of Object.values(state.playerHealth)) {
+      if (h.lastMatchAt && h.lastMatchAt > mostRecent) mostRecent = h.lastMatchAt;
+    }
+    if (mostRecent > 0) {
+      daysSinceLastMatch = (Date.now() - mostRecent) / (1000 * 60 * 60 * 24);
+    }
+  }
   const contextModifiers = effectiveStrength.startersCounted > 0
     ? computeMatchContextModifiers({
         isHome: state.nextFixture.isHome,
+        daysSinceLastMatch,
         effectiveTeamStrength: effectiveStrength,
       })
     : undefined;
@@ -797,6 +807,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (action.mode === 'auto') {
         liveMatch = { ...liveMatch, phase: 'playing' };
         const roster = homeRosterFromLineup({ ...st, players });
+        // Fase 3 — modificadores aplicados no Auto também
+        const autoEffective = selectEffectiveTeamStrength({ players, health: st.playerHealth });
+        const autoMods = autoEffective.startersCounted > 0
+          ? computeMatchContextModifiers({
+              isHome: st.nextFixture.isHome,
+              effectiveTeamStrength: autoEffective,
+            })
+          : undefined;
         const { snapshot, updatedPlayers } = advanceMatchToPostgame({
           snapshot: liveMatch,
           homeRoster: roster,
@@ -811,6 +829,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           opponentStrength: st.nextFixture.opponent.strength,
           awayShort: st.nextFixture.opponent.shortName,
           staffMatchEffects: staffRunMatchMinuteEffects(st.manager.staff),
+          contextModifiers: autoMods,
         });
         players = { ...players, ...updatedPlayers };
         liveMatch = snapshot;
@@ -1323,6 +1342,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'TICK_MATCH_BULK': {
       if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
       const roster = homeRosterFromLineup(state);
+      // Fase 3 — Bulk simulation respeita modificadores também.
+      const bulkEffective = selectEffectiveTeamStrength({
+        players: state.players, health: state.playerHealth,
+      });
+      const bulkMods = bulkEffective.startersCounted > 0
+        ? computeMatchContextModifiers({
+            isHome: state.nextFixture.isHome,
+            effectiveTeamStrength: bulkEffective,
+          })
+        : undefined;
       const { snapshot, updatedPlayers } = runMatchMinuteBulk({
         snapshot: state.liveMatch,
         homeRoster: roster,
@@ -1334,6 +1363,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         awayShort: state.nextFixture.opponent.shortName,
         steps: action.steps,
         staffMatchEffects: staffRunMatchMinuteEffects(state.manager.staff),
+        contextModifiers: bulkMods,
       });
       let liveMatch = snapshot;
       const players = { ...state.players, ...updatedPlayers };

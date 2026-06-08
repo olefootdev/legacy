@@ -28,6 +28,7 @@ import { updateMomentum as updateMomentumFromTick } from '@/gamespirit/momentum'
 import { weightedOverall, roleFromSlotId } from '@/match/positionWeights';
 import { zoneAtUI, isBox, isFinalThird, isCreationZone, dangerToOppGoal01 } from '@/match/spatialZones';
 import { applyContextModifiers } from '@/match/contextFactors';
+import { rngNext } from './rngNext';
 import { FIELD_WIDTH, GOAL_MOUTH_HALF_WIDTH_M } from '@/simulation/field';
 import { computeSituationalModifiers, type SituationalModifiers } from '@/gamespirit/situationalIntelligence';
 import { doesLooseControl } from '@/behaviorAI/firstTouchErrors';
@@ -69,15 +70,15 @@ function zoneFromBallX(x: number): BallZone {
 }
 
 /** Alvo UI (0–100) junto à boca real da baliza — coerente com coreografia test2d. */
-function spiritShotTargetUI(side: 'home' | 'away', shooter?: PitchPlayerState): PitchPoint {
+function spiritShotTargetUI(side: 'home' | 'away', shooter?: PitchPlayerState, ctx?: SpiritContext): PitchPoint {
   const halfUy = (GOAL_MOUTH_HALF_WIDTH_M / FIELD_WIDTH) * 100;
   // ângulo proxy: 0 = central, 1 = lateral extremo. Reduz janela e viesa pro canto curto.
   const lateralBias = shooter ? Math.min(1, Math.abs(shooter.y - 50) / 35) : 0;
   const usable = 0.88 * (1 - lateralBias * 0.55);
   const sideBias = shooter ? Math.sign(shooter.y - 50) * lateralBias * halfUy * 0.45 : 0;
-  const y = 50 + sideBias + (Math.random() - 0.5) * (2 * halfUy * usable);
-  if (side === 'home') return { x: 96.4 + Math.random() * 2.6, y };
-  return { x: 1 + Math.random() * 2.6, y };
+  const y = 50 + sideBias + (rngNext(ctx) - 0.5) * (2 * halfUy * usable);
+  if (side === 'home') return { x: 96.4 + rngNext(ctx) * 2.6, y };
+  return { x: 1 + rngNext(ctx) * 2.6, y };
 }
 
 /** Remate com desfecho pleno (golo/defesa/bloqueio): só com bola na zona final (≥68 m no eixo 0–100). */
@@ -291,7 +292,7 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     tickPressingTrap(_homePressing, simTime);
     const trapBonus = isPressingTrapActive(_homePressing, simTime) ? 0.12 : 0;
     const carrierPressResist = ctx.onBallKnowledge ? (ctx.onBallKnowledge.traits.pressIntensity - 1) * 0.06 : 0;
-    if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus - carrierPressResist)) return 'press';
+    if (rngNext(ctx) < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus - carrierPressResist)) return 'press';
   }
   if (ctx.possession === 'home' && ctx.ballZone === 'att' && (ctx.onBall?.role === 'attack' || ctx.onBall?.role === 'mid')) {
     if (isolated && ctx.crowdPressure.longPassStress > 1.05) return 'recycle';
@@ -323,7 +324,7 @@ function pickAction(ctx: SpiritContext): ProposedAction {
       urgencyByContext +  // Urgência por placar/tempo
       fatigueShotPenalty; // Cansaço empurra pra passe seguro
     // FANTASY V5 (2026-05-27): 0.20 → 0.28 — V4 chutava demais em sequência.
-    return Math.random() > 0.28 - shotBias ? 'shot' : 'progress';
+    return rngNext(ctx) > 0.28 - shotBias ? 'shot' : 'progress';
   }
   // Build-up: só joga longo (clear) se realmente sem opção curta.
   // Urgência: quando perdendo no final, evita clear (prefere progress mesmo sem colega livre).
@@ -332,11 +333,11 @@ function pickAction(ctx: SpiritContext): ProposedAction {
   const clearThreshold = pkTraits ? Math.max(0.10, 0.22 - (pkTraits.offensiveRuns - 1) * 0.04) : 0.22;
   const progressThreshold = pkTraits ? Math.min(0.38, 0.24 + (pkTraits.offensiveRuns - 1) * 0.05) : 0.24;
   const recycleThreshold = pkTraits ? Math.max(0.14, 0.28 - (pkTraits.buildUpPreference - 1) * 0.04) : 0.28;
-  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && urgencyByContext <= 0 && Math.random() < clearThreshold) return 'clear';
+  if (ctx.possession === 'home' && style.buildUp > 0.72 && !freeFwd && urgencyByContext <= 0 && rngNext(ctx) < clearThreshold) return 'clear';
   if (ctx.possession === 'home' && style.verticality > 0.72 && freeFwd) return 'progress';
-  if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < progressThreshold) return 'progress';
+  if (ctx.possession === 'home' && style.verticality > 0.72 && rngNext(ctx) < progressThreshold) return 'progress';
   // Urgência: quando perdendo, reduz recycle (prefere avançar mesmo sob pressão moderada).
-  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && urgencyByContext <= 0 && Math.random() < recycleThreshold) return 'recycle';
+  if (ctx.possession === 'home' && style.verticality < 0.28 && !underPressure && urgencyByContext <= 0 && rngNext(ctx) < recycleThreshold) return 'recycle';
   /** Sem remate “milagre” do meio-campo: em desespero só remata quem já chegou à zona final. */
   if (ctx.possession === 'home' && losingHome && ctx.minute > 70) {
     // Urgência extrema: aceita chute mesmo sem estar tão aglomerado.
@@ -353,12 +354,12 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     // FANTASY V3 (2026-05-27): bola PRECISA chegar à área. Antes 35% progress
     // → bola girava em mid 90% da partida (zero chutes). Agora 70% progress.
     const progressThreshold = urgencyByContext > 0 ? 0.20 : 0.30;
-    if (Math.random() > progressThreshold) return 'progress';
+    if (rngNext(ctx) > progressThreshold) return 'progress';
   }
   // FANTASY V3: fallback default deve PROGREDIR mais que retroceder.
   // Antes: 28% progress / 72% recycle → bola fica parada.
   // Agora: 60% progress / 40% recycle quando sem colega livre.
-  const base: ProposedAction = freeFwd ? 'progress' : (Math.random() > 0.40 ? 'progress' : 'recycle');
+  const base: ProposedAction = freeFwd ? 'progress' : (rngNext(ctx) > 0.40 ? 'progress' : 'recycle');
 
   // DNA de lenda: aplica pesos de posição sobre a decisão base (zero tokens, local).
   if (ctx.possession === 'home' && ctx.onBallKnowledge) {
@@ -975,8 +976,12 @@ export function gameSpiritTick(
   const L = createCausalBatch(ctx.minute, causalSeqStart);
   tickSkillCooldowns();
 
+  // Fase 1 — alias local pra RNG. Quando ctx.rng existe (Monte Carlo via motor
+  // real), todas as decisões estocásticas usam ele; senão cai pra Math.random.
+  const r = (): number => rngNext(ctx);
+
   if (ctx.possession === 'home' && !ctx.onBall) {
-    const nb = { x: 44 + Math.random() * 12, y: 30 + Math.random() * 40 };
+    const nb = { x: 44 + r() * 12, y: 30 + r() * 40 };
     L.push({
       type: 'possession_change',
       payload: { to: 'away', reason: 'no_home_carrier' },
@@ -1037,11 +1042,11 @@ export function gameSpiritTick(
     inAttackingArea &&
     ctx.onBall &&
     !(ctx.penaltyCooldownTicks && ctx.penaltyCooldownTicks > 0) &&
-    Math.random() < dangerousFoulProbAdj
+    r() < dangerousFoulProbAdj
   ) {
     // Se a bola está dentro da área (box ou six-yard), todo foul vira pênalti.
     const insideBox = ballZi ? isBox(ballZi) : false;
-    const toPenalty = insideBox || Math.random() < PENALTY_FROM_FOUL_PROB * sitMods.penaltyChanceMult;
+    const toPenalty = insideBox || r() < PENALTY_FROM_FOUL_PROB * sitMods.penaltyChanceMult;
     const takerName = ctx.onBall.name;
     if (toPenalty) {
       L.push({
@@ -1076,8 +1081,8 @@ export function gameSpiritTick(
       action: 'recycle',
       nextPossession: ctx.possession,
       ball: {
-        x: Math.min(88, ctx.ball.x + 4 + Math.random() * 6),
-        y: Math.min(78, Math.max(22, ctx.ball.y + (Math.random() * 10 - 5))),
+        x: Math.min(88, ctx.ball.x + 4 + r() * 6),
+        y: Math.min(78, Math.max(22, ctx.ball.y + (r() * 10 - 5))),
       },
       causalEvents: [...L.events],
       spiritMeta: {
@@ -1109,7 +1114,7 @@ export function gameSpiritTick(
           passesOk: 0,
           passesAttempt: 0,
           tackles: 0,
-          km: 0.02 + Math.random() * 0.05,
+          km: 0.02 + r() * 0.05,
         }
       : undefined;
 
@@ -1149,7 +1154,7 @@ export function gameSpiritTick(
           shooterId,
           zone: ctx.ballZone,
           minute: ctx.minute,
-          target: spiritShotTargetUI('home', ctx.onBall),
+          target: spiritShotTargetUI('home', ctx.onBall, ctx),
           ...(fromCorner ? { strike: 'header' as const } : fromFreeKick ? { strike: 'placed' as const } : {}),
         },
       });
@@ -1258,9 +1263,9 @@ export function gameSpiritTick(
         });
 
         // 15% chance de usar signature move se disponível
-        if (availableMoves.length > 0 && Math.random() < 0.15) {
+        if (availableMoves.length > 0 && r() < 0.15) {
           // Escolhe move aleatório dos disponíveis
-          usedSignatureMove = availableMoves[Math.floor(Math.random() * availableMoves.length)]!;
+          usedSignatureMove = availableMoves[Math.floor(r() * availableMoves.length)]!;
           const move = SIGNATURE_MOVES[usedSignatureMove];
 
           // Aplica xGBoost do move
@@ -1350,7 +1355,7 @@ export function gameSpiritTick(
           out: (weights.block + weights.wide + weights.post_out + weights.miss_far) / sumW,
         },
       };
-      let logical = rollHomeShotLogicalOutcome(Math.random(), weights);
+      let logical = rollHomeShotLogicalOutcome(r(), weights);
       /** Rede de segurança: golo só com bola na zona final (coerente com buildup / 2D). */
       if ((logical === 'goal' || logical === 'post_in') && ctx.ballZone !== 'att') {
         logical = 'wide';
@@ -1361,7 +1366,7 @@ export function gameSpiritTick(
         payload: { side: 'home', shooterId, outcome: causalOut },
       });
 
-      const yNorm = Math.random();
+      const yNorm = r();
 
       if (logical === 'goal' || logical === 'post_in') {
         const isCounter = detectCounter(ctx.possession, 'home', [...L.events]);
@@ -1393,7 +1398,7 @@ export function gameSpiritTick(
           payload: { ...patch.ball, reason: 'defensive_clearance' },
         });
         // 35% de bloqueios viram escanteio (em vez de posse pro rival). Mantém narrativa do block.
-        const isCorner = Math.random() < 0.35;
+        const isCorner = r() < 0.35;
         if (isCorner) {
           L.push({ type: 'corner_kick', payload: { minute: ctx.minute, side: 'home' } });
           next = 'home';
@@ -1417,7 +1422,7 @@ export function gameSpiritTick(
         // Fadiga do GK também conta (>70% amplifica erros). Quick mode: GK
         // adversário não acumula fadiga, então 0; live2D pode passar real.
         const gkFatigue01 = (awayGk?.fatigue ?? 0) / 100;
-        const subtype = rollGkSaveSubtype(Math.random(), gkSkill01, gkFatigue01);
+        const subtype = rollGkSaveSubtype(r(), gkSkill01, gkFatigue01);
         const shooterName = ctx.onBall?.name ?? 'Atacante';
 
         if (subtype === 'error_goal') {
@@ -1455,7 +1460,7 @@ export function gameSpiritTick(
           L.push({ type: 'possession_change', payload: { to: 'home', reason: 'after_save_corner' } });
           narrative = `${ctx.minute}' — O goleiro espalma com as pontas dos dedos para escanteio! Boa chance para ${shooterName}.`;
           next = 'home';
-          ball = { x: 95, y: Math.random() < 0.5 ? 8 : 92 };
+          ball = { x: 95, y: r() < 0.5 ? 8 : 92 };
           spiritMeta = {
             spiritPhase: 'set_piece',
             spiritBuildupGkTicksRemaining: 0,
@@ -1523,13 +1528,13 @@ export function gameSpiritTick(
       // Mid antes 8-22 → 14-28 (média 21, chega à zona att em ~2 progress)
       const pushX =
         ctx.ballZone === 'mid'
-          ? 14 + Math.random() * 14
+          ? 14 + r() * 14
           : ctx.ballZone === 'def'
-            ? 8 + Math.random() * 14
-            : 4 + Math.random() * 10;
+            ? 8 + r() * 14
+            : 4 + r() * 10;
       ball = {
         x: Math.min(90, ctx.ball.x + pushX),
-        y: Math.min(82, Math.max(18, ctx.ball.y + (Math.random() * 12 - 6))),
+        y: Math.min(82, Math.max(18, ctx.ball.y + (r() * 12 - 6))),
       };
       L.push({
         type: 'ball_state',
@@ -1539,9 +1544,9 @@ export function gameSpiritTick(
       // Eventos discretos de drible (estatísticas pós-jogo) — ~30% dos progress viram dribble_attempt.
       const carrierDrible = ctx.onBall?.attributes?.drible ?? 50;
       const dribbleUrge = 0.22 + Math.max(0, (carrierDrible - 55) / 200); // 22% base, até ~45% em Driblador top
-      if (Math.random() < dribbleUrge && ctx.onBall?.playerId) {
+      if (r() < dribbleUrge && ctx.onBall?.playerId) {
         const trapPenalty = isPressingTrapActive(_awayPressing, ctx.minute * 60) ? 0.08 : 0;
-        const succ = Math.random() < 0.38 + (carrierDrible - 50) / 200 - trapPenalty; // drible>=90 → ~58% sucesso; pressing trap -8%
+        const succ = r() < 0.38 + (carrierDrible - 50) / 200 - trapPenalty; // drible>=90 → ~58% sucesso; pressing trap -8%
         L.push({
           type: 'dribble_attempt',
           payload: {
@@ -1558,7 +1563,7 @@ export function gameSpiritTick(
       // Velocidade estimada da bola em condução: ~8 m/s base.
       const carrierTechnique = ctx.onBall?.attributes?.drible ?? 50;
       const lostControl = doesLooseControl(carrierTechnique, 8, Math.random.bind(Math));
-      if (lostControl || Math.random() < lossChance * 0.6) {
+      if (lostControl || r() < lossChance * 0.6) {
         next = 'away';
         // Perda de posse ativa pressing trap do adversário (passe ruim = trigger).
         const simTime = ctx.minute * 60;
@@ -1569,7 +1574,7 @@ export function gameSpiritTick(
         );
         activatePressingTrap(_awayPressing, trigger, simTime);
         // 40% das perdas são interceptação (vs. simples perda de bola).
-        if (Math.random() < 0.4) {
+        if (r() < 0.4) {
           L.push({
             type: 'interception',
             payload: {
@@ -1584,8 +1589,8 @@ export function gameSpiritTick(
         // FANTASY V3: turnover natural — bola volta DEVAGAR pra atrás (não
         // reset pra mid). Mantém pressão ofensiva da casa quando recuperar.
         ball = {
-          x: Math.max(20, ctx.ball.x - 12 - Math.random() * 10),
-          y: 25 + Math.random() * 50,
+          x: Math.max(20, ctx.ball.x - 12 - r() * 10),
+          y: 25 + r() * 50,
         };
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'turnover_after_carry' } });
         narrative = pickLine('pass_missed', { min: ctx.minute, from: ctx.onBall?.name ?? 'Casa' }, ctx.minute)
@@ -1595,8 +1600,8 @@ export function gameSpiritTick(
       homeStat!.passesOk += 1;
       homeStat!.passesAttempt += 1;
       ball = {
-        x: Math.min(82, ctx.ball.x + 2 + Math.random() * 8),
-        y: Math.min(85, Math.max(15, ctx.ball.y + (Math.random() * 10 - 5))),
+        x: Math.min(82, ctx.ball.x + 2 + r() * 8),
+        y: Math.min(85, Math.max(15, ctx.ball.y + (r() * 10 - 5))),
       };
       L.push({
         type: 'ball_state',
@@ -1607,8 +1612,8 @@ export function gameSpiritTick(
     const awayZone = zoneFromBallX(100 - ctx.ball.x);
     const awayAttackers = (ctx.awayRoster ?? []).filter((p) => /ATA|PD|PE/i.test(p.pos));
     const awayScorer = awayAttackers.length > 0
-      ? awayAttackers[Math.floor(Math.random() * awayAttackers.length)]!
-      : (ctx.awayRoster ?? [])[Math.floor(Math.random() * (ctx.awayRoster?.length || 1))] ?? { id: `away:${awayShort}`, name: awayShort };
+      ? awayAttackers[Math.floor(r() * awayAttackers.length)]!
+      : (ctx.awayRoster ?? [])[Math.floor(r() * (ctx.awayRoster?.length || 1))] ?? { id: `away:${awayShort}`, name: awayShort };
     const awayShooterId = awayScorer.id;
     // Roubada de bola — 3 níveis + crítico de erro (miss).
     // Só tenta desarme quando o motor seleciona 'press' + passa no gate de probabilidade.
@@ -1631,10 +1636,10 @@ export function gameSpiritTick(
       : null;
     const willTackle = action === 'press' && (
       foulDecision?.shouldFoul ||
-      Math.random() < 0.42 + (ctx.tacticalMentality - 50) / 250
+      r() < 0.42 + (ctx.tacticalMentality - 50) / 250
     );
     if (willTackle) {
-      const tackleOut = rollTackleOutcome(Math.random(), {
+      const tackleOut = rollTackleOutcome(r(), {
         tacticalMentality: ctx.tacticalMentality,
         fairPlay01,
         defenderMarcacao: tackler?.attributes?.marcacao,
@@ -1648,7 +1653,7 @@ export function gameSpiritTick(
       if (tackleOut === 'clean') {
         // Roubada limpa — inicia contra-ataque.
         next = 'home';
-        ball = { x: 58 + Math.random() * 10, y: 32 + Math.random() * 36 };
+        ball = { x: 58 + r() * 10, y: 32 + r() * 36 };
         L.push({ type: 'possession_change', payload: { to: 'home', reason: 'tackle_clean' } });
         L.push({ type: 'ball_state', payload: { ...ball, reason: 'recovery_attack' } });
         narrative =
@@ -1705,7 +1710,7 @@ export function gameSpiritTick(
         // Detecta foul_hard quando bola está perto do gol do home (ctx.ball.x ≤ 17 ≈ grande área).
         const awayInsideHomeBox = ctx.ball.x <= 17;
         const penaltyCooldownOk = !(ctx.penaltyCooldownTicks && ctx.penaltyCooldownTicks > 0);
-        if (awayInsideHomeBox && penaltyCooldownOk && Math.random() < 0.85) {
+        if (awayInsideHomeBox && penaltyCooldownOk && r() < 0.85) {
           L.push({
             type: 'phase_change',
             payload: { from: 'LIVE', to: 'PENALTY' as 'LIVE', reason: 'foul_in_box' },
@@ -1734,7 +1739,7 @@ export function gameSpiritTick(
         }
       }
     } else {
-      const rShot = Math.random();
+      const rShot = r();
       const awayOnPitch = Math.max(1, ctx.awayRoster?.length ?? 11);
       const awayNumericRatio = Math.max(0.55, awayOnPitch / 11);
       // FANTASY V6 (2026-06-02): pGoalAway agora pondera artilheiro real do
@@ -1764,7 +1769,7 @@ export function gameSpiritTick(
             shooterId: awayShooterId,
             zone: awayZone,
             minute: ctx.minute,
-            target: spiritShotTargetUI('away', ctx.awayPlayers?.find((p) => p.playerId === awayShooterId)),
+            target: spiritShotTargetUI('away', ctx.awayPlayers?.find((p) => p.playerId === awayShooterId), ctx),
           },
         });
         L.push({
@@ -1800,14 +1805,14 @@ export function gameSpiritTick(
             shooterId: awayShooterId,
             zone: awayZone,
             minute: ctx.minute,
-            target: spiritShotTargetUI('away', ctx.awayPlayers?.find((p) => p.playerId === awayShooterId)),
+            target: spiritShotTargetUI('away', ctx.awayPlayers?.find((p) => p.playerId === awayShooterId), ctx),
           },
         });
         L.push({
           type: 'shot_result',
           payload: { side: 'away', shooterId: awayShooterId, outcome: 'wide' },
         });
-        const yN = Math.random();
+        const yN = r();
         const patch = patchAfterAwayShotWide(yN);
         L.push({
           type: 'ball_state',
@@ -1824,22 +1829,22 @@ export function gameSpiritTick(
         };
       } else {
         if (awayZone !== 'att') {
-          const pushLeft = awayZone === 'mid' ? 7 + Math.random() * 14 : 5 + Math.random() * 11;
+          const pushLeft = awayZone === 'mid' ? 7 + r() * 14 : 5 + r() * 11;
           ball = {
             x: Math.max(14, ctx.ball.x - pushLeft),
-            y: Math.min(82, Math.max(18, ctx.ball.y + (Math.random() * 14 - 7))),
+            y: Math.min(82, Math.max(18, ctx.ball.y + (r() * 14 - 7))),
           };
         } else {
           ball = {
-            x: 25 + Math.random() * 40,
-            y: 20 + Math.random() * 60,
+            x: 25 + r() * 40,
+            y: 20 + r() * 60,
           };
         }
         L.push({
           type: 'ball_state',
           payload: { ...ball, reason: 'away_build' },
         });
-        if (Math.random() < 0.35) {
+        if (r() < 0.35) {
           next = 'home';
           L.push({ type: 'possession_change', payload: { to: 'home', reason: 'away_turnover' } });
           narrative = pickLine('possession_switch', { min: ctx.minute, team: ctx.homeShort ?? 'Casa' }, ctx.minute)
