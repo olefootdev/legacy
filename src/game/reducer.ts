@@ -210,6 +210,8 @@ import { STYLE_PRESETS } from '@/tactics/playingStyle';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
 import { buildRoundRobinSchedule } from '@/match/leagueSchedule';
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
+import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
+import { computeMatchContextModifiers } from '@/match/contextFactors';
 import { addHoursIso, applyTrainingToPlayer, maxSlotsByTrainingCenter, resolveGroupPlayerIds, splitDuePlans } from '@/systems/trainingPlans';
 import {
   STAFF_LABELS,
@@ -402,6 +404,20 @@ function crowdSupportForMatchSimulation(state: OlefootGameState): number {
 function runTick(state: OlefootGameState): OlefootGameState {
   if (!state.liveMatch || state.liveMatch.phase !== 'playing') return state;
   const roster = homeRosterFromLineup(state);
+
+  // Fase 3 — fatores contextuais consumidos por GameSpirit dentro do tick.
+  // Cobre mando, desfalques (via força efetiva). Outros fatores (rest, derby,
+  // importance) podem ser plugados quando tivermos os metadados no fixture.
+  const effectiveStrength = selectEffectiveTeamStrength({
+    players: state.players, health: state.playerHealth,
+  });
+  const contextModifiers = effectiveStrength.startersCounted > 0
+    ? computeMatchContextModifiers({
+        isHome: state.nextFixture.isHome,
+        effectiveTeamStrength: effectiveStrength,
+      })
+    : undefined;
+
   const { snapshot, updatedPlayers, newInboxItems } = runMatchMinute({
     snapshot: state.liveMatch,
     homeRoster: roster,
@@ -415,6 +431,7 @@ function runTick(state: OlefootGameState): OlefootGameState {
     awayRoster: state.liveMatch.awayRoster,
     staffMatchEffects: staffRunMatchMinuteEffects(state.manager.staff),
     tacticalIntensity: state.quickMatchIntensity?.current,
+    contextModifiers,
   });
   let liveMatch = snapshot;
   const players = { ...state.players, ...updatedPlayers };

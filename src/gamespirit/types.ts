@@ -148,6 +148,25 @@ export interface SpiritContext {
    * Permite ao GameSpirit referenciar qualquer jogador por nome + traço.
    */
   squadNarrativeProfiles?: Map<string, PlayerNarrativeProfile>;
+
+  /**
+   * Fase 3 — Fatores Contextuais. Modificadores nomeados aplicados em
+   * `homeTeamAvg`, `crowdSupport`, `avgHomeFatigue` e `tacticalMentality`
+   * antes da resolução. Auditável via `breakdown` pra UI de transparência.
+   * Quando ausente, motor roda neutro (multiplicadores = 1.0).
+   */
+  contextModifiers?: import('@/match/contextFactors').MatchContextModifiers;
+
+  /**
+   * Fase 1 — RNG seedável injetável. Quando presente, decisões estocásticas
+   * podem consumir via helper `rngNext(ctx)`. Quando ausente, motor usa
+   * Math.random — comportamento idêntico ao histórico.
+   *
+   * NOTA: o motor live atual ainda usa Math.random diretamente (48 sites em
+   * src/gamespirit/GameSpirit.ts). O campo está pronto pra plug futuro
+   * (Fase 1 PR-A migration). Hoje só o Monte Carlo via shared/ consome RNG.
+   */
+  rng?: import('../../shared/gamespirit/SpiritRng').SpiritRng;
 }
 
 /** Patch opcional ao estado de espírito / overlay no snapshot (só chaves definidas são aplicadas). */

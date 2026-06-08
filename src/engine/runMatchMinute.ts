@@ -106,6 +106,13 @@ export interface RunMinuteInput {
   spiritTickProb?: number;
   /** Efeitos cumulativos do staff Casa (preparador físico + nutrição) na fadiga/lesão por minuto. */
   staffMatchEffects?: StaffRunMatchMinuteEffects | null;
+  /**
+   * Fase 3 — Modificadores contextuais (mando, descanso, derby, importância,
+   * desfalques). Quando presentes, GameSpirit aplica multiplicadores nos
+   * inputs do peso da partida ANTES da resolução. Quando ausentes, motor
+   * roda neutro (multiplicadores = 1.0) — comportamento idêntico ao histórico.
+   */
+  contextModifiers?: import('@/match/contextFactors').MatchContextModifiers;
 }
 
 export interface RunMinuteOutput {
@@ -357,6 +364,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       smartfieldActionHint: spiritActionHint,
       tacticalIntensity: input.tacticalIntensity,
       situational,
+      contextModifiers: input.contextModifiers,
     });
     const startSeq = s.causalLog?.nextSeq ?? 1;
     const out = gameSpiritTick(ctx, input.awayShort, startSeq, Date.now());
