@@ -39,6 +39,11 @@ import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { fetchMarketActivities } from '@/supabase/marketActivities';
 import type { MarketActivity } from '@/market/socialTrade';
 import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
+import { SquadNewsCard } from '@/components/home/SquadNewsCard';
+import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
+import { simulateMatchN } from '@/match/matchMonteCarlo';
+import { computeMatchContextModifiers } from '@/match/contextFactors';
+import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
@@ -176,6 +181,7 @@ export function Home() {
   const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+  const playerHealth = useGameStore((s) => s.playerHealth);
 
   // Próxima partida real da Global League — sobrepõe o fixture estático (TITANS mock)
   const nextGlobal = useNextGlobalFixture();
@@ -426,6 +432,35 @@ export function Home() {
     () => ({ primary: undefined, secondary: undefined }),
     [],
   );
+
+  // Fase 1 — Predição V/E/D pra próxima partida. Seed estável (a partir do
+  // opponentId ou fixture id) pra manager ver MESMA leitura ao reabrir Home.
+  const nextMatchPrediction = useMemo(() => {
+    const opponentOvr = nextGlobal?.opponentOverall ?? fixture?.opponent?.strength;
+    const opponentId = nextGlobal
+      ? `g_${nextGlobal.fixture?.id ?? `${nextGlobal.opponentName}_${nextGlobal.roundNumber}`}`
+      : fixture?.opponent?.id;
+    if (!opponentOvr || !opponentId || opponentId === 'placeholder-opponent' || opponentId === 'no-opponent-available') {
+      return null;
+    }
+    const effective = selectEffectiveTeamStrength({ players, health: playerHealth });
+    if (effective.startersCounted === 0) return null;
+    const isHome = nextGlobal ? nextGlobal.isHome : true;
+    const mods = computeMatchContextModifiers({
+      isHome,
+      effectiveTeamStrength: effective,
+    });
+    const seed = Array.from(opponentId).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 11);
+    return simulateMatchN({
+      homeTeamOvr: effective.effectiveOverall,
+      awayTeamOvr: opponentOvr,
+      contextModifiers: mods,
+      effectiveHomeStrength: effective,
+      homeRoster: Object.values(players),
+      n: 800,
+      seed,
+    });
+  }, [nextGlobal, fixture?.opponent?.id, fixture?.opponent?.strength, players, playerHealth]);
 
   /**
    * Sprint C — Fase B: contexto smart do hero (eyebrow + status).
@@ -1197,6 +1232,18 @@ export function Home() {
                 </div>
               )}
 
+              {/* Fase 1 — Predição V/E/D compacta (acima das ações) */}
+              {nextMatchPrediction ? (
+                <div className="w-full max-w-[480px]">
+                  <MatchPredictionPanel
+                    result={nextMatchPrediction}
+                    homeName={homeShort}
+                    awayName={awayShort}
+                    compact
+                  />
+                </div>
+              ) : null}
+
               {/* Ações */}
               <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1">
                 <Link to={ctaLink}
@@ -1225,6 +1272,9 @@ export function Home() {
         highlightPosition={homeHighlight.position}
         expLifetimeEarned={finance.expLifetimeEarned ?? finance.ole ?? 0}
       />
+
+      {/* Novidades do elenco — Fase 2 acesa (selectStatusFeed) */}
+      <SquadNewsCard />
 
       <AnimatePresence>
         {amistosoOpen && (

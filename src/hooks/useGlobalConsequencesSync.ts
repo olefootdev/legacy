@@ -71,6 +71,34 @@ export function useGlobalConsequencesSync() {
     );
     if (!myFixture || myFixture.status !== 'finished') return;
 
+    // ── Passo 5: BATCH CATCH-UP do decremento contratual ────────────────────
+    // Manager offline N rodadas perderia N-1 decrementos. Aqui detectamos
+    // todas as rodadas perdidas e dispatchamos SÓ o decremento de contrato
+    // pra cada uma (sem re-aplicar moral/health/inbox, que já estavam OK).
+    // A rodada MAIS RECENTE segue pra applyRoundConsequences abaixo (full).
+    const lastProcessedNum = lastProcessedRound
+      ? parseInt(lastProcessedRound.split('_round_').pop() ?? '0', 10) || 0
+      : 0;
+    const latestRoundNum = currentRoundNum - 1;
+    if (lastProcessedNum > 0 && latestRoundNum > lastProcessedNum + 1) {
+      const lineupIdsForCatchup = Object.values(lineup).filter(
+        (id) => id && players[id],
+      ) as string[];
+      // Itera rodadas perdidas (exclusive da última, que cai no full path).
+      for (let rn = lastProcessedNum + 1; rn < latestRoundNum; rn++) {
+        const missedRound = leagueRounds[rn - 1];
+        if (!missedRound || missedRound.status !== 'finished') continue;
+        const missedFixture = missedRound.fixtures.find(
+          (f) => f.homeTeamId === myTeam.id || f.awayTeamId === myTeam.id,
+        );
+        if (!missedFixture || missedFixture.status !== 'finished') continue;
+        dispatchGame({
+          type: 'APPLY_CONTRACT_DECREMENT_FOR_PLAYED',
+          playerIds: lineupIdsForCatchup,
+        });
+      }
+    }
+
     dispatchGame({ type: 'SET_LAST_PROCESSED_GLOBAL_ROUND', roundKey });
 
     // Detect opponent for rivalry check
