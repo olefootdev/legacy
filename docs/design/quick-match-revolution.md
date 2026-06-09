@@ -237,5 +237,64 @@ Atacante avança, @lugano cerca    ▸ Desarme  ▸ Carrinho  ▸ Cercar   (defe
 
 ---
 
+---
+
+## 12. Feedback de teste (validado jogando) — POLIR, não reconstruir
+
+> Veredito do teste: **o quick match atual não está ruim.** Com polimento + botões
+> interativos **no próprio texto do feed**, já entrega um modo muito legal.
+> → Aproveitar o que existe; foco em 3 correções.
+
+### Virada de direção (importante)
+- Os **botões interativos vão INLINE no feed**, embutidos no texto do evento — não
+  (necessariamente) num takeover full-screen separado.
+- **Reaproveitar:** `src/components/matchquick/QuickMatchFeed.tsx` (já tem rich-text
+  highlighting + cores por tipo de evento). Os botões viram parte do item do feed.
+- Takeover full-screen (seções 3.2/4) fica reservado, no máximo, para o **clímax**
+  (gol/vermelho) — o grosso da interação acontece no feed.
+
+### Ponto 1 — Banners de pré/pós-jogo "sujam" a tela (ficam persistentes)
+- Sintoma: hero pré-jogo e/ou summary pós-jogo continuam visíveis, deixando a tela
+  desorganizada.
+- **Onde está:** `src/pages/MatchQuick.tsx` — estados `quickPreStart`
+  (L873; pré-jogo) e `summary` (L742; pós-jogo). Há renders de summary duplicados
+  (L3668 e L4286) e blocos de pré-start (L2828+, L3109+) — provável sobreposição /
+  ciclo de vida que não desmonta limpo.
+- **Fix:** garantir desmontagem limpa dos overlays (unmount no fim do ciclo),
+  consolidar os renders duplicados de summary, revisar z-index/lifecycle.
+  **Reaproveitar:** `QuickMatchHero` e `QuickMatchSummary` já existem — é correção
+  de lifecycle, não componente novo.
+
+### Ponto 2 — Falta sentimento real dos efeitos: **time da casa sempre ganha**
+- Sintoma: sem stakes — o jogador (casa) vence quase sempre → resultado não importa,
+  narrador/consequência perdem força (mina as seções 5 e 6).
+- **Onde está:** viés de mando — `src/match/matchMonteCarlo.ts` (`homeAdvantage`),
+  `src/match/contextFactors.ts`, `src/gamespirit/GameSpirit.ts` /
+  `shared/gamespirit/GameSpirit.ts` (`DEFAULT_HOME_SHOT_WEIGHTS`). Possível também
+  adversário sintético fraco em vez de elenco real.
+- **Fix:** rebalancear vantagem de mando para valor realista; usar **força real do
+  adversário** (`genesisAwayPlayers` via `friendlyMatchmaking`); permitir
+  derrotas/empates de verdade. Sem risco de perder, não há emoção.
+  **Reaproveitar:** todo o motor de probabilidade já existe — é **tuning**, não
+  motor novo.
+
+### Ponto 3 — Com os botões, o feed precisa ser mais **selecionado/curado**
+- Sintoma: feed mostra eventos demais; com interação, cada item precisa valer.
+- **Onde está:** `src/pages/MatchQuick.tsx` — pool/rotação do feed
+  (~L1425–1450, `FEED_ROTATE_MS`, pool de 14 eventos).
+- **Fix:** **scoring de importância** por evento → só os relevantes entram no feed
+  (casa exatamente com o "anti-arroz-de-festa" das seções 3/4). Botão interativo só
+  aparece em momentos de nota alta.
+  **Reaproveitar:** lógica de rotação/filtro do feed já existe — adicionar a régua
+  de importância (mesma que o `scout`/racionador usa).
+
+### Resumo do feedback
+- **Não reconstruir** — o quick atual é boa base.
+- 3 frentes de polimento: **(1)** lifecycle dos banners, **(2)** balance de mando +
+  adversário real, **(3)** curadoria do feed + botões inline.
+- A virada "botões no feed" **aumenta o reúso** (usa `QuickMatchFeed` direto).
+
+---
+
 *Salvo como memória da conversa de design. Próximo passo: transformar em plano de
 implementação detalhado por fase quando aprovado.*
