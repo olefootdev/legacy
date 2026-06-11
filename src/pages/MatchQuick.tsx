@@ -1081,6 +1081,58 @@ export function MatchQuick() {
     return () => window.clearTimeout(t);
   }, [live?.penalty?.stage, live?.spiritOverlay, live?.phase, dispatch]);
 
+  // ── Watchdog de minuto CONGELADO (2026-06-11) ──────────────────────────
+  // Sintoma reportado: "chega no 2º tempo, o narrative feed roda mas o relógio
+  // não avança / a partida não finaliza". Raiz: o loop da partida pausa em
+  // QUALQUER estado bloqueante (pênalti da casa não-batido, momento interativo
+  // órfão, sub por lesão, freeze preso) e só o feed (interval separado) segue
+  // girando. O WATCHDOG_MS=240s do loop é o único backstop hoje — lento demais.
+  // Aqui: se o minuto fica parado além de qualquer pausa LEGÍTIMA (gol 2s,
+  // momento 5s, pênalti em estágios ~6s), destrava decisivamente o que segura
+  // o loop. Interval (não setTimeout) pra re-checar sozinho sem depender de
+  // re-arm via deps — cobre até estados encadeados.
+  useEffect(() => {
+    if (!live || live.phase !== 'playing') return;
+    if (quickPreStart !== null || halfTimeUi) return;
+    const STALL_UNSTICK_MS = 14_000;
+    let lastMinute = getGameState().liveMatch?.minute ?? live.minute;
+    let lastChangeMs = Date.now();
+    const iv = window.setInterval(() => {
+      const st = getGameState().liveMatch;
+      if (!st || st.phase !== 'playing') return;
+      if (st.minute !== lastMinute) {
+        lastMinute = st.minute;
+        lastChangeMs = Date.now();
+        return;
+      }
+      if (Date.now() - lastChangeMs < STALL_UNSTICK_MS) return;
+      // Minuto travado tempo demais — solta o que estiver segurando o loop.
+      lastChangeMs = Date.now(); // evita disparo em rajada; re-tenta em +14s se persistir
+      if (st.penalty) {
+        if (st.penalty.stage === 'result' || st.spiritOverlay) {
+          dispatch({ type: 'DISMISS_SPIRIT_OVERLAY' });
+        } else {
+          dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve', rng: Math.random() } });
+        }
+      } else if (st.activeInteractiveMoment) {
+        dispatch({
+          type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT',
+          momentId: st.activeInteractiveMoment.id,
+          choiceId: null,
+        });
+      } else if (st.quickInjurySub) {
+        dispatch({ type: 'CANCEL_QUICK_INJURY_SUB' });
+      } else if (st.pendingSetPiece) {
+        dispatch({ type: 'CANCEL_SET_PIECE' });
+      } else if (st.spiritOverlay) {
+        dispatch({ type: 'DISMISS_SPIRIT_OVERLAY' });
+      }
+      // freeze preso sem estado visível: libera o gate de tempo do loop.
+      freezeUntilRef.current = 0;
+    }, 2_000) as unknown as number;
+    return () => window.clearInterval(iv);
+  }, [live?.phase, quickPreStart, halfTimeUi, dispatch]);
+
   // Gate: aguarda o matchmaking resolver (placeholder/no-opponent são estados
   // transitórios de busca). Regra de produto 2026-05-27: a partida SEMPRE
   // acontece — manager real preferido, bot como último recurso; o GameSpirit
@@ -1184,6 +1236,12 @@ export function MatchQuick() {
           return;
         }
         if (lm.quickInjurySub) {
+          return;
+        }
+        // Bola parada interativa (falta/escanteio): pausa pra não tomar/fazer
+        // gol "por trás" do card. O QuickSetPieceCard auto-resolve em ~7s e o
+        // watchdog de travamento cobre órfão (card desmontado sem resolver).
+        if (lm.pendingSetPiece) {
           return;
         }
 
@@ -2461,6 +2519,7 @@ export function MatchQuick() {
     !!live?.quickInjurySub ||
     !!live?.penalty ||
     !!live?.activeInteractiveMoment ||
+    !!live?.pendingSetPiece ||
     !!secondYellowAlert ||
     Date.now() < freezeUntilRef.current;
   const matchClock = (

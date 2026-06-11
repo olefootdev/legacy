@@ -7,20 +7,20 @@
  */
 import { useEffect, useMemo } from 'react';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import {
-  LiveSetPieceManager,
-  type SetPieceChoice,
-  type SetPieceContext,
-  type SetPieceTaker,
-  type SetPieceTarget,
+import type {
+  SetPieceChoice,
+  SetPieceContext,
+  SetPieceTaker,
+  SetPieceTarget,
 } from '@/components/setpiece';
+import { QuickSetPieceCard } from '@/components/matchquick/QuickSetPieceCard';
 
 interface Props {
   /** Tempo limite pra escolher (multiplayer-safe). */
   pickTimeSeconds?: number;
 }
 
-export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
+export function SetPieceModal({ pickTimeSeconds = 7 }: Props) {
   const dispatch = useGameDispatch();
   const pendingSetPiece = useGameStore((s) => s.liveMatch?.pendingSetPiece);
   const minute = useGameStore((s) => s.liveMatch?.minute ?? 0);
@@ -179,14 +179,6 @@ export function SetPieceModal({ pickTimeSeconds = 10 }: Props) {
       ? `${minute}' · Escanteio pra nós`
       : `${minute}' · Falta perigosa`;
 
-  return (
-    <div className="fixed inset-0 z-[200] overflow-y-auto">
-      <LiveSetPieceManager
-        ctx={ctx}
-        pickTimeSeconds={pickTimeSeconds}
-        headerLabel={headerLabel}
-        onResolve={handleResolve}
-      />
-    </div>
-  );
+  void headerLabel; // rótulo agora vem do próprio card simples
+  return <QuickSetPieceCard ctx={ctx} onResolve={handleResolve} pickSeconds={pickTimeSeconds} />;
 }

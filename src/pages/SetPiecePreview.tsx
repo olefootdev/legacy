@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { LiveSetPieceManager, type SetPieceChoice, type SetPieceContext } from '@/components/setpiece';
+import type { SetPieceChoice, SetPieceContext } from '@/components/setpiece';
+import { QuickSetPieceCard } from '@/components/matchquick/QuickSetPieceCard';
 
 export function SetPiecePreview() {
   const [scenario, setScenario] = useState<'corner' | 'free_kick'>('corner');
@@ -108,10 +109,11 @@ export function SetPiecePreview() {
         </button>
       </div>
 
-      <LiveSetPieceManager
+      <div className="min-h-screen bg-deep-black" />
+      <QuickSetPieceCard
+        key={scenario}
         ctx={scenario === 'corner' ? cornerCtx : freeKickCtx}
-        headerLabel={scenario === 'corner' ? "67' · Escanteio pra nós" : "73' · Falta perigosa"}
-        pickTimeSeconds={10}
+        pickSeconds={10}
         onResolve={setResolved}
       />
     </div>
