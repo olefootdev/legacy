@@ -79,7 +79,7 @@ import {
   buildSubTimingMoment,
 } from '@/match/quickInteractiveMoments';
 import { buildSquadDecisionMoment } from '@/match/quickSquadPalette';
-import { buildGoalChain, type NarrationChain } from '@/match/quickNarrationChain';
+import { buildGoalChain, buildNearMissChain, type NarrationChain } from '@/match/quickNarrationChain';
 import { QuickCinematicNarration } from '@/components/matchquick/QuickCinematicNarration';
 import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
 import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
@@ -857,8 +857,16 @@ export function MatchQuick() {
   const [goalScorerRevealDone, setGoalScorerRevealDone] = useState(false);
   const [goalCelebrationKey, setGoalCelebrationKey] = useState<string | null>(null);
   const [goalCelebrationActive, setGoalCelebrationActive] = useState(false);
-  // §3.2: narração full-screen cinética (cadeia → GOOOL) antes do card do artilheiro.
-  const [cinematicGoal, setCinematicGoal] = useState<{ chain: NarrationChain; goalId: string } | null>(null);
+  // §3.2/§3.3: narração full-screen cinética (gol → GOOOL + card; quase-gol →
+  // NA TRAVE!/DEFENDEÇÃO!/PRA FORA! sem card). `scorerCardId` só no gol.
+  const [cinematicGoal, setCinematicGoal] = useState<{
+    chain: NarrationChain;
+    accent: 'home' | 'near';
+    scorerCardId?: string;
+  } | null>(null);
+  // Quase-gol: raciona o takeover (cooldown) e evita repetir o mesmo chute.
+  const nearMissCinemaCooldownRef = useRef<number>(0);
+  const cinematicNearMissShotRef = useRef<string | null>(null);
   // Segurança anti-órfão: o overlay auto-avança e chama onDone, mas se desmontar
   // no meio, garante que não fica preso congelando o relógio.
   useEffect(() => {
@@ -1177,6 +1185,8 @@ export function MatchQuick() {
     narratorMemoryRef.current = {};
     narratedOutcomeNonceRef.current = null;
     setCinematicGoal(null);
+    cinematicNearMissShotRef.current = null;
+    nearMissCinemaCooldownRef.current = 0;
     setMomentumAnimKey(null);
     setFeedWindowStart(0);
     lastFeedHeadIdRef.current = undefined;
@@ -1554,7 +1564,7 @@ export function MatchQuick() {
       // Compacto (3 beats ~3.5s) — partidas têm vários gols, sem arrastar.
       const beats = [full.beats[0]!, full.beats[full.beats.length - 2]!, full.beats[full.beats.length - 1]!];
       freezeUntilRef.current = Date.now() + 9000; // cobre cadeia + card
-      setCinematicGoal({ chain: { ...full, beats }, goalId: top.id });
+      setCinematicGoal({ chain: { ...full, beats }, accent: 'home', scorerCardId: top.id });
       return;
     }
 
@@ -2203,6 +2213,31 @@ export function MatchQuick() {
       triggerNearMiss(nearMiss.type, nearMiss.message, nearMiss.intensity);
     }
   }, [live?.lastShotPreview, triggerNearMiss]);
+
+  // §3.3: cinemático de QUASE-GOL — mesma build de suspense, desfecho diferente.
+  // Só chances NOSSAS de perigo real, racionado (cooldown) pra não virar takeover
+  // toda hora. Clímax pelo desfecho dominante: defesa → DEFENDEÇÃO!, senão trave
+  // ou pra fora. Gol tem prioridade (cinemático de gol cobre).
+  useEffect(() => {
+    const sp = live?.lastShotPreview;
+    if (!sp || sp.side !== 'home' || live?.phase !== 'playing') return;
+    const id = `near-${sp.ts}`;
+    if (cinematicNearMissShotRef.current === id) return;
+    cinematicNearMissShotRef.current = id;
+    if (cinematicGoal) return; // gol em cena tem prioridade
+    if (sp.probs.goal < 0.34) return; // só lance de perigo real
+    const top = live.events[0];
+    if (top?.kind === 'goal_home' && (live.minute ?? 0) - top.minute <= 0) return; // foi gol
+    if (Date.now() < nearMissCinemaCooldownRef.current) return; // raciona
+    if (Math.random() > 0.5) return; // nem todo quase-gol vira takeover
+    nearMissCinemaCooldownRef.current = Date.now() + 28000;
+    const kind: 'save' | 'post' | 'wide' =
+      sp.probs.save >= sp.probs.out ? 'save' : Math.random() < 0.4 ? 'post' : 'wide';
+    const finisher = live.homePlayers.find((p) => p.role === 'attack')?.name;
+    const chain = buildNearMissChain({ kind, finisherName: finisher, players: live.homePlayers });
+    freezeUntilRef.current = Date.now() + 4200;
+    setCinematicGoal({ chain, accent: 'near' });
+  }, [live?.lastShotPreview, live?.phase, live?.minute, live?.events, live?.homePlayers, cinematicGoal]);
 
   const squadReport = useMemo(
     () => evaluateOfficialSquad(lineupIds, playersById),
@@ -4577,16 +4612,21 @@ export function MatchQuick() {
       <AnimatePresence>
         {cinematicGoal && (
           <QuickCinematicNarration
-            key={cinematicGoal.goalId}
+            key={cinematicGoal.scorerCardId ?? `near-${cinematicGoal.chain.climaxWord}`}
             chain={cinematicGoal.chain}
-            accent="home"
+            accent={cinematicGoal.accent}
             onDone={() => {
-              const goalId = cinematicGoal.goalId;
+              const scorerCardId = cinematicGoal.scorerCardId;
               setCinematicGoal(null);
-              // Encadeia o card do artilheiro (mantém freeze curto pra ele tocar).
-              freezeUntilRef.current = Date.now() + 2600;
-              setGoalCelebrationKey(goalId);
-              setGoalCelebrationActive(true);
+              if (scorerCardId) {
+                // Gol: encadeia o card do artilheiro (freeze curto pra ele tocar).
+                freezeUntilRef.current = Date.now() + 2600;
+                setGoalCelebrationKey(scorerCardId);
+                setGoalCelebrationActive(true);
+              } else {
+                // Quase-gol: sem card; retoma o jogo.
+                freezeUntilRef.current = 0;
+              }
             }}
           />
         )}

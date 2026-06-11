@@ -97,6 +97,10 @@ export function weightedOverall(
   attrs: MatchPlayerAttributes,
   role: MatchTacticalRole | undefined,
 ): number {
+  // Blindagem: jogador legado / catch-up offline pode chegar sem `attrs` —
+  // sem isto, `attrs[k]` derruba buildSpiritContext → applyWorldCatchUp →
+  // RootErrorBoundary ("algo deu errado") no load. Default neutro = 50.
+  if (!attrs) return 50;
   if (!role) {
     let s = 0;
     for (const k of ATTR_KEYS) s += attrs[k] ?? 50;
