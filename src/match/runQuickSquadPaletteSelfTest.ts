@@ -1,5 +1,5 @@
 /**
- * Self-test da paleta gerada pelo elenco (quick-match-revolution.md §5).
+ * Self-test da paleta nomeada gerada pelo elenco (quick-match-revolution.md §4/§5).
  * Roda: `npm run test:quick-squad-palette`
  */
 
@@ -20,62 +20,73 @@ function mkAttrs(over: Partial<MatchPlayerAttributes>): MatchPlayerAttributes {
     mentalidade: 50, confianca: 50, ...over,
   };
 }
-
 let idc = 0;
-function mk(role: PitchPlayerState['role'], over: Partial<MatchPlayerAttributes>): PitchPlayerState {
+function mk(role: PitchPlayerState['role'], name: string, over: Partial<MatchPlayerAttributes>): PitchPlayerState {
   idc++;
   return {
-    playerId: `p${idc}`, slotId: `s${idc}`, name: `Jog ${idc}`, num: idc, pos: 'MC',
-    x: 50, y: 50, heading: 0, fatigue: 0, role,
-    attributes: mkAttrs(over),
+    playerId: `p${idc}`, slotId: `s${idc}`, name, num: idc, pos: 'MC',
+    x: 50, y: 50, heading: 0, fatigue: 0, role, attributes: mkAttrs(over),
   } as PitchPlayerState;
 }
 
 console.log('\n▶ Quick Squad Palette Self-Test\n');
 
-// ── Elenco CRIATIVO: deve desbloquear criação ───────────────────────────────
+// ── ATAQUE: elenco criativo → desbloqueia criação, contexto NOMEADO ─────────
 const creative: PitchPlayerState[] = [
-  mk('gk', {}),
-  mk('def', { marcacao: 60, fisico: 60 }),
-  mk('mid', { passeCurto: 86, drible: 82, tatico: 80, passeLongo: 80 }),
-  mk('mid', { passeCurto: 84, drible: 80, tatico: 78 }),
-  mk('attack', { finalizacao: 84, drible: 82, velocidade: 78 }),
+  mk('gk', 'Goleiro', {}),
+  mk('def', 'Zaga', { marcacao: 60, fisico: 60 }),
+  mk('mid', 'Palhinha', { passeCurto: 88, drible: 84, tatico: 80, passeLongo: 80 }),
+  mk('mid', 'Adauto', { passeCurto: 84, drible: 80, tatico: 78 }),
+  mk('attack', 'Tito', { finalizacao: 86, drible: 82, velocidade: 80 }),
 ];
-const cRes = buildSquadDecisionMoment(creative, 30, 1000);
-const cIds = cRes.moment.choices.map((c) => c.id);
-check('criativo: perfil creativity alto', cRes.profile.creativity >= 70, JSON.stringify(cRes.profile));
-check('criativo: desbloqueia ao menos 1 opção de criação',
-  cIds.some((id) => ['passe_genial', 'drible', 'lancamento'].includes(id)), cIds.join(','));
-check('criativo: exatamente 3 botões', cRes.moment.choices.length === 3, String(cRes.moment.choices.length));
-check('criativo: finalização tem scoreOnSuccess + executor',
-  cRes.moment.choices.some((c) => c.scoreOnSuccess && c.executorId), cIds.join(','));
+const atk = buildSquadDecisionMoment(creative, 30, 1000, 'attack');
+const atkIds = atk.moment.choices.map((c) => c.id);
+check('ataque: protagonista nomeado no contexto', /Palhinha|Adauto|Tito/.test(atk.moment.context), atk.moment.context);
+check('ataque: criativo desbloqueia criação', atkIds.some((id) => ['passe_genial', 'drible', 'lancamento'].includes(id)), atkIds.join(','));
+check('ataque: 3 botões', atk.moment.choices.length === 3);
+check('ataque: finalização marca gol real (scoreOnSuccess + executor)', atk.moment.choices.some((c) => c.scoreOnSuccess && c.executorId), atkIds.join(','));
+check('ataque: timer 3s (§4.2)', atk.moment.timeoutMs === 3000, String(atk.moment.timeoutMs));
+check('ataque: successText nomeia o jogador', atk.moment.choices.every((c) => !!c.successText && /[A-Z]/.test(c.successText)), JSON.stringify(atk.moment.choices.map((c) => c.successText)));
 
-// ── Elenco SÓ DEFENSIVO: criação NÃO aparece ────────────────────────────────
+// ── ATAQUE: elenco defensivo → criação NÃO aparece ──────────────────────────
 idc = 0;
-const defensive: PitchPlayerState[] = [
-  mk('gk', {}),
-  mk('def', { marcacao: 78, fisico: 80, passeCurto: 40, drible: 38, tatico: 45 }),
-  mk('def', { marcacao: 76, fisico: 78, passeCurto: 42, drible: 36 }),
-  mk('mid', { passeCurto: 46, drible: 40, tatico: 50, fisico: 70 }),
-  mk('attack', { finalizacao: 52, drible: 44, velocidade: 55 }),
+const weak: PitchPlayerState[] = [
+  mk('gk', 'GK', {}),
+  mk('def', 'Bruto', { marcacao: 80, fisico: 82, passeCurto: 38, drible: 34, tatico: 44, velocidade: 40 }),
+  mk('def', 'Pedra', { marcacao: 78, fisico: 80, passeCurto: 40, drible: 36, velocidade: 42 }),
+  mk('mid', 'Limitado', { passeCurto: 44, drible: 40, tatico: 48, fisico: 70 }),
+  mk('attack', 'Bola', { finalizacao: 50, drible: 42, velocidade: 52 }),
 ];
-const dRes = buildSquadDecisionMoment(defensive, 60, 2000);
-const dIds = dRes.moment.choices.map((c) => c.id);
-check('defensivo: creativity baixo', dRes.profile.creativity < 60, JSON.stringify(dRes.profile));
-check('defensivo: NÃO mostra passe genial nem drible',
-  !dIds.includes('passe_genial') && !dIds.includes('drible'), dIds.join(','));
-check('defensivo: tem opção segura (segurar/chutão/muralha)',
-  dIds.some((id) => ['segurar', 'chutao', 'muralha'].includes(id)), dIds.join(','));
+const atkWeak = buildSquadDecisionMoment(weak, 60, 2000, 'attack');
+const weakIds = atkWeak.moment.choices.map((c) => c.id);
+check('ataque defensivo: NÃO mostra passe genial nem drible', !weakIds.includes('passe_genial') && !weakIds.includes('drible'), weakIds.join(','));
+check('ataque defensivo: tem opção segura', weakIds.some((id) => ['segurar', 'recuar'].includes(id)), weakIds.join(','));
 
-// ── Invariantes gerais ──────────────────────────────────────────────────────
-check('todos os botões têm successChance em (0,1]',
-  [...cRes.moment.choices, ...dRes.moment.choices].every((c) => c.successChance > 0 && c.successChance <= 1));
-check('nenhuma label vazia',
-  [...cRes.moment.choices, ...dRes.moment.choices].every((c) => c.label.length >= 3));
-check('profile determinístico', JSON.stringify(computeSquadProfile(creative)) === JSON.stringify(cRes.profile));
+// ── DEFESA: carrinho de zagueiro LENTO vira CARTÃO (§4.3) ────────────────────
+const def = buildSquadDecisionMoment(weak, 70, 3000, 'defense');
+const defIds = def.moment.choices.map((c) => c.id);
+check('defesa: botões Desarme/Carrinho/Cercar', defIds.includes('desarme') && defIds.includes('carrinho') && defIds.includes('cercar'), defIds.join(','));
+check('defesa: contexto nomeia o zagueiro', /Bruto|Pedra/.test(def.moment.context), def.moment.context);
+const carrinho = def.moment.choices.find((c) => c.id === 'carrinho');
+check('defesa: carrinho de LENTO tem cardOnFail', carrinho?.cardOnFail === 'yellow', JSON.stringify(carrinho));
+check('defesa: failText do carrinho explica o PORQUÊ (lento)', /lento/i.test(carrinho?.failText ?? ''), carrinho?.failText);
+
+// Defesa com zagueiro RÁPIDO → carrinho sem cartão.
+idc = 0;
+const fastDef: PitchPlayerState[] = [
+  mk('gk', 'GK', {}),
+  mk('def', 'Veloz', { marcacao: 72, velocidade: 78 }),
+  mk('mid', 'M', {}),
+  mk('attack', 'A', {}),
+];
+const defFast = buildSquadDecisionMoment(fastDef, 50, 4000, 'defense');
+check('defesa rápida: carrinho de veloz NÃO carda', defFast.moment.choices.find((c) => c.id === 'carrinho')?.cardOnFail === undefined);
+
+check('invariante: successChance em (0,1]', [...atk.moment.choices, ...def.moment.choices].every((c) => c.successChance > 0 && c.successChance <= 1));
+check('profile determinístico', JSON.stringify(computeSquadProfile(creative)) === JSON.stringify(atk.profile));
 
 if (failures > 0) {
   console.log(`\n✗ quick squad palette self-test FALHOU (${failures})\n`);
   process.exit(1);
 }
-console.log('\n▶ quick squad palette self-test OK — menu é espelho do elenco (criação×defesa + gol real)\n');
+console.log('\n▶ quick squad palette self-test OK — decisões NOMEADAS (ataque+defesa) + gol/cartão real\n');

@@ -955,6 +955,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           kind: 'goal_home',
           playerId: outcome.goal.scorerId,
         });
+      } else if (outcome.card) {
+        // §4.3: carrinho de zagueiro lento → CARTÃO real (visível no feed/badge).
+        events.unshift({
+          id: `momentcard_${Date.now()}`,
+          minute: minuteNow,
+          text: outcome.narrative,
+          kind: outcome.card.kind === 'red' ? 'red_home' : 'yellow_home',
+          playerId: outcome.card.playerId,
+        });
       } else {
         events.unshift({
           id: `moment_${Date.now()}`,

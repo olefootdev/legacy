@@ -20,7 +20,9 @@ export interface QuickMomentChoice {
   momentumImpact: number;
   /** §5: sucesso desta escolha pode virar GOL de verdade (finalização). */
   scoreOnSuccess?: boolean;
-  /** §5: quem executa (pro gol/scout/narrador). */
+  /** §4.3: erro desta escolha (ex.: carrinho de zagueiro lento) vira CARTÃO real. */
+  cardOnFail?: 'yellow' | 'red';
+  /** §5: quem executa (pro gol/cartão/scout/narrador). */
   executorId?: string;
   executorName?: string;
   /** Narrativa custom de sucesso/erro (paleta gerada pelo elenco). */
@@ -50,6 +52,8 @@ export interface QuickMomentOutcome {
   momentumDelta: number;
   /** §5: quando uma finalização dá certo, vira GOL de verdade no placar. */
   goal?: { scorerId?: string; scorerName?: string };
+  /** §4.3: quando uma escolha arriscada falha, vira CARTÃO de verdade. */
+  card?: { kind: 'yellow' | 'red'; playerId?: string; playerName?: string };
 }
 
 interface MomentTriggerContext {
@@ -295,10 +299,14 @@ export function resolveInteractiveMoment(
 
   const success = Math.random() < choice.successChance;
 
-  // §5: paleta gerada pelo elenco traz a própria narrativa (e pode virar gol).
+  // §5: paleta gerada pelo elenco traz a própria narrativa (gol no ataque,
+  // cartão na defesa — §4.3 consequência real e visível).
   if (moment.type === 'squad_decision' || choice.successText || choice.failText) {
     const goal = success && choice.scoreOnSuccess
       ? { scorerId: choice.executorId, scorerName: choice.executorName }
+      : undefined;
+    const card = !success && choice.cardOnFail
+      ? { kind: choice.cardOnFail, playerId: choice.executorId, playerName: choice.executorName }
       : undefined;
     return {
       momentId: moment.id,
@@ -313,6 +321,7 @@ export function resolveInteractiveMoment(
       },
       momentumDelta: success ? choice.momentumImpact : -choice.momentumImpact * 0.3,
       goal,
+      card,
     };
   }
 

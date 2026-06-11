@@ -69,13 +69,9 @@ import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrati
 import { QuickStreakChallengesPanel } from '@/components/matchquick/QuickStreakChallengesPanel';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import {
-  shouldTriggerCounterAttack,
   shouldTriggerSetPiece,
-  shouldTriggerDefensiveChoice,
   shouldTriggerSubTiming,
-  buildCounterAttackMoment,
   buildSetPieceMoment,
-  buildDefensiveChoiceMoment,
   buildSubTimingMoment,
 } from '@/match/quickInteractiveMoments';
 import { buildSquadDecisionMoment } from '@/match/quickSquadPalette';
@@ -1402,19 +1398,18 @@ export function MatchQuick() {
           };
           const markTriggered = () => { lastMomentMinuteRef.current = lm.minute; };
 
-          // §5: nó de ATAQUE principal — menu gerado pelos atributos do elenco
-          // (criação×defesa). Dispara com a casa tocando a bola no meio/ataque.
-          if (lm.possession === 'home' && lm.minute >= 12 && lm.minute <= 86 && lm.homePlayers.length >= 5) {
-            const { moment } = buildSquadDecisionMoment(lm.homePlayers, lm.minute, Date.now());
+          // §4/§5: nó de OPEN PLAY — menu NOMEADO gerado pelo elenco. Ataque
+          // (casa com a bola) ou Defesa (visitante pressiona — Desarme/Carrinho/
+          // Cercar). Cobre os antigos counter/defensive genéricos.
+          const openPlayOk = lm.minute >= 12 && lm.minute <= 86 && lm.homePlayers.length >= 5;
+          if (openPlayOk && lm.possession === 'home') {
+            const { moment } = buildSquadDecisionMoment(lm.homePlayers, lm.minute, Date.now(), 'attack');
             dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
             markTriggered();
-          } else if (shouldTriggerCounterAttack(ctx)) {
-            const attacker = lm.homePlayers.find(p => p.role === 'attack');
-            if (attacker) {
-              const moment = buildCounterAttackMoment(ctx, attacker);
-              dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
-              markTriggered();
-            }
+          } else if (openPlayOk && lm.possession === 'away') {
+            const { moment } = buildSquadDecisionMoment(lm.homePlayers, lm.minute, Date.now(), 'defense');
+            dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            markTriggered();
           } else if (shouldTriggerSetPiece(ctx)) {
             const takers = lm.homePlayers
               .filter(p => p.role !== 'gk')
@@ -1428,11 +1423,6 @@ export function MatchQuick() {
               dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
               markTriggered();
             }
-          } else if (shouldTriggerDefensiveChoice(ctx)) {
-            // FIX G: pressão adversária no nosso terço → escolha defensiva.
-            const moment = buildDefensiveChoiceMoment(ctx);
-            dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
-            markTriggered();
           } else {
             // FIX G: sub timing — só dispara se há titular cansado E banco fresco.
             const tiredStarter = lm.homePlayers
@@ -1993,34 +1983,20 @@ export function MatchQuick() {
       return;
     }
 
-    // Cria timeout de 5s para escolha automática baseada na intensidade tática
+    // §4.2: auto-pick no estouro do timer do PRÓPRIO moment (squad = 3s) →
+    // opção FAVORECIDA pelo atributo (maior successChance = a mais segura/provável).
+    // Jogo nunca trava.
+    const timeoutMs = (live.activeInteractiveMoment.timeoutMs || 5000) + 300;
     interactiveMomentTimeoutRef.current = setTimeout(() => {
       const moment = live.activeInteractiveMoment;
       if (!moment) return;
-
-      // Escolha automática baseada na Tactical Intensity
-      const intensity = quickMatchIntensity?.current ?? 'counter';
-      let autoChoiceId = moment.choices[0]?.id; // fallback: primeira opção
-
-      // Lógica de escolha baseada na intensidade
-      if (intensity === 'attack' || intensity === 'press') {
-        // Táticas agressivas: escolhe opção mais ofensiva (geralmente a primeira)
-        autoChoiceId = moment.choices[0]?.id;
-      } else if (intensity === 'defend') {
-        // Tática defensiva: escolhe opção mais conservadora (geralmente a última)
-        autoChoiceId = moment.choices[moment.choices.length - 1]?.id;
-      } else {
-        // Posse/Counter: escolhe opção do meio (balanceada)
-        const midIndex = Math.floor(moment.choices.length / 2);
-        autoChoiceId = moment.choices[midIndex]?.id;
-      }
-
+      const safest = [...moment.choices].sort((a, b) => b.successChance - a.successChance)[0];
       dispatch({
         type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT',
         momentId: moment.id,
-        choiceId: autoChoiceId,
+        choiceId: safest?.id ?? moment.choices[0]?.id,
       });
-    }, 5000) as unknown as number;
+    }, timeoutMs) as unknown as number;
 
     return () => {
       if (interactiveMomentTimeoutRef.current) {

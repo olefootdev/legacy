@@ -35,9 +35,8 @@ const LABEL: Record<QuickMomentType, string> = {
   squad_decision: 'Jogada do time',
 };
 
-const TOTAL_MS = 5000;
-
 export function QuickFeedDecisionCard({ moment, onChoice }: Props) {
+  const TOTAL_MS = moment.timeoutMs || 4000; // §4.2: timer curto (squad = 3s)
   const [remaining, setRemaining] = useState(TOTAL_MS);
   const [selected, setSelected] = useState<string | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -111,7 +110,7 @@ export function QuickFeedDecisionCard({ moment, onChoice }: Props) {
 
       <p className="px-3 py-1.5 text-[11px] leading-snug text-white/70">{moment.context}</p>
 
-      <div className="grid grid-cols-2 gap-1.5 p-2.5 pt-1">
+      <div className={cn('grid gap-1.5 p-2.5 pt-1', moment.choices.length >= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
         {moment.choices.map((choice) => {
           const best = moment.choices.every((c) => choice.successChance >= c.successChance);
           return (
