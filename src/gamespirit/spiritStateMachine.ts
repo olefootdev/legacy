@@ -28,7 +28,7 @@ import type {
 
 /** Pesos base do remate (casa); `gameSpiritTick` pode multiplicar faixas com skill/zona. */
 export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> = {
-  goal: 0.32,        // V5 (2026-05-27) — V4 (0.42) gerava 3 gols seguidos. Calibrado pra ~5/partida.
+  goal: 0.25,        // V7 (2026-06-11) — V5 (0.32) + canais extras só da casa (escanteio/rebote/erro GK) davam ~2x os gols do away em força igual; ver quick-match-revolution.md §12 P2 + test:quick-balance.
   post_in: 0.07,
   save: 0.16,
   block: 0.10,
@@ -38,8 +38,11 @@ export const DEFAULT_HOME_SHOT_WEIGHTS: Record<HomeShotLogicalOutcome, number> =
 };
 
 /** Prob. de falta perigosa num tick em zona final. V5: reduzido de 0.30 → 0.18
- *  pra evitar spam de faltas + loop visual. */
-export const DANGEROUS_FOUL_PROB = 0.18;
+ *  pra evitar spam de faltas + loop visual.
+ *  V7 (2026-06-11): 0.18 → 0.09 — com PENALTY_FROM_FOUL_PROB=0.95, dava
+ *  pênalti pra casa quase toda partida ("margem de pênalti muito alta",
+ *  feedback do fundador). Cooldown de 8 ticks continua valendo. */
+export const DANGEROUS_FOUL_PROB = 0.09;
 /** Dado falta perigosa, prob. de virar pênalti.
  *  V5: 0.5 → 0.95 — fix do bug "gol antes do batedor". Falta normal (FK direto)
  *  era auto-resolved pelo engine sem modal (forçava action='shot' no próximo tick).
@@ -120,14 +123,17 @@ export function adjustHomeShotWeights(
   const gkEffective = typeof gkInd === 'number' ? Math.max(0, Math.min(1, gkInd)) : opts.gkFactor01;
 
   w.goal *= 1 + sk * 0.45 + opts.supportBoost * 0.35 + (opts.zoneAtt ? 0.22 : opts.zoneMid ? 0.08 : -0.18);
-  // Defesa adversária reduz xG até 25% quando press≈1.
-  w.goal *= 1 - press * 0.25;
+  // Defesa adversária reduz xG até 45% quando press≈1.
+  // BALANCE FIX (quick-match-revolution.md §12 P2): -25% era raso demais — com
+  // o layout do visitante corrigido (press finalmente >0 no quick), a defesa
+  // precisa de dente pra criar derrota/empate de verdade.
+  w.goal *= 1 - press * 0.45;
   w.post_in *= 1 + sk * 0.2;
-  w.post_in *= 1 - press * 0.18;
+  w.post_in *= 1 - press * 0.3;
   // Save individualizado por GK real (não só OVR do clube).
-  w.save *= 1 + gkEffective * 0.5;
-  // Defesa próxima aumenta bloqueios (+0.40 quando press≈1).
-  w.block *= 1 + opts.errorTax * 0.25 + press * 0.40;
+  w.save *= 1 + gkEffective * 0.9;
+  // Defesa próxima aumenta bloqueios (+0.55 quando press≈1).
+  w.block *= 1 + opts.errorTax * 0.25 + press * 0.55;
   w.wide *= 1 + opts.errorTax * 0.2;
   w.post_out *= 1 + sk * 0.05;
   w.miss_far *= 1 + (opts.zoneAtt ? -0.08 : 0.05);

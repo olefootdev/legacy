@@ -1758,9 +1758,11 @@ export function gameSpiritTick(
       // Atacante elite (fin ≥ 80) ganha +30% no pGoalAway base; medíocre (≤60) perde 10%.
       const finBonus = (awayShooterFin01 - 0.6) * 0.45;
       // FANTASY V5 (2026-05-27): 0.32 → 0.24 — V4 dava 3 gols seguidos do away.
+      // BALANCE V7 (2026-06-11): força do clube pesa mais (/700 → /500) — em
+      // força igual o away precisa converter parecido com a casa (§12 P2).
       const pGoalAway =
         awayZone === 'att'
-          ? (0.24 + ctx.opponentStrength / 700 + errorTax * 0.18 + finBonus + awayMentMod) * awayNumericRatio
+          ? (0.24 + ctx.opponentStrength / 500 + errorTax * 0.18 + finBonus + awayMentMod) * awayNumericRatio
           : 0;
       const pWideAway = 0.10;
       if (awayZone === 'att' && rShot < pGoalAway) {
@@ -1830,23 +1832,34 @@ export function gameSpiritTick(
           spiritBuildupGkTicksRemaining: patch.spiritBuildupGkTicksRemaining,
         };
       } else {
+        // BALANCE FIX (quick-match-revolution.md §12 P2): os dois freios que
+        // deixavam o visitante "cone" eram daqui — (a) chegar na zona de ataque
+        // e ser teleportado de volta pro meio em todo tick sem chute; (b) perder
+        // a posse 35% das vezes independente da força do clube. Ambos agora
+        // escalam com opponentStrength: time forte sustenta o ataque e segura
+        // a bola; time fraco continua se desfazendo dela.
         if (awayZone !== 'att') {
-          const pushLeft = awayZone === 'mid' ? 7 + r() * 14 : 5 + r() * 11;
+          const pushLeft = awayZone === 'mid' ? 8 + r() * 18 : 6 + r() * 12;
           ball = {
             x: Math.max(14, ctx.ball.x - pushLeft),
             y: Math.min(82, Math.max(18, ctx.ball.y + (r() * 14 - 7))),
           };
         } else {
-          ball = {
-            x: 25 + r() * 40,
-            y: 20 + r() * 60,
-          };
+          const pSustainAttack = Math.min(0.5, Math.max(0.22, 0.34 + (ctx.opponentStrength - 65) * 0.005));
+          ball = r() < pSustainAttack
+            ? { x: 16 + r() * 17, y: 24 + r() * 52 }   // segue na zona de ataque (x ≤ 34)
+            : { x: 25 + r() * 40, y: 20 + r() * 60 };  // recicla pro meio (comportamento antigo)
         }
         L.push({
           type: 'ball_state',
           payload: { ...ball, reason: 'away_build' },
         });
-        if (r() < 0.35) {
+        // A casa só perde a bola pelos próprios desfechos (chute/erro) — o away
+        // não tem mecânica de roubo sobre a casa. Logo o turnover do away é o
+        // único dreno de posse do jogo e precisa ser bem mais raso que os 35%
+        // flat antigos pra posse do visitante sobreviver até a zona de ataque.
+        const pTurnover = Math.min(0.42, Math.max(0.16, 0.30 - (ctx.opponentStrength - 65) * 0.006));
+        if (r() < pTurnover) {
           next = 'home';
           L.push({ type: 'possession_change', payload: { to: 'home', reason: 'away_turnover' } });
           narrative = pickLine('possession_switch', { min: ctx.minute, team: ctx.homeShort ?? 'Casa' }, ctx.minute)

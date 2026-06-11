@@ -75,8 +75,10 @@ function applyOffsets(base: number, offsets: Partial<PosArchetype>, key: keyof P
 /**
  * Deriva atributos sintéticos para um jogador visitante.
  *
- * - `opponentStrength` é o OVR do clube (0-120 normalizado, usado em quick mode).
- *   Convertemos pra escala 0-100 e usamos como base do jogador "médio" dele.
+ * - `opponentStrength` é o OVR do clube na escala 0-100 (todas as fontes reais —
+ *   `friendlyMatchmaking.avgOvr`, bots, Liga Global — produzem `overallFromAttributes`
+ *   0-100). A conversão antiga ×(100/120) assumia escala 0-120 e nerfava o
+ *   visitante em ~17% (raiz do "casa sempre ganha", quick-match-revolution.md §12).
  * - `pos` define o arquétipo (offsets sobre a base).
  * - `playerId` semeia uma pequena variação determinística (±4) por jogador,
  *   pra mesmo OVR ter 11 jogadores distintos em vez de robôs clonados.
@@ -86,7 +88,7 @@ export function synthesizeAwayAttrsForPlayer(args: {
   pos: string;
   playerId: string;
 }): MatchPlayerAttributes {
-  const baseOvr = Math.max(40, Math.min(95, args.opponentStrength * (100 / 120)));
+  const baseOvr = Math.max(40, Math.min(95, args.opponentStrength));
   const offsets = POS_OFFSETS[args.pos.toUpperCase()] ?? POS_OFFSETS.MC ?? {};
   // Variação determinística por jogador (±4 pontos)
   const h = hashStringSeed(args.playerId);
@@ -121,34 +123,44 @@ export function posToRole(pos: string): 'attack' | 'mid' | 'def' | 'gk' {
 }
 
 /**
- * Posições aproximadas (eixo x espelhado: visitante ataca da direita pra esquerda).
+ * Posições aproximadas do visitante. Coordenadas do engine: casa ataca +X
+ * (gol visitante em x=100), visitante ataca -X (gol da casa em x=0). Logo a
+ * defesa visitante vive em x ALTO (GK ~96) e o ataque visitante em x baixo.
+ *
+ * BUG FIX (quick-match-revolution.md §12 P2): o layout antigo estava com o
+ * eixo invertido (GK visitante em x=4 — dentro da área da CASA). Consequência:
+ * quando a casa chutava (x ≥ 66), nenhum defensor visitante caía no raio 22 do
+ * `awayDefensePress01` → press sempre 0 → xG da casa nunca era reduzido pela
+ * defesa adversária. Todo o sistema de defesa individualizada do Fantasy V6
+ * estava morto no quick — "time da casa sempre ganha".
+ *
  * Apenas pro `pickAction.countOpponentsWithin` e `awayDefensePress` saberem onde
  * cada jogador está. Não é tactical positioning real — quick mode não desenha
  * o visitante; só precisa de coordenadas plausíveis para densidade.
  */
 const QUICK_AWAY_LAYOUT: Record<string, { x: number; y: number }> = {
-  GOL: { x: 4, y: 50 },
-  GK: { x: 4, y: 50 },
-  ZAG: { x: 18, y: 38 },
-  CB: { x: 18, y: 38 },
-  LE: { x: 22, y: 14 },
-  LD: { x: 22, y: 86 },
-  LB: { x: 22, y: 14 },
-  RB: { x: 22, y: 86 },
-  VOL: { x: 32, y: 50 },
-  CDM: { x: 32, y: 50 },
-  MC: { x: 40, y: 38 },
-  CM: { x: 40, y: 62 },
-  MEI: { x: 48, y: 50 },
-  MO: { x: 48, y: 50 },
-  CAM: { x: 48, y: 50 },
-  PE: { x: 62, y: 18 },
-  PD: { x: 62, y: 82 },
-  LW: { x: 62, y: 18 },
-  RW: { x: 62, y: 82 },
-  ATA: { x: 70, y: 50 },
-  ATACANTE: { x: 70, y: 50 },
-  ST: { x: 70, y: 50 },
+  GOL: { x: 96, y: 50 },
+  GK: { x: 96, y: 50 },
+  ZAG: { x: 82, y: 38 },
+  CB: { x: 82, y: 38 },
+  LE: { x: 78, y: 14 },
+  LD: { x: 78, y: 86 },
+  LB: { x: 78, y: 14 },
+  RB: { x: 78, y: 86 },
+  VOL: { x: 68, y: 50 },
+  CDM: { x: 68, y: 50 },
+  MC: { x: 60, y: 38 },
+  CM: { x: 60, y: 62 },
+  MEI: { x: 52, y: 50 },
+  MO: { x: 52, y: 50 },
+  CAM: { x: 52, y: 50 },
+  PE: { x: 38, y: 18 },
+  PD: { x: 38, y: 82 },
+  LW: { x: 38, y: 18 },
+  RW: { x: 38, y: 82 },
+  ATA: { x: 30, y: 50 },
+  ATACANTE: { x: 30, y: 50 },
+  ST: { x: 30, y: 50 },
 };
 
 function quickAwayPosition(pos: string, index: number): { x: number; y: number } {

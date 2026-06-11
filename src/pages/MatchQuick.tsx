@@ -15,7 +15,9 @@ import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { hashStringSeed } from '@/match/seededRng';
 import { computeAwayImpactsFromVirtualLedger, computeHomeImpactsFromLedger } from '@/match/impactLedger';
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
-import { quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
+import { curateQuickFeedPool, quickFeedLineClass, renderQuickFeedRichText } from '@/match/quickMatchFeed';
+import { DEFAULT_OPPONENT } from '@/entities/team';
+import { computeScoutFromEvents, type MatchScoutBoard } from '@/match/scout';
 import { MatchInterruptOverlay } from '@/match/MatchInterruptOverlay';
 import { MatchFindingOverlay } from '@/components/match/MatchFindingOverlay';
 import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
@@ -49,12 +51,9 @@ import {
 } from '@/components/matchday/MatchdayVersusTitle';
 import { LiveMatchClockDisplay } from '@/components/matchday/LiveMatchClockDisplay';
 import { trackMissionEvent } from '@/progression/trackEvent';
-import { QuickMatchHero } from '@/components/matchquick/QuickMatchHero';
 import { QuickMatchScoreboard } from '@/components/matchquick/QuickMatchScoreboard';
-import { QuickMatchFeed } from '@/components/matchquick/QuickMatchFeed';
 import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
 import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
-import { QuickMatchSummary } from '@/components/matchquick/QuickMatchSummary';
 import { QuickInteractiveMomentOverlay } from '@/components/matchquick/QuickInteractiveMomentOverlay';
 import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
 import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
@@ -605,6 +604,8 @@ interface EndSummary {
   result: 'win' | 'draw' | 'loss';
   mvp?: MvpSnapshot;
   stats?: MatchStats;
+  /** Scout da partida (régua compartilhada, Fase 1) — top pontuadores dos 2 lados. */
+  scout?: MatchScoutBoard;
 }
 
 interface QuickAwayPlayer {
@@ -675,9 +676,12 @@ export function MatchQuick() {
   const quickMatchIntensity = useGameStore((s) => s.quickMatchIntensity);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
 
-  // PvP assíncrono: adversário real passado via navigate state
+  // PvP assíncrono: adversário real passado via navigate state.
+  // Stub "no-opponent-available" antigo em location.state é IGNORADO — senão
+  // ele tem precedência sobre a re-busca e a partida nunca começa.
   const location = useLocation();
-  const pvpStubFromState = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const pvpStubRaw = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const pvpStubFromState = pvpStubRaw && pvpStubRaw.id !== 'no-opponent-available' ? pvpStubRaw : undefined;
 
   // [2026-05-18] Auto-buscar adversário se o usuário caiu direto em /match/quick
   // sem passar pelo QuickSearchModal. Evita o TITANS FC mock e segue a regra:
@@ -686,10 +690,18 @@ export function MatchQuick() {
   // Fix 2026-05-18b: useRef em vez de state nas deps — antes `playersById` +
   // `autoSearching` recriavam o effect a cada render, gerando loop infinito
   // de busca que congelava a UI (botões da Home pareciam mortos).
+  //
+  // [2026-06-11] Regra de produto 2026-05-27 reafirmada: a Partida Rápida
+  // SEMPRE acontece. O matchmaking escolhe um time qualquer (sem filtro de
+  // OVR) e o GameSpirit joga pelo manager offline; bot é o último recurso.
+  // Também re-busca quando um 'no-opponent-available' antigo ficou persistido
+  // no fixture (antes era beco sem saída: nunca buscava de novo).
   const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
   const autoSearchTriedRef = useRef(false);
   const isPlaceholderOpponent =
-    !pvpStubFromState && fixtureBase.opponent.id === 'placeholder-opponent';
+    !pvpStubFromState &&
+    (fixtureBase.opponent.id === 'placeholder-opponent' ||
+      fixtureBase.opponent.id === 'no-opponent-available');
 
   useEffect(() => {
     if (!isPlaceholderOpponent || autoSearchTriedRef.current) return;
@@ -715,12 +727,31 @@ export function MatchQuick() {
       } catch (err) {
         console.warn('[MatchQuick] auto opponent search failed', err);
         if (cancelled) return;
-        // Não cai em bot — UI exibe "Nenhum manager disponível" via NO_OPPONENT_STUB_ID.
-        const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
-        const myOverall = 70;
-        const stub = opponentMatchToStub({ type: 'none' }, myOverall);
-        setAutoOpponent(stub);
-        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        // Regra 2026-05-27: a partida SEMPRE começa. Se até a cascata de
+        // matchmaking explodiu (rede/chunk/Supabase), cai num bot do pool —
+        // o GameSpirit joga por ele, igual faria por um manager offline.
+        try {
+          const { getMatchingBotTeam } = await import('@/match/botTeams');
+          const bot = getMatchingBotTeam(70, 15);
+          const stub: OpponentStub = {
+            id: bot.id,
+            name: bot.name,
+            shortName: bot.shortName,
+            strength: bot.avgOverall,
+          };
+          setAutoOpponent(stub);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        } catch {
+          // Sem rede nem pro chunk do bot (dev server caiu): stub local fixo.
+          const stub: OpponentStub = {
+            id: 'bot-fallback-local',
+            name: 'Esquadrão Reserva',
+            shortName: 'RES',
+            strength: 68,
+          };
+          setAutoOpponent(stub);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -774,6 +805,12 @@ export function MatchQuick() {
 
   // Interactive Moment auto-timeout
   const interactiveMomentTimeoutRef = useRef<number | null>(null);
+
+  // StreakBar transitório (2026-06-11): era `fixed top-20 z-50` SEMPRE visível
+  // com streak ≥ 1 — o "banner persistente sujando a tela" entre partidas.
+  // Agora aparece 5s quando a sequência MUDA (fim de jogo) e some sozinho.
+  const [streakBannerVisible, setStreakBannerVisible] = useState(false);
+  const prevStreakRef = useRef<number | null>(null);
 
   // sync ref for use inside interval
   useEffect(() => { secondYellowAlertRef.current = secondYellowAlert; }, [secondYellowAlert]);
@@ -959,8 +996,72 @@ export function MatchQuick() {
     }
   }, [fcGate, navigate]);
 
-  // Gate: NUNCA inicia a partida contra placeholder/bot. Só contra manager real
-  // (decisão de produto 2026-05-26). Mostra mensagem clara na UI ao invés.
+  // Guarda anti-banner-fantasma (§12 P1): se uma partida NOVA já está rolando
+  // e o summary da anterior ainda existe (o reset acima aguarda matchmaking),
+  // desmonta summary + recompensas imediatamente.
+  useEffect(() => {
+    if (live?.phase === 'playing' && live.minute <= 1 && summary !== null) {
+      setSummary(null);
+      setShowInstantRewards(false);
+      finalizedRef.current = false;
+    }
+  }, [live?.phase, live?.minute, summary]);
+
+  // StreakBar: mostra por 5s quando o valor da sequência muda (pós-jogo).
+  useEffect(() => {
+    const cur = quickMatchStreak?.current ?? 0;
+    if (prevStreakRef.current === null) {
+      prevStreakRef.current = cur;
+      return;
+    }
+    if (cur === prevStreakRef.current) return;
+    prevStreakRef.current = cur;
+    if (cur === 0) {
+      setStreakBannerVisible(false);
+      return;
+    }
+    setStreakBannerVisible(true);
+    const t = window.setTimeout(() => setStreakBannerVisible(false), 5000);
+    return () => window.clearTimeout(t);
+  }, [quickMatchStreak?.current]);
+
+  // Pênalti do VISITANTE (2026-06-11): o PenaltyKickModal é o POV do manager
+  // batendo — pro lado de lá quem joga é o GameSpirit (manager offline). Sem
+  // isto o stage 'kick' do away nunca resolvia e o relógio congelava (loop
+  // pausa em lm.penalty) — sintoma "trava aos 64' e a partida não termina".
+  useEffect(() => {
+    const pen = live?.penalty;
+    if (!pen || live?.phase !== 'playing' || pen.side !== 'away' || pen.stage !== 'kick') return;
+    const t = window.setTimeout(() => {
+      const cur = getGameState().liveMatch?.penalty;
+      if (!cur || cur.side !== 'away' || cur.stage !== 'kick') return;
+      dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_resolve', rng: Math.random() } });
+    }, 1800);
+    return () => window.clearTimeout(t);
+  }, [live?.penalty?.stage, live?.penalty?.side, live?.phase, dispatch]);
+
+  // Watchdog anti-trava de pênalti (2026-06-11): a progressão banner→walk→kick
+  // depende do spiritOverlay; se o overlay for dispensado no meio (qualquer
+  // corrida de overlays), o pênalti fica órfão sem UI e o jogo congela. Se há
+  // pênalti pendente SEM overlay fora do 'kick', força o avanço.
+  useEffect(() => {
+    const pen = live?.penalty;
+    if (!pen || live?.phase !== 'playing') return;
+    if (pen.stage === 'kick' || pen.stage === 'result') return;
+    if (live?.spiritOverlay) return;
+    const t = window.setTimeout(() => {
+      const st = getGameState().liveMatch;
+      const cur = st?.penalty;
+      if (!cur || cur.stage === 'kick' || cur.stage === 'result' || st?.spiritOverlay) return;
+      dispatch({ type: 'APPLY_SPIRIT_OUTCOME', payload: { kind: 'penalty_advance' } });
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [live?.penalty?.stage, live?.spiritOverlay, live?.phase, dispatch]);
+
+  // Gate: aguarda o matchmaking resolver (placeholder/no-opponent são estados
+  // transitórios de busca). Regra de produto 2026-05-27: a partida SEMPRE
+  // acontece — manager real preferido, bot como último recurso; o GameSpirit
+  // joga pelo adversário offline em qualquer caso.
   const opponentId = fixture?.opponent?.id;
   const hasValidOpponent = !!opponentId && opponentId !== 'placeholder-opponent' && opponentId !== 'no-opponent-available';
 
@@ -969,6 +1070,7 @@ export function MatchQuick() {
     if (!hasValidOpponent) return; // aguarda matchmaking achar manager real
     finalizedRef.current = false;
     setSummary(null);
+    setShowInstantRewards(false);
     htRef.current = 0;
     setHalfTimeUi(false);
     setHalfTimeTick(3);
@@ -1796,6 +1898,12 @@ export function MatchQuick() {
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live)) return;
     if (live.phase !== 'postgame' || finalizedRef.current) return;
+    // Anti-corrida (2026-06-11): ao remontar sobre um postgame antigo, o efeito
+    // de START já pode ter criado uma partida NOVA neste mesmo commit — o `live`
+    // desta closure ainda é o postgame velho. Sem este guard, o FINALIZE abaixo
+    // matava a partida recém-criada (placar 0x0 fantasma indo pro histórico).
+    const freshLm = getGameState().liveMatch;
+    if (!freshLm || freshLm.phase !== 'postgame') return;
     finalizedRef.current = true;
 
     // ─ MVP: melhor do home por impact (homeRanked já está sorted desc)
@@ -1832,6 +1940,17 @@ export function MatchQuick() {
     const redsHome = live.events.filter((e) => e.kind === 'red_home').length;
     const possessionHome = live.possession === 'home' ? 58 : 42;
 
+    // ─ Scout da partida (Fase 1 → UI): pontos por jogador dos DOIS lados,
+    //   pela régua compartilhada (determinística, capitão ×2).
+    const scoutBoard = computeScoutFromEvents({
+      events: live.events,
+      homeRoster: live.homePlayers.map((p) => ({ id: p.playerId, name: p.name, pos: p.pos ?? p.role ?? 'MC' })),
+      awayRoster: (live.awayRosterAtKickoff ?? live.awayRoster ?? []).map((p) => ({ id: p.id, name: p.name, pos: p.pos })),
+      homeCaptainId: live.homeCaptainPlayerId,
+      homeScore: live.homeScore,
+      awayScore: live.awayScore,
+    });
+
     setSummary({
       homeShort: live.homeShort,
       awayShort: live.awayShort,
@@ -1843,10 +1962,19 @@ export function MatchQuick() {
       result: live.homeScore > live.awayScore ? 'win' : live.homeScore < live.awayScore ? 'loss' : 'draw',
       mvp: mvpSnapshot,
       stats: { shotsHome, shotsAway, possessionHome, cornersHome, yellowsHome, redsHome },
+      scout: scoutBoard,
     });
     // Mostrar recompensas instantâneas após 800ms (deixa o summary aparecer primeiro)
     window.setTimeout(() => setShowInstantRewards(true), 800);
     dispatch({ type: 'FINALIZE_MATCH' });
+    // Solta o adversário (2026-06-11): sem isso o fixture persiste o mesmo
+    // oponente e a PRÓXIMA partida começa instantânea contra ele — sem
+    // matchmaking novo, sem a animação "Buscando partida" e repetindo o mesmo
+    // time (sensação de "cone"). Placeholder força busca nova no próximo mount.
+    dispatch({
+      type: 'ADMIN_PATCH_NEXT_FIXTURE',
+      partial: { opponent: DEFAULT_OPPONENT, awayName: DEFAULT_OPPONENT.name },
+    });
 
     // ── Persist inverse result + away events to opponent's state (async PvP) ──
     const isRealOpponent = fixture?.opponent?.id && !fixture.opponent.id.startsWith('bot-') && !fixture.opponent.id.startsWith('placeholder');
@@ -2213,11 +2341,14 @@ export function MatchQuick() {
   const feedAwayNames = useMemo(() => awayRoster.map((p) => p.name).filter(Boolean), [awayRoster]);
 
   const feedVisibleEvents = useMemo(() => {
-    const pool = (live?.events ?? []).slice(0, FEED_POOL_MAX);
+    // Curadoria (§12 P3): eventos-chave têm prioridade no pool; filler só
+    // preenche vaga. live.events segue intacto (summary/narração usam tudo).
+    // live.minute limita a idade dos lances-chave (anti-reciclagem do 1º tempo).
+    const pool = curateQuickFeedPool(live?.events ?? [], FEED_POOL_MAX, live?.minute);
     const maxStart = Math.max(0, pool.length - FEED_VISIBLE_COUNT);
     const start = Math.min(feedWindowStart, maxStart);
     return pool.slice(start, start + FEED_VISIBLE_COUNT);
-  }, [live?.events, feedWindowStart]);
+  }, [live?.events, live?.minute, feedWindowStart]);
 
   const { homeEventBadges, awayEventBadges } = useMemo(() => {
     const home = new Map<string, QuickEventBadge[]>();
@@ -2398,7 +2529,7 @@ export function MatchQuick() {
             Nenhum manager disponível
           </h1>
           <p className="text-white/65 text-sm leading-relaxed">
-            A Olefoot não tem partidas contra bots. Estamos procurando outro manager pra ti — tenta de novo em alguns segundos.
+            Estamos escalando um adversário pra ti — a busca recomeça sozinha em instantes.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <button
@@ -2440,7 +2571,7 @@ export function MatchQuick() {
   return (
     <div className="flex w-full min-h-0 flex-1 flex-col space-y-4 py-6 px-4 pb-[calc(13rem+env(safe-area-inset-bottom,0px))] md:flex-none" style={{ touchAction: 'pan-y' }}>
       {/* Streak Bar */}
-      <StreakBar streak={quickMatchStreak} />
+      {streakBannerVisible && <StreakBar streak={quickMatchStreak} />}
 
       {/* Top bar — chrome editorial Olefoot */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -2812,12 +2943,14 @@ export function MatchQuick() {
         ) : null}
       </AnimatePresence>
 
-      {showBoard && live && livePrediction ? (
+      {/* Painel de previsão é banner de PRÉ-jogo: desmonta quando a bola rola
+          (§12 P1 — banners persistentes sujavam a tela durante a partida). */}
+      {showBoard && live && livePrediction && quickPreStart !== null ? (
         <div className="mb-3">
           <MatchPredictionPanel
             result={livePrediction}
-            homeName={club?.shortName ?? 'Casa'}
-            awayName={fixture?.opponent?.shortName ?? 'Visitante'}
+            homeName={club?.name ?? club?.shortName ?? 'Casa'}
+            awayName={fixture?.opponent?.name ?? fixture?.opponent?.shortName ?? 'Visitante'}
             compact
           />
         </div>
@@ -2827,9 +2960,18 @@ export function MatchQuick() {
         <div data-tutorial-anchor="match-quick-board" className="glass-panel p-5 border border-white/10 space-y-4 relative overflow-visible">
           {quickPreStart === 'ready' || quickPreStart === 'c3' || quickPreStart === 'c2' || quickPreStart === 'c1' ? (
             <div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 backdrop-blur-[2px] pointer-events-none"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/55 backdrop-blur-[2px] pointer-events-none"
               aria-live="polite"
             >
+              {/* Confronto SEMPRE visível no pré-jogo (§ "contra qual time é o jogo?") */}
+              <p
+                className="font-display uppercase text-white/70 text-center px-4 max-w-full truncate"
+                style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.22em' }}
+              >
+                <span className="text-neon-yellow">{live.homeName ?? live.homeShort}</span>
+                <span className="mx-2 text-white/40">×</span>
+                <span>{live.awayName ?? fixture?.opponent?.name ?? live.awayShort}</span>
+              </p>
               {quickPreStart === 'ready' ? (
                 <motion.span
                   key="ready"
@@ -3987,6 +4129,99 @@ export function MatchQuick() {
             </div>
           ) : null}
 
+          {/* ─── Scout da partida (régua compartilhada — Fase 1) ─────────── */}
+          {summary.scout && (summary.scout.home.length > 0 || summary.scout.away.length > 0) ? (
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className="w-[3px] h-5 bg-neon-yellow shrink-0" />
+                  <h3
+                    className="text-neon-yellow uppercase"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      letterSpacing: '0.24em',
+                    }}
+                  >
+                    Scout da partida
+                  </h3>
+                </div>
+                {summary.scout.topScorer ? (
+                  <span
+                    className="uppercase text-white/45"
+                    style={{ fontFamily: 'var(--font-display)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em' }}
+                  >
+                    Craque: <span className="text-neon-yellow">{summary.scout.topScorer.name}</span>
+                  </span>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { label: summary.homeName ?? summary.homeShort, rows: summary.scout.home.slice(0, 3), homeSide: true },
+                  { label: summary.awayName ?? summary.awayShort, rows: summary.scout.away.slice(0, 3), homeSide: false },
+                ] as const).map((col) => (
+                  <div
+                    key={col.label}
+                    className="border border-white/10 bg-deep-black/40 px-3 py-3 space-y-2"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  >
+                    <p
+                      className={cn('font-display uppercase truncate', col.homeSide ? 'text-neon-yellow/80' : 'text-white/55')}
+                      style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.24em' }}
+                    >
+                      {col.label}
+                    </p>
+                    {col.rows.length === 0 ? (
+                      <p className="text-white/35" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}>
+                        Sem destaques pontuados.
+                      </p>
+                    ) : (
+                      col.rows.map((r) => (
+                        <div key={r.playerId} className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className="text-white/85 truncate"
+                              style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 600 }}
+                            >
+                              {r.name}
+                            </span>
+                            <span className="text-white/35 uppercase shrink-0" style={{ fontSize: '9px', letterSpacing: '0.12em' }}>
+                              {r.pos}
+                            </span>
+                            {r.isCaptain ? (
+                              <span
+                                className="shrink-0 px-1 rounded-sm bg-neon-yellow/15 text-neon-yellow uppercase"
+                                style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em' }}
+                                title="Capitão — pontos ×2"
+                              >
+                                C ×2
+                              </span>
+                            ) : null}
+                            {r.goals > 0 ? (
+                              <span className="shrink-0 text-white/60" style={{ fontSize: '10px' }} title={`${r.goals} gol(s)`}>
+                                ⚽{r.goals > 1 ? `×${r.goals}` : ''}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span
+                            className={cn('italic tabular-nums shrink-0', r.points >= 0 ? 'text-neon-yellow' : 'text-red-400')}
+                            style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '16px' }}
+                          >
+                            {r.points.toFixed(1)}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {/* ─── Lances do jogo ──────────────────────────────────────────── */}
           <div
             className="border border-[var(--color-border)] bg-dark-gray p-4 max-h-44 overflow-y-auto"
@@ -4176,7 +4411,7 @@ export function MatchQuick() {
       )}
 
       {/* ─── Penalty Kick Modal ─────────────────────────────────────────── */}
-      {live?.penalty?.stage === 'kick' && live?.phase === 'playing' && live?.penalty && (
+      {live?.penalty?.stage === 'kick' && live?.phase === 'playing' && live?.penalty?.side === 'home' && (
         <PenaltyKickModal
           key={`penalty-${live.penalty.takerId ?? live.penalty.takerName ?? 'anon'}`}
           penalty={live.penalty}

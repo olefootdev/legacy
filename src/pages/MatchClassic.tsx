@@ -103,12 +103,16 @@ export function MatchClassic() {
   // PvP assíncrono via navigate state (QuickSearchModal) + auto-busca on mount
   // Fix 2026-05-18b: useRef pra evitar loop (playersById muda referência a cada
   // update do store → effect retrigger → setState → loop infinito).
-  const pvpStubFromState = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  const pvpStubRaw = (location.state as { pvpOpponentStub?: OpponentStub } | null)?.pvpOpponentStub;
+  // Stub "no-opponent-available" antigo em location.state é ignorado (beco sem saída).
+  const pvpStubFromState = pvpStubRaw && pvpStubRaw.id !== 'no-opponent-available' ? pvpStubRaw : undefined;
   const [autoOpponent, setAutoOpponent] = useState<OpponentStub | null>(null);
   const [overlayDone, setOverlayDone] = useState(false);
   const autoSearchTriedRef = useRef(false);
   const isPlaceholderOpponent =
-    !pvpStubFromState && fixtureBase?.opponent?.id === 'placeholder-opponent';
+    !pvpStubFromState &&
+    (fixtureBase?.opponent?.id === 'placeholder-opponent' ||
+      fixtureBase?.opponent?.id === 'no-opponent-available');
 
   useEffect(() => {
     if (!isPlaceholderOpponent || autoSearchTriedRef.current) return;
@@ -134,12 +138,18 @@ export function MatchClassic() {
       } catch (err) {
         console.warn('[MatchClassic] auto opponent search failed', err);
         if (cancelled) return;
-        // Não cai em bot — UI exibe "Nenhum manager disponível" via NO_OPPONENT_STUB_ID.
-        const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
-        const myOverall = 70;
-        const stub = opponentMatchToStub({ type: 'none' }, myOverall);
-        setAutoOpponent(stub);
-        dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        // Regra 2026-05-27: a partida SEMPRE começa — bot como último recurso.
+        try {
+          const { getMatchingBotTeam } = await import('@/match/botTeams');
+          const bot = getMatchingBotTeam(70, 15);
+          const stub: OpponentStub = { id: bot.id, name: bot.name, shortName: bot.shortName, strength: bot.avgOverall };
+          setAutoOpponent(stub);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        } catch {
+          const stub: OpponentStub = { id: 'bot-fallback-local', name: 'Esquadrão Reserva', shortName: 'RES', strength: 68 };
+          setAutoOpponent(stub);
+          dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
+        }
       }
     })();
     return () => { cancelled = true; };

@@ -76,6 +76,91 @@ export function renderQuickFeedRichText(
   return <>{parts}</>;
 }
 
+// ─── Curadoria de importância (quick-match-revolution.md §12 P3) ────────────
+// Com botões interativos no feed, cada item precisa valer. Eventos-chave
+// (gol/cartão/pênalti/lesão/sub) entram SEMPRE; narrativa só quando o texto
+// carrega um lance de verdade; filler ("troca passes", "recicla posse") cede
+// lugar quando o pool aperta.
+
+/** Texto de narrativa que descreve lance relevante (chute, defesa, trave, falta…). */
+const NARRATIVE_HIGHLIGHT_RE =
+  /chut|rema[tz]|finaliz|defes|defend|espalm|trave|travessão|p[êe]nalti|falta|cabeç|escanteio|c[óo]rner|contra-ataque|cruzamento|drible|rouba|desarm|perigo|quase|pra fora|gol/i;
+
+/**
+ * Importância 0–3 de um evento do feed:
+ *   3 = clímax (gol, vermelho, pênalti) · 2 = momento-chave (amarelo, lesão,
+ *   sub, chute, apito) · 1 = narrativa com lance · 0 = filler ambiente.
+ */
+export function quickFeedImportance(e: Pick<MatchEventEntry, 'kind' | 'text'>): number {
+  switch (e.kind) {
+    case 'goal_home':
+    case 'goal_away':
+    case 'red_home':
+    case 'red_away':
+    case 'penalty_start':
+    case 'penalty_result':
+      return 3;
+    case 'yellow_home':
+    case 'yellow_away':
+    case 'injury_home':
+    case 'sub':
+    case 'shot_home':
+    case 'shot_away':
+    case 'whistle':
+      return 2;
+    default:
+      return NARRATIVE_HIGHLIGHT_RE.test(e.text ?? '') ? 1 : 0;
+  }
+}
+
+/**
+ * Seleciona os eventos que merecem o pool visível do feed (mais recentes
+ * primeiro, ordem preservada). Regra: eventos de importância ≥1 têm prioridade;
+ * filler (0) só preenche as vagas que sobrarem — assim o feed nunca fica vazio
+ * no começo do jogo, mas "arroz de festa" sai primeiro quando o pool aperta.
+ *
+ * `nowMinute` (opcional): evento-chave com mais de 20 minutos de jogo não volta
+ * pro pool — sem isso, gols do 1º tempo ficavam reciclando na rotação aos 60'+
+ * ("ficam os eventos do primeiro tempo sendo narrados").
+ */
+const FEED_KEY_EVENT_MAX_AGE_MIN = 20;
+
+export function curateQuickFeedPool<T extends Pick<MatchEventEntry, 'kind' | 'text' | 'minute'>>(
+  events: T[],
+  max: number,
+  nowMinute?: number,
+): T[] {
+  if (events.length <= max) return events.slice(0, max);
+  const windowed = events.slice(0, Math.min(events.length, max * 3));
+  const recent =
+    typeof nowMinute === 'number'
+      ? windowed.filter(
+          (e) =>
+            quickFeedImportance(e) === 0 ||
+            typeof e.minute !== 'number' ||
+            nowMinute - e.minute <= FEED_KEY_EVENT_MAX_AGE_MIN,
+        )
+      : windowed;
+  const kept: T[] = [];
+  const fillerBackfill: T[] = [];
+  for (const e of recent) {
+    if (kept.length >= max) break;
+    if (quickFeedImportance(e) >= 1) kept.push(e);
+    else if (fillerBackfill.length < max) fillerBackfill.push(e);
+  }
+  if (kept.length < max) {
+    // Preenche com filler na ordem original até completar o pool.
+    for (const f of fillerBackfill) {
+      if (kept.length >= max) break;
+      kept.push(f);
+    }
+    // Reordena pro feed manter cronologia (mais recente primeiro).
+    const order = new Map(recent.map((e, i) => [e, i] as const));
+    kept.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+  }
+  return kept;
+}
+
 export function quickFeedLineClass(kind: MatchEventEntry['kind']): string {
   switch (kind) {
     case 'goal_home':

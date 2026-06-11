@@ -855,9 +855,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         if (genesisAway?.length) {
           const starters = awayStartingElevenFromSquad(genesisAway);
           awayRoster = starters.map((p) => ({ id: p.id, num: p.num, name: p.name, pos: p.pos }));
-          if (action.mode === 'test2d') {
-            awayPitchPlayers = buildAwayPitchPlayersFromEntities(starters, fs);
-          }
+          // Quick também usa o elenco REAL do adversário (antes só test2d):
+          // sem isso o runMatchMinute caía no sintético derivado do OVR do clube
+          // e ignorava os atributos reais do manager adversário
+          // (quick-match-revolution.md §12 P2 — "usar força real do adversário").
+          awayPitchPlayers = buildAwayPitchPlayersFromEntities(starters, fs);
         } else {
           const awaySlots: { pos: string; num: number }[] = [
             { pos: 'GOL', num: 1 }, { pos: 'ZAG', num: 4 }, { pos: 'ZAG', num: 5 },
