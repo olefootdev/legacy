@@ -252,6 +252,8 @@ export interface LiveMatchSnapshot {
     momentType: import('@/match/quickInteractiveMoments').QuickMomentType;
     success: boolean;
     minute: number;
+    /** §5: a decisão virou gol real → o narrador de gol já cobre (evita dupla fala). */
+    scored?: boolean;
     /** Nonce crescente — distingue desfechos repetidos pro efeito de UI disparar. */
     nonce: number;
   } | null;

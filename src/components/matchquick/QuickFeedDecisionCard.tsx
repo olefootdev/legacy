@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Clock, Zap, Shield, Target, Users } from 'lucide-react';
+import { Clock, Zap, Shield, Target, Users, Sparkles } from 'lucide-react';
 import type { QuickInteractiveMoment, QuickMomentType } from '@/match/quickInteractiveMoments';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ const ICON: Record<QuickMomentType, typeof Zap> = {
   set_piece: Target,
   defensive_choice: Shield,
   sub_timing: Users,
+  squad_decision: Sparkles,
 };
 
 const LABEL: Record<QuickMomentType, string> = {
@@ -31,6 +32,7 @@ const LABEL: Record<QuickMomentType, string> = {
   set_piece: 'Bola parada',
   defensive_choice: 'Decisão defensiva',
   sub_timing: 'Substituição',
+  squad_decision: 'Jogada do time',
 };
 
 const TOTAL_MS = 5000;

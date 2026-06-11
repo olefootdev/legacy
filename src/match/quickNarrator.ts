@@ -95,6 +95,7 @@ const DECISION_LABEL: Record<QuickMomentType, string> = {
   set_piece: 'bola parada',
   defensive_choice: 'leitura defensiva',
   sub_timing: 'troca',
+  squad_decision: 'jogada do time',
 };
 
 const SUCCESS_LINES: Record<QuickMomentType, string[]> = {
@@ -102,6 +103,7 @@ const SUCCESS_LINES: Record<QuickMomentType, string[]> = {
   set_piece: ['Na mosca! Bola parada ensaiada.', 'Cobrança magistral — você mandou bem.'],
   defensive_choice: ['Defesa cirúrgica! Leu o lance.', 'Fechou tudo! Comando perfeito.'],
   sub_timing: ['Troca de mestre! Mudou o jogo.', 'Sangue novo decidiu. Tá ligado.'],
+  squad_decision: ['QUE JOGADA! Você leu o time certo.', 'Saiu redondo! Boa pedida, manager.'],
 };
 
 const FAIL_LINES: Record<QuickMomentType, string[]> = {
@@ -109,12 +111,14 @@ const FAIL_LINES: Record<QuickMomentType, string[]> = {
   set_piece: ['Cobrou na barreira. Ai, ai.', 'Bola parada desperdiçada. Doeu.'],
   defensive_choice: ['Se expôs e tomou perigo.', 'Leitura furada. Quase custou caro.'],
   sub_timing: ['Troca no momento errado. Hmm.', 'Mexeu e piorou. Paciência.'],
+  squad_decision: ['Pediu o que o time não tem. Eita.', 'Jogada forçada — não saiu. Calma.'],
 };
 
 const REPEAT_FAIL_LINES: Record<QuickMomentType, string> = {
   counter_attack: 'De novo o contra-ataque afobado, manager?',
   set_piece: 'Mesma cobrança furada de novo? Aprende.',
   defensive_choice: 'Toda vez a mesma leitura errada, hein.',
+  squad_decision: 'De novo forçando o que o elenco não dá?',
   sub_timing: 'De novo a troca no escuro? Repensa.',
 };
 

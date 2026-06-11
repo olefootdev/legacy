@@ -5,7 +5,8 @@ export type QuickMomentType =
   | 'counter_attack'
   | 'set_piece'
   | 'defensive_choice'
-  | 'sub_timing';
+  | 'sub_timing'
+  | 'squad_decision';
 
 export interface QuickMomentChoice {
   id: string;
@@ -17,6 +18,14 @@ export interface QuickMomentChoice {
     exp?: number;
   };
   momentumImpact: number;
+  /** §5: sucesso desta escolha pode virar GOL de verdade (finalização). */
+  scoreOnSuccess?: boolean;
+  /** §5: quem executa (pro gol/scout/narrador). */
+  executorId?: string;
+  executorName?: string;
+  /** Narrativa custom de sucesso/erro (paleta gerada pelo elenco). */
+  successText?: string;
+  failText?: string;
 }
 
 export interface QuickInteractiveMoment {
@@ -39,6 +48,8 @@ export interface QuickMomentOutcome {
     exp: number;
   };
   momentumDelta: number;
+  /** §5: quando uma finalização dá certo, vira GOL de verdade no placar. */
+  goal?: { scorerId?: string; scorerName?: string };
 }
 
 interface MomentTriggerContext {
@@ -283,6 +294,27 @@ export function resolveInteractiveMoment(
   }
 
   const success = Math.random() < choice.successChance;
+
+  // §5: paleta gerada pelo elenco traz a própria narrativa (e pode virar gol).
+  if (moment.type === 'squad_decision' || choice.successText || choice.failText) {
+    const goal = success && choice.scoreOnSuccess
+      ? { scorerId: choice.executorId, scorerName: choice.executorName }
+      : undefined;
+    return {
+      momentId: moment.id,
+      choiceId: choice.id,
+      success,
+      narrative: success
+        ? choice.successText ?? 'Deu certo! A jogada saiu como o manager pediu.'
+        : choice.failText ?? 'Não saiu como planejado. Bola perdida.',
+      rewards: {
+        ole: success ? (choice.reward.ole ?? 0) : 0,
+        exp: success ? (choice.reward.exp ?? 0) : 0,
+      },
+      momentumDelta: success ? choice.momentumImpact : -choice.momentumImpact * 0.3,
+      goal,
+    };
+  }
 
   let narrative = '';
   if (moment.type === 'counter_attack') {

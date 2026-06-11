@@ -940,12 +940,29 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const newMomentum = state.liveMatch.spiritMomentum ?? { home: 50, away: 50 };
       newMomentum.home = Math.max(0, Math.min(100, newMomentum.home + outcome.momentumDelta));
 
-      const narrativeEvent: MatchEventEntry = {
-        id: `moment_${Date.now()}`,
-        minute: state.liveMatch.minute,
-        text: outcome.narrative,
-        kind: 'narrative',
-      };
+      const minuteNow = state.liveMatch.minute;
+      const events: MatchEventEntry[] = [...state.liveMatch.events];
+
+      // §5/§4.3: finalização certa vira GOL de verdade (placar + scout + §6).
+      // Loop pausado durante o moment → sem corrida com gol do motor.
+      let homeScore = state.liveMatch.homeScore;
+      if (outcome.goal) {
+        homeScore += 1;
+        events.unshift({
+          id: `momentgoal_${Date.now()}`,
+          minute: minuteNow,
+          text: outcome.narrative,
+          kind: 'goal_home',
+          playerId: outcome.goal.scorerId,
+        });
+      } else {
+        events.unshift({
+          id: `moment_${Date.now()}`,
+          minute: minuteNow,
+          text: outcome.narrative,
+          kind: 'narrative',
+        });
+      }
 
       const resolvedType = state.liveMatch.activeInteractiveMoment.type;
 
@@ -954,16 +971,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         finance: newFinance,
         liveMatch: {
           ...state.liveMatch,
+          homeScore,
           activeInteractiveMoment: null,
           // §6: expõe o desfecho pro narrador reativo (exalta/cutuca + memória).
           lastInteractiveOutcome: {
             momentType: resolvedType,
             success: outcome.success,
-            minute: state.liveMatch.minute,
+            minute: minuteNow,
+            scored: !!outcome.goal,
             nonce: Date.now(),
           },
           spiritMomentum: newMomentum,
-          events: [narrativeEvent, ...state.liveMatch.events],
+          events,
         },
       };
     }

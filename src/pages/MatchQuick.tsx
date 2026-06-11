@@ -78,6 +78,9 @@ import {
   buildDefensiveChoiceMoment,
   buildSubTimingMoment,
 } from '@/match/quickInteractiveMoments';
+import { buildSquadDecisionMoment } from '@/match/quickSquadPalette';
+import { buildGoalChain, type NarrationChain } from '@/match/quickNarrationChain';
+import { QuickCinematicNarration } from '@/components/matchquick/QuickCinematicNarration';
 import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
 import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
@@ -813,6 +816,8 @@ export function MatchQuick() {
 
   // Interactive Moment auto-timeout
   const interactiveMomentTimeoutRef = useRef<number | null>(null);
+  // §4.2: raciona os nós de decisão (≥8 min entre eles → ~5/partida).
+  const lastMomentMinuteRef = useRef<number>(-99);
 
   // ── Narrador reativo (§6) ──────────────────────────────────────────────
   // Linha cinética atual + nonce (mesmo texto pode repetir → nonce força UI).
@@ -852,6 +857,15 @@ export function MatchQuick() {
   const [goalScorerRevealDone, setGoalScorerRevealDone] = useState(false);
   const [goalCelebrationKey, setGoalCelebrationKey] = useState<string | null>(null);
   const [goalCelebrationActive, setGoalCelebrationActive] = useState(false);
+  // §3.2: narração full-screen cinética (cadeia → GOOOL) antes do card do artilheiro.
+  const [cinematicGoal, setCinematicGoal] = useState<{ chain: NarrationChain; goalId: string } | null>(null);
+  // Segurança anti-órfão: o overlay auto-avança e chama onDone, mas se desmontar
+  // no meio, garante que não fica preso congelando o relógio.
+  useEffect(() => {
+    if (!cinematicGoal) return;
+    const t = window.setTimeout(() => setCinematicGoal(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [cinematicGoal]);
 
   // Novos overlays de substituição e cartão vermelho
   const [substitutionOverlay, setSubstitutionOverlay] = useState<{
@@ -1159,6 +1173,10 @@ export function MatchQuick() {
     if (tacticalFeedbackTimerRef.current) clearTimeout(tacticalFeedbackTimerRef.current);
     freezeUntilRef.current = 0;
     lastSeenGoalEventIdRef.current = null;
+    lastMomentMinuteRef.current = -99;
+    narratorMemoryRef.current = {};
+    narratedOutcomeNonceRef.current = null;
+    setCinematicGoal(null);
     setMomentumAnimKey(null);
     setFeedWindowStart(0);
     lastFeedHeadIdRef.current = undefined;
@@ -1361,8 +1379,9 @@ export function MatchQuick() {
           dispatch({ type: 'SET_TACTICAL_INTENSITY', level: autoIntensity });
         }
 
-        // ── Sprint 1: Trigger momentos interativos (15% chance/min) ──────
-        if (!lm.activeInteractiveMoment && Math.random() < 0.15) {
+        // ── Trigger momentos interativos (§4.2: racionado, ~5 nós/partida) ──
+        const momentCooldownOk = lm.minute - lastMomentMinuteRef.current >= 8;
+        if (!lm.activeInteractiveMoment && momentCooldownOk && Math.random() < 0.22) {
           const ctx = {
             minute: lm.minute,
             homeScore: lm.homeScore,
@@ -1371,12 +1390,20 @@ export function MatchQuick() {
             homePlayers: lm.homePlayers,
             momentum: lm.spiritMomentum ?? { home: 50, away: 50 },
           };
+          const markTriggered = () => { lastMomentMinuteRef.current = lm.minute; };
 
-          if (shouldTriggerCounterAttack(ctx)) {
+          // §5: nó de ATAQUE principal — menu gerado pelos atributos do elenco
+          // (criação×defesa). Dispara com a casa tocando a bola no meio/ataque.
+          if (lm.possession === 'home' && lm.minute >= 12 && lm.minute <= 86 && lm.homePlayers.length >= 5) {
+            const { moment } = buildSquadDecisionMoment(lm.homePlayers, lm.minute, Date.now());
+            dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            markTriggered();
+          } else if (shouldTriggerCounterAttack(ctx)) {
             const attacker = lm.homePlayers.find(p => p.role === 'attack');
             if (attacker) {
               const moment = buildCounterAttackMoment(ctx, attacker);
               dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+              markTriggered();
             }
           } else if (shouldTriggerSetPiece(ctx)) {
             const takers = lm.homePlayers
@@ -1389,11 +1416,13 @@ export function MatchQuick() {
             if (takers.length >= 2) {
               const moment = buildSetPieceMoment(ctx, takers);
               dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+              markTriggered();
             }
           } else if (shouldTriggerDefensiveChoice(ctx)) {
             // FIX G: pressão adversária no nosso terço → escolha defensiva.
             const moment = buildDefensiveChoiceMoment(ctx);
             dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+            markTriggered();
           } else {
             // FIX G: sub timing — só dispara se há titular cansado E banco fresco.
             const tiredStarter = lm.homePlayers
@@ -1410,6 +1439,7 @@ export function MatchQuick() {
             if (shouldTriggerSubTiming(subCtx) && tiredStarter) {
               const moment = buildSubTimingMoment(ctx, tiredStarter);
               dispatch({ type: 'TRIGGER_QUICK_INTERACTIVE_MOMENT', moment });
+              markTriggered();
             }
           }
         }
@@ -1508,18 +1538,31 @@ export function MatchQuick() {
     if (!top || (top.kind !== 'goal_home' && top.kind !== 'goal_away')) return;
     if (lastSeenGoalEventIdRef.current === top.id) return;
     lastSeenGoalEventIdRef.current = top.id;
-    freezeUntilRef.current = Date.now() + GOAL_FREEZE_MS;
     setMomentumAnimKey(top.id);
-
-    // Ativar celebração de gol
-    setGoalCelebrationKey(top.id);
-    setGoalCelebrationActive(true);
 
     // Limpar spiritOverlay de gol para não conflitar com a celebração
     if (live.spiritOverlay?.kind === 'goal') {
       dispatch({ type: 'DISMISS_SPIRIT_OVERLAY' });
     }
-  }, [live?.events, live?.phase, live?.mode, preGoalActive, live?.spiritOverlay?.kind, dispatch]);
+
+    // §3.2: gol da CASA ganha a narração cinética (cadeia build-up → GOOOL)
+    // ANTES do card do artilheiro. Mantém o relógio congelado durante a cadeia;
+    // o card do artilheiro entra no onDone do cinemático.
+    if (top.kind === 'goal_home') {
+      const scorerName = top.playerId ? playersById[top.playerId]?.name : undefined;
+      const full = buildGoalChain({ scorerName, players: live.homePlayers });
+      // Compacto (3 beats ~3.5s) — partidas têm vários gols, sem arrastar.
+      const beats = [full.beats[0]!, full.beats[full.beats.length - 2]!, full.beats[full.beats.length - 1]!];
+      freezeUntilRef.current = Date.now() + 9000; // cobre cadeia + card
+      setCinematicGoal({ chain: { ...full, beats }, goalId: top.id });
+      return;
+    }
+
+    // Gol do visitante: card direto (sem takeover cinético).
+    freezeUntilRef.current = Date.now() + GOAL_FREEZE_MS;
+    setGoalCelebrationKey(top.id);
+    setGoalCelebrationActive(true);
+  }, [live?.events, live?.phase, live?.mode, preGoalActive, live?.spiritOverlay?.kind, playersById, dispatch]);
 
   /** Após pré-golo: 3s com cartão do marcador, depois painel narrativo (total = autoDismissMs). */
   useEffect(() => {
@@ -2015,6 +2058,8 @@ export function MatchQuick() {
     }
     if (outcome.nonce === narratedOutcomeNonceRef.current) return;
     narratedOutcomeNonceRef.current = outcome.nonce;
+    // Se a decisão virou gol, o narrador de gol (reactToGoal) já explode o GOOOL.
+    if (outcome.scored) return;
     pushReactiveLine(
       reactToDecision({
         momentType: outcome.momentType,
@@ -2520,6 +2565,7 @@ export function MatchQuick() {
     !!live?.penalty ||
     !!live?.activeInteractiveMoment ||
     !!live?.pendingSetPiece ||
+    !!cinematicGoal ||
     !!secondYellowAlert ||
     Date.now() < freezeUntilRef.current;
   const matchClock = (
@@ -4527,6 +4573,25 @@ export function MatchQuick() {
       )}
 
       {/* ─── Celebração de Gol ─────────────────────────────────────────── */}
+      {/* §3.2: narração cinética em tela cheia (gol da casa) — antes do card */}
+      <AnimatePresence>
+        {cinematicGoal && (
+          <QuickCinematicNarration
+            key={cinematicGoal.goalId}
+            chain={cinematicGoal.chain}
+            accent="home"
+            onDone={() => {
+              const goalId = cinematicGoal.goalId;
+              setCinematicGoal(null);
+              // Encadeia o card do artilheiro (mantém freeze curto pra ele tocar).
+              freezeUntilRef.current = Date.now() + 2600;
+              setGoalCelebrationKey(goalId);
+              setGoalCelebrationActive(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {live && goalCelebrationKey && (
         <QuickGoalCelebration
           triggerKey={goalCelebrationKey}
