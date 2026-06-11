@@ -947,12 +947,21 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         kind: 'narrative',
       };
 
+      const resolvedType = state.liveMatch.activeInteractiveMoment.type;
+
       return {
         ...state,
         finance: newFinance,
         liveMatch: {
           ...state.liveMatch,
           activeInteractiveMoment: null,
+          // §6: expõe o desfecho pro narrador reativo (exalta/cutuca + memória).
+          lastInteractiveOutcome: {
+            momentType: resolvedType,
+            success: outcome.success,
+            minute: state.liveMatch.minute,
+            nonce: Date.now(),
+          },
           spiritMomentum: newMomentum,
           events: [narrativeEvent, ...state.liveMatch.events],
         },

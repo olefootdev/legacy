@@ -247,6 +247,14 @@ export interface LiveMatchSnapshot {
 
   /** Sprint 1: Momento interativo ativo (counter_attack, set_piece) */
   activeInteractiveMoment?: import('@/match/quickInteractiveMoments').QuickInteractiveMoment | null;
+  /** §6: desfecho da última decisão do manager — alimenta o narrador reativo. */
+  lastInteractiveOutcome?: {
+    momentType: import('@/match/quickInteractiveMoments').QuickMomentType;
+    success: boolean;
+    minute: number;
+    /** Nonce crescente — distingue desfechos repetidos pro efeito de UI disparar. */
+    nonce: number;
+  } | null;
   /** Sprint 2: Arco narrativo detectado */
   narrativeArc?: import('@/match/quickNarrativeArcs').NarrativeArcState | null;
   /** Sprint 1: Bônus de performance acumulados */

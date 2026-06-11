@@ -54,7 +54,15 @@ import { trackMissionEvent } from '@/progression/trackEvent';
 import { QuickMatchScoreboard } from '@/components/matchquick/QuickMatchScoreboard';
 import { QuickMatchLineup } from '@/components/matchquick/QuickMatchLineup';
 import { QuickMatchHalftime } from '@/components/matchquick/QuickMatchHalftime';
-import { QuickInteractiveMomentOverlay } from '@/components/matchquick/QuickInteractiveMomentOverlay';
+import { QuickFeedDecisionCard } from '@/components/matchquick/QuickFeedDecisionCard';
+import { QuickReactiveNarrator } from '@/components/matchquick/QuickReactiveNarrator';
+import {
+  reactToGoal,
+  reactToRed,
+  reactToDecision,
+  type NarratorLine,
+  type NarratorMemory,
+} from '@/match/quickNarrator';
 import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
 import { QuickTacticalIntensityControls, QuickTacticalIntensityInfo } from '@/components/matchquick/QuickTacticalIntensityControls';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
@@ -805,6 +813,21 @@ export function MatchQuick() {
 
   // Interactive Moment auto-timeout
   const interactiveMomentTimeoutRef = useRef<number | null>(null);
+
+  // ── Narrador reativo (§6) ──────────────────────────────────────────────
+  // Linha cinética atual + nonce (mesmo texto pode repetir → nonce força UI).
+  const [reactiveLine, setReactiveLine] = useState<(NarratorLine & { nonce: number }) | null>(null);
+  const reactiveNonceRef = useRef(0);
+  // Memória do padrão do manager (erros por tipo de decisão) — "de novo, hein?".
+  const narratorMemoryRef = useRef<NarratorMemory>({});
+  // Rastreia o que já foi narrado pra não repetir ao remontar.
+  const narratedGoalIdRef = useRef<string | null>(null);
+  const narratedRedIdRef = useRef<string | null>(null);
+  const narratedOutcomeNonceRef = useRef<number | null>(null);
+  const pushReactiveLine = (line: NarratorLine) => {
+    reactiveNonceRef.current += 1;
+    setReactiveLine({ ...line, nonce: reactiveNonceRef.current });
+  };
 
   // StreakBar transitório (2026-06-11): era `fixed top-20 z-50` SEMPRE visível
   // com streak ≥ 1 — o "banner persistente sujando a tela" entre partidas.
@@ -1894,6 +1917,54 @@ export function MatchQuick() {
       }
     };
   }, [live?.activeInteractiveMoment, quickMatchIntensity?.current, dispatch]);
+
+  // ── Narrador reativo (§6): reage a gols / vermelhos / decisões ───────────
+  // events[0] é o mais recente (reducer prepende). Só narra lance "do agora"
+  // (minuto ≈ live.minute) — assim não rebate gols velhos ao remontar.
+  useEffect(() => {
+    if (!live || live.phase !== 'playing') return;
+    const nowMin = live.minute;
+    const fresh = (m?: number) => typeof m === 'number' && nowMin - m <= 3;
+
+    const goal = live.events.find((e) => e.kind === 'goal_home' || e.kind === 'goal_away');
+    if (goal && goal.id !== narratedGoalIdRef.current && fresh(goal.minute)) {
+      narratedGoalIdRef.current = goal.id;
+      pushReactiveLine(
+        reactToGoal(goal.kind === 'goal_home' ? 'home' : 'away', {
+          minute: nowMin,
+          homeScore: live.homeScore,
+          awayScore: live.awayScore,
+        }),
+      );
+      return;
+    }
+
+    const red = live.events.find((e) => e.kind === 'red_home' || e.kind === 'red_away');
+    if (red && red.id !== narratedRedIdRef.current && fresh(red.minute)) {
+      narratedRedIdRef.current = red.id;
+      pushReactiveLine(reactToRed(red.kind === 'red_home' ? 'home' : 'away'));
+    }
+  }, [live?.events, live?.minute, live?.phase, live?.homeScore, live?.awayScore]);
+
+  // Desfecho da decisão do manager → exalta/cutuca + memória do padrão.
+  useEffect(() => {
+    const outcome = live?.lastInteractiveOutcome;
+    if (!outcome) return;
+    if (narratedOutcomeNonceRef.current === null) {
+      // Prime ao montar — não narra desfecho herdado de partida anterior.
+      narratedOutcomeNonceRef.current = outcome.nonce;
+      return;
+    }
+    if (outcome.nonce === narratedOutcomeNonceRef.current) return;
+    narratedOutcomeNonceRef.current = outcome.nonce;
+    pushReactiveLine(
+      reactToDecision({
+        momentType: outcome.momentType,
+        success: outcome.success,
+        memory: narratorMemoryRef.current,
+      }),
+    );
+  }, [live?.lastInteractiveOutcome?.nonce]);
 
   useEffect(() => {
     if (!live || isBlockingNonQuickMatch(live)) return;
@@ -3135,6 +3206,10 @@ export function MatchQuick() {
               {displayAwayScore}
             </span>
           </div>
+          {/* §6: narrador reativo — legenda cinética sobre o lance */}
+          {quickPreStart === null && live.phase === 'playing' && (
+            <QuickReactiveNarrator line={reactiveLine} />
+          )}
           {quickPreStart === null ? (
             <div className="w-full max-w-[min(100%,44rem)] mx-auto pt-4">
               <MomentumBar
@@ -3255,6 +3330,21 @@ export function MatchQuick() {
             </div>
           )}
           <div className="border-t border-white/10 pt-3 mt-2 space-y-2">
+            {/* §12 pivot: decisão INLINE no topo do feed (não takeover) */}
+            <AnimatePresence>
+              {quickPreStart === null && live.activeInteractiveMoment && (
+                <QuickFeedDecisionCard
+                  moment={live.activeInteractiveMoment}
+                  onChoice={(choiceId) =>
+                    dispatch({
+                      type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT',
+                      momentId: live.activeInteractiveMoment!.id,
+                      choiceId,
+                    })
+                  }
+                />
+              )}
+            </AnimatePresence>
             <div className="min-h-[4.5rem] space-y-1.5 overflow-hidden">
               {quickPreStart === 'kickoff' ? (
                 <div className="flex items-center justify-center min-h-[4.5rem] px-3">
@@ -4443,19 +4533,8 @@ export function MatchQuick() {
       {/* Sprint L3 — Set-piece interativo (escanteio/falta) */}
       <SetPieceModal />
 
-      {/* ─── Sprint 1: Overlay de Momento Interativo ─────────────────────── */}
-      {live?.activeInteractiveMoment && (
-        <QuickInteractiveMomentOverlay
-          moment={live.activeInteractiveMoment}
-          onChoice={(choiceId) => {
-            dispatch({
-              type: 'RESOLVE_QUICK_INTERACTIVE_MOMENT',
-              momentId: live.activeInteractiveMoment!.id,
-              choiceId,
-            });
-          }}
-        />
-      )}
+      {/* §12 pivot: momento interativo agora é INLINE no feed (QuickFeedDecisionCard).
+          O takeover full-screen fica reservado ao clímax (gol/vermelho). */}
 
       {/* ─── Overlays de Substituição e Cartão Vermelho ─────────────────── */}
       <AnimatePresence>
