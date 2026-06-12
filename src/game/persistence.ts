@@ -304,6 +304,12 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
     if (p && TEST_PLAYER_RE.test(String(p.name ?? '').trim())) {
       delete players[id];
     }
+    // AUTO-CURA: ids malformados com prefixo "legacy-" DUPLICADO (bug antigo do
+    // legacyRowToPlayerEntity). Não existe id legítimo "legacy-legacy-..." — eram
+    // legacy players adicionados sem pagar OLE. Remove pra permitir recompra limpa.
+    if (id.startsWith('legacy-legacy-')) {
+      delete players[id];
+    }
   }
   // NOTA: havia aqui um filtro `if (!id.startsWith('genesis-')) delete` que
   // wipava jogadores criados na Academia (`mgr_*`), prospects NPC (`npc_*`),

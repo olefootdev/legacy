@@ -60,6 +60,14 @@ export function ManagerSquadHydrator() {
       console.info('[SquadHydrator] localHasPlayers=', localHasPlayers);
       const remote = await loadManagerSquad();
       if (cancelled) return;
+      // AUTO-CURA: descarta ids malformados "legacy-legacy-" do remoto (bug antigo
+      // do prefixo duplo) pra o merge não RE-ADICIONAR o legacy-fantasma. Combina
+      // com a migração no hydrateState (limpa o local).
+      if (remote?.players) {
+        for (const id of Object.keys(remote.players)) {
+          if (id.startsWith('legacy-legacy-')) delete remote.players[id];
+        }
+      }
       console.info('[SquadHydrator] remote players=', remote ? Object.keys(remote.players).length : 'null');
       if (!remote || Object.keys(remote.players).length === 0) {
         setSquadHydrationDone();
