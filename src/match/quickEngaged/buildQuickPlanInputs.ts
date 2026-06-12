@@ -67,6 +67,9 @@ export interface BuildQuickPlanArgs {
   seed: string;
   /** Posições/atributos do adversário derivam disto (determinístico). */
   awaySeedKey?: string;
+  /** Elenco REAL do adversário (Liga Global). Quando ≥7, usa estes jogadores no
+   *  lugar do roster sintético — nomes e atributos de verdade no motor e nos cards. */
+  awayPlayers?: PlayerEntity[];
 }
 
 /** Penalidade de fadiga no OVR efetivo — espelha team_strength do Python (10%→-2). */
@@ -115,6 +118,13 @@ function buildAwayPayloads(awayStrength: number, seedKey: string): QuickPlanPlay
   });
 }
 
+/** Elenco REAL do adversário → payloads do motor (nomes/atributos de verdade). */
+export function awayPayloadsFromPlayers(players: PlayerEntity[]): QuickPlanPlayerPayload[] {
+  return players.slice(0, 11).map((p) =>
+    playerToQuickPlanPayload(p, p.fatigue ?? 0, roleFromPos(p.pos)),
+  );
+}
+
 /**
  * Monta os inputs do quick-plan a partir do estado do jogo.
  * `homePlayers` sai ordenado pela ordem de slot da lineup.
@@ -147,7 +157,10 @@ export function buildQuickPlanInputs(args: BuildQuickPlanArgs): QuickPlanInputsR
     awayStrength: args.awayStrength,
     intensity,
     homeLineup: homePlayers.map((h) => h.payload),
-    awayLineup: buildAwayPayloads(args.awayStrength, args.awaySeedKey ?? args.seed),
+    // Elenco real do adversário quando disponível (Liga Global); senão sintetiza.
+    awayLineup: args.awayPlayers && args.awayPlayers.length >= 7
+      ? awayPayloadsFromPlayers(args.awayPlayers)
+      : buildAwayPayloads(args.awayStrength, args.awaySeedKey ?? args.seed),
   };
 
   return { input, homePlayers };

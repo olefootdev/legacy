@@ -154,6 +154,7 @@ import { createPendingCommand } from '@/voiceCommand/commandQueue';
 import { TEAM_OBEDIENCE_DELTAS } from '@/voiceCommand/obedienceRoll';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import { computeQuickPlanCredit } from '@/match/quickEngaged/creditQuickPlan';
+import { advanceLigaOle } from '@/match/ligaOle/ligaOleModel';
 import {
   CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_MEDICAL_FATIGUE_DELTA,
@@ -2261,10 +2262,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           homeStats: action.homeStats,
           homeOnPitch: action.homeOnPitch,
           agg: action.agg,
+          shootoutWin: action.shootoutWin,
         },
       );
-      const homeWin = action.homeScore > action.awayScore;
-      const draw = action.homeScore === action.awayScore;
+      // Empate no tempo normal é decidido nos pênaltis (nenhum jogo empata).
+      const drawScore = action.homeScore === action.awayScore;
+      const homeWin = action.homeScore > action.awayScore || (drawScore && action.shootoutWin === 'home');
+      const draw = drawScore && !action.shootoutWin;
       const finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
       const nextResult: import('@/entities/types').FormLetter = homeWin ? 'W' : draw ? 'D' : 'L';
       const form = [...state.form.slice(1), nextResult];
@@ -2290,6 +2294,27 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           hideFromHomeFeed: true,
         },
       );
+      // LIGA OLE: se esta partida era da liga (pendingOpponentId setado),
+      // avança o chaveamento com o resultado real (V/E→pênaltis/D).
+      let ligaOle = state.ligaOle;
+      let ligaOleResultFlash = state.ligaOleResultFlash;
+      if (ligaOle?.pendingOpponentId && ligaOle.status === 'active') {
+        const advanced = advanceLigaOle(ligaOle, {
+          won: homeWin,
+          scoreManager: action.homeScore,
+          scoreOpp: action.awayScore,
+          shootout: !!action.shootoutWin,
+        });
+        if (advanced.status === 'active') {
+          // Segue vivo na liga — guarda o avanço.
+          ligaOle = { ...advanced, pendingOpponentId: undefined };
+        } else {
+          // Campanha ACABOU (campeão/eliminado): vira FLASH transitório e some do
+          // landing (só aparece como resultado da partida, não como tela inicial).
+          ligaOleResultFlash = { outcome: advanced.status, reachedRound: advanced.reachedRound, clubName: state.club.name };
+          ligaOle = undefined;
+        }
+      }
       return {
         ...state,
         finance,
@@ -2299,7 +2324,22 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         results,
         form,
         inbox: [note, ...state.inbox].slice(0, 60),
+        ligaOle,
+        ligaOleResultFlash,
       };
+    }
+    case 'CREATE_LIGA_OLE': {
+      return { ...state, ligaOle: action.liga, ligaOleResultFlash: undefined };
+    }
+    case 'START_LIGA_OLE_MATCH': {
+      if (!state.ligaOle) return state;
+      return { ...state, ligaOle: { ...state.ligaOle, pendingOpponentId: action.opponentId } };
+    }
+    case 'RESET_LIGA_OLE': {
+      return { ...state, ligaOle: undefined, ligaOleResultFlash: undefined };
+    }
+    case 'DISMISS_LIGA_OLE_RESULT': {
+      return { ...state, ligaOleResultFlash: undefined };
     }
     case 'MERGE_PLAYERS': {
       const players = { ...state.players, ...action.players };

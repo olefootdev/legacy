@@ -44,6 +44,9 @@ export interface QuickPlanCreditInput {
   homeOnPitch: string[];
   /** Agregados pro bônus de performance. */
   agg: { shots: number; possessionHome: number; wasLosing: boolean };
+  /** Vencedor da disputa de pênaltis quando o tempo normal empatou (nenhum
+   *  jogo termina empatado) — vira V/D real pra streak/forma/economia. */
+  shootoutWin?: 'home' | 'away';
 }
 
 export interface QuickPlanCreditState {
@@ -73,8 +76,11 @@ export function computeQuickPlanCredit(
   state: QuickPlanCreditState,
   input: QuickPlanCreditInput,
 ): QuickPlanCreditResult {
-  const homeWin = input.homeScore > input.awayScore;
-  const draw = input.homeScore === input.awayScore;
+  // Empate no tempo normal é decidido nos pênaltis (nenhum jogo empata).
+  const drawOnScore = input.homeScore === input.awayScore;
+  const homeWin = input.homeScore > input.awayScore || (drawOnScore && input.shootoutWin === 'home');
+  const homeLoss = input.homeScore < input.awayScore || (drawOnScore && input.shootoutWin === 'away');
+  const draw = !homeWin && !homeLoss;
   const outcome: MatchOutcome = homeWin ? 'win' : draw ? 'draw' : 'loss';
 
   // 1) Streak + multiplicador

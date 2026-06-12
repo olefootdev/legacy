@@ -121,6 +121,7 @@ const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ defaul
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
 const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
 const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
+const LigaOle = lazy(() => import('./pages/LigaOle').then((m) => ({ default: m.LigaOle })));
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
 const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
 const GlobalLeagueHistory = lazy(() => import('./pages/GlobalLeagueHistory').then((m) => ({ default: m.default })));
@@ -578,6 +579,7 @@ as a nice MVP. Let's Play Together! ⚽
               }
             />
             <Route path="/match/quick-plan-preview" element={<QuickPlanPreview />} />
+            <Route path="/liga-ole" element={<LigaOle />} />
             <Route path="/match/penalty" element={<MatchPenaltyV2 />} />
             <Route path="/match/penalty-legacy" element={<MatchPenalty />} />
             <Route path="/match/penalty-v2" element={<Navigate to="/match/penalty" replace />} />
