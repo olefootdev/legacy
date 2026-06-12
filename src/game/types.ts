@@ -349,6 +349,13 @@ export interface OlefootGameState {
   shopInventory: Record<string, number>;
   /** Streak de vitórias consecutivas no modo Quick Match. */
   quickMatchStreak?: QuickMatchStreak;
+  /** Liga Ole — mata-mata de 32 times reais que o manager dispute até o título.
+   *  `pendingOpponentId` marca que a próxima Partida Rápida é desta liga.
+   *  Só fica setado enquanto a campanha está ATIVA — ao terminar, vira flash. */
+  ligaOle?: import('@/match/ligaOle/ligaOleModel').LigaOleState & { pendingOpponentId?: string };
+  /** Resultado TRANSITÓRIO da última campanha (campeão/eliminado) — mostrado UMA
+   *  vez quando termina, nunca como landing. Limpo ao criar nova ou dispensar. */
+  ligaOleResultFlash?: { outcome: 'champion' | 'eliminated'; reachedRound: string; clubName: string };
   /** Ranking competitivo da Partida Rápida (modo ranqueado). */
   competitiveRanking?: CompetitiveRankingState;
   /** Desafios diários com recompensas. */
@@ -565,7 +572,17 @@ export type GameAction =
       homeOnPitch: string[];
       agg: { shots: number; possessionHome: number; wasLosing: boolean };
       mvpName?: string;
+      /** Vencedor da disputa de pênaltis quando empatou (nenhum jogo empata). */
+      shootoutWin?: 'home' | 'away';
     }
+  /** Liga Ole — cria o chaveamento de 32 times reais. */
+  | { type: 'CREATE_LIGA_OLE'; liga: import('@/match/ligaOle/ligaOleModel').LigaOleState }
+  /** Liga Ole — marca o adversário da próxima Partida Rápida (a partida da liga). */
+  | { type: 'START_LIGA_OLE_MATCH'; opponentId: string }
+  /** Liga Ole — encerra/limpa a liga atual. */
+  | { type: 'RESET_LIGA_OLE' }
+  /** Liga Ole — dispensa o flash de resultado (campeão/eliminado visto). */
+  | { type: 'DISMISS_LIGA_OLE_RESULT' }
   /** Quando `insertMatch` resolve — actualiza o snapshot em curso (evita mutar objecto já descartado). */
   | { type: 'SET_LIVE_MATCH_SUPABASE_ID'; matchId: string; matchClientNonce: number }
   /** Sprint 1: Trigger momento interativo na partida rápida */

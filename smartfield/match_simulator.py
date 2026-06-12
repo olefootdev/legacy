@@ -62,6 +62,13 @@ BRILLIANCE_MIN_CONFIDENCE = 80
 BRILLIANCE_PROB = 0.35
 SENT_OFF_STRENGTH_PENALTY = 6.0
 
+# Vantagem do MANAGER ATIVO (online) contra um adversário no AUTOMÁTICO: quem
+# decide o jogo merece um empurrão no ataque (nivela o fato de só ele "sofrer"
+# com decisões ruins, já que o outro lado nunca erra uma escolha). Moderado de
+# propósito — respeita os números do Python e não vira goleada injusta. Empate
+# segue indo pros pênaltis. Aplicado ao xG do home.
+HOME_ACTIVE_XG = 1.18
+
 
 def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Garante 11 jogadores com campos mínimos."""
@@ -160,7 +167,9 @@ def pick_channel(rng: random.Random, matrix: Dict[str, Dict[str, Any]]) -> str:
     weights = []
     total = 0.0
     for ch in ATTACK_CHANNELS:
-        w = math.exp(matrix[ch]["edge"] * 1.4)
+        # Expoente 2.0: o canal dominante puxa o jogo pra si — o perigo flui por
+        # um setor (textura), em vez de distribuição quase uniforme entre canais.
+        w = math.exp(matrix[ch]["edge"] * 2.0)
         if ch == "bola_parada":
             w *= 0.45  # bola parada é evento menos frequente
         weights.append((ch, w))
@@ -217,7 +226,7 @@ def event_text(kind: str, actor_name: str, zone: str, minute: int, xg: float, ti
 
     if kind == "save_home":
         return _seeded_pick([
-            f"DEFENDAÇA! {n} carimbou e o goleiro voou pra espalmar.",
+            f"QUE DEFESA! {n} carimbou e o goleiro voou pra espalmar.",
             f"{n} obrigou o goleiro a fazer um milagre.",
             f"Que bomba do {n}! O goleiro pegou no susto.",
         ], minute, 5)
@@ -303,8 +312,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     home_matrix = compute_matchup_matrix(home_lineup, away_lineup)
     away_matrix = compute_matchup_matrix(away_lineup, home_lineup)
 
-    # Peso das decisões do manager → multiplicadores de xG por canal
-    home_mult, away_mult, away_global = build_decision_modifiers(decisions)
+    # Peso das decisões do manager → multiplicadores de xG por canal + BUFFER global
+    home_mult, away_mult, away_global, home_global, away_suppress = build_decision_modifiers(decisions)
+
+    # Edge ofensivo MÉDIO de cada time (estático no jogo) — alimenta o build-up
+    # de pressão: quem tem vantagem setorial constrói cerco mais rápido.
+    home_atk_edge = sum(home_matrix[ch]["edge"] for ch in ATTACK_CHANNELS) / len(ATTACK_CHANNELS)
+    away_atk_edge = sum(away_matrix[ch]["edge"] for ch in ATTACK_CHANNELS) / len(ATTACK_CHANNELS)
 
     # Estado herdado do 1º tempo (replan)
     first_half = input_data.get("first_half") or {}
@@ -345,6 +359,12 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     events: List[Dict[str, Any]] = []
     momentum_curve = []
     analyst_beats: List[Dict[str, Any]] = []
+    # PRESSÃO ACUMULADA (0–100 por lado) — o coração do momento lógico. Constrói
+    # quando um time cerca (posse no ataque, chutes, quase-gols) e descarrega no
+    # gol/pênalti. O momento ESPELHA a diferença de pressão, então a barra se move
+    # de acordo com os dados, não por random walk. No 2º tempo, herda do momento.
+    pressure_home = max(0.0, (momentum_home - 50.0)) * 1.1
+    pressure_away = max(0.0, (50.0 - momentum_home)) * 1.1
     possession = "home" if diff >= 0 else "away"
     prev_actor_id = None
     prev_actor_id_away = None
@@ -372,9 +392,15 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         opp_strength = away_strength if possession == "home" else home_strength
         side_intensity = home_intensity if possession == "home" else away_intensity
 
-        # PÊNALTI (raro, só no ataque) — MARCADOR. O placar NÃO muda aqui:
-        # o cliente resolve (home = manager escolhe o batedor; away = auto).
-        penalty_awarded = zone == "att" and minute > start_minute and rng.random() < 0.018
+        # PÊNALTI — MARCADOR (o placar NÃO muda aqui; o cliente resolve). Agora é
+        # CONQUISTADO: só nasce de CERCO real (pressão acumulada alta), nunca do
+        # nada num meio-campo equilibrado. Antes do pênalti, o build-up de pressão
+        # já moveu a barra e gerou lances — a jogada tem construção e emoção.
+        atk_pressure = pressure_home if possession == "home" else pressure_away
+        pen_chance = 0.0
+        if zone == "att" and minute > start_minute and atk_pressure > 28:
+            pen_chance = 0.020 + (atk_pressure - 28) / 60.0 * 0.05  # ~2%→~6% conforme o cerco aperta
+        penalty_awarded = pen_chance > 0 and rng.random() < pen_chance
 
         # Decide se houve TIRO (depende de zona, força ofensiva, momentum)
         shot_prob = 0.0
@@ -401,6 +427,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 "reason": "pênalti",
                 "text": event_text(kind, pen_actor["name"], zone, minute, 0, "epic"),
             })
+            # O cerco culminou no pênalti — descarrega a pressão.
+            if possession == "home":
+                pressure_home *= 0.55
+            else:
+                pressure_away *= 0.55
         elif rng.random() < shot_prob:
             # Canal de origem da jogada — vem da matchup matrix
             matrix_side = home_matrix if possession == "home" else away_matrix
@@ -418,11 +449,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 intensity=side_intensity,
             )
             xg *= (1 + edge * 0.35) * (1 + gk_edge * 0.15)
-            # Peso das decisões do manager (canal a canal)
+            # Peso das decisões: canal a canal + BUFFER global (boas leituras
+            # levantam o ataque inteiro / seguram a defesa inteira no 2º tempo).
+            # Home ainda ganha a vantagem do manager ativo (HOME_ACTIVE_XG).
             if possession == "home":
-                xg *= home_mult.get(channel, 1.0)
+                xg *= home_mult.get(channel, 1.0) * home_global * HOME_ACTIVE_XG
             else:
-                xg *= away_mult.get(channel, 1.0) * away_global
+                xg *= away_mult.get(channel, 1.0) * away_global * away_suppress
             xg = max(0.02, min(0.65, xg))
 
             # Resolve outcome
@@ -496,16 +529,28 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             if is_goal:
                 if possession == "home":
                     home_score += 1
-                    momentum_home = min(95, momentum_home + 12)
+                    pressure_home *= 0.5    # o cerco descarregou no gol
+                    pressure_away *= 0.7    # adversário abalado
+                    momentum_home = min(95, momentum_home + 10)
                 else:
                     away_score += 1
-                    momentum_home = max(5, momentum_home - 12)
+                    pressure_away *= 0.5
+                    pressure_home *= 0.7
+                    momentum_home = max(5, momentum_home - 10)
                 stats = scorer_counts.setdefault(actor["id"], {"goals": 0, "name": actor["name"]})
                 stats["goals"] += 1
             elif base in ("chance", "save", "woodwork"):
-                # Quase-gol mexe com o momentum (pressão real)
-                swing = 4 if possession == "home" else -4
-                momentum_home = max(5, min(95, momentum_home + swing))
+                # Quase-gol INTENSIFICA o cerco — a pressão sobe de verdade.
+                if possession == "home":
+                    pressure_home = min(100.0, pressure_home + 11)
+                else:
+                    pressure_away = min(100.0, pressure_away + 11)
+            elif base == "shot":
+                # Finalização de longe: cerco leve.
+                if possession == "home":
+                    pressure_home = min(100.0, pressure_home + 5)
+                else:
+                    pressure_away = min(100.0, pressure_away + 5)
         else:
             # SEM chute neste minuto: emite evento de CONSTRUÇÃO pra dar ritmo.
             # Contra-ataque, escanteio ou posse trabalhada — o jogo "respira".
@@ -516,13 +561,19 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 build_prob = 0.30
             elif zone == "mid":
                 build_prob = 0.16
+            # Sob CERCO (pressão alta), o jogo respira mais: escanteios e sufoco
+            # aparecem com frequência, dando construção VISÍVEL antes do clímax
+            # (pênalti/gol não saem "do nada" — vêm de um cerco que a barra mostra).
+            siege = atk_pressure > 34
+            if siege:
+                build_prob += 0.22
             if rng.random() < build_prob:
                 matrix_side = home_matrix if possession == "home" else away_matrix
                 channel = pick_channel(rng, matrix_side)
                 edge = matrix_side[channel]["edge"]
                 mom_for_side = (momentum_home - 50) if possession == "home" else (50 - momentum_home)
                 r = rng.random()
-                if zone == "att" and r < 0.34:
+                if zone == "att" and r < (0.55 if siege else 0.34):
                     base = "corner"
                 elif mom_for_side > 8 and r < 0.6:
                     base = "counter"
@@ -596,13 +647,29 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         for p in home_lineup + away_lineup:
             p["fatigue"] = min(100, p["fatigue"] + 0.55)
 
-        # Momentum drift
-        if possession == "home":
-            momentum_home = min(95, momentum_home + 0.4)
-        else:
-            momentum_home = max(5, momentum_home - 0.4)
-        # Recuo gradual ao 50 se nada acontece
-        momentum_home += (50 - momentum_home) * 0.05
+        # ── PRESSÃO & MOMENTO ───────────────────────────────────────────────
+        # Decaimento natural do cerco (o ímpeto esfria se o time não insiste).
+        pressure_home *= 0.90
+        pressure_away *= 0.90
+        # Build-up do lado com a posse, conforme a zona (terço ofensivo = cerco).
+        # Edge setorial + força + intensidade + BUFFER de decisão aceleram o cerco.
+        side_imul = intensity_mul.get(side_intensity, 1.0)
+        build = 8.5 if zone == "att" else 2.6 if zone == "mid" else 0.0
+        if build > 0:
+            if possession == "home":
+                pressure_home = min(100.0, pressure_home
+                    + build * side_imul * (1 + home_atk_edge * 0.8)
+                    * (1 + (home_strength - 70) / 130) * home_global)
+            else:
+                pressure_away = min(100.0, pressure_away
+                    + build * side_imul * (1 + away_atk_edge * 0.8)
+                    * (1 + (away_strength - 70) / 130) * away_global * away_suppress)
+        # O MOMENTO ESPELHA a diferença de pressão — a barra se move de acordo com
+        # os dados (cerco real), não por random walk. Segue o alvo suavemente.
+        target = 50.0 + (pressure_home - pressure_away) * 0.5
+        target = max(8.0, min(92.0, target))
+        momentum_home += (target - momentum_home) * 0.24
+        momentum_home = max(5.0, min(95.0, momentum_home))
 
         momentum_curve.append(round(momentum_home, 1))
 

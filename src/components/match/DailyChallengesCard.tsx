@@ -9,7 +9,7 @@ interface DailyChallengesCardProps {
   compact?: boolean;
 }
 
-const CHALLENGE_ICONS: Record<ChallengeType, typeof Trophy> = {
+export const CHALLENGE_ICONS: Record<ChallengeType, typeof Trophy> = {
   win_matches: Trophy,
   score_goals: Target,
   win_streak: Flame,
@@ -19,7 +19,7 @@ const CHALLENGE_ICONS: Record<ChallengeType, typeof Trophy> = {
   quick_goals: Clock,
 };
 
-const CHALLENGE_COLORS: Record<ChallengeType, string> = {
+export const CHALLENGE_COLORS: Record<ChallengeType, string> = {
   win_matches: '#FDE047',
   score_goals: '#F59E0B',
   win_streak: '#EF4444',

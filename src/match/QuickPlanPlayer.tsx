@@ -42,6 +42,8 @@ import { buildClutch, resolveClutch, type ClutchMoment, type ClutchKey } from '.
 import { AnalystBeatCard } from '@/components/matchquick/AnalystBeatCard';
 import { MomentumBar } from '@/components/match/MomentumBar';
 import { QuickGoalCelebration } from '@/components/matchquick/QuickGoalCelebration';
+import { PenaltyShootout, type ShootoutSetup } from '@/components/matchquick/PenaltyShootout';
+import type { ShootoutResult } from '@/match/quickEngaged/penaltyShootout';
 import { renderQuickFeedRichText } from '@/match/quickMatchFeed';
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
@@ -75,6 +77,8 @@ export interface QuickPlanPlayResult {
   homeOnPitch: string[];
   /** Agregados pro crédito (bônus de performance). */
   stats: { homeShots: number; awayShots: number; possessionHome: number };
+  /** Disputa de pênaltis quando o jogo empatou (nenhum jogo termina empatado). */
+  shootout?: { winner: 'home' | 'away'; homeTally: number; awayTally: number };
 }
 
 interface Props {
@@ -105,6 +109,18 @@ interface Props {
   benchCards?: SquadCard[];
   /** Avisa o pai que houve substituição (atualiza o elenco vivo: out→in). */
   onSubstitution?: (outId: string, inId: string) => void;
+  /** Narração IA (Sonnet) pré-buscada — mescla nos beats e na comemoração de gol. */
+  narration?: QuickNarrationOverride;
+  /** Monta os dados da disputa de pênaltis (elenco vivo + goleiros) no empate.
+   *  O pai (MatchQuickEngaged) tem os atributos; retorna null pra pular a disputa. */
+  buildShootout?: () => ShootoutSetup | null;
+}
+
+/** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
+export interface QuickNarrationOverride {
+  beats: Record<string, string>;
+  goals: Record<string, string>;
+  reading?: string;
 }
 
 /** Carta de jogador pros 5 cards + banco (OVR cartola). */
@@ -135,10 +151,66 @@ function fatigueWord(f: number): string {
   return 'apagando';
 }
 
-/** Nota da partida (cartola) a partir do OVR + envolvimento (gols/chutes). */
-export function matchRating(ovr: number, t?: { goals: number; shots: number }): number {
-  const base = 6.0 + (ovr - 60) / 50;
-  const r = base + (t?.goals ?? 0) * 0.9 + (t?.shots ?? 0) * 0.12;
+/** Papel do jogador inferido da posição (pt-BR) — pondera a nota por função. */
+function inferRatingRole(pos: string): 'gk' | 'def' | 'mid' | 'att' {
+  const p = pos.toUpperCase();
+  if (p.includes('GOL') || p === 'GK') return 'gk';
+  if (/(ZAG|LD|LE|LAT|DEF)/.test(p)) return 'def';
+  if (/(VOL|MC|MEI|MED|MD|ME)/.test(p)) return 'mid';
+  return 'att';
+}
+
+/** Contexto vivo da partida pra nota respirar (placar, momento, minuto). */
+export interface RatingCtx {
+  pos: string;
+  side: 'home' | 'away';
+  /** Gols do time do jogador / gols sofridos. */
+  teamGoals: number;
+  oppGoals: number;
+  /** Momento atual 0–100 na perspectiva da casa. */
+  momentumHome: number;
+  /** Minuto corrido — rampa o peso do contexto (começa neutro, diverge). */
+  minute: number;
+}
+
+/**
+ * Nota da partida (cartola) — VIVA. Sem ctx, cai na fórmula simples (compat).
+ * Com ctx, a nota respira: atacante sobe com o time dominando, zagueiro/goleiro
+ * pune gol sofrido e premia jogo limpo, goleiro cresce nas defesas. O OVR só
+ * dá um empurrão suave — o protagonista é o que acontece em campo.
+ */
+export function matchRating(
+  ovr: number,
+  t?: { goals: number; shots: number; saves?: number },
+  ctx?: RatingCtx,
+): number {
+  const goals = t?.goals ?? 0;
+  const shots = t?.shots ?? 0;
+  const saves = t?.saves ?? 0;
+
+  if (!ctx) {
+    const base = 6.0 + (ovr - 60) / 50;
+    return Math.max(5.0, Math.min(9.9, base + goals * 0.9 + shots * 0.12));
+  }
+
+  const role = inferRatingRole(ctx.pos);
+  let r = 6.2 + (ovr - 70) / 45;          // âncora ~6.2, OVR nudge ±~0.4
+  r += goals * 1.05 + shots * 0.14 + saves * 0.22;
+
+  const ramp = Math.min(1, ctx.minute / 30); // contexto entra ao longo do jogo
+  const sideMom = ctx.side === 'home' ? ctx.momentumHome : 100 - ctx.momentumHome;
+  const momTilt = (sideMom - 50) / 100;       // -0.5..+0.5
+
+  if (role === 'att') {
+    r += (ctx.teamGoals * 0.16 + momTilt * 0.9) * ramp;
+  } else if (role === 'mid') {
+    r += (ctx.teamGoals * 0.12 - ctx.oppGoals * 0.08 + momTilt * 0.7) * ramp;
+  } else if (role === 'def') {
+    r += (ctx.oppGoals === 0 ? 0.35 : -ctx.oppGoals * 0.34) * ramp + momTilt * 0.45 * ramp;
+  } else {
+    r += (ctx.oppGoals === 0 ? 0.45 : -ctx.oppGoals * 0.30) * ramp + saves * 0.05;
+  }
+
   return Math.max(5.0, Math.min(9.9, r));
 }
 
@@ -188,7 +260,7 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
   );
 }
 
-type PlayerPhase = 'playing' | 'beat' | 'halftime' | 'celebration' | 'penalty' | 'forced' | 'clutch' | 'sub' | 'done';
+type PlayerPhase = 'playing' | 'beat' | 'halftime' | 'celebration' | 'penalty' | 'forced' | 'clutch' | 'sub' | 'shootout' | 'done';
 
 /** Momento forçado: lesão (escolhe quem entra) ou vermelho (banner + 10 em campo). */
 interface ForcedMoment {
@@ -234,7 +306,7 @@ const CLOCK_MS = 240;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, fieldCards, awayCards, benchCards, onSubstitution }: Props) {
+export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -251,6 +323,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const [penalty, setPenalty] = useState<{ idx: number; minute: number } | null>(null);
   const [forced, setForced] = useState<ForcedMoment | null>(null);
   const [clutch, setClutch] = useState<{ moment: ClutchMoment; idx: number } | null>(null);
+  const [shootoutSetup, setShootoutSetup] = useState<ShootoutSetup | null>(null);
+  const [shootoutResult, setShootoutResult] = useState<ShootoutResult | null>(null);
   const [doneInfo, setDoneInfo] = useState<{
     verdicts: BeatVerdict[];
     reading: { good: number; total: number };
@@ -351,19 +425,38 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     };
     const skipped = Math.max(0, offeredBeatsRef.current.length - ledgerRef.current.length);
     setDoneInfo({ verdicts, reading, skipped, stats });
+
+    const emitComplete = (shootout?: ShootoutResult) => {
+      onComplete?.(plan, {
+        homeScore: scoreRef.current.home,
+        awayScore: scoreRef.current.away,
+        ledger: [...ledgerRef.current],
+        verdicts,
+        reading,
+        replanned: replannedRef.current,
+        playerStats: { ...statsRef.current },
+        homeOnPitch: field.map((p) => p.id),
+        stats: { homeShots: stats.homeShots, awayShots: stats.awayShots, possessionHome: stats.possessionHome },
+        shootout: shootout
+          ? { winner: shootout.winner, homeTally: shootout.homeTally, awayTally: shootout.awayTally }
+          : undefined,
+      });
+    };
+    completeMatchRef.current = emitComplete;
+
+    // EMPATE → DISPUTA DE PÊNALTIS (nenhum jogo termina empatado).
+    if (scoreRef.current.home === scoreRef.current.away && buildShootout) {
+      const setup = buildShootout();
+      if (setup && setup.homeKickers.length >= 5 && setup.awayKickers.length >= 1) {
+        setShootoutSetup(setup);
+        setPhase('shootout');
+        return; // emitComplete dispara quando a disputa terminar
+      }
+    }
     setPhase('done');
-    onComplete?.(plan, {
-      homeScore: scoreRef.current.home,
-      awayScore: scoreRef.current.away,
-      ledger: [...ledgerRef.current],
-      verdicts,
-      reading,
-      replanned: replannedRef.current,
-      playerStats: { ...statsRef.current },
-      homeOnPitch: field.map((p) => p.id),
-      stats: { homeShots: stats.homeShots, awayShots: stats.awayShots, possessionHome: stats.possessionHome },
-    });
+    emitComplete();
   };
+  const completeMatchRef = useRef<(s?: ShootoutResult) => void>(() => {});
 
   const runHalftime = async () => {
     htDoneRef.current = true;
@@ -412,7 +505,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       if (rng.next() < 0.74) {
         scoreRef.current.away += 1;
         setAwayScore((v) => v + 1);
-        setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: 'Pênalti convertido pelo adversário. Dói, mas segue.', side: 'away' });
+        setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: goalLine(next.minute, 'Pênalti convertido pelo adversário. Dói, mas segue.'), side: 'away' });
         setPhase('celebration');
       } else {
         pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'save', text: 'PEGOU! Pênalti defendido — que paredão!', side: 'home' });
@@ -453,7 +546,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         key: `goal-${idx}`,
         name: next.actor_name ?? (side === 'home' ? plan.home_short : plan.away_short),
         portrait: portraitOf?.(next.actor_id, side) ?? null,
-        narrative: next.text.replace(/^\d+'\s*—\s*/, ''),
+        narrative: goalLine(next.minute, next.text.replace(/^\d+'\s*—\s*/, '')),
         side,
       });
       setPhase('celebration');
@@ -465,6 +558,16 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     scheduleNext(HOLD_MS[next.weight_tier]);
   };
 
+  /** Sobrepõe a leitura do beat pela narração rica (Sonnet), se houver. */
+  function narrateBeat(beat: AnalystBeat): AnalystBeat {
+    const rich = narration?.beats[beat.id];
+    return rich ? { ...beat, insight: { ...beat.insight, text: rich } } : beat;
+  }
+  /** Narração rica do gol por minuto (Sonnet), com fallback pro texto do Python. */
+  function goalLine(minute: number, fallback: string): string {
+    return narration?.goals[String(minute)] ?? fallback;
+  }
+
   /** RELÓGIO CORRIDO: roda minuto a minuto; eventos/decisões caem no seu minuto. */
   const tick = () => {
     const m = minuteRef.current;
@@ -475,8 +578,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       beatsQueueRef.current = beatsQueueRef.current.slice(1);
       offeredRef.current += 1;
       offeredBeatsRef.current.push(beat);
-      pushFeed({ id: `i-${beat.id}`, minute: beat.minute, kind: 'insight', text: beat.insight.text });
-      setActiveBeat(beat);
+      const shownBeat = narrateBeat(beat);
+      pushFeed({ id: `i-${beat.id}`, minute: beat.minute, kind: 'insight', text: shownBeat.insight.text });
+      setActiveBeat(shownBeat);
       setPhase('beat');
       return;
     }
@@ -535,7 +639,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         key: `clutch-${c.idx}`,
         name: homeScores ? c.moment.actorName : plan.away_short,
         portrait: homeScores ? (portraitOf?.(ev?.actor_id, 'home') ?? null) : null,
-        narrative: res.feedback,
+        narrative: goalLine(c.moment.minute, res.feedback),
         side: homeScores ? 'home' : 'away',
       });
       setPhase('celebration');
@@ -678,6 +782,16 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const awayTopId = awayFive.length ? awayFive[0]!.id : '';
   const subCandidateIds = new Set([...field].sort((a, b) => a.ovr - b.ovr).slice(0, 2).map((p) => p.id));
   const canSubNow = phase === 'playing' && benchPool.length > 0;
+  // Momento atual (perspectiva casa) — alimenta a nota VIVA por jogador.
+  const liveMomentum = momentumRef.current[Math.max(0, Math.min(89, currentMinute - 1))] ?? 50;
+  const ratingCtx = (card: SquadCard, side: 'home' | 'away'): RatingCtx => ({
+    pos: card.pos,
+    side,
+    teamGoals: side === 'home' ? homeScore : awayScore,
+    oppGoals: side === 'home' ? awayScore : homeScore,
+    momentumHome: liveMomentum,
+    minute: currentMinute,
+  });
 
   // PAINEL AO VIVO (preenche o palco quando não há lance): dados REAIS.
   const liveRead = (() => {
@@ -1067,6 +1181,27 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             </motion.div>
           )}
 
+          {phase === 'shootout' && shootoutSetup && (
+            <motion.div
+              key="shootout"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full"
+            >
+              <PenaltyShootout
+                setup={shootoutSetup}
+                seed={`${plan.seed}|so`}
+                homeName={homeName ?? plan.home_short}
+                awayName={awayName ?? plan.away_short}
+                onDone={(res) => {
+                  setShootoutResult(res);
+                  setPhase('done');
+                  completeMatchRef.current(res);
+                }}
+              />
+            </motion.div>
+          )}
+
           {phase === 'done' && doneInfo && (
             <motion.div
               key="done"
@@ -1075,12 +1210,17 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               className="w-full text-left"
             >
               {(() => {
-                const res = homeScore > awayScore ? 'win' : homeScore < awayScore ? 'loss' : 'draw';
+                // No empate, a disputa de pênaltis decide o vencedor.
+                const decided = shootoutResult ? shootoutResult.winner : homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : null;
+                const res = decided === 'home' ? 'win' : decided === 'away' ? 'loss' : 'draw';
                 const resWord = res === 'win' ? 'Vitória' : res === 'loss' ? 'Não foi dessa vez' : 'Empate';
                 const resColor = res === 'win' ? 'var(--color-success)' : res === 'loss' ? 'var(--color-danger)' : 'var(--color-neon-yellow)';
+                const detail = shootoutResult
+                  ? `nos pênaltis ${shootoutResult.homeTally}–${shootoutResult.awayTally}`
+                  : plan.narrative_arc.replace('_', ' ');
                 return (
                   <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black mb-4 text-center" style={{ color: resColor }}>
-                    {resWord} · {plan.narrative_arc.replace('_', ' ')}
+                    {resWord} · {detail}
                   </p>
                 );
               })()}
@@ -1125,6 +1265,11 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 <p className="font-display uppercase tracking-[0.26em] text-[10px] font-black text-neon-yellow mb-2 text-center">
                   Leitura de Jogo · {doneInfo.reading.good}/{doneInfo.reading.total}
                 </p>
+                {narration?.reading && (
+                  <p className="font-serif italic text-white/85 text-[15px] leading-snug text-center mb-3 px-2" style={{ fontFamily: 'var(--font-serif-hero)' }}>
+                    {narration.reading}
+                  </p>
+                )}
                 {doneInfo.verdicts.length === 0 ? (
                   <p className="text-[11px] text-white/50 text-center">
                     Você não decidiu nada — o Analista falou sozinho.
@@ -1208,7 +1353,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 key={p.id}
                 card={p}
                 isTop={p.id === homeTopId}
-                rating={matchRating(p.ovr, statsRef.current[p.id])}
+                rating={matchRating(p.ovr, statsRef.current[p.id], ratingCtx(p, 'home'))}
                 subbable={canSubNow && subCandidateIds.has(p.id)}
                 onSub={() => openSub(p.id)}
               />
@@ -1224,7 +1369,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               </span>
             </div>
             {awayFive.map((p) => (
-              <RosterRow key={p.id} card={p} isTop={p.id === awayTopId} rating={matchRating(p.ovr, statsRef.current[p.id])} />
+              <RosterRow key={p.id} card={p} isTop={p.id === awayTopId} rating={matchRating(p.ovr, statsRef.current[p.id], ratingCtx(p, 'away'))} />
             ))}
           </div>
         </div>

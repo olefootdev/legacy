@@ -49,10 +49,11 @@ import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
 import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
 import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
-import { EngagementBadge } from '@/components/EngagementBadge';
 import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
-import { DailyChallengesCard } from '@/components/match/DailyChallengesCard';
-import { DailyCycleWidget } from '@/components/matchglobal/DailyCycleWidget';
+import { LigaOleBanner } from '@/components/home/LigaOleBanner';
+import { CoroaDoDiaBanner } from '@/components/home/CoroaDoDiaBanner';
+import { EngajamentoBanner } from '@/components/home/EngajamentoBanner';
+import { DesafioDiarioBanner } from '@/components/home/DesafioDiarioBanner';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
 import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMatches';
@@ -953,22 +954,19 @@ export function Home() {
         <HomeHeroLegacy scrollCueTargetId="home-below-fold" />
       </section>
 
-      {/* OLEFOOT PYTHON MODE — alerta de ausência + bonus de login + desafios diários */}
+      {/* LIGA OLE — único hero grande abaixo do hero do manager */}
+      <section aria-label="Liga Ole" className="mb-3">
+        <LigaOleBanner />
+      </section>
+
+      {/* Banners do clube — padrão compacto unificado (StatBanner) */}
       <section aria-label="Estado do clube" className="space-y-2.5">
         <AbsenceBanner />
-        <DailyCycleWidget />
         <LoginBonusWidget />
-        <EngagementBadge />
         <PassiveIncomeWidget />
-        {dailyChallenges && dailyChallenges.challenges.length > 0 && (
-          <DailyChallengesCard
-            challenges={dailyChallenges.challenges}
-            onClaimReward={(challengeId) =>
-              dispatch({ type: 'CLAIM_CHALLENGE_REWARD', challengeId })
-            }
-            compact
-          />
-        )}
+        <CoroaDoDiaBanner />
+        <EngajamentoBanner />
+        <DesafioDiarioBanner />
       </section>
 
       {/* HERO LEGADO — temporariamente desabilitado pelo HomeHeroLegacy. */}

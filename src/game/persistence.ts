@@ -295,6 +295,16 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   // É o "plugue" que liga a usina nuclear de DNA do agente — sem isso o
   // bias em campo sempre retorna 0 porque o cache nunca é populado.
   players = generateMissingAgentProfiles(players);
+  // AUTO-CURA: remove jogadores de TESTE fabricados ("Teste ZAG 2", "Teste LD 5"…)
+  // que sobraram no estado local de saves antigos. Padrão cirúrgico (Teste + POS
+  // curta + número) — NUNCA casa com Genesis nem com jogadores reais. O
+  // sanitizeLineupForRoster abaixo limpa as referências órfãs na lineup.
+  const TEST_PLAYER_RE = /^teste\s+[A-Za-zÀ-ÿ]{1,4}\s*\d+$/i;
+  for (const [id, p] of Object.entries(players)) {
+    if (p && TEST_PLAYER_RE.test(String(p.name ?? '').trim())) {
+      delete players[id];
+    }
+  }
   // NOTA: havia aqui um filtro `if (!id.startsWith('genesis-')) delete` que
   // wipava jogadores criados na Academia (`mgr_*`), prospects NPC (`npc_*`),
   // bots e qualquer compra de listing de outro manager. Removido — jogadores

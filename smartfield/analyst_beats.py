@@ -88,11 +88,105 @@ DEFEND_VERB = {
     "pressao": "Segura o ímpeto deles",
 }
 
+# Variantes de rótulo por canal (a UI não repete o mesmo botão toda vez).
+# Comando curto de beira de campo — voz de comissão técnica brasileira.
+ATTACK_VERB_ALT = {
+    "ataque_central": ["Joga pelo meio", "Enfia no miolo", "Ataca pelo meião"],
+    "corredor_esquerdo": ["Ataca pela esquerda", "Vaza pela esquerda", "Sobe pela esquerda"],
+    "corredor_direito": ["Ataca pela direita", "Vaza pela direita", "Sobe pela direita"],
+    "criacao": ["Roda a bola e cria", "Toca e arma a jogada", "Cadencia no meio"],
+    "bola_parada": ["Aposta na bola parada", "Manda na área", "Caprichada na bola alçada"],
+    "pressao": ["Pressão na saída deles", "Marca lá na frente", "Sufoca o adversário"],
+}
+DEFEND_VERB_ALT = {
+    "ataque_central": ["Fecha o meio", "Tranca o miolo", "Dobra a marcação no meio"],
+    "corredor_esquerdo": ["Fecha a esquerda", "Marca o ponta deles", "Tampa a esquerda"],
+    "corredor_direito": ["Fecha a direita", "Marca o ponta deles", "Tampa a direita"],
+    "criacao": ["Marca a criação deles", "Anula o camisa 10 deles", "Cola no armador"],
+    "bola_parada": ["Atenção na bola parada", "Cuidado na bola alçada", "Marca o homem de área"],
+    "pressao": ["Segura o ímpeto deles", "Sai jogando com calma", "Tira a bola da pressão"],
+}
+
+# Leitura humana do MOMENTO (faixa de momentum) — voz de narrador brasileiro.
+def _momentum_phrase(mom: float, home_short: str, away_short: str) -> str:
+    if mom >= 70:
+        return f"O {home_short} tá sufocando o {away_short}"
+    if mom >= 58:
+        return f"O {home_short} cresceu e tá empilhando chegada"
+    if mom >= 45:
+        return "Jogo aberto, taco a taco"
+    if mom >= 33:
+        return f"O {away_short} tomou conta do jogo"
+    return f"O {away_short} tá sufocando — liga o alerta"
+
+# Por que ESTE canal está aberto pra atacar (banco por canal, gíria brasileira).
+ATTACK_DESC = {
+    "ataque_central": [
+        "a zaga deles abre no meio", "tem espaço entre os zagueiros",
+        "o miolo tá livre pra enfiar a bola", "dá pra jogar nas costas da zaga",
+    ],
+    "corredor_esquerdo": [
+        "a esquerda tá escancarada", "o lateral deles largou a esquerda",
+        "dá pra vazar pela esquerda em velocidade", "a ponta esquerda tá liberada",
+    ],
+    "corredor_direito": [
+        "a direita tá livre pra subir", "o lado direito tá aberto",
+        "dá pra rasgar pela direita", "o lateral deles abandonou a direita",
+    ],
+    "criacao": [
+        "seu camisa 10 tá com tempo pra pensar", "o meio deles não pega o seu armador",
+        "a bola corre fácil no meio", "dá pra trocar passe e abrir o jogo",
+    ],
+    "bola_parada": [
+        "na bola alçada vocês levam vantagem", "dá pra mandar na área no escanteio",
+        "tem gente alta pra ganhar no alto", "a falta na entrada pede capricho",
+    ],
+}
+# Por que ESTE canal deles te ameaça (banco por canal, gíria brasileira).
+DEFEND_DESC = {
+    "ataque_central": [
+        "o centroavante deles tá ganhando as dividas", "eles tão enfiando a bola no meio",
+        "a sua zaga tá balançando no miolo", "eles acham o passe nas costas dos zagueiros",
+    ],
+    "corredor_esquerdo": [
+        "eles tão vazando pela sua direita", "o ponta deles tá solto na sua direita",
+        "a sua direita tá aberta", "eles cruzam à vontade pela direita",
+    ],
+    "corredor_direito": [
+        "eles atacam forte pela sua esquerda", "o ponta deles te castiga pela esquerda",
+        "a sua esquerda virou ponto fraco", "eles sobem fácil pela sua esquerda",
+    ],
+    "criacao": [
+        "o camisa 10 deles tá ditando o ritmo", "eles tocam e te tiram da posição",
+        "o meio deles tá mandando no jogo", "eles sempre acham o homem livre",
+    ],
+    "bola_parada": [
+        "a bola parada deles assusta", "eles têm gente alta pra cabecear",
+        "cuidado com a jogada ensaiada", "nas faltas eles sobem com perigo",
+    ],
+    "pressao": [
+        "a marcação deles te sufoca na saída", "eles roubam a bola lá na frente",
+        "você não tá conseguindo sair jogando", "eles te pressionam e abafam atrás",
+    ],
+}
+
+
+def _cap(s: str) -> str:
+    return s[0].upper() + s[1:] if s else s
+
+
+def _verb(bank_alt: Dict[str, List[str]], bank: Dict[str, str], ch: str, minute: int, tag: str) -> str:
+    """Rótulo do botão com variação estável (varia entre beats, fixo no seed)."""
+    opts = bank_alt.get(ch)
+    if not opts:
+        return bank.get(ch, "Ataca")
+    return opts[(minute + len(tag)) % len(opts)]
+
 
 def _attack_choice(minute: int, ch: str, edge: float, tag: str) -> Dict[str, Any]:
     return {
         "id": f"beat-{minute}-{tag}",
-        "label": ATTACK_VERB.get(ch, "Ataca"),
+        "label": _verb(ATTACK_VERB_ALT, ATTACK_VERB, ch, minute, tag),
         "channel": ch,
         "target_side": "home",
         # Canal forte → peso bom; canal fraco → armadilha (negativo).
@@ -103,7 +197,7 @@ def _attack_choice(minute: int, ch: str, edge: float, tag: str) -> Dict[str, Any
 def _defend_choice(minute: int, ch: str, threat_edge: float, tag: str) -> Dict[str, Any]:
     return {
         "id": f"beat-{minute}-{tag}",
-        "label": DEFEND_VERB.get(ch, "Recua o bloco"),
+        "label": _verb(DEFEND_VERB_ALT, DEFEND_VERB, ch, minute, tag),
         "channel": ch,
         "target_side": "away",
         # Travar uma ameaça real vale; travar o que não assusta vale pouco.
@@ -145,25 +239,59 @@ def build_beat(
 
     lb = CHANNEL_LABELS[best]
     lt = CHANNEL_LABELS[threat]
+    mom_phrase = _momentum_phrase(mom, home_short, away_short)
+    best_strong = atk_edges[best] > 0.18      # canal realmente dominado
+    threat_strong = away_edges[threat] > 0.18  # ameaça realmente perigosa
 
-    # --- Insight COMPACTO (pt-BR) — enquadrado pela intenção do momento ---
+    # --- Insight RICO (pt-BR): momento + leitura do canal + comando ---
+    # Composto por bancos seedados (rng) — varia a cada beat, sem repetir.
     if intent == "attack":
-        text = rng.choice([
-            f"CHANCE! {_art(best).capitalize()} {lb} tá livre — é gol na veia.",
-            f"PRA CIMA! O {away_short} cede {_em(best)} {lb}.",
-            f"AGORA! Brecha {_em(best)} {lb}, ataca!",
+        desc = rng.choice(ATTACK_DESC.get(best, [f"{lb} tá livre"]))
+        lead = rng.choice(["CHANCE!", "PRA CIMA!", "AGORA!", "É a sua vez —", f"{mom_phrase}:"])
+        push = rng.choice([
+            "é gol na certa.", "manda pra dentro.", "acelera que sai!",
+            "explora antes que feche.", "tem que matar agora.", "parte pro abraço!",
         ])
+        if best_strong:
+            push = rng.choice([
+                "tá dominado, é só empurrar!",
+                "vantagem clara, capricha que sai.",
+                push,
+            ])
+        text = f"{lead} {_cap(desc)} — {push}"
     elif intent == "defend":
-        text = rng.choice([
-            f"PERIGO! Eles vêm {_em(threat)} {lt} — segura o gol.",
-            f"ATENÇÃO! {_art(threat).capitalize()} {lt} deles tá pegando fogo.",
-            f"RECUA! O {away_short} pressiona {_em(threat)} {lt}.",
+        desc = rng.choice(DEFEND_DESC.get(threat, [f"{lt} deles tá quente"]))
+        lead = rng.choice(["PERIGO!", "ATENÇÃO!", "RECUA!", "Segura aí!", f"{mom_phrase}:"])
+        guard = rng.choice([
+            "fecha o espaço.", "não dá o bote à toa.", "junta as linhas.",
+            "marca firme antes do passe.", "aguenta que passa.",
         ])
+        if threat_strong:
+            guard = rng.choice([
+                "essa é perigosa de verdade, dobra a marcação.",
+                "perigo na área, todo mundo atrás.",
+                guard,
+            ])
+        text = f"{lead} {_cap(desc)} — {guard}"
     else:
-        opening = (f"{_art(best).capitalize()} {lb} tá livre." if atk_edges[best] > 0.05
-                   else f"Jogo travado — tenta {_em(best)} {lb}.")
-        tail = f" Cuidado com {_art(threat)} {lt} deles." if away_edges[threat] > 0.08 else " Atrás você controla."
-        text = opening + tail
+        lead = f"{mom_phrase}."
+        mid = rng.choice([
+            f"O caminho é {_por(best)} {lb}",
+            f"Dá pra crescer {_em(best)} {lb}",
+            f"O ponto fraco deles é {lb}",
+            f"Aposta {_em(best)} {lb}",
+        ])
+        if away_edges[threat] > 0.08:
+            tail = rng.choice([
+                f"mas fica de olho {_em(threat)} {lt} deles.",
+                f"olho {_em(threat)} {lt} deles, viu.",
+            ])
+        else:
+            tail = rng.choice([
+                "atrás você segura.", "segura e espera o vacilo deles.",
+                "o jogo tá na sua mão.",
+            ])
+        text = f"{lead} {mid} — {tail}"
 
     # --- Opções moldadas pela intenção (ataca = fazer gol; defende = salvar) ---
     a_ch = atk_rank[0] if (minute // 20) % 2 == 0 else atk_rank[1]
@@ -177,7 +305,7 @@ def build_beat(
             _attack_choice(minute, c2, atk_edges[c2], "atk2"),
             {
                 "id": f"beat-{minute}-trap",
-                "label": ATTACK_VERB.get(worst, "Insiste"),
+                "label": ATTACK_VERB.get(worst, "Força mesmo assim"),
                 "channel": worst, "target_side": "home",
                 "weight": round(min(-0.04, atk_edges[worst] * 0.18), 3),
             },
@@ -200,13 +328,13 @@ def build_beat(
             choices.append(_attack_choice(minute, c_ch, atk_edges[c_ch], "push"))
         elif diff > 0:
             choices.append({
-                "id": f"beat-{minute}-park", "label": "Recua o bloco",
+                "id": f"beat-{minute}-park", "label": "Segura o resultado",
                 "channel": threat, "target_side": "away",
                 "weight": round(max(0.03, 0.04 + away_edges[threat] * 0.10), 3),
             })
         else:
             choices.append({
-                "id": f"beat-{minute}-trap", "label": ATTACK_VERB.get(worst, "Insiste"),
+                "id": f"beat-{minute}-trap", "label": ATTACK_VERB.get(worst, "Força mesmo assim"),
                 "channel": worst, "target_side": "home",
                 "weight": round(min(-0.04, atk_edges[worst] * 0.18), 3),
             })
@@ -248,16 +376,28 @@ def build_beat(
 
 
 def build_decision_modifiers(decisions: List[Dict[str, Any]]):
-    """Converte o ledger de decisões em multiplicadores de xG por canal.
+    """Converte o ledger de decisões em multiplicadores de xG por canal + BUFFER global.
 
-    Retorna (home_mult, away_mult, away_global):
+    Filosofia (pedido do produto): mesmo com OVRs parecidos, um manager que lê bem
+    o jogo precisa de um BUFFER — vantagem que atravessa o time todo, em ataque E
+    defesa, não só no canal escolhido. Por isso, além dos multiplicadores por canal,
+    boas decisões acumulam um tilt global:
+      • escolha ofensiva certa (home, w>0)  → home_global sobe (ataque inteiro respira)
+      • escolha defensiva certa (away, w>0)  → away_suppress cai (defesa inteira segura)
+      • escolha ruim (home, w<0)            → away_global sobe (você dá fôlego pra eles)
+
+    Retorna (home_mult, away_mult, away_global, home_global, away_suppress):
       home_mult[ch]  — multiplica xG do home em ch
       away_mult[ch]  — multiplica xG do away em ch (escolhas defensivas reduzem)
-      away_global    — boost global do away gerado por escolhas ruins do manager
+      away_global    — boost global do away gerado por escolhas RUINS do manager
+      home_global    — buffer global de ATAQUE do home (boas escolhas ofensivas)
+      away_suppress  — buffer global de DEFESA (boas escolhas defensivas reduzem o away)
     """
     home_mult: Dict[str, float] = {}
     away_mult: Dict[str, float] = {}
     away_global = 1.0
+    home_global = 1.0
+    away_suppress = 1.0
     for d in decisions or []:
         ch = d.get("channel")
         if ch not in CHANNEL_LABELS:
@@ -269,11 +409,20 @@ def build_decision_modifiers(decisions: List[Dict[str, Any]]):
         w = max(-WEIGHT_CLAMP, min(WEIGHT_CLAMP, w))
         if d.get("target_side") == "away":
             away_mult[ch] = away_mult.get(ch, 1.0) * (1 - max(0.0, w))
+            if w > 0:
+                away_suppress *= 1 - w * 0.38  # boa defesa segura o time todo (buffer reforçado)
         else:
             home_mult[ch] = home_mult.get(ch, 1.0) * (1 + w)
-            if w < 0:
+            if w > 0:
+                home_global *= 1 + w * 0.45    # bom ataque levanta o time todo (buffer reforçado)
+            else:
                 away_global *= 1 + abs(w) * 0.5
-    return home_mult, away_mult, away_global
+    # Tetos de segurança — buffer da DECISÃO CORRETA agora pesa mais (recompensa
+    # quem lê bem o jogo), sem virar injustiça: decisão ruim ainda penaliza.
+    home_global = min(1.55, home_global)
+    away_suppress = max(0.64, away_suppress)
+    away_global = min(1.45, away_global)
+    return home_mult, away_mult, away_global, home_global, away_suppress
 
 
 def decisions_fingerprint(decisions: List[Dict[str, Any]]) -> str:

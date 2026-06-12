@@ -35,6 +35,7 @@
     "test:quick-engaged": "tsx scripts/test-quick-engaged.ts",
     "test:quick-clutch": "tsx scripts/test-quick-clutch.ts",
     "test:quick-credit": "tsx scripts/test-quick-credit.ts",
+    "test:penalty-shootout": "tsx scripts/test-penalty-shootout.ts",
     "test:possession-invariant": "tsx src/match/runPossessionInvariantSelfTest.ts",
     "test:deliberation": "tsx src/playerDecision/runDeliberationSelfTest.ts",
     "test:classic-qa": "tsx src/engine/classic/qa/classicQA.test.ts",
@@ -63,7 +64,8 @@
     "genesis:repair-pinata-token-from-card-url": "node scripts/repair-genesis-pinata-token-from-card-url.mjs",
     "deploy:cloudflare": "VITE_OLEFOOT_API_URL=https://legacy-production-de1e.up.railway.app VITE_SUPABASE_URL=$(grep VITE_SUPABASE_URL .env | cut -d= -f2- | tr -d '\"') VITE_SUPABASE_ANON_KEY=$(grep VITE_SUPABASE_ANON_KEY .env | cut -d= -f2- | tr -d '\"') npm run build && wrangler deploy",
     "generate:assets": "tsx scripts/generateAssetsFreepik.ts",
-    "legend:import": "tsx --env-file=server/.env scripts/import-legend.ts"
+    "legend:import": "tsx --env-file=server/.env scripts/import-legend.ts",
+    "test:liga-ole": "tsx scripts/test-liga-ole.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

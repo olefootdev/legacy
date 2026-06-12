@@ -24,6 +24,10 @@ import { getEffectiveFatigue } from '@/systems/fatigue';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { fetchQuickPlan } from '@/match/quickPlanClient';
+import { fetchQuickNarration, type QuickNarration } from '@/match/quickNarrateClient';
+import { fetchOpponentRoster } from '@/match/opponentRosterClient';
+import type { ShootoutSetup } from '@/components/matchquick/PenaltyShootout';
+import type { ShootoutKicker, ShootoutKeeper } from '@/match/quickEngaged/penaltyShootout';
 import type { MatchPlan } from '@/match/quickPlanTypes';
 import {
   QuickPlanPlayer,
@@ -58,6 +62,7 @@ export default function MatchQuickEngaged() {
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [plan, setPlan] = useState<MatchPlan | null>(null);
+  const [narration, setNarration] = useState<QuickNarration | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QuickPlanPlayResult | null>(null);
   const [countdown, setCountdown] = useState(3);
@@ -102,6 +107,18 @@ export default function MatchQuickEngaged() {
       try {
         const seed = `${club.shortName}-${opponent!.shortName}-${opponent!.id}-${Date.now()}`;
         seedRef.current = seed;
+        // Elenco REAL do adversário. NUNCA inventa jogadores: usa o stub só se
+        // for real (ids sintéticos `gl-syn-*`/`away-*` não contam); senão resolve
+        // no backend (profiles → manager_squad). Sintético só como último recurso.
+        const stubAway = opponent!.genesisAwayPlayers;
+        const isSynthetic = (id: string) => id.startsWith('gl-syn-') || id.startsWith('away-');
+        const stubLooksReal = !!stubAway && stubAway.length >= 7 && !stubAway.some((p) => isSynthetic(String(p.id)));
+        let awayPlayers = stubLooksReal ? stubAway : undefined;
+        if (!awayPlayers) {
+          const roster = await fetchOpponentRoster({ clubName: opponent!.name, clubShort: opponent!.shortName });
+          if (roster) awayPlayers = roster.players;
+          else if (stubAway && stubAway.length >= 7) awayPlayers = stubAway; // último recurso
+        }
         const { input, homePlayers } = buildQuickPlanInputs({
           players,
           playerHealth,
@@ -112,6 +129,7 @@ export default function MatchQuickEngaged() {
           intensity: intensityRef.current,
           seed,
           awaySeedKey: `${opponent!.id}|away`,
+          awayPlayers,
         });
         homePlayersRef.current = homePlayers;
         awayLineupRef.current = input.awayLineup;
@@ -124,6 +142,11 @@ export default function MatchQuickEngaged() {
         }
         setPlan(fetched);
         setPhase('kickoff');
+        // Pré-busca a narração IA (Sonnet) em paralelo ao kickoff — não bloqueia.
+        // Chega antes do 1º beat na maioria das vezes; senão, cai no texto Python.
+        fetchQuickNarration(fetched, { home: club.name, away: opponent!.name })
+          .then((n) => { if (n) setNarration(n); })
+          .catch(() => { /* degradação graciosa */ });
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
         setPhase('error');
@@ -236,12 +259,60 @@ export default function MatchQuickEngaged() {
           })),
         });
         resolve(replan);
+        // Re-narra o 2º tempo (novos beats/gols 46-90) e mescla na narração viva.
+        if (replan) {
+          fetchQuickNarration(replan, { home: club.name, away: opponent!.name })
+            .then((n) => {
+              if (!n) return;
+              setNarration((prev) => prev
+                ? { beats: { ...prev.beats, ...n.beats }, goals: { ...prev.goals, ...n.goals }, reading: n.reading ?? prev.reading }
+                : n);
+            })
+            .catch(() => { /* mantém narração do 1º tempo */ });
+        }
       } catch {
         resolve(null);
       }
     },
     [halftimeCtx, club.shortName, opponent],
   );
+
+  // DISPUTA DE PÊNALTIS: monta os dados (elenco vivo + goleiros) a partir dos
+  // refs com atributos. Desgaste de 90' na fadiga — quem entrou de fora chega
+  // mais fresco (recompensa o sub tático na hora da disputa).
+  const buildShootout = useCallback((): ShootoutSetup | null => {
+    const MATCH_WEAR = 26;
+    const wear = (f: number | undefined) => Math.min(100, (f ?? 0) + MATCH_WEAR);
+    const home = homePlayersRef.current;
+    const away = awayLineupRef.current;
+    if (!home.length || !away.length) return null;
+
+    const homeOutfield: ShootoutKicker[] = home
+      .filter((p) => p.payload.role !== 'gk')
+      .map((p) => ({
+        id: p.id, name: p.name, pos: p.pos,
+        finalizacao: p.payload.finalizacao, fisico: p.payload.fisico, confianca: p.payload.confianca,
+        fatigue: wear(p.payload.fatigue), portrait: players[p.id] ? playerPortraitSrc(players[p.id]!, 40, 40) : null,
+      }));
+    const awayOutfield: ShootoutKicker[] = away
+      .filter((p) => p.role !== 'gk')
+      .map((p) => ({
+        id: p.id, name: p.name, pos: p.pos,
+        finalizacao: p.finalizacao, fisico: p.fisico, confianca: p.confianca, fatigue: wear(p.fatigue),
+      }));
+    if (homeOutfield.length < 5 || awayOutfield.length < 1) return null;
+
+    const homeGk = home.find((p) => p.payload.role === 'gk');
+    const awayGk = away.find((p) => p.role === 'gk');
+    const homeKeeper: ShootoutKeeper = homeGk
+      ? { id: homeGk.id, name: homeGk.name, marcacao: homeGk.payload.marcacao, confianca: homeGk.payload.confianca, fisico: homeGk.payload.fisico, fatigue: wear(homeGk.payload.fatigue) }
+      : { id: 'h-gk', name: 'Goleiro', marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
+    const awayKeeper: ShootoutKeeper = awayGk
+      ? { id: awayGk.id, name: awayGk.name, marcacao: awayGk.marcacao, confianca: awayGk.confianca, fisico: awayGk.fisico, fatigue: wear(awayGk.fatigue) }
+      : { id: 'a-gk', name: 'Goleiro', marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
+
+    return { homeKickers: homeOutfield, awayKickers: awayOutfield, homeKeeper, awayKeeper };
+  }, [players]);
 
   const creditedRef = useRef(false);
   const onComplete = useCallback((_p: MatchPlan, r: QuickPlanPlayResult) => {
@@ -265,6 +336,7 @@ export default function MatchQuickEngaged() {
       homeOnPitch: r.homeOnPitch,
       agg: { shots: r.stats.homeShots, possessionHome: r.stats.possessionHome, wasLosing: false },
       mvpName: _p.mvp_projection?.name,
+      shootoutWin: r.shootout?.winner,
     });
   }, [dispatch]);
 
@@ -333,6 +405,8 @@ export default function MatchQuickEngaged() {
           <QuickPlanPlayer
             key={plan.seed}
             plan={plan}
+            narration={narration ?? undefined}
+            buildShootout={buildShootout}
             speedMultiplier={speedMultiplier}
             onSecondHalf={onSecondHalf}
             onComplete={onComplete}
