@@ -26,6 +26,7 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { fetchQuickPlan } from '@/match/quickPlanClient';
 import { fetchQuickNarration, type QuickNarration } from '@/match/quickNarrateClient';
 import { fetchOpponentRoster } from '@/match/opponentRosterClient';
+import { LIGA_OLE_ROUNDS } from '@/match/ligaOle/ligaOleModel';
 import type { ShootoutSetup } from '@/components/matchquick/PenaltyShootout';
 import type { ShootoutKicker, ShootoutKeeper } from '@/match/quickEngaged/penaltyShootout';
 import type { MatchPlan } from '@/match/quickPlanTypes';
@@ -59,6 +60,12 @@ export default function MatchQuickEngaged() {
   const club = useGameStore((s) => s.club);
   const nextFixture = useGameStore((s) => s.nextFixture);
   const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
+  // Liga Ole: detecta no MOUNT se esta partida é da liga (pendingOpponentId),
+  // pra mostrar a continuação ("avançou de fase" + Avançar) no pós-jogo.
+  const ligaOle = useGameStore((s) => s.ligaOle);
+  const ligaFlash = useGameStore((s) => s.ligaOleResultFlash);
+  const isLigaOleMatchRef = useRef<boolean | null>(null);
+  if (isLigaOleMatchRef.current === null) isLigaOleMatchRef.current = !!ligaOle?.pendingOpponentId;
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [plan, setPlan] = useState<MatchPlan | null>(null);
@@ -439,13 +446,50 @@ export default function MatchQuickEngaged() {
 
         {phase === 'finished' && result && (
           <div className="mt-5 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => navigate(0)}
-              className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors"
-            >
-              Jogar de novo
-            </button>
+            {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
+            {isLigaOleMatchRef.current && (() => {
+              const M = 'var(--font-serif-hero)';
+              if (ligaFlash?.outcome === 'champion') {
+                return (
+                  <div className="relative overflow-hidden bg-neon-yellow px-5 py-5 text-black mb-1" style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 10px 30px rgba(253,225,0,0.22)' }}>
+                    <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-black/70 mb-1">Liga Ole · Campeão</p>
+                    <p style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(30px, 9vw, 46px)', lineHeight: 0.95 }}>{club.name}</p>
+                    <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-black/80 mt-1">Levantou a taça!</p>
+                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 bg-black text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px] font-black" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
+                  </div>
+                );
+              }
+              if (ligaFlash?.outcome === 'eliminated') {
+                return (
+                  <div className="border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
+                    <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-1">Liga Ole · Fim da linha</p>
+                    <p className="text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(24px, 7vw, 36px)' }}>Caiu nas {ligaFlash.reachedRound}</p>
+                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 border border-white/20 text-white/80 font-display uppercase tracking-[0.18em] text-[11px] font-black hover:border-white/50 transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
+                  </div>
+                );
+              }
+              if (ligaOle?.status === 'active') {
+                return (
+                  <div className="relative overflow-hidden border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)', boxShadow: '0 10px 30px rgba(253,225,0,0.10)' }}>
+                    <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow mb-1">Liga Ole</p>
+                    <p className="text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 0.95 }}>{club.name} avançou de fase!</p>
+                    <p className="font-display uppercase tracking-[0.2em] text-[10px] font-black text-white/50 mt-1">Próxima: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
+                    <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3.5 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.2em] text-[13px] font-black transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Avançar ›</button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {!isLigaOleMatchRef.current && (
+              <button
+                type="button"
+                onClick={() => navigate(0)}
+                className="w-full py-3 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors"
+              >
+                Jogar de novo
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate('/')}
