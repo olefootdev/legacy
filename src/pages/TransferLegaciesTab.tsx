@@ -40,9 +40,9 @@ export function TransferLegaciesTab() {
 
   const buy = async (row: LegacyPlayerRow) => {
     const entity = legacyRowToPlayerEntity(row);
-    const priceExp = Math.max(1, Math.round(row.price_bro_cents));
+    // price_bro_cents guarda o preço em OLEFOOT (=OLE, a moeda dos legacies).
+    const priceOlefoot = Math.max(1, Math.round(row.price_bro_cents));
     if (owned.has(entity.id)) { window.alert('Você já possui esse legacy.'); return; }
-    if (oleBal < priceExp) { window.alert('Saldo OLE insuficiente.'); return; }
 
     const apiBase = (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_OLEFOOT_API_URL || 'http://localhost:4000';
     const serverUrl = apiBase !== 'http://localhost:4000' ? apiBase : null;
@@ -50,7 +50,8 @@ export function TransferLegaciesTab() {
     const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
 
     if (serverUrl && token) {
-      // Compra ATÔMICA no servidor: debita OLE + entrega o player (sem corrida).
+      // Compra ATÔMICA no servidor: debita OLEFOOT (legacy_olefoot_credits) +
+      // entrega o player (sem corrida). NÃO toca EXP (finance.ole).
       try {
         const r = await fetch(`${serverUrl}/api/market/buy-legacy`, {
           method: 'POST',
@@ -62,20 +63,16 @@ export function TransferLegaciesTab() {
           window.alert(data?.error ?? 'Não foi possível comprar agora.');
           return;
         }
-        // Servidor já debitou — alinha o estado local (SETA o OLE, não re-deduz).
-        dispatch({
-          type: 'CONFIRM_LEGACY_PURCHASE',
-          player: entity,
-          ole: typeof data.ole === 'number' ? data.ole : Math.max(0, oleBal - priceExp),
-          ledgerEntry: data.ledgerEntry,
-        });
+        // Servidor debitou o OLEFOOT — só entregamos o player no estado local
+        // (ole = saldo atual, INALTERADO: a moeda do legacy é OLEFOOT, não EXP).
+        dispatch({ type: 'CONFIRM_LEGACY_PURCHASE', player: entity, ole: oleBal });
       } catch {
         window.alert('Falha de conexão ao comprar. Tente de novo.');
         return;
       }
     } else {
       // Fallback (dev local sem server): mantém o fluxo client-side.
-      dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp });
+      dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp: priceOlefoot });
     }
 
     // Registra atividade pública no feed do mercado
@@ -89,7 +86,7 @@ export function TransferLegaciesTab() {
         playerName: entity.name,
         playerOvr: overallFromAttributes(entity.attrs),
         playerPos: entity.pos,
-        priceExp,
+        priceExp: priceOlefoot,
       });
     })();
   };

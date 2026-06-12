@@ -12,7 +12,6 @@ import { SendModal } from './wallet/SendModal';
 import { CryptoCoinCard } from './wallet/CryptoCoinCard';
 import { ActivityStrip } from './wallet/ActivityStrip';
 import { SquadValuationCard } from './wallet/SquadValuationCard';
-import { MatchReceiptCard, type MatchReceiptData } from './wallet/MatchReceiptCard';
 import { TrophyShowcase } from './wallet/TrophyShowcase';
 import { MiniSwapInline } from './wallet/MiniSwapInline';
 import { PlayerWatchlist } from './wallet/PlayerWatchlist';
@@ -22,7 +21,6 @@ import {
   useTopSquadPlayers,
   useUnlockedTrophies,
 } from './wallet/useWalletPlayerData';
-import { RivalsLeaderboardMini } from './wallet/RivalsLeaderboardMini';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
 import { OLE_INTERNAL_PRICE_USD, OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
@@ -106,22 +104,6 @@ export function Wallet() {
   const squadValuation = useSquadValuation();
   const topSquadPlayers = useTopSquadPlayers(3);
   const trophies = useUnlockedTrophies();
-
-  // ── MOCK DATA — substituir por dados reais conforme integração ──
-  const mockReceipt: MatchReceiptData = {
-    roundLabel: 'Round 22',
-    opponent: 'CAM FC',
-    result: '2 — 1',
-    isHome: true,
-    lines: [
-      { label: 'Prêmio de vitória', amount: 1200, currency: 'EXP' },
-      { label: 'Bilheteria', amount: 120, currency: 'EXP' },
-      { label: 'Performance individual', amount: 50, currency: 'EXP' },
-      { label: 'Salários do round', amount: -340, currency: 'EXP' },
-      { label: 'Manutenção estádio', amount: -80, currency: 'EXP' },
-    ],
-  };
-
 
   const quickActions: QuickAction[] = [
     { key: 'deposit', label: 'Depositar', icon: '↓', accent: 'green', onClick: () => setDepositOpen(true) },
@@ -247,15 +229,6 @@ export function Wallet() {
         highlight={squadCardData.highlight}
       />
 
-      {/* ── RIVALS LEADERBOARD MINI ──────────────────────────────── */}
-      <RivalsLeaderboardMini
-        position={12}
-        total={1240}
-        gapToNextOle={200}
-        nextRivalName="Coach Diogo"
-        delta24h={2}
-      />
-
       {/* ── SUAS CRYPTOS ──────────────────────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-3">
@@ -297,9 +270,6 @@ export function Wallet() {
 
       {/* ── ATIVIDADE RECENTE ─────────────────────────────────────── */}
       <ActivityStrip ledger={wallet.ledger ?? []} limit={3} />
-
-      {/* ── RECIBO DA ÚLTIMA PARTIDA ──────────────────────────────── */}
-      <MatchReceiptCard data={mockReceipt} />
 
       {/* ── MINI-SWAP (substitui o card "Como Funciona" estático) ── */}
       <MiniSwapInline />

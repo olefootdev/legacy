@@ -309,17 +309,7 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
   if (!row.listed_on_market) return c.json({ ok: false, error: 'Não está à venda.' }, 409);
   const price = Math.max(1, Math.round(Number(row.price_bro_cents)));
 
-  // 2) Finança do comprador (manager_game_state.finance)
-  const { data: mgs } = await sb
-    .from('manager_game_state')
-    .select('finance')
-    .eq('user_id', buyerId)
-    .maybeSingle();
-  if (!mgs) return c.json({ ok: false, error: 'Estado do manager não encontrado.' }, 404);
-  const finance = (mgs.finance ?? {}) as { ole?: number; expHistory?: unknown[]; [k: string]: unknown };
-  const ole = Math.round(Number(finance.ole ?? 0));
-
-  // 3) Já possui? (idempotente)
+  // 2) Já possui? (idempotente) — lê o squad
   const { data: sq } = await sb
     .from('manager_squad')
     .select('players, lineup, formation_scheme')
@@ -327,19 +317,36 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
     .maybeSingle();
   const players = Array.isArray(sq?.players) ? (sq!.players as Array<{ id: string }>) : [];
   if (players.some((p) => p.id === legacyId)) {
-    return c.json({ ok: true, already_owned: true, ole, price });
+    return c.json({ ok: true, already_owned: true, price });
   }
-  if (ole < price) return c.json({ ok: false, error: 'Saldo OLE insuficiente.', ole, price }, 402);
 
-  // 4) ATÔMICO-ish: debita OLE (+ ledger) e entrega o player. Rollback se falhar.
-  const ledgerEntry = { id: `exp-${Date.now()}-leg`, amount: -price, source: 'mercado_legacy', createdAt: new Date().toISOString() };
-  const nextFinance = {
-    ...finance,
-    ole: ole - price,
-    expHistory: [ledgerEntry, ...(Array.isArray(finance.expHistory) ? finance.expHistory : [])].slice(0, 120),
-  };
-  const { error: finErr } = await sb.from('manager_game_state').update({ finance: nextFinance }).eq('user_id', buyerId);
-  if (finErr) return c.json({ ok: false, error: 'Falha ao debitar OLE.', detail: finErr.message }, 500);
+  // 3) Saldo OLEFOOT — a moeda dos legacies é o OLEFOOT (=OLE) do snapshot v1
+  //    (legacy_olefoot_credits, 18 decimais em wei). É o saldo que a Wallet
+  //    mostra como "Olefoot". EXP (manager_game_state.finance.ole) é OUTRA moeda
+  //    e NÃO é tocada aqui.
+  const { data: credit } = await sb
+    .from('legacy_olefoot_credits')
+    .select('balance_human')
+    .eq('user_id', buyerId)
+    .maybeSingle();
+  const balanceHuman = String(credit?.balance_human ?? '0');
+  const [intRaw, fracRaw = ''] = balanceHuman.split('.');
+  const intPart = BigInt(intRaw || '0');
+  const fracPart = (fracRaw + '0'.repeat(18)).slice(0, 18); // normaliza p/ 18 casas
+  const origWei = (intPart * 10n ** 18n + BigInt(fracPart)).toString();
+  if (!credit || intPart < BigInt(price)) {
+    return c.json({ ok: false, error: 'Saldo OLEFOOT insuficiente.', olefoot: balanceHuman, price }, 402);
+  }
+
+  // 4) ATÔMICO-ish: debita OLEFOOT e entrega o player. Rollback se o squad falhar.
+  const newInt = intPart - BigInt(price);
+  const newHuman = `${newInt.toString()}.${fracPart}`;
+  const newWei = (newInt * 10n ** 18n + BigInt(fracPart)).toString();
+  const { error: credErr } = await sb
+    .from('legacy_olefoot_credits')
+    .update({ balance_human: newHuman, balance_wei: newWei })
+    .eq('user_id', buyerId);
+  if (credErr) return c.json({ ok: false, error: 'Falha ao debitar OLEFOOT.', detail: credErr.message }, 500);
 
   const { error: sqErr } = await sb.from('manager_squad').upsert(
     {
@@ -351,10 +358,13 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
     { onConflict: 'user_id' },
   );
   if (sqErr) {
-    // Rollback do débito — o player não foi entregue.
-    await sb.from('manager_game_state').update({ finance }).eq('user_id', buyerId);
+    // Rollback do débito OLEFOOT — o player não foi entregue.
+    await sb
+      .from('legacy_olefoot_credits')
+      .update({ balance_human: balanceHuman, balance_wei: origWei })
+      .eq('user_id', buyerId);
     return c.json({ ok: false, error: 'Falha ao entregar o jogador.', detail: sqErr.message }, 500);
   }
 
-  return c.json({ ok: true, ole: ole - price, price, ledgerEntry, player });
+  return c.json({ ok: true, olefoot: newHuman, price, player });
 });
