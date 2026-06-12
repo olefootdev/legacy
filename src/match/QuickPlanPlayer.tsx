@@ -69,6 +69,10 @@ export interface QuickPlanPlayResult {
   verdicts: BeatVerdict[];
   reading: { good: number; total: number };
   replanned: boolean;
+  /** Tally por jogador (gols/chutes/defesas) — base da nota e do crédito (Fase D). */
+  playerStats: Record<string, { goals: number; shots: number; saves: number; side: 'home' | 'away' }>;
+  /** Quem terminou em campo (pra minutos/recovery). */
+  homeOnPitch: string[];
 }
 
 interface Props {
@@ -129,10 +133,18 @@ function fatigueWord(f: number): string {
   return 'apagando';
 }
 
+/** Nota da partida (cartola) a partir do OVR + envolvimento (gols/chutes). */
+export function matchRating(ovr: number, t?: { goals: number; shots: number }): number {
+  const base = 6.0 + (ovr - 60) / 50;
+  const r = base + (t?.goals ?? 0) * 0.9 + (t?.shots ?? 0) * 0.12;
+  return Math.max(5.0, Math.min(9.9, r));
+}
+
 /** Linha de elenco no padrão editorial "Today's roster" (rail por estado). */
-function RosterRow({ card, isTop, subbable, onSub }: {
+function RosterRow({ card, isTop, rating, subbable, onSub }: {
   card: SquadCard;
   isTop: boolean;
+  rating?: number;
   subbable?: boolean;
   onSub?: () => void;
 }) {
@@ -154,6 +166,14 @@ function RosterRow({ card, isTop, subbable, onSub }: {
           {card.pos} · {fatigueWord(card.fatigue)}
         </span>
       </span>
+      {rating !== undefined && (
+        <span
+          className="font-serif italic tabular-nums leading-none shrink-0"
+          style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', letterSpacing: '-0.02em', color: rating >= 7.5 ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.85)' }}
+        >
+          {rating.toFixed(1)}
+        </span>
+      )}
       {subbable && <ArrowRightLeft className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />}
     </>
   );
@@ -250,6 +270,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const htDoneRef = useRef(false);
   const replannedRef = useRef(false);
   const completedRef = useRef(false);
+  // Tally por jogador (gols/chutes/defesas) → nota da partida + crédito (Fase D).
+  const statsRef = useRef<Record<string, { goals: number; shots: number; saves: number; side: 'home' | 'away' }>>({});
+
+  const tally = (id: string | undefined, side: 'home' | 'away', field: 'goals' | 'shots' | 'saves') => {
+    if (!id) return;
+    const cur = statsRef.current[id] ?? { goals: 0, shots: 0, saves: 0, side };
+    cur[field] += 1;
+    statsRef.current[id] = cur;
+  };
 
   const pushFeed = (item: QuickPlanFeedItem) => {
     setFeed((prev) => [...prev, item].slice(-QUICK_PLAN_FEED_MAX));
@@ -264,6 +293,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
 
   const processEvent = (e: MatchPlanEvent, idx: number) => {
     const base = e.kind.replace(/_(home|away)$/, '');
+    // Tally por jogador (nota): gol/chute do autor; defesa creditada ao GK adversário.
+    if (base === 'goal') { tally(e.actor_id, e.actor_side, 'goals'); tally(e.actor_id, e.actor_side, 'shots'); }
+    else if (base === 'shot' || base === 'chance' || base === 'woodwork') tally(e.actor_id, e.actor_side, 'shots');
     if (e.kind === 'goal_home') {
       scoreRef.current.home += 1;
       setHomeScore((v) => v + 1);
@@ -322,6 +354,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       verdicts,
       reading,
       replanned: replannedRef.current,
+      playerStats: { ...statsRef.current },
+      homeOnPitch: field.map((p) => p.id),
     });
   };
 
@@ -489,7 +523,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     const awayScores = c.moment.intent === 'defend' ? !res.success : false;
 
     if (homeScores || awayScores) {
-      if (homeScores) { scoreRef.current.home += 1; setHomeScore((v) => v + 1); }
+      if (homeScores) { scoreRef.current.home += 1; setHomeScore((v) => v + 1); tally(ev?.actor_id, 'home', 'goals'); tally(ev?.actor_id, 'home', 'shots'); }
       else { scoreRef.current.away += 1; setAwayScore((v) => v + 1); }
       setCelebration({
         key: `clutch-${c.idx}`,
@@ -580,6 +614,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     if (scored) {
       scoreRef.current.home += 1;
       setHomeScore((v) => v + 1);
+      tally(taker.id, 'home', 'goals');
+      tally(taker.id, 'home', 'shots');
       setCelebration({
         key: `pen-${pen.idx}`,
         name: taker.name,
@@ -1166,6 +1202,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 key={p.id}
                 card={p}
                 isTop={p.id === homeTopId}
+                rating={matchRating(p.ovr, statsRef.current[p.id])}
                 subbable={canSubNow && subCandidateIds.has(p.id)}
                 onSub={() => openSub(p.id)}
               />
@@ -1181,7 +1218,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               </span>
             </div>
             {awayFive.map((p) => (
-              <RosterRow key={p.id} card={p} isTop={p.id === awayTopId} />
+              <RosterRow key={p.id} card={p} isTop={p.id === awayTopId} rating={matchRating(p.ovr, statsRef.current[p.id])} />
             ))}
           </div>
         </div>
