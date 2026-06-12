@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { useGameStore } from '@/game/store';
+import { useGameStore, useGameDispatch } from '@/game/store';
 import { getEffectiveFatigue } from '@/systems/fatigue';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
@@ -29,6 +29,7 @@ import {
   QuickPlanPlayer,
   type QuickPlanHalftimeContext,
   type QuickPlanPlayResult,
+  matchRating,
   type PenaltyTaker,
   type SquadCard,
 } from '@/match/QuickPlanPlayer';
@@ -47,6 +48,7 @@ type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
 export default function MatchQuickEngaged() {
   const navigate = useNavigate();
+  const dispatch = useGameDispatch();
   const players = useGameStore((s) => s.players);
   const playerHealth = useGameStore((s) => s.playerHealth);
   const lineup = useGameStore((s) => s.lineup);
@@ -241,10 +243,30 @@ export default function MatchQuickEngaged() {
     [halftimeCtx, club.shortName, opponent],
   );
 
+  const creditedRef = useRef(false);
   const onComplete = useCallback((_p: MatchPlan, r: QuickPlanPlayResult) => {
     setResult(r);
     setPhase('finished');
-  }, []);
+    // CRÉDITO DE PROGRESSÃO (Fase D): credita XP/economia/evolução/fadiga +
+    // Manager IQ uma única vez por partida.
+    if (creditedRef.current) return;
+    creditedRef.current = true;
+    const homeStats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn?: number }> = {};
+    for (const p of homePlayersRef.current) {
+      const t = r.playerStats[p.id];
+      homeStats[p.id] = { passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, rating: matchRating(p.ovr, t), shotsOn: t?.shots ?? 0 };
+    }
+    dispatch({
+      type: 'FINALIZE_QUICK_PLAN',
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+      reading: r.reading,
+      homeStats,
+      homeOnPitch: r.homeOnPitch,
+      agg: { shots: r.stats.homeShots, possessionHome: r.stats.possessionHome, wasLosing: false },
+      mvpName: _p.mvp_projection?.name,
+    });
+  }, [dispatch]);
 
   // ── Render ────────────────────────────────────────────────────────────
   if (!hasOpponent) {

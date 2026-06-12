@@ -153,6 +153,7 @@ import { updateChallengeProgress as updateStreakProgress, generateWeeklyChalleng
 import { createPendingCommand } from '@/voiceCommand/commandQueue';
 import { TEAM_OBEDIENCE_DELTAS } from '@/voiceCommand/obedienceRoll';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
+import { computeQuickPlanCredit } from '@/match/quickEngaged/creditQuickPlan';
 import {
   CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_MEDICAL_FATIGUE_DELTA,
@@ -2242,6 +2243,63 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const crowd = { supportPercent: newSupportPercent, moodLabel: crowdMood(newSupportPercent) };
 
       return { ...stateAfterMatch, manager, crowd };
+    }
+    case 'FINALIZE_QUICK_PLAN': {
+      // Crédito da Partida Rápida 2.0 (motor Python) — reusa os helpers puros
+      // de economia/evolução/fadiga/streak sem reconstruir um liveMatch.
+      const credit = computeQuickPlanCredit(
+        {
+          finance: state.finance,
+          players: state.players,
+          playerHealth: state.playerHealth,
+          quickMatchStreak: state.quickMatchStreak,
+        },
+        {
+          homeScore: action.homeScore,
+          awayScore: action.awayScore,
+          reading: action.reading,
+          homeStats: action.homeStats,
+          homeOnPitch: action.homeOnPitch,
+          agg: action.agg,
+        },
+      );
+      const homeWin = action.homeScore > action.awayScore;
+      const draw = action.homeScore === action.awayScore;
+      const finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
+      const nextResult: import('@/entities/types').FormLetter = homeWin ? 'W' : draw ? 'D' : 'L';
+      const form = [...state.form.slice(1), nextResult];
+      const results = [{
+        home: state.club.name,
+        away: state.nextFixture.opponent?.name ?? 'Adversário',
+        scoreHome: action.homeScore,
+        scoreAway: action.awayScore,
+        status: 'FT',
+        result: homeWin ? ('win' as const) : draw ? ('draw' as const) : ('loss' as const),
+      }, ...state.results].slice(0, 8);
+      const iqLine = action.reading.total > 0
+        ? ` Leitura de jogo ${action.reading.good}/${action.reading.total} — Manager IQ ${credit.readingMult >= 1 ? `+${Math.round((credit.readingMult - 1) * 100)}%` : `${Math.round((credit.readingMult - 1) * 100)}%`} na recompensa.`
+        : '';
+      const note = makeInboxItem(
+        `qp-${Date.now()}`,
+        'FINANCE_EXP_GAIN',
+        'FINANCEIRO',
+        `+${credit.oleGain} EXP pela Partida Rápida.`,
+        {
+          body: `Recompensa creditada.${credit.bonusNames.length ? ` Bônus: ${credit.bonusNames.join(', ')}.` : ''}${iqLine}`,
+          deepLink: '/wallet',
+          hideFromHomeFeed: true,
+        },
+      );
+      return {
+        ...state,
+        finance,
+        players: credit.players,
+        playerHealth: credit.playerHealth,
+        quickMatchStreak: credit.quickMatchStreak,
+        results,
+        form,
+        inbox: [note, ...state.inbox].slice(0, 60),
+      };
     }
     case 'MERGE_PLAYERS': {
       const players = { ...state.players, ...action.players };

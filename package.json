@@ -34,6 +34,7 @@
     "test:quick-beats": "tsx scripts/test-quick-beats.ts",
     "test:quick-engaged": "tsx scripts/test-quick-engaged.ts",
     "test:quick-clutch": "tsx scripts/test-quick-clutch.ts",
+    "test:quick-credit": "tsx scripts/test-quick-credit.ts",
     "test:possession-invariant": "tsx src/match/runPossessionInvariantSelfTest.ts",
     "test:deliberation": "tsx src/playerDecision/runDeliberationSelfTest.ts",
     "test:classic-qa": "tsx src/engine/classic/qa/classicQA.test.ts",

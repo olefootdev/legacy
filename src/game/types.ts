@@ -555,6 +555,17 @@ export type GameAction =
       expelledPlayerName: string;
     }
   | { type: 'FINALIZE_MATCH' }
+  /** Crédito da Partida Rápida 2.0 (motor Python) — progressão sem o loop tick. */
+  | {
+      type: 'FINALIZE_QUICK_PLAN';
+      homeScore: number;
+      awayScore: number;
+      reading: { good: number; total: number };
+      homeStats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn?: number }>;
+      homeOnPitch: string[];
+      agg: { shots: number; possessionHome: number; wasLosing: boolean };
+      mvpName?: string;
+    }
   /** Quando `insertMatch` resolve — actualiza o snapshot em curso (evita mutar objecto já descartado). */
   | { type: 'SET_LIVE_MATCH_SUPABASE_ID'; matchId: string; matchClientNonce: number }
   /** Sprint 1: Trigger momento interativo na partida rápida */

@@ -73,6 +73,8 @@ export interface QuickPlanPlayResult {
   playerStats: Record<string, { goals: number; shots: number; saves: number; side: 'home' | 'away' }>;
   /** Quem terminou em campo (pra minutos/recovery). */
   homeOnPitch: string[];
+  /** Agregados pro crédito (bônus de performance). */
+  stats: { homeShots: number; awayShots: number; possessionHome: number };
 }
 
 interface Props {
@@ -280,8 +282,11 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     statsRef.current[id] = cur;
   };
 
+  const feedSeqRef = useRef(0);
   const pushFeed = (item: QuickPlanFeedItem) => {
-    setFeed((prev) => [...prev, item].slice(-QUICK_PLAN_FEED_MAX));
+    feedSeqRef.current += 1;
+    const unique = { ...item, id: `${item.id}#${feedSeqRef.current}` }; // key sempre única
+    setFeed((prev) => [...prev, unique].slice(-QUICK_PLAN_FEED_MAX));
   };
 
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
@@ -356,6 +361,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       replanned: replannedRef.current,
       playerStats: { ...statsRef.current },
       homeOnPitch: field.map((p) => p.id),
+      stats: { homeShots: stats.homeShots, awayShots: stats.awayShots, possessionHome: stats.possessionHome },
     });
   };
 
