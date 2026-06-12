@@ -18,7 +18,6 @@ import { fetchLigaOleRivals } from '@/match/ligaOle/fetchLigaOleTeams';
 import {
   createLigaOle,
   managerOpponent,
-  roundsToTitle,
   roundMatches,
   availableRoundCount,
   LIGA_OLE_ROUNDS,
@@ -221,6 +220,13 @@ export function LigaOle() {
   const opp = active ? managerOpponent(active) : null;
   const pillCls = 'w-full py-4 font-display uppercase tracking-[0.18em] text-[13px] font-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2';
   const pillStyle = { backgroundColor: 'var(--color-neon-yellow)', color: '#000', borderRadius: 'var(--radius-md)' } as const;
+  // CTA "Avançar" — usado em DOIS lugares (acima e abaixo do chaveamento) pra
+  // ficar sempre à mão no mobile, sem precisar rolar de volta.
+  const advanceBtn = (
+    <button type="button" disabled={busy || !opp} onClick={playNext} className={pillCls} style={pillStyle}>
+      {busy ? 'Preparando a partida…' : <>Avançar <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
+    </button>
+  );
 
   return (
     <main className="min-h-screen bg-black text-white px-5 py-6 max-w-xl mx-auto">
@@ -324,18 +330,15 @@ export function LigaOle() {
 
             {error && <p className="text-danger text-[12px] text-center">{error}</p>}
 
-            <button type="button" disabled={busy || !opp} onClick={playNext} className={pillCls} style={pillStyle}>
-              {busy ? 'Preparando a partida…' : <>Jogar {LIGA_OLE_ROUNDS[active.roundIndex]} <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
-            </button>
-            <p className="text-center font-display uppercase tracking-[0.22em] text-[10px] font-black text-white/40 -mt-1">
-              {roundsToTitle(active)} {roundsToTitle(active) === 1 ? 'jogo' : 'jogos'} até o título
-            </p>
+            {advanceBtn}
           </div>
 
           {/* CHAVEAMENTO — section header no design system (sem ícone) */}
           <div className="flex flex-col gap-3">
             <SectionHeader>Chaveamento</SectionHeader>
             <BracketCompact key={active.roundIndex} liga={active} />
+            {/* CTA duplicado embaixo (mobile: à mão sem rolar de volta) */}
+            {advanceBtn}
           </div>
 
           <button type="button" onClick={reset} className="text-white/30 text-[11px] underline self-center hover:text-white/60">
