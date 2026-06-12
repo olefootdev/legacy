@@ -74,6 +74,8 @@ import {
 import { detectNarrativeArc, getArcFeedSpeed } from '@/match/quickNarrativeArcs';
 import { shouldAutoSwitchIntensity, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
+import { QUICK_PLAN_ENABLED } from '@/match/quickPlanClient';
+import MatchQuickEngaged from '@/pages/MatchQuickEngaged';
 
 const FIRST_HALF_MS = 45_000;
 const HALFTIME_MS = 10_000;
@@ -656,9 +658,19 @@ function buildAwayQuickRoster(opponent: OpponentStub, sessionKey: number): Quick
 }
 
 /**
- * Partida rápida: 25s + intervalo 5s + 25s; feed ao vivo; substituição altera `matchLineupBySlot` (mesmo reducer).
+ * Gate do Quick Match 2.0 (Fase C). Com VITE_QUICK_PLAN_ENABLED=1, a Partida
+ * Rápida roda no motor Python + Analyst Beats (MatchQuickEngaged). Sem a flag,
+ * o motor tick-by-tick legado abaixo segue intocado (default em produção).
  */
 export function MatchQuick() {
+  if (QUICK_PLAN_ENABLED) return <MatchQuickEngaged />;
+  return <MatchQuickLegacy />;
+}
+
+/**
+ * Partida rápida (legado): 25s + intervalo 5s + 25s; feed ao vivo; substituição altera `matchLineupBySlot` (mesmo reducer).
+ */
+function MatchQuickLegacy() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fcParam = searchParams.get('fc');

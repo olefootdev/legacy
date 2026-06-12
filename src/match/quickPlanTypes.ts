@@ -11,6 +11,12 @@
 export type MatchEventKind =
   | 'goal_home' | 'goal_away'
   | 'shot_home' | 'shot_away'
+  | 'chance_home' | 'chance_away'       // cara a cara perdido (quase-gol)
+  | 'save_home' | 'save_away'           // defensaça do goleiro
+  | 'woodwork_home' | 'woodwork_away'   // bola na trave
+  | 'counter_home' | 'counter_away'     // contra-ataque perigoso
+  | 'corner_home' | 'corner_away'       // escanteio
+  | 'buildup_home' | 'buildup_away'     // construção / posse trabalhada
   | 'yellow_home' | 'yellow_away'
   | 'red_home' | 'red_away'
   | 'injury_home' | 'injury_away'
@@ -65,6 +71,8 @@ export interface AnalystBeat {
   id: string;
   minute: number;
   half: 1 | 2;
+  /** Contexto do momento: ataque (fazer gol), defesa (salvar gol) ou leitura. */
+  intent?: 'attack' | 'defend' | 'neutral';
   insight: {
     text: string;
     primary_channel: MatchupChannel;
@@ -99,6 +107,8 @@ export interface MatchPlanEvent {
   minute: number;
   kind: MatchEventKind;
   actor_id?: string;
+  /** Nome do protagonista (v1.1+) — usado na comemoração de gol. */
+  actor_name?: string;
   actor_side: 'home' | 'away';
   xg?: number;
   weight_tier: MatchEventTier;
@@ -143,12 +153,13 @@ export interface MatchPlan {
   duration_ms: number;
 }
 
-/** Duração em ms da animação de cada tier no render condensado (FIX F). */
+/** Duração em ms da animação de cada tier. Ritmo CALMO (~55-60s): o jogo
+ *  respira pela barra de momento, cada lance tem espaço. Anti-frenético. */
 export const TIER_ANIMATION_MS: Record<MatchEventTier, number> = {
-  epic: 3500,
-  big: 1800,
-  normal: 500,
-  minor: 150,
+  epic: 3400,
+  big: 2300,
+  normal: 1500,
+  minor: 1000,
 };
 
 /** Tempo total estimado de render condensado de um plan completo. */

@@ -12,13 +12,15 @@
 import type { MatchPlan, QuickPlanDecision, QuickPlanFirstHalfState } from './quickPlanTypes';
 import type { PlayerEntity } from '@/entities/types';
 
+// optional chaining: em runtime de teste (tsx/node) import.meta.env é undefined.
+const ENV = (import.meta as { env?: Record<string, string | undefined> }).env;
+
 const API_BASE =
-  (import.meta.env.VITE_OLEFOOT_API_URL as string) ||
-  (import.meta.env.VITE_API_URL as string) ||
+  ENV?.VITE_OLEFOOT_API_URL ||
+  ENV?.VITE_API_URL ||
   'http://localhost:4000';
 
-export const QUICK_PLAN_ENABLED =
-  (import.meta.env.VITE_QUICK_PLAN_ENABLED as string) === '1';
+export const QUICK_PLAN_ENABLED = ENV?.VITE_QUICK_PLAN_ENABLED === '1';
 
 export interface QuickPlanPlayerPayload {
   id: string;

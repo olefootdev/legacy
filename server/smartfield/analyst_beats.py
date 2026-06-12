@@ -20,9 +20,13 @@ from typing import Any, Dict, List
 
 from matchup_matrix import ATTACK_CHANNELS, CHANNEL_LABELS
 
-BEAT_MINUTES_FULL = [18, 35, 58, 78]
-BEAT_MINUTES_SECOND_HALF = [58, 78]
-BEAT_WINDOW_MS = 5000
+# Minutos fixos das decisões do manager — ESPAÇADOS pra criar ritmo (respira →
+# tensão → alívio). 2 por tempo + o INTERVALO como reset tático central:
+#   1º tempo: 10', 30'  ·  INTERVALO (45')  ·  2º tempo: 60', 80'
+# Menos decisões e bem distantes = mais emoção por decisão (anti-frenético).
+BEAT_MINUTES_FULL = [10, 30, 60, 80]
+BEAT_MINUTES_SECOND_HALF = [60, 80]
+BEAT_WINDOW_MS = 6000
 
 # Gênero gramatical dos labels — concordância dos templates PT-BR
 CHANNEL_GENDER = {
@@ -65,6 +69,48 @@ def _trend(momentum_curve: List[float]) -> str:
     return "stable"
 
 
+# Verbo tático ofensivo por canal (curto, pt-BR). target_side=home.
+ATTACK_VERB = {
+    "ataque_central": "Joga pelo meio",
+    "corredor_esquerdo": "Ataca pela esquerda",
+    "corredor_direito": "Ataca pela direita",
+    "criacao": "Cadencia e cria",
+    "bola_parada": "Aposta na bola parada",
+    "pressao": "Pressão alta!",
+}
+# Verbo tático defensivo por canal (trava a ameaça deles). target_side=away.
+DEFEND_VERB = {
+    "ataque_central": "Fecha o meio deles",
+    "corredor_esquerdo": "Fecha a esquerda",
+    "corredor_direito": "Fecha a direita",
+    "criacao": "Marca a criação deles",
+    "bola_parada": "Atenção na bola parada",
+    "pressao": "Segura o ímpeto deles",
+}
+
+
+def _attack_choice(minute: int, ch: str, edge: float, tag: str) -> Dict[str, Any]:
+    return {
+        "id": f"beat-{minute}-{tag}",
+        "label": ATTACK_VERB.get(ch, "Ataca"),
+        "channel": ch,
+        "target_side": "home",
+        # Canal forte → peso bom; canal fraco → armadilha (negativo).
+        "weight": round(0.06 + edge * 0.30, 3),
+    }
+
+
+def _defend_choice(minute: int, ch: str, threat_edge: float, tag: str) -> Dict[str, Any]:
+    return {
+        "id": f"beat-{minute}-{tag}",
+        "label": DEFEND_VERB.get(ch, "Recua o bloco"),
+        "channel": ch,
+        "target_side": "away",
+        # Travar uma ameaça real vale; travar o que não assusta vale pouco.
+        "weight": round(max(0.03, 0.05 + threat_edge * 0.16), 3),
+    }
+
+
 def build_beat(
     rng: random.Random,
     minute: int,
@@ -78,82 +124,125 @@ def build_beat(
     away_score: int,
 ) -> Dict[str, Any]:
     atk_edges = {ch: home_matrix[ch]["edge"] for ch in ATTACK_CHANNELS}
-    best = max(atk_edges, key=lambda ch: atk_edges[ch])
-    worst = min(atk_edges, key=lambda ch: atk_edges[ch])
-    if worst == best:  # edges uniformes: evita opção duplicada
-        worst = next(ch for ch in ATTACK_CHANNELS if ch != best)
     away_edges = {ch: away_matrix[ch]["edge"] for ch in ATTACK_CHANNELS}
-    threat = max(away_edges, key=lambda ch: away_edges[ch])
-
+    atk_rank = sorted(ATTACK_CHANNELS, key=lambda ch: atk_edges[ch], reverse=True)
+    threat_rank = sorted(ATTACK_CHANNELS, key=lambda ch: away_edges[ch], reverse=True)
+    best, worst = atk_rank[0], atk_rank[-1]
+    threat, threat2 = threat_rank[0], threat_rank[1]
     trend = _trend(momentum_curve)
+    diff = home_score - away_score  # >0 ganhando, <0 perdendo
+    mom = momentum_curve[-1] if momentum_curve else 50.0
+
+    # INTENÇÃO do momento: o jogo está no ATAQUE da casa, na DEFESA, ou neutro?
+    # Momentum manda; placar dá um empurrão (atrás → ataca; na frente → segura).
+    score = mom + (-6 if diff < 0 else 5 if diff > 0 and trend != "rising" else 0)
+    if score >= 57:
+        intent = "attack"
+    elif score <= 43:
+        intent = "defend"
+    else:
+        intent = "neutral"
+
     lb = CHANNEL_LABELS[best]
-    lw = CHANNEL_LABELS[worst]
     lt = CHANNEL_LABELS[threat]
 
-    # --- Insight: leitura do cenário em PT-BR (template local, custo zero) ---
-    if atk_edges[best] > 0.05:
-        opening = rng.choice([
-            f"O {away_short} sofre {_em(best)} {lb} — o espaço está lá, mas ainda falta transformar em chegada.",
-            f"Leitura clara: {_art(best)} {lb} é onde o {away_short} mais se expõe.",
-            f"O confronto setorial aponta: {_art(best)} {lb} é o caminho menos defendido pelo {away_short}.",
+    # --- Insight COMPACTO (pt-BR) — enquadrado pela intenção do momento ---
+    if intent == "attack":
+        text = rng.choice([
+            f"CHANCE! {_art(best).capitalize()} {lb} tá livre — é gol na veia.",
+            f"PRA CIMA! O {away_short} cede {_em(best)} {lb}.",
+            f"AGORA! Brecha {_em(best)} {lb}, ataca!",
+        ])
+    elif intent == "defend":
+        text = rng.choice([
+            f"PERIGO! Eles vêm {_em(threat)} {lt} — segura o gol.",
+            f"ATENÇÃO! {_art(threat).capitalize()} {lt} deles tá pegando fogo.",
+            f"RECUA! O {away_short} pressiona {_em(threat)} {lt}.",
         ])
     else:
-        opening = rng.choice([
-            f"Jogo truncado: o {away_short} fecha bem todos os setores. {_art(best).upper()} {lb} ainda é a brecha menos vigiada.",
-            f"O {away_short} está compacto — nenhum setor cede fácil, mas {_art(best)} {lb} é o menos protegido.",
-        ])
-    if away_edges[threat] > 0.05:
-        threat_txt = f" Do outro lado, o perigo mora {_em(threat)} {lt} deles."
+        opening = (f"{_art(best).capitalize()} {lb} tá livre." if atk_edges[best] > 0.05
+                   else f"Jogo travado — tenta {_em(best)} {lb}.")
+        tail = f" Cuidado com {_art(threat)} {lt} deles." if away_edges[threat] > 0.08 else " Atrás você controla."
+        text = opening + tail
+
+    # --- Opções moldadas pela intenção (ataca = fazer gol; defende = salvar) ---
+    a_ch = atk_rank[0] if (minute // 20) % 2 == 0 else atk_rank[1]
+    b_ch = threat if (minute // 17) % 2 == 0 else threat2
+
+    if intent == "attack":
+        # Dois caminhos pro gol + uma armadilha (forçar o canal fechado).
+        c2 = next((c for c in atk_rank if c != a_ch), worst)
+        choices = [
+            _attack_choice(minute, a_ch, atk_edges[a_ch], "atk1"),
+            _attack_choice(minute, c2, atk_edges[c2], "atk2"),
+            {
+                "id": f"beat-{minute}-trap",
+                "label": ATTACK_VERB.get(worst, "Insiste"),
+                "channel": worst, "target_side": "home",
+                "weight": round(min(-0.04, atk_edges[worst] * 0.18), 3),
+            },
+        ]
+    elif intent == "defend":
+        # Duas formas de SALVAR o gol + um contra-ataque rápido.
+        choices = [
+            _defend_choice(minute, threat, away_edges[threat], "def1"),
+            _defend_choice(minute, threat2, away_edges[threat2], "def2"),
+            {**_attack_choice(minute, best, atk_edges[best], "counter"),
+             "label": "Sai no contra-ataque"},
+        ]
     else:
-        threat_txt = f" Defensivamente o seu time controla — {_art(threat)} {lt} deles ainda não assustou."
-    momentum_txt = {
-        "rising": " Seu time cresce no jogo.",
-        "falling": " O momento é deles agora — cuidado.",
-        "stable": "",
-    }[trend]
-    text = opening + threat_txt + momentum_txt
+        choices = [
+            _attack_choice(minute, a_ch, atk_edges[a_ch], "atk"),
+            _defend_choice(minute, b_ch, away_edges[b_ch], "def"),
+        ]
+        if diff < 0:
+            c_ch = next((c for c in atk_rank if c != a_ch), worst)
+            choices.append(_attack_choice(minute, c_ch, atk_edges[c_ch], "push"))
+        elif diff > 0:
+            choices.append({
+                "id": f"beat-{minute}-park", "label": "Recua o bloco",
+                "channel": threat, "target_side": "away",
+                "weight": round(max(0.03, 0.04 + away_edges[threat] * 0.10), 3),
+            })
+        else:
+            choices.append({
+                "id": f"beat-{minute}-trap", "label": ATTACK_VERB.get(worst, "Insiste"),
+                "channel": worst, "target_side": "home",
+                "weight": round(min(-0.04, atk_edges[worst] * 0.18), 3),
+            })
 
-    # --- Decisões: peso proporcional aos edges REAIS ---
-    exploit_w = round(max(0.06, 0.08 + atk_edges[best] * 0.14), 3)
-    shield_w = round(max(0.04, 0.05 + away_edges[threat] * 0.12), 3)
-    trap_w = round(min(-0.04, atk_edges[worst] * 0.15), 3)
-
-    choices = [
-        {
-            "id": f"beat-{minute}-exploit",
-            "label": f"Atacar {_por(best)} {lb}",
-            "channel": best,
-            "target_side": "home",
-            "weight": exploit_w,
-        },
-        {
-            "id": f"beat-{minute}-shield",
-            "label": f"Fechar {_art(threat)} {lt} deles",
-            "channel": threat,
-            "target_side": "away",
-            "weight": shield_w,
-        },
-        {
-            "id": f"beat-{minute}-trap",
-            "label": f"Insistir {_em(worst)} {lw}",
-            "channel": worst,
-            "target_side": "home",
-            "weight": trap_w,
-        },
-    ]
-    rng.shuffle(choices)
+    # Dedup por canal+lado (evita duas opções idênticas) e embaralha.
+    seen = set()
+    uniq = []
+    for c in choices:
+        key = (c["channel"], c["target_side"])
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq.append(c)
+    while len(uniq) < 3:
+        # Completa com um canal ofensivo ainda não usado.
+        for c in atk_rank:
+            if (c, "home") not in seen:
+                uniq.append(_attack_choice(minute, c, atk_edges[c], f"alt{len(uniq)}"))
+                seen.add((c, "home"))
+                break
+        else:
+            break
+    rng.shuffle(uniq)
 
     return {
         "id": f"beat-{minute}",
         "minute": minute,
         "half": half,
+        "intent": intent,  # attack | defend | neutral — enquadra a UI (CHANCE/PERIGO)
         "insight": {
             "text": text,
             "primary_channel": best,
             "threat_channel": threat,
             "momentum_trend": trend,
         },
-        "choices": choices,
+        "choices": uniq,
         "window_ms": BEAT_WINDOW_MS,
     }
 

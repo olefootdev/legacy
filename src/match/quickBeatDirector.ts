@@ -43,15 +43,30 @@ export interface BeatVerdict {
   text: string;
 }
 
+export type QuickFeedKind =
+  | 'insight' | 'decision' | 'halftime'
+  | 'goal_home' | 'goal_away'
+  | 'save' | 'chance' | 'woodwork' | 'counter' | 'penalty' | 'red';
+
 export interface QuickPlanFeedItem {
   id: string;
   minute: number;
-  kind: 'insight' | 'decision' | 'goal_home' | 'goal_away' | 'red' | 'halftime';
+  kind: QuickFeedKind;
   text: string;
+  /** Lado do protagonista — pra foto/realce no feed (item 8). */
+  side?: 'home' | 'away';
+  /** actor_id do evento, quando houver — usado pra puxar a foto do jogador. */
+  actorId?: string;
 }
 
 /** Feed enxuto: itens de alto sinal apenas (tese "dois planos" da spec). */
 export const QUICK_PLAN_FEED_MAX = 10;
+
+/** Quase-gols que uma boa leitura pode CONVERTER em gol (ou que punem). */
+const NEAR_MISS_HOME = new Set<MatchPlanEvent['kind']>(['shot_home', 'chance_home', 'save_home', 'woodwork_home']);
+const NEAR_MISS_AWAY = new Set<MatchPlanEvent['kind']>(['shot_away', 'chance_away', 'save_away', 'woodwork_away']);
+/** Ameaças REAIS do adversário que o escudo neutraliza (chute fraco fica de fora). */
+const THREAT_AWAY = new Set<MatchPlanEvent['kind']>(['goal_away', 'chance_away', 'save_away', 'woodwork_away']);
 
 /** Concordância PT-BR por canal — espelha CHANNEL_GENDER do analyst_beats.py. */
 const CHANNEL_PT: Record<MatchupChannel, { label: string; em: string; por: string }> = {
@@ -97,8 +112,8 @@ function upgradeToHomeGoal(e: MatchPlanEvent, ch: MatchupChannel): MatchPlanEven
     ...e,
     kind: 'goal_home',
     weight_tier: 'epic',
-    text: `${e.minute}' — GOL! A aposta ${por} ${label} paga — jogada desenhada no banco termina na rede!`,
-    reason: 'sua leitura abriu o canal',
+    text: `${e.minute}' — GOOOL! Você mandou atacar ${por} ${label} e deu certo — bola na rede!`,
+    reason: 'sua leitura abriu o caminho',
     decision_influenced: true,
   };
 }
@@ -109,8 +124,8 @@ function downgradeHomeGoal(e: MatchPlanEvent, ch: MatchupChannel): MatchPlanEven
     ...e,
     kind: 'shot_home',
     weight_tier: 'normal',
-    text: `${e.minute}' — Quase! A insistência ${em} ${label} esbarra na marcação que já esperava.`,
-    reason: 'canal fechado — a leitura custou a chance',
+    text: `${e.minute}' — Bateu na trave da insistência ${em} ${label}: a marcação já esperava. Faltou ler melhor.`,
+    reason: 'canal fechado — a teimosia custou',
     decision_influenced: true,
   };
 }
@@ -121,7 +136,7 @@ function downgradeAwayGoal(e: MatchPlanEvent, ch: MatchupChannel): MatchPlanEven
     ...e,
     kind: 'shot_away',
     weight_tier: 'big',
-    text: `${e.minute}' — A trava funciona! O perigo deles ${CHANNEL_PT[ch]?.em ?? 'no'} ${label} morre na sua marcação ajustada.`,
+    text: `${e.minute}' — Travou! Você fechou a ${label} deles e o perigo morreu na marcação. Leitura cirúrgica.`,
     reason: 'sua decisão defensiva segurou o canal',
     decision_influenced: true,
   };
@@ -132,8 +147,8 @@ function upgradeToAwayGoal(e: MatchPlanEvent): MatchPlanEvent {
     ...e,
     kind: 'goal_away',
     weight_tier: 'big',
-    text: `${e.minute}' — Punição imediata: o adversário acha o espaço que a sua aposta abriu e marca.`,
-    reason: 'escolha ruim cobrou o preço',
+    text: `${e.minute}' — Deu ruim: o adversário achou o buraco que a sua aposta deixou e não perdoou.`,
+    reason: 'escolha errada cobrou o preço',
     decision_influenced: true,
   };
 }
@@ -159,9 +174,10 @@ export function applyDecisionToRemainingEvents(opts: {
     if (i < fromIndex || e.minute < beat.minute || e.minute > halfEnd) return e;
 
     if (choice.target_side === 'home' && w > 0) {
-      // Explorar canal com vantagem: chutes no canal podem virar gol
-      if (e.kind === 'shot_home' && e.channel === choice.channel) {
-        const p = Math.min(0.45, (e.xg ?? 0.1) * w * 3.0);
+      // Explorar canal com vantagem: quase-gols do home no canal podem virar gol
+      // (cara a cara, defensaça e chute de fora — todos "quase" que a leitura converte)
+      if (NEAR_MISS_HOME.has(e.kind) && e.channel === choice.channel) {
+        const p = Math.min(0.5, (e.xg ?? 0.12) * w * 3.2 + 0.05);
         if (rng.next() < p) {
           flips += 1;
           return upgradeToHomeGoal(e, choice.channel);
@@ -175,16 +191,17 @@ export function applyDecisionToRemainingEvents(opts: {
           return downgradeHomeGoal(e, choice.channel);
         }
       }
-      if (e.kind === 'shot_away') {
-        const p = Math.min(0.35, (e.xg ?? 0.1) * Math.abs(w) * 1.5);
+      if (NEAR_MISS_AWAY.has(e.kind)) {
+        const p = Math.min(0.35, (e.xg ?? 0.1) * Math.abs(w) * 1.6 + 0.03);
         if (rng.next() < p) {
           flips += 1;
           return upgradeToAwayGoal(e);
         }
       }
     } else if (choice.target_side === 'away' && w > 0) {
-      // Escudo: gols do away naquele canal podem ser travados
-      if (e.kind === 'goal_away' && e.channel === choice.channel) {
+      // Escudo: ameaças REAIS do away naquele canal (gol/cara a cara/defensaça/
+      // trave) são neutralizadas. Chute fraco não precisa de escudo.
+      if (THREAT_AWAY.has(e.kind) && e.channel === choice.channel) {
         if (rng.next() < Math.min(0.6, w * 2.5)) {
           flips += 1;
           return downgradeAwayGoal(e, choice.channel);
@@ -195,6 +212,61 @@ export function applyDecisionToRemainingEvents(opts: {
   });
 
   return { events: out, flips };
+}
+
+/**
+ * Jogar com um a menos (vermelho) PESA no resto do jogo: parte dos gols da casa
+ * vira só chute e parte dos quase-gols do adversário vira gol. Determinístico.
+ */
+export function applyManDownPenalty(opts: {
+  events: MatchPlanEvent[];
+  fromIndex: number;
+  seed: string;
+}): MatchPlanEvent[] {
+  const { events, fromIndex, seed } = opts;
+  const rng = new SpiritRng(hashSeed(`${seed}:mandown`));
+  return events.map((e, i) => {
+    if (i < fromIndex) return e;
+    if (e.kind === 'goal_home' && rng.next() < 0.35) {
+      return { ...e, kind: 'shot_home', weight_tier: 'normal', text: `${e.minute}' — Com um a menos, o time não chega: a finalização sai fraca.`, reason: 'desfalque numérico pesou' };
+    }
+    if ((e.kind === 'shot_away' || e.kind === 'chance_away') && rng.next() < 0.3) {
+      return { ...e, kind: 'goal_away', weight_tier: 'big', text: `${e.minute}' — O espaço deixado pelo expulso vira gol do adversário.`, reason: 'um a menos cobrou o preço' };
+    }
+    return e;
+  });
+}
+
+/**
+ * Efeito de uma SUBSTITUIÇÃO no meio do jogo (sem replan): o saldo de OVR entre
+ * quem entra e quem sai pesa no resto. Sub melhor pode transformar um quase-gol
+ * da casa em gol; sub pior pode esfriar um gol. Determinístico por seed+outId.
+ */
+export function applySubNudge(opts: {
+  events: MatchPlanEvent[];
+  fromIndex: number;
+  ovrDelta: number; // inOvr - outOvr (efetivo)
+  seed: string;
+  outId: string;
+}): MatchPlanEvent[] {
+  const { events, fromIndex, ovrDelta, seed, outId } = opts;
+  if (Math.abs(ovrDelta) < 3) return events; // troca neutra, sem efeito
+  const rng = new SpiritRng(hashSeed(`${seed}:sub:${outId}`));
+  const better = ovrDelta > 0;
+  const strength = Math.min(0.5, Math.abs(ovrDelta) / 30); // 3→0.1 … 15+→0.5
+  let used = false;
+  return events.map((e, i) => {
+    if (used || i < fromIndex) return e;
+    if (better && (e.kind === 'shot_home' || e.kind === 'chance_home') && rng.next() < strength) {
+      used = true;
+      return { ...e, kind: 'goal_home', weight_tier: 'big', text: `${e.minute}' — O reforço que entrou resolve — bola na rede!`, reason: 'sangue novo decidiu', decision_influenced: true };
+    }
+    if (!better && e.kind === 'goal_home' && rng.next() < strength) {
+      used = true;
+      return { ...e, kind: 'shot_home', weight_tier: 'normal', text: `${e.minute}' — A troca não encaixou: a jogada esfria e a finalização sai fraca.`, reason: 'substituição custou ritmo', decision_influenced: true };
+    }
+    return e;
+  });
 }
 
 /** Veredito por decisão, computado sobre os eventos REALMENTE exibidos. */
@@ -219,14 +291,14 @@ export function computeBeatVerdicts(
         return {
           ...base,
           kind: 'hit' as const,
-          text: `Sua leitura estava certa — o gol saiu ${por} ${label}.`,
+          text: `Mandou bem — o gol saiu ${por} ${label}, exatamente onde você apontou.`,
         };
       }
-      if (after.some((e) => e.kind === 'shot_home' && e.channel === d.channel)) {
+      if (after.some((e) => NEAR_MISS_HOME.has(e.kind) && e.channel === d.channel)) {
         return {
           ...base,
           kind: 'neutral' as const,
-          text: `A ideia era boa: o time chegou ${por} ${label}, faltou capricho na finalização.`,
+          text: `Quase! O time chegou ${por} ${label} — faltou o capricho na hora H.`,
         };
       }
       return {

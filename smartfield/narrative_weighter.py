@@ -50,7 +50,23 @@ def classify_event_weight(
     if kind.startswith("penalty_"):
         return "big"
 
-    # Chutes — tier depende do xG
+    # Trave — drama puro
+    if kind.startswith("woodwork_"):
+        return "big"
+
+    # Defensaça do goleiro — ato heroico (big se chance clara)
+    if kind.startswith("save_"):
+        return "big" if xg > 0.22 else "normal"
+
+    # Chance clara perdida (cara a cara) — quase-gol
+    if kind.startswith("chance_"):
+        return "big" if xg > 0.30 else "normal"
+
+    # Contra-ataque perigoso — ritmo
+    if kind.startswith("counter_"):
+        return "normal"
+
+    # Chutes de fora — tier depende do xG
     if kind.startswith("shot_"):
         if xg > 0.30:
             return "big"
@@ -65,6 +81,10 @@ def classify_event_weight(
     # Amarelo: normal
     if kind.startswith("yellow_"):
         return "normal"
+
+    # Construção (posse) e escanteio — atmosfera, peso leve
+    if kind.startswith("buildup_") or kind.startswith("corner_"):
+        return "minor"
 
     return "minor"
 

@@ -34,6 +34,8 @@ export function renderQuickFeedRichText(
     awayNames: string[];
     homeClassName: string;
     awayClassName: string;
+    /** Tamanho do nome em Moret (default 15px). */
+    fontSize?: string;
   },
 ): ReactNode {
   const refs = collectRefs(opts.homeShort, opts.awayShort, opts.homeNames, opts.awayNames);
@@ -64,7 +66,7 @@ export function renderQuickFeedRichText(
           fontFamily: 'var(--font-serif-hero)',
           fontStyle: 'italic',
           fontWeight: 700,
-          fontSize: '15px',
+          fontSize: opts.fontSize ?? '15px',
           letterSpacing: '0.01em',
         }}
       >

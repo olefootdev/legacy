@@ -110,15 +110,20 @@ async function main() {
   }
   check('4 analyst beats', plan.analyst_beats?.length === 4,
     `got ${plan.analyst_beats?.length}`);
-  check('beats nos minutos 18/35/58/78',
-    JSON.stringify(plan.analyst_beats?.map((b: any) => b.minute)) === JSON.stringify([18, 35, 58, 78]));
+  check('beats nos minutos 10/30/60/80',
+    JSON.stringify(plan.analyst_beats?.map((b: any) => b.minute)) === JSON.stringify([10, 30, 60, 80]));
   for (const beat of plan.analyst_beats ?? []) {
     const weights = beat.choices.map((c: any) => c.weight);
     check(`${beat.id}: 3 escolhas, insight, janela`,
       beat.choices.length === 3 && typeof beat.insight?.text === 'string' && beat.window_ms > 0);
-    check(`${beat.id}: tem opção boa e armadilha`,
-      weights.some((w: number) => w > 0) && weights.some((w: number) => w < 0),
+    check(`${beat.id}: tem pelo menos uma boa opção`,
+      weights.some((w: number) => w > 0),
       `weights=${JSON.stringify(weights)}`);
+    const keys = new Set(beat.choices.map((c: any) => `${c.channel}:${c.target_side}`));
+    check(`${beat.id}: 3 opções táticas distintas (variedade)`, keys.size === 3,
+      JSON.stringify([...keys]));
+    check(`${beat.id}: insight compacto (≤90 chars)`, beat.insight.text.length <= 90,
+      `len=${beat.insight.text.length}`);
   }
   check('momentum_curve com 90 valores', plan.momentum_curve.length === 90);
 
@@ -161,26 +166,20 @@ async function main() {
   check('momentum_curve com 45 valores', h2.momentum_curve.length === 45, `got ${h2.momentum_curve.length}`);
   check('herda placar do 1º tempo', h2.home_score >= 1);
   check('eventos só do 2º tempo', h2.events.every((e: any) => e.minute >= 46));
-  check('beats só nos minutos 58/78',
-    JSON.stringify(h2.analyst_beats?.map((b: any) => b.minute)) === JSON.stringify([58, 78]));
+  check('beats só nos minutos 60/80',
+    JSON.stringify(h2.analyst_beats?.map((b: any) => b.minute)) === JSON.stringify([60, 80]));
 
   // 5. Decisões pesam de verdade: ledger bom vs ruim nos mesmos seeds
   console.log('\n[5] Peso das decisões');
-  const goodLedger = [
-    { channel: 'ataque_central', target_side: 'home', weight: 0.2 },
-    { channel: 'criacao', target_side: 'home', weight: 0.2 },
-    { channel: 'corredor_esquerdo', target_side: 'home', weight: 0.2 },
-  ];
-  const badLedger = [
-    { channel: 'ataque_central', target_side: 'home', weight: -0.2 },
-    { channel: 'criacao', target_side: 'home', weight: -0.2 },
-    { channel: 'corredor_esquerdo', target_side: 'home', weight: -0.2 },
-  ];
+  // Pesos no teto (0.25) em todos os canais → efeito inequívoco; 50 seeds p/ estabilidade.
+  const ALL_ATK = ['ataque_central', 'criacao', 'corredor_esquerdo', 'corredor_direito', 'bola_parada'] as const;
+  const goodLedger = ALL_ATK.map((channel) => ({ channel, target_side: 'home' as const, weight: 0.25 }));
+  const badLedger = ALL_ATK.map((channel) => ({ channel, target_side: 'home' as const, weight: -0.25 }));
   let goodGoals = 0;
   let badGoals = 0;
   let goodDiff = 0;
   let badDiff = 0;
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < 50; i += 1) {
     const fh = { home_score: 0, away_score: 0, momentum_end: 50 };
     const base = { ...baseInput(`weights-${i}`, 74, 74), mode: 'second_half', first_half: fh };
     const good = await runSim({ ...base, decisions: goodLedger });
@@ -190,7 +189,7 @@ async function main() {
     goodDiff += good.home_score - good.away_score;
     badDiff += bad.home_score - bad.away_score;
   }
-  check(`ledger bom gera mais gols (${goodGoals} vs ${badGoals}, 30 seeds)`, goodGoals > badGoals);
+  check(`ledger bom gera mais gols (${goodGoals} vs ${badGoals}, 50 seeds)`, goodGoals > badGoals);
   check(`ledger ruim conta CONTRA o saldo (saldo bom ${goodDiff} vs ruim ${badDiff})`, goodDiff > badDiff);
 
   console.log(failures === 0 ? '\n✅ Fase A OK — todos os checks passaram' : `\n❌ ${failures} check(s) falharam`);

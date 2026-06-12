@@ -115,11 +115,12 @@ def team_strength(team_lineup: List[Dict[str, Any]], base_strength: int) -> floa
 
 
 def pick_zone(rng: random.Random, possession: str) -> str:
-    """Distribui posse em 3 zonas (def/mid/att) com bias pra meio."""
+    """Distribui posse em 3 zonas (def/mid/att). Mais presença no terço
+    ofensivo = mais lances de construção e chances (jogo com ritmo)."""
     r = rng.random()
-    if r < 0.30:
+    if r < 0.26:
         return "def"
-    if r < 0.75:
+    if r < 0.66:
         return "mid"
     return "att"
 
@@ -173,41 +174,107 @@ def pick_channel(rng: random.Random, matrix: Dict[str, Dict[str, Any]]) -> str:
     return ATTACK_CHANNELS[0]
 
 
+def _seeded_pick(options: List[str], minute: int, salt: int) -> str:
+    """Escolha estável (sem rng global) pra variar texto sem quebrar determinismo."""
+    return options[(minute * 7 + salt) % len(options)]
+
+
 def event_text(kind: str, actor_name: str, zone: str, minute: int, xg: float, tier: str) -> str:
-    """Texto humano-pronto pro feed do TS."""
-    flair = {
-        "epic": "!!",
-        "big": "!",
-        "normal": ".",
-        "minor": ".",
-    }[tier]
+    """Narração de resenha — direta, brasileira, com personalidade.
+
+    Frases curtas, voz de quem está vendo o jogo. Cada tipo de evento constrói
+    o ambiente: construção, chance clara, defensaça, trave, gol.
+    """
+    n = actor_name
+
     if kind == "goal_home":
         if tier == "epic":
-            return f"{minute}' — GOLAÇO de {actor_name}{flair} Estádio explode."
-        return f"{minute}' — {actor_name} marca! Bola no fundo da rede{flair}"
+            return _seeded_pick([
+                f"GOLAÇO! {n} decide no detalhe — pra história!",
+                f"{n} no ângulo! Que pintura, virou jogo!",
+                f"NÃO ACREDITO! {n} resolve no sufoco!",
+            ], minute, 1)
+        return _seeded_pick([
+            f"GOL! {n} empurrou pra rede, sem dó.",
+            f"{n} apareceu na hora certa. É gol!",
+            f"Pode comemorar — {n} fez o dele.",
+        ], minute, 2)
     if kind == "goal_away":
-        return f"{minute}' — Adversário marca contra a corrente{flair}"
+        return _seeded_pick([
+            "Calou o estádio. O adversário balançou a rede.",
+            "Levou. O outro lado aproveitou a brecha.",
+            "Gol do adversário, no contra-pé. Dói.",
+        ], minute, 3)
+
+    if kind == "chance_home":
+        return _seeded_pick([
+            f"CARA A CARA! {n} mandou por cima — era o gol feito.",
+            f"{n} perdeu o impossível! Faltou o capricho.",
+            f"Na cara do gol, {n} isolou. Que desperdício.",
+        ], minute, 4)
+    if kind == "chance_away":
+        return "O adversário perdeu cara a cara. Respira, torcida."
+
+    if kind == "save_home":
+        return _seeded_pick([
+            f"DEFENDAÇA! {n} carimbou e o goleiro voou pra espalmar.",
+            f"{n} obrigou o goleiro a fazer um milagre.",
+            f"Que bomba do {n}! O goleiro pegou no susto.",
+        ], minute, 5)
+    if kind == "save_away":
+        return "Chegou o adversário, mas o nosso goleiro garantiu."
+
+    if kind == "woodwork_home":
+        return _seeded_pick([
+            f"NA TRAVE! {n} carimbou o travessão, que azar!",
+            f"Quase! {n} acertou o pau. Faltou um nada.",
+        ], minute, 6)
+    if kind == "woodwork_away":
+        return "UFA! O adversário acertou a trave. Sobrou pra nós."
+
+    if kind == "counter_home":
+        return f"Contra-ataque puxado por {n} — o time voou!"
+    if kind == "counter_away":
+        return "Cuidado! Adversário saiu em velocidade no contra-ataque."
+
+    if kind == "corner_home":
+        return f"Escanteio. {n} cobra e a área vira fervura."
+    if kind == "corner_away":
+        return "Escanteio pro adversário. Atenção na bola parada."
+
+    if kind == "buildup_home":
+        return _seeded_pick([
+            f"{n} comanda o meio, time todo no toque.",
+            f"Posse trabalhada, {n} pedindo paciência.",
+            f"{n} segura a bola e organiza a saída.",
+        ], minute, 7)
+    if kind == "buildup_away":
+        return "Adversário com a bola, tentando montar o ataque."
+
     if kind == "shot_home":
-        if xg > 0.35:
-            return f"{minute}' — {actor_name} obriga o goleiro a defesa difícil{flair}"
-        return f"{minute}' — {actor_name} arrisca de fora; bola sai{flair}"
+        return _seeded_pick([
+            f"{n} arriscou de longe — passou raspando.",
+            f"Chute de fora do {n}, sem perigo real.",
+        ], minute, 8)
     if kind == "shot_away":
-        return f"{minute}' — Adversário finaliza; goleiro segura{flair}"
+        return "Adversário tentou de longe, o goleiro tranquilo."
+
     if kind == "yellow_home":
-        return f"{minute}' — Amarelo pra {actor_name} por falta tática{flair}"
+        return f"Amarelo pra {n}. Entrada dura, tem que segurar."
     if kind == "yellow_away":
-        return f"{minute}' — Amarelo pro adversário{flair}"
+        return "Amarelo pro adversário. Faltou e levou."
     if kind == "red_home":
-        return f"{minute}' — VERMELHO pra {actor_name}! Saída por entrada dura{flair}"
+        return f"VERMELHO pra {n}! Saiu mais cedo, time com um a menos."
     if kind == "red_away":
-        return f"{minute}' — Adversário expulso! Vantagem numérica{flair}"
+        return "EXPULSO! O adversário ficou com dez. Vantagem nossa!"
     if kind == "injury_home":
-        return f"{minute}' — {actor_name} cai com dores no gramado{flair}"
+        return f"{n} sentiu e caiu. Atenção no departamento médico."
     if kind == "penalty_home":
-        return f"{minute}' — PÊNALTI pra casa! {actor_name} pra bater{flair}"
+        return f"PÊNALTI PRA GENTE! {n} já pega a bola pra bater."
     if kind == "penalty_away":
-        return f"{minute}' — Pênalti pro adversário{flair}"
-    return f"{minute}' — Jogada construída por {actor_name}{flair}"
+        return "Pênalti pro adversário. Prende a respiração."
+
+    return f"{n} aparece na jogada."
 
 
 def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -305,15 +372,36 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         opp_strength = away_strength if possession == "home" else home_strength
         side_intensity = home_intensity if possession == "home" else away_intensity
 
+        # PÊNALTI (raro, só no ataque) — MARCADOR. O placar NÃO muda aqui:
+        # o cliente resolve (home = manager escolhe o batedor; away = auto).
+        penalty_awarded = zone == "att" and minute > start_minute and rng.random() < 0.018
+
         # Decide se houve TIRO (depende de zona, força ofensiva, momentum)
         shot_prob = 0.0
         if zone == "att":
-            shot_prob = 0.32 * intensity_mul.get(side_intensity, 1.0)
+            shot_prob = 0.42 * intensity_mul.get(side_intensity, 1.0)
             shot_prob *= 1 + (side_strength - 70) / 100
             mom_factor = (momentum_home - 50) if possession == "home" else (50 - momentum_home)
             shot_prob *= 1 + mom_factor / 200
 
-        if rng.random() < shot_prob:
+        if penalty_awarded:
+            # Batedor sugerido = melhor finalizador em campo (cliente pode trocar).
+            pen_actor = max(lineup_active, key=lambda p: p["finalizacao"])
+            kind = "penalty_" + possession
+            events.append({
+                "minute": minute,
+                "kind": kind,
+                "actor_id": pen_actor["id"],
+                "actor_name": pen_actor["name"],
+                "actor_side": possession,
+                "xg": 0.76,
+                "weight_tier": "epic",
+                "zone": "att",
+                "channel": "finalizacao_vs_gk",
+                "reason": "pênalti",
+                "text": event_text(kind, pen_actor["name"], zone, minute, 0, "epic"),
+            })
+        elif rng.random() < shot_prob:
             # Canal de origem da jogada — vem da matchup matrix
             matrix_side = home_matrix if possession == "home" else away_matrix
             channel = pick_channel(rng, matrix_side)
@@ -363,7 +451,27 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     outcome = "save"
 
             is_goal = outcome == "goal"
-            kind = ("goal_" if is_goal else "shot_") + possession
+
+            # Mapeia o desfecho do chute em um EVENTO RICO (constrói ambiente):
+            #   goal → gol | save → defensaça do goleiro | block→ cara a cara
+            #   bloqueado ou escanteio | wide → cara a cara perdido ou chute fora
+            # Trave (woodwork) entra como drama em chutes de boa chance.
+            suffix = possession
+            if is_goal:
+                base = "goal"
+            elif outcome == "save":
+                base = "save"
+            elif outcome == "block":
+                base = "chance" if xg > 0.22 else "corner"
+            elif outcome == "wide":
+                base = "chance" if xg > 0.30 else "shot"
+            else:  # miss_far
+                base = "shot"
+            # Bola na trave: drama extra em chutes perigosos que não viraram gol
+            if not is_goal and xg > 0.25 and rng.random() < 0.10:
+                base = "woodwork"
+
+            kind = f"{base}_{suffix}"
             tier = classify_event_weight(
                 kind=kind,
                 minute=minute,
@@ -376,6 +484,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 "minute": minute,
                 "kind": kind,
                 "actor_id": actor["id"],
+                "actor_name": actor["name"],
                 "actor_side": possession,
                 "xg": round(xg, 3),
                 "weight_tier": tier,
@@ -393,6 +502,47 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     momentum_home = max(5, momentum_home - 12)
                 stats = scorer_counts.setdefault(actor["id"], {"goals": 0, "name": actor["name"]})
                 stats["goals"] += 1
+            elif base in ("chance", "save", "woodwork"):
+                # Quase-gol mexe com o momentum (pressão real)
+                swing = 4 if possession == "home" else -4
+                momentum_home = max(5, min(95, momentum_home + swing))
+        else:
+            # SEM chute neste minuto: emite evento de CONSTRUÇÃO pra dar ritmo.
+            # Contra-ataque, escanteio ou posse trabalhada — o jogo "respira".
+            # Densidade reduzida (anti-frenético): o jogo respira pela barra de
+            # momento; construção aparece com parcimônia pra cada lance pesar.
+            build_prob = 0.0
+            if zone == "att":
+                build_prob = 0.30
+            elif zone == "mid":
+                build_prob = 0.16
+            if rng.random() < build_prob:
+                matrix_side = home_matrix if possession == "home" else away_matrix
+                channel = pick_channel(rng, matrix_side)
+                edge = matrix_side[channel]["edge"]
+                mom_for_side = (momentum_home - 50) if possession == "home" else (50 - momentum_home)
+                r = rng.random()
+                if zone == "att" and r < 0.34:
+                    base = "corner"
+                elif mom_for_side > 8 and r < 0.6:
+                    base = "counter"
+                else:
+                    base = "buildup"
+                kind = f"{base}_{possession}"
+                tier = classify_event_weight(kind, minute, home_score, away_score, 0.0)
+                events.append({
+                    "minute": minute,
+                    "kind": kind,
+                    "actor_id": actor["id"],
+                    "actor_name": actor["name"],
+                    "actor_side": possession,
+                    "xg": 0,
+                    "weight_tier": tier,
+                    "zone": zone,
+                    "channel": channel,
+                    "reason": channel_reason(channel, edge, False),
+                    "text": event_text(kind, actor["name"], zone, minute, 0, tier),
+                })
 
         # Eventos disciplinares (raros)
         if rng.random() < 0.025 and zone != "att":
