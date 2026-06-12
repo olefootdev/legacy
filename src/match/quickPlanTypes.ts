@@ -28,6 +28,73 @@ export type NarrativeArc =
   | 'collapse'
   | 'balanced';
 
+/** Canais de confronto setorial da Matchup Matrix (Fase A — Quick 2.0). */
+export type MatchupChannel =
+  | 'ataque_central'
+  | 'corredor_esquerdo'
+  | 'corredor_direito'
+  | 'criacao'
+  | 'bola_parada'
+  | 'finalizacao_vs_gk'
+  | 'pressao';
+
+export interface MatchupChannelEntry {
+  att: number;
+  def: number;
+  /** -1..+1 — positivo = vantagem do atacante nesse canal. */
+  edge: number;
+  label: string;
+}
+
+export interface MatchupMatrix {
+  home: Record<MatchupChannel, MatchupChannelEntry>;
+  away: Record<MatchupChannel, MatchupChannelEntry>;
+}
+
+export interface AnalystBeatChoice {
+  id: string;
+  label: string;
+  channel: MatchupChannel;
+  /** 'home' = mexe no xG do próprio time; 'away' = escolha defensiva (reduz xG deles). */
+  target_side: 'home' | 'away';
+  /** Peso calculado pelo Python a partir dos edges reais. Negativo = armadilha. */
+  weight: number;
+}
+
+export interface AnalystBeat {
+  id: string;
+  minute: number;
+  half: 1 | 2;
+  insight: {
+    text: string;
+    primary_channel: MatchupChannel;
+    threat_channel: MatchupChannel;
+    momentum_trend: 'rising' | 'falling' | 'stable';
+  };
+  choices: AnalystBeatChoice[];
+  window_ms: number;
+}
+
+/** Decisão tomada pelo manager — ecoa de volta os pesos que o Python calculou. */
+export interface QuickPlanDecision {
+  beat_id: string;
+  choice_id: string;
+  channel: MatchupChannel;
+  target_side: 'home' | 'away';
+  weight: number;
+}
+
+/** Estado do 1º tempo enviado no replan (mode: 'second_half'). */
+export interface QuickPlanFirstHalfState {
+  home_score: number;
+  away_score: number;
+  momentum_end?: number;
+  cards_home?: number;
+  cards_away?: number;
+  sent_off_home?: number;
+  sent_off_away?: number;
+}
+
 export interface MatchPlanEvent {
   minute: number;
   kind: MatchEventKind;
@@ -36,6 +103,10 @@ export interface MatchPlanEvent {
   xg?: number;
   weight_tier: MatchEventTier;
   zone: FieldZone;
+  /** Canal da Matchup Matrix de onde a jogada nasceu (chutes/gols, v1.1+). */
+  channel?: MatchupChannel;
+  /** Justificativa setorial humana-pronta ("corredor esquerdo dominado"). */
+  reason?: string;
   text: string;
 }
 
@@ -48,14 +119,22 @@ export interface MatchPlanMvp {
 }
 
 export interface MatchPlan {
-  version: '1.0';
+  version: '1.0' | '1.1';
   seed: string;
+  /** 'full' = 90'; 'second_half' = replan dos minutos 46-90 (v1.1+). */
+  mode?: 'full' | 'second_half';
+  /** 1 no full; 46 no replan de 2º tempo (v1.1+). */
+  start_minute?: number;
   home_short: string;
   away_short: string;
   home_score: number;
   away_score: number;
   events: MatchPlanEvent[];
-  momentum_curve: number[]; // 90 valores 0-100 (perspectiva home)
+  momentum_curve: number[]; // 0-100 perspectiva home (90 valores full; 45 no second_half)
+  /** Cruzamento setorial dos 22 jogadores — fonte dos beats e do gating de gol (v1.1+). */
+  matchup_matrix?: MatchupMatrix;
+  /** Leituras do Analista com decisões pesadas (v1.1+). */
+  analyst_beats?: AnalystBeat[];
   mvp_projection: MatchPlanMvp | null;
   narrative_arc: NarrativeArc;
   generated_at_ms: number;

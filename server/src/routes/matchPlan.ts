@@ -37,12 +37,34 @@ interface QuickPlanTeamInput {
   lineup: QuickPlanPlayerInput[];
 }
 
+interface QuickPlanDecisionInput {
+  beat_id?: string;
+  choice_id?: string;
+  channel: string;
+  target_side?: 'home' | 'away';
+  weight: number;
+}
+
+interface QuickPlanFirstHalfInput {
+  home_score: number;
+  away_score: number;
+  momentum_end?: number;
+  cards_home?: number;
+  cards_away?: number;
+  sent_off_home?: number;
+  sent_off_away?: number;
+}
+
 interface QuickPlanRequestBody {
   seed: string;
   home_short: string;
   away_short: string;
   home_team: QuickPlanTeamInput;
   away_team: QuickPlanTeamInput;
+  /** Fase A (Quick 2.0): 'second_half' = replan dos minutos 46-90. */
+  mode?: 'full' | 'second_half';
+  first_half?: QuickPlanFirstHalfInput;
+  decisions?: QuickPlanDecisionInput[];
 }
 
 const simpleCache = new Map<string, { ts: number; plan: unknown }>();
@@ -96,6 +118,9 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
   if (!body?.seed || !body.home_team || !body.away_team) {
     return c.json({ ok: false, error: 'campos obrigatórios: seed, home_team, away_team' }, 400);
   }
+  if (body.mode === 'second_half' && !body.first_half) {
+    return c.json({ ok: false, error: "mode 'second_half' exige first_half" }, 400);
+  }
 
   const cacheKey = JSON.stringify({
     s: body.seed,
@@ -106,6 +131,13 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     as: body.away_team.strength,
     hl: body.home_team.lineup.map((p) => p.id).join(','),
     al: body.away_team.lineup.map((p) => p.id).join(','),
+    m: body.mode ?? 'full',
+    fh: body.first_half
+      ? `${body.first_half.home_score}-${body.first_half.away_score}-${body.first_half.momentum_end ?? 50}`
+      : '',
+    d: (body.decisions ?? [])
+      .map((d) => `${d.channel}:${d.target_side ?? 'home'}:${d.weight}`)
+      .join('|'),
   });
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {

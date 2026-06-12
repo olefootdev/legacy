@@ -9,7 +9,7 @@
  * Sem a flag, MatchQuick continua usando o loop tick-by-tick (compat).
  */
 
-import type { MatchPlan } from './quickPlanTypes';
+import type { MatchPlan, QuickPlanDecision, QuickPlanFirstHalfState } from './quickPlanTypes';
 import type { PlayerEntity } from '@/entities/types';
 
 const API_BASE =
@@ -43,6 +43,12 @@ export interface FetchQuickPlanInput {
   intensity?: 'defensive' | 'balanced' | 'offensive';
   homeLineup: QuickPlanPlayerPayload[];
   awayLineup: QuickPlanPlayerPayload[];
+  /** 'second_half' = replan dos minutos 46-90 com o ledger de decisões (Fase A). */
+  mode?: 'full' | 'second_half';
+  /** Obrigatório quando mode='second_half': estado real do 1º tempo. */
+  firstHalf?: QuickPlanFirstHalfState;
+  /** Ledger de decisões dos analyst beats — pesos calculados pelo Python, ecoados de volta. */
+  decisions?: QuickPlanDecision[];
 }
 
 /** Converte PlayerEntity local → payload do Python (campos achatados). */
@@ -84,6 +90,9 @@ export async function fetchQuickPlan(input: FetchQuickPlanInput): Promise<MatchP
           strength: input.awayStrength,
           lineup: input.awayLineup,
         },
+        mode: input.mode ?? 'full',
+        first_half: input.firstHalf,
+        decisions: input.decisions,
       }),
     });
     if (!res.ok) {
