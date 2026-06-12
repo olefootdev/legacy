@@ -107,6 +107,8 @@ export interface MatchPlanEvent {
   channel?: MatchupChannel;
   /** Justificativa setorial humana-pronta ("corredor esquerdo dominado"). */
   reason?: string;
+  /** Marcado client-side quando uma decisão do manager alterou o desfecho. */
+  decision_influenced?: boolean;
   text: string;
 }
 

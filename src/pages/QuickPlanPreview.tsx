@@ -10,15 +10,20 @@
  * uma sessão futura via flag VITE_QUICK_PLAN_ENABLED=1.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
 import {
   fetchQuickPlan,
   playerToQuickPlanPayload,
+  type FetchQuickPlanInput,
   type QuickPlanPlayerPayload,
 } from '@/match/quickPlanClient';
-import { QuickPlanPlayer } from '@/match/QuickPlanPlayer';
+import {
+  QuickPlanPlayer,
+  type QuickPlanHalftimeContext,
+  type QuickPlanPlayResult,
+} from '@/match/QuickPlanPlayer';
 import type { MatchPlan } from '@/match/quickPlanTypes';
 import { buildFatigueByIdMap, getEffectiveFatigue } from '@/systems/fatigue';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
@@ -34,6 +39,34 @@ export default function QuickPlanPreview() {
   const [plan, setPlan] = useState<MatchPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<QuickPlanPlayResult | null>(null);
+  const lastInputRef = useRef<FetchQuickPlanInput | null>(null);
+
+  /** Seam do intervalo: replaneja o 2º tempo no Python com o ledger real. */
+  const onSecondHalf = useCallback(async (ctx: QuickPlanHalftimeContext) => {
+    const base = lastInputRef.current;
+    if (!base) return null;
+    return fetchQuickPlan({
+      ...base,
+      mode: 'second_half',
+      firstHalf: {
+        home_score: ctx.homeScore,
+        away_score: ctx.awayScore,
+        momentum_end: ctx.momentumEnd,
+        cards_home: ctx.cardsHome,
+        cards_away: ctx.cardsAway,
+        sent_off_home: ctx.sentOffHome,
+        sent_off_away: ctx.sentOffAway,
+      },
+      decisions: ctx.ledger.map((d) => ({
+        beat_id: d.beat_id,
+        choice_id: d.choice_id,
+        channel: d.channel,
+        target_side: d.target_side,
+        weight: d.weight,
+      })),
+    });
+  }, []);
 
   const runSim = async () => {
     setLoading(true);
@@ -67,7 +100,7 @@ export default function QuickPlanPreview() {
       }));
 
       const seed = `${club.shortName}-${nextFixture?.opponent?.shortName ?? 'TST'}-${Date.now()}`;
-      const result = await fetchQuickPlan({
+      const input: FetchQuickPlanInput = {
         seed,
         homeShort: club.shortName,
         awayShort: nextFixture?.opponent?.shortName ?? 'OPP',
@@ -76,12 +109,15 @@ export default function QuickPlanPreview() {
         intensity: 'balanced',
         homeLineup,
         awayLineup,
-      });
-      if (!result) {
+      };
+      const fetched = await fetchQuickPlan(input);
+      if (!fetched) {
         setError('Backend retornou null. Verifique se o servidor Hono está rodando + python3 disponível.');
         return;
       }
-      setPlan(result);
+      lastInputRef.current = input;
+      setResult(null);
+      setPlan(fetched);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -136,9 +172,21 @@ export default function QuickPlanPreview() {
         {plan && (
           <>
             <div className="mb-3 text-[11px] text-white/50 tabular-nums">
-              Gerado em {plan.duration_ms}ms · {plan.events.length} eventos · arco {plan.narrative_arc}
+              Gerado em {plan.duration_ms}ms · {plan.events.length} eventos · {plan.analyst_beats?.length ?? 0} beats · arco {plan.narrative_arc}
             </div>
-            <QuickPlanPlayer plan={plan} />
+            {/* key=seed: plano novo = instância nova (refs do engine não sobrevivem à troca) */}
+            <QuickPlanPlayer
+              key={plan.seed}
+              plan={plan}
+              onSecondHalf={onSecondHalf}
+              onComplete={(_p, r) => setResult(r)}
+            />
+            {result && (
+              <div className="mt-3 text-[11px] text-white/50 tabular-nums">
+                Leitura {result.reading.good}/{result.reading.total} · {result.ledger.length} decisões ·{' '}
+                {result.replanned ? '2º tempo replanejado pelo Python' : '2º tempo baseline (replan indisponível)'}
+              </div>
+            )}
           </>
         )}
       </div>
