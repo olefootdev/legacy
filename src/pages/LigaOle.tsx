@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Swords, ChevronRight, ShieldX, Flame, GitBranch } from 'lucide-react';
+import { Trophy, Swords, ChevronRight, ShieldX, Flame } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -285,61 +285,60 @@ export function LigaOle() {
 
       {/* ─── LIGA ATIVA → jornada ─────────────────────────────────────────── */}
       {active && (
-        <div className="flex flex-col gap-5">
-          <SectionHeader>A Jornada</SectionHeader>
+        <div className="flex flex-col gap-7">
+          {/* A JORNADA: trilha + confronto + ÚNICO CTA */}
+          <div className="flex flex-col gap-4">
+            <SectionHeader>A Jornada</SectionHeader>
 
-          {/* Trilha das fases */}
-          <div className="flex items-stretch gap-1.5">
-            {LIGA_OLE_ROUNDS.map((r, i) => {
-              const done = i < active.roundIndex;
-              const current = i === active.roundIndex;
-              return (
-                <div key={r} className="flex-1 text-center">
-                  <div className="h-1.5 rounded-full mb-1.5" style={{ backgroundColor: done ? 'var(--color-success)' : current ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.12)' }} />
-                  <span className="font-display uppercase tracking-[0.06em] text-[8px] font-black leading-tight block" style={{ color: current ? 'var(--color-neon-yellow)' : done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)' }}>
-                    {r.replace('Fase de 32', '32-avos').replace('Semifinal', 'Semi')}
-                  </span>
+            {/* Trilha das fases */}
+            <div className="flex items-stretch gap-1.5">
+              {LIGA_OLE_ROUNDS.map((r, i) => {
+                const done = i < active.roundIndex;
+                const current = i === active.roundIndex;
+                return (
+                  <div key={r} className="flex-1 text-center">
+                    <div className="h-1.5 rounded-full mb-1.5 transition-colors" style={{ backgroundColor: done ? 'var(--color-success)' : current ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.12)' }} />
+                    <span className="font-display uppercase tracking-[0.06em] text-[8px] font-black leading-tight block" style={{ color: current ? 'var(--color-neon-yellow)' : done ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)' }}>
+                      {roundAbbr(r)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Confronto — peça editorial (Moret protagonista) */}
+            <div className="relative overflow-hidden border px-5 py-6" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)', boxShadow: '0 10px 30px rgba(253,225,0,0.08)' }}>
+              <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-neon-yellow text-center mb-4">{LIGA_OLE_ROUNDS[active.roundIndex]}</p>
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex-1 text-right min-w-0">
+                  <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{club.name}</p>
+                  <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {managerOverall}</p>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Confronto — peça editorial (Moret protagonista) */}
-          <div className="relative overflow-hidden border px-5 py-6" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)' }}>
-            <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-neon-yellow text-center mb-4">{LIGA_OLE_ROUNDS[active.roundIndex]}</p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="flex-1 text-right min-w-0">
-                <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{club.name}</p>
-                <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {managerOverall}</p>
-              </div>
-              <Swords className="w-5 h-5 text-white/35 shrink-0" strokeWidth={2} aria-hidden />
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-white truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{opp?.name ?? '—'}</p>
-                <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {opp?.overall ?? '—'}</p>
+                <Swords className="w-5 h-5 text-white/35 shrink-0" strokeWidth={2} aria-hidden />
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-white truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{opp?.name ?? '—'}</p>
+                  <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {opp?.overall ?? '—'}</p>
+                </div>
               </div>
             </div>
+
+            {error && <p className="text-danger text-[12px] text-center">{error}</p>}
+
+            <button type="button" disabled={busy || !opp} onClick={playNext} className={pillCls} style={pillStyle}>
+              {busy ? 'Preparando a partida…' : <>Jogar {LIGA_OLE_ROUNDS[active.roundIndex]} <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
+            </button>
+            <p className="text-center font-display uppercase tracking-[0.22em] text-[10px] font-black text-white/40 -mt-1">
+              {roundsToTitle(active)} {roundsToTitle(active) === 1 ? 'jogo' : 'jogos'} até o título
+            </p>
           </div>
 
-          {error && <p className="text-danger text-[12px] text-center">{error}</p>}
-
-          <button type="button" disabled={busy || !opp} onClick={playNext} className={pillCls} style={pillStyle}>
-            {busy ? 'Preparando a partida…' : <>Jogar {LIGA_OLE_ROUNDS[active.roundIndex]} <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
-          </button>
-
-          <p className="text-center font-display uppercase tracking-[0.22em] text-[10px] font-black text-white/40">
-            {roundsToTitle(active)} {roundsToTitle(active) === 1 ? 'jogo' : 'jogos'} até o título
-          </p>
-
-          {/* Chaveamento — sempre visível, mostra quem continua a cada fase */}
-          <div className="flex items-center gap-2 mt-1">
-            <GitBranch className="w-4 h-4 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
-            <h2 className="text-neon-yellow" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(20px, 5.5vw, 27px)', letterSpacing: '-0.01em' }}>
-              Chaveamento
-            </h2>
+          {/* CHAVEAMENTO — section header no design system (sem ícone) */}
+          <div className="flex flex-col gap-3">
+            <SectionHeader>Chaveamento</SectionHeader>
+            <BracketCompact key={active.roundIndex} liga={active} />
           </div>
-          <BracketCompact key={active.roundIndex} liga={active} />
 
-          <button type="button" onClick={reset} className="text-white/30 text-[11px] underline self-center mt-1 hover:text-white/60">
+          <button type="button" onClick={reset} className="text-white/30 text-[11px] underline self-center hover:text-white/60">
             Desistir da liga
           </button>
         </div>
