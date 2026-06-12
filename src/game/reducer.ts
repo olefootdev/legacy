@@ -2775,6 +2775,22 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
+    case 'CONFIRM_LEGACY_PURCHASE': {
+      // O servidor já validou + debitou o OLE (autoritativo). Aqui só ALINHAMOS
+      // o estado local: SETA o OLE (não re-deduz), grava o ledger e entrega o
+      // player. Idempotente: se já tem o player, só sincroniza o saldo.
+      const pid = action.player.id;
+      const expHistory = action.ledgerEntry && !state.players[pid]
+        ? [action.ledgerEntry, ...(state.finance.expHistory ?? [])].slice(0, 120)
+        : state.finance.expHistory;
+      const finance = { ...state.finance, ole: Math.max(0, Math.round(action.ole)), expHistory };
+      if (state.players[pid]) return { ...state, finance };
+      return {
+        ...state,
+        finance,
+        players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
+      };
+    }
     case 'RECRUIT_YOUTH_PROSPECT': {
       const pid = action.player.id;
       if (state.players[pid]) return state; // já no plantel

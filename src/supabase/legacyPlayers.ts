@@ -83,7 +83,9 @@ export function legacyRowToPlayerEntity(row: LegacyPlayerRow): PlayerEntity {
     sf === 'right' || sf === 'left' || sf === 'both' ? sf : undefined;
   const ovr = overallFromAttributes(attrs);
   return createPlayer({
-    id: `legacy-${row.id}`,
+    // BUG FIX: row.id já pode vir com o prefixo "legacy-" (ex.: legacy-juca-
+    // consolidacao). Sem o guard, virava "legacy-legacy-..." (id duplicado).
+    id: row.id.startsWith('legacy-') ? row.id : `legacy-${row.id}`,
     num: 99,
     name: row.name.trim(),
     pos: row.pos.trim(),

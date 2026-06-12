@@ -38,21 +38,48 @@ export function TransferLegaciesTab() {
     return set;
   }, [playersById]);
 
-  const buy = (row: LegacyPlayerRow) => {
+  const buy = async (row: LegacyPlayerRow) => {
     const entity = legacyRowToPlayerEntity(row);
     const priceExp = Math.max(1, Math.round(row.price_bro_cents));
-    if (oleBal < priceExp) {
-      window.alert('Saldo OLE insuficiente.');
-      return;
+    if (owned.has(entity.id)) { window.alert('Você já possui esse legacy.'); return; }
+    if (oleBal < priceExp) { window.alert('Saldo OLE insuficiente.'); return; }
+
+    const apiBase = (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_OLEFOOT_API_URL || 'http://localhost:4000';
+    const serverUrl = apiBase !== 'http://localhost:4000' ? apiBase : null;
+    const sb = getSupabase();
+    const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+
+    if (serverUrl && token) {
+      // Compra ATÔMICA no servidor: debita OLE + entrega o player (sem corrida).
+      try {
+        const r = await fetch(`${serverUrl}/api/market/buy-legacy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ legacy_id: row.id, player: entity }),
+        });
+        const data = await r.json().catch(() => null);
+        if (!r.ok || !data?.ok) {
+          window.alert(data?.error ?? 'Não foi possível comprar agora.');
+          return;
+        }
+        // Servidor já debitou — alinha o estado local (SETA o OLE, não re-deduz).
+        dispatch({
+          type: 'CONFIRM_LEGACY_PURCHASE',
+          player: entity,
+          ole: typeof data.ole === 'number' ? data.ole : Math.max(0, oleBal - priceExp),
+          ledgerEntry: data.ledgerEntry,
+        });
+      } catch {
+        window.alert('Falha de conexão ao comprar. Tente de novo.');
+        return;
+      }
+    } else {
+      // Fallback (dev local sem server): mantém o fluxo client-side.
+      dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp });
     }
-    if (owned.has(entity.id)) {
-      window.alert('Você já possui esse legacy.');
-      return;
-    }
-    dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp });
+
     // Registra atividade pública no feed do mercado
     void (async () => {
-      const sb = getSupabase();
       const userId = sb ? (await sb.auth.getSession()).data.session?.user.id : undefined;
       void recordMarketActivity({
         type: 'purchase',

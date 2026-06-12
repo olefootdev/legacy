@@ -856,6 +856,14 @@ export type GameAction =
       player: import('@/entities/types').PlayerEntity;
       priceExp: number;
     }
+  /** Confirma a compra de legacy validada/debitada no servidor: SETA o OLE
+   *  (autoritativo do servidor, sem re-deduzir) + adiciona o player + ledger. */
+  | {
+      type: 'CONFIRM_LEGACY_PURCHASE';
+      player: import('@/entities/types').PlayerEntity;
+      ole: number;
+      ledgerEntry?: { id: string; amount: number; source: string; createdAt: string };
+    }
   | {
       /** Recruta uma promessa da categoria de base — desconta BRO e adiciona ao plantel. */
       type: 'RECRUIT_YOUTH_PROSPECT';

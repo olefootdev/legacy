@@ -274,3 +274,87 @@ marketRoutes.post('/api/market/buy-prospect', rateLimit(20), async (c) => {
     seller_user_id: sellerId,
   });
 });
+
+/**
+ * POST /api/market/buy-legacy
+ * Compra de um legacy player com dedução de OLE ATÔMICA no servidor (autoritativa).
+ * Evita a corrida do client-only, onde o player grudava no manager_squad mas o
+ * desconto no manager_game_state.finance se perdia. Espelha buy-prospect.
+ *
+ * Body: { legacy_id, player } — player é o PlayerEntity já montado no client
+ * (atributos vêm da row); o servidor valida PREÇO e unicidade e debita o OLE.
+ */
+marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
+  const buyerId = await resolveUser(c.req.header('Authorization'));
+  if (!buyerId) return c.json({ ok: false, error: 'Unauthorized' }, 401);
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ ok: false, error: 'Serviço indisponível.' }, 503);
+
+  const body = await c.req
+    .json<{ legacy_id?: string; player?: Record<string, unknown> & { id?: string } }>()
+    .catch(() => ({} as { legacy_id?: string; player?: { id?: string } }));
+  const legacyId = body.legacy_id?.trim();
+  const player = body.player;
+  if (!legacyId || !player?.id) return c.json({ ok: false, error: 'legacy_id e player obrigatórios.' }, 400);
+  if (player.id !== legacyId) return c.json({ ok: false, error: 'player.id não confere com legacy_id.' }, 400);
+
+  // 1) Row do legacy — PREÇO autoritativo + disponibilidade
+  const { data: row, error: rowErr } = await sb
+    .from('legacy_players')
+    .select('id, name, price_bro_cents, listed_on_market')
+    .eq('id', legacyId)
+    .maybeSingle();
+  if (rowErr || !row) return c.json({ ok: false, error: 'Legacy não encontrado.' }, 404);
+  if (!row.listed_on_market) return c.json({ ok: false, error: 'Não está à venda.' }, 409);
+  const price = Math.max(1, Math.round(Number(row.price_bro_cents)));
+
+  // 2) Finança do comprador (manager_game_state.finance)
+  const { data: mgs } = await sb
+    .from('manager_game_state')
+    .select('finance')
+    .eq('user_id', buyerId)
+    .maybeSingle();
+  if (!mgs) return c.json({ ok: false, error: 'Estado do manager não encontrado.' }, 404);
+  const finance = (mgs.finance ?? {}) as { ole?: number; expHistory?: unknown[]; [k: string]: unknown };
+  const ole = Math.round(Number(finance.ole ?? 0));
+
+  // 3) Já possui? (idempotente)
+  const { data: sq } = await sb
+    .from('manager_squad')
+    .select('players, lineup, formation_scheme')
+    .eq('user_id', buyerId)
+    .maybeSingle();
+  const players = Array.isArray(sq?.players) ? (sq!.players as Array<{ id: string }>) : [];
+  if (players.some((p) => p.id === legacyId)) {
+    return c.json({ ok: true, already_owned: true, ole, price });
+  }
+  if (ole < price) return c.json({ ok: false, error: 'Saldo OLE insuficiente.', ole, price }, 402);
+
+  // 4) ATÔMICO-ish: debita OLE (+ ledger) e entrega o player. Rollback se falhar.
+  const ledgerEntry = { id: `exp-${Date.now()}-leg`, amount: -price, source: 'mercado_legacy', createdAt: new Date().toISOString() };
+  const nextFinance = {
+    ...finance,
+    ole: ole - price,
+    expHistory: [ledgerEntry, ...(Array.isArray(finance.expHistory) ? finance.expHistory : [])].slice(0, 120),
+  };
+  const { error: finErr } = await sb.from('manager_game_state').update({ finance: nextFinance }).eq('user_id', buyerId);
+  if (finErr) return c.json({ ok: false, error: 'Falha ao debitar OLE.', detail: finErr.message }, 500);
+
+  const { error: sqErr } = await sb.from('manager_squad').upsert(
+    {
+      user_id: buyerId,
+      players: [...players, { ...player, listedOnMarket: false }],
+      lineup: (sq?.lineup ?? {}) as Record<string, string>,
+      formation_scheme: sq?.formation_scheme ?? null,
+    },
+    { onConflict: 'user_id' },
+  );
+  if (sqErr) {
+    // Rollback do débito — o player não foi entregue.
+    await sb.from('manager_game_state').update({ finance }).eq('user_id', buyerId);
+    return c.json({ ok: false, error: 'Falha ao entregar o jogador.', detail: sqErr.message }, 500);
+  }
+
+  return c.json({ ok: true, ole: ole - price, price, ledgerEntry, player });
+});
