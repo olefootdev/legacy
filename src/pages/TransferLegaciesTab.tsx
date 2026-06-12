@@ -129,16 +129,16 @@ function HeroLegacyCard({
       </div>
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-        {/* Portrait grande */}
+        {/* Card retangular (proporção do card colecionável Olefoot) */}
         <div className="shrink-0">
           {portrait ? (
             <img
               src={portrait}
               alt={entity.name}
-              className="h-32 w-32 rounded-2xl object-cover ring-2 ring-amber-400/60 sm:h-40 sm:w-40"
+              className="aspect-[11/15.6] w-36 rounded-xl object-cover object-top ring-2 ring-amber-400/60 sm:w-44"
             />
           ) : (
-            <div className="grid h-32 w-32 place-items-center rounded-2xl bg-amber-500/20 text-amber-400 sm:h-40 sm:w-40">
+            <div className="grid aspect-[11/15.6] w-36 place-items-center rounded-xl bg-amber-500/20 text-amber-400 sm:w-44">
               <Crown className="h-12 w-12" />
             </div>
           )}
@@ -259,9 +259,13 @@ function LegacyCard({
     <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.06] to-black p-4">
       <div className="flex items-start gap-3">
         {portrait ? (
-          <img src={portrait} alt={entity.name} className="h-14 w-14 rounded-full object-cover ring-2 ring-amber-500/40" />
+          <img
+            src={portrait}
+            alt={entity.name}
+            className="aspect-[11/15.6] w-20 shrink-0 rounded-lg object-cover object-top ring-2 ring-amber-500/40"
+          />
         ) : (
-          <div className="grid h-14 w-14 place-items-center rounded-full bg-amber-500/20 text-amber-400">
+          <div className="grid aspect-[11/15.6] w-20 shrink-0 place-items-center rounded-lg bg-amber-500/20 text-amber-400">
             <Crown className="h-6 w-6" />
           </div>
         )}

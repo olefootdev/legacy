@@ -22,15 +22,15 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: fal
 const updates = [
   {
     id: 'legacy-juca-revelacao',
-    portrait_public_url: '/newplayers-olefoot/juca-token-revelacao.png',
+    portrait_public_url: '/newplayers-olefoot/juca-revelacao.png',
   },
   {
     id: 'legacy-juca-consolidacao',
-    portrait_public_url: '/newplayers-olefoot/juca-token-consolidacao.png',
+    portrait_public_url: '/newplayers-olefoot/juca-olefoot.png',
   },
   {
     id: 'legacy-juca-expansao',
-    portrait_public_url: '/newplayers-olefoot/juca-token-expansao.png',
+    portrait_public_url: '/newplayers-olefoot/juca-expansao.png',
   },
 ];
 
