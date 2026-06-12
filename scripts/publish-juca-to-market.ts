@@ -1,8 +1,8 @@
 /**
- * Publica as 3 fases do Juca no mercado:
+ * Publica a fase Consolidação do Juca no mercado:
  *   - price_bro_cents = 1.000.000 (= 1.000.000 OLE exibido)
  *   - listed_on_market = true
- *   - portrait_public_url = /newplayers-olefoot/juca-token-<phase>.png
+ *   - portrait_public_url = /newplayers-olefoot/juca-olefoot.png (card BRASIL 1970)
  *
  * Uso:
  *   npx tsx --env-file=server/.env scripts/publish-juca-to-market.ts
@@ -21,23 +21,15 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: fal
 
 const updates = [
   {
-    id: 'legacy-juca-revelacao',
-    portrait_public_url: '/newplayers-olefoot/juca-revelacao.png',
-  },
-  {
     id: 'legacy-juca-consolidacao',
     portrait_public_url: '/newplayers-olefoot/juca-olefoot.png',
-  },
-  {
-    id: 'legacy-juca-expansao',
-    portrait_public_url: '/newplayers-olefoot/juca-expansao.png',
   },
 ];
 
 const PRICE_OLE = 1_000_000;
 
 async function main() {
-  console.log('🏟  Publicando Juca no mercado (1.000.000 OLE × 3 fases)\n');
+  console.log('🏟  Publicando Juca no mercado (1.000.000 OLE — só Consolidação)\n');
 
   for (const u of updates) {
     const { data, error } = await sb
@@ -63,7 +55,7 @@ async function main() {
     console.log(`      portrait: ${data.portrait_public_url}`);
   }
 
-  console.log('\n✅ 3 Jucas listados. Aparecem em /transfer → aba Legacies.');
+  console.log('\n✅ Juca Consolidação listado. Aparece em /transfer → aba Legacies.');
 }
 
 main().catch((e) => {
