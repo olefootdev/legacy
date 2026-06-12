@@ -53,6 +53,15 @@ export interface FetchQuickPlanInput {
   decisions?: QuickPlanDecision[];
 }
 
+/** Nome curto pra narração/UI: apelido entre aspas ("Juca") ou corta " — fase".
+ *  Ex.: 'José Carlos "Juca" de Andrade — Consolidação' → 'Juca'. */
+function shortPlayerName(name: string | undefined): string {
+  const raw = (name ?? '').trim();
+  const nick = raw.match(/"([^"]+)"/);
+  if (nick) return nick[1]!.trim();
+  return raw.split(' — ')[0]!.trim();
+}
+
 /** Converte PlayerEntity local → payload do Python (campos achatados). */
 export function playerToQuickPlanPayload(
   p: PlayerEntity,
@@ -61,7 +70,7 @@ export function playerToQuickPlanPayload(
 ): QuickPlanPlayerPayload {
   return {
     id: p.id,
-    name: p.name,
+    name: shortPlayerName(p.name),
     pos: p.pos,
     role,
     finalizacao: p.attrs.finalizacao,

@@ -151,6 +151,15 @@ function fatigueWord(f: number): string {
   return 'apagando';
 }
 
+/** Nome curto pra UI: apelido entre aspas ("Juca") ou corta o sufixo " — fase".
+ *  Ex.: 'José Carlos "Juca" de Andrade — Consolidação' → 'Juca'. */
+function shortName(name: string | undefined): string {
+  const raw = (name ?? '').trim();
+  const nick = raw.match(/"([^"]+)"/);
+  if (nick) return nick[1]!.trim();
+  return raw.split(' — ')[0]!.trim();
+}
+
 /** Papel do jogador inferido da posição (pt-BR) — pondera a nota por função. */
 function inferRatingRole(pos: string): 'gk' | 'def' | 'mid' | 'att' {
   const p = pos.toUpperCase();
@@ -234,7 +243,7 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
       </span>
       <span className="flex-1 min-w-0">
         <span className="block font-display uppercase font-black text-white truncate" style={{ fontSize: '12px', letterSpacing: '0.04em' }}>
-          {card.name}
+          {shortName(card.name)}
         </span>
         <span className="block uppercase tracking-[0.14em] text-[9px]" style={{ color: tired ? 'var(--color-warning)' : 'rgba(255,255,255,0.45)' }}>
           {card.pos} · {fatigueWord(card.fatigue)}
@@ -1235,7 +1244,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                     className="text-black leading-[0.95]"
                     style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(34px, 9vw, 52px)', letterSpacing: '-0.03em' }}
                   >
-                    {plan.mvp_projection.name}
+                    {shortName(plan.mvp_projection.name)}
                   </p>
                   <span aria-hidden className="block w-12 h-[3px] bg-black/80 mt-2 mb-3" />
                   <p className="font-display uppercase tracking-[0.2em] text-[12px] font-black text-black/85">
@@ -1378,7 +1387,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       {/* Comemoração de gol — overlay cinematográfico, pausa o jogo */}
       <QuickGoalCelebration
         triggerKey={celebration?.key ?? null}
-        scorerName={celebration?.name ?? ''}
+        scorerName={shortName(celebration?.name)}
         scorerPortrait={celebration?.portrait ?? null}
         narrative={celebration?.narrative}
         onDismiss={dismissCelebration}
