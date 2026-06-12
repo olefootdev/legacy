@@ -1,0 +1,394 @@
+{
+  "playerName": "José Carlos \"Juca\" de Andrade",
+  "shortName": "Juca",
+  "collectionId": "mem-juca-1970",
+  "collectionKind": "memorable",
+  "sources": [
+    "Inspiração de estilo: Pelé, Tostão, Jairzinho, Rivelino (Seleção Brasileira, Copa do México 1970)",
+    "Inspiração de finalização: Gerd Müller (Bola de Ouro da Copa de 1970)",
+    "Personagem fictício criado pela Olefoot — arquétipo canônico do atacante brasileiro de 1970"
+  ],
+  "inconsistencies": [
+    "Personagem fictício — datas, clubes e estatísticas são narrativa de catálogo, não biografia real."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "O moleque do interior — 1968",
+      "yearStart": 1967,
+      "yearEnd": 1969,
+      "mainClub": "Clube do Interior Paulista",
+      "narrativeTitle": "O ponta-direita que decidiu jogo grande sem tremer",
+      "narrative": "Aos 19 anos, Juca aparece num Torneio Rio-São Paulo com um gol de cabeça no Maracanã. Time pequeno, camisa 7, ginga curta e arrancada que ninguém esperava. A imprensa do Rio batiza: 'o moleque do interior que não treme'. Ainda erra muito o passe certo; quase nunca erra o tempo do salto. É a fase em que o futebol brasileiro descobre que tem um atacante novo pra Copa que vem aí.",
+      "tier": 1,
+      "collectionCode": "BR-68",
+      "collectionTitle": "Revelação do Rio-São Paulo 1968",
+      "currency": "USDT",
+      "priceUnitCents": 100,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "Jogador", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+      ],
+      "entity": {
+        "name": "José Carlos \"Juca\" de Andrade",
+        "num": 7,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 20,
+        "bio": "Moleque do interior. Cabeceio decisivo, arrancada curta e a coragem de quem joga sem medo do Maracanã.",
+        "tagline": "Decidiu o Rio-São Paulo de cabeça aos 19 — e o Brasil começou a aprender o nome dele.",
+        "portraitUrl": "/newplayers-olefoot/juca-olefoot.png",
+        "attrs": {
+          "passe": 64,
+          "marcacao": 50,
+          "velocidade": 82,
+          "drible": 78,
+          "finalizacao": 76,
+          "fisico": 78,
+          "tatico": 62,
+          "mentalidade": 70,
+          "confianca": 68,
+          "fairPlay": 72
+        },
+        "mintOverall": 70,
+        "evolutionRate": 1.5,
+        "rarity": "ultra_raro",
+        "cardSupply": 50,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["finalizacao", "fisico"],
+        "legacyTeamBooster": {
+          "morale": 4,
+          "attack_pct": 5,
+          "possession_pct": 1
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "opp_box", "right_half"],
+            "spatialAwareness": 70,
+            "scanBeforeReceive": 62,
+            "runTiming": 78,
+            "defensivePositioning": 45
+          },
+          "teamProfile": {
+            "supportCarrier": 60,
+            "tacticalDiscipline": 60,
+            "teamCommunication": 65,
+            "defensiveCover": 42,
+            "collectiveMovement": 70
+          },
+          "individualProfile": {
+            "creativity": 75,
+            "decisionUnderPressure": 68,
+            "ballConfidence": 78,
+            "vision": 65,
+            "technicalExecution": 75
+          },
+          "riskProfile": {
+            "baseRisk": 70,
+            "riskUnderPressure": 8,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -5,
+            "dribbleVsPass": 70
+          },
+          "criticalProfile": {
+            "criticalComposure": 72,
+            "ego": 60,
+            "crowdPressureReaction": 75,
+            "selfishVsTeam": 55,
+            "finishingConfidence": 78
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-06-12T00:00:00.000Z",
+          "updatedAt": "2026-06-12T00:00:00.000Z",
+          "version": 1
+        },
+        "marketValueBroCents": 92000,
+        "_priceDebug": {
+          "ovr": 70,
+          "age": 20,
+          "rarity": "ultra_raro",
+          "supply": 50,
+          "base": 40706,
+          "rarityMul": 1.8,
+          "ageMul": 1.2,
+          "scarcityMul": 1.05,
+          "final": 92000
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Brasil 1970 — o herói da Copa do México",
+      "yearStart": 1970,
+      "yearEnd": 1973,
+      "mainClub": "Seleção Brasileira / Grande Clube Carioca",
+      "narrativeTitle": "Raça, garra, gol — o atacante que a Copa coroou",
+      "narrative": "Aos 22 anos, camisa 9 do Brasil no México. Quatro gols na Copa, um deles de cabeça na semifinal — arremate impossível que entrou pela história como 'o pulo do Juca'. Bicampeão Brasileiro pelo clube no mesmo ciclo. É a fase em que o moleque vira ídolo nacional e o futebol mundial aprende que o Brasil tinha mais um atacante completo: pivota, finaliza, sobe alto, decide. A torcida resumiu em três palavras pintadas em faixa: RAÇA. GARRA. GOL.",
+      "tier": 2,
+      "collectionCode": "COPA-70",
+      "collectionTitle": "Copa do Mundo México 1970",
+      "currency": "USDT",
+      "priceUnitCents": 200,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "Jogador", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+      ],
+      "entity": {
+        "name": "José Carlos \"Juca\" de Andrade",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 22,
+        "bio": "Camisa 9 do Brasil no México. Quatro gols na Copa. Pivota, decide, sobe alto. RAÇA. GARRA. GOL.",
+        "tagline": "Quatro gols no México 70. Um deles de cabeça — 'o pulo do Juca' virou hino de torcida.",
+        "portraitUrl": "/newplayers-olefoot/juca-olefoot.png",
+        "attrs": {
+          "passe": 70,
+          "marcacao": 50,
+          "velocidade": 82,
+          "drible": 80,
+          "finalizacao": 86,
+          "fisico": 80,
+          "tatico": 74,
+          "mentalidade": 80,
+          "confianca": 76,
+          "fairPlay": 75
+        },
+        "mintOverall": 75,
+        "evolutionRate": 1.5,
+        "rarity": "ultra_raro",
+        "cardSupply": 25,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["finalizacao", "mentalidade", "fisico"],
+        "legacyTeamBooster": {
+          "morale": 7,
+          "attack_pct": 8,
+          "possession_pct": 2
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "opp_box", "central"],
+            "spatialAwareness": 82,
+            "scanBeforeReceive": 75,
+            "runTiming": 88,
+            "defensivePositioning": 50
+          },
+          "teamProfile": {
+            "supportCarrier": 72,
+            "tacticalDiscipline": 72,
+            "teamCommunication": 78,
+            "defensiveCover": 48,
+            "collectiveMovement": 82
+          },
+          "individualProfile": {
+            "creativity": 82,
+            "decisionUnderPressure": 82,
+            "ballConfidence": 85,
+            "vision": 75,
+            "technicalExecution": 82
+          },
+          "riskProfile": {
+            "baseRisk": 72,
+            "riskUnderPressure": 5,
+            "riskWhenLosing": 15,
+            "riskWhenWinning": -5,
+            "dribbleVsPass": 65
+          },
+          "criticalProfile": {
+            "criticalComposure": 85,
+            "ego": 62,
+            "crowdPressureReaction": 88,
+            "selfishVsTeam": 50,
+            "finishingConfidence": 88
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-06-12T00:00:00.000Z",
+          "updatedAt": "2026-06-12T00:00:00.000Z",
+          "version": 1
+        },
+        "marketValueBroCents": 132000,
+        "_priceDebug": {
+          "ovr": 75,
+          "age": 22,
+          "rarity": "ultra_raro",
+          "supply": 25,
+          "base": 58200,
+          "rarityMul": 1.8,
+          "ageMul": 1.2,
+          "scarcityMul": 1.05,
+          "final": 132000
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "O capitão que passou a faixa",
+      "yearStart": 1974,
+      "yearEnd": 1978,
+      "mainClub": "Grande Clube Brasileiro (com passagem pela Itália)",
+      "narrativeTitle": "Veterano respeitado, mestre dos minutos finais",
+      "narrative": "Aos 26 anos passa uma temporada na Itália, volta ao Brasil e veste a faixa de capitão. Velocidade caiu uns degraus — leitura de jogo e mentalidade explodiram. É o cara que vê o lance dois passes adiante, joga pro lado certo no minuto 88 e cabeceia o gol do título do Brasileirão de 1977 já como veterano. Ensina o sub-20 da base a se posicionar no pivote como ele fazia em 1970. Sai de campo aplaudido, mesmo no estádio do adversário.",
+      "tier": 3,
+      "collectionCode": "BR-77",
+      "collectionTitle": "Capitão Brasileiro 1977",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "Jogador", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+      ],
+      "entity": {
+        "name": "José Carlos \"Juca\" de Andrade",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "equilibrado",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 29,
+        "bio": "Capitão. Veterano que decide o jogo no minuto 88. Ensina o pivote brasileiro de 1970 pra geração nova.",
+        "tagline": "Bicampeão brasileiro como capitão. Mestre dos minutos finais. O atacante que virou maestro.",
+        "portraitUrl": "/newplayers-olefoot/juca-olefoot.png",
+        "attrs": {
+          "passe": 79,
+          "marcacao": 55,
+          "velocidade": 74,
+          "drible": 80,
+          "finalizacao": 88,
+          "fisico": 76,
+          "tatico": 88,
+          "mentalidade": 90,
+          "confianca": 85,
+          "fairPlay": 83
+        },
+        "mintOverall": 80,
+        "evolutionRate": 1.2,
+        "rarity": "epico",
+        "cardSupply": 10,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["tatico", "mentalidade", "finalizacao"],
+        "legacyTeamBooster": {
+          "morale": 9,
+          "attack_pct": 9,
+          "possession_pct": 4
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "opp_box", "central", "mid_third"],
+            "spatialAwareness": 92,
+            "scanBeforeReceive": 88,
+            "runTiming": 85,
+            "defensivePositioning": 58
+          },
+          "teamProfile": {
+            "supportCarrier": 82,
+            "tacticalDiscipline": 85,
+            "teamCommunication": 92,
+            "defensiveCover": 55,
+            "collectiveMovement": 88
+          },
+          "individualProfile": {
+            "creativity": 85,
+            "decisionUnderPressure": 92,
+            "ballConfidence": 90,
+            "vision": 88,
+            "technicalExecution": 85
+          },
+          "riskProfile": {
+            "baseRisk": 60,
+            "riskUnderPressure": -5,
+            "riskWhenLosing": 12,
+            "riskWhenWinning": -12,
+            "dribbleVsPass": 48
+          },
+          "criticalProfile": {
+            "criticalComposure": 94,
+            "ego": 55,
+            "crowdPressureReaction": 92,
+            "selfishVsTeam": 38,
+            "finishingConfidence": 90
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-06-12T00:00:00.000Z",
+          "updatedAt": "2026-06-12T00:00:00.000Z",
+          "version": 1
+        },
+        "marketValueBroCents": 210000,
+        "_priceDebug": {
+          "ovr": 80,
+          "age": 29,
+          "rarity": "epico",
+          "supply": 10,
+          "base": 76364,
+          "rarityMul": 2.2,
+          "ageMul": 1.0,
+          "scarcityMul": 1.25,
+          "final": 210000
+        }
+      }
+    }
+  ]
+}
