@@ -197,7 +197,7 @@ export function TeamPlayerSeasonSheet({
             />
             {/* Foto — object-contain garante que a foto inteira apareça sem cortes */}
             <img
-              src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 800, 1200)}
+              src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 800, 1200)}
               alt=""
               className="absolute inset-0 h-full w-full object-contain object-center grayscale"
               referrerPolicy="no-referrer"

@@ -127,7 +127,7 @@ function playerEntityToManagerMockAuction(
     marketKind,
     managerListingId: opts.managerListingId,
     managerPlayerId: opts.managerPlayerId ?? p.id,
-    portraitSrc: playerPortraitSrc({ name: p.name, portraitUrl: p.portraitUrl }, 400, 520),
+    portraitSrc: playerPortraitSrc({ id: p.id, name: p.name, portraitUrl: p.portraitUrl }, 400, 520),
   };
 }
 

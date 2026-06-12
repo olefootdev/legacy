@@ -23,7 +23,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { playerPortraitSrc } from '@/lib/playerPortrait';
+import { playerPortraitSrc, playerDisplayName } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes, playerToCardView } from '@/entities/player';
 import { FORMATION_SCHEME_LIST, SCHEME_LINE_GROUPS, pitchUiSlots } from '@/match-engine/formations/catalog';
@@ -618,7 +618,7 @@ export function Team() {
                       aria-hidden
                     />
                     <img
-                      src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
+                      src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
                       alt={player.name}
                       className="absolute inset-0 h-full w-full object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300"
                       referrerPolicy="no-referrer"
@@ -663,7 +663,7 @@ export function Team() {
                             lineHeight: 1.05,
                           }}
                         >
-                          {player.name}
+                          {playerDisplayName(player)}
                         </p>
                         <p
                           className="text-white/50 uppercase mt-0.5"
@@ -839,9 +839,9 @@ export function Team() {
                           player.style === 'neon-yellow' ? 'bg-neon-yellow' : 'bg-white'
                         )} />
                         <img 
-                          src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 200, 300)} 
-                          alt={player.name} 
-                          className="w-[80%] h-[90%] object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300" 
+                          src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 200, 300)}
+                          alt={player.name}
+                          className="w-[80%] h-[90%] object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-300"
                           referrerPolicy="no-referrer"
                           style={{ maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)' }}
                         />
@@ -862,7 +862,7 @@ export function Team() {
                             </span>
                           ) : null}
                           <div className="min-w-0 flex-1 font-display font-black text-lg sm:text-xl md:text-2xl uppercase tracking-wide text-white leading-none truncate">
-                            {player.name}
+                            {playerDisplayName(player)}
                           </div>
                         </div>
                         
@@ -1291,7 +1291,7 @@ function PitchPlayerMenu({
             )}
           >
             <img
-              src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
+              src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
               alt=""
               className="h-full w-full object-cover object-top"
               referrerPolicy="no-referrer"
@@ -1323,7 +1323,7 @@ function PitchPlayerMenu({
               id="pitch-menu-title"
               className="mt-1 truncate font-display text-[20px] font-black uppercase leading-tight tracking-tight text-white"
             >
-              {player.name}
+              {playerDisplayName(player)}
             </h3>
           </div>
           <button
@@ -1690,7 +1690,7 @@ function PitchPlayer({
             </span>
           ) : null}
           <img
-            src={playerPortraitSrc({ name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
+            src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 100, 100)}
             alt=""
             className="h-full w-full object-cover object-top"
             referrerPolicy="no-referrer"
@@ -1701,7 +1701,7 @@ function PitchPlayer({
           className="mt-1 max-w-[min(5.5rem,24vw)] truncate border border-white/25 bg-black/90 px-1 py-0.5 text-[9px] font-bold text-white drop-shadow-md sm:mt-1.5 sm:max-w-[6.5rem] sm:px-1.5 sm:text-[10px] md:max-w-[7.5rem] md:px-2 md:text-[11px]"
           style={{ borderRadius: 'var(--radius-sm)' }}
         >
-          {player.name}
+          {playerDisplayName(player)}
         </div>
 
         <div
