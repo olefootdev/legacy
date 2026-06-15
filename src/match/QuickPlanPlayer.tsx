@@ -1487,42 +1487,45 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         );
       })()}
 
-      {/* CONTROLES — Formação (esquerda) | Legacy (direita), entre a narração e os
-          jogadores. Formação cicla; Legacy ativa o buff das lendas (1 uso/jogo). */}
-      {phase !== 'done' && (
-        <div className="px-3 pt-1 pb-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={cycleFormation}
-            className="py-2.5 flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
-            style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
-          >
-            <span className="font-display uppercase tracking-[0.16em] text-[10px] font-black text-white/40">Formação</span>
-            <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '18px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
-          </button>
+      {/* CONTROLES — Formação (só o número) | Legacy. Entre a narração e os jogadores.
+          Legacy ganha um glow fino GIRANDO quando há buff disponível pra usar. */}
+      {phase !== 'done' && (() => {
+        const noLegend = !legacyBoosters || legacyBoosters.length === 0;
+        const legacyAvail = !noLegend && !legacyUsed && !legacyActive;
+        return (
+          <div className="px-3 pt-1 pb-2 grid grid-cols-2 gap-2">
+            <style>{`@property --lg-angle{syntax:'<angle>';initial-value:0deg;inherits:false}@keyframes lg-rotate{to{--lg-angle:360deg}}.legacy-ring::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--lg-angle),transparent 0deg,#FDE047 55deg,transparent 130deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:lg-rotate 2.4s linear infinite;pointer-events:none}`}</style>
 
-          <button
-            type="button"
-            onClick={activateLegacy}
-            disabled={!legacyBoosters || legacyBoosters.length === 0 || legacyUsed}
-            className="py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] disabled:cursor-default truncate"
-            style={{
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : 'transparent',
-              color: legacyActive ? '#000' : (!legacyBoosters || legacyBoosters.length === 0 || legacyUsed) ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
-              border: legacyActive ? 'none' : `1px solid ${(!legacyBoosters || legacyBoosters.length === 0 || legacyUsed) ? 'var(--color-border)' : 'var(--color-neon-yellow)'}`,
-            }}
-          >
-            {legacyActive
-              ? '★ Legacy ativo'
-              : legacyUsed
-              ? '★ Legacy usado'
-              : !legacyBoosters || legacyBoosters.length === 0
-              ? '★ Sem lenda'
-              : `★ Ativar Legacy (${legacyBoosters.length})`}
-          </button>
-        </div>
-      )}
+            {/* Formação — só o número, cicla ao toque */}
+            <button
+              type="button"
+              onClick={cycleFormation}
+              className="py-2.5 flex items-center justify-center transition-colors active:scale-[0.98]"
+              style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
+            >
+              <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '18px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
+            </button>
+
+            {/* Legacy — glow fino girando enquanto há buff disponível */}
+            <div className={`relative ${legacyAvail ? 'legacy-ring' : ''}`} style={{ borderRadius: 'var(--radius-sm)' }}>
+              <button
+                type="button"
+                onClick={activateLegacy}
+                disabled={!legacyAvail}
+                className="relative w-full py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] disabled:cursor-default truncate"
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : legacyAvail ? 'var(--color-deep-black)' : 'transparent',
+                  color: legacyActive ? '#000' : (noLegend || legacyUsed) ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
+                  border: legacyActive || legacyAvail ? 'none' : '1px solid var(--color-border)',
+                }}
+              >
+                {legacyActive ? '★ Legacy ativo' : legacyUsed ? '★ Legacy usado' : noLegend ? '★ Sem lenda' : '★ Legacy'}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* MEU ELENCO EM CAMPO — só o nosso time (o adversário não interessa ver).
           Toca num dos teus pra trocar a qualquer momento. */}
