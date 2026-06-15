@@ -51,8 +51,10 @@ function BracketRow({ m }: { m: LigaOleRoundMatch }) {
     const won = resolved && winner === id;
     const lost = resolved && winner !== id;
     return {
-      fontFamily: MORET, fontStyle: 'italic' as const, fontWeight: 700,
-      fontSize: 'clamp(13px, 3.6vw, 16px)', letterSpacing: '-0.01em',
+      // Lista de confrontos = texto corrido: fonte padrão (Inter), legível e leve.
+      // A Moret editorial fica reservada pros heróis e pro confronto em destaque.
+      fontFamily: 'var(--font-sans)', fontWeight: 600,
+      fontSize: 'clamp(12px, 3.4vw, 15px)', letterSpacing: '0',
       color: isManager ? 'var(--color-neon-yellow)' : lost ? 'rgba(255,255,255,0.35)' : '#fff',
       opacity: lost ? 0.8 : 1,
     };
