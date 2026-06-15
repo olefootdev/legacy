@@ -35,6 +35,7 @@
     "test:quick-engaged": "tsx scripts/test-quick-engaged.ts",
     "test:quick-clutch": "tsx scripts/test-quick-clutch.ts",
     "test:quick-credit": "tsx scripts/test-quick-credit.ts",
+    "test:tactical-live": "tsx scripts/test-tactical-live.ts",
     "test:penalty-shootout": "tsx scripts/test-penalty-shootout.ts",
     "test:possession-invariant": "tsx src/match/runPossessionInvariantSelfTest.ts",
     "test:deliberation": "tsx src/playerDecision/runDeliberationSelfTest.ts",

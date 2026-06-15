@@ -45,6 +45,13 @@ import { QuickGoalCelebration } from '@/components/matchquick/QuickGoalCelebrati
 import { PenaltyShootout, type ShootoutSetup } from '@/components/matchquick/PenaltyShootout';
 import type { ShootoutResult } from '@/match/quickEngaged/penaltyShootout';
 import { renderQuickFeedRichText } from '@/match/quickMatchFeed';
+import {
+  resolveStyleOnEvent,
+  styleMomentumBias,
+  nudgeMomentumCurve,
+  STYLE_LABEL,
+} from '@/match/quickTacticalLive';
+import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
  *  Fruto de decisão SEMPRE aparece — o manager precisa ver a consequência. */
@@ -296,6 +303,15 @@ interface GoalCelebration {
   side: 'home' | 'away';
 }
 
+/** Chips do dock de estilo (ordem defesa → ataque, como o eixo do fit). */
+const STYLE_CHIPS: { id: TacticalIntensityLevel; label: string }[] = [
+  { id: 'defend', label: 'Retranca' },
+  { id: 'counter', label: 'Contra' },
+  { id: 'possession', label: 'Posse' },
+  { id: 'press', label: 'Pressão' },
+  { id: 'attack', label: 'Ataque' },
+];
+
 const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
   insight: 'text-white/70 italic',
   decision: 'text-neon-yellow',
@@ -328,6 +344,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const [awayScore, setAwayScore] = useState(0);
   const [activeBeat, setActiveBeat] = useState<AnalystBeat | null>(null);
   const [feed, setFeed] = useState<QuickPlanFeedItem[]>([]);
+  // Estilo de jogo AO VIVO — escolha certa converte gol, errada custa caro.
+  const [style, setStyle] = useState<TacticalIntensityLevel>('possession');
   const [celebration, setCelebration] = useState<GoalCelebration | null>(null);
   const [penalty, setPenalty] = useState<{ idx: number; minute: number } | null>(null);
   const [forced, setForced] = useState<ForcedMoment | null>(null);
@@ -344,6 +362,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const eventsRef = useRef<MatchPlanEvent[]>(plan.events);
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
+  const styleRef = useRef<TacticalIntensityLevel>('possession'); // lido no tick (closure sempre fresca)
   const ledgerRef = useRef<BeatDecisionRecord[]>([]);
   const minuteRef = useRef(0);          // relógio corrido
   const eventIdxRef = useRef(0);        // ponteiro no próximo evento (lista ordenada por minuto)
@@ -370,6 +389,17 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     feedSeqRef.current += 1;
     const unique = { ...item, id: `${item.id}#${feedSeqRef.current}` }; // key sempre única
     setFeed((prev) => [...prev, unique].slice(-QUICK_PLAN_FEED_MAX));
+  };
+
+  /** Troca de estilo AO VIVO: empurra o momento (viés territorial) e anuncia. O
+   *  efeito no PLACAR vem evento a evento via resolveStyleOnEvent (no tick). */
+  const changeStyle = (next: TacticalIntensityLevel) => {
+    if (next === styleRef.current) return;
+    styleRef.current = next;
+    setStyle(next);
+    const m = minuteRef.current;
+    momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, styleMomentumBias(next));
+    pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: `Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}` });
   };
 
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
@@ -597,7 +627,28 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     if (m > 0 && ev && ev.minute === m) {
       const idx = eventIdxRef.current;
       eventIdxRef.current = idx + 1;
-      handleEvent(ev, idx);
+      // ESTILO AO VIVO: o estilo certo pro momento CONVERTE (gol/blindagem); o
+      // errado CUSTA (gol perdido / leva gol). Não re-mexe em lances já moldados
+      // por uma decisão (beat/clutch), pra não contar duas vezes.
+      let shown = ev;
+      if (!ev.decision_influenced) {
+        const res = resolveStyleOnEvent({
+          event: ev,
+          chosen: styleRef.current,
+          state: {
+            scoreDiff: scoreRef.current.home - scoreRef.current.away,
+            minute: m,
+            momentum: momentumRef.current[Math.max(0, Math.min(89, m - 1))] ?? 50,
+          },
+          seed: plan.seed,
+          index: idx,
+        });
+        if (res.flip) {
+          shown = res.event;
+          eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? res.event : e));
+        }
+      }
+      handleEvent(shown, idx);
       return;
     }
 
@@ -927,6 +978,33 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           homeShort={plan.home_short}
           awayShort={plan.away_short}
         />
+      </div>
+
+      {/* DOCK DE ESTILO — controle tático AO VIVO. O estilo certo pro momento
+          converte chance em gol e blinda o perigo; o errado custa caro. Faixa
+          fina, sempre à mão (não some durante o jogo). */}
+      <div className="px-5 pt-3">
+        <div className="grid grid-cols-5 gap-1.5">
+          {STYLE_CHIPS.map((c) => {
+            const on = style === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => changeStyle(c.id)}
+                className="py-2 font-display uppercase tracking-[0.03em] text-[10px] font-black transition-colors active:scale-[0.97]"
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: on ? 'var(--color-neon-yellow)' : 'transparent',
+                  color: on ? '#000' : 'rgba(255,255,255,0.6)',
+                  border: on ? 'none' : '1px solid var(--color-border)',
+                }}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Área principal: o palco muda por fase; a barra acima permanece. */}
