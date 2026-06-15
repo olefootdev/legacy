@@ -183,7 +183,7 @@ function WeeklyLeaderboard({ rows, myId, weekLabel }: { rows: LigaOleWeeklyRow[]
               {r.isChampion
                 ? <Crown className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
                 : <Medal className="w-3.5 h-3.5 text-white/30 shrink-0" strokeWidth={2} aria-hidden />}
-              <span className="flex-1 truncate leading-none" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: '14px', color: mine ? 'var(--color-neon-yellow)' : '#fff' }}>{r.clubName}</span>
+              <span className="flex-1 truncate leading-none" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '14px', color: mine ? 'var(--color-neon-yellow)' : '#fff' }}>{r.clubName}</span>
               <span className="font-display uppercase tracking-[0.1em] text-[8px] font-black text-white/45 shrink-0">{reachedName(r.reachedRound, r.isChampion)}</span>
             </div>
           );
@@ -390,7 +390,7 @@ export function LigaOle() {
             <div className="flex items-center gap-2.5 px-4 py-3 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
               <Skull className="w-5 h-5 text-danger shrink-0" strokeWidth={2} aria-hidden />
               <p className="text-[12px] text-white/75 leading-snug">
-                Revanche: <span className="text-white font-semibold" style={{ fontFamily: MORET, fontStyle: 'italic' }}>{nemesis.name}</span> te eliminou na <span className="text-danger">{nemesis.round}</span>. Crie a Liga Ole clássica e <span className="text-neon-yellow">cobre essa conta</span>.
+                Revanche: <span className="text-white font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>{nemesis.name}</span> te eliminou na <span className="text-danger">{nemesis.round}</span>. Crie a Liga Ole clássica e <span className="text-neon-yellow">cobre essa conta</span>.
               </p>
             </div>
           )}
@@ -460,12 +460,12 @@ export function LigaOle() {
               </p>
               <div className="flex items-center justify-center gap-3">
                 <div className="flex-1 text-right min-w-0">
-                  <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{club.name}</p>
+                  <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{club.name}</p>
                   <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {managerOverall}</p>
                 </div>
                 <Swords className="w-5 h-5 text-white/35 shrink-0" strokeWidth={2} aria-hidden />
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-white truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{opp?.name ?? '—'}</p>
+                  <p className="text-white truncate leading-[0.95]" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 'clamp(20px, 6vw, 30px)', letterSpacing: '-0.01em' }}>{opp?.name ?? '—'}</p>
                   <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {opp?.overall ?? '—'}</p>
                 </div>
               </div>
