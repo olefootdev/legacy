@@ -72,10 +72,10 @@ function main() {
     return good > bad;
   })());
 
-  console.log('\n[4] Fadiga / recovery');
-  check('titular recuperou fadiga (60→48)', r.players.p1.fatigue === 48, `fad=${r.players.p1.fatigue}`);
-  check('banco recupera mais (50→20)', r.players.bench1.fatigue === 20, `fad=${r.players.bench1.fatigue}`);
-  check('playerHealth sincronizado', r.playerHealth.p1?.fatigue === 48);
+  console.log('\n[4] Fadiga: titular cansa, banco descansa');
+  check('titular CANSA ao jogar (60→80)', r.players.p1.fatigue === 80, `fad=${r.players.p1.fatigue}`);
+  check('banco DESCANSA (50→32)', r.players.bench1.fatigue === 32, `fad=${r.players.bench1.fatigue}`);
+  check('playerHealth sincronizado', r.playerHealth.p1?.fatigue === 80);
 
   console.log('\n[5] Streak');
   check('vitória incrementa streak', r.quickMatchStreak.current === 1);

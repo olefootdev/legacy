@@ -57,8 +57,8 @@ export interface QuickPlanCreditState {
   quickMatchStreak: { current: number; best: number; lastMatchWon: boolean; multiplier: number };
 }
 
-const POST_MATCH_BASE_RECOVERY = 12;
-const POST_MATCH_BENCH_BONUS = 18;
+const MATCH_FATIGUE_COST = 20;   // quem jogou os 90' CANSA (fadiga sobe)
+const POST_MATCH_RECOVERY = 18;  // quem ficou de fora/banco DESCANSA (fadiga cai)
 
 /** Multiplicador da Leitura de Jogo (Manager IQ): 0/4 → 0.85x · 4/4 → ~1.18x. */
 export function readingMultiplier(reading: { good: number; total: number }): number {
@@ -161,15 +161,16 @@ export function computeQuickPlanCredit(
     teamOvrAfter: counted ? Math.round((teamAfterSum / counted) * 10) / 10 : 0,
   };
 
-  // 5) Recuperação de fadiga pós-jogo (FIX C): jogou recupera menos, banco mais.
+  // 5) Fadiga pós-jogo: quem JOGOU os 90' cansa (+custo); quem ficou de FORA
+  //    descansa (−recuperação). É o que faz a fadiga existir e a rotação importar.
   const playedSet = new Set(input.homeOnPitch);
   const playerHealth = { ...state.playerHealth };
   for (const [pid, p] of Object.entries(players)) {
     const cur = playerHealth[pid] ?? healthFromLegacyPlayer({
       id: pid, fatigue: p.fatigue, injuryRisk: p.injuryRisk, outForMatches: p.outForMatches,
     });
-    const recovery = POST_MATCH_BASE_RECOVERY + (playedSet.has(pid) ? 0 : POST_MATCH_BENCH_BONUS);
-    const nextFatigue = Math.max(0, p.fatigue - recovery);
+    const fatigueDelta = playedSet.has(pid) ? MATCH_FATIGUE_COST : -POST_MATCH_RECOVERY;
+    const nextFatigue = Math.max(0, Math.min(100, p.fatigue + fatigueDelta));
     playerHealth[pid] = { ...cur, fatigue: nextFatigue, injuryRisk: p.injuryRisk, outForMatches: p.outForMatches, atRisk: nextFatigue >= 80 || p.injuryRisk >= 70 };
     players[pid] = { ...p, fatigue: nextFatigue };
   }
