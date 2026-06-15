@@ -248,9 +248,10 @@ def build_beat(
     # INTENÇÃO do momento: o jogo está no ATAQUE da casa, na DEFESA, ou neutro?
     # Momentum manda; placar dá um empurrão (atrás → ataca; na frente → segura).
     score = mom + (-6 if diff < 0 else 5 if diff > 0 and trend != "rising" else 0)
-    if score >= 57:
+    # Banda neutra ESTREITA (47–53): compromete mais com ataque/defesa, menos "morno".
+    if score >= 53:
         intent = "attack"
-    elif score <= 43:
+    elif score <= 47:
         intent = "defend"
     else:
         intent = "neutral"
@@ -278,9 +279,10 @@ def build_beat(
             f"Eles vêm {loc_def}.",
         ])
     else:
+        # Neutro NUNCA diz "equilibrado" (a barra já mostra isso): aponta a inclinação.
         text = rng.choice([
-            "Jogo equilibrado.",
-            f"Aposte {loc_atk}.",
+            f"Vai abrir {loc_atk}.",
+            "Quem marcar primeiro decide.",
             f"Olho {loc_def} deles.",
         ])
     text = _max5(text)

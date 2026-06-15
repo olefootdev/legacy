@@ -369,6 +369,33 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     prev_actor_id = None
     prev_actor_id_away = None
 
+    # ── ASSIMETRIA PRÉ-JOGO (#3) ────────────────────────────────────────────
+    # Futebol é decidido por pequenas vantagens AMPLIFICADAS. Mesmo com OVRs
+    # próximos, o jogo TENDE pra quem tem: mando de campo, força, melhor leitura
+    # setorial (edges) e um jogador "quente". Sem isso a barra fica colada no 50.
+    HOME_ADVANTAGE = 4.0
+    hot_home = max((p.get("finalizacao", 60) for p in home_lineup), default=60)
+    hot_away = max((p.get("finalizacao", 60) for p in away_lineup), default=60)
+    hot_tilt = max(-3.0, min(3.0, (hot_home - hot_away) * 0.12))   # craque inclina o jogo
+    edge_tilt = (home_atk_edge - away_atk_edge) * 22.0             # vantagem setorial pesa
+    form_tilt = (float(home_team.get("form", 0)) - float(away_team.get("form", 0))) * 1.5
+    base_tilt = HOME_ADVANTAGE + diff * 9.0 + edge_tilt + hot_tilt + form_tilt
+    base_tilt = max(-16.0, min(16.0, base_tilt))
+    if mode == "second_half":
+        base_tilt *= 0.85  # no 2º tempo o mando pesa um pouco menos
+
+    # ── CHOQUES DE EVENTO (#2) ──────────────────────────────────────────────
+    # Gol/pênalti perdido empurram FORTE e o efeito PERSISTE (decai devagar), em
+    # vez de ser engolido pelo retorno ao 50. man_down e fadiga são bias vivos.
+    momentum_shock = 0.0
+    fat_im = {"defensive": 0.85, "balanced": 1.0, "offensive": 1.2}
+
+    def fatigue_rate(intensity_key: str, strength: float) -> float:
+        # press/ataque cansam mais; time mais fraco corre mais atrás.
+        return 0.5 * fat_im.get(intensity_key, 1.0) * (1 + max(0.0, (72 - strength)) / 160.0)
+    home_fat_rate = fatigue_rate(home_intensity, home_strength)
+    away_fat_rate = fatigue_rate(away_intensity, away_strength)
+
     # Goal scorers tracking
     scorer_counts: Dict[str, Dict[str, Any]] = {}
 
@@ -529,14 +556,16 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             if is_goal:
                 if possession == "home":
                     home_score += 1
-                    pressure_home *= 0.5    # o cerco descarregou no gol
-                    pressure_away *= 0.7    # adversário abalado
-                    momentum_home = min(95, momentum_home + 10)
+                    pressure_home *= 0.6     # descarregou, mas a confiança fica
+                    pressure_away *= 0.72     # adversário abalado
+                    momentum_home = min(95, momentum_home + 16)
+                    momentum_shock += 14      # ONDA: empurra forte e PERSISTE (#2)
                 else:
                     away_score += 1
-                    pressure_away *= 0.5
-                    pressure_home *= 0.7
-                    momentum_home = max(5, momentum_home - 10)
+                    pressure_away *= 0.6
+                    pressure_home *= 0.72
+                    momentum_home = max(5, momentum_home - 16)
+                    momentum_shock -= 14
                 stats = scorer_counts.setdefault(actor["id"], {"goals": 0, "name": actor["name"]})
                 stats["goals"] += 1
             elif base in ("chance", "save", "woodwork"):
@@ -618,6 +647,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 cards_home += 1
                 if cards_home > 4 and rng.random() < 0.18 and sent_off_home == 0:
                     sent_off_home = 1
+                    home_strength -= SENT_OFF_STRENGTH_PENALTY  # um a menos pesa JÁ
+                    momentum_shock -= 12                        # e empurra o jogo pro adversário
                     red_text = event_text("red_home", foul_actor["name"], zone, minute, 0, "epic")
                     events.append({
                         "minute": minute,
@@ -627,6 +658,17 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     })
             else:
                 cards_away += 1
+                if cards_away > 4 and rng.random() < 0.18 and sent_off_away == 0:
+                    sent_off_away = 1
+                    away_strength -= SENT_OFF_STRENGTH_PENALTY
+                    momentum_shock += 12                        # vantagem numérica pra casa
+                    red_text = event_text("red_away", foul_actor["name"], zone, minute, 0, "epic")
+                    events.append({
+                        "minute": minute,
+                        "kind": "red_away", "actor_id": foul_actor["id"],
+                        "actor_side": "away", "xg": 0, "weight_tier": "epic",
+                        "zone": zone, "text": red_text,
+                    })
 
         # Lesão (rara)
         if rng.random() < 0.012 and possession == "home":
@@ -643,9 +685,12 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 "text": event_text("injury_home", inj_actor["name"], zone, minute, 0, tier),
             })
 
-        # Atualiza fatigue por minuto (in-place)
-        for p in home_lineup + away_lineup:
-            p["fatigue"] = min(100, p["fatigue"] + 0.55)
+        # Atualiza fatigue por minuto (in-place) — DIVERGENTE: press/ataque e o time
+        # mais fraco cansam mais. Vira "abafa"/"blitz final" no 2º tempo (#2).
+        for p in home_lineup:
+            p["fatigue"] = min(100, p["fatigue"] + home_fat_rate)
+        for p in away_lineup:
+            p["fatigue"] = min(100, p["fatigue"] + away_fat_rate)
 
         # ── PRESSÃO & MOMENTO ───────────────────────────────────────────────
         # Decaimento natural do cerco (o ímpeto esfria se o time não insiste).
@@ -664,9 +709,19 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 pressure_away = min(100.0, pressure_away
                     + build * side_imul * (1 + away_atk_edge * 0.8)
                     * (1 + (away_strength - 70) / 130) * away_global * away_suppress)
-        # O MOMENTO ESPELHA a diferença de pressão — a barra se move de acordo com
-        # os dados (cerco real), não por random walk. Segue o alvo suavemente.
-        target = 50.0 + (pressure_home - pressure_away) * 0.5
+        # O MOMENTO ESPELHA a diferença de pressão + os DESEQUILÍBRIOS reais:
+        # assimetria pré-jogo (#3), choque de gol/cartão que persiste (#2),
+        # um-a-menos o jogo todo (#2) e fadiga divergente no fim (#2).
+        momentum_shock *= 0.90  # a onda do gol/cartão dura ~8-10 min
+        man_down_bias = (sent_off_away - sent_off_home) * 13.0
+        if minute >= 60:
+            home_fat = sum(p["fatigue"] for p in home_lineup) / max(1, len(home_lineup))
+            away_fat = sum(p["fatigue"] for p in away_lineup) / max(1, len(away_lineup))
+            fatigue_bias = (away_fat - home_fat) * 0.5 * ((minute - 60) / 30.0)
+        else:
+            fatigue_bias = 0.0
+        target = (50.0 + (pressure_home - pressure_away) * 0.5
+                  + base_tilt + momentum_shock + man_down_bias + fatigue_bias)
         target = max(8.0, min(92.0, target))
         momentum_home += (target - momentum_home) * 0.24
         momentum_home = max(5.0, min(95.0, momentum_home))

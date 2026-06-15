@@ -544,9 +544,11 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       if (rng.next() < 0.74) {
         scoreRef.current.away += 1;
         setAwayScore((v) => v + 1);
+        momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, -15); // gol deles puxa o momento
         setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: goalLine(next.minute, 'Pênalti convertido pelo adversário. Dói, mas segue.'), side: 'away' });
         setPhase('celebration');
       } else {
+        momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, 16); // paredão! a torcida vira o jogo
         pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'save', text: 'PEGOU! Pênalti defendido — que paredão!', side: 'home' });
         scheduleNext(HOLD_MS.big);
       }
@@ -786,6 +788,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       setHomeScore((v) => v + 1);
       tally(taker.id, 'home', 'goals');
       tally(taker.id, 'home', 'shots');
+      momentumRef.current = nudgeMomentumCurve(momentumRef.current, pen.minute, 15); // pênalti convertido empurra o momento
       setCelebration({
         key: `pen-${pen.idx}`,
         name: taker.name,
@@ -795,6 +798,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       });
       setPhase('celebration');
     } else {
+      // PÊNALTI PERDIDO: choque psicológico — o momento pende pro adversário (#2).
+      momentumRef.current = nudgeMomentumCurve(momentumRef.current, pen.minute, -16);
       pushFeed({ id: `penm-${pen.idx}`, minute: pen.minute, kind: 'chance', text: `${taker.name} bateu o pênalti e o goleiro pegou! Que azar.`, side: 'home', actorId: taker.id });
       setPhase('playing');
       scheduleNext(900);
@@ -870,11 +875,18 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     const threat = pick(plan.matchup_matrix?.away);
     const homeShort = homeName ?? plan.home_short;
     const awayShort = awayName ?? plan.away_short;
+    // Neutro NUNCA repete "Jogo equilibrado" (a barra de momento já diz isso):
+    // aponta o que vai TIPAR o jogo, girando por minuto pra não repetir a linha.
+    const balancedReads = [
+      bestHome ? `Pode abrir ${bestHome.label}` : 'Quem marcar primeiro decide',
+      threat ? `Olho ${threat.label} deles` : 'Jogo de detalhes',
+      'Quem marcar primeiro decide',
+    ];
     const headline = press >= 58
       ? `${homeShort} no ataque`
       : press <= 42
       ? `${awayShort} pressiona`
-      : 'Jogo equilibrado';
+      : balancedReads[Math.floor(currentMinute / 6) % balancedReads.length]!;
     // Detalhe gira por minuto pra não ficar estático (3 leituras reais).
     const beat = Math.floor(currentMinute / 7) % 3;
     let detail: string;
