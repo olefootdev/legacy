@@ -111,6 +111,8 @@ interface Props {
   penaltyTakers?: PenaltyTaker[];
   /** Lendas (isLegacy) titulares — ativam um BUFF de time por ~15' (1 uso/jogo). */
   legacyBoosters?: { id: string; name: string; label: string; pct: number }[];
+  /** Formação inicial (ex.: '4-3-3') — o seletor ao vivo cicla a partir dela. */
+  initialFormation?: string;
   /** Titulares em campo — alimentam os 5 cards (3 melhores + 2 piores por OVR). */
   fieldCards?: SquadCard[];
   /** Onze do adversário — pros 5 cards do outro time (só leitura). */
@@ -315,6 +317,12 @@ const STYLE_CHIPS: { id: TacticalIntensityLevel; label: string }[] = [
   { id: 'attack', label: 'Ataque' },
 ];
 
+/** Formações que o seletor ao vivo cicla + viés territorial (afeta o momento). */
+const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3'];
+const FORMATION_TILT: Record<string, number> = {
+  '3-4-3': 5, '4-3-3': 2, '4-2-3-1': 1, '4-4-2': 0, '3-5-2': 0, '5-3-2': -5,
+};
+
 const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
   insight: 'text-white/70 italic',
   decision: 'text-neon-yellow',
@@ -334,7 +342,7 @@ const CLOCK_MS = 240;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
+export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -352,6 +360,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   // LEGACY — buff de time das lendas titulares (1 uso/jogo, dura ~15').
   const [legacyActive, setLegacyActive] = useState(false);
   const [legacyUsed, setLegacyUsed] = useState(false);
+  // Formação ao vivo — cicla a partir da inicial (afeta o momento, não re-planeja).
+  const [formation, setFormation] = useState<string>(initialFormation ?? '4-3-3');
   const [celebration, setCelebration] = useState<GoalCelebration | null>(null);
   const [penalty, setPenalty] = useState<{ idx: number; minute: number } | null>(null);
   const [forced, setForced] = useState<ForcedMoment | null>(null);
@@ -426,6 +436,17 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     setLegacyUsed(true);
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, Math.min(18, totalPct * 2 + 4));
     legacyBoosters.forEach((l) => pushFeed({ id: `legacy-${l.id}`, minute: m, kind: 'decision', text: `Legacy: @${l.name} +${l.pct}% ${l.label}` }));
+  };
+
+  /** Cicla a formação ao vivo: muda a forma do time e empurra o momento conforme
+   *  o quão ofensiva ela é (3-4-3 sobe, 5-3-2 recua). Não re-planeja o jogo. */
+  const cycleFormation = () => {
+    const idx = FORMATIONS.indexOf(formation);
+    const next = FORMATIONS[(idx + 1) % FORMATIONS.length] ?? '4-3-3';
+    setFormation(next);
+    const m = minuteRef.current;
+    momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, FORMATION_TILT[next] ?? 0);
+    pushFeed({ id: `form-${m}-${next}`, minute: m, kind: 'decision', text: `Formação: ${next}` });
   };
 
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
@@ -1057,29 +1078,6 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             );
           })}
         </div>
-
-        {/* LEGACY — buff das lendas titulares (1 uso/jogo, dura ~15'). Só aparece
-            quando há lenda no time; ativado, empurra o momento e puxa o gol. */}
-        {legacyBoosters && legacyBoosters.length > 0 && (
-          <button
-            type="button"
-            onClick={activateLegacy}
-            disabled={legacyUsed}
-            className="mt-1.5 w-full py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black transition-colors flex items-center justify-center gap-1.5 disabled:cursor-default"
-            style={{
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : 'transparent',
-              color: legacyActive ? '#000' : legacyUsed ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
-              border: legacyActive ? 'none' : `1px solid ${legacyUsed ? 'var(--color-border)' : 'var(--color-neon-yellow)'}`,
-            }}
-          >
-            {legacyActive
-              ? <span className="truncate">★ Legacy ativo · {legacyBoosters.map((l) => `@${l.name} +${l.pct}%`).join(' · ')}</span>
-              : legacyUsed
-              ? 'Legacy já usado'
-              : <>★ Ativar Legacy ({legacyBoosters.length})</>}
-          </button>
-        )}
       </div>
 
       {/* Área principal: o palco muda por fase; a barra acima permanece. */}
@@ -1488,6 +1486,43 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           </div>
         );
       })()}
+
+      {/* CONTROLES — Formação (esquerda) | Legacy (direita), entre a narração e os
+          jogadores. Formação cicla; Legacy ativa o buff das lendas (1 uso/jogo). */}
+      {phase !== 'done' && (
+        <div className="px-3 pt-1 pb-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={cycleFormation}
+            className="py-2.5 flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
+            style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
+          >
+            <span className="font-display uppercase tracking-[0.16em] text-[10px] font-black text-white/40">Formação</span>
+            <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '18px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={activateLegacy}
+            disabled={!legacyBoosters || legacyBoosters.length === 0 || legacyUsed}
+            className="py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] disabled:cursor-default truncate"
+            style={{
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : 'transparent',
+              color: legacyActive ? '#000' : (!legacyBoosters || legacyBoosters.length === 0 || legacyUsed) ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
+              border: legacyActive ? 'none' : `1px solid ${(!legacyBoosters || legacyBoosters.length === 0 || legacyUsed) ? 'var(--color-border)' : 'var(--color-neon-yellow)'}`,
+            }}
+          >
+            {legacyActive
+              ? '★ Legacy ativo'
+              : legacyUsed
+              ? '★ Legacy usado'
+              : !legacyBoosters || legacyBoosters.length === 0
+              ? '★ Sem lenda'
+              : `★ Ativar Legacy (${legacyBoosters.length})`}
+          </button>
+        </div>
+      )}
 
       {/* MEU ELENCO EM CAMPO — só o nosso time (o adversário não interessa ver).
           Toca num dos teus pra trocar a qualquer momento. */}

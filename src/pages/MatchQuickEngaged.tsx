@@ -452,6 +452,7 @@ export default function MatchQuickEngaged() {
             awayName={opponent!.name}
             penaltyTakers={penaltyTakers}
             legacyBoosters={legacyBoosters}
+            initialFormation={formationRef.current}
             fieldCards={homePlayersRef.current.map(toSquadCard)}
             awayCards={awayLineupRef.current.map((p) => ({
               id: p.id,
