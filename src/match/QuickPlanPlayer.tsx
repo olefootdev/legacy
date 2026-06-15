@@ -47,6 +47,7 @@ import type { ShootoutResult } from '@/match/quickEngaged/penaltyShootout';
 import { renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import {
   resolveStyleOnEvent,
+  resolveLegacyBoost,
   styleMomentumBias,
   nudgeMomentumCurve,
   STYLE_LABEL,
@@ -108,6 +109,8 @@ interface Props {
   awayName?: string;
   /** Batedores de pênalti da casa — o manager escolhe quem bate (Elifoot-style). */
   penaltyTakers?: PenaltyTaker[];
+  /** Lendas (isLegacy) titulares — ativam um BUFF de time por ~15' (1 uso/jogo). */
+  legacyBoosters?: { id: string; name: string; label: string; pct: number }[];
   /** Titulares em campo — alimentam os 5 cards (3 melhores + 2 piores por OVR). */
   fieldCards?: SquadCard[];
   /** Onze do adversário — pros 5 cards do outro time (só leitura). */
@@ -331,7 +334,7 @@ const CLOCK_MS = 240;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
+export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -346,6 +349,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const [feed, setFeed] = useState<QuickPlanFeedItem[]>([]);
   // Estilo de jogo AO VIVO — escolha certa converte gol, errada custa caro.
   const [style, setStyle] = useState<TacticalIntensityLevel>('possession');
+  // LEGACY — buff de time das lendas titulares (1 uso/jogo, dura ~15').
+  const [legacyActive, setLegacyActive] = useState(false);
+  const [legacyUsed, setLegacyUsed] = useState(false);
   const [celebration, setCelebration] = useState<GoalCelebration | null>(null);
   const [penalty, setPenalty] = useState<{ idx: number; minute: number } | null>(null);
   const [forced, setForced] = useState<ForcedMoment | null>(null);
@@ -363,6 +369,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
   const styleRef = useRef<TacticalIntensityLevel>('possession'); // lido no tick (closure sempre fresca)
+  const legacyActiveRef = useRef(false);
+  const legacyUntilRef = useRef(0);
+  const legacyPctRef = useRef(0);
+  const legacyNameRef = useRef('');
   const ledgerRef = useRef<BeatDecisionRecord[]>([]);
   const minuteRef = useRef(0);          // relógio corrido
   const eventIdxRef = useRef(0);        // ponteiro no próximo evento (lista ordenada por minuto)
@@ -400,6 +410,22 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, styleMomentumBias(next));
     pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: `Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}` });
+  };
+
+  /** LEGACY: ativa o buff das lendas (1 uso/jogo, ~15'). Empurra o momento na hora
+   *  e dá chance extra de gol enquanto a janela está aberta (efeito no tick). */
+  const activateLegacy = () => {
+    if (legacyUsed || !legacyBoosters || legacyBoosters.length === 0) return;
+    const totalPct = legacyBoosters.reduce((s, l) => s + l.pct, 0);
+    const m = minuteRef.current;
+    legacyPctRef.current = totalPct;
+    legacyNameRef.current = legacyBoosters[0]!.name;
+    legacyActiveRef.current = true;
+    legacyUntilRef.current = m + 15;
+    setLegacyActive(true);
+    setLegacyUsed(true);
+    momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, Math.min(18, totalPct * 2 + 4));
+    legacyBoosters.forEach((l) => pushFeed({ id: `legacy-${l.id}`, minute: m, kind: 'decision', text: `Legacy: @${l.name} +${l.pct}% ${l.label}` }));
   };
 
   /** Agenda o próximo passo do relógio (pausa quando uma decisão está aberta). */
@@ -650,6 +676,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? res.event : e));
         }
       }
+      // LEGACY ATIVO: a lenda puxa o time — chance extra de converter quase-gol.
+      if (legacyActiveRef.current && m <= legacyUntilRef.current && !shown.decision_influenced) {
+        const boosted = resolveLegacyBoost({ event: shown, totalPct: legacyPctRef.current, seed: plan.seed, index: idx, legendName: legacyNameRef.current });
+        if (boosted) {
+          shown = boosted;
+          eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? boosted : e));
+        }
+      }
       handleEvent(shown, idx);
       return;
     }
@@ -813,6 +847,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Encerra a janela do Legacy quando o relógio passa dos ~15'.
+  useEffect(() => {
+    if (legacyActiveRef.current && minute > legacyUntilRef.current) {
+      legacyActiveRef.current = false;
+      setLegacyActive(false);
+    }
+  }, [minute]);
+
   const handleBeatChoice = (choice: AnalystBeatChoice | null) => {
     const beat = activeBeat;
     if (beat && choice) {
@@ -842,9 +884,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     return [...ranked.slice(0, 3), ...ranked.slice(-2).filter((p) => !ranked.slice(0, 3).includes(p))];
   };
   const homeFive = pickFive(field);
-  const awayFive = pickFive(awayCards ?? []);
   const homeTopId = homeFive.length ? homeFive[0]!.id : '';
-  const awayTopId = awayFive.length ? awayFive[0]!.id : '';
   const subCandidateIds = new Set([...field].sort((a, b) => a.ovr - b.ovr).slice(0, 2).map((p) => p.id));
   const canSubNow = phase === 'playing' && benchPool.length > 0;
   // Momento atual (perspectiva casa) — alimenta a nota VIVA por jogador.
@@ -1017,6 +1057,29 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             );
           })}
         </div>
+
+        {/* LEGACY — buff das lendas titulares (1 uso/jogo, dura ~15'). Só aparece
+            quando há lenda no time; ativado, empurra o momento e puxa o gol. */}
+        {legacyBoosters && legacyBoosters.length > 0 && (
+          <button
+            type="button"
+            onClick={activateLegacy}
+            disabled={legacyUsed}
+            className="mt-1.5 w-full py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black transition-colors flex items-center justify-center gap-1.5 disabled:cursor-default"
+            style={{
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : 'transparent',
+              color: legacyActive ? '#000' : legacyUsed ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
+              border: legacyActive ? 'none' : `1px solid ${legacyUsed ? 'var(--color-border)' : 'var(--color-neon-yellow)'}`,
+            }}
+          >
+            {legacyActive
+              ? <span className="truncate">★ Legacy ativo · {legacyBoosters.map((l) => `@${l.name} +${l.pct}%`).join(' · ')}</span>
+              : legacyUsed
+              ? 'Legacy já usado'
+              : <>★ Ativar Legacy ({legacyBoosters.length})</>}
+          </button>
+        )}
       </div>
 
       {/* Área principal: o palco muda por fase; a barra acima permanece. */}
@@ -1426,42 +1489,26 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         );
       })()}
 
-      {/* ELENCOS EM CAMPO — 5 de cada lado, padrão editorial roster. Toca num
-          dos teus pra trocar a qualquer momento. */}
+      {/* MEU ELENCO EM CAMPO — só o nosso time (o adversário não interessa ver).
+          Toca num dos teus pra trocar a qualquer momento. */}
       {homeFive.length >= 5 && phase !== 'done' && (
-        <div className="px-3 pb-3 pt-2 border-t border-white/8 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
-          {/* Meu time */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              {homeCrestUrl && <img src={homeCrestUrl} alt="" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
-              <span className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow truncate">
-                {homeName ?? plan.home_short} · em campo
-              </span>
-            </div>
-            {homeFive.map((p) => (
-              <RosterRow
-                key={p.id}
-                card={p}
-                isTop={p.id === homeTopId}
-                rating={matchRating(p.ovr, statsRef.current[p.id], ratingCtx(p, 'home'))}
-                subbable={canSubNow && subCandidateIds.has(p.id)}
-                onSub={() => openSub(p.id)}
-              />
-            ))}
+        <div className="px-3 pb-3 pt-2 border-t border-white/8 flex flex-col gap-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            {homeCrestUrl && <img src={homeCrestUrl} alt="" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
+            <span className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow truncate">
+              {homeName ?? plan.home_short} · em campo
+            </span>
           </div>
-
-          {/* Adversário */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              {awayCrestUrl && <img src={awayCrestUrl} alt="" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
-              <span className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-white/70 truncate">
-                {awayName ?? plan.away_short} · o perigo
-              </span>
-            </div>
-            {awayFive.map((p) => (
-              <RosterRow key={p.id} card={p} isTop={p.id === awayTopId} rating={matchRating(p.ovr, statsRef.current[p.id], ratingCtx(p, 'away'))} />
-            ))}
-          </div>
+          {homeFive.map((p) => (
+            <RosterRow
+              key={p.id}
+              card={p}
+              isTop={p.id === homeTopId}
+              rating={matchRating(p.ovr, statsRef.current[p.id], ratingCtx(p, 'home'))}
+              subbable={canSubNow && subCandidateIds.has(p.id)}
+              onSub={() => openSub(p.id)}
+            />
+          ))}
         </div>
       )}
 

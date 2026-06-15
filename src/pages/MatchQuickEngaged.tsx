@@ -193,6 +193,32 @@ export default function MatchQuickEngaged() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, players]);
 
+  // LEGACY: lendas (isLegacy) titulares dão um buff de time ativável na partida.
+  // Deriva o destaque (label + %) do legacyTeamBooster de cada uma.
+  const legacyBoosters = useMemo(() => {
+    const BOOSTER_LABEL: Record<string, string> = {
+      morale: 'MORAL', possession_pct: 'POSSE', attack: 'ATAQUE', defense: 'DEFESA',
+      finalizacao: 'FINALIZAÇÃO', velocidade: 'VELOCIDADE', passe: 'PASSE',
+    };
+    const ids = Object.values(lineup).filter((v): v is string => typeof v === 'string');
+    const out: { id: string; name: string; label: string; pct: number }[] = [];
+    for (const id of ids) {
+      const p = players[id];
+      if (!p || !p.isLegacy) continue;
+      const entries = Object.entries(p.legacyTeamBooster ?? {});
+      let label = 'ATAQUE';
+      let pct = 2;
+      if (entries.length) {
+        entries.sort((a, b) => Number(b[1]) - Number(a[1]));
+        const [k, v] = entries[0]!;
+        label = BOOSTER_LABEL[k] ?? k.toUpperCase();
+        pct = Math.max(1, Math.min(6, Math.round(Number(v) || 2)));
+      }
+      out.push({ id, name: p.name, label, pct });
+    }
+    return out.slice(0, 3);
+  }, [players, lineup]);
+
   // QuickHomePlayerView → SquadCard (5 cards + banco).
   const toSquadCard = useCallback(
     (p: QuickHomePlayerView): SquadCard => ({
@@ -425,6 +451,7 @@ export default function MatchQuickEngaged() {
             homeName={club.name}
             awayName={opponent!.name}
             penaltyTakers={penaltyTakers}
+            legacyBoosters={legacyBoosters}
             fieldCards={homePlayersRef.current.map(toSquadCard)}
             awayCards={awayLineupRef.current.map((p) => ({
               id: p.id,

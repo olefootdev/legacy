@@ -111,6 +111,31 @@ function upAwayGoal(e: MatchPlanEvent, label: string): MatchPlanEvent {
     reason: `${label} fora de hora cobrou o preço`, decision_influenced: true };
 }
 
+/**
+ * LEGACY ATIVO: enquanto a janela do buff está aberta, as lendas em campo
+ * PUXAM o time — quase-gol da casa tem chance extra de virar gol. `totalPct` é a
+ * soma dos boosters das lendas ativas (quanto mais lenda, mais forte). Pode
+ * compor com o estilo (são efeitos independentes). Determinístico por índice.
+ */
+export function resolveLegacyBoost(opts: {
+  event: MatchPlanEvent;
+  totalPct: number;
+  seed: string;
+  index: number;
+  legendName: string;
+}): MatchPlanEvent | null {
+  const e = opts.event;
+  if (!NEAR_MISS_HOME.has(e.kind)) return null;
+  const rng = new SpiritRng(hashSeed(`${opts.seed}:legacy:${opts.index}`));
+  const p = Math.min(0.45, (e.xg ?? 0.12) * 1.5 + opts.totalPct * 0.03);
+  if (rng.next() < p) {
+    return { ...e, kind: 'goal_home', weight_tier: 'epic',
+      text: `${e.minute}' — GOOOL! O Legacy de ${opts.legendName} puxou o time — bola na rede!`,
+      reason: `a lenda ${opts.legendName} decidiu`, decision_influenced: true };
+  }
+  return null;
+}
+
 export type StyleFlip = 'home_goal' | 'shield' | 'home_miss' | 'away_goal' | null;
 
 export interface StyleResolveResult { event: MatchPlanEvent; flip: StyleFlip; fit: number; }
