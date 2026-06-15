@@ -16,6 +16,7 @@ import {
   styleMomentumBias,
   nudgeMomentumCurve,
   resolveStyleOnEvent,
+  resolveFormationOnEvent,
   type LiveMatchState,
 } from '../src/match/quickTacticalLive';
 import type { MatchPlanEvent } from '../src/match/quickPlanTypes';
@@ -89,6 +90,22 @@ const parked = nudgeMomentumCurve(flat, 60, styleMomentumBias('defend'));
 ok(pushed[61]! > 50, 'Ataque empurra o momento pra cima');
 ok(parked[61]! < 50, 'Retranca puxa o momento pra baixo');
 ok(pushed[88]! === 50 || Math.abs(pushed[88]! - 50) < Math.abs(pushed[61]! - 50), 'efeito decai com o tempo');
+
+console.log('\n[8] formação muda o jogo de verdade');
+function countForm(kind: MatchPlanEvent['kind'], formation: string, n = 600) {
+  let goals = 0, away = 0, shields = 0;
+  for (let i = 0; i < n; i += 1) {
+    const r = resolveFormationOnEvent({ event: ev(kind), formation, seed: 'test-seed', index: i });
+    if (r?.kind === 'goal_home') goals += 1;
+    if (r?.kind === 'goal_away') away += 1;
+    if (r?.kind === 'shot_away') shields += 1;
+  }
+  return { goals, away, shields };
+}
+ok(countForm('shot_home', '3-4-3').goals > 30, 'formação ofensiva (3-4-3) converte mais chance da casa');
+ok(countForm('shot_home', '4-4-2').goals === 0, 'formação neutra (4-4-2) não força gol');
+ok(countForm('shot_away', '3-4-3').away > 0, 'formação ofensiva expõe a defesa (sofre mais)');
+ok(countForm('chance_away', '5-3-2').shields > 0, 'formação defensiva (5-3-2) blinda a ameaça');
 
 console.log(`\n${fail === 0 ? '✅ OK' : '❌ FALHOU'} — Estilo ao vivo: ${pass} checks, ${fail} falhas\n`);
 if (fail > 0) process.exit(1);

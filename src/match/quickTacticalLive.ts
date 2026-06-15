@@ -136,6 +136,45 @@ export function resolveLegacyBoost(opts: {
   return null;
 }
 
+/** Índice ofensivo da formação (-1 fechada … +1 aberta). Vira efeito REAL no jogo. */
+export const FORMATION_OFFENSE: Record<string, number> = {
+  '5-3-2': -1, '3-5-2': -0.3, '4-4-2': 0, '4-2-3-1': 0.25, '4-3-3': 0.5, '3-4-3': 1,
+};
+
+/**
+ * FORMAÇÃO com consequência: a forma do time muda o jogo de VERDADE (não só o
+ * momento). Ofensiva (3-4-3) cria mais gol da casa MAS expõe a defesa no contra;
+ * defensiva (5-3-2) blinda a ameaça do adversário. Determinístico por índice.
+ */
+export function resolveFormationOnEvent(opts: {
+  event: MatchPlanEvent;
+  formation: string;
+  seed: string;
+  index: number;
+}): MatchPlanEvent | null {
+  const off = FORMATION_OFFENSE[opts.formation] ?? 0;
+  if (Math.abs(off) < 0.1) return null;
+  const e = opts.event;
+  const rng = new SpiritRng(hashSeed(`${opts.seed}:formation:${opts.index}:${opts.formation}`));
+  if (off > 0) {
+    if (NEAR_MISS_HOME.has(e.kind) && rng.next() < off * 0.1) {
+      return { ...e, kind: 'goal_home', weight_tier: 'big',
+        text: `${e.minute}' — GOOOL! A formação ofensiva criou o espaço e o time não perdoou!`,
+        reason: 'a formação aberta gerou a chance', decision_influenced: true };
+    }
+    if (NEAR_MISS_AWAY.has(e.kind) && rng.next() < off * 0.07) {
+      return { ...e, kind: 'goal_away', weight_tier: 'big',
+        text: `${e.minute}' — A formação aberta deixou espaço atrás e o adversário aproveitou.`,
+        reason: 'o time exposto pagou o preço', decision_influenced: true };
+    }
+  } else if (THREAT_AWAY.has(e.kind) && rng.next() < Math.abs(off) * 0.16) {
+    return { ...e, kind: 'shot_away', weight_tier: 'big',
+      text: `${e.minute}' — A formação fechada engoliu o ataque deles. Sólido atrás.`,
+      reason: 'a formação defensiva segurou', decision_influenced: true };
+  }
+  return null;
+}
+
 export type StyleFlip = 'home_goal' | 'shield' | 'home_miss' | 'away_goal' | null;
 
 export interface StyleResolveResult { event: MatchPlanEvent; flip: StyleFlip; fit: number; }

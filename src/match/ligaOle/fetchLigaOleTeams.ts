@@ -42,8 +42,9 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
  * Sorteio determinístico por seed. Retorna LigaOleTeam (id = global_league_teams).
  */
 export async function fetchLigaOleRivals(args: {
-  excludeShort: string;
-  excludeName: string;
+  /** Exclusões do clube do manager (clássica). Omitir → campo CANÔNICO (Liga da Semana). */
+  excludeShort?: string;
+  excludeName?: string;
   excludeManagerId?: string | null;
   count: number;
   seed: string;

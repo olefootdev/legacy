@@ -10,9 +10,9 @@ OUT="$ROOT/supabase/apply_full_public_schema.sql"
 -- ═══════════════════════════════════════════════════════════════════════════
 -- OLEFOOT — schema public completo (gerado por scripts/bundle-supabase-migrations.sh)
 --
--- Executar UMA vez no Supabase → SQL → novo script, com a base vazia.
--- Não reexecutar sobre o mesmo schema: políticas CREATE POLICY podem falhar
--- se já existirem (use os DROP POLICY IF EXISTS quando disponíveis).
+-- IDEMPOTENTE: pode rodar em base vazia OU re-rodar sobre schema existente.
+-- O bundle prefixa DROP POLICY/TRIGGER IF EXISTS automaticamente antes de cada
+-- CREATE POLICY/TRIGGER, então não tropeça em "policy already exists".
 --
 -- Preferido em dev/prod: na raiz do repo
 --   npx supabase login && npx supabase link --project-ref <REF> && npx supabase db push
@@ -27,5 +27,12 @@ HDR
     echo "-- ─── $(basename "$f") ───"
     cat "$f"
   done < <(find "$ROOT/supabase/migrations" -maxdepth 1 -type f -name '*.sql' | sort)
-} > "$OUT"
+} | perl -0777 -pe '
+  # Torna o bundle RE-RODÁVEL: antes de cada CREATE POLICY/TRIGGER (no início de
+  # linha, nunca em comentário "--"), injeta o DROP ... IF EXISTS correspondente.
+  s{(?im)^([ \t]*)(create[ \t]+policy[ \t]+("(?:[^"]*)"|[A-Za-z0-9_]+)[ \t]+on[ \t]+([A-Za-z0-9_."]+))}
+   {$1."DROP POLICY IF EXISTS $3 ON $4;\n".$1.$2}ge;
+  s{(?im)^([ \t]*)(create[ \t]+trigger[ \t]+([A-Za-z0-9_]+)\b[\s\S]*?\bon[ \t]+([A-Za-z0-9_."]+))}
+   {$1."DROP TRIGGER IF EXISTS $3 ON $4;\n".$1.$2}ge;
+' > "$OUT"
 echo "Wrote $OUT"

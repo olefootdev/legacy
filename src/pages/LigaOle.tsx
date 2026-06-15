@@ -261,20 +261,41 @@ export function LigaOle() {
     setBusy(true);
     try {
       const myManagerId = await currentManagerId();
-      // weekly → seed GLOBAL da semana (todos pegam o mesmo chaveamento). classic → seed própria.
-      const seed = mode === 'weekly' ? `ligaole-week-${weekKey}` : `ligaole-${club.shortName}-${Date.now()}`;
-      const rivals = await fetchLigaOleRivals({ excludeShort: club.shortName, excludeName: club.name, excludeManagerId: myManagerId, count: 31, seed });
-      if (rivals.length < 31) {
-        setError('Ainda não há managers suficientes pra montar a Liga Ole (precisa de 31 rivais reais).');
-        setBusy(false);
-        return;
-      }
-      // REVANCHE (só clássica): força o nêmesis no chaveamento se não tiver caído no sorteio.
-      if (mode === 'classic' && nemesis && !rivals.some((r) => r.id === nemesis.id)) {
-        rivals[rivals.length - 1] = { id: nemesis.id, name: nemesis.name, short: nemesis.short, overall: nemesis.overall, managerId: nemesis.managerId };
-      }
+      const norm = (s: string | null | undefined) => String(s ?? '').trim().toLowerCase();
       const managerTeam: LigaOleTeam = { id: 'manager', name: club.name, short: club.shortName, overall: managerOverall, isManager: true };
-      const built = createLigaOle({ teams: [managerTeam, ...rivals], managerTeamId: 'manager', seed });
+      const seed = mode === 'weekly' ? `ligaole-week-${weekKey}` : `ligaole-${club.shortName}-${Date.now()}`;
+      let teams: LigaOleTeam[];
+
+      if (mode === 'weekly') {
+        // CAMPO CANÔNICO de 32 (idêntico pra TODOS): sem auto-exclusão. O manager
+        // assume o próprio slot no campo (ou troca o último, se não estiver nele).
+        const field = await fetchLigaOleRivals({ count: 32, seed });
+        if (field.length < 32) {
+          setError('Ainda não há 32 managers reais pra montar a Liga da Semana.');
+          setBusy(false);
+          return;
+        }
+        let slot = myManagerId ? field.findIndex((t) => t.managerId && t.managerId === myManagerId) : -1;
+        if (slot < 0) slot = field.findIndex((t) => norm(t.short) === norm(club.shortName) || norm(t.name) === norm(club.name));
+        if (slot < 0) slot = field.length - 1;
+        field[slot] = managerTeam;
+        teams = field;
+      } else {
+        // CLÁSSICA: 31 rivais sorteados em volta do manager (bracket próprio).
+        const rivals = await fetchLigaOleRivals({ excludeShort: club.shortName, excludeName: club.name, excludeManagerId: myManagerId, count: 31, seed });
+        if (rivals.length < 31) {
+          setError('Ainda não há managers suficientes pra montar a Liga Ole (precisa de 31 rivais reais).');
+          setBusy(false);
+          return;
+        }
+        // REVANCHE: força o nêmesis no chaveamento se não tiver caído no sorteio.
+        if (nemesis && !rivals.some((r) => r.id === nemesis.id)) {
+          rivals[rivals.length - 1] = { id: nemesis.id, name: nemesis.name, short: nemesis.short, overall: nemesis.overall, managerId: nemesis.managerId };
+        }
+        teams = [managerTeam, ...rivals];
+      }
+
+      const built = createLigaOle({ teams, managerTeamId: 'manager', seed });
       dispatch({ type: 'CREATE_LIGA_OLE', liga: built, mode, weekKey: mode === 'weekly' ? weekKey : undefined });
       setWager(0);
     } catch (e) {

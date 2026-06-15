@@ -48,6 +48,7 @@ import { renderQuickFeedRichText } from '@/match/quickMatchFeed';
 import {
   resolveStyleOnEvent,
   resolveLegacyBoost,
+  resolveFormationOnEvent,
   styleMomentumBias,
   nudgeMomentumCurve,
   STYLE_LABEL,
@@ -377,8 +378,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   // LEGACY — buff de time das lendas titulares (1 uso/jogo, dura ~15').
   const [legacyActive, setLegacyActive] = useState(false);
   const [legacyUsed, setLegacyUsed] = useState(false);
-  // Formação ao vivo — cicla a partir da inicial (afeta o momento, não re-planeja).
+  // Formação ao vivo — cicla a partir da inicial. Afeta o momento E o jogo (resolveFormationOnEvent).
   const [formation, setFormation] = useState<string>(initialFormation ?? '4-3-3');
+  const formationRef = useRef<string>(initialFormation ?? '4-3-3'); // lido no tick
   const [celebration, setCelebration] = useState<GoalCelebration | null>(null);
   const [penalty, setPenalty] = useState<{ idx: number; minute: number } | null>(null);
   const [forced, setForced] = useState<ForcedMoment | null>(null);
@@ -460,6 +462,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const cycleFormation = () => {
     const idx = FORMATIONS.indexOf(formation);
     const next = FORMATIONS[(idx + 1) % FORMATIONS.length] ?? '4-3-3';
+    formationRef.current = next;
     setFormation(next);
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, FORMATION_TILT[next] ?? 0);
@@ -720,6 +723,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         if (boosted) {
           shown = boosted;
           eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? boosted : e));
+        }
+      }
+      // FORMAÇÃO: a forma do time muda o jogo de verdade (ofensiva = mais gol e
+      // mais risco; defensiva = blinda). Só se o lance ainda não foi moldado.
+      if (!shown.decision_influenced) {
+        const ff = resolveFormationOnEvent({ event: shown, formation: formationRef.current, seed: plan.seed, index: idx });
+        if (ff) {
+          shown = ff;
+          eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? ff : e));
         }
       }
       handleEvent(shown, idx);
@@ -1074,6 +1086,19 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           converte chance em gol e blinda o perigo; o errado custa caro. Faixa
           fina, sempre à mão (não some durante o jogo). */}
       <div className="px-5 pt-3">
+        {/* Header do dock: rótulo + RISCO do estilo atual (trade-off legível). */}
+        <div className="flex items-center justify-between px-0.5 mb-1.5">
+          <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/40">Estilo</span>
+          {(() => {
+            const d = TACTICAL_INTENSITY_PRESETS[style].defensiveBonus;
+            const r = d <= -0.08
+              ? { t: 'Risco alto', c: 'var(--color-danger)' }
+              : d <= 0.05
+              ? { t: 'Risco médio', c: 'var(--color-warning)' }
+              : { t: 'Risco baixo', c: 'var(--color-success)' };
+            return <span className="font-display uppercase tracking-[0.16em] text-[9px] font-black" style={{ color: r.c }}>{r.t}</span>;
+          })()}
+        </div>
         <div className="grid grid-cols-5 gap-1.5">
           {STYLE_CHIPS.map((c) => {
             const on = style === c.id;

@@ -1,9 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- OLEFOOT — schema public completo (gerado por scripts/bundle-supabase-migrations.sh)
 --
--- Executar UMA vez no Supabase → SQL → novo script, com a base vazia.
--- Não reexecutar sobre o mesmo schema: políticas CREATE POLICY podem falhar
--- se já existirem (use os DROP POLICY IF EXISTS quando disponíveis).
+-- IDEMPOTENTE: pode rodar em base vazia OU re-rodar sobre schema existente.
+-- O bundle prefixa DROP POLICY/TRIGGER IF EXISTS automaticamente antes de cada
+-- CREATE POLICY/TRIGGER, então não tropeça em "policy already exists".
 --
 -- Preferido em dev/prod: na raiz do repo
 --   npx supabase login && npx supabase link --project-ref <REF> && npx supabase db push
@@ -104,49 +104,63 @@ as $$
 $$;
 
 -- ── Profiles ───
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 create policy "profiles_select_own" on public.profiles
   for select using (id = auth.uid());
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
 create policy "profiles_insert_own" on public.profiles
   for insert with check (id = auth.uid());
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 create policy "profiles_update_own" on public.profiles
   for update using (id = auth.uid());
 
 -- ── Clubs ──────
 -- Dono pode ler/atualizar o seu clube; qualquer autenticado pode criar.
+DROP POLICY IF EXISTS "clubs_select_own" ON public.clubs;
 create policy "clubs_select_own" on public.clubs
   for select using (id = public.my_club_id());
+DROP POLICY IF EXISTS "clubs_insert_auth" ON public.clubs;
 create policy "clubs_insert_auth" on public.clubs
   for insert with check (auth.uid() is not null);
+DROP POLICY IF EXISTS "clubs_update_own" ON public.clubs;
 create policy "clubs_update_own" on public.clubs
   for update using (id = public.my_club_id());
 
 -- ── Players ────
 -- Tudo filtrado por club_id = my_club_id().
+DROP POLICY IF EXISTS "players_select_own" ON public.players;
 create policy "players_select_own" on public.players
   for select using (club_id = public.my_club_id());
+DROP POLICY IF EXISTS "players_insert_own" ON public.players;
 create policy "players_insert_own" on public.players
   for insert with check (club_id = public.my_club_id());
+DROP POLICY IF EXISTS "players_update_own" ON public.players;
 create policy "players_update_own" on public.players
   for update using (club_id = public.my_club_id());
+DROP POLICY IF EXISTS "players_delete_own" ON public.players;
 create policy "players_delete_own" on public.players
   for delete using (club_id = public.my_club_id());
 
 -- ── Matches ────
 -- Dono de qualquer lado (home ou away) pode ler.
 -- Só home_club pode criar e atualizar.
+DROP POLICY IF EXISTS "matches_select_own" ON public.matches;
 create policy "matches_select_own" on public.matches
   for select using (
     home_club_id = public.my_club_id()
     or away_club_id = public.my_club_id()
   );
+DROP POLICY IF EXISTS "matches_insert_own" ON public.matches;
 create policy "matches_insert_own" on public.matches
   for insert with check (home_club_id = public.my_club_id());
+DROP POLICY IF EXISTS "matches_update_own" ON public.matches;
 create policy "matches_update_own" on public.matches
   for update using (home_club_id = public.my_club_id());
 
 -- ── Match Events ─
 -- Leitura: dono de qualquer clube da partida.
 -- Escrita: dono do clube home da partida.
+DROP POLICY IF EXISTS "match_events_select_own" ON public.match_events;
 create policy "match_events_select_own" on public.match_events
   for select using (
     match_id in (
@@ -155,6 +169,7 @@ create policy "match_events_select_own" on public.match_events
          or away_club_id = public.my_club_id()
     )
   );
+DROP POLICY IF EXISTS "match_events_insert_own" ON public.match_events;
 create policy "match_events_insert_own" on public.match_events
   for insert with check (
     match_id in (
@@ -394,16 +409,20 @@ create index if not exists idx_matches_fixture on public.matches (fixture_id);
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- Calendário / divisões: leitura para utilizadores autenticados (metadados de época).
+DROP POLICY IF EXISTS "seasons_select_authenticated" ON public.seasons;
 create policy "seasons_select_authenticated" on public.seasons
   for select to authenticated using (true);
 
+DROP POLICY IF EXISTS "season_divisions_select_authenticated" ON public.season_divisions;
 create policy "season_divisions_select_authenticated" on public.season_divisions
   for select to authenticated using (true);
 
+DROP POLICY IF EXISTS "season_division_memberships_select_authenticated" ON public.season_division_memberships;
 create policy "season_division_memberships_select_authenticated" on public.season_division_memberships
   for select to authenticated using (true);
 
 -- Competição visível se: participo OU (pública e não rascunho).
+DROP POLICY IF EXISTS "competitions_select_authenticated" ON public.competitions;
 create policy "competitions_select_authenticated" on public.competitions
   for select to authenticated using (
     exists (
@@ -419,6 +438,7 @@ create policy "competitions_select_authenticated" on public.competitions
   );
 
 -- Fases: mesma lógica via competição pai.
+DROP POLICY IF EXISTS "competition_phases_select_authenticated" ON public.competition_phases;
 create policy "competition_phases_select_authenticated" on public.competition_phases
   for select to authenticated using (
     exists (
@@ -441,6 +461,7 @@ create policy "competition_phases_select_authenticated" on public.competition_ph
   );
 
 -- Participantes: ver todos do mesmo campeonato se o campeonato me é visível.
+DROP POLICY IF EXISTS "competition_participants_select_authenticated" ON public.competition_participants;
 create policy "competition_participants_select_authenticated" on public.competition_participants
   for select to authenticated using (
     exists (
@@ -462,6 +483,7 @@ create policy "competition_participants_select_authenticated" on public.competit
     )
   );
 
+DROP POLICY IF EXISTS "competition_standings_select_authenticated" ON public.competition_standings;
 create policy "competition_standings_select_authenticated" on public.competition_standings
   for select to authenticated using (
     exists (
@@ -483,6 +505,7 @@ create policy "competition_standings_select_authenticated" on public.competition
     )
   );
 
+DROP POLICY IF EXISTS "competition_rewards_select_authenticated" ON public.competition_rewards;
 create policy "competition_rewards_select_authenticated" on public.competition_rewards
   for select to authenticated using (
     exists (
@@ -504,6 +527,7 @@ create policy "competition_rewards_select_authenticated" on public.competition_r
     )
   );
 
+DROP POLICY IF EXISTS "fixtures_select_authenticated" ON public.fixtures;
 create policy "fixtures_select_authenticated" on public.fixtures
   for select to authenticated using (
     exists (
@@ -590,6 +614,7 @@ comment on table public.sports_leagues is
 create index if not exists idx_sports_leagues_active on public.sports_leagues (is_active, sort_order);
 create index if not exists idx_sports_leagues_country on public.sports_leagues (country);
 
+DROP TRIGGER IF EXISTS sports_leagues_set_updated_at ON public.sports_leagues;
 create trigger sports_leagues_set_updated_at
   before update on public.sports_leagues
   for each row execute function public.olefoot_set_updated_at();
@@ -618,6 +643,7 @@ create index if not exists idx_sports_clubs_league on public.sports_clubs (leagu
 create index if not exists idx_sports_clubs_active on public.sports_clubs (league_id, is_active);
 create index if not exists idx_sports_clubs_name on public.sports_clubs (name);
 
+DROP TRIGGER IF EXISTS sports_clubs_set_updated_at ON public.sports_clubs;
 create trigger sports_clubs_set_updated_at
   before update on public.sports_clubs
   for each row execute function public.olefoot_set_updated_at();
@@ -664,6 +690,7 @@ create table if not exists public.user_settings (
 
 comment on table public.user_settings is 'Preferências de UI/idioma/notificações; sem dados sensíveis.';
 
+DROP TRIGGER IF EXISTS user_settings_set_updated_at ON public.user_settings;
 create trigger user_settings_set_updated_at
   before update on public.user_settings
   for each row execute function public.olefoot_set_updated_at();
@@ -689,6 +716,7 @@ comment on table public.platform_accounts is
 create index if not exists idx_platform_accounts_auth on public.platform_accounts (auth_user_id);
 create index if not exists idx_platform_accounts_status on public.platform_accounts (status);
 
+DROP TRIGGER IF EXISTS platform_accounts_set_updated_at ON public.platform_accounts;
 create trigger platform_accounts_set_updated_at
   before update on public.platform_accounts
   for each row execute function public.olefoot_set_updated_at();
@@ -720,6 +748,7 @@ comment on table public.player_blueprints is
 create index if not exists idx_player_blueprints_status on public.player_blueprints (status, updated_at desc);
 create index if not exists idx_player_blueprints_created_by on public.player_blueprints (created_by);
 
+DROP TRIGGER IF EXISTS player_blueprints_set_updated_at ON public.player_blueprints;
 create trigger player_blueprints_set_updated_at
   before update on public.player_blueprints
   for each row execute function public.olefoot_set_updated_at();
@@ -746,6 +775,7 @@ create unique index if not exists game_spirit_profiles_one_default
 
 comment on table public.game_spirit_profiles is 'Ambiente narrativo (ex. produção / staging). Apenas um is_default = true.';
 
+DROP TRIGGER IF EXISTS game_spirit_profiles_set_updated_at ON public.game_spirit_profiles;
 create trigger game_spirit_profiles_set_updated_at
   before update on public.game_spirit_profiles
   for each row execute function public.olefoot_set_updated_at();
@@ -765,6 +795,7 @@ create table if not exists public.game_spirit_rules (
 
 create index if not exists idx_game_spirit_rules_profile on public.game_spirit_rules (profile_id, is_active, sort_order);
 
+DROP TRIGGER IF EXISTS game_spirit_rules_set_updated_at ON public.game_spirit_rules;
 create trigger game_spirit_rules_set_updated_at
   before update on public.game_spirit_rules
   for each row execute function public.olefoot_set_updated_at();
@@ -784,6 +815,7 @@ create table if not exists public.game_spirit_templates (
 
 create index if not exists idx_game_spirit_templates_profile on public.game_spirit_templates (profile_id, locale);
 
+DROP TRIGGER IF EXISTS game_spirit_templates_set_updated_at ON public.game_spirit_templates;
 create trigger game_spirit_templates_set_updated_at
   before update on public.game_spirit_templates
   for each row execute function public.olefoot_set_updated_at();
@@ -800,6 +832,7 @@ create table if not exists public.game_spirit_knowledge (
 
 create index if not exists idx_game_spirit_knowledge_profile on public.game_spirit_knowledge (profile_id, domain);
 
+DROP TRIGGER IF EXISTS game_spirit_knowledge_set_updated_at ON public.game_spirit_knowledge;
 create trigger game_spirit_knowledge_set_updated_at
   before update on public.game_spirit_knowledge
   for each row execute function public.olefoot_set_updated_at();
@@ -860,6 +893,7 @@ create table if not exists public.admin_banners (
 
 create index if not exists idx_admin_banners_active on public.admin_banners (status, priority desc, starts_at, ends_at);
 
+DROP TRIGGER IF EXISTS admin_banners_set_updated_at ON public.admin_banners;
 create trigger admin_banners_set_updated_at
   before update on public.admin_banners
   for each row execute function public.olefoot_set_updated_at();
@@ -921,49 +955,64 @@ alter table public.admin_banners enable row level security;
 alter table public.finance_ledger_entries enable row level security;
 
 -- Catálogo desportivo: leitura pública (onboarding pode ser pré-login)
+DROP POLICY IF EXISTS sports_leagues_select_public ON public.sports_leagues;
 create policy sports_leagues_select_public on public.sports_leagues
   for select to anon, authenticated using (is_active = true);
 
+DROP POLICY IF EXISTS sports_clubs_select_public ON public.sports_clubs;
 create policy sports_clubs_select_public on public.sports_clubs
   for select to anon, authenticated using (is_active = true);
 
 -- sports_data_imports: sem policies = sem acesso via anon key; service_role ignora RLS.
 
 -- user_settings: dono
+DROP POLICY IF EXISTS user_settings_own ON public.user_settings;
 create policy user_settings_own on public.user_settings
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- platform_accounts: dono quando ligado a auth; senão sem acesso cliente (admin API)
+DROP POLICY IF EXISTS platform_accounts_select_own ON public.platform_accounts;
 create policy platform_accounts_select_own on public.platform_accounts
   for select to authenticated using (auth_user_id = auth.uid());
 
 -- player_blueprints: criador
+DROP POLICY IF EXISTS player_blueprints_select_own ON public.player_blueprints;
 create policy player_blueprints_select_own on public.player_blueprints
   for select to authenticated using (created_by = auth.uid());
+DROP POLICY IF EXISTS player_blueprints_insert_own ON public.player_blueprints;
 create policy player_blueprints_insert_own on public.player_blueprints
   for insert to authenticated with check (created_by = auth.uid());
+DROP POLICY IF EXISTS player_blueprints_update_own ON public.player_blueprints;
 create policy player_blueprints_update_own on public.player_blueprints
   for update to authenticated using (created_by = auth.uid());
+DROP POLICY IF EXISTS player_blueprints_delete_own ON public.player_blueprints;
 create policy player_blueprints_delete_own on public.player_blueprints
   for delete to authenticated using (created_by = auth.uid());
 
 -- Game Spirit: leitura para clientes autenticados (conteúdo publicado); refinamento futuro por profile
+DROP POLICY IF EXISTS game_spirit_profiles_select_auth ON public.game_spirit_profiles;
 create policy game_spirit_profiles_select_auth on public.game_spirit_profiles
   for select to authenticated using (true);
+DROP POLICY IF EXISTS game_spirit_rules_select_auth ON public.game_spirit_rules;
 create policy game_spirit_rules_select_auth on public.game_spirit_rules
   for select to authenticated using (is_active = true);
+DROP POLICY IF EXISTS game_spirit_templates_select_auth ON public.game_spirit_templates;
 create policy game_spirit_templates_select_auth on public.game_spirit_templates
   for select to authenticated using (true);
+DROP POLICY IF EXISTS game_spirit_knowledge_select_auth ON public.game_spirit_knowledge;
 create policy game_spirit_knowledge_select_auth on public.game_spirit_knowledge
   for select to authenticated using (true);
+DROP POLICY IF EXISTS game_spirit_snapshots_select_auth ON public.game_spirit_snapshots;
 create policy game_spirit_snapshots_select_auth on public.game_spirit_snapshots
   for select to authenticated using (true);
 
 -- Saves: dono
+DROP POLICY IF EXISTS game_saves_own ON public.game_saves;
 create policy game_saves_own on public.game_saves
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- Banners: activos no período
+DROP POLICY IF EXISTS admin_banners_select_active ON public.admin_banners;
 create policy admin_banners_select_active on public.admin_banners
   for select to anon, authenticated using (
     status = 'active'
@@ -972,6 +1021,7 @@ create policy admin_banners_select_active on public.admin_banners
   );
 
 -- Ledger: utilizador vê linhas onde é alvo; ajustes globais (user_id null) só backend
+DROP POLICY IF EXISTS finance_ledger_select_own ON public.finance_ledger_entries;
 create policy finance_ledger_select_own on public.finance_ledger_entries
   for select to authenticated using (user_id = auth.uid());
 
@@ -1105,6 +1155,7 @@ end;
 $$;
 
 drop trigger if exists players_sync_name_display_trg on public.players;
+DROP TRIGGER IF EXISTS players_sync_name_display_trg ON public.players;
 create trigger players_sync_name_display_trg
   before insert or update on public.players
   for each row execute function public.players_sync_name_display();
@@ -1456,6 +1507,7 @@ end;
 $$;
 
 drop trigger if exists friendly_challenges_set_accept_meta_trg on public.friendly_challenges;
+DROP TRIGGER IF EXISTS friendly_challenges_set_accept_meta_trg ON public.friendly_challenges;
 create trigger friendly_challenges_set_accept_meta_trg
   before update on public.friendly_challenges
   for each row execute function public.friendly_challenges_set_accept_meta();
@@ -1806,21 +1858,25 @@ $$;
 -- ─── Triggers nas tabelas sensíveis ─────────────────────────────────────────
 
 -- market_purchases: toda compra fica registada
+DROP TRIGGER IF EXISTS audit_market_purchases ON public.market_purchases;
 create trigger audit_market_purchases
   after insert or update or delete on public.market_purchases
   for each row execute function public.fn_audit_log();
 
 -- wallet_credits: emissão de BRO pelo admin
+DROP TRIGGER IF EXISTS audit_wallet_credits ON public.wallet_credits;
 create trigger audit_wallet_credits
   after insert or update or delete on public.wallet_credits
   for each row execute function public.fn_audit_log();
 
 -- genesis_market_players: alterações de retrato ou listagem
+DROP TRIGGER IF EXISTS audit_genesis_market_players ON public.genesis_market_players;
 create trigger audit_genesis_market_players
   after update or delete on public.genesis_market_players
   for each row execute function public.fn_audit_log();
 
 -- matches: criação e mudança de estado
+DROP TRIGGER IF EXISTS audit_matches ON public.matches;
 create trigger audit_matches
   after insert or update or delete on public.matches
   for each row execute function public.fn_audit_log();
@@ -1978,6 +2034,7 @@ end;
 $$;
 
 drop trigger if exists trg_increment_total_managers on public.profiles;
+DROP TRIGGER IF EXISTS trg_increment_total_managers ON public.profiles;
 create trigger trg_increment_total_managers
   after insert on public.profiles
   for each row
@@ -2988,12 +3045,14 @@ alter table public.manager_learned_phrases enable row level security;
 
 -- Manager lê seu próprio dicionário; admin lê tudo.
 drop policy if exists mlp_select_self on public.manager_learned_phrases;
+DROP POLICY IF EXISTS mlp_select_self ON public.manager_learned_phrases;
 create policy mlp_select_self on public.manager_learned_phrases
   for select
   using (manager_id = auth.uid() or public.is_admin());
 
 -- Inserção/atualização só via RPC (ver abaixo) — bloqueia acesso direto.
 drop policy if exists mlp_no_direct_write on public.manager_learned_phrases;
+DROP POLICY IF EXISTS mlp_no_direct_write ON public.manager_learned_phrases;
 create policy mlp_no_direct_write on public.manager_learned_phrases
   for all
   using (false)
@@ -3168,6 +3227,7 @@ alter table public.admin_panel_users enable row level security;
 
 -- Tudo bloqueado via policy — só acesso via RPCs definidas abaixo.
 drop policy if exists apu_no_direct on public.admin_panel_users;
+DROP POLICY IF EXISTS apu_no_direct ON public.admin_panel_users;
 create policy apu_no_direct on public.admin_panel_users
   for all
   using (false)
@@ -3391,6 +3451,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS update_user_2fa_config_updated_at ON public.user_2fa_config;
 CREATE TRIGGER update_user_2fa_config_updated_at
   BEFORE UPDATE ON public.user_2fa_config
   FOR EACH ROW
@@ -4338,6 +4399,7 @@ alter table public.narrative_templates enable row level security;
 
 -- Qualquer autenticado lê o catálogo (não é segredo).
 drop policy if exists ntpl_public_read on public.narrative_templates;
+DROP POLICY IF EXISTS ntpl_public_read ON public.narrative_templates;
 create policy ntpl_public_read on public.narrative_templates
   for select
   to authenticated, anon
@@ -4345,6 +4407,7 @@ create policy ntpl_public_read on public.narrative_templates
 
 -- Escrita só via RPC.
 drop policy if exists ntpl_no_direct_write on public.narrative_templates;
+DROP POLICY IF EXISTS ntpl_no_direct_write ON public.narrative_templates;
 create policy ntpl_no_direct_write on public.narrative_templates
   for all
   using (false)
@@ -4581,6 +4644,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS football_vocabulary_updated_at ON football_vocabulary;
 CREATE TRIGGER football_vocabulary_updated_at
   BEFORE UPDATE ON football_vocabulary
   FOR EACH ROW
@@ -4626,6 +4690,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS player_collections_updated_at ON player_collections;
 CREATE TRIGGER player_collections_updated_at
   BEFORE UPDATE ON player_collections
   FOR EACH ROW
@@ -4732,6 +4797,7 @@ grant execute on function public.get_my_onboarding_profile() to authenticated;
 
 -- Policy: usuário pode ler o próprio profile (já deve existir, mas garante).
 drop policy if exists profiles_self_read on public.profiles;
+DROP POLICY IF EXISTS profiles_self_read ON public.profiles;
 create policy profiles_self_read on public.profiles
   for select to authenticated
   using (id = auth.uid());
@@ -4777,20 +4843,24 @@ alter table public.beta_testers enable row level security;
 
 -- Usuário lê seu próprio registro; admin lê tudo.
 drop policy if exists beta_testers_select_self on public.beta_testers;
+DROP POLICY IF EXISTS beta_testers_select_self ON public.beta_testers;
 create policy beta_testers_select_self on public.beta_testers
   for select using (user_id = auth.uid() or public.is_admin());
 
 -- Inserção pública para waitlist (anon pode entrar com email).
 drop policy if exists beta_testers_insert_waitlist on public.beta_testers;
+DROP POLICY IF EXISTS beta_testers_insert_waitlist ON public.beta_testers;
 create policy beta_testers_insert_waitlist on public.beta_testers
   for insert with check (status = 'pending');
 
 -- Apenas admin atualiza/aprova.
 drop policy if exists beta_testers_admin_write on public.beta_testers;
+DROP POLICY IF EXISTS beta_testers_admin_write ON public.beta_testers;
 create policy beta_testers_admin_write on public.beta_testers
   for update using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists beta_testers_admin_delete on public.beta_testers;
+DROP POLICY IF EXISTS beta_testers_admin_delete ON public.beta_testers;
 create policy beta_testers_admin_delete on public.beta_testers
   for delete using (public.is_admin());
 
@@ -4832,14 +4902,17 @@ create index if not exists idx_bug_reports_created on public.bug_reports(created
 alter table public.bug_reports enable row level security;
 
 drop policy if exists bug_reports_select_self on public.bug_reports;
+DROP POLICY IF EXISTS bug_reports_select_self ON public.bug_reports;
 create policy bug_reports_select_self on public.bug_reports
   for select using (user_id = auth.uid() or public.is_admin());
 
 drop policy if exists bug_reports_insert_self on public.bug_reports;
+DROP POLICY IF EXISTS bug_reports_insert_self ON public.bug_reports;
 create policy bug_reports_insert_self on public.bug_reports
   for insert with check (user_id = auth.uid() or user_id is null);
 
 drop policy if exists bug_reports_admin_write on public.bug_reports;
+DROP POLICY IF EXISTS bug_reports_admin_write ON public.bug_reports;
 create policy bug_reports_admin_write on public.bug_reports
   for update using (public.is_admin()) with check (public.is_admin());
 
@@ -4875,18 +4948,22 @@ create index if not exists idx_notifications_expires
 alter table public.notifications enable row level security;
 
 drop policy if exists notifications_select_self on public.notifications;
+DROP POLICY IF EXISTS notifications_select_self ON public.notifications;
 create policy notifications_select_self on public.notifications
   for select using (user_id = auth.uid() or public.is_admin());
 
 drop policy if exists notifications_update_self on public.notifications;
+DROP POLICY IF EXISTS notifications_update_self ON public.notifications;
 create policy notifications_update_self on public.notifications
   for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 drop policy if exists notifications_admin_insert on public.notifications;
+DROP POLICY IF EXISTS notifications_admin_insert ON public.notifications;
 create policy notifications_admin_insert on public.notifications
   for insert with check (public.is_admin());
 
 drop policy if exists notifications_delete_self on public.notifications;
+DROP POLICY IF EXISTS notifications_delete_self ON public.notifications;
 create policy notifications_delete_self on public.notifications
   for delete using (user_id = auth.uid() or public.is_admin());
 
@@ -4963,6 +5040,7 @@ alter table public.manager_friendships enable row level security;
 
 -- Ambos os lados leem; admin lê tudo.
 drop policy if exists friendships_select_involved on public.manager_friendships;
+DROP POLICY IF EXISTS friendships_select_involved ON public.manager_friendships;
 create policy friendships_select_involved on public.manager_friendships
   for select using (
     requester_id = auth.uid()
@@ -4972,11 +5050,13 @@ create policy friendships_select_involved on public.manager_friendships
 
 -- Apenas o requester cria solicitação.
 drop policy if exists friendships_insert_requester on public.manager_friendships;
+DROP POLICY IF EXISTS friendships_insert_requester ON public.manager_friendships;
 create policy friendships_insert_requester on public.manager_friendships
   for insert with check (requester_id = auth.uid());
 
 -- Ambos os lados podem atualizar (aceitar/rejeitar/cancelar).
 drop policy if exists friendships_update_involved on public.manager_friendships;
+DROP POLICY IF EXISTS friendships_update_involved ON public.manager_friendships;
 create policy friendships_update_involved on public.manager_friendships
   for update using (
     requester_id = auth.uid() or addressee_id = auth.uid()
@@ -4986,6 +5066,7 @@ create policy friendships_update_involved on public.manager_friendships
 
 -- Apenas requester pode cancelar (delete) sua própria solicitação pending.
 drop policy if exists friendships_delete_requester on public.manager_friendships;
+DROP POLICY IF EXISTS friendships_delete_requester ON public.manager_friendships;
 create policy friendships_delete_requester on public.manager_friendships
   for delete using (
     requester_id = auth.uid() and status = 'pending'
@@ -5010,16 +5091,19 @@ end;
 $$;
 
 drop trigger if exists trg_beta_testers_updated on public.beta_testers;
+DROP TRIGGER IF EXISTS trg_beta_testers_updated ON public.beta_testers;
 create trigger trg_beta_testers_updated
   before update on public.beta_testers
   for each row execute function public.touch_updated_at();
 
 drop trigger if exists trg_bug_reports_updated on public.bug_reports;
+DROP TRIGGER IF EXISTS trg_bug_reports_updated ON public.bug_reports;
 create trigger trg_bug_reports_updated
   before update on public.bug_reports
   for each row execute function public.touch_updated_at();
 
 drop trigger if exists trg_friendships_updated on public.manager_friendships;
+DROP TRIGGER IF EXISTS trg_friendships_updated ON public.manager_friendships;
 create trigger trg_friendships_updated
   before update on public.manager_friendships
   for each row execute function public.touch_updated_at();
@@ -5434,11 +5518,13 @@ $$ LANGUAGE plpgsql;
 
 -- Aplicar trigger em todas as tabelas
 DROP TRIGGER IF EXISTS update_global_teams_updated_at ON global_league_teams;
+DROP TRIGGER IF EXISTS update_global_teams_updated_at ON global_league_teams;
 CREATE TRIGGER update_global_teams_updated_at
   BEFORE UPDATE ON global_league_teams
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_global_rounds_updated_at ON global_league_rounds;
 DROP TRIGGER IF EXISTS update_global_rounds_updated_at ON global_league_rounds;
 CREATE TRIGGER update_global_rounds_updated_at
   BEFORE UPDATE ON global_league_rounds
@@ -5446,11 +5532,13 @@ CREATE TRIGGER update_global_rounds_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_global_fixtures_updated_at ON global_league_fixtures;
+DROP TRIGGER IF EXISTS update_global_fixtures_updated_at ON global_league_fixtures;
 CREATE TRIGGER update_global_fixtures_updated_at
   BEFORE UPDATE ON global_league_fixtures
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_global_state_updated_at ON global_league_state;
 DROP TRIGGER IF EXISTS update_global_state_updated_at ON global_league_state;
 CREATE TRIGGER update_global_state_updated_at
   BEFORE UPDATE ON global_league_state
@@ -5611,24 +5699,37 @@ DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_events;
 DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_state;
 
 -- Política: Todos podem ler
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_teams;
 CREATE POLICY "Allow public read access" ON global_league_teams FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_rounds;
 CREATE POLICY "Allow public read access" ON global_league_rounds FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_fixtures;
 CREATE POLICY "Allow public read access" ON global_league_fixtures FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_events;
 CREATE POLICY "Allow public read access" ON global_league_events FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_state;
 CREATE POLICY "Allow public read access" ON global_league_state FOR SELECT USING (true);
 
 -- Política: Apenas autenticados podem inserir/atualizar
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_teams;
 CREATE POLICY "Allow authenticated insert" ON global_league_teams FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_teams;
 CREATE POLICY "Allow authenticated update" ON global_league_teams FOR UPDATE USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_rounds;
 CREATE POLICY "Allow authenticated insert" ON global_league_rounds FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_rounds;
 CREATE POLICY "Allow authenticated update" ON global_league_rounds FOR UPDATE USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_fixtures;
 CREATE POLICY "Allow authenticated insert" ON global_league_fixtures FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_fixtures;
 CREATE POLICY "Allow authenticated update" ON global_league_fixtures FOR UPDATE USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_events;
 CREATE POLICY "Allow authenticated insert" ON global_league_events FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_state;
 CREATE POLICY "Allow authenticated update" ON global_league_state FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- ============================================
@@ -5794,6 +5895,7 @@ end;
 $$;
 
 drop trigger if exists trg_touch_manager_squad on public.manager_squad;
+DROP TRIGGER IF EXISTS trg_touch_manager_squad ON public.manager_squad;
 create trigger trg_touch_manager_squad
   before update on public.manager_squad
   for each row
@@ -6315,6 +6417,7 @@ begin
   return new;
 end; $$;
 drop trigger if exists market_purchases_distribute on public.market_purchases;
+DROP TRIGGER IF EXISTS market_purchases_distribute ON public.market_purchases;
 create trigger market_purchases_distribute
   after insert on public.market_purchases
   for each row execute function public.trg_market_purchase_distribute();
@@ -6779,6 +6882,7 @@ end;
 $$;
 
 drop trigger if exists trg_profiles_username on public.profiles;
+DROP TRIGGER IF EXISTS trg_profiles_username ON public.profiles;
 create trigger trg_profiles_username
   before insert or update of display_name, club_short on public.profiles
   for each row
@@ -6947,6 +7051,7 @@ begin new.updated_at := now(); return new; end;
 $$;
 
 drop trigger if exists trg_touch_manager_game_state on public.manager_game_state;
+DROP TRIGGER IF EXISTS trg_touch_manager_game_state ON public.manager_game_state;
 create trigger trg_touch_manager_game_state
   before update on public.manager_game_state
   for each row execute function public.touch_manager_game_state_updated_at();
@@ -7090,6 +7195,7 @@ begin new.updated_at := now(); return new; end;
 $$;
 
 drop trigger if exists trg_touch_admin_leagues on public.admin_leagues;
+DROP TRIGGER IF EXISTS trg_touch_admin_leagues ON public.admin_leagues;
 create trigger trg_touch_admin_leagues
   before update on public.admin_leagues
   for each row execute function public.touch_admin_leagues_updated_at();
@@ -7633,6 +7739,7 @@ $$;
 
 drop trigger if exists profiles_generate_referral_code_trg on public.profiles;
 
+DROP TRIGGER IF EXISTS profiles_generate_referral_code_trg ON public.profiles;
 create trigger profiles_generate_referral_code_trg
   before insert on public.profiles
   for each row
@@ -8176,6 +8283,7 @@ $$;
 revoke execute on function public.trg_referral_exp_commission() from anon, authenticated, public;
 
 drop trigger if exists profiles_referral_exp_commission_trg on public.profiles;
+DROP TRIGGER IF EXISTS profiles_referral_exp_commission_trg ON public.profiles;
 create trigger profiles_referral_exp_commission_trg
   after update of exp_lifetime_earned on public.profiles
   for each row
@@ -8441,6 +8549,7 @@ alter table public.pvp_match_results enable row level security;
 
 -- Usuário lê apenas resultados onde participou
 drop policy if exists pvp_results_select_participant on public.pvp_match_results;
+DROP POLICY IF EXISTS pvp_results_select_participant ON public.pvp_match_results;
 create policy pvp_results_select_participant on public.pvp_match_results
   for select using (home_user_id = auth.uid() or away_user_id = auth.uid());
 
@@ -8971,6 +9080,7 @@ $$;
 revoke execute on function public.trg_wallet_credit_affiliate_bonus() from anon, authenticated, public;
 
 drop trigger if exists wallet_credits_affiliate_bonus_trg on public.wallet_credits;
+DROP TRIGGER IF EXISTS wallet_credits_affiliate_bonus_trg ON public.wallet_credits;
 create trigger wallet_credits_affiliate_bonus_trg
   after update of applied_at on public.wallet_credits
   for each row
@@ -9198,6 +9308,7 @@ $$;
 revoke execute on function public.trg_career_progress_accrue() from anon, authenticated, public;
 
 drop trigger if exists affiliate_commissions_career_progress_trg on public.affiliate_commissions;
+DROP TRIGGER IF EXISTS affiliate_commissions_career_progress_trg ON public.affiliate_commissions;
 create trigger affiliate_commissions_career_progress_trg
   after insert on public.affiliate_commissions
   for each row
@@ -11287,6 +11398,7 @@ create index if not exists idx_legacy_credits_email
 
 -- Usuário pode ler o próprio crédito (pra UI mostrar o toast / saldo pendente).
 drop policy if exists legacy_credits_self_read on public.legacy_olefoot_credits;
+DROP POLICY IF EXISTS legacy_credits_self_read ON public.legacy_olefoot_credits;
 create policy legacy_credits_self_read on public.legacy_olefoot_credits
   for select to authenticated
   using (user_id = auth.uid());
@@ -11472,6 +11584,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_daily_crowns_per_day
 
 ALTER TABLE daily_crowns ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow public read access" ON daily_crowns;
 DROP POLICY IF EXISTS "Allow public read access" ON daily_crowns;
 CREATE POLICY "Allow public read access" ON daily_crowns FOR SELECT USING (true);
 
@@ -11672,14 +11785,17 @@ alter table public.liga_ole_weekly_runs enable row level security;
 
 -- Leitura pública (o leaderboard é visível a todos).
 drop policy if exists liga_ole_weekly_read on public.liga_ole_weekly_runs;
+DROP POLICY IF EXISTS liga_ole_weekly_read ON public.liga_ole_weekly_runs;
 create policy liga_ole_weekly_read on public.liga_ole_weekly_runs
   for select using (true);
 
 -- Escrita só da própria linha (a RPC abaixo é a via recomendada).
 drop policy if exists liga_ole_weekly_insert_self on public.liga_ole_weekly_runs;
+DROP POLICY IF EXISTS liga_ole_weekly_insert_self ON public.liga_ole_weekly_runs;
 create policy liga_ole_weekly_insert_self on public.liga_ole_weekly_runs
   for insert with check (manager_id = auth.uid());
 drop policy if exists liga_ole_weekly_update_self on public.liga_ole_weekly_runs;
+DROP POLICY IF EXISTS liga_ole_weekly_update_self ON public.liga_ole_weekly_runs;
 create policy liga_ole_weekly_update_self on public.liga_ole_weekly_runs
   for update using (manager_id = auth.uid());
 
