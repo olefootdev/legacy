@@ -1,9 +1,23 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { lazyRetry } from '@/lib/lazyRetry';
 import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
 const lazy = lazyRetry; // Bug fix: tela preta na 1ª carga (chunk failure após deploy)
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+
+/** Sobe ao topo a cada troca de rota — a página abre sempre no hero, nunca no meio.
+ *  useLayoutEffect = reset antes do paint (sem flash). Só observa o pathname, então
+ *  mudanças de query/hash não resetam. */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useLayoutEffect(() => {
+    // Desliga a restauração automática do navegador (senão reload abre no meio).
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+    document.scrollingElement?.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 import { Layout } from './components/Layout';
 import { GameProvider } from './game/GameProvider';
 import { useGameStore, useGameDispatch } from './game/store';
@@ -414,6 +428,7 @@ as a nice MVP. Let's Play Together! ⚽
         <GenesisTestSquadsHydrate />
         <AnnouncementsHydrate />
         <EmergencyTransferWindow />
+        <ScrollToTop />
         <Routes>
           <Route
             path="/admin/login"
