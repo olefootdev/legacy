@@ -352,10 +352,29 @@ export interface OlefootGameState {
   /** Liga Ole — mata-mata de 32 times reais que o manager dispute até o título.
    *  `pendingOpponentId` marca que a próxima Partida Rápida é desta liga.
    *  Só fica setado enquanto a campanha está ATIVA — ao terminar, vira flash. */
-  ligaOle?: import('@/match/ligaOle/ligaOleModel').LigaOleState & { pendingOpponentId?: string };
+  ligaOle?: import('@/match/ligaOle/ligaOleModel').LigaOleState & {
+    pendingOpponentId?: string;
+    /** Aposta em EXP feita ANTES da partida da liga (já debitada). Pagamento 2× na vitória. */
+    pendingWager?: number;
+    /** 'classic' (seed própria) ou 'weekly' (Liga da Semana — seed global compartilhada). */
+    mode?: 'classic' | 'weekly';
+    /** Chave ISO da semana quando mode='weekly' (ex.: '2026-W24'). */
+    weekKey?: string;
+  };
   /** Resultado TRANSITÓRIO da última campanha (campeão/eliminado) — mostrado UMA
    *  vez quando termina, nunca como landing. Limpo ao criar nova ou dispensar. */
-  ligaOleResultFlash?: { outcome: 'champion' | 'eliminated'; reachedRound: string; clubName: string };
+  ligaOleResultFlash?: { outcome: 'champion' | 'eliminated'; reachedRound: string; clubName: string; weekKey?: string };
+  /** NÊMESIS: o time que eliminou o manager na última Liga Ole — entra na próxima
+   *  como REVANCHE. Persistido até a revanche ser cumprida. */
+  ligaOleNemesis?: { id: string; name: string; short: string; overall: number; managerId?: string; round: string };
+  /** DINASTIA: total de títulos da Liga Ole (multiplica prêmios das próximas campanhas). */
+  ligaOleTitles?: number;
+  /** Transitório: rival REAL que o manager acabou de eliminar — dispara a notificação
+   *  cross-user (inbox do derrotado) e é limpo logo após. */
+  ligaOleLastDefeated?: { managerId: string; clubName: string; round: string };
+  /** Resumo de EVOLUÇÃO da última Partida Rápida (delta de OVR por jogador + time).
+   *  Transitório: alimenta o painel "Seu time evoluiu" no pós-jogo. */
+  lastQuickEvolution?: import('@/match/quickEngaged/creditQuickPlan').QuickPlanEvolutionSummary;
   /** Ranking competitivo da Partida Rápida (modo ranqueado). */
   competitiveRanking?: CompetitiveRankingState;
   /** Desafios diários com recompensas. */
@@ -575,10 +594,13 @@ export type GameAction =
       /** Vencedor da disputa de pênaltis quando empatou (nenhum jogo empata). */
       shootoutWin?: 'home' | 'away';
     }
-  /** Liga Ole — cria o chaveamento de 32 times reais. */
-  | { type: 'CREATE_LIGA_OLE'; liga: import('@/match/ligaOle/ligaOleModel').LigaOleState }
-  /** Liga Ole — marca o adversário da próxima Partida Rápida (a partida da liga). */
-  | { type: 'START_LIGA_OLE_MATCH'; opponentId: string }
+  /** Liga Ole — cria o chaveamento de 32 times reais. `mode`/`weekKey` p/ Liga da Semana. */
+  | { type: 'CREATE_LIGA_OLE'; liga: import('@/match/ligaOle/ligaOleModel').LigaOleState; mode?: 'classic' | 'weekly'; weekKey?: string }
+  /** Liga Ole — a notificação do nêmesis (cross-user) já foi disparada; limpa o transitório. */
+  | { type: 'LIGA_OLE_NEMESIS_NOTIFIED' }
+  /** Liga Ole — marca o adversário da próxima Partida Rápida (a partida da liga).
+   *  `wager` (opcional): aposta em EXP, debitada na hora; vitória paga 2×. */
+  | { type: 'START_LIGA_OLE_MATCH'; opponentId: string; wager?: number }
   /** Liga Ole — encerra/limpa a liga atual. */
   | { type: 'RESET_LIGA_OLE' }
   /** Liga Ole — dispensa o flash de resultado (campeão/eliminado visto). */

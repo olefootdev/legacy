@@ -21,6 +21,7 @@ import {
   clampPlayerToEvolutionCap,
   ensureMintOverall,
 } from '@/entities/playerEvolution';
+import { overallFromAttributes } from '@/entities/player';
 import { healthFromLegacyPlayer } from '@/systems/playerHealth/reducer';
 
 export type MatchOutcome = 'win' | 'draw' | 'loss';
@@ -66,10 +67,32 @@ export function readingMultiplier(reading: { good: number; total: number }): num
   return Math.max(0.85, Math.min(1.18, 1 + (ratio - 0.5) * 0.36));
 }
 
+/** Delta de OVR de um jogador que atuou (pra mostrar "o time evoluiu"). */
+export interface PlayerEvolutionDelta {
+  id: string;
+  name: string;
+  pos: string;
+  ovrBefore: number;
+  ovrAfter: number;
+  delta: number;
+}
+
+/** Resumo de evolução do time pós-partida — alimenta o painel do pós-jogo. */
+export interface QuickPlanEvolutionSummary {
+  /** Jogadores que SUBIRAM OVR, do maior salto pro menor. */
+  risers: PlayerEvolutionDelta[];
+  /** Soma dos deltas de OVR de quem atuou (pode ser negativa em jogo ruim). */
+  teamDelta: number;
+  /** OVR médio do XI titular antes e depois (1 casa). */
+  teamOvrBefore: number;
+  teamOvrAfter: number;
+}
+
 export interface QuickPlanCreditResult extends QuickPlanCreditState {
   oleGain: number;
   bonusNames: string[];
   readingMult: number;
+  evolution: QuickPlanEvolutionSummary;
 }
 
 export function computeQuickPlanCredit(
@@ -106,16 +129,37 @@ export function computeQuickPlanCredit(
   const oleGain = Math.max(0, Math.round((oleGainBase + bonusOle + bonusExp) * streakMult * readingMult));
   const finance = grantEarnedExp(state.finance, oleGain);
 
-  // 4) Evolução dos titulares + XP extra por boa leitura
+  // 4) Evolução dos titulares + XP extra por boa leitura.
+  //    Captura o delta de OVR (antes × depois) pra MOSTRAR ao manager que o time
+  //    melhorou — a evolução sempre persistiu, mas era invisível. Agora não é.
   const players = { ...state.players };
   const readingXp = Math.round(input.reading.good * 3); // ler bem evolui mais
+  const deltas: PlayerEvolutionDelta[] = [];
+  let teamBeforeSum = 0;
+  let teamAfterSum = 0;
+  let counted = 0;
   for (const [pid, stat] of Object.entries(input.homeStats)) {
     const pl = players[pid];
     if (!pl) continue;
+    const ovrBefore = overallFromAttributes(pl.attrs);
     let next = applyMatchPerformanceEvolution(pl, stat, outcome, false);
     if (readingXp > 0) next = { ...next, evolutionXp: (next.evolutionXp ?? 0) + readingXp };
-    players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(next));
+    const evolved = clampPlayerToEvolutionCap(ensureMintOverall(next));
+    players[pid] = evolved;
+    const ovrAfter = overallFromAttributes(evolved.attrs);
+    teamBeforeSum += ovrBefore;
+    teamAfterSum += ovrAfter;
+    counted += 1;
+    if (ovrAfter !== ovrBefore) {
+      deltas.push({ id: pid, name: pl.name, pos: pl.pos, ovrBefore, ovrAfter, delta: ovrAfter - ovrBefore });
+    }
   }
+  const evolution: QuickPlanEvolutionSummary = {
+    risers: deltas.filter((d) => d.delta > 0).sort((a, b) => b.delta - a.delta),
+    teamDelta: deltas.reduce((s, d) => s + d.delta, 0),
+    teamOvrBefore: counted ? Math.round((teamBeforeSum / counted) * 10) / 10 : 0,
+    teamOvrAfter: counted ? Math.round((teamAfterSum / counted) * 10) / 10 : 0,
+  };
 
   // 5) Recuperação de fadiga pós-jogo (FIX C): jogou recupera menos, banco mais.
   const playedSet = new Set(input.homeOnPitch);
@@ -130,5 +174,5 @@ export function computeQuickPlanCredit(
     players[pid] = { ...p, fatigue: nextFatigue };
   }
 
-  return { finance, players, playerHealth, quickMatchStreak, oleGain, bonusNames: bonuses.map((b) => b.name), readingMult };
+  return { finance, players, playerHealth, quickMatchStreak, oleGain, bonusNames: bonuses.map((b) => b.name), readingMult, evolution };
 }

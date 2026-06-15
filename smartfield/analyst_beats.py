@@ -91,19 +91,19 @@ DEFEND_VERB = {
 # Variantes de rótulo por canal (a UI não repete o mesmo botão toda vez).
 # Comando curto de beira de campo — voz de comissão técnica brasileira.
 ATTACK_VERB_ALT = {
-    "ataque_central": ["Joga pelo meio", "Enfia no miolo", "Ataca pelo meião"],
-    "corredor_esquerdo": ["Ataca pela esquerda", "Vaza pela esquerda", "Sobe pela esquerda"],
-    "corredor_direito": ["Ataca pela direita", "Vaza pela direita", "Sobe pela direita"],
+    "ataque_central": ["Joga pelo meio", "Avança pelo centro", "Ataca pelo meio"],
+    "corredor_esquerdo": ["Ataca pela esquerda", "Sobe pela esquerda", "Joga pela esquerda"],
+    "corredor_direito": ["Ataca pela direita", "Sobe pela direita", "Joga pela direita"],
     "criacao": ["Roda a bola e cria", "Toca e arma a jogada", "Cadencia no meio"],
-    "bola_parada": ["Aposta na bola parada", "Manda na área", "Caprichada na bola alçada"],
-    "pressao": ["Pressão na saída deles", "Marca lá na frente", "Sufoca o adversário"],
+    "bola_parada": ["Aposta na bola parada", "Manda na área", "Capricha na bola alçada"],
+    "pressao": ["Pressão na saída deles", "Marca na frente", "Sufoca o adversário"],
 }
 DEFEND_VERB_ALT = {
-    "ataque_central": ["Fecha o meio", "Tranca o miolo", "Dobra a marcação no meio"],
-    "corredor_esquerdo": ["Fecha a esquerda", "Marca o ponta deles", "Tampa a esquerda"],
-    "corredor_direito": ["Fecha a direita", "Marca o ponta deles", "Tampa a direita"],
+    "ataque_central": ["Fecha o meio", "Tranca o centro", "Reforça a marcação no meio"],
+    "corredor_esquerdo": ["Fecha a esquerda", "Marca o ponta deles", "Protege a esquerda"],
+    "corredor_direito": ["Fecha a direita", "Marca o ponta deles", "Protege a direita"],
     "criacao": ["Marca a criação deles", "Anula o camisa 10 deles", "Cola no armador"],
-    "bola_parada": ["Atenção na bola parada", "Cuidado na bola alçada", "Marca o homem de área"],
+    "bola_parada": ["Atenção na bola parada", "Cuidado na bola alçada", "Marca o homem na área"],
     "pressao": ["Segura o ímpeto deles", "Sai jogando com calma", "Tira a bola da pressão"],
 }
 
@@ -175,6 +175,24 @@ def _cap(s: str) -> str:
     return s[0].upper() + s[1:] if s else s
 
 
+# Local CURTO por canal (forma preposicionada) — pra leitura do Analista em ≤5
+# palavras. A resposta certa continua inferível: o local aponta o botão certo.
+SHORT_LOCAL = {
+    "ataque_central": "no meio",
+    "corredor_esquerdo": "pela esquerda",
+    "corredor_direito": "pela direita",
+    "criacao": "no meio-campo",
+    "bola_parada": "na bola parada",
+    "pressao": "na pressão",
+}
+
+
+def _max5(s: str) -> str:
+    """Garante no máximo 5 palavras na descrição do Analista (pedido do produto)."""
+    parts = s.split()
+    return " ".join(parts[:5]) if len(parts) > 5 else s
+
+
 def _verb(bank_alt: Dict[str, List[str]], bank: Dict[str, str], ch: str, minute: int, tag: str) -> str:
     """Rótulo do botão com variação estável (varia entre beats, fixo no seed)."""
     opts = bank_alt.get(ch)
@@ -243,55 +261,29 @@ def build_beat(
     best_strong = atk_edges[best] > 0.18      # canal realmente dominado
     threat_strong = away_edges[threat] > 0.18  # ameaça realmente perigosa
 
-    # --- Insight RICO (pt-BR): momento + leitura do canal + comando ---
-    # Composto por bancos seedados (rng) — varia a cada beat, sem repetir.
+    # --- Insight CURTO (≤5 palavras): só a leitura essencial do Analista ---
+    # Aponta ONDE está a chance (best) ou o perigo (threat). Resposta inferível.
+    loc_atk = SHORT_LOCAL.get(best, "no jogo")
+    loc_def = SHORT_LOCAL.get(threat, "no jogo")
     if intent == "attack":
-        desc = rng.choice(ATTACK_DESC.get(best, [f"{lb} tá livre"]))
-        lead = rng.choice(["CHANCE!", "PRA CIMA!", "AGORA!", "É a sua vez —", f"{mom_phrase}:"])
-        push = rng.choice([
-            "é gol na certa.", "manda pra dentro.", "acelera que sai!",
-            "explora antes que feche.", "tem que matar agora.", "parte pro abraço!",
+        text = rng.choice([
+            f"Espaço {loc_atk}.",
+            f"Brecha {loc_atk}, vai!",
+            f"Ataque {loc_atk}!",
         ])
-        if best_strong:
-            push = rng.choice([
-                "tá dominado, é só empurrar!",
-                "vantagem clara, capricha que sai.",
-                push,
-            ])
-        text = f"{lead} {_cap(desc)} — {push}"
     elif intent == "defend":
-        desc = rng.choice(DEFEND_DESC.get(threat, [f"{lt} deles tá quente"]))
-        lead = rng.choice(["PERIGO!", "ATENÇÃO!", "RECUA!", "Segura aí!", f"{mom_phrase}:"])
-        guard = rng.choice([
-            "fecha o espaço.", "não dá o bote à toa.", "junta as linhas.",
-            "marca firme antes do passe.", "aguenta que passa.",
+        text = rng.choice([
+            f"Perigo {loc_def} deles.",
+            f"Cuidado {loc_def}.",
+            f"Eles vêm {loc_def}.",
         ])
-        if threat_strong:
-            guard = rng.choice([
-                "essa é perigosa de verdade, dobra a marcação.",
-                "perigo na área, todo mundo atrás.",
-                guard,
-            ])
-        text = f"{lead} {_cap(desc)} — {guard}"
     else:
-        lead = f"{mom_phrase}."
-        mid = rng.choice([
-            f"O caminho é {_por(best)} {lb}",
-            f"Dá pra crescer {_em(best)} {lb}",
-            f"O ponto fraco deles é {lb}",
-            f"Aposta {_em(best)} {lb}",
+        text = rng.choice([
+            "Jogo equilibrado.",
+            f"Aposte {loc_atk}.",
+            f"Olho {loc_def} deles.",
         ])
-        if away_edges[threat] > 0.08:
-            tail = rng.choice([
-                f"mas fica de olho {_em(threat)} {lt} deles.",
-                f"olho {_em(threat)} {lt} deles, viu.",
-            ])
-        else:
-            tail = rng.choice([
-                "atrás você segura.", "segura e espera o vacilo deles.",
-                "o jogo tá na sua mão.",
-            ])
-        text = f"{lead} {mid} — {tail}"
+    text = _max5(text)
 
     # --- Opções moldadas pela intenção (ataca = fazer gol; defende = salvar) ---
     a_ch = atk_rank[0] if (minute // 20) % 2 == 0 else atk_rank[1]

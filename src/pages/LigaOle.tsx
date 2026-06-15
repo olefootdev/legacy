@@ -6,10 +6,10 @@
  * headers com rail amarelo + Moret italic, e o confronto como peça editorial.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Swords, ChevronRight, ShieldX, Flame } from 'lucide-react';
+import { Trophy, Swords, ChevronRight, ShieldX, Flame, Crown, CalendarDays, Skull, Medal } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -20,11 +20,23 @@ import {
   managerOpponent,
   roundMatches,
   availableRoundCount,
+  ligaOleRoundReward,
+  dinastiaMultiplier,
+  dinastiaLabel,
   LIGA_OLE_ROUNDS,
   type LigaOleTeam,
   type LigaOleState,
   type LigaOleRoundMatch,
 } from '@/match/ligaOle/ligaOleModel';
+import { formatCompactNumber } from '@/systems/economy';
+import {
+  currentWeekKey,
+  recordLigaOleWeeklyRun,
+  fetchLigaOleWeeklyLeaderboard,
+  notifyLigaOleNemesis,
+  currentManagerId,
+  type LigaOleWeeklyRow,
+} from '@/supabase/ligaOleWeekly';
 import type { OpponentStub } from '@/entities/types';
 
 const MORET = 'var(--font-serif-hero)';
@@ -146,6 +158,39 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Leaderboard da Liga da Semana — quem chegou mais longe (Supabase real). */
+function WeeklyLeaderboard({ rows, myId, weekLabel }: { rows: LigaOleWeeklyRow[]; myId: string | null; weekLabel: string }) {
+  if (!rows.length) return null;
+  const reachedName = (i: number, champ: boolean) => (champ ? 'Campeão' : (LIGA_OLE_ROUNDS[Math.max(0, Math.min(4, i))] ?? '—'));
+  return (
+    <div className="border p-3" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+      <div className="flex items-center gap-2 mb-2.5 px-0.5">
+        <CalendarDays className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
+        <span className="font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/55">Liga da Semana · {weekLabel} · quem chegou mais longe</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        {rows.map((r) => {
+          const mine = !!myId && r.managerId === myId;
+          return (
+            <div
+              key={r.managerId}
+              className="flex items-center gap-2.5 px-2.5 py-1.5"
+              style={{ borderRadius: 'var(--radius-sm)', backgroundColor: mine ? 'rgba(253,225,0,0.10)' : 'var(--color-deep-black)', border: mine ? '1px solid var(--color-neon-yellow)' : '1px solid transparent' }}
+            >
+              <span className="font-display tabular-nums text-[11px] font-black w-5 text-center shrink-0" style={{ color: r.rank <= 3 ? 'var(--color-neon-yellow)' : 'rgba(255,255,255,0.4)' }}>{r.rank}</span>
+              {r.isChampion
+                ? <Crown className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2.5} aria-hidden />
+                : <Medal className="w-3.5 h-3.5 text-white/30 shrink-0" strokeWidth={2} aria-hidden />}
+              <span className="flex-1 truncate leading-none" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: '14px', color: mine ? 'var(--color-neon-yellow)' : '#fff' }}>{r.clubName}</span>
+              <span className="font-display uppercase tracking-[0.1em] text-[8px] font-black text-white/45 shrink-0">{reachedName(r.reachedRound, r.isChampion)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function LigaOle() {
   const navigate = useNavigate();
   const dispatch = useGameDispatch();
@@ -155,11 +200,22 @@ export function LigaOle() {
   const club = useGameStore((s) => s.club);
   const liga = useGameStore((s) => s.ligaOle);
   const flash = useGameStore((s) => s.ligaOleResultFlash);
+  const balance = useGameStore((s) => s.finance.ole);
+  const nemesis = useGameStore((s) => s.ligaOleNemesis);
+  const titles = useGameStore((s) => s.ligaOleTitles) ?? 0;
+  const lastDefeated = useGameStore((s) => s.ligaOleLastDefeated);
   // Só a liga ATIVA dirige a jornada; estados encerrados não assombram o landing.
   const active = liga && liga.status === 'active' ? liga : null;
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Aposta da próxima partida (EXP). Dobra na vitória; zera na derrota.
+  const [wager, setWager] = useState(0);
+
+  // Liga da Semana — seed global compartilhado por todos + leaderboard real.
+  const weekKey = useMemo(() => currentWeekKey(), []);
+  const [board, setBoard] = useState<LigaOleWeeklyRow[]>([]);
+  const [myId, setMyId] = useState<string | null>(null);
 
   const managerOverall = useMemo(() => {
     const ids = Object.values(lineup).filter((v): v is string => typeof v === 'string' && !!players[v]);
@@ -169,20 +225,56 @@ export function LigaOle() {
     return Math.round(sum / xi.length);
   }, [players, lineup, playerHealth]);
 
-  const createLeague = async () => {
+  // NÊMESIS (cross-user): venceu um rival real → notifica o derrotado UMA vez.
+  useEffect(() => {
+    if (!lastDefeated?.managerId) return;
+    notifyLigaOleNemesis({ targetManagerId: lastDefeated.managerId, winnerClub: lastDefeated.clubName, round: lastDefeated.round })
+      .finally(() => dispatch({ type: 'LIGA_OLE_NEMESIS_NOTIFIED' }));
+  }, [lastDefeated?.managerId, lastDefeated?.round, dispatch]);
+
+  // Liga da Semana: registra o avanço da campanha ativa (a RPC guarda a fase mais longe).
+  useEffect(() => {
+    if (active?.mode === 'weekly' && active.weekKey) {
+      recordLigaOleWeeklyRun({ weekKey: active.weekKey, reachedRound: active.roundIndex, isChampion: false, clubName: club.name, clubShort: club.shortName });
+    }
+  }, [active?.mode, active?.weekKey, active?.roundIndex, club.name, club.shortName]);
+
+  // Liga da Semana: registra o RESULTADO FINAL (campeão/eliminado) da campanha semanal.
+  useEffect(() => {
+    if (!flash?.weekKey) return;
+    const reached = flash.outcome === 'champion' ? 4 : Math.max(0, LIGA_OLE_ROUNDS.indexOf(flash.reachedRound as (typeof LIGA_OLE_ROUNDS)[number]));
+    recordLigaOleWeeklyRun({ weekKey: flash.weekKey, reachedRound: reached, isChampion: flash.outcome === 'champion', clubName: flash.clubName, clubShort: club.shortName });
+  }, [flash?.weekKey, flash?.outcome, flash?.reachedRound, flash?.clubName, club.shortName]);
+
+  // Leaderboard da semana + meu id (pra destacar minha linha). Recarrega ao mudar de fase.
+  useEffect(() => {
+    let alive = true;
+    fetchLigaOleWeeklyLeaderboard(weekKey, 20).then((r) => { if (alive) setBoard(r); });
+    currentManagerId().then((id) => { if (alive) setMyId(id); });
+    return () => { alive = false; };
+  }, [weekKey, flash?.weekKey, active?.roundIndex]);
+
+  const createLeague = async (mode: 'classic' | 'weekly') => {
     setError(null);
     setBusy(true);
     try {
-      const seed = `ligaole-${club.shortName}-${Date.now()}`;
-      const rivals = await fetchLigaOleRivals({ excludeShort: club.shortName, excludeName: club.name, count: 31, seed });
+      const myManagerId = await currentManagerId();
+      // weekly → seed GLOBAL da semana (todos pegam o mesmo chaveamento). classic → seed própria.
+      const seed = mode === 'weekly' ? `ligaole-week-${weekKey}` : `ligaole-${club.shortName}-${Date.now()}`;
+      const rivals = await fetchLigaOleRivals({ excludeShort: club.shortName, excludeName: club.name, excludeManagerId: myManagerId, count: 31, seed });
       if (rivals.length < 31) {
         setError('Ainda não há managers suficientes pra montar a Liga Ole (precisa de 31 rivais reais).');
         setBusy(false);
         return;
       }
+      // REVANCHE (só clássica): força o nêmesis no chaveamento se não tiver caído no sorteio.
+      if (mode === 'classic' && nemesis && !rivals.some((r) => r.id === nemesis.id)) {
+        rivals[rivals.length - 1] = { id: nemesis.id, name: nemesis.name, short: nemesis.short, overall: nemesis.overall, managerId: nemesis.managerId };
+      }
       const managerTeam: LigaOleTeam = { id: 'manager', name: club.name, short: club.shortName, overall: managerOverall, isManager: true };
       const built = createLigaOle({ teams: [managerTeam, ...rivals], managerTeamId: 'manager', seed });
-      dispatch({ type: 'CREATE_LIGA_OLE', liga: built });
+      dispatch({ type: 'CREATE_LIGA_OLE', liga: built, mode, weekKey: mode === 'weekly' ? weekKey : undefined });
+      setWager(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao criar a liga.');
     } finally {
@@ -207,7 +299,7 @@ export function LigaOle() {
         supporterCrestUrl: null,
       };
       dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
-      dispatch({ type: 'START_LIGA_OLE_MATCH', opponentId: opp.id });
+      dispatch({ type: 'START_LIGA_OLE_MATCH', opponentId: opp.id, wager: Math.min(wager, balance) });
       navigate('/match/quick');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao montar a partida.');
@@ -277,15 +369,57 @@ export function LigaOle() {
             />
           )}
 
+          {/* DINASTIA — títulos acumulados multiplicam os prêmios das próximas campanhas */}
+          {titles > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)' }}>
+              <span className="flex items-center gap-2.5 min-w-0">
+                <Crown className="w-5 h-5 text-neon-yellow shrink-0" strokeWidth={2} aria-hidden />
+                <span className="min-w-0">
+                  <span className="block font-display uppercase tracking-[0.2em] text-[9px] font-black text-white/45">Dinastia</span>
+                  <span className="block truncate text-neon-yellow" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: '18px' }}>{dinastiaLabel(titles)}</span>
+                </span>
+              </span>
+              <span className="font-display tabular-nums text-[13px] font-black text-neon-yellow shrink-0">prêmios ×{dinastiaMultiplier(titles).toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* NÊMESIS — quem te eliminou entra na próxima clássica como revanche */}
+          {nemesis && (
+            <div className="flex items-center gap-2.5 px-4 py-3 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
+              <Skull className="w-5 h-5 text-danger shrink-0" strokeWidth={2} aria-hidden />
+              <p className="text-[12px] text-white/75 leading-snug">
+                Nêmesis: <span className="text-white font-semibold" style={{ fontFamily: MORET, fontStyle: 'italic' }}>{nemesis.name}</span> te eliminou na <span className="text-danger">{nemesis.round}</span>. Crie a Liga Ole clássica e cobre a <span className="text-neon-yellow">revanche</span>.
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="text-white/60 text-[13px] leading-snug mb-3 px-1">
               O sistema sorteia <span className="text-white font-semibold">31 managers reais</span> (com elencos de verdade) + o seu time. Você joga rodada a rodada — Fase de 32, Oitavas, Quartas, Semi e Final. Empatou? <span className="text-neon-yellow">Pênaltis decidem.</span> Perdeu? Acabou. Vença tudo e seja campeão.
             </p>
             {error && <p className="text-danger text-[12px] mb-2 px-1">{error}</p>}
-            <button type="button" disabled={busy} onClick={createLeague} className={pillCls} style={pillStyle}>
-              {busy ? 'Sorteando os 32…' : flash ? 'Criar nova Liga Ole' : 'Criar Liga Ole'}
-            </button>
+            <div className="flex flex-col gap-2.5">
+              <button type="button" disabled={busy} onClick={() => createLeague('classic')} className={pillCls} style={pillStyle}>
+                {busy ? 'Sorteando os 32…' : flash ? 'Criar nova Liga Ole' : 'Criar Liga Ole'}
+              </button>
+              {/* Liga da Semana — mesmo chaveamento pra todos os managers, ranking real */}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => createLeague('weekly')}
+                className="w-full py-3.5 font-display uppercase tracking-[0.18em] text-[12px] font-black transition-colors disabled:opacity-50 flex items-center justify-center gap-2 border"
+                style={{ backgroundColor: 'var(--color-dark-gray)', color: 'var(--color-neon-yellow)', borderColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)' }}
+              >
+                <CalendarDays className="w-4 h-4" strokeWidth={2.5} aria-hidden /> Liga da Semana
+              </button>
+              <p className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35 text-center">
+                Liga da Semana · {weekKey} · mesmo chaveamento pra todo mundo
+              </p>
+            </div>
           </div>
+
+          {/* Leaderboard semanal — quem chegou mais longe (cross-user) */}
+          <WeeklyLeaderboard rows={board} myId={myId} weekLabel={weekKey} />
         </div>
       )}
 
@@ -314,7 +448,14 @@ export function LigaOle() {
 
             {/* Confronto — peça editorial (Moret protagonista) */}
             <div className="relative overflow-hidden border px-5 py-6" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'var(--color-dark-gray)', boxShadow: '0 10px 30px rgba(253,225,0,0.08)' }}>
-              <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-neon-yellow text-center mb-4">{LIGA_OLE_ROUNDS[active.roundIndex]}</p>
+              {opp && nemesis && opp.id === nemesis.id && (
+                <p className="flex items-center justify-center gap-1.5 font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-2">
+                  <Skull className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden /> Revanche
+                </p>
+              )}
+              <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-neon-yellow text-center mb-4">
+                {active.mode === 'weekly' ? 'Liga da Semana · ' : ''}{LIGA_OLE_ROUNDS[active.roundIndex]}
+              </p>
               <div className="flex items-center justify-center gap-3">
                 <div className="flex-1 text-right min-w-0">
                   <p className="text-neon-yellow truncate leading-[0.95]" style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', letterSpacing: '-0.02em' }}>{club.name}</p>
@@ -327,6 +468,60 @@ export function LigaOle() {
                 </div>
               </div>
             </div>
+
+            {/* Prêmio da fase + APOSTA (dobra na vitória) */}
+            {(() => {
+              const prize = ligaOleRoundReward(active.roundIndex);
+              const presets = [10_000, 50_000, 250_000, 1_000_000].filter((v) => v <= balance);
+              const chips: { label: string; value: number }[] = [
+                { label: 'Sem aposta', value: 0 },
+                ...presets.map((v) => ({ label: formatCompactNumber(v), value: v })),
+              ];
+              const staked = Math.min(wager, balance);
+              return (
+                <div className="flex flex-col gap-3">
+                  {/* Prêmio em jogo */}
+                  <div className="flex items-center justify-between px-3.5 py-2.5 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-deep-black)' }}>
+                    <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45">
+                      {prize.isChampion ? 'Prêmio de TÍTULO' : 'Prêmio da fase'}
+                    </span>
+                    <span className="font-display tabular-nums text-[14px] font-black text-neon-yellow">
+                      +{prize.amount.toLocaleString('pt-BR')} EXP
+                    </span>
+                  </div>
+
+                  {/* Aposta */}
+                  <div className="px-3.5 py-3 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: staked > 0 ? 'var(--color-neon-yellow)' : 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/55">Apostar EXP · paga 2× na vitória</span>
+                      <span className="font-display tabular-nums text-[9px] font-black text-white/35">Saldo {formatCompactNumber(balance)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {chips.map((c) => {
+                        const sel = staked === c.value;
+                        return (
+                          <button
+                            key={c.label}
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setWager(c.value)}
+                            className="px-2.5 py-1.5 font-display uppercase tracking-[0.08em] text-[10px] font-black transition-colors"
+                            style={{ borderRadius: 'var(--radius-sm)', backgroundColor: sel ? 'var(--color-neon-yellow)' : 'transparent', color: sel ? '#000' : 'rgba(255,255,255,0.6)', border: sel ? 'none' : '1px solid var(--color-border)' }}
+                          >
+                            {c.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {staked > 0 && (
+                      <p className="font-display uppercase tracking-[0.12em] text-[10px] font-black text-neon-yellow mt-2.5">
+                        Ganhe e leve +{(staked * 2).toLocaleString('pt-BR')} EXP
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {error && <p className="text-danger text-[12px] text-center">{error}</p>}
 

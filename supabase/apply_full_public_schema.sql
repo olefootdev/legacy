@@ -4603,7 +4603,60 @@ CREATE POLICY "Todos podem ler frases ativas"
 
 COMMENT ON TABLE football_vocabulary IS 'Biblioteca global de vocabulário de futebol PT-BR para comandos de voz';
 
--- ─── 20260427000000_profile_onboarding.sql ───
+-- ─── 20260427000000_create_player_collections_table.sql ───
+-- Cria tabela para armazenar coleções de jogadores
+CREATE TABLE IF NOT EXISTS player_collections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  collection_id TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_player_collections_collection_id ON player_collections(collection_id);
+CREATE INDEX idx_player_collections_active ON player_collections(is_active);
+
+CREATE OR REPLACE FUNCTION update_player_collections_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER player_collections_updated_at
+  BEFORE UPDATE ON player_collections
+  FOR EACH ROW
+  EXECUTE FUNCTION update_player_collections_updated_at();
+
+ALTER TABLE player_collections ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins podem fazer tudo em player_collections"
+  ON player_collections
+  FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());
+
+CREATE POLICY "Todos podem ler coleções ativas"
+  ON player_collections
+  FOR SELECT
+  TO authenticated
+  USING (is_active = true);
+
+COMMENT ON TABLE player_collections IS 'Coleções de jogadores para organização e categorização';
+
+-- Insere coleções iniciais
+INSERT INTO player_collections (collection_id, name, description)
+VALUES
+  ('genesis', 'Genesis', 'Coleção inicial do Olefoot'),
+  ('legends', 'Legends', 'Lendas do futebol mundial'),
+  ('brasil', 'Brasil', 'Jogadores brasileiros históricos')
+ON CONFLICT (collection_id) DO NOTHING;
+
+-- ─── 20260427000002_profile_onboarding.sql ───
 -- Estende `profiles` pra armazenar o payload completo do onboarding,
 -- permitindo login cross-device: o manager faz signup → profile salvo →
 -- em outro dispositivo faz login → hidrata managerProfile + clube +
@@ -4682,6 +4735,1069 @@ drop policy if exists profiles_self_read on public.profiles;
 create policy profiles_self_read on public.profiles
   for select to authenticated
   using (id = auth.uid());
+
+-- ─── 20260427012821_beta_program_and_social.sql ───
+-- ============================================================================
+-- OLEFOOT — Beta program, bug reports, notifications, manager friendships
+-- ============================================================================
+-- Tabelas para suportar testes online:
+--   1) beta_testers        — controle de acesso ao beta (waitlist + invites)
+--   2) bug_reports         — coleta de feedback/bugs dos testers
+--   3) notifications       — log persistente de notificações (NotificationBell)
+--   4) manager_friendships — solicitações + amizades confirmadas (ManagerNetwork)
+-- ============================================================================
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 1) beta_testers
+-- ────────────────────────────────────────────────────────────────────────────
+
+create table if not exists public.beta_testers (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references auth.users(id) on delete set null,
+  email         text not null,
+  status        text not null default 'pending'
+                check (status in ('pending','approved','rejected','active','revoked')),
+  invite_code   text unique,
+  invited_by    uuid references auth.users(id) on delete set null,
+  approved_at   timestamptz,
+  approved_by   uuid references auth.users(id) on delete set null,
+  source        text,                    -- ex: 'landing', 'referral', 'admin'
+  notes         text,
+  metadata      jsonb default '{}'::jsonb,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  unique (email)
+);
+
+create index if not exists idx_beta_testers_status on public.beta_testers(status);
+create index if not exists idx_beta_testers_user on public.beta_testers(user_id);
+create index if not exists idx_beta_testers_invite_code on public.beta_testers(invite_code);
+
+alter table public.beta_testers enable row level security;
+
+-- Usuário lê seu próprio registro; admin lê tudo.
+drop policy if exists beta_testers_select_self on public.beta_testers;
+create policy beta_testers_select_self on public.beta_testers
+  for select using (user_id = auth.uid() or public.is_admin());
+
+-- Inserção pública para waitlist (anon pode entrar com email).
+drop policy if exists beta_testers_insert_waitlist on public.beta_testers;
+create policy beta_testers_insert_waitlist on public.beta_testers
+  for insert with check (status = 'pending');
+
+-- Apenas admin atualiza/aprova.
+drop policy if exists beta_testers_admin_write on public.beta_testers;
+create policy beta_testers_admin_write on public.beta_testers
+  for update using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists beta_testers_admin_delete on public.beta_testers;
+create policy beta_testers_admin_delete on public.beta_testers
+  for delete using (public.is_admin());
+
+comment on table public.beta_testers is
+  'Waitlist e controle de acesso ao beta online da Olefoot.';
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 2) bug_reports
+-- ────────────────────────────────────────────────────────────────────────────
+
+create table if not exists public.bug_reports (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid references auth.users(id) on delete set null,
+  category       text not null default 'bug'
+                 check (category in ('bug','feedback','suggestion','crash','ux')),
+  severity       text not null default 'medium'
+                 check (severity in ('low','medium','high','critical')),
+  title          text not null,
+  description    text not null,
+  route          text,                    -- rota onde ocorreu (ex: /match/live)
+  user_agent     text,
+  app_version    text,
+  screenshot_url text,                    -- supabase storage path
+  attachments    jsonb default '[]'::jsonb,
+  status         text not null default 'open'
+                 check (status in ('open','triage','in_progress','resolved','wontfix','duplicate')),
+  admin_notes    text,
+  resolved_by    uuid references auth.users(id) on delete set null,
+  resolved_at    timestamptz,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+create index if not exists idx_bug_reports_user on public.bug_reports(user_id);
+create index if not exists idx_bug_reports_status on public.bug_reports(status);
+create index if not exists idx_bug_reports_category on public.bug_reports(category);
+create index if not exists idx_bug_reports_created on public.bug_reports(created_at desc);
+
+alter table public.bug_reports enable row level security;
+
+drop policy if exists bug_reports_select_self on public.bug_reports;
+create policy bug_reports_select_self on public.bug_reports
+  for select using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists bug_reports_insert_self on public.bug_reports;
+create policy bug_reports_insert_self on public.bug_reports
+  for insert with check (user_id = auth.uid() or user_id is null);
+
+drop policy if exists bug_reports_admin_write on public.bug_reports;
+create policy bug_reports_admin_write on public.bug_reports
+  for update using (public.is_admin()) with check (public.is_admin());
+
+comment on table public.bug_reports is
+  'Bugs e feedback enviados pelos beta testers via UI.';
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 3) notifications
+-- ────────────────────────────────────────────────────────────────────────────
+
+create table if not exists public.notifications (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  category    text not null,             -- 'COMPETIÇÃO','PLANTEL','TREINO','STAFF','TORCIDA','SISTEMA'
+  title       text not null,
+  message     text,
+  link        text,                      -- rota in-app (ex: /clube/elenco)
+  payload     jsonb default '{}'::jsonb,
+  read        boolean not null default false,
+  read_at     timestamptz,
+  expires_at  timestamptz,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_notifications_user_unread
+  on public.notifications(user_id, read, created_at desc)
+  where read = false;
+create index if not exists idx_notifications_user_created
+  on public.notifications(user_id, created_at desc);
+create index if not exists idx_notifications_expires
+  on public.notifications(expires_at) where expires_at is not null;
+
+alter table public.notifications enable row level security;
+
+drop policy if exists notifications_select_self on public.notifications;
+create policy notifications_select_self on public.notifications
+  for select using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists notifications_update_self on public.notifications;
+create policy notifications_update_self on public.notifications
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists notifications_admin_insert on public.notifications;
+create policy notifications_admin_insert on public.notifications
+  for insert with check (public.is_admin());
+
+drop policy if exists notifications_delete_self on public.notifications;
+create policy notifications_delete_self on public.notifications
+  for delete using (user_id = auth.uid() or public.is_admin());
+
+comment on table public.notifications is
+  'Notificações in-app persistentes (NotificationBell + InboxItem).';
+
+-- RPC: marcar notificação como lida
+create or replace function public.mark_notification_read(p_notification_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.notifications
+     set read = true, read_at = now()
+   where id = p_notification_id
+     and user_id = auth.uid()
+     and read = false;
+  return found;
+end;
+$$;
+
+grant execute on function public.mark_notification_read(uuid) to authenticated;
+
+-- RPC: marcar todas como lidas
+create or replace function public.mark_all_notifications_read()
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count int;
+begin
+  update public.notifications
+     set read = true, read_at = now()
+   where user_id = auth.uid() and read = false;
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+grant execute on function public.mark_all_notifications_read() to authenticated;
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 4) manager_friendships
+-- ────────────────────────────────────────────────────────────────────────────
+
+create table if not exists public.manager_friendships (
+  id                    uuid primary key default gen_random_uuid(),
+  requester_id          uuid not null references auth.users(id) on delete cascade,
+  addressee_id          uuid not null references auth.users(id) on delete cascade,
+  status                text not null default 'pending'
+                        check (status in ('pending','accepted','rejected','blocked','cancelled')),
+  requester_club_name   text,
+  addressee_club_name   text,
+  message               text,
+  responded_at          timestamptz,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  constraint friendship_distinct_users check (requester_id <> addressee_id),
+  unique (requester_id, addressee_id)
+);
+
+create index if not exists idx_friendships_requester
+  on public.manager_friendships(requester_id, status);
+create index if not exists idx_friendships_addressee
+  on public.manager_friendships(addressee_id, status);
+create index if not exists idx_friendships_status
+  on public.manager_friendships(status, created_at desc);
+
+alter table public.manager_friendships enable row level security;
+
+-- Ambos os lados leem; admin lê tudo.
+drop policy if exists friendships_select_involved on public.manager_friendships;
+create policy friendships_select_involved on public.manager_friendships
+  for select using (
+    requester_id = auth.uid()
+    or addressee_id = auth.uid()
+    or public.is_admin()
+  );
+
+-- Apenas o requester cria solicitação.
+drop policy if exists friendships_insert_requester on public.manager_friendships;
+create policy friendships_insert_requester on public.manager_friendships
+  for insert with check (requester_id = auth.uid());
+
+-- Ambos os lados podem atualizar (aceitar/rejeitar/cancelar).
+drop policy if exists friendships_update_involved on public.manager_friendships;
+create policy friendships_update_involved on public.manager_friendships
+  for update using (
+    requester_id = auth.uid() or addressee_id = auth.uid()
+  ) with check (
+    requester_id = auth.uid() or addressee_id = auth.uid()
+  );
+
+-- Apenas requester pode cancelar (delete) sua própria solicitação pending.
+drop policy if exists friendships_delete_requester on public.manager_friendships;
+create policy friendships_delete_requester on public.manager_friendships
+  for delete using (
+    requester_id = auth.uid() and status = 'pending'
+  );
+
+comment on table public.manager_friendships is
+  'Solicitações de amizade e amizades confirmadas entre managers (ManagerNetwork).';
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Triggers de updated_at (compartilhado)
+-- ────────────────────────────────────────────────────────────────────────────
+
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_beta_testers_updated on public.beta_testers;
+create trigger trg_beta_testers_updated
+  before update on public.beta_testers
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists trg_bug_reports_updated on public.bug_reports;
+create trigger trg_bug_reports_updated
+  before update on public.bug_reports
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists trg_friendships_updated on public.manager_friendships;
+create trigger trg_friendships_updated
+  before update on public.manager_friendships
+  for each row execute function public.touch_updated_at();
+
+-- ─── 20260427013353_beta_invite_approve_rpcs.sql ───
+-- ============================================================================
+-- OLEFOOT — RPCs de invite/approve para beta_testers
+-- ============================================================================
+
+create or replace function public.generate_beta_invite_code()
+returns text
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_code text;
+  v_attempts int := 0;
+begin
+  loop
+    v_code := upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8));
+    exit when not exists (select 1 from public.beta_testers where invite_code = v_code);
+    v_attempts := v_attempts + 1;
+    if v_attempts > 10 then
+      raise exception 'Failed to generate unique invite code after 10 attempts';
+    end if;
+  end loop;
+  return v_code;
+end;
+$$;
+
+create or replace function public.admin_approve_beta_tester(
+  p_tester_id uuid,
+  p_notes text default null
+)
+returns table (id uuid, email text, status text, invite_code text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin uuid := auth.uid();
+  v_code text;
+begin
+  if not public.is_admin() then
+    raise exception 'Forbidden: admin only';
+  end if;
+
+  v_code := public.generate_beta_invite_code();
+
+  return query
+  update public.beta_testers t
+     set status = 'approved',
+         invite_code = coalesce(t.invite_code, v_code),
+         approved_at = now(),
+         approved_by = v_admin,
+         notes = coalesce(p_notes, t.notes)
+   where t.id = p_tester_id and t.status in ('pending','rejected')
+  returning t.id, t.email, t.status, t.invite_code;
+end;
+$$;
+
+grant execute on function public.admin_approve_beta_tester(uuid, text) to authenticated;
+
+create or replace function public.admin_invite_beta_tester(
+  p_email text,
+  p_source text default 'admin',
+  p_notes text default null
+)
+returns table (id uuid, email text, invite_code text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_admin uuid := auth.uid();
+  v_code text;
+  v_email text := lower(trim(p_email));
+begin
+  if not public.is_admin() then
+    raise exception 'Forbidden: admin only';
+  end if;
+  if v_email = '' or v_email !~ '^[^@]+@[^@]+\.[^@]+$' then
+    raise exception 'Invalid email';
+  end if;
+
+  v_code := public.generate_beta_invite_code();
+
+  return query
+  insert into public.beta_testers (email, status, invite_code, invited_by, approved_at, approved_by, source, notes)
+  values (v_email, 'approved', v_code, v_admin, now(), v_admin, p_source, p_notes)
+  on conflict (email) do update
+    set status = case when public.beta_testers.status = 'pending' then 'approved' else public.beta_testers.status end,
+        invite_code = coalesce(public.beta_testers.invite_code, excluded.invite_code),
+        approved_at = coalesce(public.beta_testers.approved_at, excluded.approved_at),
+        approved_by = coalesce(public.beta_testers.approved_by, excluded.approved_by),
+        updated_at = now()
+  returning beta_testers.id, beta_testers.email, beta_testers.invite_code;
+end;
+$$;
+
+grant execute on function public.admin_invite_beta_tester(text, text, text) to authenticated;
+
+create or replace function public.redeem_beta_invite(p_invite_code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_code text := upper(trim(p_invite_code));
+begin
+  if v_user is null then
+    raise exception 'Must be authenticated to redeem invite';
+  end if;
+
+  update public.beta_testers
+     set user_id = v_user,
+         status = 'active',
+         updated_at = now()
+   where invite_code = v_code
+     and status = 'approved'
+     and (user_id is null or user_id = v_user);
+
+  return found;
+end;
+$$;
+
+grant execute on function public.redeem_beta_invite(text) to authenticated;
+
+create or replace function public.admin_revoke_beta_access(
+  p_tester_id uuid,
+  p_reason text default null
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Forbidden: admin only';
+  end if;
+
+  update public.beta_testers
+     set status = 'revoked',
+         notes = coalesce(p_reason, notes),
+         updated_at = now()
+   where id = p_tester_id;
+
+  return found;
+end;
+$$;
+
+grant execute on function public.admin_revoke_beta_access(uuid, text) to authenticated;
+
+-- ─── 20260427124302_add_increment_vocabulary_usage_function.sql ───
+-- Função RPC para incrementar contador de uso de vocabulário
+CREATE OR REPLACE FUNCTION public.increment_vocabulary_usage(p_phrase_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE public.football_vocabulary
+  SET
+    confirm_count = confirm_count + 1,
+    updated_at = now()
+  WHERE id = p_phrase_id AND is_active = true;
+END;
+$$;
+
+-- ─── 20260427134038_fix_favorite_team_ids.sql ───
+-- Correção de IDs de times favoritos que podem estar trocados
+-- Ceará deve ser ID 152 (não 129)
+-- Athletico-PR deve ser ID 129 (não 152)
+
+-- Atualiza registros onde o ID está trocado
+update public.profiles
+set onboarding_data = jsonb_set(
+  onboarding_data,
+  '{favoriteRealTeam}',
+  jsonb_build_object(
+    'id', 152,
+    'name', 'Ceará',
+    'logo', 'https://media.api-sports.io/football/teams/152.png'
+  )
+)
+where onboarding_data->>'favoriteRealTeam' is not null
+  and onboarding_data->'favoriteRealTeam'->>'name' = 'Ceará'
+  and (onboarding_data->'favoriteRealTeam'->>'id')::int != 152;
+
+update public.profiles
+set onboarding_data = jsonb_set(
+  onboarding_data,
+  '{favoriteRealTeam}',
+  jsonb_build_object(
+    'id', 129,
+    'name', 'Athletico-PR',
+    'logo', 'https://media.api-sports.io/football/teams/129.png'
+  )
+)
+where onboarding_data->>'favoriteRealTeam' is not null
+  and onboarding_data->'favoriteRealTeam'->>'name' = 'Athletico-PR'
+  and (onboarding_data->'favoriteRealTeam'->>'id')::int != 129;
+
+-- Comentário para log
+comment on table public.profiles is 'Correção aplicada em 2026-04-27: IDs de Ceará (152) e Athletico-PR (129) verificados e corrigidos';
+
+-- ─── 20260427135532_global_league_mvp.sql ───
+-- ============================================
+-- GLOBAL LEAGUE MVP - TABELAS SUPABASE
+-- ============================================
+
+-- 1. Tabela de Times
+CREATE TABLE IF NOT EXISTS global_league_teams (
+  id TEXT PRIMARY KEY,
+  manager_id TEXT NOT NULL UNIQUE,
+  club_name TEXT NOT NULL,
+  club_short TEXT NOT NULL,
+  overall INTEGER NOT NULL,
+
+  -- Divisão atual
+  division INTEGER,
+  "position" INTEGER,
+  previous_position INTEGER,
+
+  -- Estatísticas dos Playoffs
+  playoff_points INTEGER DEFAULT 0,
+  playoff_matches_played INTEGER DEFAULT 0,
+  playoff_wins INTEGER DEFAULT 0,
+  playoff_draws INTEGER DEFAULT 0,
+  playoff_losses INTEGER DEFAULT 0,
+  playoff_goals_for INTEGER DEFAULT 0,
+  playoff_goals_against INTEGER DEFAULT 0,
+
+  -- Estatísticas da Liga Oficial
+  points INTEGER DEFAULT 0,
+  matches_played INTEGER DEFAULT 0,
+  wins INTEGER DEFAULT 0,
+  draws INTEGER DEFAULT 0,
+  losses INTEGER DEFAULT 0,
+  goals_for INTEGER DEFAULT 0,
+  goals_against INTEGER DEFAULT 0,
+  goal_difference INTEGER DEFAULT 0,
+
+  -- Forma recente (JSON array)
+  recent_form JSONB DEFAULT '[]'::jsonb,
+
+  -- Timestamps
+  registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT valid_division CHECK (division IS NULL OR (division >= 1 AND division <= 3)),
+  CONSTRAINT valid_overall CHECK (overall >= 40 AND overall <= 99)
+);
+
+-- Índices para performance
+CREATE INDEX IF NOT EXISTS idx_global_teams_manager ON global_league_teams(manager_id);
+CREATE INDEX IF NOT EXISTS idx_global_teams_division ON global_league_teams(division);
+CREATE INDEX IF NOT EXISTS idx_global_teams_points ON global_league_teams(points DESC);
+CREATE INDEX IF NOT EXISTS idx_global_teams_playoff_points ON global_league_teams(playoff_points DESC);
+
+-- 2. Tabela de Rodadas
+CREATE TABLE IF NOT EXISTS global_league_rounds (
+  id TEXT PRIMARY KEY,
+  season_id TEXT NOT NULL,
+  round_number INTEGER NOT NULL,
+  round_type TEXT NOT NULL,
+  phase TEXT,
+  is_returning BOOLEAN DEFAULT FALSE,
+
+  -- Status
+  status TEXT NOT NULL DEFAULT 'scheduled',
+
+  -- Timestamps
+  scheduled_kickoff_ms BIGINT NOT NULL,
+  actual_kickoff_ms BIGINT,
+  finished_at_ms BIGINT,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT valid_round_type CHECK (round_type IN ('playoff', 'league')),
+  CONSTRAINT valid_status CHECK (status IN ('scheduled', 'live', 'finished')),
+  CONSTRAINT unique_round_per_season UNIQUE (season_id, round_number, round_type)
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_global_rounds_season ON global_league_rounds(season_id);
+CREATE INDEX IF NOT EXISTS idx_global_rounds_status ON global_league_rounds(status);
+CREATE INDEX IF NOT EXISTS idx_global_rounds_kickoff ON global_league_rounds(scheduled_kickoff_ms);
+
+-- 3. Tabela de Partidas
+CREATE TABLE IF NOT EXISTS global_league_fixtures (
+  id TEXT PRIMARY KEY,
+  round_id TEXT NOT NULL REFERENCES global_league_rounds(id) ON DELETE CASCADE,
+  division TEXT NOT NULL,
+
+  -- Times
+  home_team_id TEXT NOT NULL REFERENCES global_league_teams(id) ON DELETE CASCADE,
+  away_team_id TEXT NOT NULL REFERENCES global_league_teams(id) ON DELETE CASCADE,
+  home_team_name TEXT NOT NULL,
+  away_team_name TEXT NOT NULL,
+  home_overall INTEGER NOT NULL,
+  away_overall INTEGER NOT NULL,
+
+  -- Placar
+  score_home INTEGER DEFAULT 0,
+  score_away INTEGER DEFAULT 0,
+  current_minute INTEGER DEFAULT 0,
+
+  -- Status
+  status TEXT NOT NULL DEFAULT 'scheduled',
+
+  -- Timestamps
+  kickoff_ms BIGINT,
+  finished_at_ms BIGINT,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT valid_fixture_status CHECK (status IN ('scheduled', 'live', 'finished')),
+  CONSTRAINT different_teams CHECK (home_team_id != away_team_id)
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_global_fixtures_round ON global_league_fixtures(round_id);
+CREATE INDEX IF NOT EXISTS idx_global_fixtures_home_team ON global_league_fixtures(home_team_id);
+CREATE INDEX IF NOT EXISTS idx_global_fixtures_away_team ON global_league_fixtures(away_team_id);
+CREATE INDEX IF NOT EXISTS idx_global_fixtures_division ON global_league_fixtures(division);
+CREATE INDEX IF NOT EXISTS idx_global_fixtures_status ON global_league_fixtures(status);
+
+-- 4. Tabela de Eventos
+CREATE TABLE IF NOT EXISTS global_league_events (
+  id TEXT PRIMARY KEY,
+  fixture_id TEXT NOT NULL REFERENCES global_league_fixtures(id) ON DELETE CASCADE,
+
+  -- Tipo de evento
+  event_type TEXT NOT NULL,
+
+  -- Detalhes
+  minute INTEGER NOT NULL,
+  side TEXT NOT NULL,
+  player_name TEXT,
+  player_id TEXT,
+  "text" TEXT NOT NULL,
+  highlight BOOLEAN DEFAULT FALSE,
+
+  -- Timestamp
+  timestamp_ms BIGINT NOT NULL,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT valid_event_type CHECK (event_type IN ('goal', 'yellow_card', 'red_card', 'injury', 'substitution', 'pressure', 'miss')),
+  CONSTRAINT valid_side CHECK (side IN ('home', 'away')),
+  CONSTRAINT valid_minute CHECK (minute >= 0 AND minute <= 90)
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_global_events_fixture ON global_league_events(fixture_id);
+CREATE INDEX IF NOT EXISTS idx_global_events_type ON global_league_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_global_events_minute ON global_league_events(minute);
+
+-- 5. Tabela de Estado da Liga (singleton)
+CREATE TABLE IF NOT EXISTS global_league_state (
+  id TEXT PRIMARY KEY DEFAULT 'current',
+  season_id TEXT NOT NULL,
+  season_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'waiting_teams',
+
+  -- Configurações
+  min_teams_required INTEGER DEFAULT 32,
+  teams_per_division INTEGER DEFAULT 11,
+  promotion_percentage DECIMAL(3,2) DEFAULT 0.10,
+  relegation_percentage DECIMAL(3,2) DEFAULT 0.10,
+
+  -- Rodadas atuais
+  current_playoff_round INTEGER,
+  current_league_round INTEGER,
+
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT valid_league_status CHECK (status IN ('waiting_teams', 'playoffs', 'active', 'season_ended')),
+  CONSTRAINT singleton_check CHECK (id = 'current')
+);
+
+-- Inserir estado inicial
+INSERT INTO global_league_state (id, season_id, season_name, status)
+VALUES ('current', 'season_2026', 'OLEFOOT LIGA GLOBAL 2026', 'waiting_teams')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- TRIGGERS PARA ATUALIZAÇÃO AUTOMÁTICA
+-- ============================================
+
+-- Trigger para atualizar updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Aplicar trigger em todas as tabelas
+DROP TRIGGER IF EXISTS update_global_teams_updated_at ON global_league_teams;
+CREATE TRIGGER update_global_teams_updated_at
+  BEFORE UPDATE ON global_league_teams
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_global_rounds_updated_at ON global_league_rounds;
+CREATE TRIGGER update_global_rounds_updated_at
+  BEFORE UPDATE ON global_league_rounds
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_global_fixtures_updated_at ON global_league_fixtures;
+CREATE TRIGGER update_global_fixtures_updated_at
+  BEFORE UPDATE ON global_league_fixtures
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_global_state_updated_at ON global_league_state;
+CREATE TRIGGER update_global_state_updated_at
+  BEFORE UPDATE ON global_league_state
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- VIEWS ÚTEIS
+-- ============================================
+
+-- View: Classificação dos Playoffs
+CREATE OR REPLACE VIEW v_playoff_standings AS
+SELECT
+  id,
+  manager_id,
+  club_name,
+  club_short,
+  overall,
+  playoff_points,
+  playoff_matches_played,
+  playoff_wins,
+  playoff_draws,
+  playoff_losses,
+  playoff_goals_for,
+  playoff_goals_against,
+  (playoff_goals_for - playoff_goals_against) AS playoff_goal_difference,
+  ROW_NUMBER() OVER (
+    ORDER BY
+      playoff_points DESC,
+      playoff_wins DESC,
+      (playoff_goals_for - playoff_goals_against) DESC,
+      playoff_goals_for DESC,
+      club_name ASC
+  ) AS playoff_position
+FROM global_league_teams
+ORDER BY playoff_position;
+
+-- View: Classificação por Divisão
+CREATE OR REPLACE VIEW v_division_standings AS
+SELECT
+  id,
+  manager_id,
+  club_name,
+  club_short,
+  overall,
+  division,
+  points,
+  matches_played,
+  wins,
+  draws,
+  losses,
+  goals_for,
+  goals_against,
+  goal_difference,
+  recent_form,
+  "position",
+  previous_position,
+  ROW_NUMBER() OVER (
+    PARTITION BY division
+    ORDER BY
+      points DESC,
+      wins DESC,
+      goal_difference DESC,
+      goals_for DESC,
+      club_name ASC
+  ) AS calculated_position
+FROM global_league_teams
+WHERE division IS NOT NULL
+ORDER BY division, calculated_position;
+
+-- View: Próximas Rodadas
+CREATE OR REPLACE VIEW v_upcoming_rounds AS
+SELECT
+  r.id,
+  r.season_id,
+  r.round_number,
+  r.round_type,
+  r.status,
+  r.scheduled_kickoff_ms,
+  COUNT(f.id) AS total_fixtures,
+  COUNT(CASE WHEN f.status = 'finished' THEN 1 END) AS finished_fixtures
+FROM global_league_rounds r
+LEFT JOIN global_league_fixtures f ON f.round_id = r.id
+WHERE r.status IN ('scheduled', 'live')
+GROUP BY r.id, r.season_id, r.round_number, r.round_type, r.status, r.scheduled_kickoff_ms
+ORDER BY r.scheduled_kickoff_ms ASC;
+
+-- ============================================
+-- FUNÇÕES ÚTEIS
+-- ============================================
+
+-- Função: Obter times de uma divisão
+CREATE OR REPLACE FUNCTION get_division_teams(div INTEGER)
+RETURNS TABLE (
+  id TEXT,
+  club_name TEXT,
+  points INTEGER,
+  team_position INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    t.id,
+    t.club_name,
+    t.points,
+    t."position" as team_position
+  FROM global_league_teams t
+  WHERE t.division = div
+  ORDER BY t."position" ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Função: Obter estatísticas da liga
+CREATE OR REPLACE FUNCTION get_league_stats()
+RETURNS TABLE (
+  total_teams INTEGER,
+  teams_in_playoffs INTEGER,
+  teams_in_league INTEGER,
+  total_goals INTEGER,
+  total_matches INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COUNT(*)::INTEGER AS total_teams,
+    COUNT(CASE WHEN division IS NULL THEN 1 END)::INTEGER AS teams_in_playoffs,
+    COUNT(CASE WHEN division IS NOT NULL THEN 1 END)::INTEGER AS teams_in_league,
+    SUM(goals_for)::INTEGER AS total_goals,
+    SUM(matches_played)::INTEGER AS total_matches
+  FROM global_league_teams;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- POLÍTICAS RLS (Row Level Security)
+-- ============================================
+
+-- Habilitar RLS
+ALTER TABLE global_league_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE global_league_rounds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE global_league_fixtures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE global_league_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE global_league_state ENABLE ROW LEVEL SECURITY;
+
+-- Remover políticas antigas se existirem
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_teams;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_rounds;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_fixtures;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_events;
+DROP POLICY IF EXISTS "Allow public read access" ON global_league_state;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_teams;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_teams;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_rounds;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_rounds;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_fixtures;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_fixtures;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON global_league_events;
+DROP POLICY IF EXISTS "Allow authenticated update" ON global_league_state;
+
+-- Política: Todos podem ler
+CREATE POLICY "Allow public read access" ON global_league_teams FOR SELECT USING (true);
+CREATE POLICY "Allow public read access" ON global_league_rounds FOR SELECT USING (true);
+CREATE POLICY "Allow public read access" ON global_league_fixtures FOR SELECT USING (true);
+CREATE POLICY "Allow public read access" ON global_league_events FOR SELECT USING (true);
+CREATE POLICY "Allow public read access" ON global_league_state FOR SELECT USING (true);
+
+-- Política: Apenas autenticados podem inserir/atualizar
+CREATE POLICY "Allow authenticated insert" ON global_league_teams FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated update" ON global_league_teams FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow authenticated insert" ON global_league_rounds FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated update" ON global_league_rounds FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow authenticated insert" ON global_league_fixtures FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated update" ON global_league_fixtures FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow authenticated insert" ON global_league_events FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow authenticated update" ON global_league_state FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- ============================================
+-- COMENTÁRIOS
+-- ============================================
+
+COMMENT ON TABLE global_league_teams IS 'Times cadastrados na Liga Global MVP';
+COMMENT ON TABLE global_league_rounds IS 'Rodadas dos playoffs e da liga oficial';
+COMMENT ON TABLE global_league_fixtures IS 'Partidas de cada rodada';
+COMMENT ON TABLE global_league_events IS 'Eventos que acontecem durante as partidas';
+COMMENT ON TABLE global_league_state IS 'Estado global da liga (singleton)';
+
+COMMENT ON VIEW v_playoff_standings IS 'Classificação dos playoffs ordenada por pontos';
+COMMENT ON VIEW v_division_standings IS 'Classificação por divisão ordenada por pontos';
+COMMENT ON VIEW v_upcoming_rounds IS 'Próximas rodadas agendadas ou em andamento';
+
+-- ─── 20260427160000_global_league_cron.sql ───
+-- ============================================================================
+-- Olefoot Liga — Cron job para o tick da Edge Function global-league-tick
+-- ============================================================================
+-- Habilita pg_cron + pg_net e agenda chamada HTTP a cada 1 minuto à Edge
+-- Function que avança rodadas agendadas. URL e service role key são lidos
+-- de Vault para não vazarem no schema.
+--
+-- ANTES DE RODAR ESTA MIGRATION você precisa setar 2 segredos no Vault:
+--
+--   select vault.create_secret(
+--     'https://<SEU_PROJECT_REF>.supabase.co/functions/v1/global-league-tick',
+--     'global_league_tick_url',
+--     'URL pública da Edge Function global-league-tick'
+--   );
+--
+--   select vault.create_secret(
+--     '<SEU_SERVICE_ROLE_KEY>',
+--     'global_league_tick_service_role_key',
+--     'Service role key usada pela cron para chamar a Edge Function'
+--   );
+--
+-- Depois deploy a Edge Function:
+--   supabase functions deploy global-league-tick --no-verify-jwt
+--
+-- ============================================================================
+
+create extension if not exists pg_cron;
+create extension if not exists pg_net with schema extensions;
+
+-- Permitir execução de cron pelo postgres role
+grant usage on schema cron to postgres;
+
+-- Remover job anterior se existir (idempotente em re-deploys)
+do $$
+begin
+  if exists (select 1 from cron.job where jobname = 'global-league-tick') then
+    perform cron.unschedule('global-league-tick');
+  end if;
+end$$;
+
+-- Agendar tick a cada 1 minuto
+select cron.schedule(
+  'global-league-tick',
+  '* * * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'global_league_tick_url' limit 1),
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'global_league_tick_service_role_key' limit 1),
+      'Content-Type', 'application/json'
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
+  ) as request_id;
+  $$
+);
+
+comment on extension pg_cron is 'Job scheduler — usado pelo Olefoot para tick da Liga Global';
+comment on extension pg_net is 'Async HTTP client — usado pelo cron para chamar Edge Functions';
+
+-- ─── 20260427170000_global_league_realtime.sql ───
+-- Habilita Realtime para tabelas da Liga Global.
+-- Clientes assinam mudanças e re-hidratam o estado quando o servidor (Edge
+-- Function global-league-tick) avança rodadas, simula partidas, etc.
+
+alter publication supabase_realtime add table public.global_league_teams;
+alter publication supabase_realtime add table public.global_league_rounds;
+alter publication supabase_realtime add table public.global_league_fixtures;
+alter publication supabase_realtime add table public.global_league_events;
+alter publication supabase_realtime add table public.global_league_state;
+
+-- ─── 20260427180000_global_league_team_injuries.sql ───
+-- Lesões α (server-only): debuff temporário no overall do time.
+-- Uma lesão num jogo registra injury_modifier (-2 a -4) e injury_rounds_remaining
+-- (1 ou 2). A cada rodada futura, o tick decrementa o contador; quando chega
+-- a 0, o modifier é zerado. Não modela jogador individual ainda.
+
+alter table public.global_league_teams
+  add column if not exists injury_modifier int not null default 0,
+  add column if not exists injury_rounds_remaining int not null default 0;
+
+comment on column public.global_league_teams.injury_modifier is
+  'Debuff temporário no overall do time por lesões. 0 = sem lesão. Tipicamente entre -4 e 0.';
+comment on column public.global_league_teams.injury_rounds_remaining is
+  'Quantas rodadas restam de debuff. 0 = sem lesão. Decrementado a cada tick que joga.';
+
+-- ─── 20260427210000_manager_squad.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — manager_squad
+--
+-- Persistência server-side do plantel + escalação de cada manager.
+-- Estrutura: 1 row por user_id, com `players` (jsonb array) e `lineup` (jsonb map).
+-- Idempotente: upsert overwrite total. Cliente envia snapshot completo.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.manager_squad (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  players jsonb not null default '[]'::jsonb,
+  lineup jsonb not null default '{}'::jsonb,
+  formation_scheme text,
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.manager_squad is
+  'Plantel + escalação por manager (snapshot client-side). 1 row por user.';
+comment on column public.manager_squad.players is
+  'Array<PlayerEntity> serializado integralmente do client.';
+comment on column public.manager_squad.lineup is
+  'Map<slotId, playerId> da escalação ativa.';
+
+create index if not exists idx_manager_squad_updated
+  on public.manager_squad (updated_at desc);
+
+alter table public.manager_squad enable row level security;
+
+drop policy if exists "manager_squad_select_own" on public.manager_squad;
+create policy "manager_squad_select_own"
+  on public.manager_squad for select
+  to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "manager_squad_insert_own" on public.manager_squad;
+create policy "manager_squad_insert_own"
+  on public.manager_squad for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "manager_squad_update_own" on public.manager_squad;
+create policy "manager_squad_update_own"
+  on public.manager_squad for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+grant select, insert, update on table public.manager_squad to authenticated;
+
+-- updated_at trigger
+create or replace function public.touch_manager_squad_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_touch_manager_squad on public.manager_squad;
+create trigger trg_touch_manager_squad
+  before update on public.manager_squad
+  for each row
+  execute function public.touch_manager_squad_updated_at();
 
 -- ─── 20260428000000_admin_list_profiles.sql ───
 -- RPC pra o painel admin listar todos os profiles com métricas básicas.
@@ -5091,7 +6207,39 @@ $$;
 revoke all on function public.get_my_linked_cards() from public;
 grant execute on function public.get_my_linked_cards() to authenticated;
 
--- ─── 20260502000000_pro_payouts_pipeline.sql ───
+-- ─── 20260502000000_market_activities.sql ───
+-- market_activities: feed público de atividades do mercado
+-- Registra compras, vendas e leilões ganhos pelos managers
+
+create table if not exists public.market_activities (
+  id            uuid primary key default gen_random_uuid(),
+  type          text not null check (type in ('purchase', 'sale', 'auction_won', 'listing')),
+  manager_id    uuid references auth.users(id) on delete set null,
+  manager_name  text not null default 'Manager',
+  club_name     text,
+  player_name   text not null,
+  player_ovr    integer,
+  player_pos    text,
+  price_exp     bigint,
+  created_at    timestamptz not null default now()
+);
+
+-- Índice para feed cronológico
+create index if not exists market_activities_created_at_idx
+  on public.market_activities (created_at desc);
+
+-- RLS: leitura pública, escrita apenas pelo próprio manager
+alter table public.market_activities enable row level security;
+
+create policy "market_activities_select_all"
+  on public.market_activities for select
+  using (true);
+
+create policy "market_activities_insert_own"
+  on public.market_activities for insert
+  with check (manager_id = auth.uid() or manager_id is null);
+
+-- ─── 20260502000001_pro_payouts_pipeline.sql ───
 -- Pipeline de distribuição de vendas pro PRO.
 -- Quando um market_purchases insert acontece, lê o payment_split do player
 -- e credita cada beneficiário (user_id) em pro_payouts proporcional ao percent.
@@ -5513,445 +6661,921 @@ insert into coach_skills_catalog (id, name, role, tier, level, payload) values
   }'::jsonb)
 on conflict (id) do nothing;
 
--- ─── 20260503000000_beta_program_and_social.sql ───
--- ============================================================================
--- OLEFOOT — Beta program, bug reports, notifications, manager friendships
--- ============================================================================
--- Tabelas para suportar testes online:
---   1) beta_testers        — controle de acesso ao beta (waitlist + invites)
---   2) bug_reports         — coleta de feedback/bugs dos testers
---   3) notifications       — log persistente de notificações (NotificationBell)
---   4) manager_friendships — solicitações + amizades confirmadas (ManagerNetwork)
--- ============================================================================
+-- ─── 20260502020000_position_knowledge.sql ───
+-- Migration: position_knowledge
+-- Adiciona coluna JSONB para persistir o DNA de lenda evoluído por jogador.
+-- Aplicada em: players (elenco normal) e legacy_players (lendas).
 
--- ────────────────────────────────────────────────────────────────────────────
--- 1) beta_testers
--- ────────────────────────────────────────────────────────────────────────────
+-- ── players ──────────────────────────────────────────────────────────────────
+ALTER TABLE public.players
+  ADD COLUMN IF NOT EXISTS position_knowledge JSONB DEFAULT NULL;
 
-create table if not exists public.beta_testers (
-  id            uuid primary key default gen_random_uuid(),
-  user_id       uuid references auth.users(id) on delete set null,
-  email         text not null,
-  status        text not null default 'pending'
-                check (status in ('pending','approved','rejected','active','revoked')),
-  invite_code   text unique,
-  invited_by    uuid references auth.users(id) on delete set null,
-  approved_at   timestamptz,
-  approved_by   uuid references auth.users(id) on delete set null,
-  source        text,                    -- ex: 'landing', 'referral', 'admin'
-  notes         text,
-  metadata      jsonb default '{}'::jsonb,
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now(),
-  unique (email)
-);
+COMMENT ON COLUMN public.players.position_knowledge IS
+  'DNA de lenda evoluído: actionWeights, traits, sessionsCompleted, legendSource. Atualizado pós-partida pelo syncPlayerToSupabase.';
 
-create index if not exists idx_beta_testers_status on public.beta_testers(status);
-create index if not exists idx_beta_testers_user on public.beta_testers(user_id);
-create index if not exists idx_beta_testers_invite_code on public.beta_testers(invite_code);
+-- ── legacy_players ────────────────────────────────────────────────────────────
+ALTER TABLE public.legacy_players
+  ADD COLUMN IF NOT EXISTS position_knowledge JSONB DEFAULT NULL;
 
-alter table public.beta_testers enable row level security;
+COMMENT ON COLUMN public.legacy_players.position_knowledge IS
+  'DNA de lenda evoluído: actionWeights, traits, sessionsCompleted, legendSource. Atualizado por syncLegacyPlayerPositionKnowledge.';
 
--- Usuário lê seu próprio registro; admin lê tudo.
-drop policy if exists beta_testers_select_self on public.beta_testers;
-create policy beta_testers_select_self on public.beta_testers
-  for select using (user_id = auth.uid() or public.is_admin());
+-- Índice GIN para queries futuras sobre traits/actionWeights (opcional mas útil).
+CREATE INDEX IF NOT EXISTS idx_players_position_knowledge
+  ON public.players USING GIN (position_knowledge)
+  WHERE position_knowledge IS NOT NULL;
 
--- Inserção pública para waitlist (anon pode entrar com email).
-drop policy if exists beta_testers_insert_waitlist on public.beta_testers;
-create policy beta_testers_insert_waitlist on public.beta_testers
-  for insert with check (status = 'pending');
+CREATE INDEX IF NOT EXISTS idx_legacy_players_position_knowledge
+  ON public.legacy_players USING GIN (position_knowledge)
+  WHERE position_knowledge IS NOT NULL;
 
--- Apenas admin atualiza/aprova.
-drop policy if exists beta_testers_admin_write on public.beta_testers;
-create policy beta_testers_admin_write on public.beta_testers
-  for update using (public.is_admin()) with check (public.is_admin());
+-- ─── 20260502030000_profile_username.sql ───
+-- Sistema de username auto-gerado: firstName_clubShort (ex.: jonhnes_ofc).
+-- Unicidade garantida por club_short ser UNIQUE na tabela.
 
-drop policy if exists beta_testers_admin_delete on public.beta_testers;
-create policy beta_testers_admin_delete on public.beta_testers
-  for delete using (public.is_admin());
-
-comment on table public.beta_testers is
-  'Waitlist e controle de acesso ao beta online da Olefoot.';
-
--- ────────────────────────────────────────────────────────────────────────────
--- 2) bug_reports
--- ────────────────────────────────────────────────────────────────────────────
-
-create table if not exists public.bug_reports (
-  id             uuid primary key default gen_random_uuid(),
-  user_id        uuid references auth.users(id) on delete set null,
-  category       text not null default 'bug'
-                 check (category in ('bug','feedback','suggestion','crash','ux')),
-  severity       text not null default 'medium'
-                 check (severity in ('low','medium','high','critical')),
-  title          text not null,
-  description    text not null,
-  route          text,                    -- rota onde ocorreu (ex: /match/live)
-  user_agent     text,
-  app_version    text,
-  screenshot_url text,                    -- supabase storage path
-  attachments    jsonb default '[]'::jsonb,
-  status         text not null default 'open'
-                 check (status in ('open','triage','in_progress','resolved','wontfix','duplicate')),
-  admin_notes    text,
-  resolved_by    uuid references auth.users(id) on delete set null,
-  resolved_at    timestamptz,
-  created_at     timestamptz not null default now(),
-  updated_at     timestamptz not null default now()
-);
-
-create index if not exists idx_bug_reports_user on public.bug_reports(user_id);
-create index if not exists idx_bug_reports_status on public.bug_reports(status);
-create index if not exists idx_bug_reports_category on public.bug_reports(category);
-create index if not exists idx_bug_reports_created on public.bug_reports(created_at desc);
-
-alter table public.bug_reports enable row level security;
-
-drop policy if exists bug_reports_select_self on public.bug_reports;
-create policy bug_reports_select_self on public.bug_reports
-  for select using (user_id = auth.uid() or public.is_admin());
-
-drop policy if exists bug_reports_insert_self on public.bug_reports;
-create policy bug_reports_insert_self on public.bug_reports
-  for insert with check (user_id = auth.uid() or user_id is null);
-
-drop policy if exists bug_reports_admin_write on public.bug_reports;
-create policy bug_reports_admin_write on public.bug_reports
-  for update using (public.is_admin()) with check (public.is_admin());
-
-comment on table public.bug_reports is
-  'Bugs e feedback enviados pelos beta testers via UI.';
-
--- ────────────────────────────────────────────────────────────────────────────
--- 3) notifications
--- ────────────────────────────────────────────────────────────────────────────
-
-create table if not exists public.notifications (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users(id) on delete cascade,
-  category    text not null,             -- 'COMPETIÇÃO','PLANTEL','TREINO','STAFF','TORCIDA','SISTEMA'
-  title       text not null,
-  message     text,
-  link        text,                      -- rota in-app (ex: /clube/elenco)
-  payload     jsonb default '{}'::jsonb,
-  read        boolean not null default false,
-  read_at     timestamptz,
-  expires_at  timestamptz,
-  created_at  timestamptz not null default now()
-);
-
-create index if not exists idx_notifications_user_unread
-  on public.notifications(user_id, read, created_at desc)
-  where read = false;
-create index if not exists idx_notifications_user_created
-  on public.notifications(user_id, created_at desc);
-create index if not exists idx_notifications_expires
-  on public.notifications(expires_at) where expires_at is not null;
-
-alter table public.notifications enable row level security;
-
-drop policy if exists notifications_select_self on public.notifications;
-create policy notifications_select_self on public.notifications
-  for select using (user_id = auth.uid() or public.is_admin());
-
-drop policy if exists notifications_update_self on public.notifications;
-create policy notifications_update_self on public.notifications
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
-
-drop policy if exists notifications_admin_insert on public.notifications;
-create policy notifications_admin_insert on public.notifications
-  for insert with check (public.is_admin());
-
-drop policy if exists notifications_delete_self on public.notifications;
-create policy notifications_delete_self on public.notifications
-  for delete using (user_id = auth.uid() or public.is_admin());
-
-comment on table public.notifications is
-  'Notificações in-app persistentes (NotificationBell + InboxItem).';
-
--- RPC: marcar notificação como lida
-create or replace function public.mark_notification_read(p_notification_id uuid)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
+-- 1a. Deduplica club_short existentes (sufixo numérico nas cópias).
+do $$
+declare
+  dup record;
+  duped record;
+  v_short text;
+  i int;
 begin
-  update public.notifications
-     set read = true, read_at = now()
-   where id = p_notification_id
-     and user_id = auth.uid()
-     and read = false;
-  return found;
+  for dup in
+    select club_short
+    from public.profiles
+    where club_short is not null
+    group by club_short
+    having count(*) > 1
+  loop
+    v_short := dup.club_short;
+    i := 1;
+    for duped in
+      select id from public.profiles
+      where club_short = v_short
+      order by created_at asc
+      offset 1
+    loop
+      update public.profiles
+      set club_short = v_short || i::text
+      where id = duped.id;
+      i := i + 1;
+    end loop;
+  end loop;
 end;
 $$;
 
-grant execute on function public.mark_notification_read(uuid) to authenticated;
+-- 1b. Torna club_short único (impede dois clubes com mesmas iniciais).
+alter table public.profiles
+  add constraint profiles_club_short_unique unique (club_short);
 
--- RPC: marcar todas como lidas
-create or replace function public.mark_all_notifications_read()
-returns int
+-- 2. Coluna username — derivada de display_name + club_short.
+alter table public.profiles
+  add column if not exists username text;
+
+create unique index if not exists profiles_username_unique
+  on public.profiles (username)
+  where username is not null;
+
+-- 3. Função utilitária para gerar username limpo.
+create or replace function public.compute_username(p_display_name text, p_club_short text)
+returns text
 language plpgsql
-security definer
-set search_path = public
+immutable
 as $$
 declare
-  v_count int;
+  v_first text;
+  v_short text;
 begin
-  update public.notifications
-     set read = true, read_at = now()
-   where user_id = auth.uid() and read = false;
-  get diagnostics v_count = row_count;
-  return v_count;
+  if p_display_name is null or p_club_short is null then
+    return null;
+  end if;
+  -- Remove acentos, lowercase, só alfanumérico
+  v_first := regexp_replace(
+    lower(translate(
+      p_display_name,
+      'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇçÑñ',
+      'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNn'
+    )),
+    '[^a-z0-9]', '', 'g'
+  );
+  v_short := lower(regexp_replace(p_club_short, '[^a-zA-Z0-9]', '', 'g'));
+  if v_first = '' or v_short = '' then
+    return null;
+  end if;
+  return v_first || '_' || v_short;
 end;
 $$;
 
-grant execute on function public.mark_all_notifications_read() to authenticated;
-
--- ────────────────────────────────────────────────────────────────────────────
--- 4) manager_friendships
--- ────────────────────────────────────────────────────────────────────────────
-
-create table if not exists public.manager_friendships (
-  id                    uuid primary key default gen_random_uuid(),
-  requester_id          uuid not null references auth.users(id) on delete cascade,
-  addressee_id          uuid not null references auth.users(id) on delete cascade,
-  status                text not null default 'pending'
-                        check (status in ('pending','accepted','rejected','blocked','cancelled')),
-  requester_club_name   text,
-  addressee_club_name   text,
-  message               text,
-  responded_at          timestamptz,
-  created_at            timestamptz not null default now(),
-  updated_at            timestamptz not null default now(),
-  constraint friendship_distinct_users check (requester_id <> addressee_id),
-  unique (requester_id, addressee_id)
-);
-
-create index if not exists idx_friendships_requester
-  on public.manager_friendships(requester_id, status);
-create index if not exists idx_friendships_addressee
-  on public.manager_friendships(addressee_id, status);
-create index if not exists idx_friendships_status
-  on public.manager_friendships(status, created_at desc);
-
-alter table public.manager_friendships enable row level security;
-
--- Ambos os lados leem; admin lê tudo.
-drop policy if exists friendships_select_involved on public.manager_friendships;
-create policy friendships_select_involved on public.manager_friendships
-  for select using (
-    requester_id = auth.uid()
-    or addressee_id = auth.uid()
-    or public.is_admin()
-  );
-
--- Apenas o requester cria solicitação.
-drop policy if exists friendships_insert_requester on public.manager_friendships;
-create policy friendships_insert_requester on public.manager_friendships
-  for insert with check (requester_id = auth.uid());
-
--- Ambos os lados podem atualizar (aceitar/rejeitar/cancelar).
-drop policy if exists friendships_update_involved on public.manager_friendships;
-create policy friendships_update_involved on public.manager_friendships
-  for update using (
-    requester_id = auth.uid() or addressee_id = auth.uid()
-  ) with check (
-    requester_id = auth.uid() or addressee_id = auth.uid()
-  );
-
--- Apenas requester pode cancelar (delete) sua própria solicitação pending.
-drop policy if exists friendships_delete_requester on public.manager_friendships;
-create policy friendships_delete_requester on public.manager_friendships
-  for delete using (
-    requester_id = auth.uid() and status = 'pending'
-  );
-
-comment on table public.manager_friendships is
-  'Solicitações de amizade e amizades confirmadas entre managers (ManagerNetwork).';
-
--- ────────────────────────────────────────────────────────────────────────────
--- Triggers de updated_at (compartilhado)
--- ────────────────────────────────────────────────────────────────────────────
-
-create or replace function public.touch_updated_at()
+-- 4. Trigger: auto-atualiza username quando display_name ou club_short mudam.
+create or replace function public.trg_update_username()
 returns trigger
 language plpgsql
-set search_path = public
 as $$
 begin
-  new.updated_at := now();
+  new.username := public.compute_username(new.display_name, new.club_short);
   return new;
 end;
 $$;
 
-drop trigger if exists trg_beta_testers_updated on public.beta_testers;
-create trigger trg_beta_testers_updated
-  before update on public.beta_testers
-  for each row execute function public.touch_updated_at();
+drop trigger if exists trg_profiles_username on public.profiles;
+create trigger trg_profiles_username
+  before insert or update of display_name, club_short on public.profiles
+  for each row
+  execute function public.trg_update_username();
 
-drop trigger if exists trg_bug_reports_updated on public.bug_reports;
-create trigger trg_bug_reports_updated
-  before update on public.bug_reports
-  for each row execute function public.touch_updated_at();
+-- 5. Backfill perfis existentes.
+update public.profiles
+set username = public.compute_username(display_name, club_short)
+where display_name is not null
+  and club_short is not null
+  and username is null;
 
-drop trigger if exists trg_friendships_updated on public.manager_friendships;
-create trigger trg_friendships_updated
-  before update on public.manager_friendships
-  for each row execute function public.touch_updated_at();
-
--- ─── 20260503010000_beta_invite_approve_rpcs.sql ───
--- ============================================================================
--- OLEFOOT — RPCs de invite/approve para beta_testers
--- ============================================================================
-
-create or replace function public.generate_beta_invite_code()
-returns text
+-- 6. RPC para checar se iniciais já estão em uso.
+create or replace function public.check_club_short_available(p_club_short text)
+returns boolean
 language plpgsql
+stable
+security definer
 set search_path = public
 as $$
-declare
-  v_code text;
-  v_attempts int := 0;
 begin
-  loop
-    v_code := upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8));
-    exit when not exists (select 1 from public.beta_testers where invite_code = v_code);
-    v_attempts := v_attempts + 1;
-    if v_attempts > 10 then
-      raise exception 'Failed to generate unique invite code after 10 attempts';
-    end if;
-  end loop;
-  return v_code;
+  return not exists (
+    select 1 from public.profiles
+    where lower(club_short) = lower(p_club_short)
+      and id != coalesce(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid)
+  );
 end;
 $$;
 
-create or replace function public.admin_approve_beta_tester(
-  p_tester_id uuid,
-  p_notes text default null
+revoke all on function public.check_club_short_available(text) from public;
+grant execute on function public.check_club_short_available(text) to authenticated, anon;
+
+-- 7. RPC para buscar perfil por username (lookup de amigos).
+create or replace function public.find_profile_by_username(p_username text)
+returns table (
+  id uuid,
+  username text,
+  display_name text,
+  club_name text,
+  club_short text
 )
-returns table (id uuid, email text, status text, invite_code text)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  return query
+    select p.id, p.username, p.display_name, p.club_name, p.club_short
+    from public.profiles p
+    where p.username = lower(p_username)
+    limit 1;
+end;
+$$;
+
+revoke all on function public.find_profile_by_username(text) from public;
+grant execute on function public.find_profile_by_username(text) to authenticated;
+
+-- 8. Atualiza get_my_onboarding_profile para incluir username.
+create or replace function public.get_my_onboarding_profile()
+returns table (
+  display_name text,
+  club_name text,
+  club_short text,
+  onboarding_data jsonb,
+  username text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+  return query
+    select p.display_name, p.club_name, p.club_short, p.onboarding_data, p.username
+      from public.profiles p
+     where p.id = v_uid
+     limit 1;
+end;
+$$;
+
+revoke all on function public.get_my_onboarding_profile() from public;
+grant execute on function public.get_my_onboarding_profile() to authenticated;
+
+-- ─── 20260502030001_wallet_credits_exp.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — wallet_credits: adiciona exp_amount
+--
+-- Permite creditar EXP (moeda in-game) via Supabase, com a mesma semântica
+-- de applied_at que já existe para bro_cents.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+alter table public.wallet_credits
+  add column if not exists exp_amount bigint not null default 0;
+
+comment on column public.wallet_credits.exp_amount is
+  'EXP a creditar ao manager. Aplicado pelo cliente em applyPendingCredits() junto com bro_cents.';
+
+-- ─── 20260502040000_manager_game_state.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — manager_game_state
+--
+-- Persistência server-side dos slices críticos do OlefootGameState que
+-- ficavam apenas no localStorage e se perdiam ao trocar de browser/dispositivo.
+--
+-- Estratégia: snapshot JSONB por slice, upsert debounced após eventos chave.
+-- Hidratação no boot via ManagerGameStateHydrator (antes da cerimônia).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.manager_game_state (
+  user_id            uuid primary key references auth.users(id) on delete cascade,
+
+  -- CRÍTICO
+  structures         jsonb,   -- ClubStructuresState
+  league_season      jsonb,   -- LeagueSeasonState
+  results            jsonb,   -- PastResult[]
+  trophy_ids         jsonb,   -- string[]
+  competitive_ranking jsonb,  -- CompetitiveRankingState
+  olefoot_ranked     jsonb,   -- OlefootRankedState
+
+  -- IMPORTANTE
+  player_health      jsonb,   -- Record<string, PlayerHealth>
+  player_season_ledger jsonb, -- PlayerSeasonLedgerMap
+  player_moral       jsonb,   -- Record<string, PlayerMoral>
+  shop_inventory     jsonb,   -- Record<string, number>
+  olefoot_league     jsonb,   -- OlefootLeagueState
+  manager_relation   jsonb,   -- Record<string, number>
+  saved_tactics      jsonb,   -- SavedTacticPlan[]
+  staff              jsonb,   -- StaffState
+
+  updated_at         timestamptz not null default now()
+);
+
+comment on table public.manager_game_state is
+  'Snapshot dos slices críticos do OlefootGameState. Upsert debounced após eventos chave. 1 row por manager.';
+
+create index if not exists idx_manager_game_state_updated
+  on public.manager_game_state (updated_at desc);
+
+alter table public.manager_game_state enable row level security;
+
+create policy "manager_game_state_select_own"
+  on public.manager_game_state for select
+  to authenticated using (user_id = auth.uid());
+
+create policy "manager_game_state_insert_own"
+  on public.manager_game_state for insert
+  to authenticated with check (user_id = auth.uid());
+
+create policy "manager_game_state_update_own"
+  on public.manager_game_state for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+grant select, insert, update on table public.manager_game_state to authenticated;
+
+create or replace function public.touch_manager_game_state_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at := now(); return new; end;
+$$;
+
+drop trigger if exists trg_touch_manager_game_state on public.manager_game_state;
+create trigger trg_touch_manager_game_state
+  before update on public.manager_game_state
+  for each row execute function public.touch_manager_game_state_updated_at();
+
+-- ─── 20260502050000_welcome_pack_grants.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — welcome_pack_grants
+--
+-- Idempotência real por manager: garante que cada user_id recebe o welcome
+-- pack exatamente uma vez, independente de localStorage ou cache.
+-- Substitui o guard local (welcomeGenesisPackVersion no localStorage).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.welcome_pack_grants (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  pack_version int not null default 1,
+  granted_at timestamptz not null default now()
+);
+
+alter table public.welcome_pack_grants enable row level security;
+
+create policy "welcome_pack_grants_select_own"
+  on public.welcome_pack_grants for select
+  to authenticated using (user_id = auth.uid());
+
+grant select on table public.welcome_pack_grants to authenticated;
+
+comment on table public.welcome_pack_grants is
+  'Registro server-side de entrega do welcome pack por manager. Idempotência real — substitui guard localStorage.';
+
+-- Recria claim_welcome_pack com verificação por manager
+create or replace function public.claim_welcome_pack(p_manager_id uuid)
+returns table (
+  claimed          boolean,
+  queue_position   bigint,
+  remaining        bigint,
+  welcome_packs_claimed bigint,
+  welcome_packs_limit   bigint
+)
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_admin uuid := auth.uid();
-  v_code text;
+  v_claimed bigint;
+  v_limit   bigint;
+  v_already boolean;
 begin
-  if not public.is_admin() then
-    raise exception 'Forbidden: admin only';
+  -- Verificar se este manager já recebeu (idempotência por manager)
+  select exists(
+    select 1 from public.welcome_pack_grants where user_id = p_manager_id
+  ) into v_already;
+
+  if v_already then
+    select lc.welcome_packs_claimed, lc.welcome_packs_limit
+      into v_claimed, v_limit
+      from public.launch_counters lc where lc.id = 1;
+    return query select
+      false                    as claimed,
+      (v_claimed + 1)          as queue_position,
+      (v_limit - v_claimed)    as remaining,
+      v_claimed                as welcome_packs_claimed,
+      v_limit                  as welcome_packs_limit;
+    return;
   end if;
 
-  v_code := public.generate_beta_invite_code();
+  -- Lock singleton para incremento atômico
+  select lc.welcome_packs_claimed, lc.welcome_packs_limit
+    into v_claimed, v_limit
+    from public.launch_counters lc where lc.id = 1
+    for update;
 
-  return query
-  update public.beta_testers t
-     set status = 'approved',
-         invite_code = coalesce(t.invite_code, v_code),
-         approved_at = now(),
-         approved_by = v_admin,
-         notes = coalesce(p_notes, t.notes)
-   where t.id = p_tester_id and t.status in ('pending','rejected')
-  returning t.id, t.email, t.status, t.invite_code;
+  if v_claimed < v_limit then
+    update public.launch_counters
+       set welcome_packs_claimed = welcome_packs_claimed + 1,
+           updated_at = now()
+     where id = 1
+     returning launch_counters.welcome_packs_claimed into v_claimed;
+
+    -- Registrar entrega para este manager
+    insert into public.welcome_pack_grants (user_id, pack_version)
+    values (p_manager_id, 2)
+    on conflict (user_id) do nothing;
+
+    return query select
+      true                     as claimed,
+      v_claimed                as queue_position,
+      (v_limit - v_claimed)    as remaining,
+      v_claimed                as welcome_packs_claimed,
+      v_limit                  as welcome_packs_limit;
+  else
+    return query select
+      false                    as claimed,
+      (v_claimed + 1)          as queue_position,
+      0::bigint                as remaining,
+      v_claimed                as welcome_packs_claimed,
+      v_limit                  as welcome_packs_limit;
+  end if;
 end;
 $$;
 
-grant execute on function public.admin_approve_beta_tester(uuid, text) to authenticated;
+revoke all on function public.claim_welcome_pack(uuid) from public;
+grant execute on function public.claim_welcome_pack(uuid) to authenticated;
 
-create or replace function public.admin_invite_beta_tester(
-  p_email text,
-  p_source text default 'admin',
-  p_notes text default null
+-- ─── 20260502060000_platform_data.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — platform_data
+--
+-- Dados globais de plataforma que o admin configura e todos os managers recebem:
+-- shop_catalog, admin_leagues, gamespirit_knowledge, coach_templates.
+-- Usa platform_config (já existente) para shop_catalog e gamespirit_knowledge.
+-- Nova tabela admin_leagues para ligas (queryável individualmente).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Ligas admin (tabela própria para ser queryável)
+create table if not exists public.admin_leagues (
+  id          text primary key,
+  config      jsonb not null,
+  is_primary  boolean not null default false,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.admin_leagues enable row level security;
+
+-- Todos os managers autenticados podem ler as ligas
+create policy "admin_leagues_select_authenticated"
+  on public.admin_leagues for select
+  to authenticated using (true);
+
+-- Só service_role escreve (admin usa RPC)
+grant select on table public.admin_leagues to authenticated;
+
+comment on table public.admin_leagues is
+  'Competições criadas pelo admin. Lidas por todos os managers no boot.';
+
+-- Trigger updated_at
+create or replace function public.touch_admin_leagues_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at := now(); return new; end;
+$$;
+
+drop trigger if exists trg_touch_admin_leagues on public.admin_leagues;
+create trigger trg_touch_admin_leagues
+  before update on public.admin_leagues
+  for each row execute function public.touch_admin_leagues_updated_at();
+
+-- RPC para upsert de liga (requer is_admin)
+create or replace function public.admin_upsert_league(
+  p_id      text,
+  p_config  jsonb,
+  p_primary boolean default false
 )
-returns table (id uuid, email text, invite_code text)
-language plpgsql
-security definer
-set search_path = public
+returns public.admin_leagues
+language plpgsql security definer set search_path = public
 as $$
-declare
-  v_admin uuid := auth.uid();
-  v_code text;
-  v_email text := lower(trim(p_email));
+declare v public.admin_leagues;
 begin
-  if not public.is_admin() then
-    raise exception 'Forbidden: admin only';
+  if not public.is_admin() then raise exception 'admin required'; end if;
+  -- Se marcando como primary, desmarcar as outras
+  if p_primary then
+    update public.admin_leagues set is_primary = false where is_primary = true;
   end if;
-  if v_email = '' or v_email !~ '^[^@]+@[^@]+\.[^@]+$' then
-    raise exception 'Invalid email';
-  end if;
-
-  v_code := public.generate_beta_invite_code();
-
-  return query
-  insert into public.beta_testers (email, status, invite_code, invited_by, approved_at, approved_by, source, notes)
-  values (v_email, 'approved', v_code, v_admin, now(), v_admin, p_source, p_notes)
-  on conflict (email) do update
-    set status = case when public.beta_testers.status = 'pending' then 'approved' else public.beta_testers.status end,
-        invite_code = coalesce(public.beta_testers.invite_code, excluded.invite_code),
-        approved_at = coalesce(public.beta_testers.approved_at, excluded.approved_at),
-        approved_by = coalesce(public.beta_testers.approved_by, excluded.approved_by),
+  insert into public.admin_leagues (id, config, is_primary)
+  values (p_id, p_config, p_primary)
+  on conflict (id) do update
+    set config = excluded.config,
+        is_primary = excluded.is_primary,
         updated_at = now()
-  returning beta_testers.id, beta_testers.email, beta_testers.invite_code;
+  returning * into v;
+  return v;
 end;
 $$;
+revoke all on function public.admin_upsert_league(text, jsonb, boolean) from public;
+grant execute on function public.admin_upsert_league(text, jsonb, boolean) to authenticated;
 
-grant execute on function public.admin_invite_beta_tester(text, text, text) to authenticated;
-
-create or replace function public.redeem_beta_invite(p_invite_code text)
+-- RPC para remover liga
+create or replace function public.admin_remove_league(p_id text)
 returns boolean
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'admin required'; end if;
+  delete from public.admin_leagues where id = p_id;
+  return found;
+end;
+$$;
+revoke all on function public.admin_remove_league(text) from public;
+grant execute on function public.admin_remove_league(text) to authenticated;
+
+-- RPC para set primary league
+create or replace function public.admin_set_primary_league(p_id text)
+returns boolean
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'admin required'; end if;
+  update public.admin_leagues set is_primary = false where is_primary = true;
+  update public.admin_leagues set is_primary = true where id = p_id;
+  return found;
+end;
+$$;
+revoke all on function public.admin_set_primary_league(text) from public;
+grant execute on function public.admin_set_primary_league(text) to authenticated;
+
+-- Tabela para coach templates globais (coaches que o admin cria como templates)
+create table if not exists public.coach_templates (
+  id          text primary key,
+  coach       jsonb not null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.coach_templates enable row level security;
+
+create policy "coach_templates_select_authenticated"
+  on public.coach_templates for select
+  to authenticated using (true);
+
+grant select on table public.coach_templates to authenticated;
+
+comment on table public.coach_templates is
+  'Templates de Coach Agent criados pelo admin. Managers podem escolher um no onboarding.';
+
+-- Coluna evolution_rate em legacy_players
+alter table public.legacy_players
+  add column if not exists evolution_rate float not null default 1.0;
+
+comment on column public.legacy_players.evolution_rate is
+  'Multiplicador de evolução por partida (0.25–3.0). Configurado pelo admin.';
+
+-- Coluna skills em genesis_market_players
+alter table public.genesis_market_players
+  add column if not exists skills jsonb;
+
+comment on column public.genesis_market_players.skills is
+  'Skills equipadas pelo admin antes da venda. Array de skill IDs.';
+
+-- ─── 20260502070000_global_league_state.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — global_league_state (NO-OP)
+--
+-- Esta migration tentava criar `global_league_state` com schema (id text PK,
+-- state jsonb). Mas a tabela já tinha sido criada em
+-- 20260427135532_global_league_mvp.sql com o schema relacional (season_id,
+-- status, current_playoff_round, current_league_round, min_teams_required,
+-- ...) que é o que cliente e server usam.
+--
+-- O `CREATE TABLE IF NOT EXISTS` impedia que essa migration criasse algo, mas
+-- o arquivo confundia leitores. Mantida vazia para preservar o histórico de
+-- migrations sem alterar o estado do banco. Sem rollback necessário.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+select 1 as global_league_state_noop_2026_05_02;
+
+-- ─── 20260506000000_global_league_alltime_stats.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — Liga Global: estatísticas ALL-TIME
+--
+-- Adiciona colunas all_time_* em global_league_teams para acumular pontos,
+-- vitórias, gols etc. ao longo de todas as temporadas. Diferente das colunas
+-- `points`/`wins`/etc. (que zeram a cada temporada para reorganização de
+-- divisões via promoção/rebaixamento), as all_time_* JAMAIS zeram.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+ALTER TABLE global_league_teams
+  ADD COLUMN IF NOT EXISTS all_time_points INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_matches_played INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_wins INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_draws INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_losses INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_goals_for INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_goals_against INTEGER DEFAULT 0 NOT NULL,
+  ADD COLUMN IF NOT EXISTS all_time_seasons_played INTEGER DEFAULT 0 NOT NULL;
+
+-- Backfill: copia os valores atuais (que ainda não foram zerados) como base
+-- inicial. Times que já passaram por reset perdem histórico anterior, mas a
+-- partir daqui o all-time acumula corretamente.
+UPDATE global_league_teams
+SET
+  all_time_points = COALESCE(points, 0),
+  all_time_matches_played = COALESCE(matches_played, 0),
+  all_time_wins = COALESCE(wins, 0),
+  all_time_draws = COALESCE(draws, 0),
+  all_time_losses = COALESCE(losses, 0),
+  all_time_goals_for = COALESCE(goals_for, 0),
+  all_time_goals_against = COALESCE(goals_against, 0)
+WHERE all_time_points = 0 AND points > 0;
+
+CREATE INDEX IF NOT EXISTS idx_global_teams_all_time_points
+  ON global_league_teams (all_time_points DESC);
+
+-- ─── 20260506000001_global_league_match_slots.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — Liga Global: slots fixos por dia + conceito de "OleFoot day"
+--
+-- Etapa 2 da reorganização da Liga Global. Em vez de rodadas 24/7 a cada 5min,
+-- as rodadas só podem acontecer DENTRO de janelas de slot (default 5/dia).
+-- O dia OleFoot acompanha a UTC date atual.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+ALTER TABLE global_league_state
+  ADD COLUMN IF NOT EXISTS match_slots JSONB
+    DEFAULT '["05:30","11:00","15:00","19:00","21:30"]'::jsonb NOT NULL,
+  ADD COLUMN IF NOT EXISTS slot_duration_min INTEGER
+    DEFAULT 30 NOT NULL,
+  ADD COLUMN IF NOT EXISTS current_olefoot_day DATE
+    DEFAULT CURRENT_DATE NOT NULL;
+
+COMMENT ON COLUMN global_league_state.match_slots IS
+  'Janelas (hh:mm UTC) onde rodadas podem ser disputadas. Default: 5 slots/dia.';
+COMMENT ON COLUMN global_league_state.slot_duration_min IS
+  'Duração de cada slot em minutos (default 30 = 6 rodadas de 5min).';
+COMMENT ON COLUMN global_league_state.current_olefoot_day IS
+  'Dia OleFoot atual (UTC). Atualizado pela Edge Function ao virar a meia-noite.';
+
+-- ─── 20260506000002_global_league_competition_cycle.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — Liga Global: ciclo de "Competição" longa (carry-over de pontos)
+--
+-- Etapa 3. Em vez de pontos zerarem ao fim de cada season (~110min), os pontos
+-- agora acumulam por TODA a competição (default 7 dias). Promoção/rebaixamento
+-- entre seasons preserva pontos (soft mode). Reset hard só ao fim do ciclo.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+ALTER TABLE global_league_state
+  ADD COLUMN IF NOT EXISTS competition_started_at TIMESTAMPTZ
+    DEFAULT NOW() NOT NULL,
+  ADD COLUMN IF NOT EXISTS competition_duration_days INTEGER
+    DEFAULT 7 NOT NULL,
+  ADD COLUMN IF NOT EXISTS competition_id TEXT
+    DEFAULT ('competition_' || extract(epoch from now())::bigint::text) NOT NULL;
+
+COMMENT ON COLUMN global_league_state.competition_started_at IS
+  'Início da competição atual. Pontos acumulam até completion_started_at + duration_days.';
+COMMENT ON COLUMN global_league_state.competition_duration_days IS
+  'Duração de uma competição em dias (default 7). Ao fim, zera pontos da temporada (all-time intacto).';
+COMMENT ON COLUMN global_league_state.competition_id IS
+  'ID da competição atual. Muda ao fim do ciclo.';
+
+-- Inicializa para o registro existente
+UPDATE global_league_state
+SET competition_started_at = COALESCE(competition_started_at, NOW()),
+    competition_duration_days = COALESCE(competition_duration_days, 7),
+    competition_id = COALESCE(competition_id, 'competition_' || extract(epoch from now())::bigint::text)
+WHERE id = 'current';
+
+-- ─── 20260510000000_global_league_yellow_cards_suspension.sql ───
+-- Adiciona acúmulo de cartões amarelos e suspensões por time na Liga Global.
+-- yellow_card_count: contador de amarelos na competição atual (zera após suspensão).
+-- suspension_rounds_remaining: rodadas de suspensão pendentes (penaliza OVR efetivo em -5).
+
+ALTER TABLE global_league_teams
+  ADD COLUMN IF NOT EXISTS yellow_card_count INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS suspension_rounds_remaining INTEGER NOT NULL DEFAULT 0;
+
+COMMENT ON COLUMN global_league_teams.yellow_card_count IS
+  'Amarelos acumulados na competição atual. Zera ao atingir 3 (gera 1 rodada de suspensão).';
+COMMENT ON COLUMN global_league_teams.suspension_rounds_remaining IS
+  'Rodadas de suspensão pendentes. Enquanto > 0, OVR efetivo é reduzido em 5 pontos.';
+
+-- ─── 20260518000000_manager_state_academy_inbox.sql ───
+-- ============================================================================
+-- Persistência cross-browser do queue da Academia OLE + inbox do manager
+-- ============================================================================
+-- Antes: managerProspectArtQueue e inbox viviam só no localStorage.
+-- Manager criava prospect num browser, admin processava no MESMO browser,
+-- e se o manager logava noutro device a carta entregue não aparecia.
+--
+-- Agora: ambos os slices vão pro Supabase como JSONB. O game state hydrator
+-- traz de volta no boot e o reducer continua mutando em memória.
+-- ============================================================================
+
+alter table public.manager_game_state
+  add column if not exists manager_prospect_art_queue jsonb,
+  add column if not exists inbox jsonb;
+
+-- Sem índices: campos são lidos só pelo próprio user_id (já indexado como PK).
+-- Sem RLS extra: a tabela já tem RLS por user_id (mesma policy dos outros slices).
+
+-- ─── 20260518010000_manager_state_global_league_milestones.sql ───
+-- ============================================================================
+-- Persistência cross-browser dos marcos da Liga Global já reclamados
+-- ============================================================================
+-- Cada manager pode bater 20 marcos no total (4 categorias × 5 thresholds):
+--   matches | goals | points | wins  → 10 / 50 / 100 / 300 / 1000
+-- IDs estáveis: `gl_<category>_<threshold>` (ex.: `gl_matches_10`).
+--
+-- Persistir cross-browser garante que o EXP é pago só 1× — sem isso, logar
+-- noutro device pagaria de novo todos os marcos que o time já atingiu.
+-- ============================================================================
+
+alter table public.manager_game_state
+  add column if not exists global_league_milestones_claimed jsonb;
+
+-- Sem índices: campo é lido só pelo próprio user_id (já PK).
+-- RLS herdada do owner da tabela.
+
+-- ─── 20260518020000_manager_state_local_leagues.sql ───
+-- ============================================================================
+-- LIGA CLASSIC + FAST LIGA — placar acumulado por manager cross-browser
+-- ============================================================================
+-- Cada manager tem 2 leagues locais cumulativas (sem temporadas):
+--   • classic → soma pontos por toda partida do modo CLASSIC (2D tático)
+--   • fast    → soma pontos por toda partida do modo QUICK (rápida)
+--
+-- Schema do JSON (LocalLeaguesState em src/match/localLeagues.ts):
+--   {
+--     "classic": { "played": int, "wins": int, "draws": int, "losses": int,
+--                  "goalsFor": int, "goalsAgainst": int, "points": int,
+--                  "recentForm": ["W"|"D"|"L"], "bestStreak": int,
+--                  "currentStreak": int },
+--     "fast": { ... mesmo shape ... }
+--   }
+--
+-- Persistir cross-browser garante que a Liga Classic e a Fast Liga não
+-- zeram quando o manager loga em outro device.
+-- ============================================================================
+
+alter table public.manager_game_state
+  add column if not exists local_leagues jsonb;
+
+-- ─── 20260518030000_manager_state_onboarding_flags.sql ───
+-- ============================================================================
+-- Persistência cross-browser das flags de onboarding
+-- ============================================================================
+-- Antes: welcomeGenesisPackVersion + hasDoneOnboarding viviam SÓ no
+-- localStorage. Manager fazia a cerimônia, deslogava, logava noutro browser
+-- (ou aba anônima) — localStorage zerado + welcome_pack_grants sem entry
+-- na cerimônia nova (regressão da remoção do tryGrantWelcomeGenesisPack
+-- no Sprint 2). Resultado: cerimônia abria de novo.
+--
+-- Solução em 2 camadas:
+--   1. OnboardingCeremony agora chama claimWelcomePackSlot() no finish()
+--      → grava em welcome_pack_grants (gate primário).
+--   2. Esta coluna persiste as flags como BACKUP (segundo guard) caso o
+--      RPC falhe ou tenha latência.
+--
+-- Shape do JSON:
+--   {
+--     "welcomeGenesisPackVersion": int,
+--     "hasDoneOnboarding": boolean
+--   }
+-- ============================================================================
+
+alter table public.manager_game_state
+  add column if not exists onboarding_flags jsonb;
+
+-- ─── 20260518040000_get_total_managers_rpc.sql ───
+-- ============================================================================
+-- RPC get_total_managers() — pré-existente em código mas nunca criada no DB
+-- ============================================================================
+-- O hook `useTotalManagers` (src/hooks/useTotalManagers.ts) chama essa RPC
+-- pra mostrar contagem global de managers na Home. Estava retornando 404
+-- em prod (spammando o console). Migration cria a função.
+--
+-- Sem fallback mockado — se vier null o hook deixa "Fase Beta" no UI.
+-- ============================================================================
+
+create or replace function public.get_total_managers()
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  select count(*)::int from public.profiles where id is not null;
+$$;
+
+grant execute on function public.get_total_managers() to anon, authenticated;
+
+-- ─── 20260518050000_manager_state_finance.sql ───
+-- ============================================================================
+-- PERSISTIR FINANCE CROSS-BROWSER
+-- ============================================================================
+-- Antes: finance (ole/EXP, broCents, expLifetimeEarned, expHistory) vivia
+-- APENAS no localStorage. Resultado: logout → localStorage limpo → user
+-- volta com 0 EXP, perde tudo que jogou.
+--
+-- Agora: persiste em manager_game_state.finance (jsonb). Hidratação usa
+-- MAX(expLifetimeEarned) — monotônico, jamais regredir.
+-- ============================================================================
+
+alter table public.manager_game_state
+  add column if not exists finance jsonb;
+
+-- ─── 20260518060000_global_league_wo_rivalry.sql ───
+-- Adiciona colunas para WO (available_player_count) e Rivalidade (rivalry_encounters)
+-- na tabela global_league_teams.
+
+ALTER TABLE global_league_teams
+  ADD COLUMN IF NOT EXISTS available_player_count integer NOT NULL DEFAULT 25,
+  ADD COLUMN IF NOT EXISTS rivalry_encounters jsonb NOT NULL DEFAULT '{}';
+
+COMMENT ON COLUMN global_league_teams.available_player_count IS
+  'Jogadores disponíveis (synced pelo cliente). Edge Function usa para WO (<11 = derrota 3x0).';
+
+COMMENT ON COLUMN global_league_teams.rivalry_encounters IS
+  'Confrontos na temporada: {opponentTeamId: count}. 3+ = clássico (probabilidades aumentadas).';
+
+-- ─── 20260519010000_manager_squad_public_read.sql ───
+-- Permite leitura cruzada de manager_squad para matchmaking PvP assíncrono.
+-- Dados de gameplay (plantel/lineup) não são sensíveis.
+DROP POLICY IF EXISTS "manager_squad_select_own" ON public.manager_squad;
+
+CREATE POLICY "manager_squad_select_all"
+  ON public.manager_squad FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- ─── 20260519020000_cleanup_npc_market_activities.sql ───
+-- Remove atividades de mercado geradas por NPCs (manager_id IS NULL).
+-- A partir de agora, apenas transações reais de managers aparecem no feed.
+DELETE FROM public.market_activities WHERE manager_id IS NULL;
+
+-- ─── 20260519030000_list_ruiz_pacheco_on_market.sql ───
+-- Coloca Ruiz Pacheco (GEN-040) disponível no mercado de transferências.
+UPDATE public.genesis_market_players
+SET listed_on_market = true
+WHERE id = 'GEN-040';
+
+-- ─── 20260519040000_fix_get_total_managers_rpc.sql ───
+-- Fix: conta managers reais a partir de auth.users (não profiles que pode ficar órfão).
+-- SECURITY DEFINER permite acesso a auth.users.
+create or replace function public.get_total_managers()
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  select count(*)::int from auth.users;
+$$;
+
+-- ─── 20260519050000_reset_global_league_stats.sql ───
+-- Reset da Liga Global: zera stats/pontos de todos os times.
+-- Mantém registros (nome, manager_id, club_name, overall, jogadores).
+-- Prepara para nova temporada.
+UPDATE public.global_league_teams SET
+  points = 0,
+  matches_played = 0,
+  wins = 0,
+  draws = 0,
+  losses = 0,
+  goals_for = 0,
+  goals_against = 0,
+  goal_difference = 0;
+
+-- ─── 20260519060000_cleanup_orphan_league_teams.sql ───
+-- Remove times da Liga Global cujo manager_id não corresponde a nenhum
+-- email em auth.users (times órfãos de users deletados).
+-- Também remove times mockados (ole-fc, guest).
+DELETE FROM public.global_league_teams
+WHERE manager_id NOT IN (
+  SELECT email FROM auth.users WHERE email IS NOT NULL
+)
+OR manager_id IN ('ole-fc', 'guest');
+
+-- ─── 20260519070000_atomic_persist_opponent_result.sql ───
+-- RPC atômica para persistir resultado do adversário na Liga Local.
+-- Evita race condition de read-then-write quando 2 jogadores vencem
+-- o mesmo oponente simultaneamente.
+create or replace function public.persist_opponent_local_league_result(
+  p_opponent_user_id uuid,
+  p_league text,        -- 'fast' ou 'classic'
+  p_result text,        -- 'win', 'draw', 'loss'
+  p_goals_for int,
+  p_goals_against int
+)
+returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_user uuid := auth.uid();
-  v_code text := upper(trim(p_invite_code));
+  v_leagues jsonb;
+  v_league_data jsonb;
+  v_played int;
+  v_wins int;
+  v_draws int;
+  v_losses int;
+  v_gf int;
+  v_ga int;
+  v_points int;
 begin
-  if v_user is null then
-    raise exception 'Must be authenticated to redeem invite';
+  -- Ler local_leagues atual
+  select coalesce(local_leagues, '{}'::jsonb)
+  into v_leagues
+  from manager_game_state
+  where user_id = p_opponent_user_id
+  for update;
+
+  -- Se não existe row, criar
+  if not found then
+    insert into manager_game_state (user_id, local_leagues)
+    values (p_opponent_user_id, '{}'::jsonb)
+    on conflict (user_id) do nothing;
+    v_leagues := '{}'::jsonb;
   end if;
 
-  update public.beta_testers
-     set user_id = v_user,
-         status = 'active',
-         updated_at = now()
-   where invite_code = v_code
-     and status = 'approved'
-     and (user_id is null or user_id = v_user);
+  -- Extrair dados da liga específica
+  v_league_data := coalesce(v_leagues -> p_league, '{}'::jsonb);
+  v_played := coalesce((v_league_data ->> 'played')::int, 0) + 1;
+  v_wins := coalesce((v_league_data ->> 'wins')::int, 0) + (case when p_result = 'win' then 1 else 0 end);
+  v_draws := coalesce((v_league_data ->> 'draws')::int, 0) + (case when p_result = 'draw' then 1 else 0 end);
+  v_losses := coalesce((v_league_data ->> 'losses')::int, 0) + (case when p_result = 'loss' then 1 else 0 end);
+  v_gf := coalesce((v_league_data ->> 'goalsFor')::int, 0) + p_goals_for;
+  v_ga := coalesce((v_league_data ->> 'goalsAgainst')::int, 0) + p_goals_against;
+  v_points := (v_wins * 3) + v_draws;
 
-  return found;
+  -- Montar novo JSON da liga
+  v_league_data := jsonb_build_object(
+    'played', v_played,
+    'wins', v_wins,
+    'draws', v_draws,
+    'losses', v_losses,
+    'goalsFor', v_gf,
+    'goalsAgainst', v_ga,
+    'points', v_points
+  );
+
+  -- Atualizar atomicamente
+  update manager_game_state
+  set local_leagues = jsonb_set(coalesce(local_leagues, '{}'::jsonb), array[p_league], v_league_data)
+  where user_id = p_opponent_user_id;
 end;
 $$;
 
-grant execute on function public.redeem_beta_invite(text) to authenticated;
+grant execute on function public.persist_opponent_local_league_result(uuid, text, text, int, int) to anon, authenticated;
 
-create or replace function public.admin_revoke_beta_access(
-  p_tester_id uuid,
-  p_reason text default null
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if not public.is_admin() then
-    raise exception 'Forbidden: admin only';
-  end if;
-
-  update public.beta_testers
-     set status = 'revoked',
-         notes = coalesce(p_reason, notes),
-         updated_at = now()
-   where id = p_tester_id;
-
-  return found;
-end;
-$$;
-
-grant execute on function public.admin_revoke_beta_access(uuid, text) to authenticated;
+-- ─── 20260521000000_fix_referral_codes_complete.sql ───
 -- Fix: Complete referral code system
 -- Adds: my_referral_code column, trigger to generate it, RPCs to query it
 
@@ -6101,3 +7725,4072 @@ begin
     end loop;
   end loop;
 end $$;
+
+-- ─── 20260525014754_olefoot_python_mode.sql ───
+-- ═══════════════════════════════════════════════════════════════════════
+--  OLEFOOT PYTHON MODE — Schema for impact + engagement systems
+--  Sistema A: club_consequences (persistent overlay effects)
+--  Sistema E: manager_presence + manager_login_bonus_claims
+--  Will be consumed by:
+--    - TS reducer (real-time overlay)
+--    - Python /insights service (analytics, batch jobs)
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- ─── Sistema A: PersistentConsequence storage ─────────────────────────
+CREATE TABLE IF NOT EXISTS public.club_consequences (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  manager_id      uuid NOT NULL,
+  club_id         text NOT NULL,
+  player_id       text,
+  kind            text NOT NULL,
+  dimension       text NOT NULL CHECK (dimension IN ('physical','psychological','reputational','financial')),
+  scope           text NOT NULL CHECK (scope IN ('player','club')),
+  magnitude       numeric NOT NULL,
+  decay_curve     text NOT NULL DEFAULT 'linear' CHECK (decay_curve IN ('step','linear','exponential')),
+  starts_at       timestamptz NOT NULL DEFAULT now(),
+  expires_at      timestamptz NOT NULL,
+  source_event_id text,
+  metadata        jsonb DEFAULT '{}'::jsonb,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_club_consequences_manager_expires
+  ON public.club_consequences (manager_id, expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_club_consequences_player_expires
+  ON public.club_consequences (player_id, expires_at)
+  WHERE player_id IS NOT NULL;
+
+-- Postgres não aceita now() em predicate de index (não é IMMUTABLE).
+-- Index sem WHERE: queries de "consequências ativas por dimensão" continuam
+-- usando este index + filtro WHERE expires_at > now() no runtime.
+CREATE INDEX IF NOT EXISTS idx_club_consequences_dimension_expires
+  ON public.club_consequences (dimension, expires_at);
+
+COMMENT ON TABLE public.club_consequences IS
+  'Persistent overlay effects with temporal decay. TS reducer applies overlay; Python /insights aggregates for projections.';
+
+-- RLS: manager só lê/escreve as próprias consequências
+ALTER TABLE public.club_consequences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "consequences_select_own" ON public.club_consequences;
+CREATE POLICY "consequences_select_own"
+  ON public.club_consequences FOR SELECT
+  USING (auth.uid() = manager_id);
+
+DROP POLICY IF EXISTS "consequences_insert_own" ON public.club_consequences;
+CREATE POLICY "consequences_insert_own"
+  ON public.club_consequences FOR INSERT
+  WITH CHECK (auth.uid() = manager_id);
+
+DROP POLICY IF EXISTS "consequences_update_own" ON public.club_consequences;
+CREATE POLICY "consequences_update_own"
+  ON public.club_consequences FOR UPDATE
+  USING (auth.uid() = manager_id);
+
+DROP POLICY IF EXISTS "consequences_delete_own" ON public.club_consequences;
+CREATE POLICY "consequences_delete_own"
+  ON public.club_consequences FOR DELETE
+  USING (auth.uid() = manager_id);
+
+
+-- ─── Sistema E: Manager presence (engagement tracking) ────────────────
+CREATE TABLE IF NOT EXISTS public.manager_presence (
+  manager_id                      uuid PRIMARY KEY,
+  last_login_at                   timestamptz NOT NULL,
+  last_session_end_at             timestamptz,
+  total_sessions                  integer NOT NULL DEFAULT 0,
+  last_bonus_claim_at             timestamptz,
+  bonus_streak_slots              integer NOT NULL DEFAULT 0,
+  absence_penalty_last_applied_at timestamptz,
+  last_absence_tier               text CHECK (last_absence_tier IN
+    ('normal','warning_12h','mild_24h','moderate_36h','heavy_48h','crisis_72h')),
+  updated_at                      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_manager_presence_last_login
+  ON public.manager_presence (last_login_at);
+
+COMMENT ON TABLE public.manager_presence IS
+  'Tracks manager presence for absence penalty + login bonus cycle.';
+
+ALTER TABLE public.manager_presence ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "presence_select_own" ON public.manager_presence;
+CREATE POLICY "presence_select_own"
+  ON public.manager_presence FOR SELECT
+  USING (auth.uid() = manager_id);
+
+DROP POLICY IF EXISTS "presence_upsert_own" ON public.manager_presence;
+CREATE POLICY "presence_upsert_own"
+  ON public.manager_presence FOR INSERT
+  WITH CHECK (auth.uid() = manager_id);
+
+DROP POLICY IF EXISTS "presence_update_own" ON public.manager_presence;
+CREATE POLICY "presence_update_own"
+  ON public.manager_presence FOR UPDATE
+  USING (auth.uid() = manager_id);
+
+
+-- ─── Sistema E: Login bonus claim history ─────────────────────────────
+CREATE TABLE IF NOT EXISTS public.manager_login_bonus_claims (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  manager_id   uuid NOT NULL,
+  claimed_at   timestamptz NOT NULL DEFAULT now(),
+  slot_index   integer NOT NULL,
+  reward_kind  text NOT NULL,
+  exp_granted  integer,
+  is_weekend   boolean NOT NULL DEFAULT false,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_bonus_claims_manager_at
+  ON public.manager_login_bonus_claims (manager_id, claimed_at DESC);
+
+COMMENT ON TABLE public.manager_login_bonus_claims IS
+  'History of 3h/1h cycle bonus claims. Used for streak preservation and analytics.';
+
+ALTER TABLE public.manager_login_bonus_claims ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "bonus_claims_select_own" ON public.manager_login_bonus_claims;
+CREATE POLICY "bonus_claims_select_own"
+  ON public.manager_login_bonus_claims FOR SELECT
+  USING (auth.uid() = manager_id);
+
+DROP POLICY IF EXISTS "bonus_claims_insert_own" ON public.manager_login_bonus_claims;
+CREATE POLICY "bonus_claims_insert_own"
+  ON public.manager_login_bonus_claims FOR INSERT
+  WITH CHECK (auth.uid() = manager_id);
+
+-- ─── 20260526030000_academy_storage_buckets.sql ───
+-- Buckets do fluxo Academia OLE: selfies (privado, temporário) + portraits
+-- e cards promocionais (público).
+--
+-- academy-selfies: selfie do manager usada como referência pelo admin pra
+--   gerar a arte final no Freepik. Privado pois é dado pessoal; signed URLs
+--   geradas com TTL 7 dias na rota /api/academy/upload-selfie. Deletada após
+--   o admin "lançar" o jogador no plantel (cleanup futuro).
+--
+-- academy-portraits: arte final do jogador (portraitUrl) e card promocional
+--   (promotionalCardUrl). Público pois o manager precisa exibir no plantel
+--   e compartilhar nas redes sociais. Subdividido em duas subpastas
+--   (portrait/ e promo/) só pra organização visual no dashboard.
+
+insert into storage.buckets (id, name, public)
+values
+  ('academy-selfies', 'academy-selfies', false),
+  ('academy-portraits', 'academy-portraits', true)
+on conflict (id) do nothing;
+
+-- Policies — uploads via service_role bypass RLS, então só precisamos abrir
+-- LEITURA pra usuários autenticados (selfies) e leitura pública (portraits
+-- já são públicos via bucket public=true).
+
+drop policy if exists "academy_selfies_authenticated_read" on storage.objects;
+create policy "academy_selfies_authenticated_read"
+  on storage.objects for select
+  to authenticated
+  using (bucket_id = 'academy-selfies');
+
+drop policy if exists "academy_selfies_owner_delete" on storage.objects;
+create policy "academy_selfies_owner_delete"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'academy-selfies' and owner = auth.uid());
+
+-- ─── 20260526040000_referral_hardening.sql ───
+-- Hardening do sistema de referral (3 melhorias):
+-- 1. save_onboarding_profile valida que referred_by_code é um my_referral_code real
+--    de OUTRO usuário (bloqueia órfãos e auto-indicação silenciosamente).
+-- 2. Revoga EXECUTE de anon/public nos RPCs (auth ainda checada internamente, mas
+--    reduz superfície exposta no /rest/v1/rpc).
+-- 3. SET search_path = public nas funções que faltavam (hardening contra injection
+--    via search_path manipulado em sessões).
+
+-- ============================================================
+-- 1. Validação de referrer existente
+-- ============================================================
+
+create or replace function public.save_onboarding_profile(
+  p_display_name text,
+  p_club_name text,
+  p_club_short text,
+  p_onboarding_data jsonb,
+  p_referred_by_code text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_code text;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  v_code := nullif(regexp_replace(upper(coalesce(p_referred_by_code, '')), '[^A-Z0-9]', '', 'g'), '');
+  if v_code is not null and (char_length(v_code) < 6 or char_length(v_code) > 8) then
+    v_code := null;
+  end if;
+
+  if v_code is not null then
+    if not exists (
+      select 1 from public.profiles
+      where my_referral_code = v_code and id <> v_uid
+    ) then
+      v_code := null;
+    end if;
+  end if;
+
+  insert into public.profiles (id, display_name, club_name, club_short, onboarding_data, referred_by_code)
+  values (v_uid, p_display_name, p_club_name, p_club_short, p_onboarding_data, v_code)
+  on conflict (id) do update set
+    display_name = excluded.display_name,
+    club_name = excluded.club_name,
+    club_short = excluded.club_short,
+    onboarding_data = excluded.onboarding_data,
+    referred_by_code = coalesce(public.profiles.referred_by_code, excluded.referred_by_code),
+    updated_at = now();
+end;
+$$;
+
+-- ============================================================
+-- 2. Revoga EXECUTE de anon/public; só authenticated entra
+-- ============================================================
+
+revoke execute on function public.save_onboarding_profile(text, text, text, jsonb, text) from anon, public;
+grant execute on function public.save_onboarding_profile(text, text, text, jsonb, text) to authenticated;
+
+revoke execute on function public.get_my_referral_code() from anon, public;
+grant execute on function public.get_my_referral_code() to authenticated;
+
+revoke execute on function public.get_my_referrals() from anon, public;
+grant execute on function public.get_my_referrals() to authenticated;
+
+-- generate_unique_referral_code só é chamada pelo trigger (que roda no contexto
+-- do owner da função): nem authenticated nem anon precisam invocá-la diretamente.
+revoke execute on function public.generate_unique_referral_code() from anon, authenticated, public;
+
+-- ============================================================
+-- 3. search_path explícito nas funções que faltavam
+-- ============================================================
+
+create or replace function public.generate_unique_referral_code()
+returns text
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_code text;
+  v_alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  v_attempts int := 0;
+begin
+  while v_attempts < 10 loop
+    v_code := '';
+    for i in 1..8 loop
+      v_code := v_code || substr(v_alphabet, (floor(random() * 32)::int) + 1, 1);
+    end loop;
+    if not exists(select 1 from public.profiles where my_referral_code = v_code) then
+      return v_code;
+    end if;
+    v_attempts := v_attempts + 1;
+  end loop;
+  raise exception 'Failed to generate unique referral code after 10 attempts';
+end;
+$$;
+
+create or replace function public.trg_generate_referral_code()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.my_referral_code is null then
+    new.my_referral_code := public.generate_unique_referral_code();
+  end if;
+  return new;
+end;
+$$;
+
+-- Re-revoga após o CREATE OR REPLACE (o CREATE recria grants default em PUBLIC).
+revoke execute on function public.generate_unique_referral_code() from anon, authenticated, public;
+revoke execute on function public.trg_generate_referral_code() from anon, authenticated, public;
+
+-- ─── 20260526050000_fix_get_my_referrals_ambiguous_id.sql ───
+-- Fix: column reference "id" was ambiguous because RETURNS TABLE (id uuid, ...)
+-- creates a variable named "id" that shadows profiles.id in the inner query.
+--
+-- Bug pré-existente da migration 20260521000000. ReferralTab + ManagerNetwork
+-- recebiam 400 Bad Request silenciado pelo try/catch do client (`fetchMyReferrals`
+-- só logava warning e retornava []), então a página parecia "vazia" mesmo com
+-- dados no banco.
+--
+-- Diagnóstico veio do Network tab do browser: POST /rest/v1/rpc/get_my_referrals
+-- → 400. SQL puro `select * from get_my_referrals()` retornou:
+--   ERROR: 42702: column reference "id" is ambiguous
+--   QUERY: select my_referral_code from public.profiles where id = auth.uid()
+
+create or replace function public.get_my_referrals()
+returns table (
+  id uuid,
+  display_name text,
+  club_name text,
+  club_short text,
+  created_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_my_code text;
+begin
+  -- Qualifica com alias pra evitar ambiguidade com a variável "id" do RETURNS TABLE
+  select p.my_referral_code into v_my_code
+    from public.profiles p
+   where p.id = auth.uid();
+
+  if v_my_code is null then
+    return;
+  end if;
+
+  return query
+    select p.id, p.display_name, p.club_name, p.club_short, p.created_at
+      from public.profiles p
+     where p.referred_by_code = v_my_code
+     order by p.created_at desc;
+end;
+$$;
+
+revoke execute on function public.get_my_referrals() from anon, public;
+grant execute on function public.get_my_referrals() to authenticated;
+
+-- ─── 20260526060000_referral_exp_commission.sql ───
+-- Sistema de comissão EXP sobre indicados (5% de todo EXP ganho pelo indicado).
+--
+-- Como funciona:
+--   1. Cliente sincroniza `profiles.exp_lifetime_earned` em eventos críticos
+--      (login + pós-partida) com o valor de `finance.expLifetimeEarned` local
+--   2. Trigger AFTER UPDATE detecta delta positivo
+--   3. Se o profile tem `referred_by_code` → resolve o referrer e cria entry
+--      em `referral_exp_commissions` com round(delta * 0.05)
+--   4. RPC `get_my_referrals` agrega o total recebido por cada indicado
+--
+-- O credit automático no saldo do referrer fica como próxima iteração.
+-- Esta migration entrega o LEDGER + DISPLAY (decisão de produto, 2026-05-26).
+
+-- ============================================================
+-- 1. Coluna pra rastrear lifetime EXP no profile
+-- ============================================================
+
+alter table public.profiles
+  add column if not exists exp_lifetime_earned bigint not null default 0;
+
+create index if not exists profiles_exp_lifetime_idx
+  on public.profiles (exp_lifetime_earned)
+  where exp_lifetime_earned > 0;
+
+-- ============================================================
+-- 2. Tabela ledger de comissões
+-- ============================================================
+
+create table if not exists public.referral_exp_commissions (
+  id uuid primary key default gen_random_uuid(),
+  referrer_id uuid not null references public.profiles(id) on delete cascade,
+  referred_id uuid not null references public.profiles(id) on delete cascade,
+  exp_amount bigint not null check (exp_amount > 0),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists referral_exp_commissions_referrer_idx
+  on public.referral_exp_commissions (referrer_id, created_at desc);
+
+create index if not exists referral_exp_commissions_referred_idx
+  on public.referral_exp_commissions (referred_id);
+
+alter table public.referral_exp_commissions enable row level security;
+
+-- Só o referrer pode ler suas próprias comissões.
+drop policy if exists referral_exp_commissions_select_referrer on public.referral_exp_commissions;
+create policy referral_exp_commissions_select_referrer
+  on public.referral_exp_commissions
+  for select
+  using (referrer_id = auth.uid());
+
+-- Inserts vêm só do trigger (service_role contexto). Sem policy de INSERT
+-- pra clientes autenticados — eles não devem criar comissão diretamente.
+
+-- ============================================================
+-- 3. Trigger: credita comissão no ledger quando indicado ganha EXP
+-- ============================================================
+
+create or replace function public.trg_referral_exp_commission()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_delta bigint;
+  v_referrer_id uuid;
+  v_commission bigint;
+begin
+  -- Só age se exp_lifetime_earned aumentou
+  v_delta := coalesce(new.exp_lifetime_earned, 0) - coalesce(old.exp_lifetime_earned, 0);
+  if v_delta <= 0 then
+    return new;
+  end if;
+
+  -- Sem referrer → sem comissão
+  if new.referred_by_code is null then
+    return new;
+  end if;
+
+  -- Resolve o referrer
+  select p.id into v_referrer_id
+    from public.profiles p
+   where p.my_referral_code = new.referred_by_code
+   limit 1;
+
+  if v_referrer_id is null or v_referrer_id = new.id then
+    return new;
+  end if;
+
+  -- 5% sobre o delta
+  v_commission := round(v_delta * 0.05);
+  if v_commission <= 0 then
+    return new;
+  end if;
+
+  insert into public.referral_exp_commissions (referrer_id, referred_id, exp_amount)
+  values (v_referrer_id, new.id, v_commission);
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.trg_referral_exp_commission() from anon, authenticated, public;
+
+drop trigger if exists profiles_referral_exp_commission_trg on public.profiles;
+create trigger profiles_referral_exp_commission_trg
+  after update of exp_lifetime_earned on public.profiles
+  for each row
+  execute function public.trg_referral_exp_commission();
+
+-- ============================================================
+-- 4. RPC pra sincronizar exp_lifetime_earned do client
+-- ============================================================
+
+create or replace function public.sync_my_exp_lifetime(p_amount bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+  if p_amount is null or p_amount < 0 then
+    return;
+  end if;
+
+  -- Monotonic: nunca regredir o lifetime (defende contra client com state stale)
+  update public.profiles
+     set exp_lifetime_earned = greatest(exp_lifetime_earned, p_amount)
+   where id = v_uid
+     and exp_lifetime_earned < p_amount;
+end;
+$$;
+
+revoke execute on function public.sync_my_exp_lifetime(bigint) from anon, public;
+grant execute on function public.sync_my_exp_lifetime(bigint) to authenticated;
+
+-- ============================================================
+-- 5. RPC get_my_referrals: retorna lifetime + commission agregada
+-- ============================================================
+
+drop function if exists public.get_my_referrals();
+
+create or replace function public.get_my_referrals()
+returns table (
+  id uuid,
+  display_name text,
+  club_name text,
+  club_short text,
+  created_at timestamptz,
+  exp_lifetime_earned bigint,
+  commission_earned bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_my_code text;
+  v_my_id uuid := auth.uid();
+begin
+  if v_my_id is null then
+    return;
+  end if;
+
+  select p.my_referral_code into v_my_code
+    from public.profiles p
+   where p.id = v_my_id;
+
+  if v_my_code is null then
+    return;
+  end if;
+
+  return query
+    select
+      p.id,
+      p.display_name,
+      p.club_name,
+      p.club_short,
+      p.created_at,
+      coalesce(p.exp_lifetime_earned, 0)::bigint as exp_lifetime_earned,
+      coalesce((
+        select sum(c.exp_amount)::bigint
+          from public.referral_exp_commissions c
+         where c.referrer_id = v_my_id
+           and c.referred_id = p.id
+      ), 0)::bigint as commission_earned
+    from public.profiles p
+   where p.referred_by_code = v_my_code
+   order by p.created_at desc;
+end;
+$$;
+
+revoke execute on function public.get_my_referrals() from anon, public;
+grant execute on function public.get_my_referrals() to authenticated;
+
+-- ─── 20260526070000_referral_exp_commission_claim.sql ───
+-- Fecha o loop da comissão de indicação: ledger → claim → saldo.
+--
+-- Adiciona claimed_at no ledger e RPC pra resgatar.
+-- get_my_referrals agora retorna commission_pending (claimable) e
+-- commission_total (histórico cumulativo).
+
+-- ============================================================
+-- 1. Coluna claimed_at no ledger (nullable: null = pendente)
+-- ============================================================
+
+alter table public.referral_exp_commissions
+  add column if not exists claimed_at timestamptz;
+
+create index if not exists referral_exp_commissions_pending_idx
+  on public.referral_exp_commissions (referrer_id)
+  where claimed_at is null;
+
+-- ============================================================
+-- 2. RPC claim: marca como claimed e retorna o total resgatado
+-- ============================================================
+
+create or replace function public.claim_my_referral_commissions(
+  p_referred_id uuid default null
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_total bigint;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  with claimed as (
+    update public.referral_exp_commissions
+       set claimed_at = now()
+     where referrer_id = v_uid
+       and claimed_at is null
+       and (p_referred_id is null or referred_id = p_referred_id)
+    returning exp_amount
+  )
+  select coalesce(sum(exp_amount), 0)::bigint into v_total from claimed;
+
+  return v_total;
+end;
+$$;
+
+revoke execute on function public.claim_my_referral_commissions(uuid) from anon, public;
+grant execute on function public.claim_my_referral_commissions(uuid) to authenticated;
+
+-- ============================================================
+-- 3. Update get_my_referrals: separa pending vs total
+-- ============================================================
+
+drop function if exists public.get_my_referrals();
+
+create or replace function public.get_my_referrals()
+returns table (
+  id uuid,
+  display_name text,
+  club_name text,
+  club_short text,
+  created_at timestamptz,
+  exp_lifetime_earned bigint,
+  commission_pending bigint,
+  commission_total bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_my_code text;
+  v_my_id uuid := auth.uid();
+begin
+  if v_my_id is null then
+    return;
+  end if;
+
+  select p.my_referral_code into v_my_code
+    from public.profiles p
+   where p.id = v_my_id;
+
+  if v_my_code is null then
+    return;
+  end if;
+
+  return query
+    select
+      p.id,
+      p.display_name,
+      p.club_name,
+      p.club_short,
+      p.created_at,
+      coalesce(p.exp_lifetime_earned, 0)::bigint as exp_lifetime_earned,
+      coalesce((
+        select sum(c.exp_amount)::bigint
+          from public.referral_exp_commissions c
+         where c.referrer_id = v_my_id
+           and c.referred_id = p.id
+           and c.claimed_at is null
+      ), 0)::bigint as commission_pending,
+      coalesce((
+        select sum(c.exp_amount)::bigint
+          from public.referral_exp_commissions c
+         where c.referrer_id = v_my_id
+           and c.referred_id = p.id
+      ), 0)::bigint as commission_total
+    from public.profiles p
+   where p.referred_by_code = v_my_code
+   order by p.created_at desc;
+end;
+$$;
+
+revoke execute on function public.get_my_referrals() from anon, public;
+grant execute on function public.get_my_referrals() to authenticated;
+
+-- ─── 20260526080000_pvp_match_results.sql ───
+-- Sistema PvP assíncrono: partidas Rápida e Clássica entre managers.
+--
+-- Modelo:
+--   1. Manager A joga contra um manager B (offline) usando o snapshot do
+--      squad de B (em manager_squad). A simulação roda local no cliente A.
+--   2. Ao final, cliente A chama `record_pvp_match_result()`. Server insere
+--      ledger imutável + calcula EXP reward pra cada lado.
+--   3. A recebe seu reward imediatamente (RPC retorna o valor).
+--   4. B recebe quando logar: `fetch_my_pending_pvp_results()` retorna
+--      ledger rows onde ele participou e não foi claimed ainda.
+--      Cliente B aplica via reducer + chama `claim_pvp_match_result(id)`.
+--
+-- Recompensas (decisão de produto 2026-05-26): vitória 200 EXP,
+-- empate 80 EXP, derrota 30 EXP (consolation). Aplicado pros DOIS lados.
+
+create table if not exists public.pvp_match_results (
+  id uuid primary key default gen_random_uuid(),
+  mode text not null check (mode in ('quick', 'classic')),
+  home_user_id uuid not null references public.profiles(id) on delete cascade,
+  away_user_id uuid not null references public.profiles(id) on delete cascade,
+  home_score smallint not null check (home_score >= 0 and home_score <= 30),
+  away_score smallint not null check (away_score >= 0 and away_score <= 30),
+  home_overall smallint,
+  away_overall smallint,
+  outcome text not null check (outcome in ('home_win', 'away_win', 'draw')),
+  home_exp_reward bigint not null,
+  away_exp_reward bigint not null,
+  -- Quando cada lado coletou (claimed). A é creditado na hora; B coleta no próximo login.
+  home_claimed_at timestamptz default now(),
+  away_claimed_at timestamptz,
+  played_at timestamptz not null default now(),
+  constraint different_users check (home_user_id <> away_user_id)
+);
+
+create index if not exists pvp_results_home_idx on public.pvp_match_results (home_user_id, played_at desc);
+create index if not exists pvp_results_away_idx on public.pvp_match_results (away_user_id, played_at desc);
+create index if not exists pvp_results_mode_idx on public.pvp_match_results (mode, played_at desc);
+create index if not exists pvp_results_away_pending_idx
+  on public.pvp_match_results (away_user_id)
+  where away_claimed_at is null;
+
+alter table public.pvp_match_results enable row level security;
+
+-- Usuário lê apenas resultados onde participou
+drop policy if exists pvp_results_select_participant on public.pvp_match_results;
+create policy pvp_results_select_participant on public.pvp_match_results
+  for select using (home_user_id = auth.uid() or away_user_id = auth.uid());
+
+-- Sem INSERT/UPDATE direto via cliente — só via RPCs (security definer)
+
+-- ============================================================
+-- RPC: record_pvp_match_result
+-- Cliente A grava o resultado. Server calcula outcome + rewards + insere.
+-- Retorna o ID + os rewards (cliente A aplica home_reward localmente).
+-- ============================================================
+
+create or replace function public.record_pvp_match_result(
+  p_mode text,
+  p_away_user_id uuid,
+  p_home_score int,
+  p_away_score int,
+  p_home_overall int default null,
+  p_away_overall int default null
+)
+returns table (
+  id uuid,
+  outcome text,
+  home_exp_reward bigint,
+  away_exp_reward bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_home_user_id uuid := auth.uid();
+  v_outcome text;
+  v_home_exp bigint;
+  v_away_exp bigint;
+  v_id uuid;
+  v_hs smallint;
+  v_as smallint;
+begin
+  if v_home_user_id is null then
+    raise exception 'must be authenticated';
+  end if;
+  if p_mode not in ('quick', 'classic') then
+    raise exception 'invalid mode';
+  end if;
+  if p_away_user_id = v_home_user_id then
+    raise exception 'cannot play against self';
+  end if;
+  if not exists (select 1 from public.profiles where id = p_away_user_id) then
+    raise exception 'opponent not found';
+  end if;
+
+  -- Sanitização defensiva dos scores (0-30)
+  v_hs := greatest(0, least(30, coalesce(p_home_score, 0)));
+  v_as := greatest(0, least(30, coalesce(p_away_score, 0)));
+
+  v_outcome := case
+    when v_hs > v_as then 'home_win'
+    when v_hs < v_as then 'away_win'
+    else 'draw'
+  end;
+
+  v_home_exp := case v_outcome
+    when 'home_win' then 200
+    when 'draw' then 80
+    else 30
+  end;
+  v_away_exp := case v_outcome
+    when 'away_win' then 200
+    when 'draw' then 80
+    else 30
+  end;
+
+  insert into public.pvp_match_results (
+    mode, home_user_id, away_user_id,
+    home_score, away_score, home_overall, away_overall,
+    outcome, home_exp_reward, away_exp_reward,
+    home_claimed_at, away_claimed_at
+  ) values (
+    p_mode, v_home_user_id, p_away_user_id,
+    v_hs, v_as, p_home_overall, p_away_overall,
+    v_outcome, v_home_exp, v_away_exp,
+    now(),   -- A coleta imediatamente
+    null     -- B coleta quando logar
+  )
+  returning pvp_match_results.id into v_id;
+
+  return query select v_id, v_outcome, v_home_exp, v_away_exp;
+end;
+$$;
+
+revoke execute on function public.record_pvp_match_result(text, uuid, int, int, int, int) from anon, public;
+grant execute on function public.record_pvp_match_result(text, uuid, int, int, int, int) to authenticated;
+
+-- ============================================================
+-- RPC: fetch_my_pending_pvp_results
+-- B busca resultados onde participou como away e ainda não claimou.
+-- ============================================================
+
+create or replace function public.fetch_my_pending_pvp_results()
+returns table (
+  id uuid,
+  mode text,
+  outcome text,
+  home_score smallint,
+  away_score smallint,
+  away_exp_reward bigint,
+  played_at timestamptz,
+  opponent_display_name text,
+  opponent_club_name text,
+  opponent_club_short text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+  return query
+    select
+      r.id,
+      r.mode,
+      r.outcome,
+      r.home_score,
+      r.away_score,
+      r.away_exp_reward,
+      r.played_at,
+      p.display_name,
+      p.club_name,
+      p.club_short
+    from public.pvp_match_results r
+    inner join public.profiles p on p.id = r.home_user_id
+    where r.away_user_id = v_uid
+      and r.away_claimed_at is null
+    order by r.played_at desc
+    limit 20;
+end;
+$$;
+
+revoke execute on function public.fetch_my_pending_pvp_results() from anon, public;
+grant execute on function public.fetch_my_pending_pvp_results() to authenticated;
+
+-- ============================================================
+-- RPC: claim_pvp_match_result
+-- Cliente B marca um result como claimed (após ter aplicado o EXP local).
+-- ============================================================
+
+create or replace function public.claim_pvp_match_result(p_id uuid)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_reward bigint;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  update public.pvp_match_results
+     set away_claimed_at = now()
+   where id = p_id
+     and away_user_id = v_uid
+     and away_claimed_at is null
+   returning away_exp_reward into v_reward;
+
+  return coalesce(v_reward, 0);
+end;
+$$;
+
+revoke execute on function public.claim_pvp_match_result(uuid) from anon, public;
+grant execute on function public.claim_pvp_match_result(uuid) to authenticated;
+
+-- ─── 20260526090000_pvp_standings.sql ───
+-- Standings agregados de Quick e Classic.
+-- View espelha cada partida em 2 linhas (home + away) e agrega por user+mode.
+-- RPC retorna top N com info de profile + crest do time do coração.
+
+create or replace view public.pvp_standings_v as
+with results as (
+  select home_user_id as user_id, mode,
+    case outcome
+      when 'home_win' then 'W'
+      when 'away_win' then 'L'
+      else 'D'
+    end as result,
+    home_score as gf, away_score as ga
+  from public.pvp_match_results
+  union all
+  select away_user_id, mode,
+    case outcome
+      when 'away_win' then 'W'
+      when 'home_win' then 'L'
+      else 'D'
+    end as result,
+    away_score as gf, home_score as ga
+  from public.pvp_match_results
+)
+select
+  r.user_id,
+  r.mode,
+  count(*)::int as played,
+  count(*) filter (where result = 'W')::int as wins,
+  count(*) filter (where result = 'D')::int as draws,
+  count(*) filter (where result = 'L')::int as losses,
+  coalesce(sum(gf), 0)::int as goals_for,
+  coalesce(sum(ga), 0)::int as goals_against,
+  coalesce(sum(gf - ga), 0)::int as goal_diff,
+  (count(*) filter (where result = 'W') * 3 + count(*) filter (where result = 'D'))::int as points
+from results r
+group by r.user_id, r.mode;
+
+create or replace function public.get_pvp_standings(p_mode text, p_limit int default 50)
+returns table (
+  user_id uuid,
+  display_name text,
+  club_name text,
+  club_short text,
+  favorite_team_id int,
+  played int,
+  wins int,
+  draws int,
+  losses int,
+  goals_for int,
+  goals_against int,
+  goal_diff int,
+  points int,
+  rank int
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_mode not in ('quick', 'classic') then
+    raise exception 'invalid mode';
+  end if;
+  return query
+    select
+      s.user_id,
+      p.display_name,
+      p.club_name,
+      p.club_short,
+      nullif(p.onboarding_data->'favoriteRealTeam'->>'id', '')::int as favorite_team_id,
+      s.played,
+      s.wins,
+      s.draws,
+      s.losses,
+      s.goals_for,
+      s.goals_against,
+      s.goal_diff,
+      s.points,
+      (row_number() over (order by s.points desc, s.goal_diff desc, s.goals_for desc))::int as rank
+    from public.pvp_standings_v s
+    inner join public.profiles p on p.id = s.user_id
+    where s.mode = p_mode
+    order by s.points desc, s.goal_diff desc, s.goals_for desc
+    limit greatest(1, least(200, coalesce(p_limit, 50)));
+end;
+$$;
+
+revoke execute on function public.get_pvp_standings(text, int) from anon, public;
+grant execute on function public.get_pvp_standings(text, int) to authenticated;
+
+-- ─── 20260527000000_token_economy_config.sql ───
+-- ============================================================
+-- token_economy_config — camada centralizada do preço do token OLEFOOT
+--
+-- Por quê:
+--   Toda lógica do jogo (rewards HODL, marketplace, swaps, comissões em USD)
+--   precisa puxar o preço da moeda de UMA fonte. Hardcodear $0.00001 em
+--   vários arquivos = dívida técnica que explode quando listarmos em exchange.
+--
+-- Modelo:
+--   - Singleton (id='current')
+--   - Modo 'fixed' (preço travado interno) vs 'market' (oráculo futuro)
+--   - Treasury + mint controls (flags para evolução)
+--
+-- Preço inicial: $0.00001 (OLEFOOT-USD)
+-- ============================================================
+
+create table if not exists public.token_economy_config (
+  id text primary key default 'current',
+  current_token_price numeric(20, 10) not null default 0.00001,
+  pricing_mode text not null default 'fixed' check (pricing_mode in ('fixed', 'market')),
+  future_exchange_enabled boolean not null default false,
+  treasury_control_enabled boolean not null default true,
+  mint_control_enabled boolean not null default true,
+  daily_mint_cap numeric(36, 8),
+  total_minted numeric(36, 8) not null default 0,
+  updated_by uuid references public.profiles(id),
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  constraint token_economy_config_singleton check (id = 'current')
+);
+
+alter table public.token_economy_config enable row level security;
+
+-- Read público (preço é informação pública)
+drop policy if exists token_economy_config_select_all on public.token_economy_config;
+create policy token_economy_config_select_all
+  on public.token_economy_config
+  for select
+  using (true);
+
+-- Sem INSERT/UPDATE direto via client — apenas via RPC (admin)
+
+insert into public.token_economy_config (id) values ('current')
+on conflict (id) do nothing;
+
+-- ============================================================
+-- RPC get_token_price() — leitura pública
+-- ============================================================
+
+create or replace function public.get_token_price()
+returns table (
+  current_token_price numeric,
+  pricing_mode text,
+  future_exchange_enabled boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select current_token_price, pricing_mode, future_exchange_enabled
+    from public.token_economy_config
+   where id = 'current';
+$$;
+
+revoke execute on function public.get_token_price() from anon, public;
+grant execute on function public.get_token_price() to authenticated, anon;
+
+-- ============================================================
+-- Helper interno: converte centavos BRO → pontos de carreira (USD-equivalent)
+-- 1 BRO = 1 USD (parity), 1 ponto = 1 USD ganho
+-- ============================================================
+
+create or replace function public.bro_cents_to_career_points(p_cents bigint)
+returns bigint
+language sql
+immutable
+as $$
+  select coalesce(floor(p_cents::numeric / 100), 0)::bigint;
+$$;
+
+-- ─── 20260527000100_affiliate_commissions.sql ───
+-- ============================================================
+-- affiliate_commissions — ledger multinível L1/L2/L3
+--
+-- Super-Bônus de Depósito: 5% L1 + 5% L2 + 5% L3 sobre todo wallet_credits
+-- que carregar BRO/EXP e for marcado applied_at.
+--
+-- Por que ESSA arquitetura:
+--   - Hook em wallet_credits.applied_at: qualquer caminho de depósito (admin,
+--     gateway futuro, edge function de webhook) termina marcando applied_at.
+--     Plugamos UMA vez, vale pra sempre.
+--   - Tabela genérica (currency + source + level) suporta BRO, OLEXP, USDT no
+--     futuro sem migration nova.
+--   - Idempotência via UNIQUE (source_ref, level): nunca paga 2x pelo mesmo
+--     wallet_credit.
+-- ============================================================
+
+create table if not exists public.affiliate_commissions (
+  id uuid primary key default gen_random_uuid(),
+  referrer_id uuid not null references public.profiles(id) on delete cascade,
+  referred_id uuid not null references public.profiles(id) on delete cascade,
+  level smallint not null check (level between 1 and 3),
+  source text not null check (source in ('deposit', 'purchase', 'match_reward', 'manual')),
+  source_ref text not null,
+  currency text not null check (currency in ('BRO', 'EXP', 'OLEXP', 'USDT', 'USD')),
+  -- BRO/EXP em unidades inteiras (cents pra BRO, EXP inteiro); OLEXP/USDT em numeric
+  amount_cents bigint,
+  amount_numeric numeric(36, 8),
+  rate numeric(6, 4) not null default 0.0500,
+  base_amount_cents bigint,
+  base_amount_numeric numeric(36, 8),
+  status text not null default 'confirmed' check (status in ('pending', 'confirmed', 'reversed')),
+  transaction_hash text,
+  claimed_at timestamptz,
+  created_at timestamptz not null default now(),
+
+  -- Idempotência: 1 entry por (source_ref, level)
+  constraint affiliate_commissions_idempotent unique (source_ref, level)
+);
+
+create index if not exists affiliate_commissions_referrer_idx
+  on public.affiliate_commissions (referrer_id, created_at desc);
+
+create index if not exists affiliate_commissions_referred_idx
+  on public.affiliate_commissions (referred_id);
+
+create index if not exists affiliate_commissions_pending_idx
+  on public.affiliate_commissions (referrer_id, currency)
+  where claimed_at is null;
+
+alter table public.affiliate_commissions enable row level security;
+
+drop policy if exists affiliate_commissions_select_referrer on public.affiliate_commissions;
+create policy affiliate_commissions_select_referrer
+  on public.affiliate_commissions
+  for select
+  using (referrer_id = auth.uid());
+
+-- ============================================================
+-- Helper: resolve cadeia L1/L2/L3 de um user pelo referred_by_code
+-- ============================================================
+
+create or replace function public.get_referral_chain(
+  p_user_id uuid,
+  p_max_levels int default 3
+)
+returns table (
+  level smallint,
+  referrer_id uuid
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_cur_id uuid := p_user_id;
+  v_cur_code text;
+  v_next_referrer uuid;
+  v_level smallint := 1;
+begin
+  while v_level <= p_max_levels loop
+    select p.referred_by_code into v_cur_code
+      from public.profiles p
+     where p.id = v_cur_id;
+
+    if v_cur_code is null or v_cur_code = '' then
+      return;
+    end if;
+
+    select p.id into v_next_referrer
+      from public.profiles p
+     where p.my_referral_code = v_cur_code
+     limit 1;
+
+    if v_next_referrer is null or v_next_referrer = p_user_id then
+      return;
+    end if;
+
+    level := v_level;
+    referrer_id := v_next_referrer;
+    return next;
+
+    v_cur_id := v_next_referrer;
+    v_level := v_level + 1;
+  end loop;
+end;
+$$;
+
+revoke execute on function public.get_referral_chain(uuid, int) from anon, public;
+
+-- ============================================================
+-- Trigger: ao aplicar wallet_credit, paga 5%-5%-5% nos 3 níveis
+-- ============================================================
+
+create or replace function public.trg_wallet_credit_affiliate_bonus()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rate numeric := 0.05;
+  v_bro_bonus bigint;
+  v_exp_bonus bigint;
+  v_chain record;
+begin
+  -- Só dispara quando applied_at vira NOT NULL (ou seja, depósito confirmado)
+  if new.applied_at is null then
+    return new;
+  end if;
+  if old.applied_at is not null then
+    return new; -- já tinha applied_at, não dispara de novo
+  end if;
+
+  -- Calcula bônus 5% sobre o crédito aplicado
+  v_bro_bonus := coalesce(floor(new.bro_cents * v_rate), 0)::bigint;
+  v_exp_bonus := coalesce(floor(coalesce(new.exp_amount, 0) * v_rate), 0)::bigint;
+
+  if v_bro_bonus <= 0 and v_exp_bonus <= 0 then
+    return new;
+  end if;
+
+  -- Itera cadeia L1/L2/L3
+  for v_chain in select * from public.get_referral_chain(new.user_id, 3) loop
+    if v_bro_bonus > 0 then
+      insert into public.affiliate_commissions (
+        referrer_id, referred_id, level, source, source_ref,
+        currency, amount_cents, rate, base_amount_cents, status
+      ) values (
+        v_chain.referrer_id, new.user_id, v_chain.level, 'deposit',
+        'wallet_credit:' || new.id::text || ':BRO',
+        'BRO', v_bro_bonus, v_rate, new.bro_cents, 'confirmed'
+      )
+      on conflict (source_ref, level) do nothing;
+    end if;
+
+    if v_exp_bonus > 0 then
+      insert into public.affiliate_commissions (
+        referrer_id, referred_id, level, source, source_ref,
+        currency, amount_cents, rate, base_amount_cents, status
+      ) values (
+        v_chain.referrer_id, new.user_id, v_chain.level, 'deposit',
+        'wallet_credit:' || new.id::text || ':EXP',
+        'EXP', v_exp_bonus, v_rate, new.exp_amount, 'confirmed'
+      )
+      on conflict (source_ref, level) do nothing;
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.trg_wallet_credit_affiliate_bonus() from anon, authenticated, public;
+
+drop trigger if exists wallet_credits_affiliate_bonus_trg on public.wallet_credits;
+create trigger wallet_credits_affiliate_bonus_trg
+  after update of applied_at on public.wallet_credits
+  for each row
+  execute function public.trg_wallet_credit_affiliate_bonus();
+
+-- ============================================================
+-- RPC get_my_affiliate_commissions — agregado por nível + currency
+-- ============================================================
+
+create or replace function public.get_my_affiliate_commissions()
+returns table (
+  level smallint,
+  currency text,
+  total_pending_cents bigint,
+  total_claimed_cents bigint,
+  entry_count bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    c.level,
+    c.currency,
+    coalesce(sum(case when c.claimed_at is null then c.amount_cents else 0 end), 0)::bigint as total_pending_cents,
+    coalesce(sum(case when c.claimed_at is not null then c.amount_cents else 0 end), 0)::bigint as total_claimed_cents,
+    count(*)::bigint as entry_count
+  from public.affiliate_commissions c
+  where c.referrer_id = auth.uid()
+    and c.status = 'confirmed'
+  group by c.level, c.currency
+  order by c.level, c.currency;
+$$;
+
+revoke execute on function public.get_my_affiliate_commissions() from anon, public;
+grant execute on function public.get_my_affiliate_commissions() to authenticated;
+
+-- ============================================================
+-- RPC claim_my_affiliate_commissions — marca claimed_at + retorna totais
+-- ============================================================
+
+create or replace function public.claim_my_affiliate_commissions(
+  p_currency text default null
+)
+returns table (
+  currency text,
+  total_cents bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  return query
+  with claimed as (
+    update public.affiliate_commissions
+       set claimed_at = now()
+     where referrer_id = v_uid
+       and claimed_at is null
+       and status = 'confirmed'
+       and (p_currency is null or currency = p_currency)
+    returning currency, amount_cents
+  )
+  select c.currency, coalesce(sum(c.amount_cents), 0)::bigint
+    from claimed c
+   group by c.currency;
+end;
+$$;
+
+revoke execute on function public.claim_my_affiliate_commissions(text) from anon, public;
+grant execute on function public.claim_my_affiliate_commissions(text) to authenticated;
+
+-- ─── 20260527000200_career_progress.sql ───
+-- ============================================================
+-- career_progress — Plano de Carreira "Cash Only" da OLEFOOT
+--
+-- 1 BRO (≈ 1 USD) ganho em comissão = 1 ponto vitalício.
+--
+-- Ranks (cumulativo, pago UMA vez por nível):
+--   10.000 pts  → Júnior   ($50)
+--   50.000      → Pro      ($250)
+--   100.000     → Diretor  ($500)
+--   250.000     → Campeão  ($2.500)
+--   500.000     → Legend   ($5.000)
+--
+-- Trigger sobre affiliate_commissions: cada comissão confirmada em moeda
+-- USD-equivalente (BRO ou USDT) soma pontos.
+-- ============================================================
+
+create table if not exists public.career_progress (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  lifetime_points bigint not null default 0,
+  current_rank text not null default 'rookie' check (current_rank in (
+    'rookie', 'junior', 'pro', 'diretor', 'campeao', 'legend'
+  )),
+  total_commissions_cents bigint not null default 0,
+  unlocked_rewards jsonb not null default '[]'::jsonb,
+  pending_bonus_cents bigint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists career_progress_rank_idx
+  on public.career_progress (current_rank, lifetime_points desc);
+
+alter table public.career_progress enable row level security;
+
+drop policy if exists career_progress_select_self on public.career_progress;
+create policy career_progress_select_self
+  on public.career_progress
+  for select
+  using (user_id = auth.uid());
+
+-- Leaderboard público (top N) — leitura agregada permitida via RPC, não policy
+
+-- ============================================================
+-- Função: rank a partir de pontos
+-- ============================================================
+
+create or replace function public.get_rank_for_points(p_points bigint)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when p_points >= 500000 then 'legend'
+    when p_points >= 250000 then 'campeao'
+    when p_points >= 100000 then 'diretor'
+    when p_points >= 50000  then 'pro'
+    when p_points >= 10000  then 'junior'
+    else 'rookie'
+  end;
+$$;
+
+create or replace function public.get_rank_bonus_cents(p_rank text)
+returns bigint
+language sql
+immutable
+as $$
+  select case p_rank
+    when 'junior'  then 5000
+    when 'pro'     then 25000
+    when 'diretor' then 50000
+    when 'campeao' then 250000
+    when 'legend'  then 500000
+    else 0
+  end::bigint;
+$$;
+
+create or replace function public.get_rank_threshold(p_rank text)
+returns bigint
+language sql
+immutable
+as $$
+  select case p_rank
+    when 'junior'  then 10000
+    when 'pro'     then 50000
+    when 'diretor' then 100000
+    when 'campeao' then 250000
+    when 'legend'  then 500000
+    else 0
+  end::bigint;
+$$;
+
+-- ============================================================
+-- Trigger: ao confirmar comissão de afiliado USD-equivalente, soma pontos
+-- ============================================================
+
+create or replace function public.trg_career_progress_accrue()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_points_delta bigint;
+  v_new_total bigint;
+  v_new_rank text;
+  v_old_rank text;
+begin
+  -- Só conta comissão confirmada em moeda fiat-equivalent (1:1 USD)
+  if new.status <> 'confirmed' then
+    return new;
+  end if;
+
+  if new.currency not in ('BRO', 'USDT', 'USD') then
+    return new;
+  end if;
+
+  -- 1 BRO cent = 0.01 ponto → 100 cents = 1 ponto
+  v_points_delta := public.bro_cents_to_career_points(new.amount_cents);
+  if v_points_delta <= 0 then
+    return new;
+  end if;
+
+  insert into public.career_progress (user_id, lifetime_points, total_commissions_cents)
+  values (new.referrer_id, v_points_delta, new.amount_cents)
+  on conflict (user_id) do update
+    set lifetime_points = career_progress.lifetime_points + v_points_delta,
+        total_commissions_cents = career_progress.total_commissions_cents + new.amount_cents,
+        updated_at = now()
+  returning lifetime_points, current_rank into v_new_total, v_old_rank;
+
+  v_new_rank := public.get_rank_for_points(v_new_total);
+
+  if v_new_rank <> v_old_rank then
+    update public.career_progress
+       set current_rank = v_new_rank,
+           pending_bonus_cents = pending_bonus_cents + public.get_rank_bonus_cents(v_new_rank),
+           updated_at = now()
+     where user_id = new.referrer_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.trg_career_progress_accrue() from anon, authenticated, public;
+
+drop trigger if exists affiliate_commissions_career_progress_trg on public.affiliate_commissions;
+create trigger affiliate_commissions_career_progress_trg
+  after insert on public.affiliate_commissions
+  for each row
+  execute function public.trg_career_progress_accrue();
+
+-- ============================================================
+-- RPC get_my_career_progress
+-- ============================================================
+
+create or replace function public.get_my_career_progress()
+returns table (
+  user_id uuid,
+  lifetime_points bigint,
+  current_rank text,
+  next_rank text,
+  next_rank_threshold bigint,
+  progress_pct numeric,
+  total_commissions_cents bigint,
+  unlocked_rewards jsonb,
+  pending_bonus_cents bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+
+  -- Garante row existente
+  insert into public.career_progress (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+
+  return query
+  select
+    cp.user_id,
+    cp.lifetime_points,
+    cp.current_rank,
+    case cp.current_rank
+      when 'rookie'  then 'junior'
+      when 'junior'  then 'pro'
+      when 'pro'     then 'diretor'
+      when 'diretor' then 'campeao'
+      when 'campeao' then 'legend'
+      else 'legend'
+    end as next_rank,
+    case cp.current_rank
+      when 'rookie'  then 10000
+      when 'junior'  then 50000
+      when 'pro'     then 100000
+      when 'diretor' then 250000
+      when 'campeao' then 500000
+      else 500000
+    end::bigint as next_rank_threshold,
+    case
+      when cp.current_rank = 'legend' then 100::numeric
+      else round((cp.lifetime_points::numeric / nullif(
+        case cp.current_rank
+          when 'rookie'  then 10000
+          when 'junior'  then 50000
+          when 'pro'     then 100000
+          when 'diretor' then 250000
+          when 'campeao' then 500000
+          else 1
+        end, 0
+      )) * 100, 2)
+    end as progress_pct,
+    cp.total_commissions_cents,
+    cp.unlocked_rewards,
+    cp.pending_bonus_cents
+  from public.career_progress cp
+  where cp.user_id = v_uid;
+end;
+$$;
+
+revoke execute on function public.get_my_career_progress() from anon, public;
+grant execute on function public.get_my_career_progress() to authenticated;
+
+-- ============================================================
+-- RPC claim_career_bonus — paga bônus pendente pra wallet_credits
+-- ============================================================
+
+create or replace function public.claim_career_bonus()
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_pending bigint;
+  v_rank text;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  -- Lock row pra evitar race condition
+  select pending_bonus_cents, current_rank into v_pending, v_rank
+    from public.career_progress
+   where user_id = v_uid
+   for update;
+
+  if v_pending is null or v_pending <= 0 then
+    return 0;
+  end if;
+
+  -- Cria wallet_credit já aplicado (entra no SPOT do user via trigger normal)
+  insert into public.wallet_credits (user_id, bro_cents, exp_amount, reason, applied_at)
+  values (
+    v_uid,
+    v_pending,
+    0,
+    'career_bonus:' || v_rank,
+    null
+  );
+
+  -- Marca histórico
+  update public.career_progress
+     set unlocked_rewards = unlocked_rewards || jsonb_build_object(
+       'rank', v_rank,
+       'amount_cents', v_pending,
+       'claimed_at', now()
+     ),
+     pending_bonus_cents = 0,
+     updated_at = now()
+   where user_id = v_uid;
+
+  return v_pending;
+end;
+$$;
+
+revoke execute on function public.claim_career_bonus() from anon, public;
+grant execute on function public.claim_career_bonus() to authenticated;
+
+-- ============================================================
+-- RPC career_leaderboard — top 50 por pontos
+-- ============================================================
+
+create or replace function public.career_leaderboard(p_limit int default 50)
+returns table (
+  display_name text,
+  club_short text,
+  current_rank text,
+  lifetime_points bigint,
+  rank_position bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    p.display_name,
+    p.club_short,
+    cp.current_rank,
+    cp.lifetime_points,
+    row_number() over (order by cp.lifetime_points desc)::bigint as rank_position
+  from public.career_progress cp
+  join public.profiles p on p.id = cp.user_id
+  where cp.lifetime_points > 0
+  order by cp.lifetime_points desc
+  limit greatest(p_limit, 10);
+$$;
+
+revoke execute on function public.career_leaderboard(int) from anon, public;
+grant execute on function public.career_leaderboard(int) to authenticated;
+
+-- ─── 20260527000300_hodl_locks.sql ───
+-- ============================================================
+-- HODL System — Lock-up de 90 dias com 7,5%/mês (0,25%/dia)
+--
+-- Fluxo:
+--   1. Usuário trava OLEXP via create_hodl_lock(amount)
+--   2. Recebe instantaneamente 1 Premium Card (premium_cards_grants)
+--   3. Edge function diária (hodl-daily-tick) processa:
+--        - rewards de cada lock ativo (0,25% diário em OLEXP)
+--        - sorteio entre locks ativos (1 winner/dia, prize card)
+--        - maturação de locks com end_date passado
+--   4. Após end_date, principal volta pra disposição normal do user
+--
+-- Saldo OLEXP: existe como wallet.olexpPositions client-side. Aqui criamos
+-- ledger server-side que reflete LOCKS específicos do HODL (separado dos
+-- planos OLEXP convencionais de 90/180/360d).
+-- ============================================================
+
+create table if not exists public.hodl_locks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  amount_locked numeric(36, 8) not null check (amount_locked > 0),
+  currency text not null default 'OLEXP' check (currency in ('OLEXP', 'BRO', 'USDT')),
+  reward_rate_daily numeric(8, 6) not null default 0.0025,
+  start_date timestamptz not null default now(),
+  end_date timestamptz not null,
+  status text not null default 'active' check (status in ('active', 'matured', 'cancelled')),
+  total_rewards_paid numeric(36, 8) not null default 0,
+  last_reward_date date,
+  matured_claimed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists hodl_locks_user_idx
+  on public.hodl_locks (user_id, status, created_at desc);
+
+create index if not exists hodl_locks_active_idx
+  on public.hodl_locks (status, end_date)
+  where status = 'active';
+
+alter table public.hodl_locks enable row level security;
+
+drop policy if exists hodl_locks_select_self on public.hodl_locks;
+create policy hodl_locks_select_self
+  on public.hodl_locks
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- hodl_daily_rewards — ledger imutável de payouts diários (idempotência)
+-- ============================================================
+
+create table if not exists public.hodl_daily_rewards (
+  id uuid primary key default gen_random_uuid(),
+  lock_id uuid not null references public.hodl_locks(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  paid_for_date date not null,
+  amount numeric(36, 8) not null,
+  currency text not null,
+  created_at timestamptz not null default now(),
+  -- 1 payout por (lock, day)
+  constraint hodl_daily_rewards_idempotent unique (lock_id, paid_for_date)
+);
+
+create index if not exists hodl_daily_rewards_user_idx
+  on public.hodl_daily_rewards (user_id, paid_for_date desc);
+
+alter table public.hodl_daily_rewards enable row level security;
+
+drop policy if exists hodl_daily_rewards_select_self on public.hodl_daily_rewards;
+create policy hodl_daily_rewards_select_self
+  on public.hodl_daily_rewards
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- hodl_lottery_draws — sorteio diário
+-- ============================================================
+
+create table if not exists public.hodl_lottery_draws (
+  id uuid primary key default gen_random_uuid(),
+  draw_date date not null,
+  winner_user_id uuid references public.profiles(id) on delete set null,
+  winner_lock_id uuid references public.hodl_locks(id) on delete set null,
+  prize_type text not null check (prize_type in ('premium_card', 'rare_card', 'legendary_card')),
+  prize_metadata jsonb not null default '{}'::jsonb,
+  eligible_count int not null default 0,
+  created_at timestamptz not null default now(),
+  constraint hodl_lottery_draws_one_per_day unique (draw_date)
+);
+
+create index if not exists hodl_lottery_draws_winner_idx
+  on public.hodl_lottery_draws (winner_user_id, draw_date desc);
+
+alter table public.hodl_lottery_draws enable row level security;
+
+drop policy if exists hodl_lottery_draws_select_all on public.hodl_lottery_draws;
+create policy hodl_lottery_draws_select_all
+  on public.hodl_lottery_draws
+  for select
+  using (true);
+
+-- ============================================================
+-- premium_cards_grants — registro de cards entregues
+-- ============================================================
+
+create table if not exists public.premium_cards_grants (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  card_tier text not null default 'premium' check (card_tier in ('premium', 'rare', 'legendary')),
+  source text not null check (source in ('hodl_lock', 'hodl_lottery', 'career_bonus', 'admin')),
+  source_ref text not null,
+  card_metadata jsonb not null default '{}'::jsonb,
+  redeemed_at timestamptz,
+  granted_at timestamptz not null default now(),
+  constraint premium_cards_grants_idempotent unique (source, source_ref)
+);
+
+create index if not exists premium_cards_grants_user_idx
+  on public.premium_cards_grants (user_id, granted_at desc);
+
+create index if not exists premium_cards_grants_pending_idx
+  on public.premium_cards_grants (user_id)
+  where redeemed_at is null;
+
+alter table public.premium_cards_grants enable row level security;
+
+drop policy if exists premium_cards_grants_select_self on public.premium_cards_grants;
+create policy premium_cards_grants_select_self
+  on public.premium_cards_grants
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- RPC create_hodl_lock — cria lock + dispara premium card
+-- ============================================================
+
+create or replace function public.create_hodl_lock(
+  p_amount numeric,
+  p_currency text default 'OLEXP'
+)
+returns table (
+  lock_id uuid,
+  premium_card_id uuid,
+  end_date timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_lock_id uuid;
+  v_card_id uuid;
+  v_end_date timestamptz;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'amount must be positive';
+  end if;
+
+  if p_currency not in ('OLEXP', 'BRO', 'USDT') then
+    raise exception 'unsupported currency: %', p_currency;
+  end if;
+
+  v_end_date := now() + interval '90 days';
+
+  insert into public.hodl_locks (user_id, amount_locked, currency, end_date)
+  values (v_uid, p_amount, p_currency, v_end_date)
+  returning id into v_lock_id;
+
+  -- Premium card instantâneo
+  insert into public.premium_cards_grants (user_id, card_tier, source, source_ref, card_metadata)
+  values (
+    v_uid,
+    'premium',
+    'hodl_lock',
+    v_lock_id::text,
+    jsonb_build_object(
+      'lock_amount', p_amount,
+      'lock_currency', p_currency,
+      'lock_end_date', v_end_date
+    )
+  )
+  returning id into v_card_id;
+
+  return query select v_lock_id, v_card_id, v_end_date;
+end;
+$$;
+
+revoke execute on function public.create_hodl_lock(numeric, text) from anon, public;
+grant execute on function public.create_hodl_lock(numeric, text) to authenticated;
+
+-- ============================================================
+-- RPC get_my_hodl_locks
+-- ============================================================
+
+create or replace function public.get_my_hodl_locks()
+returns table (
+  id uuid,
+  amount_locked numeric,
+  currency text,
+  reward_rate_daily numeric,
+  start_date timestamptz,
+  end_date timestamptz,
+  status text,
+  total_rewards_paid numeric,
+  days_remaining int,
+  projected_total_rewards numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    l.id,
+    l.amount_locked,
+    l.currency,
+    l.reward_rate_daily,
+    l.start_date,
+    l.end_date,
+    l.status,
+    l.total_rewards_paid,
+    greatest(0, extract(day from (l.end_date - now()))::int) as days_remaining,
+    round(l.amount_locked * l.reward_rate_daily * 90, 8) as projected_total_rewards
+  from public.hodl_locks l
+  where l.user_id = auth.uid()
+  order by l.created_at desc;
+$$;
+
+revoke execute on function public.get_my_hodl_locks() from anon, public;
+grant execute on function public.get_my_hodl_locks() to authenticated;
+
+-- ============================================================
+-- RPC get_my_premium_cards — cards pendentes de redenção
+-- ============================================================
+
+create or replace function public.get_my_premium_cards(p_only_pending boolean default true)
+returns table (
+  id uuid,
+  card_tier text,
+  source text,
+  card_metadata jsonb,
+  granted_at timestamptz,
+  redeemed_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id, card_tier, source, card_metadata, granted_at, redeemed_at
+    from public.premium_cards_grants
+   where user_id = auth.uid()
+     and (not p_only_pending or redeemed_at is null)
+   order by granted_at desc;
+$$;
+
+revoke execute on function public.get_my_premium_cards(boolean) from anon, public;
+grant execute on function public.get_my_premium_cards(boolean) to authenticated;
+
+-- ============================================================
+-- RPC redeem_premium_card — marca card como usado
+-- ============================================================
+
+create or replace function public.redeem_premium_card(p_card_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_updated int;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  update public.premium_cards_grants
+     set redeemed_at = now()
+   where id = p_card_id
+     and user_id = v_uid
+     and redeemed_at is null;
+
+  get diagnostics v_updated = row_count;
+  return v_updated > 0;
+end;
+$$;
+
+revoke execute on function public.redeem_premium_card(uuid) from anon, public;
+grant execute on function public.redeem_premium_card(uuid) to authenticated;
+
+-- ============================================================
+-- RPC process_hodl_daily_tick — núcleo do cron diário
+--
+-- Para cada lock 'active':
+--   - se end_date passou → status='matured'
+--   - senão → cria 1 hodl_daily_rewards (idempotente por dia)
+--
+-- Faz 1 sorteio diário entre locks ativos (1 premium card pro vencedor).
+--
+-- IMPORTANTE: chamada via service_role (edge function). Idempotente por dia.
+-- ============================================================
+
+create or replace function public.process_hodl_daily_tick(
+  p_target_date date default current_date
+)
+returns table (
+  rewards_paid int,
+  locks_matured int,
+  lottery_winner uuid,
+  lottery_eligible int
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rewards_paid int := 0;
+  v_matured int := 0;
+  v_winner_user_id uuid;
+  v_winner_lock_id uuid;
+  v_eligible int := 0;
+  v_lock record;
+  v_daily_reward numeric;
+begin
+  -- 1. Maturar locks vencidos
+  update public.hodl_locks
+     set status = 'matured', updated_at = now()
+   where status = 'active'
+     and end_date <= now();
+  get diagnostics v_matured = row_count;
+
+  -- 2. Pagar rewards a todos locks ativos (idempotente por lock+date)
+  for v_lock in
+    select id, user_id, amount_locked, reward_rate_daily, currency
+      from public.hodl_locks
+     where status = 'active'
+       and (last_reward_date is null or last_reward_date < p_target_date)
+  loop
+    v_daily_reward := round(v_lock.amount_locked * v_lock.reward_rate_daily, 8);
+    if v_daily_reward <= 0 then continue; end if;
+
+    insert into public.hodl_daily_rewards (
+      lock_id, user_id, paid_for_date, amount, currency
+    ) values (
+      v_lock.id, v_lock.user_id, p_target_date, v_daily_reward, v_lock.currency
+    )
+    on conflict (lock_id, paid_for_date) do nothing;
+
+    if found then
+      update public.hodl_locks
+         set total_rewards_paid = total_rewards_paid + v_daily_reward,
+             last_reward_date = p_target_date,
+             updated_at = now()
+       where id = v_lock.id;
+      v_rewards_paid := v_rewards_paid + 1;
+    end if;
+  end loop;
+
+  -- 3. Sorteio diário (1 vez por dia, idempotente via UNIQUE draw_date)
+  if not exists (select 1 from public.hodl_lottery_draws where draw_date = p_target_date) then
+    select count(*)::int into v_eligible
+      from public.hodl_locks
+     where status = 'active';
+
+    if v_eligible > 0 then
+      -- Pega 1 lock aleatório entre os ativos (peso uniforme por lock)
+      select id, user_id into v_winner_lock_id, v_winner_user_id
+        from public.hodl_locks
+       where status = 'active'
+       order by random()
+       limit 1;
+
+      insert into public.hodl_lottery_draws (
+        draw_date, winner_user_id, winner_lock_id, prize_type,
+        prize_metadata, eligible_count
+      ) values (
+        p_target_date, v_winner_user_id, v_winner_lock_id, 'premium_card',
+        jsonb_build_object('drawn_at', now()), v_eligible
+      );
+
+      -- Entrega o prêmio (premium card)
+      insert into public.premium_cards_grants (
+        user_id, card_tier, source, source_ref, card_metadata
+      ) values (
+        v_winner_user_id, 'premium', 'hodl_lottery', p_target_date::text,
+        jsonb_build_object('draw_date', p_target_date, 'lock_id', v_winner_lock_id)
+      )
+      on conflict (source, source_ref) do nothing;
+    end if;
+  end if;
+
+  return query select v_rewards_paid, v_matured, v_winner_user_id, v_eligible;
+end;
+$$;
+
+revoke execute on function public.process_hodl_daily_tick(date) from anon, public, authenticated;
+-- Apenas service_role (via edge function) executa o tick
+
+-- ============================================================
+-- pg_cron schedule (executa 00:05 UTC todo dia)
+-- ============================================================
+
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule('hodl-daily-tick');
+    perform cron.schedule(
+      'hodl-daily-tick',
+      '5 0 * * *',
+      $cron$
+        select public.process_hodl_daily_tick(current_date);
+      $cron$
+    );
+  end if;
+exception when others then
+  -- Se pg_cron não está disponível, ignora — edge function ainda pode chamar
+  null;
+end;
+$$;
+
+-- ─── 20260527000400_activation_pack.sql ───
+-- ============================================================
+-- ACTIVATION PACK — Gate de entrada do Plano de Carreira ($25 USD)
+--
+-- Regra de produto:
+--   - Para PARTICIPAR (receber comissões, criar HODL, claim de bônus),
+--     o usuário precisa comprar um Activation Pack de $25 (2500 cents BRO).
+--   - Pack é vitalício (compra única → ativação permanente).
+--   - Se um referrer NÃO está ativado, a comissão dele NÃO é criada (vai
+--     para um log de "comissões perdidas" como FOMO motivador).
+--   - A compra do próprio pack é um wallet_credit normal — paga 5-5-5%
+--     para a cadeia (se essa cadeia estiver ativada).
+--
+-- Por que vitalício: padrão MMN. Se um dia quisermos expirar, adicionar
+-- coluna expires_at e mudar is_user_activated() — UI e RPCs continuam.
+-- ============================================================
+
+create table if not exists public.activation_packs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  amount_cents bigint not null check (amount_cents >= 2500),
+  currency text not null default 'BRO' check (currency in ('BRO', 'USDT', 'USD')),
+  source text not null default 'purchase' check (source in ('purchase', 'admin_grant', 'promo')),
+  wallet_credit_id uuid references public.wallet_credits(id) on delete set null,
+  activated_at timestamptz not null default now(),
+  expires_at timestamptz, -- null = vitalício
+  created_at timestamptz not null default now()
+);
+
+-- 1 pack ativo (vitalício) por user. Quando expiração futura existir,
+-- aplicar lógica adicional na aplicação ou trigger — índice precisa IMMUTABLE.
+create unique index if not exists activation_packs_one_active_per_user
+  on public.activation_packs (user_id)
+  where expires_at is null;
+
+create index if not exists activation_packs_user_idx
+  on public.activation_packs (user_id, activated_at desc);
+
+alter table public.activation_packs enable row level security;
+
+drop policy if exists activation_packs_select_self on public.activation_packs;
+create policy activation_packs_select_self
+  on public.activation_packs
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- Função: is_user_activated(uuid)
+-- ============================================================
+
+create or replace function public.is_user_activated(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.activation_packs
+     where user_id = p_user_id
+       and (expires_at is null or expires_at > now())
+    limit 1
+  );
+$$;
+
+revoke execute on function public.is_user_activated(uuid) from anon, public;
+grant execute on function public.is_user_activated(uuid) to authenticated;
+
+-- ============================================================
+-- Tabela de comissões perdidas (FOMO motivador)
+-- ============================================================
+
+create table if not exists public.affiliate_commissions_lost (
+  id uuid primary key default gen_random_uuid(),
+  would_be_referrer_id uuid not null references public.profiles(id) on delete cascade,
+  referred_id uuid not null references public.profiles(id) on delete cascade,
+  level smallint not null check (level between 1 and 3),
+  source text not null,
+  source_ref text not null,
+  currency text not null,
+  amount_cents bigint not null,
+  reason text not null default 'referrer_not_activated',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists affiliate_commissions_lost_referrer_idx
+  on public.affiliate_commissions_lost (would_be_referrer_id, created_at desc);
+
+alter table public.affiliate_commissions_lost enable row level security;
+
+drop policy if exists affiliate_commissions_lost_select_self on public.affiliate_commissions_lost;
+create policy affiliate_commissions_lost_select_self
+  on public.affiliate_commissions_lost
+  for select
+  using (would_be_referrer_id = auth.uid());
+
+-- ============================================================
+-- Adiciona coluna lost_commissions_cents em career_progress
+-- ============================================================
+
+alter table public.career_progress
+  add column if not exists lost_commissions_cents bigint not null default 0;
+
+-- ============================================================
+-- SUBSTITUI o trigger de bônus: agora respeita ativação
+-- ============================================================
+
+create or replace function public.trg_wallet_credit_affiliate_bonus()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rate numeric := 0.05;
+  v_bro_bonus bigint;
+  v_exp_bonus bigint;
+  v_chain record;
+  v_referrer_active boolean;
+begin
+  if new.applied_at is null then return new; end if;
+  if old.applied_at is not null then return new; end if;
+
+  v_bro_bonus := coalesce(floor(new.bro_cents * v_rate), 0)::bigint;
+  v_exp_bonus := coalesce(floor(coalesce(new.exp_amount, 0) * v_rate), 0)::bigint;
+
+  if v_bro_bonus <= 0 and v_exp_bonus <= 0 then return new; end if;
+
+  for v_chain in select * from public.get_referral_chain(new.user_id, 3) loop
+    v_referrer_active := public.is_user_activated(v_chain.referrer_id);
+
+    if v_referrer_active then
+      -- Referrer ATIVADO: gera comissões normalmente
+      if v_bro_bonus > 0 then
+        insert into public.affiliate_commissions (
+          referrer_id, referred_id, level, source, source_ref,
+          currency, amount_cents, rate, base_amount_cents, status
+        ) values (
+          v_chain.referrer_id, new.user_id, v_chain.level, 'deposit',
+          'wallet_credit:' || new.id::text || ':BRO',
+          'BRO', v_bro_bonus, v_rate, new.bro_cents, 'confirmed'
+        )
+        on conflict (source_ref, level) do nothing;
+      end if;
+
+      if v_exp_bonus > 0 then
+        insert into public.affiliate_commissions (
+          referrer_id, referred_id, level, source, source_ref,
+          currency, amount_cents, rate, base_amount_cents, status
+        ) values (
+          v_chain.referrer_id, new.user_id, v_chain.level, 'deposit',
+          'wallet_credit:' || new.id::text || ':EXP',
+          'EXP', v_exp_bonus, v_rate, new.exp_amount, 'confirmed'
+        )
+        on conflict (source_ref, level) do nothing;
+      end if;
+    else
+      -- Referrer NÃO ativado: registra perda (FOMO) e atualiza contador
+      if v_bro_bonus > 0 then
+        insert into public.affiliate_commissions_lost (
+          would_be_referrer_id, referred_id, level, source, source_ref,
+          currency, amount_cents
+        ) values (
+          v_chain.referrer_id, new.user_id, v_chain.level, 'deposit',
+          'wallet_credit:' || new.id::text || ':BRO',
+          'BRO', v_bro_bonus
+        );
+
+        insert into public.career_progress (user_id, lost_commissions_cents)
+        values (v_chain.referrer_id, v_bro_bonus)
+        on conflict (user_id) do update
+          set lost_commissions_cents = career_progress.lost_commissions_cents + v_bro_bonus,
+              updated_at = now();
+      end if;
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.trg_wallet_credit_affiliate_bonus() from anon, authenticated, public;
+
+-- ============================================================
+-- RPC purchase_activation_pack — flujo de compra/ativação
+--
+-- Cria wallet_credit (debitando saldo via apply normal? NO — pack é compra,
+-- então NÃO credita BRO; cria entry de activation_packs e marca o gate).
+-- O cliente paga $25 via gateway. Quando o pagamento confirma, esta RPC
+-- é chamada (idealmente pelo webhook ou edge function).
+--
+-- Modelo simples (MVP):
+--   - Recebe amount_cents (deve ser >= 2500)
+--   - Cria activation_packs entry
+--   - NÃO mexe em wallet_credits (depósito real fica separado)
+--
+-- Pra integração com gateway futuro: criar wallet_credits row com
+-- source='activation_pack' e chamar esta RPC depois de marcar applied_at —
+-- assim o trigger de bônus dispara normal, dando 5-5-5% pros 3 níveis.
+-- ============================================================
+
+create or replace function public.purchase_activation_pack(
+  p_amount_cents bigint default 2500,
+  p_wallet_credit_id uuid default null,
+  p_source text default 'purchase'
+)
+returns table (
+  activation_id uuid,
+  user_id uuid,
+  amount_cents bigint,
+  activated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_id uuid;
+  v_now timestamptz := now();
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  if p_amount_cents < 2500 then
+    raise exception 'minimum pack amount is 2500 cents ($25)';
+  end if;
+
+  if p_source not in ('purchase', 'admin_grant', 'promo') then
+    raise exception 'invalid source: %', p_source;
+  end if;
+
+  -- Já ativado? Não cria novo (mantém o existente)
+  if public.is_user_activated(v_uid) then
+    return query
+      select ap.id, ap.user_id, ap.amount_cents, ap.activated_at
+        from public.activation_packs ap
+       where ap.user_id = v_uid
+         and (ap.expires_at is null or ap.expires_at > now())
+       order by ap.activated_at desc
+       limit 1;
+    return;
+  end if;
+
+  insert into public.activation_packs (
+    user_id, amount_cents, currency, source, wallet_credit_id, activated_at
+  ) values (
+    v_uid, p_amount_cents, 'BRO', p_source, p_wallet_credit_id, v_now
+  )
+  returning id into v_id;
+
+  return query
+    select v_id, v_uid, p_amount_cents, v_now;
+end;
+$$;
+
+revoke execute on function public.purchase_activation_pack(bigint, uuid, text) from anon, public;
+grant execute on function public.purchase_activation_pack(bigint, uuid, text) to authenticated;
+
+-- ============================================================
+-- RPC get_my_activation_status — status pro UI
+-- ============================================================
+
+create or replace function public.get_my_activation_status()
+returns table (
+  is_activated boolean,
+  activated_at timestamptz,
+  expires_at timestamptz,
+  total_lost_commissions_cents bigint,
+  activation_amount_cents bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then return; end if;
+
+  return query
+  select
+    public.is_user_activated(v_uid) as is_activated,
+    (select ap.activated_at from public.activation_packs ap
+      where ap.user_id = v_uid
+        and (ap.expires_at is null or ap.expires_at > now())
+      order by ap.activated_at desc limit 1) as activated_at,
+    (select ap.expires_at from public.activation_packs ap
+      where ap.user_id = v_uid
+        and (ap.expires_at is null or ap.expires_at > now())
+      order by ap.activated_at desc limit 1) as expires_at,
+    coalesce((select cp.lost_commissions_cents from public.career_progress cp
+              where cp.user_id = v_uid), 0)::bigint as total_lost_commissions_cents,
+    2500::bigint as activation_amount_cents;
+end;
+$$;
+
+revoke execute on function public.get_my_activation_status() from anon, public;
+grant execute on function public.get_my_activation_status() to authenticated;
+
+-- ============================================================
+-- Modifica RPCs existentes para EXIGIR ativação
+-- ============================================================
+
+-- create_hodl_lock: bloqueia se não ativado
+create or replace function public.create_hodl_lock(
+  p_amount numeric,
+  p_currency text default 'OLEXP'
+)
+returns table (
+  lock_id uuid,
+  premium_card_id uuid,
+  end_date timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_lock_id uuid;
+  v_card_id uuid;
+  v_end_date timestamptz;
+begin
+  if v_uid is null then raise exception 'must be authenticated'; end if;
+
+  if not public.is_user_activated(v_uid) then
+    raise exception 'ACTIVATION_REQUIRED: compre o pack de $25 para participar do HODL';
+  end if;
+
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'amount must be positive';
+  end if;
+  if p_currency not in ('OLEXP', 'BRO', 'USDT') then
+    raise exception 'unsupported currency: %', p_currency;
+  end if;
+
+  v_end_date := now() + interval '90 days';
+
+  insert into public.hodl_locks (user_id, amount_locked, currency, end_date)
+  values (v_uid, p_amount, p_currency, v_end_date)
+  returning id into v_lock_id;
+
+  insert into public.premium_cards_grants (user_id, card_tier, source, source_ref, card_metadata)
+  values (
+    v_uid, 'premium', 'hodl_lock', v_lock_id::text,
+    jsonb_build_object('lock_amount', p_amount, 'lock_currency', p_currency, 'lock_end_date', v_end_date)
+  )
+  returning id into v_card_id;
+
+  return query select v_lock_id, v_card_id, v_end_date;
+end;
+$$;
+
+revoke execute on function public.create_hodl_lock(numeric, text) from anon, public;
+grant execute on function public.create_hodl_lock(numeric, text) to authenticated;
+
+-- claim_career_bonus: bloqueia se não ativado
+create or replace function public.claim_career_bonus()
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_pending bigint;
+  v_rank text;
+begin
+  if v_uid is null then raise exception 'must be authenticated'; end if;
+
+  if not public.is_user_activated(v_uid) then
+    raise exception 'ACTIVATION_REQUIRED: compre o pack de $25 para resgatar bônus';
+  end if;
+
+  select pending_bonus_cents, current_rank into v_pending, v_rank
+    from public.career_progress
+   where user_id = v_uid
+   for update;
+
+  if v_pending is null or v_pending <= 0 then return 0; end if;
+
+  insert into public.wallet_credits (user_id, bro_cents, exp_amount, reason, applied_at)
+  values (v_uid, v_pending, 0, 'career_bonus:' || v_rank, null);
+
+  update public.career_progress
+     set unlocked_rewards = unlocked_rewards || jsonb_build_object(
+       'rank', v_rank, 'amount_cents', v_pending, 'claimed_at', now()
+     ),
+     pending_bonus_cents = 0,
+     updated_at = now()
+   where user_id = v_uid;
+
+  return v_pending;
+end;
+$$;
+
+revoke execute on function public.claim_career_bonus() from anon, public;
+grant execute on function public.claim_career_bonus() to authenticated;
+
+-- claim_my_affiliate_commissions: bloqueia se não ativado
+create or replace function public.claim_my_affiliate_commissions(
+  p_currency text default null
+)
+returns table (
+  currency text,
+  total_cents bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then raise exception 'must be authenticated'; end if;
+
+  if not public.is_user_activated(v_uid) then
+    raise exception 'ACTIVATION_REQUIRED: compre o pack de $25 para resgatar comissões';
+  end if;
+
+  return query
+  with claimed as (
+    update public.affiliate_commissions
+       set claimed_at = now()
+     where referrer_id = v_uid
+       and claimed_at is null
+       and status = 'confirmed'
+       and (p_currency is null or currency = p_currency)
+    returning currency, amount_cents
+  )
+  select c.currency, coalesce(sum(c.amount_cents), 0)::bigint
+    from claimed c
+   group by c.currency;
+end;
+$$;
+
+revoke execute on function public.claim_my_affiliate_commissions(text) from anon, public;
+grant execute on function public.claim_my_affiliate_commissions(text) to authenticated;
+
+-- ─── 20260528000000_activation_gateway_fix.sql ───
+-- ============================================================
+-- ACTIVATION GATEWAY FIX — Bloqueia ativação grátis
+--
+-- Antes: purchase_activation_pack criava activation_packs sem cobrar.
+-- Agora: exige wallet_credit_id válido (pago e aplicado) >= $25.
+--
+-- Caminho pré-PIX: admin chama admin_grant_activation_pack que cria
+-- wallet_credit + activation_pack atomicamente.
+-- Caminho pós-PIX: webhook do Abacatepay cria wallet_credit com PIX
+-- confirmado e depois chama purchase_activation_pack com esse id.
+-- ============================================================
+
+-- 1. UNIQUE constraint: 1 ativação por wallet_credit (idempotência)
+alter table public.activation_packs
+  add constraint activation_packs_wallet_credit_unique
+    unique (wallet_credit_id) deferrable initially deferred;
+
+-- Nota: nullable (legacy rows pré-fix podem ter wallet_credit_id = null)
+
+-- 2. SUBSTITUI purchase_activation_pack — agora exige wallet_credit_id NOT NULL
+create or replace function public.purchase_activation_pack(
+  p_amount_cents bigint default 2500,
+  p_wallet_credit_id uuid default null,
+  p_source text default 'purchase'
+)
+returns table (
+  activation_id uuid,
+  user_id uuid,
+  amount_cents bigint,
+  activated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_id uuid;
+  v_now timestamptz := now();
+  v_credit record;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  if p_amount_cents < 2500 then
+    raise exception 'minimum pack amount is 2500 cents ($25)';
+  end if;
+
+  if p_source not in ('purchase', 'admin_grant', 'promo') then
+    raise exception 'invalid source: %', p_source;
+  end if;
+
+  -- Idempotente: já ativado? Retorna existente
+  if public.is_user_activated(v_uid) then
+    return query
+      select ap.id, ap.user_id, ap.amount_cents, ap.activated_at
+        from public.activation_packs ap
+       where ap.user_id = v_uid
+         and (ap.expires_at is null or ap.expires_at > now())
+       order by ap.activated_at desc
+       limit 1;
+    return;
+  end if;
+
+  -- ATIVAÇÃO EXIGE PAGAMENTO REAL — exceto admin_grant
+  if p_source = 'purchase' then
+    if p_wallet_credit_id is null then
+      raise exception 'ACTIVATION_REQUIRES_PAYMENT: wallet_credit_id obrigatório para ativação por compra';
+    end if;
+
+    select * into v_credit
+      from public.wallet_credits
+     where id = p_wallet_credit_id;
+
+    if v_credit is null then
+      raise exception 'WALLET_CREDIT_NOT_FOUND';
+    end if;
+
+    if v_credit.user_id <> v_uid then
+      raise exception 'WALLET_CREDIT_WRONG_OWNER';
+    end if;
+
+    if v_credit.applied_at is null then
+      raise exception 'WALLET_CREDIT_NOT_APPLIED: depósito ainda não confirmado';
+    end if;
+
+    if coalesce(v_credit.bro_cents, 0) < p_amount_cents then
+      raise exception 'WALLET_CREDIT_INSUFFICIENT: depósito de % cents insuficiente para pack de %', v_credit.bro_cents, p_amount_cents;
+    end if;
+
+    if exists (
+      select 1 from public.activation_packs ap
+       where ap.wallet_credit_id = p_wallet_credit_id
+    ) then
+      raise exception 'WALLET_CREDIT_ALREADY_USED: este crédito já ativou outra conta';
+    end if;
+  end if;
+
+  -- admin_grant e promo podem passar wallet_credit_id null
+  insert into public.activation_packs (
+    user_id, amount_cents, currency, source, wallet_credit_id, activated_at
+  ) values (
+    v_uid, p_amount_cents, 'BRO', p_source, p_wallet_credit_id, v_now
+  )
+  returning id into v_id;
+
+  return query
+    select v_id, v_uid, p_amount_cents, v_now;
+end;
+$$;
+
+revoke execute on function public.purchase_activation_pack(bigint, uuid, text) from anon, public;
+grant execute on function public.purchase_activation_pack(bigint, uuid, text) to authenticated;
+
+-- ============================================================
+-- 3. RPC admin_grant_activation_pack — bypass admin (auditável)
+--
+-- Cria wallet_credit + activation_pack atomicamente em nome do user-alvo.
+-- Útil pra: grants promocionais, testes pré-PIX, suporte ao cliente.
+-- ============================================================
+
+create or replace function public.admin_grant_activation_pack(
+  p_target_user_id uuid,
+  p_reason text default 'admin_grant'
+)
+returns table (
+  activation_id uuid,
+  wallet_credit_id uuid,
+  user_id uuid
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_credit_id uuid;
+  v_activation_id uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'admin only';
+  end if;
+
+  if p_target_user_id is null then
+    raise exception 'target user id required';
+  end if;
+
+  -- Idempotente
+  if public.is_user_activated(p_target_user_id) then
+    return query
+      select ap.id, ap.wallet_credit_id, ap.user_id
+        from public.activation_packs ap
+       where ap.user_id = p_target_user_id
+         and (ap.expires_at is null or ap.expires_at > now())
+       order by ap.activated_at desc
+       limit 1;
+    return;
+  end if;
+
+  -- 1. Cria wallet_credit já aplicado (grants admin não geram comissão 5-5-5%
+  --    pra rede do user-alvo — só wallets com bro_cents > 0 disparam trigger,
+  --    e queremos isso aqui pra refletir o "pagamento simulado" no histórico).
+  --    Se quiseres GRANT sem disparar 5-5-5%, mudar bro_cents pra 0 — mas o
+  --    pack continua valendo.
+  insert into public.wallet_credits (user_id, bro_cents, exp_amount, reason, applied_at)
+  values (p_target_user_id, 2500, 0, 'admin_activation_grant:' || p_reason, now())
+  returning id into v_credit_id;
+
+  -- 2. Cria activation_packs row
+  insert into public.activation_packs (
+    user_id, amount_cents, currency, source, wallet_credit_id, activated_at
+  ) values (
+    p_target_user_id, 2500, 'BRO', 'admin_grant', v_credit_id, now()
+  )
+  returning id into v_activation_id;
+
+  return query select v_activation_id, v_credit_id, p_target_user_id;
+end;
+$$;
+
+revoke execute on function public.admin_grant_activation_pack(uuid, text) from anon, public, authenticated;
+-- Apenas admins via Supabase Studio (com auth.uid() válido) podem chamar
+grant execute on function public.admin_grant_activation_pack(uuid, text) to authenticated;
+
+-- ─── 20260528000100_olexp_balances.sql ───
+-- ============================================================
+-- OLEXP BALANCES — Ledger server-side de OLEXP
+--
+-- Por que existe:
+--   Antes: OLEXP era apenas Zustand client-side em WalletState.
+--   Problema: create_hodl_lock aceitava qualquer amount sem debitar.
+--   User podia "travar" 1M OLEXP sem ter saldo e drenar treasury.
+--
+-- Modelo:
+--   - olexp_balances: cache do saldo atual (1 row por user)
+--   - olexp_ledger: histórico imutável de débitos/créditos
+--   - Funções _credit_olexp / _debit_olexp são security definer,
+--     internas (sem grant pra authenticated/anon), só chamadas por
+--     outras RPCs (HODL, futuro marketplace, futuro PIX).
+-- ============================================================
+
+create table if not exists public.olexp_balances (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  balance numeric(36, 8) not null default 0 check (balance >= 0),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists olexp_balances_balance_idx
+  on public.olexp_balances (balance desc)
+  where balance > 0;
+
+alter table public.olexp_balances enable row level security;
+
+drop policy if exists olexp_balances_select_self on public.olexp_balances;
+create policy olexp_balances_select_self
+  on public.olexp_balances
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- Ledger imutável de movimentos OLEXP
+-- ============================================================
+
+create table if not exists public.olexp_ledger (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  delta numeric(36, 8) not null check (delta <> 0),
+  balance_after numeric(36, 8) not null check (balance_after >= 0),
+  source text not null check (source in (
+    'hodl_lock', 'hodl_matured', 'hodl_daily_reward', 'hodl_lottery',
+    'admin_grant', 'admin_debit', 'card_purchase', 'pix_deposit',
+    'swap_in', 'swap_out', 'initial_seed'
+  )),
+  source_ref text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists olexp_ledger_user_idx
+  on public.olexp_ledger (user_id, created_at desc);
+
+create index if not exists olexp_ledger_source_idx
+  on public.olexp_ledger (source, created_at desc);
+
+alter table public.olexp_ledger enable row level security;
+
+drop policy if exists olexp_ledger_select_self on public.olexp_ledger;
+create policy olexp_ledger_select_self
+  on public.olexp_ledger
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- Função interna: _credit_olexp
+-- (security definer, sem grant — só chamada por outras RPCs)
+-- ============================================================
+
+create or replace function public._credit_olexp(
+  p_user_id uuid,
+  p_amount numeric,
+  p_source text,
+  p_source_ref text default null
+)
+returns numeric
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_new_balance numeric(36, 8);
+begin
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'INVALID_AMOUNT: credit must be positive';
+  end if;
+
+  insert into public.olexp_balances (user_id, balance)
+  values (p_user_id, p_amount)
+  on conflict (user_id) do update
+    set balance = olexp_balances.balance + p_amount,
+        updated_at = now()
+  returning balance into v_new_balance;
+
+  insert into public.olexp_ledger (user_id, delta, balance_after, source, source_ref)
+  values (p_user_id, p_amount, v_new_balance, p_source, p_source_ref);
+
+  return v_new_balance;
+end;
+$$;
+
+revoke execute on function public._credit_olexp(uuid, numeric, text, text) from anon, authenticated, public;
+
+-- ============================================================
+-- Função interna: _debit_olexp
+-- Lock row + valida saldo + raise INSUFFICIENT_OLEXP_BALANCE
+-- ============================================================
+
+create or replace function public._debit_olexp(
+  p_user_id uuid,
+  p_amount numeric,
+  p_source text,
+  p_source_ref text default null
+)
+returns numeric
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_current_balance numeric(36, 8);
+  v_new_balance numeric(36, 8);
+begin
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'INVALID_AMOUNT: debit must be positive';
+  end if;
+
+  -- Lock row pra evitar race condition em débitos concorrentes
+  select balance into v_current_balance
+    from public.olexp_balances
+   where user_id = p_user_id
+   for update;
+
+  if v_current_balance is null then
+    raise exception 'INSUFFICIENT_OLEXP_BALANCE: saldo zero';
+  end if;
+
+  if v_current_balance < p_amount then
+    raise exception 'INSUFFICIENT_OLEXP_BALANCE: saldo % insuficiente para débito de %', v_current_balance, p_amount;
+  end if;
+
+  v_new_balance := v_current_balance - p_amount;
+
+  update public.olexp_balances
+     set balance = v_new_balance,
+         updated_at = now()
+   where user_id = p_user_id;
+
+  insert into public.olexp_ledger (user_id, delta, balance_after, source, source_ref)
+  values (p_user_id, -p_amount, v_new_balance, p_source, p_source_ref);
+
+  return v_new_balance;
+end;
+$$;
+
+revoke execute on function public._debit_olexp(uuid, numeric, text, text) from anon, authenticated, public;
+
+-- ============================================================
+-- RPC pública: get_my_olexp_balance
+-- ============================================================
+
+create or replace function public.get_my_olexp_balance()
+returns numeric
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(balance, 0)::numeric(36, 8)
+    from public.olexp_balances
+   where user_id = auth.uid();
+$$;
+
+revoke execute on function public.get_my_olexp_balance() from anon, public;
+grant execute on function public.get_my_olexp_balance() to authenticated;
+
+-- ============================================================
+-- RPC pública: get_my_olexp_ledger (histórico)
+-- ============================================================
+
+create or replace function public.get_my_olexp_ledger(p_limit int default 50)
+returns table (
+  id uuid,
+  delta numeric,
+  balance_after numeric,
+  source text,
+  source_ref text,
+  created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id, delta, balance_after, source, source_ref, created_at
+    from public.olexp_ledger
+   where user_id = auth.uid()
+   order by created_at desc
+   limit greatest(p_limit, 10);
+$$;
+
+revoke execute on function public.get_my_olexp_ledger(int) from anon, public;
+grant execute on function public.get_my_olexp_ledger(int) to authenticated;
+
+-- ============================================================
+-- RPC admin: admin_credit_olexp / admin_debit_olexp (auditável)
+-- ============================================================
+
+create or replace function public.admin_credit_olexp(
+  p_target_user_id uuid,
+  p_amount numeric,
+  p_reason text
+)
+returns numeric
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'admin only';
+  end if;
+
+  return public._credit_olexp(p_target_user_id, p_amount, 'admin_grant', p_reason);
+end;
+$$;
+
+revoke execute on function public.admin_credit_olexp(uuid, numeric, text) from anon, public;
+grant execute on function public.admin_credit_olexp(uuid, numeric, text) to authenticated;
+
+-- ─── 20260528000200_hodl_olexp_integration.sql ───
+-- ============================================================
+-- HODL ↔ OLEXP INTEGRATION
+--
+-- Antes: create_hodl_lock criava lock sem debitar saldo. BUG grave.
+-- Agora: debita via _debit_olexp atomicamente. Rewards diários creditam.
+-- Lock maturado libera principal de volta ao saldo.
+--
+-- TUDO atômico — qualquer falha rola back o lock inteiro.
+-- ============================================================
+
+-- ============================================================
+-- 1. SUBSTITUI create_hodl_lock — agora debita saldo OLEXP
+-- ============================================================
+
+create or replace function public.create_hodl_lock(
+  p_amount numeric,
+  p_currency text default 'OLEXP'
+)
+returns table (
+  lock_id uuid,
+  premium_card_id uuid,
+  end_date timestamptz,
+  new_olexp_balance numeric
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_lock_id uuid;
+  v_card_id uuid;
+  v_end_date timestamptz;
+  v_new_balance numeric(36, 8);
+begin
+  if v_uid is null then raise exception 'must be authenticated'; end if;
+
+  if not public.is_user_activated(v_uid) then
+    raise exception 'ACTIVATION_REQUIRED: compre o pack de $25 para participar do HODL';
+  end if;
+
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'amount must be positive';
+  end if;
+
+  -- Atualmente só OLEXP. Quando suportarmos BRO/USDT, expandir aqui.
+  if p_currency <> 'OLEXP' then
+    raise exception 'unsupported currency for HODL: % (only OLEXP for now)', p_currency;
+  end if;
+
+  v_end_date := now() + interval '90 days';
+
+  -- 1. DEBITA OLEXP do user (raises se saldo insuficiente — toda transação rola back)
+  insert into public.hodl_locks (user_id, amount_locked, currency, end_date)
+  values (v_uid, p_amount, p_currency, v_end_date)
+  returning id into v_lock_id;
+
+  v_new_balance := public._debit_olexp(v_uid, p_amount, 'hodl_lock', v_lock_id::text);
+
+  -- 2. Premium card instantâneo
+  insert into public.premium_cards_grants (user_id, card_tier, source, source_ref, card_metadata)
+  values (
+    v_uid, 'premium', 'hodl_lock', v_lock_id::text,
+    jsonb_build_object('lock_amount', p_amount, 'lock_currency', p_currency, 'lock_end_date', v_end_date)
+  )
+  returning id into v_card_id;
+
+  return query select v_lock_id, v_card_id, v_end_date, v_new_balance;
+end;
+$$;
+
+revoke execute on function public.create_hodl_lock(numeric, text) from anon, public;
+grant execute on function public.create_hodl_lock(numeric, text) to authenticated;
+
+-- ============================================================
+-- 2. SUBSTITUI process_hodl_daily_tick — credita rewards no OLEXP balance
+-- ============================================================
+
+create or replace function public.process_hodl_daily_tick(
+  p_target_date date default current_date
+)
+returns table (
+  rewards_paid int,
+  locks_matured int,
+  lottery_winner uuid,
+  lottery_eligible int,
+  total_olexp_credited numeric
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_rewards_paid int := 0;
+  v_matured int := 0;
+  v_winner_user_id uuid;
+  v_winner_lock_id uuid;
+  v_eligible int := 0;
+  v_lock record;
+  v_daily_reward numeric;
+  v_total_credited numeric := 0;
+begin
+  -- 1. Maturar locks vencidos + LIBERAR principal de volta ao saldo OLEXP
+  for v_lock in
+    select id, user_id, amount_locked
+      from public.hodl_locks
+     where status = 'active'
+       and end_date <= now()
+  loop
+    update public.hodl_locks
+       set status = 'matured',
+           matured_claimed_at = now(),
+           updated_at = now()
+     where id = v_lock.id;
+
+    -- LIBERA principal: credita de volta ao saldo OLEXP do user
+    perform public._credit_olexp(v_lock.user_id, v_lock.amount_locked, 'hodl_matured', v_lock.id::text);
+
+    v_matured := v_matured + 1;
+    v_total_credited := v_total_credited + v_lock.amount_locked;
+  end loop;
+
+  -- 2. Pagar rewards a todos locks ativos (idempotente por lock+date)
+  for v_lock in
+    select id, user_id, amount_locked, reward_rate_daily, currency
+      from public.hodl_locks
+     where status = 'active'
+       and (last_reward_date is null or last_reward_date < p_target_date)
+  loop
+    v_daily_reward := round(v_lock.amount_locked * v_lock.reward_rate_daily, 8);
+    if v_daily_reward <= 0 then continue; end if;
+
+    insert into public.hodl_daily_rewards (
+      lock_id, user_id, paid_for_date, amount, currency
+    ) values (
+      v_lock.id, v_lock.user_id, p_target_date, v_daily_reward, v_lock.currency
+    )
+    on conflict (lock_id, paid_for_date) do nothing;
+
+    if found then
+      -- Credita reward direto no saldo OLEXP do user
+      perform public._credit_olexp(v_lock.user_id, v_daily_reward, 'hodl_daily_reward', v_lock.id::text || ':' || p_target_date::text);
+
+      update public.hodl_locks
+         set total_rewards_paid = total_rewards_paid + v_daily_reward,
+             last_reward_date = p_target_date,
+             updated_at = now()
+       where id = v_lock.id;
+
+      v_rewards_paid := v_rewards_paid + 1;
+      v_total_credited := v_total_credited + v_daily_reward;
+    end if;
+  end loop;
+
+  -- 3. Sorteio diário (1 vez por dia, idempotente)
+  if not exists (select 1 from public.hodl_lottery_draws where draw_date = p_target_date) then
+    select count(*)::int into v_eligible
+      from public.hodl_locks
+     where status = 'active';
+
+    if v_eligible > 0 then
+      select id, user_id into v_winner_lock_id, v_winner_user_id
+        from public.hodl_locks
+       where status = 'active'
+       order by random()
+       limit 1;
+
+      insert into public.hodl_lottery_draws (
+        draw_date, winner_user_id, winner_lock_id, prize_type,
+        prize_metadata, eligible_count
+      ) values (
+        p_target_date, v_winner_user_id, v_winner_lock_id, 'premium_card',
+        jsonb_build_object('drawn_at', now()), v_eligible
+      );
+
+      insert into public.premium_cards_grants (
+        user_id, card_tier, source, source_ref, card_metadata
+      ) values (
+        v_winner_user_id, 'premium', 'hodl_lottery', p_target_date::text,
+        jsonb_build_object('draw_date', p_target_date, 'lock_id', v_winner_lock_id)
+      )
+      on conflict (source, source_ref) do nothing;
+    end if;
+  end if;
+
+  return query select v_rewards_paid, v_matured, v_winner_user_id, v_eligible, v_total_credited;
+end;
+$$;
+
+revoke execute on function public.process_hodl_daily_tick(date) from anon, public, authenticated;
+
+-- ============================================================
+-- 3. NOVO RPC — get_hodl_rewards_for_lock (histórico de rewards de 1 lock)
+-- ============================================================
+
+create or replace function public.get_hodl_rewards_for_lock(p_lock_id uuid)
+returns table (
+  paid_for_date date,
+  amount numeric,
+  currency text,
+  created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select r.paid_for_date, r.amount, r.currency, r.created_at
+    from public.hodl_daily_rewards r
+    join public.hodl_locks l on l.id = r.lock_id
+   where r.lock_id = p_lock_id
+     and l.user_id = auth.uid()
+   order by r.paid_for_date desc;
+$$;
+
+revoke execute on function public.get_hodl_rewards_for_lock(uuid) from anon, public;
+grant execute on function public.get_hodl_rewards_for_lock(uuid) to authenticated;
+
+-- ============================================================
+-- 4. NOVO RPC — get_recent_lottery_draws (feed público)
+-- ============================================================
+
+create or replace function public.get_recent_lottery_draws(p_limit int default 10)
+returns table (
+  draw_date date,
+  winner_user_id uuid,
+  winner_display_name text,
+  winner_club_short text,
+  prize_type text,
+  eligible_count int
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    d.draw_date,
+    d.winner_user_id,
+    p.display_name,
+    p.club_short,
+    d.prize_type,
+    d.eligible_count
+  from public.hodl_lottery_draws d
+  left join public.profiles p on p.id = d.winner_user_id
+  order by d.draw_date desc
+  limit greatest(p_limit, 5);
+$$;
+
+revoke execute on function public.get_recent_lottery_draws(int) from anon, public;
+grant execute on function public.get_recent_lottery_draws(int) to authenticated;
+
+-- ─── 20260528100000_payment_intents.sql ───
+-- ============================================================
+-- PAYMENT INTENTS — Camada agnóstica de pagamento (PIX via Abacate Pay)
+--
+-- Arquitetura:
+--   1. Front pede ao backend: "criar PIX pra ativation_pack"
+--   2. Backend (Hono) chama POST /v2/transparents/create no Abacate
+--   3. Salva payment_intent + retorna brCode/brCodeBase64 pro front
+--   4. User paga PIX no app do banco
+--   5. Abacate envia webhook "transparent.completed" → edge function
+--   6. Edge function valida HMAC + chama confirm_payment_intent RPC
+--   7. RPC: marca paid_at + cria wallet_credit (applied) + cria activation_pack
+--   8. Trigger 5-5-5% existente dispara → comissões pra rede do user
+--
+-- Idempotência:
+--   - payment_intents.external_id UNIQUE (1 charge por intent)
+--   - payment_webhooks_log.event_id UNIQUE (1 processamento por evento)
+--   - confirm_payment_intent re-entrante (status=paid → retorna OK)
+-- ============================================================
+
+create table if not exists public.payment_intents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  external_id text not null unique,
+  abacate_id text,
+  product_kind text not null check (product_kind in ('activation_pack', 'card', 'recharge')),
+  product_ref text,
+  amount_cents bigint not null check (amount_cents > 0),
+  currency text not null default 'BRL',
+  br_code text,
+  br_code_base64 text,
+  status text not null default 'pending'
+    check (status in ('pending', 'paid', 'expired', 'cancelled', 'failed')),
+  dev_mode boolean not null default false,
+  customer_name text,
+  customer_email text,
+  customer_tax_id text,
+  customer_cellphone text,
+  expires_at timestamptz,
+  paid_at timestamptz,
+  cancelled_at timestamptz,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists payment_intents_user_idx
+  on public.payment_intents (user_id, created_at desc);
+
+create index if not exists payment_intents_status_idx
+  on public.payment_intents (status, created_at desc);
+
+create index if not exists payment_intents_abacate_idx
+  on public.payment_intents (abacate_id)
+  where abacate_id is not null;
+
+alter table public.payment_intents enable row level security;
+
+drop policy if exists payment_intents_select_self on public.payment_intents;
+create policy payment_intents_select_self
+  on public.payment_intents
+  for select
+  using (user_id = auth.uid());
+
+-- ============================================================
+-- payment_webhooks_log — idempotência absoluta
+-- ============================================================
+
+create table if not exists public.payment_webhooks_log (
+  id uuid primary key default gen_random_uuid(),
+  event_id text not null unique,
+  event_type text not null,
+  raw_payload jsonb not null,
+  signature_header text,
+  signature_valid boolean,
+  intent_id uuid references public.payment_intents(id) on delete set null,
+  processed_at timestamptz,
+  error_message text,
+  received_at timestamptz not null default now()
+);
+
+create index if not exists payment_webhooks_log_event_idx
+  on public.payment_webhooks_log (event_type, received_at desc);
+
+alter table public.payment_webhooks_log enable row level security;
+
+-- Webhooks log: só admins veem. Webhook insere via service_role.
+drop policy if exists payment_webhooks_log_select_admin on public.payment_webhooks_log;
+create policy payment_webhooks_log_select_admin
+  on public.payment_webhooks_log
+  for select
+  using (public.is_admin());
+
+-- ============================================================
+-- RPC create_payment_intent — chamada pelo backend Hono ANTES de chamar Abacate
+-- ============================================================
+
+create or replace function public.create_payment_intent(
+  p_product_kind text,
+  p_product_ref text default null,
+  p_amount_cents bigint default 12500,
+  p_customer_name text default null,
+  p_customer_email text default null,
+  p_customer_tax_id text default null,
+  p_customer_cellphone text default null,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns table (
+  intent_id uuid,
+  external_id text,
+  amount_cents bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_intent_id uuid;
+  v_external text;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  if p_amount_cents <= 0 then
+    raise exception 'amount must be positive';
+  end if;
+
+  if p_product_kind not in ('activation_pack', 'card', 'recharge') then
+    raise exception 'invalid product_kind: %', p_product_kind;
+  end if;
+
+  -- external_id determinístico: user + product_kind + timestamp + product_ref
+  v_external := 'olefoot_' || v_uid::text || '_' || p_product_kind || '_' ||
+                extract(epoch from now())::bigint::text ||
+                coalesce('_' || p_product_ref, '');
+
+  insert into public.payment_intents (
+    user_id, external_id, product_kind, product_ref,
+    amount_cents, customer_name, customer_email, customer_tax_id, customer_cellphone,
+    metadata
+  )
+  values (
+    v_uid, v_external, p_product_kind, p_product_ref,
+    p_amount_cents, p_customer_name, p_customer_email, p_customer_tax_id, p_customer_cellphone,
+    p_metadata
+  )
+  returning id into v_intent_id;
+
+  return query select v_intent_id, v_external, p_amount_cents;
+end;
+$$;
+
+revoke execute on function public.create_payment_intent(text, text, bigint, text, text, text, text, jsonb) from anon, public;
+grant execute on function public.create_payment_intent(text, text, bigint, text, text, text, text, jsonb) to authenticated;
+
+-- ============================================================
+-- RPC update_payment_intent_charge — chamada pelo backend Hono APÓS Abacate
+-- responder com brCode/brCodeBase64
+-- ============================================================
+
+create or replace function public.update_payment_intent_charge(
+  p_intent_id uuid,
+  p_abacate_id text,
+  p_br_code text,
+  p_br_code_base64 text,
+  p_expires_at timestamptz,
+  p_dev_mode boolean default false
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_updated int;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+
+  update public.payment_intents
+     set abacate_id = p_abacate_id,
+         br_code = p_br_code,
+         br_code_base64 = p_br_code_base64,
+         expires_at = p_expires_at,
+         dev_mode = p_dev_mode,
+         updated_at = now()
+   where id = p_intent_id
+     and user_id = v_uid
+     and status = 'pending';
+
+  get diagnostics v_updated = row_count;
+  return v_updated > 0;
+end;
+$$;
+
+revoke execute on function public.update_payment_intent_charge(uuid, text, text, text, timestamptz, boolean) from anon, public;
+grant execute on function public.update_payment_intent_charge(uuid, text, text, text, timestamptz, boolean) to authenticated;
+
+-- ============================================================
+-- RPC get_my_payment_intent — usado pelo modal de checkout (polling)
+-- ============================================================
+
+create or replace function public.get_my_payment_intent(p_intent_id uuid)
+returns table (
+  id uuid,
+  status text,
+  amount_cents bigint,
+  br_code text,
+  br_code_base64 text,
+  expires_at timestamptz,
+  paid_at timestamptz,
+  product_kind text,
+  product_ref text,
+  dev_mode boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id, status, amount_cents, br_code, br_code_base64,
+         expires_at, paid_at, product_kind, product_ref, dev_mode
+    from public.payment_intents
+   where id = p_intent_id
+     and user_id = auth.uid();
+$$;
+
+revoke execute on function public.get_my_payment_intent(uuid) from anon, public;
+grant execute on function public.get_my_payment_intent(uuid) to authenticated;
+
+-- ============================================================
+-- RPC confirm_payment_intent — chamado pelo webhook após validar HMAC
+--
+-- Atômico:
+--   1. Marca intent como paid
+--   2. Cria wallet_credit (já com applied_at = now → trigger 5-5-5% dispara)
+--   3. Se product_kind = activation_pack: cria activation_pack apontando pro wallet_credit
+--   4. Se product_kind = card: TODO (Fase 9 marketplace)
+--   5. Se product_kind = recharge: nada além do wallet_credit
+--
+-- Idempotente: se já pago, retorna OK.
+-- ============================================================
+
+create or replace function public.confirm_payment_intent(
+  p_intent_id uuid,
+  p_abacate_id text default null
+)
+returns table (
+  intent_id uuid,
+  status text,
+  wallet_credit_id uuid,
+  activation_id uuid,
+  was_already_paid boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_intent record;
+  v_credit_id uuid;
+  v_activation_id uuid;
+  v_was_paid boolean := false;
+begin
+  -- Lock the row
+  select * into v_intent
+    from public.payment_intents
+   where id = p_intent_id
+   for update;
+
+  if v_intent is null then
+    raise exception 'PAYMENT_INTENT_NOT_FOUND';
+  end if;
+
+  -- Idempotência absoluta
+  if v_intent.status = 'paid' then
+    v_was_paid := true;
+    -- Retorna links existentes do credit + activation se houver
+    select id into v_credit_id
+      from public.wallet_credits
+     where user_id = v_intent.user_id
+       and reason = 'pix_payment:' || v_intent.id::text
+     order by created_at desc
+     limit 1;
+
+    select id into v_activation_id
+      from public.activation_packs
+     where user_id = v_intent.user_id
+       and wallet_credit_id = v_credit_id
+     order by activated_at desc
+     limit 1;
+
+    return query select v_intent.id, v_intent.status, v_credit_id, v_activation_id, v_was_paid;
+    return;
+  end if;
+
+  -- Marca como pago
+  update public.payment_intents
+     set status = 'paid',
+         paid_at = now(),
+         abacate_id = coalesce(p_abacate_id, abacate_id),
+         updated_at = now()
+   where id = p_intent_id;
+
+  -- 1. Cria wallet_credit pago — dispara trigger 5-5-5%
+  insert into public.wallet_credits (user_id, bro_cents, exp_amount, reason, applied_at)
+  values (
+    v_intent.user_id,
+    v_intent.amount_cents,
+    0,
+    'pix_payment:' || v_intent.id::text,
+    now()
+  )
+  returning id into v_credit_id;
+
+  -- 2. Side-effect por product_kind
+  if v_intent.product_kind = 'activation_pack' then
+    -- Cria ativação apontando pro wallet_credit (idempotente via UNIQUE wallet_credit_id)
+    if not public.is_user_activated(v_intent.user_id) then
+      insert into public.activation_packs (
+        user_id, amount_cents, currency, source, wallet_credit_id, activated_at
+      ) values (
+        v_intent.user_id, 2500, 'BRO', 'purchase', v_credit_id, now()
+      )
+      on conflict (wallet_credit_id) do nothing
+      returning id into v_activation_id;
+    end if;
+  end if;
+
+  -- product_kind = 'card' fica pra Fase 9 marketplace
+  -- product_kind = 'recharge' não tem side-effect adicional
+
+  return query select v_intent.id, 'paid'::text, v_credit_id, v_activation_id, v_was_paid;
+end;
+$$;
+
+-- confirm_payment_intent só roda no contexto de service_role (edge function webhook)
+revoke execute on function public.confirm_payment_intent(uuid, text) from anon, public, authenticated;
+
+-- ─── 20260531000000_legacy_v1_olefoot_credits.sql ───
+-- Migração v1 → v11 dos 168 usuários do Olefoot antigo.
+-- Cria tabela de créditos OLEFOOT off-chain (snapshot BSC) + função admin
+-- de import que insere auth.users com bcrypt preservado e registra o crédito.
+--
+-- Bcrypt do v1 ($2b$10$...) é compatível com Supabase Auth out-of-the-box,
+-- então o usuário antigo loga com email + senha de sempre.
+-- Profile NÃO é criado de propósito: RequireRegistration força onboarding completo.
+
+create table if not exists public.legacy_olefoot_credits (
+  user_id          uuid primary key references auth.users(id) on delete cascade,
+  legacy_id        int not null,
+  email            text not null,
+  wallet_address   text not null,
+  balance_wei      numeric(78, 0) not null,
+  balance_human    text not null,
+  source           text not null default 'olefoot-v1-bsc-snapshot',
+  snapshot_at      timestamptz not null,
+  credited_at      timestamptz,
+  credited_amount  numeric(78, 0),
+  created_at       timestamptz not null default now()
+);
+
+alter table public.legacy_olefoot_credits enable row level security;
+
+create unique index if not exists ulx_legacy_credits_legacy_id
+  on public.legacy_olefoot_credits(legacy_id);
+
+create index if not exists idx_legacy_credits_email
+  on public.legacy_olefoot_credits(lower(email));
+
+-- Usuário pode ler o próprio crédito (pra UI mostrar o toast / saldo pendente).
+drop policy if exists legacy_credits_self_read on public.legacy_olefoot_credits;
+create policy legacy_credits_self_read on public.legacy_olefoot_credits
+  for select to authenticated
+  using (user_id = auth.uid());
+
+-- Função admin: cria/atualiza auth.users e legacy_olefoot_credits em uma transação.
+-- Idempotente por email: roda 2x sem duplicar.
+-- Política Passo 0:
+--   - se email já existe em auth.users → reaproveita o UUID, registra o crédito,
+--     NÃO mexe em senha/profile/club do usuário ativo do v11.
+--   - se não existe → cria com bcrypt preservado e email_confirmed_at=now().
+create or replace function public.admin_import_legacy_v1_user(
+  p_email          text,
+  p_bcrypt_hash    text,
+  p_legacy_id      int,
+  p_name           text,
+  p_wallet         text,
+  p_balance_wei    numeric,
+  p_balance_human  text,
+  p_snapshot_at    timestamptz
+)
+returns table (out_user_id uuid, action text)
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_email text := lower(trim(p_email));
+  v_uid uuid;
+  v_action text;
+begin
+  if v_email is null or v_email = '' then
+    raise exception 'email vazio';
+  end if;
+  if p_bcrypt_hash !~ '^\$2[aby]\$\d{2}\$.{53}$' then
+    raise exception 'bcrypt hash inválido para %', v_email;
+  end if;
+
+  -- Passo 0: já existe?
+  select id into v_uid from auth.users where lower(email) = v_email limit 1;
+
+  if v_uid is not null then
+    v_action := 'reused_existing';
+  else
+    v_uid := gen_random_uuid();
+    insert into auth.users (
+      id, instance_id, email, encrypted_password, email_confirmed_at,
+      aud, role, raw_app_meta_data, raw_user_meta_data,
+      created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token
+    ) values (
+      v_uid,
+      '00000000-0000-0000-0000-000000000000'::uuid,
+      v_email,
+      p_bcrypt_hash,
+      now(),
+      'authenticated',
+      'authenticated',
+      jsonb_build_object('provider','email','providers',jsonb_build_array('email')),
+      jsonb_build_object('legacy_id', p_legacy_id, 'legacy_name', p_name, 'source','olefoot-v1'),
+      now(),
+      now(),
+      '', '', '', ''
+    );
+    -- Linha em auth.identities pro provider 'email' (necessário pro login funcionar).
+    insert into auth.identities (
+      id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at
+    ) values (
+      gen_random_uuid(),
+      v_uid,
+      jsonb_build_object('sub', v_uid::text, 'email', v_email, 'email_verified', true),
+      'email',
+      v_email,
+      null, now(), now()
+    );
+    v_action := 'created_new';
+  end if;
+
+  -- Crédito OLEFOOT (idempotente por user_id).
+  insert into public.legacy_olefoot_credits (
+    user_id, legacy_id, email, wallet_address, balance_wei, balance_human, snapshot_at
+  ) values (
+    v_uid, p_legacy_id, v_email, p_wallet, p_balance_wei, p_balance_human, p_snapshot_at
+  )
+  on conflict (user_id) do update set
+    balance_wei = excluded.balance_wei,
+    balance_human = excluded.balance_human,
+    snapshot_at = excluded.snapshot_at,
+    legacy_id = excluded.legacy_id;
+
+  return query select v_uid, v_action;
+end;
+$$;
+
+revoke all on function public.admin_import_legacy_v1_user(
+  text, text, int, text, text, numeric, text, timestamptz
+) from public;
+-- Apenas service_role (script de migração) pode chamar.
+grant execute on function public.admin_import_legacy_v1_user(
+  text, text, int, text, text, numeric, text, timestamptz
+) to service_role;
+
+-- Função consumida pela UI no primeiro login: credita off-chain (idempotente)
+-- e retorna o saldo creditado pra o toast de boas-vindas.
+-- Hoje só marca credited_at e retorna o balance_human pra mostrar.
+-- A integração com o wallet OLEXP fica num segundo passo (após confirmar UX).
+create or replace function public.claim_legacy_olefoot_credit()
+returns table (already_claimed boolean, out_balance_human text, out_credited_amount_wei numeric)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_row public.legacy_olefoot_credits%rowtype;
+begin
+  if v_uid is null then
+    raise exception 'must be authenticated';
+  end if;
+  select * into v_row from public.legacy_olefoot_credits where user_id = v_uid;
+  if not found then
+    return query select false, null::text, null::numeric;
+    return;
+  end if;
+  if v_row.credited_at is not null then
+    return query select true, v_row.balance_human, v_row.credited_amount;
+    return;
+  end if;
+  update public.legacy_olefoot_credits
+     set credited_at = now(),
+         credited_amount = balance_wei
+   where user_id = v_uid;
+  return query select false, v_row.balance_human, v_row.balance_wei;
+end;
+$$;
+
+revoke all on function public.claim_legacy_olefoot_credit() from public;
+grant execute on function public.claim_legacy_olefoot_credit() to authenticated;
+
+-- ─── 20260531000100_global_league_daily_crowns.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — Liga Global: histórico de COROAS DO DIA
+--
+-- Cada vez que o mata-mata diário define um campeão, grava-se uma linha aqui.
+-- Alimenta o widget "Campeão de Hoje" na home, a página /liga-global/coroas
+-- e o ranking de coroas da season. Leitura pública; escrita só service_role
+-- (a Edge Function global-league-tick é a única autoridade).
+-- ═══════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS daily_crowns (
+  id              TEXT PRIMARY KEY,
+  team_id         TEXT NOT NULL REFERENCES global_league_teams(id) ON DELETE CASCADE,
+  manager_id      TEXT NOT NULL,
+  club_name       TEXT NOT NULL,
+  club_short      TEXT NOT NULL,
+
+  -- Contexto da conquista
+  daily_date      TEXT NOT NULL,               -- 'YYYY-MM-DD' BRT do dia conquistado
+  season_id       TEXT NOT NULL,               -- season da liga no momento
+  competition_id  TEXT,                         -- competição (ciclo) no momento
+  bracket_size    INTEGER NOT NULL,             -- nº de times no mata-mata (2,4,8,16,32)
+  final_round_id  TEXT,                         -- round_id da final
+  runner_up_team_id   TEXT,                     -- vice (derrotado na final)
+  runner_up_club_name TEXT,
+
+  -- Placar da final (inclui pênaltis se houve)
+  final_score_home    INTEGER,
+  final_score_away    INTEGER,
+  final_went_to_pens  BOOLEAN NOT NULL DEFAULT FALSE,
+
+  crowned_at_ms   BIGINT NOT NULL,
+  created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_crowns_manager
+  ON daily_crowns (manager_id, crowned_at_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_crowns_recent
+  ON daily_crowns (crowned_at_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_crowns_season
+  ON daily_crowns (season_id, crowned_at_ms DESC);
+
+-- Um campeão por dia (BRT). Protege contra dupla coroação por ticks concorrentes.
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_daily_crowns_per_day
+  ON daily_crowns (daily_date);
+
+ALTER TABLE daily_crowns ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read access" ON daily_crowns;
+CREATE POLICY "Allow public read access" ON daily_crowns FOR SELECT USING (true);
+
+COMMENT ON TABLE daily_crowns IS
+  'Histórico de campeões do mata-mata diário da Liga Global (Coroas do Dia). 1 linha por Dia Olefoot.';
+
+-- ─── 20260531003000_global_league_daily_cycle.sql ───
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OLEFOOT — Liga Global: CICLO DIÁRIO com COROAS (Fase A)
+--
+-- Adiciona a camada "Dia Olefoot" SOBRE a liga nonstop existente, sem
+-- alterar o loop de 5/5min que já roda em produção:
+--
+--   • 00:00–19:00 BRT  → fase "qualifying": cada partida de LIGA também
+--     soma daily_points. A liga nonstop continua dando densidade o dia todo.
+--   • 19:00 BRT        → fase "knockout": top N (maior potência de 2 ≤ 32)
+--     por daily_points entram num mata-mata (round_type='daily_ko'), com
+--     pênaltis decidindo empates.
+--   • Final            → fase "crowned": campeão do dia recebe 1 Coroa
+--     (season_crowns + all_time_crowns). Mais coroas na season = título
+--     paralelo ao campeão de divisão.
+--   • 00:00 BRT seguinte → daily_* zeram, volta a "qualifying".
+--
+-- daily_* são ORTOGONAIS ao ciclo de season: NÃO zeram no soft-reset de
+-- promoção/rebaixamento; só zeram na virada do Dia Olefoot. A coluna
+-- season_crowns acompanha a competição (zera no hard-reset); all_time_crowns
+-- jamais zera.
+--
+-- Migration ADITIVA e idempotente (IF NOT EXISTS). Não destrói dados.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- ── 1. Pontuação diária + coroas em global_league_teams ────────────────────
+ALTER TABLE global_league_teams
+  ADD COLUMN IF NOT EXISTS daily_points          INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_matches_played  INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_wins            INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_draws           INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_losses          INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_goals_for       INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_goals_against   INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_goal_difference INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS season_crowns         INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS all_time_crowns       INTEGER NOT NULL DEFAULT 0;
+
+-- Ranking da corrida diária (top N por daily_points, depois saldo, depois pró)
+CREATE INDEX IF NOT EXISTS idx_global_teams_daily_rank
+  ON global_league_teams (
+    daily_points DESC,
+    daily_goal_difference DESC,
+    daily_goals_for DESC
+  );
+
+CREATE INDEX IF NOT EXISTS idx_global_teams_season_crowns
+  ON global_league_teams (season_crowns DESC);
+
+-- ── 2. Estado da fase diária em global_league_state ────────────────────────
+ALTER TABLE global_league_state
+  ADD COLUMN IF NOT EXISTS daily_date         TEXT,    -- 'YYYY-MM-DD' em BRT
+  ADD COLUMN IF NOT EXISTS daily_phase        TEXT NOT NULL DEFAULT 'qualifying',
+  ADD COLUMN IF NOT EXISTS daily_ko_season_id TEXT,    -- season_id dos rounds daily_ko do dia
+  ADD COLUMN IF NOT EXISTS daily_ko_size      INTEGER, -- tamanho do bracket gerado (2,4,8,16,32)
+  ADD COLUMN IF NOT EXISTS daily_qualify_hour INTEGER NOT NULL DEFAULT 19, -- hora BRT do corte
+  ADD COLUMN IF NOT EXISTS daily_ko_max_size  INTEGER NOT NULL DEFAULT 32; -- teto do bracket
+
+-- Constraint da fase diária (drop+recreate para idempotência)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'valid_daily_phase'
+  ) THEN
+    ALTER TABLE global_league_state
+      ADD CONSTRAINT valid_daily_phase
+      CHECK (daily_phase IN ('qualifying', 'knockout', 'crowned'));
+  END IF;
+END$$;
+
+-- ── 3. Pênaltis nas fixtures (decidem empate no mata-mata) ──────────────────
+ALTER TABLE global_league_fixtures
+  ADD COLUMN IF NOT EXISTS penalty_score_home INTEGER,
+  ADD COLUMN IF NOT EXISTS penalty_score_away INTEGER,
+  ADD COLUMN IF NOT EXISTS went_to_penalties  BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ── 4. round_type aceita 'daily_ko' ────────────────────────────────────────
+-- A constraint original só aceita ('playoff','league'). Reabrimos para incluir
+-- o mata-mata diário. drop+recreate preservando os valores existentes.
+ALTER TABLE global_league_rounds DROP CONSTRAINT IF EXISTS valid_round_type;
+ALTER TABLE global_league_rounds
+  ADD CONSTRAINT valid_round_type
+  CHECK (round_type IN ('playoff', 'league', 'daily_ko'));
+
+-- ── 5. event_type aceita eventos de pênalti e coroação ─────────────────────
+ALTER TABLE global_league_events DROP CONSTRAINT IF EXISTS valid_event_type;
+ALTER TABLE global_league_events
+  ADD CONSTRAINT valid_event_type
+  CHECK (event_type IN (
+    'goal', 'yellow_card', 'red_card', 'injury', 'substitution',
+    'pressure', 'miss', 'walkover', 'penalty', 'crown'
+  ));
+
+COMMENT ON COLUMN global_league_teams.daily_points IS
+  'Pontos acumulados no Dia Olefoot corrente (qualifying). Zera na virada do dia (BRT), NÃO no soft-reset de season.';
+COMMENT ON COLUMN global_league_teams.season_crowns IS
+  'Coroas (campeão do mata-mata diário) ganhas nesta competição/season. Mais coroas = título paralelo no fim.';
+COMMENT ON COLUMN global_league_teams.all_time_crowns IS
+  'Total histórico de Coroas do Dia. Jamais zera.';
+COMMENT ON COLUMN global_league_state.daily_phase IS
+  'Fase do Dia Olefoot: qualifying (00–19h BRT) | knockout (mata-mata) | crowned (campeão definido, aguarda meia-noite).';
+
+-- ─── 20260608100000_spend_olefoot_rpc.sql ───
+-- ============================================================
+-- spend_olefoot RPC
+--
+-- Permite que o user autenticado gaste OLEFOOT (=OLEXP) em compras in-game
+-- (renovação de contrato, marketplace premium, etc) com auditoria via ledger.
+--
+-- Embrulha o _debit_olexp interno (que continua revogado de authenticated)
+-- expondo apenas operações com source whitelisteado. Isso impede que código
+-- malicioso debite OLEFOOT pra origens arbitrárias.
+--
+-- Whitelist atual:
+--   'renovacao_contrato' — renovação de contrato de jogador (Academia OLE)
+--
+-- Ampliar conforme novas features que aceitem OLEFOOT.
+-- ============================================================
+
+create or replace function public.spend_olefoot(
+  p_amount numeric,
+  p_source text,
+  p_source_ref text default null
+)
+returns numeric
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_new_balance numeric(36, 8);
+  v_allowed_sources text[] := array[
+    'renovacao_contrato'
+  ];
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    raise exception 'NOT_AUTHENTICATED: precisa estar autenticado pra gastar OLEFOOT';
+  end if;
+
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'INVALID_AMOUNT: valor deve ser positivo';
+  end if;
+
+  if not (p_source = any(v_allowed_sources)) then
+    raise exception 'INVALID_SOURCE: % não está na whitelist', p_source;
+  end if;
+
+  -- _debit_olexp valida saldo (raise INSUFFICIENT_OLEXP_BALANCE), faz lock
+  -- da row e escreve no ledger numa transação só.
+  v_new_balance := public._debit_olexp(v_user_id, p_amount, p_source, p_source_ref);
+
+  return v_new_balance;
+end;
+$$;
+
+revoke execute on function public.spend_olefoot(numeric, text, text) from anon, public;
+grant execute on function public.spend_olefoot(numeric, text, text) to authenticated;
+
+comment on function public.spend_olefoot(numeric, text, text) is
+  'Debita OLEFOOT do user autenticado pra fonte whitelisteada. Lança INSUFFICIENT_OLEXP_BALANCE se sem saldo. Auditável via olexp_ledger.';
+
+-- ─── 20260615123000_liga_ole_weekly_and_nemesis.sql ───
+-- Liga Ole — Liga da Semana (leaderboard semanal compartilhado entre managers) +
+-- notificação do NÊMESIS (um manager notifica o derrotado, cross-user).
+--
+-- Tudo client-driven via RPC SECURITY DEFINER (sem edge function dedicada):
+--   • record_liga_ole_weekly_run   — upsert da campanha da semana (guarda a fase MAIS LONGE)
+--   • get_liga_ole_weekly_leaderboard — ranking "quem chegou mais longe" na semana
+--   • notify_liga_ole_nemesis      — insere notificação pro manager derrotado
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 1) Tabela: uma linha por (semana, manager) com a melhor campanha da semana
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists public.liga_ole_weekly_runs (
+  id            uuid primary key default gen_random_uuid(),
+  week_key      text not null,                 -- ex: '2026-W24' (ISO week)
+  manager_id    uuid not null references auth.users(id) on delete cascade,
+  club_name     text not null,
+  club_short    text not null,
+  reached_round int  not null default 0 check (reached_round between 0 and 4),
+  is_champion   boolean not null default false,
+  updated_at    timestamptz not null default now(),
+  unique (week_key, manager_id)
+);
+
+create index if not exists idx_liga_ole_weekly_rank
+  on public.liga_ole_weekly_runs (week_key, is_champion desc, reached_round desc, updated_at asc);
+
+alter table public.liga_ole_weekly_runs enable row level security;
+
+-- Leitura pública (o leaderboard é visível a todos).
+drop policy if exists liga_ole_weekly_read on public.liga_ole_weekly_runs;
+create policy liga_ole_weekly_read on public.liga_ole_weekly_runs
+  for select using (true);
+
+-- Escrita só da própria linha (a RPC abaixo é a via recomendada).
+drop policy if exists liga_ole_weekly_insert_self on public.liga_ole_weekly_runs;
+create policy liga_ole_weekly_insert_self on public.liga_ole_weekly_runs
+  for insert with check (manager_id = auth.uid());
+drop policy if exists liga_ole_weekly_update_self on public.liga_ole_weekly_runs;
+create policy liga_ole_weekly_update_self on public.liga_ole_weekly_runs
+  for update using (manager_id = auth.uid());
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2) RPC: registra/atualiza a campanha da semana mantendo a fase MAIS LONGE
+-- ─────────────────────────────────────────────────────────────────────────────
+create or replace function public.record_liga_ole_weekly_run(
+  p_week_key   text,
+  p_reached_round int,
+  p_is_champion boolean,
+  p_club_name  text,
+  p_club_short text
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then return; end if;
+  if p_week_key is null or p_week_key = '' then return; end if;
+  insert into public.liga_ole_weekly_runs
+    (week_key, manager_id, club_name, club_short, reached_round, is_champion, updated_at)
+  values (
+    p_week_key, v_uid,
+    coalesce(nullif(p_club_name, ''), 'Clube'),
+    coalesce(nullif(p_club_short, ''), 'OLE'),
+    greatest(0, least(4, coalesce(p_reached_round, 0))),
+    coalesce(p_is_champion, false),
+    now()
+  )
+  on conflict (week_key, manager_id) do update
+    set reached_round = greatest(public.liga_ole_weekly_runs.reached_round, excluded.reached_round),
+        is_champion   = public.liga_ole_weekly_runs.is_champion or excluded.is_champion,
+        club_name     = excluded.club_name,
+        club_short    = excluded.club_short,
+        updated_at    = now();
+end;
+$$;
+
+grant execute on function public.record_liga_ole_weekly_run(text, int, boolean, text, text) to authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 3) RPC: leaderboard da semana (quem chegou mais longe)
+-- ─────────────────────────────────────────────────────────────────────────────
+create or replace function public.get_liga_ole_weekly_leaderboard(
+  p_week_key text,
+  p_limit    int default 50
+) returns table (
+  rank          bigint,
+  manager_id    uuid,
+  club_name     text,
+  club_short    text,
+  reached_round int,
+  is_champion   boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    row_number() over (order by r.is_champion desc, r.reached_round desc, r.updated_at asc) as rank,
+    r.manager_id, r.club_name, r.club_short, r.reached_round, r.is_champion
+  from public.liga_ole_weekly_runs r
+  where r.week_key = p_week_key
+  order by rank
+  limit greatest(1, least(200, coalesce(p_limit, 50)));
+$$;
+
+grant execute on function public.get_liga_ole_weekly_leaderboard(text, int) to authenticated, anon;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 4) RPC: notifica o manager derrotado pelo nêmesis (cross-user, validado)
+--    SECURITY DEFINER → insere em notifications mesmo com RLS admin-only.
+-- ─────────────────────────────────────────────────────────────────────────────
+create or replace function public.notify_liga_ole_nemesis(
+  p_target_manager_id uuid,
+  p_winner_club       text,
+  p_round             text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_id  uuid;
+begin
+  if v_uid is null or p_target_manager_id is null then return null; end if;
+  if p_target_manager_id = v_uid then return null; end if; -- nunca a si mesmo
+  insert into public.notifications (user_id, category, title, message, link, payload)
+  values (
+    p_target_manager_id,
+    'COMPETIÇÃO',
+    'Seu time caiu na Liga Ole',
+    coalesce(nullif(p_winner_club, ''), 'Um rival')
+      || ' eliminou seu time na ' || coalesce(nullif(p_round, ''), 'Liga Ole')
+      || '. Vai deixar barato?',
+    '/liga-ole',
+    jsonb_build_object(
+      'kind', 'liga_ole_nemesis',
+      'winner_manager_id', v_uid,
+      'winner_club', p_winner_club,
+      'round', p_round
+    )
+  )
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+grant execute on function public.notify_liga_ole_nemesis(uuid, text, text) to authenticated;

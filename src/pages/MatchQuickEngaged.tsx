@@ -64,6 +64,8 @@ export default function MatchQuickEngaged() {
   // pra mostrar a continuação ("avançou de fase" + Avançar) no pós-jogo.
   const ligaOle = useGameStore((s) => s.ligaOle);
   const ligaFlash = useGameStore((s) => s.ligaOleResultFlash);
+  // Evolução do time pós-partida (delta de OVR) — preenchido pelo FINALIZE_QUICK_PLAN.
+  const lastEvolution = useGameStore((s) => s.lastQuickEvolution);
   const isLigaOleMatchRef = useRef<boolean | null>(null);
   if (isLigaOleMatchRef.current === null) isLigaOleMatchRef.current = !!ligaOle?.pendingOpponentId;
 
@@ -446,6 +448,39 @@ export default function MatchQuickEngaged() {
 
         {phase === 'finished' && result && (
           <div className="mt-5 flex flex-col gap-2">
+            {/* EVOLUÇÃO DO TIME — o manager VÊ que não perdeu tempo: o time melhorou. */}
+            {lastEvolution && (lastEvolution.risers.length > 0 || lastEvolution.teamOvrAfter > 0) && (() => {
+              const M = 'var(--font-serif-hero)';
+              const teamUp = lastEvolution.teamOvrAfter - lastEvolution.teamOvrBefore;
+              const risers = lastEvolution.risers.slice(0, 4);
+              return (
+                <div className="relative overflow-hidden border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">Seu time evoluiu</p>
+                    <span className="font-display tabular-nums text-[12px] font-black" style={{ color: teamUp >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                      Força {lastEvolution.teamOvrBefore.toFixed(1)} → {lastEvolution.teamOvrAfter.toFixed(1)}
+                    </span>
+                  </div>
+                  {risers.length > 0 ? (
+                    <div className="flex flex-col gap-1.5">
+                      {risers.map((r) => (
+                        <div key={r.id} className="flex items-center gap-2.5">
+                          {players[r.id] && (
+                            <img src={playerPortraitSrc(players[r.id]!, 32, 32)} alt="" className="w-7 h-7 rounded-full object-cover bg-deep-black shrink-0" />
+                          )}
+                          <span className="flex-1 truncate text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: '15px' }}>{r.name}</span>
+                          <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/35 shrink-0">{r.pos}</span>
+                          <span className="font-display tabular-nums text-[12px] font-black text-success shrink-0">{r.ovrBefore}→{r.ovrAfter}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-white/50 text-[12px]">O elenco segurou o nível. Vença pra acelerar a evolução.</p>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
             {isLigaOleMatchRef.current && (() => {
               const M = 'var(--font-serif-hero)';

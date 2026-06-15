@@ -1311,9 +1311,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
 
       {/* NARRAÇÃO — linha atual em destaque cinematográfico + histórico legível. */}
       {feed.length > 0 && phase !== 'done' && (() => {
-        const recent = feed.slice(-4);
-        const latest = recent[recent.length - 1]!;
-        const history = recent.slice(0, -1).reverse();
+        // Narração AO VIVO: só o lance atual. O feed não arquiva o que já passou —
+        // é um ticker, não um log (pedido do produto: layout menos carregado).
+        const latest = feed[feed.length - 1]!;
         const portrait = portraitOf?.(latest.actorId, latest.side) ?? null;
         return (
           <div className="px-4 pb-3">
@@ -1332,15 +1332,6 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 </p>
               </div>
             </div>
-            {history.length > 0 && (
-              <div className="flex flex-col gap-0.5 mt-2 pl-3">
-                {history.map((item) => (
-                  <p key={item.id} className="text-[11px] text-white/55 leading-snug truncate" style={{ fontFamily: 'var(--font-sans)' }}>
-                    <span className="tabular-nums text-white/35">{item.minute}&prime;</span> {richText(item.text, '12px')}
-                  </p>
-                ))}
-              </div>
-            )}
           </div>
         );
       })()}

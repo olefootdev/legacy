@@ -19,11 +19,49 @@ export interface LigaOleTeam {
   /** Força do clube (OVR efetivo, já considerando fadiga/disponíveis no manager). */
   overall: number;
   isManager?: boolean;
+  /** auth.users.id do manager dono do clube — usado pra notificar o derrotado (nêmesis). */
+  managerId?: string;
 }
 
 export const LIGA_OLE_ROUNDS = ['Fase de 32', 'Oitavas', 'Quartas', 'Semifinal', 'Final'] as const;
 export type LigaOleRound = (typeof LIGA_OLE_ROUNDS)[number];
 export const LIGA_OLE_SIZE = 32;
+
+/**
+ * Premiação por VITÓRIA em cada fase (índice = rodada vencida). Tudo creditado no
+ * saldo de jogo (`finance.ole`, exibido como EXP). A Semifinal soma o bônus de
+ * "ir para a final" (500k + 250k). Vencer a Final (campeão) é o grande prêmio.
+ *   0 Fase de 32 → 50k · 1 Oitavas → 100k · 2 Quartas → 250k ·
+ *   3 Semifinal → 750k (500k + 250k ida à final) · 4 Final/CAMPEÃO → 1.000.000
+ */
+export const LIGA_OLE_ROUND_REWARDS = [50_000, 100_000, 250_000, 750_000, 1_000_000] as const;
+
+/** Recompensa por vencer a rodada `roundIndex` (0..4). isChampion na Final. */
+export function ligaOleRoundReward(roundIndex: number): { amount: number; isChampion: boolean; round: LigaOleRound } {
+  const i = Math.max(0, Math.min(LIGA_OLE_ROUNDS.length - 1, roundIndex));
+  return {
+    amount: LIGA_OLE_ROUND_REWARDS[i] ?? 0,
+    isChampion: i >= LIGA_OLE_ROUNDS.length - 1,
+    round: LIGA_OLE_ROUNDS[i]!,
+  };
+}
+
+/**
+ * DINASTIA: cada título já conquistado aumenta o prêmio das próximas campanhas.
+ * +12% por título, teto de 2× (5 títulos). O 1º título joga com multiplicador 1×.
+ */
+export function dinastiaMultiplier(titles: number): number {
+  const t = Math.max(0, Math.floor(titles || 0));
+  return Math.min(2, 1 + t * 0.12);
+}
+
+/** Etiqueta de dinastia pelo nº de títulos (Bicampeão, Tricampeão, …). */
+export function dinastiaLabel(titles: number): string | null {
+  const t = Math.max(0, Math.floor(titles || 0));
+  if (t <= 0) return null;
+  const names = ['', 'Campeão', 'Bicampeão', 'Tricampeão', 'Tetracampeão', 'Pentacampeão'];
+  return names[t] ?? `${t}× Campeão`;
+}
 
 export interface LigaOleMatchResult {
   winner: string; // team id

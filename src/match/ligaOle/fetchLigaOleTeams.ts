@@ -81,6 +81,7 @@ export async function fetchLigaOleRivals(args: {
       name: t.club_name || 'Clube Rival',
       short: t.club_short || 'RIV',
       overall: Math.round(Number(t.overall)),
+      managerId: t.manager_id ? String(t.manager_id) : undefined,
     }));
   } catch {
     return [];

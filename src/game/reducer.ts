@@ -154,7 +154,7 @@ import { createPendingCommand } from '@/voiceCommand/commandQueue';
 import { TEAM_OBEDIENCE_DELTAS } from '@/voiceCommand/obedienceRoll';
 import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import { computeQuickPlanCredit } from '@/match/quickEngaged/creditQuickPlan';
-import { advanceLigaOle } from '@/match/ligaOle/ligaOleModel';
+import { advanceLigaOle, ligaOleRoundReward, dinastiaMultiplier, managerOpponent } from '@/match/ligaOle/ligaOleModel';
 import {
   CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_MEDICAL_FATIGUE_DELTA,
@@ -2269,7 +2269,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const drawScore = action.homeScore === action.awayScore;
       const homeWin = action.homeScore > action.awayScore || (drawScore && action.shootoutWin === 'home');
       const draw = drawScore && !action.shootoutWin;
-      const finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
+      let finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
       const nextResult: import('@/entities/types').FormLetter = homeWin ? 'W' : draw ? 'D' : 'L';
       const form = [...state.form.slice(1), nextResult];
       const results = [{
@@ -2295,23 +2295,101 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       );
       // LIGA OLE: se esta partida era da liga (pendingOpponentId setado),
-      // avança o chaveamento com o resultado real (V/E→pênaltis/D).
+      // avança o chaveamento com o resultado real (V/E→pênaltis/D), credita o
+      // PRÊMIO DA FASE e liquida a APOSTA (2× na vitória).
       let ligaOle = state.ligaOle;
       let ligaOleResultFlash = state.ligaOleResultFlash;
+      let ligaOleNemesis = state.ligaOleNemesis;
+      let ligaOleTitles = state.ligaOleTitles ?? 0;
+      let ligaOleLastDefeated = state.ligaOleLastDefeated;
+      const ligaNotes: import('@/game/inboxTypes').InboxItem[] = [];
       if (ligaOle?.pendingOpponentId && ligaOle.status === 'active') {
+        const roundPlayed = ligaOle.roundIndex;
+        const playedRoundName = ligaOleRoundReward(roundPlayed).round;
+        const opponent = managerOpponent(ligaOle); // adversário ANTES de avançar
+        const wager = ligaOle.pendingWager ?? 0;
+        const isWeekly = ligaOle.mode === 'weekly';
+        const weekKey = ligaOle.weekKey;
+        // DINASTIA: títulos anteriores multiplicam os prêmios desta campanha.
+        const dinastiaMult = dinastiaMultiplier(ligaOleTitles);
         const advanced = advanceLigaOle(ligaOle, {
           won: homeWin,
           scoreManager: action.homeScore,
           scoreOpp: action.awayScore,
           shootout: !!action.shootoutWin,
         });
+
+        if (homeWin) {
+          // Prêmio por vencer a fase (índice = rodada vencida) × dinastia. Final = 1.000.000 base.
+          const prize = ligaOleRoundReward(roundPlayed);
+          const amount = Math.round(prize.amount * dinastiaMult);
+          if (amount > 0) {
+            const label = prize.isChampion ? 'Liga Ole · CAMPEÃO' : `Liga Ole · ${prize.round}`;
+            finance = withExpHistory(grantEarnedExp(finance, amount), amount, label);
+            const dinastiaTag = dinastiaMult > 1 ? ` (Dinastia ×${dinastiaMult.toFixed(2)})` : '';
+            ligaNotes.push(makeInboxItem(
+              `lo-prize-${Date.now()}`,
+              'FINANCE_EXP_GAIN',
+              'COMPETIÇÃO',
+              prize.isChampion
+                ? `🏆 CAMPEÃO! +${amount.toLocaleString('pt-BR')} EXP de título${dinastiaTag}.`
+                : `Avançou na ${prize.round}: +${amount.toLocaleString('pt-BR')} EXP${dinastiaTag}.`,
+              { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
+            ));
+          }
+          // Aposta: vitória paga 2× (devolve o stake + lucro igual ao stake).
+          if (wager > 0) {
+            const payout = wager * 2;
+            finance = withExpHistory(grantEarnedExp(finance, payout), payout, 'Liga Ole · aposta vencedora');
+            ligaNotes.push(makeInboxItem(
+              `lo-bet-${Date.now()}`,
+              'FINANCE_EXP_GAIN',
+              'COMPETIÇÃO',
+              `Aposta vencedora: +${payout.toLocaleString('pt-BR')} EXP (dobrou ${wager.toLocaleString('pt-BR')}).`,
+              { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
+            ));
+          }
+          // NÊMESIS: venceu um rival REAL → notifica o derrotado (efeito cross-user no componente).
+          if (opponent?.managerId) {
+            ligaOleLastDefeated = { managerId: opponent.managerId, clubName: state.club.name, round: playedRoundName };
+          }
+          // REVANCHE cumprida: bateu justamente o nêmesis → some o selo.
+          if (ligaOleNemesis && opponent && opponent.id === ligaOleNemesis.id) {
+            ligaNotes.push(makeInboxItem(
+              `lo-revenge-${Date.now()}`,
+              'FINANCE_EXP_GAIN',
+              'COMPETIÇÃO',
+              `Revanche! Você eliminou ${ligaOleNemesis.name} — conta acertada.`,
+              { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: false },
+            ));
+            ligaOleNemesis = undefined;
+          }
+        } else {
+          // Derrota: o algoz vira o NÊMESIS da próxima campanha (revanche).
+          if (opponent) {
+            ligaOleNemesis = { id: opponent.id, name: opponent.name, short: opponent.short, overall: opponent.overall, managerId: opponent.managerId, round: playedRoundName };
+          }
+          if (wager > 0) {
+            ligaNotes.push(makeInboxItem(
+              `lo-bet-${Date.now()}`,
+              'FINANCE_EXP_GAIN',
+              'COMPETIÇÃO',
+              `Aposta perdida: ${wager.toLocaleString('pt-BR')} EXP. Fica pra próxima.`,
+              { tag: 'Liga Ole', deepLink: '/liga-ole', hideFromHomeFeed: true },
+            ));
+          }
+        }
+
+        // DINASTIA: título conquistado incrementa o contador (multiplica futuras campanhas).
+        if (advanced.status === 'champion') ligaOleTitles = ligaOleTitles + 1;
+
         if (advanced.status === 'active') {
-          // Segue vivo na liga — guarda o avanço.
-          ligaOle = { ...advanced, pendingOpponentId: undefined };
+          // Segue vivo na liga — guarda o avanço; zera aposta/alvo do confronto.
+          ligaOle = { ...advanced, pendingOpponentId: undefined, pendingWager: undefined };
         } else {
           // Campanha ACABOU (campeão/eliminado): vira FLASH transitório e some do
           // landing (só aparece como resultado da partida, não como tela inicial).
-          ligaOleResultFlash = { outcome: advanced.status, reachedRound: advanced.reachedRound, clubName: state.club.name };
+          ligaOleResultFlash = { outcome: advanced.status, reachedRound: advanced.reachedRound, clubName: state.club.name, weekKey: isWeekly ? weekKey : undefined };
           ligaOle = undefined;
         }
       }
@@ -2321,19 +2399,42 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players: credit.players,
         playerHealth: credit.playerHealth,
         quickMatchStreak: credit.quickMatchStreak,
+        lastQuickEvolution: credit.evolution,
         results,
         form,
-        inbox: [note, ...state.inbox].slice(0, 60),
+        inbox: [...ligaNotes, note, ...state.inbox].slice(0, 60),
         ligaOle,
         ligaOleResultFlash,
+        ligaOleNemesis,
+        ligaOleTitles,
+        ligaOleLastDefeated,
       };
     }
     case 'CREATE_LIGA_OLE': {
-      return { ...state, ligaOle: action.liga, ligaOleResultFlash: undefined };
+      return {
+        ...state,
+        ligaOle: { ...action.liga, mode: action.mode ?? 'classic', weekKey: action.weekKey },
+        ligaOleResultFlash: undefined,
+      };
+    }
+    case 'LIGA_OLE_NEMESIS_NOTIFIED': {
+      if (!state.ligaOleLastDefeated) return state;
+      return { ...state, ligaOleLastDefeated: undefined };
     }
     case 'START_LIGA_OLE_MATCH': {
       if (!state.ligaOle) return state;
-      return { ...state, ligaOle: { ...state.ligaOle, pendingOpponentId: action.opponentId } };
+      // Aposta opcional em EXP: debita NA HORA (cap no saldo) e guarda o stake.
+      // Vitória paga 2× no FINALIZE_QUICK_PLAN; derrota perde o apostado.
+      const wager = Math.max(0, Math.floor(action.wager ?? 0));
+      const stake = Math.min(wager, Math.max(0, state.finance.ole));
+      const finance = stake > 0
+        ? withExpHistory(addOle(state.finance, -stake), -stake, 'Liga Ole · aposta')
+        : state.finance;
+      return {
+        ...state,
+        finance,
+        ligaOle: { ...state.ligaOle, pendingOpponentId: action.opponentId, pendingWager: stake > 0 ? stake : undefined },
+      };
     }
     case 'RESET_LIGA_OLE': {
       return { ...state, ligaOle: undefined, ligaOleResultFlash: undefined };
