@@ -247,6 +247,23 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
   const tired = card.fatigue > 85;
   const inner = (
     <>
+      {/* Foto do jogador — destaque (anel amarelo) pra quem brilha, cinza sutil
+          pros demais. Dá MORAL ao jogador em evidência. */}
+      {card.portrait ? (
+        <img
+          src={card.portrait}
+          alt=""
+          className={`w-8 h-8 rounded-full object-cover object-top shrink-0 ${isTop ? 'border-2 border-neon-yellow' : 'border border-white/15 grayscale opacity-90'}`}
+        />
+      ) : (
+        <span
+          className={`w-8 h-8 rounded-full shrink-0 grid place-items-center bg-dark-gray font-display font-black text-white/70 ${isTop ? 'border-2 border-neon-yellow' : 'border border-white/10'}`}
+          style={{ fontSize: '13px' }}
+          aria-hidden
+        >
+          {card.name.trim().charAt(0).toUpperCase() || '?'}
+        </span>
+      )}
       <span
         className="font-serif italic tabular-nums leading-none w-7 text-center shrink-0"
         style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '20px', letterSpacing: '-0.03em', color: isTop ? 'var(--color-neon-yellow)' : '#fff' }}
