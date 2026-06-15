@@ -395,22 +395,23 @@ export function PenaltyShootout({ setup, seed, homeName, awayName, onDone }: Pro
                         animate={{ opacity: 1, x: 0 }}
                         className="flex items-center gap-1.5"
                       >
-                        <span
-                          className="w-3.5 h-3.5 rounded-full shrink-0 flex items-center justify-center"
-                          style={{
-                            backgroundColor: pending ? 'transparent' : k.scored ? 'var(--color-success)' : 'var(--color-danger)',
-                            border: pending ? '1px solid var(--color-neon-yellow)' : 'none',
-                          }}
-                        >
-                          {pending && (
+                        {pending ? (
+                          <span
+                            className="w-3.5 h-3.5 rounded-full shrink-0 flex items-center justify-center"
+                            style={{ border: '1px solid var(--color-neon-yellow)' }}
+                          >
                             <motion.span
                               animate={{ scale: [0.5, 1, 0.5], opacity: [0.4, 1, 0.4] }}
                               transition={{ duration: 1, repeat: Infinity }}
                               className="w-1.5 h-1.5 rounded-full"
                               style={{ backgroundColor: 'var(--color-neon-yellow)' }}
                             />
-                          )}
-                        </span>
+                          </span>
+                        ) : (
+                          <span className="w-3.5 h-3.5 shrink-0 flex items-center justify-center leading-none" style={{ fontSize: '12px' }} aria-hidden>
+                            {k.scored ? '⚽' : '🚫'}
+                          </span>
+                        )}
                         <span className={`font-display uppercase tracking-[0.04em] text-[10px] truncate ${pending ? 'text-neon-yellow' : 'text-white/75'}`}>
                           {k.kickerName}
                         </span>

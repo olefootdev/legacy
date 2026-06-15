@@ -388,7 +388,7 @@ export function LigaOle() {
             <div className="flex items-center gap-2.5 px-4 py-3 border" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
               <Skull className="w-5 h-5 text-danger shrink-0" strokeWidth={2} aria-hidden />
               <p className="text-[12px] text-white/75 leading-snug">
-                Nêmesis: <span className="text-white font-semibold" style={{ fontFamily: MORET, fontStyle: 'italic' }}>{nemesis.name}</span> te eliminou na <span className="text-danger">{nemesis.round}</span>. Crie a Liga Ole clássica e cobre a <span className="text-neon-yellow">revanche</span>.
+                Revanche: <span className="text-white font-semibold" style={{ fontFamily: MORET, fontStyle: 'italic' }}>{nemesis.name}</span> te eliminou na <span className="text-danger">{nemesis.round}</span>. Crie a Liga Ole clássica e <span className="text-neon-yellow">cobre essa conta</span>.
               </p>
             </div>
           )}
