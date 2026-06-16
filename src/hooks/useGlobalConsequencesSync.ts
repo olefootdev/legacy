@@ -23,6 +23,7 @@ import { makeInboxItem } from '@/game/inboxItem';
 import { getSupabase } from '@/supabase/client';
 import { fetchMyOlexpBalance, spendMyOlefoot } from '@/wallet/olexpSync';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
+import { overallFromAttributes } from '@/entities/player';
 import { expCostToOlefoot, managerProspectContractPremiumExp } from '@/playerContracts/playerContracts';
 import {
   buildContractNudges,
@@ -502,16 +503,29 @@ async function syncTeamStatus(
   if (!sb) return;
 
   let available = 0;
+  let ovrSum = 0;
+  let ovrCount = 0;
   for (const pid of Object.keys(players)) {
     const p = players[pid];
+    if (!p) continue;
+    // Overall do time = média do elenco (mesma convenção do registro). Mantido em
+    // sync pra o seed por divisão refletir investimento real — antes era setado 1×
+    // no registro e nunca atualizava (ficava achatado no piso).
+    ovrSum += overallFromAttributes(p.attrs);
+    ovrCount++;
     // Contrato vencido tira o jogador do elenco útil (squadEligibility → 'contract').
     // É ISTO que faz "contrato vencido" finalmente impactar a Liga Global: derruba
     // o available_player_count e, abaixo de 11, gera WO legítimo.
-    if (p?.contractExpired === true) continue;
+    if (p.contractExpired === true) continue;
     const h = playerHealth[pid];
     if (h && (h.outForMatches > 0 || h.suspendedMatches > 0)) continue;
     available++;
   }
+  // Clamp 40–99: respeita o CHECK da coluna. Sem isso, um elenco com média <40
+  // faria o UPDATE inteiro falhar (e nada sincronizaria — o bug original).
+  const teamOverall = ovrCount > 0
+    ? Math.max(40, Math.min(99, Math.round(ovrSum / ovrCount)))
+    : 40;
 
   const { data: session } = await sb.auth.getSession();
   const userId = session?.session?.user?.id;
@@ -530,6 +544,7 @@ async function syncTeamStatus(
       available_player_count: available,
       available_player_count_updated_at: new Date().toISOString(),
       engagement_score: engagementScore,
+      overall: teamOverall,
     })
     .eq('id', team.id);
 }
