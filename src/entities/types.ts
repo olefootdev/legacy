@@ -128,6 +128,12 @@ export interface PlayerEntity {
   contractIsLifetime?: boolean;
   /** Contrato esgotado — recomprar no mercado; não entra em XI oficial. */
   contractExpired?: boolean;
+  /**
+   * Auto-renovação opt-in: quando true e o contrato vence, o cliente tenta
+   * renovar automaticamente debitando OLEXP (tier de manutenção). Protege o
+   * time do WO na Liga Global sem exigir ação manual a cada vencimento.
+   */
+  autoRenewContract?: boolean;
   /** Id no catálogo `genesis_market_players` (ex. GEN-001), sem prefixo `genesis-`. */
   genesisCatalogId?: string;
   /**

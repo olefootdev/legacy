@@ -53,6 +53,7 @@ import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
 import { LigaOleBanner } from '@/components/home/LigaOleBanner';
 import { CoroaDoDiaBanner } from '@/components/home/CoroaDoDiaBanner';
 import { EngajamentoBanner } from '@/components/home/EngajamentoBanner';
+import { ClubPowerBanner } from '@/components/home/ClubPowerBanner';
 import { DesafioDiarioBanner } from '@/components/home/DesafioDiarioBanner';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
@@ -966,6 +967,7 @@ export function Home() {
         <PassiveIncomeWidget />
         <CoroaDoDiaBanner />
         <EngajamentoBanner />
+        <ClubPowerBanner />
         <DesafioDiarioBanner />
       </section>
 

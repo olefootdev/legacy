@@ -2591,7 +2591,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const player = state.players[action.playerId];
       if (!player) return state;
       if (!player.contractExpired) return state;
-      if (!player.managerCreated) return state;
+      // Renovável: prospects criados pelo manager OU jogadores Genesis (catálogo)
+      // não-vitalícios. Vitalícios nunca vencem, então nunca chegam aqui.
+      const isRenewable =
+        player.managerCreated === true ||
+        (player.genesisCatalogId != null && player.contractIsLifetime !== true);
+      if (!isRenewable) return state;
 
       // OLEFOOT já foi debitado server-side via RPC `spend_olefoot` ANTES do dispatch.
       // Reducer só renova o contrato; sem mexer em finance.ole.
@@ -2645,6 +2650,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // decrementContractsForIds devolve a referência original quando nada mudou.
       if (next === state.players) return state;
       return { ...state, players: next };
+    }
+    case 'SET_AUTO_RENEW_CONTRACT': {
+      const pl = state.players[action.playerId];
+      if (!pl) return state;
+      if ((pl.autoRenewContract ?? false) === action.enabled) return state;
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          [action.playerId]: { ...pl, autoRenewContract: action.enabled },
+        },
+      };
     }
     case 'LIST_MANAGER_PROSPECT': {
       const pl = state.players[action.playerId];
@@ -2954,6 +2971,19 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const src = action.historySource?.trim() || 'Recompensa';
       let finance = grantEarnedExp(state.finance, a);
       finance = withExpHistory(finance, a, src);
+      return { ...state, finance };
+    }
+    case 'CLAIM_SEASON_CHAMPION_PRIZE': {
+      const ole = Math.max(0, Math.round(action.ole));
+      const exp = Math.max(0, Math.round(action.exp));
+      if (ole === 0 && exp === 0) return state;
+      // Teto defensivo (mesma filosofia do GRANT_EARNED_EXP). Idempotência real
+      // mora no flag `claimed` da tabela global_league_season_champions (cliente
+      // só dispatcha após marcar claimed=true com sucesso).
+      if (ole > 5_000_000 || exp > 5_000_000) return state;
+      let finance = state.finance;
+      if (ole > 0) finance = withExpHistory(addOle(finance, ole), ole, `Campeão Div ${action.division} · OLE`);
+      if (exp > 0) finance = withExpHistory(grantEarnedExp(finance, exp), exp, `Campeão Div ${action.division} · EXP`);
       return { ...state, finance };
     }
     case 'EXP_EXCHANGE_ANNOUNCE_SELL': {

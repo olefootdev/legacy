@@ -16,11 +16,19 @@
  * Este bridge atribui cada evento a um jogador aleatório do lineup.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGameStore, dispatchGame } from '@/game/store';
 import { globalRoundPlayedEvents } from '@/systems/playerHealth/fromGlobalMatch';
 import { makeInboxItem } from '@/game/inboxItem';
 import { getSupabase } from '@/supabase/client';
+import { fetchMyOlexpBalance, spendMyOlefoot } from '@/wallet/olexpSync';
+import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
+import { expCostToOlefoot, managerProspectContractPremiumExp } from '@/playerContracts/playerContracts';
+import {
+  buildContractNudges,
+  contractDeepLink,
+  playersPendingAutoRenew,
+} from '@/systems/contracts/contractEngagement';
 import type { GlobalFixture } from '@/match/globalMatch';
 import type { MatchOutcomeEvent, PlayerHealth } from '@/systems/playerHealth/types';
 import type { MatchResult } from '@/systems/playerMoral/types';
@@ -39,6 +47,11 @@ export function useGlobalConsequencesSync() {
   const lastProcessedRound = useGameStore((s) => s.lastProcessedGlobalRound);
 
   const engagementScore = useGameStore((s) => s.managerPresence?.engagementScore ?? 0);
+  const inbox = useGameStore((s) => s.inbox);
+  const createCostExp = useGameStore(
+    (s) => s.managerProspectConfig?.createCostExp ?? DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP,
+  );
+  const autoRenewInFlight = useRef<Set<string>>(new Set());
 
   // Sync available_player_count + engagement_score para Supabase (debounced)
   useEffect(() => {
@@ -48,6 +61,112 @@ export function useGlobalConsequencesSync() {
     }, 2000);
     return () => clearTimeout(timer);
   }, [playerHealth, players, club, engagementScore]);
+
+  // ── Nudge in-app: contrato vencido / a vencer → item de inbox acionável ────
+  useEffect(() => {
+    if (!players || Object.keys(players).length === 0) return;
+    const existingIds = new Set((inbox ?? []).map((i) => i.id));
+    const items = buildContractNudges(players as Record<string, PlayerEntity>, existingIds);
+    if (items.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
+  }, [players, inbox]);
+
+  // ── Auto-renovação opt-in: debita OLEXP e renova contratos vencidos ────────
+  // Tier de manutenção (50 jogos, o mais barato) — interação frequente e leve.
+  useEffect(() => {
+    if (!players) return;
+    const targets = playersPendingAutoRenew(players as Record<string, PlayerEntity>).filter(
+      (p) => !autoRenewInFlight.current.has(p.id),
+    );
+    if (targets.length === 0) return;
+    // Reserva síncrona (antes de qualquer await) evita dupla-renovação por re-render.
+    for (const p of targets) autoRenewInFlight.current.add(p.id);
+
+    const tier = 50 as const;
+    const expCost = Math.round(createCostExp * 0.5) + managerProspectContractPremiumExp(tier);
+    const olexpCost = expCostToOlefoot(expCost);
+
+    let cancelled = false;
+    (async () => {
+      let balance = await fetchMyOlexpBalance();
+      const inboxItems = [];
+      for (const p of targets) {
+        if (cancelled) break;
+        try {
+          if (balance < olexpCost) {
+            inboxItems.push(
+              makeInboxItem(`autorenew-failed-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', `Auto-renovação falhou — ${p.name}`, {
+                body: `Sem OLEXP suficiente (${olexpCost} OLEXP) pra renovar ${p.name}. Recarregue OLEXP ou renove manualmente.`,
+                deepLink: contractDeepLink(p.id),
+                relatedPlayerIds: [p.id],
+              }),
+            );
+            continue;
+          }
+          const result = await spendMyOlefoot({ amount: olexpCost, source: 'renovacao_contrato', sourceRef: p.id });
+          if (result.ok === false) continue; // erro transitório → tenta no próximo scan
+          balance = result.newBalance;
+          dispatchGame({ type: 'RENEW_MANAGER_PROSPECT_CONTRACT', playerId: p.id, contractMatches: tier, paymentMethod: 'olefoot' });
+          inboxItems.push(
+            makeInboxItem(`autorenew-ok-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', `Auto-renovado — ${p.name}`, {
+              body: `Renovei ${p.name} por ${olexpCost} OLEXP (+${tier} jogos). Auto-renovação está ativa para este jogador.`,
+              deepLink: contractDeepLink(p.id),
+              relatedPlayerIds: [p.id],
+            }),
+          );
+        } finally {
+          // Sucesso: contractExpired vira false e o filtro não reentra.
+          // Falha: liberamos pra retry no próximo scan.
+          autoRenewInFlight.current.delete(p.id);
+        }
+      }
+      if (!cancelled && inboxItems.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items: inboxItems });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [players, createCostExp]);
+
+  // ── Prêmio de Campeão de Temporada: lê coroações não-reclamadas e credita ───
+  // Idempotência forte: marca claimed=true (condicional a claimed=false) ANTES
+  // de dispatchar o crédito — se a linha já foi reclamada, não credita 2×.
+  useEffect(() => {
+    const email = managerProfile?.email;
+    if (!email) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await sb
+        .from('global_league_season_champions')
+        .select('*')
+        .eq('manager_id', email)
+        .eq('claimed', false);
+      if (cancelled || !data || data.length === 0) return;
+      const items = [];
+      for (const c of data as Array<Record<string, any>>) {
+        const { data: upd } = await sb
+          .from('global_league_season_champions')
+          .update({ claimed: true })
+          .eq('id', c.id)
+          .eq('claimed', false)
+          .select('id');
+        if (!upd || upd.length === 0) continue; // reclamado em outra aba/sessão
+        const ole = Number(c.prize_ole ?? 0);
+        const exp = Number(c.prize_exp ?? 0);
+        dispatchGame({ type: 'CLAIM_SEASON_CHAMPION_PRIZE', ole, exp, division: Number(c.division) });
+        items.push(
+          makeInboxItem(`season-champ-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 Campeão da Divisão ${c.division}!`, {
+            body: `Sua equipe venceu a temporada da Div ${c.division} com ${c.points ?? 0} pts. Prêmio creditado: +${ole.toLocaleString('pt-BR')} OLE · +${exp.toLocaleString('pt-BR')} EXP.`,
+            deepLink: '/match/global',
+          }),
+        );
+      }
+      if (!cancelled && items.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [managerProfile?.email, globalLeagueMVP?.seasonId]);
 
   useEffect(() => {
     if (!globalLeagueMVP || !club) return;
@@ -384,6 +503,11 @@ async function syncTeamStatus(
 
   let available = 0;
   for (const pid of Object.keys(players)) {
+    const p = players[pid];
+    // Contrato vencido tira o jogador do elenco útil (squadEligibility → 'contract').
+    // É ISTO que faz "contrato vencido" finalmente impactar a Liga Global: derruba
+    // o available_player_count e, abaixo de 11, gera WO legítimo.
+    if (p?.contractExpired === true) continue;
     const h = playerHealth[pid];
     if (h && (h.outForMatches > 0 || h.suspendedMatches > 0)) continue;
     available++;

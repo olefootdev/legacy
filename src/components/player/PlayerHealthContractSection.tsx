@@ -17,7 +17,7 @@
 import { useState } from 'react';
 import { Activity, ShieldCheck, FileText, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGameStore } from '@/game/store';
+import { useGameStore, dispatchGame } from '@/game/store';
 import { getPlayerHealth } from '@/systems/playerHealth/selectors';
 import { INJURY_LABEL_PT, INJURY_MATCHES_OUT } from '@/systems/injury';
 import { RenewContractModal } from '@/components/RenewContractModal';
@@ -143,7 +143,11 @@ export function PlayerHealthContractSection({ player }: Props) {
     : contractPct <= 30 ? 'neon'
     : 'success';
 
-  const canRenew = player.managerCreated === true && (isExpired || contractPct <= 30);
+  // Renovável: prospects do manager OU Genesis não-vitalício (espelha o reducer).
+  const isRenewable =
+    !isLifetime && (player.managerCreated === true || player.genesisCatalogId != null);
+  const canRenew = isRenewable && (isExpired || contractPct <= 30);
+  const autoRenewOn = player.autoRenewContract === true;
 
   return (
     <>
@@ -371,7 +375,7 @@ export function PlayerHealthContractSection({ player }: Props) {
               </p>
             )}
 
-            {/* CTA de renovação — só pra jogadores da Academia (managerCreated). */}
+            {/* CTA de renovação — prospects do manager + Genesis não-vitalícios. */}
             {canRenew ? (
               <button
                 type="button"
@@ -392,6 +396,39 @@ export function PlayerHealthContractSection({ player }: Props) {
               >
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden />
                 {isExpired ? 'Renovar agora' : 'Renovar contrato'}
+              </button>
+            ) : null}
+
+            {/* Auto-renovação opt-in (OLEXP) — protege o time do WO sem ação manual. */}
+            {isRenewable ? (
+              <button
+                type="button"
+                onClick={() =>
+                  dispatchGame({ type: 'SET_AUTO_RENEW_CONTRACT', playerId: player.id, enabled: !autoRenewOn })
+                }
+                className={cn(
+                  'mt-2 flex w-full touch-manipulation items-center justify-between gap-2 border px-3 py-2 transition-colors',
+                  autoRenewOn
+                    ? 'border-amber-400/45 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+                    : 'border-white/12 bg-white/[0.03] text-white/55 hover:bg-white/[0.06]',
+                )}
+                style={{ borderRadius: 'var(--radius-sm)' }}
+                aria-pressed={autoRenewOn}
+              >
+                <span
+                  className="uppercase"
+                  style={{ fontFamily: 'var(--font-display)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.18em' }}
+                >
+                  Auto-renovar (OLEXP)
+                </span>
+                <span
+                  className={cn(
+                    'flex h-4 w-7 shrink-0 items-center rounded-full px-0.5 transition-colors',
+                    autoRenewOn ? 'justify-end bg-amber-400/80' : 'justify-start bg-white/15',
+                  )}
+                >
+                  <span className="h-3 w-3 rounded-full bg-white" />
+                </span>
               </button>
             ) : null}
 

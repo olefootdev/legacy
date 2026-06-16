@@ -7,10 +7,23 @@ function poissonGoals(expected: number): number {
   return k - 1;
 }
 
+// Espelho da Edge: spread de prestígio por divisão (Div1 +6 … Div3 -6).
+const DIVISION_OVR_SPREAD = 6;
+function divisionOvrModifier(division: number | null | undefined): number {
+  if (!division) return 0;
+  return (2 - division) * DIVISION_OVR_SPREAD;
+}
+// Espelho da Edge: Poder do Clube (joga mais + vence mais, all-time persistente).
+const CLUB_POWER_CAP = 12;
+function clubPowerModifier(team: TeamRow): number {
+  const fromMatches = Math.floor((team.all_time_matches_played ?? 0) / 150);
+  const fromWins = Math.floor((team.all_time_wins ?? 0) / 60);
+  return Math.min(CLUB_POWER_CAP, fromMatches + fromWins);
+}
 export function effectiveOverall(team: TeamRow): number {
   const suspMod = (team.suspension_rounds_remaining ?? 0) > 0 ? -5 : 0;
   const injMod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
-  return Math.max(40, team.overall + injMod + suspMod);
+  return Math.max(40, team.overall + injMod + suspMod + divisionOvrModifier(team.division) + clubPowerModifier(team));
 }
 
 export interface SimResult {
@@ -33,8 +46,9 @@ export function simulateFixture(
   kickoffMs: number,
 ): SimResult {
   const diff = (effHome + 3) - effAway;
-  const homeGoals = poissonGoals(Math.max(0.2, 1.4 + diff / 22));
-  const awayGoals = poissonGoals(Math.max(0.2, 1.4 - diff / 22));
+  // Sensibilidade /16 (espelho da Edge) — favorito aparece no placar quando há gap real.
+  const homeGoals = poissonGoals(Math.max(0.2, 1.4 + diff / 16));
+  const awayGoals = poissonGoals(Math.max(0.2, 1.4 - diff / 16));
   const events: SimResult['events'] = [];
 
   const placeGoal = (side: 'home' | 'away', i: number, total: number) => {

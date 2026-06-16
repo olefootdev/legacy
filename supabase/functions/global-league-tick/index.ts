@@ -180,10 +180,27 @@ interface StateRow {
   daily_ko_max_size?: number;
 }
 
+// Spread de prestígio por divisão: Div 1 = elite, Div 3 = base. Cria favoritos
+// claros no mata-mata diário (que MISTURA divisões). Intra-divisão cancela
+// (todos no mesmo nível) — a diferenciação dentro da divisão vem do overall real.
+const DIVISION_OVR_SPREAD = 6; // Div1 +6, Div2 0, Div3 -6 (gap de 12 entre extremos)
+function divisionOvrModifier(division: number | null | undefined): number {
+  if (!division) return 0;
+  return (2 - division) * DIVISION_OVR_SPREAD;
+}
+// Poder do Clube: evolução do TIME por mérito (all-time, persiste entre temporadas).
+// Quem JOGA mais + VENCE mais fica mais forte — sem inflar o OVR dos jogadores
+// (Genesis segue capado). Diferencia o veterano ativo do recém-chegado.
+const CLUB_POWER_CAP = 12;
+function clubPowerModifier(team: TeamRow): number {
+  const fromMatches = Math.floor((team.all_time_matches_played ?? 0) / 150); // joga mais
+  const fromWins = Math.floor((team.all_time_wins ?? 0) / 60);               // vence mais
+  return Math.min(CLUB_POWER_CAP, fromMatches + fromWins);
+}
 function effectiveOverall(team: TeamRow): number {
   const suspMod = (team.suspension_rounds_remaining ?? 0) > 0 ? -5 : 0;
   const injMod = team.injury_rounds_remaining > 0 ? team.injury_modifier : 0;
-  const base = Math.max(40, team.overall + injMod + suspMod);
+  const base = Math.max(40, team.overall + injMod + suspMod + divisionOvrModifier(team.division) + clubPowerModifier(team));
   // Engagement buff: score 0-100 → +0 to +20 OVR
   const engBuff = Math.min(20, Math.floor((team.engagement_score ?? 0) / 5));
   return Math.round(base + engBuff);
@@ -591,6 +608,99 @@ function applyPromotionRelegationSoft(
   return result;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPORADA SAZONAL — linha de chegada de 1000 pts + Campeão por divisão
+// ═══════════════════════════════════════════════════════════════════════════
+const SEASON_POINT_TARGET = 1000; // ~2,5 dias no ritmo nonstop → fim da temporada
+// O reset da temporada só acontece de MADRUGADA (0–6h BRT) — depois do mata-mata
+// da noite e da virada de meia-noite, nunca durante o dia. A liga continua
+// estendendo (acumulando pontos) até a janela da madrugada chegar.
+const SEASON_RESET_HOUR = 6;
+// Prêmio do campeão por divisão (D1 > D2 > D3). Creditado client-side via tabela
+// global_league_season_champions (claimed). Constantes — fáceis de tunar.
+const SEASON_PRIZES: Record<number, { ole: number; exp: number }> = {
+  1: { ole: 500_000, exp: 250_000 },
+  2: { ole: 250_000, exp: 125_000 },
+  3: { ole: 100_000, exp: 50_000 },
+};
+
+function divisionLeader(teams: TeamRow[], division: number): TeamRow | null {
+  const divTeams = teams.filter((t) => t.division === division);
+  if (divTeams.length === 0) return null;
+  divTeams.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.goal_difference !== a.goal_difference) return b.goal_difference - a.goal_difference;
+    if (b.goals_for !== a.goals_for) return b.goals_for - a.goals_for;
+    return a.club_name.localeCompare(b.club_name);
+  });
+  return divTeams[0];
+}
+
+// Coroa o líder de cada divisão. Insert idempotente (id determinístico) — não
+// re-coroa nem re-notifica se o tick repetir. O crédito do prêmio é client-side
+// (cliente lê os champions não-reclamados do seu manager_id).
+async function crownDivisionChampions(
+  supabase: any, teams: TeamRow[], state: StateRow, now: number,
+): Promise<string[]> {
+  const crowned: string[] = [];
+  for (let division = 1; division <= 3; division++) {
+    const champ = divisionLeader(teams, division);
+    if (!champ) continue;
+    const prize = SEASON_PRIZES[division] ?? { ole: 0, exp: 0 };
+    const id = `champ_${state.competition_id}_${state.season_id}_d${division}`;
+    const { error } = await supabase.from('global_league_season_champions').insert({
+      id,
+      competition_id: state.competition_id,
+      season_id: state.season_id,
+      division,
+      team_id: champ.id,
+      manager_id: champ.manager_id,
+      club_name: champ.club_name,
+      points: champ.points,
+      prize_ole: prize.ole,
+      prize_exp: prize.exp,
+      claimed: false,
+      crowned_at_ms: now,
+    });
+    if (error) continue; // já existe (idempotente) → não duplica notificação
+    crowned.push(`D${division}:${champ.club_name}`);
+    await notifyManager(
+      supabase, champ.manager_id, 'COMPETIÇÃO',
+      `🏆 CAMPEÃO DA DIVISÃO ${division}!`,
+      `${champ.club_name} venceu a temporada da Div ${division} com ${champ.points} pts. Prêmio de ${prize.ole.toLocaleString('pt-BR')} OLE + ${prize.exp.toLocaleString('pt-BR')} EXP no seu próximo login.`,
+      '/match/global',
+      { kind: 'season_champion', champion_id: id, division },
+    );
+  }
+  return crowned;
+}
+
+// Notifica quem subiu/desceu de divisão na virada de temporada.
+async function notifyPromotions(
+  supabase: any, reorganized: TeamRow[], oldDivById: Map<string, number | null>,
+): Promise<void> {
+  for (const t of reorganized) {
+    const oldDiv = oldDivById.get(t.id);
+    if (!oldDiv || !t.division || t.division === oldDiv) continue;
+    if (t.division < oldDiv) {
+      await notifyManager(
+        supabase, t.manager_id, 'COMPETIÇÃO',
+        `⬆️ ACESSO À DIVISÃO ${t.division}!`,
+        `${t.club_name} subiu para a Divisão ${t.division}. Nova temporada começando — segure a vaga.`,
+        '/match/global', { kind: 'promotion', division: t.division },
+      );
+    } else {
+      await notifyManager(
+        supabase, t.manager_id, 'COMPETIÇÃO',
+        `⬇️ Rebaixado para a Divisão ${t.division}`,
+        `${t.club_name} caiu para a Divisão ${t.division}. Hora de reagir na nova temporada.`,
+        '/match/global', { kind: 'relegation', division: t.division },
+      );
+    }
+  }
+}
+
 // HARD reset — fim da competição (zera tudo de season, all-time intacto)
 function applyCompetitionReset(teams: TeamRow[]): TeamRow[] {
   return teams.map((team) => ({
@@ -613,8 +723,12 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
 
   const homeAdvantage = 3;
   const diff = (effHome + homeAdvantage) - effAway;
-  const homeExpected = Math.max(0.2, 1.4 + diff / 22);
-  const awayExpected = Math.max(0.2, 1.4 - diff / 22);
+  // Sensibilidade /16 (antes /22): quando há gap REAL de overall, o favorito
+  // aparece no placar — menos "cara-ou-coroa". Times iguais (diff≈3) seguem
+  // ~25% de empate; o efeito cresce só quando a diferença é genuína.
+  const OVR_GOAL_SENSITIVITY = 16;
+  const homeExpected = Math.max(0.2, 1.4 + diff / OVR_GOAL_SENSITIVITY);
+  const awayExpected = Math.max(0.2, 1.4 - diff / OVR_GOAL_SENSITIVITY);
   const homeGoals = poissonGoals(homeExpected);
   const awayGoals = poissonGoals(awayExpected);
   const events: any[] = [];
@@ -990,8 +1104,33 @@ Deno.serve(async (_req: Request) => {
     const seasonId = isRestart ? `season_${now}` : state.season_id;
 
     if (isRestart) {
-      // SOFT promo/rele (preserva stats da temporada anterior) + nova season
-      const reorganized = applyPromotionRelegationSoft(teams, promoPct, relePct);
+      // Linha de chegada: a TEMPORADA INTEIRA acaba quando o LÍDER DA DIVISÃO 1
+      // crava 1000 pts. As outras divisões encerram junto (cada uma coroa seu
+      // líder atual, mesmo com <1000). Antes disso, cada fim de round-robin só
+      // REGENERA rodadas mantendo pontos/divisões — a maratona continua.
+      const div1Max = teams.reduce((m, t) => (t.division === 1 ? Math.max(m, t.points ?? 0) : m), 0);
+      // #3 timing: só encerra DE MADRUGADA (após o mata-mata da noite + virada de
+      // meia-noite). De dia, mesmo com Div 1 ≥ 1000, a liga só ESTENDE — o reset
+      // espera a janela noturna. Round-robins completam a cada ~3,7h, então a
+      // janela 0–6h sempre pega uma conclusão → reset garantido na madrugada.
+      const seasonOver = div1Max >= SEASON_POINT_TARGET && brtHour(now) < SEASON_RESET_HOUR;
+      let reorganized: TeamRow[];
+      if (seasonOver) {
+        // FIM REAL DA TEMPORADA: coroa campeões → promo/rele → reseta pontos
+        await crownDivisionChampions(supabase, teams, state, now);
+        const oldDivById = new Map(teams.map((t) => [t.id, t.division]));
+        const promoted = applyPromotionRelegationSoft(teams, promoPct, relePct);
+        await notifyPromotions(supabase, promoted, oldDivById);
+        reorganized = promoted.map((t) => ({
+          ...t,
+          points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
+          goals_for: 0, goals_against: 0, goal_difference: 0,
+          recent_form: [], position: null,
+        }));
+      } else {
+        // EXTEND: mantém pontos e divisões intactos (sem promo/rele/coroa)
+        reorganized = teams;
+      }
       // Incluir times órfãos (registrados mid-season) na 3ª divisão
       for (const team of reorganized) {
         if (!team.division) {
@@ -1317,20 +1456,23 @@ Deno.serve(async (_req: Request) => {
     const home = teamById.get(fx.home_team_id);
     const away = teamById.get(fx.away_team_id);
 
-    // Ponto 4: WO — elenco incompleto (<11 disponíveis) = derrota 3x0
-    // Se client syncou recentemente, usar o valor real. Senão, estimar com penalidade por stale data.
+    // Ponto 4: WO — elenco incompleto (<11 disponíveis) = derrota 3x0.
+    // REGRA: inatividade NUNCA causa WO. O WO só dispara com evidência REAL e
+    // recente de elenco curto (sync nas últimas 72h mostrando <11). Sem sync
+    // recente, presumimos elenco cheio descontando só desfalques conhecidos
+    // (suspensão/lesão) e nunca caímos abaixo de 11 — senão times de managers
+    // passivos forfeitariam toda rodada e a liga viraria uma epidemia de 0×0.
     const estimateAvailable = (t: TeamRow | undefined): number => {
       if (!t) return 25;
-      const synced = t.available_player_count;
       const updatedAt = t.available_player_count_updated_at ? new Date(t.available_player_count_updated_at).getTime() : 0;
-      const staleHours = updatedAt > 0 ? (now - updatedAt) / (60 * 60 * 1000) : 999;
-      // Client syncou nas últimas 24h → confiar no valor
-      if (synced !== 25 && staleHours < 24) return synced;
-      // Fallback: estimar com penalidade por suspensões/lesões + stale penalty
-      const suspPenalty = (t.suspension_rounds_remaining ?? 0) * 2;
-      const injPenalty = (t.injury_rounds_remaining ?? 0) * 2;
-      const stalePenalty = Math.floor(Math.max(0, staleHours - 24) / 12) * 2;
-      return Math.max(0, 25 - suspPenalty - injPenalty - stalePenalty);
+      const staleHours = updatedAt > 0 ? (now - updatedAt) / (60 * 60 * 1000) : Infinity;
+      // Sync recente (<72h) → é a única fonte em que confiamos pra declarar WO.
+      if (updatedAt > 0 && staleHours < 72) return t.available_player_count;
+      // Fallback (sem sync recente): elenco cheio menos desfalques conhecidos,
+      // com piso em 11 pra que a ausência de sync jamais vire forfeit.
+      const suspPenalty = (t.suspension_rounds_remaining ?? 0) > 0 ? 3 : 0;
+      const injPenalty = (t.injury_rounds_remaining ?? 0) > 0 ? 2 : 0;
+      return Math.max(11, 25 - suspPenalty - injPenalty);
     };
     const homeAvailable = estimateAvailable(home);
     const awayAvailable = estimateAvailable(away);

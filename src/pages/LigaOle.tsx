@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Swords, ChevronRight, ShieldX, Flame, Crown, CalendarDays, Skull, Medal } from 'lucide-react';
+import { Trophy, Swords, ChevronRight, ShieldX, Flame, Crown, CalendarDays, Skull, Medal, Share2, Star } from 'lucide-react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -29,6 +29,8 @@ import {
   type LigaOleRoundMatch,
 } from '@/match/ligaOle/ligaOleModel';
 import { formatCompactNumber } from '@/systems/economy';
+import { fetchMyReferralCode } from '@/supabase/referrals';
+import { shareImageWithText } from '@/lib/shareImage';
 import {
   currentWeekKey,
   recordLigaOleWeeklyRun,
@@ -115,35 +117,119 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
   );
 }
 
-/** Hero amarelo — padrão Crown Jewel (eyebrow + Moret gigante + régua + caption). */
-function LeagueHero({ eyebrow, title, caption, watermark, icon }: {
-  eyebrow: string; title: string; caption: string; watermark?: string; icon?: React.ReactNode;
+/**
+ * Hero cinematográfico — banner editorial full-bleed (preto+dourado) com texto
+ * sobreposto. Scrim de baixo garante legibilidade; texto claro/dourado ancorado
+ * no rodapé esquerdo pra não cobrir o manager no centro da imagem.
+ */
+function CinematicHero({ eyebrow, title, caption, image }: {
+  eyebrow: string; title: string; caption: string; image: string;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden bg-neon-yellow px-6 py-7"
-      style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 10px 30px rgba(253,225,0,0.20)' }}
+      className="relative overflow-hidden"
+      style={{ borderRadius: 'var(--radius-md)', aspectRatio: '3 / 2', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}
     >
-      {watermark && (
-        <span aria-hidden className="absolute inset-0 grid place-items-center pointer-events-none select-none">
-          <span className="font-display font-black uppercase whitespace-nowrap text-black/[0.05]"
-            style={{ fontSize: 'clamp(120px, 30vw, 280px)', lineHeight: 0.8, letterSpacing: '-0.02em' }}>
-            {watermark}
-          </span>
-        </span>
-      )}
-      <div className="relative z-10">
-        <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-black/70 mb-2">{eyebrow}</p>
-        {icon && <div className="mb-2">{icon}</div>}
-        <p className="text-black leading-[0.92]"
-          style={{ fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(40px, 12vw, 60px)', letterSpacing: '-0.03em' }}>
-          {title}
-        </p>
-        <span aria-hidden className="block w-12 h-[3px] bg-black/80 mt-3 mb-3" />
-        <p className="font-display uppercase tracking-[0.2em] text-[12px] font-black text-black/85">{caption}</p>
+      <img
+        src={image}
+        alt=""
+        aria-hidden
+        loading="eager"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div aria-hidden className="absolute inset-0"
+        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 34%, rgba(0,0,0,0) 62%)' }} />
+
+      <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 px-2.5 py-1"
+        style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(253,225,0,0.45)' }}>
+        <Trophy className="h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
+        <span className="font-display uppercase text-neon-yellow" style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.16em' }}>Liga Ole</span>
       </div>
+
+      <div className="absolute inset-x-4 bottom-4 z-10">
+        <p className="font-display uppercase mb-1.5" style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.28em' }}>{eyebrow}</p>
+        <p style={{ color: '#f5ead0', fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(38px, 11vw, 56px)', lineHeight: 0.92, letterSpacing: '-0.03em' }}>{title}</p>
+        <span aria-hidden className="block h-[3px] w-11 bg-neon-yellow mt-2.5 mb-2" />
+        <p className="font-display uppercase" style={{ color: 'rgba(245,234,208,0.8)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.18em' }}>{caption}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+/**
+ * Card de campeão VIRAL — pôster `banner-campeao` com texto sobreposto, craque
+ * do time, CTA que É o link de indicação do manager, e botão de compartilhar
+ * (Web Share API → imagem real + texto + link). Crescimento orgânico: quem
+ * clica no texto/CTA cai no /cadastro/<código> e vira indicado.
+ */
+function ChampionShareCard({ clubName, bestPlayer, referralCode }: {
+  clubName: string;
+  bestPlayer: { name: string; ovr: number } | null;
+  referralCode: string | null;
+}) {
+  const [shared, setShared] = useState<'idle' | 'done' | 'copied'>('idle');
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
+  const referralUrl = referralCode ? `${origin}/cadastro/${referralCode}` : `${origin}/cadastro`;
+  const displayUrl = referralUrl.replace(/^https?:\/\//, '');
+  const shareMessage =
+    `🏆 ${clubName} é CAMPEÃO da Liga Ole no Olefoot!` +
+    (bestPlayer ? ` Craque: ${bestPlayer.name} (OVR ${bestPlayer.ovr}).` : '') +
+    ` Monta teu time e vem me enfrentar 👉 ${referralUrl}`;
+
+  const onShare = async () => {
+    const r = await shareImageWithText({
+      imageUrl: '/banner-campeao-liga-ole.png',
+      text: shareMessage,
+      fileName: 'campeao-liga-ole.png',
+      title: 'Campeão da Liga Ole',
+    });
+    if (r === 'shared') setShared('done');
+    else if (r === 'fallback') setShared('copied');
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-3">
+      <div className="relative w-full max-w-[340px] overflow-hidden"
+        style={{ borderRadius: 'var(--radius-md)', aspectRatio: '9 / 16', border: '2px solid rgba(201,162,39,0.55)', boxShadow: '0 12px 34px rgba(0,0,0,0.5)' }}>
+        <img src="/banner-campeao-liga-ole.png" alt={`${clubName} campeão da Liga Ole`} loading="eager"
+          className="absolute inset-0 h-full w-full object-cover" />
+        <div aria-hidden className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 22%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.35) 64%, rgba(0,0,0,0.92) 100%)' }} />
+
+        <div className="absolute inset-x-4 top-9 z-10">
+          <p className="font-display uppercase mb-1" style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.26em' }}>Liga Ole · Mata-mata dos 32</p>
+          <p style={{ color: '#f7ecd2', fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(40px, 13vw, 60px)', lineHeight: 0.88, letterSpacing: '-0.03em' }}>É campeão!</p>
+          <p className="mt-1.5 text-white" style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '14px' }}>{clubName}</p>
+        </div>
+
+        <div className="absolute inset-x-4 bottom-4 z-10">
+          {bestPlayer && (
+            <div className="inline-flex items-center gap-2 mb-2.5 px-2.5 py-1.5"
+              style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(253,225,0,0.4)' }}>
+              <Star className="w-3.5 h-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
+              <span style={{ color: '#f7ecd2', fontSize: '11px', fontWeight: 600 }}>Craque: <span className="text-white">{bestPlayer.name}</span> · OVR {bestPlayer.ovr}</span>
+            </div>
+          )}
+          <p className="mb-3" style={{ color: 'rgba(247,236,210,0.82)', fontSize: '11px', lineHeight: 1.5 }}>
+            Bati managers reais no chaveamento e levantei a taça. Você também consegue.
+          </p>
+          <a href={referralUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full"
+            style={{ padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-neon-yellow)', color: '#1a1405', fontWeight: 800, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', fontFamily: 'var(--font-display)' }}>
+            <Trophy className="w-4 h-4" strokeWidth={2.5} aria-hidden /> CRIE SEU TIME AGORA
+          </a>
+          <p className="mt-1.5 text-center" style={{ color: 'rgba(253,225,0,0.85)', fontSize: '10px' }}>{displayUrl}</p>
+        </div>
+      </div>
+
+      <button type="button" onClick={onShare}
+        className="flex items-center justify-center gap-2 w-full max-w-[340px] border"
+        style={{ padding: '12px', borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-neon-yellow)', backgroundColor: 'rgba(253,225,0,0.08)', color: 'var(--color-neon-yellow)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '12px', letterSpacing: '0.1em' }}>
+        <Share2 className="w-4 h-4" strokeWidth={2.5} aria-hidden />
+        {shared === 'done' ? 'COMPARTILHADO!' : shared === 'copied' ? 'LINK COPIADO!' : 'COMPARTILHAR NAS REDES'}
+      </button>
     </motion.div>
   );
 }
@@ -208,6 +294,27 @@ export function LigaOle() {
   const lastDefeated = useGameStore((s) => s.ligaOleLastDefeated);
   // Só a liga ATIVA dirige a jornada; estados encerrados não assombram o landing.
   const active = liga && liga.status === 'active' ? liga : null;
+
+  // Card de campeão viral: código de indicação (server) + craque do elenco.
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  useEffect(() => {
+    if (flash?.outcome !== 'champion') return;
+    let alive = true;
+    fetchMyReferralCode().then((c) => { if (alive) setReferralCode(c); }).catch(() => {});
+    return () => { alive = false; };
+  }, [flash?.outcome]);
+
+  const bestPlayer = useMemo(() => {
+    const all = Object.values(players ?? {});
+    if (!all.length) return null;
+    let best = all[0];
+    let bestOvr = overallFromAttributes(all[0].attrs);
+    for (const p of all) {
+      const o = overallFromAttributes(p.attrs);
+      if (o > bestOvr) { best = p; bestOvr = o; }
+    }
+    return { name: best.name, ovr: bestOvr };
+  }, [players]);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -357,12 +464,10 @@ export function LigaOle() {
         <div className="flex flex-col gap-5">
           {/* Resultado da última campanha — só quando ACABOU de acontecer */}
           {flash?.outcome === 'champion' && (
-            <LeagueHero
-              eyebrow="Liga Ole · Campeão"
-              title={flash.clubName}
-              caption="Levantou a taça"
-              watermark="OLE"
-              icon={<Trophy className="w-9 h-9 text-black" strokeWidth={2} aria-hidden />}
+            <ChampionShareCard
+              clubName={flash.clubName}
+              bestPlayer={bestPlayer}
+              referralCode={referralCode}
             />
           )}
           {flash?.outcome === 'eliminated' && (
@@ -382,13 +487,13 @@ export function LigaOle() {
             </motion.div>
           )}
 
-          {/* Convite — sempre presente no landing */}
+          {/* Convite — sempre presente no landing. Hero cinematográfico (banner real). */}
           {!flash && (
-            <LeagueHero
+            <CinematicHero
               eyebrow="Mata-mata · 32 clubes"
               title="Seja campeão."
               caption="Só managers reais · 5 confrontos"
-              watermark="OLE"
+              image="/banner-inicio-liga-ole.png"
             />
           )}
 

@@ -135,6 +135,16 @@ export function Team() {
   /** Sprint B-3: menu de ações ao clicar num token do campo (Substituir/Skill/Anunciar). */
   const [pitchMenu, setPitchMenu] = useState<{ slotId: string; player: CardPlayer } | null>(null);
 
+  // ?player=<id> abre a ficha do jogador (deep-link das notificações de contrato).
+  useEffect(() => {
+    const pid = searchParams.get('player');
+    if (!pid || !playersById[pid]) return;
+    setSheetPlayerId(pid);
+    const next = new URLSearchParams(searchParams);
+    next.delete('player');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, playersById, setSearchParams]);
+
   useEffect(() => {
     if (lineupDirty) {
       setLineup((prev) => {

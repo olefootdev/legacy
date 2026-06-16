@@ -72,6 +72,15 @@ export function engagementBuffPercent(score: number): number {
   return Math.round((Math.min(MAX_SCORE, score) / MAX_SCORE) * MAX_BUFF_PERCENT);
 }
 
+/**
+ * Buff em PONTOS DE OVR — espelho EXATO da Edge `effectiveOverall`
+ * (`Math.min(20, Math.floor(engagement_score / 5))`). É o efeito real aplicado
+ * ao time na Liga Global; use isto pra UI, não `engagementBuffPercent`.
+ */
+export function engagementBuffOvr(score: number): number {
+  return Math.min(MAX_BUFF_PERCENT, Math.floor(Math.max(0, score) / 5));
+}
+
 export function engagementBuffLabel(score: number): string {
   const pct = engagementBuffPercent(score);
   if (pct === 0) return 'Inativo';

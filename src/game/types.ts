@@ -853,6 +853,8 @@ export type GameAction =
       type: 'APPLY_CONTRACT_DECREMENT_FOR_PLAYED';
       playerIds: string[];
     }
+  | { type: 'SET_AUTO_RENEW_CONTRACT'; playerId: string; enabled: boolean }
+  | { type: 'CLAIM_SEASON_CHAMPION_PRIZE'; ole: number; exp: number; division: number }
   | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
   | { type: 'MARKET_MAKER_ACCEPT'; playerId: string; offerExp: number }
