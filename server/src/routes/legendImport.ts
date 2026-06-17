@@ -593,16 +593,24 @@ legendImportRoutes.get('/legend-export', async (c) => {
     phases,
   };
 
-  // Portraits (se houver) pra UI mostrar preview
+  // Portraits + enquadramento (se houver) pra UI mostrar preview/foco
   const portraits: Record<string, string | null> = {};
+  const portraitFocus: Record<string, { x: number; y: number; zoom: number }> = {};
   for (const r of sorted) {
     const row = r as Record<string, unknown>;
     const ph = typeof row.phase === 'string' ? row.phase : null;
     const url = typeof row.portrait_public_url === 'string' ? row.portrait_public_url : null;
-    if (ph) portraits[ph] = url;
+    if (ph) {
+      portraits[ph] = url;
+      portraitFocus[ph] = {
+        x: typeof row.portrait_focus_x === 'number' ? row.portrait_focus_x : 0.5,
+        y: typeof row.portrait_focus_y === 'number' ? row.portrait_focus_y : 0,
+        zoom: typeof row.portrait_zoom === 'number' ? row.portrait_zoom : 1,
+      };
+    }
   }
 
-  return c.json({ ok: true, slug, payload, portraits });
+  return c.json({ ok: true, slug, payload, portraits, portraitFocus });
 });
 
 /**
@@ -620,7 +628,14 @@ legendImportRoutes.post('/legacy-player-set-portrait', async (c) => {
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin not configured' }, 503);
 
-  let body: { legacyPlayerId?: unknown; publicUrl?: unknown; storagePath?: unknown };
+  let body: {
+    legacyPlayerId?: unknown;
+    publicUrl?: unknown;
+    storagePath?: unknown;
+    focusX?: unknown;
+    focusY?: unknown;
+    zoom?: unknown;
+  };
   try {
     body = await c.req.json();
   } catch {
@@ -638,13 +653,21 @@ legendImportRoutes.post('/legacy-player-set-portrait', async (c) => {
     return c.json({ error: 'publicUrl required (http/https)' }, 400);
   }
 
+  // Enquadramento (ponto focal) — opcional. Clamp foco 0..1, zoom 0.5..3.
+  const clampNum = (v: unknown, lo: number, hi: number, dflt: number) =>
+    typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : dflt;
+  const update: Record<string, unknown> = {
+    portrait_public_url: publicUrl,
+    portrait_storage_path: storagePath,
+    updated_at: new Date().toISOString(),
+  };
+  if (body.focusX !== undefined) update.portrait_focus_x = clampNum(body.focusX, 0, 1, 0.5);
+  if (body.focusY !== undefined) update.portrait_focus_y = clampNum(body.focusY, 0, 1, 0);
+  if (body.zoom !== undefined) update.portrait_zoom = clampNum(body.zoom, 0.5, 3, 1);
+
   const { error } = await sb
     .from('legacy_players')
-    .update({
-      portrait_public_url: publicUrl,
-      portrait_storage_path: storagePath,
-      updated_at: new Date().toISOString(),
-    })
+    .update(update)
     .eq('id', legacyPlayerId);
 
   if (error) {

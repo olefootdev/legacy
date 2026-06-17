@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Coins,
   Database,
+  Link2,
   RefreshCw,
   Save,
   Search,
@@ -39,8 +40,10 @@ import {
   type LegendPhasePayload,
   type LegendSplitEntry,
   type LegendTier,
+  type PortraitFocus,
 } from '../legendCreatorClient';
 import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
+import { PortraitFocusEditor } from '@/admin/components/PortraitFocusEditor';
 
 const PHASE_LABEL: Record<LegendPhase, string> = {
   revelacao: 'Revelação',
@@ -125,6 +128,12 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
     consolidacao: null,
     expansao: null,
   });
+  /** Enquadramento (ponto focal) por fase, carregado do banco. */
+  const [portraitFocus, setPortraitFocus] = useState<Record<LegendPhase, PortraitFocus>>({
+    revelacao: { x: 0.5, y: 0, zoom: 1 },
+    consolidacao: { x: 0.5, y: 0, zoom: 1 },
+    expansao: { x: 0.5, y: 0, zoom: 1 },
+  });
   /** True quando o payload veio do banco (modo edição) — muda CTA pra "Salvar". */
   const [isEditing, setIsEditing] = useState(false);
   const [loadingFromDb, setLoadingFromDb] = useState(false);
@@ -147,6 +156,12 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         revelacao: res.portraits.revelacao ?? null,
         consolidacao: res.portraits.consolidacao ?? null,
         expansao: res.portraits.expansao ?? null,
+      });
+      const dfFocus = { x: 0.5, y: 0, zoom: 1 };
+      setPortraitFocus({
+        revelacao: res.portraitFocus?.revelacao ?? dfFocus,
+        consolidacao: res.portraitFocus?.consolidacao ?? dfFocus,
+        expansao: res.portraitFocus?.expansao ?? dfFocus,
       });
       setIsEditing(true);
     } catch (e) {
@@ -357,6 +372,10 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
             onPortraitUploaded={(url) =>
               setPortraits((prev) => ({ ...prev, [ph.phase]: url }))
             }
+            portraitFocus={portraitFocus[ph.phase]}
+            onPortraitFocusChange={(f) =>
+              setPortraitFocus((prev) => ({ ...prev, [ph.phase]: f }))
+            }
             expanded={expanded === ph.phase}
             onToggle={() => setExpanded(expanded === ph.phase ? null : ph.phase)}
             onChange={(patch) => updatePhase(ph.phase, patch)}
@@ -468,13 +487,15 @@ function LabeledNumber({
 }
 
 function PhaseEditor({
-  phase, slug, portraitUrl, onPortraitUploaded,
+  phase, slug, portraitUrl, onPortraitUploaded, portraitFocus, onPortraitFocusChange,
   expanded, onToggle, onChange, onChangeEntity, onChangeAttr, onApplyTier,
 }: {
   phase: LegendPhasePayload;
   slug: string;
   portraitUrl: string | null;
   onPortraitUploaded: (url: string | null) => void;
+  portraitFocus: PortraitFocus;
+  onPortraitFocusChange: (f: PortraitFocus) => void;
   expanded: boolean;
   onToggle: () => void;
   onChange: (patch: Partial<LegendPhasePayload>) => void;
@@ -562,7 +583,9 @@ function PhaseEditor({
               slug={slug}
               phase={phase.phase}
               currentUrl={portraitUrl}
+              currentFocus={portraitFocus}
               onUploaded={onPortraitUploaded}
+              onFocusChange={onPortraitFocusChange}
             />
             <LabeledInput
               label="Main club"
@@ -728,16 +751,60 @@ function TaglineField({
 }
 
 function PortraitUploader({
-  slug, phase, currentUrl, onUploaded,
+  slug, phase, currentUrl, currentFocus, onUploaded, onFocusChange,
 }: {
   slug: string;
   phase: LegendPhase;
   currentUrl: string | null;
+  currentFocus: PortraitFocus;
   onUploaded: (url: string | null) => void;
+  onFocusChange: (f: PortraitFocus) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [savingUrl, setSavingUrl] = useState(false);
+  const [savingFocus, setSavingFocus] = useState(false);
+  const [focusSaved, setFocusSaved] = useState(false);
   const legacyPlayerId = slug ? `legacy-${slug}-${phase}` : null;
+
+  async function handleUseUrl() {
+    const url = urlInput.trim();
+    if (!legacyPlayerId) {
+      setError('Defina o Slug antes de salvar a imagem.');
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setError('Cola uma URL http(s) válida (ex: gateway do Pinata).');
+      return;
+    }
+    setError(null);
+    setSavingUrl(true);
+    try {
+      await adminSetLegacyPortrait(legacyPlayerId, url, undefined, currentFocus);
+      onUploaded(url);
+      setUrlInput('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingUrl(false);
+    }
+  }
+
+  async function handleSaveFocus() {
+    if (!legacyPlayerId || !currentUrl) return;
+    setSavingFocus(true);
+    setFocusSaved(false);
+    try {
+      await adminSetLegacyPortrait(legacyPlayerId, currentUrl, undefined, currentFocus);
+      setFocusSaved(true);
+      setTimeout(() => setFocusSaved(false), 2500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingFocus(false);
+    }
+  }
 
   async function handleFile(file: File) {
     if (!legacyPlayerId) {
@@ -761,7 +828,7 @@ function PortraitUploader({
       });
       if (upload.ok === true) {
         // 2) Persiste a URL pública no row de legacy_players.
-        await adminSetLegacyPortrait(legacyPlayerId, upload.media.publicUrl);
+        await adminSetLegacyPortrait(legacyPlayerId, upload.media.publicUrl, undefined, currentFocus);
         onUploaded(upload.media.publicUrl);
       } else {
         const failMsg = (upload as { error: string }).error || 'Falha no upload';
@@ -775,6 +842,7 @@ function PortraitUploader({
   }
 
   return (
+    <div className="space-y-3">
     <div className="flex items-end gap-3">
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded border border-white/20 bg-deep-black flex items-center justify-center">
         {currentUrl ? (
@@ -835,10 +903,60 @@ function PortraitUploader({
         )}
         {currentUrl && !error && (
           <span className="truncate text-[10px] text-white/50" title={currentUrl}>
-            {currentUrl.replace(/.*\/legacy-player-portraits\//, '')}
+            {currentUrl.length > 48 ? `${currentUrl.slice(0, 48)}…` : currentUrl}
           </span>
         )}
       </div>
+    </div>
+
+      {/* Colar URL já hospedada (Pinata/IPFS) — sem upload da máquina */}
+      <div className="flex items-center gap-2">
+        <Link2 size={14} className="shrink-0 text-cyan-300" />
+        <input
+          type="url"
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
+          placeholder="Cola a URL do Pinata/IPFS…"
+          disabled={!legacyPlayerId || savingUrl}
+          className="min-w-0 flex-1 rounded border border-white/15 bg-black/40 px-2.5 py-1.5 font-mono text-xs text-white/90 placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => void handleUseUrl()}
+          disabled={!legacyPlayerId || savingUrl || !urlInput.trim()}
+          className="shrink-0 rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:opacity-40"
+        >
+          {savingUrl ? 'Salvando…' : 'Usar URL'}
+        </button>
+      </div>
+
+      {/* Enquadramento (ponto focal) — card + token */}
+      {currentUrl && (
+        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+          <PortraitFocusEditor
+            url={currentUrl}
+            fx={currentFocus.x}
+            fy={currentFocus.y}
+            zoom={currentFocus.zoom}
+            onChange={(x, y, zoom) => onFocusChange({ x, y, zoom })}
+          />
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleSaveFocus()}
+              disabled={savingFocus}
+              className="inline-flex items-center gap-1.5 rounded bg-neon-yellow px-3 py-1.5 text-xs font-black uppercase text-black hover:brightness-110 disabled:opacity-50"
+            >
+              <Save size={13} /> {savingFocus ? 'Salvando…' : 'Salvar enquadramento'}
+            </button>
+            {focusSaved && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
+                <Check size={12} /> salvo
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -127,11 +127,18 @@ export async function adminImportLegend(slug: string, payload: LegendImportPaylo
   return body;
 }
 
+export interface PortraitFocus {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
 export interface LegendExportResponse {
   ok: true;
   slug: string;
   payload: LegendImportPayload;
   portraits: Partial<Record<LegendPhase, string | null>>;
+  portraitFocus?: Partial<Record<LegendPhase, PortraitFocus>>;
 }
 
 /**
@@ -166,6 +173,7 @@ export async function adminSetLegacyPortrait(
   legacyPlayerId: string,
   publicUrl: string,
   storagePath?: string,
+  focus?: PortraitFocus,
 ): Promise<SetPortraitResponse> {
   const url = `${olefootApiBase()}/api/admin/legacy-player-set-portrait`;
   const res = await fetch(url, {
@@ -174,7 +182,12 @@ export async function adminSetLegacyPortrait(
       'Content-Type': 'application/json',
       'X-Admin-Token': adminToken(),
     },
-    body: JSON.stringify({ legacyPlayerId, publicUrl, storagePath }),
+    body: JSON.stringify({
+      legacyPlayerId,
+      publicUrl,
+      storagePath,
+      ...(focus ? { focusX: focus.x, focusY: focus.y, zoom: focus.zoom } : {}),
+    }),
   });
   const body = (await res.json()) as SetPortraitResponse | { error: string };
   if (!res.ok || 'error' in body) {
