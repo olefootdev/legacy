@@ -37,10 +37,8 @@ export function ReferralTab() {
     [finance.wallet],
   );
 
-  const [sponsorInput, setSponsorInput] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [sponsorError, setSponsorError] = useState<string | null>(null);
   const [peerOpen, setPeerOpen] = useState(false);
 
   const summary = referralSummary(wallet);
@@ -77,17 +75,6 @@ export function ReferralTab() {
   const transferOut = queryLedger(wallet, { type: 'TRANSFER' }).filter(
     (e) => e.amount < 0 && e.source === 'peer_by_referral_code',
   );
-
-  function handleSetSponsor() {
-    setSponsorError(null);
-    const norm = normalizeReferralCode(sponsorInput);
-    if (!norm) {
-      setSponsorError('Código inválido: usa 3 a 5 letras ou números (sem caracteres especiais).');
-      return;
-    }
-    dispatch({ type: 'WALLET_SET_SPONSOR', sponsorId: norm });
-    setSponsorInput('');
-  }
 
   function handleCopyCode() {
     if (!myCode) return;
@@ -168,42 +155,12 @@ export function ReferralTab() {
         </button>
       </motion.div>
 
-      {/* Set sponsor */}
-      {!wallet.sponsorId && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="glass-panel p-5 border border-blue-400/10 space-y-3"
-        >
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <Link2 className="w-4 h-4" />
-            <span>Vincular o código do teu patrocinador (uma vez, não podes mudar depois)</span>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={sponsorInput}
-              onChange={(e) => {
-                setSponsorInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5));
-                setSponsorError(null);
-              }}
-              placeholder="Código (3–5 caracteres)"
-              maxLength={5}
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:border-blue-400 focus:outline-none transition-colors text-sm font-mono"
-            />
-            <button
-              type="button"
-              onClick={handleSetSponsor}
-              disabled={sponsorInput.trim().length < 3}
-              className="bg-blue-500 hover:bg-blue-400 disabled:bg-white/5 disabled:text-gray-600 text-white py-3 px-6 rounded-xl font-bold text-sm transition-colors"
-            >
-              Vincular
-            </button>
-          </div>
-          {sponsorError && <p className="text-xs text-red-400">{sponsorError}</p>}
-        </motion.div>
-      )}
-
+      {/*
+        Vínculo manual de patrocinador removido: o patrocinador real é gravado
+        só no signup (profiles.referred_by_code, imutável). O WALLET_SET_SPONSOR
+        era local/mock e nunca chegava ao servidor, então prometia comissão que
+        não fluía. O display abaixo permanece para quem já tinha um vínculo local.
+      */}
       {wallet.sponsorId && (
         <div className="bg-white/5 rounded-xl p-3 text-xs text-gray-400 flex items-center gap-2">
           <User className="w-3.5 h-3.5 text-blue-300" />

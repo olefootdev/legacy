@@ -31,6 +31,7 @@ import { ManagerSquadHydrator } from './game/ManagerSquadHydrator';
 import { ManagerGameStateHydrator } from './game/ManagerGameStateHydrator';
 import { OlefootPythonModeHydrator } from './game/OlefootPythonModeHydrator';
 import { PersistenceGuard } from './game/PersistenceGuard';
+import { ReferralExpSync } from './game/ReferralExpSync';
 import { PlatformDataHydrator } from './game/PlatformDataHydrator';
 import { WorldClock } from './game/WorldClock';
 import { UserSettingsEffects } from './components/UserSettingsEffects';
@@ -423,6 +424,7 @@ as a nice MVP. Let's Play Together! ⚽
         <ManagerGameStateHydrator />
         <OlefootPythonModeHydrator />
         <PersistenceGuard />
+        <ReferralExpSync />
         <PlatformDataHydrator />
         <GenesisCatalogPortraitsHydrate />
         <GenesisTestSquadsHydrate />
