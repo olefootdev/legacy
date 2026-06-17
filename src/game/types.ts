@@ -200,6 +200,10 @@ export type PlayerCreationStep =
 export interface ManagerProspectArtRequest {
   id: string;
   playerId: string;
+  /** Nome do jogador no momento da criação. Usado no painel Admin global,
+   *  onde o snapshot do plantel de outros managers não está disponível.
+   *  Opcional: requests antigos caem no fallback `playerId`. */
+  playerName?: string;
   createdAtIso: string;
   playerCreationStep: PlayerCreationStep;
   /** Saves antigos: `pending` | `fulfilled` antes de `playerCreationStep`. */
@@ -832,6 +836,20 @@ export type GameAction =
   | {
       type: 'CREATE_MANAGER_PROSPECT';
       payload: import('@/entities/managerProspect').ManagerProspectCreatePayload;
+    }
+  | {
+      /** Cria o jogador a partir de um sorteio (gacha de época). Atributos já
+       *  vêm escalados à banda da raridade pelo servidor — sem cap de 60. */
+      type: 'CONFIRM_GACHA_DRAW';
+      payload: {
+        name: string;
+        pos: string;
+        attrs: PlayerAttributes;
+        overall: number;
+        rarity: 'normal' | 'premium' | 'gold' | 'rare' | 'legend';
+        likePlayerName: string;
+        year: number;
+      };
     }
   | {
       type: 'RENEW_MANAGER_PROSPECT_CONTRACT';

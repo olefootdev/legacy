@@ -21,11 +21,13 @@ export const MANAGER_PROSPECT_CREATE_MAX_ATTR = 60;
 export const MANAGER_PROSPECT_EVOLVED_MAX_OVR = 75;
 
 /**
- * Slots simultâneos da Academia OLE: até 5 prospects criados/ativos no
- * plantel ao mesmo tempo. Para criar o 6º, o manager precisa primeiro
- * vender um existente (ao Market Maker ou outro manager), liberando o slot.
+ * Jogadores criados por manager permitidos simultaneamente no plantel.
+ * Reduzido de 5 → 1 em 2026-06-17 com a virada pro sistema de criação por
+ * sorteio (gacha de época): a criação vira evento raro de prestígio, 1 por
+ * manager, destravada só por quem tem ≥5 indicados ativos. Ver memória
+ * project-player-creation-gacha.
  */
-export const MAX_ACTIVE_ACADEMY_PROSPECTS = 5;
+export const MAX_ACTIVE_ACADEMY_PROSPECTS = 1;
 
 /**
  * Conta os prospects da Academia que ocupam slot. Considera tanto o prefixo

@@ -35,6 +35,7 @@ import { AdminUsuariosPanel } from './panels/AdminUsuariosPanel';
 import { AdminFinanceiroPanel } from './panels/AdminFinanceiroPanel';
 import { AdminGameSpiritPanel } from './panels/AdminGameSpiritPanel';
 import { AdminProspectArtPanel } from './panels/AdminProspectArtPanel';
+import { AdminGachaTemplatesPanel } from './panels/AdminGachaTemplatesPanel';
 import { AdminPlayerEvolutionPanel } from './panels/AdminPlayerEvolutionPanel';
 import { AdminGrowthPanel } from './panels/AdminGrowthPanel';
 import { AdminGenesisPortraitsPanel } from './panels/AdminGenesisPortraitsPanel';
@@ -75,6 +76,7 @@ type SubTabId =
   | 'shop'
   | 'market'
   | 'prospectArt'
+  | 'gachaTemplates'
   | 'playerEvolution'
   | 'genesisPortraits'
   | 'legacy'
@@ -115,6 +117,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
     icon: Users,
     subTabs: [
       { id: 'prospectArt', label: 'Academy' },
+      { id: 'gachaTemplates', label: 'Gacha' },
       { id: 'playerEvolution', label: 'Evolução' },
       { id: 'genesisPortraits', label: 'Fotos Genesis' },
       { id: 'legacy', label: 'Legacy DNA' },
@@ -360,6 +363,7 @@ export function AdminDashboard() {
 
               {/* Jogadores group */}
               {tab === 'jogadores' && subTab === 'prospectArt' ? <AdminProspectArtPanel /> : null}
+              {tab === 'jogadores' && subTab === 'gachaTemplates' ? <AdminGachaTemplatesPanel /> : null}
               {tab === 'jogadores' && subTab === 'playerEvolution' ? <AdminPlayerEvolutionPanel /> : null}
               {tab === 'jogadores' && subTab === 'genesisPortraits' ? <AdminGenesisPortraitsPanel /> : null}
               {tab === 'jogadores' && subTab === 'legacy' ? <AdminLegacyPanel /> : null}

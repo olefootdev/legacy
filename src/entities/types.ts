@@ -114,6 +114,16 @@ export interface PlayerEntity {
   adminMarketTag?: string;
   /** Prospect criado pelo manager no fluxo Academia OLE (OVR criação / evolução limitados). */
   managerCreated?: boolean;
+  /**
+   * Proveniência do sorteio (gacha de época): "jogou como X em Y".
+   * Os atributos foram DERIVADOS (metodologia Olefoot) de pesquisa pública do
+   * craque sorteado — não são cópia de rating licenciado. Ver project-player-creation-gacha.
+   */
+  gachaProvenance?: {
+    likePlayerName: string;
+    year: number;
+    rarity: 'normal' | 'premium' | 'gold' | 'rare' | 'legend';
+  };
   /** Idade exibida / narrativa (plantel criado pelo manager). */
   age?: number;
   /** OVR na criação do cartão (Admin: tecto de crescimento = mint + 15). */

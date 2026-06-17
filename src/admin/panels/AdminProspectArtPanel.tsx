@@ -631,7 +631,7 @@ export function AdminProspectArtPanel() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-display text-sm font-black text-white">
-                        {g.request.heritage?.playerName ?? g.request.playerId}
+                        {g.request.playerName ?? g.request.playerId}
                       </span>
                       <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-cyan-300">
                         {stepLabel(g.request.playerCreationStep)}

@@ -26,7 +26,7 @@ import { rehydrateGameState } from './persistence';
 import { awayStartingElevenFromSquad, buildDefaultLineup, mergeLineupWithDefaults } from '@/entities/lineup';
 import { buildFatigueByIdMap, getEffectiveFatigue } from '@/systems/fatigue';
 import { normalizeFixture, normalizeOpponentStub } from '@/entities/team';
-import { overallFromAttributes } from '@/entities/player';
+import { createPlayer, overallFromAttributes } from '@/entities/player';
 import type { PlayerEntity } from '@/entities/types';
 import {
   buildManagerCreatedPlayerEntity,
@@ -124,6 +124,7 @@ import {
 } from '@/team/playerEvolutionTimeline';
 import {
   applyHomeContractsAfterMatch,
+  contractFieldsForManagerProspectTier,
   decrementContractsForIds,
   genesisListingPriceExpFromMintOverall,
   managerProspectContractPremiumExp,
@@ -2567,6 +2568,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const queueEntry: ManagerProspectArtRequest = {
         id: requestId,
         playerId: built.id,
+        playerName: built.name,
         createdAtIso,
         // Se a selfie já chegou, pula direto pra 'photo_uploaded' (admin já
         // tem material pra trabalhar). Caso contrário fica em 'awaiting_photo'.
@@ -2585,6 +2587,76 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         finance,
         players: { ...state.players, [built.id]: built },
         managerProspectArtQueue,
+      };
+    }
+    case 'CONFIRM_GACHA_DRAW': {
+      // Server já fez o gate (≥5 indicados) e garantiu sorteio único.
+      // Aqui só respeitamos o slot (1 por manager) e criamos o jogador com os
+      // atributos do sorteio CRUS — sem clampAttrsToCreationCap, pois a banda
+      // de OVR já foi aplicada server-side conforme a raridade (até 90).
+      if (countActiveAcademyProspects(state.players) >= MAX_ACTIVE_ACADEMY_PROSPECTS) return state;
+      const gp = action.payload;
+      const gName = gp.name.trim().toUpperCase().slice(0, 24) || 'NOVO';
+      const gPos = gp.pos.toUpperCase();
+      const gId = `mgr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const gNum = nextKitNumber(state.players);
+      const gMint = gp.overall || overallFromAttributes(gp.attrs);
+      const gBuilt: PlayerEntity = {
+        ...createPlayer({
+          id: gId,
+          num: gNum,
+          name: gName,
+          pos: gPos,
+          attrs: gp.attrs,
+          behavior: 'equilibrado',
+          creatorType: 'amador',
+          managerCreated: true,
+          mintOverall: gMint,
+          evolutionRate: 1,
+          age: 24,
+          strongFoot: 'right',
+          listedOnMarket: false,
+          fatigue: 12,
+          bio: `Jogou como ${gp.likePlayerName} (${gp.year})`,
+          ...contractFieldsForManagerProspectTier(250),
+        }),
+        gachaProvenance: { likePlayerName: gp.likePlayerName, year: gp.year, rarity: gp.rarity },
+      };
+      // Fila de arte → foto manual (WhatsApp na Fase 4). awaiting_photo.
+      const gReqId = `art_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const gQueueEntry: ManagerProspectArtRequest = {
+        id: gReqId,
+        playerId: gId,
+        playerName: gName,
+        createdAtIso: new Date().toISOString(),
+        playerCreationStep: 'awaiting_photo',
+        adminArtPrompt: `Gacha — jogou como ${gp.likePlayerName} (${gp.year}) · ${gPos} · ${gp.rarity} · OVR ${gMint}`,
+        attributesSnapshot: { ...gp.attrs },
+        heritage: {
+          portraitStyleRegion: 'americas_sul',
+          originTags: [],
+          originText: `Sorteio: jogou como ${gp.likePlayerName} em ${gp.year}`,
+        },
+      };
+      const gPrevQueue = state.managerProspectArtQueue ?? [];
+      const gInbox = [
+        makeInboxItem(
+          `gacha-create-${Date.now()}`,
+          'PLAYER_BOUGHT',
+          'PLANTEL',
+          `${gName} criado — jogou como ${gp.likePlayerName} (${gp.year})`,
+          {
+            body: `Teu jogador de raridade ${gp.rarity.toUpperCase()} (OVR ${gMint}) está no plantel. Envia tua foto pra finalizarmos o card.`,
+            deepLink: '/team',
+          },
+        ),
+        ...state.inbox,
+      ].slice(0, 14);
+      return {
+        ...state,
+        players: { ...state.players, [gId]: gBuilt },
+        managerProspectArtQueue: [gQueueEntry, ...gPrevQueue].slice(0, 200),
+        inbox: gInbox,
       };
     }
     case 'RENEW_MANAGER_PROSPECT_CONTRACT': {

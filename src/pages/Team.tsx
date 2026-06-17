@@ -55,7 +55,7 @@ const PRESET_ICONS: Record<PlayingStylePresetId, LucideIcon> = {
   CRIATIVO_LIVRE: Sparkles,
 };
 import { suggestBestLineup } from '@/team/suggestBestLineup';
-import { ManagerCreatePlayerModal } from '@/components/ManagerCreatePlayerModal';
+import { GachaCreatePlayerModal } from '@/components/GachaCreatePlayerModal';
 import { AcademyCardDeliveryModal } from '@/components/AcademyCardDeliveryModal';
 import { TeamPlayerSeasonSheet } from '@/team/TeamPlayerSeasonSheet';
 import { TeamMeuTimeHeader } from '@/pages/TeamMeuTimeHeader';
@@ -1187,7 +1187,7 @@ export function Team() {
         })()}
       </AnimatePresence>
 
-      <ManagerCreatePlayerModal open={createProspectOpen} onClose={() => setCreateProspectOpen(false)} />
+      <GachaCreatePlayerModal open={createProspectOpen} onClose={() => setCreateProspectOpen(false)} />
       <AcademyCardDeliveryModal
         open={!!deliveryItem?.academy}
         onClose={closeDeliveryModal}
