@@ -104,7 +104,13 @@ export interface FindUserResponse {
 function adminToken(): string {
   if (typeof window === 'undefined') return '';
   try {
-    return localStorage.getItem('olefoot.admin.token')?.trim() ?? '';
+    // Chave canônica = a que o AdminGlobalPanel realmente seta via input.
+    // Fallback p/ a chave antiga (nunca populada, mantida por segurança).
+    return (
+      localStorage.getItem('olefoot_global_league_admin_token') ??
+      localStorage.getItem('olefoot.admin.token') ??
+      ''
+    ).trim();
   } catch {
     return '';
   }

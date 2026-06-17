@@ -33,7 +33,11 @@ export interface AdminDrawConfig {
 function adminToken(): string {
   if (typeof window === 'undefined') return '';
   try {
-    return localStorage.getItem('olefoot.admin.token')?.trim() ?? '';
+    return (
+      localStorage.getItem('olefoot_global_league_admin_token') ??
+      localStorage.getItem('olefoot.admin.token') ??
+      ''
+    ).trim();
   } catch {
     return '';
   }
