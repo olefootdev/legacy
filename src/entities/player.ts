@@ -105,6 +105,7 @@ export function createPlayer(partial: {
   outForMatches?: number;
   portraitUrl?: string;
   portraitTokenUrl?: string;
+  portraitFocus?: { x: number; y: number; zoom: number };
   marketValueBroCents?: number;
   marketValueExp?: number;
   country?: string;
@@ -173,6 +174,7 @@ export function createPlayer(partial: {
     ...core,
     ...(partial.portraitUrl ? { portraitUrl: partial.portraitUrl } : {}),
     ...(partial.portraitTokenUrl ? { portraitTokenUrl: partial.portraitTokenUrl } : {}),
+    ...(partial.portraitFocus ? { portraitFocus: partial.portraitFocus } : {}),
     ...(partial.marketValueBroCents != null && partial.marketValueBroCents >= 0
       ? { marketValueBroCents: Math.round(partial.marketValueBroCents) }
       : {}),

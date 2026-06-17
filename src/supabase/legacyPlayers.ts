@@ -24,6 +24,10 @@ export type LegacyPlayerRow = {
   bio: string | null;
   portrait_storage_path: string | null;
   portrait_public_url: string | null;
+  /** Enquadramento (ponto focal) — foco 0..1 + zoom. Default 0.5/0.0/1. */
+  portrait_focus_x: number | null;
+  portrait_focus_y: number | null;
+  portrait_zoom: number | null;
   card_supply: number | null;
   created_at: string | null;
   updated_at: string | null;
@@ -54,6 +58,34 @@ export function legacyPortraitImageUrl(row: Pick<LegacyPlayerRow, 'portrait_publ
   if (!base) return undefined;
   const bust = row.updated_at ? `?v=${new Date(row.updated_at).getTime() || Date.now()}` : '';
   return `${base}/storage/v1/object/public/legacy-player-portraits/${path.replace(/^\//, '')}${bust}`;
+}
+
+/**
+ * Estilo CSS do enquadramento (ponto focal): object-position no foco + zoom
+ * com transform-origin no mesmo ponto. Aplicar num <img object-cover>.
+ * Use em token, profile e cards — uma fonte de imagem só.
+ */
+export function portraitFocusStyle(
+  fx?: number | null,
+  fy?: number | null,
+  zoom?: number | null,
+): import('react').CSSProperties {
+  const x = Math.max(0, Math.min(1, typeof fx === 'number' ? fx : 0.5));
+  const y = Math.max(0, Math.min(1, typeof fy === 'number' ? fy : 0));
+  const z = Math.max(0.5, Math.min(3, typeof zoom === 'number' ? zoom : 1));
+  const pos = `${(x * 100).toFixed(1)}% ${(y * 100).toFixed(1)}%`;
+  return {
+    objectFit: 'cover',
+    objectPosition: pos,
+    ...(z !== 1 ? { transform: `scale(${z})`, transformOrigin: pos } : {}),
+  };
+}
+
+/** Conveniência: estilo direto a partir de uma LegacyPlayerRow. */
+export function legacyPortraitFocusStyle(
+  row: Pick<LegacyPlayerRow, 'portrait_focus_x' | 'portrait_focus_y' | 'portrait_zoom'>,
+): import('react').CSSProperties {
+  return portraitFocusStyle(row.portrait_focus_x, row.portrait_focus_y, row.portrait_zoom);
 }
 
 function attrsFromRow(attributes: Record<string, unknown> | null | undefined): PlayerAttributes {
@@ -97,6 +129,11 @@ export function legacyRowToPlayerEntity(row: LegacyPlayerRow): PlayerEntity {
     evolutionXp: 0,
     outForMatches: 0,
     portraitUrl: legacyPortraitImageUrl(row),
+    portraitFocus: {
+      x: typeof row.portrait_focus_x === 'number' ? row.portrait_focus_x : 0.5,
+      y: typeof row.portrait_focus_y === 'number' ? row.portrait_focus_y : 0,
+      zoom: typeof row.portrait_zoom === 'number' ? row.portrait_zoom : 1,
+    },
     country: row.country?.trim() || undefined,
     strongFoot,
     rarity: 'epico',

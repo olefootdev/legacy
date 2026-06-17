@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
+import { portraitFocusStyle } from '@/supabase/legacyPlayers';
 
 type Rarity = 'normal' | 'ouro' | 'epico' | 'lenda' | 'genesis';
 
@@ -52,6 +53,7 @@ export function PlayerPortrait({
   onClick,
   className,
   style,
+  focus,
 }: {
   src?: string | null;
   alt?: string;
@@ -64,6 +66,8 @@ export function PlayerPortrait({
   onClick?: () => void;
   className?: string;
   style?: CSSProperties;
+  /** Enquadramento (ponto focal). Omitir = topo (comportamento legado). */
+  focus?: { x: number; y: number; zoom: number };
 }) {
   const dims =
     size === 'sm'
@@ -106,7 +110,8 @@ export function PlayerPortrait({
         <img
           src={src}
           alt={alt ?? name ?? 'Jogador'}
-          className="absolute inset-0 h-full w-full object-cover object-top opacity-95"
+          className={cn('absolute inset-0 h-full w-full object-cover opacity-95', !focus && 'object-top')}
+          style={focus ? portraitFocusStyle(focus.x, focus.y, focus.zoom) : undefined}
           loading="lazy"
         />
       ) : (

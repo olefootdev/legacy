@@ -6,6 +6,7 @@ import { overallFromAttributes } from '@/entities/player';
 import {
   fetchListedLegacyPlayerRows,
   legacyPortraitImageUrl,
+  legacyPortraitFocusStyle,
   legacyRowToPlayerEntity,
   type LegacyPlayerRow,
 } from '@/supabase/legacyPlayers';
@@ -159,7 +160,8 @@ function HeroLegacyCard({
             <img
               src={portrait}
               alt={entity.name}
-              className="aspect-[11/15.6] w-36 rounded-xl object-cover object-top ring-2 ring-amber-400/60 sm:w-44"
+              style={legacyPortraitFocusStyle(row)}
+              className="aspect-[11/15.6] w-36 rounded-xl object-cover ring-2 ring-amber-400/60 sm:w-44"
             />
           ) : (
             <div className="grid aspect-[11/15.6] w-36 place-items-center rounded-xl bg-amber-500/20 text-amber-400 sm:w-44">
@@ -286,7 +288,8 @@ function LegacyCard({
           <img
             src={portrait}
             alt={entity.name}
-            className="aspect-[11/15.6] w-20 shrink-0 rounded-lg object-cover object-top ring-2 ring-amber-500/40"
+            style={legacyPortraitFocusStyle(row)}
+            className="aspect-[11/15.6] w-20 shrink-0 rounded-lg object-cover ring-2 ring-amber-500/40"
           />
         ) : (
           <div className="grid aspect-[11/15.6] w-20 shrink-0 place-items-center rounded-lg bg-amber-500/20 text-amber-400">

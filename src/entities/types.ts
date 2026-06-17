@@ -90,6 +90,9 @@ export interface PlayerEntity {
   portraitUrl?: string;
   /** Foto circular para token na partida ao vivo (crop separado otimizado para 1:1) */
   portraitTokenUrl?: string;
+  /** Enquadramento do retrato (ponto focal 0..1 + zoom). Aplicado via CSS
+   *  (object-position + scale) em token/profile/card. Default 0.5/0/1. */
+  portraitFocus?: { x: number; y: number; zoom: number };
   /** Valor de mercado em centavos de BRO (0,01 BRO) — mercado / transferências */
   marketValueBroCents?: number;
   /** Valor de mercado em EXP (ex.: catálogo Genesis); quando definido, UI e livro usam EXP em vez de BRO. */
