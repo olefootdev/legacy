@@ -134,6 +134,10 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
     consolidacao: { x: 0.5, y: 0, zoom: 1 },
     expansao: { x: 0.5, y: 0, zoom: 1 },
   });
+  /** Split de pagamento ÚNICO da lenda (aplicado a todas as fases no envio). */
+  const [sharedSplit, setSharedSplit] = useState<LegendSplitEntry[]>(() => [...DEFAULT_SPLIT]);
+  /** Beneficiário (uuid do atleta) ÚNICO da lenda. */
+  const [sharedBeneficiary, setSharedBeneficiary] = useState<string>('');
   /** True quando o payload veio do banco (modo edição) — muda CTA pra "Salvar". */
   const [isEditing, setIsEditing] = useState(false);
   const [loadingFromDb, setLoadingFromDb] = useState(false);
@@ -163,6 +167,10 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         consolidacao: res.portraitFocus?.consolidacao ?? dfFocus,
         expansao: res.portraitFocus?.expansao ?? dfFocus,
       });
+      // Split e beneficiário são únicos: pega os da 1ª fase (todas iguais).
+      const loadedSplit = res.payload.phases.find((p) => (p.paymentSplit?.length ?? 0) > 0)?.paymentSplit;
+      setSharedSplit(loadedSplit && loadedSplit.length > 0 ? loadedSplit : [...DEFAULT_SPLIT]);
+      setSharedBeneficiary(res.payload.phases.find((p) => p.beneficiaryUserId)?.beneficiaryUserId ?? '');
       setIsEditing(true);
     } catch (e) {
       setError(`Falha ao carregar: ${e instanceof Error ? e.message : String(e)}`);
@@ -252,14 +260,23 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         setError(`Fase ${PHASE_LABEL[ph.phase]}: collection_code obrigatório (ex. BR-95)`);
         return;
       }
-      if (!isSplitValid(ph.paymentSplit ?? [])) {
-        setError(`Fase ${PHASE_LABEL[ph.phase]}: split inválido (soma 100, max 5 facilitadores)`);
-        return;
-      }
+    }
+    // Split é ÚNICO pra lenda inteira — valida uma vez e aplica em todas as fases.
+    if (!isSplitValid(sharedSplit)) {
+      setError('Split de pagamento inválido (soma deve ser 100%, máx 5 facilitadores)');
+      return;
     }
     setSubmitting(true);
     try {
-      const res = await adminImportLegend(slug, payload);
+      const payloadToSend: LegendImportPayload = {
+        ...payload,
+        phases: payload.phases.map((ph) => ({
+          ...ph,
+          paymentSplit: sharedSplit,
+          beneficiaryUserId: sharedBeneficiary.trim() || undefined,
+        })),
+      };
+      const res = await adminImportLegend(slug, payloadToSend);
       setResult(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -359,6 +376,25 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
             onChange={(v) => setPayload((p) => ({ ...p, collectionId: v }))}
           />
         </div>
+      </section>
+
+      {/* Split de pagamento — ÚNICO pra lenda inteira (vale pras 3 coleções) */}
+      <section className="rounded-lg border border-amber-400/30 bg-amber-500/[0.04] p-4 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-200">
+            Split de pagamento (vale pra todas as coleções)
+          </h3>
+          <p className="text-[11px] text-white/45">
+            Preenche uma vez — aplica nas 3 fases no envio. Soma 100%, até 5 facilitadores.
+          </p>
+        </div>
+        <SplitEditor split={sharedSplit} onChange={setSharedSplit} />
+        <LabeledInput
+          label="Beneficiary user id (uuid do atleta — opcional)"
+          value={sharedBeneficiary}
+          onChange={setSharedBeneficiary}
+          placeholder="uuid de auth.users (vale pras 3 fases)"
+        />
       </section>
 
       {/* Fases */}
@@ -695,22 +731,8 @@ function PhaseEditor({
             )}
           </fieldset>
 
-          {/* Split */}
-          <fieldset className="space-y-2">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-white/60">
-              Split de pagamento (soma 100, max 5 facilitadores)
-            </legend>
-            <SplitEditor
-              split={phase.paymentSplit ?? []}
-              onChange={(s) => onChange({ paymentSplit: s })}
-            />
-            <LabeledInput
-              label="Beneficiary user id (uuid do atleta)"
-              value={phase.beneficiaryUserId ?? ''}
-              onChange={(v) => onChange({ beneficiaryUserId: v || undefined })}
-              placeholder="(opcional) — uuid de auth.users"
-            />
-          </fieldset>
+          {/* Split de pagamento e beneficiário são ÚNICOS por lenda — editados
+              no topo do wizard, não por fase. */}
         </div>
       )}
     </div>
