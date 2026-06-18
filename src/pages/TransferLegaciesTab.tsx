@@ -364,103 +364,132 @@ function LegacyCard({
   const isOwned = owned.has(entity.id);
   const canAfford = oleBal >= priceExp;
   const boosterEntries = Object.entries(row.team_booster ?? {});
+  const taught = row.taught_attributes ?? [];
   const fmtBrl = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+  const stats: Array<[string, number]> = [
+    ['PAC', entity.attrs.velocidade],
+    ['SHO', entity.attrs.finalizacao],
+    ['PAS', entity.attrs.passe],
+  ];
 
   return (
     <div
       onClick={onView}
       role="button"
       tabIndex={0}
-      className="cursor-pointer rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.06] to-black p-4 transition hover:border-amber-400/50 hover:shadow-[0_0_24px_-8px_rgba(245,158,11,0.4)]"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-black transition hover:border-amber-400/70 hover:shadow-[0_0_36px_-6px_rgba(245,158,11,0.55)]"
     >
-      <div className="flex items-start gap-3">
+      {/* HERO — arte do card colecionável no formato real (clipada: o zoom de
+          enquadramento NÃO transborda mais sobre o texto). */}
+      <div className="relative aspect-[11/15.6] w-full overflow-hidden bg-gradient-to-br from-amber-900/25 to-black">
         {portrait ? (
           <img
             src={portrait}
             alt={entity.name}
             style={legacyPortraitFocusStyle(row)}
-            className="aspect-[11/15.6] w-20 shrink-0 rounded-lg object-cover ring-2 ring-amber-500/40"
+            className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-[1.03]"
+            loading="lazy"
           />
         ) : (
-          <div className="grid aspect-[11/15.6] w-20 shrink-0 place-items-center rounded-lg bg-amber-500/20 text-amber-400">
-            <Crown className="h-6 w-6" />
+          <div className="grid h-full w-full place-items-center text-amber-400/40">
+            <Crown className="h-14 w-14" />
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <Crown className="h-3 w-3 text-amber-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Legacy DNA</span>
-          </div>
-          <p className="truncate text-sm font-black text-white">{entity.name}</p>
-          <p className="text-[11px] text-gray-400">
-            {entity.pos} · OVR {ovr}
-            {row.country ? ` · ${row.country}` : ''}
+
+        {/* OVR — Moret italic dourado */}
+        <div className="absolute left-2.5 top-2.5 rounded-lg border border-amber-400/40 bg-black/70 px-2.5 py-1 backdrop-blur">
+          <p
+            className="italic leading-none tabular-nums text-amber-300"
+            style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '22px' }}
+          >
+            {ovr}
+          </p>
+        </div>
+
+        {/* Selo Legacy DNA */}
+        <div className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-black/65 px-2 py-1 backdrop-blur">
+          <Crown className="h-3 w-3 text-amber-300" strokeWidth={2.5} />
+          <span className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-300">Legacy DNA</span>
+        </div>
+
+        {/* Faixa inferior: nome + posição/país sobre gradiente */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent px-3 pb-2.5 pt-8">
+          <p className="truncate font-display text-base font-black uppercase tracking-tight text-white">
+            {entity.name}
+          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-200/80">
+            {entity.pos}{row.country ? ` · ${row.country}` : ''}
           </p>
         </div>
       </div>
 
-      {row.bio && <p className="mt-3 line-clamp-2 text-[11px] leading-snug text-gray-400">{row.bio}</p>}
+      {/* INFO */}
+      <div className="flex flex-1 flex-col gap-3 p-3">
+        {/* Stats PAC / SHO / PAS */}
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-white/5 bg-white/5">
+          {stats.map(([label, val]) => (
+            <div key={label} className="bg-black/40 px-1 py-1.5 text-center">
+              <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/40">{label}</p>
+              <p
+                className="italic leading-none tabular-nums text-white"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '15px' }}
+              >
+                {val}
+              </p>
+            </div>
+          ))}
+        </div>
 
-      {(row.taught_attributes?.length ?? 0) > 0 && (
-        <div className="mt-3">
-          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">Ensina</p>
+        {/* Ensina + Booster (diferenciais do Legacy) */}
+        {(taught.length > 0 || boosterEntries.length > 0) && (
           <div className="flex flex-wrap gap-1">
-            {row.taught_attributes.map((a) => (
-              <span key={a} className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase text-amber-300">
+            {taught.map((a) => (
+              <span key={a} className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-200">
                 {a}
               </span>
             ))}
-          </div>
-        </div>
-      )}
-
-      {boosterEntries.length > 0 && (
-        <div className="mt-2">
-          <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">Booster (titular)</p>
-          <div className="flex flex-wrap gap-1">
             {boosterEntries.map(([k, v]) => (
-              <span key={k} className="rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase text-green-300">
+              <span key={k} className="rounded-full bg-green-500/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-green-300">
                 {k} +{v}
               </span>
             ))}
           </div>
-        </div>
-      )}
-
-      <div className="mt-4 space-y-2">
-        {isOwned ? (
-          <div className="rounded-lg bg-white/5 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400">
-            Adquirido
-          </div>
-        ) : (
-          <>
-            {/* PIX (cards USDT) — preço já em R$ no botão */}
-            {brlCents != null && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onPixBuy(); }}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] py-2.5 text-[12px] font-black uppercase tracking-wide text-black transition hover:brightness-110"
-              >
-                Comprar com PIX · {fmtBrl(brlCents)}
-              </button>
-            )}
-            {/* OLE só pra cards em OLEFOOT (nunca em USDT) */}
-            {row.currency !== 'USDT' && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onBuy(row); }}
-                disabled={!canAfford}
-                className={cn(
-                  'flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-bold uppercase tracking-wider transition-colors',
-                  canAfford ? 'bg-amber-500 text-black hover:bg-amber-400' : 'bg-white/5 text-gray-500',
-                )}
-              >
-                <Coins className="h-3.5 w-3.5" />
-                {canAfford ? `Comprar · ${priceExp.toLocaleString('pt-BR')} OLE` : 'Sem saldo OLE'}
-              </button>
-            )}
-          </>
         )}
+
+        {/* Preço + CTA */}
+        <div className="mt-auto space-y-2 pt-1">
+          {isOwned ? (
+            <div className="rounded-lg bg-white/5 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400">
+              Adquirido
+            </div>
+          ) : (
+            <>
+              {brlCents != null && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onPixBuy(); }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] py-2.5 text-[12px] font-black uppercase tracking-wide text-black transition hover:brightness-110"
+                >
+                  Comprar com PIX · {fmtBrl(brlCents)}
+                </button>
+              )}
+              {row.currency !== 'USDT' && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onBuy(row); }}
+                  disabled={!canAfford}
+                  className={cn(
+                    'flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-[11px] font-black uppercase tracking-wider transition-colors',
+                    canAfford ? 'bg-amber-400 text-black hover:bg-white' : 'bg-white/5 text-gray-500',
+                  )}
+                >
+                  <Coins className="h-3.5 w-3.5" />
+                  {canAfford ? `Comprar · ${priceExp.toLocaleString('pt-BR')} OLE` : 'Sem saldo OLE'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

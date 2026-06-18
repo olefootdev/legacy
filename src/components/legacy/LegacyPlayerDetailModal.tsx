@@ -91,12 +91,14 @@ export function LegacyPlayerDetailModal({
             {/* Foto + identidade */}
             <div className="flex items-start gap-4">
               {portrait ? (
-                <img
-                  src={portrait}
-                  alt={entity.name}
-                  style={legacyPortraitFocusStyle(row)}
-                  className="aspect-[11/15.6] w-28 shrink-0 rounded-xl object-cover ring-2 ring-amber-500/50"
-                />
+                <div className="relative aspect-[11/15.6] w-28 shrink-0 overflow-hidden rounded-xl ring-2 ring-amber-500/50">
+                  <img
+                    src={portrait}
+                    alt={entity.name}
+                    style={legacyPortraitFocusStyle(row)}
+                    className="absolute inset-0 h-full w-full"
+                  />
+                </div>
               ) : (
                 <div className="grid aspect-[11/15.6] w-28 shrink-0 place-items-center rounded-xl bg-amber-500/20 text-amber-400">
                   <Crown className="h-10 w-10" />
