@@ -26,7 +26,7 @@ import { TransferLegaciesTab } from './TransferLegaciesTab';
 import { usePlatformConfig } from '@/admin/platformConfigStore';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
-import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider';
+import { type HeroTab } from '@/transfer/TransferHeroSlider';
 import { TransferFeaturedBoxes } from '@/transfer/TransferFeaturedBoxes';
 import { isSupabaseConfigured } from '@/supabase/client';
 import type { PlayerEntity } from '@/entities/types';
@@ -1267,13 +1267,9 @@ export function Transfer() {
         </section>
       ) : null}
 
-      {/* ── SLIDER promocional por aba ─────────────────────────────── */}
-      <TransferHeroSlider
-        tab={marketTab}
-        slides={heroSlidesForTab(marketTab)}
-      />
+      {/* Slider promocional removido (poluía a tela). */}
 
-      {/* ── TAB BAR scoreboard-tape (abaixo do slider) ───────────────── */}
+      {/* ── TAB BAR scoreboard-tape ───────────────── */}
       <div className="flex items-stretch gap-0 border-b border-white/10 overflow-x-auto hide-scrollbar">
         {tabsList.map((t) => {
           const active = marketTab === t.id;
