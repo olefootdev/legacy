@@ -951,11 +951,20 @@ function SplitEditor({
   split: LegendSplitEntry[];
   onChange: (s: LegendSplitEntry[]) => void;
 }) {
-  const [emailQuery, setEmailQuery] = useState('');
-  const [emailLookup, setEmailLookup] = useState<string | null>(null);
+  // Estado de e-mail/resultado POR LINHA (índice) — antes era compartilhado,
+  // o que quebrava com 2+ facilitadores (todos os campos linkados ao mesmo texto).
+  const [emailQueries, setEmailQueries] = useState<Record<number, string>>({});
+  const [emailLookups, setEmailLookups] = useState<Record<number, string>>({});
   const total = split.reduce((s, e) => s + (Number.isFinite(e.percent) ? e.percent : 0), 0);
   const facilitatorCount = split.filter((e) => e.kind === 'facilitator').length;
+  const beneficiaryCount = split.filter((e) => e.kind === 'player').length;
 
+  function setQuery(i: number, v: string) {
+    setEmailQueries((prev) => ({ ...prev, [i]: v }));
+  }
+  function setLookup(i: number, v: string) {
+    setEmailLookups((prev) => ({ ...prev, [i]: v }));
+  }
   function updateEntry(index: number, patch: Partial<LegendSplitEntry>) {
     onChange(split.map((e, i) => (i === index ? { ...e, ...patch } : e)));
   }
@@ -963,32 +972,30 @@ function SplitEditor({
     onChange(split.filter((_, i) => i !== index));
   }
   function addFacilitator() {
-    if (facilitatorCount >= 5) {
-      setEmailLookup('Máximo de 5 facilitadores atingido.');
-      return;
-    }
-    onChange([
-      ...split,
-      { kind: 'facilitator', user_id: null, label: 'Facilitador', percent: 0 },
-    ]);
+    if (facilitatorCount >= 5) return;
+    onChange([...split, { kind: 'facilitator', user_id: null, label: 'Facilitador', percent: 0 }]);
+  }
+  function addBeneficiary() {
+    onChange([...split, { kind: 'player', user_id: null, label: 'Beneficiário', percent: 0 }]);
   }
 
-  async function lookupEmail(email: string, targetIndex: number) {
+  async function lookupEmail(targetIndex: number) {
+    const email = (emailQueries[targetIndex] ?? '').trim();
     if (!email.includes('@')) {
-      setEmailLookup('Email inválido.');
+      setLookup(targetIndex, 'Email inválido.');
       return;
     }
-    setEmailLookup('Buscando...');
+    setLookup(targetIndex, 'Buscando...');
     try {
       const res = await adminFindUserByEmail(email);
       if (res.found && res.id) {
         updateEntry(targetIndex, { user_id: res.id, label: email });
-        setEmailLookup(`✓ Encontrado: ${res.email} (${res.id.slice(0, 8)}…)`);
+        setLookup(targetIndex, `✓ ${res.email} (${res.id.slice(0, 8)}…)`);
       } else {
-        setEmailLookup(`✗ Não cadastrado: ${email}`);
+        setLookup(targetIndex, `✗ Não cadastrado: ${email}`);
       }
     } catch (e) {
-      setEmailLookup(`✗ Erro: ${e instanceof Error ? e.message : String(e)}`);
+      setLookup(targetIndex, `✗ Erro: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -1019,13 +1026,13 @@ function SplitEditor({
                 <input
                   type="email"
                   placeholder="email@…"
-                  value={emailQuery}
-                  onChange={(ev) => setEmailQuery(ev.target.value)}
+                  value={emailQueries[i] ?? ''}
+                  onChange={(ev) => setQuery(i, ev.target.value)}
                   className="w-40 rounded border border-white/25 bg-deep-black px-2 py-1 text-xs text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
                 />
                 <button
                   type="button"
-                  onClick={() => lookupEmail(emailQuery, i)}
+                  onClick={() => lookupEmail(i)}
                   className="inline-flex items-center justify-center rounded border border-white/20 px-2 py-1 text-neon-yellow hover:bg-neon-yellow/10"
                   title="Buscar usuário"
                 >
@@ -1038,30 +1045,41 @@ function SplitEditor({
                   {e.user_id.slice(0, 8)}…
                 </span>
               )}
+              {emailLookups[i] && <span className="text-[10px] text-white/55">{emailLookups[i]}</span>}
             </div>
           )}
-          {e.kind === 'facilitator' && (
+          {(e.kind === 'facilitator' || (e.kind === 'player' && beneficiaryCount > 1)) && (
             <button
               type="button"
               onClick={() => removeEntry(i)}
               className="self-end inline-flex items-center justify-center rounded border border-white/20 px-2 py-1 text-neon-yellow hover:bg-red-400/15"
-              title="Remover facilitador"
+              title="Remover"
             >
               <X size={14} />
             </button>
           )}
         </div>
       ))}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <button
-          type="button"
-          onClick={addFacilitator}
-          disabled={facilitatorCount >= 5}
-          className="inline-flex items-center gap-2 rounded border border-white/20 px-3 py-1 font-semibold text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
-        >
-          <UserPlus size={14} className="text-neon-yellow" />
-          Facilitador ({facilitatorCount}/5)
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={addBeneficiary}
+            className="inline-flex items-center gap-2 rounded border border-white/20 px-3 py-1 font-semibold text-neon-yellow hover:bg-neon-yellow/10"
+          >
+            <UserPlus size={14} className="text-neon-yellow" />
+            Beneficiário ({beneficiaryCount})
+          </button>
+          <button
+            type="button"
+            onClick={addFacilitator}
+            disabled={facilitatorCount >= 5}
+            className="inline-flex items-center gap-2 rounded border border-white/20 px-3 py-1 font-semibold text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
+          >
+            <UserPlus size={14} className="text-neon-yellow" />
+            Facilitador ({facilitatorCount}/5)
+          </button>
+        </div>
         <span
           className={`inline-flex items-center gap-1 font-semibold ${
             total === 100 ? 'text-emerald-200' : 'text-red-200'
@@ -1075,7 +1093,6 @@ function SplitEditor({
           )}
         </span>
       </div>
-      {emailLookup && <p className="text-[11px] text-white/60">{emailLookup}</p>}
     </div>
   );
 }
