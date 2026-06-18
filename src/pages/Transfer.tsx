@@ -2086,21 +2086,33 @@ function TransferMarketCompactCard({
   );
 }
 
-function PlayerCard({
+export function PlayerCard({
   player,
   isModal = false,
   listHomonym,
   /** Carril horizontal: hover mais leve para não ser cortado por `overflow-x-auto`. */
   carouselStrip = false,
+  /** Venda de preço fixo (ex.: Legacy PIX/OLE): troca o rodapé de leilão por
+   *  preço + CTA, esconde "Encerra em" e troca o selo de moeda. */
+  fixedSale,
+  /** Override do estilo/classe da foto (ex.: enquadramento do Legacy, em cor). */
+  portraitStyle,
+  portraitClassName,
 }: {
   player: MockAuctionPlayer;
   isModal?: boolean;
   /** Só na grelha: quando há mais de um anúncio com o mesmo nome no resultado atual. */
   listHomonym?: { index: number; total: number };
   carouselStrip?: boolean;
+  fixedSale?: { price: string; cta: string; badge: string };
+  portraitStyle?: import('react').CSSProperties;
+  portraitClassName?: string;
 }) {
-  const currencyLabel =
-    player.auctionCurrency === 'EXP' ? 'Lances em EXP' : 'Lances em BRO';
+  const currencyLabel = fixedSale
+    ? fixedSale.badge
+    : player.auctionCurrency === 'EXP'
+      ? 'Lances em EXP'
+      : 'Lances em BRO';
   const isGold = player.category === 'gold';
   const showHomonymStrip = !isModal && listHomonym && listHomonym.total > 1;
   return (
@@ -2182,12 +2194,12 @@ function PlayerCard({
 
         {/* Player Image */}
         <div className="aspect-[3/4] relative flex items-end justify-center">
-          <img 
-            src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`} 
-            alt={player.name} 
-            className="w-full h-full object-cover object-top grayscale group-hover:grayscale-0 transition-all duration-500 drop-shadow-2xl" 
-            referrerPolicy="no-referrer" 
-            style={{ maskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)' }} 
+          <img
+            src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
+            alt={player.name}
+            className={cn('w-full h-full object-cover object-top transition-all duration-500 drop-shadow-2xl', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
+            referrerPolicy="no-referrer"
+            style={portraitStyle ?? { maskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)' }}
           />
         </div>
 
@@ -2270,24 +2282,22 @@ function PlayerCard({
                 carouselStrip ? 'items-stretch' : 'sm:justify-between',
               )}
             >
-              {/* Tempo restante — texto-claro, sem icone Clock */}
-              <span className="flex shrink-0 items-center justify-center gap-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/55 sm:justify-start sm:text-[10px]">
-                Encerra em <span className="text-white/85">{player.timeLeft}</span>
-              </span>
-              {/* Lance atual — MORET serif italic, peso editorial */}
+              {/* Tempo restante — só leilão (venda fixa esconde) */}
+              {!fixedSale && (
+                <span className="flex shrink-0 items-center justify-center gap-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/55 sm:justify-start sm:text-[10px]">
+                  Encerra em <span className="text-white/85">{player.timeLeft}</span>
+                </span>
+              )}
+              {/* Preço — MORET serif italic, peso editorial */}
               <span
                 className={cn(
                   'min-w-0 max-w-full break-words text-center italic tabular-nums leading-tight text-neon-green [overflow-wrap:anywhere] sm:text-right',
-                  carouselStrip ? 'w-full truncate' : 'sm:max-w-[58%]',
+                  carouselStrip ? 'w-full truncate' : fixedSale ? 'w-full text-center' : 'sm:max-w-[58%]',
                 )}
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(16px, 3vw, 22px)',
-                  fontWeight: 700,
-                }}
-                title={formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
+                style={{ fontFamily: 'var(--font-serif-hero)', fontSize: 'clamp(16px, 3vw, 22px)', fontWeight: 700 }}
+                title={fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
               >
-                {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
+                {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
               </span>
             </div>
             <button
@@ -2295,7 +2305,7 @@ function PlayerCard({
               className="flex w-full min-h-11 max-w-full items-center justify-center bg-neon-yellow px-3 py-2.5 font-display text-[12px] font-black uppercase leading-tight tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98] [-webkit-tap-highlight-color:transparent] sm:py-3 sm:text-[13px]"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              Dar Lance
+              {fixedSale ? fixedSale.cta : 'Dar Lance'}
             </button>
           </div>
         </div>
@@ -2309,17 +2319,23 @@ function PlayerCard({
  * Foto à esquerda + info-claro à direita + ação dominante.
  * Pattern espelha o JOGADORES DISPONÍVEIS de Team.tsx.
  */
-function TransferRowCard({
+export function TransferRowCard({
   player,
   listHomonym,
   onSelect,
   delay = 0,
+  fixedSale,
+  portraitStyle,
+  portraitClassName,
 }: {
   key?: import("react").Key;
   player: MockAuctionPlayer;
   listHomonym?: { index: number; total: number };
   onSelect: () => void;
   delay?: number;
+  fixedSale?: { price: string; cta: string; badge: string };
+  portraitStyle?: import('react').CSSProperties;
+  portraitClassName?: string;
 }) {
   const isGold = player.category === 'gold';
   const isNeon = player.style === 'neon-yellow';
@@ -2360,7 +2376,8 @@ function TransferRowCard({
         <img
           src={player.portraitSrc?.trim() || `https://picsum.photos/seed/transfer-${player.id}/300/400`}
           alt={player.name}
-          className="absolute inset-0 h-full w-full object-cover object-top grayscale transition-all duration-300 group-hover:grayscale-0"
+          className={cn('absolute inset-0 h-full w-full object-cover object-top transition-all duration-300', portraitClassName ?? 'grayscale group-hover:grayscale-0')}
+          style={portraitStyle}
           referrerPolicy="no-referrer"
         />
         <div
@@ -2436,13 +2453,13 @@ function TransferRowCard({
           <span
             className={cn(
               'shrink-0 inline-flex items-center border px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-[0.18em]',
-              player.auctionCurrency === 'EXP'
+              fixedSale || player.auctionCurrency === 'EXP'
                 ? 'border-neon-yellow/60 bg-black/70 text-neon-yellow'
                 : 'border-white/40 bg-black/70 text-white',
             )}
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
-            {player.auctionCurrency}
+            {fixedSale ? fixedSale.badge : player.auctionCurrency}
           </span>
         </div>
 
@@ -2478,23 +2495,19 @@ function TransferRowCard({
           ))}
         </div>
 
-        {/* Footer: encerra em + lance + CTA */}
+        {/* Footer: (encerra em) + preço + CTA */}
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-divider-yellow)] pt-3">
           <div className="flex min-w-0 flex-col">
-            <span
-              className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50"
-            >
-              Encerra em <span className="text-white/85">{player.timeLeft}</span>
-            </span>
+            {!fixedSale && (
+              <span className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/50">
+                Encerra em <span className="text-white/85">{player.timeLeft}</span>
+              </span>
+            )}
             <span
               className="italic tabular-nums leading-tight text-neon-green"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(18px, 2.4vw, 24px)',
-              }}
+              style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: 'clamp(18px, 2.4vw, 24px)' }}
             >
-              {formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
+              {fixedSale ? fixedSale.price : formatAuctionDisplay(player.auctionCurrency, player.currentBid, 'card')}
             </span>
           </div>
           <button
@@ -2506,7 +2519,7 @@ function TransferRowCard({
             className="inline-flex items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all hover:bg-white hover:scale-[1.02] active:scale-[0.98]"
             style={{ borderRadius: 'var(--radius-sm)' }}
           >
-            Dar Lance
+            {fixedSale ? fixedSale.cta : 'Dar Lance'}
           </button>
         </div>
       </div>
