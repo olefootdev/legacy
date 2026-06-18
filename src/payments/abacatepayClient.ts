@@ -24,6 +24,8 @@ export interface CreatePixInput {
     taxId: string; // CPF
     cellphone?: string;
   };
+  /** Guardado na intent (ex: { player } pra entrega de card via webhook). */
+  metadata?: Record<string, unknown>;
 }
 
 export interface CreatePixResult {
@@ -72,6 +74,7 @@ export async function createPixCharge(input: CreatePixInput): Promise<CreatePixR
         tax_id: input.customer.taxId,
         cellphone: input.customer.cellphone ?? '',
       },
+      ...(input.metadata ? { metadata: input.metadata } : {}),
     }),
   });
 

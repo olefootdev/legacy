@@ -12,6 +12,8 @@ import {
 } from '@/supabase/legacyPlayers';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
+import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
+import { PixCheckoutModal } from '@/components/PixCheckoutModal';
 
 export function TransferLegaciesTab() {
   const dispatch = useGameDispatch();
@@ -20,6 +22,15 @@ export function TransferLegaciesTab() {
   const clubName = useGameStore((s) => s.club?.name ?? 'Manager');
   const [rows, setRows] = useState<LegacyPlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pixRow, setPixRow] = useState<LegacyPlayerRow | null>(null);
+  const quote = useOlefootUsdBrlQuote(true);
+
+  // Preço em R$ (centavos) do card a partir do preço de lançamento USDT × cotação.
+  const brlCentsFor = (row: LegacyPlayerRow): number | null => {
+    if (quote.status !== 'ok') return null;
+    if (row.currency !== 'USDT' || !row.price_unit_cents) return null;
+    return Math.round(row.price_unit_cents * quote.olefootVenda);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -134,11 +145,36 @@ export function TransferLegaciesTab() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {g.rows.map((row) => (
-              <LegacyCard key={row.id} row={row} oleBal={oleBal} owned={owned} onBuy={buy} />
+              <LegacyCard
+                key={row.id}
+                row={row}
+                oleBal={oleBal}
+                owned={owned}
+                onBuy={buy}
+                brlCents={brlCentsFor(row)}
+                onPixBuy={() => setPixRow(row)}
+              />
             ))}
           </div>
         </section>
       ))}
+
+      {pixRow && brlCentsFor(pixRow) != null && (
+        <PixCheckoutModal
+          open={!!pixRow}
+          productKind="card"
+          productRef={pixRow.id}
+          amountCents={brlCentsFor(pixRow)!}
+          metadata={{ player: legacyRowToPlayerEntity(pixRow) }}
+          title={`Comprar ${pixRow.name}`}
+          description="Pague via PIX e o jogador entra no teu time automaticamente."
+          onClose={() => setPixRow(null)}
+          onSuccess={() => {
+            setPixRow(null);
+            window.alert('Pagamento confirmado! O jogador chega no teu time em instantes.');
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -287,11 +323,15 @@ function LegacyCard({
   oleBal,
   owned,
   onBuy,
+  brlCents,
+  onPixBuy,
 }: {
   row: LegacyPlayerRow;
   oleBal: number;
   owned: Set<string>;
   onBuy: (row: LegacyPlayerRow) => void;
+  brlCents: number | null;
+  onPixBuy: () => void;
 }) {
   const entity = legacyRowToPlayerEntity(row);
   const ovr = overallFromAttributes(entity.attrs);
@@ -300,6 +340,7 @@ function LegacyCard({
   const isOwned = owned.has(entity.id);
   const canAfford = oleBal >= priceExp;
   const boosterEntries = Object.entries(row.team_booster ?? {});
+  const fmtBrl = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 
   return (
     <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.06] to-black p-4">
@@ -357,26 +398,38 @@ function LegacyCard({
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1 text-sm font-black text-neon-yellow">
-          <Coins className="h-3.5 w-3.5" />
-          {priceExp.toLocaleString('pt-BR')} OLE
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 text-sm font-black text-neon-yellow">
+            <Coins className="h-3.5 w-3.5" />
+            {priceExp.toLocaleString('pt-BR')} OLE
+          </div>
+          <button
+            type="button"
+            onClick={() => onBuy(row)}
+            disabled={isOwned || !canAfford}
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors',
+              isOwned
+                ? 'bg-white/5 text-gray-500'
+                : canAfford
+                  ? 'bg-amber-500 text-black hover:bg-amber-400'
+                  : 'bg-white/5 text-gray-500',
+            )}
+          >
+            {isOwned ? 'Adquirido' : canAfford ? 'Comprar c/ OLE' : 'Sem saldo OLE'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => onBuy(row)}
-          disabled={isOwned || !canAfford}
-          className={cn(
-            'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors',
-            isOwned
-              ? 'bg-white/5 text-gray-500'
-              : canAfford
-                ? 'bg-amber-500 text-black hover:bg-amber-400'
-                : 'bg-white/5 text-gray-500',
-          )}
-        >
-          {isOwned ? 'Adquirido' : canAfford ? 'Comprar' : 'Sem saldo'}
-        </button>
+        {/* Compra com dinheiro real (PIX) — pra quem não tem OLE */}
+        {!isOwned && brlCents != null && (
+          <button
+            type="button"
+            onClick={onPixBuy}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] py-2 text-[12px] font-black uppercase tracking-wide text-black transition hover:brightness-110"
+          >
+            Comprar com PIX · {fmtBrl(brlCents)}
+          </button>
+        )}
       </div>
     </div>
   );

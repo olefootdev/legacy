@@ -40,6 +40,8 @@ interface Props {
   productKind: ProductKind;
   productRef?: string;
   amountCents: number; // BRL cents (R$125 = 12500)
+  /** Metadata extra guardada na intent (ex: { player } pra entrega de card). */
+  metadata?: Record<string, unknown>;
   title: string;
   description: string;
   defaultName?: string;
@@ -70,6 +72,7 @@ export function PixCheckoutModal({
   productKind,
   productRef,
   amountCents,
+  metadata,
   title,
   description,
   defaultName = '',
@@ -122,6 +125,7 @@ export function PixCheckoutModal({
       productKind,
       productRef,
       amountCents,
+      ...(metadata ? { metadata } : {}),
       customer: {
         name: name.trim(),
         email: email.trim(),

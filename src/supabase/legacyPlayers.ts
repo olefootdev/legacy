@@ -15,6 +15,8 @@ export type LegacyPlayerRow = {
   taught_attributes: string[];
   team_booster: Record<string, number>;
   price_bro_cents: number;
+  price_unit_cents: number | null;
+  currency: string | null;
   listed_on_market: boolean;
   country: string | null;
   age: number | null;

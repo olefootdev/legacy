@@ -27,6 +27,8 @@ interface CreatePixBody {
     tax_id?: string; // CPF
     cellphone?: string;
   };
+  /** Metadata extra guardada na intent (ex: { player } pra entrega de card). */
+  metadata?: Record<string, unknown>;
 }
 
 interface AbacateChargeResponse {
@@ -124,7 +126,7 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
       p_customer_email: customer.email,
       p_customer_tax_id: customer.tax_id,
       p_customer_cellphone: customer.cellphone ?? null,
-      p_metadata: { source: 'olefoot_app' },
+      p_metadata: { source: 'olefoot_app', ...(body.metadata ?? {}) },
     }),
   });
 
