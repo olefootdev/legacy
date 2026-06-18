@@ -26,11 +26,6 @@ type Currency = 'USDT' | 'OLEFOOT';
 type Tier = 1 | 2 | 3;
 
 const VALID_PHASES: readonly Phase[] = ['revelacao', 'consolidacao', 'expansao'];
-const PHASE_LABEL: Record<Phase, string> = {
-  revelacao: 'Revelação',
-  consolidacao: 'Consolidação',
-  expansao: 'Expansão',
-};
 
 /** Defaults Panini-tier por tier (admin pode override). */
 const TIER_DEFAULTS: Record<Tier, { supply: number; priceUsdtCents: number; priceOleUnits: number; phase: Phase }> = {
@@ -227,7 +222,9 @@ function resolvePricing(ph: LegendPhasePayload): ResolvedPricing {
 
 function buildLegacyRow(slug: string, payload: LegendImportPayload, ph: LegendPhasePayload, pricing: ResolvedPricing, split: SplitEntry[]) {
   const e = ph.entity;
-  const displayName = `${e.name.trim()} — ${PHASE_LABEL[ph.phase]}`;
+  // Nome puro como digitado (sem sufixo "— Fase"); os nomes já se diferenciam
+  // (ex: Goncalves93/95/98). O export ainda usa stripPhaseLabel p/ saves antigos.
+  const displayName = e.name.trim();
   const attrs = validateAttrs(e.attrs)!;
 
   return {
