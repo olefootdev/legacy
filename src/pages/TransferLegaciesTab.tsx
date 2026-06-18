@@ -23,6 +23,7 @@ export function TransferLegaciesTab() {
   const clubName = useGameStore((s) => s.club?.name ?? 'Manager');
   const [rows, setRows] = useState<LegacyPlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'detalhe' | 'galeria'>('detalhe');
   const [pixRow, setPixRow] = useState<LegacyPlayerRow | null>(null);
   const [detailRow, setDetailRow] = useState<LegacyPlayerRow | null>(null);
   const quote = useOlefootUsdBrlQuote(true);
@@ -135,32 +136,63 @@ export function TransferLegaciesTab() {
 
   return (
     <div className="space-y-8">
-      {groups.map((g) => (
-        <section key={g.code} className="space-y-3">
-          <div className="flex items-baseline justify-between gap-3 border-b border-amber-400/20 pb-1.5">
-            <h3 className="font-display text-sm font-black uppercase tracking-wide text-amber-300">
-              {g.title}
-            </h3>
-            <span className="text-[11px] text-white/45">
-              {g.rows.length} {g.rows.length === 1 ? 'jogador' : 'jogadores'}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {g.rows.map((row) => (
-              <LegacyCard
-                key={row.id}
-                row={row}
-                oleBal={oleBal}
-                owned={owned}
-                onBuy={buy}
-                brlCents={brlCentsFor(row)}
-                onPixBuy={() => setPixRow(row)}
-                onView={() => setDetailRow(row)}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {/* Toggle de visualização — Detalhe (cards grandes) vs Galeria (grid compacto) */}
+      <div className="flex items-center justify-end gap-1.5">
+        {([['detalhe', 'Detalhe'], ['galeria', 'Galeria']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setView(key)}
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition',
+              view === key ? 'bg-amber-400 text-black' : 'border border-white/10 text-white/55 hover:text-white',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'galeria' ? (
+        /* Galeria = álbum: TODOS os legacies num grid denso (coleção vira tag no card). */
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          {rows.map((row) => (
+            <CompactLegacyCard
+              key={row.id}
+              row={row}
+              owned={owned}
+              onView={() => setDetailRow(row)}
+            />
+          ))}
+        </div>
+      ) : (
+        groups.map((g) => (
+          <section key={g.code} className="space-y-3">
+            <div className="flex items-baseline justify-between gap-3 border-b border-amber-400/20 pb-1.5">
+              <h3 className="font-display text-sm font-black uppercase tracking-wide text-amber-300">
+                {g.title}
+              </h3>
+              <span className="text-[11px] text-white/45">
+                {g.rows.length} {g.rows.length === 1 ? 'jogador' : 'jogadores'}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {g.rows.map((row) => (
+                <LegacyCard
+                  key={row.id}
+                  row={row}
+                  oleBal={oleBal}
+                  owned={owned}
+                  onBuy={buy}
+                  brlCents={brlCentsFor(row)}
+                  onPixBuy={() => setPixRow(row)}
+                  onView={() => setDetailRow(row)}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
 
       {pixRow && brlCentsFor(pixRow) != null && (
         <PixCheckoutModal
@@ -336,6 +368,63 @@ function HeroLegacyCard({
         </div>
       </div>
     </div>
+  );
+}
+
+// ── CARD COMPACTO (Galeria / álbum) ─────────────────────────────────────────
+function CompactLegacyCard({
+  row,
+  owned,
+  onView,
+}: {
+  row: LegacyPlayerRow;
+  owned: Set<string>;
+  onView: () => void;
+}) {
+  const entity = legacyRowToPlayerEntity(row);
+  const ovr = overallFromAttributes(entity.attrs);
+  const portrait = legacyPortraitImageUrl(row);
+  const isOwned = owned.has(entity.id);
+
+  return (
+    <button
+      type="button"
+      onClick={onView}
+      className="group relative aspect-[11/15.6] w-full overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-black text-left transition hover:border-amber-400/70 hover:shadow-[0_0_22px_-6px_rgba(245,158,11,0.55)]"
+    >
+      {portrait ? (
+        <img
+          src={portrait}
+          alt={entity.name}
+          style={legacyPortraitFocusStyle(row)}
+          className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-[1.04]"
+          loading="lazy"
+        />
+      ) : (
+        <div className="grid h-full w-full place-items-center text-amber-400/40">
+          <Crown className="h-8 w-8" />
+        </div>
+      )}
+
+      {/* OVR */}
+      <div className="absolute left-1.5 top-1.5 rounded-md border border-amber-400/40 bg-black/70 px-1.5 py-0.5 backdrop-blur">
+        <p className="italic leading-none tabular-nums text-amber-300" style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '15px' }}>
+          {ovr}
+        </p>
+      </div>
+
+      {isOwned && (
+        <div className="absolute right-1.5 top-1.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-black">
+          Seu
+        </div>
+      )}
+
+      {/* Nome + posição */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent px-2 pb-1.5 pt-6">
+        <p className="truncate font-display text-[11px] font-black uppercase tracking-tight text-white">{entity.name}</p>
+        <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-amber-200/75">{entity.pos}</p>
+      </div>
+    </button>
   );
 }
 
