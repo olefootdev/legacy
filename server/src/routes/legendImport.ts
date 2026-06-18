@@ -695,13 +695,23 @@ legendImportRoutes.get('/find-user', async (c) => {
     return c.json({ error: 'email query param required' }, 400);
   }
 
-  // listUsers filtra por email — supabase-js v2.42+ aceita filter.
-  const { data, error } = await sb.auth.admin.listUsers({ page: 1, perPage: 50 });
-  if (error) {
-    console.error('[find-user] error:', error.message);
-    return c.json({ error: error.message }, 500);
+  // listUsers é paginado e SEM filtro por e-mail na Admin API. O bug antigo
+  // (perPage: 50) só via os 50 primeiros usuários — com 190+ contas, qualquer
+  // user mais recente aparecia como "não cadastrado". Agora percorremos páginas
+  // (1000 por vez) até achar ou esgotar.
+  const target = email.toLowerCase();
+  const perPage = 1000;
+  let match: Awaited<ReturnType<typeof sb.auth.admin.listUsers>>['data']['users'][number] | undefined;
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await sb.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.error('[find-user] error:', error.message);
+      return c.json({ error: error.message }, 500);
+    }
+    match = data.users.find((u) => u.email?.toLowerCase() === target);
+    if (match) break;
+    if (data.users.length < perPage) break; // última página
   }
-  const match = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
   if (!match) {
     return c.json({ found: false });
   }
