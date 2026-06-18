@@ -169,7 +169,22 @@ export function QuickHalftimePanel({
                 Em alta
               </p>
               {five.top.map((p) => (
-                <MiniCard key={p.id} p={p} tone="top" />
+                <MiniCard
+                  key={p.id}
+                  p={p}
+                  tone="top"
+                  action={
+                    availableBench.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setPicking(p.id)}
+                        className="px-2.5 py-1 border border-neon-yellow/40 text-neon-yellow/80 text-[10px] font-display uppercase tracking-[0.12em] font-bold hover:bg-neon-yellow hover:text-black transition-colors inline-flex items-center gap-1"
+                      >
+                        <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden /> Trocar
+                      </button>
+                    ) : null
+                  }
+                />
               ))}
               <p className="text-[9px] uppercase tracking-[0.2em] font-display font-black pt-1" style={{ color: 'var(--color-warning)' }}>
                 Apagados — trocar?
