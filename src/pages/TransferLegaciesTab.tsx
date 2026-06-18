@@ -5,7 +5,6 @@ import { overallFromAttributes } from '@/entities/player';
 import {
   fetchListedLegacyPlayerRows,
   legacyPortraitImageUrl,
-  legacyPortraitFocusStyle,
   legacyRowToPlayerEntity,
   type LegacyPlayerRow,
 } from '@/supabase/legacyPlayers';
@@ -137,6 +136,16 @@ export function TransferLegaciesTab() {
 
   const fmtBrl = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 
+  // Enquadramento do card Genesis: a arte do Legacy é QUADRADA (rosto no meio).
+  // Numa caixa retrato (3/4) ela preenche a altura toda → "cortado no meio".
+  // Damos zoom no rosto (alinha no topo como os Genesis). focus_x posiciona
+  // horizontalmente; vertical fixo na faixa do rosto.
+  const cardCropStyle = (row: LegacyPlayerRow): import('react').CSSProperties => {
+    const fx = typeof row.portrait_focus_x === 'number' ? Math.max(0, Math.min(1, row.portrait_focus_x)) : 0.5;
+    const pos = `${(fx * 100).toFixed(1)}% 30%`;
+    return { objectFit: 'cover', objectPosition: pos, transform: 'scale(1.65)', transformOrigin: pos };
+  };
+
   // Legacy → MockAuctionPlayer (reusa o card Genesis: PlayerCard / TransferRowCard).
   const toAuction = (row: LegacyPlayerRow, idx: number): MockAuctionPlayer => {
     const entity = legacyRowToPlayerEntity(row);
@@ -211,7 +220,7 @@ export function TransferLegaciesTab() {
                   <PlayerCard
                     player={toAuction(row, i)}
                     fixedSale={fixedSaleFor(row)}
-                    portraitStyle={legacyPortraitFocusStyle(row)}
+                    portraitStyle={cardCropStyle(row)}
                     portraitClassName=""
                   />
                 </div>
@@ -225,7 +234,7 @@ export function TransferLegaciesTab() {
                   player={toAuction(row, i)}
                   onSelect={() => setDetailRow(row)}
                   fixedSale={fixedSaleFor(row)}
-                  portraitStyle={legacyPortraitFocusStyle(row)}
+                  portraitStyle={cardCropStyle(row)}
                   portraitClassName=""
                   delay={i * 0.04}
                 />
