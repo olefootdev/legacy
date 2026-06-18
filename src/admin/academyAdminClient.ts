@@ -4,6 +4,7 @@
  * legendCreatorClient.
  */
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { getSupabase } from '@/supabase/client';
 import type { PlayerAttributes } from '@/entities/types';
 
 export interface AdminAttributeTemplate {
@@ -43,14 +44,23 @@ function adminToken(): string {
   }
 }
 
-function headers(json = false): Record<string, string> {
-  const h: Record<string, string> = { 'X-Admin-Token': adminToken() };
+async function headers(json = false): Promise<Record<string, string>> {
+  const h: Record<string, string> = {};
   if (json) h['Content-Type'] = 'application/json';
+  const tok = adminToken();
+  if (tok) h['X-Admin-Token'] = tok;
+  try {
+    const sb = getSupabase();
+    const access = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+    if (access) h['Authorization'] = `Bearer ${access}`;
+  } catch {
+    /* sessão indisponível */
+  }
   return h;
 }
 
 export async function fetchAcademyTemplates(): Promise<AdminAttributeTemplate[]> {
-  const r = await fetch(`${olefootApiBase()}/api/admin/academy/templates`, { headers: headers() });
+  const r = await fetch(`${olefootApiBase()}/api/admin/academy/templates`, { headers: await headers() });
   const body = (await r.json()) as { ok?: boolean; templates?: AdminAttributeTemplate[]; error?: string };
   if (!r.ok || !body.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
   return body.templates ?? [];
@@ -66,7 +76,7 @@ export async function patchAcademyTemplate(patch: {
 }): Promise<AdminAttributeTemplate | null> {
   const r = await fetch(`${olefootApiBase()}/api/admin/academy/template`, {
     method: 'PATCH',
-    headers: headers(true),
+    headers: await headers(true),
     body: JSON.stringify(patch),
   });
   const body = (await r.json()) as { ok?: boolean; template?: AdminAttributeTemplate; error?: string };
@@ -75,7 +85,7 @@ export async function patchAcademyTemplate(patch: {
 }
 
 export async function fetchAcademyDrawConfigAdmin(): Promise<AdminDrawConfig[]> {
-  const r = await fetch(`${olefootApiBase()}/api/admin/academy/draw-config`, { headers: headers() });
+  const r = await fetch(`${olefootApiBase()}/api/admin/academy/draw-config`, { headers: await headers() });
   const body = (await r.json()) as { ok?: boolean; config?: AdminDrawConfig[]; error?: string };
   if (!r.ok || !body.ok) throw new Error(body.error ?? `HTTP ${r.status}`);
   return body.config ?? [];
@@ -89,7 +99,7 @@ export async function patchAcademyDrawConfig(patch: {
 }): Promise<void> {
   const r = await fetch(`${olefootApiBase()}/api/admin/academy/draw-config`, {
     method: 'PATCH',
-    headers: headers(true),
+    headers: await headers(true),
     body: JSON.stringify(patch),
   });
   const body = (await r.json()) as { ok?: boolean; error?: string };

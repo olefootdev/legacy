@@ -7,6 +7,7 @@
  */
 
 import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
+import { getSupabase } from '@/supabase/client';
 
 export type LegendPhase = 'revelacao' | 'consolidacao' | 'expansao';
 export type LegendCurrency = 'USDT' | 'OLEFOOT';
@@ -116,14 +117,31 @@ function adminToken(): string {
   }
 }
 
+/**
+ * Headers de admin: manda o token legado (se existir) E o Bearer da sessão
+ * Supabase. O servidor aceita qualquer um dos dois — logado no OLEFOOT como
+ * admin, não precisa de token manual.
+ */
+async function authHeaders(json = false): Promise<Record<string, string>> {
+  const h: Record<string, string> = {};
+  if (json) h['Content-Type'] = 'application/json';
+  const tok = adminToken();
+  if (tok) h['X-Admin-Token'] = tok;
+  try {
+    const sb = getSupabase();
+    const access = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+    if (access) h['Authorization'] = `Bearer ${access}`;
+  } catch {
+    /* sessão indisponível — segue com token se houver */
+  }
+  return h;
+}
+
 export async function adminImportLegend(slug: string, payload: LegendImportPayload): Promise<LegendImportResponse> {
   const url = `${olefootApiBase()}/api/admin/legend-import`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Token': adminToken(),
-    },
+    headers: await authHeaders(true),
     body: JSON.stringify({ slug, payload }),
   });
   const body = (await res.json()) as LegendImportResponse | { error: string };
@@ -155,7 +173,7 @@ export async function adminExportLegend(slug: string): Promise<LegendExportRespo
   const url = `${olefootApiBase()}/api/admin/legend-export?slug=${encodeURIComponent(slug)}`;
   const res = await fetch(url, {
     method: 'GET',
-    headers: { 'X-Admin-Token': adminToken() },
+    headers: await authHeaders(),
   });
   const body = (await res.json()) as LegendExportResponse | { error: string };
   if (!res.ok || 'error' in body) {
@@ -184,10 +202,7 @@ export async function adminSetLegacyPortrait(
   const url = `${olefootApiBase()}/api/admin/legacy-player-set-portrait`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Token': adminToken(),
-    },
+    headers: await authHeaders(true),
     body: JSON.stringify({
       legacyPlayerId,
       publicUrl,
@@ -206,7 +221,7 @@ export async function adminFindUserByEmail(email: string): Promise<FindUserRespo
   const url = `${olefootApiBase()}/api/admin/find-user?email=${encodeURIComponent(email)}`;
   const res = await fetch(url, {
     method: 'GET',
-    headers: { 'X-Admin-Token': adminToken() },
+    headers: await authHeaders(),
   });
   const body = (await res.json()) as FindUserResponse | { error: string };
   if (!res.ok || 'error' in body) {

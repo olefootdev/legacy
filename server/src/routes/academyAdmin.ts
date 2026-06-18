@@ -21,7 +21,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, M
 
 /** GET — lista templates (draft primeiro, mais recentes no topo). */
 academyAdminRoutes.get('/api/admin/academy/templates', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);
@@ -50,7 +50,7 @@ interface PatchTemplateBody {
 
 /** PATCH — edita/sela um template. Recalcula nada: admin é a verdade aqui. */
 academyAdminRoutes.patch('/api/admin/academy/template', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);
@@ -86,7 +86,7 @@ academyAdminRoutes.patch('/api/admin/academy/template', async (c) => {
 
 /** GET — config de odds/tetos por raridade. */
 academyAdminRoutes.get('/api/admin/academy/draw-config', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);
@@ -108,7 +108,7 @@ interface PatchConfigBody {
 
 /** PATCH — ajusta odds/tetos de uma raridade. */
 academyAdminRoutes.patch('/api/admin/academy/draw-config', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase admin não configurado.' }, 503);

@@ -171,7 +171,7 @@ globalLeagueRoutes.get('/rounds', async (c) => {
  * rodada scheduled com kickoff no passado.
  */
 globalLeagueRoutes.post('/cycle', async (c) => {
-  const forbidden = requireAdminToken(c);
+  const forbidden = await requireAdminToken(c);
   if (forbidden) return forbidden;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase não configurado' }, 503);
@@ -187,7 +187,7 @@ globalLeagueRoutes.post('/cycle', async (c) => {
  * Body: { seasonName, durationDays, slots, slotDurationMin, minTeamsRequired }
  */
 globalLeagueRoutes.post('/start-season', async (c) => {
-  const forbidden = requireAdminToken(c);
+  const forbidden = await requireAdminToken(c);
   if (forbidden) return forbidden;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase não configurado' }, 503);
@@ -329,7 +329,7 @@ globalLeagueRoutes.post('/start-season', async (c) => {
  * POST /recover-stale-live — tenta destravar uma rodada que ficou live.
  */
 globalLeagueRoutes.post('/recover-stale-live', async (c) => {
-  const forbidden = requireAdminToken(c);
+  const forbidden = await requireAdminToken(c);
   if (forbidden) return forbidden;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase não configurado' }, 503);
@@ -347,7 +347,7 @@ globalLeagueRoutes.post('/recover-stale-live', async (c) => {
  * Preserva estatísticas de times existentes e usa manager_squad para estimar OVR.
  */
 globalLeagueRoutes.post('/backfill-teams', async (c) => {
-  const forbidden = requireAdminToken(c);
+  const forbidden = await requireAdminToken(c);
   if (forbidden) return forbidden;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase não configurado' }, 503);
@@ -390,7 +390,7 @@ globalLeagueRoutes.post('/backfill-teams', async (c) => {
 });
 
 globalLeagueRoutes.post('/enroll', async (c) => {
-  const forbidden = requireAdminToken(c);
+  const forbidden = await requireAdminToken(c);
   if (forbidden) return forbidden;
   const sb = getSupabaseAdmin();
   if (!sb) return c.json({ error: 'Supabase não configurado' }, 503);

@@ -285,7 +285,7 @@ function buildInitialLot(playerId: string, pricing: ResolvedPricing) {
 export const legendImportRoutes = new Hono();
 
 legendImportRoutes.post('/legend-import', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
 
   const sb = getSupabaseAdmin();
@@ -389,7 +389,7 @@ legendImportRoutes.post('/legend-import', async (c) => {
  * Response: { ok: true, url: string, path: string }
  */
 legendImportRoutes.post('/legend-portrait', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
 
   const sb = getSupabaseAdmin();
@@ -478,7 +478,7 @@ legendImportRoutes.post('/legend-portrait', async (c) => {
  * e payment_split são incluídos.
  */
 legendImportRoutes.get('/legend-export', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
 
   const sb = getSupabaseAdmin();
@@ -622,7 +622,7 @@ legendImportRoutes.get('/legend-export', async (c) => {
  * Body JSON: { legacyPlayerId: string, publicUrl: string, storagePath?: string }
  */
 legendImportRoutes.post('/legacy-player-set-portrait', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
 
   const sb = getSupabaseAdmin();
@@ -684,7 +684,7 @@ legendImportRoutes.post('/legacy-player-set-portrait', async (c) => {
  * Auth admin obrigatório.
  */
 legendImportRoutes.get('/find-user', async (c) => {
-  const authErr = requireAdminToken(c);
+  const authErr = await requireAdminToken(c);
   if (authErr) return authErr;
 
   const sb = getSupabaseAdmin();
