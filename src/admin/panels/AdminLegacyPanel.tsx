@@ -48,6 +48,8 @@ type DraftRow = {
   taught_attributes: string[];
   team_booster: Record<string, number>;
   price_bro_cents: number;
+  price_unit_cents: number;
+  currency: string;
   listed_on_market: boolean;
   country: string;
   age: number | null;
@@ -68,6 +70,8 @@ function emptyDraft(): DraftRow {
     taught_attributes: POS_TAUGHT_DEFAULTS.MC,
     team_booster: { morale: 3 },
     price_bro_cents: 50_000,
+    price_unit_cents: 0,
+    currency: 'OLEFOOT',
     listed_on_market: false,
     country: '',
     age: 30,
@@ -89,6 +93,8 @@ function draftFromRow(r: LegacyPlayerRow): DraftRow {
     taught_attributes: Array.isArray(r.taught_attributes) ? r.taught_attributes : [],
     team_booster: (r.team_booster ?? {}) as Record<string, number>,
     price_bro_cents: r.price_bro_cents ?? 0,
+    price_unit_cents: r.price_unit_cents ?? 0,
+    currency: r.currency ?? 'OLEFOOT',
     listed_on_market: !!r.listed_on_market,
     country: r.country ?? '',
     age: r.age ?? null,
@@ -132,6 +138,8 @@ export function AdminLegacyPanel() {
       taught_attributes: editing.taught_attributes,
       team_booster: editing.team_booster,
       price_bro_cents: editing.price_bro_cents,
+      price_unit_cents: editing.price_unit_cents,
+      currency: editing.currency,
       listed_on_market: editing.listed_on_market,
       country: editing.country.trim() || null,
       age: editing.age ?? null,
@@ -415,11 +423,30 @@ function EditorModal({
                 className="w-full rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
               />
             </Field>
-            <Field label="Preço (BRO cents)">
+            <Field label="Preço OLE (BRO cents)">
               <input
                 type="number"
                 value={draft.price_bro_cents}
                 onChange={(e) => update('price_bro_cents', Number(e.target.value) || 0)}
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+              />
+            </Field>
+            <Field label="Moeda de venda">
+              <select
+                value={draft.currency}
+                onChange={(e) => update('currency', e.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+              >
+                <option value="USDT">USDT (PIX em R$)</option>
+                <option value="OLEFOOT">OLEFOOT (saldo OLE)</option>
+              </select>
+            </Field>
+            <Field label="Preço de venda (USDT cents — $1 = 100)">
+              <input
+                type="number"
+                value={draft.price_unit_cents}
+                onChange={(e) => update('price_unit_cents', Number(e.target.value) || 0)}
+                placeholder="100 = $1,00"
                 className="w-full rounded-lg border border-white/10 bg-black/40 px-2.5 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
               />
             </Field>
