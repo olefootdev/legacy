@@ -204,7 +204,7 @@ export function TransferLegaciesTab() {
           </div>
 
           {view === 'grid' ? (
-            <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
               {g.rows.map((row, i) => (
                 <div key={row.id} className="min-w-0 cursor-pointer" onClick={() => setDetailRow(row)}>
                   <PlayerCard

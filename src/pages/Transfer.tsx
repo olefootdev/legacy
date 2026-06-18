@@ -354,9 +354,10 @@ export function Transfer() {
   const [genesisAuctionCards, setGenesisAuctionCards] = useState<MockAuctionPlayer[]>([]);
   const [genesisListedEntities, setGenesisListedEntities] = useState<Record<string, PlayerEntity>>({});
   const [otherManagerListings, setOtherManagerListings] = useState<OtherManagerListing[]>([]);
-  const [marketTab, setMarketTab] = useState<HeroTab>('genesis');
   const { flags } = usePlatformConfig();
   const legacyMarketEnabled = flags.LEGACY_MARKET && flags.LEGACY_DNA;
+  // Abre direto em LEGACIES (área premium) quando habilitada, pra não ficar escondida.
+  const [marketTab, setMarketTab] = useState<HeroTab>(legacyMarketEnabled ? 'legacies' : 'genesis');
   const localClubId = useGameStore((s) => s.club?.id ?? null);
 
   useEffect(() => {
