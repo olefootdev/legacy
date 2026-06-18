@@ -31,6 +31,7 @@ import {
 import { formatCompactNumber } from '@/systems/economy';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { shareImageWithText } from '@/lib/shareImage';
+import { LigaOlePreviewModal } from '@/components/ligaole/LigaOlePreviewModal';
 import {
   currentWeekKey,
   recordLigaOleWeeklyRun,
@@ -318,6 +319,7 @@ export function LigaOle() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   // Aposta da próxima partida (EXP). Dobra na vitória; zera na derrota.
   const [wager, setWager] = useState(0);
 
@@ -445,7 +447,7 @@ export function LigaOle() {
   // CTA "Avançar" — usado em DOIS lugares (acima e abaixo do chaveamento) pra
   // ficar sempre à mão no mobile, sem precisar rolar de volta.
   const advanceBtn = (
-    <button type="button" disabled={busy || !opp} onClick={playNext} className={pillCls} style={pillStyle}>
+    <button type="button" disabled={busy || !opp} onClick={() => setPreviewOpen(true)} className={pillCls} style={pillStyle}>
       {busy ? 'Preparando a partida…' : <>Avançar <ChevronRight className="w-4 h-4" strokeWidth={3} aria-hidden /></>}
     </button>
   );
@@ -668,6 +670,20 @@ export function LigaOle() {
             Desistir da liga
           </button>
         </div>
+      )}
+
+      {previewOpen && opp && (
+        <LigaOlePreviewModal
+          opponentName={opp.name}
+          opponentShort={opp.short}
+          opponentOverall={opp.overall}
+          busy={busy}
+          onCancel={() => setPreviewOpen(false)}
+          onConfirm={() => {
+            setPreviewOpen(false);
+            void playNext();
+          }}
+        />
       )}
     </main>
   );
