@@ -26,7 +26,7 @@ import { rehydrateGameState } from './persistence';
 import { awayStartingElevenFromSquad, buildDefaultLineup, mergeLineupWithDefaults } from '@/entities/lineup';
 import { buildFatigueByIdMap, getEffectiveFatigue } from '@/systems/fatigue';
 import { normalizeFixture, normalizeOpponentStub } from '@/entities/team';
-import { createPlayer, overallFromAttributes } from '@/entities/player';
+import { createPlayer, overallFromAttributes, samePersonKey } from '@/entities/player';
 import type { PlayerEntity } from '@/entities/types';
 import {
   buildManagerCreatedPlayerEntity,
@@ -741,7 +741,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return { ...state, lastProcessedGlobalRound: action.roundKey };
     }
     case 'SET_LINEUP': {
-      const lineup = { ...action.lineup };
+      // Regra: nunca dois jogadores da MESMA PESSOA escalados juntos (pode ter
+      // duas raridades/fases no elenco, mas só uma titular). Dedup defensivo —
+      // mantém o primeiro slot de cada pessoa, descarta repetições.
+      const lineup: Record<string, string> = {};
+      const seenPersons = new Set<string>();
+      for (const [slotId, playerId] of Object.entries(action.lineup)) {
+        const pl = state.players[playerId];
+        const key = pl ? samePersonKey(pl) : `id:${playerId}`;
+        if (seenPersons.has(key)) continue;
+        seenPersons.add(key);
+        lineup[slotId] = playerId;
+      }
       let formationScheme: FormationSchemeId | undefined = action.formationScheme;
       if (formationScheme && !(formationScheme in FORMATION_BASES)) {
         formationScheme = undefined;

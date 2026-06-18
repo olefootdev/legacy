@@ -23,6 +23,33 @@ export function generatePlayerId(): string {
 }
 
 /** Pilar 2 (impacto agregado no XI / cartões): mapa em `@/lib/veracityPillarsMap`. */
+const LEGACY_PHASE_SUFFIXES = ['revelacao', 'consolidacao', 'expansao'];
+
+/**
+ * Chave de "MESMA PESSOA" — igual entre variações do mesmo jogador, pra impedir
+ * escalar dois ao mesmo tempo (pode TER duas, mas só uma titular).
+ *  - Legacy (legacy-<slug>-<fase>): a pessoa é o slug (fases têm nomes diferentes).
+ *  - Genesis (genesis-...): as raridades compartilham o NOME (ids GEN-xxx diferem).
+ *  - Resto (criados pelo manager, etc.): cada id é único.
+ */
+export function samePersonKey(p: { id: string; name?: string }): string {
+  const id = p.id;
+  if (id.startsWith('legacy-')) {
+    let base = id;
+    for (const ph of LEGACY_PHASE_SUFFIXES) {
+      if (base.endsWith(`-${ph}`)) {
+        base = base.slice(0, -(ph.length + 1));
+        break;
+      }
+    }
+    return `legacy:${base}`;
+  }
+  if (id.startsWith('genesis-')) {
+    return `genesis:${(p.name ?? '').trim().toLowerCase()}`;
+  }
+  return `id:${id}`;
+}
+
 export function overallFromAttributes(a: PlayerAttributes): number {
   const w =
     a.passe * 0.12 +

@@ -25,7 +25,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc, playerDisplayName } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { overallFromAttributes, playerToCardView } from '@/entities/player';
+import { overallFromAttributes, playerToCardView, samePersonKey } from '@/entities/player';
 import { FORMATION_SCHEME_LIST, SCHEME_LINE_GROUPS, pitchUiSlots } from '@/match-engine/formations/catalog';
 import {
   PRESET_LABEL_PT,
@@ -197,7 +197,22 @@ export function Team() {
     ? availablePlayers.filter(p => p.pos === selectedSlot.label)
     : [];
 
+  // Regra: não escalar duas variações da MESMA pessoa ao mesmo tempo.
+  // Retorna o slot onde a pessoa já está (ignorando `exceptSlot`), ou null.
+  const personAlreadyStarting = (player: CardPlayer, exceptSlot?: string): string | null => {
+    const key = samePersonKey(player);
+    for (const [sid, pl] of Object.entries(lineup)) {
+      if (sid === exceptSlot) continue;
+      if (pl && samePersonKey(pl) === key) return sid;
+    }
+    return null;
+  };
+
   const handleEscalarToSlot = (player: CardPlayer, slotId: string) => {
+    if (personAlreadyStarting(player, slotId)) {
+      setSaveBanner({ kind: 'error', text: `${player.name} já está escalado. Só pode 1 ${player.name} em campo por vez.` });
+      return;
+    }
     setSaveBanner(null);
     setLineupDirty(true);
     setLineup((prev) => ({ ...prev, [slotId]: player }));
@@ -205,6 +220,10 @@ export function Team() {
   };
 
   const handleEscalar = (player: CardPlayer) => {
+    if (personAlreadyStarting(player)) {
+      setSaveBanner({ kind: 'error', text: `${player.name} já está escalado. Só pode 1 ${player.name} em campo por vez.` });
+      return;
+    }
     // Try to find an empty slot that matches the player's position
     let targetSlot = pitchSlots.find((s) => s.label === player.pos && !lineup[s.id]);
 
