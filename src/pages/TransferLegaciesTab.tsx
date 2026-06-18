@@ -104,21 +104,41 @@ export function TransferLegaciesTab() {
     );
   }
 
-  // Primeira row vira HERO (Marcelo Gonçalves no caso atual — primeira lenda
-  // tokenizada via pipeline). Restantes vão pra grid normal.
-  const [hero, ...rest] = rows;
+  // Agrupa por COLEÇÃO (time/temporada). Vários jogadores da mesma coleção
+  // (ex: FOGAO95 = Botafogo 1995) aparecem juntos sob um cabeçalho.
+  const groups: Array<{ code: string; title: string; rows: LegacyPlayerRow[] }> = [];
+  const groupIndex = new Map<string, number>();
+  for (const row of rows) {
+    const code = row.collection_code?.trim() || row.collection_id?.trim() || 'OUTROS';
+    const title = row.collection_title?.trim() || code;
+    let idx = groupIndex.get(code);
+    if (idx === undefined) {
+      idx = groups.length;
+      groupIndex.set(code, idx);
+      groups.push({ code, title, rows: [] });
+    }
+    groups[idx]!.rows.push(row);
+  }
 
   return (
-    <div className="space-y-4">
-      {hero && <HeroLegacyCard row={hero} oleBal={oleBal} owned={owned} onBuy={buy} />}
-
-      {rest.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {rest.map((row) => (
-            <LegacyCard key={row.id} row={row} oleBal={oleBal} owned={owned} onBuy={buy} />
-          ))}
-        </div>
-      )}
+    <div className="space-y-8">
+      {groups.map((g) => (
+        <section key={g.code} className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3 border-b border-amber-400/20 pb-1.5">
+            <h3 className="font-display text-sm font-black uppercase tracking-wide text-amber-300">
+              {g.title}
+            </h3>
+            <span className="text-[11px] text-white/45">
+              {g.rows.length} {g.rows.length === 1 ? 'jogador' : 'jogadores'}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {g.rows.map((row) => (
+              <LegacyCard key={row.id} row={row} oleBal={oleBal} owned={owned} onBuy={buy} />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

@@ -21,6 +21,9 @@ export type LegacyPlayerRow = {
   strong_foot: string | null;
   creator_label: string | null;
   rarity_label: string | null;
+  collection_id: string | null;
+  collection_code: string | null;
+  collection_title: string | null;
   bio: string | null;
   portrait_storage_path: string | null;
   portrait_public_url: string | null;

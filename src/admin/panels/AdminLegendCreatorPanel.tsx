@@ -662,20 +662,24 @@ function PhaseEditor({
           {/* Coleção & preço */}
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold uppercase tracking-wider text-white/60">
-              Coleção & preço
+              Coleção (time/temporada desta fase) & preço
             </legend>
+            <p className="text-[11px] text-white/40">
+              A coleção é o TIME/TEMPORADA desta fase — vários jogadores podem compartilhar (ex: FOGAO95
+              junta todos do Botafogo 1995). Por isso é por fase: cada época do craque é uma coleção diferente.
+            </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <LabeledInput
-                label="Collection code (sigla, ex: BR-95)"
+                label="Código da coleção (ex: FOGAO95)"
                 value={phase.collectionCode ?? ''}
                 onChange={(v) => onChange({ collectionCode: v.toUpperCase().trim() })}
-                placeholder="BR-95"
+                placeholder="FOGAO95"
               />
               <LabeledInput
-                label="Collection title (texto)"
+                label="Nome da coleção (ex: Botafogo 1995)"
                 value={phase.collectionTitle ?? ''}
                 onChange={(v) => onChange({ collectionTitle: v })}
-                placeholder="Campeão Brasileiro 1995"
+                placeholder="Botafogo 1995"
               />
             </div>
             <div className="flex gap-2">
