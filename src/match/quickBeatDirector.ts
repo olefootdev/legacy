@@ -393,11 +393,15 @@ export function buildLiveAnalystBeat(opts: {
   });
   const type = opts.index % 3; // 0 @setor, 1 @jogador, 2 @time
 
-  // @setor — lado cansado do adversário (fadiga média por flanco)
+  // @setor — lado cansado do adversário (fadiga média por flanco).
+  // awayPlayers.fatigue é o snapshot do INÍCIO (não atualiza ao vivo), então
+  // estimamos a fadiga corrente somando o desgaste acumulado pelo minuto — assim
+  // a leitura "lado deles cansado" passa a fazer sentido no 2º tempo.
   if (type === 0 && opts.awayPlayers.length) {
+    const live = (f: number) => Math.min(100, (f || 0) + opts.minute * 0.5);
     const avg = (poss: string[]) => {
       const g = opts.awayPlayers.filter((p) => poss.includes(p.pos.toUpperCase()));
-      return g.length ? g.reduce((s, p) => s + (p.fatigue || 0), 0) / g.length : 0;
+      return g.length ? g.reduce((s, p) => s + live(p.fatigue), 0) / g.length : 0;
     };
     const right = avg(['LD', 'PD']);
     const left = avg(['LE', 'PE']);

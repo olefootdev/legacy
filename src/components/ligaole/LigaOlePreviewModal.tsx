@@ -78,14 +78,24 @@ export function LigaOlePreviewModal({
     setFormation(scheme);
     setPicking(null);
     const newSlots = pitchUiSlots(scheme);
-    const squad = Object.values(players)
-      .filter((p) => !p.listedOnMarket && isAvailable(p.id))
-      .map((p) => ({
-        id: p.id,
-        pos: p.pos,
-        ovr: overallFromAttributes(p.attrs),
-        outForMatches: playerHealth?.[p.id]?.outForMatches ?? p.outForMatches ?? 0,
-      }));
+    // suggestBestLineup deduplica por id, não por pessoa — então mantemos só 1
+    // variação por pessoa (a de maior OVR) pra ele não escalar dois "iguais" e
+    // o SET_LINEUP cortar um, deixando slot vazio.
+    const bestPerPerson = new Map<string, (typeof players)[string]>();
+    for (const p of Object.values(players)) {
+      if (p.listedOnMarket || !isAvailable(p.id)) continue;
+      const key = samePersonKey(p);
+      const cur = bestPerPerson.get(key);
+      if (!cur || overallFromAttributes(p.attrs) > overallFromAttributes(cur.attrs)) {
+        bestPerPerson.set(key, p);
+      }
+    }
+    const squad = [...bestPerPerson.values()].map((p) => ({
+      id: p.id,
+      pos: p.pos,
+      ovr: overallFromAttributes(p.attrs),
+      outForMatches: playerHealth?.[p.id]?.outForMatches ?? p.outForMatches ?? 0,
+    }));
     const res = suggestBestLineup(newSlots, squad);
     if (!('error' in res)) setWorking(res.slotToPlayerId);
   };
