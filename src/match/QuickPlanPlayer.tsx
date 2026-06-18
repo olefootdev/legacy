@@ -33,6 +33,7 @@ import {
   applyManDownPenalty,
   applySubNudge,
   sprinkleDisciplineEvents,
+  buildLiveAnalystBeat,
   QUICK_PLAN_FEED_MAX,
   type BeatDecisionRecord,
   type BeatVerdict,
@@ -700,9 +701,23 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       beatsQueueRef.current = beatsQueueRef.current.slice(1);
       offeredRef.current += 1;
       offeredBeatsRef.current.push(beat);
-      const shownBeat = narrateBeat(beat);
-      pushFeed({ id: `i-${beat.id}`, minute: beat.minute, kind: 'insight', text: shownBeat.insight.text });
-      setActiveBeat(shownBeat);
+      // Analista REAL ≤5 palavras: gera o beat com o estado vivo da partida
+      // (3 tipos rotativos: @setor cansado / @teu destaque / @time), a escolha
+      // "fazer" favorece o próximo lance via applyDecisionToRemainingEvents.
+      const liveBeat = buildLiveAnalystBeat({
+        beatId: beat.id,
+        minute: beat.minute,
+        index: offeredRef.current - 1,
+        homeScore: scoreRef.current.home,
+        awayScore: scoreRef.current.away,
+        momentum: momentumRef.current[Math.max(0, m - 1)] ?? 50,
+        homeStats: Object.entries(statsRef.current).map(([id, s]) => ({ id, side: s.side, goals: s.goals, shots: s.shots })),
+        homeNameById: Object.fromEntries(field.map((c) => [c.id, c.name])),
+        awayPlayers: (awayCards ?? []).map((c) => ({ pos: c.pos, fatigue: c.fatigue })),
+      });
+      offeredBeatsRef.current[offeredBeatsRef.current.length - 1] = liveBeat;
+      pushFeed({ id: `i-${beat.id}`, minute: beat.minute, kind: 'insight', text: liveBeat.insight.text });
+      setActiveBeat(liveBeat);
       setPhase('beat');
       return;
     }

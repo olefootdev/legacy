@@ -354,6 +354,78 @@ export function sprinkleDisciplineEvents(opts: {
   return [...events, ...extra].sort((a, b) => a.minute - b.minute);
 }
 
+export interface LiveBeatStat { id: string; side: 'home' | 'away'; goals: number; shots: number; }
+export interface LiveBeatAwayPlayer { pos: string; fatigue: number; }
+
+const firstName = (n: string) => n.trim().split(/\s+/)[0] || n;
+
+/**
+ * Gera o beat do Analista a partir do estado REAL da partida (não mock), em
+ * ≤5 palavras, num de 3 tipos rotativos: @setor (lado cansado do adversário),
+ * @jogador (teu destaque) e @time (pressionar/segurar). A escolha "fazer" carrega
+ * peso positivo → applyDecisionToRemainingEvents favorece o PRÓXIMO lance.
+ */
+export function buildLiveAnalystBeat(opts: {
+  beatId: string;
+  minute: number;
+  index: number; // qual beat (0..) → rotaciona o tipo
+  homeScore: number;
+  awayScore: number;
+  momentum: number; // 0..100 (viés casa)
+  homeStats: LiveBeatStat[];
+  homeNameById: Record<string, string>;
+  awayPlayers: LiveBeatAwayPlayer[];
+}): AnalystBeat {
+  const trend: 'rising' | 'falling' | 'stable' =
+    opts.momentum > 55 ? 'rising' : opts.momentum < 45 ? 'falling' : 'stable';
+  const half: 1 | 2 = opts.minute <= 45 ? 1 : 2;
+  const mk = (text: string, doLabel: string, channel: MatchupChannel, targetSide: 'home' | 'away'): AnalystBeat => ({
+    id: opts.beatId,
+    minute: opts.minute,
+    half,
+    intent: targetSide === 'away' ? 'defend' : 'attack',
+    insight: { text, primary_channel: channel, threat_channel: 'ataque_central', momentum_trend: trend },
+    choices: [
+      { id: `${opts.beatId}-go`, label: doLabel, channel, target_side: targetSide, weight: 0.22 },
+      { id: `${opts.beatId}-no`, label: 'Manter o plano', channel: 'ataque_central', target_side: 'home', weight: 0 },
+    ],
+    window_ms: 6000,
+  });
+  const type = opts.index % 3; // 0 @setor, 1 @jogador, 2 @time
+
+  // @setor — lado cansado do adversário (fadiga média por flanco)
+  if (type === 0 && opts.awayPlayers.length) {
+    const avg = (poss: string[]) => {
+      const g = opts.awayPlayers.filter((p) => poss.includes(p.pos.toUpperCase()));
+      return g.length ? g.reduce((s, p) => s + (p.fatigue || 0), 0) / g.length : 0;
+    };
+    const right = avg(['LD', 'PD']);
+    const left = avg(['LE', 'PE']);
+    if (Math.max(right, left) >= 55) {
+      return right >= left
+        ? mk('Lado direito deles cansado', 'Atacar por ali', 'corredor_direito', 'home')
+        : mk('Lado esquerdo deles caiu', 'Atacar por ali', 'corredor_esquerdo', 'home');
+    }
+  }
+
+  // @jogador — teu destaque na partida
+  if (type === 0 || type === 1) {
+    const best = opts.homeStats
+      .filter((s) => s.side === 'home')
+      .sort((a, b) => b.goals * 3 + b.shots - (a.goals * 3 + a.shots))[0];
+    if (best && best.goals + best.shots > 0) {
+      const nm = firstName(opts.homeNameById[best.id] ?? 'o craque');
+      return mk(`${nm} está ligado`, `Jogar pro ${nm}`, 'finalizacao_vs_gk', 'home');
+    }
+  }
+
+  // @time — pressionar ou segurar conforme placar + momento
+  if (opts.homeScore > opts.awayScore && opts.momentum >= 50) {
+    return mk('Segure o resultado', 'Fechar atrás', 'pressao', 'away');
+  }
+  return mk('Hora de pressionar', 'Pressionar agora', 'pressao', 'home');
+}
+
 /** Veredito por decisão, computado sobre os eventos REALMENTE exibidos. */
 export function computeBeatVerdicts(
   events: MatchPlanEvent[],
