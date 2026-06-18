@@ -16,7 +16,14 @@ import { LegacyPlayerDetailModal } from '@/components/legacy/LegacyPlayerDetailM
 import { PlayerCard, TransferRowCard } from '@/pages/Transfer';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 
-export function TransferLegaciesTab() {
+export function TransferLegaciesTab({
+  openDetailId,
+  onDetailConsumed,
+}: {
+  /** id de um legacy a abrir no modal de detalhe (vindo do destaque global). */
+  openDetailId?: string | null;
+  onDetailConsumed?: () => void;
+} = {}) {
   const dispatch = useGameDispatch();
   const oleBal = useGameStore((s) => s.finance.ole);
   const playersById = useGameStore((s) => s.players);
@@ -52,6 +59,17 @@ export function TransferLegaciesTab() {
     for (const pid of Object.keys(playersById)) if (pid.startsWith('legacy-')) set.add(pid);
     return set;
   }, [playersById]);
+
+  // Abre o modal de detalhe quando o destaque global pede (clique num legacy lá).
+  useEffect(() => {
+    if (!openDetailId || rows.length === 0) return;
+    const row = rows.find((r) => r.id === openDetailId);
+    if (row) {
+      setDetailRow(row);
+      onDetailConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openDetailId, rows]);
 
   const buy = async (row: LegacyPlayerRow) => {
     const entity = legacyRowToPlayerEntity(row);

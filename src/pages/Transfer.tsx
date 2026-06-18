@@ -23,6 +23,13 @@ import { overallFromAttributes } from '@/entities/player';
 import { fetchListedGenesisEntitiesByCatalogId, fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
 import { fetchOtherManagerListings, type OtherManagerListing } from '@/supabase/academyManagers';
 import { TransferLegaciesTab } from './TransferLegaciesTab';
+import {
+  fetchListedLegacyPlayerRows,
+  legacyRowToPlayerEntity,
+  legacyPortraitImageUrl,
+  type LegacyPlayerRow,
+} from '@/supabase/legacyPlayers';
+import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { usePlatformConfig } from '@/admin/platformConfigStore';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
@@ -360,6 +367,17 @@ export function Transfer() {
   const [marketTab, setMarketTab] = useState<HeroTab>(legacyMarketEnabled ? 'legacies' : 'genesis');
   const localClubId = useGameStore((s) => s.club?.id ?? null);
 
+  // Legacies em destaque no carrossel global (curadoria: pinados na frente).
+  const legacyQuote = useOlefootUsdBrlQuote(true);
+  const [legacyRows, setLegacyRows] = useState<LegacyPlayerRow[]>([]);
+  const [pendingLegacyDetailId, setPendingLegacyDetailId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!legacyMarketEnabled) return;
+    let cancelled = false;
+    void fetchListedLegacyPlayerRows().then((d) => { if (!cancelled) setLegacyRows(d); });
+    return () => { cancelled = true; };
+  }, [legacyMarketEnabled]);
+
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       setGenesisAuctionCards([]);
@@ -537,9 +555,52 @@ export function Transfer() {
     ];
   }, [auctionPool]);
 
-  const highlightsOrdered = discoveryRails.find((r) => r.id === 'highlights')?.ordered ?? [];
+  const baseHighlights = discoveryRails.find((r) => r.id === 'highlights')?.ordered ?? [];
+  // Curadoria do "Destaque da semana": fixa Goncalves98 + Juca (legacies) + Gui
+  // Nunez (genesis) na frente do carrossel. legacyHighlightMap mapeia o id
+  // sintético do card → row do legacy (pra abrir o modal certo no clique).
+  const { highlightsOrdered, legacyHighlightMap } = useMemo(() => {
+    const FEATURED_LEGACY_IDS = [
+      'legacy-marcelo-goncalves-costa-lopes-expansao', // Goncalves98
+      'legacy-juca-consolidacao', // Juca
+    ];
+    const FEATURED_GENESIS = 'gui nunez';
+    const map = new Map<number, LegacyPlayerRow>();
+    const pinned: MockAuctionPlayer[] = [];
+    let synth = 9_000_001;
+    for (const lid of FEATURED_LEGACY_IDS) {
+      const row = legacyRows.find((r) => r.id === lid);
+      if (!row) continue;
+      const e = legacyRowToPlayerEntity(row);
+      const ovr = overallFromAttributes(e.attrs);
+      pinned.push({
+        id: synth, name: e.name, pos: e.pos, nat: row.country ?? '—', ovr,
+        style: ovr >= 80 ? 'neon-yellow' : ovr >= 70 ? 'white' : 'gray-400',
+        pac: e.attrs.velocidade, sho: e.attrs.finalizacao, pas: e.attrs.passe,
+        dri: e.attrs.drible, def: e.attrs.marcacao, phy: e.attrs.fisico,
+        auctionCurrency: 'EXP', currentBid: 0, buyNow: 0, timeLeft: '', history: [],
+        category: ovr >= 80 ? 'gold' : undefined, bio: row.bio ?? undefined,
+        portraitSrc: legacyPortraitImageUrl(row), marketKind: 'mock',
+      });
+      map.set(synth, row);
+      synth += 1;
+    }
+    const gui = baseHighlights.find((p) => p.name.toLowerCase().includes(FEATURED_GENESIS));
+    const rest = baseHighlights.filter((p) => p !== gui);
+    return { highlightsOrdered: [...pinned, ...(gui ? [gui] : []), ...rest], legacyHighlightMap: map };
+  }, [baseHighlights, legacyRows]);
   const highlightsVisibleCap = discoveryVisibleCount.highlights ?? DISCOVERY_CAROUSEL_INITIAL;
   const highlightsShownLen = Math.min(highlightsVisibleCap, highlightsOrdered.length);
+
+  // Preço fixo (PIX/OLE) no card de destaque do legacy.
+  const legacyHighlightFixedSale = (row: LegacyPlayerRow) => {
+    const brl = legacyQuote.status === 'ok' && row.currency === 'USDT' && row.price_unit_cents
+      ? Math.round(row.price_unit_cents * legacyQuote.olefootVenda) : null;
+    const oleTxt = `${Math.max(1, Math.round(row.price_bro_cents)).toLocaleString('pt-BR')} OLE`;
+    const price = brl != null ? `R$ ${(brl / 100).toFixed(2).replace('.', ',')}` : oleTxt;
+    const isOwned = !!playersById[legacyRowToPlayerEntity(row).id];
+    return { price, cta: isOwned ? 'Adquirido' : 'Comprar', badge: brl != null ? 'PIX' : 'OLE' };
+  };
 
   useHighlightRailSizing(highlightsScrollRef, !isFiltered, highlightsShownLen);
 
@@ -1224,22 +1285,33 @@ export function Transfer() {
               className="hide-scrollbar overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] "
             >
               <div className="inline-flex flex-nowrap items-stretch gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 lg:px-8">
-                {highlightsOrdered.slice(0, highlightsShownLen).map((player, i) => (
+                {highlightsOrdered.slice(0, highlightsShownLen).map((player, i) => {
+                  const legacyRow = legacyHighlightMap.get(player.id);
+                  return (
                   <motion.div
                     key={`hl-${player.id}`}
                     initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.02, duration: 0.18 }}
                     className="min-w-0 shrink-0 cursor-pointer w-[var(--highlight-card-px,min(200px,calc(100dvw-3rem)))]"
-                    onClick={() => setSelectedPlayer(player)}
+                    onClick={() => {
+                      if (legacyRow) {
+                        setPendingLegacyDetailId(legacyRow.id);
+                        setMarketTab('legacies');
+                      } else {
+                        setSelectedPlayer(player);
+                      }
+                    }}
                   >
                     <PlayerCard
                       player={player}
                       listHomonym={homonymRankMapForPlayers(highlightsOrdered).get(player.id)}
                       carouselStrip
+                      {...(legacyRow ? { fixedSale: legacyHighlightFixedSale(legacyRow), portraitClassName: '' } : {})}
                     />
                   </motion.div>
-                ))}
+                  );
+                })}
                 <div className="flex items-stretch">
                   <TransferCarouselVerMaisTile
                     variant="neon"
@@ -1310,7 +1382,12 @@ export function Transfer() {
         })}
       </div>
 
-      {legacyMarketEnabled && marketTab === 'legacies' ? <TransferLegaciesTab /> : null}
+      {legacyMarketEnabled && marketTab === 'legacies' ? (
+        <TransferLegaciesTab
+          openDetailId={pendingLegacyDetailId}
+          onDetailConsumed={() => setPendingLegacyDetailId(null)}
+        />
+      ) : null}
       <div className={marketTab !== 'legacies' ? 'contents' : 'hidden'}>
       <AnimatePresence>
         {purchaseCompleteBanner && (
