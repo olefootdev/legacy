@@ -32,6 +32,7 @@ import {
   hashSeed,
   applyManDownPenalty,
   applySubNudge,
+  sprinkleDisciplineEvents,
   QUICK_PLAN_FEED_MAX,
   type BeatDecisionRecord,
   type BeatVerdict,
@@ -352,6 +353,8 @@ const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
   counter: 'text-[var(--color-success)]',
   penalty: 'text-neon-yellow font-bold',
   red: 'text-[var(--color-danger)]',
+  yellow: 'text-amber-300 font-semibold',
+  injury: 'text-orange-300 font-semibold',
   halftime: 'text-white/50 uppercase tracking-[0.2em] text-[10px]',
 };
 
@@ -394,7 +397,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     stats: { homeShots: number; awayShots: number; homeSaves: number; awaySaves: number; possessionHome: number };
   } | null>(null);
 
-  const eventsRef = useRef<MatchPlanEvent[]>(plan.events);
+  const eventsRef = useRef<MatchPlanEvent[]>(
+    sprinkleDisciplineEvents({
+      events: plan.events,
+      home: (fieldCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue })),
+      away: (awayCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue })),
+      seed: plan.seed,
+    }),
+  );
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
   const styleRef = useRef<TacticalIntensityLevel>('possession'); // lido no tick (closure sempre fresca)
@@ -491,8 +501,12 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       pushFeed({ id: `g-${idx}`, minute: e.minute, kind: 'goal_away', text: e.text, side: 'away', actorId: e.actor_id });
     } else if (e.kind === 'yellow_home') {
       cardsRef.current.cardsHome += 1;
+      pushFeed({ id: `y-${idx}`, minute: e.minute, kind: 'yellow', text: e.text, side: 'home', actorId: e.actor_id });
     } else if (e.kind === 'yellow_away') {
       cardsRef.current.cardsAway += 1;
+      pushFeed({ id: `y-${idx}`, minute: e.minute, kind: 'yellow', text: e.text, side: 'away', actorId: e.actor_id });
+    } else if (e.kind === 'injury_away') {
+      pushFeed({ id: `inj-${idx}`, minute: e.minute, kind: 'injury', text: e.text, side: 'away', actorId: e.actor_id });
     } else if (e.kind === 'red_home') {
       cardsRef.current.sentOffHome += 1;
       pushFeed({ id: `r-${idx}`, minute: e.minute, kind: 'red', text: e.text, side: 'home', actorId: e.actor_id });

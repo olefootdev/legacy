@@ -46,7 +46,8 @@ export interface BeatVerdict {
 export type QuickFeedKind =
   | 'insight' | 'decision' | 'halftime'
   | 'goal_home' | 'goal_away'
-  | 'save' | 'chance' | 'woodwork' | 'counter' | 'penalty' | 'red';
+  | 'save' | 'chance' | 'woodwork' | 'counter' | 'penalty' | 'red'
+  | 'yellow' | 'injury';
 
 export interface QuickPlanFeedItem {
   id: string;
@@ -267,6 +268,90 @@ export function applySubNudge(opts: {
     }
     return e;
   });
+}
+
+export interface DisciplinePlayer {
+  id: string;
+  name: string;
+  fatigue: number;
+}
+
+/**
+ * Semeia eventos de DISCIPLINA/FÍSICO (amarelo, vermelho, lesão) no plano — o
+ * motor Python quase não os gera. Determinístico por seed; ponderado por fadiga
+ * (mais cansado = mais chance de cartão/lesão). 2º amarelo do mesmo jogador vira
+ * vermelho. Os eventos resultantes passam pela máquina existente do player
+ * (vermelho → 1 a menos; lesão home → substituição forçada; feed pros demais).
+ */
+export function sprinkleDisciplineEvents(opts: {
+  events: MatchPlanEvent[];
+  home: DisciplinePlayer[];
+  away: DisciplinePlayer[];
+  seed: string;
+}): MatchPlanEvent[] {
+  const { events, home, away, seed } = opts;
+  const rng = new SpiritRng(hashSeed(`${seed}:discipline`));
+  const extra: MatchPlanEvent[] = [];
+
+  const pickWeighted = (players: DisciplinePlayer[]): DisciplinePlayer | null => {
+    if (!players.length) return null;
+    const weights = players.map((p) => 1 + Math.max(0, p.fatigue) / 25);
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = rng.next() * total;
+    for (let i = 0; i < players.length; i++) {
+      r -= weights[i]!;
+      if (r <= 0) return players[i]!;
+    }
+    return players[players.length - 1]!;
+  };
+  const minuteSlot = (lo: number, hi: number) => lo + Math.floor(rng.next() * (hi - lo));
+
+  const genSide = (players: DisciplinePlayer[], side: 'home' | 'away') => {
+    if (!players.length) return;
+    const yellowedAt = new Map<string, number>();
+    const nYellow = 1 + Math.floor(rng.next() * 3); // 1–3 amarelos
+    for (let k = 0; k < nYellow; k++) {
+      const p = pickWeighted(players);
+      if (!p) continue;
+      const minute = minuteSlot(12, 88);
+      const prev = yellowedAt.get(p.id);
+      if (prev !== undefined && rng.next() < 0.5) {
+        const m = Math.min(90, Math.max(minute, prev + 5));
+        extra.push({
+          minute: m, kind: `red_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
+          actor_side: side, weight_tier: 'big', zone: 'mid',
+          text: `${m}' — Segundo amarelo! ${p.name} tá fora.`, reason: 'segundo amarelo',
+        });
+      } else {
+        yellowedAt.set(p.id, minute);
+        extra.push({
+          minute, kind: `yellow_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
+          actor_side: side, weight_tier: 'minor', zone: 'mid',
+          text: `${minute}' — Amarelo para ${p.name}.`, reason: 'falta tática',
+        });
+      }
+    }
+    // Lesão: chance ponderada pela maior fadiga do lado.
+    const maxFat = players.reduce((m, p) => Math.max(m, p.fatigue), 0);
+    const injuryChance = 0.1 + (Math.max(0, maxFat - 70) / 30) * 0.25; // 0.10–0.35
+    if (rng.next() < injuryChance) {
+      const p = [...players].sort((a, b) => b.fatigue - a.fatigue)[0];
+      if (p) {
+        const minute = minuteSlot(20, 80);
+        extra.push({
+          minute, kind: `injury_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
+          actor_side: side, weight_tier: 'big', zone: 'mid',
+          text: `${minute}' — ${p.name} sente e não consegue continuar.`, reason: 'desgaste físico',
+        });
+      }
+    }
+  };
+
+  genSide(home, 'home');
+  genSide(away, 'away');
+
+  if (!extra.length) return events;
+  return [...events, ...extra].sort((a, b) => a.minute - b.minute);
 }
 
 /** Veredito por decisão, computado sobre os eventos REALMENTE exibidos. */
