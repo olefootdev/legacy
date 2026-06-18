@@ -30,18 +30,19 @@ const ADMIN_EMAILS: Set<string> = new Set(
 );
 
 /** Resolve o e-mail do usuário a partir do Bearer token (sessão Supabase). */
-async function adminEmailFromSession(c: Context): Promise<string | null> {
+async function adminSessionInfo(c: Context): Promise<{ email: string | null; reason: string }> {
   const auth = c.req.header('Authorization');
   const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null;
-  if (!token) return null;
+  if (!token) return { email: null, reason: 'sem Bearer (não logado neste dispositivo?)' };
   const sb = getSupabaseAdmin();
-  if (!sb) return null;
+  if (!sb) return { email: null, reason: 'servidor sem service role (SUPABASE_SERVICE_ROLE_KEY/SUPABASE_URL)' };
   try {
     const { data, error } = await sb.auth.getUser(token);
-    if (error || !data.user?.email) return null;
-    return data.user.email.toLowerCase();
-  } catch {
-    return null;
+    if (error) return { email: null, reason: `sessão inválida/expirada: ${error.message}` };
+    if (!data.user?.email) return { email: null, reason: 'sessão sem e-mail' };
+    return { email: data.user.email.toLowerCase(), reason: 'ok' };
+  } catch (e) {
+    return { email: null, reason: `erro ao validar sessão: ${e instanceof Error ? e.message : 'desconhecido'}` };
   }
 }
 
@@ -63,11 +64,15 @@ export async function requireAdminToken(c: Context): Promise<Response | null> {
   }
 
   // 2) Sessão de admin (login OLEFOOT)
-  const email = await adminEmailFromSession(c);
-  if (email && ADMIN_EMAILS.has(email)) return null;
+  const info = await adminSessionInfo(c);
+  if (info.email && ADMIN_EMAILS.has(info.email)) return null;
 
   // 3) Dev local sem token configurado e sem sessão admin → libera (como antes).
   if (!expected && process.env.NODE_ENV !== 'production') return null;
 
-  return c.json({ error: 'Acesso de admin negado: token inválido ou conta sem permissão.' }, 403);
+  // Diagnóstico preciso no 403 (só expõe o próprio e-mail do usuário + a razão).
+  const detail = info.email
+    ? `a conta logada (${info.email}) não está na lista de admins`
+    : `não autenticado — ${info.reason}`;
+  return c.json({ error: `Acesso de admin negado: ${detail}.` }, 403);
 }
