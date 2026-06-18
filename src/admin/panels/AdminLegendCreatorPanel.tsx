@@ -763,40 +763,29 @@ function PortraitUploader({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState('');
-  const [savingUrl, setSavingUrl] = useState(false);
   const [savingFocus, setSavingFocus] = useState(false);
   const [focusSaved, setFocusSaved] = useState(false);
   const legacyPlayerId = slug ? `legacy-${slug}-${phase}` : null;
 
-  async function handleUseUrl() {
-    const url = urlInput.trim();
-    if (!legacyPlayerId) {
-      setError('Defina o Slug antes de salvar a imagem.');
-      return;
-    }
-    if (!/^https?:\/\//i.test(url)) {
-      setError('Cola uma URL http(s) válida (ex: gateway do Pinata).');
-      return;
-    }
-    setError(null);
-    setSavingUrl(true);
-    try {
-      await adminSetLegacyPortrait(legacyPlayerId, url, undefined, currentFocus);
-      onUploaded(url);
-      setUrlInput('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSavingUrl(false);
-    }
-  }
+  // URL de trabalho: a já salva OU a colada (se válida) — alimenta o preview
+  // imediatamente, ANTES de salvar (enquadrar é client-side, não precisa do server).
+  const typedUrl = /^https?:\/\//i.test(urlInput.trim()) ? urlInput.trim() : null;
+  const workingUrl = currentUrl ?? typedUrl;
 
+  // Salva foto + enquadramento juntos. Usa a workingUrl (salva ou colada).
   async function handleSaveFocus() {
-    if (!legacyPlayerId || !currentUrl) return;
+    if (!legacyPlayerId) {
+      setError('Defina o Slug antes de salvar.');
+      return;
+    }
+    if (!workingUrl) return;
+    setError(null);
     setSavingFocus(true);
     setFocusSaved(false);
     try {
-      await adminSetLegacyPortrait(legacyPlayerId, currentUrl, undefined, currentFocus);
+      await adminSetLegacyPortrait(legacyPlayerId, workingUrl, undefined, currentFocus);
+      onUploaded(workingUrl);
+      setUrlInput('');
       setFocusSaved(true);
       setTimeout(() => setFocusSaved(false), 2500);
     } catch (e) {
@@ -845,10 +834,10 @@ function PortraitUploader({
     <div className="space-y-3">
     <div className="flex items-end gap-3">
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded border border-white/20 bg-deep-black flex items-center justify-center">
-        {currentUrl ? (
+        {workingUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`${currentUrl}?v=${Date.now()}`}
+            src={workingUrl}
             alt="portrait"
             className="h-full w-full object-cover"
           />
@@ -909,7 +898,8 @@ function PortraitUploader({
       </div>
     </div>
 
-      {/* Colar URL já hospedada (Pinata/IPFS) — sem upload da máquina */}
+      {/* Colar URL já hospedada (Pinata/IPFS) — sem upload da máquina.
+          O preview aparece assim que a URL é válida (não precisa salvar primeiro). */}
       <div className="flex items-center gap-2">
         <Link2 size={14} className="shrink-0 text-cyan-300" />
         <input
@@ -917,24 +907,15 @@ function PortraitUploader({
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
           placeholder="Cola a URL do Pinata/IPFS…"
-          disabled={!legacyPlayerId || savingUrl}
           className="min-w-0 flex-1 rounded border border-white/15 bg-black/40 px-2.5 py-1.5 font-mono text-xs text-white/90 placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
         />
-        <button
-          type="button"
-          onClick={() => void handleUseUrl()}
-          disabled={!legacyPlayerId || savingUrl || !urlInput.trim()}
-          className="shrink-0 rounded border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-bold text-cyan-100 hover:bg-cyan-500/25 disabled:opacity-40"
-        >
-          {savingUrl ? 'Salvando…' : 'Usar URL'}
-        </button>
       </div>
 
-      {/* Enquadramento (ponto focal) — card + token */}
-      {currentUrl && (
+      {/* Enquadramento (ponto focal) — card + token. Aparece com a URL colada. */}
+      {workingUrl && (
         <div className="rounded-lg border border-white/10 bg-black/20 p-3">
           <PortraitFocusEditor
-            url={currentUrl}
+            url={workingUrl}
             fx={currentFocus.x}
             fy={currentFocus.y}
             zoom={currentFocus.zoom}
@@ -944,11 +925,14 @@ function PortraitUploader({
             <button
               type="button"
               onClick={() => void handleSaveFocus()}
-              disabled={savingFocus}
+              disabled={savingFocus || !legacyPlayerId}
               className="inline-flex items-center gap-1.5 rounded bg-neon-yellow px-3 py-1.5 text-xs font-black uppercase text-black hover:brightness-110 disabled:opacity-50"
             >
-              <Save size={13} /> {savingFocus ? 'Salvando…' : 'Salvar enquadramento'}
+              <Save size={13} /> {savingFocus ? 'Salvando…' : 'Salvar foto + enquadramento'}
             </button>
+            {!legacyPlayerId && (
+              <span className="text-[11px] text-amber-300">defina o slug pra salvar</span>
+            )}
             {focusSaved && (
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
                 <Check size={12} /> salvo
