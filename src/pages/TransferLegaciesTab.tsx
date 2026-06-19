@@ -11,8 +11,10 @@ import {
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
+import { fetchMyOlexpBalance } from '@/wallet/olexpSync';
 import { PixCheckoutModal } from '@/components/PixCheckoutModal';
 import { LegacyPlayerDetailModal } from '@/components/legacy/LegacyPlayerDetailModal';
+import { PurchaseReceiptModal } from '@/components/legacy/PurchaseReceiptModal';
 import { PlayerCard, TransferRowCard } from '@/pages/Transfer';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 
@@ -33,13 +35,42 @@ export function TransferLegaciesTab({
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [pixRow, setPixRow] = useState<LegacyPlayerRow | null>(null);
   const [detailRow, setDetailRow] = useState<LegacyPlayerRow | null>(null);
+  // Saldo OLEFOOT real (server-authoritative) — é a moeda que paga os legacies.
+  // null = ainda carregando (a UI mostra "Verificando saldo…").
+  const [olefootBalance, setOlefootBalance] = useState<number | null>(null);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<
+    { name: string; ovr: number; pos: string; portrait: string | null; balance: number | null; paidWith: 'olefoot' | 'pix' } | null
+  >(null);
+  const [sessionEmail, setSessionEmail] = useState('');
   const quote = useOlefootUsdBrlQuote(true);
+
+  const refreshOlefootBalance = () => {
+    void fetchMyOlexpBalance().then((b) => setOlefootBalance(b));
+  };
+  useEffect(() => {
+    refreshOlefootBalance();
+    // E-mail da sessão pra pré-preencher o checkout PIX.
+    void (async () => {
+      const sb = getSupabase();
+      const email = sb ? (await sb.auth.getSession()).data.session?.user.email : undefined;
+      if (email) setSessionEmail(email);
+    })();
+  }, []);
 
   // Preço em R$ (centavos) do card a partir do preço de lançamento USDT × cotação.
   const brlCentsFor = (row: LegacyPlayerRow): number | null => {
     if (quote.status !== 'ok') return null;
     if (row.currency !== 'USDT' || !row.price_unit_cents) return null;
     return Math.round(row.price_unit_cents * quote.olefootVenda);
+  };
+
+  // Estado do PIX por card: ready = tem R$; loading = card USDT mas cotação
+  // ainda não chegou; none = card só OLEFOOT (sem PIX).
+  const pixStateFor = (row: LegacyPlayerRow): 'ready' | 'loading' | 'none' => {
+    if (row.currency !== 'USDT' || !row.price_unit_cents) return 'none';
+    return quote.status === 'ok' ? 'ready' : 'loading';
   };
 
   useEffect(() => {
@@ -60,6 +91,11 @@ export function TransferLegaciesTab({
     return set;
   }, [playersById]);
 
+  // Erro de compra é por-tentativa: some ao trocar/fechar o detalhe.
+  useEffect(() => {
+    setBuyError(null);
+  }, [detailRow?.id]);
+
   // Abre o modal de detalhe quando o destaque global pede (clique num legacy lá).
   useEffect(() => {
     if (!openDetailId || rows.length === 0) return;
@@ -72,20 +108,26 @@ export function TransferLegaciesTab({
   }, [openDetailId, rows]);
 
   const buy = async (row: LegacyPlayerRow) => {
+    if (buyingId) return; // trava duplo-clique / compra concorrente
     const entity = legacyRowToPlayerEntity(row);
     // price_bro_cents guarda o preço em OLEFOOT (=OLE, a moeda dos legacies).
     const priceOlefoot = Math.max(1, Math.round(row.price_bro_cents));
-    if (owned.has(entity.id)) { window.alert('Você já possui esse legacy.'); return; }
+    if (owned.has(entity.id)) { setBuyError('Você já possui esse legacy.'); return; }
+
+    setBuyError(null);
+    setBuyingId(row.id);
 
     const apiBase = (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_OLEFOOT_API_URL || 'http://localhost:4000';
     const serverUrl = apiBase !== 'http://localhost:4000' ? apiBase : null;
     const sb = getSupabase();
-    const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+    let newBalance: number | null = null;
 
-    if (serverUrl && token) {
-      // Compra ATÔMICA no servidor: debita OLEFOOT (legacy_olefoot_credits) +
-      // entrega o player (sem corrida). NÃO toca EXP (finance.ole).
-      try {
+    try {
+      const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+
+      if (serverUrl && token) {
+        // Compra ATÔMICA no servidor: debita OLEFOOT (legacy_olefoot_credits) +
+        // entrega o player (sem corrida). NÃO toca EXP (finance.ole).
         const r = await fetch(`${serverUrl}/api/market/buy-legacy`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -93,20 +135,41 @@ export function TransferLegaciesTab({
         });
         const data = await r.json().catch(() => null);
         if (!r.ok || !data?.ok) {
-          window.alert(data?.error ?? 'Não foi possível comprar agora.');
+          setBuyError(data?.error ?? 'Não foi possível comprar agora.');
           return;
         }
         // Servidor debitou o OLEFOOT — só entregamos o player no estado local
         // (ole = saldo atual, INALTERADO: a moeda do legacy é OLEFOOT, não EXP).
         dispatch({ type: 'CONFIRM_LEGACY_PURCHASE', player: entity, ole: oleBal });
-      } catch {
-        window.alert('Falha de conexão ao comprar. Tente de novo.');
-        return;
+        // O servidor já devolve o novo saldo OLEFOOT — usa direto (sem refetch).
+        if (data.olefoot != null) {
+          newBalance = Number(data.olefoot);
+          setOlefootBalance(newBalance);
+        } else {
+          refreshOlefootBalance();
+        }
+      } else {
+        // Fallback (dev local sem server): mantém o fluxo client-side.
+        dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp: priceOlefoot });
+        refreshOlefootBalance();
       }
-    } else {
-      // Fallback (dev local sem server): mantém o fluxo client-side.
-      dispatch({ type: 'BUY_LEGACY_PLAYER', player: entity, priceExp: priceOlefoot });
+    } catch {
+      setBuyError('Falha de conexão ao comprar. Tente de novo.');
+      return;
+    } finally {
+      setBuyingId(null);
     }
+
+    // Sucesso: fecha o detalhe e mostra o recibo.
+    setDetailRow(null);
+    setReceipt({
+      name: entity.name,
+      ovr: overallFromAttributes(entity.attrs),
+      pos: entity.pos,
+      portrait: legacyPortraitImageUrl(row),
+      balance: newBalance,
+      paidWith: 'olefoot',
+    });
 
     // Registra atividade pública no feed do mercado
     void (async () => {
@@ -259,10 +322,24 @@ export function TransferLegaciesTab({
           metadata={{ player: legacyRowToPlayerEntity(pixRow) }}
           title={`Comprar ${pixRow.name}`}
           description="Pague via PIX e o jogador entra no teu time automaticamente."
+          defaultName={clubName}
+          defaultEmail={sessionEmail}
           onClose={() => setPixRow(null)}
           onSuccess={() => {
+            const r = pixRow;
             setPixRow(null);
-            window.alert('Pagamento confirmado! O jogador chega no teu time em instantes.');
+            refreshOlefootBalance();
+            if (r) {
+              const entity = legacyRowToPlayerEntity(r);
+              setReceipt({
+                name: entity.name,
+                ovr: overallFromAttributes(entity.attrs),
+                pos: entity.pos,
+                portrait: legacyPortraitImageUrl(r),
+                balance: null,
+                paidWith: 'pix',
+              });
+            }
           }}
         />
       )}
@@ -273,17 +350,36 @@ export function TransferLegaciesTab({
         onClose={() => setDetailRow(null)}
         brlCents={detailRow ? brlCentsFor(detailRow) : null}
         isOwned={detailRow ? owned.has(legacyRowToPlayerEntity(detailRow).id) : false}
-        canAffordOle={detailRow ? oleBal >= Math.max(1, Math.round(detailRow.price_bro_cents)) : false}
+        canAfford={
+          !detailRow
+            ? false
+            : olefootBalance == null
+              ? null
+              : olefootBalance >= Math.max(1, Math.round(detailRow.price_bro_cents))
+        }
+        balanceLabel={olefootBalance == null ? null : `${olefootBalance.toLocaleString('pt-BR')} OLEFOOT`}
+        buying={!!detailRow && buyingId === detailRow.id}
+        errorMsg={buyError}
+        pixState={detailRow ? pixStateFor(detailRow) : 'none'}
         onBuy={() => {
-          const r = detailRow;
-          setDetailRow(null);
-          if (r) void buy(r);
+          if (detailRow) void buy(detailRow);
         }}
         onPixBuy={() => {
           const r = detailRow;
           setDetailRow(null);
           if (r) setPixRow(r);
         }}
+      />
+
+      <PurchaseReceiptModal
+        open={!!receipt}
+        playerName={receipt?.name ?? ''}
+        playerOvr={receipt?.ovr ?? 0}
+        playerPos={receipt?.pos ?? ''}
+        portrait={receipt?.portrait ?? null}
+        newBalanceLabel={receipt?.balance != null ? `${receipt.balance.toLocaleString('pt-BR')} OLEFOOT` : null}
+        paidWith={receipt?.paidWith ?? 'olefoot'}
+        onClose={() => setReceipt(null)}
       />
     </div>
   );

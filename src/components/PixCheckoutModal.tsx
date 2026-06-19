@@ -56,6 +56,30 @@ function fmtBrl(cents: number): string {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 
+// Pré-preenchimento do checkout PIX — guarda os dados do pagador entre compras
+// (sem re-digitar CPF/telefone). Só dados de contato, nada sensível de pagamento.
+const PIX_PREFILL_KEY = 'olefoot.pix-prefill-v1';
+interface PixPrefill {
+  name?: string;
+  email?: string;
+  cpf?: string;
+  cellphone?: string;
+}
+function readPixPrefill(): PixPrefill {
+  try {
+    return JSON.parse(localStorage.getItem(PIX_PREFILL_KEY) || '{}') as PixPrefill;
+  } catch {
+    return {};
+  }
+}
+function writePixPrefill(v: PixPrefill): void {
+  try {
+    localStorage.setItem(PIX_PREFILL_KEY, JSON.stringify(v));
+  } catch {
+    /* ignore */
+  }
+}
+
 function secondsLeft(expiresAt: string | null): number {
   if (!expiresAt) return 0;
   return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
@@ -100,16 +124,20 @@ export function PixCheckoutModal({
     };
   }, []);
 
-  // Reseta quando abre
+  // Reseta quando abre — e pré-preenche com os dados salvos da última compra.
   useEffect(() => {
     if (open) {
       setStage('form');
       setErrorMsg(null);
       setCharge(null);
       setCopied(false);
-      setCpf('');
-      setCellphone('');
+      const saved = readPixPrefill();
+      setName(saved.name || defaultName);
+      setEmail(saved.email || defaultEmail);
+      setCpf(saved.cpf ? formatCpf(saved.cpf) : '');
+      setCellphone(saved.cellphone || '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const cpfValid = useMemo(() => isValidCpf(cpf), [cpf]);
@@ -139,6 +167,14 @@ export function PixCheckoutModal({
       setStage('error');
       return;
     }
+
+    // Dados aceitos pelo gateway → guarda pra próxima compra não re-digitar.
+    writePixPrefill({
+      name: name.trim(),
+      email: email.trim(),
+      cpf: cpf.replace(/\D/g, ''),
+      cellphone: cellphone.replace(/\D/g, ''),
+    });
 
     setCharge(result);
     setStage('waiting');

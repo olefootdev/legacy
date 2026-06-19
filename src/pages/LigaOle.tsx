@@ -683,6 +683,10 @@ export function LigaOle() {
             setPreviewOpen(false);
             void playNext();
           }}
+          onGoToMarket={() => {
+            setPreviewOpen(false);
+            navigate('/mercado/transfer');
+          }}
         />
       )}
     </main>

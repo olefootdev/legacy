@@ -7,6 +7,9 @@ import { useGameStore } from '@/game/store';
 import { quickFindOpponent, type OpponentMatch, opponentMatchToStub } from '@/match/friendlyMatchmaking';
 import { overallFromAttributes } from '@/entities/player';
 import { formatExp } from '@/systems/economy';
+import { MatchPreviewModal } from '@/components/match/MatchPreviewModal';
+
+type OpponentStub = ReturnType<typeof opponentMatchToStub>;
 
 type FriendlyMode = 'quick' | 'penalty';
 type BetCurrency = 'BRO' | 'EXP';
@@ -29,6 +32,8 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
   const [betInput, setBetInput] = useState('10');
   const [searching, setSearching] = useState(false);
   const [opponent, setOpponent] = useState<OpponentMatch | null>(null);
+  // Pré-jogo da Partida Rápida: escalação/gestão antes do apito.
+  const [previewStub, setPreviewStub] = useState<OpponentStub | null>(null);
 
   // Calcular OVR médio do time
   const myOverall = Math.round(
@@ -55,12 +60,25 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
 
   const handleConfirm = () => {
     if (!opponent) return;
-
-    const path = mode === 'penalty' ? '/match/penalty' : '/match/quick';
     // Passa SEMPRE um stub no navigate state (manager, online ou bot). Isso
     // garante que MatchQuick nunca caia no DEFAULT_OPPONENT placeholder.
     const stub = opponentMatchToStub(opponent, myOverall);
-    navigate(path, { state: { pvpOpponentStub: stub } });
+
+    // Disputa de pênaltis não precisa de pré-jogo de escalação → vai direto.
+    if (mode === 'penalty') {
+      navigate('/match/penalty', { state: { pvpOpponentStub: stub } });
+      onClose();
+      return;
+    }
+
+    // Partida Rápida: abre o pré-jogo (escalação + gestão de cansados) por cima.
+    setPreviewStub(stub);
+  };
+
+  const startQuickMatch = () => {
+    if (!previewStub) return;
+    navigate('/match/quick', { state: { pvpOpponentStub: previewStub } });
+    setPreviewStub(null);
     onClose();
   };
 
@@ -68,6 +86,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
   const betExp = Math.max(1, Math.round(parseFloat(betInput.replace(',', '.'))));
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/88 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4">
@@ -338,5 +357,21 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
         </div>
       )}
     </AnimatePresence>
+
+    {previewStub && (
+      <MatchPreviewModal
+        opponentName={previewStub.name}
+        opponentShort={previewStub.shortName ?? previewStub.name}
+        opponentOverall={previewStub.strength}
+        onConfirm={startQuickMatch}
+        onCancel={() => setPreviewStub(null)}
+        onGoToMarket={() => {
+          setPreviewStub(null);
+          onClose();
+          navigate('/mercado/transfer');
+        }}
+      />
+    )}
+    </>
   );
 }

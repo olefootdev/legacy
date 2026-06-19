@@ -1999,7 +1999,8 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
 }
 
 function StatBar({ label, value }: { label: string, value: number }) {
-  const color = value >= 90 ? 'bg-neon-yellow' : value >= 80 ? 'bg-neon-green' : value >= 70 ? 'bg-blue-400' : 'bg-gray-400';
+  // Atributos sempre em amarelo (Genesis e Legacy unificados — sem cor por faixa).
+  const color = 'bg-neon-yellow';
   return (
     <div className="flex min-w-0 items-center gap-2 sm:gap-3">
       <span className="w-7 shrink-0 text-[10px] font-bold uppercase tracking-wider text-gray-400 sm:w-8 sm:text-xs">
@@ -2317,7 +2318,7 @@ export function PlayerCard({
             <div className="text-center">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAC</div>
               <div
-                className="mt-0.5 italic tabular-nums leading-none text-white"
+                className="mt-0.5 italic tabular-nums leading-none text-neon-yellow"
                 style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
               >
                 {player.pac}
@@ -2326,7 +2327,7 @@ export function PlayerCard({
             <div className="text-center border-x border-white/10">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">SHO</div>
               <div
-                className="mt-0.5 italic tabular-nums leading-none text-white"
+                className="mt-0.5 italic tabular-nums leading-none text-neon-yellow"
                 style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
               >
                 {player.sho}
@@ -2335,7 +2336,7 @@ export function PlayerCard({
             <div className="text-center">
               <div className="font-display text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">PAS</div>
               <div
-                className="mt-0.5 italic tabular-nums leading-none text-white"
+                className="mt-0.5 italic tabular-nums leading-none text-neon-yellow"
                 style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '17px', fontWeight: 700 }}
               >
                 {player.pas}

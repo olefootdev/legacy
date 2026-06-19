@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Crown, Coins, TrendingUp, BookText, GraduationCap, Sparkles } from 'lucide-react';
+import { X, Crown, ShoppingCart, AlertTriangle, Loader2, TrendingUp, BookText, GraduationCap, Sparkles } from 'lucide-react';
 import {
   legacyPortraitImageUrl,
   legacyPortraitFocusStyle,
@@ -28,8 +29,8 @@ function fmtBrl(cents: number): string {
 
 /** Barra de atributo (mesmo espírito do StatBar do mercado Genesis). */
 function StatBar({ label, value }: { label: string; value: number }) {
-  const color =
-    value >= 90 ? 'bg-neon-yellow' : value >= 80 ? 'bg-emerald-400' : value >= 70 ? 'bg-amber-400' : value >= 55 ? 'bg-blue-400' : 'bg-gray-500';
+  // Atributos sempre em amarelo (mesma cor do mercado Genesis — sem faixa por valor).
+  const color = 'bg-neon-yellow';
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <span className="w-24 shrink-0 text-[11px] font-medium text-white/55">{label}</span>
@@ -57,7 +58,11 @@ export function LegacyPlayerDetailModal({
   onClose,
   brlCents,
   isOwned,
-  canAffordOle,
+  canAfford,
+  balanceLabel,
+  buying,
+  errorMsg,
+  pixState = 'none',
   onBuy,
   onPixBuy,
 }: {
@@ -66,15 +71,34 @@ export function LegacyPlayerDetailModal({
   onClose: () => void;
   brlCents: number | null;
   isOwned: boolean;
-  canAffordOle: boolean;
+  /** true = tem saldo OLEFOOT; false = não tem; null = ainda carregando o saldo. */
+  canAfford: boolean | null;
+  /** saldo atual do manager, formatado (ex.: "12.500 OLEFOOT") — só pra exibir. */
+  balanceLabel?: string | null;
+  /** compra em andamento — trava o botão e mostra "Comprando…". */
+  buying?: boolean;
+  /** erro da última tentativa de compra (exibido inline, sem alert). */
+  errorMsg?: string | null;
+  /** disponibilidade do PIX: ready = tem R$; loading = cotação carregando; none = card só OLEFOOT. */
+  pixState?: 'ready' | 'loading' | 'none';
   onBuy: () => void;
   onPixBuy: () => void;
 }) {
+  // Confirmação de 2 passos só pra compras de alto valor (evita débito acidental).
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    // Reseta o passo de confirmação ao trocar de jogador / reabrir.
+    setConfirming(false);
+  }, [row?.id, open]);
+
   if (!open || !row) return null;
   const entity = legacyRowToPlayerEntity(row);
   const ovr = overallFromAttributes(entity.attrs);
   const portrait = legacyPortraitImageUrl(row);
   const priceExp = Math.max(1, Math.round(row.price_bro_cents));
+  // Compra acima deste valor pede um 2º clique de confirmação.
+  const HIGH_VALUE_THRESHOLD = 100_000;
+  const needsConfirm = priceExp >= HIGH_VALUE_THRESHOLD;
   const taught = Array.isArray(row.taught_attributes) ? row.taught_attributes : [];
   const boosterEntries = Object.entries(row.team_booster ?? {});
   const cardStats: Array<[string, number]> = [
@@ -133,7 +157,7 @@ export function LegacyPlayerDetailModal({
                       {cardStats.map(([label, val]) => (
                         <div key={label} className="bg-black/40 px-1 py-2 text-center">
                           <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/40">{label}</p>
-                          <p className="italic leading-none tabular-nums text-white" style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '16px' }}>
+                          <p className="italic leading-none tabular-nums text-neon-yellow" style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '16px' }}>
                             {val}
                           </p>
                         </div>
@@ -214,41 +238,102 @@ export function LegacyPlayerDetailModal({
                     </div>
                   )}
 
-                  {/* Compra */}
+                  {/* Compra — o preço vive NO botão (sem repetir em cima).
+                      Tem saldo → carrinho de 1 clique. Sem saldo → aviso + PIX. */}
                   <div className="relative overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-br from-amber-500/15 to-transparent p-4 sm:p-5">
                     {isOwned ? (
                       <div className="rounded-lg bg-white/5 py-2.5 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
                         Você já tem este jogador
                       </div>
-                    ) : (
+                    ) : canAfford === null ? (
+                      <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-3 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Verificando saldo…
+                      </div>
+                    ) : canAfford ? (
+                      /* Tem saldo: carrinho direto, preço no botão. Alto valor pede 2º clique. */
                       <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300/70">Adquirir lenda</span>
-                          <span className="font-display text-lg font-black tabular-nums text-neon-yellow">
-                            {brlCents != null ? fmtBrl(brlCents) : `${priceExp.toLocaleString('pt-BR')} OLE`}
-                          </span>
-                        </div>
-                        {brlCents != null && (
+                        {errorMsg && (
+                          <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" strokeWidth={2.5} />
+                            <p className="text-[11px] text-red-300">{errorMsg}</p>
+                          </div>
+                        )}
+                        {confirming && needsConfirm && !buying ? (
+                          <>
+                            <p className="text-center text-[12px] text-white/70">
+                              Confirmar a compra de <span className="font-bold text-neon-yellow">{priceExp.toLocaleString('pt-BR')} OLEFOOT</span>?
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setConfirming(false)}
+                                className="rounded-xl border border-white/15 py-3 text-[12px] font-bold uppercase tracking-wider text-white/70 transition hover:border-white/40 hover:text-white"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={onBuy}
+                                className="flex items-center justify-center gap-2 rounded-xl bg-amber-400 py-3 text-[12px] font-black uppercase tracking-wider text-black transition hover:bg-white"
+                              >
+                                <ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Confirmar
+                              </button>
+                            </div>
+                          </>
+                        ) : (
                           <button
                             type="button"
-                            onClick={onPixBuy}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3 text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110"
+                            disabled={buying}
+                            onClick={() => {
+                              if (needsConfirm) setConfirming(true);
+                              else onBuy();
+                            }}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-wide text-black transition hover:bg-white disabled:opacity-60"
                           >
-                            Comprar com PIX · {fmtBrl(brlCents)}
+                            {buying ? (
+                              <><Loader2 className="h-4 w-4 animate-spin" /> Comprando…</>
+                            ) : (
+                              <><ShoppingCart className="h-4 w-4" strokeWidth={2.5} /> Comprar · {priceExp.toLocaleString('pt-BR')} OLEFOOT</>
+                            )}
                           </button>
                         )}
-                        {row.currency !== 'USDT' && (
+                      </div>
+                    ) : (
+                      /* Sem saldo: avisa e oferece recarga via PIX. */
+                      <div className="space-y-3">
+                        {errorMsg && (
+                          <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" strokeWidth={2.5} />
+                            <p className="text-[11px] text-red-300">{errorMsg}</p>
+                          </div>
+                        )}
+                        <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" strokeWidth={2.5} />
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-black uppercase tracking-wider text-red-300">Saldo insuficiente</p>
+                            <p className="text-[11px] text-white/55">
+                              {balanceLabel ? `Você tem ${balanceLabel} · ` : ''}custa {priceExp.toLocaleString('pt-BR')} OLEFOOT
+                            </p>
+                          </div>
+                        </div>
+                        {pixState === 'ready' && brlCents != null ? (
                           <button
                             type="button"
-                            onClick={onBuy}
-                            disabled={!canAffordOle}
-                            className={`flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-bold uppercase tracking-wider transition ${
-                              canAffordOle ? 'bg-amber-400 text-black hover:bg-white' : 'bg-white/5 text-gray-500'
-                            }`}
+                            disabled={buying}
+                            onClick={onPixBuy}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-black uppercase tracking-wide text-black transition hover:brightness-110 disabled:opacity-60"
                           >
-                            <Coins className="h-4 w-4" />
-                            {canAffordOle ? `Comprar · ${priceExp.toLocaleString('pt-BR')} OLE` : 'Sem saldo OLE'}
+                            <ShoppingCart className="h-4 w-4" strokeWidth={2.5} />
+                            Comprar com PIX · {fmtBrl(brlCents)}
                           </button>
+                        ) : pixState === 'loading' ? (
+                          <p className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cotação indisponível, tente em instantes…
+                          </p>
+                        ) : (
+                          <p className="rounded-lg bg-white/5 py-2.5 text-center text-[11px] text-white/45">
+                            Recarregue OLEFOOT na carteira para adquirir esta lenda.
+                          </p>
                         )}
                       </div>
                     )}
