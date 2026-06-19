@@ -83,6 +83,50 @@ export function playerToQuickPlanPayload(
   };
 }
 
+/**
+ * Boost PASSIVO das lendas: dobra o team_booster dos legacies EM CAMPO nos
+ * atributos do lineup enviado ao Python. Assim a presença da lenda pesa
+ * automaticamente na simulação (team_strength + quem chuta + hot finisher),
+ * sem depender da ativação manual do buff (que continua sendo o "burst" de 15').
+ *
+ * Os rótulos vêm de `legacyTeamBooster` (ATAQUE/DEFESA/MORAL/POSSE/...). Cada
+ * categoria é somada e capada para não explodir com várias lendas.
+ */
+export function applyLegacyBoostToLineup(
+  lineup: QuickPlanPlayerPayload[],
+  boosters: Array<{ label: string; pct: number }>,
+): QuickPlanPlayerPayload[] {
+  if (!boosters.length) return lineup;
+  const acc = { atk: 0, def: 0, mor: 0, pas: 0, vel: 0 };
+  for (const b of boosters) {
+    const p = Number(b.pct) || 0;
+    switch (b.label) {
+      case 'DEFESA': acc.def += p; break;
+      case 'MORAL': acc.mor += p; break;
+      case 'POSSE':
+      case 'PASSE': acc.pas += p; break;
+      case 'VELOCIDADE': acc.vel += p; break;
+      case 'FINALIZAÇÃO':
+      case 'ATAQUE':
+      default: acc.atk += p; break;
+    }
+  }
+  // Capa cada categoria (várias lendas não viram cheat).
+  const CAP = 8;
+  const cap = (v: number) => Math.min(CAP, v);
+  const clamp = (v: number) => Math.max(1, Math.min(99, Math.round(v)));
+  const dAtk = cap(acc.atk), dDef = cap(acc.def), dMor = cap(acc.mor), dPas = cap(acc.pas), dVel = cap(acc.vel);
+  if (!dAtk && !dDef && !dMor && !dPas && !dVel) return lineup;
+  return lineup.map((pl) => ({
+    ...pl,
+    finalizacao: clamp(pl.finalizacao + dAtk),
+    marcacao: clamp(pl.marcacao + dDef),
+    confianca: clamp(pl.confianca + dMor),
+    passe: clamp(pl.passe + dPas),
+    velocidade: clamp(pl.velocidade + dVel),
+  }));
+}
+
 export async function fetchQuickPlan(input: FetchQuickPlanInput): Promise<MatchPlan | null> {
   try {
     const res = await fetch(`${API_BASE}/api/match/quick-plan`, {

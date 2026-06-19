@@ -304,8 +304,10 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     away_team = input_data.get("away_team", {})
     home_lineup = normalize_lineup(home_team)
     away_lineup = normalize_lineup(away_team)
-    home_strength = team_strength(home_lineup, int(home_team.get("strength", 70)))
-    away_strength = team_strength(away_lineup, int(away_team.get("strength", 70)))
+    home_base = int(home_team.get("strength", 70))
+    away_base = int(away_team.get("strength", 70))
+    home_strength = team_strength(home_lineup, home_base)
+    away_strength = team_strength(away_lineup, away_base)
 
     # MATCHUP MATRIX — cruzamento setorial dos 22 jogadores (Fase A).
     # Toda jogada de chute nasce de um canal; gol exige edge positivo.
@@ -319,6 +321,14 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # de pressão: quem tem vantagem setorial constrói cerco mais rápido.
     home_atk_edge = sum(home_matrix[ch]["edge"] for ch in ATTACK_CHANNELS) / len(ATTACK_CHANNELS)
     away_atk_edge = sum(away_matrix[ch]["edge"] for ch in ATTACK_CHANNELS) / len(ATTACK_CHANNELS)
+
+    # Controle de MEIO-CAMPO (#5) → posse: quem domina o meio perde menos a bola.
+    def _mid_quality(team_lineup: List[Dict[str, Any]]) -> float:
+        mids = [p for p in team_lineup if p["role"] == "mid"]
+        if not mids:
+            return 60.0
+        return sum(p["passe"] * 0.5 + p["confianca"] * 0.25 + p["velocidade"] * 0.25 for p in mids) / len(mids)
+    mid_adv_home = _mid_quality(home_lineup) - _mid_quality(away_lineup)  # >0 = casa controla o meio
 
     # Estado herdado do 1º tempo (replan)
     first_half = input_data.get("first_half") or {}
@@ -355,6 +365,9 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     home_intensity = home_team.get("intensity", "balanced")
     away_intensity = away_team.get("intensity", "balanced")
     intensity_mul = {"defensive": 0.85, "balanced": 1.0, "offensive": 1.18}
+    # Exposição defensiva (#3): quem defende "ofensivo" se abre e concede mais;
+    # "defensivo" se fecha e concede menos. Torna o estilo um risco/recompensa real.
+    DEF_EXPOSURE = {"defensive": 0.85, "balanced": 1.0, "offensive": 1.16}
 
     events: List[Dict[str, Any]] = []
     momentum_curve = []
@@ -402,6 +415,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     for minute in range(start_minute, 91):
         # Possession flip (depende de força e momentum)
         flip_prob = 0.42 - diff * 0.08 - (momentum_home - 50) / 250
+        # Meio-campo (#5): quem controla o meio segura mais a bola (perde menos posse).
+        flip_prob -= (mid_adv_home if possession == "home" else -mid_adv_home) / 400.0
         flip_prob = max(0.18, min(0.62, flip_prob))
         if rng.random() < flip_prob:
             possession = "away" if possession == "home" else "home"
@@ -415,9 +430,15 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             prev_actor_id_away = actor["id"]
 
-        side_strength = home_strength if possession == "home" else away_strength
-        opp_strength = away_strength if possession == "home" else home_strength
+        # Força EFETIVA do minuto (#1): recalcula com a fadiga ACUMULADA — time
+        # fundo/fresco atropela no fim; quem não rodou o elenco murcha. Inclui a
+        # penalidade de expulsão. (A assimetria pré-jogo `base_tilt` segue estática.)
+        home_eff = team_strength(home_lineup, home_base) - SENT_OFF_STRENGTH_PENALTY * sent_off_home
+        away_eff = team_strength(away_lineup, away_base) - SENT_OFF_STRENGTH_PENALTY * sent_off_away
+        side_strength = home_eff if possession == "home" else away_eff
+        opp_strength = away_eff if possession == "home" else home_eff
         side_intensity = home_intensity if possession == "home" else away_intensity
+        def_intensity = away_intensity if possession == "home" else home_intensity
 
         # PÊNALTI — MARCADOR (o placar NÃO muda aqui; o cliente resolve). Agora é
         # CONQUISTADO: só nasce de CERCO real (pressão acumulada alta), nunca do
@@ -436,6 +457,18 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             shot_prob *= 1 + (side_strength - 70) / 100
             mom_factor = (momentum_home - 50) if possession == "home" else (50 - momentum_home)
             shot_prob *= 1 + mom_factor / 200
+            # Exposição do adversário (#3): defesa ofensiva concede mais chances.
+            shot_prob *= DEF_EXPOSURE.get(def_intensity, 1.0)
+            # Urgência por placar (#4): no fim, quem perde empurra; quem ganha administra.
+            if minute >= 65:
+                my_score = home_score if possession == "home" else away_score
+                their_score = away_score if possession == "home" else home_score
+                gd = my_score - their_score
+                urgency = (minute - 65) / 25.0
+                if gd < 0:
+                    shot_prob *= 1 + 0.35 * urgency * min(2, -gd)
+                elif gd > 0:
+                    shot_prob *= 1 - 0.18 * urgency
 
         if penalty_awarded:
             # Batedor sugerido = melhor finalizador em campo (cliente pode trocar).
@@ -483,6 +516,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 xg *= home_mult.get(channel, 1.0) * home_global * HOME_ACTIVE_XG
             else:
                 xg *= away_mult.get(channel, 1.0) * away_global * away_suppress
+            # Goleiro de verdade (#2): a qualidade do GK adversário abate o xG.
+            # GK 62 = neutro; ~90 → -12%, ~40 → +9%. Clamp pra não zerar/explodir.
+            def_lineup = away_lineup if possession == "home" else home_lineup
+            gk = next((p for p in def_lineup if p["role"] == "gk"), None)
+            if gk:
+                gk_q = gk["marcacao"] * 0.6 + gk["confianca"] * 0.4
+                xg *= max(0.6, min(1.12, 1 - (gk_q - 62) / 240.0))
             xg = max(0.02, min(0.65, xg))
 
             # Resolve outcome

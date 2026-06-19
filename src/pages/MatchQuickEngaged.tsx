@@ -23,7 +23,7 @@ import { useGameStore, useGameDispatch } from '@/game/store';
 import { getEffectiveFatigue } from '@/systems/fatigue';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
-import { fetchQuickPlan } from '@/match/quickPlanClient';
+import { fetchQuickPlan, applyLegacyBoostToLineup } from '@/match/quickPlanClient';
 import { fetchQuickNarration, type QuickNarration } from '@/match/quickNarrateClient';
 import { fetchOpponentRoster } from '@/match/opponentRosterClient';
 import { LIGA_OLE_ROUNDS } from '@/match/ligaOle/ligaOleModel';
@@ -143,6 +143,9 @@ export default function MatchQuickEngaged() {
         homePlayersRef.current = homePlayers;
         awayLineupRef.current = input.awayLineup;
         baseStrengthRef.current = { home: input.homeStrength, away: input.awayStrength };
+        // Boost PASSIVO das lendas titulares no lineup enviado ao Python — a
+        // presença da lenda já pesa na simulação (sem depender do buff manual).
+        input.homeLineup = applyLegacyBoostToLineup(input.homeLineup, legacyBoosters);
         const fetched = await fetchQuickPlan(input);
         if (!fetched) {
           setError('Não foi possível gerar a partida (motor offline). Tente novamente.');
@@ -219,6 +222,31 @@ export default function MatchQuickEngaged() {
     return out.slice(0, 3);
   }, [players, lineup]);
 
+  // Mapa de TODAS as lendas do ELENCO (não só titulares) → buff. Permite que uma
+  // lenda que ENTRA por substituição também ofereça o buff. Antes o buff só lia o
+  // lineup do kickoff, então o legacy substituído "não carregava" (bug do JUCA).
+  const legacyLookup = useMemo(() => {
+    const BOOSTER_LABEL: Record<string, string> = {
+      morale: 'MORAL', possession_pct: 'POSSE', attack: 'ATAQUE', defense: 'DEFESA',
+      finalizacao: 'FINALIZAÇÃO', velocidade: 'VELOCIDADE', passe: 'PASSE',
+    };
+    const map: Record<string, { name: string; label: string; pct: number }> = {};
+    for (const p of Object.values(players)) {
+      if (!p.isLegacy) continue;
+      const entries = Object.entries(p.legacyTeamBooster ?? {});
+      let label = 'ATAQUE';
+      let pct = 2;
+      if (entries.length) {
+        entries.sort((a, b) => Number(b[1]) - Number(a[1]));
+        const [k, v] = entries[0]!;
+        label = BOOSTER_LABEL[k] ?? k.toUpperCase();
+        pct = Math.max(1, Math.min(6, Math.round(Number(v) || 2)));
+      }
+      map[p.id] = { name: p.name, label, pct };
+    }
+    return map;
+  }, [players]);
+
   // QuickHomePlayerView → SquadCard (5 cards + banco).
   const toSquadCard = useCallback(
     (p: QuickHomePlayerView): SquadCard => ({
@@ -262,10 +290,16 @@ export default function MatchQuickEngaged() {
       if (!ctx || !resolve) return;
       try {
         // Formação remapeia os roles → muda a matchup matrix de verdade.
-        const homeLineup = applyFormationToPayloads(
+        const homeLineupRaw = applyFormationToPayloads(
           ht.homePlayers.map((p) => p.payload),
           ht.formation,
         );
+        // Boost PASSIVO das lendas que ESTÃO em campo no 2º tempo (inclui quem
+        // entrou por substituição) — derivado do elenco vivo, não do kickoff.
+        const htBoosters = ht.homePlayers
+          .map((p) => legacyLookup[p.id])
+          .filter((b): b is { name: string; label: string; pct: number } => !!b);
+        const homeLineup = applyLegacyBoostToLineup(homeLineupRaw, htBoosters);
         const replan = await fetchQuickPlan({
           seed: seedRef.current,
           homeShort: club.shortName,
@@ -309,7 +343,7 @@ export default function MatchQuickEngaged() {
         resolve(null);
       }
     },
-    [halftimeCtx, club.shortName, opponent],
+    [halftimeCtx, club.shortName, opponent, legacyLookup],
   );
 
   // DISPUTA DE PÊNALTIS: monta os dados (elenco vivo + goleiros) a partir dos
@@ -452,6 +486,7 @@ export default function MatchQuickEngaged() {
             awayName={opponent!.name}
             penaltyTakers={penaltyTakers}
             legacyBoosters={legacyBoosters}
+            legacyLookup={legacyLookup}
             initialFormation={formationRef.current}
             fieldCards={homePlayersRef.current.map(toSquadCard)}
             awayCards={awayLineupRef.current.map((p) => ({

@@ -14,7 +14,7 @@
  * Veredito por decisão + Leitura de Jogo aparecem no apito final.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Crosshair, ShieldAlert, Target, Cross, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import type {
@@ -114,6 +114,10 @@ interface Props {
   penaltyTakers?: PenaltyTaker[];
   /** Lendas (isLegacy) titulares — ativam um BUFF de time por ~15' (1 uso/jogo). */
   legacyBoosters?: { id: string; name: string; label: string; pct: number }[];
+  /** Mapa id→buff de TODAS as lendas do elenco (titular ou banco). Usado pra
+   *  derivar os buffs do elenco VIVO em campo — assim a lenda que entra por
+   *  substituição também passa a oferecer o buff. */
+  legacyLookup?: Record<string, { name: string; label: string; pct: number }>;
   /** Formação inicial (ex.: '4-3-3') — o seletor ao vivo cicla a partir dela. */
   initialFormation?: string;
   /** Titulares em campo — alimentam os 5 cards (3 melhores + 2 piores por OVR). */
@@ -364,7 +368,7 @@ const CLOCK_MS = 240;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
+export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -379,9 +383,11 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const [feed, setFeed] = useState<QuickPlanFeedItem[]>([]);
   // Estilo de jogo AO VIVO — escolha certa converte gol, errada custa caro.
   const [style, setStyle] = useState<TacticalIntensityLevel>('possession');
-  // LEGACY — buff de time das lendas titulares (1 uso/jogo, dura ~15').
+  // LEGACY — cada lenda em campo dá um buff de time (1 uso CADA, dura ~15').
+  // O manager escolhe QUAL ativar e QUANDO (defesa sob pressão, ataque pra pressionar).
   const [legacyActive, setLegacyActive] = useState(false);
-  const [legacyUsed, setLegacyUsed] = useState(false);
+  const [legacyUsedIds, setLegacyUsedIds] = useState<Set<string>>(() => new Set());
+  const [legacyPickerOpen, setLegacyPickerOpen] = useState(false);
   // Formação ao vivo — cicla a partir da inicial. Afeta o momento E o jogo (resolveFormationOnEvent).
   const [formation, setFormation] = useState<string>(initialFormation ?? '4-3-3');
   const formationRef = useRef<string>(initialFormation ?? '4-3-3'); // lido no tick
@@ -452,20 +458,36 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: `Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}` });
   };
 
-  /** LEGACY: ativa o buff das lendas (1 uso/jogo, ~15'). Empurra o momento na hora
-   *  e dá chance extra de gol enquanto a janela está aberta (efeito no tick). */
-  const activateLegacy = () => {
-    if (legacyUsed || !legacyBoosters || legacyBoosters.length === 0) return;
-    const totalPct = legacyBoosters.reduce((s, l) => s + l.pct, 0);
+  // Buffs de legacy DISPONÍVEIS agora — derivados do elenco VIVO em campo (field),
+  // então uma lenda que ENTRA por substituição também passa a oferecer o buff.
+  // Fallback pro prop legacyBoosters (kickoff) quando não há lookup.
+  const liveBoosters = useMemo<{ id: string; name: string; label: string; pct: number }[]>(() => {
+    if (legacyLookup && Object.keys(legacyLookup).length) {
+      const out: { id: string; name: string; label: string; pct: number }[] = [];
+      for (const c of field) {
+        const lg = legacyLookup[c.id];
+        if (lg) out.push({ id: c.id, name: lg.name, label: lg.label, pct: lg.pct });
+      }
+      return out.slice(0, 3);
+    }
+    return legacyBoosters ?? [];
+  }, [field, legacyLookup, legacyBoosters]);
+  const availableBoosters = liveBoosters.filter((b) => !legacyUsedIds.has(b.id));
+
+  /** LEGACY: ativa UM buff escolhido (1 uso por lenda, ~15'). Empurra o momento
+   *  na hora e dá chance extra de gol enquanto a janela está aberta (no tick). */
+  const activateLegacy = (buff: { id: string; name: string; label: string; pct: number }) => {
+    if (legacyActiveRef.current || legacyUsedIds.has(buff.id)) return;
     const m = minuteRef.current;
-    legacyPctRef.current = totalPct;
-    legacyNameRef.current = legacyBoosters[0]!.name;
+    legacyPctRef.current = buff.pct;
+    legacyNameRef.current = buff.name;
     legacyActiveRef.current = true;
     legacyUntilRef.current = m + 15;
     setLegacyActive(true);
-    setLegacyUsed(true);
-    momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, Math.min(18, totalPct * 2 + 4));
-    legacyBoosters.forEach((l) => pushFeed({ id: `legacy-${l.id}`, minute: m, kind: 'decision', text: `Legacy: @${l.name} +${l.pct}% ${l.label}` }));
+    setLegacyUsedIds((prev) => new Set(prev).add(buff.id));
+    setLegacyPickerOpen(false);
+    momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, Math.min(18, buff.pct * 2 + 4));
+    pushFeed({ id: `legacy-${buff.id}-${m}`, minute: m, kind: 'decision', text: `Legacy: @${buff.name} +${buff.pct}% ${buff.label}` });
   };
 
   /** Cicla a formação ao vivo: muda a forma do time e empurra o momento conforme
@@ -1561,39 +1583,78 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       {/* CONTROLES — Formação (só o número) | Legacy. Entre a narração e os jogadores.
           Legacy ganha um glow fino GIRANDO quando há buff disponível pra usar. */}
       {phase !== 'done' && (() => {
-        const noLegend = !legacyBoosters || legacyBoosters.length === 0;
-        const legacyAvail = !noLegend && !legacyUsed && !legacyActive;
+        const noLegend = liveBoosters.length === 0;
+        const allUsed = !noLegend && availableBoosters.length === 0;
+        const canPick = !legacyActive && availableBoosters.length > 0;
         return (
-          <div className="px-3 pt-1 pb-2 grid grid-cols-2 gap-2">
+          <div className="px-3 pt-1 pb-2">
             <style>{`@property --lg-angle{syntax:'<angle>';initial-value:0deg;inherits:false}@keyframes lg-rotate{to{--lg-angle:360deg}}.legacy-ring::before{content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--lg-angle),transparent 0deg,#FDE047 55deg,transparent 130deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:lg-rotate 2.4s linear infinite;pointer-events:none}`}</style>
 
-            {/* Formação — só o número, cicla ao toque */}
-            <button
-              type="button"
-              onClick={cycleFormation}
-              className="py-2.5 flex items-center justify-center transition-colors active:scale-[0.98]"
-              style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
-            >
-              <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '18px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
-            </button>
-
-            {/* Legacy — glow fino girando enquanto há buff disponível */}
-            <div className={`relative ${legacyAvail ? 'legacy-ring' : ''}`} style={{ borderRadius: 'var(--radius-sm)' }}>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Formação — só o número, cicla ao toque */}
               <button
                 type="button"
-                onClick={activateLegacy}
-                disabled={!legacyAvail}
-                className="relative w-full py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] disabled:cursor-default truncate"
-                style={{
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : legacyAvail ? 'var(--color-deep-black)' : 'transparent',
-                  color: legacyActive ? '#000' : (noLegend || legacyUsed) ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
-                  border: legacyActive || legacyAvail ? 'none' : '1px solid var(--color-border)',
-                }}
+                onClick={cycleFormation}
+                className="py-2.5 flex items-center justify-center transition-colors active:scale-[0.98]"
+                style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'transparent', border: '1px solid var(--color-border)' }}
               >
-                {legacyActive ? '★ Legacy ativo' : legacyUsed ? '★ Legacy usado' : noLegend ? '★ Sem lenda' : '★ Legacy'}
+                <span style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '18px', color: 'var(--color-neon-yellow)' }}>{formation}</span>
               </button>
+
+              {/* Legacy — mostra a CONTAGEM de buffs; toque abre a lista pra escolher */}
+              <div className={`relative ${canPick ? 'legacy-ring' : ''}`} style={{ borderRadius: 'var(--radius-sm)' }}>
+                <button
+                  type="button"
+                  onClick={() => { if (canPick) setLegacyPickerOpen((v) => !v); }}
+                  disabled={!canPick}
+                  className="relative w-full py-2.5 font-display uppercase tracking-[0.12em] text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors active:scale-[0.98] disabled:cursor-default truncate"
+                  style={{
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: legacyActive ? 'var(--color-neon-yellow)' : canPick ? 'var(--color-deep-black)' : 'transparent',
+                    color: legacyActive ? '#000' : (noLegend || allUsed) ? 'rgba(255,255,255,0.35)' : 'var(--color-neon-yellow)',
+                    border: legacyActive || canPick ? 'none' : '1px solid var(--color-border)',
+                  }}
+                >
+                  {legacyActive ? '★ Legacy ativo' : allUsed ? '★ Legacy usado' : noLegend ? '★ Sem lenda' : `★ Legacy (${availableBoosters.length})`}
+                </button>
+              </div>
             </div>
+
+            {/* Lista de buffs disponíveis — escolha contextual (defesa sob pressão, ataque pra pressionar) */}
+            {legacyPickerOpen && canPick && (
+              <div className="mt-2 flex flex-col gap-1.5" style={{ borderRadius: 'var(--radius-sm)' }}>
+                <p className="text-[9px] uppercase tracking-[0.16em] text-white/40 font-display font-bold px-0.5">
+                  Ativar buff — defesa sob pressão · ataque pra pressionar
+                </p>
+                {availableBoosters.map((b) => {
+                  const def = b.label === 'DEFESA';
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => activateLegacy(b)}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2.5 transition-colors active:scale-[0.99] text-left"
+                      style={{ borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-deep-black)', border: '1px solid var(--color-border)' }}
+                    >
+                      <span className="min-w-0 flex items-center gap-2">
+                        <span className="text-[13px]" style={{ color: 'var(--color-neon-yellow)' }}>★</span>
+                        <span className="text-[12px] font-bold text-white truncate">{b.name}</span>
+                      </span>
+                      <span
+                        className="shrink-0 px-2 py-0.5 text-[10px] font-display font-black uppercase tracking-[0.12em]"
+                        style={{
+                          borderRadius: 'var(--radius-sm)',
+                          color: def ? 'var(--color-success, #22c55e)' : 'var(--color-neon-yellow)',
+                          border: `1px solid ${def ? 'var(--color-success, #22c55e)' : 'var(--color-neon-yellow)'}`,
+                        }}
+                      >
+                        +{b.pct}% {b.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })()}
