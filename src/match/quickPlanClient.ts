@@ -10,7 +10,7 @@
  */
 
 import type { MatchPlan, QuickPlanDecision, QuickPlanFirstHalfState } from './quickPlanTypes';
-import type { PlayerEntity } from '@/entities/types';
+import type { PlayerEntity, PlayerBehavior } from '@/entities/types';
 
 // optional chaining: em runtime de teste (tsx/node) import.meta.env é undefined.
 const ENV = (import.meta as { env?: Record<string, string | undefined> }).env;
@@ -33,7 +33,26 @@ export interface QuickPlanPlayerPayload {
   velocidade: number;
   fisico: number;
   confianca: number;
+  // Ponte #1: atributos antes ignorados pelo motor. Opcionais (Python tem
+  // defaults) pra não quebrar construtores sintéticos antigos.
+  drible?: number;
+  tatico?: number;
+  mentalidade?: number;
+  fair_play?: number;
   fatigue: number;
+}
+
+// Ponte #4: o comportamento do jogador inclina levemente os atributos efetivos
+// enviados ao motor (arquétipo decorativo → vira sinal). Tilt pequeno (±3).
+function behaviorTilt(behavior: PlayerBehavior | undefined): {
+  fin: number; vel: number; mar: number; pas: number; fis: number; dri: number; tat: number;
+} {
+  switch (behavior) {
+    case 'ofensivo': return { fin: 3, vel: 2, mar: -2, pas: 0, fis: 0, dri: 1, tat: 0 };
+    case 'defensivo': return { fin: -2, vel: 0, mar: 3, pas: 0, fis: 1, dri: 0, tat: 2 };
+    case 'criativo': return { fin: 0, vel: 0, mar: -1, pas: 3, fis: -1, dri: 3, tat: 1 };
+    default: return { fin: 0, vel: 0, mar: 0, pas: 0, fis: 0, dri: 0, tat: 0 };
+  }
 }
 
 export interface FetchQuickPlanInput {
@@ -68,17 +87,23 @@ export function playerToQuickPlanPayload(
   fatigue: number,
   role: 'attack' | 'mid' | 'def' | 'gk',
 ): QuickPlanPlayerPayload {
+  const t = behaviorTilt(p.behavior);
+  const clamp = (v: number) => Math.max(1, Math.min(99, Math.round(v)));
   return {
     id: p.id,
     name: shortPlayerName(p.name),
     pos: p.pos,
     role,
-    finalizacao: p.attrs.finalizacao,
-    passe: p.attrs.passe,
-    marcacao: p.attrs.marcacao,
-    velocidade: p.attrs.velocidade,
-    fisico: p.attrs.fisico,
+    finalizacao: clamp(p.attrs.finalizacao + t.fin),
+    passe: clamp(p.attrs.passe + t.pas),
+    marcacao: clamp(p.attrs.marcacao + t.mar),
+    velocidade: clamp(p.attrs.velocidade + t.vel),
+    fisico: clamp(p.attrs.fisico + t.fis),
     confianca: p.attrs.confianca,
+    drible: clamp(p.attrs.drible + t.dri),
+    tatico: clamp(p.attrs.tatico + t.tat),
+    mentalidade: p.attrs.mentalidade,
+    fair_play: p.attrs.fairPlay,
     fatigue,
   };
 }

@@ -113,6 +113,11 @@ function buildAwayPayloads(awayStrength: number, seedKey: string): QuickPlanPlay
       velocidade: base,
       fisico: base,
       confianca: base,
+      // Ponte #1: away sintético também leva os 4 atributos novos (simetria).
+      drible: slot.role === 'attack' || slot.role === 'mid' ? base + 1 : base - 5,
+      tatico: slot.role === 'mid' || slot.role === 'def' ? base + 1 : base - 3,
+      mentalidade: base,
+      fair_play: 70,
       fatigue: 0,
     };
   });

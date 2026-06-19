@@ -256,6 +256,7 @@ export default function MatchQuickEngaged() {
       ovr: p.ovr,
       fatigue: p.fatigue,
       portrait: players[p.id] ? playerPortraitSrc(players[p.id]!, 48, 48) : null,
+      fairPlay: players[p.id]?.attrs.fairPlay ?? 70,
     }),
     [players],
   );
@@ -496,6 +497,7 @@ export default function MatchQuickEngaged() {
               ovr: Math.round((p.finalizacao + p.passe + p.marcacao + p.velocidade + p.fisico + p.confianca) / 6),
               fatigue: p.fatigue ?? 0,
               portrait: null,
+              fairPlay: p.fair_play ?? 70,
             }))}
             benchCards={bench.map(toSquadCard)}
             onSubstitution={(outId, inId) => {

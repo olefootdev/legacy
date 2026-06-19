@@ -150,6 +150,8 @@ export interface SquadCard {
   ovr: number;
   fatigue: number;
   portrait: string | null;
+  /** Ponte #2: fair play do jogador (risco de cartão). */
+  fairPlay?: number;
 }
 
 /** Rótulo curto do lance pro eyebrow do banner amarelo. */
@@ -407,8 +409,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const eventsRef = useRef<MatchPlanEvent[]>(
     sprinkleDisciplineEvents({
       events: plan.events,
-      home: (fieldCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue })),
-      away: (awayCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue })),
+      home: (fieldCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue, fairPlay: c.fairPlay })),
+      away: (awayCards ?? []).map((c) => ({ id: c.id, name: c.name, fatigue: c.fatigue, fairPlay: c.fairPlay })),
       seed: plan.seed,
     }),
   );
@@ -889,9 +891,13 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       const outCard = field.find((p) => p.id === outId);
       pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: `Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.` });
       swapInField(outId, inCard);
-      // Efeito real no resto do jogo (sem replan): saldo de OVR pesa.
+      // Efeito real no resto do jogo (sem replan): OVR + pernas frescas + encaixe.
       const delta = inCard.ovr - (outCard?.ovr ?? inCard.ovr);
-      eventsRef.current = applySubNudge({ events: eventsRef.current, fromIndex: eventIdxRef.current, ovrDelta: delta, seed: plan.seed, outId });
+      eventsRef.current = applySubNudge({
+        events: eventsRef.current, fromIndex: eventIdxRef.current, ovrDelta: delta, seed: plan.seed, outId,
+        freshnessDelta: (outCard?.fatigue ?? 0) - inCard.fatigue,
+        posMatch: outCard?.pos === inCard.pos,
+      });
     }
     setPhase('playing');
     scheduleNext(450);

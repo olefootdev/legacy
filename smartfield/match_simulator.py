@@ -85,6 +85,11 @@ def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
             "velocidade": int(p.get("velocidade", 60)),
             "fisico": int(p.get("fisico", 60)),
             "confianca": int(p.get("confianca", 60)),
+            # Ponte #1: atributos antes ignorados pelo motor.
+            "drible": int(p.get("drible", 60)),
+            "tatico": int(p.get("tatico", 60)),
+            "mentalidade": int(p.get("mentalidade", 60)),
+            "fair_play": int(p.get("fair_play", 70)),
             "fatigue": float(p.get("fatigue", 0)),
         })
     while len(out) < 11:
@@ -93,7 +98,8 @@ def normalize_lineup(team: Dict[str, Any]) -> List[Dict[str, Any]]:
             "name": "Reserva",
             "pos": "MC", "role": "mid",
             "finalizacao": 55, "passe": 55, "marcacao": 55,
-            "velocidade": 55, "fisico": 55, "confianca": 55, "fatigue": 0,
+            "velocidade": 55, "fisico": 55, "confianca": 55,
+            "drible": 55, "tatico": 55, "mentalidade": 55, "fair_play": 70, "fatigue": 0,
         })
     return out
 
@@ -327,8 +333,17 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         mids = [p for p in team_lineup if p["role"] == "mid"]
         if not mids:
             return 60.0
-        return sum(p["passe"] * 0.5 + p["confianca"] * 0.25 + p["velocidade"] * 0.25 for p in mids) / len(mids)
+        # Ponte #1: o tático pesa no controle de meio (leitura, menos perda de bola).
+        return sum(p["passe"] * 0.42 + p["tatico"] * 0.25 + p["confianca"] * 0.18 + p["velocidade"] * 0.15 for p in mids) / len(mids)
     mid_adv_home = _mid_quality(home_lineup) - _mid_quality(away_lineup)  # >0 = casa controla o meio
+
+    # Mentalidade média (#1): pesa no clutch (urgência por placar) e no pênalti.
+    def _avg_mentality(team_lineup: List[Dict[str, Any]]) -> float:
+        if not team_lineup:
+            return 60.0
+        return sum(p["mentalidade"] for p in team_lineup) / len(team_lineup)
+    home_mentality = _avg_mentality(home_lineup)
+    away_mentality = _avg_mentality(away_lineup)
 
     # Estado herdado do 1º tempo (replan)
     first_half = input_data.get("first_half") or {}
@@ -465,8 +480,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 their_score = away_score if possession == "home" else home_score
                 gd = my_score - their_score
                 urgency = (minute - 65) / 25.0
+                # Clutch (#1): mentalidade amplifica a reação de quem corre atrás.
+                my_ment = home_mentality if possession == "home" else away_mentality
+                ment_clutch = 1 + (my_ment - 60) / 160.0
                 if gd < 0:
-                    shot_prob *= 1 + 0.35 * urgency * min(2, -gd)
+                    shot_prob *= 1 + 0.35 * urgency * min(2, -gd) * ment_clutch
                 elif gd > 0:
                     shot_prob *= 1 - 0.18 * urgency
 
@@ -474,13 +492,15 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             # Batedor sugerido = melhor finalizador em campo (cliente pode trocar).
             pen_actor = max(lineup_active, key=lambda p: p["finalizacao"])
             kind = "penalty_" + possession
+            # Pênalti (#1): mentalidade do batedor calibra a conversão (frieza).
+            pen_xg = max(0.58, min(0.90, 0.76 + (pen_actor["mentalidade"] - 60) / 380.0))
             events.append({
                 "minute": minute,
                 "kind": kind,
                 "actor_id": pen_actor["id"],
                 "actor_name": pen_actor["name"],
                 "actor_side": possession,
-                "xg": 0.76,
+                "xg": pen_xg,
                 "weight_tier": "epic",
                 "zone": "att",
                 "channel": "finalizacao_vs_gk",
@@ -523,6 +543,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             if gk:
                 gk_q = gk["marcacao"] * 0.6 + gk["confianca"] * 0.4
                 xg *= max(0.6, min(1.12, 1 - (gk_q - 62) / 240.0))
+            # Drible (#1): driblador cria chance melhor (rompe a marcação).
+            xg *= 1 + (actor["drible"] - 60) / 300.0
             xg = max(0.02, min(0.65, xg))
 
             # Resolve outcome
@@ -670,7 +692,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             # Inverte: quem perde a bola comete falta
             foul_side = "away" if possession == "home" else "home"
             foul_lineup = away_lineup if foul_side == "away" else home_lineup
-            foul_actor = rng.choice([p for p in foul_lineup if p["role"] != "gk"])
+            # Fair play (#1): quem comete a falta tende a ser o menos disciplinado
+            # (sorteia 2, fica com o de menor fair_play); e o vermelho sai mais fácil.
+            _foul_pool = [p for p in foul_lineup if p["role"] != "gk"]
+            foul_actor = min(rng.sample(_foul_pool, min(2, len(_foul_pool))), key=lambda p: p["fair_play"]) if _foul_pool else rng.choice(foul_lineup)
+            red_prob = 0.18 * (1 + max(0, 60 - foul_actor["fair_play"]) / 45.0)
             yellow_kind = "yellow_" + foul_side
             tier = classify_event_weight(yellow_kind, minute, home_score, away_score, 0.0)
             events.append({
@@ -685,7 +711,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
             })
             if foul_side == "home":
                 cards_home += 1
-                if cards_home > 4 and rng.random() < 0.18 and sent_off_home == 0:
+                if cards_home > 4 and rng.random() < red_prob and sent_off_home == 0:
                     sent_off_home = 1
                     home_strength -= SENT_OFF_STRENGTH_PENALTY  # um a menos pesa JÁ
                     momentum_shock -= 12                        # e empurra o jogo pro adversário
@@ -698,7 +724,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     })
             else:
                 cards_away += 1
-                if cards_away > 4 and rng.random() < 0.18 and sent_off_away == 0:
+                if cards_away > 4 and rng.random() < red_prob and sent_off_away == 0:
                     sent_off_away = 1
                     away_strength -= SENT_OFF_STRENGTH_PENALTY
                     momentum_shock += 12                        # vantagem numérica pra casa

@@ -249,12 +249,19 @@ export function applySubNudge(opts: {
   ovrDelta: number; // inOvr - outOvr (efetivo)
   seed: string;
   outId: string;
+  /** Ponte #3: fadiga do que sai − fadiga do que entra (>0 = reforço mais fresco). */
+  freshnessDelta?: number;
+  /** Ponte #3: o reforço entra na MESMA posição do que saiu? (encaixe). */
+  posMatch?: boolean;
 }): MatchPlanEvent[] {
-  const { events, fromIndex, ovrDelta, seed, outId } = opts;
-  if (Math.abs(ovrDelta) < 3) return events; // troca neutra, sem efeito
+  const { events, fromIndex, ovrDelta, seed, outId, freshnessDelta = 0, posMatch = true } = opts;
+  // Delta EFETIVO: OVR + pernas frescas (até ~+8 com 65% de diferença) + encaixe.
+  // Assim trocar um craque cansado por reserva fresco PESA mesmo sem ganho de OVR.
+  const effDelta = ovrDelta + freshnessDelta * 0.12 + (posMatch ? 1.5 : -3);
+  if (Math.abs(effDelta) < 3) return events; // troca neutra, sem efeito
   const rng = new SpiritRng(hashSeed(`${seed}:sub:${outId}`));
-  const better = ovrDelta > 0;
-  const strength = Math.min(0.5, Math.abs(ovrDelta) / 30); // 3→0.1 … 15+→0.5
+  const better = effDelta > 0;
+  const strength = Math.min(0.5, Math.abs(effDelta) / 30); // 3→0.1 … 15+→0.5
   let used = false;
   return events.map((e, i) => {
     if (used || i < fromIndex) return e;
@@ -274,6 +281,8 @@ export interface DisciplinePlayer {
   id: string;
   name: string;
   fatigue: number;
+  /** Ponte #2: menos fair play = mais propenso a cartão. Default 70 (neutro). */
+  fairPlay?: number;
 }
 
 /**
@@ -295,7 +304,8 @@ export function sprinkleDisciplineEvents(opts: {
 
   const pickWeighted = (players: DisciplinePlayer[]): DisciplinePlayer | null => {
     if (!players.length) return null;
-    const weights = players.map((p) => 1 + Math.max(0, p.fatigue) / 25);
+    // Fadiga + indisciplina (fair play baixo) puxam o cartão pro jogador certo.
+    const weights = players.map((p) => 1 + Math.max(0, p.fatigue) / 25 + Math.max(0, 70 - (p.fairPlay ?? 70)) / 20);
     const total = weights.reduce((a, b) => a + b, 0);
     let r = rng.next() * total;
     for (let i = 0; i < players.length; i++) {
@@ -315,7 +325,9 @@ export function sprinkleDisciplineEvents(opts: {
       if (!p) continue;
       const minute = minuteSlot(12, 88);
       const prev = yellowedAt.get(p.id);
-      if (prev !== undefined && rng.next() < 0.5) {
+      // 2º amarelo → vermelho sai mais fácil pra quem tem fair play baixo.
+      const redChance = Math.min(0.85, 0.5 * (1 + Math.max(0, 60 - (p.fairPlay ?? 70)) / 40));
+      if (prev !== undefined && rng.next() < redChance) {
         const m = Math.min(90, Math.max(minute, prev + 5));
         extra.push({
           minute: m, kind: `red_${side}` as MatchPlanEvent['kind'], actor_id: p.id, actor_name: p.name,
