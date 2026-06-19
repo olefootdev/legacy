@@ -3069,6 +3069,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (exp > 0) finance = withExpHistory(grantEarnedExp(finance, exp), exp, `Campeão Div ${action.division} · EXP`);
       return { ...state, finance };
     }
+    case 'CLAIM_KO_PRIZE': {
+      // Prêmio do mata-mata diário (Coroa do Dia). Idempotência real mora no flag
+      // `claimed` da tabela global_league_ko_prizes (cliente só dispatcha após
+      // marcar claimed=true). Teto defensivo: final = 2.5M, total dia ≤ 3.45M.
+      const exp = Math.max(0, Math.round(action.exp));
+      if (exp === 0 || exp > 5_000_000) return state;
+      const labels: Record<string, string> = {
+        qualified: 'Classificação Mata-Mata', r16: 'Vitória nas oitavas',
+        qf: 'Vitória nas quartas', sf: 'Vitória na semifinal', final: 'Campeão do Dia',
+      };
+      const src = `Mata-Mata · ${labels[action.stage] ?? action.stage} · EXP`;
+      const finance = withExpHistory(grantEarnedExp(state.finance, exp), exp, src);
+      return { ...state, finance };
+    }
     case 'EXP_EXCHANGE_ANNOUNCE_SELL': {
       const expAmount = Math.round(action.expAmount);
       const broCents = Math.round(action.broCents);

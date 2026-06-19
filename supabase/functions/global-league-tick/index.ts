@@ -388,6 +388,17 @@ async function advanceOrCrownDailyKo(
   }
   if (winners.length === 0) return { step: 'daily-ko-no-winners' };
 
+  // PRÊMIO POR VENCER A FASE — todos os vencedores da rodada que terminou. A
+  // fase vem do nº de times na rodada (2*fixtures): 16=oitavas, 8=quartas,
+  // 4=semi, 2=final. Idempotente (id determinístico). O campeão (final) cai aqui.
+  const stagePrize = KO_STAGE_PRIZE[finishedFx.length * 2];
+  if (stagePrize) {
+    const prizeCtx = { brtDay, competitionId: state.competition_id, seasonId: round.season_id, now };
+    for (const w of winners) {
+      await writeKoPrize(supabase, w, stagePrize.stage, stagePrize.exp, prizeCtx);
+    }
+  }
+
   if (winners.length > 1) {
     const nextPairs = pairAdjacent(winners);
     const built = buildDailyKnockoutRound(nextPairs, round.season_id, round.round_number + 1, now + KO_PHASE_INTERVAL_MS);
@@ -623,6 +634,42 @@ const SEASON_PRIZES: Record<number, { ole: number; exp: number }> = {
   2: { ole: 250_000, exp: 125_000 },
   3: { ole: 100_000, exp: 50_000 },
 };
+
+// ── Prêmio EXP do MATA-MATA DIÁRIO (Coroa do Dia) ────────────────────────────
+// Creditado client-side via a tabela global_league_ko_prizes (claimed). Pago ao
+// CLASSIFICAR e ao VENCER cada fase. Chave de fase = nº de times NA rodada que
+// terminou (16=oitavas, 8=quartas, 4=semi, 2=final). Rodadas antes das oitavas
+// (32+) não pagam — o prêmio começa "das oitavas". Total do campeão: 3.450.000.
+const KO_QUALIFY_PRIZE = 100_000;
+const KO_STAGE_PRIZE: Record<number, { stage: string; exp: number }> = {
+  16: { stage: 'r16', exp: 100_000 },
+  8: { stage: 'qf', exp: 250_000 },
+  4: { stage: 'sf', exp: 500_000 },
+  2: { stage: 'final', exp: 2_500_000 },
+};
+
+// Insere uma linha de prêmio (idempotente por id determinístico). O cliente lê
+// os não-reclamados do seu manager_id, credita EXP e marca claimed=true.
+async function writeKoPrize(
+  supabase: any, team: TeamRow, stage: string, exp: number,
+  ctx: { brtDay: string; competitionId: string; seasonId: string; now: number },
+): Promise<void> {
+  if (exp <= 0 || !team?.id) return;
+  await supabase.from('global_league_ko_prizes').insert({
+    id: `koprize_${ctx.brtDay}_${stage}_${team.id}`,
+    competition_id: ctx.competitionId,
+    season_id: ctx.seasonId,
+    daily_date: ctx.brtDay,
+    team_id: team.id,
+    manager_id: team.manager_id,
+    club_name: team.club_name,
+    stage,
+    prize_exp: exp,
+    claimed: false,
+    crowned_at_ms: ctx.now,
+  });
+  // insert idempotente: conflito de PK = no-op (erro engolido — não credita 2×).
+}
 
 function divisionLeader(teams: TeamRow[], division: number): TeamRow | null {
   const divTeams = teams.filter((t) => t.division === division);
@@ -1054,6 +1101,9 @@ Deno.serve(async (_req: Request) => {
     await supabase.from('global_league_state').update({
       daily_phase: 'knockout', daily_ko_season_id: dkoSeasonId, daily_ko_size: size,
     }).eq('id', 'current');
+    // PRÊMIO DE CLASSIFICAÇÃO — todo time que entrou no bracket ganha (idempotente).
+    const qualifyCtx = { brtDay, competitionId: state.competition_id, seasonId: dkoSeasonId, now };
+    await Promise.all(qualifiers.map((t) => writeKoPrize(supabase, t, 'qualified', KO_QUALIFY_PRIZE, qualifyCtx)));
     // Notifica os classificados — fire-and-forget, não bloqueia o motor
     const phaseName = dailyPhaseLabel(size);
     Promise.all(qualifiers.map((t, i) => notifyManager(

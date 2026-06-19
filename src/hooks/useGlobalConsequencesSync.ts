@@ -169,6 +169,52 @@ export function useGlobalConsequencesSync() {
     };
   }, [managerProfile?.email, globalLeagueMVP?.seasonId]);
 
+  // ── Prêmio do Mata-Mata Diário (Coroa do Dia): credita EXP por fase ─────────
+  // Mesmo padrão do campeão sazonal: marca claimed=true (condicional) ANTES de
+  // creditar, pra nunca pagar 2×. Uma linha por (time, fase) na Edge.
+  useEffect(() => {
+    const email = managerProfile?.email;
+    if (!email) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await sb
+        .from('global_league_ko_prizes')
+        .select('*')
+        .eq('manager_id', email)
+        .eq('claimed', false);
+      if (cancelled || !data || data.length === 0) return;
+      const STAGE_LABEL: Record<string, string> = {
+        qualified: 'Classificado pro Mata-Mata!', r16: 'Venceu as oitavas!',
+        qf: 'Venceu as quartas!', sf: 'Venceu a semifinal!', final: '👑 Campeão do Dia!',
+      };
+      const items = [];
+      for (const c of data as Array<Record<string, any>>) {
+        const { data: upd } = await sb
+          .from('global_league_ko_prizes')
+          .update({ claimed: true })
+          .eq('id', c.id)
+          .eq('claimed', false)
+          .select('id');
+        if (!upd || upd.length === 0) continue; // reclamado em outra aba/sessão
+        const exp = Number(c.prize_exp ?? 0);
+        if (exp <= 0) continue;
+        dispatchGame({ type: 'CLAIM_KO_PRIZE', exp, stage: String(c.stage ?? '') });
+        items.push(
+          makeInboxItem(`ko-prize-${c.id}`, 'FINANCE_EXP_GAIN', 'COMPETIÇÃO', `🏆 ${STAGE_LABEL[c.stage] ?? 'Mata-Mata do Dia'}`, {
+            body: `Mata-Mata da Liga Global — prêmio creditado: +${exp.toLocaleString('pt-BR')} EXP.`,
+            deepLink: '/match/global',
+          }),
+        );
+      }
+      if (!cancelled && items.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [managerProfile?.email, globalLeagueMVP?.seasonId]);
+
   useEffect(() => {
     if (!globalLeagueMVP || !club) return;
 
