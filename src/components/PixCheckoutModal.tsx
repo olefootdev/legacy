@@ -56,6 +56,33 @@ function fmtBrl(cents: number): string {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 }
 
+/**
+ * Traduz o erro técnico do checkout (vindo cru do backend/Abacate) numa
+ * mensagem humana em pt-BR. O erro original continua no console pra debug.
+ */
+function friendlyCheckoutError(raw?: string): string {
+  const e = (raw ?? '').toLowerCase();
+  // Provedor de pagamento indisponível / mal configurado (chave inválida, 502/503).
+  if (
+    e.includes('api key') ||
+    e.includes('inactive') ||
+    e.includes('não configurado') ||
+    e.includes('abacate') ||
+    e.includes('http_5') ||
+    e.includes('502') ||
+    e.includes('503')
+  ) {
+    return 'O pagamento via PIX está temporariamente indisponível. Tente novamente em alguns minutos — se persistir, fale com o suporte.';
+  }
+  if (e.includes('unauthenticated') || e.includes('unauthorized') || e.includes('401')) {
+    return 'Sua sessão expirou. Entre novamente e refaça a compra.';
+  }
+  if (e.includes('cpf') || e.includes('tax') || e.includes('pagador') || e.includes('inválid')) {
+    return 'Confira os dados do pagador (nome, e-mail e CPF) e tente de novo.';
+  }
+  return 'Não foi possível gerar o PIX agora. Tente novamente em instantes.';
+}
+
 // Pré-preenchimento do checkout PIX — guarda os dados do pagador entre compras
 // (sem re-digitar CPF/telefone). Só dados de contato, nada sensível de pagamento.
 const PIX_PREFILL_KEY = 'olefoot.pix-prefill-v1';
@@ -163,7 +190,10 @@ export function PixCheckoutModal({
     });
 
     if (result.ok === false) {
-      setErrorMsg(result.error);
+      // O erro técnico (ex: "Invalid or inactive API key" vindo cru da Abacate)
+      // não deve aparecer pro cliente — vai pro console e mostramos algo humano.
+      console.warn('[PixCheckout] falha no checkout:', { step: result.step, error: result.error });
+      setErrorMsg(friendlyCheckoutError(result.error));
       setStage('error');
       return;
     }
