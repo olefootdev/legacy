@@ -2281,6 +2281,26 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const drawScore = action.homeScore === action.awayScore;
       const homeWin = action.homeScore > action.awayScore || (drawScore && action.shootoutWin === 'home');
       const draw = drawScore && !action.shootoutWin;
+      // Ponte #2: desafios semanais de streak também progridem no motor Engaged
+      // (antes só o FINALIZE_MATCH legado os atualizava → loop de retorno morto).
+      let streakChallenges = state.streakChallenges;
+      if (streakChallenges) {
+        if (shouldRefreshChallenges(streakChallenges)) {
+          streakChallenges = {
+            challenges: generateWeeklyChallenges(),
+            lastRefreshDate: new Date().toISOString(),
+          };
+        } else {
+          streakChallenges = {
+            ...streakChallenges,
+            challenges: updateStreakProgress(
+              streakChallenges.challenges,
+              credit.quickMatchStreak.current,
+              homeWin,
+            ),
+          };
+        }
+      }
       let finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
       const nextResult: import('@/entities/types').FormLetter = homeWin ? 'W' : draw ? 'D' : 'L';
       const form = [...state.form.slice(1), nextResult];
@@ -2412,6 +2432,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         playerHealth: credit.playerHealth,
         quickMatchStreak: credit.quickMatchStreak,
         lastQuickEvolution: credit.evolution,
+        lastQuickBonuses: credit.bonuses,
+        streakChallenges,
         results,
         form,
         inbox: [...ligaNotes, note, ...state.inbox].slice(0, 60),

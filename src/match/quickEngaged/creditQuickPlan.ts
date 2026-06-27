@@ -15,7 +15,8 @@ import type { FinanceState } from '@/entities/types';
 import type { PlayerHealth } from '@/systems/playerHealth/types';
 import { grantEarnedExp } from '@/systems/economy';
 import { updateStreak } from '@/game/quickMatchStreak';
-import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
+import { evaluatePerformanceBonuses, calculateTotalBonusRewards, type PerformanceBonus } from '@/match/quickPerformanceBonuses';
+import type { MatchEventEntry } from '@/engine/types';
 import {
   applyMatchPerformanceEvolution,
   clampPlayerToEvolutionCap,
@@ -33,6 +34,8 @@ export interface QuickPlanStatRow {
   km: number;
   rating: number;
   shotsOn?: number;
+  /** Ponte #1: gols do jogador na partida — habilita o bônus de hat-trick. */
+  goals?: number;
 }
 
 export interface QuickPlanCreditInput {
@@ -91,6 +94,8 @@ export interface QuickPlanEvolutionSummary {
 export interface QuickPlanCreditResult extends QuickPlanCreditState {
   oleGain: number;
   bonusNames: string[];
+  /** Ponte #1: bônus completos (nome/ícone/recompensa) pro painel do pós-jogo. */
+  bonuses: PerformanceBonus[];
   readingMult: number;
   evolution: QuickPlanEvolutionSummary;
 }
@@ -110,14 +115,24 @@ export function computeQuickPlanCredit(
   const quickMatchStreak = updateStreak(state.quickMatchStreak, homeWin);
   const streakMult = quickMatchStreak.multiplier;
 
-  // 2) Bônus de performance
+  // 2) Bônus de performance.
+  //    O motor Engaged não carrega MatchEventEntry[], mas o hat-trick só precisa
+  //    de gols por jogador da casa — sintetizamos eventos mínimos a partir do
+  //    placar individual (homeStats.goals) pra reativar o bônus sem reconstruir o
+  //    histórico inteiro.
+  const bonusEvents: MatchEventEntry[] = [];
+  for (const [pid, stat] of Object.entries(input.homeStats)) {
+    for (let g = 0; g < (stat.goals ?? 0); g++) {
+      bonusEvents.push({ id: `synth-goal-${pid}-${g}`, kind: 'goal_home', minute: 0, text: '', playerId: pid });
+    }
+  }
   const bonuses = evaluatePerformanceBonuses({
     homeScore: input.homeScore,
     awayScore: input.awayScore,
     goalsAgainst: input.awayScore,
     possession: input.agg.possessionHome,
     shots: input.agg.shots,
-    events: [],
+    events: bonusEvents,
     wasLosing: input.agg.wasLosing,
     won: homeWin,
   });
@@ -175,5 +190,5 @@ export function computeQuickPlanCredit(
     players[pid] = { ...p, fatigue: nextFatigue };
   }
 
-  return { finance, players, playerHealth, quickMatchStreak, oleGain, bonusNames: bonuses.map((b) => b.name), readingMult, evolution };
+  return { finance, players, playerHealth, quickMatchStreak, oleGain, bonusNames: bonuses.map((b) => b.name), bonuses, readingMult, evolution };
 }

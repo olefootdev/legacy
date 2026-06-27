@@ -100,6 +100,45 @@ export function detectNarrativeArc(ctx: ArcDetectionContext): NarrativeArcState 
   };
 }
 
+/**
+ * Ponte #3 — detecção de arco AO VIVO no motor Engaged (QuickPlanPlayer).
+ *
+ * O motor de produção (Python pré-computado) não expõe `MatchEventEntry[]`, então
+ * `detectNarrativeArc` (acima) não se aplica. Este detector usa só os sinais vivos
+ * que o QuickPlanPlayer já tem — minuto, placar, momento e finalizações por lado —
+ * e devolve o MESMO `NarrativeArc` consumido pelo `QuickNarrativeArcIndicator`.
+ * Os limiares espelham os de `detectNarrativeArc` para manter a leitura coerente.
+ */
+export function detectLiveArc(s: {
+  minute: number;
+  homeScore: number;
+  awayScore: number;
+  /** Momento da casa 0–100 (a barra de momento). */
+  momentum: number;
+  shotsHome: number;
+  shotsAway: number;
+}): NarrativeArcState {
+  const diff = s.homeScore - s.awayScore;
+
+  // Late Drama: empate ou diferença de 1 nos minutos finais.
+  if (s.minute >= 75 && Math.abs(diff) <= 1) {
+    return { arc: 'late_drama', intensity: 0.9, detectedAtMinute: s.minute };
+  }
+  // Collapse: perdendo/empatado com o momento fortemente contra.
+  if (diff <= 0 && s.momentum <= 32 && s.minute >= 30) {
+    return { arc: 'collapse', intensity: 0.85, detectedAtMinute: s.minute };
+  }
+  // Underdog Fight: perdendo, mas pressionando (momento + finalizações).
+  if (diff < 0 && s.momentum >= 56 && s.shotsHome >= 3) {
+    return { arc: 'underdog_fight', intensity: 0.75, detectedAtMinute: s.minute };
+  }
+  // Dominant Control: ganhando por 2+ com domínio e adversário apagado.
+  if (diff >= 2 && s.momentum >= 60 && s.shotsAway <= 3) {
+    return { arc: 'dominant_control', intensity: 0.6, detectedAtMinute: s.minute };
+  }
+  return { arc: 'balanced', intensity: 0.5, detectedAtMinute: s.minute };
+}
+
 export function getArcFeedSpeed(arc: NarrativeArc): number {
   switch (arc) {
     case 'late_drama':

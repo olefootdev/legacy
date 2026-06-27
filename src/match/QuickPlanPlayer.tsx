@@ -56,6 +56,8 @@ import {
   STYLE_LABEL,
 } from '@/match/quickTacticalLive';
 import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
+import { detectLiveArc } from '@/match/quickNarrativeArcs';
+import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
  *  Fruto de decisão SEMPRE aparece — o manager precisa ver a consequência. */
@@ -87,7 +89,7 @@ export interface QuickPlanPlayResult {
   /** Quem terminou em campo (pra minutos/recovery). */
   homeOnPitch: string[];
   /** Agregados pro crédito (bônus de performance). */
-  stats: { homeShots: number; awayShots: number; possessionHome: number };
+  stats: { homeShots: number; awayShots: number; possessionHome: number; wasLosing: boolean };
   /** Disputa de pênaltis quando o jogo empatou (nenhum jogo termina empatado). */
   shootout?: { winner: 'home' | 'away'; homeTally: number; awayTally: number };
 }
@@ -426,6 +428,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const eventIdxRef = useRef(0);        // ponteiro no próximo evento (lista ordenada por minuto)
   const timerRef = useRef<number | null>(null);
   const scoreRef = useRef({ home: 0, away: 0 });
+  // Ponte #1: a casa esteve atrás em algum momento? Habilita o bônus "Virada Épica".
+  const wasLosingRef = useRef(false);
   const cardsRef = useRef({ cardsHome: 0, cardsAway: 0, sentOffHome: 0, sentOffAway: 0 });
   const offeredRef = useRef(0);
   const offeredBeatsRef = useRef<AnalystBeat[]>([]);
@@ -523,6 +527,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     } else if (e.kind === 'goal_away') {
       scoreRef.current.away += 1;
       setAwayScore((v) => v + 1);
+      if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true;
       pushFeed({ id: `g-${idx}`, minute: e.minute, kind: 'goal_away', text: e.text, side: 'away', actorId: e.actor_id });
     } else if (e.kind === 'yellow_home') {
       cardsRef.current.cardsHome += 1;
@@ -581,7 +586,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         replanned: replannedRef.current,
         playerStats: { ...statsRef.current },
         homeOnPitch: field.map((p) => p.id),
-        stats: { homeShots: stats.homeShots, awayShots: stats.awayShots, possessionHome: stats.possessionHome },
+        stats: { homeShots: stats.homeShots, awayShots: stats.awayShots, possessionHome: stats.possessionHome, wasLosing: wasLosingRef.current },
         shootout: shootout
           ? { winner: shootout.winner, homeTally: shootout.homeTally, awayTally: shootout.awayTally }
           : undefined,
@@ -650,6 +655,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       if (rng.next() < 0.74) {
         scoreRef.current.away += 1;
         setAwayScore((v) => v + 1);
+        if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true;
         momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, -15); // gol deles puxa o momento
         setCelebration({ key: `pen-away-${idx}`, name: plan.away_short, portrait: null, narrative: goalLine(next.minute, 'Pênalti convertido pelo adversário. Dói, mas segue.'), side: 'away' });
         setPhase('celebration');
@@ -833,7 +839,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
 
     if (homeScores || awayScores) {
       if (homeScores) { scoreRef.current.home += 1; setHomeScore((v) => v + 1); tally(ev?.actor_id, 'home', 'goals'); tally(ev?.actor_id, 'home', 'shots'); }
-      else { scoreRef.current.away += 1; setAwayScore((v) => v + 1); }
+      else { scoreRef.current.away += 1; setAwayScore((v) => v + 1); if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true; }
       setCelebration({
         key: `clutch-${c.idx}`,
         name: homeScores ? c.moment.actorName : plan.away_short,
@@ -1138,6 +1144,23 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           awayShort={plan.away_short}
         />
       </div>
+
+      {/* Ponte #3 — ARCO NARRATIVO ao vivo: lê o drama do jogo (virada, domínio,
+          luta do azarão) e dá nome ao momento. Só durante o jogo e quando há
+          tensão real (arc !== 'balanced' some sozinho). */}
+      {phase === 'playing' && (() => {
+        const isShot = (k: string) => /^(shot|chance|goal|save|woodwork)_/.test(k);
+        const processed = eventsRef.current.slice(0, eventIdxRef.current);
+        const shotsHome = processed.filter((e) => isShot(e.kind) && e.actor_side === 'home').length;
+        const shotsAway = processed.filter((e) => isShot(e.kind) && e.actor_side === 'away').length;
+        const live = detectLiveArc({ minute: currentMinute, homeScore, awayScore, momentum: momentumNow, shotsHome, shotsAway });
+        if (live.arc === 'balanced') return null;
+        return (
+          <div className="px-5 pt-3">
+            <QuickNarrativeArcIndicator arc={live.arc} intensity={live.intensity} />
+          </div>
+        );
+      })()}
 
       {/* DOCK DE ESTILO — controle tático AO VIVO. O estilo certo pro momento
           converte chance em gol e blinda o perigo; o errado custa caro. Faixa

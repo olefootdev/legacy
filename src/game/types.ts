@@ -379,6 +379,9 @@ export interface OlefootGameState {
   /** Resumo de EVOLUÇÃO da última Partida Rápida (delta de OVR por jogador + time).
    *  Transitório: alimenta o painel "Seu time evoluiu" no pós-jogo. */
   lastQuickEvolution?: import('@/match/quickEngaged/creditQuickPlan').QuickPlanEvolutionSummary;
+  /** Ponte #1: bônus de performance da última Partida Rápida (Engaged).
+   *  Transitório: alimenta o painel celebratório "Bônus de Performance" no pós-jogo. */
+  lastQuickBonuses?: import('@/match/quickPerformanceBonuses').PerformanceBonus[];
   /** Ranking competitivo da Partida Rápida (modo ranqueado). */
   competitiveRanking?: CompetitiveRankingState;
   /** Desafios diários com recompensas. */

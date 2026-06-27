@@ -48,6 +48,9 @@ import {
   QuickHalftimePanel,
   type HalftimeResult,
 } from '@/components/matchquick/QuickHalftimePanel';
+import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
+import { QuickStreakChallengesPanel } from '@/components/matchquick/QuickStreakChallengesPanel';
+import { calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
@@ -66,6 +69,9 @@ export default function MatchQuickEngaged() {
   const ligaFlash = useGameStore((s) => s.ligaOleResultFlash);
   // Evolução do time pós-partida (delta de OVR) — preenchido pelo FINALIZE_QUICK_PLAN.
   const lastEvolution = useGameStore((s) => s.lastQuickEvolution);
+  // Ponte #1/#2: bônus de performance + desafios semanais pro pós-jogo.
+  const lastBonuses = useGameStore((s) => s.lastQuickBonuses);
+  const streakChallenges = useGameStore((s) => s.streakChallenges);
   const isLigaOleMatchRef = useRef<boolean | null>(null);
   if (isLigaOleMatchRef.current === null) isLigaOleMatchRef.current = !!ligaOle?.pendingOpponentId;
 
@@ -392,10 +398,10 @@ export default function MatchQuickEngaged() {
     // Manager IQ uma única vez por partida.
     if (creditedRef.current) return;
     creditedRef.current = true;
-    const homeStats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn?: number }> = {};
+    const homeStats: Record<string, { passesOk: number; passesAttempt: number; tackles: number; km: number; rating: number; shotsOn?: number; goals?: number }> = {};
     for (const p of homePlayersRef.current) {
       const t = r.playerStats[p.id];
-      homeStats[p.id] = { passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, rating: matchRating(p.ovr, t), shotsOn: t?.shots ?? 0 };
+      homeStats[p.id] = { passesOk: 0, passesAttempt: 0, tackles: 0, km: 0, rating: matchRating(p.ovr, t), shotsOn: t?.shots ?? 0, goals: t?.goals ?? 0 };
     }
     dispatch({
       type: 'FINALIZE_QUICK_PLAN',
@@ -404,7 +410,7 @@ export default function MatchQuickEngaged() {
       reading: r.reading,
       homeStats,
       homeOnPitch: r.homeOnPitch,
-      agg: { shots: r.stats.homeShots, possessionHome: r.stats.possessionHome, wasLosing: false },
+      agg: { shots: r.stats.homeShots, possessionHome: r.stats.possessionHome, wasLosing: r.stats.wasLosing },
       mvpName: _p.mvp_projection?.name,
       shootoutWin: r.shootout?.winner,
     });
@@ -545,6 +551,26 @@ export default function MatchQuickEngaged() {
                 </div>
               );
             })()}
+
+            {/* Ponte #1 — BÔNUS DE PERFORMANCE: o "efeito uau" que estava sendo
+                calculado e jogado no lixo agora aparece (revelação progressiva). */}
+            {lastBonuses && lastBonuses.length > 0 && (
+              <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                <QuickPerformanceBonusPanel
+                  bonuses={lastBonuses}
+                  totalOle={calculateTotalBonusRewards(lastBonuses).ole}
+                  totalExp={calculateTotalBonusRewards(lastBonuses).exp}
+                />
+              </div>
+            )}
+
+            {/* Ponte #2 — DESAFIOS SEMANAIS: o gancho de retorno ("volta amanhã")
+                agora progride e fica visível no modo mais jogado. */}
+            {streakChallenges && streakChallenges.challenges.length > 0 && (
+              <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                <QuickStreakChallengesPanel challenges={streakChallenges.challenges} />
+              </div>
+            )}
 
             {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
             {isLigaOleMatchRef.current && (() => {
