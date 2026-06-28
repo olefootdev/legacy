@@ -382,6 +382,11 @@ export interface OlefootGameState {
   /** Ponte #1: bônus de performance da última Partida Rápida (Engaged).
    *  Transitório: alimenta o painel celebratório "Bônus de Performance" no pós-jogo. */
   lastQuickBonuses?: import('@/match/quickPerformanceBonuses').PerformanceBonus[];
+  /** Rival fantasma (viral #6): MELHOR vitória na Partida Rápida — a marca a bater.
+   *  Persistente; alimenta o nudge "supere seu recorde" na Home e no pré/pós-jogo. */
+  quickBestWin?: { homeScore: number; awayScore: number; opponentName: string };
+  /** Transitório: a última Partida Rápida bateu o recorde pessoal? (badge no pós-jogo) */
+  lastQuickNewRecord?: boolean;
   /** Ranking competitivo da Partida Rápida (modo ranqueado). */
   competitiveRanking?: CompetitiveRankingState;
   /** Desafios diários com recompensas. */

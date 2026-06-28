@@ -2281,6 +2281,16 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const drawScore = action.homeScore === action.awayScore;
       const homeWin = action.homeScore > action.awayScore || (drawScore && action.shootoutWin === 'home');
       const draw = drawScore && !action.shootoutWin;
+      // Rival fantasma (viral #6): guarda a MELHOR vitória (maior saldo) como marca
+      // a bater. Vitória que supera o recorde acende um badge transitório no pós-jogo.
+      const winMargin = action.homeScore - action.awayScore;
+      const prevBestMargin = state.quickBestWin
+        ? state.quickBestWin.homeScore - state.quickBestWin.awayScore
+        : 0;
+      const lastQuickNewRecord = homeWin && winMargin > prevBestMargin;
+      const quickBestWin = lastQuickNewRecord
+        ? { homeScore: action.homeScore, awayScore: action.awayScore, opponentName: state.nextFixture.opponent?.name ?? 'Adversário' }
+        : state.quickBestWin;
       // Ponte #2: desafios semanais de streak também progridem no motor Engaged
       // (antes só o FINALIZE_MATCH legado os atualizava → loop de retorno morto).
       let streakChallenges = state.streakChallenges;
@@ -2433,6 +2443,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         quickMatchStreak: credit.quickMatchStreak,
         lastQuickEvolution: credit.evolution,
         lastQuickBonuses: credit.bonuses,
+        quickBestWin,
+        lastQuickNewRecord,
         streakChallenges,
         results,
         form,

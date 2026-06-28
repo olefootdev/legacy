@@ -154,21 +154,6 @@ export function getArcFeedSpeed(arc: NarrativeArc): number {
   }
 }
 
-export function getArcMusicIntensity(arc: NarrativeArc): number {
-  switch (arc) {
-    case 'late_drama':
-      return 1.0;
-    case 'collapse':
-      return 0.9;
-    case 'underdog_fight':
-      return 0.8;
-    case 'dominant_control':
-      return 0.4;
-    case 'balanced':
-      return 0.6;
-  }
-}
-
 export function getArcDescription(arc: NarrativeArc): string {
   switch (arc) {
     case 'late_drama':

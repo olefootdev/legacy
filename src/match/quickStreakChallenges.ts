@@ -104,22 +104,6 @@ export function updateChallengeProgress(
   });
 }
 
-export function getCompletedChallengeRewards(challenges: StreakChallenge[]): {
-  ole: number;
-  exp: number;
-  items: string[];
-} {
-  const completed = challenges.filter((c) => c.completed);
-  return completed.reduce(
-    (acc, c) => ({
-      ole: acc.ole + c.reward.ole,
-      exp: acc.exp + c.reward.exp,
-      items: c.reward.item ? [...acc.items, c.reward.item] : acc.items,
-    }),
-    { ole: 0, exp: 0, items: [] as string[] },
-  );
-}
-
 export function getDifficultyColor(difficulty: StreakChallengeDifficulty): string {
   switch (difficulty) {
     case 'easy':

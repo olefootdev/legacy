@@ -1211,7 +1211,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
           // As frases de construção NÃO viram linha solta: somem no ritmo.
           const hl = currentEvent && isHighSignal(currentEvent) ? currentEvent : null;
           const yellow = !!hl;
-          const eyebrow = hl ? `${eventKindLabel(hl)} · ${currentMinute}'` : `Ao vivo · ${currentMinute}'`;
+          // Ideia viral #2 — FRASE LENDÁRIA colecionável: gol épico tem chance rara
+          // (~8%, determinística por seed) de virar um lance "lendário" com brilho.
+          // Reforço de razão variável (slot machine): o raro dá vontade de mostrar.
+          const legendary = !!hl && hl.kind.startsWith('goal_')
+            && new SpiritRng(hashSeed(`${plan.seed}:legend:${hl.minute}:${hl.kind}`)).next() < 0.08;
+          const eyebrow = legendary
+            ? `✦ Frase Lendária · ${currentMinute}'`
+            : hl ? `${eventKindLabel(hl)} · ${currentMinute}'` : `Ao vivo · ${currentMinute}'`;
           const headline = hl ? hl.text : liveRead.headline;
           const detail = hl ? hl.reason : liveRead.detail;
           return (
@@ -1225,13 +1232,18 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 className="w-full border border-l-[3px] px-4 py-4"
                 style={{
                   borderColor: 'var(--color-border)',
-                  borderLeftColor: 'var(--color-neon-yellow)',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: yellow ? 'rgba(253,225,0,0.10)' : 'var(--color-dark-gray)',
-                  boxShadow: yellow && hl!.weight_tier === 'epic' ? '0 0 24px rgba(253,225,0,0.30)' : undefined,
+                  backgroundColor: legendary ? 'rgba(167,139,250,0.12)' : yellow ? 'rgba(253,225,0,0.10)' : 'var(--color-dark-gray)',
+                  borderLeftColor: legendary ? 'rgb(167,139,250)' : 'var(--color-neon-yellow)',
+                  boxShadow: legendary
+                    ? '0 0 28px rgba(167,139,250,0.45)'
+                    : yellow && hl!.weight_tier === 'epic' ? '0 0 24px rgba(253,225,0,0.30)' : undefined,
                 }}
               >
-                <p className="font-display uppercase tracking-[0.3em] text-[9px] font-black text-neon-yellow mb-1.5">
+                <p
+                  className="font-display uppercase tracking-[0.3em] text-[9px] font-black mb-1.5"
+                  style={{ color: legendary ? 'rgb(196,181,253)' : 'var(--color-neon-yellow)' }}
+                >
                   {eyebrow}
                 </p>
                 <p

@@ -51,6 +51,9 @@ import {
 import { QuickPerformanceBonusPanel } from '@/components/matchquick/QuickPerformanceBonusPanel';
 import { QuickStreakChallengesPanel } from '@/components/matchquick/QuickStreakChallengesPanel';
 import { calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
+import { QuickShareCard } from '@/components/matchquick/QuickShareCard';
+import { computeQuickRarity } from '@/match/quickRarity';
+import { fetchMyReferralCode } from '@/supabase/referrals';
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
@@ -72,6 +75,11 @@ export default function MatchQuickEngaged() {
   // Ponte #1/#2: bônus de performance + desafios semanais pro pós-jogo.
   const lastBonuses = useGameStore((s) => s.lastQuickBonuses);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
+  // Viral: forma (story strip), streak (raridade) e código de indicação (card).
+  const form = useGameStore((s) => s.form);
+  const quickStreak = useGameStore((s) => s.quickMatchStreak);
+  const newRecord = useGameStore((s) => s.lastQuickNewRecord);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   const isLigaOleMatchRef = useRef<boolean | null>(null);
   if (isLigaOleMatchRef.current === null) isLigaOleMatchRef.current = !!ligaOle?.pendingOpponentId;
 
@@ -82,6 +90,14 @@ export default function MatchQuickEngaged() {
   const [result, setResult] = useState<QuickPlanPlayResult | null>(null);
   const [countdown, setCountdown] = useState(3);
   const [halftimeCtx, setHalftimeCtx] = useState<QuickPlanHalftimeContext | null>(null);
+
+  // Viral #7: busca o código de indicação só quando o jogo termina (pro card).
+  useEffect(() => {
+    if (phase !== 'finished') return;
+    let alive = true;
+    fetchMyReferralCode().then((c) => { if (alive) setReferralCode(c); }).catch(() => {});
+    return () => { alive = false; };
+  }, [phase]);
 
   // Estado vivo da lineup home (subs do intervalo persistem aqui)
   const homePlayersRef = useRef<QuickHomePlayerView[]>([]);
@@ -519,6 +535,63 @@ export default function MatchQuickEngaged() {
 
         {phase === 'finished' && result && (
           <div className="mt-5 flex flex-col gap-2">
+            {/* Rival fantasma (#6) — recorde pessoal superado: dopamina + bragging. */}
+            {newRecord && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="px-4 py-2.5 rounded-lg border text-center mb-1"
+                style={{ borderColor: 'var(--color-neon-yellow)', background: 'rgba(253,225,0,0.10)' }}
+              >
+                <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-neon-yellow">
+                  🏆 Novo recorde pessoal — {result.homeScore}–{result.awayScore}!
+                </p>
+              </motion.div>
+            )}
+
+            {/* CARD VIRAL DO MOMENTO (#1/#7/#8/#9/#10) — manchete + raridade + MVP +
+                story strip + compartilhar com link de indicação. Só aparece quando
+                o desfecho é digno de print (vitória ou jogo raro). */}
+            {(() => {
+              const drawScore = result.homeScore === result.awayScore;
+              const won = result.homeScore > result.awayScore || (drawScore && result.shootout?.winner === 'home');
+              const draw = drawScore && !result.shootout;
+              const res: 'win' | 'draw' | 'loss' = won ? 'win' : draw ? 'draw' : 'loss';
+              const rarity = computeQuickRarity({
+                homeScore: result.homeScore,
+                awayScore: result.awayScore,
+                won,
+                draw,
+                wasLosing: result.stats.wasLosing,
+                possessionHome: result.stats.possessionHome,
+                shotsHome: result.stats.homeShots,
+                bonusCount: lastBonuses?.length ?? 0,
+                cleanSheet: result.awayScore === 0 && result.homeScore > 0,
+                hattrick: !!lastBonuses?.some((b) => b.id === 'hattrick'),
+                streak: quickStreak?.current ?? 0,
+              });
+              // Mostra o card em vitória OU quando o jogo foi raro (virada épica, etc.).
+              if (!won && !rarity.shareWorthy) return null;
+              const mvp = plan?.mvp_projection
+                ? { name: plan.mvp_projection.name, goals: plan.mvp_projection.goals, rating: plan.mvp_projection.rating }
+                : null;
+              return (
+                <div className="mb-2">
+                  <QuickShareCard
+                    clubName={club.name}
+                    opponentName={opponent!.name}
+                    homeScore={result.homeScore}
+                    awayScore={result.awayScore}
+                    result={res}
+                    rarity={rarity}
+                    mvp={mvp}
+                    form={form}
+                    referralCode={referralCode}
+                  />
+                </div>
+              );
+            })()}
+
             {/* EVOLUÇÃO DO TIME — o manager VÊ que não perdeu tempo: o time melhorou. */}
             {lastEvolution && (lastEvolution.risers.length > 0 || lastEvolution.teamOvrAfter > 0) && (() => {
               const M = 'var(--font-serif-hero)';
@@ -568,6 +641,26 @@ export default function MatchQuickEngaged() {
                 agora progride e fica visível no modo mais jogado. */}
             {streakChallenges && streakChallenges.challenges.length > 0 && (
               <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                {/* #4 — celebra desafio recém-concluído (surpresa + endowed progress). */}
+                {(() => {
+                  const justDone = streakChallenges.challenges.filter((c) => c.completed && !c.claimed);
+                  if (!justDone.length) return null;
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="mb-3 px-3 py-2 rounded-lg border"
+                      style={{ borderColor: 'var(--color-success)', background: 'rgba(34,197,94,0.12)' }}
+                    >
+                      <p className="font-display uppercase tracking-[0.18em] text-[10px] font-black text-success">
+                        ✓ Desafio concluído!
+                      </p>
+                      <p className="text-white text-[12px] mt-0.5">
+                        {justDone.map((c) => c.name).join(' · ')} — resgate a recompensa.
+                      </p>
+                    </motion.div>
+                  );
+                })()}
                 <QuickStreakChallengesPanel challenges={streakChallenges.challenges} />
               </div>
             )}

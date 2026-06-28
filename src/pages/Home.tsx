@@ -198,6 +198,9 @@ export function Home() {
   );
   const dailyChallenges = useGameStore((s) => s.dailyChallenges);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
+  // Viral #5 (saga) + #6 (rival fantasma): sequência viva + recorde a bater.
+  const quickStreak = useGameStore((s) => s.quickMatchStreak);
+  const quickBestWin = useGameStore((s) => s.quickBestWin);
 
   // Inicializa/renova engagement state quando user abre a Home.
   // Daily reseta por UTC day; streak por semana. Garante que o progress tracker
@@ -1411,6 +1414,24 @@ export function Home() {
                         </ul>
                       ) : null}
                     </div>
+                    {/* Viral #5 (saga) + #6 (rival fantasma): puxa o jogador pra
+                        próxima partida via loss-aversion (não quebrar a sequência)
+                        e competição assíncrona (superar o próprio recorde). */}
+                    {((quickStreak?.current ?? 0) >= 2 || quickBestWin) && (
+                      <div className="rounded border border-neon-yellow/30 bg-neon-yellow/[0.06] px-3 py-2">
+                        {(quickStreak?.current ?? 0) >= 2 && (
+                          <p className="text-[11px] text-white/85 font-semibold">
+                            🔥 Você vem de <span className="text-neon-yellow font-bold">{quickStreak!.current} vitórias seguidas</span> — não quebre o embalo.
+                          </p>
+                        )}
+                        {quickBestWin && (
+                          <p className="text-[10px] text-white/55 mt-0.5">
+                            Recorde a bater: <span className="text-white/80 font-bold tabular-nums">{quickBestWin.homeScore}–{quickBestWin.awayScore}</span> vs {quickBestWin.opponentName}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">
                         Modo de partida
