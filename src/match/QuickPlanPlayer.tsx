@@ -34,6 +34,9 @@ import {
   applySubNudge,
   sprinkleDisciplineEvents,
   buildLiveAnalystBeat,
+  rollDecisionCrit,
+  EFFECT_BUFF_PCT,
+  BUFF_WINDOW_MINUTES,
   QUICK_PLAN_FEED_MAX,
   type BeatDecisionRecord,
   type BeatVerdict,
@@ -130,6 +133,9 @@ interface Props {
   benchCards?: SquadCard[];
   /** Avisa o pai que houve substituição (atualiza o elenco vivo: out→in). */
   onSubstitution?: (outId: string, inId: string) => void;
+  /** Elenco vivo APÓS o intervalo (subs do halftime acontecem no pai). Sincroniza
+   *  o field/bench internos pra a lenda que ENTRA no 2º tempo oferecer o buff. */
+  secondHalfLineup?: () => { field: SquadCard[]; bench: SquadCard[] } | null;
   /** Narração IA (Sonnet) pré-buscada — mescla nos beats e na comemoração de gol. */
   narration?: QuickNarrationOverride;
   /** Monta os dados da disputa de pênaltis (elenco vivo + goleiros) no empate.
@@ -372,7 +378,7 @@ const CLOCK_MS = 240;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, narration, buildShootout }: Props) {
+export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -384,6 +390,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const [activeBeat, setActiveBeat] = useState<AnalystBeat | null>(null);
+  // FX flutuante do impacto da decisão (sobe da barra de momento e some).
+  const [floatFx, setFloatFx] = useState<{ key: number; text: string; tier: 'pos' | 'neg' | 'neutral' | 'crit' } | null>(null);
+  // Buff ATIVO (#3): janela de ~10s mostrada como chip com contagem regressiva.
+  const [activeBuff, setActiveBuff] = useState<{ pct: number; tier: 'pos' | 'neg' | 'crit'; untilMinute: number } | null>(null);
   const [feed, setFeed] = useState<QuickPlanFeedItem[]>([]);
   // Estilo de jogo AO VIVO — escolha certa converte gol, errada custa caro.
   const [style, setStyle] = useState<TacticalIntensityLevel>('possession');
@@ -436,6 +446,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const htDoneRef = useRef(false);
   const replannedRef = useRef(false);
   const completedRef = useRef(false);
+  const fxSeqRef = useRef(0); // chave única do FX flutuante (retrigger AnimatePresence)
   // Tally por jogador (gols/chutes/defesas) → nota da partida + crédito (Fase D).
   const statsRef = useRef<Record<string, { goals: number; shots: number; saves: number; side: 'home' | 'away' }>>({});
 
@@ -635,6 +646,14 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       }
     } catch {
       // Replan falhou: segue o 2º tempo baseline do plano original
+    }
+    // Sincroniza o elenco vivo com as substituições feitas no INTERVALO (no pai):
+    // sem isso, a lenda que ENTRA no 2º tempo não entraria em `field` e o buff dela
+    // nunca apareceria no seletor de Legacy. Agora aparece (request #2).
+    const ll = secondHalfLineup?.();
+    if (ll) {
+      setField(ll.field);
+      setBenchPool(ll.bench);
     }
     // minuteRef segue em 45 → ao retomar, o relógio avança pro 46 e roda o 2º tempo.
     setPhase('playing');
@@ -966,21 +985,50 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       legacyActiveRef.current = false;
       setLegacyActive(false);
     }
+    // Encerra o buff de decisão quando a janela (~10s) expira.
+    setActiveBuff((b) => (b && minute > b.untilMinute ? null : b));
   }, [minute]);
 
   const handleBeatChoice = (choice: AnalystBeatChoice | null) => {
     const beat = activeBeat;
     if (beat && choice) {
-      ledgerRef.current.push(toDecisionRecord(beat, choice));
+      const effect = choice.effect ?? (choice.weight > 0 ? 'positive' : choice.weight < 0 ? 'negative' : 'neutral');
+      // CRÍTICO: 5% de chance → multiplica o buff por 2× ou 3× (determinístico).
+      const crit = rollDecisionCrit(plan.seed, beat.id);
+      const effectivePct = EFFECT_BUFF_PCT[effect] * crit.mult; // ex.: +2.5% × 2 = +5%
+      const buffedChoice = { ...choice, weight: choice.weight * crit.mult };
+      ledgerRef.current.push(toDecisionRecord(beat, buffedChoice));
       const res = applyDecisionToRemainingEvents({
         events: eventsRef.current,
         fromIndex: eventIdxRef.current, // afeta os eventos ainda não exibidos
         beat,
-        choice,
+        choice: buffedChoice,
         seed: plan.seed,
+        windowMinutes: BUFF_WINDOW_MINUTES, // buff dura ~10s (janela de minutos)
       });
       eventsRef.current = res.events;
       pushFeed({ id: `d-${beat.id}`, minute: beat.minute, kind: 'decision', text: `Você: ${choice.label}` });
+
+      // FX flutuante do impacto (sobe da barra de momento e some) + chip de buff ativo.
+      const side = choice.target_side === 'away' ? 'DEFESA' : 'ATAQUE';
+      const sign = effectivePct > 0 ? '+' : '';
+      const fxTier: 'pos' | 'neg' | 'neutral' | 'crit' =
+        crit.isCrit ? 'crit' : effect === 'positive' ? 'pos' : effect === 'negative' ? 'neg' : 'neutral';
+      const fxText = effect === 'neutral'
+        ? 'Plano mantido'
+        : crit.isCrit
+          ? `⚡ CRÍTICO ×${crit.mult} · ${sign}${effectivePct.toFixed(1)}% ${side}`
+          : `${sign}${effectivePct.toFixed(1)}% ${side}`;
+      const key = (fxSeqRef.current += 1);
+      setFloatFx({ key, text: fxText, tier: fxTier });
+      window.setTimeout(() => setFloatFx((f) => (f && f.key === key ? null : f)), 1500);
+      if (effect !== 'neutral') {
+        setActiveBuff({
+          pct: effectivePct,
+          tier: crit.isCrit ? 'crit' : effect === 'positive' ? 'pos' : 'neg',
+          untilMinute: beat.minute + BUFF_WINDOW_MINUTES,
+        });
+      }
     }
     setActiveBeat(null);
     setPhase('playing');
@@ -1137,12 +1185,54 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
 
       {/* Barra de MOMENTO — PERSISTENTE (nunca desmonta): narra o jogo o tempo
           todo, inclusive durante decisões. Não volta mais ao meio. */}
-      <div className="px-5 pt-4">
+      <div className="px-5 pt-4 relative">
         <MomentumBar
           momentum={momentumNow / 100}
           homeShort={plan.home_short}
           awayShort={plan.away_short}
         />
+
+        {/* FX FLUTUANTE do impacto da decisão (#1): sobe da barra e some — sem
+            empilhar texto sobre texto (some sozinho em ~1.5s). */}
+        <AnimatePresence>
+          {floatFx && (
+            <motion.div
+              key={floatFx.key}
+              initial={{ opacity: 0, y: 6, scale: 0.9 }}
+              animate={{ opacity: 1, y: -26, scale: 1 }}
+              exit={{ opacity: 0, y: -44 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-0 z-20 font-display font-black tabular-nums whitespace-nowrap"
+              style={{
+                fontSize: floatFx.tier === 'crit' ? '15px' : '13px',
+                letterSpacing: '0.04em',
+                color: floatFx.tier === 'crit' ? 'rgb(196,181,253)'
+                  : floatFx.tier === 'pos' ? 'var(--color-success)'
+                  : floatFx.tier === 'neg' ? 'var(--color-danger)'
+                  : 'rgba(255,255,255,0.7)',
+                textShadow: floatFx.tier === 'crit' ? '0 0 14px rgba(167,139,250,0.7)' : '0 2px 8px rgba(0,0,0,0.6)',
+              }}
+            >
+              {floatFx.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chip de BUFF ATIVO (#3): mostra o buff vigente + contagem da janela. */}
+        {activeBuff && (
+          <div
+            className="absolute right-5 -bottom-1 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-display font-black tabular-nums"
+            style={{
+              fontSize: '9px',
+              letterSpacing: '0.08em',
+              background: 'rgba(0,0,0,0.55)',
+              border: `1px solid ${activeBuff.tier === 'crit' ? 'rgb(167,139,250)' : activeBuff.tier === 'pos' ? 'var(--color-success)' : 'var(--color-danger)'}`,
+              color: activeBuff.tier === 'crit' ? 'rgb(196,181,253)' : activeBuff.tier === 'pos' ? 'var(--color-success)' : 'var(--color-danger)',
+            }}
+          >
+            {activeBuff.tier === 'crit' ? '⚡' : '●'} {activeBuff.pct > 0 ? '+' : ''}{activeBuff.pct.toFixed(1)}% · {Math.max(0, activeBuff.untilMinute - currentMinute)}&prime;
+          </div>
+        )}
       </div>
 
       {/* Ponte #3 — ARCO NARRATIVO ao vivo: lê o drama do jogo (virada, domínio,

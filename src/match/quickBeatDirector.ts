@@ -19,9 +19,45 @@ import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import type {
   AnalystBeat,
   AnalystBeatChoice,
+  ChoiceEffect,
   MatchPlanEvent,
   MatchupChannel,
 } from './quickPlanTypes';
+
+/** Buff base por tier de efeito: positivo +2.5% · neutro 0% · negativo −2.5%. */
+export const EFFECT_BUFF_PCT: Record<ChoiceEffect, number> = {
+  positive: 2.5,
+  neutral: 0,
+  negative: -2.5,
+};
+
+/** % → peso do motor de flip (escala onde 2.5% ≈ 0.25 de weight). */
+export function buffPctToWeight(pct: number): number {
+  return pct / 10;
+}
+
+/** Janela do buff em minutos de jogo (~10s reais no ritmo da Partida Rápida). */
+export const BUFF_WINDOW_MINUTES = 12;
+
+export interface DecisionCrit {
+  /** 1 (normal), 2 ou 3 (crítico). */
+  mult: 1 | 2 | 3;
+  isCrit: boolean;
+}
+
+/**
+ * Rola o CRÍTICO de uma decisão: 5% de chance de crítico; quando crítico,
+ * multiplica o buff por 2× ou 3× (50/50). Determinístico por seed+beatId pra o
+ * replay bater. Caso comum (95%): 1× (sem crítico).
+ */
+export function rollDecisionCrit(seed: string, beatId: string): DecisionCrit {
+  const rng = new SpiritRng(hashSeed(`${seed}:crit:${beatId}`));
+  if (rng.next() < 0.05) {
+    const mult = rng.next() < 0.5 ? 2 : 3;
+    return { mult, isCrit: true };
+  }
+  return { mult: 1, isCrit: false };
+}
 
 /** Decisão registrada no ledger local (ecoada no replan via QuickPlanDecision). */
 export interface BeatDecisionRecord {
@@ -164,15 +200,19 @@ export function applyDecisionToRemainingEvents(opts: {
   beat: AnalystBeat;
   choice: AnalystBeatChoice;
   seed: string;
+  /** Limita o efeito do buff a uma janela de minutos (default: até o fim do tempo). */
+  windowMinutes?: number;
 }): { events: MatchPlanEvent[]; flips: number } {
-  const { events, fromIndex, beat, choice, seed } = opts;
+  const { events, fromIndex, beat, choice, seed, windowMinutes } = opts;
   const rng = new SpiritRng(hashSeed(`${seed}:${choice.id}`));
   const halfEnd = beat.half === 1 ? 45 : 90;
+  // Buff dura uma JANELA (≈10s): só os lances dentro dela sentem o efeito.
+  const windowEnd = windowMinutes != null ? Math.min(halfEnd, beat.minute + windowMinutes) : halfEnd;
   const w = choice.weight;
   let flips = 0;
 
   const out = events.map((e, i) => {
-    if (i < fromIndex || e.minute < beat.minute || e.minute > halfEnd) return e;
+    if (i < fromIndex || e.minute < beat.minute || e.minute > windowEnd) return e;
 
     if (choice.target_side === 'home' && w > 0) {
       // Explorar canal com vantagem: quase-gols do home no canal podem virar gol
@@ -206,6 +246,15 @@ export function applyDecisionToRemainingEvents(opts: {
         if (rng.next() < Math.min(0.6, w * 2.5)) {
           flips += 1;
           return downgradeAwayGoal(e, choice.channel);
+        }
+      }
+    } else if (choice.target_side === 'away' && w < 0) {
+      // Defesa ERRADA: a leitura ruim abre o canal e um quase-gol do adversário vira gol.
+      if (NEAR_MISS_AWAY.has(e.kind)) {
+        const p = Math.min(0.35, (e.xg ?? 0.1) * Math.abs(w) * 1.6 + 0.03);
+        if (rng.next() < p) {
+          flips += 1;
+          return upgradeToAwayGoal(e);
         }
       }
     }
@@ -371,16 +420,49 @@ export interface LiveBeatAwayPlayer { pos: string; fatigue: number; }
 
 const firstName = (n: string) => n.trim().split(/\s+/)[0] || n;
 
+/** Situação real do jogo: 3 opções (a CERTA é inferível do texto). */
+interface SituationTemplate {
+  intent: 'attack' | 'defend' | 'neutral';
+  targetSide: 'home' | 'away';
+  channel: MatchupChannel;
+  /** [positiva, neutra, negativa] — a ordem é embaralhada na UI. */
+  labels: [string, string, string];
+}
+
+/** Monta o texto da situação (suporta {flank}/{star} preenchidos pelo builder). */
+type SituationFactory = (ctx: { flank: string; star: string }) => { insight: string; tpl: SituationTemplate };
+
+const DEFEND_SITUATIONS: SituationFactory[] = [
+  ({ flank }) => ({ insight: `Adversário cruzando ${flank}`, tpl: { intent: 'defend', targetSide: 'away', channel: flank.includes('direit') ? 'corredor_direito' : 'corredor_esquerdo', labels: ['Marcar nas laterais', 'Manter posicionamento', 'Subir a linha'] } }),
+  () => ({ insight: 'Eles pressionam em bloco alto', tpl: { intent: 'defend', targetSide: 'away', channel: 'pressao', labels: ['Sair jogando rápido', 'Tocar de lado', 'Lançar na loteria'] } }),
+  () => ({ insight: 'Contra-ataque deles em velocidade', tpl: { intent: 'defend', targetSide: 'away', channel: 'ataque_central', labels: ['Falta tática no meio', 'Recompor a marcação', 'Dar o bote isolado'] } }),
+  () => ({ insight: 'Escanteio perigoso pra eles', tpl: { intent: 'defend', targetSide: 'away', channel: 'bola_parada', labels: ['Marcação por zona', 'Marcação individual', 'Subir o goleiro'] } }),
+];
+
+const ATTACK_SITUATIONS: SituationFactory[] = [
+  ({ flank }) => ({ insight: `Lateral deles exposto ${flank}`, tpl: { intent: 'attack', targetSide: 'home', channel: flank.includes('direit') ? 'corredor_direito' : 'corredor_esquerdo', labels: ['Atacar pelo corredor', 'Manter o meio', 'Insistir no chutão'] } }),
+  () => ({ insight: 'Goleiro deles inseguro', tpl: { intent: 'attack', targetSide: 'home', channel: 'finalizacao_vs_gk', labels: ['Finalizar de primeira', 'Trabalhar a jogada', 'Driblar demais'] } }),
+  () => ({ insight: 'Espaço nas costas da zaga', tpl: { intent: 'attack', targetSide: 'home', channel: 'ataque_central', labels: ['Lançar nas costas', 'Posse no meio', 'Recuar a bola'] } }),
+  ({ star }) => ({ insight: `${star} está ligado`, tpl: { intent: 'attack', targetSide: 'home', channel: 'finalizacao_vs_gk', labels: [`Municiar ${star}`, 'Jogo coletivo', 'Isolar na ponta'] } }),
+];
+
+const NEUTRAL_SITUATIONS: SituationFactory[] = [
+  () => ({ insight: 'Jogo travado no meio', tpl: { intent: 'neutral', targetSide: 'home', channel: 'criacao', labels: ['Acelerar pelos lados', 'Manter a posse', 'Chutar de longe'] } }),
+  () => ({ insight: 'Time pedindo fôlego', tpl: { intent: 'neutral', targetSide: 'home', channel: 'pressao', labels: ['Segurar a bola', 'Ritmo normal', 'Pressionar alto'] } }),
+];
+
+const EFFECT_ORDER: ChoiceEffect[] = ['positive', 'neutral', 'negative'];
+
 /**
- * Gera o beat do Analista a partir do estado REAL da partida (não mock), em
- * ≤5 palavras, num de 3 tipos rotativos: @setor (lado cansado do adversário),
- * @jogador (teu destaque) e @time (pressionar/segurar). A escolha "fazer" carrega
- * peso positivo → applyDecisionToRemainingEvents favorece o PRÓXIMO lance.
+ * Gera o beat do Analista a partir do estado REAL da partida (não mock): uma
+ * SITUAÇÃO concreta (cruzamento, contra-ataque, lateral exposto…) com SEMPRE 3
+ * opções de efeito (positivo +2.5% / neutro 0% / negativo −2.5%). A ordem das
+ * opções é embaralhada (determinística) — a resposta certa é inferível do texto.
  */
 export function buildLiveAnalystBeat(opts: {
   beatId: string;
   minute: number;
-  index: number; // qual beat (0..) → rotaciona o tipo
+  index: number; // qual beat (0..) → rotaciona a situação
   homeScore: number;
   awayScore: number;
   momentum: number; // 0..100 (viés casa)
@@ -391,55 +473,56 @@ export function buildLiveAnalystBeat(opts: {
   const trend: 'rising' | 'falling' | 'stable' =
     opts.momentum > 55 ? 'rising' : opts.momentum < 45 ? 'falling' : 'stable';
   const half: 1 | 2 = opts.minute <= 45 ? 1 : 2;
-  const mk = (text: string, doLabel: string, channel: MatchupChannel, targetSide: 'home' | 'away'): AnalystBeat => ({
+  const rng = new SpiritRng(hashSeed(`${opts.beatId}:situation`));
+
+  // Flanco cansado do adversário (estima fadiga corrente pelo minuto).
+  const live = (f: number) => Math.min(100, (f || 0) + opts.minute * 0.5);
+  const avgFlank = (poss: string[]) => {
+    const g = opts.awayPlayers.filter((p) => poss.includes(p.pos.toUpperCase()));
+    return g.length ? g.reduce((s, p) => s + live(p.fatigue), 0) / g.length : 0;
+  };
+  const flank = avgFlank(['LD', 'PD']) >= avgFlank(['LE', 'PE']) ? 'pela direita' : 'pela esquerda';
+  const best = opts.homeStats
+    .filter((s) => s.side === 'home')
+    .sort((a, b) => b.goals * 3 + b.shots - (a.goals * 3 + a.shots))[0];
+  const star = best && best.goals + best.shots > 0
+    ? firstName(opts.homeNameById[best.id] ?? 'o craque')
+    : 'o craque';
+
+  // Categoria pela leitura do jogo: perdendo/sob pressão → defesa; com a bola e
+  // momento → ataque; senão neutro. Rotaciona dentro da categoria pelo índice.
+  const losing = opts.homeScore < opts.awayScore;
+  const category: SituationFactory[] =
+    losing || opts.momentum < 43 ? DEFEND_SITUATIONS
+      : opts.momentum > 57 || opts.homeScore > opts.awayScore ? ATTACK_SITUATIONS
+        : NEUTRAL_SITUATIONS;
+  const factory = category[opts.index % category.length]!;
+  const { insight, tpl } = factory({ flank, star });
+
+  // 3 escolhas (positivo/neutro/negativo) → peso por tier; ordem embaralhada.
+  const built = EFFECT_ORDER.map((effect, i) => ({
+    id: `${opts.beatId}-${effect}`,
+    label: tpl.labels[i]!,
+    channel: tpl.channel,
+    target_side: tpl.targetSide,
+    weight: buffPctToWeight(EFFECT_BUFF_PCT[effect]),
+    effect,
+  }));
+  // Fisher-Yates determinístico pra a ordem dos botões não denunciar o tier.
+  for (let i = built.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [built[i], built[j]] = [built[j]!, built[i]!];
+  }
+
+  return {
     id: opts.beatId,
     minute: opts.minute,
     half,
-    intent: targetSide === 'away' ? 'defend' : 'attack',
-    insight: { text, primary_channel: channel, threat_channel: 'ataque_central', momentum_trend: trend },
-    choices: [
-      { id: `${opts.beatId}-go`, label: doLabel, channel, target_side: targetSide, weight: 0.22 },
-      { id: `${opts.beatId}-no`, label: 'Manter o plano', channel: 'ataque_central', target_side: 'home', weight: 0 },
-    ],
+    intent: tpl.intent,
+    insight: { text: insight, primary_channel: tpl.channel, threat_channel: 'ataque_central', momentum_trend: trend },
+    choices: built,
     window_ms: 6000,
-  });
-  const type = opts.index % 3; // 0 @setor, 1 @jogador, 2 @time
-
-  // @setor — lado cansado do adversário (fadiga média por flanco).
-  // awayPlayers.fatigue é o snapshot do INÍCIO (não atualiza ao vivo), então
-  // estimamos a fadiga corrente somando o desgaste acumulado pelo minuto — assim
-  // a leitura "lado deles cansado" passa a fazer sentido no 2º tempo.
-  if (type === 0 && opts.awayPlayers.length) {
-    const live = (f: number) => Math.min(100, (f || 0) + opts.minute * 0.5);
-    const avg = (poss: string[]) => {
-      const g = opts.awayPlayers.filter((p) => poss.includes(p.pos.toUpperCase()));
-      return g.length ? g.reduce((s, p) => s + live(p.fatigue), 0) / g.length : 0;
-    };
-    const right = avg(['LD', 'PD']);
-    const left = avg(['LE', 'PE']);
-    if (Math.max(right, left) >= 55) {
-      return right >= left
-        ? mk('Lado direito deles cansado', 'Atacar por ali', 'corredor_direito', 'home')
-        : mk('Lado esquerdo deles caiu', 'Atacar por ali', 'corredor_esquerdo', 'home');
-    }
-  }
-
-  // @jogador — teu destaque na partida
-  if (type === 0 || type === 1) {
-    const best = opts.homeStats
-      .filter((s) => s.side === 'home')
-      .sort((a, b) => b.goals * 3 + b.shots - (a.goals * 3 + a.shots))[0];
-    if (best && best.goals + best.shots > 0) {
-      const nm = firstName(opts.homeNameById[best.id] ?? 'o craque');
-      return mk(`${nm} está ligado`, `Jogar pro ${nm}`, 'finalizacao_vs_gk', 'home');
-    }
-  }
-
-  // @time — pressionar ou segurar conforme placar + momento
-  if (opts.homeScore > opts.awayScore && opts.momentum >= 50) {
-    return mk('Segure o resultado', 'Fechar atrás', 'pressao', 'away');
-  }
-  return mk('Hora de pressionar', 'Pressionar agora', 'pressao', 'home');
+  };
 }
 
 /** Veredito por decisão, computado sobre os eventos REALMENTE exibidos. */
@@ -452,6 +535,13 @@ export function computeBeatVerdicts(
     const after = events.filter((e) => e.minute > d.minute);
     const base = { beatId: d.beat_id, minute: d.minute, choiceLabel: d.label };
 
+    if (d.weight === 0) {
+      return {
+        ...base,
+        kind: 'neutral' as const,
+        text: 'Você manteve o plano — sem mexer no jogo, sem risco.',
+      };
+    }
     if (d.weight < 0) {
       return {
         ...base,

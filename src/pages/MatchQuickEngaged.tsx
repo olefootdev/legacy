@@ -530,6 +530,24 @@ export default function MatchQuickEngaged() {
                 p.id === outId ? { ...inView, payload: { ...inView.payload, role: p.payload.role } } : p,
               );
             }}
+            secondHalfLineup={() => {
+              // Elenco vivo APÓS o intervalo: o QuickPlanPlayer usa pra reconhecer a
+              // lenda que ENTROU no 2º tempo e oferecer o buff dela (request #2).
+              const fieldCards = homePlayersRef.current.map(toSquadCard);
+              const starterIds = new Set(homePlayersRef.current.map((p) => p.id));
+              const benchCards = Object.values(players)
+                .filter((p) => {
+                  if (starterIds.has(p.id)) return false;
+                  const h = playerHealth?.[p.id];
+                  if (h) return (h.outForMatches ?? 0) <= 0 && (h.suspendedMatches ?? 0) <= 0;
+                  return (p.outForMatches ?? 0) <= 0;
+                })
+                .map((p) => playerToHomeView(p, getEffectiveFatigue(p.id, p, playerHealth)))
+                .sort((a, b) => b.effective - a.effective)
+                .slice(0, 8)
+                .map(toSquadCard);
+              return { field: fieldCards, bench: benchCards };
+            }}
           />
         )}
 

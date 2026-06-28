@@ -57,6 +57,9 @@ export interface MatchupMatrix {
   away: Record<MatchupChannel, MatchupChannelEntry>;
 }
 
+/** Tier de efeito de uma escolha: 3 sempre presentes (neutro/positivo/negativo). */
+export type ChoiceEffect = 'positive' | 'neutral' | 'negative';
+
 export interface AnalystBeatChoice {
   id: string;
   label: string;
@@ -65,6 +68,9 @@ export interface AnalystBeatChoice {
   target_side: 'home' | 'away';
   /** Peso calculado pelo Python a partir dos edges reais. Negativo = armadilha. */
   weight: number;
+  /** Tier do efeito (neutro 0% / positivo +2.5% / negativo −2.5%). A resposta certa
+   *  é INFERÍVEL do texto — o tier NÃO é exibido nos botões. */
+  effect?: ChoiceEffect;
 }
 
 export interface AnalystBeat {
