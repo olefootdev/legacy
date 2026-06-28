@@ -197,22 +197,27 @@ function upgradeToAwayGoal(e: MatchPlanEvent): MatchPlanEvent {
 export function applyDecisionToRemainingEvents(opts: {
   events: MatchPlanEvent[];
   fromIndex: number;
-  beat: AnalystBeat;
+  /** Beat completo (decisão) OU, pra reações de lead-in, use atMinute/half. */
+  beat?: AnalystBeat;
+  atMinute?: number;
+  half?: 1 | 2;
   choice: AnalystBeatChoice;
   seed: string;
   /** Limita o efeito do buff a uma janela de minutos (default: até o fim do tempo). */
   windowMinutes?: number;
 }): { events: MatchPlanEvent[]; flips: number } {
   const { events, fromIndex, beat, choice, seed, windowMinutes } = opts;
+  const half = beat?.half ?? opts.half ?? 1;
+  const atMinute = beat?.minute ?? opts.atMinute ?? 0;
   const rng = new SpiritRng(hashSeed(`${seed}:${choice.id}`));
-  const halfEnd = beat.half === 1 ? 45 : 90;
+  const halfEnd = half === 1 ? 45 : 90;
   // Buff dura uma JANELA (≈10s): só os lances dentro dela sentem o efeito.
-  const windowEnd = windowMinutes != null ? Math.min(halfEnd, beat.minute + windowMinutes) : halfEnd;
+  const windowEnd = windowMinutes != null ? Math.min(halfEnd, atMinute + windowMinutes) : halfEnd;
   const w = choice.weight;
   let flips = 0;
 
   const out = events.map((e, i) => {
-    if (i < fromIndex || e.minute < beat.minute || e.minute > windowEnd) return e;
+    if (i < fromIndex || e.minute < atMinute || e.minute > windowEnd) return e;
 
     if (choice.target_side === 'home' && w > 0) {
       // Explorar canal com vantagem: quase-gols do home no canal podem virar gol
@@ -523,6 +528,114 @@ export function buildLiveAnalystBeat(opts: {
     choices: built,
     window_ms: 6000,
   };
+}
+
+/** Chamada de transição: o texto curto que ANTECEDE um lance de alto sinal pra
+ *  dar contexto ("Olha o contra-ataque!") — o gol deixa de sair "do nada". */
+export interface TransitionLeadIn {
+  /** id da situação (telemetria/teste). */
+  kind: string;
+  text: string;
+  intent: 'attack' | 'defend' | 'neutral';
+  /** Ação CERTA pra reagir à situação (buff de acerto). Ex.: 'RECUAR!'. */
+  reaction: string;
+}
+
+/** Ação de acerto por situação × intenção (o manager reage e ganha o buff). */
+const TRANSITION_REACTIONS: Record<string, { attack: string; defend: string }> = {
+  rebote: { attack: 'NA SOBRA!', defend: 'AFASTAR!' },
+  contra_pro: { attack: 'ACELERAR!', defend: 'RECUAR!' },
+  contra_sofrido: { attack: 'ACELERAR!', defend: 'RECUAR!' },
+  bola_parada: { attack: 'SUBIR PRA ÁREA!', defend: 'MARCAR FORTE!' },
+  falha: { attack: 'APROVEITAR!', defend: 'COBRIR!' },
+  pressao: { attack: 'ROUBAR ALTO!', defend: 'SAIR JOGANDO!' },
+  individual: { attack: 'OUSAR!', defend: 'DOBRAR MARCAÇÃO!' },
+  cruzamento: { attack: 'ATACAR A BOLA!', defend: 'AFASTAR CRUZAMENTO!' },
+  golaco: { attack: 'ARRISCAR!', defend: 'BLOQUEAR!' },
+  lancamento: { attack: 'LANÇAR!', defend: 'LINHA ALTA!' },
+  chegada: { attack: 'FINALIZAR!', defend: 'FECHAR!' },
+};
+
+/**
+ * Classifica a SITUAÇÃO que antecede um lance de alto sinal (gol, contra-ataque,
+ * chance grande), pra anunciar o contexto antes de mostrar o desfecho. Cobre as
+ * 10 situações principais; cai num genérico só pra gol (nunca um gol "do nada").
+ * Decisão tática já tem contexto próprio (feed) → não anuncia.
+ */
+export function classifyTransition(opts: {
+  event: MatchPlanEvent;
+  /** Momento da casa (0..100) no minuto do lance. */
+  momentumHome: number;
+  /** Tipo do lance imediatamente anterior (pra detectar rebote/sobra). */
+  prevKind?: MatchPlanEvent['kind'];
+}): TransitionLeadIn | null {
+  const e = opts.event;
+  if (e.decision_influenced) return null; // já explicado pela decisão do manager
+
+  const isGoal = e.kind === 'goal_home' || e.kind === 'goal_away';
+  const isCounter = e.kind === 'counter_home' || e.kind === 'counter_away';
+  const isBigChance = (e.kind === 'chance_home' || e.kind === 'chance_away')
+    && (e.weight_tier === 'big' || e.weight_tier === 'epic');
+  if (!isGoal && !isCounter && !isBigChance) return null;
+
+  const home = e.actor_side === 'home';
+  const mh = opts.momentumHome;
+  const reason = (e.reason ?? '').toLowerCase();
+  const ch = e.channel;
+  const intent: 'attack' | 'defend' = home ? 'attack' : 'defend';
+  const mk = (kind: string, text: string): TransitionLeadIn => ({
+    kind,
+    text,
+    intent,
+    reaction: TRANSITION_REACTIONS[kind]?.[intent] ?? (intent === 'attack' ? 'ATACAR!' : 'FECHAR!'),
+  });
+
+  // 1) Rebote/sobra — lance logo após defesaça/trave.
+  if (opts.prevKind && (
+    opts.prevKind === (home ? 'save_away' : 'save_home')
+    || opts.prevKind === (home ? 'woodwork_home' : 'woodwork_away')
+  )) {
+    return mk('rebote', home ? 'Na sobra do rebote…' : 'Sobra perigosa na nossa área…');
+  }
+  // 2) Contra-ataque — gol/lance CONTRA o fluxo do jogo (a queixa do "do nada").
+  if (isCounter || (isGoal && ((home && mh < 42) || (!home && mh > 58)))) {
+    return home
+      ? mk('contra_pro', 'Roubou e saiu no contra-ataque!')
+      : mk('contra_sofrido', 'Cuidado — contra-ataque deles!');
+  }
+  // 3) Bola parada / escanteio / falta.
+  if (ch === 'bola_parada' || reason.includes('bola parada') || reason.includes('escanteio') || reason.includes('falta')) {
+    return mk('bola_parada', home ? 'Na bola parada…' : 'Bola parada perigosa pra eles…');
+  }
+  // 4) Erro defensivo / presente.
+  if (reason.includes('falha') || reason.includes('erro') || reason.includes('vacilo')) {
+    return mk('falha', home ? 'Falha na saída deles — presente!' : 'Vacilo nosso na saída…');
+  }
+  // 5) Pressão alta → roubada.
+  if (ch === 'pressao') {
+    return mk('pressao', home ? 'Pressão alta e roubou!' : 'A pressão deles te sufoca…');
+  }
+  // 6) Jogada individual de craque.
+  if (ch === 'finalizacao_vs_gk' || reason.includes('individual') || reason.includes('drible')) {
+    return mk('individual', home ? 'Lance individual de craque…' : 'Individual deles assusta…');
+  }
+  // 7) Cruzamento na área (corredores).
+  if (ch === 'corredor_esquerdo' || ch === 'corredor_direito') {
+    return mk('cruzamento', home ? 'Cruzamento na área…' : 'Cruzamento perigoso pra eles…');
+  }
+  // 8) Golaço de longe (xG baixo).
+  if (isGoal && (e.xg ?? 0.1) < 0.06) {
+    return mk('golaco', home ? 'De muito longe… olha o chute!' : 'Chutaram de longe…');
+  }
+  // 9) Lançamento nas costas / ataque central.
+  if (ch === 'ataque_central') {
+    return mk('lancamento', home ? 'Lançou nas costas da zaga!' : 'Acharam as costas da nossa zaga…');
+  }
+  // 10) Construção / chegada com perigo (genérico — gol nunca sai "do nada").
+  if (isGoal) {
+    return mk('chegada', home ? 'Chegou com perigo…' : 'Perigo na nossa área…');
+  }
+  return null;
 }
 
 /** Veredito por decisão, computado sobre os eventos REALMENTE exibidos. */

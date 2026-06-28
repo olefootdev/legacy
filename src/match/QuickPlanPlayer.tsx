@@ -37,10 +37,12 @@ import {
   rollDecisionCrit,
   EFFECT_BUFF_PCT,
   BUFF_WINDOW_MINUTES,
+  classifyTransition,
   QUICK_PLAN_FEED_MAX,
   type BeatDecisionRecord,
   type BeatVerdict,
   type QuickPlanFeedItem,
+  type TransitionLeadIn,
 } from './quickBeatDirector';
 import { SpiritRng } from '../../shared/gamespirit/SpiritRng';
 import { buildClutch, resolveClutch, type ClutchMoment, type ClutchKey } from './quickClutch';
@@ -315,7 +317,7 @@ function RosterRow({ card, isTop, rating, subbable, onSub }: {
   );
 }
 
-type PlayerPhase = 'playing' | 'beat' | 'halftime' | 'celebration' | 'penalty' | 'forced' | 'clutch' | 'sub' | 'shootout' | 'done';
+type PlayerPhase = 'playing' | 'beat' | 'halftime' | 'celebration' | 'penalty' | 'forced' | 'clutch' | 'sub' | 'shootout' | 'done' | 'leadin';
 
 /** Momento forçado: lesão (escolhe quem entra) ou vermelho (banner + 10 em campo). */
 interface ForcedMoment {
@@ -375,6 +377,8 @@ const FEED_STYLE: Record<QuickPlanFeedItem['kind'], string> = {
 
 /** Tempo real por minuto de jogo CORRIDO (relógio 1,2,3…). 90 min ≈ 22s. */
 const CLOCK_MS = 240;
+/** Duração da CHAMADA de transição antes de um lance de alto sinal (contexto). */
+const LEADIN_MS = 1300;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
@@ -392,6 +396,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const [activeBeat, setActiveBeat] = useState<AnalystBeat | null>(null);
   // FX flutuante do impacto da decisão (sobe da barra de momento e some).
   const [floatFx, setFloatFx] = useState<{ key: number; text: string; tier: 'pos' | 'neg' | 'neutral' | 'crit' } | null>(null);
+  // Chamada de transição ("Olha o contra-ataque!") antes de um lance de alto sinal.
+  const [leadIn, setLeadIn] = useState<TransitionLeadIn | null>(null);
+  // Buff de ACERTO: a chamada vira reação opcional (1 toque). Acertar = buff.
+  const [leadInReactable, setLeadInReactable] = useState(false);
   // Buff ATIVO (#3): janela de ~10s mostrada como chip com contagem regressiva.
   const [activeBuff, setActiveBuff] = useState<{ pct: number; tier: 'pos' | 'neg' | 'crit'; untilMinute: number } | null>(null);
   const [feed, setFeed] = useState<QuickPlanFeedItem[]>([]);
@@ -447,6 +455,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const replannedRef = useRef(false);
   const completedRef = useRef(false);
   const fxSeqRef = useRef(0); // chave única do FX flutuante (retrigger AnimatePresence)
+  const prevEventKindRef = useRef<MatchPlanEvent['kind'] | undefined>(undefined); // p/ detectar rebote
+  const leadInPendingRef = useRef<{ ev: MatchPlanEvent; idx: number } | null>(null); // lance aguardando a reação
+  const leadInResolvedRef = useRef(false); // evita reação + timeout dispararem 2×
   // Tally por jogador (gols/chutes/defesas) → nota da partida + crédito (Fase D).
   const statsRef = useRef<Record<string, { goals: number; shots: number; saves: number; side: 'home' | 'away' }>>({});
 
@@ -660,9 +671,91 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     scheduleNext(600);
   };
 
+  /** Entrada do evento: ANTES de mostrar um lance de alto sinal (gol, contra-ataque,
+   *  chance grande), anuncia a CHAMADA de contexto ("Olha o contra-ataque!") por um
+   *  instante — assim o desfecho nunca sai "do nada". Depois processa o lance. */
+  const handleEvent = (next: MatchPlanEvent, idx: number) => {
+    const lead = classifyTransition({
+      event: next,
+      momentumHome: momentumRef.current[Math.max(0, Math.min(89, next.minute - 1))] ?? 50,
+      prevKind: prevEventKindRef.current,
+    });
+    prevEventKindRef.current = next.kind;
+    if (lead) {
+      const isGoalEv = next.kind === 'goal_home' || next.kind === 'goal_away';
+      // Gol já tem o "momento decisivo" (clutch) como interação. As demais
+      // situações viram REAÇÃO de 1 toque: acertar = buff (buff de acerto).
+      const reactable = !isGoalEv && !!lead.reaction;
+      setLeadIn(lead);
+      setLeadInReactable(reactable);
+      setPhase('leadin');
+      leadInPendingRef.current = reactable ? { ev: next, idx } : null;
+      leadInResolvedRef.current = false;
+      if (timerRef.current != null) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        if (leadInResolvedRef.current) return; // já reagiu
+        leadInResolvedRef.current = true;
+        leadInPendingRef.current = null;
+        setLeadIn(null);
+        setLeadInReactable(false);
+        processSignalEvent(next, idx);
+      }, LEADIN_MS);
+      return;
+    }
+    processSignalEvent(next, idx);
+  };
+
+  /** BUFF DE ACERTO: o manager reagiu à chamada no tempo → buff forte aplicado ao
+   *  lance iminente + janela (~10s), com FX e chip. Sem reação = sem buff (sem
+   *  punição: a regra é impressionar, não desiludir). */
+  const reactToLeadIn = () => {
+    const pend = leadInPendingRef.current;
+    const lead = leadIn;
+    if (!pend || !lead || leadInResolvedRef.current) return;
+    leadInResolvedRef.current = true;
+    leadInPendingRef.current = null;
+    if (timerRef.current != null) window.clearTimeout(timerRef.current);
+    const { ev, idx } = pend;
+    const attack = lead.intent === 'attack';
+    // CRÍTICO também vale no acerto (×2/×3).
+    const crit = rollDecisionCrit(plan.seed, `reac-${ev.minute}-${ev.kind}`);
+    const baseW = 0.4; // acerto = buff FORTE (converte/neutraliza o lance iminente)
+    const choice = {
+      id: `reac-${ev.minute}-${ev.kind}`,
+      label: lead.reaction,
+      channel: ev.channel ?? 'ataque_central',
+      target_side: (attack ? 'home' : 'away') as 'home' | 'away',
+      weight: baseW * crit.mult,
+      effect: 'positive' as const,
+    };
+    const res = applyDecisionToRemainingEvents({
+      events: eventsRef.current,
+      fromIndex: idx, // inclui o lance iminente
+      atMinute: ev.minute,
+      half: ev.minute <= 45 ? 1 : 2,
+      choice,
+      seed: plan.seed,
+      windowMinutes: BUFF_WINDOW_MINUTES,
+    });
+    eventsRef.current = res.events;
+    const pct = EFFECT_BUFF_PCT.positive * crit.mult;
+    const fxKey = (fxSeqRef.current += 1);
+    setFloatFx({
+      key: fxKey,
+      text: crit.isCrit ? `⚡ ACERTO CRÍTICO ×${crit.mult} · +${pct.toFixed(1)}%` : `ACERTO! +${pct.toFixed(1)}% ${attack ? 'ATAQUE' : 'DEFESA'}`,
+      tier: crit.isCrit ? 'crit' : 'pos',
+    });
+    window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1500);
+    setActiveBuff({ pct, tier: crit.isCrit ? 'crit' : 'pos', untilMinute: ev.minute + BUFF_WINDOW_MINUTES });
+    pushFeed({ id: `reac-${ev.minute}`, minute: ev.minute, kind: 'decision', text: `Reação certa: ${lead.reaction}` });
+    setLeadIn(null);
+    setLeadInReactable(false);
+    processSignalEvent(eventsRef.current[idx] ?? ev, idx);
+  };
+
   /** Processa UM evento que caiu no minuto atual. Decisões pausam; lances
    *  comuns destacam no palco e seguram o relógio por HOLD_MS. */
-  const handleEvent = (next: MatchPlanEvent, idx: number) => {
+  const processSignalEvent = (next: MatchPlanEvent, idx: number) => {
     if (next.kind === 'penalty_home') {
       pushFeed({ id: `pen-${idx}`, minute: next.minute, kind: 'penalty', text: 'Pênalti pra gente!', side: 'home' });
       setPenalty({ idx, minute: next.minute });
@@ -714,6 +807,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     // Gol fruto de DECISÃO tática → comemora direto.
     if (next.kind === 'goal_home' || next.kind === 'goal_away') {
       const side = next.actor_side;
+      // Gol sacode o momento (a barra reage ao placar).
+      momentumRef.current = nudgeMomentumCurve(momentumRef.current, next.minute, side === 'home' ? 14 : -14);
       setCelebration({
         key: `goal-${idx}`,
         name: next.actor_name ?? (side === 'home' ? plan.home_short : plan.away_short),
@@ -859,6 +954,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     if (homeScores || awayScores) {
       if (homeScores) { scoreRef.current.home += 1; setHomeScore((v) => v + 1); tally(ev?.actor_id, 'home', 'goals'); tally(ev?.actor_id, 'home', 'shots'); }
       else { scoreRef.current.away += 1; setAwayScore((v) => v + 1); if (scoreRef.current.away > scoreRef.current.home) wasLosingRef.current = true; }
+      // O gol SACODE o momento: a barra reage ao placar (o % deixa de parecer ilusório).
+      momentumRef.current = nudgeMomentumCurve(momentumRef.current, c.moment.minute, homeScores ? 14 : -14);
       setCelebration({
         key: `clutch-${c.idx}`,
         name: homeScores ? c.moment.actorName : plan.away_short,
@@ -1168,7 +1265,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         {/* Minuto */}
         <div className="flex justify-center mt-2">
           <span className="font-display tabular-nums text-neon-yellow text-[13px] font-bold tracking-[0.1em]">
-            {phase === 'beat' || phase === 'clutch' || phase === 'penalty' || phase === 'forced' ? '⏸ ' : phase === 'halftime' ? 'INTERVALO · ' : ''}{currentMinute}&prime;
+            {phase === 'beat' || phase === 'clutch' || phase === 'penalty' || phase === 'forced' || phase === 'leadin' ? '⏸ ' : phase === 'halftime' ? 'INTERVALO · ' : ''}{currentMinute}&prime;
           </span>
         </div>
       </div>
@@ -1353,6 +1450,68 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         })()}
 
         <AnimatePresence mode="wait">
+          {phase === 'leadin' && leadIn && (() => {
+            const tone = leadIn.intent === 'attack'
+              ? 'var(--color-success)'
+              : leadIn.intent === 'defend'
+              ? 'var(--color-danger)'
+              : 'var(--color-neon-yellow)';
+            return (
+              <motion.div
+                key={`leadin-${leadIn.kind}-${currentMinute}`}
+                initial={{ opacity: 0, scale: 0.92, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 1.06 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                className="w-full border border-l-[3px] px-4 py-5 text-center"
+                style={{ borderColor: 'var(--color-border)', borderLeftColor: tone, borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-dark-gray)' }}
+              >
+                <motion.p
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 0.9, repeat: Infinity }}
+                  className="font-display uppercase tracking-[0.32em] text-[9px] font-black mb-2"
+                  style={{ color: tone }}
+                >
+                  Atenção
+                </motion.p>
+                <p
+                  className="text-white leading-[1.05]"
+                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 5.6vw, 32px)', letterSpacing: '-0.02em' }}
+                >
+                  {leadIn.text}
+                </p>
+
+                {/* BUFF DE ACERTO — reação de 1 toque (opcional). Acertar no tempo
+                    dá buff forte ao lance; ignorar não pune. */}
+                {leadInReactable && (
+                  <>
+                    <motion.button
+                      type="button"
+                      onClick={reactToLeadIn}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.12 }}
+                      className="mt-3 px-5 py-2.5 font-display uppercase tracking-[0.16em] text-[13px] font-black text-black"
+                      style={{ borderRadius: 'var(--radius-sm)', backgroundColor: tone, boxShadow: `0 0 22px color-mix(in srgb, ${tone} 45%, transparent)` }}
+                    >
+                      {leadIn.reaction}
+                    </motion.button>
+                    <div className="mt-2 mx-auto h-0.5 w-32 bg-deep-black/60 overflow-hidden" style={{ borderRadius: 999 }}>
+                      <motion.div
+                        className="h-full"
+                        style={{ backgroundColor: tone }}
+                        initial={{ width: '100%' }}
+                        animate={{ width: '0%' }}
+                        transition={{ ease: 'linear', duration: LEADIN_MS / 1000 }}
+                      />
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            );
+          })()}
+
           {phase === 'beat' && activeBeat && (
             <AnalystBeatCard key={activeBeat.id} beat={activeBeat} onChoose={handleBeatChoice} />
           )}
