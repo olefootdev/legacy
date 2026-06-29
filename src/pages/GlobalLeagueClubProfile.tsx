@@ -41,6 +41,10 @@ function FixtureRow({ fixture, teamId }: { fixture: GlobalFixture; teamId: strin
   const theirGoals = isHome ? fixture.scoreAway : fixture.scoreHome;
   const opponentName = isHome ? fixture.awayTeamName : fixture.homeTeamName;
 
+  // #4: WO por elenco incompleto — o lado true perdeu por ausência (0×3).
+  const myWo = isHome ? fixture.woHome : fixture.woAway;
+  const theirWo = isHome ? fixture.woAway : fixture.woHome;
+
   let resultLabel = '';
   let resultColor = 'text-white/40';
   if (myGoals > theirGoals) { resultLabel = 'V'; resultColor = 'text-emerald-400'; }
@@ -56,6 +60,18 @@ function FixtureRow({ fixture, teamId }: { fixture: GlobalFixture; teamId: strin
       <span className="flex-1 font-display text-xs font-bold text-white/70 truncate uppercase">
         {opponentName}
       </span>
+      {(myWo || theirWo) && (
+        <span
+          className="text-[8px] font-display font-black uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0"
+          style={{
+            color: myWo ? 'var(--color-danger)' : 'var(--color-success)',
+            border: `1px solid ${myWo ? 'var(--color-danger)' : 'var(--color-success)'}`,
+          }}
+          title={myWo ? 'Você não tinha elenco mínimo (11)' : 'Adversário não tinha elenco mínimo (11)'}
+        >
+          {myWo ? 'WO sofrido' : 'WO a favor'}
+        </span>
+      )}
       <div className="flex items-center gap-1 shrink-0">
         <span className="font-serif-hero text-base font-bold text-neon-yellow">{myGoals}</span>
         <span className="text-white/30 text-xs">x</span>
@@ -116,6 +132,16 @@ export default function GlobalLeagueClubProfile() {
   }
 
   const sgSeason = team.goalsFor - team.goalsAgainst;
+  // #12 Rivalidade histórica: adversários com 3+ confrontos viram "clássicos".
+  const rivals = Object.entries(team.rivalryEncounters ?? {})
+    .filter(([, n]) => (n as number) >= 3)
+    .map(([oppId, n]) => ({
+      id: oppId,
+      count: n as number,
+      name: globalLeagueMVP?.teams.find((t) => t.id === oppId)?.clubName ?? 'Adversário',
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
@@ -234,6 +260,34 @@ export default function GlobalLeagueClubProfile() {
           <StatBox label="PTS Total" value={team.allTimePoints} accent />
         </div>
       </motion.div>
+
+      {/* #12 Rivais históricos — narrativa de confrontos repetidos */}
+      {rivals.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="sports-panel rounded-lg overflow-hidden"
+        >
+          <div className="bg-deep-black px-4 py-3 border-b border-white/10">
+            <h2 className="font-display text-sm font-bold uppercase tracking-wider text-white">Rivais Históricos</h2>
+            <p className="text-[10px] text-white/30 mt-0.5">3+ confrontos nesta jornada</p>
+          </div>
+          <div className="p-3 space-y-1.5">
+            {rivals.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => navigate(`/match/global/club/${r.id}`)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-white/5 hover:bg-white/10 transition-colors text-left"
+              >
+                <span className="text-[13px] font-bold text-white truncate">{r.name}</span>
+                <span className="font-display tabular-nums text-[11px] font-black text-neon-yellow shrink-0">{r.count} duelos</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Historico de partidas */}
       <motion.div

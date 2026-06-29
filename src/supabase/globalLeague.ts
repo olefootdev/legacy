@@ -192,6 +192,8 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
         penaltyScoreHome: f.penalty_score_home == null ? undefined : Number(f.penalty_score_home),
         penaltyScoreAway: f.penalty_score_away == null ? undefined : Number(f.penalty_score_away),
         wentToPenalties: Boolean(f.went_to_penalties),
+        woHome: Boolean(f.wo_home),
+        woAway: Boolean(f.wo_away),
       };
       const list = fixturesByRound.get(roundId) ?? [];
       list.push(fixture);
@@ -319,6 +321,8 @@ export async function loadDailyKnockoutFromSupabase(
         penaltyScoreHome: f.penalty_score_home == null ? undefined : Number(f.penalty_score_home),
         penaltyScoreAway: f.penalty_score_away == null ? undefined : Number(f.penalty_score_away),
         wentToPenalties: Boolean(f.went_to_penalties),
+        woHome: Boolean(f.wo_home),
+        woAway: Boolean(f.wo_away),
       };
       const list = fixturesByRound.get(roundId) ?? [];
       list.push(fixture);

@@ -631,8 +631,14 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     pressure_home *= 0.72
                     momentum_home = max(5, momentum_home - 16)
                     momentum_shock -= 14
-                stats = scorer_counts.setdefault(actor["id"], {"goals": 0, "name": actor["name"]})
+                stats = scorer_counts.setdefault(actor["id"], {"goals": 0, "assists": 0, "name": actor["name"]})
                 stats["goals"] += 1
+                # ASSIST: o último a tocar antes do autor (mesmo lado), se diferente.
+                if prev_id and prev_id != actor["id"]:
+                    assister = next((p for p in lineup_active if p["id"] == prev_id), None)
+                    if assister:
+                        ast = scorer_counts.setdefault(prev_id, {"goals": 0, "assists": 0, "name": assister["name"]})
+                        ast["assists"] += 1
             elif base in ("chance", "save", "woodwork"):
                 # Quase-gol INTENSIFICA o cerco — a pressão sobe de verdade.
                 if possession == "home":
@@ -815,13 +821,16 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     # MVP projection — home apenas
     mvp = None
     if scorer_counts:
-        best_id = max(scorer_counts, key=lambda k: scorer_counts[k]["goals"])
+        # Melhor por participação direta (gol vale mais que assist).
+        best_id = max(scorer_counts, key=lambda k: scorer_counts[k]["goals"] * 3 + scorer_counts[k].get("assists", 0))
+        g = scorer_counts[best_id]["goals"]
+        a = scorer_counts[best_id].get("assists", 0)
         mvp = {
             "player_id": best_id,
             "name": scorer_counts[best_id]["name"],
-            "rating": 6.5 + scorer_counts[best_id]["goals"] * 0.8,
-            "goals": scorer_counts[best_id]["goals"],
-            "assists": 0,
+            "rating": round(6.5 + g * 0.8 + a * 0.4, 1),
+            "goals": g,
+            "assists": a,
         }
 
     arc = detect_narrative_arc(

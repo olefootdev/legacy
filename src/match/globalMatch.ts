@@ -114,6 +114,9 @@ export interface GlobalFixture {
   penaltyScoreHome?: number;
   penaltyScoreAway?: number;
   wentToPenalties?: boolean;
+  /** #4: WO por elenco incompleto (<11). O lado true perdeu 0×3 por ausência. */
+  woHome?: boolean;
+  woAway?: boolean;
 }
 
 /** Rodada global completa */

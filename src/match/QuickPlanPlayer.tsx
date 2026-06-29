@@ -63,7 +63,7 @@ import {
   STYLE_LABEL,
 } from '@/match/quickTacticalLive';
 import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
-import { detectLiveArc } from '@/match/quickNarrativeArcs';
+import { detectLiveArc, getArcDescription } from '@/match/quickNarrativeArcs';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
@@ -1782,7 +1782,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 const resColor = res === 'win' ? 'var(--color-success)' : res === 'loss' ? 'var(--color-danger)' : 'var(--color-neon-yellow)';
                 const detail = shootoutResult
                   ? `nos pênaltis ${shootoutResult.homeTally}–${shootoutResult.awayTally}`
-                  : plan.narrative_arc.replace('_', ' ');
+                  : getArcDescription(plan.narrative_arc); // #14: arco em PT legível
                 return (
                   <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black mb-4 text-center" style={{ color: resColor }}>
                     {resWord} · {detail}
@@ -1790,25 +1790,47 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 );
               })()}
 
-              {/* CARD DE MVP — padrão Crown Jewel (hero amarelo). */}
-              {plan.mvp_projection && (
-                <div className="mb-4 px-5 py-5 bg-neon-yellow" style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(253,225,0,0.18)' }}>
-                  <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-black/70 mb-2">
-                    Craque do jogo · MVP
-                  </p>
-                  <p
-                    className="text-black leading-[0.95]"
-                    style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(34px, 9vw, 52px)', letterSpacing: '-0.03em' }}
-                  >
-                    {shortName(plan.mvp_projection.name)}
-                  </p>
-                  <span aria-hidden className="block w-12 h-[3px] bg-black/80 mt-2 mb-3" />
-                  <p className="font-display uppercase tracking-[0.2em] text-[12px] font-black text-black/85">
-                    {plan.mvp_projection.goals > 0 && `${plan.mvp_projection.goals} ${plan.mvp_projection.goals === 1 ? 'gol' : 'gols'} · `}
-                    Nota {plan.mvp_projection.rating.toFixed(1)}
-                  </p>
-                </div>
-              )}
+              {/* CARD DE MVP — padrão Crown Jewel (hero amarelo). #9: assists reais +
+                  fallback quando ninguém marcou (0-0): premia o goleiro/destaque por
+                  defesas/finalizações (statsRef) pra NUNCA ficar sem craque. */}
+              {(() => {
+                const proj = plan.mvp_projection;
+                const fallback = (() => {
+                  if (proj) return null;
+                  const best = Object.entries(statsRef.current)
+                    .filter(([, s]) => s.side === 'home')
+                    .map(([id, s]) => ({ id, s, score: s.saves * 2 + s.shots + s.goals * 3 }))
+                    .filter((x) => x.score > 0)
+                    .sort((a, b) => b.score - a.score)[0];
+                  if (!best) return null;
+                  const card = field.find((c) => c.id === best.id);
+                  if (!card) return null;
+                  return { name: card.name, goals: best.s.goals, assists: 0, rating: matchRating(card.ovr, best.s) };
+                })();
+                const mvp = proj ?? fallback;
+                if (!mvp) return null;
+                const parts: string[] = [];
+                if (mvp.goals > 0) parts.push(`${mvp.goals} ${mvp.goals === 1 ? 'gol' : 'gols'}`);
+                if (mvp.assists > 0) parts.push(`${mvp.assists} ${mvp.assists === 1 ? 'assist.' : 'assist.'}`);
+                parts.push(`Nota ${mvp.rating.toFixed(1)}`);
+                return (
+                  <div className="mb-4 px-5 py-5 bg-neon-yellow" style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(253,225,0,0.18)' }}>
+                    <p className="font-display uppercase tracking-[0.32em] text-[10px] font-black text-black/70 mb-2">
+                      Craque do jogo · MVP
+                    </p>
+                    <p
+                      className="text-black leading-[0.95]"
+                      style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(34px, 9vw, 52px)', letterSpacing: '-0.03em' }}
+                    >
+                      {shortName(mvp.name)}
+                    </p>
+                    <span aria-hidden className="block w-12 h-[3px] bg-black/80 mt-2 mb-3" />
+                    <p className="font-display uppercase tracking-[0.2em] text-[12px] font-black text-black/85">
+                      {parts.join(' · ')}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Estatísticas do jogo */}
               <div className="grid grid-cols-3 gap-px bg-white/8 border border-white/8 text-center mb-4" style={{ borderRadius: 'var(--radius-sm)' }}>

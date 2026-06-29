@@ -124,15 +124,23 @@ export function goalProbability(kicker: ShootoutKicker, keeper: ShootoutKeeper, 
   return clamp(0.40, 0.96, 0.74 + diff * 0.42);
 }
 
-/** Resolve uma cobrança. Determinístico pelo seed + side + round + batedor. */
+/** Resolve uma cobrança. Determinístico pelo seed + side + round + batedor.
+ *  #10 PSICOLOGIA: sob pressão (atrás no placar ou morte súbita), a CONFIANÇA do
+ *  batedor pesa — frio (confiança alta) ganha um tico, nervoso (baixa) perde. */
 export function resolveKick(
   kicker: ShootoutKicker,
   keeper: ShootoutKeeper,
   seed: string,
   side: 'home' | 'away',
   round: number,
+  ctx?: { selfTally: number; oppTally: number; sudden: boolean },
 ): { scored: boolean; outcome: KickOutcome; goalProb: number } {
-  const goalProb = goalProbability(kicker, keeper, seed);
+  let goalProb = goalProbability(kicker, keeper, seed);
+  if (ctx) {
+    const pressure = (ctx.sudden ? 0.6 : 0) + (ctx.selfTally < ctx.oppTally ? 0.5 : 0);
+    const coolness = (kicker.confianca - 60) / 100; // -0.4 .. +0.39
+    goalProb = clamp(0.30, 0.96, goalProb + pressure * coolness * 0.12);
+  }
   const rng = rngFor(`${seed}:so:${side}:${round}:${kicker.id}`);
   const r = rng();
   const scored = r < goalProb;
@@ -177,7 +185,7 @@ export function simulateShootout(args: {
 
   const kickHome = (round: number, sudden: boolean) => {
     const kicker = homeOrder[homeTaken % homeOrder.length]!;
-    const res = resolveKick(kicker, awayKeeper, seed, 'home', round);
+    const res = resolveKick(kicker, awayKeeper, seed, 'home', round, { selfTally: homeTally, oppTally: awayTally, sudden });
     if (res.scored) homeTally += 1;
     homeTaken += 1;
     kicks.push({
@@ -188,7 +196,7 @@ export function simulateShootout(args: {
   };
   const kickAway = (round: number, sudden: boolean) => {
     const kicker = awayOrder[awayTaken % awayOrder.length]!;
-    const res = resolveKick(kicker, homeKeeper, seed, 'away', round);
+    const res = resolveKick(kicker, homeKeeper, seed, 'away', round, { selfTally: awayTally, oppTally: homeTally, sudden });
     if (res.scored) awayTally += 1;
     awayTaken += 1;
     kicks.push({

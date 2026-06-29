@@ -122,6 +122,7 @@ interface FixtureRow {
   score_home: number; score_away: number;
   current_minute?: number; status: string;
   kickoff_ms?: number | null; finished_at_ms?: number | null;
+  wo_home?: boolean; wo_away?: boolean;
 }
 interface RoundRow {
   id: string; season_id: string;
@@ -1550,7 +1551,7 @@ Deno.serve(async (_req: Request) => {
           timestamp_ms: now,
         });
       }
-      fixturesUpdated.push({ ...fx, score_home: woScoreHome, score_away: woScoreAway, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS });
+      fixturesUpdated.push({ ...fx, score_home: woScoreHome, score_away: woScoreAway, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS, wo_home: homeWO, wo_away: awayWO });
       for (const ev of woEvents) eventsToInsert.push(ev);
       const ha = teamDelta.get(fx.home_team_id) ?? { gf: 0, ga: 0 }; ha.gf += woScoreHome; ha.ga += woScoreAway; teamDelta.set(fx.home_team_id, ha);
       const aa = teamDelta.get(fx.away_team_id) ?? { gf: 0, ga: 0 }; aa.gf += woScoreAway; aa.ga += woScoreHome; teamDelta.set(fx.away_team_id, aa);
@@ -1566,7 +1567,7 @@ Deno.serve(async (_req: Request) => {
     const effH = home ? effectiveOverall(home) : fx.home_overall;
     const effA = away ? effectiveOverall(away) : fx.away_overall;
     const sim = simulateFixture(fx, effH, effA, now, { isRivalry });
-    fixturesUpdated.push({ ...fx, score_home: sim.score_home, score_away: sim.score_away, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS });
+    fixturesUpdated.push({ ...fx, score_home: sim.score_home, score_away: sim.score_away, status: 'finished', kickoff_ms: now, finished_at_ms: now + SIM_DURATION_MS, wo_home: false, wo_away: false });
     for (const ev of sim.events) eventsToInsert.push(ev);
     const ha = teamDelta.get(fx.home_team_id) ?? { gf: 0, ga: 0 }; ha.gf += sim.score_home; ha.ga += sim.score_away; teamDelta.set(fx.home_team_id, ha);
     const aa = teamDelta.get(fx.away_team_id) ?? { gf: 0, ga: 0 }; aa.gf += sim.score_away; aa.ga += sim.score_home; teamDelta.set(fx.away_team_id, aa);
