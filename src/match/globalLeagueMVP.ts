@@ -747,6 +747,16 @@ export function applyPromotionRelegation(league: GlobalLeagueMVPState): GlobalLe
         recentForm: [],
         position: undefined,
         previousPosition: undefined,
+        // Zera também os stats de PLAYOFF — senão a próxima temporada acumula em
+        // cima do lixo da anterior (updatePlayoffStats soma) e a semeadura por
+        // playoffPoints fica corrompida.
+        playoffPoints: 0,
+        playoffMatchesPlayed: 0,
+        playoffWins: 0,
+        playoffDraws: 0,
+        playoffLosses: 0,
+        playoffGoalsFor: 0,
+        playoffGoalsAgainst: 0,
         // ALL-TIME preservado + +1 temporada concluída
         allTimePoints: team.allTimePoints ?? 0,
         allTimeMatchesPlayed: team.allTimeMatchesPlayed ?? 0,

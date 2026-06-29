@@ -610,15 +610,28 @@ export function LigaOle() {
               const staked = Math.min(wager, balance);
               return (
                 <div className="flex flex-col gap-3">
-                  {/* Prêmio em jogo */}
-                  <div className="flex items-center justify-between px-3.5 py-2.5 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-deep-black)' }}>
-                    <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45">
-                      {prize.isChampion ? 'Prêmio de TÍTULO' : 'Prêmio da fase'}
-                    </span>
-                    <span className="font-display tabular-nums text-[14px] font-black text-neon-yellow">
-                      +{prize.amount.toLocaleString('pt-BR')} EXP
-                    </span>
-                  </div>
+                  {/* Prêmio em jogo — já com a Dinastia aplicada (igual ao reducer). */}
+                  {(() => {
+                    const mult = dinastiaMultiplier(titles);
+                    const finalPrize = Math.round(prize.amount * mult);
+                    return (
+                      <div className="flex items-center justify-between px-3.5 py-2.5 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-deep-black)' }}>
+                        <div className="flex flex-col">
+                          <span className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45">
+                            {prize.isChampion ? 'Prêmio de TÍTULO' : 'Prêmio da fase'}
+                          </span>
+                          {mult > 1 && (
+                            <span className="font-display tabular-nums text-[9px] font-black text-white/40 mt-0.5">
+                              base {prize.amount.toLocaleString('pt-BR')} × Dinastia {mult.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-display tabular-nums text-[14px] font-black text-neon-yellow">
+                          +{finalPrize.toLocaleString('pt-BR')} EXP
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Aposta */}
                   <div className="px-3.5 py-3 border" style={{ borderRadius: 'var(--radius-sm)', borderColor: staked > 0 ? 'var(--color-neon-yellow)' : 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
@@ -644,9 +657,16 @@ export function LigaOle() {
                       })}
                     </div>
                     {staked > 0 && (
-                      <p className="font-display uppercase tracking-[0.12em] text-[10px] font-black text-neon-yellow mt-2.5">
-                        Ganhe e leve +{(staked * 2).toLocaleString('pt-BR')} EXP
-                      </p>
+                      <div className="grid grid-cols-2 gap-1.5 mt-2.5">
+                        <div className="px-2.5 py-2 text-center border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-success)', backgroundColor: 'rgba(34,197,94,0.10)' }}>
+                          <p className="font-display uppercase tracking-[0.14em] text-[8px] font-black text-success/80">Vitória</p>
+                          <p className="font-display tabular-nums text-[13px] font-black text-success">+{(staked * 2).toLocaleString('pt-BR')}</p>
+                        </div>
+                        <div className="px-2.5 py-2 text-center border" style={{ borderRadius: 'var(--radius-sm)', borderColor: 'var(--color-danger)', backgroundColor: 'rgba(239,68,68,0.10)' }}>
+                          <p className="font-display uppercase tracking-[0.14em] text-[8px] font-black text-danger/80">Derrota</p>
+                          <p className="font-display tabular-nums text-[13px] font-black text-danger">−{staked.toLocaleString('pt-BR')}</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>

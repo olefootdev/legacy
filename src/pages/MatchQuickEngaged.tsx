@@ -165,6 +165,9 @@ export default function MatchQuickEngaged() {
         homePlayersRef.current = homePlayers;
         awayLineupRef.current = input.awayLineup;
         baseStrengthRef.current = { home: input.homeStrength, away: input.awayStrength };
+        // Formação inicial salva pelo manager ENTRA no 1º tempo (antes só valia a
+        // partir do intervalo): remapeia os roles → muda a matchup matrix no Python.
+        input.homeLineup = applyFormationToPayloads(input.homeLineup, formationRef.current);
         // Boost PASSIVO das lendas titulares no lineup enviado ao Python — a
         // presença da lenda já pesa na simulação (sem depender do buff manual).
         input.homeLineup = applyLegacyBoostToLineup(input.homeLineup, legacyBoosters);

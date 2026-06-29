@@ -532,29 +532,91 @@ export function buildLiveAnalystBeat(opts: {
 
 /** Chamada de transição: o texto curto que ANTECEDE um lance de alto sinal pra
  *  dar contexto ("Olha o contra-ataque!") — o gol deixa de sair "do nada". */
+/** Uma opção de reação à chamada (label + tier de efeito). */
+export interface ReactionChoice {
+  label: string;
+  effect: ChoiceEffect; // positive=certa · neutral=segura · negative=errada
+}
+
 export interface TransitionLeadIn {
   /** id da situação (telemetria/teste). */
   kind: string;
   text: string;
   intent: 'attack' | 'defend' | 'neutral';
-  /** Ação CERTA pra reagir à situação (buff de acerto). Ex.: 'RECUAR!'. */
-  reaction: string;
+  /** SEMPRE 3 opções (negativo/neutro/positivo), ordem embaralhada — a certa é
+   *  inferível do texto. Vazio só nas chamadas de gol (que usam o clutch). */
+  reactions: ReactionChoice[];
 }
 
-/** Ação de acerto por situação × intenção (o manager reage e ganha o buff). */
-const TRANSITION_REACTIONS: Record<string, { attack: string; defend: string }> = {
-  rebote: { attack: 'NA SOBRA!', defend: 'AFASTAR!' },
-  contra_pro: { attack: 'ACELERAR!', defend: 'RECUAR!' },
-  contra_sofrido: { attack: 'ACELERAR!', defend: 'RECUAR!' },
-  bola_parada: { attack: 'SUBIR PRA ÁREA!', defend: 'MARCAR FORTE!' },
-  falha: { attack: 'APROVEITAR!', defend: 'COBRIR!' },
-  pressao: { attack: 'ROUBAR ALTO!', defend: 'SAIR JOGANDO!' },
-  individual: { attack: 'OUSAR!', defend: 'DOBRAR MARCAÇÃO!' },
-  cruzamento: { attack: 'ATACAR A BOLA!', defend: 'AFASTAR CRUZAMENTO!' },
-  golaco: { attack: 'ARRISCAR!', defend: 'BLOQUEAR!' },
-  lancamento: { attack: 'LANÇAR!', defend: 'LINHA ALTA!' },
-  chegada: { attack: 'FINALIZAR!', defend: 'FECHAR!' },
+/** Tripla de reação (positiva/neutra/negativa) por situação × intenção. */
+interface ReactionTriple { positive: string; neutral: string; negative: string }
+
+const TRANSITION_REACTIONS: Record<string, { attack: ReactionTriple; defend: ReactionTriple }> = {
+  rebote: {
+    attack: { positive: 'NA SOBRA!', neutral: 'RECOMPOR', negative: 'TOCAR PRA TRÁS' },
+    defend: { positive: 'AFASTAR!', neutral: 'MANTER POSIÇÃO', negative: 'SAIR JOGANDO' },
+  },
+  contra_pro: {
+    attack: { positive: 'ACELERAR!', neutral: 'MANTER POSSE', negative: 'SEGURAR' },
+    defend: { positive: 'RECUAR!', neutral: 'MANTER', negative: 'PRESSIONAR' },
+  },
+  contra_sofrido: {
+    attack: { positive: 'ACELERAR!', neutral: 'MANTER POSSE', negative: 'SEGURAR' },
+    defend: { positive: 'RECUAR!', neutral: 'MANTER', negative: 'PRESSIONAR' },
+  },
+  bola_parada: {
+    attack: { positive: 'SUBIR PRA ÁREA!', neutral: 'JOGADA ENSAIADA', negative: 'BATER DIRETO' },
+    defend: { positive: 'MARCAR FORTE!', neutral: 'MANTER ZONA', negative: 'SUBIR A LINHA' },
+  },
+  falha: {
+    attack: { positive: 'APROVEITAR!', neutral: 'CONSTRUIR', negative: 'ENROLAR' },
+    defend: { positive: 'COBRIR!', neutral: 'MANTER', negative: 'ARRISCAR SAÍDA' },
+  },
+  pressao: {
+    attack: { positive: 'ROUBAR ALTO!', neutral: 'MANTER', negative: 'RECUAR' },
+    defend: { positive: 'SAIR JOGANDO!', neutral: 'TOCAR DE LADO', negative: 'LANÇAR NA LOTERIA' },
+  },
+  individual: {
+    attack: { positive: 'OUSAR!', neutral: 'TOCAR', negative: 'ISOLAR' },
+    defend: { positive: 'DOBRAR MARCAÇÃO!', neutral: 'CONTER', negative: 'DAR O BOTE' },
+  },
+  cruzamento: {
+    attack: { positive: 'ATACAR A BOLA!', neutral: 'SEGURAR', negative: 'CHUTAR DE LONGE' },
+    defend: { positive: 'AFASTAR CRUZAMENTO!', neutral: 'MARCAR ZONA', negative: 'SUBIR A LINHA' },
+  },
+  golaco: {
+    attack: { positive: 'ARRISCAR!', neutral: 'TRABALHAR', negative: 'RECUAR' },
+    defend: { positive: 'BLOQUEAR!', neutral: 'FECHAR ÂNGULO', negative: 'DAR ESPAÇO' },
+  },
+  lancamento: {
+    attack: { positive: 'LANÇAR!', neutral: 'MANTER POSSE', negative: 'RECUAR' },
+    defend: { positive: 'RECUAR A LINHA!', neutral: 'MANTER', negative: 'LINHA ALTA' },
+  },
+  chegada: {
+    attack: { positive: 'FINALIZAR!', neutral: 'TRABALHAR', negative: 'RECUAR' },
+    defend: { positive: 'FECHAR!', neutral: 'MANTER', negative: 'SAIR PRA CIMA' },
+  },
 };
+
+/** Monta as 3 reações (neg/neutro/pos) e embaralha determinístico por minuto. */
+function buildReactions(kind: string, intent: 'attack' | 'defend', minute: number): ReactionChoice[] {
+  const t = TRANSITION_REACTIONS[kind]?.[intent] ?? {
+    positive: intent === 'attack' ? 'ATACAR!' : 'FECHAR!',
+    neutral: 'MANTER',
+    negative: intent === 'attack' ? 'RECUAR' : 'SUBIR A LINHA',
+  };
+  const out: ReactionChoice[] = [
+    { label: t.positive, effect: 'positive' },
+    { label: t.neutral, effect: 'neutral' },
+    { label: t.negative, effect: 'negative' },
+  ];
+  const rng = new SpiritRng(hashSeed(`${kind}:${minute}:react`));
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
+}
 
 /**
  * Classifica a SITUAÇÃO que antecede um lance de alto sinal (gol, contra-ataque,
@@ -587,7 +649,7 @@ export function classifyTransition(opts: {
     kind,
     text,
     intent,
-    reaction: TRANSITION_REACTIONS[kind]?.[intent] ?? (intent === 'attack' ? 'ATACAR!' : 'FECHAR!'),
+    reactions: buildReactions(kind, intent, e.minute),
   });
 
   // 1) Rebote/sobra — lance logo após defesaça/trave.

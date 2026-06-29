@@ -2333,7 +2333,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         {
           body: `Recompensa creditada.${credit.bonusNames.length ? ` Bônus: ${credit.bonusNames.join(', ')}.` : ''}${iqLine}`,
           deepLink: '/wallet',
-          hideFromHomeFeed: true,
+          // Ponte #4: quando saiu bônus de performance, o feito MERECE o feed da
+          // Home (growth orgânico). Partida rotineira sem bônus segue escondida.
+          hideFromHomeFeed: credit.bonusNames.length === 0,
         },
       );
       // LIGA OLE: se esta partida era da liga (pendingOpponentId setado),

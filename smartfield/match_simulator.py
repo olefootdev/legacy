@@ -426,6 +426,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Goal scorers tracking
     scorer_counts: Dict[str, Dict[str, Any]] = {}
+    # Posse REAL: minutos de controle de bola por lado (não o proxy de momento).
+    possession_minutes = {"home": 0, "away": 0}
 
     for minute in range(start_minute, 91):
         # Possession flip (depende de força e momentum)
@@ -435,6 +437,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         flip_prob = max(0.18, min(0.62, flip_prob))
         if rng.random() < flip_prob:
             possession = "away" if possession == "home" else "home"
+        possession_minutes[possession] += 1
 
         zone = pick_zone(rng, possession)
         lineup_active = home_lineup if possession == "home" else away_lineup
@@ -828,6 +831,11 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         events=events,
     )
 
+    total_poss = possession_minutes["home"] + possession_minutes["away"]
+    possession_home_pct = (
+        round(100.0 * possession_minutes["home"] / total_poss, 1) if total_poss else 50.0
+    )
+
     return {
         "version": "1.1",
         "seed": seed,
@@ -842,6 +850,7 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         "matchup_matrix": {"home": home_matrix, "away": away_matrix},
         "analyst_beats": analyst_beats,
         "mvp_projection": mvp,
+        "possession_home_pct": possession_home_pct,
         "narrative_arc": arc,
         "generated_at_ms": int(time.time() * 1000),
         "duration_ms": int((time.time() - started) * 1000),

@@ -154,6 +154,8 @@ export interface MatchPlan {
   /** Leituras do Analista com decisões pesadas (v1.1+). */
   analyst_beats?: AnalystBeat[];
   mvp_projection: MatchPlanMvp | null;
+  /** Posse REAL da casa (% de minutos com a bola) — substitui o proxy de momento. */
+  possession_home_pct?: number;
   narrative_arc: NarrativeArc;
   generated_at_ms: number;
   duration_ms: number;

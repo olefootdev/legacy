@@ -245,11 +245,6 @@ export function advanceLigaOle(state: LigaOleState, managerResult: {
   };
 }
 
-/** Quantos adversários faltam pro título a partir da rodada atual. */
-export function roundsToTitle(state: LigaOleState): number {
-  return Math.max(0, LIGA_OLE_ROUNDS.length - state.roundIndex);
-}
-
 export interface LigaOleRoundMatch {
   pairIndex: number;
   a: LigaOleTeam;

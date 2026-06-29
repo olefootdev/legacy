@@ -13,7 +13,6 @@ import {
   advanceLigaOle,
   managerOpponent,
   resolveAutoMatch,
-  roundsToTitle,
   LIGA_OLE_ROUNDS,
   type LigaOleTeam,
   type LigaOleState,
@@ -55,7 +54,7 @@ function main() {
   check('manager está no bracket', s0.participants[0]!.includes('manager'));
   check('status inicial active', s0.status === 'active');
   check('rodada inicial = Fase de 32', s0.reachedRound === 'Fase de 32');
-  check('5 adversários até o título', roundsToTitle(s0) === 5);
+  check('5 adversários até o título', LIGA_OLE_ROUNDS.length - s0.roundIndex === 5);
 
   // [2] Seed por força: 2 mais fortes em metades opostas (só se cruzam na final)
   console.log('\n[2] Seed por força');

@@ -50,10 +50,15 @@ function main() {
     { label: '9 golaço de longe', event: ev({ kind: 'goal_home', channel: 'criacao', xg: 0.04 }), momentumHome: 50, kind: 'golaco', intent: 'attack' },
     { label: '10 lançamento nas costas', event: ev({ kind: 'goal_home', channel: 'ataque_central' }), momentumHome: 50, kind: 'lancamento', intent: 'attack' },
   ];
+  const hasTrio = (rx: { effect: string }[]) =>
+    rx.length === 3
+    && rx.some((c) => c.effect === 'positive')
+    && rx.some((c) => c.effect === 'neutral')
+    && rx.some((c) => c.effect === 'negative');
   for (const c of cases) {
     const r = classifyTransition({ event: c.event, momentumHome: c.momentumHome, prevKind: c.prevKind });
-    check(c.label, !!r && r.kind === c.kind && r.intent === c.intent && r.reaction.length > 0,
-      r ? `got kind=${r.kind} intent=${r.intent} reaction=${r.reaction}` : 'null');
+    check(c.label, !!r && r.kind === c.kind && r.intent === c.intent && hasTrio(r.reactions),
+      r ? `got kind=${r.kind} intent=${r.intent} reactions=${JSON.stringify(r.reactions.map((x) => x.effect))}` : 'null');
   }
 
   console.log('\n[2] Guardas');
@@ -68,7 +73,7 @@ function main() {
 
   console.log('\n[3] Fallback — todo gol tem contexto');
   const g = classifyTransition({ event: ev({ kind: 'goal_home', channel: undefined, xg: 0.2 }), momentumHome: 50 });
-  check('gol sem canal cai no genérico "chegada"', g?.kind === 'chegada' && g.reaction.length > 0, g ? g.kind : 'null');
+  check('gol sem canal cai no genérico "chegada"', g?.kind === 'chegada' && hasTrio(g.reactions), g ? g.kind : 'null');
   const ga = classifyTransition({ event: ev({ kind: 'goal_away', channel: undefined, xg: 0.2 }), momentumHome: 50 });
   check('gol deles sem canal → contexto defensivo', ga?.kind === 'chegada' && ga.intent === 'defend');
 
