@@ -686,6 +686,41 @@ export default function MatchQuickEngaged() {
               </div>
             )}
 
+            {/* #11 DESTAQUES DO ELENCO — torna VISÍVEIS os atributos que já pesam no
+                motor (drible/tático/mentalidade) mas eram invisíveis ao manager. */}
+            {(() => {
+              const xi = homePlayersRef.current.map((p) => players[p.id]).filter((p): p is NonNullable<typeof p> => !!p);
+              if (!xi.length) return null;
+              const shortNm = (n: string) => n.match(/"([^"]+)"/)?.[1] ?? n.split(/\s+/)[0] ?? n;
+              const cats: { icon: string; label: string; key: 'drible' | 'tatico' | 'mentalidade' }[] = [
+                { icon: '🎩', label: 'Driblador', key: 'drible' },
+                { icon: '🧠', label: 'Cérebro', key: 'tatico' },
+                { icon: '❄️', label: 'Frieza', key: 'mentalidade' },
+              ];
+              const picks = cats
+                .map((c) => {
+                  const best = xi.reduce((b, p) => (p.attrs[c.key] > b.attrs[c.key] ? p : b), xi[0]!);
+                  return best.attrs[c.key] >= 72 ? { ...c, name: shortNm(best.name), val: best.attrs[c.key] } : null;
+                })
+                .filter((x): x is NonNullable<typeof x> => !!x);
+              if (!picks.length) return null;
+              return (
+                <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                  <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow mb-3">Destaques do elenco</p>
+                  <div className="flex flex-col gap-2">
+                    {picks.map((p) => (
+                      <div key={p.key} className="flex items-center gap-2.5">
+                        <span className="text-base shrink-0">{p.icon}</span>
+                        <span className="font-display uppercase tracking-[0.1em] text-[9px] font-black text-white/40 w-20 shrink-0">{p.label}</span>
+                        <span className="flex-1 truncate text-white" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: '15px' }}>{p.name}</span>
+                        <span className="font-display tabular-nums text-[13px] font-black text-neon-yellow shrink-0">{p.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
             {isLigaOleMatchRef.current && (() => {
               const M = 'var(--font-serif-hero)';
