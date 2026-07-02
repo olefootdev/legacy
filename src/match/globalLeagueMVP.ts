@@ -28,6 +28,8 @@ export interface GlobalTeam {
   clubName: string;
   clubShort: string;
   overall: number;
+  /** Engajamento do manager (0-100) — proxy de investimento/EXP no ranking composto. */
+  engagementScore?: number;
 
   // Estatísticas dos playoffs
   playoffPoints: number;

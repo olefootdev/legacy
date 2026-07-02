@@ -118,6 +118,7 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       goalsAgainst: Number(r.goals_against ?? 0),
       goalDifference: Number(r.goal_difference ?? 0),
       recentForm: (r.recent_form as Array<'W' | 'D' | 'L'>) ?? [],
+      engagementScore: Number(r.engagement_score ?? 0),
       registeredAt: r.registered_at ? new Date(String(r.registered_at)).getTime() : Date.now(),
       // ALL-TIME — fallback 0 antes da migration
       allTimePoints: Number(r.all_time_points ?? 0),

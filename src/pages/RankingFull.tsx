@@ -19,10 +19,13 @@ type RankingTabId = 'mundial' | 'nacional' | 'estadual';
  *  LeagueScopeRankingEntry + a divisão pra badge. */
 type MundialEntry = {
   team: string;
+  /** = índice composto (reusa o render da coluna existente). */
   points: number;
   isMe: boolean;
   entryId: string;
   division?: number;
+  /** Componentes do índice (pontos + força + engajamento) pro detalhe. */
+  breakdown?: { points: number; overall: number; engagement: number };
 };
 type AnyRankRow = MundialEntry | LeagueScopeRankingEntry;
 
@@ -36,7 +39,7 @@ const TAB_META: Record<RankingTabId, { icon: typeof Trophy; title: string; subti
   mundial: {
     icon: Trophy,
     title: 'Mundial',
-    subtitle: 'Pontos acumulados na Liga Global (histórico) — o placar de prestígio que sobrevive aos resets de temporada.',
+    subtitle: 'Índice = média de Pontos (temporada) + Força do time + Engajamento. É isso que dita o 1º lugar.',
   },
   nacional: {
     icon: TrendingUp,
@@ -103,8 +106,9 @@ export function RankingFull() {
     );
   }, [searchParams, favoriteRealTeam?.name, setSearchParams]);
 
-  // Aba Mundial = times REAIS da Liga Global (ordenados por pontos históricos).
-  // O "meu time" casa pelo mesmo critério do resto do app (email do manager).
+  // Aba Mundial = times REAIS da Liga Global, ordenados pelo ÍNDICE COMPOSTO
+  // (média de pontos da temporada + força + engajamento). O "meu time" casa
+  // pelo mesmo critério do resto do app (email do manager).
   const managerId = managerProfile?.email ?? club.id;
   const mundialEntries = useMemo<MundialEntry[]>(() => {
     const real = getGlobalLeagueRankingEntries(globalLeagueMVP?.teams, managerId, club.id);
@@ -115,6 +119,7 @@ export function RankingFull() {
         isMe: r.isMe,
         entryId: r.entryId,
         division: r.division,
+        breakdown: { points: r.points, overall: r.overall, engagement: r.engagement },
       }));
     }
     // Fallback: liga ainda não carregou → mostra ao menos o próprio clube.
@@ -287,7 +292,7 @@ export function RankingFull() {
                 <th style={{ width: '3.5rem' }} className="text-center">#</th>
                 <th>Equipe</th>
                 <th style={{ width: '8rem' }} className="text-center">
-                  Pontos
+                  {tab === 'mundial' ? 'Índice' : 'Pontos'}
                 </th>
                 <th style={{ width: '3rem' }} className="text-center">★</th>
               </tr>
@@ -379,7 +384,9 @@ export function RankingFull() {
                           letterSpacing: '-0.02em',
                         }}
                       >
-                        {formatExpSmart(row.points)}
+                        {tab === 'mundial'
+                          ? row.points.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                          : formatExpSmart(row.points)}
                       </span>
                     </td>
                     <td className="text-center">
@@ -558,7 +565,7 @@ export function RankingFull() {
                       fontWeight: 600,
                     }}
                   >
-                    {tab === 'mundial' ? 'Pontos (histórico)' : 'Pontos'}
+                    {tab === 'mundial' ? 'Índice' : 'Pontos'}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-2">
@@ -571,7 +578,9 @@ export function RankingFull() {
                       letterSpacing: '-0.02em',
                     }}
                   >
-                    {selectedTeam.points.toLocaleString('pt-BR')}
+                    {tab === 'mundial'
+                      ? selectedTeam.points.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                      : selectedTeam.points.toLocaleString('pt-BR')}
                   </span>
                   <span
                     className="text-white/40 uppercase"
@@ -581,9 +590,24 @@ export function RankingFull() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    pts
+                    {tab === 'mundial' ? '/ 100' : 'pts'}
                   </span>
                 </div>
+                {/* Componentes do índice (só na aba Mundial). */}
+                {'breakdown' in selectedTeam && selectedTeam.breakdown && (
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10">
+                    {([
+                      ['Pontos', selectedTeam.breakdown.points],
+                      ['Força', selectedTeam.breakdown.overall],
+                      ['Engaj.', selectedTeam.breakdown.engagement],
+                    ] as [string, number][]).map(([label, val]) => (
+                      <div key={label} className="flex flex-col">
+                        <span className="text-white/40 uppercase" style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.18em' }}>{label}</span>
+                        <span className="text-white tabular-nums" style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '18px', fontWeight: 700 }}>{Math.round(val)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Diferença para o líder (se não for #1) */}
@@ -616,7 +640,9 @@ export function RankingFull() {
                       const leader = withGlobalRank[0];
                       if (!leader) return '—';
                       const diff = leader.points - selectedTeam.points;
-                      return `${diff.toLocaleString('pt-BR')} pts`;
+                      return tab === 'mundial'
+                        ? `${diff.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de índice`
+                        : `${diff.toLocaleString('pt-BR')} pts`;
                     })()}
                   </span>
                 </div>
