@@ -5,7 +5,7 @@
  * Adaptado para Global League MVP com 3 divisões
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useGameStore } from '@/game/store';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +20,17 @@ import { CoronationModal } from '@/components/matchglobal/CoronationModal';
 import { useCoronationListener } from '@/hooks/useCoronationListener';
 
 type FilterMode = 'all' | 'division_1' | 'division_2' | 'division_3';
+
+// ─── Identidade visual das divisões (pirâmide: ouro=Elite, aço=Intermediária,
+// bronze=Acesso). Classes ESTÁTICAS — o Tailwind não compila `text-${x}`. ─────
+const DIV_THEME: Record<number, {
+  name: string; text: string; bg: string; spineBg: string; dotBg: string; tabOn: string;
+}> = {
+  1: { name: 'Elite',         text: 'text-neon-yellow', bg: 'bg-neon-yellow/10', spineBg: 'bg-neon-yellow', dotBg: 'bg-neon-yellow', tabOn: 'bg-neon-yellow text-black' },
+  2: { name: 'Intermediária', text: 'text-slate-300',   bg: 'bg-slate-400/10',   spineBg: 'bg-slate-300',   dotBg: 'bg-slate-300',   tabOn: 'bg-slate-300 text-black' },
+  3: { name: 'Acesso',        text: 'text-amber-500',   bg: 'bg-amber-600/10',   spineBg: 'bg-amber-500',   dotBg: 'bg-amber-500',   tabOn: 'bg-amber-500 text-black' },
+};
+const divTheme = (d: number) => DIV_THEME[d] ?? DIV_THEME[3];
 
 // ─── Slot helpers (cliente — espelho da Edge Function) ──────────────────────
 function nextSlotKickoffMs(nowMs: number, slots: string[], slotDurationMin: number): number | null {
@@ -163,6 +174,7 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
   const lastEvent = fixture.events[fixture.events.length - 1];
   const hasGoal = fixture.scoreHome > 0 || fixture.scoreAway > 0;
   const isLive = fixture.currentMinute > 0 && fixture.currentMinute < 90;
+  const theme = divTheme(Number(fixture.division));
 
   return (
     <motion.div
@@ -177,15 +189,16 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
     >
       {/* Confronto compacto — tudo numa linha só */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        {/* Divisão (tag curta) */}
-        <span className="shrink-0 w-5 text-[9px] font-display uppercase tracking-wider text-text-soft/60 tabular-nums">
+        {/* Spine + tag da divisão — identidade da pirâmide (ouro/aço/bronze) */}
+        <span className={`shrink-0 w-1 h-7 rounded-full ${theme.spineBg}`} aria-hidden />
+        <span className={`shrink-0 text-[9px] font-display font-bold uppercase tracking-wider tabular-nums ${theme.text}`}>
           D{fixture.division}
         </span>
 
         {/* Time Casa (nome trunca, OVR colado à direita, junto do placar) */}
         <div className="flex-1 min-w-0 flex items-baseline justify-end gap-1.5">
           <span
-            className="font-serif-hero text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
+            className="font-sans text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
             title={fixture.homeTeamName}
           >
             {fixture.homeTeamName}
@@ -218,7 +231,7 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
         <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
           <span className="shrink-0 text-[10px] text-text-soft tabular-nums">{fixture.awayOverall}</span>
           <span
-            className="font-serif-hero text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
+            className="font-sans text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
             title={fixture.awayTeamName}
           >
             {fixture.awayTeamName}
@@ -256,7 +269,7 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
   );
 }
 
-function DivisionStandings({ division, teams }: { division: number; teams: GlobalTeam[] }) {
+function DivisionStandings({ division, teams, myTeamId }: { division: number; teams: GlobalTeam[]; myTeamId?: string | null }) {
   // ORDENA pela classificação real antes de renderizar — sem isso, o index do
   // map é a ordem de inserção e os destaques (líder/promo/rele) ficam errados.
   const sortedTeams = useMemo(() => [...teams].sort((a, b) => {
@@ -268,9 +281,7 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
   }), [teams]);
   const promotionCount = Math.ceil(sortedTeams.length * 0.1);
   const relegationCount = Math.ceil(sortedTeams.length * 0.1);
-
-  const divisionColor = division === 1 ? 'neon-yellow' : division === 2 ? 'blue-400' : 'white/60';
-  const divisionName = division === 1 ? 'Elite' : division === 2 ? 'Intermediária' : 'Acesso';
+  const theme = divTheme(division);
 
   return (
     <motion.div
@@ -278,19 +289,20 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
       animate={{ opacity: 1, y: 0 }}
       className="sports-panel rounded-lg overflow-hidden"
     >
-      {/* Header */}
-      <div className="bg-deep-black px-6 py-4 border-b border-white/10">
+      {/* Header — spine + acento da divisão (ouro/aço/bronze) */}
+      <div className="relative bg-deep-black px-6 py-4 border-b border-white/10">
+        <span className={`absolute left-0 top-0 bottom-0 w-1 ${theme.spineBg}`} aria-hidden />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Trophy className={`w-5 h-5 text-${divisionColor}`} />
+            <Trophy className={`w-5 h-5 ${theme.text}`} />
             <div>
               <h3 className="font-display text-base font-bold uppercase tracking-wider text-white">
                 Divisão {division}
               </h3>
-              <p className="text-xs text-white/60 mt-0.5">{divisionName}</p>
+              <p className="text-xs text-white/60 mt-0.5">{theme.name}</p>
             </div>
           </div>
-          <span className={`font-serif-hero text-2xl font-bold text-${divisionColor}`}>
+          <span className={`font-serif-hero text-2xl font-bold ${theme.text}`}>
             {teams.length}
           </span>
         </div>
@@ -318,80 +330,121 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
               const isPromotion = division > 1 && index < promotionCount;
               const isRelegation = division < 3 && index >= sortedTeams.length - relegationCount;
               const isLeader = index === 0;
+              const isMe = !!myTeamId && team.id === myTeamId;
 
               let bgClass = '';
               let borderClass = 'border-l-4 border-l-transparent';
-              if (isRelegation) {
-                bgClass = 'bg-red-600/30';                              // vermelho com opacidade
+              if (isMe) {
+                bgClass = 'bg-neon-yellow/[0.10]';                       // meu time SEMPRE se destaca
+                borderClass = 'border-l-4 border-l-neon-yellow';
+              } else if (isRelegation) {
+                bgClass = 'bg-red-600/20';
                 borderClass = 'border-l-4 border-l-red-500/70';
               } else if (isPromotion) {
-                borderClass = 'border-l-4 border-l-neon-yellow';         // borda amarela
-                bgClass = 'bg-neon-yellow/[0.04]';
+                bgClass = 'bg-emerald-400/[0.05]';
+                borderClass = 'border-l-4 border-l-emerald-400';
               } else if (isLeader) {
-                bgClass = 'bg-neon-yellow/10';
-                borderClass = 'border-l-4 border-l-neon-yellow';
+                bgClass = theme.bg;
+                borderClass = `border-l-4 ${division === 1 ? 'border-l-neon-yellow' : division === 2 ? 'border-l-slate-300' : 'border-l-amber-500'}`;
               }
 
               const positionChange = team.previousPosition
                 ? team.previousPosition - (team.position || 0)
                 : 0;
 
+              // Linha de corte: divisor DEPOIS da zona de acesso e ANTES da de rebaixamento.
+              const showPromoCut = division > 1 && index === promotionCount - 1 && sortedTeams.length > promotionCount;
+              const showReleCut = division < 3 && index === sortedTeams.length - relegationCount - 1 && sortedTeams.length > relegationCount;
+
               return (
-                <tr
-                  key={team.id}
-                  className={`border-t border-white/5 hover:bg-white/5 transition-colors ${bgClass} ${borderClass}`}
-                >
-                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono text-xs sm:text-sm text-white/60">{team.position}</span>
-                      {positionChange > 0 && (
-                        <ArrowUp className="w-3 h-3 text-emerald-400" strokeWidth={3} />
-                      )}
-                      {positionChange < 0 && (
-                        <ArrowDown className="w-3 h-3 text-red-400" strokeWidth={3} />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 max-w-[100px] sm:max-w-none">
-                    <div>
-                      <p className="font-display text-xs sm:text-sm font-bold text-white truncate">{team.clubName}</p>
-                      <p className="text-[10px] text-white/40">{team.clubShort}</p>
-                    </div>
-                  </td>
-                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                    <span className="font-mono text-xs sm:text-sm text-white/80">{team.matchesPlayed}</span>
-                  </td>
-                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                    <span className="font-mono text-xs sm:text-sm text-emerald-400">{team.wins}</span>
-                  </td>
-                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                    <span className="font-mono text-xs sm:text-sm text-amber-400">{team.draws}</span>
-                  </td>
-                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                    <span className="font-mono text-xs sm:text-sm text-red-400">{team.losses}</span>
-                  </td>
-                  <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
-                    <span className={`font-mono text-xs sm:text-sm ${
-                      team.goalDifference > 0 ? 'text-emerald-400' :
-                      team.goalDifference < 0 ? 'text-red-400' : 'text-white/60'
-                    }`}>
-                      {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
-                    <div className="flex flex-col items-center leading-tight">
-                      <span className="font-serif-hero text-base sm:text-lg font-bold text-neon-yellow">
-                        {team.points}
+                <Fragment key={team.id}>
+                  <tr
+                    id={isMe ? 'my-global-team' : undefined}
+                    className={`border-t border-white/5 transition-colors ${bgClass} ${borderClass} ${isMe ? 'ring-1 ring-inset ring-neon-yellow/50' : 'hover:bg-white/5'}`}
+                  >
+                    <td className="px-2 sm:px-4 py-2 sm:py-3">
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-xs sm:text-sm text-white/60">{team.position}</span>
+                        {positionChange > 0 && (
+                          <ArrowUp className="w-3 h-3 text-emerald-400" strokeWidth={3} />
+                        )}
+                        {positionChange < 0 && (
+                          <ArrowDown className="w-3 h-3 text-red-400" strokeWidth={3} />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 max-w-[100px] sm:max-w-none">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="min-w-0">
+                          <p className={`font-sans text-xs sm:text-sm font-bold truncate ${isMe ? 'text-neon-yellow' : 'text-white'}`}>{team.clubName}</p>
+                          <p className="text-[10px] text-white/40">{team.clubShort}</p>
+                        </div>
+                        {isMe && (
+                          <span className="shrink-0 text-[8px] font-display font-bold uppercase tracking-wider bg-neon-yellow text-black px-1.5 py-0.5 rounded-sm">você</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                      <span className="font-mono text-xs sm:text-sm text-white/80">{team.matchesPlayed}</span>
+                    </td>
+                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                      <span className="font-mono text-xs sm:text-sm text-emerald-400">{team.wins}</span>
+                    </td>
+                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                      <span className="font-mono text-xs sm:text-sm text-amber-400">{team.draws}</span>
+                    </td>
+                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                      <span className="font-mono text-xs sm:text-sm text-red-400">{team.losses}</span>
+                    </td>
+                    <td className="px-1 sm:px-4 py-2 sm:py-3 text-center">
+                      <span className={`font-mono text-xs sm:text-sm ${
+                        team.goalDifference > 0 ? 'text-emerald-400' :
+                        team.goalDifference < 0 ? 'text-red-400' : 'text-white/60'
+                      }`}>
+                        {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
                       </span>
-                      <span
-                        className="font-mono text-[9px] text-white/40 mt-0.5"
-                        title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
-                      >
-                        {team.allTimePoints ?? 0} hist.
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
+                      <div className="flex flex-col items-center leading-tight">
+                        <span className="font-serif-hero text-base sm:text-lg font-bold text-neon-yellow">
+                          {team.points}
+                        </span>
+                        <span
+                          className="font-mono text-[9px] text-white/40 mt-0.5"
+                          title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
+                        >
+                          {team.allTimePoints ?? 0} hist.
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  {showPromoCut && (
+                    <tr aria-hidden>
+                      <td colSpan={8} className="p-0">
+                        <div className="flex items-center gap-2 px-4 py-1 bg-emerald-500/[0.07]">
+                          <div className="h-px flex-1 bg-emerald-500/40" />
+                          <span className="text-[9px] font-display font-bold uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-1">
+                            <ArrowUp className="w-3 h-3" strokeWidth={3} /> Zona de acesso
+                          </span>
+                          <div className="h-px flex-1 bg-emerald-500/40" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {showReleCut && (
+                    <tr aria-hidden>
+                      <td colSpan={8} className="p-0">
+                        <div className="flex items-center gap-2 px-4 py-1 bg-red-500/[0.07]">
+                          <div className="h-px flex-1 bg-red-500/40" />
+                          <span className="text-[9px] font-display font-bold uppercase tracking-[0.2em] text-red-400 flex items-center gap-1">
+                            <ArrowDown className="w-3 h-3" strokeWidth={3} /> Zona de rebaixamento
+                          </span>
+                          <div className="h-px flex-1 bg-red-500/40" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -580,7 +633,7 @@ function ProjectedDivisionMini({
               <tr key={team.id} className={`border-t border-white/5 ${rowBg} ${rowBorder}`}>
                 <td className="px-2 py-1.5"><span className="font-mono text-white/60">{index + 1}</span></td>
                 <td className="px-2 py-1.5 truncate">
-                  <span className="font-display font-bold text-white truncate">{team.clubName}</span>
+                  <span className="font-sans font-bold text-white truncate">{team.clubName}</span>
                   <span className="text-[10px] text-white/40 ml-1.5">{team.clubShort}</span>
                 </td>
                 <td className="px-1 py-1.5 text-center font-mono text-white/80">{team.playoffMatchesPlayed}</td>
@@ -958,7 +1011,7 @@ export default function MatchGlobal() {
                     {idx + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-display text-sm font-bold uppercase text-white truncate">{team.clubName}</p>
+                    <p className="font-sans text-sm font-bold uppercase text-white truncate">{team.clubName}</p>
                     <p className="font-mono text-[10px] text-white/40">{team.clubShort}</p>
                   </div>
                   <div className="text-right shrink-0">
@@ -1031,6 +1084,11 @@ export default function MatchGlobal() {
   const division2Teams = globalLeagueMVP.teams.filter(t => t.division === 2);
   const division3Teams = globalLeagueMVP.teams.filter(t => t.division === 3);
   const currentRound = currentLeagueRound;
+  // Hero vivo: o líder da D1 (o gigante a bater) + o meu time + rolar até ele.
+  const d1Leader = [...division1Teams].sort((a, b) =>
+    b.points - a.points || b.wins - a.wins || b.goalDifference - a.goalDifference)[0];
+  const myTeam = myTeamId ? globalLeagueMVP.teams.find(t => t.id === myTeamId) : undefined;
+  const scrollToMyTeam = () => document.getElementById('my-global-team')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-7xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-6 md:pb-8">
@@ -1054,15 +1112,37 @@ export default function MatchGlobal() {
           className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12 text-center"
         >
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-black/60 mb-4">
-            Liga Global · Temporada 2026
+            Liga Global · Pirâmide de 3 divisões
           </p>
           <h1 className="font-display text-4xl sm:text-6xl font-bold uppercase text-black">
-            Liga LEGACY
+            Liga Global
           </h1>
           <span aria-hidden className="mx-auto mt-4 block w-16 h-[3px] bg-black" />
-          <p className="font-serif-hero text-xl sm:text-2xl italic text-black/80 mt-4">
-            Rodadas em slots · Temporada 2026
-          </p>
+          {/* Strip vivo: o gigante a bater (líder da Elite) + pular pro meu time */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {d1Leader && (
+              <span className="inline-flex items-center gap-1.5 bg-black/85 rounded-full px-3 py-1.5 max-w-full">
+                <Trophy className="w-3.5 h-3.5 text-neon-yellow shrink-0" />
+                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">Líder Elite</span>
+                <span className="font-sans text-xs font-bold uppercase text-white truncate max-w-[110px]">{d1Leader.clubName}</span>
+                <span className="font-serif-hero text-sm font-bold text-neon-yellow shrink-0">{d1Leader.points}</span>
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 bg-black/10 rounded-full px-3 py-1.5">
+              <span className="font-display text-[10px] font-bold uppercase tracking-wider text-black/70">{globalLeagueMVP.teams.length} clubes</span>
+            </span>
+            {myTeam && (
+              <button
+                type="button"
+                onClick={scrollToMyTeam}
+                className="inline-flex items-center gap-1.5 bg-black rounded-full px-3 py-1.5 hover:opacity-90 transition-opacity max-w-full"
+              >
+                <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-yellow/70 shrink-0">Meu time</span>
+                <span className="font-sans text-xs font-bold uppercase text-neon-yellow truncate max-w-[100px]">{myTeam.clubName}</span>
+                <ArrowDown className="w-3 h-3 text-neon-yellow shrink-0" strokeWidth={3} />
+              </button>
+            )}
+          </div>
         </motion.div>
       </section>
 
@@ -1095,7 +1175,7 @@ export default function MatchGlobal() {
           <button
             onClick={() => setFilterMode('division_2')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_2' ? 'bg-blue-400 text-black' : 'bg-panel text-white/60 hover:text-white'
+              filterMode === 'division_2' ? 'bg-slate-300 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
             Divisão 2
@@ -1103,7 +1183,7 @@ export default function MatchGlobal() {
           <button
             onClick={() => setFilterMode('division_3')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
-              filterMode === 'division_3' ? 'bg-white/20 text-white' : 'bg-panel text-white/60 hover:text-white'
+              filterMode === 'division_3' ? 'bg-amber-500 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
           >
             Divisão 3
@@ -1172,9 +1252,9 @@ export default function MatchGlobal() {
 
       {/* Tabelas de Classificação */}
       <div className="space-y-6">
-        <DivisionStandings division={1} teams={division1Teams} />
-        <DivisionStandings division={2} teams={division2Teams} />
-        <DivisionStandings division={3} teams={division3Teams} />
+        <DivisionStandings division={1} teams={division1Teams} myTeamId={myTeamId} />
+        <DivisionStandings division={2} teams={division2Teams} myTeamId={myTeamId} />
+        <DivisionStandings division={3} teams={division3Teams} myTeamId={myTeamId} />
       </div>
 
       <CrownsGallery />
