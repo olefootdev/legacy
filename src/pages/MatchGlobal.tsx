@@ -169,84 +169,84 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`sports-panel rounded-lg p-4 transition-all group min-w-0 ${
+      className={`sports-panel rounded-lg px-3 py-2 transition-all group min-w-0 ${
         isLive
           ? 'border border-neon-green/40 shadow-[0_0_12px_rgba(0,255,128,0.08)]'
           : 'hover:border-neon-yellow/30'
       }`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3 min-w-0">
-        <span className="text-xs text-text-soft uppercase tracking-wider font-display truncate">
-          Divisão {fixture.division}
+      {/* Confronto compacto — tudo numa linha só */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Divisão (tag curta) */}
+        <span className="shrink-0 w-5 text-[9px] font-display uppercase tracking-wider text-text-soft/60 tabular-nums">
+          D{fixture.division}
         </span>
-        <div className="flex items-center gap-2 shrink-0">
-          <Clock className={`w-3 h-3 ${isLive ? 'text-neon-green' : 'text-white/40'}`} />
-          <span className={`font-serif-hero font-bold text-lg ${isLive ? 'text-neon-green' : 'text-white/60'}`}>
-            {fixture.currentMinute}'
-          </span>
-          {isLive && <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />}
-        </div>
-      </div>
 
-      {/* Placar */}
-      <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
-        {/* Time Casa */}
-        <div className="flex-1 text-left min-w-0">
-          <p className="font-serif-hero text-base sm:text-xl font-bold text-white truncate group-hover:text-neon-yellow transition-colors uppercase">
+        {/* Time Casa (nome trunca, OVR colado à direita, junto do placar) */}
+        <div className="flex-1 min-w-0 flex items-baseline justify-end gap-1.5">
+          <span
+            className="font-serif-hero text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
+            title={fixture.homeTeamName}
+          >
             {fixture.homeTeamName}
-          </p>
-          <p className="text-xs sm:text-sm text-text-soft mt-1">
-            OVR <span className="text-neon-yellow font-serif-hero font-bold text-base sm:text-xl">{fixture.homeOverall}</span>
-          </p>
+          </span>
+          <span className="shrink-0 text-[10px] text-text-soft tabular-nums">{fixture.homeOverall}</span>
         </div>
 
-        {/* Placar Central */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-deep-black rounded-md border border-white/5 shrink-0">
+        {/* Placar */}
+        <div className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 bg-deep-black rounded-md border border-white/5">
           <motion.span
             key={`home-${fixture.scoreHome}`}
-            initial={{ scale: hasGoal ? 1.5 : 1 }}
+            initial={{ scale: hasGoal ? 1.4 : 1 }}
             animate={{ scale: 1 }}
-            className="font-serif-hero text-3xl sm:text-5xl font-bold text-neon-yellow"
+            className="font-serif-hero text-lg sm:text-2xl font-bold text-neon-yellow tabular-nums"
           >
             {fixture.scoreHome}
           </motion.span>
-          <span className="text-text-muted text-lg sm:text-2xl">×</span>
+          <span className="text-text-muted text-xs">×</span>
           <motion.span
             key={`away-${fixture.scoreAway}`}
-            initial={{ scale: hasGoal ? 1.5 : 1 }}
+            initial={{ scale: hasGoal ? 1.4 : 1 }}
             animate={{ scale: 1 }}
-            className="font-serif-hero text-3xl sm:text-5xl font-bold text-neon-yellow"
+            className="font-serif-hero text-lg sm:text-2xl font-bold text-neon-yellow tabular-nums"
           >
             {fixture.scoreAway}
           </motion.span>
         </div>
 
-        {/* Time Visitante */}
-        <div className="flex-1 text-right min-w-0">
-          <p className="font-serif-hero text-base sm:text-xl font-bold text-white truncate group-hover:text-neon-yellow transition-colors uppercase">
+        {/* Time Visitante (OVR colado à esquerda, nome trunca) */}
+        <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
+          <span className="shrink-0 text-[10px] text-text-soft tabular-nums">{fixture.awayOverall}</span>
+          <span
+            className="font-serif-hero text-sm sm:text-base font-bold text-white truncate uppercase group-hover:text-neon-yellow transition-colors"
+            title={fixture.awayTeamName}
+          >
             {fixture.awayTeamName}
-          </p>
-          <p className="text-xs sm:text-sm text-text-soft mt-1">
-            OVR <span className="text-neon-yellow font-serif-hero font-bold text-base sm:text-xl">{fixture.awayOverall}</span>
-          </p>
+          </span>
+        </div>
+
+        {/* Minuto */}
+        <div className="shrink-0 flex items-center gap-1 w-8 justify-end">
+          <Clock className={`w-3 h-3 ${isLive ? 'text-neon-green' : 'text-white/30'}`} />
+          <span className={`font-serif-hero text-xs sm:text-sm font-bold tabular-nums ${isLive ? 'text-neon-green' : 'text-white/50'}`}>
+            {fixture.currentMinute}'
+          </span>
+          {isLive && <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse shrink-0" />}
         </div>
       </div>
 
-      {/* Último Evento */}
+      {/* Último Evento — linha fina, só quando há lance */}
       <AnimatePresence mode="wait">
         {lastEvent && (
           <motion.div
             key={lastEvent.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 10 }}
-            className="bg-deep-black rounded px-3 py-2 border-l-2 border-l-neon-green"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-1.5 pl-7 overflow-hidden"
           >
-            <p className="text-xs text-gray-300">
-              <span className="font-serif-hero font-bold text-neon-yellow text-sm">
-                {lastEvent.minute}'
-              </span>{' '}
+            <p className="text-[11px] text-gray-400 truncate">
+              <span className="font-serif-hero font-bold text-neon-yellow">{lastEvent.minute}'</span>{' '}
               {lastEvent.text}
             </p>
           </motion.div>
