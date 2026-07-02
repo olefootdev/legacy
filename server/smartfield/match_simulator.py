@@ -315,6 +315,13 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
     home_strength = team_strength(home_lineup, home_base)
     away_strength = team_strength(away_lineup, away_base)
 
+    # FABLE — DERBY/CLÁSSICO (revanche contra o nêmesis): o caldeirão esquenta
+    # o jogo TODO, simetricamente — mais finalização e xG dos DOIS lados, mais
+    # pênalti nascendo do cerco e mais cartão. Clássico não favorece ninguém;
+    # ele AMPLIFICA. Espelha o derbyIntensity 1.15× do contextFactors (TS).
+    is_derby = bool(input_data.get("is_derby", False))
+    derby_mult = 1.12 if is_derby else 1.0
+
     # MATCHUP MATRIX — cruzamento setorial dos 22 jogadores (Fase A).
     # Toda jogada de chute nasce de um canal; gol exige edge positivo.
     home_matrix = compute_matchup_matrix(home_lineup, away_lineup)
@@ -465,13 +472,15 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
         atk_pressure = pressure_home if possession == "home" else pressure_away
         pen_chance = 0.0
         if zone == "att" and minute > start_minute and atk_pressure > 28:
-            pen_chance = 0.020 + (atk_pressure - 28) / 60.0 * 0.05  # ~2%→~6% conforme o cerco aperta
+            # Derby: caldeirão gera mais lance capital na área (×1.12).
+            pen_chance = (0.020 + (atk_pressure - 28) / 60.0 * 0.05) * derby_mult  # ~2%→~6% conforme o cerco aperta
         penalty_awarded = pen_chance > 0 and rng.random() < pen_chance
 
         # Decide se houve TIRO (depende de zona, força ofensiva, momentum)
         shot_prob = 0.0
         if zone == "att":
-            shot_prob = 0.42 * intensity_mul.get(side_intensity, 1.0)
+            # Derby amplifica a agressividade dos DOIS lados (simétrico).
+            shot_prob = 0.42 * intensity_mul.get(side_intensity, 1.0) * derby_mult
             shot_prob *= 1 + (side_strength - 70) / 100
             mom_factor = (momentum_home - 50) if possession == "home" else (50 - momentum_home)
             shot_prob *= 1 + mom_factor / 200
@@ -548,6 +557,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                 xg *= max(0.6, min(1.12, 1 - (gk_q - 62) / 240.0))
             # Drible (#1): driblador cria chance melhor (rompe a marcação).
             xg *= 1 + (actor["drible"] - 60) / 300.0
+            # Derby: chance em clássico carrega mais perigo (metade do mult, ~+6%).
+            xg *= 1.0 + (derby_mult - 1.0) * 0.5
             xg = max(0.02, min(0.65, xg))
 
             # Resolve outcome
@@ -695,8 +706,8 @@ def simulate(input_data: Dict[str, Any]) -> Dict[str, Any]:
                     "text": event_text(kind, actor["name"], zone, minute, 0, tier),
                 })
 
-        # Eventos disciplinares (raros)
-        if rng.random() < 0.025 and zone != "att":
+        # Eventos disciplinares (raros) — derby esquenta a marcação (mais falta).
+        if rng.random() < 0.025 * derby_mult and zone != "att":
             side = possession  # quem comete falta = quem está defendendo? simplificação
             # Inverte: quem perde a bola comete falta
             foul_side = "away" if possession == "home" else "home"

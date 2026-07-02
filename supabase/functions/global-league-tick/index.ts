@@ -775,11 +775,26 @@ function simulateFixture(fx: FixtureRow, effHome: number, effAway: number, kicko
   // aparece no placar — menos "cara-ou-coroa". Times iguais (diff≈3) seguem
   // ~25% de empate; o efeito cresce só quando a diferença é genuína.
   const OVR_GOAL_SENSITIVITY = 16;
-  const homeExpected = Math.max(0.2, 1.4 + diff / OVR_GOAL_SENSITIVITY);
-  const awayExpected = Math.max(0.2, 1.4 - diff / OVR_GOAL_SENSITIVITY);
+  // FABLE — DERBY: rivalidade (3º+ confronto) esquenta o PLACAR também, não só
+  // a disciplina. Simétrico (×1.12 nos dois lambdas) — clássico não favorece
+  // ninguém, ele AMPLIFICA. Espelha o derby do client (contextFactors 1.15×
+  // e o derby_mult 1.12 do quick plan Python).
+  const derbyGoalMult = isRivalry ? 1.12 : 1.0;
+  const homeExpected = Math.max(0.2, 1.4 + diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
+  const awayExpected = Math.max(0.2, 1.4 - diff / OVR_GOAL_SENSITIVITY) * derbyGoalMult;
   const homeGoals = poissonGoals(homeExpected);
   const awayGoals = poissonGoals(awayExpected);
   const events: any[] = [];
+  // Clássico ganha a manchete de abertura no feed do fixture.
+  if (isRivalry) {
+    events.push({
+      id: `evt_${fx.id}_derby_${kickoffMs}`,
+      fixture_id: fx.id, event_type: 'pressure', minute: 1, side: 'home',
+      text: `🔥 CLÁSSICO! ${fx.home_team_name} × ${fx.away_team_name} — a rivalidade ferve.`,
+      highlight: true,
+      timestamp_ms: kickoffMs + 1000,
+    });
+  }
   const placeGoal = (side: 'home' | 'away', i: number, total: number) => {
     const minute = Math.max(1, Math.min(90, Math.floor((90 / (total + 1)) * (i + 1) + (Math.random() - 0.5) * 8)));
     const teamName = side === 'home' ? fx.home_team_name : fx.away_team_name;

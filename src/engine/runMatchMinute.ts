@@ -113,6 +113,11 @@ export interface RunMinuteInput {
    * roda neutro (multiplicadores = 1.0) — comportamento idêntico ao histórico.
    */
   contextModifiers?: import('@/match/contextFactors').MatchContextModifiers;
+  /**
+   * FABLE — DNA Tático do Clube (-100 pragmático … +100 romântico). Vira viés
+   * sutil (±0.05) na decisão de chute dos agentes — identidade pesa em campo.
+   */
+  clubDnaAxis?: number;
 }
 
 export interface RunMinuteOutput {
@@ -362,6 +367,7 @@ export function runMatchMinute(input: RunMinuteInput): RunMinuteOutput {
       pendingCornerForSide: s.pendingCornerForSide ?? null,
       pendingFreeKickForSide: s.pendingFreeKickForSide ?? null,
       smartfieldActionHint: spiritActionHint,
+      clubDnaAxis: input.clubDnaAxis,
       tacticalIntensity: input.tacticalIntensity,
       situational,
       contextModifiers: input.contextModifiers,

@@ -65,6 +65,8 @@ interface QuickPlanRequestBody {
   mode?: 'full' | 'second_half';
   first_half?: QuickPlanFirstHalfInput;
   decisions?: QuickPlanDecisionInput[];
+  /** FABLE — DERBY/CLÁSSICO: Python amplia agressividade dos 2 lados (~×1.12). */
+  is_derby?: boolean;
 }
 
 const simpleCache = new Map<string, { ts: number; plan: unknown }>();
@@ -138,6 +140,8 @@ matchPlanRoutes.post('/api/match/quick-plan', rateLimit(20), async (c) => {
     d: (body.decisions ?? [])
       .map((d) => `${d.channel}:${d.target_side ?? 'home'}:${d.weight}`)
       .join('|'),
+    // Derby entra na chave — mesmo seed com/sem clássico são planos distintos.
+    dy: body.is_derby === true ? 1 : 0,
   });
   const cached = simpleCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {

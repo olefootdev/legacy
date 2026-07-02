@@ -312,6 +312,9 @@ function pickAction(ctx: SpiritContext): ProposedAction {
     const dnaRiskBias = ctx.onBallKnowledge
       ? (ctx.onBallKnowledge.traits.riskTaking - 1) * 0.10
       : 0;
+    // FABLE — DNA do CLUBE: identidade romântica (+) arrisca mais o chute;
+    // pragmática (-) segura. Mesma ordem de grandeza do DNA de lenda (±0.05).
+    const clubDnaBias = ((ctx.clubDnaAxis ?? 0) / 100) * 0.05;
     const shotBias =
       style.shootingProfile * 0.25 +
       style.riskTaking * 0.18 +
@@ -600,6 +603,8 @@ export function buildSpiritContext(input: {
   pendingCornerForSide?: SpiritContext['pendingCornerForSide'];
   pendingFreeKickForSide?: SpiritContext['pendingFreeKickForSide'];
   smartfieldActionHint?: SpiritContext['smartfieldActionHint'];
+  /** FABLE — DNA Tático do Clube (-100 pragmático … +100 romântico). */
+  clubDnaAxis?: number;
   tacticalIntensity?: TacticalIntensityLevel;
   situational?: SpiritContext['situational'];
   /**
@@ -729,6 +734,7 @@ export function buildSpiritContext(input: {
     pendingCornerForSide: input.pendingCornerForSide,
     pendingFreeKickForSide: input.pendingFreeKickForSide,
     smartfieldActionHint: input.smartfieldActionHint,
+    clubDnaAxis: input.clubDnaAxis,
     tacticalIntensity: input.tacticalIntensity,
     onBallNarrativeProfile,
     squadNarrativeProfiles,

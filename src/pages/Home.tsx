@@ -43,6 +43,9 @@ import { SquadNewsCard } from '@/components/home/SquadNewsCard';
 import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
 import { simulateMatchN } from '@/match/matchMonteCarlo';
 import { computeMatchContextModifiers } from '@/match/contextFactors';
+import { nemesisIsDerby } from '@/match/rivalDerby';
+import { renownTitle } from '@/systems/renown';
+import { dnaLabel } from '@/systems/clubDna';
 import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
 import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
@@ -201,6 +204,10 @@ export function Home() {
   // Viral #5 (saga) + #6 (rival fantasma): sequência viva + recorde a bater.
   const quickStreak = useGameStore((s) => s.quickMatchStreak);
   const quickBestWin = useGameStore((s) => s.quickBestWin);
+  // FABLE — nêmesis (derby na predição) + renome (título público no hero).
+  const ligaOleNemesisHome = useGameStore((s) => s.ligaOleNemesis);
+  const clubRenown = useGameStore((s) => s.clubRenown);
+  const clubDnaHome = useGameStore((s) => s.clubDna);
 
   // Inicializa/renova engagement state quando user abre a Home.
   // Daily reseta por UTC day; streak por semana. Garante que o progress tracker
@@ -454,6 +461,11 @@ export function Home() {
     const mods = computeMatchContextModifiers({
       isHome,
       effectiveTeamStrength: effective,
+      // FABLE — revanche contra o nêmesis é CLÁSSICO (derbyIntensity acende).
+      isDerby: nemesisIsDerby({
+        opponentId: fixture?.opponent?.id,
+        ligaOleNemesisId: ligaOleNemesisHome?.id,
+      }),
     });
     const seed = Array.from(opponentId).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 11);
     return simulateMatchN({
@@ -540,8 +552,16 @@ export function Home() {
     void nextKickoffMs;
     void nowMs;
 
+    // FABLE — Renome: o TÍTULO PÚBLICO do clube abre o eyebrow do hero
+    // ("Clube de Bairro" → "Lenda Viva"). Fama nunca decai; muda de faixa.
+    // DNA: quando a identidade é marcada (|eixo| ≥ 25), ela vira sobrenome.
+    const dnaTag = clubDnaHome && Math.abs(clubDnaHome.axis) >= 25
+      ? ` · ${dnaLabel(clubDnaHome.axis).toUpperCase()}`
+      : '';
+    eyebrow = `${renownTitle(clubRenown?.total ?? 0).toUpperCase()}${dnaTag} · ${eyebrow}`;
+
     return { eyebrow, statusPrimary, statusSecondary };
-  }, [finance.ole, finance.expLifetimeEarned, results, formGlobal, fixture]);
+  }, [finance.ole, finance.expLifetimeEarned, results, formGlobal, fixture, clubRenown, clubDnaHome]);
   const supportLabel = roundedSupport.toLocaleString('pt-BR', {
     minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
     maximumFractionDigits: 1,

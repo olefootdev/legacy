@@ -6,13 +6,16 @@
  * bracket integrado e galeria de coroas no rodapé.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Flag, Swords, Clock, ArrowLeft, Trophy } from 'lucide-react';
+import { Crown, Flag, Swords, Clock, ArrowLeft, Trophy, Scale } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
 import { DailyBracket } from '@/components/matchglobal/DailyBracket';
 import { CrownsGallery } from '@/components/matchglobal/CrownsGallery';
+import { useGameStore, useGameDispatch } from '@/game/store';
+import { decreeForWeek, isoWeekKey, type DecreeOption } from '@/systems/weeklyDecree';
+import { submitDecreeVote, fetchDecreeTally, type DecreeTally } from '@/supabase/weeklyDecree';
 
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return 'agora';
@@ -38,7 +41,31 @@ function phaseSizeLabel(size: number): string {
 export default function GlobalLeagueDaily() {
   const navigate = useNavigate();
   const daily = useDailyCycle();
+  const dispatch = useGameDispatch();
+  // FABLE — Decreto da Semana (decisão de reinado): voto vale a semana ISO.
+  const weeklyDecree = useGameStore((s) => s.weeklyDecree);
   const [now, setNow] = useState(() => Date.now());
+  const [tally, setTally] = useState<DecreeTally | null>(null);
+  const weekKey = isoWeekKey(now);
+  const decree = decreeForWeek(weekKey);
+  const activeVote = weeklyDecree?.weekKey === weekKey ? weeklyDecree.vote ?? null : null;
+  const globalWinner = weeklyDecree?.weekKey === weekKey ? weeklyDecree.globalOption ?? null : null;
+
+  // V2 (cross-user): lê o tally da semana e aplica o decreto VENCEDOR no save
+  // (o reino decidiu — vale mesmo pra quem votou na opção derrotada).
+  const refreshTally = useCallback(async () => {
+    const t = await fetchDecreeTally(weekKey);
+    if (!t) return;
+    setTally(t);
+    if (t.winner) dispatch({ type: 'SET_WEEKLY_DECREE_GLOBAL', weekKey, option: t.winner });
+  }, [weekKey, dispatch]);
+  useEffect(() => { void refreshTally(); }, [refreshTally]);
+
+  const voteDecree = (option: DecreeOption) => {
+    dispatch({ type: 'VOTE_WEEKLY_DECREE', option });
+    // Fire-and-forget: grava o voto no Supabase e re-lê o placar do reino.
+    void submitDecreeVote(weekKey, option).then((ok) => { if (ok) void refreshTally(); });
+  };
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -127,6 +154,74 @@ export default function GlobalLeagueDaily() {
           )}
         </div>
       </div>
+
+      {/* FABLE — DECRETO DA SEMANA: a decisão de reinado. O voto muda como o
+          SEU mundo joga a semana (pisos em MatchContextModifiers). */}
+      <section className="sports-panel rounded-lg overflow-hidden">
+        <div className="px-4 py-3 bg-gradient-to-r from-neon-yellow/15 via-neon-yellow/5 to-transparent border-b border-neon-yellow/30 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-neon-yellow/80">
+              {decree.title} · {weekKey}
+            </p>
+            <h2 className="font-display text-lg font-bold uppercase tracking-wider text-white flex items-center gap-2">
+              <Scale className="w-4 h-4 text-neon-yellow" /> {decree.question}
+            </h2>
+          </div>
+          {activeVote && (
+            <span className="text-[9px] font-display uppercase tracking-wider bg-neon-yellow text-black px-2 py-1 rounded-sm shrink-0">
+              Decretado
+            </span>
+          )}
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(Object.entries(decree.options) as [DecreeOption, { label: string; effectText: string }][]).map(([key, opt]) => {
+            const chosen = activeVote === key;
+            const reigning = globalWinner === key;
+            const votes = tally ? tally[key] : null;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => voteDecree(key)}
+                disabled={!!activeVote}
+                className={`text-left rounded-md border p-3.5 transition-colors ${
+                  chosen || reigning
+                    ? 'border-neon-yellow bg-neon-yellow/10'
+                    : activeVote
+                      ? 'border-white/10 opacity-40'
+                      : 'border-white/15 hover:border-neon-yellow/60 hover:bg-white/[0.03]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className={`font-display text-sm font-black uppercase tracking-wider ${chosen || reigning ? 'text-neon-yellow' : 'text-white'}`}>
+                    {opt.label}
+                  </p>
+                  {votes != null && (
+                    <span className="font-mono text-xs text-text-soft shrink-0">{votes} voto{votes === 1 ? '' : 's'}</span>
+                  )}
+                </div>
+                <p className="text-xs text-text-soft mt-1">{opt.effectText}</p>
+                {reigning && (
+                  <p className="text-[10px] font-display uppercase tracking-[0.2em] text-neon-yellow/80 mt-2">
+                    👑 Decreto do reino — em vigor até domingo
+                  </p>
+                )}
+                {chosen && !reigning && (
+                  <p className="text-[10px] font-display uppercase tracking-[0.2em] text-white/50 mt-2">
+                    ✓ Seu voto
+                  </p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {globalWinner && activeVote && globalWinner !== activeVote && (
+          <p className="px-4 pb-3 -mt-1 text-[11px] text-text-soft">
+            O reino escolheu <span className="text-neon-yellow font-bold">{decree.options[globalWinner].label}</span> —
+            a decisão da maioria vale pra todos, inclusive pra quem votou vencido.
+          </p>
+        )}
+      </section>
 
       {/* CAMPEÃO COROADO — faixa hero secundária */}
       {daily.phase === 'crowned' && daily.todayCrown && (

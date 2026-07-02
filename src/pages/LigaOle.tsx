@@ -15,6 +15,7 @@ import { overallFromAttributes } from '@/entities/player';
 import { getEffectiveFatigue } from '@/systems/fatigue';
 import { fetchOpponentRoster } from '@/match/opponentRosterClient';
 import { fetchLigaOleRivals } from '@/match/ligaOle/fetchLigaOleTeams';
+import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
 import {
   createLigaOle,
   managerOpponent,
@@ -597,6 +598,18 @@ export function LigaOle() {
                   <p className="font-display uppercase tracking-[0.18em] text-[9px] font-black text-white/45 mt-1">Força {opp?.overall ?? '—'}</p>
                 </div>
               </div>
+              {/* FABLE — persona do treinador rival: rosto + provocação pré-jogo.
+                  Determinística por teamId (mesmo rival, mesma cara sempre). */}
+              {opp && (() => {
+                const persona = coachPersonaFor(opp.id);
+                const line = personaLine(opp.id, 'pre', LIGA_OLE_ROUNDS[active.roundIndex]);
+                return (
+                  <p className="text-center text-white/55 text-[12px] mt-4">
+                    {persona.icon} <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/40">{persona.label}</span>{' '}
+                    — “{line}”
+                  </p>
+                );
+              })()}
             </div>
 
             {/* Prêmio da fase + APOSTA (dobra na vitória) */}

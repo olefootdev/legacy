@@ -113,6 +113,13 @@ export interface SpiritContext {
   smartfieldActionHint?: import('@/smartfield/decision').ActionKind | null;
 
   /**
+   * FABLE — DNA Tático do Clube: eixo -100 (pragmático) … +100 (romântico).
+   * Vira viés sutil (±0.05) na decisão de chute do pickAction — a identidade
+   * construída pelo manager pesa no comportamento dos agentes.
+   */
+  clubDnaAxis?: number;
+
+  /**
    * Escanteio pendente desde o tick anterior — força cabeçada nessa posse.
    * Consumido/limpo no tick corrente via `spiritMeta.pendingCornerForSide = null`.
    */

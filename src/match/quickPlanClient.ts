@@ -70,6 +70,9 @@ export interface FetchQuickPlanInput {
   firstHalf?: QuickPlanFirstHalfState;
   /** Ledger de decisões dos analyst beats — pesos calculados pelo Python, ecoados de volta. */
   decisions?: QuickPlanDecision[];
+  /** FABLE — DERBY/CLÁSSICO (revanche contra o nêmesis): o Python amplia
+   *  finalização/xG/pênalti/cartão dos DOIS lados (~×1.12, simétrico). */
+  isDerby?: boolean;
 }
 
 /** Nome curto pra narração/UI: apelido entre aspas ("Juca") ou corta " — fase".
@@ -173,6 +176,7 @@ export async function fetchQuickPlan(input: FetchQuickPlanInput): Promise<MatchP
         mode: input.mode ?? 'full',
         first_half: input.firstHalf,
         decisions: input.decisions,
+        is_derby: input.isDerby === true,
       }),
     });
     if (!res.ok) {

@@ -215,6 +215,12 @@ import { buildRoundRobinSchedule } from '@/match/leagueSchedule';
 import { evaluateOfficialSquad, isOfficialSquadGateRelaxedForTests } from '@/match/squadEligibility';
 import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import { computeMatchContextModifiers } from '@/match/contextFactors';
+import { applyQuickMatchToDna } from '@/systems/clubDna';
+import { addRenown } from '@/systems/renown';
+import { applyQuickScars } from '@/systems/scars';
+import { isoWeekKey, activeDecreeOption } from '@/systems/weeklyDecree';
+import { buildRoundChronicle } from '@/match/ligaOle/ligaOleChronicle';
+import { nemesisIsDerby } from '@/match/rivalDerby';
 import { addHoursIso, applyTrainingToPlayer, maxSlotsByTrainingCenter, resolveGroupPlayerIds, splitDuePlans } from '@/systems/trainingPlans';
 import {
   STAFF_LABELS,
@@ -428,6 +434,12 @@ function runTick(state: OlefootGameState): OlefootGameState {
         isHome: state.nextFixture.isHome,
         daysSinceLastMatch,
         effectiveTeamStrength: effectiveStrength,
+        // FABLE — nêmesis/rivalidade acende o derby (maquinário já existia).
+        isDerby: nemesisIsDerby({
+          opponentId: state.nextFixture.opponent?.id,
+          ligaOleNemesisId: state.ligaOleNemesis?.id,
+        }),
+        decree: activeDecreeOption(state.weeklyDecree, Date.now()),
       })
     : undefined;
 
@@ -442,6 +454,7 @@ function runTick(state: OlefootGameState): OlefootGameState {
     awayShort: state.nextFixture.opponent.shortName,
     opponentId: state.nextFixture.opponent.id,
     awayRoster: state.liveMatch.awayRoster,
+    clubDnaAxis: state.clubDna?.axis,
     staffMatchEffects: staffRunMatchMinuteEffects(state.manager.staff),
     tacticalIntensity: state.quickMatchIntensity?.current,
     contextModifiers,
@@ -827,6 +840,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           ? computeMatchContextModifiers({
               isHome: st.nextFixture.isHome,
               effectiveTeamStrength: autoEffective,
+              isDerby: nemesisIsDerby({
+                opponentId: st.nextFixture.opponent?.id,
+                ligaOleNemesisId: st.ligaOleNemesis?.id,
+              }),
+              decree: activeDecreeOption(st.weeklyDecree, Date.now()),
             })
           : undefined;
         const { snapshot, updatedPlayers } = advanceMatchToPostgame({
@@ -842,6 +860,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           tacticalStyle: st.manager.tacticalStyle,
           opponentStrength: st.nextFixture.opponent.strength,
           awayShort: st.nextFixture.opponent.shortName,
+          clubDnaAxis: st.clubDna?.axis,
           staffMatchEffects: staffRunMatchMinuteEffects(st.manager.staff),
           contextModifiers: autoMods,
         });
@@ -1364,6 +1383,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ? computeMatchContextModifiers({
             isHome: state.nextFixture.isHome,
             effectiveTeamStrength: bulkEffective,
+            isDerby: nemesisIsDerby({
+              opponentId: state.nextFixture.opponent?.id,
+              ligaOleNemesisId: state.ligaOleNemesis?.id,
+            }),
+            decree: activeDecreeOption(state.weeklyDecree, Date.now()),
           })
         : undefined;
       const { snapshot, updatedPlayers } = runMatchMinuteBulk({
@@ -1376,6 +1400,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         opponentStrength: state.nextFixture.opponent.strength,
         awayShort: state.nextFixture.opponent.shortName,
         steps: action.steps,
+        clubDnaAxis: state.clubDna?.axis,
         staffMatchEffects: staffRunMatchMinuteEffects(state.manager.staff),
         contextModifiers: bulkMods,
       });
@@ -2347,6 +2372,43 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let ligaOleTitles = state.ligaOleTitles ?? 0;
       let ligaOleLastDefeated = state.ligaOleLastDefeated;
       const ligaNotes: import('@/game/inboxTypes').InboxItem[] = [];
+      // ─── FABLE: DNA Tático + Renome + Cicatrizes (memória e rosto) ─────
+      const fableNowMs = Date.now();
+      // DNA: as escolhas de estilo ao vivo + formação marcam o eixo
+      // Romântico↔Pragmático do clube (muda devagar, cap por partida).
+      const clubDna = applyQuickMatchToDna(state.clubDna, {
+        styleLog: action.styleLog ?? [],
+        formation: action.formation,
+      });
+      // Renome: feitos públicos somam fama (nunca decai).
+      let clubRenown = state.clubRenown;
+      if (homeWin) clubRenown = addRenown(clubRenown, 2, 'Vitória na Partida Rápida', fableNowMs);
+      if (homeWin && action.agg.wasLosing) clubRenown = addRenown(clubRenown, 15, 'Virada épica', fableNowMs);
+      // Cicatrizes: pênalti errado marca; conversão carregando a marca CURA
+      // (redenção); gol aos 85'+ vira medalha de clutch.
+      let playerScars = state.playerScars;
+      if ((action.shootoutKicks?.length ?? 0) > 0 || (action.lateHeroIds?.length ?? 0) > 0) {
+        const scarred = applyQuickScars(
+          playerScars,
+          {
+            shootoutKicks: action.shootoutKicks,
+            lateHeroIds: action.lateHeroIds,
+            matchLabel: `vs ${state.nextFixture.opponent?.name ?? 'Adversário'}`,
+            atMs: fableNowMs,
+          },
+          (id) => state.players[id]?.name ?? 'Jogador',
+        );
+        playerScars = scarred.map;
+        for (const n of scarred.narratives) {
+          ligaNotes.push(makeInboxItem(
+            `scar-${n.playerId}-${fableNowMs}`,
+            'COMPANY_ANNOUNCEMENT',
+            'PLANTEL',
+            n.text,
+            { tag: 'Elenco', hideFromHomeFeed: n.kind !== 'healed' },
+          ));
+        }
+      }
       if (ligaOle?.pendingOpponentId && ligaOle.status === 'active') {
         const roundPlayed = ligaOle.roundIndex;
         const playedRoundName = ligaOleRoundReward(roundPlayed).round;
@@ -2427,6 +2489,19 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         // DINASTIA: título conquistado incrementa o contador (multiplica futuras campanhas).
         if (advanced.status === 'champion') ligaOleTitles = ligaOleTitles + 1;
 
+        // FABLE — Renome: avançar fase +30; título soma +100 (fama nunca decai).
+        if (homeWin) {
+          clubRenown = advanced.status === 'champion'
+            ? addRenown(clubRenown, 130, 'Campeão da Liga Ole', fableNowMs)
+            : addRenown(clubRenown, 30, `Liga Ole — venceu na ${playedRoundName}`, fableNowMs);
+        }
+        // FABLE — Crônica da edição: zebra/goleada/carrasco da rodada viram
+        // manchete no inbox (a história sendo escrita sem autor humano).
+        ligaNotes.push(...buildRoundChronicle(ligaOle, advanced, {
+          managerClubName: state.club.name,
+          idSalt: fableNowMs,
+        }));
+
         if (advanced.status === 'active') {
           // Segue vivo na liga — guarda o avanço; zera aposta/alvo do confronto.
           ligaOle = { ...advanced, pendingOpponentId: undefined, pendingWager: undefined };
@@ -2456,6 +2531,39 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ligaOleNemesis,
         ligaOleTitles,
         ligaOleLastDefeated,
+        clubDna,
+        clubRenown,
+        playerScars,
+      };
+    }
+    case 'VOTE_WEEKLY_DECREE': {
+      // FABLE — Decreto da Semana: voto vale só na semana ISO corrente; o
+      // efeito entra via computeMatchContextModifiers (decree option ativa).
+      const now = Date.now();
+      const weekKey = isoWeekKey(now);
+      // Preserva o resultado global se já chegou pra ESTA semana.
+      const globalOption = state.weeklyDecree?.weekKey === weekKey
+        ? state.weeklyDecree.globalOption
+        : undefined;
+      return {
+        ...state,
+        weeklyDecree: { weekKey, vote: action.option, votedAtMs: now, globalOption },
+      };
+    }
+    case 'SET_WEEKLY_DECREE_GLOBAL': {
+      // FABLE v2 — o decreto VENCEDOR (tally cross-user) passa a valer pra
+      // este mundo, mesmo se o manager votou na opção derrotada (Fable 3:
+      // quem perde a votação também vive com a consequência).
+      const cur = state.weeklyDecree;
+      const sameWeek = cur?.weekKey === action.weekKey;
+      return {
+        ...state,
+        weeklyDecree: {
+          weekKey: action.weekKey,
+          vote: sameWeek ? cur?.vote : undefined,
+          votedAtMs: sameWeek ? cur?.votedAtMs : undefined,
+          globalOption: action.option,
+        },
       };
     }
     case 'CREATE_LIGA_OLE': {
@@ -3026,6 +3134,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         finance,
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
+        // FABLE — Renome: contratar uma lenda é evento SOCIAL (+50).
+        clubRenown: addRenown(state.clubRenown, 50, `Contratou a lenda ${action.player.name}`, Date.now()),
       };
     }
     case 'RECRUIT_YOUTH_PROSPECT': {
@@ -3103,7 +3213,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let finance = state.finance;
       if (ole > 0) finance = withExpHistory(addOle(finance, ole), ole, `Campeão Div ${action.division} · OLE`);
       if (exp > 0) finance = withExpHistory(grantEarnedExp(finance, exp), exp, `Campeão Div ${action.division} · EXP`);
-      return { ...state, finance };
+      // FABLE — Renome: título de divisão é feito público (+100).
+      const clubRenown = addRenown(state.clubRenown, 100, `Campeão da Divisão ${action.division}`, Date.now());
+      return { ...state, finance, clubRenown };
     }
     case 'CLAIM_KO_PRIZE': {
       // Prêmio do mata-mata diário (Coroa do Dia). Idempotência real mora no flag
@@ -3117,7 +3229,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       };
       const src = `Mata-Mata · ${labels[action.stage] ?? action.stage} · EXP`;
       const finance = withExpHistory(grantEarnedExp(state.finance, exp), exp, src);
-      return { ...state, finance };
+      // FABLE — Renome: Coroa do Dia +50; fases do mata-mata +10.
+      const clubRenown = addRenown(
+        state.clubRenown,
+        action.stage === 'final' ? 50 : 10,
+        labels[action.stage] ?? 'Mata-Mata do Dia',
+        Date.now(),
+      );
+      return { ...state, finance, clubRenown };
     }
     case 'EXP_EXCHANGE_ANNOUNCE_SELL': {
       const expAmount = Math.round(action.expAmount);
@@ -5390,6 +5509,8 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
       let finance = grantEarnedExp(state.finance, challenge.reward);
       finance = withExpHistory(finance, challenge.reward, `Desafio: ${challenge.title}`);
+      // FABLE — Renome: desafio diário cumprido é feito público (+10).
+      const clubRenown = addRenown(state.clubRenown, 10, `Desafio: ${challenge.title}`, Date.now());
 
       const inbox = [
         makeInboxItem(
@@ -5409,6 +5530,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         finance,
         inbox,
+        clubRenown,
         dailyChallenges: {
           ...state.dailyChallenges,
           challenges,
@@ -5429,9 +5551,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ? -1
         : Math.max(-6, -4 - Math.floor(Math.max(0, -goalDiff - 1)));
       const newSupportPercent = Math.min(99, Math.max(0, state.crowd.supportPercent + crowdDelta));
+      // FABLE — Renome: vitória na Liga Global é feito público (+5).
+      const clubRenown = action.win
+        ? addRenown(state.clubRenown, 5, 'Vitória na Liga Global', Date.now())
+        : state.clubRenown;
       return {
         ...state,
         crowd: { supportPercent: newSupportPercent, moodLabel: crowdMood(newSupportPercent) },
+        clubRenown,
       };
     }
 

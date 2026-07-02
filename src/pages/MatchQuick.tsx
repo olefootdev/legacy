@@ -21,6 +21,7 @@ import { MatchFindingOverlay } from '@/components/match/MatchFindingOverlay';
 import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
 import { simulateMatchN, simulateLiveRemainder } from '@/match/matchMonteCarlo';
 import { computeMatchContextModifiers } from '@/match/contextFactors';
+import { nemesisIsDerby } from '@/match/rivalDerby';
 import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
 import {
   fetchFriendlyChallengeById,
@@ -685,6 +686,8 @@ function MatchQuickLegacy() {
   const club = useGameStore((s) => s.club);
   const quickMatchStreak = useGameStore((s) => s.quickMatchStreak);
   const quickMatchIntensity = useGameStore((s) => s.quickMatchIntensity);
+  // FABLE — nêmesis pendente acende o derby na predição pré-jogo/ao vivo.
+  const ligaOleNemesisQuick = useGameStore((s) => s.ligaOleNemesis);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
 
   // PvP assíncrono: adversário real passado via navigate state
@@ -2079,6 +2082,7 @@ function MatchQuickLegacy() {
     const mods = computeMatchContextModifiers({
       isHome: true,
       effectiveTeamStrength: effective,
+      isDerby: nemesisIsDerby({ opponentId: fixture.opponent.id, ligaOleNemesisId: ligaOleNemesisQuick?.id }),
     });
     const seed = Array.from(fixture.opponent.id).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
     return simulateMatchN({
@@ -2105,6 +2109,7 @@ function MatchQuickLegacy() {
     const mods = computeMatchContextModifiers({
       isHome: true,
       effectiveTeamStrength: effective,
+      isDerby: nemesisIsDerby({ opponentId: fixture.opponent.id, ligaOleNemesisId: ligaOleNemesisQuick?.id }),
     });
     const seedKey = `${fixture.opponent.id}_${live.homeScore}_${live.awayScore}_${liveMinuteBucket}`;
     const seed = Array.from(seedKey).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 13);

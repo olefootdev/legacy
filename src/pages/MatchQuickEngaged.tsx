@@ -54,6 +54,11 @@ import { calculateTotalBonusRewards } from '@/match/quickPerformanceBonuses';
 import { QuickShareCard } from '@/components/matchquick/QuickShareCard';
 import { computeQuickRarity } from '@/match/quickRarity';
 import { fetchMyReferralCode } from '@/supabase/referrals';
+import { scarShootoutConfidenceDelta } from '@/systems/scars';
+import { nemesisIsDerby } from '@/match/rivalDerby';
+import { dnaLabel } from '@/systems/clubDna';
+import { coachPersonaFor, personaLine } from '@/match/ligaOle/coachPersona';
+import type { AgentEchoTrait } from '@/match/quickAgentEcho';
 
 type Phase = 'loading' | 'kickoff' | 'playing' | 'finished' | 'error';
 
@@ -79,9 +84,16 @@ export default function MatchQuickEngaged() {
   const form = useGameStore((s) => s.form);
   const quickStreak = useGameStore((s) => s.quickMatchStreak);
   const newRecord = useGameStore((s) => s.lastQuickNewRecord);
+  // FABLE — cicatrizes (confiança no shootout) + DNA do clube (pós-jogo).
+  const playerScars = useGameStore((s) => s.playerScars);
+  const clubDna = useGameStore((s) => s.clubDna);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const isLigaOleMatchRef = useRef<boolean | null>(null);
   if (isLigaOleMatchRef.current === null) isLigaOleMatchRef.current = !!ligaOle?.pendingOpponentId;
+  // FABLE — persona do treinador rival: captura o adversário da Liga Ole no
+  // mount (o pendingOpponentId é limpo pelo FINALIZE, então guardamos aqui).
+  const ligaOpponentIdRef = useRef<string | null>(null);
+  if (ligaOpponentIdRef.current === null) ligaOpponentIdRef.current = ligaOle?.pendingOpponentId ?? '';
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [plan, setPlan] = useState<MatchPlan | null>(null);
@@ -113,6 +125,14 @@ export default function MatchQuickEngaged() {
 
   const opponent = nextFixture?.opponent;
   const hasOpponent = !!opponent && opponent.id !== 'placeholder-opponent' && opponent.id !== 'no-opponent-available';
+
+  // FABLE — DERBY/CLÁSSICO: revanche contra o nêmesis vira clássico MECÂNICO
+  // (o Python amplia finalização/xG/pênalti/cartão dos 2 lados) e visual.
+  const ligaOleNemesisEng = useGameStore((s) => s.ligaOleNemesis);
+  const isDerbyMatch = nemesisIsDerby({
+    opponentId: ligaOpponentIdRef.current || opponent?.id,
+    ligaOleNemesisId: ligaOleNemesisEng?.id,
+  });
 
   // Banco: titulares de fora, saudáveis
   const bench = useMemo<QuickHomePlayerView[]>(() => {
@@ -171,6 +191,8 @@ export default function MatchQuickEngaged() {
         // Boost PASSIVO das lendas titulares no lineup enviado ao Python — a
         // presença da lenda já pesa na simulação (sem depender do buff manual).
         input.homeLineup = applyLegacyBoostToLineup(input.homeLineup, legacyBoosters);
+        // FABLE — revanche contra o nêmesis = clássico MECÂNICO no Python.
+        input.isDerby = isDerbyMatch;
         const fetched = await fetchQuickPlan(input);
         if (!fetched) {
           setError('Não foi possível gerar a partida (motor offline). Tente novamente.');
@@ -333,6 +355,8 @@ export default function MatchQuickEngaged() {
           homeStrength: baseStrengthRef.current.home,
           awayStrength: baseStrengthRef.current.away,
           intensity: ht.intensity,
+          isDerby: isDerbyMatch, // clássico continua quente no 2º tempo
+
           homeLineup,
           awayLineup: awayLineupRef.current, // mesmo adversário do 1º tempo
           mode: 'second_half',
@@ -369,7 +393,7 @@ export default function MatchQuickEngaged() {
         resolve(null);
       }
     },
-    [halftimeCtx, club.shortName, opponent, legacyLookup],
+    [halftimeCtx, club.shortName, opponent, legacyLookup, isDerbyMatch],
   );
 
   // DISPUTA DE PÊNALTIS: monta os dados (elenco vivo + goleiros) a partir dos
@@ -386,7 +410,10 @@ export default function MatchQuickEngaged() {
       .filter((p) => p.payload.role !== 'gk')
       .map((p) => ({
         id: p.id, name: p.name, pos: p.pos,
-        finalizacao: p.payload.finalizacao, fisico: p.payload.fisico, confianca: p.payload.confianca,
+        finalizacao: p.payload.finalizacao, fisico: p.payload.fisico,
+        // FABLE — cicatriz pesa AQUI: pênalti perdido não curado = -8 de
+        // confiança na disputa; medalha (clutch/redenção) = +5.
+        confianca: Math.max(0, Math.min(100, p.payload.confianca + scarShootoutConfidenceDelta(playerScars?.[p.id]))),
         fatigue: wear(p.payload.fatigue), portrait: players[p.id] ? playerPortraitSrc(players[p.id]!, 40, 40) : null,
       }));
     const awayOutfield: ShootoutKicker[] = away
@@ -407,6 +434,20 @@ export default function MatchQuickEngaged() {
       : { id: 'a-gk', name: 'Goleiro', marcacao: 62, confianca: 60, fisico: 65, fatigue: MATCH_WEAR };
 
     return { homeKickers: homeOutfield, awayKickers: awayOutfield, homeKeeper, awayKeeper };
+  }, [players, playerScars]);
+
+  // FABLE — Eco do agente: traços por playerId (agentProfile → risco/confiança).
+  const agentTraits = useMemo<Record<string, AgentEchoTrait>>(() => {
+    const out: Record<string, AgentEchoTrait> = {};
+    for (const p of Object.values(players)) {
+      const prof = p.agentProfile;
+      if (!prof) continue;
+      out[p.id] = {
+        risk: prof.riskProfile?.baseRisk ?? 50,
+        confidence: prof.learningState?.confidence ?? 50,
+      };
+    }
+    return out;
   }, [players]);
 
   const creditedRef = useRef(false);
@@ -432,6 +473,11 @@ export default function MatchQuickEngaged() {
       agg: { shots: r.stats.homeShots, possessionHome: r.stats.possessionHome, wasLosing: r.stats.wasLosing },
       mvpName: _p.mvp_projection?.name,
       shootoutWin: r.shootout?.winner,
+      // FABLE — DNA (estilos ao vivo + formação) e Cicatrizes (pênaltis + herói do fim).
+      styleLog: r.styleLog,
+      formation: formationRef.current,
+      shootoutKicks: r.shootout?.homeKicks,
+      lateHeroIds: r.lateHeroIds,
     });
   }, [dispatch]);
 
@@ -455,6 +501,11 @@ export default function MatchQuickEngaged() {
         <div className="flex items-center justify-between mb-4">
           <span className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow/80">
             Partida Rápida
+            {isDerbyMatch && (
+              <span className="ml-2 px-1.5 py-0.5 rounded-sm bg-danger/20 text-danger tracking-[0.18em]">
+                🔥 Clássico
+              </span>
+            )}
           </span>
           <button
             type="button"
@@ -513,6 +564,7 @@ export default function MatchQuickEngaged() {
             penaltyTakers={penaltyTakers}
             legacyBoosters={legacyBoosters}
             legacyLookup={legacyLookup}
+            agentTraits={agentTraits}
             initialFormation={formationRef.current}
             fieldCards={homePlayersRef.current.map(toSquadCard)}
             awayCards={awayLineupRef.current.map((p) => ({
@@ -646,6 +698,31 @@ export default function MatchQuickEngaged() {
               );
             })()}
 
+            {/* FABLE — DNA DO CLUBE: a marca desta partida no eixo
+                Romântico ↔ Pragmático (halo/chifres do futebol). */}
+            {clubDna && clubDna.lastShift !== 0 && (() => {
+              const pct = Math.max(0, Math.min(100, (clubDna.axis + 100) / 2));
+              const romantic = clubDna.lastShift > 0;
+              return (
+                <div className="border px-5 py-4 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-border)', backgroundColor: 'var(--color-dark-gray)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-display uppercase tracking-[0.28em] text-[10px] font-black text-neon-yellow">DNA do clube</p>
+                    <span className="font-display tabular-nums text-[12px] font-black" style={{ color: romantic ? 'var(--color-neon-yellow)' : 'rgb(148,163,184)' }}>
+                      {romantic ? '+' : ''}{clubDna.lastShift} {romantic ? 'Romântico' : 'Pragmático'}
+                    </span>
+                  </div>
+                  <div className="relative h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.10)' }}>
+                    <div className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-neon-yellow" style={{ left: `calc(${pct}% - 5px)` }} />
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">Pragmático</span>
+                    <span className="text-white/80 text-[12px]" style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700 }}>{dnaLabel(clubDna.axis)}</span>
+                    <span className="font-display uppercase tracking-[0.14em] text-[9px] font-black text-white/35">Romântico</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Ponte #1 — BÔNUS DE PERFORMANCE: o "efeito uau" que estava sendo
                 calculado e jogado no lixo agora aparece (revelação progressiva). */}
             {lastBonuses && lastBonuses.length > 0 && (
@@ -724,12 +801,28 @@ export default function MatchQuickEngaged() {
             {/* LIGA OLE — continuação da campanha (avançou / campeão / eliminado) */}
             {isLigaOleMatchRef.current && (() => {
               const M = 'var(--font-serif-hero)';
+              // FABLE — a persona do treinador rival deixa o recado (NPC com
+              // opinião): ele perdeu → 'lost'; ele te eliminou → 'eliminated_you'.
+              const rivalId = ligaOpponentIdRef.current;
+              const rivalQuote = rivalId
+                ? (() => {
+                    const persona = coachPersonaFor(rivalId);
+                    const situation = ligaFlash?.outcome === 'eliminated' ? 'eliminated_you' as const : 'lost' as const;
+                    return { persona, line: personaLine(rivalId, situation, String(result.homeScore * 10 + result.awayScore)) };
+                  })()
+                : null;
+              const rivalQuoteEl = rivalQuote ? (
+                <p className="text-[12px] mt-2" style={{ color: ligaFlash?.outcome === 'eliminated' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.65)' }}>
+                  {rivalQuote.persona.icon} {rivalQuote.persona.label}, treinador rival — “{rivalQuote.line}”
+                </p>
+              ) : null;
               if (ligaFlash?.outcome === 'champion') {
                 return (
                   <div className="relative overflow-hidden bg-neon-yellow px-5 py-5 text-black mb-1" style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 10px 30px rgba(253,225,0,0.22)' }}>
                     <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-black/70 mb-1">Liga Ole · Campeão</p>
                     <p style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(30px, 9vw, 46px)', lineHeight: 0.95 }}>{club.name}</p>
                     <p className="font-display uppercase tracking-[0.2em] text-[11px] font-black text-black/80 mt-1">Levantou a taça!</p>
+                    {rivalQuoteEl}
                     <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 bg-black text-neon-yellow font-display uppercase tracking-[0.2em] text-[12px] font-black" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
                   </div>
                 );
@@ -739,6 +832,7 @@ export default function MatchQuickEngaged() {
                   <div className="border px-5 py-5 mb-1" style={{ borderRadius: 'var(--radius-md)', borderColor: 'var(--color-danger)', backgroundColor: 'var(--color-dark-gray)' }}>
                     <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-danger mb-1">Liga Ole · Fim da linha</p>
                     <p className="text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(24px, 7vw, 36px)' }}>Caiu nas {ligaFlash.reachedRound}</p>
+                    {rivalQuoteEl}
                     <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3 border border-white/20 text-white/80 font-display uppercase tracking-[0.18em] text-[11px] font-black hover:border-white/50 transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Ver Liga Ole</button>
                   </div>
                 );
@@ -749,6 +843,11 @@ export default function MatchQuickEngaged() {
                     <p className="font-display uppercase tracking-[0.3em] text-[10px] font-black text-neon-yellow mb-1">Liga Ole</p>
                     <p className="text-white" style={{ fontFamily: M, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(22px, 6.5vw, 32px)', lineHeight: 0.95 }}>{club.name} avançou de fase!</p>
                     <p className="font-display uppercase tracking-[0.2em] text-[10px] font-black text-white/50 mt-1">Próxima: {LIGA_OLE_ROUNDS[ligaOle.roundIndex]}</p>
+                    {rivalQuote && (
+                      <p className="text-[12px] mt-2 text-white/60">
+                        {rivalQuote.persona.icon} {rivalQuote.persona.label}, treinador rival — “{rivalQuote.line}”
+                      </p>
+                    )}
                     <button type="button" onClick={() => navigate('/liga-ole')} className="mt-3 w-full py-3.5 bg-neon-yellow hover:bg-white text-black font-display uppercase tracking-[0.2em] text-[13px] font-black transition-colors" style={{ borderRadius: 'var(--radius-sm)' }}>Avançar ›</button>
                   </div>
                 );

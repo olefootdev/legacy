@@ -65,6 +65,7 @@ import {
 import { TACTICAL_INTENSITY_PRESETS, type TacticalIntensityLevel } from '@/match/quickTacticalIntensity';
 import { detectLiveArc, getArcDescription } from '@/match/quickNarrativeArcs';
 import { QuickNarrativeArcIndicator } from '@/components/matchquick/QuickNarrativeArcIndicator';
+import { buildAgentEcho, type AgentEchoTrait } from '@/match/quickAgentEcho';
 
 /** Lance importante ganha o palco central; construção só alimenta o momento.
  *  Fruto de decisão SEMPRE aparece — o manager precisa ver a consequência. */
@@ -98,7 +99,17 @@ export interface QuickPlanPlayResult {
   /** Agregados pro crédito (bônus de performance). */
   stats: { homeShots: number; awayShots: number; possessionHome: number; wasLosing: boolean };
   /** Disputa de pênaltis quando o jogo empatou (nenhum jogo termina empatado). */
-  shootout?: { winner: 'home' | 'away'; homeTally: number; awayTally: number };
+  shootout?: {
+    winner: 'home' | 'away';
+    homeTally: number;
+    awayTally: number;
+    /** FABLE/Cicatrizes — cobranças da CASA (quem converteu/errou). */
+    homeKicks: { kickerId: string; scored: boolean }[];
+  };
+  /** FABLE/DNA — estilos ativados no dock ao vivo, na ordem. */
+  styleLog: TacticalIntensityLevel[];
+  /** FABLE/Cicatrizes — autores de gol da casa aos 85'+ (herói do fim). */
+  lateHeroIds: string[];
 }
 
 interface Props {
@@ -145,6 +156,9 @@ interface Props {
   /** Monta os dados da disputa de pênaltis (elenco vivo + goleiros) no empate.
    *  O pai (MatchQuickEngaged) tem os atributos; retorna null pra pular a disputa. */
   buildShootout?: () => ShootoutSetup | null;
+  /** FABLE — Eco do agente: traços (agentProfile) por playerId. Ao trocar o
+   *  estilo, UM jogador do XI reage no feed coerente com a personalidade. */
+  agentTraits?: Record<string, AgentEchoTrait>;
 }
 
 /** Narração rica vinda do backend (Sonnet) — chaves por beat_id e por minuto. */
@@ -386,7 +400,7 @@ const LEADIN_REACT_MS = 2800;
 /** Quanto o relógio "segura" num lance pra dar tempo de ler. */
 const HOLD_MS: Record<MatchEventTier, number> = { epic: 2400, big: 1700, normal: 950, minor: 600 };
 
-export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout }: Props) {
+export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSecondHalf, portraitOf, homeCrestUrl, awayCrestUrl, homeName, awayName, penaltyTakers, legacyBoosters, legacyLookup, initialFormation, fieldCards, awayCards, benchCards, onSubstitution, secondHalfLineup, narration, buildShootout, agentTraits }: Props) {
   void speedMultiplier;
   const [phase, setPhase] = useState<PlayerPhase>('playing');
   const [minute, setMinute] = useState(0);
@@ -441,6 +455,8 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   const beatsQueueRef = useRef<AnalystBeat[]>([...(plan.analyst_beats ?? [])]);
   const momentumRef = useRef<number[]>([...plan.momentum_curve]);
   const styleRef = useRef<TacticalIntensityLevel>('possession'); // lido no tick (closure sempre fresca)
+  // FABLE/DNA — log dos estilos ativados ao vivo (alimenta o eixo do clube).
+  const styleLogRef = useRef<TacticalIntensityLevel[]>([]);
   const legacyActiveRef = useRef(false);
   const legacyUntilRef = useRef(0);
   const legacyPctRef = useRef(0);
@@ -485,9 +501,25 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     if (next === styleRef.current) return;
     styleRef.current = next;
     setStyle(next);
+    styleLogRef.current.push(next); // FABLE/DNA — cada escolha marca o eixo do clube
     const m = minuteRef.current;
     momentumRef.current = nudgeMomentumCurve(momentumRef.current, m, styleMomentumBias(next));
     pushFeed({ id: `style-${m}`, minute: m, kind: 'decision', text: `Estilo: ${STYLE_LABEL[next]} — ${TACTICAL_INTENSITY_PRESETS[next].description}` });
+    // FABLE — ECO DO AGENTE: um jogador do XI responde ao comando no feed,
+    // coerente com o agentProfile dele (abraça / resmunga / cumpre). O comando
+    // deixa de ser toggle mudo e vira conversa com o elenco.
+    const echo = buildAgentEcho({
+      style: next,
+      field: field.map((c) => ({ id: c.id, name: c.name, pos: c.pos })),
+      traits: agentTraits ?? {},
+      seed: plan.seed,
+      minute: m,
+    });
+    if (echo) {
+      window.setTimeout(() => {
+        pushFeed({ id: `echo-${m}`, minute: m, kind: 'insight', text: echo.text, side: 'home', actorId: echo.playerId });
+      }, 900);
+    }
   };
 
   // Buffs de legacy DISPONÍVEIS agora — derivados do elenco VIVO em campo (field),
@@ -607,6 +639,12 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     setDoneInfo({ verdicts, reading, skipped, stats });
 
     const emitComplete = (shootout?: ShootoutResult) => {
+      // FABLE/Cicatrizes — herói do fim: gol da casa aos 85'+ no tempo normal.
+      const lateHeroIds = [...new Set(
+        eventsRef.current
+          .filter((e) => e.kind === 'goal_home' && e.minute >= 85 && e.actor_id)
+          .map((e) => e.actor_id as string),
+      )];
       onComplete?.(plan, {
         homeScore: scoreRef.current.home,
         awayScore: scoreRef.current.away,
@@ -618,8 +656,18 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         homeOnPitch: field.map((p) => p.id),
         stats: { homeShots: stats.homeShots, awayShots: stats.awayShots, possessionHome: stats.possessionHome, wasLosing: wasLosingRef.current },
         shootout: shootout
-          ? { winner: shootout.winner, homeTally: shootout.homeTally, awayTally: shootout.awayTally }
+          ? {
+              winner: shootout.winner,
+              homeTally: shootout.homeTally,
+              awayTally: shootout.awayTally,
+              // FABLE/Cicatrizes — cobranças da casa (erro marca; conversão cura).
+              homeKicks: shootout.kicks
+                .filter((k) => k.side === 'home')
+                .map((k) => ({ kickerId: k.kickerId, scored: k.scored })),
+            }
           : undefined,
+        styleLog: [...styleLogRef.current],
+        lateHeroIds,
       });
     };
     completeMatchRef.current = emitComplete;
@@ -907,6 +955,17 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
         if (res.flip) {
           shown = res.event;
           eventsRef.current = eventsRef.current.map((e, i) => (i === idx ? res.event : e));
+          // FABLE — SELO DE CONSEQUÊNCIA: o flip era invisível; agora o jogo
+          // CONFESSA que a sua escolha causou o lance ("SUA LEITURA") ou o
+          // castigo ("O PREÇO"). Fecha o loop escolha → efeito, ao vivo.
+          const good = res.flip === 'home_goal' || res.flip === 'shield';
+          const fxKey = (fxSeqRef.current += 1);
+          setFloatFx({
+            key: fxKey,
+            text: good ? `✓ SUA LEITURA — ${STYLE_LABEL[styleRef.current]}` : `✕ O PREÇO — ${STYLE_LABEL[styleRef.current]}`,
+            tier: good ? 'pos' : 'neg',
+          });
+          window.setTimeout(() => setFloatFx((f) => (f && f.key === fxKey ? null : f)), 1600);
         }
       }
       // LEGACY ATIVO: a lenda puxa o time — chance extra de converter quase-gol.

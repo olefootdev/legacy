@@ -430,6 +430,26 @@ export interface OlefootGameState {
   managerPresence?: ManagerPresence;
   /** Último resultado de claim de login bonus — UI consome após dispatch. */
   lastLoginBonusClaim?: LoginBonusClaimResult;
+  /**
+   * FABLE — DNA Tático do Clube (eixo Romântico ↔ Pragmático). Alimentado
+   * pelas escolhas de estilo ao vivo na Partida Rápida; muda devagar.
+   */
+  clubDna?: import('@/systems/clubDna').ClubDnaState;
+  /**
+   * FABLE — Renome do Clube (reputação PÚBLICA, nunca decai). Alimentado por
+   * feitos (títulos, fases da Liga Ole, coroações, Legacy). Título por faixa.
+   */
+  clubRenown?: import('@/systems/renown').ClubRenownState;
+  /**
+   * FABLE — Cicatrizes por jogador (pênalti perdido, gol aos 85'+, redenção).
+   * Afetam a confiança em shootouts até o arco de redenção fechar.
+   */
+  playerScars?: import('@/systems/scars').PlayerScarsMap;
+  /**
+   * FABLE — Decreto da Semana (Liga Global): voto do manager na semana ISO.
+   * Efeito aplicado via MatchContextModifiers enquanto a semana durar.
+   */
+  weeklyDecree?: import('@/systems/weeklyDecree').WeeklyDecreeState;
 }
 
 export type GameAction =
@@ -605,7 +625,19 @@ export type GameAction =
       mvpName?: string;
       /** Vencedor da disputa de pênaltis quando empatou (nenhum jogo empata). */
       shootoutWin?: 'home' | 'away';
+      /** FABLE/DNA — estilos ativados no dock ao vivo (ordem real). */
+      styleLog?: import('@/match/quickTacticalIntensity').TacticalIntensityLevel[];
+      /** FABLE/DNA — formação em campo no apito final. */
+      formation?: string;
+      /** FABLE/Cicatrizes — cobranças da CASA na disputa (quem converteu/errou). */
+      shootoutKicks?: { kickerId: string; scored: boolean }[];
+      /** FABLE/Cicatrizes — autores de gol da casa aos 85'+ no tempo normal. */
+      lateHeroIds?: string[];
     }
+  /** FABLE — Decreto da Semana: registra o voto do manager pra semana ISO atual. */
+  | { type: 'VOTE_WEEKLY_DECREE'; option: import('@/systems/weeklyDecree').DecreeOption }
+  /** FABLE — Decreto da Semana v2: aplica o VENCEDOR global (tally do Supabase). */
+  | { type: 'SET_WEEKLY_DECREE_GLOBAL'; weekKey: string; option: import('@/systems/weeklyDecree').DecreeOption | null }
   /** Liga Ole — cria o chaveamento de 32 times reais. `mode`/`weekKey` p/ Liga da Semana. */
   | { type: 'CREATE_LIGA_OLE'; liga: import('@/match/ligaOle/ligaOleModel').LigaOleState; mode?: 'classic' | 'weekly'; weekKey?: string }
   /** Liga Ole — a notificação do nêmesis (cross-user) já foi disparada; limpa o transitório. */

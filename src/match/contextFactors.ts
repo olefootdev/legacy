@@ -19,6 +19,8 @@
  */
 
 import type { EffectiveTeamStrength } from './availabilityReport';
+import { renownCrowdFactor } from '@/systems/renown';
+import { decreeEffects } from '@/systems/weeklyDecree';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Tipos
@@ -37,6 +39,12 @@ export interface MatchContextModifiers {
   importance: number;
   /** 0.80-1.00. Multiplica homeTeamAvg. Vem direto de EffectiveTeamStrength.depletionMultiplier. */
   squadDepletion: number;
+  /**
+   * 1.00-1.03. RENOME (Fable): fama tem preço — contra um clube muito mais
+   * famoso, o adversário se acende (multiplica opponentStrength). Opcional
+   * pra compat com construções antigas (ausente = 1.0).
+   */
+  renownPressure?: number;
   /** Detalhe legível pra UI/debug — cada fator com a razão. */
   breakdown: {
     homeAdvantage: string;
@@ -44,6 +52,8 @@ export interface MatchContextModifiers {
     derby: string;
     importance: string;
     depletion: string;
+    /** Presente quando o renome pesou no jogo. */
+    renown?: string;
   };
 }
 
@@ -58,6 +68,12 @@ export interface MatchContextInput {
   importance?: MatchImportance;
   /** Resultado da Fase 2 — força efetiva do XI. */
   effectiveTeamStrength?: EffectiveTeamStrength;
+  /** RENOME (Fable): fama do clube do user (0-1000+). Com oppRenown, gera renownPressure. */
+  myRenown?: number;
+  /** Renome estimado do adversário (0-1000+). */
+  oppRenown?: number;
+  /** DECRETO DA SEMANA (Fable 3): opção ativa muda pisos dos fatores. */
+  decree?: import('@/systems/weeklyDecree').DecreeOption | null;
 }
 
 export interface ApplyContextInput {
@@ -134,10 +150,21 @@ function clamp(n: number, [lo, hi]: readonly [number, number]): number {
  */
 export function computeMatchContextModifiers(input: MatchContextInput): MatchContextModifiers {
   const homeAdv = input.isHome ? HOME_ADVANTAGE_IN : HOME_ADVANTAGE_AWAY;
-  const rest = restMultiplierFromDays(input.daysSinceLastMatch);
-  const derby = input.isDerby ? DERBY_INTENSITY_BOOST : 1.0;
+  let rest = restMultiplierFromDays(input.daysSinceLastMatch);
+  let derby = input.isDerby ? DERBY_INTENSITY_BOOST : 1.0;
   const importance = IMPORTANCE_MULTS[input.importance ?? 'liga'];
   const depletion = input.effectiveTeamStrength?.depletionMultiplier ?? 1.0;
+
+  // DECRETO DA SEMANA — pisos escolhidos pela comunidade (Fable 3):
+  // espetáculo = todo jogo ferve um pouco; ferro = calendário protegido.
+  const decreeFx = decreeEffects(input.decree ?? null);
+  if (decreeFx.derbyIntensityFloor) derby = Math.max(derby, decreeFx.derbyIntensityFloor);
+  if (decreeFx.restMultiplierFloor) rest = Math.max(rest, decreeFx.restMultiplierFloor);
+
+  // RENOME — fama tem preço: o adversário se acende contra o clube famoso.
+  const renownPressure = input.myRenown != null && input.oppRenown != null
+    ? renownCrowdFactor(input.myRenown, input.oppRenown)
+    : 1.0;
 
   return {
     homeAdvantage: clamp(homeAdv, CAPS.homeAdvantage),
@@ -145,12 +172,18 @@ export function computeMatchContextModifiers(input: MatchContextInput): MatchCon
     derbyIntensity: clamp(derby, CAPS.derbyIntensity),
     importance: clamp(importance, CAPS.importance),
     squadDepletion: clamp(depletion, CAPS.squadDepletion),
+    renownPressure: clamp(renownPressure, [1.0, 1.03]),
     breakdown: {
       homeAdvantage: input.isHome ? 'Jogando em casa' : 'Visitante',
       rest: input.daysSinceLastMatch != null
         ? `${input.daysSinceLastMatch} dia${input.daysSinceLastMatch === 1 ? '' : 's'} desde o último jogo`
         : 'Descanso desconhecido',
-      derby: input.isDerby ? 'Clássico — torcida ferve' : 'Jogo normal',
+      derby: input.isDerby
+        ? 'Clássico — torcida ferve'
+        : decreeFx.derbyIntensityFloor
+          ? 'Semana do Espetáculo — todo jogo ferve'
+          : 'Jogo normal',
+      renown: renownPressure > 1.0 ? 'Sua fama acende o adversário' : undefined,
       importance: input.importance === 'final'
         ? 'Final — pressão máxima'
         : input.importance === 'decisao'
@@ -195,8 +228,9 @@ export function applyContextModifiers(
   //   isHome=true  → opponentMod = 0.96 (~3% mais fraco mas ainda PRESENTE)
   //                + derby boost (clássico = todos vão pra cima)
   //   isHome=false → opponentMod = 1.04 (mandante real recebe mando)
+  //   renownPressure → o adversário se acende contra o clube famoso (Fable).
   const opponentSymmetric = 2 - mods.homeAdvantage;
-  const opponentStrength = base.opponentStrength * opponentSymmetric * mods.derbyIntensity;
+  const opponentStrength = base.opponentStrength * opponentSymmetric * mods.derbyIntensity * (mods.renownPressure ?? 1.0);
 
   // Clamps de sanidade pra evitar valores absurdos no motor.
   const clampedHomeAvg = clamp(homeTeamAvg, [0, 100]);
