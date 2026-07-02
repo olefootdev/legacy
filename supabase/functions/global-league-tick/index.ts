@@ -1024,7 +1024,53 @@ async function recoverStaleLiveRound(supabase: any, now: number, state: StateRow
   };
 }
 
-Deno.serve(async (_req: Request) => {
+// Sequência COMPLETA de fim de temporada — coroa campeões por divisão →
+// promoção/rebaixamento → zera pontos/estatísticas da temporada → regenera as
+// rodadas pro próximo slot. Reutilizada pelo fim natural (alvo de pontos) e
+// pelo reset manual do admin. all_time_* é PRESERVADO (só season stats zeram).
+async function runSeasonReset(
+  supabase: any, state: StateRow, now: number,
+  cfg: { promoPct: number; relePct: number; slots: string[]; slotDurationMin: number },
+): Promise<Record<string, unknown>> {
+  const { data: tData } = await supabase.from('global_league_teams').select('*');
+  const teams = (tData as TeamRow[]) ?? [];
+  if (teams.length < 2) return { ok: false, step: 'season-reset', reason: 'not-enough-teams', count: teams.length };
+  const seasonId = `season_${now}`;
+  await crownDivisionChampions(supabase, teams, state, now);
+  const oldDivById = new Map(teams.map((t) => [t.id, t.division]));
+  const promoted = applyPromotionRelegationSoft(teams, cfg.promoPct, cfg.relePct);
+  await notifyPromotions(supabase, promoted, oldDivById);
+  const reorganized = promoted.map((t) => ({
+    ...t, points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
+    goals_for: 0, goals_against: 0, goal_difference: 0, recent_form: [], position: null,
+  }));
+  for (const t of reorganized) {
+    if (!t.division) {
+      t.division = 3; t.points = 0; t.matches_played = 0; t.wins = 0; t.draws = 0;
+      t.losses = 0; t.goals_for = 0; t.goals_against = 0; t.goal_difference = 0; t.recent_form = [];
+    }
+  }
+  await supabase.from('global_league_events').delete().neq('id', '');
+  await supabase.from('global_league_fixtures').delete().neq('id', '');
+  await supabase.from('global_league_rounds').delete().neq('id', '');
+  await supabase.from('global_league_teams').upsert(reorganized as any, { onConflict: 'id' });
+  const { data: after } = await supabase.from('global_league_teams').select('*');
+  const withDiv = (after as TeamRow[]) ?? [];
+  const { rounds, fixtures } = generateLeagueRoundsAndFixtures(withDiv, seasonId, now, cfg.slots, cfg.slotDurationMin);
+  if (rounds.length > 0) await supabase.from('global_league_rounds').upsert(rounds as any, { onConflict: 'id' });
+  if (fixtures.length > 0) await supabase.from('global_league_fixtures').upsert(fixtures as any, { onConflict: 'id' });
+  await supabase.from('global_league_state').update({
+    status: 'active', season_id: seasonId, season_name: `OLEFOOT LIGA — ${seasonId}`,
+    current_playoff_round: null, current_league_round: 1,
+  }).eq('id', 'current');
+  return {
+    ok: true, step: 'season-reset', seasonId,
+    teams: reorganized.length, rounds: rounds.length, fixtures: fixtures.length,
+    firstKickoffUtc: rounds[0] ? new Date(rounds[0].scheduled_kickoff_ms).toISOString() : null,
+  };
+}
+
+Deno.serve(async (req: Request) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -1041,6 +1087,23 @@ Deno.serve(async (_req: Request) => {
   const slotDurationMin = state.slot_duration_min ?? 30;
   const promoPct = Number(state.promotion_percentage);
   const relePct = Number(state.relegation_percentage);
+  // Alvo de pontos da temporada — TUNÁVEL via global_league_state.season_point_target
+  // (fallback pra constante). O admin controla a cadência sem redeploy.
+  const seasonTarget = Number(state.season_point_target) || SEASON_POINT_TARGET;
+
+  // ── RESET MANUAL DE TEMPORADA (admin) ──────────────────────────────────────
+  // Seguro e persistente: SÓ a SERVICE ROLE key dispara (o fundador, via
+  // dashboard/CLI). Roda a MESMA sequência do fim natural — pra anunciar uma
+  // temporada nova on-demand sem esperar o alvo de pontos.
+  //   curl -X POST <fn-url> -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
+  //        -H "x-admin-action: force-season-reset"
+  if (
+    req.headers.get('x-admin-action') === 'force-season-reset' &&
+    req.headers.get('Authorization') === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+  ) {
+    const result = await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
+    return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
+  }
   const competitionStartedMs = state.competition_started_at ? new Date(state.competition_started_at).getTime() : now;
   const competitionDurationMs = (state.competition_duration_days ?? 7) * 86_400_000;
   const competitionEndsMs = competitionStartedMs + competitionDurationMs;
@@ -1179,7 +1242,7 @@ Deno.serve(async (_req: Request) => {
       // meia-noite). De dia, mesmo com Div 1 ≥ 1000, a liga só ESTENDE — o reset
       // espera a janela noturna. Round-robins completam a cada ~3,7h, então a
       // janela 0–6h sempre pega uma conclusão → reset garantido na madrugada.
-      const seasonOver = div1Max >= SEASON_POINT_TARGET && brtHour(now) < SEASON_RESET_HOUR;
+      const seasonOver = div1Max >= seasonTarget && brtHour(now) < SEASON_RESET_HOUR;
       let reorganized: TeamRow[];
       if (seasonOver) {
         // FIM REAL DA TEMPORADA: coroa campeões → promo/rele → reseta pontos
