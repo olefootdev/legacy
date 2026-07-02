@@ -380,14 +380,14 @@ function DivisionStandings({ division, teams }: { division: number; teams: Globa
                   </td>
                   <td className="px-2 sm:px-4 py-2 sm:py-3 text-center">
                     <div className="flex flex-col items-center leading-tight">
+                      <span className="font-serif-hero text-base sm:text-lg font-bold text-neon-yellow">
+                        {team.points}
+                      </span>
                       <span
-                        className="font-serif-hero text-base sm:text-lg font-bold text-neon-yellow"
+                        className="font-mono text-[9px] text-white/40 mt-0.5"
                         title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
                       >
-                        {team.allTimePoints ?? 0}
-                      </span>
-                      <span className="font-mono text-[9px] text-white/40 mt-0.5">
-                        {team.points} (rodada)
+                        {team.allTimePoints ?? 0} hist.
                       </span>
                     </div>
                   </td>
@@ -594,14 +594,14 @@ function ProjectedDivisionMini({
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <div className="flex flex-col items-center leading-tight">
+                    <span className="font-serif-hero text-base font-bold text-neon-yellow">
+                      {team.playoffPoints}
+                    </span>
                     <span
-                      className="font-serif-hero text-base font-bold text-neon-yellow"
+                      className="font-mono text-[8px] text-white/40"
                       title={`Total acumulado em ${team.allTimeSeasonsPlayed ?? 0} temporada(s)`}
                     >
-                      {team.allTimePoints ?? 0}
-                    </span>
-                    <span className="font-mono text-[8px] text-white/40">
-                      {team.playoffPoints} (rodada)
+                      {team.allTimePoints ?? 0} hist.
                     </span>
                   </div>
                 </td>
