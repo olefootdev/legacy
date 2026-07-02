@@ -4,9 +4,9 @@ import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, Search, Star, Trophy, TrendingUp, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
-import { getFullRankingEntries, type RankingEntry } from '@/ranking/worldRanking';
 import type { LeagueScopeRankingEntry } from '@/ranking/leagueScopeRanking';
 import { getLeagueScopeRankingEntries } from '@/ranking/leagueScopeRanking';
+import { getGlobalLeagueRankingEntries } from '@/ranking/globalLeagueRanking';
 import { useRankingFavorites } from '@/ranking/useRankingFavorites';
 import { LEAGUE_SCOPE_LABELS } from '@/match/adminLeagues';
 import { BackButton } from '@/components/BackButton';
@@ -15,8 +15,19 @@ const PER_PAGE = 25;
 
 type RankingTabId = 'mundial' | 'nacional' | 'estadual';
 
+/** Linha da aba Mundial (times reais da Liga Global). Mesma forma da
+ *  LeagueScopeRankingEntry + a divisão pra badge. */
+type MundialEntry = {
+  team: string;
+  points: number;
+  isMe: boolean;
+  entryId: string;
+  division?: number;
+};
+type AnyRankRow = MundialEntry | LeagueScopeRankingEntry;
+
 const TAB_OPTIONS: { id: RankingTabId; label: string }[] = [
-  { id: 'mundial', label: 'Mundial (EXP)' },
+  { id: 'mundial', label: 'Mundial' },
   { id: 'nacional', label: LEAGUE_SCOPE_LABELS.national },
   { id: 'estadual', label: LEAGUE_SCOPE_LABELS.state },
 ];
@@ -24,8 +35,8 @@ const TAB_OPTIONS: { id: RankingTabId; label: string }[] = [
 const TAB_META: Record<RankingTabId, { icon: typeof Trophy; title: string; subtitle: string }> = {
   mundial: {
     icon: Trophy,
-    title: 'Global',
-    subtitle: 'Ordenação mundial por saldo EXP.',
+    title: 'Mundial',
+    subtitle: 'Pontos acumulados na Liga Global (histórico) — o placar de prestígio que sobrevive aos resets de temporada.',
   },
   nacional: {
     icon: TrendingUp,
@@ -63,10 +74,11 @@ function parseTab(raw: string | null): RankingTabId {
 
 export function RankingFull() {
   const club = useGameStore((s) => s.club);
-  const finance = useGameStore((s) => s.finance);
   const adminLeagues = useGameStore((s) => s.adminLeagues);
   const leagueSeason = useGameStore((s) => s.leagueSeason);
   const favoriteRealTeam = useGameStore((s) => s.userSettings.favoriteRealTeam);
+  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
   const { favorites, toggleFavorite } = useRankingFavorites();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -74,7 +86,7 @@ export function RankingFull() {
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedTeam, setSelectedTeam] = useState<(RankingEntry | LeagueScopeRankingEntry) & { globalRank: number } | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<(AnyRankRow & { globalRank: number }) | null>(null);
 
   useEffect(() => {
     const heart = searchParams.get('heart');
@@ -91,10 +103,23 @@ export function RankingFull() {
     );
   }, [searchParams, favoriteRealTeam?.name, setSearchParams]);
 
-  const mundialEntries = useMemo(
-    () => getFullRankingEntries(club.name, finance.ole, club.id),
-    [club.name, finance.ole, club.id],
-  );
+  // Aba Mundial = times REAIS da Liga Global (ordenados por pontos históricos).
+  // O "meu time" casa pelo mesmo critério do resto do app (email do manager).
+  const managerId = managerProfile?.email ?? club.id;
+  const mundialEntries = useMemo<MundialEntry[]>(() => {
+    const real = getGlobalLeagueRankingEntries(globalLeagueMVP?.teams, managerId, club.id);
+    if (real.length > 0) {
+      return real.map((r) => ({
+        team: r.team,
+        points: r.score,
+        isMe: r.isMe,
+        entryId: r.entryId,
+        division: r.division,
+      }));
+    }
+    // Fallback: liga ainda não carregou → mostra ao menos o próprio clube.
+    return [{ team: club.name, points: 0, isMe: true, entryId: club.id }];
+  }, [globalLeagueMVP, managerId, club.name, club.id]);
 
   const nacionalEntries = useMemo(
     () => getLeagueScopeRankingEntries(adminLeagues, 'national', club.name, club.shortName, leagueSeason),
@@ -109,7 +134,7 @@ export function RankingFull() {
   const activeList =
     tab === 'mundial' ? mundialEntries : tab === 'nacional' ? nacionalEntries : estadualEntries;
 
-  type RowWithRank = (RankingEntry | LeagueScopeRankingEntry) & { globalRank: number };
+  type RowWithRank = AnyRankRow & { globalRank: number };
 
   const withGlobalRank = useMemo<RowWithRank[]>(
     () => activeList.map((row, i) => ({ ...row, globalRank: i + 1 })),
@@ -262,7 +287,7 @@ export function RankingFull() {
                 <th style={{ width: '3.5rem' }} className="text-center">#</th>
                 <th>Equipe</th>
                 <th style={{ width: '8rem' }} className="text-center">
-                  {tab === 'mundial' ? 'EXP' : 'Pontos'}
+                  Pontos
                 </th>
                 <th style={{ width: '3rem' }} className="text-center">★</th>
               </tr>
@@ -279,7 +304,7 @@ export function RankingFull() {
                       }}
                     >
                       {tab === 'mundial'
-                        ? '"nenhum time encontrado."'
+                        ? '"a liga global ainda está carregando…"'
                         : '"configura ligas no /admin."'}
                     </p>
                   </td>
@@ -312,6 +337,20 @@ export function RankingFull() {
                         >
                           {row.team}
                         </span>
+                        {'division' in row && row.division && (
+                          <span
+                            className="ml-2 align-middle inline-block px-1.5 py-0.5 border border-white/15 text-white/55"
+                            style={{
+                              fontFamily: 'var(--font-display)',
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              letterSpacing: '0.14em',
+                              borderRadius: 'var(--radius-sm)',
+                            }}
+                          >
+                            D{row.division}
+                          </span>
+                        )}
                         {row.isMe && (
                           <span
                             className="ml-2 text-neon-yellow/70"
@@ -340,7 +379,7 @@ export function RankingFull() {
                           letterSpacing: '-0.02em',
                         }}
                       >
-                        {'exp' in row ? formatExpSmart(row.exp) : row.points}
+                        {formatExpSmart(row.points)}
                       </span>
                     </td>
                     <td className="text-center">
@@ -519,7 +558,7 @@ export function RankingFull() {
                       fontWeight: 600,
                     }}
                   >
-                    {tab === 'mundial' ? 'EXP Total' : 'Pontos'}
+                    {tab === 'mundial' ? 'Pontos (histórico)' : 'Pontos'}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-2">
@@ -532,9 +571,7 @@ export function RankingFull() {
                       letterSpacing: '-0.02em',
                     }}
                   >
-                    {'exp' in selectedTeam
-                      ? selectedTeam.exp.toLocaleString('pt-BR')
-                      : selectedTeam.points.toLocaleString('pt-BR')}
+                    {selectedTeam.points.toLocaleString('pt-BR')}
                   </span>
                   <span
                     className="text-white/40 uppercase"
@@ -544,7 +581,7 @@ export function RankingFull() {
                       letterSpacing: '0.18em',
                     }}
                   >
-                    {'exp' in selectedTeam ? 'EXP' : 'pts'}
+                    pts
                   </span>
                 </div>
               </div>
@@ -578,13 +615,8 @@ export function RankingFull() {
                     {(() => {
                       const leader = withGlobalRank[0];
                       if (!leader) return '—';
-                      const diff =
-                        'exp' in selectedTeam && 'exp' in leader
-                          ? leader.exp - selectedTeam.exp
-                          : 'points' in selectedTeam && 'points' in leader
-                            ? leader.points - selectedTeam.points
-                            : 0;
-                      return `${diff.toLocaleString('pt-BR')} ${tab === 'mundial' ? 'EXP' : 'pts'}`;
+                      const diff = leader.points - selectedTeam.points;
+                      return `${diff.toLocaleString('pt-BR')} pts`;
                     })()}
                   </span>
                 </div>
