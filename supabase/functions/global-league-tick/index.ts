@@ -1092,17 +1092,26 @@ Deno.serve(async (req: Request) => {
   const seasonTarget = Number(state.season_point_target) || SEASON_POINT_TARGET;
 
   // ── RESET MANUAL DE TEMPORADA (admin) ──────────────────────────────────────
-  // Seguro e persistente: SÓ a SERVICE ROLE key dispara (o fundador, via
-  // dashboard/CLI). Roda a MESMA sequência do fim natural — pra anunciar uma
-  // temporada nova on-demand sem esperar o alvo de pontos.
-  //   curl -X POST <fn-url> -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
-  //        -H "x-admin-action: force-season-reset"
-  if (
-    req.headers.get('x-admin-action') === 'force-season-reset' &&
-    req.headers.get('Authorization') === `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-  ) {
-    const result = await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
-    return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
+  // Guardado por um SEGREDO DEDICADO que o fundador define e só ele conhece
+  // (env LEAGUE_ADMIN_SECRET). Não depende da service key, não vaza metadados.
+  // Se o segredo não estiver configurado, o gatilho fica DESLIGADO (fail-safe).
+  //   1) supabase secrets set LEAGUE_ADMIN_SECRET=<valor-forte>   (o fundador escolhe)
+  //   2) curl -X POST "<fn-url>?admin_action=force-season-reset" -H "x-admin-key: <valor>"
+  const adminAction = req.headers.get('x-admin-action')
+    ?? new URL(req.url).searchParams.get('admin_action');
+  if (adminAction === 'force-season-reset') {
+    const adminSecret = Deno.env.get('LEAGUE_ADMIN_SECRET') ?? '';
+    const provided = req.headers.get('x-admin-key')?.trim() ?? '';
+    if (adminSecret.length >= 8 && provided === adminSecret) {
+      const result = await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
+      return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({
+      ok: false, step: 'force-reset-denied',
+      reason: adminSecret.length < 8
+        ? 'LEAGUE_ADMIN_SECRET não configurado (rode: supabase secrets set LEAGUE_ADMIN_SECRET=...)'
+        : 'x-admin-key não confere',
+    }), { headers: { 'Content-Type': 'application/json' } });
   }
   const competitionStartedMs = state.competition_started_at ? new Date(state.competition_started_at).getTime() : now;
   const competitionDurationMs = (state.competition_duration_days ?? 7) * 86_400_000;
