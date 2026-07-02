@@ -1070,6 +1070,54 @@ async function runSeasonReset(
   };
 }
 
+// RESET ABSOLUTO — zera TUDO (temporada + histórico all-time + coroas + diário +
+// rivalidades), redistribui as divisões por força (seed limpo) e regenera as
+// rodadas. Preserva só identidade (id/manager/nome/força) e engajamento (é do
+// manager, re-sincroniza sozinho). DESTRUTIVO e IRREVERSÍVEL — faça backup antes.
+// NÃO mexe nas tabelas-log separadas (champions/ko_prizes/crowns gallery).
+async function runFullWipe(
+  supabase: any, now: number, slots: string[], slotDurationMin: number,
+): Promise<Record<string, unknown>> {
+  const { data: tData } = await supabase.from('global_league_teams').select('*');
+  const teams = (tData as TeamRow[]) ?? [];
+  if (teams.length < 2) return { ok: false, step: 'full-wipe', reason: 'not-enough-teams', count: teams.length };
+  const seasonId = `season_${now}`;
+  const wiped = teams.map((t) => ({
+    ...t,
+    points: 0, matches_played: 0, wins: 0, draws: 0, losses: 0,
+    goals_for: 0, goals_against: 0, goal_difference: 0, recent_form: [],
+    position: null, previous_position: null,
+    playoff_points: 0, playoff_matches_played: 0, playoff_wins: 0, playoff_draws: 0,
+    playoff_losses: 0, playoff_goals_for: 0, playoff_goals_against: 0,
+    all_time_points: 0, all_time_matches_played: 0, all_time_wins: 0, all_time_draws: 0,
+    all_time_losses: 0, all_time_goals_for: 0, all_time_goals_against: 0, all_time_seasons_played: 0,
+    season_crowns: 0, all_time_crowns: 0,
+    daily_points: 0, daily_matches_played: 0, daily_wins: 0, daily_draws: 0, daily_losses: 0,
+    daily_goals_for: 0, daily_goals_against: 0, daily_goal_difference: 0,
+    injury_modifier: 0, injury_rounds_remaining: 0, yellow_card_count: 0, suspension_rounds_remaining: 0,
+    rivalry_encounters: {},
+  }));
+  const distributed = distributeIntoDivisions(wiped);
+  await supabase.from('global_league_events').delete().neq('id', '');
+  await supabase.from('global_league_fixtures').delete().neq('id', '');
+  await supabase.from('global_league_rounds').delete().neq('id', '');
+  await supabase.from('global_league_teams').upsert(distributed as any, { onConflict: 'id' });
+  const { data: after } = await supabase.from('global_league_teams').select('*');
+  const withDiv = (after as TeamRow[]) ?? [];
+  const { rounds, fixtures } = generateLeagueRoundsAndFixtures(withDiv, seasonId, now, slots, slotDurationMin);
+  if (rounds.length > 0) await supabase.from('global_league_rounds').upsert(rounds as any, { onConflict: 'id' });
+  if (fixtures.length > 0) await supabase.from('global_league_fixtures').upsert(fixtures as any, { onConflict: 'id' });
+  await supabase.from('global_league_state').update({
+    status: 'active', season_id: seasonId, season_name: `OLEFOOT LIGA — ${seasonId}`,
+    current_playoff_round: null, current_league_round: 1,
+  }).eq('id', 'current');
+  return {
+    ok: true, step: 'full-wipe', seasonId,
+    teams: distributed.length, rounds: rounds.length, fixtures: fixtures.length,
+    firstKickoffUtc: rounds[0] ? new Date(rounds[0].scheduled_kickoff_ms).toISOString() : null,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -1096,14 +1144,18 @@ Deno.serve(async (req: Request) => {
   // (env LEAGUE_ADMIN_SECRET). Não depende da service key, não vaza metadados.
   // Se o segredo não estiver configurado, o gatilho fica DESLIGADO (fail-safe).
   //   1) supabase secrets set LEAGUE_ADMIN_SECRET=<valor-forte>   (o fundador escolhe)
-  //   2) curl -X POST "<fn-url>?admin_action=force-season-reset" -H "x-admin-key: <valor>"
+  //   2a) reset SUAVE (mantém histórico): ?admin_action=force-season-reset
+  //   2b) reset ABSOLUTO (zera histórico tb): ?admin_action=force-full-wipe
+  //       curl -X POST "<fn-url>?admin_action=<acao>" -H "x-admin-key: <valor>"
   const adminAction = req.headers.get('x-admin-action')
     ?? new URL(req.url).searchParams.get('admin_action');
-  if (adminAction === 'force-season-reset') {
+  if (adminAction === 'force-season-reset' || adminAction === 'force-full-wipe') {
     const adminSecret = Deno.env.get('LEAGUE_ADMIN_SECRET') ?? '';
     const provided = req.headers.get('x-admin-key')?.trim() ?? '';
     if (adminSecret.length >= 8 && provided === adminSecret) {
-      const result = await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
+      const result = adminAction === 'force-full-wipe'
+        ? await runFullWipe(supabase, now, slots, slotDurationMin)
+        : await runSeasonReset(supabase, state, now, { promoPct, relePct, slots, slotDurationMin });
       return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({
