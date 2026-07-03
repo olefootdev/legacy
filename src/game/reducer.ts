@@ -4336,6 +4336,36 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       return syncWalletToFinance(state, result.state);
     }
+    case 'WALLET_RESTORE_SNAPSHOT': {
+      const w = walletOf(state);
+      // Só restaura em wallet "vazia" (navegador limpo / novo dispositivo).
+      // Nunca sobrescreve estado local que já tem dados duráveis.
+      const hasLocalDurable =
+        (w.olexpPositions?.length ?? 0) > 0 ||
+        (w.gatPositions?.length ?? 0) > 0 ||
+        (w.ledger?.length ?? 0) > 0;
+      if (hasLocalDurable) return state;
+
+      const snap = action.snapshot;
+      // Restaura só a data DURÁVEL. Saldos spot ficam do estado atual (o dinheiro
+      // vem do servidor via créditos — confiar no snapshot inflaria saldo).
+      const restored: import('@/wallet/types').WalletState = {
+        ...w,
+        olexpPositions: snap.olexpPositions ?? [],
+        gatPositions: snap.gatPositions ?? [],
+        ledger: snap.ledger ?? [],
+        referralTree: snap.referralTree ?? w.referralTree,
+        referralCommissions: snap.referralCommissions ?? w.referralCommissions,
+        kycOlexpDone: snap.kycOlexpDone ?? w.kycOlexpDone,
+        hasCompletedSwapKyc: snap.hasCompletedSwapKyc ?? w.hasCompletedSwapKyc,
+        kycProfile: snap.kycProfile ?? w.kycProfile,
+        myReferralCode: snap.myReferralCode ?? w.myReferralCode,
+        sponsorId: snap.sponsorId ?? w.sponsorId,
+        spotBroCents: state.finance.broCents,
+        spotExpBalance: w.spotExpBalance,
+      };
+      return syncWalletToFinance(state, restored);
+    }
     case 'WALLET_ACCRUE_DAILY': {
       let w = { ...walletOf(state), spotBroCents: state.finance.broCents };
       w = accrueOlexpDaily(w, action.dateIso);

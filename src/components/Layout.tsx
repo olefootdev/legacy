@@ -30,6 +30,7 @@ import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { signOutGame } from '@/supabase/auth';
 import { hydrateManagerFirstNameFromSupabase } from '@/supabase/profileDisplayName';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
+import { restoreWalletIfEmpty, startWalletAutoBackup } from '@/wallet/walletDurability';
 import { LegacyOlefootWelcomeToast } from '@/components/LegacyOlefootWelcomeToast';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
@@ -113,8 +114,14 @@ export function Layout({ children }: { children: ReactNode }) {
       const remote = await hydrateManagerFirstNameFromSupabase(readLocal());
       if (!cancelled) setRemoteManagerFirst(remote);
     };
+    // Restaura o "tesouro" (posições OLEXP/GAT + ledger) da nuvem se o
+    // localStorage estiver vazio (navegador limpo), depois liga o auto-backup.
+    const syncWalletDurability = () => {
+      void restoreWalletIfEmpty().finally(() => startWalletAutoBackup());
+    };
     void run();
     void applyPendingCredits();
+    syncWalletDurability();
     const sb = getSupabase();
     if (!sb) {
       return () => { cancelled = true; };
@@ -122,6 +129,7 @@ export function Layout({ children }: { children: ReactNode }) {
     const { data: { subscription } } = sb.auth.onAuthStateChange(() => {
       void run();
       void applyPendingCredits();
+      syncWalletDurability();
     });
     return () => {
       cancelled = true;

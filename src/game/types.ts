@@ -715,6 +715,11 @@ export type GameAction =
   | { type: 'CLAIM_PASSIVE_STRUCTURE_INCOME' }
   /** Envio de SPOT BRO para outro utilizador pelo código de indicação (MVP cliente). */
   | { type: 'WALLET_TRANSFER_BRO_BY_CODE'; recipientCode: string; amountCents: number }
+  /** Restaura posições OLEXP/GAT + ledger de um backup na nuvem quando a wallet
+   *  local está vazia (navegador limpo / novo dispositivo). NÃO restaura saldos
+   *  spot (dinheiro vem do servidor via créditos). Guarda contra sobrescrever
+   *  estado local com dados duráveis já presentes. */
+  | { type: 'WALLET_RESTORE_SNAPSHOT'; snapshot: import('@/wallet/types').WalletState }
   | { type: 'WALLET_ACCRUE_DAILY'; dateIso: string }
   | {
       type: 'WALLET_GAT_PURCHASE';
