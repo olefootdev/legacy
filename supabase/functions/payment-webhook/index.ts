@@ -1,44 +1,36 @@
 // deno-lint-ignore-file no-explicit-any
 // Olefoot — payment-webhook
 //
-// Recebe webhooks da Abacate Pay (https://docs.abacatepay.com/pages/webhooks).
-// Valida HMAC-SHA256 via header X-Webhook-Signature.
+// Recebe webhooks do Mercado Pago (https://www.mercadopago.com.br/developers
+//   → Notifications → Webhooks).
+// Valida a assinatura HMAC-SHA256 via header X-Signature + X-Request-Id.
 // Idempotência via payment_webhooks_log.event_id UNIQUE.
 //
-// Evento crítico: transparent.completed → chama confirm_payment_intent RPC.
+// Fluxo: o webhook do MP é "magro" — só traz data.id (id do pagamento). Pra
+// saber o status real fazemos GET /v1/payments/{id} com o access token.
+// Quando status='approved' → chama confirm_payment_intent RPC.
 //
 // IMPORTANTE: deploy com verify_jwt: false — webhook é público.
-// Secret HMAC vive em env var ABACATE_WEBHOOK_SECRET (Supabase dashboard).
+// Segredos (Supabase dashboard → Edge Functions → Secrets):
+//   MP_ACCESS_TOKEN     — pra consultar o pagamento
+//   MP_WEBHOOK_SECRET   — a "chave secreta" da assinatura (painel MP → Webhooks)
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-// Chave pública HMAC da AbacatePay (a mesma pra todos clientes — não é segredo).
-// Conforme https://docs.abacatepay.com/pages/webhooks
-const ABACATE_PUBLIC_HMAC_KEY = 't9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9';
+const MP_API_BASE = 'https://api.mercadopago.com';
 
-interface AbacateWebhookPayload {
-  id: string;            // event id (log_abc123...)
-  event: string;         // ex: 'transparent.completed'
-  apiVersion: number;
-  devMode: boolean;
-  data: {
-    // Estrutura real do Abacate v2:
-    // data.transparent.{id, externalId, status, metadata.intent_id}
-    transparent?: {
-      id?: string;
-      externalId?: string | null;
-      status?: string;
-      amount?: number;
-      metadata?: Record<string, unknown>;
-      [k: string]: any;
-    };
-    customer?: Record<string, any>;
-    [k: string]: any;
-  };
+interface MpWebhookBody {
+  id?: number | string;          // id da notificação
+  type?: string;                 // 'payment'
+  action?: string;               // 'payment.created' | 'payment.updated'
+  live_mode?: boolean;
+  date_created?: string;
+  data?: { id?: string };        // id do recurso (pagamento)
+  [k: string]: any;
 }
 
-async function computeHmac(secret: string, body: string): Promise<{ base64: string; hex: string }> {
+async function hmacHex(secret: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -47,14 +39,11 @@ async function computeHmac(secret: string, body: string): Promise<{ base64: stri
     false,
     ['sign'],
   );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
   const bytes = new Uint8Array(signature);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  const base64 = btoa(binary);
   let hex = '';
   for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0');
-  return { base64, hex };
+  return hex;
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -62,6 +51,19 @@ function timingSafeEqual(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+/** Extrai { ts, v1 } do header x-signature: "ts=1704908010,v1=abcdef..." */
+function parseSignatureHeader(header: string): { ts: string; v1: string } {
+  let ts = '';
+  let v1 = '';
+  for (const part of header.split(',')) {
+    const [k, val] = part.split('=');
+    const key = (k ?? '').trim();
+    if (key === 'ts') ts = (val ?? '').trim();
+    else if (key === 'v1') v1 = (val ?? '').trim();
+  }
+  return { ts, v1 };
 }
 
 Deno.serve(async (req: Request) => {
@@ -77,36 +79,12 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  const url = new URL(req.url);
   const rawBody = await req.text();
-  const signatureHeader = req.headers.get('x-webhook-signature') ?? '';
-  // Usa a chave pública hardcoded (não o secret do webhook — esse é outro mecanismo).
-  const secret = ABACATE_PUBLIC_HMAC_KEY;
 
-  // 1. Valida assinatura HMAC
-  let signatureValid = false;
-  let signatureDebug = '';
-  if (secret) {
-    try {
-      const { base64, hex } = await computeHmac(secret, rawBody);
-      // Tenta base64 primeiro (doc Abacate), depois hex como fallback
-      if (timingSafeEqual(base64, signatureHeader)) {
-        signatureValid = true;
-      } else if (timingSafeEqual(hex, signatureHeader)) {
-        signatureValid = true;
-      } else {
-        signatureDebug = `mismatch base64_prefix=${base64.slice(0, 10)} hex_prefix=${hex.slice(0, 10)} received_prefix=${signatureHeader.slice(0, 10)} body_len=${rawBody.length}`;
-        console.warn('[payment-webhook]', signatureDebug);
-      }
-    } catch (e) {
-      console.error('hmac error', e);
-      signatureDebug = `hmac_error: ${e instanceof Error ? e.message : String(e)}`;
-    }
-  }
-
-  // 2. Parse payload
-  let payload: AbacateWebhookPayload;
+  let body: MpWebhookBody;
   try {
-    payload = JSON.parse(rawBody) as AbacateWebhookPayload;
+    body = JSON.parse(rawBody) as MpWebhookBody;
   } catch {
     return new Response(JSON.stringify({ ok: false, error: 'invalid_json' }), {
       status: 400,
@@ -114,22 +92,58 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // 3. Loga (idempotência via UNIQUE event_id)
+  // O id do recurso (pagamento) usado no manifesto da assinatura vem do query
+  // param data.id (fallback pro corpo). MP normaliza alfanuméricos p/ minúsculo.
+  const dataIdRaw = url.searchParams.get('data.id') ?? (body.data?.id != null ? String(body.data.id) : '');
+  const dataId = dataIdRaw ? dataIdRaw.toLowerCase() : '';
+  const notificationType = url.searchParams.get('type') ?? body.type ?? '';
+
+  // ── 1. Valida assinatura HMAC (obrigatória — sem exceções) ──────────────
+  const secret = Deno.env.get('MP_WEBHOOK_SECRET') ?? '';
+  const signatureHeader = req.headers.get('x-signature') ?? '';
+  const requestId = req.headers.get('x-request-id') ?? '';
+  let signatureValid = false;
+  let signatureDebug = '';
+
+  if (!secret) {
+    signatureDebug = 'missing_MP_WEBHOOK_SECRET';
+  } else {
+    const { ts, v1 } = parseSignatureHeader(signatureHeader);
+    if (!ts || !v1) {
+      signatureDebug = `malformed_signature header_prefix=${signatureHeader.slice(0, 12)}`;
+    } else {
+      const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+      try {
+        const expected = await hmacHex(secret, manifest);
+        signatureValid = timingSafeEqual(expected, v1);
+        if (!signatureValid) {
+          signatureDebug = `mismatch expected_prefix=${expected.slice(0, 10)} v1_prefix=${v1.slice(0, 10)} dataId=${dataId}`;
+        }
+      } catch (e) {
+        signatureDebug = `hmac_error: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
+  }
+
+  // id de evento pra idempotência: notificação + recurso (retries repetem os dois)
+  const eventId = `${body.id ?? 'noid'}:${dataId || 'nodata'}`;
+
+  // ── 2. Loga (idempotência via UNIQUE event_id) ──────────────────────────
   const { error: logErr } = await supabase
     .from('payment_webhooks_log')
     .insert({
-      event_id: payload.id,
-      event_type: payload.event,
-      raw_payload: payload as any,
+      event_id: eventId,
+      event_type: body.action ?? notificationType ?? 'unknown',
+      raw_payload: body as any,
       signature_header: signatureHeader,
       signature_valid: signatureValid,
     });
 
   if (logErr) {
-    // Se for duplicate (UNIQUE event_id), retorna 200 — idempotência
     if (logErr.code === '23505') {
+      // Duplicate → idempotência. 200 pra o MP parar de reenviar.
       return new Response(
-        JSON.stringify({ ok: true, step: 'duplicate_event', eventId: payload.id }),
+        JSON.stringify({ ok: true, step: 'duplicate_event', eventId }),
         { headers: { 'Content-Type': 'application/json' } },
       );
     }
@@ -139,94 +153,118 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // 4. Se assinatura inválida e há secret configurado → recusa
-  //    EXCEÇÃO: payload.devMode === true bypassa HMAC (sandbox Abacate só envia
-  //    devMode=true quando key sandbox criou a charge — em produção sempre false).
-  const isDevMode = payload.devMode === true;
-  if (secret && !signatureValid && !isDevMode) {
+  // ── 3. Assinatura inválida → recusa (sem bypass) ────────────────────────
+  if (!signatureValid) {
     await supabase
       .from('payment_webhooks_log')
       .update({ error_message: `invalid_signature ${signatureDebug}` })
-      .eq('event_id', payload.id);
+      .eq('event_id', eventId);
 
-    return new Response(JSON.stringify({ ok: false, error: 'invalid_signature', debug: signatureDebug }), {
+    console.warn('[payment-webhook] invalid_signature', signatureDebug);
+    return new Response(JSON.stringify({ ok: false, error: 'invalid_signature' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  if (secret && !signatureValid && isDevMode) {
-    console.warn('[payment-webhook] dev_mode_bypass — accepting despite HMAC mismatch', signatureDebug);
-  }
 
-  // 5. Processa evento
+  // ── 4. Processa evento de pagamento ─────────────────────────────────────
   let intentId: string | null = null;
   let processedAt: string | null = null;
   let errorMessage: string | null = null;
 
-  if (payload.event === 'transparent.completed') {
-    const transparent = payload.data?.transparent ?? {};
-    const externalId = transparent.externalId ?? null;
-    const abacateId = transparent.id ?? null;
-    const status = transparent.status ?? null;
-    const intentIdFromMetadata = (transparent.metadata as Record<string, unknown> | undefined)?.intent_id as string | undefined;
+  const isPaymentEvent = notificationType === 'payment' || (body.action ?? '').startsWith('payment');
 
-    if (status !== 'PAID' && status !== 'APPROVED' && status !== 'COMPLETE') {
-      errorMessage = `status_not_paid: ${status}`;
+  if (isPaymentEvent && dataIdRaw) {
+    const accessToken = Deno.env.get('MP_ACCESS_TOKEN') ?? '';
+    if (!accessToken) {
+      errorMessage = 'missing_MP_ACCESS_TOKEN';
     } else {
-      // Estratégia em cascata pra achar o intent:
-      // 1. metadata.intent_id (mais confiável — vem do que enviamos)
-      // 2. externalId (fallback se metadata não veio)
-      // 3. abacate_id (último recurso, busca pelo charge id salvo no UPDATE)
-      let intent: { id: string; status: string; user_id: string } | null = null;
+      // GET /v1/payments/{id} — fonte da verdade do status.
+      const mpRes = await fetch(`${MP_API_BASE}/v1/payments/${encodeURIComponent(dataIdRaw)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
-      if (intentIdFromMetadata) {
-        const { data } = await supabase
-          .from('payment_intents')
-          .select('id, status, user_id')
-          .eq('id', intentIdFromMetadata)
-          .maybeSingle();
-        if (data) intent = data;
-      }
-
-      if (!intent && externalId) {
-        const { data } = await supabase
-          .from('payment_intents')
-          .select('id, status, user_id')
-          .eq('external_id', externalId)
-          .maybeSingle();
-        if (data) intent = data;
-      }
-
-      if (!intent && abacateId) {
-        const { data } = await supabase
-          .from('payment_intents')
-          .select('id, status, user_id')
-          .eq('abacate_id', abacateId)
-          .maybeSingle();
-        if (data) intent = data;
-      }
-
-      if (!intent) {
-        errorMessage = `intent_not_found:metadata=${intentIdFromMetadata}|ext=${externalId}|abacate=${abacateId}`;
+      if (!mpRes.ok) {
+        errorMessage = `mp_fetch_failed:${mpRes.status}`;
       } else {
-        intentId = intent.id;
-        const { error: confirmErr } = await supabase.rpc('confirm_payment_intent', {
-          p_intent_id: intent.id,
-          p_abacate_id: abacateId ?? null,
-        });
-        if (confirmErr) {
-          errorMessage = `confirm_rpc_failed: ${confirmErr.message}`;
-        } else {
+        const payment = (await mpRes.json().catch(() => ({}))) as {
+          id?: number;
+          status?: string;
+          transaction_amount?: number;      // valor em reais
+          external_reference?: string | null;
+          metadata?: Record<string, unknown> | null;
+        };
+        const status = payment.status ?? null;
+
+        if (status !== 'approved') {
+          // pending / in_process / rejected / cancelled — nada a fazer ainda.
+          // NÃO é erro: a aprovação chega depois como outra notificação
+          // (payment.updated). Marca como recebido (200) pra o MP não reenviar.
           processedAt = new Date().toISOString();
+        } else {
+          const externalRef = payment.external_reference ?? null;
+          const intentFromMeta = (payment.metadata as Record<string, unknown> | undefined)?.intent_id as string | undefined;
+          const mpPaymentId = payment.id != null ? String(payment.id) : dataIdRaw;
+
+          // Acha a intent: external_reference (= external_id) → metadata.intent_id → abacate_id
+          let intent: { id: string; status: string; user_id: string; amount_cents: number } | null = null;
+
+          if (externalRef) {
+            const { data } = await supabase
+              .from('payment_intents')
+              .select('id, status, user_id, amount_cents')
+              .eq('external_id', externalRef)
+              .maybeSingle();
+            if (data) intent = data;
+          }
+          if (!intent && intentFromMeta) {
+            const { data } = await supabase
+              .from('payment_intents')
+              .select('id, status, user_id, amount_cents')
+              .eq('id', intentFromMeta)
+              .maybeSingle();
+            if (data) intent = data;
+          }
+          if (!intent) {
+            const { data } = await supabase
+              .from('payment_intents')
+              .select('id, status, user_id, amount_cents')
+              .eq('abacate_id', mpPaymentId)
+              .maybeSingle();
+            if (data) intent = data;
+          }
+
+          if (!intent) {
+            errorMessage = `intent_not_found:ext=${externalRef}|meta=${intentFromMeta}|mp=${mpPaymentId}`;
+          } else {
+            // Confere o VALOR pago vs o pedido — bloqueia pagamento parcial/adulterado
+            // creditando o produto cheio. transaction_amount vem em reais.
+            const paidCents = Math.round((payment.transaction_amount ?? 0) * 100);
+            if (paidCents !== intent.amount_cents) {
+              intentId = intent.id;
+              errorMessage = `amount_mismatch:paid=${paidCents}|expected=${intent.amount_cents}`;
+            } else {
+              intentId = intent.id;
+              const { error: confirmErr } = await supabase.rpc('confirm_payment_intent', {
+                p_intent_id: intent.id,
+                p_abacate_id: mpPaymentId,
+              });
+              if (confirmErr) {
+                errorMessage = `confirm_rpc_failed: ${confirmErr.message}`;
+              } else {
+                processedAt = new Date().toISOString();
+              }
+            }
+          }
         }
       }
     }
   } else {
-    // Outros eventos (refund/dispute/cancel) ficam aqui pra futuras fases
-    processedAt = new Date().toISOString(); // marca como recebido mas não-acionado
+    // Outros tópicos (merchant_order, etc) — recebido mas não-acionado.
+    processedAt = new Date().toISOString();
   }
 
-  // 6. Atualiza log
+  // ── 5. Atualiza log ─────────────────────────────────────────────────────
   await supabase
     .from('payment_webhooks_log')
     .update({
@@ -234,13 +272,13 @@ Deno.serve(async (req: Request) => {
       processed_at: processedAt,
       error_message: errorMessage,
     })
-    .eq('event_id', payload.id);
+    .eq('event_id', eventId);
 
   return new Response(
     JSON.stringify({
       ok: !errorMessage,
       step: 'webhook_processed',
-      event: payload.event,
+      type: notificationType,
       intentId,
       error: errorMessage,
     }),

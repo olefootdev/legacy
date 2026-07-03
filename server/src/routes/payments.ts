@@ -1,21 +1,25 @@
 /**
- * Payments — integração Abacate Pay (PIX).
+ * Payments — integração Mercado Pago (PIX).
  *
  * Fluxo:
  *   1. Front chama POST /api/payments/pix/create com produto + dados do user
  *   2. Cria payment_intent no Supabase (security definer via auth.uid)
- *   3. Chama POST /v2/transparents/create no Abacate Pay
- *   4. Persiste brCode/brCodeBase64 no intent
+ *   3. Chama POST /v1/payments no Mercado Pago (payment_method_id='pix')
+ *   4. Persiste brCode (qr_code copia-e-cola) + brCodeBase64 (QR PNG) no intent
  *   5. Retorna pro front: { intentId, brCode, brCodeBase64, expiresAt }
  *
  * O resto (confirmação) é via webhook → edge function payment-webhook.
+ *
+ * NOTA: a coluna payment_intents.abacate_id (nome legado) agora guarda o
+ * payment id do Mercado Pago. As RPCs create/update/confirm continuam
+ * agnósticas de provedor — só este arquivo e o webhook falam com o MP.
  */
 
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
 
-const ABACATE_API_BASE = 'https://api.abacatepay.com/v2';
+const MP_API_BASE = 'https://api.mercadopago.com';
 
 interface CreatePixBody {
   product_kind?: 'activation_pack' | 'card' | 'recharge';
@@ -31,18 +35,22 @@ interface CreatePixBody {
   metadata?: Record<string, unknown>;
 }
 
-interface AbacateChargeResponse {
-  data?: {
-    id?: string;
-    status?: string;
-    brCode?: string;
-    brCodeBase64?: string;
-    amount?: number;
-    expiresAt?: string;
-    devMode?: boolean;
+interface MpPaymentResponse {
+  id?: number;
+  status?: string;
+  live_mode?: boolean;
+  date_of_expiration?: string;
+  point_of_interaction?: {
+    transaction_data?: {
+      qr_code?: string;        // copia-e-cola (brCode)
+      qr_code_base64?: string; // PNG base64
+      ticket_url?: string;
+    };
   };
-  error?: string | null;
-  success?: boolean;
+  // Erros do MP vêm em { message, error, status, cause: [...] }
+  message?: string;
+  error?: string;
+  cause?: Array<{ code?: string | number; description?: string }>;
 }
 
 async function resolveUser(authHeader: string | undefined): Promise<{ id: string; email?: string } | null> {
@@ -61,6 +69,28 @@ function bracketsFromError(e: unknown): string {
   return String(e);
 }
 
+/**
+ * Formata uma Date no fuso de Brasília (-03:00, sem horário de verão desde 2019)
+ * no padrão ISO-8601 com offset que o Mercado Pago exige em date_of_expiration.
+ * Ex: 2026-07-03T20:00:00.000-03:00
+ */
+function toMpExpiry(d: Date): string {
+  const shifted = new Date(d.getTime() - 3 * 60 * 60 * 1000); // wall clock -03:00
+  const p = (n: number, len = 2) => String(n).padStart(len, '0');
+  return (
+    `${shifted.getUTCFullYear()}-${p(shifted.getUTCMonth() + 1)}-${p(shifted.getUTCDate())}` +
+    `T${p(shifted.getUTCHours())}:${p(shifted.getUTCMinutes())}:${p(shifted.getUTCSeconds())}` +
+    `.${p(shifted.getUTCMilliseconds(), 3)}-03:00`
+  );
+}
+
+/** Quebra "João da Silva" em { first: 'João', last: 'da Silva' } pro payer do MP. */
+function splitName(full: string): { first: string; last: string } {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { first: parts[0] ?? full, last: parts[0] ?? full };
+  return { first: parts[0]!, last: parts.slice(1).join(' ') };
+}
+
 export const paymentsRoutes = new Hono();
 
 /**
@@ -70,15 +100,15 @@ export const paymentsRoutes = new Hono();
  *   product_kind: 'activation_pack' | 'card' | 'recharge'
  *   product_ref?: string (uuid do card, etc — null pra activation_pack)
  *   amount_cents: número (default 12500 = R$125 / activation pack)
- *   customer: { name, email, tax_id (CPF), cellphone }  ← TODOS obrigatórios pra Abacate
+ *   customer: { name, email, tax_id (CPF), cellphone }  ← name/email/CPF obrigatórios
  */
 paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   const user = await resolveUser(c.req.header('Authorization'));
   if (!user) return c.json({ ok: false, error: 'Unauthorized' }, 401);
 
-  const apiKey = process.env.ABACATE_API_KEY?.trim();
-  if (!apiKey) {
-    return c.json({ ok: false, error: 'ABACATE_API_KEY não configurado no servidor.' }, 503);
+  const accessToken = process.env.MP_ACCESS_TOKEN?.trim();
+  if (!accessToken) {
+    return c.json({ ok: false, error: 'MP_ACCESS_TOKEN não configurado no servidor.' }, 503);
   }
 
   const sb = getSupabaseAdmin();
@@ -105,10 +135,6 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
   // 1. Cria payment_intent server-side
   // (impersona o user via JWT pra que auth.uid() funcione nos RPCs security definer)
   const userToken = c.req.header('Authorization')!.slice('Bearer '.length).trim();
-  const sbAsUser = sb.auth.setSession({ access_token: userToken, refresh_token: '' });
-  // NOTE: setSession é assíncrono no v2 — não esperamos pq depois usamos RPC com session header
-
-  // Usar fetch direto pra Supabase com o JWT do user:
   const projectUrl = process.env.SUPABASE_URL!;
 
   const rpcCreateRes = await fetch(`${projectUrl}/rest/v1/rpc/create_payment_intent`, {
@@ -144,54 +170,73 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
     return c.json({ ok: false, step: 'create_intent', error: 'empty rpc response' }, 500);
   }
 
-  // 2. Chama Abacate Pay
+  // 2. Chama Mercado Pago — POST /v1/payments com payment_method_id='pix'
   try {
-    const abacateRes = await fetch(`${ABACATE_API_BASE}/transparents/create`, {
+    const taxId = customer.tax_id.replace(/\D/g, '');
+    const { first, last } = splitName(customer.name);
+    const expiresAt = toMpExpiry(new Date(Date.now() + 60 * 60 * 1000)); // 1 hora
+    // Webhook opcional por-pagamento (também dá pra configurar no painel MP).
+    const notificationUrl = process.env.MP_WEBHOOK_URL?.trim() || undefined;
+
+    const mpRes = await fetch(`${MP_API_BASE}/v1/payments`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        // Idempotência do lado do MP: mesma intent nunca gera cobrança dupla.
+        'X-Idempotency-Key': intent.external_id,
       },
       body: JSON.stringify({
-        method: 'PIX',
-        data: {
-          amount: amountCents,
-          expiresIn: 3600, // 1 hora
-          externalId: intent.external_id,
-          description: productKind === 'activation_pack'
-            ? 'Ativação Olefoot Plano de Carreira'
-            : `Olefoot · ${productKind}`,
-          customer: {
-            name: customer.name,
-            email: customer.email,
-            taxId: customer.tax_id,
-            cellphone: customer.cellphone ?? '',
-          },
-          metadata: {
-            intent_id: intent.intent_id,
-            product_kind: productKind,
-            product_ref: body.product_ref ?? null,
-            user_id: user.id,
-          },
+        transaction_amount: Number((amountCents / 100).toFixed(2)), // reais decimais
+        description: productKind === 'activation_pack'
+          ? 'Ativação Olefoot Plano de Carreira'
+          : `Olefoot · ${productKind}`,
+        payment_method_id: 'pix',
+        external_reference: intent.external_id,
+        date_of_expiration: expiresAt,
+        ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+        payer: {
+          email: customer.email,
+          first_name: first,
+          last_name: last,
+          identification: { type: 'CPF', number: taxId },
+        },
+        metadata: {
+          intent_id: intent.intent_id,
+          product_kind: productKind,
+          product_ref: body.product_ref ?? null,
+          user_id: user.id,
         },
       }),
     });
 
-    if (!abacateRes.ok) {
-      const txt = await abacateRes.text();
-      return c.json({ ok: false, step: 'abacate_create', status: abacateRes.status, error: txt }, 502);
-    }
+    const mp = (await mpRes.json().catch(() => ({}))) as MpPaymentResponse;
 
-    const abacate = (await abacateRes.json()) as AbacateChargeResponse;
-    if (!abacate.success || !abacate.data?.brCode) {
+    if (!mpRes.ok) {
+      const causeDesc = Array.isArray(mp.cause) && mp.cause.length
+        ? mp.cause.map((x) => x.description).filter(Boolean).join('; ')
+        : undefined;
       return c.json({
         ok: false,
-        step: 'abacate_create',
-        error: abacate.error ?? 'sem brCode na resposta',
+        step: 'mp_create',
+        status: mpRes.status,
+        error: causeDesc ?? mp.message ?? mp.error ?? 'falha ao criar pagamento',
       }, 502);
     }
 
-    // 3. Atualiza intent com dados da Abacate
+    const txData = mp.point_of_interaction?.transaction_data;
+    if (!txData?.qr_code) {
+      return c.json({
+        ok: false,
+        step: 'mp_create',
+        error: mp.message ?? 'sem qr_code na resposta do Mercado Pago',
+      }, 502);
+    }
+
+    const mpId = mp.id != null ? String(mp.id) : null;
+    const devMode = mp.live_mode === false; // credencial de teste → sandbox
+
+    // 3. Atualiza intent com dados do Mercado Pago (reusa colunas legadas)
     await fetch(`${projectUrl}/rest/v1/rpc/update_payment_intent_charge`, {
       method: 'POST',
       headers: {
@@ -201,11 +246,11 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
       },
       body: JSON.stringify({
         p_intent_id: intent.intent_id,
-        p_abacate_id: abacate.data.id ?? null,
-        p_br_code: abacate.data.brCode,
-        p_br_code_base64: abacate.data.brCodeBase64 ?? null,
-        p_expires_at: abacate.data.expiresAt ?? null,
-        p_dev_mode: abacate.data.devMode ?? false,
+        p_abacate_id: mpId, // ← guarda o payment id do MP
+        p_br_code: txData.qr_code,
+        p_br_code_base64: txData.qr_code_base64 ?? null,
+        p_expires_at: mp.date_of_expiration ?? expiresAt,
+        p_dev_mode: devMode,
       }),
     });
 
@@ -213,24 +258,24 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
       ok: true,
       intent_id: intent.intent_id,
       external_id: intent.external_id,
-      abacate_id: abacate.data.id,
+      abacate_id: mpId,
       amount_cents: amountCents,
-      br_code: abacate.data.brCode,
-      br_code_base64: abacate.data.brCodeBase64,
-      expires_at: abacate.data.expiresAt,
-      status: abacate.data.status ?? 'PENDING',
-      dev_mode: abacate.data.devMode ?? false,
+      br_code: txData.qr_code,
+      br_code_base64: txData.qr_code_base64,
+      expires_at: mp.date_of_expiration ?? expiresAt,
+      status: mp.status ?? 'pending',
+      dev_mode: devMode,
     });
   } catch (e) {
-    return c.json({ ok: false, step: 'abacate_create', error: bracketsFromError(e) }, 502);
+    return c.json({ ok: false, step: 'mp_create', error: bracketsFromError(e) }, 502);
   }
 });
 
 /**
  * GET /api/payments/:intentId/status
  *
- * Fallback de polling caso webhook atrase. Consulta Supabase (não chama Abacate
- * em todo poll pra evitar rate limit). Frontend usa este endpoint.
+ * Fallback de polling caso webhook atrase. Consulta Supabase (não chama Mercado
+ * Pago em todo poll pra evitar rate limit). Frontend usa este endpoint.
  */
 paymentsRoutes.get('/api/payments/:intentId/status', rateLimit(60), async (c) => {
   const user = await resolveUser(c.req.header('Authorization'));

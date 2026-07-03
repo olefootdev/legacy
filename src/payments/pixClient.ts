@@ -1,7 +1,9 @@
 /**
- * Abacate Pay client — wrapper das rotas Hono.
+ * PIX client — wrapper das rotas Hono (provedor: Mercado Pago).
  *
- * Backend faz a chamada autenticada pra Abacate. Front nunca toca na API key.
+ * Backend faz a chamada autenticada ao provedor. Front nunca toca no token.
+ * O campo `abacateId` é o payment id do Mercado Pago (nome legado mantido
+ * pra não quebrar a coluna payment_intents.abacate_id).
  */
 
 import { getSupabase } from '@/supabase/client';

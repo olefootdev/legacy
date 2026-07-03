@@ -1,5 +1,5 @@
 /**
- * PixCheckoutModal — modal de checkout PIX via Abacate Pay.
+ * PixCheckoutModal — modal de checkout PIX via Mercado Pago.
  *
  * Estados:
  *   1. form     — coleta CPF/Nome/Email/Telefone
@@ -33,7 +33,7 @@ import {
   isValidCpf,
   type ProductKind,
   type CreatePixResult,
-} from '@/payments/abacatepayClient';
+} from '@/payments/pixClient';
 
 interface Props {
   open: boolean;
@@ -57,17 +57,19 @@ function fmtBrl(cents: number): string {
 }
 
 /**
- * Traduz o erro técnico do checkout (vindo cru do backend/Abacate) numa
+ * Traduz o erro técnico do checkout (vindo cru do backend/Mercado Pago) numa
  * mensagem humana em pt-BR. O erro original continua no console pra debug.
  */
 function friendlyCheckoutError(raw?: string): string {
   const e = (raw ?? '').toLowerCase();
-  // Provedor de pagamento indisponível / mal configurado (chave inválida, 502/503).
+  // Provedor de pagamento indisponível / mal configurado (token inválido, 502/503).
   if (
-    e.includes('api key') ||
+    e.includes('access_token') ||
+    e.includes('access token') ||
+    e.includes('token') ||
     e.includes('inactive') ||
     e.includes('não configurado') ||
-    e.includes('abacate') ||
+    e.includes('mercado') ||
     e.includes('http_5') ||
     e.includes('502') ||
     e.includes('503')
@@ -190,7 +192,7 @@ export function PixCheckoutModal({
     });
 
     if (result.ok === false) {
-      // O erro técnico (ex: "Invalid or inactive API key" vindo cru da Abacate)
+      // O erro técnico (ex: token inválido vindo cru do Mercado Pago)
       // não deve aparecer pro cliente — vai pro console e mostramos algo humano.
       console.warn('[PixCheckout] falha no checkout:', { step: result.step, error: result.error });
       setErrorMsg(friendlyCheckoutError(result.error));
@@ -371,7 +373,7 @@ export function PixCheckoutModal({
 
                   <p className="text-[10px] text-white/40 text-center mt-2 inline-flex items-center gap-1.5 justify-center w-full">
                     <ShieldCheck className="w-3 h-3" />
-                    Processado pela Abacate Pay · pagamento seguro
+                    Processado pelo Mercado Pago · pagamento seguro
                   </p>
                 </div>
               )}
