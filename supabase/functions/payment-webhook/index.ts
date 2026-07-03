@@ -66,6 +66,33 @@ function parseSignatureHeader(header: string): { ts: string; v1: string } {
   return { ts, v1 };
 }
 
+interface IntentRow {
+  id: string;
+  status: string;
+  user_id: string;
+  amount_cents: number;
+}
+
+/** Acha a intent: external_reference (= external_id) → metadata.intent_id → abacate_id. */
+async function findIntent(
+  supabase: any,
+  externalRef: string | null,
+  intentFromMeta: string | undefined,
+  mpPaymentId: string,
+): Promise<IntentRow | null> {
+  const cols = 'id, status, user_id, amount_cents';
+  if (externalRef) {
+    const { data } = await supabase.from('payment_intents').select(cols).eq('external_id', externalRef).maybeSingle();
+    if (data) return data as IntentRow;
+  }
+  if (intentFromMeta) {
+    const { data } = await supabase.from('payment_intents').select(cols).eq('id', intentFromMeta).maybeSingle();
+    if (data) return data as IntentRow;
+  }
+  const { data } = await supabase.from('payment_intents').select(cols).eq('abacate_id', mpPaymentId).maybeSingle();
+  return (data as IntentRow) ?? null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ ok: false, error: 'method_not_allowed' }), {
@@ -195,56 +222,22 @@ Deno.serve(async (req: Request) => {
           metadata?: Record<string, unknown> | null;
         };
         const status = payment.status ?? null;
+        const externalRef = payment.external_reference ?? null;
+        const intentFromMeta = (payment.metadata as Record<string, unknown> | undefined)?.intent_id as string | undefined;
+        const mpPaymentId = payment.id != null ? String(payment.id) : dataIdRaw;
 
-        if (status !== 'approved') {
-          // pending / in_process / rejected / cancelled — nada a fazer ainda.
-          // NÃO é erro: a aprovação chega depois como outra notificação
-          // (payment.updated). Marca como recebido (200) pra o MP não reenviar.
-          processedAt = new Date().toISOString();
-        } else {
-          const externalRef = payment.external_reference ?? null;
-          const intentFromMeta = (payment.metadata as Record<string, unknown> | undefined)?.intent_id as string | undefined;
-          const mpPaymentId = payment.id != null ? String(payment.id) : dataIdRaw;
-
-          // Acha a intent: external_reference (= external_id) → metadata.intent_id → abacate_id
-          let intent: { id: string; status: string; user_id: string; amount_cents: number } | null = null;
-
-          if (externalRef) {
-            const { data } = await supabase
-              .from('payment_intents')
-              .select('id, status, user_id, amount_cents')
-              .eq('external_id', externalRef)
-              .maybeSingle();
-            if (data) intent = data;
-          }
-          if (!intent && intentFromMeta) {
-            const { data } = await supabase
-              .from('payment_intents')
-              .select('id, status, user_id, amount_cents')
-              .eq('id', intentFromMeta)
-              .maybeSingle();
-            if (data) intent = data;
-          }
-          if (!intent) {
-            const { data } = await supabase
-              .from('payment_intents')
-              .select('id, status, user_id, amount_cents')
-              .eq('abacate_id', mpPaymentId)
-              .maybeSingle();
-            if (data) intent = data;
-          }
-
+        if (status === 'approved') {
+          const intent = await findIntent(supabase, externalRef, intentFromMeta, mpPaymentId);
           if (!intent) {
             errorMessage = `intent_not_found:ext=${externalRef}|meta=${intentFromMeta}|mp=${mpPaymentId}`;
           } else {
+            intentId = intent.id;
             // Confere o VALOR pago vs o pedido — bloqueia pagamento parcial/adulterado
             // creditando o produto cheio. transaction_amount vem em reais.
             const paidCents = Math.round((payment.transaction_amount ?? 0) * 100);
             if (paidCents !== intent.amount_cents) {
-              intentId = intent.id;
               errorMessage = `amount_mismatch:paid=${paidCents}|expected=${intent.amount_cents}`;
             } else {
-              intentId = intent.id;
               const { error: confirmErr } = await supabase.rpc('confirm_payment_intent', {
                 p_intent_id: intent.id,
                 p_abacate_id: mpPaymentId,
@@ -256,6 +249,30 @@ Deno.serve(async (req: Request) => {
               }
             }
           }
+        } else if (status === 'refunded' || status === 'charged_back') {
+          // MP devolveu o dinheiro → reverte o que é seguro (comissões + créditos
+          // não coletados) e sinaliza o resto pro admin (reverse_payment_intent).
+          const intent = await findIntent(supabase, externalRef, intentFromMeta, mpPaymentId);
+          if (!intent) {
+            errorMessage = `intent_not_found:ext=${externalRef}|meta=${intentFromMeta}|mp=${mpPaymentId}`;
+          } else {
+            intentId = intent.id;
+            const { error: revErr } = await supabase.rpc('reverse_payment_intent', {
+              p_intent_id: intent.id,
+              p_mp_payment_id: mpPaymentId,
+              p_reason: status,
+            });
+            if (revErr) {
+              errorMessage = `reverse_rpc_failed: ${revErr.message}`;
+            } else {
+              processedAt = new Date().toISOString();
+            }
+          }
+        } else {
+          // pending / in_process / rejected / cancelled — nada a fazer ainda.
+          // NÃO é erro: a aprovação chega depois como outra notificação
+          // (payment.updated). Marca como recebido (200) pra o MP não reenviar.
+          processedAt = new Date().toISOString();
         }
       }
     }

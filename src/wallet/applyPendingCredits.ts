@@ -17,7 +17,8 @@ export async function applyPendingCredits(): Promise<void> {
     .from('wallet_credits')
     .select('id, bro_cents, exp_amount')
     .eq('user_id', user.id)
-    .is('applied_at', null);
+    .is('applied_at', null)
+    .is('voided_at', null); // ignora créditos estornados antes de coletar
 
   if (error || !credits || credits.length === 0) return;
 
