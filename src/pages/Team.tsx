@@ -146,6 +146,13 @@ export function Team() {
   }, [searchParams, playersById, setSearchParams]);
 
   useEffect(() => {
+    // GUARDA (fix mobile "slots vazios após salvar"): se o ELENCO ainda não
+    // hidratou (playersById vazio — comum em celular no cold load, quando a tela
+    // renderiza antes do Supabase/localStorage popular os players), NÃO zera a
+    // escalação. Sem isso, cada `playersById[pid]` vira undefined e todos os
+    // slots são descartados → campo vazio mesmo com lineup salvo. O effect
+    // re-roda sozinho quando `players` carrega (é dependência).
+    if (Object.keys(playersById).length === 0) return;
     if (lineupDirty) {
       setLineup((prev) => {
         const next: Record<string, CardPlayer> = {};
