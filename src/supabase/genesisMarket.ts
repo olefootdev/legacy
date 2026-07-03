@@ -196,8 +196,13 @@ export function mergeGenesisRowWithSavedPlayer(
     contractIsLifetime: saved.contractIsLifetime ?? fresh.contractIsLifetime,
     contractExpired: saved.contractExpired ?? fresh.contractExpired,
     genesisCatalogId: saved.genesisCatalogId ?? fresh.genesisCatalogId,
-    // Admin market controls sempre vêm do Supabase (fresh), não do save local
-    listedOnMarket: fresh.listedOnMarket,
+    // POSSE é do DONO, não do catálogo: `saved` é um player que o manager JÁ TEM.
+    // O `listed_on_market` da linha do catálogo (que fica `true` enquanto a carta
+    // é "comprável") NÃO pode marcar o player do dono como "à venda" — isso fazia
+    // o genesis SUMIR do plantel (Team.tsx filtra `!listedOnMarket`). O status de
+    // venda do dono vem do save (só é true se ELE listou, via ownListings).
+    listedOnMarket: saved.listedOnMarket,
+    // Tag de raridade é cosmética — pode vir fresca do admin.
     adminMarketTag: fresh.adminMarketTag,
   };
 }

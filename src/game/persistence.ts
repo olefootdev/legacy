@@ -315,6 +315,25 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
   // wipava jogadores criados na Academia (`mgr_*`), prospects NPC (`npc_*`),
   // bots e qualquer compra de listing de outro manager. Removido — jogadores
   // só são deletados explicitamente via reducer (sell/dispense/transfer).
+  // AUTO-CURA (bug do sync de retratos): um genesis que o manager POSSUI ficava
+  // marcado listedOnMarket=true porque o merge com o catálogo trazia o
+  // `listed_on_market` da LINHA do mercado (que fica true enquanto a carta é
+  // comprável) — e o Team.tsx esconde `listedOnMarket:true`, sumindo o genesis do
+  // plantel. Cura: genesis marcado à venda que NÃO está nas vendas REAIS do
+  // manager (ownListings) volta a listedOnMarket=false.
+  {
+    const ownListingsRaw = (raw.managerProspectMarket as { ownListings?: Array<{ playerId?: string }> } | undefined)?.ownListings;
+    const listedByOwner = new Set<string>(
+      (Array.isArray(ownListingsRaw) ? ownListingsRaw : [])
+        .map((l) => l?.playerId)
+        .filter((id): id is string => typeof id === 'string'),
+    );
+    for (const [id, p] of Object.entries(players)) {
+      if (id.startsWith('genesis-') && p?.listedOnMarket && !listedByOwner.has(id)) {
+        players[id] = { ...p, listedOnMarket: false };
+      }
+    }
+  }
   const lineup = sanitizeLineupForRoster(raw.lineup ?? {}, players);
   const rawFsEarly = raw.manager?.formationScheme;
   const resolvedFormationScheme: FormationSchemeId =
