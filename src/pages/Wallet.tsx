@@ -13,7 +13,6 @@ import { CryptoCoinCard } from './wallet/CryptoCoinCard';
 import { ActivityStrip } from './wallet/ActivityStrip';
 import { SquadValuationCard } from './wallet/SquadValuationCard';
 import { TrophyShowcase } from './wallet/TrophyShowcase';
-import { MiniSwapInline } from './wallet/MiniSwapInline';
 import { PlayerWatchlist } from './wallet/PlayerWatchlist';
 import { WalletQuickActions, type QuickAction } from './wallet/WalletQuickActions';
 import {
@@ -37,8 +36,6 @@ function usePrefersReducedMotion(): boolean {
   }, []);
   return reduced;
 }
-
-const USDT_BRL_RATE = 5.0;
 
 function formatUsdt(cents: number): string {
   const value = cents / 100;
@@ -108,7 +105,7 @@ export function Wallet() {
   const quickActions: QuickAction[] = [
     { key: 'deposit', label: 'Depositar', icon: '↓', accent: 'green', onClick: () => setDepositOpen(true) },
     { key: 'withdraw', label: 'Sacar', icon: '↑', accent: 'red', onClick: () => setSendOpen(true) },
-    { key: 'swap', label: 'Swap', icon: '⇄', accent: 'yellow', onClick: () => {} },
+    { key: 'swap', label: 'Swap', icon: '⇄', accent: 'yellow', onClick: () => navigate('/wallet/olexp') },
     { key: 'gat', label: 'GAT', icon: '✦', accent: 'amber', onClick: () => navigate('/wallet/gat'), badge: gat.activeCount > 0 ? String(gat.activeCount) : undefined },
     { key: 'extract', label: 'Extrato', icon: '☰', accent: 'cyan', onClick: () => navigate('/wallet/extract') },
   ];
@@ -151,28 +148,12 @@ export function Wallet() {
     spotPrice?: string;
   }> = [
     {
-      ticker: 'BTC',
-      name: 'Bitcoin',
-      logoSrc: '/wallet-btc-logo.png',
-      balance: '0.00000000 BTC',
-      fiatRef: '≈ $0.00',
-      badge: 'Em breve',
-    },
-    {
       ticker: 'USDT',
       name: 'Tether',
       logoSrc: '/wallet-usdt-logo.png',
       balance: formatUsdt(finance.broCents),
       fiatRef: formatUsdtUsdRef(finance.broCents),
       badge: 'Ativa',
-    },
-    {
-      ticker: 'BNB',
-      name: 'BNB Chain',
-      logoSrc: '/wallet-bnb-logo.png',
-      balance: '0.0000 BNB',
-      fiatRef: '≈ $0.00',
-      badge: 'Em breve',
     },
     {
       ticker: 'OLEFOOT',
@@ -190,7 +171,7 @@ export function Wallet() {
     <WalletShell
       account="spot"
       title="Conta SPOT"
-      subtitle="Carteira multi-ativos: BTC, USDT, BNB e OLE. Use cripto para comprar EXP ou OLE, e EXP/OLE para contratar jogadores."
+      subtitle="Carteira multi-ativos: USDT e OLEFOOT. Use USDT para comprar EXP ou OLE, e EXP/OLE para contratar jogadores."
       heroStats={heroStats}
       heroVariant="compact"
     >
@@ -243,9 +224,11 @@ export function Wallet() {
               Carteira Multi-Ativos
             </h2>
           </div>
-          <span className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-white/35">
-            1 USDT ≈ R$ {USDT_BRL_RATE.toFixed(2)}
-          </span>
+          {usdBrlQuote.status === 'ok' && (
+            <span className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-white/35 tabular-nums">
+              1 USDT ≈ R$ {usdBrlQuote.olefootVenda.toFixed(2)}
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -270,9 +253,6 @@ export function Wallet() {
 
       {/* ── ATIVIDADE RECENTE ─────────────────────────────────────── */}
       <ActivityStrip ledger={wallet.ledger ?? []} limit={3} />
-
-      {/* ── MINI-SWAP (substitui o card "Como Funciona" estático) ── */}
-      <MiniSwapInline />
 
       {/* ── TOP DO PLANTEL (dados reais) ──────────────────────────── */}
       <PlayerWatchlist
