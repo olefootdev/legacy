@@ -83,6 +83,8 @@ export interface QuickPlanHalftimeContext {
   cardsAway: number;
   sentOffHome: number;
   sentOffAway: number;
+  /** Substituições já gastas (1º tempo) — pra o intervalo respeitar o teto de 5. */
+  subsUsed: number;
 }
 
 export interface QuickPlanPlayResult {
@@ -408,6 +410,13 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   // Elenco vivo (subs a qualquer momento mexem aqui).
   const [field, setField] = useState<SquadCard[]>(fieldCards ?? []);
   const [benchPool, setBenchPool] = useState<SquadCard[]>(benchCards ?? []);
+  // Teto de 5 substituições (intervalo + durante o jogo, budget compartilhado).
+  // Lesão NÃO conta (é forçada). Atacante pode entrar no gol — sem filtro de
+  // posição; ele joga com os atributos dele, então "pesa" naturalmente no time.
+  const MAX_SUBS = 5;
+  const [subsUsed, setSubsUsed] = useState(0);
+  const subsUsedRef = useRef(0);
+  const bumpSubs = (n: number) => { if (n <= 0) return; subsUsedRef.current += n; setSubsUsed(subsUsedRef.current); };
   const [subOut, setSubOut] = useState<string | null>(null); // id do titular escolhido pra sair
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
@@ -694,6 +703,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       awayScore: scoreRef.current.away,
       momentumEnd: momentumRef.current[44] ?? 50,
       ...cardsRef.current,
+      subsUsed: subsUsedRef.current,
     };
     pushFeed({
       id: 'ht',
@@ -719,6 +729,9 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
     // nunca apareceria no seletor de Legacy. Agora aparece (request #2).
     const ll = secondHalfLineup?.();
     if (ll) {
+      // Conta no teto de 5 as trocas feitas no INTERVALO (quem entrou e não
+      // estava em campo antes).
+      bumpSubs(ll.field.filter((nf) => !field.some((of) => of.id === nf.id)).length);
       setField(ll.field);
       setBenchPool(ll.bench);
     }
@@ -1077,7 +1090,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
 
   /** Substituição A QUALQUER MOMENTO: pausa o relógio pra escolher o reserva. */
   const openSub = (outId: string) => {
-    if (phase !== 'playing' || benchPool.length === 0) return;
+    if (phase !== 'playing' || benchPool.length === 0 || subsUsedRef.current >= MAX_SUBS) return;
     if (timerRef.current != null) window.clearTimeout(timerRef.current);
     setSubOut(outId);
     setPhase('sub');
@@ -1091,7 +1104,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
       const outCard = field.find((p) => p.id === outId);
       pushFeed({ id: `sub-${minute}-${outId}`, minute, kind: 'insight', text: `Substituição: entra ${inCard.name}${outCard ? `, sai ${outCard.name}` : ''}.` });
       swapInField(outId, inCard);
+      bumpSubs(1); // conta no teto de 5
       // Efeito real no resto do jogo (sem replan): OVR + pernas frescas + encaixe.
+      // posMatch=false (ex.: atacante no gol) já entra como "não encaixou" no
+      // applySubNudge — o peso do fora-de-posição é embutido aqui.
       const delta = inCard.ovr - (outCard?.ovr ?? inCard.ovr);
       eventsRef.current = applySubNudge({
         events: eventsRef.current, fromIndex: eventIdxRef.current, ovrDelta: delta, seed: plan.seed, outId,
@@ -1221,8 +1237,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
   };
   const homeFive = pickFive(field);
   const homeTopId = homeFive.length ? homeFive[0]!.id : '';
-  const subCandidateIds = new Set([...field].sort((a, b) => a.ovr - b.ovr).slice(0, 2).map((p) => p.id));
-  const canSubNow = phase === 'playing' && benchPool.length > 0;
+  const canSubNow = phase === 'playing' && benchPool.length > 0 && subsUsed < MAX_SUBS;
   // Momento atual (perspectiva casa) — alimenta a nota VIVA por jogador.
   const liveMomentum = momentumRef.current[Math.max(0, Math.min(89, currentMinute - 1))] ?? 50;
   const ratingCtx = (card: SquadCard, side: 'home' | 'away'): RatingCtx => ({
@@ -1755,10 +1770,10 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
                 <button type="button" onClick={() => { setSubOut(null); setPhase('playing'); scheduleNext(300); }} className="text-[10px] text-white/40 hover:text-white uppercase tracking-[0.14em]">Cancelar</button>
               </div>
               <p className="px-4 pb-3 text-[12px] text-white/70">
-                Sai <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — quem entra?
+                Sai <span className="text-white font-bold">{field.find((p) => p.id === subOut)?.name}</span> — quem entra? <span className="text-white/40">(qualquer posição)</span>
               </p>
               <div className="px-3 pb-3 flex flex-col gap-1.5">
-                {benchPool.slice(0, 6).map((b) => (
+                {benchPool.map((b) => (
                   <button
                     key={b.id}
                     type="button"
@@ -2061,6 +2076,15 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
             <span className="font-display uppercase tracking-[0.24em] text-[9px] font-black text-neon-yellow truncate">
               {homeName ?? plan.home_short} · em campo
             </span>
+            {/* Teto de substituições — toque num jogador pra trocar. */}
+            <span
+              className="ml-auto shrink-0 flex items-center gap-1 font-display uppercase tracking-[0.14em] text-[9px] font-black"
+              style={{ color: subsUsed >= MAX_SUBS ? 'var(--color-warning)' : 'rgba(255,255,255,0.5)' }}
+              title="Substituições usadas (intervalo + jogo)"
+            >
+              <ArrowRightLeft className="w-3 h-3" strokeWidth={2.5} aria-hidden />
+              {subsUsed}/{MAX_SUBS}
+            </span>
           </div>
           {homeFive.map((p) => (
             <RosterRow
@@ -2068,7 +2092,7 @@ export function QuickPlanPlayer({ plan, onComplete, speedMultiplier = 1.0, onSec
               card={p}
               isTop={p.id === homeTopId}
               rating={matchRating(p.ovr, statsRef.current[p.id], ratingCtx(p, 'home'))}
-              subbable={canSubNow && subCandidateIds.has(p.id)}
+              subbable={canSubNow}
               onSub={() => openSub(p.id)}
             />
           ))}

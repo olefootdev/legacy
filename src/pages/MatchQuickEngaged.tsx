@@ -886,6 +886,7 @@ export default function MatchQuickEngaged() {
             bench={bench}
             intensity={intensityRef.current}
             formation={formationRef.current}
+            maxSubs={Math.max(0, 5 - halftimeCtx.subsUsed)}
             onResume={resumeFromHalftime}
           />
         )}

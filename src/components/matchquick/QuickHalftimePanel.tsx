@@ -39,6 +39,8 @@ interface Props {
   intensity: 'defensive' | 'balanced' | 'offensive';
   formation?: string;
   windowMs?: number;
+  /** Substituições ainda disponíveis no teto de 5 (já desconta as do 1º tempo). */
+  maxSubs?: number;
   onResume: (result: HalftimeResult) => void;
 }
 
@@ -91,6 +93,7 @@ export function QuickHalftimePanel({
   intensity: intensityProp,
   formation: formationProp = '4-4-2',
   windowMs = 15_000,
+  maxSubs = 5,
   onResume,
 }: Props) {
   const [working, setWorking] = useState<QuickHomePlayerView[]>(homePlayers);
@@ -123,11 +126,13 @@ export function QuickHalftimePanel({
   }, [remaining]);
 
   const doSub = (outId: string, replacement: HalftimeBenchPlayer) => {
+    if (subsUsed >= maxSubs) { setPicking(null); return; } // respeita o teto de 5
     usedBenchRef.current.add(replacement.id);
     setWorking((prev) => prev.map((p) => (p.id === outId ? replacement : p)));
     setSubsUsed((n) => n + 1);
     setPicking(null);
   };
+  const subsLeft = Math.max(0, maxSubs - subsUsed);
 
   const availableBench = bench.filter((b) => !usedBenchRef.current.has(b.id) && !working.some((w) => w.id === b.id));
 
@@ -155,6 +160,9 @@ export function QuickHalftimePanel({
             <p className="text-[12px] text-white/60 tabular-nums mt-0.5">
               {homeShort} {homeScore} – {awayScore} {awayShort}
             </p>
+            <p className="text-[10px] mt-0.5 font-display uppercase tracking-[0.14em]" style={{ color: subsLeft === 0 ? 'var(--color-warning)' : 'rgba(255,255,255,0.4)' }}>
+              {subsLeft} sub{subsLeft === 1 ? '' : 's'} restante{subsLeft === 1 ? '' : 's'}
+            </p>
           </div>
           <span className="font-display tabular-nums text-neon-yellow text-2xl font-black">
             {remaining}s
@@ -174,7 +182,7 @@ export function QuickHalftimePanel({
                   p={p}
                   tone="top"
                   action={
-                    availableBench.length > 0 ? (
+                    availableBench.length > 0 && subsLeft > 0 ? (
                       <button
                         type="button"
                         onClick={() => setPicking(p.id)}
@@ -195,7 +203,7 @@ export function QuickHalftimePanel({
                   p={p}
                   tone="bottom"
                   action={
-                    availableBench.length > 0 ? (
+                    availableBench.length > 0 && subsLeft > 0 ? (
                       <button
                         type="button"
                         onClick={() => setPicking(p.id)}
