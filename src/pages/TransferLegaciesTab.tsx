@@ -283,7 +283,7 @@ export function TransferLegaciesTab({
     [...list].sort((a, b) => priceSort(b) - priceSort(a));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-4 sm:px-5">
       {/* Toggle de visualização — Grid (card vertical) vs Lista (linha) */}
       <div className="flex items-center justify-end gap-1.5">
         {(['grid', 'list'] as const).map((m) => (
