@@ -314,12 +314,12 @@ export function TransferLegaciesTab({
             // Carrossel horizontal: arrasta pro lado e vê todas as cartas do atleta.
             // Cards de tamanho ÚNICO; a MAIS CARA vem primeiro (destaque).
             <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {orderByPriceDesc(g.rows).map((row, i) => {
+              {orderByPriceDesc(g.rows).map((row) => {
                 const entity = legacyRowToPlayerEntity(row);
                 const o = overallFromAttributes(entity.attrs);
                 const sale = fixedSaleFor(row);
                 return (
-                  <div key={row.id} className="w-[158px] flex-none snap-start pt-2 sm:w-[186px]">
+                  <div key={row.id} className="w-[158px] flex-none snap-start sm:w-[186px]">
                     <LegacyMarketCard
                       row={row}
                       ovr={o}
@@ -328,7 +328,6 @@ export function TransferLegaciesTab({
                       pixReady={pixStateFor(row) === 'ready'}
                       lot={lots.get(row.id)}
                       owned={owned.has(entity.id)}
-                      featured={i === 0 && g.rows.length > 1}
                       onOpen={() => setDetailRow(row)}
                     />
                   </div>

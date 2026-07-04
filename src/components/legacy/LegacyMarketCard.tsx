@@ -8,8 +8,8 @@ import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
  * Tamanho ÚNICO (sem hero): pensada pra carrossel horizontal — o usuário arrasta
  * o dedo e vê todas as cartas do atleta. Foto 4/5 P&B→cor, OVR Moret italic, nome
  * Agency, raridade = GRAU DE AMARELO. Tilt 3D no mouse; clicar VIRA pra ficha
- * (clicar de novo volta). `featured` = a mais cara → glow de destaque (sem mudar
- * de tamanho). Todo dado é real (attrs, ensino, booster, escassez do lote).
+ * (clicar de novo volta). Todo dado é real (attrs, ensino, booster, escassez do
+ * lote). A ordenação (mais cara primeiro) vive no TransferLegaciesTab.
  */
 
 type Tier = 'epico' | 'ultra' | 'raro';
@@ -50,7 +50,6 @@ export function LegacyMarketCard({
   pixReady,
   lot,
   owned,
-  featured = false,
   onOpen,
 }: {
   row: LegacyPlayerRow;
@@ -60,8 +59,6 @@ export function LegacyMarketCard({
   pixReady: boolean;
   lot?: LegacyLotInfo;
   owned: boolean;
-  /** Carta de maior valor do grupo — ganha glow de destaque (sem mudar de tamanho). */
-  featured?: boolean;
   onOpen: () => void;
 }) {
   const tier = tierOf(row, ovr);
@@ -132,7 +129,7 @@ export function LegacyMarketCard({
       style={{ perspective: 1100 }}
       onMouseMove={onMove}
       onMouseLeave={() => setTilt(null)}
-      className={cn('group relative rounded-[7px]', featured && 'shadow-[0_0_0_1.5px_#FDE100,0_10px_30px_rgba(253,225,0,0.22)]')}
+      className="group relative rounded-[7px]"
     >
       <article
         className="relative transition-transform duration-500 ease-out"
@@ -210,16 +207,7 @@ export function LegacyMarketCard({
               {TIER_LABEL[tier]}
             </span>
 
-            {featured && (
-              <span
-                className="absolute left-3 top-[52px] z-[4] whitespace-nowrap rounded-full bg-neon-yellow font-display font-black uppercase text-black shadow-[0_0_12px_rgba(253,225,0,0.55)]"
-                style={{ fontSize: 8, letterSpacing: '0.14em', padding: '3px 7px' }}
-              >
-                ★ Destaque
-              </span>
-            )}
-
-            {scarce && !featured && (
+            {scarce && (
               <span
                 className="absolute left-3 top-[52px] z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black/70 font-display font-bold uppercase text-neon-yellow"
                 style={{ fontSize: 9, letterSpacing: '0.14em', padding: '3px 7px' }}
