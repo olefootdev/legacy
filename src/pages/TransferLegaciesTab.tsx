@@ -274,16 +274,13 @@ export function TransferLegaciesTab({
     return { price, cta: 'Comprar', badge: brl != null ? 'PIX' : 'OLE' };
   };
 
-  // Destaque da manchete = maior OVR do grupo, movido pra primeira posição.
-  const orderFeaturedFirst = (list: LegacyPlayerRow[]): LegacyPlayerRow[] => {
-    if (list.length <= 1) return list;
-    const ovrOf = (r: LegacyPlayerRow) => overallFromAttributes(legacyRowToPlayerEntity(r).attrs);
-    let best = 0;
-    for (let i = 1; i < list.length; i++) if (ovrOf(list[i]!) > ovrOf(list[best]!)) best = i;
-    const copy = [...list];
-    const [hero] = copy.splice(best, 1);
-    return hero ? [hero, ...copy] : copy;
-  };
+  // Ordena a coleção do atleta pela carta de MAIOR VALOR primeiro (destaque).
+  // USDT compara por price_unit_cents; OLE por price_bro_cents (dentro de um
+  // atleta a moeda é consistente, então a ordenação é estável).
+  const priceSort = (r: LegacyPlayerRow) =>
+    r.currency === 'USDT' ? r.price_unit_cents ?? 0 : Math.round(Number(r.price_bro_cents) || 0);
+  const orderByPriceDesc = (list: LegacyPlayerRow[]): LegacyPlayerRow[] =>
+    [...list].sort((a, b) => priceSort(b) - priceSort(a));
 
   return (
     <div className="space-y-8">
@@ -314,15 +311,15 @@ export function TransferLegaciesTab({
           </div>
 
           {view === 'grid' ? (
-            // Manchete (upgrade 01): a lenda de maior OVR do grupo vira card-destaque 2×2.
-            <div className="grid min-w-0 auto-rows-fr grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-              {orderFeaturedFirst(g.rows).map((row, i) => {
+            // Carrossel horizontal: arrasta pro lado e vê todas as cartas do atleta.
+            // Cards de tamanho ÚNICO; a MAIS CARA vem primeiro (destaque).
+            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {orderByPriceDesc(g.rows).map((row, i) => {
                 const entity = legacyRowToPlayerEntity(row);
                 const o = overallFromAttributes(entity.attrs);
                 const sale = fixedSaleFor(row);
-                const isHero = i === 0 && g.rows.length >= 3;
                 return (
-                  <div key={row.id} className={cn('min-w-0', isHero && 'sm:col-span-2 sm:row-span-2')}>
+                  <div key={row.id} className="w-[158px] flex-none snap-start pt-2 sm:w-[186px]">
                     <LegacyMarketCard
                       row={row}
                       ovr={o}
@@ -331,7 +328,7 @@ export function TransferLegaciesTab({
                       pixReady={pixStateFor(row) === 'ready'}
                       lot={lots.get(row.id)}
                       owned={owned.has(entity.id)}
-                      size={isHero ? 'hero' : 'grid'}
+                      featured={i === 0 && g.rows.length > 1}
                       onOpen={() => setDetailRow(row)}
                     />
                   </div>

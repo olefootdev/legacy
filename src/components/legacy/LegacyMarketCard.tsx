@@ -5,10 +5,11 @@ import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
 /**
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
  *
- * Protagonista: foto 4/5 P&B→cor, OVR Moret italic, nome Agency, raridade como
- * GRAU DE AMARELO (sem cor nova). Interações: tilt 3D no mouse; clicar na carta
- * VIRA pra ficha técnica (clicar de novo volta) — sem botão. TODO dado é real
- * (attrs, ensino, booster, escassez do lote); nada é decorativo-sem-função.
+ * Tamanho ÚNICO (sem hero): pensada pra carrossel horizontal — o usuário arrasta
+ * o dedo e vê todas as cartas do atleta. Foto 4/5 P&B→cor, OVR Moret italic, nome
+ * Agency, raridade = GRAU DE AMARELO. Tilt 3D no mouse; clicar VIRA pra ficha
+ * (clicar de novo volta). `featured` = a mais cara → glow de destaque (sem mudar
+ * de tamanho). Todo dado é real (attrs, ensino, booster, escassez do lote).
  */
 
 type Tier = 'epico' | 'ultra' | 'raro';
@@ -49,7 +50,7 @@ export function LegacyMarketCard({
   pixReady,
   lot,
   owned,
-  size = 'grid',
+  featured = false,
   onOpen,
 }: {
   row: LegacyPlayerRow;
@@ -59,11 +60,11 @@ export function LegacyMarketCard({
   pixReady: boolean;
   lot?: LegacyLotInfo;
   owned: boolean;
-  size?: 'grid' | 'hero';
+  /** Carta de maior valor do grupo — ganha glow de destaque (sem mudar de tamanho). */
+  featured?: boolean;
   onOpen: () => void;
 }) {
   const tier = tierOf(row, ovr);
-  const hero = size === 'hero';
   const [flipped, setFlipped] = useState(false);
   const [tilt, setTilt] = useState<{ rx: number; ry: number; mx: number; my: number } | null>(null);
   const reduceRef = useRef(
@@ -100,6 +101,13 @@ export function LegacyMarketCard({
       .map((a) => a.k),
   );
 
+  const faceBorder = cn(
+    'border border-white/[0.08]',
+    tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
+    tier === 'ultra' && 'border-neon-yellow/40',
+    tier === 'raro' && 'border-l-[3px] border-l-white/15',
+  );
+
   const BuyButton = (
     <button
       type="button"
@@ -107,10 +115,11 @@ export function LegacyMarketCard({
         e.stopPropagation();
         onOpen();
       }}
-      className="flex w-full min-w-0 items-center justify-center gap-1.5 rounded-[4px] bg-neon-yellow px-2 py-3 font-display text-[11px] font-black uppercase tracking-[0.08em] text-black transition-colors hover:bg-white"
+      className="flex w-full min-w-0 items-center justify-center gap-2 rounded-[4px] bg-neon-yellow px-2 py-3 font-display font-black uppercase text-black transition-colors hover:bg-white"
     >
-      <span className="flex-none">Comprar</span>
-      <span className="min-w-0 truncate tabular-nums">· {priceLabel}</span>
+      <span className="min-w-0 truncate tabular-nums" style={{ fontSize: 13, letterSpacing: '0.02em' }}>
+        {priceLabel}
+      </span>
       <span className="flex-none rounded-[3px] border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.06em]">
         {pixReady ? 'PIX' : 'OLE'}
       </span>
@@ -123,26 +132,15 @@ export function LegacyMarketCard({
       style={{ perspective: 1100 }}
       onMouseMove={onMove}
       onMouseLeave={() => setTilt(null)}
-      className={cn('group relative', hero && 'h-full')}
+      className={cn('group relative rounded-[7px]', featured && 'shadow-[0_0_0_1.5px_#FDE100,0_10px_30px_rgba(253,225,0,0.22)]')}
     >
       <article
         className="relative transition-transform duration-500 ease-out"
-        style={{
-          transformStyle: 'preserve-3d',
-          transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)`,
-          height: hero ? '100%' : undefined,
-        }}
+        style={{ transformStyle: 'preserve-3d', transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)` }}
       >
         {/* ---------- FRENTE ---------- */}
         <div
-          className={cn(
-            'relative flex flex-col overflow-hidden bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)]',
-            'border border-white/[0.08]',
-            tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
-            tier === 'ultra' && 'border-neon-yellow/40',
-            tier === 'raro' && 'border-l-[3px] border-l-white/15',
-            hero && 'h-full',
-          )}
+          className={cn('relative flex flex-col overflow-hidden bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)]', faceBorder)}
           style={{ borderRadius: 6, backfaceVisibility: 'hidden' }}
         >
           {tier === 'epico' && (
@@ -165,10 +163,7 @@ export function LegacyMarketCard({
               }
             }}
             aria-label={`Ver ficha de ${row.name}`}
-            className={cn(
-              'relative cursor-pointer overflow-hidden bg-deep-black outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow/50',
-              hero ? 'min-h-[340px] flex-1' : 'aspect-[4/5]',
-            )}
+            className="relative aspect-[4/5] cursor-pointer overflow-hidden bg-deep-black outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow/50"
           >
             {portrait ? (
               <img
@@ -194,11 +189,11 @@ export function LegacyMarketCard({
             <div className="absolute left-3 top-2.5 z-[3] leading-[0.78]">
               <span
                 className="block text-neon-yellow"
-                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: hero ? 56 : 34, textShadow: '0 2px 10px rgba(0,0,0,.8)', letterSpacing: '-0.03em' }}
+                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 34, textShadow: '0 2px 10px rgba(0,0,0,.8)', letterSpacing: '-0.03em' }}
               >
                 {ovr}
               </span>
-              <span className="font-display font-extrabold uppercase text-white/70" style={{ fontSize: hero ? 10 : 8, letterSpacing: '0.2em' }}>
+              <span className="font-display font-extrabold uppercase text-white/70" style={{ fontSize: 8, letterSpacing: '0.2em' }}>
                 OVR
               </span>
             </div>
@@ -215,20 +210,29 @@ export function LegacyMarketCard({
               {TIER_LABEL[tier]}
             </span>
 
-            {scarce && (
+            {featured && (
               <span
-                className="absolute left-3 z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black/70 font-display font-bold uppercase text-neon-yellow"
-                style={{ top: hero ? 80 : 52, fontSize: 9, letterSpacing: '0.14em', padding: '3px 7px' }}
+                className="absolute left-3 top-[52px] z-[4] whitespace-nowrap rounded-full bg-neon-yellow font-display font-black uppercase text-black shadow-[0_0_12px_rgba(253,225,0,0.55)]"
+                style={{ fontSize: 8, letterSpacing: '0.14em', padding: '3px 7px' }}
+              >
+                ★ Destaque
+              </span>
+            )}
+
+            {scarce && !featured && (
+              <span
+                className="absolute left-3 top-[52px] z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black/70 font-display font-bold uppercase text-neon-yellow"
+                style={{ fontSize: 9, letterSpacing: '0.14em', padding: '3px 7px' }}
               >
                 🔥 {scarce}
               </span>
             )}
 
             <div className="absolute inset-x-0 bottom-0 z-[3] px-3 pb-3">
-              <h3 className="font-display font-extrabold uppercase leading-[0.96] text-white" style={{ fontSize: hero ? 38 : 22, letterSpacing: '0.02em' }}>
+              <h3 className="truncate font-display font-extrabold uppercase leading-[0.96] text-white" style={{ fontSize: 20, letterSpacing: '0.01em' }}>
                 {row.name}
               </h3>
-              <p className="mt-0.5 font-display font-bold uppercase text-white/60" style={{ fontSize: hero ? 11 : 9, letterSpacing: '0.18em' }}>
+              <p className="mt-0.5 font-display font-bold uppercase text-white/60" style={{ fontSize: 9, letterSpacing: '0.16em' }}>
                 {row.pos} · {row.country ?? '—'}
               </p>
             </div>
@@ -261,12 +265,7 @@ export function LegacyMarketCard({
         {/* ---------- VERSO (ficha real) — clicar volta pra frente ---------- */}
         <div
           onClick={flip}
-          className={cn(
-            'absolute inset-0 flex cursor-pointer flex-col bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)] p-3.5',
-            'border border-white/[0.08]',
-            tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
-            tier === 'raro' && 'border-l-[3px] border-l-white/15',
-          )}
+          className={cn('absolute inset-0 flex cursor-pointer flex-col bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)] p-3.5', faceBorder)}
           style={{ borderRadius: 6, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           <div className="mb-2.5 flex items-baseline justify-between">
