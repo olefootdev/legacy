@@ -4,10 +4,13 @@ import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import {
   fetchListedLegacyPlayerRows,
+  fetchLegacyOpenLots,
   legacyPortraitImageUrl,
   legacyRowToPlayerEntity,
   type LegacyPlayerRow,
+  type LegacyLotInfo,
 } from '@/supabase/legacyPlayers';
+import { LegacyMarketCard } from '@/components/legacy/LegacyMarketCard';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
@@ -15,7 +18,7 @@ import { fetchMyOlexpBalance } from '@/wallet/olexpSync';
 import { PixCheckoutModal } from '@/components/PixCheckoutModal';
 import { LegacyPlayerDetailModal } from '@/components/legacy/LegacyPlayerDetailModal';
 import { PurchaseReceiptModal } from '@/components/legacy/PurchaseReceiptModal';
-import { PlayerCard, TransferRowCard } from '@/pages/Transfer';
+import { TransferRowCard } from '@/pages/Transfer';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 
 export function TransferLegaciesTab({
@@ -31,6 +34,7 @@ export function TransferLegaciesTab({
   const playersById = useGameStore((s) => s.players);
   const clubName = useGameStore((s) => s.club?.name ?? 'Manager');
   const [rows, setRows] = useState<LegacyPlayerRow[]>([]);
+  const [lots, setLots] = useState<Map<string, LegacyLotInfo>>(new Map());
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [pixRow, setPixRow] = useState<LegacyPlayerRow | null>(null);
@@ -79,6 +83,10 @@ export function TransferLegaciesTab({
       if (cancelled) return;
       setRows(data);
       setLoading(false);
+    });
+    // Escassez REAL: lê os lotes abertos (supply/sold). Degrada em silêncio se vazio.
+    fetchLegacyOpenLots().then((m) => {
+      if (!cancelled) setLots(m);
     });
     return () => {
       cancelled = true;
@@ -131,7 +139,7 @@ export function TransferLegaciesTab({
         const r = await fetch(`${serverUrl}/api/market/buy-legacy`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ legacy_id: row.id, player: entity }),
+          body: JSON.stringify({ legacy_id: row.id, player: entity, clubName }),
         });
         const data = await r.json().catch(() => null);
         if (!r.ok || !data?.ok) {
@@ -256,6 +264,17 @@ export function TransferLegaciesTab({
     return { price, cta: 'Comprar', badge: brl != null ? 'PIX' : 'OLE' };
   };
 
+  // Destaque da manchete = maior OVR do grupo, movido pra primeira posição.
+  const orderFeaturedFirst = (list: LegacyPlayerRow[]): LegacyPlayerRow[] => {
+    if (list.length <= 1) return list;
+    const ovrOf = (r: LegacyPlayerRow) => overallFromAttributes(legacyRowToPlayerEntity(r).attrs);
+    let best = 0;
+    for (let i = 1; i < list.length; i++) if (ovrOf(list[i]!) > ovrOf(list[best]!)) best = i;
+    const copy = [...list];
+    const [hero] = copy.splice(best, 1);
+    return hero ? [hero, ...copy] : copy;
+  };
+
   return (
     <div className="space-y-8">
       {/* Toggle de visualização — Grid (card vertical) vs Lista (linha) */}
@@ -285,16 +304,29 @@ export function TransferLegaciesTab({
           </div>
 
           {view === 'grid' ? (
-            <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
-              {g.rows.map((row, i) => (
-                <div key={row.id} className="min-w-0 cursor-pointer" onClick={() => setDetailRow(row)}>
-                  <PlayerCard
-                    player={toAuction(row, i)}
-                    fixedSale={fixedSaleFor(row)}
-                    portraitClassName=""
-                  />
-                </div>
-              ))}
+            // Manchete (upgrade 01): a lenda de maior OVR do grupo vira card-destaque 2×2.
+            <div className="grid min-w-0 auto-rows-fr grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+              {orderFeaturedFirst(g.rows).map((row, i) => {
+                const entity = legacyRowToPlayerEntity(row);
+                const o = overallFromAttributes(entity.attrs);
+                const sale = fixedSaleFor(row);
+                const isHero = i === 0 && g.rows.length >= 3;
+                return (
+                  <div key={row.id} className={cn('min-w-0', isHero && 'sm:col-span-2 sm:row-span-2')}>
+                    <LegacyMarketCard
+                      row={row}
+                      ovr={o}
+                      portrait={legacyPortraitImageUrl(row)}
+                      priceLabel={sale.price}
+                      pixReady={pixStateFor(row) === 'ready'}
+                      lot={lots.get(row.id)}
+                      owned={owned.has(entity.id)}
+                      size={isHero ? 'hero' : 'grid'}
+                      onOpen={() => setDetailRow(row)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="space-y-3">
@@ -319,7 +351,7 @@ export function TransferLegaciesTab({
           productKind="card"
           productRef={pixRow.id}
           amountCents={brlCentsFor(pixRow)!}
-          metadata={{ player: legacyRowToPlayerEntity(pixRow) }}
+          metadata={{ player: legacyRowToPlayerEntity(pixRow), clubName }}
           title={`Comprar ${pixRow.name}`}
           description="Pague via PIX e o jogador entra no teu time automaticamente."
           defaultName={clubName}

@@ -1,0 +1,123 @@
+{
+  "playerName": "Nando",
+  "shortName": "Nando",
+  "collectionId": "mem-nando-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "Criação original Olefoot — jogador fictício definido pelo fundador (não é atleta real)."
+  ],
+  "inconsistencies": [],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "mainClub": "Várzea de São Paulo",
+      "narrativeTitle": "O camisa 10 da vila",
+      "narrative": "Nando nasceu na várzea de São Paulo e aprendeu futebol no barro, no sol e na bronca. Meio-campista nato, canhoto, cresceu vendo Maradona em VHS gasto e jurou jogar igual: bola colada no pé esquerdo, gente pra cima, e a coragem de nunca fugir de uma dividida. Não é o mais alto nem o mais rápido do time, mas é quem pede a bola quando o jogo pega fogo. Onde tem confusão, tem o Nando no meio — resolvendo com um drible ou brigando pela camisa.",
+      "tier": 1,
+      "collectionCode": "VILA-26",
+      "collectionTitle": "O Camisa 10 da Vila 2026",
+      "currency": "USDT",
+      "priceUnitCents": 100,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 75 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Nando",
+        "num": 10,
+        "pos": "MEI",
+        "archetype": "lenda",
+        "zone": "mid",
+        "behavior": "criativo",
+        "country": "Brasil",
+        "strongFoot": "esquerdo",
+        "creatorType": "lenda",
+        "age": 24,
+        "bio": "Meia canhoto da várzea de São Paulo. Espelho do Maradona: dribla, cria e não foge de dividida nenhuma.",
+        "tagline": "O camisa 10 que aprendeu na vila e joga como se cada bola fosse a última — dribla, encara e não corre de ninguém.",
+        "attrs": {
+          "passe": 89,
+          "marcacao": 78,
+          "velocidade": 86,
+          "drible": 90,
+          "finalizacao": 86,
+          "fisico": 82,
+          "tatico": 87,
+          "mentalidade": 90,
+          "confianca": 88,
+          "fairPlay": 74
+        },
+        "mintOverall": 85,
+        "evolutionRate": 1.2,
+        "rarity": "epico",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["drible", "mentalidade"],
+        "legacyTeamBooster": {
+          "morale": 5,
+          "attack_pct": 6,
+          "possession_pct": 4
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "MEI",
+          "role": "CAM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "mid_third", "central"],
+            "spatialAwareness": 85,
+            "scanBeforeReceive": 82,
+            "runTiming": 78,
+            "defensivePositioning": 55
+          },
+          "teamProfile": {
+            "supportCarrier": 82,
+            "tacticalDiscipline": 68,
+            "teamCommunication": 75,
+            "defensiveCover": 52,
+            "collectiveMovement": 78
+          },
+          "individualProfile": {
+            "creativity": 92,
+            "decisionUnderPressure": 84,
+            "ballConfidence": 90,
+            "vision": 88,
+            "technicalExecution": 90
+          },
+          "riskProfile": {
+            "baseRisk": 70,
+            "riskUnderPressure": 12,
+            "riskWhenLosing": 20,
+            "riskWhenWinning": -5,
+            "dribbleVsPass": 72
+          },
+          "criticalProfile": {
+            "criticalComposure": 82,
+            "ego": 70,
+            "crowdPressureReaction": 78,
+            "selfishVsTeam": 52,
+            "finishingConfidence": 82
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-07-04T00:00:00.000Z",
+          "updatedAt": "2026-07-04T00:00:00.000Z",
+          "version": 1
+        }
+      }
+    }
+  ]
+}

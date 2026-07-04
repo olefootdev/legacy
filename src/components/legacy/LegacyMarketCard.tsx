@@ -1,0 +1,319 @@
+import { useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { RotateCw, Eye } from 'lucide-react';
+import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
+
+/**
+ * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
+ *
+ * Protagonista: foto 4/5 P&B→cor, OVR Moret italic, nome Agency, raridade como
+ * GRAU DE AMARELO (sem cor nova). Interações high-tier: tilt 3D no mouse + flip
+ * pra ficha técnica. TODO dado é real (attrs, ensino, booster, escassez do lote);
+ * nada é decorativo-sem-função.
+ */
+
+type Tier = 'epico' | 'ultra' | 'raro';
+
+const ATTR_ROWS: Array<{ key: string; label: string }> = [
+  { key: 'drible', label: 'DRI' },
+  { key: 'passe', label: 'PAS' },
+  { key: 'finalizacao', label: 'FIN' },
+  { key: 'velocidade', label: 'VEL' },
+  { key: 'fisico', label: 'FÍS' },
+  { key: 'marcacao', label: 'MAR' },
+];
+
+function tierOf(row: LegacyPlayerRow, ovr: number): Tier {
+  const r = (row.rarity_label ?? '').toLowerCase();
+  if (r.includes('epico') || r.includes('épico')) return 'epico';
+  if (r.includes('ultra')) return 'ultra';
+  if (r.includes('raro')) return 'raro';
+  // fallback derivado do OVR (real, não arbitrário)
+  return ovr >= 83 ? 'epico' : ovr >= 78 ? 'ultra' : 'raro';
+}
+
+const TIER_LABEL: Record<Tier, string> = { epico: 'Épico', ultra: 'Ultra-raro', raro: 'Raro' };
+
+/** Sinal de calor HONESTO — derivado da escassez real do lote, não de contador fake. */
+function scarcitySignal(lot?: LegacyLotInfo): { label: string; pct: number } | null {
+  if (!lot || lot.supply <= 0) return null;
+  const pct = lot.restam / lot.supply;
+  if (pct <= 0.1) return { label: 'Últimas unidades', pct };
+  if (pct <= 0.25) return { label: 'Quase esgotado', pct };
+  return null;
+}
+
+export function LegacyMarketCard({
+  row,
+  ovr,
+  portrait,
+  priceLabel,
+  pixReady,
+  lot,
+  owned,
+  size = 'grid',
+  onOpen,
+}: {
+  row: LegacyPlayerRow;
+  ovr: number;
+  portrait: string | null;
+  /** Ex.: "R$ 5,00" ou "1.000.000 OLE". */
+  priceLabel: string;
+  /** true = paga via PIX (card USDT). */
+  pixReady: boolean;
+  lot?: LegacyLotInfo;
+  owned: boolean;
+  size?: 'grid' | 'hero';
+  onOpen: () => void;
+}) {
+  const tier = tierOf(row, ovr);
+  const hero = size === 'hero';
+  const [flipped, setFlipped] = useState(false);
+  const [tilt, setTilt] = useState<{ rx: number; ry: number; mx: number; my: number } | null>(null);
+  const reduce =
+    typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  const onMove = (e: React.MouseEvent) => {
+    if (reduce || flipped || !stageRef.current) return;
+    const r = stageRef.current.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    setTilt({ rx: (0.5 - py) * 10, ry: (px - 0.5) * 10, mx: px * 100, my: py * 100 });
+  };
+
+  const rotY = (flipped ? 180 : 0) + (tilt?.ry ?? 0);
+  const rotX = flipped ? 0 : tilt?.rx ?? 0;
+
+  const scarce = scarcitySignal(lot);
+  const taught = Array.isArray(row.taught_attributes) ? row.taught_attributes.slice(0, 3) : [];
+  const boosterEntries = Object.entries(row.team_booster ?? {}).filter(([, v]) => typeof v === 'number' && v !== 0);
+  const attrs = row.attributes ?? {};
+  const topTwo = new Set(
+    ATTR_ROWS.map((a) => ({ k: a.key, v: attrs[a.key] ?? 0 }))
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 2)
+      .map((a) => a.k),
+  );
+
+  return (
+    <div
+      ref={stageRef}
+      style={{ perspective: 1100 }}
+      onMouseMove={onMove}
+      onMouseLeave={() => setTilt(null)}
+      className={cn('group relative', hero && 'h-full')}
+    >
+      <article
+        className="relative transition-transform duration-500 ease-out"
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)`,
+          height: hero ? '100%' : undefined,
+        }}
+      >
+        {/* ---------- FRENTE ---------- */}
+        <div
+          className={cn(
+            'relative flex flex-col overflow-hidden bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)]',
+            'border border-white/[0.08]',
+            tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
+            tier === 'ultra' && 'border-neon-yellow/40',
+            tier === 'raro' && 'border-l-[3px] border-l-white/15',
+            hero && 'h-full',
+          )}
+          style={{ borderRadius: 6, backfaceVisibility: 'hidden' }}
+        >
+          {tier === 'epico' && (
+            <span
+              aria-hidden
+              className="absolute inset-x-0 top-0 z-[5] h-[2px]"
+              style={{ background: 'linear-gradient(90deg,#FDE100,transparent 65%)', boxShadow: '0 0 12px rgba(253,225,0,.45)' }}
+            />
+          )}
+
+          <div className={cn('relative overflow-hidden bg-deep-black', hero ? 'min-h-[340px] flex-1' : 'aspect-[4/5]')}>
+            {portrait ? (
+              <img
+                src={portrait}
+                alt={row.name}
+                className="ole-player-photo-bw h-full w-full object-cover transition-[filter] duration-500 group-hover:[filter:grayscale(0)_contrast(1.03)]"
+                style={{ objectPosition: 'center 10%' }}
+                referrerPolicy="no-referrer"
+                draggable={false}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center font-display text-4xl font-black uppercase text-white/25">
+                {row.name.slice(0, 2)}
+              </div>
+            )}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-[2] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              style={{ background: `radial-gradient(600px circle at ${tilt?.mx ?? 50}% ${tilt?.my ?? 0}%, rgba(253,225,0,.10), transparent 42%)` }}
+            />
+            <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(0deg,var(--color-card) 2%,rgba(36,36,36,.1) 34%,transparent 55%)' }} />
+
+            {/* OVR — Moret italic (assinatura do sistema) */}
+            <div className="absolute left-3 top-2.5 z-[3] leading-[0.78]">
+              <span
+                className="block text-neon-yellow"
+                style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: hero ? 56 : 34, textShadow: '0 2px 10px rgba(0,0,0,.8)', letterSpacing: '-0.03em' }}
+              >
+                {ovr}
+              </span>
+              <span className="font-display font-extrabold uppercase text-white/70" style={{ fontSize: hero ? 10 : 8, letterSpacing: '0.2em' }}>
+                OVR
+              </span>
+            </div>
+
+            {/* Raridade = grau de amarelo */}
+            <span
+              className={cn(
+                'absolute right-3 top-3 z-[3] rounded-[4px] font-display font-black uppercase',
+                tier === 'epico' && 'bg-neon-yellow text-black shadow-[0_0_14px_rgba(253,225,0,0.45)]',
+                tier === 'ultra' && 'border border-neon-yellow/60 text-neon-yellow',
+                tier === 'raro' && 'border border-white/20 text-white/60',
+              )}
+              style={{ fontSize: 9, letterSpacing: '0.2em', padding: '4px 7px' }}
+            >
+              {TIER_LABEL[tier]}
+            </span>
+
+            {/* Calor HONESTO (só quando a escassez real justifica) */}
+            {scarce && (
+              <span
+                className="absolute left-3 z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black/70 font-display font-bold uppercase text-neon-yellow"
+                style={{ top: hero ? 80 : 52, fontSize: 9, letterSpacing: '0.14em', padding: '3px 7px' }}
+              >
+                🔥 {scarce.label}
+              </span>
+            )}
+
+            <div className="absolute inset-x-0 bottom-0 z-[3] px-3 pb-3">
+              <h3 className="font-display font-extrabold uppercase leading-[0.96] text-white" style={{ fontSize: hero ? 38 : 22, letterSpacing: '0.02em' }}>
+                {row.name}
+              </h3>
+              <p className="mt-0.5 font-display font-bold uppercase text-white/60" style={{ fontSize: hero ? 11 : 9, letterSpacing: '0.18em' }}>
+                {row.pos} · {row.country ?? '—'}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[var(--color-card)] px-3 pb-3 pt-2.5">
+            {/* Escassez REAL do lote */}
+            {lot && lot.supply > 0 && (
+              <>
+                <div className="mb-2 h-1 overflow-hidden rounded-full bg-[var(--color-card-hi)]">
+                  <span className="block h-full bg-neon-yellow" style={{ width: `${Math.max(3, (lot.restam / lot.supply) * 100)}%` }} />
+                </div>
+                <div className="mb-2 flex items-center justify-between text-[11px] text-white/55">
+                  <span>
+                    restam <b className="text-neon-yellow tabular-nums">{lot.restam.toLocaleString('pt-BR')}</b>
+                  </span>
+                  <span className="tabular-nums">Ed. {lot.supply.toLocaleString('pt-BR')}</span>
+                </div>
+              </>
+            )}
+            <div className="flex gap-1.5">
+              {owned ? (
+                <span className="flex flex-1 items-center justify-center gap-1.5 rounded-[4px] border border-[var(--color-success)] py-3 font-display text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-success)]">
+                  ✓ No time
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpen}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[4px] bg-neon-yellow py-3 font-display text-[11px] font-black uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
+                >
+                  Comprar · {priceLabel}
+                  <span className="rounded-[3px] border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.1em]">
+                    {pixReady ? 'PIX' : 'OLE'}
+                  </span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTilt(null);
+                  setFlipped((f) => !f);
+                }}
+                aria-label={`Ver ficha de ${row.name}`}
+                className="grid w-[42px] flex-none place-items-center rounded-[4px] border border-white/15 bg-deep-black/60 text-white/60 transition-colors hover:border-neon-yellow/50 hover:text-neon-yellow"
+              >
+                <RotateCw className="h-4 w-4" strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ---------- VERSO (ficha real) ---------- */}
+        <div
+          className={cn(
+            'absolute inset-0 flex flex-col bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)] p-3.5',
+            'border border-white/[0.08]',
+            tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
+            tier === 'raro' && 'border-l-[3px] border-l-white/15',
+          )}
+          style={{ borderRadius: 6, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
+          <div className="mb-2.5 flex items-baseline justify-between">
+            <span className="font-display text-[11px] font-black uppercase tracking-[0.2em] text-neon-yellow">Ficha técnica</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFlipped(false);
+              }}
+              aria-label="Voltar"
+              className="text-white/40 hover:text-neon-yellow"
+            >
+              <Eye className="h-4 w-4" strokeWidth={2} />
+            </button>
+          </div>
+          <div className="mb-3 grid grid-cols-3 gap-1.5">
+            {ATTR_ROWS.map((a) => (
+              <div key={a.key} className="rounded-[4px] border border-white/[0.08] bg-deep-black/50 py-2 text-center">
+                <b
+                  className={cn('block leading-none', topTwo.has(a.key) ? 'text-neon-yellow' : 'text-white')}
+                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic', fontWeight: 700, fontSize: 18 }}
+                >
+                  {attrs[a.key] ?? '—'}
+                </b>
+                <span className="mt-0.5 block font-display text-[8px] font-extrabold uppercase tracking-[0.14em] text-white/50">{a.label}</span>
+              </div>
+            ))}
+          </div>
+          {taught.length > 0 && (
+            <div className="flex items-center justify-between border-t border-white/[0.08] py-1.5 text-[11px] text-white/60">
+              <span>Ensina no time</span>
+              <b className="font-medium text-white">{taught.join(' · ')}</b>
+            </div>
+          )}
+          {boosterEntries.length > 0 && (
+            <div className="flex items-center justify-between border-t border-white/[0.08] py-1.5 text-[11px] text-white/60">
+              <span>Bônus de time</span>
+              <b className="font-medium text-white">
+                {boosterEntries.map(([k, v]) => `${k} +${v}${k.includes('pct') ? '%' : ''}`).join(' · ')}
+              </b>
+            </div>
+          )}
+          <div className="flex items-center justify-between border-t border-white/[0.08] py-1.5 text-[11px] text-white/60">
+            <span>Edição</span>
+            <b className="font-medium text-white tabular-nums">{(lot?.supply ?? row.card_supply ?? 0).toLocaleString('pt-BR')} cópias</b>
+          </div>
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-auto flex items-center justify-center gap-2 rounded-[4px] bg-neon-yellow py-3 font-display text-[11px] font-black uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
+          >
+            Comprar · {priceLabel}
+          </button>
+        </div>
+      </article>
+    </div>
+  );
+}

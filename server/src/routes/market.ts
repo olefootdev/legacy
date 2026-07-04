@@ -292,10 +292,11 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
   if (!sb) return c.json({ ok: false, error: 'Serviço indisponível.' }, 503);
 
   const body = await c.req
-    .json<{ legacy_id?: string; player?: Record<string, unknown> & { id?: string } }>()
-    .catch(() => ({} as { legacy_id?: string; player?: { id?: string } }));
+    .json<{ legacy_id?: string; player?: Record<string, unknown> & { id?: string }; clubName?: string }>()
+    .catch(() => ({} as { legacy_id?: string; player?: { id?: string }; clubName?: string }));
   const legacyId = body.legacy_id?.trim();
   const player = body.player;
+  const clubName = typeof body.clubName === 'string' ? body.clubName.trim().slice(0, 40) : '';
   if (!legacyId || !player?.id) return c.json({ ok: false, error: 'legacy_id e player obrigatórios.' }, 400);
   if (player.id !== legacyId) return c.json({ ok: false, error: 'player.id não confere com legacy_id.' }, 400);
 
@@ -364,6 +365,43 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
       .update({ balance_human: balanceHuman, balance_wei: origWei })
       .eq('user_id', buyerId);
     return c.json({ ok: false, error: 'Falha ao entregar o jogador.', detail: sqErr.message }, 500);
+  }
+
+  // 5) Registro da venda (best-effort — NUNCA bloqueia a entrega já concluída).
+  //    Torna a "camada ao vivo" do mercado REAL: (a) incrementa o lote aberto,
+  //    fazendo a escassez andar e disparando emit_next_lot ao esgotar; (b) grava
+  //    atividade real pro ticker (substitui o feed NPC por compras de verdade).
+  try {
+    const { data: lot } = await sb
+      .from('legacy_player_lots')
+      .select('lot_id, sold')
+      .eq('legacy_player_id', legacyId)
+      .eq('status', 'open')
+      .maybeSingle();
+    if (lot) {
+      await sb
+        .from('legacy_player_lots')
+        .update({ sold: (Number((lot as { sold?: number }).sold) || 0) + 1 })
+        .eq('lot_id', (lot as { lot_id: string }).lot_id);
+    }
+  } catch (e) {
+    console.warn('[buy-legacy] sold++ falhou (ignorado):', e);
+  }
+  try {
+    const ovr = Number((player as { mintOverall?: number }).mintOverall) || null;
+    const pos = typeof (player as { pos?: string }).pos === 'string' ? (player as { pos: string }).pos : null;
+    await sb.from('market_activities').insert({
+      type: 'purchase',
+      manager_id: buyerId,
+      manager_name: clubName || 'Um manager',
+      club_name: clubName || null,
+      player_name: row.name,
+      player_ovr: ovr,
+      player_pos: pos,
+      price_exp: price,
+    });
+  } catch (e) {
+    console.warn('[buy-legacy] activity insert falhou (ignorado):', e);
   }
 
   return c.json({ ok: true, olefoot: newHuman, price, player });

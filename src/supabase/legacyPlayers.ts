@@ -174,6 +174,37 @@ export async function fetchListedLegacyPlayerRows(): Promise<LegacyPlayerRow[]> 
   return (data ?? []) as LegacyPlayerRow[];
 }
 
+export type LegacyLotInfo = { supply: number; sold: number; restam: number };
+
+/**
+ * Escassez REAL por legacy: lê o lote aberto (`status='open'`) de
+ * `legacy_player_lots` e devolve supply/sold/restam por `legacy_player_id`.
+ * Base do "restam X / N" no card — sem isso, qualquer contador seria fake.
+ * Retorna Map vazio se a tabela não for legível (degrada sem quebrar a UI).
+ */
+export async function fetchLegacyOpenLots(): Promise<Map<string, LegacyLotInfo>> {
+  const out = new Map<string, LegacyLotInfo>();
+  const sb = getSupabase();
+  if (!sb) return out;
+  const { data, error } = await sb
+    .from('legacy_player_lots')
+    .select('legacy_player_id, supply, sold, status')
+    .eq('status', 'open');
+  if (error) {
+    console.warn('[legacyPlayers] fetch lots:', error.message);
+    return out;
+  }
+  for (const raw of data ?? []) {
+    const r = raw as Record<string, unknown>;
+    const id = typeof r.legacy_player_id === 'string' ? r.legacy_player_id : null;
+    if (!id) continue;
+    const supply = Number(r.supply) || 0;
+    const sold = Number(r.sold) || 0;
+    out.set(id, { supply, sold, restam: Math.max(0, supply - sold) });
+  }
+  return out;
+}
+
 export async function upsertLegacyPlayer(row: Partial<LegacyPlayerRow> & { id: string; name: string; pos: string }): Promise<LegacyPlayerRow | null> {
   const sb = getSupabase();
   if (!sb) return null;
