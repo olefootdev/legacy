@@ -1,15 +1,14 @@
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { RotateCw, Eye } from 'lucide-react';
 import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
 
 /**
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
  *
  * Protagonista: foto 4/5 P&B→cor, OVR Moret italic, nome Agency, raridade como
- * GRAU DE AMARELO (sem cor nova). Interações high-tier: tilt 3D no mouse + flip
- * pra ficha técnica. TODO dado é real (attrs, ensino, booster, escassez do lote);
- * nada é decorativo-sem-função.
+ * GRAU DE AMARELO (sem cor nova). Interações: tilt 3D no mouse; clicar na carta
+ * VIRA pra ficha técnica (clicar de novo volta) — sem botão. TODO dado é real
+ * (attrs, ensino, booster, escassez do lote); nada é decorativo-sem-função.
  */
 
 type Tier = 'epico' | 'ultra' | 'raro';
@@ -28,18 +27,17 @@ function tierOf(row: LegacyPlayerRow, ovr: number): Tier {
   if (r.includes('epico') || r.includes('épico')) return 'epico';
   if (r.includes('ultra')) return 'ultra';
   if (r.includes('raro')) return 'raro';
-  // fallback derivado do OVR (real, não arbitrário)
   return ovr >= 83 ? 'epico' : ovr >= 78 ? 'ultra' : 'raro';
 }
 
 const TIER_LABEL: Record<Tier, string> = { epico: 'Épico', ultra: 'Ultra-raro', raro: 'Raro' };
 
 /** Sinal de calor HONESTO — derivado da escassez real do lote, não de contador fake. */
-function scarcitySignal(lot?: LegacyLotInfo): { label: string; pct: number } | null {
+function scarcitySignal(lot?: LegacyLotInfo): string | null {
   if (!lot || lot.supply <= 0) return null;
   const pct = lot.restam / lot.supply;
-  if (pct <= 0.1) return { label: 'Últimas unidades', pct };
-  if (pct <= 0.25) return { label: 'Quase esgotado', pct };
+  if (pct <= 0.1) return 'Últimas unidades';
+  if (pct <= 0.25) return 'Quase esgotado';
   return null;
 }
 
@@ -57,9 +55,7 @@ export function LegacyMarketCard({
   row: LegacyPlayerRow;
   ovr: number;
   portrait: string | null;
-  /** Ex.: "R$ 5,00" ou "1.000.000 OLE". */
   priceLabel: string;
-  /** true = paga via PIX (card USDT). */
   pixReady: boolean;
   lot?: LegacyLotInfo;
   owned: boolean;
@@ -70,18 +66,24 @@ export function LegacyMarketCard({
   const hero = size === 'hero';
   const [flipped, setFlipped] = useState(false);
   const [tilt, setTilt] = useState<{ rx: number; ry: number; mx: number; my: number } | null>(null);
-  const reduce =
+  const reduceRef = useRef(
     typeof window !== 'undefined' &&
-    window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      !!window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
   const stageRef = useRef<HTMLDivElement>(null);
 
   const onMove = (e: React.MouseEvent) => {
-    if (reduce || flipped || !stageRef.current) return;
+    if (reduceRef.current || flipped || !stageRef.current) return;
     const r = stageRef.current.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width;
     const py = (e.clientY - r.top) / r.height;
     setTilt({ rx: (0.5 - py) * 10, ry: (px - 0.5) * 10, mx: px * 100, my: py * 100 });
+  };
+
+  const flip = () => {
+    setTilt(null);
+    setFlipped((f) => !f);
   };
 
   const rotY = (flipped ? 180 : 0) + (tilt?.ry ?? 0);
@@ -96,6 +98,23 @@ export function LegacyMarketCard({
       .sort((a, b) => b.v - a.v)
       .slice(0, 2)
       .map((a) => a.k),
+  );
+
+  const BuyButton = (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
+      className="flex w-full min-w-0 items-center justify-center gap-1.5 rounded-[4px] bg-neon-yellow px-2 py-3 font-display text-[11px] font-black uppercase tracking-[0.08em] text-black transition-colors hover:bg-white"
+    >
+      <span className="flex-none">Comprar</span>
+      <span className="min-w-0 truncate tabular-nums">· {priceLabel}</span>
+      <span className="flex-none rounded-[3px] border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.06em]">
+        {pixReady ? 'PIX' : 'OLE'}
+      </span>
+    </button>
   );
 
   return (
@@ -134,7 +153,23 @@ export function LegacyMarketCard({
             />
           )}
 
-          <div className={cn('relative overflow-hidden bg-deep-black', hero ? 'min-h-[340px] flex-1' : 'aspect-[4/5]')}>
+          {/* Foto — clicar VIRA pra ficha */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={flip}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                flip();
+              }
+            }}
+            aria-label={`Ver ficha de ${row.name}`}
+            className={cn(
+              'relative cursor-pointer overflow-hidden bg-deep-black outline-none focus-visible:ring-2 focus-visible:ring-neon-yellow/50',
+              hero ? 'min-h-[340px] flex-1' : 'aspect-[4/5]',
+            )}
+          >
             {portrait ? (
               <img
                 src={portrait}
@@ -156,7 +191,6 @@ export function LegacyMarketCard({
             />
             <span aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(0deg,var(--color-card) 2%,rgba(36,36,36,.1) 34%,transparent 55%)' }} />
 
-            {/* OVR — Moret italic (assinatura do sistema) */}
             <div className="absolute left-3 top-2.5 z-[3] leading-[0.78]">
               <span
                 className="block text-neon-yellow"
@@ -169,7 +203,6 @@ export function LegacyMarketCard({
               </span>
             </div>
 
-            {/* Raridade = grau de amarelo */}
             <span
               className={cn(
                 'absolute right-3 top-3 z-[3] rounded-[4px] font-display font-black uppercase',
@@ -182,13 +215,12 @@ export function LegacyMarketCard({
               {TIER_LABEL[tier]}
             </span>
 
-            {/* Calor HONESTO (só quando a escassez real justifica) */}
             {scarce && (
               <span
                 className="absolute left-3 z-[3] inline-flex items-center gap-1 rounded-full border border-neon-yellow/35 bg-deep-black/70 font-display font-bold uppercase text-neon-yellow"
                 style={{ top: hero ? 80 : 52, fontSize: 9, letterSpacing: '0.14em', padding: '3px 7px' }}
               >
-                🔥 {scarce.label}
+                🔥 {scarce}
               </span>
             )}
 
@@ -203,7 +235,6 @@ export function LegacyMarketCard({
           </div>
 
           <div className="bg-[var(--color-card)] px-3 pb-3 pt-2.5">
-            {/* Escassez REAL do lote */}
             {lot && lot.supply > 0 && (
               <>
                 <div className="mb-2 h-1 overflow-hidden rounded-full bg-[var(--color-card-hi)]">
@@ -217,43 +248,21 @@ export function LegacyMarketCard({
                 </div>
               </>
             )}
-            <div className="flex gap-1.5">
-              {owned ? (
-                <span className="flex flex-1 items-center justify-center gap-1.5 rounded-[4px] border border-[var(--color-success)] py-3 font-display text-[11px] font-black uppercase tracking-[0.16em] text-[var(--color-success)]">
-                  ✓ No time
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onOpen}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-[4px] bg-neon-yellow py-3 font-display text-[11px] font-black uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
-                >
-                  Comprar · {priceLabel}
-                  <span className="rounded-[3px] border border-black/25 px-1.5 py-0.5 text-[9px] tracking-[0.1em]">
-                    {pixReady ? 'PIX' : 'OLE'}
-                  </span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTilt(null);
-                  setFlipped((f) => !f);
-                }}
-                aria-label={`Ver ficha de ${row.name}`}
-                className="grid w-[42px] flex-none place-items-center rounded-[4px] border border-white/15 bg-deep-black/60 text-white/60 transition-colors hover:border-neon-yellow/50 hover:text-neon-yellow"
-              >
-                <RotateCw className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
+            {owned ? (
+              <span className="flex w-full items-center justify-center gap-1.5 rounded-[4px] border border-[var(--color-success)] py-3 font-display text-[11px] font-black uppercase tracking-[0.12em] text-[var(--color-success)]">
+                ✓ No time
+              </span>
+            ) : (
+              BuyButton
+            )}
           </div>
         </div>
 
-        {/* ---------- VERSO (ficha real) ---------- */}
+        {/* ---------- VERSO (ficha real) — clicar volta pra frente ---------- */}
         <div
+          onClick={flip}
           className={cn(
-            'absolute inset-0 flex flex-col bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)] p-3.5',
+            'absolute inset-0 flex cursor-pointer flex-col bg-gradient-to-b from-[var(--color-card-hi)] to-[var(--color-card)] p-3.5',
             'border border-white/[0.08]',
             tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
             tier === 'raro' && 'border-l-[3px] border-l-white/15',
@@ -262,17 +271,7 @@ export function LegacyMarketCard({
         >
           <div className="mb-2.5 flex items-baseline justify-between">
             <span className="font-display text-[11px] font-black uppercase tracking-[0.2em] text-neon-yellow">Ficha técnica</span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setFlipped(false);
-              }}
-              aria-label="Voltar"
-              className="text-white/40 hover:text-neon-yellow"
-            >
-              <Eye className="h-4 w-4" strokeWidth={2} />
-            </button>
+            <span className="font-display text-[9px] uppercase tracking-[0.16em] text-white/35">toque p/ voltar</span>
           </div>
           <div className="mb-3 grid grid-cols-3 gap-1.5">
             {ATTR_ROWS.map((a) => (
@@ -305,13 +304,6 @@ export function LegacyMarketCard({
             <span>Edição</span>
             <b className="font-medium text-white tabular-nums">{(lot?.supply ?? row.card_supply ?? 0).toLocaleString('pt-BR')} cópias</b>
           </div>
-          <button
-            type="button"
-            onClick={onOpen}
-            className="mt-auto flex items-center justify-center gap-2 rounded-[4px] bg-neon-yellow py-3 font-display text-[11px] font-black uppercase tracking-[0.16em] text-black transition-colors hover:bg-white"
-          >
-            Comprar · {priceLabel}
-          </button>
         </div>
       </article>
     </div>

@@ -207,18 +207,28 @@ export function TransferLegaciesTab({
     );
   }
 
-  // Agrupa por COLEÇÃO (time/temporada). Vários jogadores da mesma coleção
-  // (ex: FOGAO95 = Botafogo 1995) aparecem juntos sob um cabeçalho.
+  // Agrupa por ATLETA (não por coleção): todas as cartas do mesmo jogador
+  // (ex: as 3 fases do Gonçalves) aparecem lado a lado sob um cabeçalho, mesmo
+  // sendo de coleções/temporadas diferentes. Escala melhor com muitos jogadores.
+  const athleteKey = (r: LegacyPlayerRow) =>
+    r.collection_id?.trim() || r.id.replace(/-(revelacao|consolidacao|expansao)$/i, '');
+  const athleteTitle = (r: LegacyPlayerRow) => {
+    const cid = r.collection_id?.trim();
+    if (cid) {
+      const base = cid.replace(/^mem-/i, '').replace(/-\d{4}$/, '').replace(/-/g, ' ').trim();
+      if (base) return base.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return r.name.replace(/\s*\d+$/, '').trim() || r.name;
+  };
   const groups: Array<{ code: string; title: string; rows: LegacyPlayerRow[] }> = [];
   const groupIndex = new Map<string, number>();
   for (const row of rows) {
-    const code = row.collection_code?.trim() || row.collection_id?.trim() || 'OUTROS';
-    const title = row.collection_title?.trim() || code;
+    const code = athleteKey(row) || 'OUTROS';
     let idx = groupIndex.get(code);
     if (idx === undefined) {
       idx = groups.length;
       groupIndex.set(code, idx);
-      groups.push({ code, title, rows: [] });
+      groups.push({ code, title: athleteTitle(row), rows: [] });
     }
     groups[idx]!.rows.push(row);
   }
@@ -299,7 +309,7 @@ export function TransferLegaciesTab({
           <div className="flex items-baseline justify-between gap-3 border-b border-amber-400/20 pb-1.5">
             <h3 className="font-display text-sm font-black uppercase tracking-wide text-amber-300">{g.title}</h3>
             <span className="text-[11px] text-white/45">
-              {g.rows.length} {g.rows.length === 1 ? 'jogador' : 'jogadores'}
+              {g.rows.length} {g.rows.length === 1 ? 'carta' : 'cartas'}
             </span>
           </div>
 
