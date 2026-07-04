@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { lazyRetry } from '@/lib/lazyRetry';
-import { loadAdminPanelSession } from '@/supabase/adminPanelAuth';
+import { loadAdminPanelSession, isGameSessionAdmin } from '@/supabase/adminPanelAuth';
 const lazy = lazyRetry; // Bug fix: tela preta na 1ª carga (chunk failure após deploy)
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 
@@ -187,8 +187,14 @@ function RequireAdmin() {
 
   useEffect(() => {
     const checkSession = async () => {
+      // 1) Sessão do painel (login /admin/login via admin_panel_users).
       const session = await loadAdminPanelSession();
-      setIsValid(session !== null);
+      if (session !== null) { setIsValid(true); return; }
+      // 2) OU já logado no JOGO com um e-mail admin — abre o painel sem exigir
+      //    a senha separada do painel. A segurança real das ações continua
+      //    server-side (requireAdminToken) e no DB (is_admin/RLS).
+      const gameAdmin = await isGameSessionAdmin();
+      setIsValid(gameAdmin);
     };
     void checkSession();
   }, []);

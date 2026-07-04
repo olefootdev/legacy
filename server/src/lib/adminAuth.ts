@@ -17,11 +17,15 @@ function configuredAdminToken(): string | null {
 
 /**
  * E-mails autorizados a agir como admin via login do OLEFOOT (sessão Supabase).
- * Default inclui o fundador; override/adição via env ADMIN_EMAILS (separado por vírgula).
+ * Default inclui as contas do fundador; override/adição via env ADMIN_EMAILS
+ * (separado por vírgula). NOTA: `olefootdev@gmail.com` é o e-mail histórico mas
+ * nunca teve conta de jogador criada — `trader4.tfxpro@gmail.com` é a conta real
+ * usada no jogo, por isso entra no default (senão o painel barra o próprio dono).
  */
 const ADMIN_EMAILS: Set<string> = new Set(
   [
     'olefootdev@gmail.com',
+    'trader4.tfxpro@gmail.com',
     ...(process.env.ADMIN_EMAILS ?? '')
       .split(',')
       .map((e) => e.trim().toLowerCase())

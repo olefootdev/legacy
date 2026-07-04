@@ -172,6 +172,41 @@ export function clearAdminPanelSession(): void {
   try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
 }
 
+/**
+ * E-mails que podem ABRIR o painel usando a própria sessão do JOGO (auth.users),
+ * sem precisar do login separado `admin_panel_users`. Espelha o `ADMIN_EMAILS` do
+ * servidor — a segurança REAL das ações continua server-side (requireAdminToken)
+ * e no DB (is_admin/RLS); isto aqui é só o gate de UI do `/admin`.
+ * Adição via env `VITE_ADMIN_EMAILS` (separado por vírgula).
+ */
+const GAME_ADMIN_EMAILS: Set<string> = new Set(
+  [
+    'olefootdev@gmail.com',
+    'trader4.tfxpro@gmail.com',
+    ...((import.meta.env?.VITE_ADMIN_EMAILS as string | undefined) ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  ].map((e) => e.toLowerCase()),
+);
+
+/**
+ * True quando a sessão do JOGO logada (auth.users) pertence a um admin.
+ * Permite abrir o painel `/admin` sem o login `admin_panel_users`, contanto que
+ * você esteja logado no jogo com um e-mail autorizado.
+ */
+export async function isGameSessionAdmin(): Promise<boolean> {
+  try {
+    const sb = getSupabase();
+    if (!sb) return false;
+    const { data } = await sb.auth.getUser();
+    const email = data.user?.email?.toLowerCase();
+    return !!email && GAME_ADMIN_EMAILS.has(email);
+  } catch {
+    return false;
+  }
+}
+
 export async function isAdminPanelSessionValid(): Promise<boolean> {
   const session = await loadAdminPanelSession();
   return session !== null;
