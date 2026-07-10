@@ -126,6 +126,41 @@ export function mergeRemoteSquadIntoLocal(
   return recovered;
 }
 
+/**
+ * Reconcilia a escalação remota no boot QUENTE (local já tem jogadores): preenche
+ * apenas os slots que estão VAZIOS no lineup local com o valor remoto, desde que
+ * o jogador exista no elenco e não esteja já escalado noutro slot. NUNCA
+ * sobrescreve um slot já preenchido localmente (a escolha do usuário neste
+ * aparelho vence). Recupera o XI quando o local zerou (localStorage estourado,
+ * outro browser) e encaixa jogadores recém-recuperados via merge.
+ *
+ * Retorna quantos slots foram preenchidos (0 se nada mudou).
+ */
+export function reconcileRemoteLineup(
+  remoteLineup: Record<string, string> | null | undefined,
+): number {
+  if (!remoteLineup || typeof remoteLineup !== 'object') return 0;
+  const roster = state.players;
+  const localLineup = state.lineup ?? {};
+  const next: Record<string, string> = { ...localLineup };
+  const fielded = new Set(Object.values(localLineup).filter(Boolean));
+  let filled = 0;
+  for (const [slot, pid] of Object.entries(remoteLineup)) {
+    if (!pid) continue;
+    if (next[slot]) continue;        // slot já ocupado localmente → local vence
+    if (!roster[pid]) continue;      // jogador precisa existir no elenco
+    if (fielded.has(pid)) continue;  // não escala o mesmo jogador em 2 slots
+    next[slot] = pid;
+    fielded.add(pid);
+    filled++;
+  }
+  if (filled === 0) return 0;
+  state = { ...state, lineup: next };
+  saveGameState(state);
+  emit();
+  return filled;
+}
+
 /** Hidrata slices críticos vindos do Supabase sem reentrar no reducer. */
 export function applyHydratedGameState(remote: ManagerGameStateSnapshot): void {
   const local = state;

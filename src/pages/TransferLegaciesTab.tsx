@@ -369,6 +369,12 @@ export function TransferLegaciesTab({
             refreshOlefootBalance();
             if (r) {
               const entity = legacyRowToPlayerEntity(r);
+              // Entrega o player no estado local NA HORA (espelha a compra por
+              // OLE, linha ~151). O servidor já entregou via confirm_payment_intent;
+              // sem isto, o próximo save do cliente (snapshot completo de players[])
+              // apagaria o jogador recém-comprado do plantel. `ole` inalterado —
+              // PIX paga em R$, não mexe no saldo OLE.
+              dispatch({ type: 'CONFIRM_LEGACY_PURCHASE', player: entity, ole: oleBal });
               setReceipt({
                 name: entity.name,
                 ovr: overallFromAttributes(entity.attrs),

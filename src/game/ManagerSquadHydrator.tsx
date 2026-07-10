@@ -3,6 +3,7 @@ import {
   applyHydratedSquad,
   getGameState,
   mergeRemoteSquadIntoLocal,
+  reconcileRemoteLineup,
   setSquadHydrationDone,
 } from '@/game/store';
 import { loadManagerSquad } from '@/supabase/managerSquad';
@@ -92,6 +93,14 @@ export function ManagerSquadHydrator() {
             `[managerSquad] recuperou ${recovered.length} jogador(es) ausente(s) do Supabase:`,
             recovered,
           );
+        }
+        // Reconcilia a escalação: preenche só os slots vazios do XI local com o
+        // remoto (nunca sobrescreve a escolha local). Recupera o lineup perdido
+        // (localStorage estourado / outro browser) e encaixa jogadores recém
+        // recuperados acima.
+        const filledSlots = reconcileRemoteLineup(remote.lineup);
+        if (filledSlots > 0) {
+          console.log(`[managerSquad] reconciliou ${filledSlots} slot(s) da escalação do Supabase`);
         }
       }
       setSquadHydrationDone();
