@@ -14,7 +14,6 @@ import { trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
 import { LegendaryBadge } from '@/store/LegendaryBadge';
 import { PremiumPriceReveal } from '@/store/PremiumPriceReveal';
-import { MythicPackHero } from '@/store/MythicPackHero';
 import { StoreViewToggle, type StoreViewMode } from '@/store/StoreViewToggle';
 import { StoreItemList } from '@/store/StoreItemList';
 
@@ -396,9 +395,6 @@ export function Store() {
           </div>
         </motion.div>
       </section>
-
-      {/* Card Edição Limitada — sempre visível */}
-      <MythicPackHero />
 
       {/* Hero promocional por aba — arte substituída pelo designer em /public/store-heroes/ */}
       <TransferHeroSlider

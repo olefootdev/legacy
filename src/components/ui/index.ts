@@ -7,7 +7,9 @@
 
 export { Badge } from './Badge';
 export { Button } from './Button';
+export { ConfirmDialog } from './ConfirmDialog';
 export { Eyebrow } from './Eyebrow';
+export { RailStat } from './RailStat';
 export { Headline } from './Headline';
 export { PackCard } from './PackCard';
 export { PlayerCard } from './PlayerCard';

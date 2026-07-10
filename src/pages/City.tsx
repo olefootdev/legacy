@@ -260,7 +260,7 @@ export function City() {
       return;
     }
     if (id === 'youth_academy') {
-      navigate('/city/youth-prospects');
+      navigate('/clube/academia');
       return;
     }
     if (id === 'megastore') {
@@ -487,9 +487,11 @@ export function City() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + idx * 0.05 }}
-              className="relative isolate overflow-hidden bg-panel border border-white/10 w-full max-w-full min-w-0 hover:border-white/20 transition-all"
+              className="relative isolate overflow-hidden bg-[#1c1c1c] border border-white/10 w-full max-w-full min-w-0 hover:border-white/20 transition-all"
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
+              {/* Rail dourado — assinatura DS */}
+              <span className="absolute inset-y-0 left-0 z-20 w-[3px] bg-neon-yellow" aria-hidden />
               {/* Watermark do ícone */}
               <div
                 className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden"
@@ -533,9 +535,9 @@ export function City() {
                   {struct.desc}
                 </p>
 
-                {/* Stats principais */}
+                {/* Stats principais — todos os benefícios do nível atual */}
                 <div className="space-y-2 pt-2 border-t border-white/5">
-                  {struct.statsForLevel(level).slice(0, 2).map((stat, i) => (
+                  {struct.statsForLevel(level).map((stat, i) => (
                     <div key={i} className="flex justify-between items-center text-xs gap-2">
                       <span className="text-gray-500 uppercase tracking-wider text-[10px]">{stat.label}</span>
                       <span className={cn('font-display font-bold', struct.color)}>{stat.value}</span>
@@ -547,23 +549,26 @@ export function City() {
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
+                    disabled={!upgrade.hasUpgrade}
                     onClick={() => {
-                      if (!upgrade.hasUpgrade || !upgrade.canAfford) {
-                        setUpgradeModalState({ structureId: struct.structureId, phase: 'insufficient' });
-                      } else {
-                        setUpgradeModalState({ structureId: struct.structureId, phase: 'confirm' });
-                      }
+                      if (!upgrade.hasUpgrade) return;
+                      setUpgradeModalState({
+                        structureId: struct.structureId,
+                        phase: upgrade.canAfford ? 'confirm' : 'insufficient',
+                      });
                     }}
                     className={cn(
-                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
-                      upgrade.hasUpgrade && upgrade.canAfford
-                        ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-                        : 'bg-white/5 text-gray-600 border-white/5 hover:bg-white/10',
+                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5 disabled:cursor-not-allowed',
+                      !upgrade.hasUpgrade
+                        ? 'bg-white/5 text-gray-600 border-white/5'
+                        : upgrade.canAfford
+                          ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                          : 'bg-white/5 text-gray-500 border-white/5 hover:bg-white/10',
                     )}
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
                     <TrendingUp className="w-3.5 h-3.5" />
-                    Evoluir
+                    {upgrade.hasUpgrade ? `Evoluir · ${upgrade.title}` : 'Nível máximo'}
                   </button>
                   <button
                     type="button"
@@ -609,12 +614,10 @@ export function City() {
           const cost = getNextUpgradeCost(upgradeModalState.structureId, level, DEFAULT_BRO_PRICES_CENTS);
 
           const handleConfirm = () => {
-            setUpgradeModalState({ ...upgradeModalState, phase: 'loading' });
-            setTimeout(() => {
-              dispatch({ type: 'UPGRADE_STRUCTURE', structureId: upgradeModalState.structureId });
-              trackMissionEvent('structure_upgraded');
-              setUpgradeModalState({ ...upgradeModalState, phase: 'success' });
-            }, 3000);
+            // Evolução é instantânea no reducer — sem spinner fake.
+            dispatch({ type: 'UPGRADE_STRUCTURE', structureId: upgradeModalState.structureId });
+            trackMissionEvent('structure_upgraded');
+            setUpgradeModalState({ ...upgradeModalState, phase: 'success' });
           };
 
           const handleClose = () => {

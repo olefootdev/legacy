@@ -124,6 +124,7 @@ import {
   type ActivationStatus,
 } from '@/wallet/activationPack';
 import { PixCheckoutModal } from '@/components/PixCheckoutModal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const RANK_ICON_MAP: Record<RankIconName, LucideIcon> = {
   Sprout, Zap, Flame, Gem, Trophy, Crown,
@@ -149,8 +150,6 @@ export function ManagerNetwork() {
     [finance.wallet],
   );
 
-  const [addOpen, setAddOpen] = useState(false);
-  const [q, setQ] = useState('');
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -389,9 +388,11 @@ export function ManagerNetwork() {
     }
   };
 
+  const [confirmLock, setConfirmLock] = useState(false);
   const handleCreateLock = async () => {
     const amount = Number(lockAmount);
     if (creatingLock || !amount || amount <= 0) return;
+    setConfirmLock(false);
     setCreatingLock(true);
     try {
       const result = await createHodlLock(amount, 'OLEXP');
@@ -423,34 +424,6 @@ export function ManagerNetwork() {
     }
   };
 
-  const blockedManagerIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const f of social.friends) ids.add(f.managerId);
-    for (const o of social.outgoing) ids.add(o.toManagerId);
-    for (const i of social.incoming) ids.add(i.fromManagerId);
-    return ids;
-  }, [social]);
-
-  const suggestions = useMemo(() => {
-    const qq = q.trim().toLowerCase();
-    const DISCOVERABLE_MANAGERS: any[] = [];
-    return DISCOVERABLE_MANAGERS.filter((m) => {
-      if (blockedManagerIds.has(m.id)) return false;
-      if (!qq) return true;
-      return (
-        m.clubName.toLowerCase().includes(qq) ||
-        m.city.toLowerCase().includes(qq) ||
-        m.id.toLowerCase().includes(qq)
-      );
-    });
-  }, [q, blockedManagerIds]);
-
-  const sendInvite = (managerId: string, clubName: string) => {
-    dispatch({ type: 'SEND_FRIEND_REQUEST', managerId, clubName });
-    setAddOpen(false);
-    setQ('');
-  };
-
   function handleCopyCode() {
     if (!myReferralCode) return;
     navigator.clipboard.writeText(myReferralCode).catch(() => {});
@@ -460,6 +433,11 @@ export function ManagerNetwork() {
 
   function handleCopyLink() {
     if (!inviteLink) return;
+    // Mobile: abre o share sheet nativo (WhatsApp/IG). Desktop: cai no copiar.
+    if (typeof navigator.share === 'function') {
+      navigator.share({ title: 'Olefoot', text: 'Entra no Olefoot pelo meu convite', url: inviteLink }).catch(() => {});
+      return;
+    }
     navigator.clipboard.writeText(inviteLink).catch(() => {});
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -609,55 +587,25 @@ export function ManagerNetwork() {
             </button>
           </div>
 
-          {/* Stats strip — 3 métricas principais */}
+          {/* Stats strip — 3 métricas de rede */}
           <div className="mt-4 sm:mt-6 grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto px-2">
-            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p
-                className="text-neon-yellow tabular-nums leading-none truncate"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 'clamp(20px, 4vw, 36px)',
-                }}
-              >
-                {privacy ? '••' : social.friends.length}
-              </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                Amigos
-              </p>
-            </div>
-            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p
-                className="text-rose-400 tabular-nums leading-none truncate"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 'clamp(20px, 4vw, 36px)',
-                }}
-              >
-                {privacy ? '••' : social.incoming.length}
-              </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                Pedidos
-              </p>
-            </div>
-            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <p
-                className="text-cyan-400 tabular-nums leading-none truncate"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 900,
-                  fontSize: 'clamp(20px, 4vw, 36px)',
-                }}
-              >
+            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
+              <p className="text-cyan-400 tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
                 {privacy ? '••' : (loadingReferrals ? '…' : referrals.length)}
               </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">
-                Indicações
+              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Indicações</p>
+            </div>
+            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
+              <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
+                {privacy ? '••' : totalCommissionPending.toLocaleString('pt-BR')}
               </p>
+              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Comissão EXP</p>
+            </div>
+            <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
+              <p className="text-amber-300 tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
+                {privacy ? '••' : (career?.lifetimePoints ?? 0).toLocaleString('pt-BR')}
+              </p>
+              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Pontos</p>
             </div>
           </div>
         </motion.div>
@@ -668,8 +616,9 @@ export function ManagerNetwork() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-rose-500/20 via-amber-500/15 to-amber-500/5 border-2 border-amber-400/60 rounded-sm p-5 sm:p-6 shadow-[0_0_36px_rgba(251,191,36,0.15)]"
+          className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px] sm:p-6 sm:pl-[18px]"
         >
+          <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-400" aria-hidden />
           <div className="flex items-start gap-3 mb-4">
             <div className="shrink-0 bg-amber-400/20 p-2.5 rounded-sm">
               <ShieldCheck className="w-6 h-6 text-amber-300" />
@@ -679,13 +628,10 @@ export function ManagerNetwork() {
                 Ativação obrigatória
               </p>
               <h2 className="font-display text-xl sm:text-2xl font-black uppercase text-white tracking-tight">
-                Ative sua conta por <span className="text-amber-300">${ACTIVATION_AMOUNT_USD}</span>
+                Ative sua conta · <span className="text-amber-300">R$ 125,00</span>
               </h2>
-              <p className="text-xs sm:text-sm text-white/70 mt-2 leading-relaxed">
-                Pra <strong className="text-white">receber comissões 5-5-5%</strong> dos depósitos da
-                tua rede, criar <strong className="text-white">HODL locks</strong> e resgatar
-                <strong className="text-white"> bônus de carreira</strong>, você precisa ativar a
-                conta com um pack único de <strong className="text-amber-300">${ACTIVATION_AMOUNT_USD}</strong>.
+              <p className="text-xs text-white/60 mt-2">
+                Pack único (≈ ${ACTIVATION_AMOUNT_USD}) — libera comissões 5-5-5%, HODL locks e bônus de carreira.
               </p>
             </div>
           </div>
@@ -705,7 +651,7 @@ export function ManagerNetwork() {
             onClick={handleActivate}
             className="w-full bg-amber-400 hover:bg-white text-black py-4 rounded-sm font-display text-sm font-black uppercase tracking-[0.18em] transition-colors"
           >
-            Ativar conta por ${ACTIVATION_AMOUNT_USD} (PIX)
+            Ativar conta · R$ 125,00 (PIX)
           </button>
 
           <p className="text-[10px] text-white/40 mt-3 text-center uppercase tracking-wider">
@@ -798,97 +744,6 @@ export function ManagerNetwork() {
           </motion.div>
         )}
 
-        {/* Amigos */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="ole-eyebrow !text-neon-yellow">
-                <span>Amigos</span>
-              </div>
-              <Users className="h-3.5 w-3.5 text-neon-yellow/70" aria-hidden />
-            </div>
-            <button
-              type="button"
-              onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-1.5 bg-neon-yellow px-3 py-1.5 rounded-sm font-display text-xs font-bold uppercase tracking-wider text-black hover:bg-white transition-colors"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              Adicionar
-            </button>
-          </div>
-
-          {social.friends.length === 0 ? (
-            <div className="bg-panel border border-dashed border-white/10 rounded-sm p-6 text-center">
-              <Users className="w-10 h-10 text-white/20 mx-auto mb-3" />
-              <p className="text-sm text-gray-500 mb-2">Nenhum amigo ainda</p>
-              <p className="text-xs text-gray-600">
-                Clica em <strong className="text-white">Adicionar</strong> para começar a construir a tua rede.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {social.friends.map((f, idx) => (
-                <motion.div
-                  key={f.managerId}
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.25 + idx * 0.03 }}
-                  className="flex items-center justify-between gap-2 bg-panel border border-white/10 rounded-sm p-4 hover:border-neon-yellow/30 transition-colors"
-                >
-                  <span className="font-display text-sm font-bold text-white truncate">
-                    {maskName(f.clubName, privacy)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'REMOVE_SOCIAL_FRIEND', managerId: f.managerId })}
-                    className="shrink-0 text-[10px] font-bold uppercase text-gray-500 hover:text-red-400 transition-colors"
-                  >
-                    Remover
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </motion.div>
-
-        {/* Convites enviados */}
-        {social.outgoing.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="space-y-3"
-          >
-            <div className="ole-eyebrow !text-white/40">
-              <span>Convites enviados</span>
-            </div>
-            <div className="space-y-2">
-              {social.outgoing.map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center justify-between gap-2 bg-panel border border-white/10 rounded-sm p-3"
-                >
-                  <span className="font-display text-sm font-bold text-gray-400 truncate">
-                    {o.toClubName}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'CANCEL_OUTGOING_FRIEND_REQUEST', requestId: o.id })}
-                    className="shrink-0 text-[10px] font-bold uppercase text-gray-500 hover:text-white transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
         {/* Indicações cadastradas */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -912,7 +767,7 @@ export function ManagerNetwork() {
 
           {/* Comissão pendente — destaque com botão Resgatar */}
           {!loadingReferrals && referrals.length > 0 && (
-            <div className="bg-gradient-to-r from-neon-yellow/10 to-neon-yellow/5 border border-neon-yellow/30 rounded-sm p-3">
+            <div className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-neon-yellow bg-[#1c1c1c] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
@@ -989,7 +844,7 @@ export function ManagerNetwork() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + idx * 0.05 }}
-                    className="bg-panel border border-cyan-500/10 rounded-sm p-4 hover:border-cyan-500/30 transition-colors"
+                    className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-cyan-400 bg-[#1c1c1c] p-4 hover:border-white/20 transition-colors"
                   >
                     {/* Header: nome + clube + L badge */}
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -1081,7 +936,8 @@ export function ManagerNetwork() {
         )}
 
         {/* CAREER PROGRESS — Resumo + bônus pendente */}
-        <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-400/30 rounded-sm p-5">
+        <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px]">
+          <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-400" aria-hidden />
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] text-amber-300 uppercase tracking-[0.2em] font-display font-bold mb-1 inline-flex items-center gap-1.5">
@@ -1212,7 +1068,8 @@ export function ManagerNetwork() {
             )}
           </div>
 
-          <div className="bg-panel border border-cyan-500/20 rounded-sm p-4 sm:p-5">
+          <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-4 pl-[18px] sm:p-5 sm:pl-[18px]">
+            <span className="absolute inset-y-0 left-0 w-[3px] bg-cyan-400" aria-hidden />
             <p className="text-xs text-white/60 mb-4">
               5% de comissão sobre cada depósito da tua rede, em 3 níveis.
             </p>
@@ -1253,7 +1110,8 @@ export function ManagerNetwork() {
             <span>HODL Vault</span>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-sm p-5">
+          <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px]">
+            <span className="absolute inset-y-0 left-0 w-[3px] bg-emerald-400" aria-hidden />
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-emerald-300" />
               <p className="font-display text-xs font-black uppercase tracking-wider text-emerald-300">
@@ -1301,7 +1159,7 @@ export function ManagerNetwork() {
               </div>
               <button
                 type="button"
-                onClick={handleCreateLock}
+                onClick={() => setConfirmLock(true)}
                 disabled={creatingLock || !Number(lockAmount) || !activation?.isActivated}
                 title={!activation?.isActivated ? 'Requer ativação' : undefined}
                 className="bg-emerald-400 text-black px-6 py-3 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
@@ -1443,7 +1301,7 @@ export function ManagerNetwork() {
                 <Ticket className="w-3.5 h-3.5" />
                 <span>Sorteios recentes</span>
               </div>
-              <ul className="bg-panel border border-amber-500/20 rounded-sm divide-y divide-white/5">
+              <ul className="bg-[#1c1c1c] border border-white/10 border-l-[3px] border-l-amber-400 rounded-[var(--radius-md)] divide-y divide-white/5">
                 {lotteryDraws.map((draw) => (
                   <li
                     key={draw.drawDate}
@@ -1522,7 +1380,7 @@ export function ManagerNetwork() {
               <Medal className="w-3.5 h-3.5" />
               <span>Top da Carreira</span>
             </div>
-            <ul className="bg-panel border border-amber-500/20 rounded-sm divide-y divide-white/5">
+            <ul className="bg-[#1c1c1c] border border-white/10 border-l-[3px] border-l-amber-400 rounded-[var(--radius-md)] divide-y divide-white/5">
               {leaderboard.slice(0, 20).map((entry) => {
                 const rankDef = RANK_CATALOG.find((r) => r.rank === entry.currentRank);
                 const RankIcon = rankDef ? RANK_ICON_MAP[rankDef.iconName] : Medal;
@@ -1566,7 +1424,7 @@ export function ManagerNetwork() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-panel border border-white/10 border-l-4 border-l-cyan-400 rounded-sm p-4 sm:p-5"
+          className="bg-[#1c1c1c] border border-white/10 border-l-[3px] border-l-cyan-400 rounded-[var(--radius-md)] p-4 sm:p-5"
         >
           <p className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-wider text-white mb-3">
             <Sparkles className="h-3.5 w-3.5 text-cyan-400" /> Como funcionam as comissões?
@@ -1588,6 +1446,27 @@ export function ManagerNetwork() {
         </motion.div>
       </section>
 
+      {/* ── CONFIRMAR HODL LOCK (90 dias) ── */}
+      <ConfirmDialog
+        open={confirmLock}
+        onClose={() => setConfirmLock(false)}
+        onConfirm={handleCreateLock}
+        eyebrow="Confirmar HODL lock"
+        title="Travar por 90 dias"
+        accent="#34D399"
+        confirmLabel={creatingLock ? 'Travando…' : 'Confirmar'}
+        confirmDisabled={creatingLock}
+      >
+        <p className="mt-3 text-[12.5px] leading-relaxed text-white/60">
+          Trava <strong className="text-white">{fmtNum(Number(lockAmount) || 0, 0)} OLEXP</strong> por <strong className="text-white">90 dias</strong>. O capital fica bloqueado até o fim do período.
+        </p>
+        {lockProjection && (
+          <div className="mt-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-[12px] text-white/70">
+            Recebe ≈ <strong className="text-emerald-300">{fmtNum(lockProjection.totalReward, 2)} OLEXP</strong> em 90 dias + 1 Premium Card.
+          </div>
+        )}
+      </ConfirmDialog>
+
       {/* ── PIX CHECKOUT MODAL ── */}
       <PixCheckoutModal
         open={pixOpen}
@@ -1600,72 +1479,6 @@ export function ManagerNetwork() {
         onSuccess={handlePixSuccess}
       />
 
-      {/* ── MODAL ADICIONAR AMIGO ── */}
-      <AnimatePresence>
-        {addOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/85 p-3 backdrop-blur-sm sm:items-center sm:p-4"
-            onClick={() => setAddOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.96, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.96, y: 10 }}
-              onClick={(e) => e.stopPropagation()}
-              className="my-auto flex max-h-[min(88dvh,calc(100dvh-5rem))] w-full max-w-md flex-col overflow-hidden rounded-sm border border-neon-yellow/40 bg-panel p-5 sm:max-h-[min(90dvh,640px)]"
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-display text-lg font-black uppercase tracking-wide text-white">
-                    Adicionar amigo
-                  </h3>
-                  <p className="mt-1 text-[11px] text-gray-500">Busca um clube e envia um convite.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(false)}
-                  className="rounded-sm p-2 text-gray-500 hover:bg-white/10 hover:text-white transition-colors"
-                  aria-label="Fechar"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Nome do clube ou cidade..."
-                className="mb-3 w-full rounded-sm border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-neon-yellow/60 focus:outline-none"
-              />
-              <ul className="max-h-[min(40dvh,14rem)] flex-1 divide-y divide-white/10 overflow-y-auto rounded-sm border border-white/10">
-                {suggestions.length === 0 ? (
-                  <li className="px-3 py-6 text-center text-sm text-gray-500">
-                    Nenhum resultado ou todos já na rede.
-                  </li>
-                ) : (
-                  suggestions.map((m) => (
-                    <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-white/5">
-                      <div className="min-w-0">
-                        <p className="truncate font-display text-sm font-bold text-white">{m.clubName}</p>
-                        <p className="text-[10px] text-gray-500">{m.city}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => sendInvite(m.id, m.clubName)}
-                        className="shrink-0 bg-neon-yellow px-2.5 py-1 rounded-sm font-display text-[10px] font-bold uppercase text-black hover:bg-white transition-colors"
-                      >
-                        Convidar
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -1058,18 +1058,6 @@ export function Home() {
           // ── Modo RESULTADO (último jogo) ────────────────────────────
           const awayShort = lastMatch.away.slice(0, 3).toUpperCase();
 
-          // Calcular ranking e variação percentual
-          const currentRanking = 1; // TODO: pegar do sistema de ranking real
-          const previousRanking = 1; // TODO: pegar do histórico de ranking
-          const rankingChange = previousRanking > 0
-            ? Math.round(((previousRanking - currentRanking) / previousRanking) * 100)
-            : 0;
-          const rankingChangeStr = rankingChange > 0
-            ? `+${rankingChange}%`
-            : rankingChange < 0
-              ? `${rankingChange}%`
-              : '0%';
-
           // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
           const mvp = lastMatch.scoutMvp;
           // Ignora MVP se for o fallback 'Equipe' (sem playerId válido)

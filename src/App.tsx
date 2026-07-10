@@ -134,20 +134,16 @@ const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ de
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
-const MatchPenalty = lazy(() => import('./pages/MatchPenalty').then((m) => ({ default: m.MatchPenalty })));
 const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
 const LigaOle = lazy(() => import('./pages/LigaOle').then((m) => ({ default: m.LigaOle })));
 const MatchGlobal = lazy(() => import('./pages/MatchGlobal').then((m) => ({ default: m.default })));
-const MatchGlobalSetup = lazy(() => import('./pages/MatchGlobalSetup').then((m) => ({ default: m.default })));
 const GlobalLeagueHistory = lazy(() => import('./pages/GlobalLeagueHistory').then((m) => ({ default: m.default })));
 const GlobalLeagueClubProfile = lazy(() => import('./pages/GlobalLeagueClubProfile').then((m) => ({ default: m.default })));
 const GlobalLeagueAllTime = lazy(() => import('./pages/GlobalLeagueAllTime').then((m) => ({ default: m.default })));
 const LocalLeagues = lazy(() => import('./pages/LocalLeagues').then((m) => ({ default: m.default })));
-const OlefootRanked = lazy(() => import('./pages/OlefootRanked').then((m) => ({ default: m.default })));
 const GlobalLeagueRegistration = lazy(() => import('./pages/GlobalLeagueRegistration').then((m) => ({ default: m.default })));
 const GlobalLeaguePlayoffs = lazy(() => import('./pages/GlobalLeaguePlayoffs').then((m) => ({ default: m.default })));
 const GlobalLeagueDaily = lazy(() => import('./pages/GlobalLeagueDaily').then((m) => ({ default: m.default })));
-const GlobalLeagueCrowns = lazy(() => import('./pages/GlobalLeagueCrowns').then((m) => ({ default: m.default })));
 const Postgame = lazy(() => import('./pages/Postgame').then((m) => ({ default: m.default })));
 const Missions = lazy(() => import('./pages/Missions').then((m) => ({ default: m.Missions })));
 const CalendarPage = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
@@ -157,7 +153,6 @@ const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.M
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
-const ManagerCareer = lazy(() => import('./pages/ManagerCareer').then((m) => ({ default: m.ManagerCareer })));
 const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
 const ManagerScoutsPlayer = lazy(() => import('./pages/ManagerScoutsPlayer').then((m) => ({ default: m.ManagerScoutsPlayer })));
 const Config = lazy(() => import('./pages/Config').then((m) => ({ default: m.Config })));
@@ -533,7 +528,8 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/manager" element={<Manager />} />
             <Route path="/manager/mensagens" element={<ManagerMessages />} />
             <Route path="/manager/network" element={<ManagerNetwork />} />
-            <Route path="/manager/career" element={<ManagerCareer />} />
+            {/* Carreira de afiliados consolidada no Network (hub único). Página órfã aposentada. */}
+            <Route path="/manager/career" element={<Navigate to="/manager/network" replace />} />
             <Route path="/manager/scouts" element={<ManagerScouts />} />
             <Route path="/manager/scouts/player/:playerId" element={<ManagerScoutsPlayer />} />
             <Route path="/manager/pro" element={<ManagerPro />} />
@@ -604,21 +600,19 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/match/quick-plan-preview" element={<QuickPlanPreview />} />
             <Route path="/liga-ole" element={<LigaOle />} />
             <Route path="/match/penalty" element={<MatchPenaltyV2 />} />
-            <Route path="/match/penalty-legacy" element={<MatchPenalty />} />
+            {/* Pênalti V1 aposentado — redireciona pra versão atual. */}
+            <Route path="/match/penalty-legacy" element={<Navigate to="/match/penalty" replace />} />
             <Route path="/match/penalty-v2" element={<Navigate to="/match/penalty" replace />} />
             <Route path="/match/global" element={<MatchGlobal />} />
-            <Route path="/match/global/setup" element={<MatchGlobalSetup />} />
             <Route path="/match/global/history" element={<GlobalLeagueHistory />} />
             <Route path="/match/global/all-time" element={<GlobalLeagueAllTime />} />
             <Route path="/ligas-locais" element={<LocalLeagues />} />
             <Route path="/match/global/club/:teamId" element={<GlobalLeagueClubProfile />} />
             {/* OLEFOOT LIGA mockada (Flamengo/Palmeiras/...) deletada em 2026-05-18 — manter apenas Liga Global com managers reais. Redireciona pra /match/global. */}
             <Route path="/match/olefoot-liga" element={<Navigate to="/match/global" replace />} />
-            <Route path="/olefoot/ranked" element={<OlefootRanked />} />
             <Route path="/liga-global/registro" element={<GlobalLeagueRegistration />} />
             <Route path="/liga-global/playoffs" element={<GlobalLeaguePlayoffs />} />
             <Route path="/liga-global/hoje" element={<GlobalLeagueDaily />} />
-            <Route path="/liga-global/coroas" element={<GlobalLeagueCrowns />} />
             <Route path="/postgame" element={<Postgame />} />
             </Route>{/* /RequireSquad */}
             </Route>{/* /GameShell */}

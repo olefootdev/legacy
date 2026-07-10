@@ -221,7 +221,7 @@ import { applyQuickScars } from '@/systems/scars';
 import { isoWeekKey, activeDecreeOption } from '@/systems/weeklyDecree';
 import { buildRoundChronicle } from '@/match/ligaOle/ligaOleChronicle';
 import { nemesisIsDerby } from '@/match/rivalDerby';
-import { addHoursIso, applyTrainingToPlayer, maxSlotsByTrainingCenter, resolveGroupPlayerIds, splitDuePlans } from '@/systems/trainingPlans';
+import { addHoursIso, applyTrainingToPlayer, durationGainMultiplier, maxSlotsByTrainingCenter, resolveGroupPlayerIds, splitDuePlans } from '@/systems/trainingPlans';
 import {
   STAFF_LABELS,
   amplifyTrainingResult,
@@ -3473,11 +3473,35 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (resolvedIds.length === 0) return state;
       /** Coletivo: todo o grupo definido por `group`; individual: até `slots` por tipo de treino. */
       const playerIdsForPlan = action.mode === 'coletivo' ? resolvedIds : resolvedIds.slice(0, slots);
+      // Item 4: um jogador não pode estar em dois treinos ao mesmo tempo (evita evolução paralela grátis).
+      const busyPlayerIds = new Set(
+        state.manager.trainingPlans
+          .filter((p) => p.status === 'running')
+          .flatMap((p) => p.playerIds),
+      );
+      const freeIdsForPlan = playerIdsForPlan.filter((id) => !busyPlayerIds.has(id));
+      if (freeIdsForPlan.length === 0) {
+        return {
+          ...state,
+          inbox: [
+            makeInboxItem(
+              `train-busy-${Date.now()}`,
+              'TRAINING_SLOT_BLOCKED',
+              'TREINO',
+              action.mode === 'coletivo'
+                ? 'Todos do grupo já estão num treino em curso.'
+                : 'Jogador(es) já estão num treino em curso.',
+              { colorClass: 'text-red-400', deepLink: '/team/treino' },
+            ),
+            ...state.inbox,
+          ].slice(0, 14),
+        };
+      }
       const plan = {
         id: `tr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         mode: action.mode,
         trainingType: action.trainingType,
-        playerIds: playerIdsForPlan,
+        playerIds: freeIdsForPlan,
         group,
         startedAt: now,
         endAt: addHoursIso(now, Math.max(1, action.durationHours)),
@@ -3517,6 +3541,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const absenceMult = absenceAtCompletion.effect.trainingMultiplier;
       for (const plan of due) {
         const marketSnap = marketBroSnapshotFromPlayers(players);
+        // Item 1: duração do plano escala o ganho (retorno decrescente). Constante por plano.
+        const planHours = Math.max(
+          1,
+          (new Date(plan.endAt).getTime() - new Date(plan.startedAt).getTime()) / 3_600_000,
+        );
+        const durMult = durationGainMultiplier(planHours);
         for (const pid of plan.playerIds) {
           const pl = players[pid];
           if (!pl) continue;
@@ -3527,10 +3557,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           const prospectMult =
             pl.archetype === 'novo_talento' ? youthAcademyProspectTrainingMultiplier(yaLvl) : 1;
           const ctMult = trainingCenterAttributeGainMultiplier(ctLvl);
+          // Item 3: potencial do jogador (evolutionRate 0.25–3) modula o ganho — jovem cresce rápido, veterano devagar.
+          const rateMult =
+            pl.evolutionRate != null && Number.isFinite(pl.evolutionRate)
+              ? Math.max(0.25, Math.min(3, pl.evolutionRate))
+              : 1;
           const boosted = amplifyTrainingResult(
             pl,
             base,
-            trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult * absenceMult,
+            trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult * absenceMult * durMult * rateMult,
           );
           const recovered = applyNutritionRecovery(boosted, state.manager.staff);
           players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(recovered));

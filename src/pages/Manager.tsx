@@ -1303,54 +1303,12 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
   const dispatch = useGameDispatch();
   const club = useGameStore((s) => s.club);
   const social = useGameStore((s) => s.social);
-  const [addOpen, setAddOpen] = useState(false);
-  const [q, setQ] = useState('');
-
-  const blockedManagerIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const f of social.friends) ids.add(f.managerId);
-    for (const o of social.outgoing) ids.add(o.toManagerId);
-    for (const i of social.incoming) ids.add(i.fromManagerId);
-    return ids;
-  }, [social]);
-
-  const suggestions = useMemo(() => {
-    const qq = q.trim().toLowerCase();
-    // DISCOVERABLE_MANAGERS removido temporariamente para MVP
-    const DISCOVERABLE_MANAGERS: any[] = [];
-    return DISCOVERABLE_MANAGERS.filter((m) => {
-      if (blockedManagerIds.has(m.id)) return false;
-      if (!qq) return true;
-      return (
-        m.clubName.toLowerCase().includes(qq) ||
-        m.city.toLowerCase().includes(qq) ||
-        m.id.toLowerCase().includes(qq)
-      );
-    });
-  }, [q, blockedManagerIds]);
-
-  const sendInvite = (managerId: string, clubName: string) => {
-    dispatch({ type: 'SEND_FRIEND_REQUEST', managerId, clubName });
-    setAddOpen(false);
-    setQ('');
-  };
-
   return (
     <DrawerShell title="Network" onClose={onClose} accent="bg-fuchsia-500">
       <div className="space-y-5">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-[11px] text-white/60">Teu clube: <span className="font-bold text-white">{club.name}</span></p>
-            <p className="text-[10px] text-white/40">Amigos, pedidos e convites.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded bg-fuchsia-500 px-3 py-1.5 font-display text-xs font-bold uppercase tracking-wider text-white hover:bg-fuchsia-400"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Adicionar
-          </button>
+        <div>
+          <p className="text-[11px] text-white/60">Teu clube: <span className="font-bold text-white">{club.name}</span></p>
+          <p className="text-[10px] text-white/40">Solicitações e amigos. Cresce a rede pelo teu link no Network.</p>
         </div>
 
         {social.incoming.length > 0 ? (
@@ -1397,7 +1355,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
           </h4>
           {social.friends.length === 0 ? (
             <p className="rounded border border-dashed border-white/10 bg-black/20 px-3 py-3 text-sm text-gray-500">
-              Nenhum amigo ainda — clica em <strong className="text-white">Adicionar</strong>.
+              Nenhum amigo ainda. Compartilha teu link de indicação no <strong className="text-white">Network</strong>.
             </p>
           ) : (
             <ul className="grid gap-1.5 sm:grid-cols-2">
@@ -1447,71 +1405,6 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
         </p>
       </div>
 
-      <AnimatePresence>
-        {addOpen ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/85 p-3 backdrop-blur-sm sm:items-center sm:p-4"
-            onClick={() => setAddOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.96, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.96, y: 10 }}
-              onClick={(e) => e.stopPropagation()}
-              className="my-auto flex max-h-[min(88dvh,calc(100dvh-5rem))] w-full max-w-md flex-col overflow-hidden rounded-xl border border-fuchsia-500/40 bg-panel p-5 sm:max-h-[min(90dvh,640px)]"
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-display text-lg font-black uppercase tracking-wide text-white">
-                    Adicionar amigo
-                  </h3>
-                  <p className="mt-1 text-[11px] text-gray-500">Busca um clube e envia um convite.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(false)}
-                  className="rounded-lg p-2 text-gray-500 hover:bg-white/10 hover:text-white"
-                  aria-label="Fechar"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Nome do clube ou cidade..."
-                className="mb-3 w-full rounded-lg border border-white/15 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-fuchsia-500/60 focus:outline-none"
-              />
-              <ul className="max-h-[min(40dvh,14rem)] flex-1 divide-y divide-white/10 overflow-y-auto rounded-lg border border-white/10">
-                {suggestions.length === 0 ? (
-                  <li className="px-3 py-6 text-center text-sm text-gray-500">
-                    Nenhum resultado ou todos já na rede.
-                  </li>
-                ) : (
-                  suggestions.map((m) => (
-                    <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-white/5">
-                      <div className="min-w-0">
-                        <p className="truncate font-display text-sm font-bold text-white">{m.clubName}</p>
-                        <p className="text-[10px] text-gray-500">{m.city}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => sendInvite(m.id, m.clubName)}
-                        className="shrink-0 bg-fuchsia-600 px-2.5 py-1 font-display text-[10px] font-bold uppercase text-white hover:bg-fuchsia-500"
-                      >
-                        Convidar
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
     </DrawerShell>
   );
 }

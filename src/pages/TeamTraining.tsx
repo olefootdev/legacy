@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import { RailStat } from '@/components/ui/RailStat';
 import { motion } from 'motion/react';
-import { Check, Clock, Dumbbell } from 'lucide-react';
+import { BatteryCharging, Brain, Check, Clock, Crosshair, Dumbbell, Footprints, LayoutGrid, Zap } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { EditorialHero } from '@/components/EditorialHero';
 import { useGameDispatch, useGameStore } from '@/game/store';
-import { maxSlotsByTrainingCenter, resolveGroupPlayerIds } from '@/systems/trainingPlans';
+import { durationGainMultiplier, maxSlotsByTrainingCenter, resolveGroupPlayerIds } from '@/systems/trainingPlans';
 import { overallFromAttributes } from '@/entities/player';
 import {
   medicalDeptTreatmentSlots,
   trainingCenterAttributeGainMultiplier,
-  trainingCenterHasAiLabs,
   trainingCenterMaxConcurrentCollectivePlans,
 } from '@/clubStructures/benefits';
 import { TREATMENT_PLAN_DURATION_H } from '@/systems/medicalTreatment';
@@ -17,44 +18,77 @@ import type { TrainingPlan } from '@/game/types';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
 
-type IndividualType = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial';
-type CollectiveType = 'formacao' | 'empatia' | 'fisico';
-type GroupType = 'defensivo' | 'criativo' | 'ataque' | 'all';
+/** Os 6 cards de treino. Chaves = trainingType do reducer (válidas p/ individual e coletivo). */
+type TrainingCardId = 'fisico' | 'mental' | 'tatico' | 'atributos' | 'especial' | 'descanso';
+/** Quem treina: o elenco todo, um setor, ou uma seleção manual. */
+type WhoMode = 'elenco' | 'setor' | 'individual';
+type SectorId = 'defensivo' | 'criativo' | 'ataque';
 
-const INDIVIDUAL: IndividualType[] = ['fisico', 'mental', 'tatico', 'atributos', 'especial'];
-const COLLECTIVE: CollectiveType[] = ['formacao', 'empatia', 'fisico'];
-const GROUPS: GroupType[] = ['defensivo', 'criativo', 'ataque', 'all'];
+const CARD_ORDER: TrainingCardId[] = ['fisico', 'mental', 'tatico', 'atributos', 'especial', 'descanso'];
 
-const INDIVIDUAL_LABEL: Record<IndividualType, string> = {
-  fisico: 'Físico',
-  mental: 'Mental',
-  tatico: 'Tático',
-  atributos: 'Técnico (passe/drible/remate)',
-  especial: 'Especialização ofensiva',
-};
-const COLLECTIVE_LABEL: Record<CollectiveType, string> = {
-  formacao: 'Formação / posicionamento',
-  empatia: 'Empatia / fair play',
-  fisico: 'Físico colectivo',
-};
-const GROUP_LABEL: Record<GroupType, string> = {
-  defensivo: 'Bloco defensivo',
-  criativo: 'Meio / criação',
-  ataque: 'Ataque',
-  all: 'Plantel completo',
+type Gain = { t: string; down?: boolean; muted?: boolean };
+type CardMeta = { label: string; grade: string; desc: string; icon: LucideIcon; gains: Gain[] };
+
+/** Ganhos/custos batem 1:1 com applyTrainingToPlayer() em systems/trainingPlans.ts. */
+const CARD_META: Record<TrainingCardId, CardMeta> = {
+  fisico: {
+    label: 'Físico', grade: 'A', icon: Zap,
+    desc: 'Resistência e velocidade. Alivia a fadiga.',
+    gains: [{ t: '+2 Físico' }, { t: '+1 Velocidade' }, { t: '−4 Fadiga' }],
+  },
+  mental: {
+    label: 'Mental', grade: 'A', icon: Brain,
+    desc: 'Mentalidade e confiança sob pressão.',
+    gains: [{ t: '+2 Mental' }, { t: '+2 Confiança' }, { t: '+6 Fadiga', down: true }],
+  },
+  tatico: {
+    label: 'Tático', grade: 'B', icon: LayoutGrid,
+    desc: 'Posicionamento e marcação por função.',
+    gains: [{ t: '+2 Tático' }, { t: '+1 Marcação' }, { t: '+7 Fadiga', down: true }],
+  },
+  atributos: {
+    label: 'Técnico', grade: 'B', icon: Footprints,
+    desc: 'Passe, drible e finalização — a base.',
+    gains: [{ t: '+1 Passe' }, { t: '+1 Drible' }, { t: '+1 Finalização' }, { t: '+8 Fadiga', down: true }],
+  },
+  especial: {
+    label: 'Espec. ofensiva', grade: 'A', icon: Crosshair,
+    desc: 'Faro de gol: finalização acima de tudo.',
+    gains: [{ t: '+2 Finalização' }, { t: '+1 Passe' }, { t: '+1 Drible' }, { t: '+8 Fadiga', down: true }],
+  },
+  descanso: {
+    label: 'Descanso', grade: 'REC', icon: BatteryCharging,
+    desc: 'Recupera fadiga e reduz risco de lesão. Sem evolução.',
+    gains: [{ t: '−25 Fadiga' }, { t: '−8 Risco' }, { t: 'Sem XP', muted: true }],
+  },
 };
 
-// (Sprint B-2: dicionários de ícones removidos — botões agora são texto-claro.)
+const SECTOR_ORDER: SectorId[] = ['defensivo', 'criativo', 'ataque'];
+const SECTOR_META: Record<SectorId, { title: string; sub: string }> = {
+  defensivo: { title: 'Defensivo', sub: 'Goleiro + defesa' },
+  criativo: { title: 'Criativo', sub: 'Meio / criação' },
+  ataque: { title: 'Ataque', sub: 'Setor ofensivo' },
+};
+
+// --- Labels usados apenas p/ renderizar planos já em curso (inclui tipos antigos) ---
+const RUNNING_TYPE_LABEL: Record<string, string> = {
+  fisico: 'Físico', mental: 'Mental', tatico: 'Tático',
+  atributos: 'Técnico', especial: 'Espec. ofensiva',
+  formacao: 'Formação', empatia: 'Empatia', descanso: 'Descanso',
+};
+const GROUP_LABEL: Record<string, string> = {
+  defensivo: 'Bloco defensivo', criativo: 'Meio / criação', ataque: 'Ataque', all: 'Plantel completo',
+};
+
+const SERIF = 'var(--font-serif-hero)';
 
 function trainingTypeLabel(p: TrainingPlan): string {
-  return p.mode === 'individual'
-    ? INDIVIDUAL_LABEL[p.trainingType as IndividualType] ?? p.trainingType
-    : COLLECTIVE_LABEL[p.trainingType as CollectiveType] ?? p.trainingType;
+  return RUNNING_TYPE_LABEL[p.trainingType] ?? p.trainingType;
 }
 
 function planDisplayName(p: TrainingPlan, rosterById: Record<string, PlayerEntity | undefined>): string {
   if (p.mode === 'coletivo') {
-    return `${GROUP_LABEL[p.group]} · ${p.playerIds.length} jog.`;
+    return `${GROUP_LABEL[p.group] ?? p.group} · ${p.playerIds.length} jog.`;
   }
   const names = p.playerIds.map((id) => rosterById[id]?.name).filter(Boolean) as string[];
   if (names.length === 0) return '—';
@@ -80,31 +114,54 @@ function formatCountdownRemaining(msRemaining: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
+/** Cor do rail comunica a fadiga do jogador (padrão do DS). */
+function fatigueRail(fatigue: number): string {
+  if (fatigue >= 35) return 'var(--color-danger)';
+  if (fatigue >= 20) return 'var(--color-warning)';
+  return 'var(--color-neon-yellow)';
+}
+
 export function TeamTraining() {
   const dispatch = useGameDispatch();
   const players = useGameStore((s) => s.players);
   const structures = useGameStore((s) => s.structures);
   const plans = useGameStore((s) => s.manager.trainingPlans);
   const treatmentPlans = useGameStore((s) => s.manager.treatmentPlans ?? []);
-  const [mode, setMode] = useState<'individual' | 'coletivo'>('individual');
-  const [individualType, setIndividualType] = useState<IndividualType>('fisico');
-  const [collectiveType, setCollectiveType] = useState<CollectiveType>('formacao');
+
+  const [trainingType, setTrainingType] = useState<TrainingCardId>('fisico');
+  const [who, setWho] = useState<WhoMode>('elenco');
+  const [sector, setSector] = useState<SectorId>('defensivo');
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-  const [group, setGroup] = useState<GroupType>('all');
   const [durationHours, setDurationHours] = useState(24);
 
   const ctLevel = structures.training_center ?? 1;
   const medLevel = structures.medical_dept ?? 1;
   const slots = maxSlotsByTrainingCenter(ctLevel);
   const maxColl = trainingCenterMaxConcurrentCollectivePlans(ctLevel);
+  const boosterPct = Math.round((trainingCenterAttributeGainMultiplier(ctLevel) - 1) * 100);
+  const durMult = durationGainMultiplier(durationHours);
   const runningCollective = plans.filter((p) => p.status === 'running' && p.mode === 'coletivo').length;
   const treatSlots = medicalDeptTreatmentSlots(medLevel);
   const runningTreat = treatmentPlans.filter((p) => p.status === 'running');
+
+  // Modo/grupo derivados da escolha "quem treina" — mantém o dispatch idêntico ao anterior.
+  const mode: 'individual' | 'coletivo' = who === 'individual' ? 'individual' : 'coletivo';
+  const group: 'defensivo' | 'criativo' | 'ataque' | 'all' = who === 'elenco' ? 'all' : who === 'setor' ? sector : 'all';
 
   const roster = useMemo(
     () => Object.values(players).filter((p) => p.outForMatches <= 0).sort((a, b) => a.num - b.num),
     [players],
   );
+
+  const sectorCounts = useMemo(
+    () => ({
+      defensivo: resolveGroupPlayerIds(players, 'defensivo').length,
+      criativo: resolveGroupPlayerIds(players, 'criativo').length,
+      ataque: resolveGroupPlayerIds(players, 'ataque').length,
+    }),
+    [players],
+  );
+  const elencoCount = useMemo(() => resolveGroupPlayerIds(players, 'all').length, [players]);
 
   const collectiveTargetIds = useMemo(() => {
     if (mode !== 'coletivo') return [];
@@ -132,8 +189,7 @@ export function TeamTraining() {
     return () => window.clearInterval(id);
   }, [runningPlansKey]);
 
-  const canStartTraining =
-    mode === 'coletivo' ? collectiveTargetIds.length > 0 : selectedPlayers.length > 0;
+  const canStartTraining = who === 'individual' ? selectedPlayers.length > 0 : collectiveTargetIds.length > 0;
 
   const togglePlayer = (id: string) => {
     setSelectedPlayers((prev) => {
@@ -144,10 +200,11 @@ export function TeamTraining() {
   };
 
   const startTraining = () => {
+    if (!canStartTraining) return;
     dispatch({
       type: 'START_TEAM_TRAINING_PLAN',
       mode,
-      trainingType: mode === 'individual' ? individualType : collectiveType,
+      trainingType,
       playerIds: selectedPlayers,
       group,
       durationHours,
@@ -156,13 +213,17 @@ export function TeamTraining() {
     setSelectedPlayers([]);
   };
 
-  const completeDueNow = () => {
-    dispatch({ type: 'COMPLETE_DUE_TRAININGS' });
-  };
+  const completeDueNow = () => dispatch({ type: 'COMPLETE_DUE_TRAININGS' });
+  const startTreatment = (playerId: string) => dispatch({ type: 'START_TREATMENT_PLAN', playerId });
 
-  const startTreatment = (playerId: string) => {
-    dispatch({ type: 'START_TREATMENT_PLAN', playerId });
-  };
+  const whoSummary =
+    who === 'elenco'
+      ? `Elenco completo (${elencoCount})`
+      : who === 'setor'
+        ? `Setor ${SECTOR_META[sector].title} (${sectorCounts[sector]})`
+        : selectedPlayers.length > 0
+          ? `${selectedPlayers.length} jogador(es)`
+          : 'nenhum jogador ainda';
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-14">
@@ -173,8 +234,7 @@ export function TeamTraining() {
           watermark="TREINO"
           eyebrow="Gestão do clube · Desenvolvimento"
           title="Treino"
-          subtitle="Evolução contínua"
-          quote="seleciona o tipo, escolhe jogadores ou grupo e inicia o plano de treino com execução por período"
+          subtitle="Evolua seu time"
           stats={`${running.length} planos ativos · ${completedPlans.length} concluídos · ${slots} slots disponíveis`}
           icon={
             <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
@@ -186,358 +246,337 @@ export function TeamTraining() {
           }
         />
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-4 p-4 pb-5 sm:p-5 sm:pb-6">
-        {/* Modo: Individual / Coletivo — pílulas Sprint B-2 sem ícones */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('individual')}
-            className={
-              mode === 'individual'
-                ? 'inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
-                : 'inline-flex items-center rounded-[var(--radius-pill)] border border-white/10 bg-white/[0.03] px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-white/70 transition-all hover:border-neon-yellow/40 hover:text-white'
-            }
-          >
-            Individual
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('coletivo')}
-            className={
-              mode === 'coletivo'
-                ? 'inline-flex items-center rounded-[var(--radius-pill)] bg-neon-yellow px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
-                : 'inline-flex items-center rounded-[var(--radius-pill)] border border-white/10 bg-white/[0.03] px-5 py-2.5 font-display text-[12px] font-black uppercase tracking-[0.22em] text-white/70 transition-all hover:border-neon-yellow/40 hover:text-white'
-            }
-          >
-            Coletivo
-          </button>
+        {/* ---- STAT CARDS (rail 3px + número serifa) ---- */}
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+          <RailStat label="Slots por sessão" value={<>{slots}</>} />
+          <RailStat label="Coletivos simult." value={<>{runningCollective}<small className="text-white/45"> /{maxColl}</small></>} />
+          <RailStat label="Em execução" value={<>{running.length}</>} />
+          <RailStat label="Booster AI Labs" value={<>+{boosterPct}<small className="text-white/45">%</small></>} />
         </div>
 
-        {mode === 'individual' ? (
-          <div className="space-y-2">
-            <div className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
-              Tipo de treino · Individual
-            </div>
-            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {INDIVIDUAL.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setIndividualType(t)}
-                  className={
-                    individualType === t
-                      ? 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-3 py-2 text-center font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
-                      : 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-3 py-2 text-center font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-white/75 transition-all hover:border-neon-yellow/40 hover:text-white'
-                  }
-                >
-                  {INDIVIDUAL_LABEL[t]}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <div className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
-                Tipo de treino · Coletivo
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {COLLECTIVE.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setCollectiveType(t)}
-                    className={
-                      collectiveType === t
-                        ? 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
-                        : 'inline-flex min-h-[3rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-white/75 transition-all hover:border-neon-yellow/40 hover:text-white'
-                    }
+        {/* ================= STEP 1 · O QUE TREINAR ================= */}
+        <StepHeader n={1} title="O que treinar" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          {CARD_ORDER.map((id) => {
+            const meta = CARD_META[id];
+            const Icon = meta.icon;
+            const sel = trainingType === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTrainingType(id)}
+                aria-pressed={sel}
+                className={`group relative overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] p-4 pl-[18px] text-left transition-all ${
+                  sel
+                    ? '-translate-y-0.5 border-neon-yellow shadow-[0_12px_34px_-18px_rgba(253,225,0,0.6)]'
+                    : 'border-white/10 hover:-translate-y-0.5 hover:border-white/20'
+                }`}
+              >
+                <span
+                  className={`absolute inset-y-0 left-0 w-[3px] transition-colors ${
+                    sel ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'
+                  }`}
+                  aria-hidden
+                />
+                <div className="flex items-start justify-between">
+                  <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-neon-yellow/10">
+                    <Icon className="h-5 w-5 text-neon-yellow" aria-hidden />
+                  </span>
+                  <span
+                    className="italic leading-none text-neon-yellow"
+                    style={{ fontFamily: SERIF, fontWeight: 700, fontSize: meta.grade.length > 1 ? '13px' : '26px' }}
                   >
-                    {COLLECTIVE_LABEL[t]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">Grupo</div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {GROUPS.map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGroup(g)}
-                    className={
-                      group === g
-                        ? 'inline-flex min-h-[2.75rem] items-center justify-center rounded-[var(--radius-sm)] bg-neon-yellow px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all'
-                        : 'inline-flex min-h-[2.75rem] items-center justify-center rounded-[var(--radius-sm)] border border-white/10 bg-white/[0.03] px-3 py-2 font-display text-[11px] font-black uppercase tracking-[0.16em] leading-tight text-white/75 transition-all hover:border-neon-yellow/40 hover:text-white'
-                    }
-                  >
-                    {GROUP_LABEL[g]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="pt-0.5 text-[10px] text-gray-500">
-              Coletivo aplica a todos do grupo acima (não usa a lista manual). Limite de planos colectivos em simultâneo: {maxColl}.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-1">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Período de execução</div>
-          <input type="range" min={6} max={72} step={6} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))} className="w-full accent-neon-yellow" />
-          <div className="text-[11px] text-gray-500 tabular-nums">{durationHours}h</div>
-        </div>
-
-        <p className="text-[10px] leading-relaxed text-gray-500">
-          Booster (CT ≥4):{' '}
-          <span className="font-medium text-neon-yellow tabular-nums">
-            +{Math.round((trainingCenterAttributeGainMultiplier(ctLevel) - 1) * 100)}%
-          </span>
-          {' · '}
-          AI Labs:{' '}
-          <span className="font-medium text-gray-400">
-            {trainingCenterHasAiLabs(ctLevel) ? '/team/ailabs' : 'CT nível 2+'}
-          </span>
-        </p>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-3 pb-4 sm:p-4 sm:pb-5">
-        <div className="mb-2 flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Selecionar jogadores</h3>
-            <p className="mt-0.5 text-[10px] text-gray-500">
-              {mode === 'individual'
-                ? `Lista do plantel disponível — até ${slots} por treino individual (limite por tipo de sessão no CT).`
-                : `Alvo do treino coletivo: ${collectiveTargetIds.length} jogador(es) no grupo «${GROUP_LABEL[group]}».`}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-gray-500">
-            {mode === 'individual' && (
-              <>
-                <span className="font-semibold text-white tabular-nums">{selectedPlayers.length}/{slots}</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPlayers([])}
-                  disabled={selectedPlayers.length === 0}
-                  className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-300 hover:bg-white/10 disabled:opacity-30"
-                >
-                  Limpar
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        <div
-          className={`max-h-[min(16rem,min(34dvh,38svh))] overflow-y-auto overscroll-y-contain rounded border border-white/10 bg-black/25 [scrollbar-gutter:stable] ${mode === 'coletivo' ? 'opacity-60' : ''}`}
-        >
-          <ul className="divide-y divide-white/10">
-            {roster.map((p) => {
-              const active = selectedPlayers.includes(p.id);
-              const disabled = !active && selectedPlayers.length >= slots;
-              const ovr = overallFromAttributes(p.attrs);
-              const inCollective = mode === 'coletivo' && collectiveTargetIds.includes(p.id);
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => togglePlayer(p.id)}
-                    disabled={disabled || mode === 'coletivo'}
-                    className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40 ${
-                      active ? 'bg-neon-yellow/10' : ''
-                    }`}
-                  >
+                    {meta.grade}
+                  </span>
+                </div>
+                <h3 className="mt-3 font-display text-[16px] font-semibold uppercase tracking-[0.03em] leading-tight">{meta.label}</h3>
+                <p className="mt-1 min-h-[34px] text-[11.5px] leading-snug text-white/55">{meta.desc}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {meta.gains.map((g) => (
                     <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border text-neon-yellow ${
-                        mode === 'coletivo'
-                          ? inCollective
-                            ? 'border-neon-yellow/50 bg-neon-yellow/15'
-                            : 'border-white/10 bg-black/40'
-                          : active
-                            ? 'border-neon-yellow bg-neon-yellow/20'
-                            : 'border-white/15 bg-black/40'
+                      key={g.t}
+                      className={`rounded-md px-1.5 py-0.5 font-display text-[10.5px] uppercase tracking-[0.04em] ${
+                        g.muted
+                          ? 'bg-white/[0.06] text-white/45'
+                          : g.down
+                            ? 'bg-red-500/10 text-red-300'
+                            : 'bg-neon-green/10 text-neon-green'
                       }`}
                     >
-                      {mode === 'coletivo' ? (
-                        inCollective ? <Check className="h-3 w-3" strokeWidth={3} /> : null
-                      ) : active ? (
-                        <Check className="h-3 w-3" strokeWidth={3} />
-                      ) : null}
+                      {g.t}
                     </span>
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="font-mono text-[11px] font-medium text-gray-400 tabular-nums">{p.num}</span>
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-white">{p.name}</span>
-                      <span className="shrink-0 text-[10px] font-medium text-gray-500">{p.pos}</span>
-                      <span className="shrink-0 text-[10px] text-gray-500 tabular-nums sm:ml-auto">
-                        OVR {ovr} · FAT {Math.round(p.fatigue)}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
         </div>
-      </motion.div>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={startTraining}
-          disabled={!canStartTraining}
-          className="rounded bg-neon-yellow px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-black disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Iniciar treino
-        </button>
-        <button type="button" onClick={completeDueNow} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white">
-          Concluir treinos 
-        </button>
-      </div>
+        {/* ================= STEP 2 · QUEM TREINA ================= */}
+        <StepHeader n={2} title="Quem treina" />
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <WhoButton active={who === 'elenco'} onClick={() => setWho('elenco')} title="Elenco" desc="Todo o plantel disponível." />
+          <WhoButton active={who === 'setor'} onClick={() => setWho('setor')} title="Setor" desc="Defensivo, criativo ou ataque." />
+          <WhoButton active={who === 'individual'} onClick={() => setWho('individual')} title="Individual" desc={`Até ${slots} jogadores na lista.`} />
+        </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-2 p-3 pb-4 sm:p-4 sm:pb-5">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Tratamentos médicos</h3>
-          <span className="text-[10px] text-gray-500 tabular-nums">{runningTreat.length}/{treatSlots} slots · ~{TREATMENT_PLAN_DURATION_H}h</span>
-        </div>
-        <p className="text-[10px] text-gray-500">
-          Clica num jogador disponível para ocupar um slot do departamento médico (nível {medLevel}).
-        </p>
-        <div className="max-h-[min(12rem,min(28dvh,32svh))] overflow-y-auto overscroll-y-contain rounded border border-white/10 bg-black/25 [scrollbar-gutter:stable]">
-          <ul className="divide-y divide-white/10">
-            {roster.map((p) => {
-              const busy = runningTreat.some((t) => t.playerId === p.id);
-              const full = runningTreat.length >= treatSlots;
-              return (
-                <li key={`treat-${p.id}`}>
-                  <button
-                    type="button"
-                    onClick={() => !busy && !full && startTreatment(p.id)}
-                    disabled={busy || full}
-                    className={`flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-[11px] transition-colors hover:bg-white/5 disabled:cursor-not-allowed ${
-                      busy ? 'bg-neon-green/5' : full ? 'opacity-40' : 'hover:bg-red-500/5'
-                    }`}
-                  >
-                    <span className="font-medium text-white">
-                      <span className="font-mono text-gray-400">{p.num}</span> · {p.name}
-                    </span>
-                    <span className="shrink-0 text-[10px] font-semibold uppercase text-gray-500">
-                      {busy ? 'Em tratamento' : full ? 'Slots cheios' : 'Iniciar'}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        {treatmentPlans.length > 0 && (
-          <div className="space-y-0.5 border-t border-white/10 pt-2">
-            {treatmentPlans.map((t) => (
-              <div key={t.id} className="flex justify-between gap-2 text-[10px] text-gray-400">
-                <span className="text-white/90">{players[t.playerId]?.name ?? t.playerId}</span>
-                <span className="shrink-0 tabular-nums">{t.status} · fim {new Date(t.endAt).toLocaleString('pt-BR')}</span>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="sports-panel p-4 sm:p-5">
+          {who === 'elenco' && (
+            <div className="flex items-center gap-5">
+              <div className="italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '44px' }}>
+                {elencoCount}
               </div>
-            ))}
-          </div>
-        )}
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="sports-panel overflow-visible p-3 pb-4 sm:p-4 sm:pb-5"
-      >
-        <div className="mb-2 flex flex-wrap items-end justify-between gap-1">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Em treinamento</h3>
-          {completedPlans.length > 0 && (
-            <span className="text-[10px] text-gray-500">{completedPlans.length} no histórico recente</span>
+              <p className="text-[12.5px] leading-relaxed text-white/60">
+                <span className="text-white">Plantel completo</span> na sessão coletiva. Ganho menor por jogador, mas todos evoluem juntos — conta como 1 slot coletivo (máx. {maxColl} em simultâneo).
+              </p>
+            </div>
           )}
-        </div>
-        {running.length === 0 ? (
-          <p className="text-[11px] text-gray-500">Nenhum treino em curso.</p>
-        ) : (
-          <div
-            className={`overflow-x-auto rounded border border-white/10 ${running.length > 4 ? 'max-h-[min(14rem,min(36dvh,42svh))] overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]' : ''}`}
-          >
-            <table className="w-full min-w-[280px] border-collapse text-left text-[11px]">
-              <thead>
-                <tr className="border-b border-white/10 bg-black/30 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                  <th className="px-2 py-1.5 font-medium">Nome</th>
-                  <th className="px-2 py-1.5 font-medium">Tipo de treino</th>
-                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">Tempo de execução</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {running.map((p) => {
-                  const dh = planDurationHours(p);
-                  const endMs = new Date(p.endAt).getTime();
-                  const remainingMs = endMs - countdownNowMs;
-                  const endShort = new Date(p.endAt).toLocaleString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  });
-                  const done = remainingMs <= 0;
+
+          {who === 'setor' && (
+            <div className="space-y-3">
+              <p className="text-[12px] text-white/55">Escolha o bloco que treina em conjunto.</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {SECTOR_ORDER.map((id) => {
+                  const meta = SECTOR_META[id];
+                  const sel = sector === id;
                   return (
-                    <tr key={p.id} className="bg-black/20 text-gray-200">
-                      <td className="max-w-[10rem] truncate px-2 py-1.5 font-medium text-white sm:max-w-none">
-                        {planDisplayName(p, players)}
-                      </td>
-                      <td className="px-2 py-1.5 text-gray-300">{trainingTypeLabel(p)}</td>
-                      <td className="px-2 py-1.5">
-                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 tabular-nums">
-                          <span
-                            className={`inline-flex items-center gap-1 font-mono text-[11px] font-semibold ${
-                              done ? 'text-neon-green' : 'text-neon-yellow'
-                            }`}
-                            title={done ? 'Prazo atingido — usa «Concluir treinos…» para aplicar' : `Termina a ${endShort}`}
-                          >
-                            <Clock className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
-                            {formatCountdownRemaining(done ? 0 : remainingMs)}
-                          </span>
-                          <span className="text-[10px] font-sans font-normal text-gray-500">
-                            ({dh}h · até {endShort})
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setSector(id)}
+                      aria-pressed={sel}
+                      className={`group relative overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] p-3.5 pl-[18px] text-left transition-all ${
+                        sel ? '-translate-y-0.5 border-neon-yellow' : 'border-white/10 hover:-translate-y-0.5 hover:border-white/20'
+                      }`}
+                    >
+                      <span className={`absolute inset-y-0 left-0 w-[3px] ${sel ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'}`} aria-hidden />
+                      <div className="font-display text-[14px] font-semibold uppercase tracking-[0.04em]">{meta.title}</div>
+                      <div className="mt-0.5 text-[11px] text-white/50">{meta.sub}</div>
+                      <div className="mt-2 italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '24px' }}>
+                        {sectorCounts[id]}
+                        <span className="ml-1 align-baseline text-[11px] not-italic text-white/50" style={{ fontFamily: 'var(--font-sans)' }}>jogadores</span>
+                      </div>
+                    </button>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="mt-3 border-t border-white/10 pt-3 pb-3 sm:pb-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:items-stretch">
-            <div className="flex min-h-0 min-w-0 flex-col rounded border border-white/10 bg-black/40 p-2 text-[10px] leading-tight sm:text-[11px]">
-              <div className="break-words font-medium uppercase tracking-wide text-gray-500">Nível centro treino</div>
-              <div className="mt-1 text-sm font-semibold text-white tabular-nums sm:text-base">{structures.training_center ?? 1}</div>
-            </div>
-            <div className="flex min-h-0 min-w-0 flex-col rounded border border-white/10 bg-black/40 p-2 text-[10px] leading-tight sm:text-[11px]">
-              <div className="break-words font-medium uppercase tracking-wide text-gray-500">Slots por treino</div>
-              <div className="mt-1 text-sm font-semibold text-neon-yellow tabular-nums sm:text-base">{slots}</div>
-            </div>
-            <div className="flex min-h-0 min-w-0 flex-col rounded border border-white/10 bg-black/40 p-2 text-[10px] leading-tight sm:text-[11px]">
-              <div className="break-words font-medium uppercase tracking-wide text-gray-500">Em execução</div>
-              <div className="mt-1 text-sm font-semibold text-white tabular-nums sm:text-base">{running.length}</div>
-            </div>
-            <div className="flex min-h-0 min-w-0 flex-col rounded border border-white/10 bg-black/40 p-2 text-[10px] leading-tight sm:text-[11px]">
-              <div className="break-words font-medium uppercase tracking-wide text-gray-500">Colectivos simultâneos</div>
-              <div className="mt-1 text-sm font-semibold text-white tabular-nums sm:text-base">
-                {runningCollective} / {maxColl}
               </div>
             </div>
+          )}
+
+          {who === 'individual' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] text-white/55">Selecione até {slots} — a cor do rail é a fadiga.</p>
+                <div className="flex items-center gap-2 text-[11px] text-white/50">
+                  <span className="font-semibold tabular-nums text-white">{selectedPlayers.length}/{slots}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlayers([])}
+                    disabled={selectedPlayers.length === 0}
+                    className="rounded border border-white/15 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-wide text-white/70 hover:bg-white/10 disabled:opacity-30"
+                  >
+                    Limpar
+                  </button>
+                </div>
+              </div>
+              <div className="flex max-h-[min(20rem,42dvh)] flex-col gap-2 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
+                {roster.map((p) => {
+                  const active = selectedPlayers.includes(p.id);
+                  const disabled = !active && selectedPlayers.length >= slots;
+                  const ovr = overallFromAttributes(p.attrs);
+                  const rail = fatigueRail(p.fatigue);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePlayer(p.id)}
+                      disabled={disabled}
+                      aria-pressed={active}
+                      className={`group relative flex items-stretch overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                        active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/25'
+                      }`}
+                    >
+                      <span className="absolute inset-y-0 left-0 z-10 w-[3px]" style={{ background: active ? 'var(--color-neon-yellow)' : rail }} aria-hidden />
+                      <div className="relative flex w-[86px] shrink-0 flex-col justify-center overflow-hidden bg-black/60 py-3 pl-4">
+                        <span className="pointer-events-none absolute -bottom-3 -right-1 italic leading-none text-white/[0.05]" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '72px' }} aria-hidden>
+                          {p.name.charAt(0)}
+                        </span>
+                        <span className="italic leading-none" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '32px', color: rail }}>{ovr}</span>
+                        <span className="mt-1 font-display text-[10px] uppercase tracking-[0.1em] text-white/45">{p.pos}</span>
+                      </div>
+                      <div className="flex flex-1 items-center px-4">
+                        <div className="min-w-0">
+                          <div className="truncate font-display text-[15px] font-bold uppercase tracking-[0.02em]">
+                            <span className="text-white/45">{p.num}</span> {p.name}
+                          </div>
+                          <div className="mt-0.5 font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">{Math.round(p.fatigue)}% cansaço</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center pr-4">
+                        <span className={`grid h-[22px] w-[22px] place-items-center rounded-[7px] border ${active ? 'border-neon-yellow bg-neon-yellow' : 'border-white/20'}`}>
+                          {active && <Check className="h-3 w-3 text-black" strokeWidth={3} />}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* ================= AÇÃO ================= */}
+        <div className="sports-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+          <div className="flex-1 text-[13px] leading-relaxed text-white/60">
+            Treino <span className="text-white">{CARD_META[trainingType].label}</span>
+            {' · '}em{' '}
+            <span className={who === 'individual' && selectedPlayers.length === 0 ? 'text-[color:var(--color-warning)]' : 'text-white'}>{whoSummary}</span>
+            {' · '}por <span className="text-white">{durationHours}h</span>
+          </div>
+          <div className="flex flex-col gap-1.5 sm:w-[190px]">
+            <label htmlFor="dur" className="font-display text-[10px] uppercase tracking-[0.16em] text-white/50">Duração de execução</label>
+            <input id="dur" type="range" min={6} max={72} step={6} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))} className="w-full accent-neon-yellow" />
+            <div className="font-display text-[11px] uppercase tracking-wide text-neon-yellow tabular-nums">
+              {durationHours}h · {trainingType === 'descanso' ? 'recuperação' : `ganho ×${durMult.toFixed(2)}`} · booster CT +{boosterPct}%
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={startTraining}
+              disabled={!canStartTraining}
+              className="rounded-[var(--radius-md)] bg-neon-yellow px-6 py-3.5 font-display text-[14px] font-bold uppercase tracking-[0.08em] text-black shadow-[0_0_24px_-6px_rgba(253,225,0,0.6)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none"
+            >
+              Iniciar treino
+            </button>
+            <button
+              type="button"
+              onClick={completeDueNow}
+              className="rounded-[var(--radius-md)] border border-white/20 bg-white/[0.06] px-4 py-3.5 font-display text-[12px] font-bold uppercase tracking-[0.08em] text-white/80 transition-colors hover:bg-white/10"
+            >
+              Concluir
+            </button>
           </div>
         </div>
-      </motion.div>
 
-      {/* Respiro extra: um pouco de dvh no telemóvel + mais em ecrãs maiores */}
-      <div
-        className="h-[max(1.5rem,min(3dvh,2.25rem))] shrink-0 sm:h-8 md:h-10"
-        aria-hidden
-      />
+        {/* ================= EM ANDAMENTO ================= */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel overflow-visible p-3 pb-4 sm:p-4 sm:pb-5">
+          <div className="mb-2 flex flex-wrap items-end justify-between gap-1">
+            <h3 className="font-display text-[15px] font-bold uppercase tracking-[0.05em] text-white/90">Em andamento</h3>
+            {completedPlans.length > 0 && (
+              <span className="text-[10px] text-gray-500">{completedPlans.length} no histórico recente</span>
+            )}
+          </div>
+          {running.length === 0 ? (
+            <p className="text-[11px] text-gray-500">Nenhum treino em curso.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {running.map((p) => {
+                const dh = planDurationHours(p);
+                const remainingMs = new Date(p.endAt).getTime() - countdownNowMs;
+                const endShort = new Date(p.endAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const done = remainingMs <= 0;
+                return (
+                  <div key={p.id} className="relative flex items-center gap-3 overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] py-3 pl-[18px] pr-3">
+                    <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: done ? 'var(--color-neon-green)' : 'var(--color-neon-yellow)' }} aria-hidden />
+                    <span className="shrink-0 rounded-md bg-neon-yellow/12 px-2 py-1 font-display text-[10.5px] uppercase tracking-[0.04em] text-neon-yellow">
+                      {trainingTypeLabel(p)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13.5px] font-medium text-white">{planDisplayName(p, players)}</div>
+                      <div className="text-[10.5px] text-white/45">{dh}h · até {endShort}</div>
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 italic ${done ? 'text-neon-green' : 'text-white'}`}
+                      style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '17px' }}
+                      title={done ? 'Prazo atingido — usa «Concluir» para aplicar' : `Termina a ${endShort}`}
+                    >
+                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-80 not-italic" aria-hidden />
+                      {formatCountdownRemaining(done ? 0 : remainingMs)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
+
+        {/* ================= DEPARTAMENTO MÉDICO ================= */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="sports-panel space-y-2 p-3 pb-4 sm:p-4 sm:pb-5">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-display text-[15px] font-bold uppercase tracking-[0.05em] text-white/90">Departamento médico</h3>
+            <span className="text-[10px] text-gray-500 tabular-nums">{runningTreat.length}/{treatSlots} slots · ~{TREATMENT_PLAN_DURATION_H}h</span>
+          </div>
+          <p className="text-[10px] text-gray-500">Clica num jogador disponível para ocupar um slot médico (nível {medLevel}).</p>
+          <div className="max-h-[min(12rem,32svh)] overflow-y-auto overscroll-y-contain rounded border border-white/10 bg-black/25 [scrollbar-gutter:stable]">
+            <ul className="divide-y divide-white/10">
+              {roster.map((p) => {
+                const busy = runningTreat.some((t) => t.playerId === p.id);
+                const full = runningTreat.length >= treatSlots;
+                return (
+                  <li key={`treat-${p.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => !busy && !full && startTreatment(p.id)}
+                      disabled={busy || full}
+                      className={`flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-[11px] transition-colors disabled:cursor-not-allowed ${
+                        busy ? 'bg-neon-green/5' : full ? 'opacity-40' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="font-medium text-white"><span className="font-mono text-gray-400">{p.num}</span> · {p.name}</span>
+                      <span className="shrink-0 font-display text-[10px] uppercase tracking-wide text-gray-500">
+                        {busy ? 'Em tratamento' : full ? 'Slots cheios' : 'Iniciar'}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          {treatmentPlans.length > 0 && (
+            <div className="space-y-0.5 border-t border-white/10 pt-2">
+              {treatmentPlans.map((t) => (
+                <div key={t.id} className="flex justify-between gap-2 text-[10px] text-gray-400">
+                  <span className="text-white/90">{players[t.playerId]?.name ?? t.playerId}</span>
+                  <span className="shrink-0 tabular-nums">{t.status} · fim {new Date(t.endAt).toLocaleString('pt-BR')}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
+        <div className="h-[max(1.5rem,3dvh)] shrink-0 sm:h-8 md:h-10" aria-hidden />
+      </div>
     </div>
+  );
+}
+
+/* ---------------- Subcomponentes locais ---------------- */
+
+
+function StepHeader({ n, title }: { n: number; title: string }) {
+  return (
+    <div className="flex items-center gap-3.5 pt-1">
+      <div className="italic leading-none text-neon-yellow" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: '34px' }}>{n}</div>
+      <h2 className="font-display text-[20px] font-bold uppercase tracking-[0.05em] leading-none">{title}</h2>
     </div>
+  );
+}
+
+function WhoButton({ active, onClick, title, desc }: { active: boolean; onClick: () => void; title: string; desc: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`group relative overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] p-4 pl-[18px] text-left transition-colors ${
+        active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/20'
+      }`}
+    >
+      <span className={`absolute inset-y-0 left-0 w-[3px] ${active ? 'bg-neon-yellow' : 'bg-white/15 group-hover:bg-neon-yellow/60'}`} aria-hidden />
+      <div className={`font-display text-[15px] font-semibold uppercase tracking-[0.05em] ${active ? 'text-neon-yellow' : 'text-white'}`}>{title}</div>
+      <div className="mt-1 text-[11.5px] text-white/50">{desc}</div>
+    </button>
   );
 }

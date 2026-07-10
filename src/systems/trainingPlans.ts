@@ -15,6 +15,28 @@ export function addHoursIso(iso: string, h: number): string {
   return new Date(new Date(iso).getTime() + h * 3600_000).toISOString();
 }
 
+/**
+ * Multiplicador de ganho por duração do plano, com retorno decrescente.
+ * Referência: 24h = 1.0. Curva log: sessões curtas rendem menos, longas rendem
+ * mais (mas com teto), criando trade-off real entre ganho e tempo de slot ocupado.
+ *   6h → 0.45 · 12h → 0.72 · 24h → 1.00 · 48h → 1.28 · 72h → 1.44
+ */
+export function durationGainMultiplier(hours: number): number {
+  const h = Math.max(1, hours);
+  const m = 1 + 0.4 * Math.log(h / 24);
+  return Math.max(0.4, Math.min(1.5, m));
+}
+
+/** Custo de fadiga por sessão de treino (skill work cansa; físico condiciona; descanso recupera). */
+const TRAINING_FATIGUE_COST: Record<string, number> = {
+  mental: 6,
+  tatico: 7,
+  formacao: 7,
+  atributos: 8,
+  especial: 8,
+  empatia: 5,
+};
+
 /** Pilar 3 (evolução por plano): mapa em `@/lib/veracityPillarsMap`. */
 export function applyTrainingToPlayer(
   player: PlayerEntity,
@@ -54,8 +76,11 @@ export function applyTrainingToPlayer(
       // Recuperação preventiva: zera ganho de XP, foca em saúde.
       p.fatigue = Math.max(0, p.fatigue - 25);
       p.injuryRisk = Math.max(0, p.injuryRisk - 8);
-      return p; // sem evolutionXp += 4
+      return p; // sem evolutionXp += 4 e sem custo de fadiga
   }
+  // Custo de fadiga da sessão (físico já ajustou a própria fadiga acima; descanso saiu antes).
+  const fatigueCost = TRAINING_FATIGUE_COST[trainingType] ?? 0;
+  if (fatigueCost > 0) p.fatigue = Math.min(100, p.fatigue + fatigueCost);
   p.evolutionXp += 4;
   return p;
 }

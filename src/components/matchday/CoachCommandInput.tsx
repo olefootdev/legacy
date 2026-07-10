@@ -15,7 +15,6 @@ import type { PitchPlayerState } from '@/engine/types';
 import type { PlayerEntity } from '@/entities/types';
 import {
   parseCoachCommand,
-  executeCoachCommand,
   getSkillSuggestions,
   type CommandResult,
 } from '@/match/coachCommands';

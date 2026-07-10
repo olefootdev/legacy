@@ -1,160 +1,139 @@
 # 👻 Olefoot — Ghost Mapping Report
-## Auditoria de Intenção do Fundador
 
-**Data:** 2026-05-02
-**Arquivos varridos:** 863 arquivos `.ts/.tsx`
-**Entry points identificados:**
-- `src/engine/runMatchMinute.ts` — loop minuto a minuto (modo auto/legacy)
-- `src/simulation/TacticalSimLoop.ts` — loop frame a frame (modo live 2D)
-- `src/playerDecision/PlayerDecisionEngine.ts` — decisão de cada agente
-- `src/gamespirit/GameSpirit.ts` — resolução de shots/gols/narrativa
-- `src/simulation/InteractionResolver.ts` — resolução de duelos/interações
-- `src/pages/useLive2dTacticalSim.ts` — orquestrador do modo live
+**Data:** 2026-07-10
+**Arquivos varridos:** 1076 (.ts/.tsx) — eram 863 na auditoria anterior
+**Score anterior:** 75/100 (2026-05-02)
+**Score atual:** 78/100
+**Evolução:** +3 pontos — mas por motivos mistos (ver veredito)
+**Método:** 3 varreduras paralelas grep-backed (motor / app-UI / economia). Sem acusação sem evidência.
+
+---
+
+## ✅ Correções aplicadas nesta sessão (2026-07-10, pós-diagnóstico)
+
+- **Ponte #1 (afiliado):** migration `20260710120000_fix_affiliate_commission_payout.sql` — `claim_my_affiliate_commissions` agora INSERE `wallet_credits` por moeda (espelha `claim_career_bonus`). ⚠️ **precisa ser aplicada no Supabase** (não deployável daqui).
+- **Ponte #2 (Cápsula Lendária):** removida do Store (produto 100% placeholder — preço/estoque fake, compra = `console.log`). `MythicPackHero.tsx` + `MythicPackModal.tsx` deletados.
+- **Ponte #5 (órfãos do motor):** 9 arquivos deletados — `matchLearningIntegration`, `utilityBridge`, `utilityShootDecision`, `replaySystem`, `globalMatchRealtime`, `dailyDigest`, `cycleCoachBridge`, `matchTickClient`, `positionAttributeWeights`.
+- **Ponte #6 (executeCoachCommand):** função de "sucesso falso" deletada + import não-usado removido de `CoachCommandInput.tsx`.
+- Lint (tsc) verde após tudo. Vite compila.
+
+**Ainda abertas (precisam backend/deploy ou trabalho dedicado):** #3 2FA TOTP (segurança — backend), #4 ranking real na Home (precisa hoistar `myRank`), #7 OLEXP/GAT server-authority (infra grande, plano em docs/), #8 posse/confiança pós-jogo hardcoded, #9 DISCOVERABLE em Manager.tsx, #10 podar rotas órfãs.
 
 ---
 
 ## 🎯 Veredito Geral
 
-> O Olefoot está rodando ~75% da inteligência que você escreveu. A maioria dos sistemas profundos está conectada — mas há 1 órfão total crítico, 2 sistemas semi-vivos com impacto desperdiçado, e o GameSpirit (o coração da resolução de partida) ainda usa `Math.random()` puro em decisões táticas que deveriam ser pesadas por atributos.
-
-**Score de Conexão:** 75 / 100
-**Pontes a construir:** 4
+> O **motor de partida evoluiu muito** (o maior órfão de 2026-05-02 — `agentProfile` — está ligado; o DNA agora muda resultado de verdade). Mas a varredura foi mais funda desta vez e revelou que a **camada de economia/loja mente para o jogador** em pontos críticos (comissão de afiliado que não credita, cápsula lendária que não compra). O motor subiu; a confiança da carteira puxou o score pra baixo.
 
 ---
 
-## 1. 🔴 Lógicas Órfãs
+## ✅ O que MELHOROU desde 2026-05-02 (provado)
 
-### 1.1 `src/agents/agentDecisionIntegration.ts` — ⚫ ÓRFÃO TOTAL
-
-- **A Promessa:** Aplicar bias de `AgentProfile` + `TeamIntent` + Skills ativas ao scoring de ações em `collectiveIndividualDecision.ts`. A função principal é `getAgentProfileBias()` — ela calcula modificadores de `spatialAwareness`, `tacticalDiscipline`, `supportCarrier`, etc.
-- **A Realidade:** Zero imports em qualquer arquivo fora de si mesmo.
-  ```
-  $ grep -rn "getAgentProfileBias\|agentDecisionIntegration" src/ (excluindo o próprio arquivo)
-  → (sem resultado)
-  ```
-- **Intenção do Founder Perdida:** Você queria que o perfil espacial e coletivo do agente influenciasse as decisões de passe/chute/suporte. Hoje, `collectiveIndividualDecision.ts` calcula scores sem nenhum bias de perfil individual. Todos os jogadores decidem com o mesmo peso base.
-- **Ponte:** Importar `getAgentProfileBias` em `collectiveIndividualDecision.ts` e aplicar o retorno como modificador no score de cada ação candidata.
+- **`agentProfile` LIGADO** — era o órfão nº1 ("cache nunca populado"). Hoje: `TacticalSimLoop.ts:6299` popula o cache num loop por match (`for (const ag of [...homeAgents, ...awayAgents]) agentProfileCache.set(...)`), lido em `:3702`, e `applyAgentBiasToScore()` é chamado em `collectiveIndividualDecision.ts:399`. 🧬→🟢
+- **DNA agora é VIVO, não decorativo** — `ego` entra em `OnBallDecision.ts:527`; `composure` em `OutcomeResolver.ts:68/80/97` e `Reception.ts`; `riskTaking` em `collectiveIndividualDecision.ts:517`. Valores mudam probabilidade de verdade.
+- **Aprendizado ao vivo ligado** — `LiveLearningBridge` instanciado em `TacticalSimLoop.ts:458`.
+- **GameSpirit quase determinístico** — só 2 `Math.random` reais (usa rng seedado quando disponível). `InteractionResolver` = 0.
+- **Zero alucinações de comentário** — grep por "Integrated with / Wired to / Hooked into" veio vazio.
+- **pressingTrap / momentumBuff / desperationBehavior / positionKnowledge** seguem vivos.
 
 ---
 
-## 2. 🟡 Sistemas Semi-Vivos (importados mas com impacto limitado)
+## 1. 🔴 Lógicas Órfãs (arquivos de lógica, zero import externo — verificado)
 
-### 2.1 `src/playerDecision/offBallHysteresis.ts` — 🟡 SEMI-VIVO
-
-- **O que faz:** Exporta `offBallReplanIntervalSec()` — controla com que frequência um agente off-ball reavalia sua decisão.
-- **Como é usado:** Importado em `PlayerDecisionEngine.ts:23`, usado em 2 guards de replan (`simTime - lastDecisionTime < offBallReplanIntervalSec(ctx)`).
-- **O que está faltando:** A função existe e é chamada, mas o arquivo tem capacidade para histerese contextual (pressão, fase de jogo, fadiga) que provavelmente não está sendo explorada. Verificar se `offBallReplanIntervalSec` recebe contexto rico ou retorna constante.
-  ```
-  $ grep -n "export" src/playerDecision/offBallHysteresis.ts
-  ```
-  Confirmar se é só uma constante disfarçada de função.
-
-### 2.2 `src/gamespirit/legacy/legendDNA.ts` — 🟡 SEMI-VIVO (DNA Decorativo no loop principal)
-
-- **O que faz:** Define `LEGEND_DNA_CATALOG` com DNA de lendas por posição.
-- **Como é usado:** Importado em `positionKnowledgeInit.ts` para seed inicial de `positionKnowledge`. O `positionKnowledge` por sua vez **está vivo** — é injetado no `TacticalSimLoop` via `applyPositionKnowledgeTraits` e no `runMatchMinute` via `pressIntensity`.
-- **O que está faltando:** O `legendDNA` em si (traços como `calmness`, `ego`, `ambition`) não chega ao `PlayerDecisionEngine` diretamente. Ele vira `positionKnowledge.traits` (pressIntensity, offensiveRuns, riskTaking, buildUpPreference) — uma tradução que perde granularidade. Os traços de personalidade da lenda não influenciam decisões individuais de chute/passe.
-- **Impacto perdido:** Um jogador com DNA de Zidane (`calmness: 95`) deveria ter menor chance de chute precipitado sob pressão. Hoje isso não existe — o DNA virou só 4 sliders táticos coletivos.
-
----
-
-## 3. 🤖 Alucinações de Instalação
-
-Nenhum comentário do padrão `// Integrated with` / `// Hooked into` foi encontrado no codebase.
-
-```
-$ grep -rn "Integrated with\|Hooked into\|Wired to\|Injected into" src/
-→ (sem resultado)
-```
-
-**Boa notícia:** A IA anterior não deixou comentários mentirosos. O que existe são sistemas reais — alguns conectados, um órfão total.
-
----
-
-## 4. 🎭 Desmerecimento de Conhecimento Tático
-
-### 4.1 `GameSpirit.ts` — Decisões táticas resolvidas por `Math.random()` puro
-
-O GameSpirit é o coração da resolução de partida no modo auto/legacy. Ele tem acesso a atributos, estilos, pressing trap, momentum — mas várias decisões críticas ainda usam random puro sem peso tático:
-
-**Linha 274 — Decisão de pressing:**
-```ts
-if (Math.random() < Math.min(0.96, 0.88 * m.awayPressMult + trapBonus)) return 'press';
-```
-O `trapBonus` (+0.12) está conectado ao `pressingTrap` — isso está **correto**. Mas `awayPressMult` é um escalar fixo, não derivado de atributos de stamina/posição dos jogadores em campo.
-
-**Linha 304 — Decisão de chute vs progressão:**
-```ts
-return Math.random() > 0.52 - shotBias ? 'shot' : 'progress';
-```
-`shotBias` existe, mas a linha 1126 mostra o drible sendo resolvido assim:
-```ts
-const succ = Math.random() < 0.38 + (carrierDrible - 50) / 200 - trapPenalty;
-```
-Aqui o atributo `carrierDrible` **entra na conta** — isso está bem. O problema é que `positionKnowledge.riskTaking` e `legendDNA` não chegam a modificar `shotBias`.
-
-**Linhas 308–330 — Estilo de jogo vs random:**
-```ts
-if (ctx.possession === 'home' && style.buildUp > 0.72 && Math.random() < 0.22) return 'clear';
-if (ctx.possession === 'home' && style.verticality > 0.72 && Math.random() < 0.24) return 'progress';
-```
-O estilo está sendo usado como gate (bom), mas as probabilidades são constantes mágicas (0.22, 0.24, 0.28). Deveriam escalar com `pressIntensity` do `positionKnowledge` dos jogadores em campo.
-
-**Imposto da preguiça:** O GameSpirit usa atributos em ~60% das decisões. Os 40% restantes são constantes mágicas que ignoram o `positionKnowledge` treinado e o DNA de lenda.
-
----
-
-## 5. 🌉 Pontes a Construir
-
-| # | Ponte | Origem | Destino | Esforço | Ganho |
-|---|---|---|---|---|---|
-| 1 | Conectar `getAgentProfileBias` ao scoring de ações | `agents/agentDecisionIntegration.ts` | `playerDecision/collectiveIndividualDecision.ts` | 🟢 Baixo | 🔥🔥🔥 Alto — cada jogador passa a decidir com seu perfil real |
-| 2 | Escalar probabilidades do GameSpirit com `positionKnowledge.traits` | `positionKnowledge` (já no TacticalSimLoop) | `gamespirit/GameSpirit.ts` linhas 308–330 | 🟡 Médio | 🔥🔥🔥 Alto — treino de posição passa a afetar partidas auto |
-| 3 | Traduzir traços de `legendDNA` (calmness/ego/ambition) para modificadores em `OnBallDecision` | `gamespirit/legacy/legendDNA.ts` | `playerDecision/OnBallDecision.ts` | 🟡 Médio | 🔥🔥 Médio — personalidade de lenda aparece em decisões individuais |
-| 4 | Auditar `offBallHysteresis` — confirmar se é constante ou contextual | `playerDecision/offBallHysteresis.ts` | `playerDecision/PlayerDecisionEngine.ts` | 🟢 Baixo | 🔥 Baixo-Médio — pode melhorar reatividade off-ball |
-
----
-
-## 6. 📊 Métricas Honestas
-
-- **Lógicas Órfãs Totais:** 1 arquivo (`agentDecisionIntegration.ts`)
-- **Sistemas semi-vivos:** 2 (`offBallHysteresis` parcial, `legendDNA` com tradução com perda)
-- **Alucinações de instalação:** 0 comentários falsos encontrados
-- **`Math.random()` que poderiam ser inteligência:** ~8 ocorrências no GameSpirit
-- **% do código conectado ao loop:** ~75%
-
----
-
-## 7. 💡 Conclusão para o Founder
-
-Você está em boa forma. A maioria dos sistemas profundos — `pressingTrap`, `momentumBuff`, `positionKnowledge`, `desperationBehavior`, `offBallHysteresis` — está realmente conectada ao loop. Não é uma casca.
-
-O problema real é mais sutil: **o `agentDecisionIntegration.ts` é um cabo caído no chão**. Você escreveu a lógica de bias por perfil de agente, mas nunca ligou ao `collectiveIndividualDecision`. Resultado: todos os jogadores decidem com o mesmo peso base, ignorando `spatialAwareness`, `tacticalDiscipline` e `supportCarrier`.
-
-A segunda dor: o `legendDNA` virou só 4 sliders táticos ao ser traduzido para `positionKnowledge.traits`. Os traços de personalidade (calmness, ego, ambition) existem no catálogo mas não chegam às decisões individuais de chute/passe. Um Zidane e um Balotelli jogam igual sob pressão.
-
-Comece pela ponte #1 — é um import e uma linha de modificador. Em 20 minutos o perfil de agente passa a existir de verdade na partida.
-
----
-
-## 📦 Update — 2026-05-02 (implementação)
-
-### Pontes construídas nesta sessão
-
-| # | Ponte | Status |
+| Arquivo | Linhas | Diagnóstico |
 |---|---|---|
-| 1 | `agentDecisionIntegration` → `chooseAction` via `zoneOpts.agentProfile` | ✅ Implementado |
-| 2 | Constantes mágicas GameSpirit (0.22/0.24/0.28) → escalam com `offensiveRuns` + `buildUpPreference` | ✅ Implementado |
-| 3 | Pressing adversário → penalizado por `pressIntensity` do portador | ✅ Implementado |
-| 4 | `AgentProfile` injetado no `DecisionContext` via `TacticalSimLoop.applyAgentProfiles()` | ✅ Implementado |
+| `src/agents/matchLearningIntegration.ts` | 135 | **Duplicata morta** — o aprendizado vivo é `liveLearningBridge`+`MatchLearningEngine`. Deletar. |
+| `src/playerDecision/utilityShootDecision.ts` | 192 | Modelo de "instinto de finalização" (`shootInstinctUtility`, `SHOOT_INSTINCT_THRESHOLD`) **nunca chamado**. Sem equivalente vivo — intenção perdida. |
+| `src/playerDecision/utilityBridge.ts` | 98 | Lib de scoring de candidatos (`scoreCandidate/sampleFromCandidates/pickBest`) que a decisão real não usa. |
+| `src/match/replaySystem.ts` | 287 | Sistema de replay completo, zero import. |
+| `src/match/globalMatchRealtime.ts` | 286 | Realtime de partida global, zero import. |
+| `src/systems/dailyDigest.ts` | 152 | Resumo diário, zero import. |
+| `src/match/cycleCoachBridge.ts` | 60 | "Bridge" que não liga nada. |
+| `src/match/matchTickClient.ts` | 58 | Zero import. |
+| `src/engine/test2d/positionAttributeWeights.ts` | 50 | Pesos por posição, zero import. |
+| `src/match/coachCommands.ts:240` (`executeCoachCommand`) | — | **Retorna `success:true` FALSO** — todos os branches são stub `// TODO enviar comando`. Único import é não-usado em `CoachCommandInput.tsx:18`. O comando de voz real usa outro caminho (`VOICE_COMMAND_ISSUED`, `reducer.ts:1701`). |
 
-### Arquivos modificados
-- `src/gamespirit/GameSpirit.ts` — pontes 2 e 3
-- `src/playerDecision/types.ts` — campo `agentProfile` e `teamIntent` em `DecisionContext`
-- `src/playerDecision/collectiveIndividualDecision.ts` — `applyAgentBiasToScore` no loop de `chooseAction`
-- `src/playerDecision/OnBallDecision.ts` — passa `agentProfile`, `teamIntent`, `decisionCtx` ao `chooseAction`
-- `src/simulation/TacticalSimLoop.ts` — cache `agentProfileCache` + método `applyAgentProfiles()`
-- `src/pages/useLive2dTacticalSim.ts` — campo `entitiesById` + chamada `applyAgentProfiles()`
-- `src/pages/Live2dMatchShell.tsx` — passa `entitiesById: playersById`
+Semi-mortos (só referenciados por ferramentas admin/reference, não pelo jogo): `advanceLiveStoryMinute.ts`, `prematchCoachSuggestion.ts`, `playerFromPrompt.ts`.
 
-### Score estimado após implementação: **90/100**
+---
+
+## 2. 🤖 Alucinações / "Sucesso Falso"
+
+Comentários de instalação: **0** (limpo). Mas há **sucesso funcional falso** — código que diz "deu certo" sem fazer nada:
+
+- `src/store/MythicPackHero.tsx:14` — `handlePurchase` = `console.log('Compra da Cápsula Lendária')`, fecha modal. **Compra fake.**
+- `src/match/coachCommands.ts:240-334` — `executeCoachCommand` retorna mensagens de sucesso ("ativou skill", "mensagem enviada") sobre stubs.
+- `src/admin/useAdmin2FA.ts:107` — `verify2FA` aceita **qualquer** 6 dígitos (`// TODO validação TOTP real`).
+
+---
+
+## 3. 💰 Economia — o ponto mais doloroso
+
+### 3.1 🔴 Comissão de afiliado NÃO CREDITA (dinheiro queimado)
+`claim_my_affiliate_commissions` (`supabase/migrations/20260527000100_affiliate_commissions.sql:236-247`) apenas marca `claimed_at = now()` e RETORNA o total — **nunca insere `wallet_credits`, nunca toca saldo.** Compare com `claim_career_bonus` (`career_progress.sql:260`) que insere corretamente. O cliente (`ManagerNetwork.tsx:380`, `ManagerCareer.tsx:196`) soma, mostra "X resgatados", dá `refresh()` → pendente zera, **saldo não muda**. Todo "Resgatar" de comissão de depósito **queima o valor**. É a comissão principal do MMN. (Justamente o botão da tela que acabamos de repaginar.)
+
+### 3.2 🟡 OLEXP/GAT staking ainda client-only
+`accrueOlexpDaily`/`accrueGatDaily` (`src/wallet/olexp.ts:159`) rodam só no cliente via `WORLD_CATCH_UP`. Sem tabela de posições no servidor (grep em migrations = nada). Limpar localStorage fabrica rendimento. (O *token* OLEXP no servidor é real; a *posição de staking* é ficção — dois "OLEXP" diferentes.)
+
+### 3.3 🟡 3 sistemas de XP fragmentados
+`finance.expLifetimeEarned` (carteira, real) · `progressionStore.expBalance` (contador órfão que carteira nenhuma lê) · `PlayerProgressionManager.totalXP` (só signature moves). O `expBalance` é um saldo morto.
+
+### 3.4 🟡 Nível do jogador é cosmético
+`evolutionXp` acumula de treino real, mas `getPlayerLevel` só alimenta UI — atributos sobem direto no treino, o nível não destrava nada.
+
+✅ **Reais e ligados:** renda passiva, prêmios de liga, HODL (cron server), bônus de carreira (diferido pro próximo mount), débitos de compra (moeda certa em todos os casos checados).
+
+---
+
+## 4. 🎭 Números falsos na UI (hardcoded)
+
+- `src/pages/Home.tsx:1062` — ranking pós-jogo fixo em **#1 / 0%** (`// TODO pegar do sistema real`).
+- `src/game/reducer.ts:1860` — posse fixa em **60%** no pós-jogo; `:1917` `wasLosingAtHalftime:false`.
+- `src/hooks/useVoiceCommandDispatch.ts:95` — obediência ao comando de voz usa `confianca:70` fixo (moral do jogador nunca pesa).
+- `src/pages/MatchGlobalSetup.tsx:19` — `generateMockTeams()` com nomes reais (Flamengo/Palmeiras) e OVR `Math.random()`.
+
+---
+
+## 5. 🚪 Rotas Órfãs (registradas, nada navega até elas)
+
+- `/olefoot/ranked` (`App.tsx:617`) — zero refs.
+- `/liga-global/coroas` (`App.tsx:621`) — zero refs.
+- `/match/global/setup` (`App.tsx:610`) — zero refs + mock teams.
+- `/match/penalty-legacy` (`App.tsx:607`) — supersedido por `/match/penalty`.
+- `/match/classic` (`App.tsx:626`) — dead-end intencional ("Em breve").
+
+---
+
+## 6. 🌉 Pontes a Construir (ranqueadas por impacto)
+
+| # | Ponte | Origem → Destino | Esforço | Ganho |
+|---|---|---|---|---|
+| 1 | **Comissão afiliado credita saldo** | `claim_my_affiliate_commissions` SQL → INSERT `wallet_credits` | 🟢 | 🔥🔥🔥 |
+| 2 | **Cápsula Lendária compra de verdade** | `MythicPackHero.handlePurchase` → debita+concede | 🟡 | 🔥🔥🔥 |
+| 3 | **2FA admin real (TOTP)** | `useAdmin2FA.verify2FA` → backend | 🟡 | 🔥🔥 (segurança) |
+| 4 | **Ranking real na Home** | `Home.tsx:1062` → sistema de ranking | 🟢 | 🔥🔥 |
+| 5 | **Deletar órfãos do motor** | matchLearningIntegration/utilityBridge/utilityShootDecision/replaySystem/etc | 🟢 | 🔥 (clareza) |
+| 6 | **executeCoachCommand: deletar ou ligar** | `coachCommands.ts:240` + import em `CoachCommandInput.tsx:18` | 🟢 | 🔥 |
+| 7 | **OLEXP/GAT staking server-authoritative** | `olexp.ts` accrual → cron+tabela (padrão HODL) | 🔴 | 🔥🔥 |
+| 8 | **Posse/confiança/ranking reais no pós-jogo** | reducer/voice hardcodes → estado real | 🟡 | 🔥 |
+| 9 | **DISCOVERABLE_MANAGERS real** | `Manager.tsx:1320` → managers online | 🟡 | 🔥 |
+| 10 | **Podar rotas órfãs** | /olefoot/ranked, /liga-global/coroas, /match/global/setup, /match/penalty-legacy | 🟢 | 🔥 |
+
+---
+
+## 7. 📊 Métricas
+
+- Órfãos de lógica confirmados: **9 arquivos** (+3 semi-mortos admin) | Sucesso falso: **3** | Rotas órfãs: **5**
+- DNA: 🟢 **VIVO** (era decorativo) | agentProfile: 🟢 **LIGADO** (era órfão) | Alucinações de comentário: **0**
+- Bugs de dinheiro: **1 crítico** (afiliado) + **1 loja fake** (cápsula) | XP fragmentado em **3** sistemas
+- **Score: 78/100** (+3 vs 75)
+
+---
+
+## 8. 💡 Conclusão (sem bajulação)
+
+O **cérebro da partida está muito melhor** — o trabalho de acender `agentProfile` e fazer o DNA (ego/composure/riskTaking) pesar em fórmulas reais é exatamente a "inteligência" que faltava em 2026-05-02. Isso sozinho justificaria subir o score.
+
+O que segura em 78 é a **camada de dinheiro/loja**: a comissão de afiliado é o pior achado do relatório — não é código morto, é **código que finge pagar e queima o valor**, na engrenagem principal do MMN. Somado à Cápsula Lendária (produto em destaque que não compra) e ao 2FA que aceita qualquer código, o jogo tem 3 pontos onde a UI mente. São poucos, são cirúrgicos, mas são de alta confiança — e o fundador acabou de repaginar a própria tela onde o bug do afiliado vive.
+
+**Prioridade absoluta: ponte #1 (afiliado credita saldo).** Depois #2 e #3. O resto é limpeza (deletar órfãos) e honestidade (ranking/posse reais).

@@ -139,7 +139,7 @@ function buildProgressCard(expLifetimeEarned: number): FeedCard {
 
   if (!next) {
     return {
-      rail: 'bg-fuchsia-400',
+      rail: 'bg-neon-yellow',
       eyebrow: 'Carreira',
       title: 'Lenda Viva',
       description: `Tier máximo atingido. ${formatExp(expLifetimeEarned)} EXP acumulado — entra para o panteão Olefoot.`,
@@ -150,10 +150,10 @@ function buildProgressCard(expLifetimeEarned: number): FeedCard {
   const expRemaining = Math.max(0, next.minExp - expLifetimeEarned);
 
   return {
-    rail: 'bg-fuchsia-400',
+    rail: 'bg-neon-yellow',
     eyebrow: `Tier ${tier.id} · ${tier.name}`,
     title: `${progressPct}% rumo a ${next.name}`,
-    description: `Faltam ${formatExp(expRemaining)} EXP para subir de tier. Cada vitória, treino e venda contam.`,
+    description: `Faltam ${formatExp(expRemaining)} EXP para subir de tier.`,
     cta: { label: 'Ver Carreira', href: '/manager' },
   };
 }
