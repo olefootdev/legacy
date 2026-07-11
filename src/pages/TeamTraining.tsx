@@ -124,6 +124,7 @@ function fatigueRail(fatigue: number): string {
 export function TeamTraining() {
   const dispatch = useGameDispatch();
   const players = useGameStore((s) => s.players);
+  const playerHealth = useGameStore((s) => s.playerHealth);
   const structures = useGameStore((s) => s.structures);
   const plans = useGameStore((s) => s.manager.trainingPlans);
   const treatmentPlans = useGameStore((s) => s.manager.treatmentPlans ?? []);
@@ -149,8 +150,16 @@ export function TeamTraining() {
   const group: 'defensivo' | 'criativo' | 'ataque' | 'all' = who === 'elenco' ? 'all' : who === 'setor' ? sector : 'all';
 
   const roster = useMemo(
-    () => Object.values(players).filter((p) => p.outForMatches <= 0).sort((a, b) => a.num - b.num),
-    [players],
+    () =>
+      Object.values(players)
+        .filter((p) => {
+          // SSOT primeiro (state.playerHealth); cai no campo legado só se não houver saúde registrada.
+          const fromHealth = playerHealth?.[p.id];
+          const outForMatches = fromHealth ? fromHealth.outForMatches : (p.outForMatches ?? 0);
+          return outForMatches <= 0;
+        })
+        .sort((a, b) => a.num - b.num),
+    [players, playerHealth],
   );
 
   const sectorCounts = useMemo(
@@ -385,7 +394,8 @@ export function TeamTraining() {
                   const active = selectedPlayers.includes(p.id);
                   const disabled = !active && selectedPlayers.length >= slots;
                   const ovr = overallFromAttributes(p.attrs);
-                  const rail = fatigueRail(p.fatigue);
+                  const fatigue = playerHealth?.[p.id]?.fatigue ?? p.fatigue;
+                  const rail = fatigueRail(fatigue);
                   return (
                     <button
                       key={p.id}
@@ -410,7 +420,7 @@ export function TeamTraining() {
                           <div className="truncate font-display text-[15px] font-bold uppercase tracking-[0.02em]">
                             <span className="text-white/45">{p.num}</span> {p.name}
                           </div>
-                          <div className="mt-0.5 font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">{Math.round(p.fatigue)}% cansaço</div>
+                          <div className="mt-0.5 font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">{Math.round(fatigue)}% cansaço</div>
                         </div>
                       </div>
                       <div className="flex items-center pr-4">
