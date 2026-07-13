@@ -414,7 +414,7 @@ export function TeamTraining() {
                       onClick={() => togglePlayer(p.id)}
                       disabled={disabled}
                       aria-pressed={active}
-                      className={`group relative flex items-stretch overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`group relative flex min-h-[64px] shrink-0 items-stretch overflow-hidden rounded-[var(--radius-md)] border bg-[#1c1c1c] text-left transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                         active ? 'border-neon-yellow' : 'border-white/10 hover:border-white/25'
                       }`}
                     >
