@@ -149,18 +149,23 @@ export function TeamTraining() {
   const mode: 'individual' | 'coletivo' = who === 'individual' ? 'individual' : 'coletivo';
   const group: 'defensivo' | 'criativo' | 'ataque' | 'all' = who === 'elenco' ? 'all' : who === 'setor' ? sector : 'all';
 
+  // Mostra SEMPRE o elenco inteiro (não esconde ninguém). Antes filtrava por
+  // outForMatches, que num save com dado de saúde desalinhado esvaziava a lista.
+  // Lesão/suspensão vira só um selo informativo — nunca some da lista.
   const roster = useMemo(
-    () =>
-      Object.values(players)
-        .filter((p) => {
-          // SSOT primeiro (state.playerHealth); cai no campo legado só se não houver saúde registrada.
-          const fromHealth = playerHealth?.[p.id];
-          const outForMatches = fromHealth ? fromHealth.outForMatches : (p.outForMatches ?? 0);
-          return outForMatches <= 0;
-        })
-        .sort((a, b) => a.num - b.num),
-    [players, playerHealth],
+    () => Object.values(players).sort((a, b) => a.num - b.num),
+    [players],
   );
+
+  /** Selo informativo de indisponibilidade (não bloqueia treino). */
+  const availabilityTag = (p: PlayerEntity): string | null => {
+    const h = playerHealth?.[p.id];
+    const out = h ? h.outForMatches : (p.outForMatches ?? 0);
+    const susp = h ? (h.suspendedMatches ?? 0) : 0;
+    if (susp > 0) return 'Suspenso';
+    if (out > 0) return 'Lesionado';
+    return null;
+  };
 
   const sectorCounts = useMemo(
     () => ({
@@ -389,6 +394,11 @@ export function TeamTraining() {
                   </button>
                 </div>
               </div>
+              {roster.length === 0 ? (
+                <div className="rounded-[var(--radius-md)] border border-dashed border-white/15 bg-black/30 px-4 py-6 text-center text-[13px] text-white/60">
+                  Nenhum jogador no elenco ainda.
+                </div>
+              ) : (
               <div className="flex max-h-[min(20rem,42dvh)] flex-col gap-2 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
                 {roster.map((p) => {
                   const active = selectedPlayers.includes(p.id);
@@ -396,6 +406,7 @@ export function TeamTraining() {
                   const ovr = overallFromAttributes(p.attrs);
                   const fatigue = playerHealth?.[p.id]?.fatigue ?? p.fatigue;
                   const rail = fatigueRail(fatigue);
+                  const tag = availabilityTag(p);
                   return (
                     <button
                       key={p.id}
@@ -420,7 +431,10 @@ export function TeamTraining() {
                           <div className="truncate font-display text-[15px] font-bold uppercase tracking-[0.02em]">
                             <span className="text-white/45">{p.num}</span> {p.name}
                           </div>
-                          <div className="mt-0.5 font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">{Math.round(fatigue)}% cansaço</div>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <span className="font-display text-[10.5px] uppercase tracking-[0.1em] text-white/45">{Math.round(fatigue)}% cansaço</span>
+                            {tag && <span className="rounded bg-red-500/15 px-1.5 py-0.5 font-display text-[9px] uppercase tracking-wide text-red-300">{tag}</span>}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center pr-4">
@@ -432,6 +446,7 @@ export function TeamTraining() {
                   );
                 })}
               </div>
+              )}
             </div>
           )}
         </motion.div>
