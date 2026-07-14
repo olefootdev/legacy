@@ -79,3 +79,6 @@ scripts/calibration/raw/
 
 # Migration v1 → v11: snapshots locais com bcrypt hashes, emails, wallets, balances
 scripts/migrate-legacy-v1/data/
+
+# Banco do sistema antigo (dumps, tar.gz, jsons com bcrypt/mnemonicos/chaves) — NUNCA versionar
+olefoot-db/

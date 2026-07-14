@@ -303,7 +303,7 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
   // 1) Row do legacy — PREÇO autoritativo + disponibilidade
   const { data: row, error: rowErr } = await sb
     .from('legacy_players')
-    .select('id, name, price_bro_cents, listed_on_market')
+    .select('id, name, price_bro_cents, listed_on_market, beneficiary_user_id, payment_split')
     .eq('id', legacyId)
     .maybeSingle();
   if (rowErr || !row) return c.json({ ok: false, error: 'Legacy não encontrado.' }, 404);
@@ -367,6 +367,51 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
     return c.json({ ok: false, error: 'Falha ao entregar o jogador.', detail: sqErr.message }, 500);
   }
 
+  // 4b) PONTE 1+3 — repasse ao DONO da lenda + registro canônico da venda.
+  //     Na compra por OLEFOOT o dono não recebia nada. Agora: credita a fatia
+  //     'player' do payment_split no saldo OLEFOOT do beneficiário e materializa
+  //     a venda em card_sales (fonte confiável por card+dono do PLAYERVIP).
+  //     Best-effort: nunca bloqueia a entrega já concluída (card_sales é o ledger).
+  const splitArr = Array.isArray(row.payment_split) ? (row.payment_split as Array<{ kind?: string; percent?: number }>) : [];
+  const playerPct = Number(splitArr.find((e) => e.kind === 'player')?.percent ?? 50);
+  const ownerCut = Math.floor((price * playerPct) / 100);
+  const beneficiaryId = (row as { beneficiary_user_id?: string | null }).beneficiary_user_id ?? null;
+  if (beneficiaryId && ownerCut > 0) {
+    try {
+      const { data: ownerCredit } = await sb
+        .from('legacy_olefoot_credits')
+        .select('balance_human')
+        .eq('user_id', beneficiaryId)
+        .maybeSingle();
+      const ownerHuman = String(ownerCredit?.balance_human ?? '0');
+      const [oInt, oFrac = ''] = ownerHuman.split('.');
+      const oIntPart = BigInt(oInt || '0');
+      const oFracPart = (oFrac + '0'.repeat(18)).slice(0, 18);
+      const newOwnerInt = oIntPart + BigInt(ownerCut);
+      const newOwnerHuman = `${newOwnerInt.toString()}.${oFracPart}`;
+      const newOwnerWei = (newOwnerInt * 10n ** 18n + BigInt(oFracPart)).toString();
+      await sb
+        .from('legacy_olefoot_credits')
+        .upsert(
+          { user_id: beneficiaryId, balance_human: newOwnerHuman, balance_wei: newOwnerWei },
+          { onConflict: 'user_id' },
+        );
+    } catch (e) {
+      console.warn('[buy-legacy] repasse OLEFOOT ao dono falhou (ignorado):', e);
+    }
+  }
+  try {
+    await sb.rpc('record_olefoot_card_sale', {
+      p_legacy_player_id: legacyId,
+      p_beneficiary: beneficiaryId,
+      p_buyer: buyerId,
+      p_gross_cents: price,
+      p_owner_cents: ownerCut,
+    });
+  } catch (e) {
+    console.warn('[buy-legacy] record_olefoot_card_sale falhou (ignorado):', e);
+  }
+
   // 5) Registro da venda (best-effort — NUNCA bloqueia a entrega já concluída).
   //    Torna a "camada ao vivo" do mercado REAL: (a) incrementa o lote aberto,
   //    fazendo a escassez andar e disparando emit_next_lot ao esgotar; (b) grava
@@ -399,6 +444,7 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
       player_ovr: ovr,
       player_pos: pos,
       price_exp: price,
+      legacy_player_id: legacyId,
     });
   } catch (e) {
     console.warn('[buy-legacy] activity insert falhou (ignorado):', e);

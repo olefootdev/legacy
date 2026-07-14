@@ -12,12 +12,15 @@ import { cn } from '@/lib/utils';
 export interface PlayerLinkEditorValue {
   beneficiaryUserId: string | null;
   beneficiaryLabel: string | null;
+  /** E-mail da lenda p/ vincular via PLAYERVIP (login mágico, sem perfil de jogo). */
+  beneficiaryEmail: string | null;
   split: PaymentSplitEntry[];
 }
 
 export const DEFAULT_LINK_VALUE: PlayerLinkEditorValue = {
   beneficiaryUserId: null,
   beneficiaryLabel: null,
+  beneficiaryEmail: null,
   split: DEFAULT_SPLIT,
 };
 
@@ -140,6 +143,21 @@ export function PlayerLinkEditor({
           selectedLabel={value.beneficiaryLabel}
           onPick={(u) => setPlayerUser(u?.id ?? null, u?.display_name ?? u?.club_name ?? null)}
         />
+        <div className="flex items-center gap-2 pt-1">
+          <div className="h-px flex-1 bg-white/10" />
+          <span className="text-[9px] uppercase tracking-widest text-white/30">ou por e-mail (PLAYERVIP)</span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+        <input
+          type="email"
+          value={value.beneficiaryEmail ?? ''}
+          onChange={(e) => onChange({ ...value, beneficiaryEmail: e.target.value || null })}
+          placeholder="email-da-lenda@exemplo.com"
+          className="w-full rounded border border-white/15 bg-black/40 px-2.5 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-neon-yellow/40"
+        />
+        <p className="text-[9px] leading-snug text-white/40">
+          Preencha o e-mail se a lenda só usa a PLAYERVIP (login mágico). Ao salvar, o card sincroniza com o painel dela na hora.
+        </p>
       </div>
 
       {/* Facilitadores (10%) */}

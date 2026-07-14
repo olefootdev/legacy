@@ -230,6 +230,27 @@ export async function adminFindUserByEmail(email: string): Promise<FindUserRespo
   return body;
 }
 
+/**
+ * Gera um magic link pra mandar pra lenda (WhatsApp). Ela clica → cai logada
+ * no /playervip. Cria a conta passwordless se não existir. Não envia e-mail.
+ */
+export async function adminGenerateAccessLink(
+  email: string,
+  redirectTo?: string,
+): Promise<{ email: string; link: string }> {
+  const url = `${olefootApiBase()}/api/admin/legend-access-link`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, redirectTo }),
+  });
+  const body = (await res.json()) as { ok?: boolean; email: string; link: string } | { error: string };
+  if (!res.ok || 'error' in body) {
+    throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
+  }
+  return { email: body.email, link: body.link };
+}
+
 /** Tier defaults (espelha tabela TIER_DEFAULTS do server). */
 export const TIER_DEFAULTS: Record<LegendTier, { supply: number; usdtCents: number; oleUnits: number }> = {
   1: { supply: 10_000, usdtCents: 100, oleUnits: 100_000 },

@@ -719,3 +719,49 @@ legendImportRoutes.get('/find-user', async (c) => {
     created_at: match.created_at,
   });
 });
+
+/**
+ * POST /api/admin/legend-access-link { email, redirectTo? }
+ * Gera UM magic link pra mandar pra lenda (WhatsApp) — ela clica e cai logada
+ * direto no /playervip, sem precisar digitar nada. Cria a conta (passwordless)
+ * se ainda não existir. NÃO envia e-mail: retorna o link pra o admin copiar.
+ * Auth admin obrigatório.
+ */
+legendImportRoutes.post('/legend-access-link', async (c) => {
+  const authErr = await requireAdminToken(c);
+  if (authErr) return authErr;
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ error: 'Supabase admin not configured' }, 503);
+
+  const body = await c.req
+    .json<{ email?: string; redirectTo?: string }>()
+    .catch(() => ({} as { email?: string; redirectTo?: string }));
+  const email = body.email?.trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    return c.json({ error: 'email obrigatório' }, 400);
+  }
+  const redirectTo = body.redirectTo?.trim() || 'https://game.olefoot.com/playervip';
+
+  // Garante a conta (passwordless). Ignora "já existe" — idempotente.
+  const created = await sb.auth.admin.createUser({ email, email_confirm: true });
+  if (created.error && !/already|registered|exists/i.test(created.error.message)) {
+    console.warn('[legend-access-link] createUser:', created.error.message);
+  }
+
+  // Gera o magic link SEM enviar e-mail.
+  const { data, error } = await sb.auth.admin.generateLink({
+    type: 'magiclink',
+    email,
+    options: { redirectTo },
+  });
+  if (error) {
+    console.error('[legend-access-link] generateLink:', error.message);
+    return c.json({ error: error.message }, 500);
+  }
+
+  const link = data?.properties?.action_link ?? null;
+  if (!link) return c.json({ error: 'link não gerado' }, 500);
+
+  return c.json({ ok: true, email, link, redirectTo });
+});

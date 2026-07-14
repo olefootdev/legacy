@@ -46,6 +46,36 @@ export async function adminSavePlayerLink(params: {
   return { ok: true };
 }
 
+/**
+ * Vincula o beneficiário por E-MAIL (auth.users) — funciona pra lenda que só
+ * existe via login mágico da PLAYERVIP (sem row em profiles). Grava
+ * beneficiary_user_id + injeta o id na fatia 'player' do split.
+ * Retorna o user_id resolvido, ou erro amigável se o e-mail não tem conta.
+ */
+export async function adminLinkPlayerByEmail(params: {
+  table: PlayerLinkTable;
+  playerId: string;
+  email: string;
+  split: PaymentSplitEntry[];
+}): Promise<{ ok: boolean; userId?: string; error?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, error: 'Supabase não configurado.' };
+  const { data, error } = await sb.rpc('admin_link_player_by_email', {
+    p_table: params.table,
+    p_player_id: params.playerId,
+    p_email: params.email.trim(),
+    p_payment_split: params.split,
+  });
+  if (error) {
+    const m = error.message.toLowerCase();
+    if (m.includes('email_sem_conta')) {
+      return { ok: false, error: 'Esse e-mail ainda não tem conta. Peça pra lenda entrar uma vez em /playervip.' };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, userId: data as string };
+}
+
 export interface LinkedCardRow {
   source: 'genesis' | 'legacy';
   id: string;

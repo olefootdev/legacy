@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Crown, Plus, Save, Trash2, X } from 'lucide-react';
+import { Crown, Plus, Save, Trash2, X, Link2, Copy, Check } from 'lucide-react';
+import { adminGenerateAccessLink } from '@/admin/legendCreatorClient';
 import { cn } from '@/lib/utils';
 import {
   fetchAllLegacyPlayerRows,
@@ -9,7 +10,7 @@ import {
   type LegacyPlayerRow,
 } from '@/supabase/legacyPlayers';
 import { PortraitFocusEditor } from '@/admin/components/PortraitFocusEditor';
-import { adminSavePlayerLink, isSplitValid } from '@/admin/playerLinking';
+import { adminSavePlayerLink, adminLinkPlayerByEmail, isSplitValid } from '@/admin/playerLinking';
 import {
   PlayerLinkEditor,
   DEFAULT_LINK_VALUE,
@@ -163,14 +164,28 @@ export function AdminLegacyPanel() {
       window.alert('Falha ao salvar (ver console).');
       return;
     }
-    const linkRes = await adminSavePlayerLink({
-      table: 'legacy_players',
-      playerId: editing.id,
-      beneficiaryUserId: linkDraft.beneficiaryUserId,
-      split: linkDraft.split,
-    });
-    if (!linkRes.ok) {
-      window.alert(`Player salvo, mas falha ao gravar split: ${linkRes.error ?? 'erro desconhecido'}`);
+    const email = linkDraft.beneficiaryEmail?.trim();
+    if (email) {
+      // Vínculo por e-mail (lenda PLAYERVIP, login mágico) — resolve o user_id.
+      const byEmail = await adminLinkPlayerByEmail({
+        table: 'legacy_players',
+        playerId: editing.id,
+        email,
+        split: linkDraft.split,
+      });
+      if (!byEmail.ok) {
+        window.alert(`Player salvo, mas falha ao vincular por e-mail: ${byEmail.error ?? 'erro'}`);
+      }
+    } else {
+      const linkRes = await adminSavePlayerLink({
+        table: 'legacy_players',
+        playerId: editing.id,
+        beneficiaryUserId: linkDraft.beneficiaryUserId,
+        split: linkDraft.split,
+      });
+      if (!linkRes.ok) {
+        window.alert(`Player salvo, mas falha ao gravar split: ${linkRes.error ?? 'erro desconhecido'}`);
+      }
     }
     setEditing(null);
     setLinkDraft(DEFAULT_LINK_VALUE);
@@ -555,6 +570,8 @@ function EditorModal({
           <PlayerLinkEditor value={linkValue} onChange={onLinkChange} />
         </div>
 
+        <AccessLinkBox email={linkValue.beneficiaryEmail} />
+
         <div className="mt-5 flex items-center justify-end gap-2">
           <button
             type="button"
@@ -573,6 +590,80 @@ function EditorModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Gera e mostra o magic link pra mandar pra lenda (WhatsApp). */
+function AccessLinkBox({ email }: { email: string | null }) {
+  const [link, setLink] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const clean = email?.trim() || '';
+
+  const generate = async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await adminGenerateAccessLink(clean);
+      setLink(res.link);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Falha ao gerar link');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const copy = () => {
+    if (!link) return;
+    navigator.clipboard.writeText(link).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-display text-[10px] font-black uppercase tracking-widest text-cyan-200/90">
+            Link de acesso da lenda
+          </p>
+          <p className="mt-0.5 text-[11px] text-white/55">
+            Gera um magic link pra mandar no WhatsApp — a lenda clica e cai logada no /playervip.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={!clean || loading}
+          onClick={() => void generate()}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-500/15 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-wider text-cyan-100 hover:bg-cyan-500/25 disabled:opacity-40"
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          {loading ? 'Gerando…' : 'Gerar link'}
+        </button>
+      </div>
+      {!clean ? (
+        <p className="mt-2 text-[10px] text-white/40">Preencha o e-mail da lenda (acima) pra habilitar.</p>
+      ) : null}
+      {err ? <p className="mt-2 text-[11px] text-rose-300">{err}</p> : null}
+      {link ? (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            readOnly
+            value={link}
+            onFocus={(e) => e.currentTarget.select()}
+            className="min-w-0 flex-1 truncate rounded border border-white/15 bg-black/50 px-2.5 py-1.5 font-mono text-[10px] text-white"
+          />
+          <button
+            type="button"
+            onClick={copy}
+            className="inline-flex shrink-0 items-center gap-1 rounded border border-white/15 bg-white/5 px-2.5 py-1.5 text-[10px] font-bold uppercase text-white hover:bg-white/10"
+          >
+            {copied ? <Check className="h-3 w-3 text-neon-green" /> : <Copy className="h-3 w-3" />}
+            {copied ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

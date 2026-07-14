@@ -62,7 +62,8 @@ function SessionGuard() {
       path === '/cadastro' ||
       path.startsWith('/cadastro/') ||
       path.startsWith('/admin') ||
-      path === '/reset-password'
+      path === '/reset-password' ||
+      path === '/playervip'
     )
       return;
 
@@ -151,6 +152,7 @@ const Leagues = lazy(() => import('./pages/Leagues').then((m) => ({ default: m.L
 const PremiumLeagues = lazy(() => import('./pages/PremiumLeagues').then((m) => ({ default: m.PremiumLeagues })));
 const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
+const PlayerVip = lazy(() => import('./pages/PlayerVip').then((m) => ({ default: m.PlayerVip })));
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
 const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
@@ -489,6 +491,15 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/cadastro/:inviteCode" element={<Cadastro />} />
           </Route>
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* PLAYERVIP — cockpit standalone da lenda (auth própria por link mágico, sem GameShell). */}
+          <Route
+            path="/playervip"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PlayerVip />
+              </Suspense>
+            }
+          />
           <Route element={<RequireRegistration />}>
             <Route element={<GameShell />}>
               <Route path="/" element={<Home />} />
