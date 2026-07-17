@@ -62,6 +62,13 @@ interface LegendPhasePayload {
   paymentSplit?: SplitEntry[];
   /** Atleta real (uuid de auth.users). */
   beneficiaryUserId?: string;
+  /**
+   * Card DA CASA: sem atleta nem facilitador reais (ex.: Juca, Nando). O banco
+   * preenche player+facilitator+beneficiary com a conta da plataforma
+   * (olefoot_platform_user_id) e ela coleta 100%. Lenda real NÃO usa isto — fica
+   * com split nulo até o admin_link_legend_full. Ver 20260718120000.
+   */
+  houseOwned?: boolean;
   entity: {
     name: string;
     num?: number;
@@ -96,6 +103,8 @@ interface LegendImportPayload {
   collectionKind?: string;
   sources?: string[];
   inconsistencies?: string[];
+  /** Card da casa pra TODAS as fases (atalho — o mesmo que houseOwned em cada). */
+  houseOwned?: boolean;
   phases: LegendPhasePayload[];
 }
 
@@ -263,6 +272,7 @@ function buildLegacyRow(slug: string, payload: LegendImportPayload, ph: LegendPh
     main_club: ph.mainClub?.trim() || null,
     payment_split: split.length > 0 ? split : null,
     beneficiary_user_id: ph.beneficiaryUserId ?? null,
+    house_owned: ph.houseOwned === true || payload.houseOwned === true,
     updated_at: new Date().toISOString(),
   };
 }
