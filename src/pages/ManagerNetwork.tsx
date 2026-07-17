@@ -3,7 +3,7 @@
  * Solicitações de amizade + Indicações cadastradas + Link de indicação
  * Design system: HERO amarelo editorial + cards padrão do jogo
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   Network,
@@ -41,7 +41,20 @@ import { useGameDispatch, useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode, normalizeReferralCode } from '@/wallet/referralCode';
-import { fetchMyReferrals, claimMyReferralCommission, type ReferredProfile } from '@/supabase/referrals';
+import {
+  fetchMyReferrals,
+  getMyNetworkStatus,
+  fetchClaimedMilestones,
+  claimNetworkMilestone,
+  type ReferredProfile,
+  type NetworkStatus,
+} from '@/supabase/referrals';
+import {
+  NETWORK_MILESTONES,
+  MILESTONE_LEGS_COUNTED,
+  isMilestoneReached,
+  progressForMilestone,
+} from '@/systems/network/milestones';
 import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import {
   fetchMyCareerProgress,
@@ -140,19 +153,29 @@ export function ManagerNetwork() {
   // wallet.referralTree é zustand local e não reflete cadastros via link.
   const [serverReferrals, setServerReferrals] = useState<ReferredProfile[]>([]);
   const [loadingReferrals, setLoadingReferrals] = useState(true);
+  const [netStatus, setNetStatus] = useState<NetworkStatus>({
+    directsActive: 0,
+    directsTotal: 0,
+    qualifyingCount: 0,
+    legsTotal: 0,
+  });
+  const [claimedMilestones, setClaimedMilestones] = useState<number[]>([]);
+
+  const refreshNetwork = useCallback(async () => {
+    const [list, status, claimed] = await Promise.all([
+      fetchMyReferrals(),
+      getMyNetworkStatus(),
+      fetchClaimedMilestones(),
+    ]);
+    setServerReferrals(list);
+    setNetStatus(status);
+    setClaimedMilestones(claimed);
+    setLoadingReferrals(false);
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const list = await fetchMyReferrals();
-      if (cancelled) return;
-      setServerReferrals(list);
-      setLoadingReferrals(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void refreshNetwork();
+  }, [refreshNetwork]);
 
   const referrals = useMemo(
     () =>
@@ -161,25 +184,15 @@ export function ManagerNetwork() {
         displayName: r.displayName ?? 'Manager',
         clubName: r.clubName ?? null,
         clubShort: r.clubShort,
-        level: 1 as number,
         joinedAt: r.createdAt,
         lifetime: r.expLifetimeEarned,
-        pending: r.commissionPending,
-        total: r.commissionTotal,
+        legSize: r.legSize,
+        countsForMilestones: r.countsForMilestones,
       })),
     [serverReferrals],
   );
 
-  const totalCommissionPending = useMemo(
-    () => referrals.reduce((sum, r) => sum + r.pending, 0),
-    [referrals],
-  );
-  const totalCommissionAccumulated = useMemo(
-    () => referrals.reduce((sum, r) => sum + r.total, 0),
-    [referrals],
-  );
-
-  const [claiming, setClaiming] = useState(false);
+  const [claiming, setClaiming] = useState<number | null>(null);
   const [claimSuccess, setClaimSuccess] = useState<number | null>(null);
 
   // Breakdown agregado de comissões por indicado — alimenta colunas USDT dos cards
@@ -328,21 +341,26 @@ export function ManagerNetwork() {
     }
   };
 
-  const handleClaimAll = async () => {
-    if (claiming || totalCommissionPending <= 0) return;
-    setClaiming(true);
+  /**
+   * Resgata um marco. O servidor decide o valor e credita em wallet_credits;
+   * applyPendingCredits aplica no estado (e reaplica no próximo boot se falhar).
+   */
+  const handleClaimMilestone = async (target: number) => {
+    if (claiming !== null) return;
+    setClaiming(target);
     try {
-      const amount = await claimMyReferralCommission();
-      if (amount > 0) {
-        dispatch({ type: 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP', amount });
-        setClaimSuccess(amount);
-        // Refresh do servidor pra zerar os pendings na UI
-        const fresh = await fetchMyReferrals();
-        setServerReferrals(fresh);
+      const res = await claimNetworkMilestone(target);
+      if (res.ok === false) {
+        showCareerToast(res.error);
+        await refreshNetwork();
+        return;
       }
+      await applyPendingCredits();
+      setClaimSuccess(res.exp);
+      await refreshNetwork();
       setTimeout(() => setClaimSuccess(null), 4000);
     } finally {
-      setClaiming(false);
+      setClaiming(null);
     }
   };
 
@@ -519,9 +537,9 @@ export function ManagerNetwork() {
             </div>
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
               <p className="text-neon-yellow tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
-                {privacy ? '••' : totalCommissionPending.toLocaleString('pt-BR')}
+                {privacy ? '••' : netStatus.qualifyingCount.toLocaleString('pt-BR')}
               </p>
-              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Comissão EXP</p>
+              <p className="mt-1.5 text-white/65 uppercase tracking-[0.18em] text-[9px] sm:text-[10px] font-medium">Qualificados</p>
             </div>
             <div className="bg-black px-2 py-3 sm:px-4 sm:py-4 text-center min-w-0" style={{ borderRadius: 'var(--radius-sm)' }}>
               <p className="text-amber-300 tabular-nums leading-none truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(20px, 4vw, 36px)' }}>
@@ -687,48 +705,94 @@ export function ManagerNetwork() {
             )}
           </div>
 
-          {/* Comissão pendente — destaque com botão Resgatar */}
-          {!loadingReferrals && referrals.length > 0 && (
-            <div className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-neon-yellow bg-[#1c1c1c] p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
-                    Comissão pendente
-                  </p>
-                  <p className="text-[10px] text-white/50 mt-0.5">
-                    5% sobre todo EXP ganho pelos teus indicados
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="font-display text-xl font-black text-neon-yellow tabular-nums tracking-tight leading-none">
-                    {privacy ? '••••' : `+${totalCommissionPending.toLocaleString('pt-BR')}`}
-                    <span className="text-[10px] ml-1 text-neon-yellow/70">EXP</span>
-                  </p>
-                  {totalCommissionAccumulated > totalCommissionPending && (
-                    <p className="text-[9px] text-white/40 mt-1">
-                      Total histórico: {totalCommissionAccumulated.toLocaleString('pt-BR')} EXP
-                    </p>
-                  )}
-                </div>
+          {/* ── ESCADA DE MARCOS ───────────────────────────────────────
+              Regra: cada indicado direto abre uma equipe; a equipe vale os
+              DESCENDENTES dele (o direto não conta a si mesmo); só as 2 maiores
+              equipes somam. O marco de 1 é a exceção: olha indicação direta. */}
+          {!loadingReferrals && (
+            <div className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-neon-yellow bg-[#1c1c1c] p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
+                  Marcos da rede
+                </p>
+                <p className="text-[10px] text-white/45">
+                  {privacy ? '••' : netStatus.qualifyingCount} qualificados
+                </p>
               </div>
-              {totalCommissionPending > 0 && (
-                <motion.button
-                  type="button"
-                  onClick={handleClaimAll}
-                  disabled={claiming}
-                  whileTap={{ scale: 0.97 }}
-                  className="mt-3 w-full bg-neon-yellow text-black py-2.5 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {claiming ? 'Resgatando…' : 'Resgatar tudo'}
-                </motion.button>
-              )}
+              <p className="mt-1 text-[10px] leading-relaxed text-white/45">
+                Suas {MILESTONE_LEGS_COUNTED} maiores equipes somadas. Cada indicado direto abre uma
+                equipe, e vale a rede abaixo dele.
+              </p>
+
+              <div className="mt-3 space-y-2">
+                {NETWORK_MILESTONES.map((m) => {
+                  const reached = isMilestoneReached(m.target, netStatus);
+                  const claimed = claimedMilestones.includes(m.target);
+                  const progress = progressForMilestone(m.target, netStatus);
+                  const pct = Math.min(100, Math.round((progress / m.target) * 100));
+                  return (
+                    <div
+                      key={m.target}
+                      className={cn(
+                        'rounded-sm border p-2.5',
+                        claimed
+                          ? 'border-white/10 bg-white/[0.02]'
+                          : reached
+                            ? 'border-neon-yellow/40 bg-neon-yellow/[0.06]'
+                            : 'border-white/10 bg-black/30',
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display text-[11px] font-black uppercase tracking-wider text-white">
+                            {m.target} {m.target === 1 ? 'indicado' : 'indicados'}
+                          </p>
+                          <p className="text-[9px] text-white/40 mt-0.5 tabular-nums">
+                            {privacy ? '••' : Math.min(progress, m.target)}/{m.target}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-display text-sm font-black tabular-nums leading-none text-neon-yellow">
+                            +{m.exp.toLocaleString('pt-BR')}
+                            <span className="text-[9px] ml-1 text-neon-yellow/70">EXP</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className={cn('h-full rounded-full', claimed ? 'bg-white/25' : 'bg-neon-yellow')}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+
+                      {claimed ? (
+                        <p className="mt-2 text-center font-display text-[9px] font-bold uppercase tracking-[0.18em] text-white/35">
+                          Resgatado
+                        </p>
+                      ) : reached ? (
+                        <motion.button
+                          type="button"
+                          onClick={() => void handleClaimMilestone(m.target)}
+                          disabled={claiming !== null}
+                          whileTap={{ scale: 0.97 }}
+                          className="mt-2 w-full rounded-sm bg-neon-yellow py-2 font-display text-[10px] font-black uppercase tracking-[0.18em] text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {claiming === m.target ? 'Resgatando…' : 'Resgatar'}
+                        </motion.button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+
               {claimSuccess !== null && claimSuccess > 0 && (
                 <motion.p
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 text-[10px] text-emerald-300 font-display uppercase tracking-wider text-center"
+                  className="mt-3 text-center font-display text-[10px] uppercase tracking-wider text-emerald-300"
                 >
-                  ✓ +{claimSuccess.toLocaleString('pt-BR')} EXP creditados no saldo
+                  ✓ +{claimSuccess.toLocaleString('pt-BR')} EXP creditados
                 </motion.p>
               )}
             </div>
@@ -794,12 +858,24 @@ export function ManagerNetwork() {
                           </span>
                         </p>
                       </div>
-                      <span className="shrink-0 px-2 py-1 rounded-sm font-display text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300">
-                        L{ref.level}
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-sm px-2 py-1 font-display text-[9px] font-black uppercase tracking-wider',
+                          ref.countsForMilestones
+                            ? 'bg-neon-yellow/20 text-neon-yellow'
+                            : 'bg-white/10 text-white/40',
+                        )}
+                        title={
+                          ref.countsForMilestones
+                            ? 'Uma das suas 2 maiores equipes — conta pros marcos'
+                            : 'Fora das 2 maiores equipes — não conta pros marcos'
+                        }
+                      >
+                        {ref.countsForMilestones ? 'Conta' : 'Fora'}
                       </span>
                     </div>
 
-                    {/* Stats: 3 colunas — EXP do indicado / EXP comissão / USDT comissão */}
+                    {/* Stats: 3 colunas — EXP do indicado / tamanho da equipe dele / USDT comissão */}
                     <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">
                       <div className="text-center">
                         <p className="text-[9px] text-gray-500 uppercase tracking-[0.18em] mb-1">
@@ -812,12 +888,12 @@ export function ManagerNetwork() {
                       </div>
                       <div className="text-center border-l border-white/5">
                         <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.18em] mb-1">
-                          {ref.pending > 0 ? 'A resgatar' : 'Recebido'}
+                          Equipe
                         </p>
                         <p className="font-display text-base font-bold text-neon-yellow tabular-nums">
-                          {privacy ? '••••' : `+${(ref.pending > 0 ? ref.pending : ref.total).toLocaleString('pt-BR')}`}
+                          {privacy ? '••••' : ref.legSize.toLocaleString('pt-BR')}
                         </p>
-                        <p className="text-[9px] text-neon-yellow/70 uppercase tracking-wider">EXP 5%</p>
+                        <p className="text-[9px] text-neon-yellow/70 uppercase tracking-wider">Ativos</p>
                       </div>
                       <div className="text-center border-l border-white/5">
                         <p className="text-[9px] text-emerald-300/80 uppercase tracking-[0.18em] mb-1">

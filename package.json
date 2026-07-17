@@ -14,6 +14,7 @@
     "test:field-smoke": "tsx src/field-schema/runSmoke.ts",
     "demo:sim-pipeline": "tsx src/match/events/runScenarioDemo.ts",
     "test:card-pricing": "tsx server/src/lib/runCardPricingSelfTest.mts",
+    "test:network-milestones": "tsx src/systems/network/runMilestonesSelfTest.mts",
     "test:causal": "tsx src/match/causal/runCausalSelfTest.ts",
     "test:impact-ledger": "tsx src/match/runImpactLedgerSelfTest.ts",
     "test:spirit-machine": "tsx src/gamespirit/runSpiritStateMachineSelfTest.ts",

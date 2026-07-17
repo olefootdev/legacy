@@ -699,12 +699,9 @@ export type GameAction =
   | { type: 'WALLET_SET_SPONSOR'; sponsorId: string }
   /** Sincroniza o código de indicação local com o autoritativo do servidor. */
   | { type: 'WALLET_SYNC_REFERRAL_CODE'; code: string }
-  /** Crédito de comissão de indicação resgatada do servidor. Vai pro saldo
-   *  via addOle (NÃO via grantEarnedExp) pra não inflar lifetime e evitar
-   *  cadeia recursiva de comissão. */
-  | { type: 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP'; amount: number }
   /** Reward de partida PvP (Quick/Classic) — vit/empate/derrota. Via
-   *  grantEarnedExp pra contar em lifetime e disparar comissão de referral. */
+   *  grantEarnedExp pra contar em exp_lifetime_earned, que define "indicado
+   *  ativo" (marcos de rede + gate do sorteio de craque). */
   | { type: 'WALLET_RECEIVE_PVP_REWARD'; amount: number; mode: 'quick' | 'classic'; outcome: 'win' | 'draw' | 'loss'; opponentLabel?: string }
   /** Resgata renda passiva acumulada (estádio + megaloja) — credita via
    *  grantEarnedExp e atualiza finance.passiveIncome.lastClaimAt. */

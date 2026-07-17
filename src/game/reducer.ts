@@ -4185,28 +4185,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       ].slice(0, 14);
       return { ...state, finance, inbox };
     }
-    case 'WALLET_RECEIVE_REFERRAL_COMMISSION_EXP': {
-      const amount = Math.floor(action.amount);
-      if (!Number.isFinite(amount) || amount <= 0) return state;
-      // addOle (NÃO grantEarnedExp) — comissão não entra em lifetime pra não
-      // disparar cadeia recursiva no trigger do banco.
-      let finance = addOle(state.finance, amount);
-      finance = withExpHistory(finance, amount, 'Comissão de indicação');
-      const inbox = [
-        makeInboxItem(
-          `referral-claim-${Date.now()}`,
-          'FINANCE_EXP_GAIN',
-          'FINANCEIRO',
-          `+${amount.toLocaleString('pt-BR')} EXP — comissão de indicação`,
-          {
-            body: `Recebeste ${amount.toLocaleString('pt-BR')} EXP de comissão dos teus indicados.`,
-            deepLink: '/manager/network',
-          },
-        ),
-        ...state.inbox,
-      ].slice(0, 14);
-      return { ...state, finance, inbox };
-    }
     case 'WALLET_RECEIVE_PVP_REWARD': {
       const amount = Math.floor(action.amount);
       if (!Number.isFinite(amount) || amount <= 0) return state;

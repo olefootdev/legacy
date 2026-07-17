@@ -42,10 +42,6 @@ const PHASE_LABEL: Record<string, string> = {
 function brl(cents: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((cents || 0) / 100);
 }
-/** Comissão de indicação é paga em EXP — nunca formatar como R$. */
-function exp(amount: number): string {
-  return `${new Intl.NumberFormat('pt-BR').format(Math.round(amount || 0))} EXP`;
-}
 function phaseFromId(id: string): string | null {
   const seg = id.split('-').pop() ?? '';
   return PHASE_LABEL[seg] ?? null;
@@ -498,9 +494,13 @@ function PlayerVipDashboard() {
                   <div className="truncate text-sm font-bold">{r.displayName ?? r.clubName ?? 'Manager'}</div>
                   <div className="mt-0.5 text-[11px] text-white/45">Entrou pelo seu link</div>
                 </div>
-                <span className="italic" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 16, color: YELLOW }}>
-                  {exp(r.commissionTotal)}
-                </span>
+                {/* Tamanho da equipe dele. A comissão sobre o EXP do indicado foi
+                    removida em 2026-07-17 — agora o ganho vem por marco de rede. */}
+                {r.legSize > 0 ? (
+                  <span className="shrink-0 text-[11px] text-white/45">
+                    equipe de {r.legSize.toLocaleString('pt-BR')}
+                  </span>
+                ) : null}
               </div>
             ))
           )}
