@@ -1160,23 +1160,32 @@ function SplitEditor({
     }
   }
 
-  /** Cria a conta do PLAYERVIP (passwordless), grava o uid no split e mostra o link. */
+  /**
+   * Garante a conta do PLAYERVIP (passwordless — idempotente), grava o uid no
+   * split e gera o magic link. Serve pros DOIS casos: conta nova (beneficiário
+   * como o Adauto) OU conta que já existe mas precisa do link pra entrar
+   * (facilitador como o afiger). O playervip só loga por magic link, então TODO
+   * beneficiário — jogador e facilitador — precisa do seu.
+   */
   async function createAndLink(targetIndex: number) {
-    const email = (notFound[targetIndex] ?? emailQueries[targetIndex] ?? '').trim().toLowerCase();
-    if (!email.includes('@')) return;
+    const email = ((notFound[targetIndex] || emailQueries[targetIndex]) ?? '').trim().toLowerCase();
+    if (!email.includes('@')) {
+      setLookup(targetIndex, 'Digite o e-mail primeiro.');
+      return;
+    }
     setCreating(targetIndex);
     try {
       const res = await adminGenerateAccessLink(email);
       if (res.userId) {
         updateEntry(targetIndex, { user_id: res.userId, label: email });
-        setLookup(targetIndex, `✓ conta criada (${res.userId.slice(0, 8)}…)`);
+        setLookup(targetIndex, `✓ conta pronta (${res.userId.slice(0, 8)}…) · link abaixo`);
       } else {
-        setLookup(targetIndex, '✓ conta criada — clique buscar pra puxar o uid');
+        setLookup(targetIndex, '✓ conta pronta — clique buscar pra puxar o uid');
       }
       setNotFound((p) => ({ ...p, [targetIndex]: '' }));
       if (res.link) setMagicLinks((p) => ({ ...p, [targetIndex]: res.link }));
     } catch (e) {
-      setLookup(targetIndex, `✗ Erro ao criar: ${e instanceof Error ? e.message : String(e)}`);
+      setLookup(targetIndex, `✗ Erro: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setCreating(null);
     }
@@ -1223,10 +1232,23 @@ function SplitEditor({
                 </button>
               </div>
               {e.user_id && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-200">
-                  <Check size={10} className="text-neon-yellow" />
-                  {e.user_id.slice(0, 8)}…
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-200">
+                    <Check size={10} className="text-neon-yellow" />
+                    {e.user_id.slice(0, 8)}…
+                  </span>
+                  {/* Conta já vinculada — mas o playervip só entra por magic link,
+                      então gera o link mesmo pra quem já tem conta (ex.: facilitador). */}
+                  <button
+                    type="button"
+                    onClick={() => createAndLink(i)}
+                    disabled={creating === i}
+                    className="rounded border border-white/20 px-1.5 py-0.5 text-[9px] font-semibold text-neon-yellow hover:bg-neon-yellow/10 disabled:opacity-40"
+                    title="Gerar magic link de acesso pra este e-mail"
+                  >
+                    {creating === i ? '…' : 'Gerar link'}
+                  </button>
+                </div>
               )}
               {emailLookups[i] && <span className="text-[10px] text-white/55">{emailLookups[i]}</span>}
               {notFound[i] && (
