@@ -52,8 +52,6 @@ const PHASE_LABEL: Record<LegendPhase, string> = {
   expansao: 'Expansão',
 };
 
-const PHASE_ORDER: LegendPhase[] = ['revelacao', 'consolidacao', 'expansao'];
-
 const ATTR_KEYS = [
   'passe', 'marcacao', 'velocidade', 'drible', 'finalizacao',
   'fisico', 'tatico', 'mentalidade', 'confianca', 'fairPlay',
@@ -120,6 +118,7 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
   const [slug, setSlug] = useState(defaultSlug);
   const [payload, setPayload] = useState<LegendImportPayload>(() => emptyPayload(defaultSlug));
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [result, setResult] = useState<LegendImportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<LegendPhase | null>('revelacao');
@@ -230,42 +229,32 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
     }));
   }
 
-  function applyTierDefaults(phase: LegendPhase, tier: LegendTier) {
-    const def = TIER_DEFAULTS[tier];
-    updatePhase(phase, {
-      tier,
-      initialSupply: def.supply,
-      priceUnitCents: payload.phases.find((p) => p.phase === phase)?.currency === 'USDT'
-        ? def.usdtCents
-        : def.oleUnits,
-    });
-  }
 
-  async function tokenize() {
+  async function tokenize(): Promise<boolean> {
     setError(null);
     setResult(null);
     if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
       setError('Slug inválido (use kebab-case: ex. marcelo-goncalves)');
-      return;
+      return false;
     }
     if (!payload.collectionId) {
       setError('collectionId vazio. Use ex.: mem-<slug>-2026');
-      return;
+      return false;
     }
     for (const ph of payload.phases) {
       if (!ph.entity.name.trim()) {
         setError(`Fase ${PHASE_LABEL[ph.phase]}: nome vazio`);
-        return;
+        return false;
       }
       if (!ph.collectionCode?.trim()) {
         setError(`Fase ${PHASE_LABEL[ph.phase]}: collection_code obrigatório (ex. BR-95)`);
-        return;
+        return false;
       }
     }
     // Split é ÚNICO pra lenda inteira — valida uma vez e aplica em todas as fases.
     if (!isSplitValid(sharedSplit)) {
       setError('Split de pagamento inválido (soma deve ser 100%, máx 5 facilitadores)');
-      return;
+      return false;
     }
     setSubmitting(true);
     try {
@@ -279,8 +268,10 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
       };
       const res = await adminImportLegend(slug, payloadToSend);
       setResult(res);
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -418,7 +409,6 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
             onChange={(patch) => updatePhase(ph.phase, patch)}
             onChangeEntity={(patch) => updatePhaseEntity(ph.phase, patch)}
             onChangeAttr={(k, v) => updatePhaseAttr(ph.phase, k, v)}
-            onApplyTier={(t) => applyTierDefaults(ph.phase, t)}
           />
         ))}
       </section>
@@ -449,24 +439,118 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         )}
         <button
           type="button"
-          onClick={tokenize}
+          onClick={() => { setError(null); setResult(null); if (canSubmit) setShowPreview(true); }}
           disabled={!canSubmit}
           className="flex w-full items-center justify-center gap-2 rounded-md bg-neon-yellow px-4 py-3 font-bold text-deep-black transition hover:bg-neon-yellow/90 disabled:opacity-40"
         >
-          {isEditing ? (
-            <Save size={20} className="text-deep-black" />
-          ) : (
-            <Coins size={20} className="text-deep-black" />
-          )}
-          {submitting
-            ? isEditing
-              ? 'Salvando...'
-              : 'Tokenizando...'
-            : isEditing
-              ? 'Salvar alterações (UPSERT)'
-              : 'Tokenizar (cria 3 cards + 3 lotes)'}
+          {isEditing ? <Save size={20} className="text-deep-black" /> : <Coins size={20} className="text-deep-black" />}
+          {isEditing ? 'Revisar e salvar' : 'Revisar e tokenizar'}
         </button>
       </section>
+
+      {showPreview && (
+        <TokenizePreview
+          slug={slug}
+          phases={payload.phases}
+          split={sharedSplit}
+          beneficiary={sharedBeneficiary.trim()}
+          isEditing={isEditing}
+          submitting={submitting}
+          error={error}
+          onClose={() => setShowPreview(false)}
+          onConfirm={async () => { const ok = await tokenize(); if (ok) setShowPreview(false); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Preview antes de tokenizar: os 3 cards como vão pro banco, com alertas do que
+ * estiver faltando. Confirmar só cria depois de você conferir.
+ */
+function TokenizePreview({
+  slug, phases, split, beneficiary, isEditing, submitting, error, onClose, onConfirm,
+}: {
+  slug: string;
+  phases: LegendPhasePayload[];
+  split: LegendSplitEntry[];
+  beneficiary: string;
+  isEditing: boolean;
+  submitting: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const splitSum = split.reduce((a, e) => a + (Number(e.percent) || 0), 0);
+  const warnings: string[] = [];
+  if (splitSum !== 100) warnings.push(`Split soma ${splitSum}% (precisa 100%)`);
+  if (!beneficiary) warnings.push('Sem beneficiário (atleta) definido — vincule depois com admin_link_legend_full');
+  for (const ph of phases) {
+    if (!ph.collectionCode?.trim()) warnings.push(`${PHASE_LABEL[ph.phase]}: sem collection_code`);
+    if (!(ph.priceUnitCents ?? 0)) warnings.push(`${PHASE_LABEL[ph.phase]}: preço zerado`);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-4" onClick={onClose}>
+      <div
+        className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-white/15 bg-[#111] p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-display text-sm font-black uppercase tracking-wider text-neon-yellow">
+            Preview — {phases.length} cards de "{slug}"
+          </h3>
+          <button type="button" onClick={onClose} className="text-white/50 hover:text-white"><X size={18} /></button>
+        </div>
+
+        <div className="space-y-2">
+          {phases.map((ph) => (
+            <div key={ph.phase} className="rounded border border-white/10 bg-black/40 p-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-display text-xs font-black uppercase tracking-wider text-white">
+                  {PHASE_LABEL[ph.phase]} · {ph.entity.name || <em className="text-red-400">sem nome</em>}
+                </span>
+                <span className="font-display text-sm font-black text-neon-yellow tabular-nums">
+                  {fmtPrice(ph.priceUnitCents, ph.currency)}
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] text-white/50">
+                id: <code>legacy-{slug}-{ph.phase}</code> · {ph.collectionTitle || '(sem título)'}
+                {ph.collectionCode ? ` · ${ph.collectionCode}` : ''} · {(ph.initialSupply ?? 0).toLocaleString('pt-BR')} cópias
+                {' · '}OVR {ph.entity.mintOverall ?? '?'} · {ph.entity.rarity ?? '?'}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 rounded border border-white/10 bg-black/40 p-3 text-[11px] text-white/60">
+          <div className="mb-1 font-semibold uppercase tracking-wider text-white/50">Split (todas as fases)</div>
+          {split.map((e, i) => (
+            <span key={i} className="mr-3 inline-block">{e.kind} {e.percent}%</span>
+          ))}
+          <div className="mt-1.5">Beneficiário: {beneficiary ? <code>{beneficiary.slice(0, 12)}…</code> : <span className="text-amber-300">não definido</span>}</div>
+        </div>
+
+        {warnings.length > 0 && (
+          <div className="mt-3 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-[11px] text-amber-200">
+            <div className="mb-1 font-bold uppercase tracking-wider">Confira antes de criar</div>
+            <ul className="list-disc pl-4">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+          </div>
+        )}
+        {error && <p className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">{error}</p>}
+
+        <div className="mt-4 flex gap-2">
+          <button type="button" onClick={onClose} disabled={submitting}
+            className="flex-1 rounded border border-white/25 px-4 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-40">
+            Voltar e corrigir
+          </button>
+          <button type="button" onClick={onConfirm} disabled={submitting}
+            className="flex-[2] rounded bg-neon-yellow px-4 py-2.5 text-sm font-black uppercase tracking-wider text-deep-black hover:bg-neon-yellow/90 disabled:opacity-40">
+            {submitting ? (isEditing ? 'Salvando…' : 'Criando…') : isEditing ? 'Confirmar e salvar' : 'Confirmar e criar os 3 cards'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -583,7 +667,7 @@ function PriceField({
 
 function PhaseEditor({
   phase, slug, portraitUrl, onPortraitUploaded, portraitFocus, onPortraitFocusChange,
-  expanded, onToggle, onChange, onChangeEntity, onChangeAttr, onApplyTier,
+  expanded, onToggle, onChange, onChangeEntity, onChangeAttr,
 }: {
   phase: LegendPhasePayload;
   slug: string;
@@ -596,9 +680,7 @@ function PhaseEditor({
   onChange: (patch: Partial<LegendPhasePayload>) => void;
   onChangeEntity: (patch: Partial<LegendPhasePayload['entity']>) => void;
   onChangeAttr: (k: (typeof ATTR_KEYS)[number], v: number) => void;
-  onApplyTier: (t: LegendTier) => void;
 }) {
-  const def = phase.tier ? TIER_DEFAULTS[phase.tier] : null;
   return (
     <div className="rounded-lg border border-white/20 bg-deep-black/40 overflow-hidden">
       <button
@@ -741,23 +823,6 @@ function PhaseEditor({
                 placeholder="Botafogo 1995"
               />
             </div>
-            <div className="flex gap-2">
-              {[1, 2, 3].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => onApplyTier(t as LegendTier)}
-                  className={`flex-1 rounded border px-3 py-1.5 text-xs uppercase ${
-                    phase.tier === t
-                      ? 'border-neon-yellow bg-neon-yellow/20 text-neon-yellow font-bold'
-                      : 'border-white/25 text-white/80 hover:bg-white/10'
-                  }`}
-                >
-                  Tier {t} · {TIER_DEFAULTS[t as LegendTier].supply.toLocaleString()} cópias · $
-                  {(TIER_DEFAULTS[t as LegendTier].usdtCents / 100).toFixed(2)}
-                </button>
-              ))}
-            </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <label className="flex flex-col gap-1 text-xs">
                 <span className="font-semibold uppercase tracking-wider text-white/60">Currency</span>
@@ -786,12 +851,9 @@ function PhaseEditor({
                 onChange={(v) => onChange({ initialSupply: v })}
               />
             </div>
-            {def && (
-              <p className="text-[11px] text-white/40">
-                Default tier {phase.tier}: {def.supply.toLocaleString()} cópias · ${(def.usdtCents / 100).toFixed(2)} ·
-                lotes seguintes 50% supply +25% preço (automático)
-              </p>
-            )}
+            <p className="text-[11px] text-white/40">
+              Lotes seguintes: 50% do supply e +25% no preço, automático.
+            </p>
           </fieldset>
 
           {/* Split de pagamento e beneficiário são ÚNICOS por lenda — editados
