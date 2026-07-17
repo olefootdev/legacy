@@ -174,7 +174,7 @@ function PlayerVipLogin() {
 function PlayerVipDashboard() {
   const [cards, setCards] = useState<LinkedCardRow[]>([]);
   const [sales, setSales] = useState<CardSaleRow[]>([]);
-  const [summary, setSummary] = useState<CardSalesSummary>({ totalSales: 0, broOwnerCents: 0, olefootOwnerCents: 0, facilitatorSales: 0, facilitatorBroCents: 0, lastSaleAt: null });
+  const [summary, setSummary] = useState<CardSalesSummary>({ totalSales: 0, broOwnerCents: 0, olefootOwnerCents: 0, facilitatorSales: 0, facilitatorBroCents: 0, platformSales: 0, platformBroCents: 0, lastSaleAt: null });
   const [withdrawable, setWithdrawable] = useState(0);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [commissionBroCents, setCommissionBroCents] = useState(0);
@@ -235,15 +235,21 @@ function PlayerVipDashboard() {
       const uid = data?.user?.id;
       if (!uid || cancelled) return;
       cleanup = subscribeMyCardSales(uid, (row) => {
+        // 4 papéis desde 2026-07-17: player · facilitator · olefoot · community.
+        // Os dois últimos são a receita da plataforma e só caem na conta OLEFOOT.
         const isFac = row.role === 'facilitator';
+        const isPlatform = row.role === 'olefoot' || row.role === 'community';
+        const isOwner = !isFac && !isPlatform;
         const bro = row.currency === 'BRO' ? Number(row.owner_cents || 0) : 0;
         setSales((prev) => [row, ...prev].slice(0, 50));
         setSummary((prev) => ({
-          totalSales: prev.totalSales + (isFac ? 0 : 1),
-          broOwnerCents: prev.broOwnerCents + (isFac ? 0 : bro),
-          olefootOwnerCents: prev.olefootOwnerCents + (!isFac && row.currency === 'OLEFOOT' ? Number(row.owner_cents || 0) : 0),
+          totalSales: prev.totalSales + (isOwner ? 1 : 0),
+          broOwnerCents: prev.broOwnerCents + (isOwner ? bro : 0),
+          olefootOwnerCents: prev.olefootOwnerCents + (isOwner && row.currency === 'OLEFOOT' ? Number(row.owner_cents || 0) : 0),
           facilitatorSales: prev.facilitatorSales + (isFac ? 1 : 0),
           facilitatorBroCents: prev.facilitatorBroCents + (isFac ? bro : 0),
+          platformSales: prev.platformSales + (isPlatform ? 1 : 0),
+          platformBroCents: prev.platformBroCents + (isPlatform ? bro : 0),
           lastSaleAt: row.created_at,
         }));
         if (row.currency === 'BRO') setWithdrawable((w) => w + Number(row.owner_cents || 0));
@@ -271,11 +277,13 @@ function PlayerVipDashboard() {
     };
   }, [reloadCards]);
 
-  // Vendas agregadas por card (fonte: card_sales — só como DONO, role=player)
+  // Vendas agregadas por card (fonte: card_sales — só como DONO, role=player).
+  // facilitator e as fatias da plataforma (olefoot/community) ficam de fora:
+  // não são venda do card do atleta.
   const salesByCard = useMemo(() => {
     const m = new Map<string, { count: number; broCents: number; olefootCents: number }>();
     for (const s of sales) {
-      if (s.role === 'facilitator') continue;
+      if (s.role !== 'player') continue;
       const cur = m.get(s.legacy_player_id) ?? { count: 0, broCents: 0, olefootCents: 0 };
       cur.count += 1;
       if (s.currency === 'BRO') cur.broCents += Number(s.owner_cents || 0);
@@ -378,6 +386,25 @@ function PlayerVipDashboard() {
         </div>
       )}
 
+      {/* RECEITA DA PLATAFORMA — só aparece na conta OLEFOOT (fatias
+          olefoot 25% + community 15%). Pro atleta isso é sempre zero. */}
+      {!loading && summary.platformSales > 0 && (
+        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border px-5 py-4"
+          style={{ background: 'linear-gradient(180deg,#17171b,#121214)', borderColor: 'rgba(253,225,0,.25)' }}>
+          <div>
+            <div className="font-display text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: YELLOW }}>
+              Receita OLEFOOT
+            </div>
+            <div className="mt-0.5 text-[11px] text-white/45">
+              {summary.platformSales} repasse{summary.platformSales === 1 ? '' : 's'} de venda de card (25% + 15%)
+            </div>
+          </div>
+          <div className="italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 26 }}>
+            {brl(summary.platformBroCents)}
+          </div>
+        </div>
+      )}
+
       {/* COLEÇÕES */}
       <SectionHeader title="Minhas Coleções" />
       {loading ? (
@@ -441,18 +468,21 @@ function PlayerVipDashboard() {
             const name = cards.find((c) => c.id === s.legacy_player_id)?.name ?? s.legacy_player_id;
             const isBro = s.currency === 'BRO';
             const isFac = s.role === 'facilitator';
+            const isPlatform = s.role === 'olefoot' || s.role === 'community';
+            const tag = isFac ? 'Comissão' : s.role === 'olefoot' ? 'Olefoot 25%' : s.role === 'community' ? 'Comunidade 15%' : null;
+            const accent = isFac || isPlatform ? YELLOW : '#46d07f';
             return (
               <div key={s.id}
                 className={cn('flex items-center gap-3.5 px-5 py-3.5 transition', i > 0 && 'border-t border-white/[0.07]',
                   flashId === s.id && 'bg-[rgba(70,208,127,.1)]')}>
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: isFac ? YELLOW : '#46d07f', boxShadow: `0 0 10px ${isFac ? 'rgba(253,225,0,.5)' : 'rgba(70,208,127,.5)'}` }} />
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: accent, boxShadow: `0 0 10px ${accent === YELLOW ? 'rgba(253,225,0,.5)' : 'rgba(70,208,127,.5)'}` }} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold">
-                    {isFac && <span className="mr-1.5 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide" style={{ background: 'rgba(253,225,0,.14)', color: YELLOW }}>Comissão</span>}
+                    {tag && <span className="mr-1.5 rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide" style={{ background: 'rgba(253,225,0,.14)', color: YELLOW }}>{tag}</span>}
                     {name}
                   </div>
                   <div className="mt-0.5 text-[11px] text-white/45">
-                    {isFac ? 'Facilitador · ' : ''}{isBro ? 'PIX' : 'OLEFOOT'} · {new Date(s.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {isFac ? 'Facilitador · ' : isPlatform ? 'Plataforma · ' : ''}{isBro ? 'PIX' : 'OLEFOOT'} · {new Date(s.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
                 <div className="shrink-0 italic" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 18, color: isFac ? YELLOW : '#46d07f' }}>

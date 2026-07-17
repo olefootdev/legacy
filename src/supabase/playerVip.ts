@@ -117,6 +117,10 @@ export interface CardSalesSummary {
   olefootOwnerCents: number;
   facilitatorSales: number;
   facilitatorBroCents: number;
+  /** Receita da plataforma (fatias olefoot 25% + community 15%). Só a conta
+   *  OLEFOOT tem isso > 0 — pro atleta vem sempre zero. */
+  platformSales: number;
+  platformBroCents: number;
   lastSaleAt: string | null;
 }
 
@@ -131,7 +135,7 @@ export async function getMyCardSales(limit = 50): Promise<CardSaleRow[]> {
 
 export async function getMyCardSalesSummary(): Promise<CardSalesSummary> {
   const sb = getSupabase();
-  const empty: CardSalesSummary = { totalSales: 0, broOwnerCents: 0, olefootOwnerCents: 0, facilitatorSales: 0, facilitatorBroCents: 0, lastSaleAt: null };
+  const empty: CardSalesSummary = { totalSales: 0, broOwnerCents: 0, olefootOwnerCents: 0, facilitatorSales: 0, facilitatorBroCents: 0, platformSales: 0, platformBroCents: 0, lastSaleAt: null };
   if (!sb) return empty;
   const { data, error } = await sb.rpc('get_my_card_sales_summary');
   if (error) { console.warn('[playerVip] card_sales_summary:', error.message); return empty; }
@@ -143,6 +147,8 @@ export async function getMyCardSalesSummary(): Promise<CardSalesSummary> {
     olefootOwnerCents: Number(row.olefoot_owner_cents ?? 0),
     facilitatorSales: Number(row.facilitator_sales ?? 0),
     facilitatorBroCents: Number(row.facilitator_bro_cents ?? 0),
+    platformSales: Number(row.platform_sales ?? 0),
+    platformBroCents: Number(row.platform_bro_cents ?? 0),
     lastSaleAt: row.last_sale_at ?? null,
   };
 }
