@@ -7,7 +7,7 @@
  * traduz esse estado em notificações de inbox acionáveis (nudge in-app).
  *
  * Funções puras (sem store/async) — fáceis de testar. A auto-renovação (que
- * precisa de OLEXP + dispatch) vive em useGlobalConsequencesSync.
+ * precisa de OLEFOOT + dispatch) vive em useGlobalConsequencesSync.
  */
 import { makeInboxItem } from '@/game/inboxItem';
 import type { InboxItem } from '@/game/inboxTypes';

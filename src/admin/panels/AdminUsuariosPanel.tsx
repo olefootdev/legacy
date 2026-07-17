@@ -36,9 +36,6 @@ function newUserTemplate(): AdminPlatformUser {
     spotBroCents: 0,
     spotExpBalance: 0,
     ole: 0,
-    olexpPrincipalLockedCents: 0,
-    olexpYieldAccruedCents: 0,
-    gatPositionsCount: 0,
     ledgerEntriesCount: 0,
     createdAtIso: now,
     updatedAtIso: now,
@@ -56,9 +53,6 @@ function profileToPlatformUser(p: AdminProfileRow): AdminPlatformUser {
     spotBroCents: 0,
     spotExpBalance: 0,
     ole: 0,
-    olexpPrincipalLockedCents: 0,
-    olexpYieldAccruedCents: 0,
-    gatPositionsCount: 0,
     ledgerEntriesCount: 0,
     createdAtIso: p.created_at,
     updatedAtIso: p.updated_at,
@@ -126,9 +120,6 @@ export function AdminUsuariosPanel() {
         spotBroCents: Math.max(0, Math.round(Number(draft.spotBroCents) || 0)),
         spotExpBalance: Math.max(0, Math.round(Number(draft.spotExpBalance) || 0)),
         ole: Math.max(0, Math.round(Number(draft.ole) || 0)),
-        olexpPrincipalLockedCents: Math.max(0, Math.round(Number(draft.olexpPrincipalLockedCents) || 0)),
-        olexpYieldAccruedCents: Math.max(0, Math.round(Number(draft.olexpYieldAccruedCents) || 0)),
-        gatPositionsCount: Math.max(0, Math.round(Number(draft.gatPositionsCount) || 0)),
         ledgerEntriesCount: Math.max(0, Math.round(Number(draft.ledgerEntriesCount) || 0)),
         status: draft.status,
         notes: draft.notes?.trim() || undefined,
@@ -244,7 +235,6 @@ export function AdminUsuariosPanel() {
               <th className="px-3 py-2">BRO</th>
               <th className="px-3 py-2">SPOT</th>
               <th className="px-3 py-2">EXP</th>
-              <th className="px-3 py-2">OLEXP trancado</th>
               <th className="px-3 py-2">Atualizado</th>
               <th className="px-3 py-2 w-28">Ações</th>
             </tr>
@@ -286,7 +276,6 @@ export function AdminUsuariosPanel() {
                 <td className="px-3 py-2 font-mono text-neon-yellow">{formatBroFromCents(u.broCents)}</td>
                 <td className="px-3 py-2 font-mono text-white/80">{formatBroFromCents(u.spotBroCents)}</td>
                 <td className="px-3 py-2 font-mono">{formatExp(u.ole)}</td>
-                <td className="px-3 py-2 font-mono text-violet-300">{formatBroFromCents(u.olexpPrincipalLockedCents)}</td>
                 <td className="px-3 py-2 text-[10px] text-white/40 whitespace-nowrap">
                   {new Date(u.updatedAtIso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                 </td>
@@ -356,9 +345,6 @@ export function AdminUsuariosPanel() {
                   ['spotBroCents', 'SPOT BRO (¢)'],
                   ['spotExpBalance', 'SPOT EXP'],
                   ['ole', 'EXP ranking (ole)'],
-                  ['olexpPrincipalLockedCents', 'OLEXP principal (¢)'],
-                  ['olexpYieldAccruedCents', 'OLEXP yield acum. (¢)'],
-                  ['gatPositionsCount', 'Posições GAT'],
                   ['ledgerEntriesCount', 'Linhas extrato (ref.)'],
                 ] as const
               ).map(([key, label]) => (

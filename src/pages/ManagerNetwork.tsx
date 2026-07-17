@@ -4,7 +4,7 @@
  * Design system: HERO amarelo editorial + cards padrão do jogo
  */
 import { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   Network,
   Users,
@@ -18,18 +18,15 @@ import {
   Sparkles,
   ArrowRight,
   ChevronRight,
-  ChevronDown,
   Eye,
   EyeOff,
   Trophy,
   Medal,
-  Ticket,
   Lock,
   Crown,
   Gift,
   Award,
   Coins,
-  Calendar,
   ShieldCheck,
   AlertTriangle,
   Sprout,
@@ -100,19 +97,7 @@ function maskName(name: string | null | undefined, hide: boolean): string {
   const first = name.trim().charAt(0).toUpperCase();
   return `${first}••••••`;
 }
-import {
-  fetchMyHodlLocks,
-  createHodlLock,
-  fetchMyPremiumCards,
-  projectHodlRewards,
-  fetchHodlRewardsForLock,
-  fetchRecentLotteryDraws,
-  type HodlLock,
-  type PremiumCardGrant,
-  type HodlRewardEntry,
-  type LotteryDrawEntry,
-} from '@/wallet/hodlLocks';
-import { fetchMyOlexpBalance } from '@/wallet/olexpSync';
+import { fetchMyPremiumCards, type PremiumCardGrant } from '@/wallet/premiumCards';
 import {
   fetchCareerLeaderboard,
   type LeaderboardEntry,
@@ -124,7 +109,6 @@ import {
   type ActivationStatus,
 } from '@/wallet/activationPack';
 import { PixCheckoutModal } from '@/components/PixCheckoutModal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 const RANK_ICON_MAP: Record<RankIconName, LucideIcon> = {
   Sprout, Zap, Flame, Gem, Trophy, Crown,
@@ -132,10 +116,6 @@ const RANK_ICON_MAP: Record<RankIconName, LucideIcon> = {
 
 function fmtUsd(cents: number): string {
   return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function fmtNum(n: number, frac = 2): string {
-  return n.toLocaleString('en-US', { minimumFractionDigits: frac, maximumFractionDigits: frac });
 }
 
 export function ManagerNetwork() {
@@ -211,22 +191,6 @@ export function ManagerNetwork() {
 
   // Fase 5 — Telemetria
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [lotteryDraws, setLotteryDraws] = useState<LotteryDrawEntry[]>([]);
-  const [olexpBalance, setOlexpBalance] = useState<number>(0);
-  const [expandedLockId, setExpandedLockId] = useState<string | null>(null);
-  const [lockRewardsCache, setLockRewardsCache] = useState<Record<string, HodlRewardEntry[]>>({});
-
-  const toggleLockExpand = async (lockId: string) => {
-    if (expandedLockId === lockId) {
-      setExpandedLockId(null);
-      return;
-    }
-    setExpandedLockId(lockId);
-    if (!lockRewardsCache[lockId]) {
-      const rewards = await fetchHodlRewardsForLock(lockId);
-      setLockRewardsCache((prev) => ({ ...prev, [lockId]: rewards }));
-    }
-  };
 
   // Modo Privacidade
   const [privacy, setPrivacy] = useState<boolean>(false);
@@ -253,18 +217,15 @@ export function ManagerNetwork() {
     };
   }, []);
 
-  // ── Career / HODL / Affiliate states ─────────────────────────────────
+  // ── Career / Affiliate states ────────────────────────────────────────
   const [career, setCareer] = useState<CareerProgress | null>(null);
   const [affiliateSummaries, setAffiliateSummaries] = useState<AffiliateCommissionSummary[]>([]);
-  const [locks, setLocks] = useState<HodlLock[]>([]);
   const [cards, setCards] = useState<PremiumCardGrant[]>([]);
   const [tokenConfig, setTokenConfig] = useState<TokenEconomyConfig | null>(null);
   const [activation, setActivation] = useState<ActivationStatus | null>(null);
   const [claimingCareer, setClaimingCareer] = useState(false);
   const [claimingAffiliate, setClaimingAffiliate] = useState(false);
-  const [creatingLock, setCreatingLock] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
-  const [lockAmount, setLockAmount] = useState<string>('1000');
   const [careerToast, setCareerToast] = useState<string | null>(null);
 
   const refreshCareer = async () => {
@@ -275,35 +236,24 @@ export function ManagerNetwork() {
     const [
       careerData,
       affData,
-      locksData,
       cardsData,
       tokenData,
       activationData,
       leaderboardData,
-      lotteryData,
-      olexpBal,
     ] = await Promise.all([
       fetchMyCareerProgress(),
       fetchMyAffiliateCommissions(),
-      fetchMyHodlLocks(),
       fetchMyPremiumCards(true),
       getTokenPrice(),
       fetchMyActivationStatus(),
       fetchCareerLeaderboard(20),
-      fetchRecentLotteryDraws(10),
-      fetchMyOlexpBalance(),
     ]);
     setCareer(careerData);
     setAffiliateSummaries(affData);
-    setLocks(locksData);
     setCards(cardsData);
     setTokenConfig(tokenData);
     setActivation(activationData);
     setLeaderboard(leaderboardData);
-    setLotteryDraws(lotteryData);
-    setOlexpBalance(olexpBal);
-    // Invalida cache de rewards se locks mudaram
-    setLockRewardsCache({});
   };
 
   useEffect(() => {
@@ -333,16 +283,6 @@ export function ManagerNetwork() {
     }
     return out;
   }, [affiliateSummaries]);
-
-  const activeLocks = useMemo(() => locks.filter((l) => l.status === 'active'), [locks]);
-  const totalLocked = useMemo(() => activeLocks.reduce((sum, l) => sum + l.amountLocked, 0), [activeLocks]);
-  const totalRewardsPaid = useMemo(() => locks.reduce((sum, l) => sum + l.totalRewardsPaid, 0), [locks]);
-
-  const lockProjection = useMemo(() => {
-    const amount = Number(lockAmount) || 0;
-    if (amount <= 0) return null;
-    return projectHodlRewards(amount, 0.0025, 90);
-  }, [lockAmount]);
 
   const showCareerToast = (msg: string) => {
     setCareerToast(msg);
@@ -385,24 +325,6 @@ export function ManagerNetwork() {
       }
     } finally {
       setClaimingAffiliate(false);
-    }
-  };
-
-  const [confirmLock, setConfirmLock] = useState(false);
-  const handleCreateLock = async () => {
-    const amount = Number(lockAmount);
-    if (creatingLock || !amount || amount <= 0) return;
-    setConfirmLock(false);
-    setCreatingLock(true);
-    try {
-      const result = await createHodlLock(amount, 'OLEXP');
-      if (result) {
-        showCareerToast(`${fmtNum(amount, 0)} OLEXP travado por 90 dias + 1 Premium Card`);
-        setLockAmount('1000');
-        await refreshCareer();
-      }
-    } finally {
-      setCreatingLock(false);
     }
   };
 
@@ -631,7 +553,7 @@ export function ManagerNetwork() {
                 Ative sua conta · <span className="text-amber-300">R$ 125,00</span>
               </h2>
               <p className="text-xs text-white/60 mt-2">
-                Pack único (≈ ${ACTIVATION_AMOUNT_USD}) — libera comissões 5-5-5%, HODL locks e bônus de carreira.
+                Pack único (≈ ${ACTIVATION_AMOUNT_USD}) — libera comissões 5-5-5% e bônus de carreira.
               </p>
             </div>
           </div>
@@ -915,7 +837,7 @@ export function ManagerNetwork() {
         </motion.div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            PLANO DE CARREIRA — Cash Only · Super-Bônus · HODL · Cards
+            PLANO DE CARREIRA — Cash Only · Super-Bônus · Cards
             ═══════════════════════════════════════════════════════════════ */}
 
         {/* Eyebrow do bloco Carreira */}
@@ -1103,236 +1025,6 @@ export function ManagerNetwork() {
           </div>
         </div>
 
-        {/* HODL VAULT */}
-        <div className="space-y-3">
-          <div className="ole-eyebrow !text-emerald-300 flex items-center gap-2">
-            <Lock className="w-3.5 h-3.5" />
-            <span>HODL Vault</span>
-          </div>
-
-          <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px]">
-            <span className="absolute inset-y-0 left-0 w-[3px] bg-emerald-400" aria-hidden />
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-4 h-4 text-emerald-300" />
-              <p className="font-display text-xs font-black uppercase tracking-wider text-emerald-300">
-                Travar OLEXP por 90 dias
-              </p>
-            </div>
-            <p className="text-xs text-white/60 mb-4">
-              <strong className="text-emerald-300">0,25% ao dia</strong> · <strong>7,5% ao mês</strong> ·{' '}
-              <strong>+1 Premium Card instantâneo</strong> · sorteio diário
-            </p>
-
-            {/* Saldo OLEXP disponível pra travar */}
-            <div className="mb-4 flex items-center justify-between bg-black/40 border border-white/5 rounded-sm px-3 py-2">
-              <span className="text-[10px] text-white/50 uppercase tracking-wider">
-                Saldo OLEXP disponível
-              </span>
-              <span className="font-display text-sm font-black text-emerald-300 tabular-nums">
-                {privacy ? '••••' : `${fmtNum(olexpBalance, 2)} OLEXP`}
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-              <div className="flex-1 min-w-0">
-                <label className="text-[10px] uppercase tracking-wider text-white/50 font-display font-bold block mb-1">
-                  Quantidade OLEXP
-                </label>
-                <input
-                  type="number"
-                  min={100}
-                  step={100}
-                  value={lockAmount}
-                  onChange={(e) => setLockAmount(e.target.value)}
-                  className="w-full bg-black/50 border border-white/15 rounded-sm px-3 py-3 text-white font-display tabular-nums text-lg focus:border-emerald-400/60 focus:outline-none"
-                  placeholder="1000"
-                />
-                {lockProjection && (
-                  <p className="text-[10px] text-white/50 mt-1.5">
-                    Recebe ≈{' '}
-                    <strong className="text-emerald-300 tabular-nums">
-                      {fmtNum(lockProjection.totalReward, 2)} OLEXP
-                    </strong>{' '}
-                    em 90 dias ({fmtNum(lockProjection.dailyReward, 4)} OLEXP/dia)
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setConfirmLock(true)}
-                disabled={creatingLock || !Number(lockAmount) || !activation?.isActivated}
-                title={!activation?.isActivated ? 'Requer ativação' : undefined}
-                className="bg-emerald-400 text-black px-6 py-3 rounded-sm font-display text-xs font-black uppercase tracking-[0.18em] hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
-              >
-                {creatingLock ? 'Travando…' : !activation?.isActivated ? (
-                  <span className="inline-flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Ativar conta</span>
-                ) : 'Travar 90 dias'}
-              </button>
-            </div>
-          </div>
-
-          {locks.length > 0 && (
-            <>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <div className="bg-panel border border-white/10 rounded-sm p-3 text-center">
-                  <p className="text-[10px] text-white/50 uppercase tracking-wider">Saldo travado</p>
-                  <p className="font-display text-xl font-black text-emerald-300 tabular-nums">
-                    {privacy ? '••••' : `${fmtNum(totalLocked, 2)} OLEXP`}
-                  </p>
-                </div>
-                <div className="bg-panel border border-white/10 rounded-sm p-3 text-center">
-                  <p className="text-[10px] text-white/50 uppercase tracking-wider">Rendimentos pagos</p>
-                  <p className="font-display text-xl font-black text-amber-300 tabular-nums">
-                    {privacy ? '••••' : `+${fmtNum(totalRewardsPaid, 4)}`}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {locks.map((lock) => {
-                  const isExpanded = expandedLockId === lock.id;
-                  const rewards = lockRewardsCache[lock.id] ?? [];
-                  return (
-                    <div
-                      key={lock.id}
-                      className={cn(
-                        'bg-panel border rounded-sm overflow-hidden',
-                        lock.status === 'active'
-                          ? 'border-emerald-500/30'
-                          : lock.status === 'matured'
-                            ? 'border-amber-500/30'
-                            : 'border-white/10 opacity-60',
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleLockExpand(lock.id)}
-                        className="w-full text-left p-4 hover:bg-white/5 transition-colors"
-                        aria-expanded={isExpanded}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-display text-sm font-black text-white tabular-nums inline-flex items-center gap-2">
-                              {privacy ? '••••' : `${fmtNum(lock.amountLocked, 2)} ${lock.currency}`}
-                              <ChevronDown
-                                className={cn(
-                                  'w-3.5 h-3.5 text-white/40 transition-transform',
-                                  isExpanded && 'rotate-180',
-                                )}
-                              />
-                            </p>
-                            <p className="text-[10px] text-white/50 uppercase tracking-wider mt-1 flex items-center gap-1.5">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(lock.startDate).toLocaleDateString('pt-BR')} →{' '}
-                              {new Date(lock.endDate).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p
-                              className={cn(
-                                'font-display text-[10px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-sm inline-block',
-                                lock.status === 'active' && 'bg-emerald-500/20 text-emerald-300',
-                                lock.status === 'matured' && 'bg-amber-500/20 text-amber-300',
-                                lock.status === 'cancelled' && 'bg-white/10 text-white/50',
-                              )}
-                            >
-                              {lock.status === 'active'
-                                ? `${lock.daysRemaining}d restantes`
-                                : lock.status === 'matured'
-                                  ? 'Vencido'
-                                  : 'Cancelado'}
-                            </p>
-                            <p className="font-display text-sm font-black text-amber-300 tabular-nums mt-2">
-                              {privacy ? '••••' : `+${fmtNum(lock.totalRewardsPaid, 4)}`}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-
-                      <AnimatePresence initial={false}>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="border-t border-white/5 overflow-hidden"
-                          >
-                            <div className="p-3 bg-black/30">
-                              <p className="text-[10px] text-white/50 uppercase tracking-[0.2em] mb-2">
-                                Histórico de rewards diários
-                              </p>
-                              {rewards.length === 0 ? (
-                                <p className="text-[11px] text-white/40 italic text-center py-3">
-                                  Sem rewards ainda — primeiro tick às 00:05 UTC
-                                </p>
-                              ) : (
-                                <ul className="space-y-1 max-h-48 overflow-y-auto">
-                                  {rewards.map((r) => (
-                                    <li
-                                      key={r.paidForDate}
-                                      className="flex items-center justify-between px-2 py-1 hover:bg-white/5 rounded-sm"
-                                    >
-                                      <span className="text-[10px] text-white/60 font-mono tabular-nums">
-                                        {new Date(r.paidForDate).toLocaleDateString('pt-BR')}
-                                      </span>
-                                      <span className="font-display text-[11px] font-bold text-amber-300 tabular-nums">
-                                        {privacy ? '••••' : `+${fmtNum(r.amount, 4)} ${r.currency}`}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {/* 5.3 — Lottery winners feed */}
-          {lotteryDraws.length > 0 && (
-            <div className="space-y-2 mt-4">
-              <div className="ole-eyebrow !text-amber-300 flex items-center gap-2">
-                <Ticket className="w-3.5 h-3.5" />
-                <span>Sorteios recentes</span>
-              </div>
-              <ul className="bg-[#1c1c1c] border border-white/10 border-l-[3px] border-l-amber-400 rounded-[var(--radius-md)] divide-y divide-white/5">
-                {lotteryDraws.map((draw) => (
-                  <li
-                    key={draw.drawDate}
-                    className="px-4 py-2.5 flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-display font-bold text-white">
-                        {maskName(draw.winnerDisplayName ?? 'Manager', privacy)}
-                      </p>
-                      <p className="text-[10px] text-white/40 uppercase tracking-wider">
-                        {new Date(draw.drawDate).toLocaleDateString('pt-BR')}
-                        {draw.winnerClubShort && (
-                          <> · <span className="font-mono text-amber-300/70">{privacy ? '••••' : draw.winnerClubShort}</span></>
-                        )}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="font-display text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-500/15 px-2 py-1 rounded-sm">
-                        Premium Card
-                      </p>
-                      <p className="text-[9px] text-white/40 mt-1">
-                        {privacy ? '••' : draw.eligibleCount} concorrentes
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
         {/* PREMIUM CARDS */}
         {cards.length > 0 && (
           <div className="space-y-3">
@@ -1361,7 +1053,7 @@ export function ManagerNetwork() {
                       {card.cardTier === 'legendary' ? 'Legendary' : card.cardTier === 'rare' ? 'Rare' : 'Premium'}
                     </p>
                     <p className="text-[10px] text-white/50 mt-1">
-                      {card.source === 'hodl_lock' ? 'HODL Lock' : card.source === 'hodl_lottery' ? 'Sorteio diário' : card.source}
+                      {card.source === 'career_bonus' ? 'Bônus de carreira' : card.source === 'admin' ? 'Concessão OLEFOOT' : card.source}
                     </p>
                     <p className="text-[10px] text-white/30 mt-1 tabular-nums">
                       {new Date(card.grantedAt).toLocaleDateString('pt-BR')}
@@ -1445,27 +1137,6 @@ export function ManagerNetwork() {
           </ul>
         </motion.div>
       </section>
-
-      {/* ── CONFIRMAR HODL LOCK (90 dias) ── */}
-      <ConfirmDialog
-        open={confirmLock}
-        onClose={() => setConfirmLock(false)}
-        onConfirm={handleCreateLock}
-        eyebrow="Confirmar HODL lock"
-        title="Travar por 90 dias"
-        accent="#34D399"
-        confirmLabel={creatingLock ? 'Travando…' : 'Confirmar'}
-        confirmDisabled={creatingLock}
-      >
-        <p className="mt-3 text-[12.5px] leading-relaxed text-white/60">
-          Trava <strong className="text-white">{fmtNum(Number(lockAmount) || 0, 0)} OLEXP</strong> por <strong className="text-white">90 dias</strong>. O capital fica bloqueado até o fim do período.
-        </p>
-        {lockProjection && (
-          <div className="mt-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-[12px] text-white/70">
-            Recebe ≈ <strong className="text-emerald-300">{fmtNum(lockProjection.totalReward, 2)} OLEXP</strong> em 90 dias + 1 Premium Card.
-          </div>
-        )}
-      </ConfirmDialog>
 
       {/* ── PIX CHECKOUT MODAL ── */}
       <PixCheckoutModal

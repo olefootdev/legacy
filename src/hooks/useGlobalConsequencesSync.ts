@@ -21,7 +21,7 @@ import { useGameStore, dispatchGame } from '@/game/store';
 import { globalRoundPlayedEvents } from '@/systems/playerHealth/fromGlobalMatch';
 import { makeInboxItem } from '@/game/inboxItem';
 import { getSupabase } from '@/supabase/client';
-import { fetchMyOlexpBalance, spendMyOlefoot } from '@/wallet/olexpSync';
+import { fetchMyOlefootBalance, spendMyOlefoot } from '@/wallet/olefoot';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
 import { overallFromAttributes } from '@/entities/player';
 import { expCostToOlefoot, managerProspectContractPremiumExp } from '@/playerContracts/playerContracts';
@@ -71,7 +71,7 @@ export function useGlobalConsequencesSync() {
     if (items.length > 0) dispatchGame({ type: 'PUSH_INBOX_ITEMS', items });
   }, [players, inbox]);
 
-  // ── Auto-renovação opt-in: debita OLEXP e renova contratos vencidos ────────
+  // ── Auto-renovação opt-in: debita OLEFOOT e renova contratos vencidos ─────
   // Tier de manutenção (50 jogos, o mais barato) — interação frequente e leve.
   useEffect(() => {
     if (!players) return;
@@ -84,32 +84,32 @@ export function useGlobalConsequencesSync() {
 
     const tier = 50 as const;
     const expCost = Math.round(createCostExp * 0.5) + managerProspectContractPremiumExp(tier);
-    const olexpCost = expCostToOlefoot(expCost);
+    const olefootCost = expCostToOlefoot(expCost);
 
     let cancelled = false;
     (async () => {
-      let balance = await fetchMyOlexpBalance();
+      let balance = await fetchMyOlefootBalance();
       const inboxItems = [];
       for (const p of targets) {
         if (cancelled) break;
         try {
-          if (balance < olexpCost) {
+          if (balance < olefootCost) {
             inboxItems.push(
               makeInboxItem(`autorenew-failed-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', `Auto-renovação falhou — ${p.name}`, {
-                body: `Sem OLEXP suficiente (${olexpCost} OLEXP) pra renovar ${p.name}. Recarregue OLEXP ou renove manualmente.`,
+                body: `Sem OLEFOOT suficiente (${olefootCost} OLEFOOT) pra renovar ${p.name}. Renove manualmente quando tiver saldo.`,
                 deepLink: contractDeepLink(p.id),
                 relatedPlayerIds: [p.id],
               }),
             );
             continue;
           }
-          const result = await spendMyOlefoot({ amount: olexpCost, source: 'renovacao_contrato', sourceRef: p.id });
+          const result = await spendMyOlefoot({ amount: olefootCost, source: 'renovacao_contrato', sourceRef: p.id });
           if (result.ok === false) continue; // erro transitório → tenta no próximo scan
           balance = result.newBalance;
           dispatchGame({ type: 'RENEW_MANAGER_PROSPECT_CONTRACT', playerId: p.id, contractMatches: tier, paymentMethod: 'olefoot' });
           inboxItems.push(
             makeInboxItem(`autorenew-ok-${p.id}`, 'PLAYER_CONTRACT', 'PLANTEL', `Auto-renovado — ${p.name}`, {
-              body: `Renovei ${p.name} por ${olexpCost} OLEXP (+${tier} jogos). Auto-renovação está ativa para este jogador.`,
+              body: `Renovei ${p.name} por ${olefootCost} OLEFOOT (+${tier} jogos). Auto-renovação está ativa para este jogador.`,
               deepLink: contractDeepLink(p.id),
               relatedPlayerIds: [p.id],
             }),

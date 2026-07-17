@@ -12,42 +12,26 @@ const LEDGER_TYPE_OPTIONS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: '', label: 'Todos' },
   { value: 'SPOT_EXP', label: 'SPOT EXP' },
   { value: 'SPOT_BRO', label: 'SPOT BRO' },
-  { value: 'OLEXP_PRINCIPAL', label: 'OLEXP Principal' },
-  { value: 'OLEXP_YIELD', label: 'OLEXP Yield' },
-  { value: 'SWAP_SPOT_TO_OLEXP', label: 'SWAP → OLEXP' },
-  { value: 'SWAP_OLEXP_TO_SPOT', label: 'SWAP → SPOT' },
   { value: 'REFERRAL_OLE_GAME', label: 'Referral OLE' },
   { value: 'REFERRAL_NFT', label: 'Referral NFT' },
-  { value: 'REFERRAL_GAT_EXP', label: 'Referral GAT (EXP)' },
-  { value: 'GAT_REWARD', label: 'GAT Reward' },
-  { value: 'GAT_BASE_DEBIT', label: 'GAT Base' },
   { value: 'MATCH_REWARD', label: 'Match Reward' },
   { value: 'PURCHASE', label: 'Compra' },
   { value: 'TRANSFER', label: 'Transferência' },
   { value: 'STRUCTURE_UPGRADE', label: 'Estrutura' },
-  { value: 'FIAT_DEPOSIT', label: 'Depósito (simulado)' },
-  { value: 'FIAT_WITHDRAWAL', label: 'Saque (simulado)' },
 ];
 
 const CURRENCY_OPTIONS: { value: WalletCurrencyExt | ''; label: string }[] = [
   { value: '', label: 'Todas' },
   { value: 'BRO', label: 'BRO' },
   { value: 'EXP', label: 'EXP' },
-  { value: 'OLEXP', label: 'OLEXP' },
-  { value: 'GAT', label: 'GAT' },
+  { value: 'OLEFOOT', label: 'OLEFOOT' },
 ];
 
 function badgeColor(type: WalletLedgerType): string {
-  if (type.startsWith('SWAP')) return 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/30';
-  if (type.startsWith('OLEXP')) return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-  if (type === 'REFERRAL_GAT_EXP') return 'bg-violet-500/20 text-violet-200 border-violet-500/30';
   if (type.startsWith('REFERRAL')) return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-  if (type.startsWith('GAT')) return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
   if (type === 'MATCH_REWARD') return 'bg-green-500/20 text-green-300 border-green-500/30';
   if (type === 'PURCHASE' || type === 'STRUCTURE_UPGRADE') return 'bg-red-500/20 text-red-300 border-red-500/30';
   if (type === 'TRANSFER') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
-  if (type === 'FIAT_DEPOSIT') return 'bg-emerald-500/20 text-emerald-200 border-emerald-500/35';
-  if (type === 'FIAT_WITHDRAWAL') return 'bg-rose-500/20 text-rose-200 border-rose-500/35';
   return 'bg-white/10 text-gray-300 border-white/10';
 }
 
@@ -165,7 +149,7 @@ export function ExtractTab() {
                   ? `${entry.amount < 0 ? '-' : '+'}${Math.abs(entry.amount).toLocaleString('pt-BR')}`
                   : `${entry.amount >= 0 ? '+' : ''}${(entry.amount / 100).toFixed(2)}`}
                 <span className="text-[10px] font-normal text-gray-500 ml-1">
-                  {entry.currency === 'EXP' ? 'EXP' : 'BRO'}
+                  {entry.currency === 'BRO' ? 'USDT' : entry.currency}
                 </span>
               </div>
             </motion.div>

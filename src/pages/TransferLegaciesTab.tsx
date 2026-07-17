@@ -14,7 +14,7 @@ import { LegacyMarketCard } from '@/components/legacy/LegacyMarketCard';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 import { getSupabase } from '@/supabase/client';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
-import { fetchMyOlexpBalance } from '@/wallet/olexpSync';
+import { fetchMyOlefootBalance } from '@/wallet/olefoot';
 import { PixCheckoutModal } from '@/components/PixCheckoutModal';
 import { LegacyPlayerDetailModal } from '@/components/legacy/LegacyPlayerDetailModal';
 import { PurchaseReceiptModal } from '@/components/legacy/PurchaseReceiptModal';
@@ -51,7 +51,7 @@ export function TransferLegaciesTab({
   const quote = useOlefootUsdBrlQuote(true);
 
   const refreshOlefootBalance = () => {
-    void fetchMyOlexpBalance().then((b) => setOlefootBalance(b));
+    void fetchMyOlefootBalance().then((b) => setOlefootBalance(b));
   };
   useEffect(() => {
     refreshOlefootBalance();

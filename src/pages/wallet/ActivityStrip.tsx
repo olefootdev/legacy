@@ -9,21 +9,12 @@ type ActivityStripProps = {
 const TYPE_META: Record<WalletLedgerType, { label: string; icon: string }> = {
   SPOT_EXP: { label: 'Movimento EXP', icon: '◆' },
   SPOT_BRO: { label: 'Movimento USDT', icon: '◆' },
-  OLEXP_PRINCIPAL: { label: 'Hold OLEXP', icon: '⬢' },
-  OLEXP_YIELD: { label: 'Yield OLEXP', icon: '⬢' },
-  SWAP_SPOT_TO_OLEXP: { label: 'Swap → OLEXP', icon: '↻' },
-  SWAP_OLEXP_TO_SPOT: { label: 'Swap → SPOT', icon: '↻' },
   REFERRAL_OLE_GAME: { label: 'Indicação OLE', icon: '◈' },
   REFERRAL_NFT: { label: 'Indicação NFT', icon: '◈' },
-  REFERRAL_GAT_EXP: { label: 'Indicação GAT', icon: '◈' },
-  GAT_REWARD: { label: 'Recompensa GAT', icon: '✦' },
-  GAT_BASE_DEBIT: { label: 'GAT base', icon: '✦' },
   TRANSFER: { label: 'Transferência', icon: '↗' },
   PURCHASE: { label: 'Compra', icon: '◉' },
   MATCH_REWARD: { label: 'Prêmio de partida', icon: '★' },
   STRUCTURE_UPGRADE: { label: 'Upgrade estrutura', icon: '⬡' },
-  FIAT_DEPOSIT: { label: 'Depósito', icon: '↓' },
-  FIAT_WITHDRAWAL: { label: 'Saque', icon: '↑' },
 };
 
 function formatAmount(amount: number, currency: string): string {

@@ -6,7 +6,8 @@ export type TrophyEntry = {
   /** Path opcional do render 3D em /public (ex: /trophy-global-2026.png). */
   imageSrc?: string;
   leagueName: string;
-  season: string;
+  /** Só quando a temporada real for conhecida — nunca derivar do ano atual. */
+  season?: string;
   /** "Campeão", "Vice", "3º lugar", "Bonus", etc. */
   position: string;
   /** Texto secundário opcional (ex: "Bonus +500 OLE"). */
@@ -127,9 +128,11 @@ export function TrophyShowcase({
                 >
                   {t.leagueName}
                 </p>
-                <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/45">
-                  {t.season}
-                </p>
+                {t.season ? (
+                  <p className="mt-1 font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/45">
+                    {t.season}
+                  </p>
+                ) : null}
                 <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-neon-yellow/30 bg-neon-yellow/[0.08] px-3 py-1">
                   <span className="font-display text-[10px] font-bold uppercase tracking-[0.18em] text-neon-yellow">
                     {t.position}

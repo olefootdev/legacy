@@ -3,64 +3,7 @@ import type {
   GrowthCommerceLine,
   GrowthDailyPulseRow,
   PlatformLedgerLine,
-  PlatformOlexpPosition,
 } from './platformTypes';
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function addDaysUtc(iso: string, days: number): string {
-  const x = new Date(`${iso}T12:00:00.000Z`);
-  x.setUTCDate(x.getUTCDate() + days);
-  return x.toISOString().slice(0, 10);
-}
-
-/** Posições de demonstração alinhadas com utilizadores seed (Carlos, Ana pendente, João). */
-export function seedPlatformOlexpPositions(): PlatformOlexpPosition[] {
-  const today = isoDate(new Date());
-  const created = new Date().toISOString();
-  return [
-    {
-      id: 'plat_olexp_demo_carlos',
-      userId: 'usr_demo_1',
-      planId: '180d',
-      principalCents: 500_000,
-      startDate: addDaysUtc(today, -45),
-      endDate: addDaysUtc(today, 135),
-      yieldAccruedCents: 18_200,
-      status: 'active',
-      createdAt: created,
-      activatedAt: created,
-      lastAccrualDate: today,
-    },
-    {
-      id: 'plat_olexp_demo_ana_pending',
-      userId: 'usr_demo_2',
-      planId: '360d',
-      principalCents: 350_000,
-      startDate: today,
-      endDate: addDaysUtc(today, 360),
-      yieldAccruedCents: 0,
-      status: 'pending_activation',
-      createdAt: created,
-      note: 'Pendente de confirmação operacional (KYC/compliance simulado).',
-    },
-    {
-      id: 'plat_olexp_demo_joao',
-      userId: 'usr_demo_3',
-      planId: '90d',
-      principalCents: 300_000,
-      startDate: addDaysUtc(today, -20),
-      endDate: addDaysUtc(today, 70),
-      yieldAccruedCents: 4_500,
-      status: 'active',
-      createdAt: created,
-      activatedAt: created,
-      lastAccrualDate: today,
-    },
-  ];
-}
 
 function userWithTimeline(
   p: Omit<AdminPlatformUser, 'createdAtIso' | 'updatedAtIso'>,

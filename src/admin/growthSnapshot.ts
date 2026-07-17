@@ -12,7 +12,6 @@ import {
   expandRecurringExpenses,
   filterLedgerCompletedFiat,
   growthTimeRange,
-  olexpUptake,
   projectMonthEndRevenue,
   pulseTotals,
   sumCashflowBrlCents,
@@ -35,7 +34,6 @@ export function buildGrowthAnalystSnapshot(
   const commerce = commerceTotals(platform.growthCommerceLines, range.start, range.end);
   const pulse = pulseTotals(platform.growthDailyPulse, range.start, range.end);
   const conv = conversionSignupToFirstDeposit(platform.users, platform.platformLedger, range.start, range.end);
-  const uptake = olexpUptake(platform);
   const projection = projectMonthEndRevenue(platform, new Date(), 7);
   const expensesBrl = sumCashflowBrlCents(platform.growthCashflowExpenses ?? [], range.start, range.end);
   const expensesByCat = cashflowTotalsByCategory(platform.growthCashflowExpenses ?? [], range.start, range.end);
@@ -74,7 +72,6 @@ export function buildGrowthAnalystSnapshot(
       signupToFirstDepositRate: conv.rate,
       signupToFirstDepositCounts: { converted: conv.converted, signups: conv.signups },
     },
-    olexp: uptake,
     topCountries: topCountries(platform.users, 8),
     projectionMonthUtc: {
       monthToDateProxyBroCents: projection.monthToDateCents,

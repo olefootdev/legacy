@@ -49,7 +49,7 @@ export function normalizeInboxItem(raw: unknown): InboxItem | null {
     const u = t.toUpperCase();
     if (u.includes('TREINO') || u === 'TÁTICA') return 'TREINO';
     if (u.includes('STAFF') || u === 'MÉDICO') return 'STAFF';
-    if (u.includes('FINAN') || u === 'LOJA' || u === 'WALLET' || u === 'OLEXP' || u === 'BRO')
+    if (u.includes('FINAN') || u === 'LOJA' || u === 'WALLET' || u === 'OLEFOOT' || u === 'BRO')
       return 'FINANCEIRO';
     if (u.includes('INFRA') || u.includes('ESTRUTURA')) return 'CLUBE';
     if (u.includes('LIGA') || u === 'PARTIDA') return 'COMPETIÇÃO';

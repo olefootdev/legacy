@@ -399,7 +399,7 @@ export function PlayerHealthContractSection({ player }: Props) {
               </button>
             ) : null}
 
-            {/* Auto-renovação opt-in (OLEXP) — protege o time do WO sem ação manual. */}
+            {/* Auto-renovação opt-in (OLEFOOT) — protege o time do WO sem ação manual. */}
             {isRenewable ? (
               <button
                 type="button"
@@ -419,7 +419,7 @@ export function PlayerHealthContractSection({ player }: Props) {
                   className="uppercase"
                   style={{ fontFamily: 'var(--font-display)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.18em' }}
                 >
-                  Auto-renovar (OLEXP)
+                  Auto-renovar (OLEFOOT)
                 </span>
                 <span
                   className={cn(

@@ -144,11 +144,7 @@ export function useSquadValuation(): SquadValuationData {
   }, [players, timeline]);
 }
 
-/**
- * Top N jogadores do plantel ordenados por valor de mercado.
- * Substitui a watchlist mock (Saliba/Wirtz/Palmer).
- * Sparklines ainda mock — quando `playerEvolutionTimeline` for ligado, derivar real.
- */
+/** Top N jogadores do plantel ordenados por valor de mercado. */
 /**
  * Lê os troféus memoráveis conquistados pelo manager (mem_liga_ole, mem_copa_ole, mem_supercopa_ole)
  * e mapeia pra TrophyEntry consumida pelo TrophyShowcase.
@@ -162,7 +158,6 @@ export function useUnlockedTrophies(): TrophyEntry[] {
       (s as { memorableTrophyUnlockedIds?: string[] }).memorableTrophyUnlockedIds ?? [],
   );
   return useMemo(() => {
-    const season = `${new Date().getFullYear()}`;
     const out: TrophyEntry[] = [];
     for (const id of ids) {
       const slot = MEMORABLE_TROPHY_SLOTS.find((s) => s.id === (id as MemorableTrophyId));
@@ -171,7 +166,8 @@ export function useUnlockedTrophies(): TrophyEntry[] {
         id: slot.id,
         imageSrc: `/trophy-${slot.id}.png`,
         leagueName: slot.name,
-        season,
+        // `season` fica de fora: o unlock não grava a temporada, e usar o ano atual
+        // fazia um troféu antigo exibir o ano de hoje.
         position: 'Campeão',
         note: slot.blurb,
       });
@@ -194,9 +190,7 @@ export function useTopSquadPlayers(limit = 3): WatchlistEntry[] {
       .sort((a, b) => priceOle(b) - priceOle(a))
       .slice(0, limit);
 
-    const sparkFallback = [[0, 0]];
-
-    return sorted.map((p, i) => {
+    return sorted.map((p) => {
       const realSpark = pricesFromTimeline(timeline, p.id);
       const hasReal = realSpark.length >= 2;
       return {
@@ -207,7 +201,7 @@ export function useTopSquadPlayers(limit = 3): WatchlistEntry[] {
         ovr: ovrOf(p),
         priceOle: priceOle(p),
         change24h: hasReal ? changeFromSpark(realSpark) : 0,
-        spark: hasReal ? realSpark : sparkFallback[i % sparkFallback.length],
+        spark: hasReal ? realSpark : [],
       };
     });
   }, [players, clubName, limit, timeline]);

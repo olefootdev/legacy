@@ -695,11 +695,7 @@ export type GameAction =
   | { type: 'CITY_QUICK_MEDICAL_MUTIRAO' }
   | { type: 'CITY_QUICK_STORE_CAMPAIGN' }
   | { type: 'CITY_QUICK_TRAINING_INTENSIVO' }
-  | { type: 'WALLET_COMPLETE_KYC' }
   | { type: 'WALLET_SAVE_SWAP_KYC'; profile: import('@/wallet/types').WalletKycProfile }
-  | { type: 'WALLET_CREATE_OLEXP'; planId: import('@/wallet/types').OlexpPlanId; amountCents: number }
-  | { type: 'WALLET_CLAIM_OLEXP'; positionId: string }
-  | { type: 'WALLET_OLEXP_EARLY_TO_SPOT'; positionId: string }
   | { type: 'WALLET_SET_SPONSOR'; sponsorId: string }
   /** Sincroniza o código de indicação local com o autoritativo do servidor. */
   | { type: 'WALLET_SYNC_REFERRAL_CODE'; code: string }
@@ -714,20 +710,11 @@ export type GameAction =
    *  grantEarnedExp e atualiza finance.passiveIncome.lastClaimAt. */
   | { type: 'CLAIM_PASSIVE_STRUCTURE_INCOME' }
   /** Envio de SPOT BRO para outro utilizador pelo código de indicação (MVP cliente). */
-  | { type: 'WALLET_TRANSFER_BRO_BY_CODE'; recipientCode: string; amountCents: number }
-  /** Restaura posições OLEXP/GAT + ledger de um backup na nuvem quando a wallet
+  /** Restaura o ledger de um backup na nuvem quando a wallet
    *  local está vazia (navegador limpo / novo dispositivo). NÃO restaura saldos
    *  spot (dinheiro vem do servidor via créditos). Guarda contra sobrescrever
    *  estado local com dados duráveis já presentes. */
   | { type: 'WALLET_RESTORE_SNAPSHOT'; snapshot: import('@/wallet/types').WalletState }
-  | { type: 'WALLET_ACCRUE_DAILY'; dateIso: string }
-  | {
-      type: 'WALLET_GAT_PURCHASE';
-      category: import('@/wallet/types').GatCategory;
-      amountCents: number;
-      /** Opcional: nome do ativo na UI (ex.: relatório de scouting). */
-      assetLabel?: string;
-    }
   | {
       type: 'START_FRIENDLY_CHALLENGE';
       opponentName: string;
@@ -817,11 +804,6 @@ export type GameAction =
   | { type: 'ADMIN_SET_FORM'; form: import('@/entities/types').FormLetter[] }
   | { type: 'ADMIN_PATCH_CLUB'; partial: Partial<import('@/entities/types').ClubEntity> }
   /** Simula depósito fiat→BRO no SPOT (ledger FIAT_DEPOSIT + crédito SPOT). */
-  | { type: 'ADMIN_SIMULATE_FIAT_DEPOSIT'; broCents: number; note?: string }
-  /** Simula saque SPOT→fiat (ledger FIAT_WITHDRAWAL + débito SPOT). */
-  | { type: 'ADMIN_SIMULATE_FIAT_WITHDRAWAL'; broCents: number; note?: string }
-  /** Forçar KYC OLEXP no save (testes Admin). */
-  | { type: 'ADMIN_SET_WALLET_KYC'; kycOlexpDone: boolean }
   /** Match Global: Define o estado da liga global */
   | { type: 'SET_GLOBAL_LEAGUE_STATE'; payload: import('@/match/globalMatch').GlobalLeagueState }
   | { type: 'SET_OLEFOOT_LEAGUE'; payload: import('@/match/olefootLeague').OlefootLeagueState }

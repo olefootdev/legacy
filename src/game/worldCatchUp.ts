@@ -4,8 +4,6 @@ import type { PlayerEntity } from '@/entities/types';
 import { runMatchMinute } from '@/engine/runMatchMinute';
 import { mergeLineupWithDefaults } from '@/entities/lineup';
 import { buildFatigueByIdMap } from '@/systems/fatigue';
-import { accrueOlexpDaily } from '@/wallet/olexp';
-import { accrueGatDaily } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
 import { processLeagueScheduleDue } from '@/match/processLeagueSchedule';
 import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
@@ -172,11 +170,9 @@ export function applyWorldCatchUp(state: OlefootGameState, nowMs: number): Olefo
     supportPercent: Math.min(98, Math.max(22, crowd.supportPercent + (gm > 180 ? 0.4 : -0.15))),
   };
 
-  let wallet = state.finance.wallet ?? createInitialWalletState();
-  wallet = { ...wallet, spotBroCents: state.finance.broCents };
-  const todayStr = new Date(nowMs).toISOString().slice(0, 10);
-  wallet = accrueOlexpDaily(wallet, todayStr);
-  wallet = accrueGatDaily(wallet, todayStr);
+  // Sem accrual diário: OLEXP e GAT foram removidos (2026-07-16). A wallet só
+  // reflete o saldo BRO — nenhum rendimento é emitido no cliente.
+  const wallet = { ...(state.finance.wallet ?? createInitialWalletState()), spotBroCents: state.finance.broCents };
 
   const finance = mergeWalletIntoFinance(state.finance, wallet);
 

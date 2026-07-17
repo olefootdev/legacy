@@ -6,7 +6,6 @@ import {
   Bot,
   Globe2,
   Landmark,
-  LineChart,
   MousePointerClick,
   Percent,
   PiggyBank,
@@ -29,7 +28,6 @@ import {
   countUsersActiveInRange,
   filterLedgerCompletedFiat,
   growthTimeRange,
-  olexpUptake,
   projectMonthEndRevenue,
   pulseTotals,
   sumFiatDepositsCents,
@@ -128,7 +126,6 @@ export function AdminGrowthPanel() {
     [platform.users, platform.platformLedger, range.start, range.end],
   );
 
-  const uptake = useMemo(() => olexpUptake(platform), [platform]);
   const countries = useMemo(() => topCountries(platform.users, 6), [platform.users]);
 
   const projection = useMemo(() => projectMonthEndRevenue(platform, new Date(), 7), [platform]);
@@ -278,12 +275,6 @@ export function AdminGrowthPanel() {
           sub={`${conv.converted} / ${conv.signups} novos no período (janela 14d após registo)`}
           icon={Percent}
         />
-        <Kpi
-          label="OLEXP — adopção"
-          value={`${uptake.usersWithLock} / ${ag.userCount}`}
-          sub={`${uptake.positionsActive} posições · ${formatBroFromCents(uptake.principalCents)} principal`}
-          icon={LineChart}
-        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -378,9 +369,6 @@ export function AdminGrowthPanel() {
           </li>
           <li>
             — <strong className="text-white/75">Export CSV</strong> diário para o teu BI
-          </li>
-          <li>
-            — <strong className="text-white/75">ARPU / ARPPU</strong> por segmento (OLEXP sim vs não)
           </li>
         </ul>
       </div>

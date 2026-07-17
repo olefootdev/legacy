@@ -4,7 +4,7 @@ import { ChangePill } from './ChangePill';
 import { Sparkline } from './Sparkline';
 
 type SquadValuationCardProps = {
-  /** Valor total do plantel em EXP (mock por enquanto). */
+  /** Valor total do plantel em OLE, somado do plantel real. */
   totalOle: number;
   change24h: number;
   playerCount: number;

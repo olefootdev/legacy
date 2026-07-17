@@ -114,7 +114,7 @@ export function Layout({ children }: { children: ReactNode }) {
       const remote = await hydrateManagerFirstNameFromSupabase(readLocal());
       if (!cancelled) setRemoteManagerFirst(remote);
     };
-    // Restaura o "tesouro" (posições OLEXP/GAT + ledger) da nuvem se o
+    // Restaura o ledger da nuvem se o
     // localStorage estiver vazio (navegador limpo), depois liga o auto-backup.
     const syncWalletDurability = () => {
       void restoreWalletIfEmpty().finally(() => startWalletAutoBackup());

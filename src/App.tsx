@@ -126,9 +126,8 @@ const LiveAuctionsPage = lazy(() =>
 );
 const Store = lazy(() => import('./pages/Store').then((m) => ({ default: m.Store })));
 const Wallet = lazy(() => import('./pages/Wallet').then((m) => ({ default: m.Wallet })));
-const OlexpTab = lazy(() => import('./pages/wallet/OlexpTab').then((m) => ({ default: m.OlexpTab })));
 const ReferralTab = lazy(() => import('./pages/wallet/ReferralTab').then((m) => ({ default: m.ReferralTab })));
-const GatTab = lazy(() => import('./pages/wallet/GatTab').then((m) => ({ default: m.GatTab })));
+const CollectionTab = lazy(() => import('./pages/wallet/CollectionTab').then((m) => ({ default: m.CollectionTab })));
 const ExtractTab = lazy(() => import('./pages/wallet/ExtractTab').then((m) => ({ default: m.ExtractTab })));
 const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default: m.LiveMatch })));
 const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ default: m.MatchClassic })));
@@ -552,12 +551,14 @@ as a nice MVP. Let's Play Together! ⚽
 
             {/* Wallet (mantém estrutura atual) */}
             <Route path="/wallet" element={<Wallet />} />
-            <Route path="/wallet/olexp" element={<OlexpTab />} />
             <Route path="/wallet/referrals" element={<ReferralTab />} />
-            <Route path="/wallet/gat" element={<GatTab />} />
+            <Route path="/wallet/colecao" element={<CollectionTab />} />
             <Route path="/wallet/extract" element={<ExtractTab />} />
 
             {/* Redirects - URLs antigas → novas */}
+            {/* OLEXP e GAT removidos (2026-07-16) — link salvo cai na Wallet, não em 404. */}
+            <Route path="/wallet/olexp" element={<Navigate to="/wallet" replace />} />
+            <Route path="/wallet/gat" element={<Navigate to="/wallet" replace />} />
             <Route path="/team" element={<Navigate to="/clube/elenco" replace />} />
             <Route path="/team/tatica" element={<Navigate to="/clube/elenco" replace />} />
             <Route path="/team/treino" element={<Navigate to="/clube/treino" replace />} />

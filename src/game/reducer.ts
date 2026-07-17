@@ -134,7 +134,6 @@ import { tryUpgradeStructure } from '@/clubStructures/upgrade';
 import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { STRUCTURE_LABELS, LEDGER_REASON_EXP, LEDGER_REASON_BRO } from '@/clubStructures/types';
 import { calculatePassiveAccrual } from '@/clubStructures/passiveIncome';
-import { gatCategoryForStructure } from '@/clubStructures/gatCategory';
 import {
   effectiveCrowdSupportPercent,
   medicalDeptRecoverySpeedBonusPercent,
@@ -180,12 +179,6 @@ import {
   handleApplyPromotionRelegation,
   handleResetGlobalLeagueMVP,
 } from './globalLeagueMVPReducer';
-import {
-  createOlexpPosition,
-  claimOlexpPrincipal,
-  accrueOlexpDaily,
-  earlyExitOlexpToSpot,
-} from '@/wallet/olexp';
 import { writeSwapKycToStorage } from '@/wallet/swapKycStorage';
 import { registerSponsor as walletRegisterSponsor, applyReferralCredits } from '@/wallet/referral';
 // Imports estáticos — substituem chamadas legadas de require() que quebravam
@@ -206,9 +199,6 @@ import { finalizeRound, advanceToNextRound } from '@/match/olefootLeague';
 import { createScheduledRound, autoAdvanceRound } from '@/match/globalRoundScheduler';
 import { simulateGlobalRound } from '@/match/globalMatchSimulator';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
-import { transferBroByReferralCode } from '@/wallet/peerTransfer';
-import { registerGatBase, accrueGatDaily } from '@/wallet/gat';
-import { simulateFiatDeposit, simulateFiatWithdrawal } from '@/wallet/adminFiatFlow';
 import { STYLE_PRESETS } from '@/tactics/playingStyle';
 import { applyResultToLeagueSeason } from '@/match/leagueSeason';
 import { buildRoundRobinSchedule } from '@/match/leagueSchedule';
@@ -3782,14 +3772,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           ].slice(0, 14),
         };
       }
-      const partial = {
+      const nextState = {
         ...state,
         finance: withExpHistory(f, 500, 'Pacote de EXP (BRO)'),
       };
-      const gatRes = registerGatBase(walletOf(partial), 'player_pack', packBroCents, undefined, {
-        assetLabel: 'Pacote de EXP',
-      });
-      const nextState = gatRes.ok ? syncWalletToFinance(partial, gatRes.state) : partial;
       return {
         ...nextState,
         inbox: [
@@ -4118,19 +4104,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const nextFinance = expCost > 0
         ? withExpHistory(result.finance!, -expCost, `Upgrade de estrutura: ${label}`)
         : result.finance!;
-      const partial = {
+      const nextState: OlefootGameState = {
         ...state,
         structures: result.structures!,
         finance: nextFinance,
       };
-      let nextState: OlefootGameState = partial;
-      if (result.ledgerReason === LEDGER_REASON_BRO && result.broSpentCents && result.broSpentCents > 0) {
-        const gatCat = gatCategoryForStructure(action.structureId);
-        const gatRes = registerGatBase(walletOf(partial), gatCat, result.broSpentCents, undefined, {
-          assetLabel: label,
-        });
-        if (gatRes.ok) nextState = syncWalletToFinance(partial, gatRes.state);
-      }
       const crowdNext =
         action.structureId === 'stadium'
           ? (() => {
@@ -4162,89 +4140,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ].slice(0, 14),
       };
     }
-    case 'WALLET_COMPLETE_KYC': {
-      const w = walletOf(state);
-      return syncWalletToFinance(state, { ...w, kycOlexpDone: true });
-    }
     case 'WALLET_SAVE_SWAP_KYC': {
       const w = walletOf(state);
       const profile = { ...action.profile, confirmedAt: action.profile.confirmedAt || new Date().toISOString() };
       const next = { ...w, kycProfile: profile, hasCompletedSwapKyc: true };
       writeSwapKycToStorage({ kycProfile: profile, hasCompletedSwapKyc: true });
       return syncWalletToFinance(state, next);
-    }
-    case 'WALLET_CREATE_OLEXP': {
-      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      const result = createOlexpPosition(w, action.planId, action.amountCents);
-      if (result.ok === false) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `olexp-fail-${Date.now()}`,
-              'WALLET_OLEXP_FAIL',
-              'FINANCEIRO',
-              result.error,
-              { colorClass: 'text-red-400', deepLink: '/wallet/olexp' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      const next = syncWalletToFinance(state, result.state);
-      return {
-        ...next,
-        inbox: [
-          makeInboxItem(
-            `olexp-${Date.now()}`,
-            'WALLET_OLEXP',
-            'FINANCEIRO',
-            `Posição OLEXP criada: ${action.amountCents / 100} BRO.`,
-            { deepLink: '/wallet/olexp' },
-          ),
-          ...next.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'WALLET_CLAIM_OLEXP': {
-      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      const result = claimOlexpPrincipal(w, action.positionId);
-      if (result.ok === false) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `claim-fail-${Date.now()}`,
-              'WALLET_CLAIM_FAIL',
-              'FINANCEIRO',
-              result.error,
-              { colorClass: 'text-red-400', deepLink: '/wallet/olexp' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      return syncWalletToFinance(state, result.state);
-    }
-    case 'WALLET_OLEXP_EARLY_TO_SPOT': {
-      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      const result = earlyExitOlexpToSpot(w, action.positionId);
-      if (result.ok === false) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `swap-olexp-fail-${Date.now()}`,
-              'WALLET_OLEXP_FAIL',
-              'FINANCEIRO',
-              result.error,
-              { colorClass: 'text-red-400', deepLink: '/wallet/olexp' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      return syncWalletToFinance(state, result.state);
     }
     case 'WALLET_SYNC_REFERRAL_CODE': {
       const w = walletOf(state);
@@ -4351,34 +4252,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       }
       return syncWalletToFinance(state, result.state);
     }
-    case 'WALLET_TRANSFER_BRO_BY_CODE': {
-      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      const result = transferBroByReferralCode(w, action.recipientCode, action.amountCents);
-      if (result.ok === false) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `xfer-fail-${Date.now()}`,
-              'WALLET_TRANSFER_FAIL',
-              'FINANCEIRO',
-              result.error,
-              { colorClass: 'text-red-400', deepLink: '/wallet' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      return syncWalletToFinance(state, result.state);
-    }
     case 'WALLET_RESTORE_SNAPSHOT': {
       const w = walletOf(state);
       // Só restaura em wallet "vazia" (navegador limpo / novo dispositivo).
       // Nunca sobrescreve estado local que já tem dados duráveis.
-      const hasLocalDurable =
-        (w.olexpPositions?.length ?? 0) > 0 ||
-        (w.gatPositions?.length ?? 0) > 0 ||
-        (w.ledger?.length ?? 0) > 0;
+      const hasLocalDurable = (w.ledger?.length ?? 0) > 0;
       if (hasLocalDurable) return state;
 
       const snap = action.snapshot;
@@ -4386,12 +4264,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // vem do servidor via créditos — confiar no snapshot inflaria saldo).
       const restored: import('@/wallet/types').WalletState = {
         ...w,
-        olexpPositions: snap.olexpPositions ?? [],
-        gatPositions: snap.gatPositions ?? [],
         ledger: snap.ledger ?? [],
         referralTree: snap.referralTree ?? w.referralTree,
         referralCommissions: snap.referralCommissions ?? w.referralCommissions,
-        kycOlexpDone: snap.kycOlexpDone ?? w.kycOlexpDone,
         hasCompletedSwapKyc: snap.hasCompletedSwapKyc ?? w.hasCompletedSwapKyc,
         kycProfile: snap.kycProfile ?? w.kycProfile,
         myReferralCode: snap.myReferralCode ?? w.myReferralCode,
@@ -4400,45 +4275,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         spotExpBalance: w.spotExpBalance,
       };
       return syncWalletToFinance(state, restored);
-    }
-    case 'WALLET_ACCRUE_DAILY': {
-      let w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      w = accrueOlexpDaily(w, action.dateIso);
-      w = accrueGatDaily(w, action.dateIso);
-      return syncWalletToFinance(state, w);
-    }
-    case 'WALLET_GAT_PURCHASE': {
-      const w = walletOf(state);
-      const result = registerGatBase(w, action.category, action.amountCents, undefined, {
-        assetLabel: action.assetLabel,
-      });
-      if (result.ok === false) {
-        return {
-          ...state,
-          inbox: [
-            makeInboxItem(
-              `gat-fail-${Date.now()}`,
-              'WALLET_GAT_FAIL',
-              'FINANCEIRO',
-              result.error,
-              { colorClass: 'text-red-400', deepLink: '/wallet/gat' },
-            ),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-      // Referral commissions on GAT purchase
-      let walletAfterGat = result.state;
-      if (walletAfterGat.sponsorId) {
-        walletAfterGat = applyReferralCredits(
-          walletAfterGat,
-          'self',
-          action.amountCents,
-          'gat',
-          'BRO',
-        );
-      }
-      return syncWalletToFinance(state, walletAfterGat);
     }
     case 'START_FRIENDLY_CHALLENGE': {
       const opponentName = action.opponentName.trim();
@@ -4948,22 +4784,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         club: { ...state.club, ...action.partial },
       };
-    }
-    case 'ADMIN_SIMULATE_FIAT_DEPOSIT': {
-      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      const result = simulateFiatDeposit(w, action.broCents, { note: action.note });
-      if (result.ok === false) return state;
-      return syncWalletToFinance(state, result.state);
-    }
-    case 'ADMIN_SIMULATE_FIAT_WITHDRAWAL': {
-      const w = { ...walletOf(state), spotBroCents: state.finance.broCents };
-      const result = simulateFiatWithdrawal(w, action.broCents, { note: action.note });
-      if (result.ok === false) return state;
-      return syncWalletToFinance(state, result.state);
-    }
-    case 'ADMIN_SET_WALLET_KYC': {
-      const w = walletOf(state);
-      return syncWalletToFinance(state, { ...w, kycOlexpDone: action.kycOlexpDone });
     }
     case 'SET_GLOBAL_LEAGUE_STATE': {
       return {

@@ -23,7 +23,7 @@ import {
   type ManagerProspectContractGames,
 } from '@/playerContracts/playerContracts';
 import { DEFAULT_MANAGER_PROSPECT_CREATE_COST_EXP } from '@/entities/managerProspect';
-import { fetchMyOlexpBalance, spendMyOlefoot } from '@/wallet/olexpSync';
+import { fetchMyOlefootBalance, spendMyOlefoot } from '@/wallet/olefoot';
 import type { PlayerEntity } from '@/entities/types';
 
 interface Props {
@@ -63,7 +63,7 @@ export function RenewContractModal({ open, onClose, player }: Props) {
     if (!open) return;
     let cancelled = false;
     setOlefootLoading(true);
-    fetchMyOlexpBalance()
+    fetchMyOlefootBalance()
       .then((b) => {
         if (!cancelled) setOlefootBal(b);
       })

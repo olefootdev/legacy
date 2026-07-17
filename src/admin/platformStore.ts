@@ -10,20 +10,14 @@ import type {
   GrowthCommerceKind,
   GrowthDailyPulseRow,
   PlatformLedgerLine,
-  PlatformOlexpCustodyStatus,
-  PlatformOlexpPosition,
 } from './platformTypes';
 import { emptyPlatformState } from './platformTypes';
 import {
   seedGrowthCommerceLines,
   seedGrowthDailyPulse,
   seedPlatformLedger,
-  seedPlatformOlexpPositions,
   seedPlatformUsers,
 } from './platformSeed';
-import { normalizeWalletState } from '@/wallet/initial';
-import type { OlexpPlanId } from '@/wallet/types';
-import { getPlan } from '@/wallet/olexp';
 
 const KEY = 'olefoot-admin-platform-v2'; // bumped v1→v2 pra invalidar caches com dados mockados
 
@@ -61,15 +55,6 @@ export type AdminPlatformAction =
   | { type: 'COMPLETE_FIAT_FLOW'; lineId: string }
   | { type: 'FAIL_FIAT_FLOW'; lineId: string; reason?: string }
   | {
-      type: 'REGISTER_OLEXP_CUSTODY_PENDING';
-      userId: string;
-      planId: OlexpPlanId;
-      principalCents: number;
-      note?: string;
-    }
-  | { type: 'ACTIVATE_OLEXP_CUSTODY'; positionId: string }
-  | { type: 'REJECT_OLEXP_CUSTODY'; positionId: string }
-  | {
       type: 'ADD_CASHFLOW_EXPENSE';
       expense: Omit<CashflowExpenseLine, 'id' | 'createdAt'> & { id?: string };
     }
@@ -92,15 +77,14 @@ function loadInitial(): AdminPlatformState {
     if (!raw) {
       const s = emptyPlatformState();
       // Tudo zerado pro deploy de testes online. Valores sobem organicamente
-      // conforme os managers reais usam o jogo (wallet, OLEXP, ledger, etc).
+      // conforme os managers reais usam o jogo (wallet, ledger, etc).
       s.users = [];
       s.platformTreasuryBroCents = 0;
       s.platformEscrowBroCents = 0;
-      s.platformOlexpPositions = [];
       s.platformLedger = [];
       s.growthCommerceLines = [];
       s.growthDailyPulse = [];
-      return applyOlexpAggregatesToUsers(s);
+      return s;
     }
     const p = JSON.parse(raw) as AdminPlatformState;
     if (p?.version !== 1) return hydrateDefaults(p);
@@ -110,11 +94,10 @@ function loadInitial(): AdminPlatformState {
     s.users = [];
     s.platformTreasuryBroCents = 0;
     s.platformEscrowBroCents = 0;
-    s.platformOlexpPositions = [];
     s.platformLedger = [];
     s.growthCommerceLines = [];
     s.growthDailyPulse = [];
-    return applyOlexpAggregatesToUsers(s);
+    return s;
   }
 }
 
@@ -136,20 +119,6 @@ function normalizeLedgerLine(raw: unknown, fallbackId: string): PlatformLedgerLi
     flowStatus: isFiat ? flowStatus : undefined,
     failureReason: typeof l.failureReason === 'string' ? l.failureReason : undefined,
   };
-}
-
-const OLEXP_PLAN_IDS: OlexpPlanId[] = ['90d', '180d', '360d'];
-const OLEXP_PLATFORM_STATUSES: PlatformOlexpCustodyStatus[] = [
-  'pending_activation',
-  'active',
-  'matured',
-  'claimed',
-];
-
-function addDaysPlatform(iso: string, days: number): string {
-  const x = new Date(`${iso}T12:00:00.000Z`);
-  x.setUTCDate(x.getUTCDate() + days);
-  return x.toISOString().slice(0, 10);
 }
 
 const GROWTH_COMMERCE_KINDS: GrowthCommerceKind[] = ['store_item', 'transfer_player', 'bundle'];
@@ -222,60 +191,10 @@ function normalizeGrowthDailyPulseRow(raw: unknown, _idx: number): GrowthDailyPu
   };
 }
 
-function normalizePlatformOlexp(raw: unknown, fallbackId: string): PlatformOlexpPosition {
-  const r = raw as Partial<PlatformOlexpPosition>;
-  const planId = OLEXP_PLAN_IDS.includes(r.planId as OlexpPlanId) ? (r.planId as OlexpPlanId) : '90d';
-  const status = OLEXP_PLATFORM_STATUSES.includes(r.status as PlatformOlexpCustodyStatus)
-    ? (r.status as PlatformOlexpCustodyStatus)
-    : 'active';
-  const today = new Date().toISOString().slice(0, 10);
-  const startDate =
-    typeof r.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.startDate) ? r.startDate : today;
-  const endDate =
-    typeof r.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.endDate) ? r.endDate : startDate;
-  return {
-    id: typeof r.id === 'string' && r.id ? r.id : fallbackId,
-    userId: typeof r.userId === 'string' ? r.userId : 'unknown',
-    planId,
-    principalCents: Math.max(0, Math.round(Number(r.principalCents) || 0)),
-    startDate,
-    endDate,
-    yieldAccruedCents: Math.max(0, Math.round(Number(r.yieldAccruedCents) || 0)),
-    status,
-    createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
-    activatedAt: typeof r.activatedAt === 'string' ? r.activatedAt : undefined,
-    lastAccrualDate: typeof r.lastAccrualDate === 'string' ? r.lastAccrualDate : undefined,
-    note: typeof r.note === 'string' ? r.note : undefined,
-  };
-}
-
-/** Recalcula `olexpPrincipalLockedCents` / `olexpYieldAccruedCents` só para utilizadores com posições na lista. */
-function applyOlexpAggregatesToUsers(s: AdminPlatformState): AdminPlatformState {
-  const positions = s.platformOlexpPositions ?? [];
-  if (positions.length === 0) return s;
-  const byUser = new Map<string, { principal: number; yieldAcc: number }>();
-  for (const p of positions) {
-    const agg = byUser.get(p.userId) ?? { principal: 0, yieldAcc: 0 };
-    if (p.status === 'active' || p.status === 'matured') {
-      agg.principal += p.principalCents;
-      agg.yieldAcc += p.yieldAccruedCents;
-    }
-    byUser.set(p.userId, agg);
-  }
-  const users = s.users.map((u) => {
-    const a = byUser.get(u.id);
-    if (!a) return u;
-    return { ...u, olexpPrincipalLockedCents: a.principal, olexpYieldAccruedCents: a.yieldAcc };
-  });
-  return { ...s, users };
-}
-
 function hydrateDefaults(raw: Partial<AdminPlatformState>): AdminPlatformState {
   const base = emptyPlatformState();
   const ledgerRaw = Array.isArray(raw.platformLedger) ? raw.platformLedger : [];
   const platformLedger = ledgerRaw.map((row, i) => normalizeLedgerLine(row, `legacy-${i}`));
-  const posRaw = Array.isArray(raw.platformOlexpPositions) ? raw.platformOlexpPositions : [];
-  const platformOlexpPositions = posRaw.map((row, i) => normalizePlatformOlexp(row, `olexp-legacy-${i}`));
   const gcRaw = Array.isArray(raw.growthCommerceLines) ? raw.growthCommerceLines : [];
   const growthCommerceLines = gcRaw.map((row, i) => normalizeGrowthCommerceLine(row, `gc-legacy-${i}`));
   const pulseRaw = Array.isArray(raw.growthDailyPulse) ? raw.growthDailyPulse : [];
@@ -288,13 +207,12 @@ function hydrateDefaults(raw: Partial<AdminPlatformState>): AdminPlatformState {
     growthBroCentsPerBrlRaw != null && Number.isFinite(parsedFx) && parsedFx > 0
       ? Math.round(parsedFx)
       : undefined;
-  let merged: AdminPlatformState = {
+  const merged: AdminPlatformState = {
     ...base,
     ...raw,
     version: 1,
     users: Array.isArray(raw.users) ? raw.users : base.users,
     platformLedger,
-    platformOlexpPositions,
     growthCommerceLines,
     growthDailyPulse,
     growthCashflowExpenses,
@@ -302,9 +220,6 @@ function hydrateDefaults(raw: Partial<AdminPlatformState>): AdminPlatformState {
     platformTreasuryBroCents: Number(raw.platformTreasuryBroCents) || 0,
     platformEscrowBroCents: Number(raw.platformEscrowBroCents) || 0,
   };
-  if (platformOlexpPositions.length > 0) {
-    merged = applyOlexpAggregatesToUsers(merged);
-  }
   return merged;
 }
 
@@ -438,11 +353,10 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
       next.users = [];
       next.platformTreasuryBroCents = action.treasuryCents ?? 0;
       next.platformEscrowBroCents = action.escrowCents ?? 0;
-      next.platformOlexpPositions = [];
       next.platformLedger = [];
       next.growthCommerceLines = [];
       next.growthDailyPulse = [];
-      return applyOlexpAggregatesToUsers(next);
+      return next;
     }
     case 'SET_TREASURY':
       return { ...s, platformTreasuryBroCents: Math.max(0, Math.round(action.broCents)) };
@@ -461,39 +375,13 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
     case 'REPLACE_USERS':
       return { ...s, users: action.users };
     case 'IMPORT_SESSION_USER': {
-      const g = action.game;
-      const w = normalizeWalletState(g.finance.wallet);
-      const mapped: PlatformOlexpPosition[] = (w.olexpPositions ?? []).map((p) => {
-        let st: PlatformOlexpCustodyStatus = 'active';
-        if (p.status === 'matured') st = 'matured';
-        if (p.status === 'claimed') st = 'claimed';
-        return {
-          id: p.id,
-          userId: 'save-local',
-          planId: p.planId,
-          principalCents: p.principalCents,
-          startDate: p.startDate,
-          endDate: p.endDate,
-          yieldAccruedCents: p.yieldAccruedCents,
-          status: st,
-          createdAt: `${p.startDate}T15:00:00.000Z`,
-          activatedAt: `${p.startDate}T15:00:00.000Z`,
-          lastAccrualDate: p.lastAccrualDate,
-        };
-      });
-      const rest = s.platformOlexpPositions.filter((x) => x.userId !== 'save-local');
-      let next: AdminPlatformState = {
-        ...s,
-        platformOlexpPositions: [...mapped, ...rest].slice(0, 200),
-      };
-      next = applyOlexpAggregatesToUsers(next);
-      const row = snapshotUserFromGame('save-local', g);
-      const idx = next.users.findIndex((u) => u.id === 'save-local');
+      const row = snapshotUserFromGame('save-local', action.game);
+      const idx = s.users.findIndex((u) => u.id === 'save-local');
       const users =
         idx >= 0
-          ? next.users.map((u, i) => (i === idx ? { ...row, updatedAtIso: now } : u))
-          : [...next.users, { ...row, updatedAtIso: now }];
-      return { ...next, users };
+          ? s.users.map((u, i) => (i === idx ? { ...row, updatedAtIso: now } : u))
+          : [...s.users, { ...row, updatedAtIso: now }];
+      return { ...s, users };
     }
     case 'APPLY_FIAT_DEPOSIT': {
       const c = Math.round(action.broCents);
@@ -570,51 +458,6 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
         failureReason: action.reason?.trim() || undefined,
       });
     }
-    case 'REGISTER_OLEXP_CUSTODY_PENDING': {
-      const plan = getPlan(action.planId);
-      const pc = Math.round(action.principalCents);
-      if (!plan || pc < plan.minBroCents) return s;
-      if (!s.users.some((u) => u.id === action.userId)) return s;
-      const today = now.slice(0, 10);
-      const pos: PlatformOlexpPosition = {
-        id: `plat_olexp_${uid()}`,
-        userId: action.userId,
-        planId: action.planId,
-        principalCents: pc,
-        startDate: today,
-        endDate: addDaysPlatform(today, plan.days),
-        yieldAccruedCents: 0,
-        status: 'pending_activation',
-        createdAt: now,
-        note: action.note?.trim() || undefined,
-      };
-      const next: AdminPlatformState = {
-        ...s,
-        platformOlexpPositions: [pos, ...s.platformOlexpPositions].slice(0, 200),
-      };
-      return applyOlexpAggregatesToUsers(next);
-    }
-    case 'ACTIVATE_OLEXP_CUSTODY': {
-      const positions = s.platformOlexpPositions.map((p) => {
-        if (p.id !== action.positionId || p.status !== 'pending_activation') return p;
-        const plan = getPlan(p.planId);
-        if (!plan) return p;
-        const today = now.slice(0, 10);
-        return {
-          ...p,
-          status: 'active' as const,
-          startDate: today,
-          endDate: addDaysPlatform(today, plan.days),
-          lastAccrualDate: today,
-          activatedAt: now,
-        };
-      });
-      return applyOlexpAggregatesToUsers({ ...s, platformOlexpPositions: positions });
-    }
-    case 'REJECT_OLEXP_CUSTODY': {
-      const platformOlexpPositions = s.platformOlexpPositions.filter((p) => p.id !== action.positionId);
-      return applyOlexpAggregatesToUsers({ ...s, platformOlexpPositions });
-    }
     case 'ADD_CASHFLOW_EXPENSE': {
       const id = action.expense.id ?? uid();
       const row = normalizeCashflowExpense(
@@ -659,9 +502,6 @@ function platformReducer(s: AdminPlatformState, action: AdminPlatformAction): Ad
 export function snapshotUserFromGame(id: string, g: OlefootGameState): AdminPlatformUser {
   const w = g.finance.wallet;
   const now = new Date().toISOString();
-  const olexp = w?.olexpPositions ?? [];
-  const principal = olexp.filter((p) => p.status === 'active').reduce((s, p) => s + p.principalCents, 0);
-  const yieldAcc = olexp.reduce((s, p) => s + p.yieldAccruedCents, 0);
   return {
     id,
     displayName: 'Sessão local (navegador)',
@@ -673,9 +513,6 @@ export function snapshotUserFromGame(id: string, g: OlefootGameState): AdminPlat
     spotBroCents: w?.spotBroCents ?? g.finance.broCents,
     spotExpBalance: w?.spotExpBalance ?? 0,
     ole: g.finance.ole,
-    olexpPrincipalLockedCents: principal,
-    olexpYieldAccruedCents: yieldAcc,
-    gatPositionsCount: w?.gatPositions?.length ?? 0,
     ledgerEntriesCount: w?.ledger?.length ?? 0,
     createdAtIso: now,
     updatedAtIso: now,
@@ -691,9 +528,6 @@ export interface PlatformFinancialAggregate {
   sumSpotBroCents: number;
   sumSpotExp: number;
   sumOle: number;
-  sumOlexpLockedCents: number;
-  sumOlexpYieldAccruedCents: number;
-  sumGatPositions: number;
   sumLedgerEntries: number;
   treasuryBroCents: number;
   escrowBroCents: number;
@@ -708,9 +542,6 @@ export function computePlatformAggregate(s: AdminPlatformState): PlatformFinanci
   const sumSpotBroCents = users.reduce((a, u) => a + (Number(u.spotBroCents) || 0), 0);
   const sumSpotExp = users.reduce((a, u) => a + (Number(u.spotExpBalance) || 0), 0);
   const sumOle = users.reduce((a, u) => a + (Number(u.ole) || 0), 0);
-  const sumOlexpLockedCents = users.reduce((a, u) => a + (Number(u.olexpPrincipalLockedCents) || 0), 0);
-  const sumOlexpYieldAccruedCents = users.reduce((a, u) => a + (Number(u.olexpYieldAccruedCents) || 0), 0);
-  const sumGatPositions = users.reduce((a, u) => a + (Number(u.gatPositionsCount) || 0), 0);
   const sumLedgerEntries = users.reduce((a, u) => a + (Number(u.ledgerEntriesCount) || 0), 0);
   const totalBroInEcosystemCents = sumBroCents + (Number(s.platformTreasuryBroCents) || 0);
   return {
@@ -720,9 +551,6 @@ export function computePlatformAggregate(s: AdminPlatformState): PlatformFinanci
     sumSpotBroCents,
     sumSpotExp,
     sumOle,
-    sumOlexpLockedCents,
-    sumOlexpYieldAccruedCents,
-    sumGatPositions,
     sumLedgerEntries,
     treasuryBroCents: Number(s.platformTreasuryBroCents) || 0,
     escrowBroCents: Number(s.platformEscrowBroCents) || 0,

@@ -6,7 +6,7 @@
  *   - coleções:   @/admin/playerLinking        (getMyLinkedCards)
  *   - comissões:  @/wallet/affiliateCommissions (fetchMyAffiliateCommissions)
  *   - indicados:  @/supabase/referrals         (fetchMyReferrals / fetchMyReferralCode)
- *   - saldo OLEXP:@/wallet/olexpSync
+ *   - saldo OLEFOOT:@/wallet/olefoot
  *
  * Backend das ações: migration 20260712120000_playervip_requests.sql.
  */

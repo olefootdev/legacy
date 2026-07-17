@@ -2,11 +2,9 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useProgressionStore } from '@/progression';
-import { OlexpScreen } from './wallet/OlexpScreen';
 import { ReferralScreen } from './wallet/ReferralScreen';
-import { GatScreen } from './wallet/GatScreen';
 
-type WalletTab = 'home' | 'olexp' | 'referrals' | 'gat';
+type WalletTab = 'home' | 'referrals';
 
 export function WalletScreen() {
   const trackMissionEvent = useProgressionStore((s) => s.trackMissionEvent);
@@ -19,9 +17,7 @@ export function WalletScreen() {
     }, [trackMissionEvent]),
   );
 
-  if (activeTab === 'olexp') return <OlexpScreen onBack={() => setActiveTab('home')} />;
   if (activeTab === 'referrals') return <ReferralScreen onBack={() => setActiveTab('home')} />;
-  if (activeTab === 'gat') return <GatScreen onBack={() => setActiveTab('home')} />;
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -42,21 +38,9 @@ export function WalletScreen() {
       </View>
 
       {/* Module cards */}
-      <Pressable style={[styles.moduleCard, { borderColor: '#a855f444' }]} onPress={() => setActiveTab('olexp')}>
-        <Text style={[styles.moduleLabel, { color: '#a855f4' }]}>OLEXP</Text>
-        <Text style={styles.moduleDesc}>Yield diário sobre BRO staked</Text>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
-
       <Pressable style={[styles.moduleCard, { borderColor: '#3b82f644' }]} onPress={() => setActiveTab('referrals')}>
         <Text style={[styles.moduleLabel, { color: '#3b82f6' }]}>Indicações</Text>
         <Text style={styles.moduleDesc}>3 níveis · 5% sobre ganho elegível</Text>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
-
-      <Pressable style={[styles.moduleCard, { borderColor: '#f59e0b44' }]} onPress={() => setActiveTab('gat')}>
-        <Text style={[styles.moduleLabel, { color: '#f59e0b' }]}>GAT</Text>
-        <Text style={styles.moduleDesc}>Reward sobre compras no ecossistema</Text>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
     </ScrollView>

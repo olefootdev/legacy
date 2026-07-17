@@ -2,21 +2,15 @@ import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
 
 import { WalletSpotToggle } from './WalletSpotToggle';
-import { TradingViewEmbed } from './TradingViewEmbed';
-import { WalletFaq } from './WalletFaq';
 import { Sparkline } from './Sparkline';
 
-export type WalletShellAccount = 'spot' | 'olexp' | 'gat';
-
 export function WalletShell({
-  account,
   title,
   subtitle,
   heroStats,
   heroVariant = 'cinematic',
   children,
 }: {
-  account: WalletShellAccount;
   title: string;
   subtitle?: string;
   heroStats?: {
@@ -173,14 +167,6 @@ export function WalletShell({
       <div id="wallet-content" className="mx-auto min-w-0 w-full max-w-3xl space-y-8 px-4 sm:px-8 py-8 sm:py-12 pb-28 md:pb-12">
         {children}
 
-        {account === 'olexp' ? (
-          <section className="space-y-3 pt-4 border-t border-white/10">
-            <h2 className="text-xs font-display font-bold uppercase tracking-widest text-gray-500">Mercado</h2>
-            <TradingViewEmbed />
-          </section>
-        ) : null}
-
-        <WalletFaq variant={account} />
       </div>
     </div>
   );

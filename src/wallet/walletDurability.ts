@@ -1,7 +1,7 @@
 /**
  * Durabilidade da wallet — liga o backup/restore (walletBackup.ts) ao boot.
  *
- * Problema que resolve: posições OLEXP/GAT + ledger vivem no localStorage.
+ * Problema que resolve: o ledger vive no localStorage.
  * Limpar o navegador / trocar de dispositivo apagava o "tesouro". Aqui:
  *   - restoreWalletIfEmpty(): se a wallet local está vazia, puxa o último
  *     backup da nuvem e restaura SÓ a data durável (nunca saldos spot).
@@ -28,14 +28,10 @@ function currentWallet(): WalletState | null {
   return s?.finance?.wallet ?? null;
 }
 
-/** Wallet "vazia" = sem nada durável (posições/ledger). Cenário de navegador limpo. */
+/** Wallet "vazia" = sem nada durável (ledger). Cenário de navegador limpo. */
 function walletIsEmpty(w: WalletState | null): boolean {
   if (!w) return true;
-  return (
-    (w.olexpPositions?.length ?? 0) === 0 &&
-    (w.gatPositions?.length ?? 0) === 0 &&
-    (w.ledger?.length ?? 0) === 0
-  );
+  return (w.ledger?.length ?? 0) === 0;
 }
 
 async function currentUserId(): Promise<string | null> {

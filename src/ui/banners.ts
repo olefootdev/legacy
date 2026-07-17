@@ -32,7 +32,7 @@ export const BANNER_SLOT_META: Record<BannerSlotId, { label: string; hint: strin
   city_store: { label: 'Clube — Megaloja', hint: 'Cabeçalho do painel Megaloja.' },
   home_matchday: { label: 'Home — bloco Matchday', hint: 'Área grande do próximo jogo na Home.' },
   team_header: { label: 'Plantel — cabeçalho', hint: 'Zona do título «Plantel Principal» e separadores.' },
-  wallet_spot: { label: 'Wallet — topo', hint: 'Cabeçalho das páginas SPOT / OLEXP da carteira.' },
+  wallet_spot: { label: 'Wallet — topo', hint: 'Cabeçalho das páginas SPOT / Coleção da carteira.' },
   leagues_header: { label: 'Ligas — topo', hint: 'Zona do título na página Ligas.' },
 };
 

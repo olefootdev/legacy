@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Landmark, Lock, Users, Wallet } from 'lucide-react';
+import { Landmark, Users, Wallet } from 'lucide-react';
 import { formatBroFromCents, formatExp } from '@/systems/economy';
 import { cn } from '@/lib/utils';
 import { computePlatformAggregate, useAdminPlatformStore } from '@/admin/platformStore';
@@ -77,13 +77,6 @@ export function AdminOverviewPanel() {
           sub="caixa operacional"
           icon={Landmark}
           accent="bg-amber-500"
-        />
-        <KpiCard
-          label="OLEXP trancado (Σ)"
-          value={formatBroFromCents(platAg.sumOlexpLockedCents)}
-          sub={`yield acc. ${formatBroFromCents(platAg.sumOlexpYieldAccruedCents)}`}
-          icon={Lock}
-          accent="bg-violet-500"
         />
       </div>
     </div>

@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { olexpSummary } from '@/wallet/olexp';
-import { referralSummary } from '@/wallet/referral';
-import { gatSummary } from '@/wallet/gat';
 import { createInitialWalletState } from '@/wallet/initial';
 import { WalletShell } from './wallet/WalletShell';
 import { DepositModal } from './wallet/DepositModal';
 import { PixCheckoutModal } from '@/components/PixCheckoutModal';
-import { SendModal } from './wallet/SendModal';
 import { CryptoCoinCard } from './wallet/CryptoCoinCard';
 import { ActivityStrip } from './wallet/ActivityStrip';
 import { SquadValuationCard } from './wallet/SquadValuationCard';
@@ -22,7 +18,7 @@ import {
 } from './wallet/useWalletPlayerData';
 import { useOlefootUsdBrlQuote } from '@/wallet/useOlefootUsdBrlQuote';
 import { fetchLegacyBalance } from '@/wallet/applyLegacyOlefootCredit';
-import { OLE_INTERNAL_PRICE_USD, OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
+import { OLE_INTERNAL_PRICE_DISPLAY, oleToUsd } from '@/wallet/constants';
 import { useTrackScreen } from '@/progression/trackEvent';
 
 function usePrefersReducedMotion(): boolean {
@@ -76,7 +72,6 @@ export function Wallet() {
   const wallet = finance.wallet ?? createInitialWalletState();
   const reducedMotion = usePrefersReducedMotion();
   const [depositOpen, setDepositOpen] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixAmountCents, setPixAmountCents] = useState(0);
   const usdBrlQuote = useOlefootUsdBrlQuote(true);
@@ -90,10 +85,6 @@ export function Wallet() {
     return () => { cancelled = true; };
   }, []);
 
-  const _olexp = olexpSummary({ ...wallet, spotBroCents: finance.broCents });
-  const _ref = referralSummary(wallet);
-  const gat = gatSummary(wallet);
-
   const expBalance = finance.ole ?? 0;
   const olefootBalance = legacyBalance != null ? Number(legacyBalance) : 0;
 
@@ -104,26 +95,25 @@ export function Wallet() {
 
   const quickActions: QuickAction[] = [
     { key: 'deposit', label: 'Depositar', icon: '↓', accent: 'green', onClick: () => setDepositOpen(true) },
-    { key: 'withdraw', label: 'Sacar', icon: '↑', accent: 'red', onClick: () => setSendOpen(true) },
-    { key: 'swap', label: 'Swap', icon: '⇄', accent: 'yellow', onClick: () => navigate('/wallet/olexp') },
-    { key: 'gat', label: 'GAT', icon: '✦', accent: 'amber', onClick: () => navigate('/wallet/gat'), badge: gat.activeCount > 0 ? String(gat.activeCount) : undefined },
+    { key: 'collection', label: 'Coleção', icon: '◈', accent: 'yellow', onClick: () => navigate('/wallet/colecao') },
+    { key: 'referrals', label: 'Indicações', icon: '⇄', accent: 'amber', onClick: () => navigate('/wallet/referrals') },
     { key: 'extract', label: 'Extrato', icon: '☰', accent: 'cyan', onClick: () => navigate('/wallet/extract') },
   ];
 
-  // Squad Valuation — total, destaque, change e spark vindos do store real
-  // (playerEvolutionTimeline alimenta sparklines + change ponderado).
-  // Fallback: spark mock só se nenhum jogador tiver timeline ainda.
+  // Squad Valuation — tudo vem do store real (playerEvolutionTimeline alimenta
+  // spark + change ponderado). Sem timeline, `spark` fica vazio e o gráfico
+  // simplesmente não renderiza: [0,0] desenhava uma linha reta verde inventada.
   const squadCardData = {
     totalOle: squadValuation.totalOle,
     change24h: squadValuation.change24h,
     playerCount: squadValuation.playerCount,
-    spark: squadValuation.spark.length >= 2 ? squadValuation.spark : [0, 0],
+    spark: squadValuation.spark,
     highlight: squadValuation.highest ?? undefined,
   };
 
   const heroStats = [
     {
-      label: 'Patrimônio Total',
+      label: 'Saldo USDT',
       value: formatPatrimonioUsd(finance.broCents),
       highlight: true,
     },
@@ -153,23 +143,20 @@ export function Wallet() {
       logoSrc: '/wallet-usdt-logo.png',
       balance: formatUsdt(finance.broCents),
       fiatRef: formatUsdtUsdRef(finance.broCents),
-      badge: 'Ativa',
     },
     {
       ticker: 'OLEFOOT',
       name: 'Olefoot Token',
       logoSrc: '/wallet-olefoot-logo.png',
       balance: `${formatCompact(olefootBalance)} OLEFOOT`,
-      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE`,
+      // Preço interno fixo, não cotação de mercado — por isso não vai em `spotPrice`.
+      fiatRef: `≈ $${oleToUsd(olefootBalance).toFixed(6)} · ${OLE_INTERNAL_PRICE_DISPLAY}/OLE (preço interno)`,
       highlight: true,
-      badge: 'Oficial',
-      spotPrice: OLE_INTERNAL_PRICE_DISPLAY,
     },
   ];
 
   return (
     <WalletShell
-      account="spot"
       title="Conta SPOT"
       subtitle="Carteira multi-ativos: USDT e OLEFOOT. Use USDT para comprar EXP ou OLE, e EXP/OLE para contratar jogadores."
       heroStats={heroStats}
@@ -196,7 +183,6 @@ export function Wallet() {
           // applyPendingCredits no Layout vai pegar o wallet_credit criado pelo webhook
         }}
       />
-      <SendModal open={sendOpen} onClose={() => setSendOpen(false)} />
 
       {/* ── QUICK ACTIONS (Revolut-style strip) ──────────────────── */}
       <WalletQuickActions actions={quickActions} />

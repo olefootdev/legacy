@@ -251,17 +251,6 @@ export function topCountries(users: AdminPlatformUser[], limit = 5): { country: 
     .map(([country, count]) => ({ country, count }));
 }
 
-export function olexpUptake(s: AdminPlatformState): {
-  usersWithLock: number;
-  positionsActive: number;
-  principalCents: number;
-} {
-  const usersWithLock = s.users.filter((u) => (u.olexpPrincipalLockedCents ?? 0) > 0).length;
-  const active = (s.platformOlexpPositions ?? []).filter((p) => p.status === 'active' || p.status === 'matured');
-  const principalCents = active.reduce((a, p) => a + p.principalCents, 0);
-  return { usersWithLock, positionsActive: active.length, principalCents };
-}
-
 function expenseDayInRange(dateStr: string, start: Date, end: Date): boolean {
   return inRange(`${dateStr}T12:00:00.000Z`, start, end);
 }

@@ -27,21 +27,18 @@ const MIN_BRL = 5;
  * Coleta apenas o VALOR. Quando o user confirma, chama onContinueToPix(cents)
  * que o Wallet usa pra abrir o PixCheckoutModal (que coleta CPF + gera QR).
  *
- * onDeposit é mantido como callback legado opcional pra MVP/mock.
+ * Sem caminho legado: o depósito só existe via PIX real (onContinueToPix).
  */
 export function DepositModal({
   open,
   onClose,
   onContinueToPix,
-  onDeposit,
   quote,
 }: {
   open: boolean;
   onClose: () => void;
-  /** Próximo passo real: abre PixCheckoutModal no Wallet. */
-  onContinueToPix?: (amountCents: number) => void;
-  /** Legado/mock — só usado se onContinueToPix não for passado. */
-  onDeposit?: (payload: { brlAmount: string; note: string }) => void;
+  /** Abre o PixCheckoutModal no Wallet. Único caminho de depósito. */
+  onContinueToPix: (amountCents: number) => void;
   quote: OlefootUsdBrlQuoteState;
 }) {
   const [brl, setBrl] = useState('');
@@ -75,17 +72,7 @@ export function DepositModal({
     if (!valid || numericAmount === null) return;
     const cents = Math.round(numericAmount * 100);
 
-    if (onContinueToPix) {
-      // Fluxo real PIX
-      onContinueToPix(cents);
-      onClose();
-      setBrl('');
-      setSelectedChip(null);
-      return;
-    }
-
-    // Fallback legado
-    onDeposit?.({ brlAmount: brl, note: '' });
+    onContinueToPix(cents);
     onClose();
     setBrl('');
     setSelectedChip(null);

@@ -3,7 +3,6 @@
  *
  * Sem pack ativo:
  *   - não recebe comissões 5-5-5%
- *   - não pode criar HODL lock
  *   - não pode resgatar career bonus
  *   - comissões que SERIAM dele vão pra log de "lost" e aparecem como FOMO
  *

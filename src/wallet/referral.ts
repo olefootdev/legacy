@@ -148,30 +148,13 @@ export function applyReferralCredits(
 export function referralSummary(state: WalletState) {
   let oleGameTotal = 0;
   let nftTotal = 0;
-  let gatExpTotal = 0;
   let oleGameCount = 0;
   let nftCount = 0;
-  let gatCount = 0;
   /** Comissões OLE/NFT em centavos BRO, por nível */
   const byLevelBroCents: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
-  /** Referral GAT em EXP inteiro, por nível (quando o destinatário é o teu código) */
-  const gatByLevelExp: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
-
-  const myCode = state.myReferralCode ? normalizeReferralCode(state.myReferralCode) : null;
 
   for (const c of state.referralCommissions) {
     if (c.status !== 'confirmed') continue;
-
-    if (c.sourceType === 'gat') {
-      const toNorm = normalizeReferralCode(String(c.toUserId)) || String(c.toUserId);
-      if (myCode && toNorm === myCode) {
-        gatExpTotal += c.commissionAmount;
-        gatCount++;
-        gatByLevelExp[c.level] = (gatByLevelExp[c.level] ?? 0) + c.commissionAmount;
-      }
-      continue;
-    }
-
     if (c.toUserId !== 'self') continue;
 
     if (c.sourceType === 'ole_game') {
@@ -189,12 +172,9 @@ export function referralSummary(state: WalletState) {
   return {
     oleGameTotal,
     nftTotal,
-    gatExpTotal,
     oleGameCount,
     nftCount,
-    gatCount,
     byLevelBroCents,
-    gatByLevelExp,
     directReferrals,
   };
 }

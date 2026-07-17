@@ -3,40 +3,19 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Banknote,
-  CalendarClock,
-  CalendarRange,
   CheckCircle2,
   ChevronRight,
   ClipboardCopy,
   Filter,
   Landmark,
-  Lock,
-  PiggyBank,
-  ShieldCheck,
-  TrendingUp,
-  Vault,
   Wallet,
   XCircle,
 } from 'lucide-react';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { useGameStore } from '@/game/store';
 import { formatBroFromCents, formatExp } from '@/systems/economy';
 import { normalizeWalletState } from '@/wallet/initial';
 import { queryLedger } from '@/wallet/ledger';
-import { olexpPlanLabel } from '@/wallet/financeAdminViews';
-import type { WalletLedgerEntry, WalletLedgerType, WalletCurrencyExt, OlexpPlanId } from '@/wallet/types';
-import {
-  OLEXP_PLANS,
-  OLEXP_SWAP_OLEXP_TO_SPOT_MIN_BRO_CENTS,
-  DAILY_ACCRUE_HOUR,
-  DAILY_ACCRUE_MINUTE,
-} from '@/wallet/constants';
-import {
-  bucketMaturitiesByMonth,
-  daysUntilEnd,
-  estimateRemainingYieldCents,
-  forecastPrincipalPayoutCents,
-} from '@/admin/olexpPlatformForecast';
-import type { PlatformOlexpCustodyStatus } from '@/admin/platformTypes';
+import type { WalletLedgerEntry, WalletLedgerType, WalletCurrencyExt } from '@/wallet/types';
 import { cn } from '@/lib/utils';
 import {
   computePlatformAggregate,
@@ -67,24 +46,12 @@ function fmtIsoDate(iso: string | undefined): string {
 
 const LEDGER_FILTER_OPTS: { value: WalletLedgerType | ''; label: string }[] = [
   { value: '', label: 'Todos' },
-  { value: 'FIAT_DEPOSIT', label: 'Depósito (simulado)' },
-  { value: 'FIAT_WITHDRAWAL', label: 'Saque (simulado)' },
   { value: 'SPOT_BRO', label: 'SPOT BRO' },
-  { value: 'SWAP_SPOT_TO_OLEXP', label: '→ OLEXP (custódia)' },
-  { value: 'SWAP_OLEXP_TO_SPOT', label: '← OLEXP (saída)' },
-  { value: 'OLEXP_PRINCIPAL', label: 'OLEXP principal' },
-  { value: 'OLEXP_YIELD', label: 'OLEXP yield' },
-  { value: 'GAT_REWARD', label: 'GAT reward (EXP)' },
-  { value: 'REFERRAL_GAT_EXP', label: 'Referral GAT (EXP)' },
   { value: 'TRANSFER', label: 'Transferência' },
 ];
 
 function badgeLedger(type: string | undefined): string {
   if (!type || typeof type !== 'string') return 'bg-white/10 text-gray-300 border-white/15';
-  if (type === 'FIAT_DEPOSIT') return 'bg-emerald-500/20 text-emerald-200 border-emerald-500/35';
-  if (type === 'FIAT_WITHDRAWAL') return 'bg-rose-500/20 text-rose-200 border-rose-500/35';
-  if (type.startsWith('SWAP')) return 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/35';
-  if (type.startsWith('OLEXP')) return 'bg-violet-500/20 text-violet-200 border-violet-500/35';
   return 'bg-white/10 text-gray-300 border-white/15';
 }
 
@@ -150,20 +117,6 @@ function resolveFiatTargetLabel(target: string, userMap: Map<string, { displayNa
   return `${u.displayName} (${u.clubShort})`;
 }
 
-function custodyStatusLabel(st: PlatformOlexpCustodyStatus): string {
-  if (st === 'pending_activation') return 'Aguarda activação';
-  if (st === 'active') return 'Activa';
-  if (st === 'matured') return 'Vencida (resgate)';
-  return 'Encerrada';
-}
-
-function custodyStatusBadge(st: PlatformOlexpCustodyStatus): string {
-  if (st === 'pending_activation') return 'bg-amber-500/20 text-amber-200 border-amber-400/40';
-  if (st === 'active') return 'bg-violet-500/20 text-violet-200 border-violet-400/35';
-  if (st === 'matured') return 'bg-sky-500/20 text-sky-200 border-sky-400/35';
-  return 'bg-white/10 text-white/45 border-white/15';
-}
-
 function canCompleteWithdrawalLine(
   line: PlatformLedgerLine,
   s: { platformTreasuryBroCents: number; users: { id: string; spotBroCents: number }[] },
@@ -176,10 +129,9 @@ function canCompleteWithdrawalLine(
   return u != null && u.spotBroCents >= c;
 }
 
-type Sub = 'visao' | 'depositos_saques' | 'olexp' | 'extrato' | 'creditar';
+type Sub = 'visao' | 'depositos_saques' | 'extrato' | 'creditar';
 
 export function AdminFinanceiroPanel() {
-  const gameDispatch = useGameDispatch();
   const platformDispatch = useAdminPlatformDispatch();
   const platform = useAdminPlatformStore((s) => s);
   const ag = useMemo(() => computePlatformAggregate(platform), [platform]);
@@ -215,10 +167,6 @@ export function AdminFinanceiroPanel() {
   const [wdBro, setWdBro] = useState('');
   const [wdNote, setWdNote] = useState('');
   const [wdQueue, setWdQueue] = useState(false);
-  const [custodyUserId, setCustodyUserId] = useState('');
-  const [custodyPlanId, setCustodyPlanId] = useState<OlexpPlanId>('90d');
-  const [custodyBro, setCustodyBro] = useState('');
-  const [custodyNote, setCustodyNote] = useState('');
   const [treasuryEdit, setTreasuryEdit] = useState('');
   const [escrowEdit, setEscrowEdit] = useState('');
 
@@ -267,7 +215,6 @@ export function AdminFinanceiroPanel() {
     }
   };
 
-  const [accrualDate, setAccrualDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [ledgerType, setLedgerType] = useState<WalletLedgerType | ''>('');
   const [ledgerCur, setLedgerCur] = useState<WalletCurrencyExt | ''>('');
 
@@ -316,21 +263,6 @@ export function AdminFinanceiroPanel() {
         .slice(0, 40),
     [platformLedgerSafe],
   );
-
-  const platformOlexpSafe = useMemo(
-    () => (Array.isArray(platform.platformOlexpPositions) ? platform.platformOlexpPositions : []),
-    [platform.platformOlexpPositions],
-  );
-  const forecastToday = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const maturityBuckets = useMemo(
-    () => bucketMaturitiesByMonth(platformOlexpSafe, forecastToday),
-    [platformOlexpSafe, forecastToday],
-  );
-  const olexpSorted = useMemo(
-    () => [...platformOlexpSafe].sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1)),
-    [platformOlexpSafe],
-  );
-  const custodyPlanMeta = OLEXP_PLANS.find((x) => x.id === custodyPlanId) ?? OLEXP_PLANS[0]!;
 
   const applyDeposit = () => {
     const cents = broInputToCents(depBro);
@@ -382,28 +314,6 @@ export function AdminFinanceiroPanel() {
   const failFiatLine = (lineId: string) => {
     const reason = window.prompt('Motivo da falha (opcional):') ?? '';
     platformDispatch({ type: 'FAIL_FIAT_FLOW', lineId, reason: reason.trim() || undefined });
-  };
-
-  const registerCustodyPending = () => {
-    const cents = broInputToCents(custodyBro);
-    const uid = custodyUserId || platform.users[0]?.id;
-    if (!uid) {
-      alert('Não há utilizadores na plataforma.');
-      return;
-    }
-    if (cents == null) {
-      alert('Indica um valor BRO válido (mínimo do plano em Hold).');
-      return;
-    }
-    platformDispatch({
-      type: 'REGISTER_OLEXP_CUSTODY_PENDING',
-      userId: uid,
-      planId: custodyPlanId,
-      principalCents: cents,
-      note: custodyNote.trim() || undefined,
-    });
-    setCustodyBro('');
-    setCustodyNote('');
   };
 
   const copyPlatformLedger = () => {
@@ -461,16 +371,9 @@ export function AdminFinanceiroPanel() {
         sessão do browser.
       </div>
 
-      <p className="max-w-3xl text-sm text-white/50">
-        Para operar <strong className="text-white/75">custódia OLEXP real</strong> (posições no reducer) continua a usar
-        a secção &quot;Sessão local&quot; mais abaixo ou o separador <strong className="text-white/75">Sessão local</strong> no
-        menu.
-      </p>
-
       <div className="flex flex-wrap gap-2">
         {subNav('visao', 'Visão geral', Banknote)}
         {subNav('depositos_saques', 'Depósitos & saques', Landmark)}
-        {subNav('olexp', 'Custódia OLEXP', Vault)}
         {subNav('extrato', 'Extrato & filtros', Filter)}
         {subNav('creditar', 'Creditar BRO', Wallet)}
       </div>
@@ -500,27 +403,7 @@ export function AdminFinanceiroPanel() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-4">
-          <div className="flex items-center gap-2 text-violet-200">
-            <Lock className="h-4 w-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">OLEXP trancado (Σ users)</span>
-          </div>
-          <p className="mt-2 font-display text-lg font-black text-white">
-            {formatBroFromCents(ag.sumOlexpLockedCents)}
-          </p>
-          <p className="text-[10px] text-white/40">
-            Yield acc. Σ {formatBroFromCents(ag.sumOlexpYieldAccruedCents)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
-          <div className="flex items-center gap-2 text-amber-200">
-            <PiggyBank className="h-4 w-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">GAT (contagem)</span>
-          </div>
-          <p className="mt-2 font-display text-lg font-black text-white">{ag.sumGatPositions} posições</p>
-          <p className="text-[10px] text-white/40">Agregado por utilizador (MVP)</p>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-4">
           <div className="flex items-center gap-2 text-cyan-200">
             <Landmark className="h-4 w-4" />
@@ -617,30 +500,10 @@ export function AdminFinanceiroPanel() {
                 ledger da <em>plataforma</em> e ajusta tesouraria ou o utilizador escolhido.
               </li>
               <li>
-                <strong className="text-white/85">Custódia OLEXP:</strong> visão agregada por utilizador na tabela em
-                Custódia; pormenor de posições no cliente real continua na sessão local.
-              </li>
-              <li>
                 <strong className="text-white/85">Próximo passo backend:</strong> substituir{' '}
                 <code className="text-neon-yellow/80">olefoot-admin-platform-v1</code> por API e sincronizar com KYC/PSP.
               </li>
             </ul>
-          </section>
-
-          <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-widest text-neon-yellow/90">
-              Planos OLEXP (constantes)
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {OLEXP_PLANS.map((p) => (
-                <span
-                  key={p.id}
-                  className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] text-white/70"
-                >
-                  {p.label}
-                </span>
-              ))}
-            </div>
           </section>
         </div>
       )}
@@ -899,362 +762,6 @@ export function AdminFinanceiroPanel() {
         </div>
       )}
 
-      {sub === 'olexp' && (
-        <div className="space-y-4">
-          <div className="rounded-xl border border-violet-500/25 bg-violet-950/20 p-4 text-sm text-white/70">
-            <h3 className="mb-2 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest text-violet-200">
-              <Lock className="h-4 w-4" />
-              Regras operacionais OLEXP
-            </h3>
-            <ul className="list-inside list-disc space-y-1 text-xs text-white/60">
-              <li>
-                O <strong className="text-white/80">yield</strong> é creditado <strong className="text-white/80">diariamente</strong>{' '}
-                (dias úteis, após 24h da adesão) na lógica da sessão — usar &quot;Accrual na sessão&quot; abaixo para simular o job (
-                UTC {String(DAILY_ACCRUE_HOUR).padStart(2, '0')}:{String(DAILY_ACCRUE_MINUTE).padStart(2, '0')}).
-              </li>
-              <li>
-                O utilizador pode <strong className="text-white/80">SWAP OLEXP → SPOT</strong> (antecipado) ou resgatar no vencimento; o
-                yield já creditado permanece no SPOT.
-              </li>
-              <li>
-                <strong className="text-white/80">Mínimo SWAP OLEXP → SPOT:</strong>{' '}
-                {OLEXP_SWAP_OLEXP_TO_SPOT_MIN_BRO_CENTS / 100} BRO de principal por posição (produto).
-              </li>
-            </ul>
-          </div>
-
-          <section className="rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-4">
-            <h3 className="mb-2 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest text-cyan-200">
-              <CalendarRange className="h-4 w-4" />
-              Previsão de vencimentos (principal a liquidar)
-            </h3>
-            <p className="mb-3 text-xs text-white/45">
-              Referência <span className="font-mono text-white/60">{forecastToday}</span> — agrupa posições{' '}
-              <strong className="text-white/70">activas</strong> e <strong className="text-white/70">vencidas não resgatadas</strong> por
-              mês de fim de prazo. Estimativas de yield restante usam a mesma taxa diária do plano (ordem de grandeza).
-            </p>
-            {maturityBuckets.length === 0 ? (
-              <p className="text-sm text-white/35">Sem vencimentos futuros na lista actual.</p>
-            ) : (
-              <div className="ole-scroll-x">
-                <table className="w-full min-w-[400px] text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
-                      <th className="py-2 pr-2">Mês (vencimento)</th>
-                      <th className="py-2 pr-2">Posições</th>
-                      <th className="py-2">Σ principal (BRO)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {maturityBuckets.map((b) => (
-                      <tr key={b.monthKey} className="border-b border-white/5">
-                        <td className="py-2 pr-2 font-medium text-white/85">{b.label}</td>
-                        <td className="py-2 pr-2 text-white/55">{b.positionCount}</td>
-                        <td className="py-2 font-mono text-cyan-200">{formatBroFromCents(b.principalCents)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
-            <h3 className="mb-2 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest text-violet-200">
-              <TrendingUp className="h-4 w-4" />
-              Posições de custódia (detalhe)
-            </h3>
-            <p className="mb-3 text-xs text-white/45">
-              Cada linha é uma custódia na visão plataforma. <strong className="text-white/70">Aguarda activação</strong> não entra no
-              saldo trancado até confirmares. Importar sessão local sincroniza o utilizador <code className="text-neon-yellow/80">save-local</code>.
-            </p>
-            <div className="ole-scroll-x">
-              <table className="w-full min-w-[960px] text-left text-[11px]">
-                <thead>
-                  <tr className="border-b border-white/10 text-[9px] uppercase text-white/40">
-                    <th className="px-2 py-2">Cliente</th>
-                    <th className="px-2 py-2">Principal</th>
-                    <th className="px-2 py-2">Plano</th>
-                    <th className="px-2 py-2">Estado custódia</th>
-                    <th className="px-2 py-2">Vencimento</th>
-                    <th className="px-2 py-2">Dias</th>
-                    <th className="px-2 py-2">Yield acc.</th>
-                    <th className="px-2 py-2">Est. yield rest.</th>
-                    <th className="px-2 py-2">Pag. principal</th>
-                    <th className="px-2 py-2">Acções</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {olexpSorted.map((p) => {
-                    const estRem = estimateRemainingYieldCents(p, forecastToday);
-                    const dLeft = daysUntilEnd(p, forecastToday);
-                    const payPr = forecastPrincipalPayoutCents(p);
-                    return (
-                      <tr key={p.id} className="border-b border-white/5">
-                        <td className="px-2 py-2 text-white/85">
-                          {resolveFiatTargetLabel(p.userId, userLabelMap)}
-                          <span className="block font-mono text-[9px] text-white/30">{p.id.slice(0, 14)}…</span>
-                        </td>
-                        <td className="px-2 py-2 font-mono text-neon-yellow">{formatBroFromCents(p.principalCents)}</td>
-                        <td className="px-2 py-2 text-white/70">{olexpPlanLabel(p.planId)}</td>
-                        <td className="px-2 py-2">
-                          <span
-                            className={cn(
-                              'rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase',
-                              custodyStatusBadge(p.status),
-                            )}
-                          >
-                            {custodyStatusLabel(p.status)}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2 font-mono text-white/55">{p.status === 'pending_activation' ? '—' : p.endDate}</td>
-                        <td className="px-2 py-2 text-white/50">{dLeft == null ? '—' : `${dLeft}d`}</td>
-                        <td className="px-2 py-2 font-mono">{formatBroFromCents(p.yieldAccruedCents)}</td>
-                        <td className="px-2 py-2 font-mono text-white/55">
-                          {estRem == null ? '—' : formatBroFromCents(estRem)}
-                        </td>
-                        <td className="px-2 py-2 font-mono text-cyan-200/90">
-                          {payPr > 0 ? formatBroFromCents(payPr) : '—'}
-                        </td>
-                        <td className="px-2 py-2">
-                          {p.status === 'pending_activation' ? (
-                            <div className="flex flex-wrap gap-1">
-                              <button
-                                type="button"
-                                onClick={() => platformDispatch({ type: 'ACTIVATE_OLEXP_CUSTODY', positionId: p.id })}
-                                className="rounded bg-neon-yellow px-2 py-1 text-[9px] font-black uppercase text-black hover:bg-white"
-                              >
-                                Activar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (window.confirm('Rejeitar e remover este pedido de custódia?')) {
-                                    platformDispatch({ type: 'REJECT_OLEXP_CUSTODY', positionId: p.id });
-                                  }
-                                }}
-                                className="rounded border border-white/20 px-2 py-1 text-[9px] font-bold uppercase text-white/70 hover:bg-white/10"
-                              >
-                                Rejeitar
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-white/25">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {olexpSorted.length === 0 && (
-                <p className="p-6 text-center text-sm text-white/40">Sem posições na plataforma. Importa a sessão ou regista um pedido.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <h3 className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-white/70">
-              Novo pedido (pendente de activação)
-            </h3>
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="text-[10px] font-bold uppercase text-white/40">
-                Utilizador
-                <select
-                  value={custodyUserId || platform.users[0]?.id || ''}
-                  onChange={(e) => setCustodyUserId(e.target.value)}
-                  className="mt-1 block min-w-[12rem] rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
-                >
-                  {(Array.isArray(platform.users) ? platform.users : []).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.displayName} — {u.clubShort}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[10px] font-bold uppercase text-white/40">
-                Plano
-                <select
-                  value={custodyPlanId}
-                  onChange={(e) => setCustodyPlanId(e.target.value as OlexpPlanId)}
-                  className="mt-1 block rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
-                >
-                  {OLEXP_PLANS.map((pl) => (
-                    <option key={pl.id} value={pl.id}>
-                      {pl.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[10px] font-bold uppercase text-white/40">
-                Principal (BRO)
-                <input
-                  value={custodyBro}
-                  onChange={(e) => setCustodyBro(e.target.value)}
-                  placeholder={`mín. ${custodyPlanMeta.minBroCents / 100} BRO`}
-                  className="mt-1 block w-32 rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
-                />
-              </label>
-              <label className="min-w-[8rem] flex-1 text-[10px] font-bold uppercase text-white/40">
-                Nota
-                <input
-                  value={custodyNote}
-                  onChange={(e) => setCustodyNote(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={registerCustodyPending}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-xs font-black uppercase text-white hover:bg-violet-500"
-              >
-                Registar pendente
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
-            <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-widest text-violet-200">
-              Resumo por utilizador
-            </h3>
-            <div className="ole-scroll-x">
-              <table className="w-full min-w-[640px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
-                    <th className="py-2 pr-2">Utilizador</th>
-                    <th className="py-2 pr-2">Principal</th>
-                    <th className="py-2 pr-2">Yield acc.</th>
-                    <th className="py-2">Conta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(Array.isArray(platform.users) ? platform.users : []).map((u) => (
-                    <tr key={u.id} className="border-b border-white/5">
-                      <td className="py-2 pr-2 text-white/85">
-                        {u.displayName}
-                        <span className="block text-[10px] text-white/35">{u.clubShort}</span>
-                      </td>
-                      <td className="py-2 pr-2 font-mono text-neon-yellow">
-                        {formatBroFromCents(u.olexpPrincipalLockedCents)}
-                      </td>
-                      <td className="py-2 pr-2 font-mono">{formatBroFromCents(u.olexpYieldAccruedCents)}</td>
-                      <td className="py-2 uppercase text-white/50">{u.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <div className="rounded-xl border border-dashed border-white/20 bg-black/30 p-4">
-            <h3 className="mb-3 font-display text-xs font-bold uppercase tracking-widest text-white/60">
-              Sessão local — operações técnicas
-            </h3>
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-neon-yellow" />
-                <span className="text-sm text-white/80">KYC OLEXP</span>
-                <span
-                  className={cn(
-                    'rounded px-2 py-0.5 text-[10px] font-bold uppercase',
-                    wallet.kycOlexpDone ? 'bg-neon-green/20 text-neon-green' : 'bg-red-500/20 text-red-300',
-                  )}
-                >
-                  {wallet.kycOlexpDone ? 'OK' : 'Pendente'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => gameDispatch({ type: 'ADMIN_SET_WALLET_KYC', kycOlexpDone: true })}
-                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold uppercase text-white hover:bg-white/20"
-              >
-                Forçar KYC
-              </button>
-              <button
-                type="button"
-                onClick={() => gameDispatch({ type: 'ADMIN_SET_WALLET_KYC', kycOlexpDone: false })}
-                className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-bold uppercase text-white/60 hover:bg-white/10"
-              >
-                Repor pendente
-              </button>
-            </div>
-
-            <div className="mb-4 flex flex-wrap items-end gap-3">
-              <label className="text-[10px] font-bold uppercase text-white/40">
-                Data accrual
-                <input
-                  type="date"
-                  value={accrualDate}
-                  onChange={(e) => setAccrualDate(e.target.value)}
-                  className="mt-1 block rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-sm text-white"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => gameDispatch({ type: 'WALLET_ACCRUE_DAILY', dateIso: accrualDate })}
-                className="flex items-center gap-2 rounded-lg bg-neon-yellow px-4 py-2 text-xs font-black uppercase text-black hover:bg-white"
-              >
-                <CalendarClock className="h-4 w-4" />
-                Accrual na sessão
-              </button>
-              <span className="text-[10px] text-white/35">
-                UTC {String(DAILY_ACCRUE_HOUR).padStart(2, '0')}:{String(DAILY_ACCRUE_MINUTE).padStart(2, '0')} — job
-                referência
-              </span>
-            </div>
-
-            <div className="ole-scroll-x rounded-lg border border-white/10">
-              <table className="w-full min-w-[640px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 text-[10px] uppercase text-white/40">
-                    <th className="px-2 py-2">Plano</th>
-                    <th className="px-2 py-2">Principal</th>
-                    <th className="px-2 py-2">Yield acc.</th>
-                    <th className="px-2 py-2">Estado</th>
-                    <th className="px-2 py-2">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {wallet.olexpPositions.map((p) => (
-                    <tr key={p.id} className="border-b border-white/5">
-                      <td className="px-2 py-2 text-white/80">{olexpPlanLabel(p.planId)}</td>
-                      <td className="px-2 py-2 font-mono text-neon-yellow">{formatBroFromCents(p.principalCents)}</td>
-                      <td className="px-2 py-2 font-mono">{formatBroFromCents(p.yieldAccruedCents)}</td>
-                      <td className="px-2 py-2 uppercase">{p.status}</td>
-                      <td className="px-2 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          {p.status === 'matured' && (
-                            <button
-                              type="button"
-                              onClick={() => gameDispatch({ type: 'WALLET_CLAIM_OLEXP', positionId: p.id })}
-                              className="rounded bg-violet-600 px-2 py-1 text-[10px] font-bold uppercase text-white hover:bg-violet-500"
-                            >
-                              Resgatar
-                            </button>
-                          )}
-                          {p.status === 'active' && (
-                            <button
-                              type="button"
-                              onClick={() => gameDispatch({ type: 'WALLET_OLEXP_EARLY_TO_SPOT', positionId: p.id })}
-                              className="rounded border border-white/20 px-2 py-1 text-[10px] font-bold uppercase text-white/80 hover:bg-white/10"
-                            >
-                              Early
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {wallet.olexpPositions.length === 0 && (
-                <p className="p-6 text-center text-sm text-white/40">Sem posições na sessão local.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {sub === 'extrato' && (
         <div className="space-y-6">
           <div>
@@ -1351,8 +858,6 @@ export function AdminFinanceiroPanel() {
                 <option value="">Todas moedas</option>
                 <option value="BRO">BRO</option>
                 <option value="EXP">EXP</option>
-                <option value="OLEXP">OLEXP</option>
-                <option value="GAT">GAT</option>
               </select>
               <button
                 type="button"
@@ -1387,7 +892,7 @@ export function AdminFinanceiroPanel() {
                       </td>
                       <td className="px-2 py-1.5 font-mono">{e.currency}</td>
                       <td className={cn('px-2 py-1.5 font-mono', e.amount < 0 ? 'text-rose-300' : 'text-emerald-300')}>
-                        {e.currency === 'BRO' || e.currency === 'GAT' ? (
+                        {e.currency === 'BRO' ? (
                           <>
                             {e.amount > 0 ? '+' : ''}
                             {formatBroFromCents(e.amount)}

@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Users, Copy, CheckCircle, Link2, User, Send, Trophy } from 'lucide-react';
+import { ArrowLeft, Users, Copy, CheckCircle, Link2, User, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { useGameStore } from '@/game/store';
 
 import { referralSummary } from '@/wallet/referral';
 import { queryLedger } from '@/wallet/ledger';
 import { normalizeWalletState } from '@/wallet/initial';
-import { inviteLinkForCode, normalizeReferralCode } from '@/wallet/referralCode';
+import { inviteLinkForCode } from '@/wallet/referralCode';
 import { fetchMyReferralCode, fetchMyReferrals, type ReferredProfile } from '@/supabase/referrals';
-import { PeerBroSendModal } from './PeerBroSendModal';
 
 function formatRelative(iso: string): string {
   try {
@@ -30,7 +29,6 @@ function formatLedgerDate(iso: string): string {
 
 export function ReferralTab() {
   const navigate = useNavigate();
-  const dispatch = useGameDispatch();
   const finance = useGameStore((s) => s.finance);
   const wallet = useMemo(
     () => normalizeWalletState(finance.wallet ?? undefined),
@@ -39,7 +37,6 @@ export function ReferralTab() {
 
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [peerOpen, setPeerOpen] = useState(false);
 
   const summary = referralSummary(wallet);
   // Servidor é autoritativo. Cache local (wallet.myReferralCode) usado só
@@ -67,11 +64,6 @@ export function ReferralTab() {
 
   const oleEntries = queryLedger(wallet, { type: 'REFERRAL_OLE_GAME' });
   const nftEntries = queryLedger(wallet, { type: 'REFERRAL_NFT' });
-  const gatRefEntries = queryLedger(wallet, { type: 'REFERRAL_GAT_EXP' }).filter((e) => {
-    const my = wallet.myReferralCode ? normalizeReferralCode(wallet.myReferralCode) : null;
-    const uid = normalizeReferralCode(e.userId) || e.userId;
-    return my && uid === my;
-  });
   const transferOut = queryLedger(wallet, { type: 'TRANSFER' }).filter(
     (e) => e.amount < 0 && e.source === 'peer_by_referral_code',
   );
@@ -92,7 +84,6 @@ export function ReferralTab() {
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-6 pb-8">
-      <PeerBroSendModal open={peerOpen} onClose={() => setPeerOpen(false)} myReferralCode={wallet.myReferralCode} />
 
       <button
         type="button"
@@ -145,14 +136,6 @@ export function ReferralTab() {
             </button>
           </div>
         ) : null}
-        <button
-          type="button"
-          onClick={() => setPeerOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 px-4 text-sm font-medium text-white hover:bg-white/10 transition-colors"
-        >
-          <Send className="w-4 h-4 text-neon-yellow" />
-          Enviar BRO para um código OLEFOOT
-        </button>
       </motion.div>
 
       {/*
@@ -223,7 +206,6 @@ export function ReferralTab() {
         <div className="grid grid-cols-3 gap-3 pt-3 border-t border-white/5">
           {[1, 2, 3].map((level) => {
             const broEarn = summary.byLevelBroCents[level] ?? 0;
-            const gatExp = summary.gatByLevelExp[level] ?? 0;
             return (
               <div
                 key={level}
@@ -233,11 +215,6 @@ export function ReferralTab() {
                 <div className="text-[10px] text-blue-300">
                   +{(broEarn / 100).toFixed(2)} BRO
                 </div>
-                {gatExp > 0 ? (
-                  <div className="text-[10px] text-violet-300 mt-0.5">+{gatExp.toLocaleString('pt-BR')} EXP</div>
-                ) : (
-                  <div className="text-[10px] text-gray-600 mt-0.5">—</div>
-                )}
               </div>
             );
           })}
@@ -313,31 +290,6 @@ export function ReferralTab() {
         )}
       </div>
 
-      {/* GAT referral EXP */}
-      <div className="space-y-3">
-        <h3 className="font-bold flex items-center gap-2 text-sm">
-          <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />
-          Referral GAT (EXP)
-        </h3>
-        {gatRefEntries.length === 0 ? (
-          <p className="text-xs text-gray-500">
-            Sem créditos GAT no teu código ainda. Quando um indicado na tua rede tiver treasury ativo, 1% da base (por
-            nível) credita em EXP no teu saldo.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {gatRefEntries.slice(-10).reverse().map((e) => (
-              <div key={e.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 text-sm">
-                <div>
-                  <div className="text-gray-300">{e.source}</div>
-                  <div className="text-[10px] text-gray-500">{formatLedgerDate(e.createdAt)}</div>
-                </div>
-                <div className="font-bold text-violet-300">+{e.amount.toLocaleString('pt-BR')} EXP</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

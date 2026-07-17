@@ -1,9 +1,15 @@
 /**
- * 2FA para operações financeiras sensíveis.
- * Usa TOTP (Time-based One-Time Password) compatível com Google Authenticator.
+ * 2FA — geração de segredo TOTP e códigos de backup.
+ *
+ * Consumidor real: `src/admin/useAdmin2FA.ts` (setup de 2FA do admin), que usa
+ * `generateTotpSecret` e `generateBackupCodes`.
+ *
+ * ⚠️ NÃO EXISTE VALIDAÇÃO DE TOTP NESTE PROJETO. `validateTotpCode` foi removido
+ * em 2026-07-16: era `/^\d{6}$/.test(code)` — aceitava QUALQUER 6 dígitos. Era
+ * usado só pelo `useSecureWallet`, que nunca foi montado. Se um dia alguém for
+ * checar código TOTP de verdade, use uma lib (otpauth/speakeasy) e valide no
+ * SERVIDOR — não reintroduza validação no cliente.
  */
-
-import type { WalletState } from './types';
 
 export interface TwoFactorConfig {
   enabled: boolean;
@@ -12,99 +18,34 @@ export interface TwoFactorConfig {
   enabledAt?: string;
 }
 
-export interface TwoFactorChallenge {
-  required: boolean;
-  reason?: string;
+/** Bytes aleatórios criptográficos. Math.random() é previsível e não serve p/ segredo. */
+function randomBytes(n: number): Uint8Array {
+  const buf = new Uint8Array(n);
+  crypto.getRandomValues(buf);
+  return buf;
 }
 
-/**
- * Operações que requerem 2FA quando habilitado.
- */
-export type SensitiveOperation =
-  | 'WITHDRAW_BRO'
-  | 'SWAP_OLEXP_TO_SPOT'
-  | 'TRANSFER_TO_USER'
-  | 'CHANGE_KYC'
-  | 'DISABLE_2FA';
-
-/**
- * Verifica se uma operação requer 2FA.
- */
-export function requires2FA(
-  operation: SensitiveOperation,
-  twoFactorConfig: TwoFactorConfig,
-  amountCents?: number,
-): TwoFactorChallenge {
-  if (!twoFactorConfig.enabled) {
-    return { required: false };
-  }
-
-  // Sempre requer 2FA para estas operações
-  const alwaysRequire: SensitiveOperation[] = ['CHANGE_KYC', 'DISABLE_2FA'];
-  if (alwaysRequire.includes(operation)) {
-    return { required: true, reason: 'Operação sensível de segurança' };
-  }
-
-  // Requer 2FA para valores altos (> 1000 BRO = 100k centavos)
-  if (amountCents && amountCents > 100_000) {
-    return { required: true, reason: 'Valor alto (> 1000 BRO)' };
-  }
-
-  // Requer 2FA para todas as operações financeiras quando habilitado
-  return { required: true, reason: '2FA habilitado' };
-}
-
-/**
- * Gera um secret TOTP (base32) para configuração inicial.
- * Em produção, usar biblioteca crypto segura (ex: otpauth, speakeasy).
- */
+/** Gera um secret TOTP (base32, 32 chars). */
 export function generateTotpSecret(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; // base32
+  const bytes = randomBytes(32);
   let secret = '';
   for (let i = 0; i < 32; i++) {
-    secret += chars[Math.floor(Math.random() * chars.length)];
+    // 32 chars = 5 bits; & 31 mapeia sem viés (256 % 32 === 0).
+    secret += chars[bytes[i]! & 31];
   }
   return secret;
 }
 
-/**
- * Gera códigos de backup (8 dígitos cada, 10 códigos).
- */
+/** Gera 10 códigos de backup de 8 dígitos. */
 export function generateBackupCodes(): string[] {
   const codes: string[] = [];
+  const bytes = new Uint32Array(10);
+  crypto.getRandomValues(bytes);
   for (let i = 0; i < 10; i++) {
-    const code = Math.floor(10000000 + Math.random() * 90000000).toString();
-    codes.push(code);
+    codes.push((10_000_000 + (bytes[i]! % 90_000_000)).toString());
   }
   return codes;
-}
-
-/**
- * Valida um código TOTP (6 dígitos).
- * Em produção, implementar verificação real com biblioteca TOTP.
- * Esta é uma validação mock para estrutura.
- */
-export function validateTotpCode(secret: string, code: string): boolean {
-  // TODO: Implementar verificação TOTP real com biblioteca (speakeasy, otpauth)
-  // Por agora, aceita qualquer código de 6 dígitos para não bloquear dev
-  return /^\d{6}$/.test(code);
-}
-
-/**
- * Valida um código de backup e o marca como usado.
- */
-export function validateBackupCode(
-  backupCodes: string[],
-  code: string,
-): { valid: boolean; remainingCodes: string[] } {
-  const idx = backupCodes.indexOf(code);
-  if (idx === -1) {
-    return { valid: false, remainingCodes: backupCodes };
-  }
-
-  // Remove o código usado
-  const remainingCodes = backupCodes.filter((c) => c !== code);
-  return { valid: true, remainingCodes };
 }
 
 /**
@@ -124,27 +65,4 @@ export function enable2FA(): {
   const qrCodeUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
 
   return { secret, backupCodes, qrCodeUrl };
-}
-
-/**
- * Desabilita 2FA (requer código válido).
- */
-export function disable2FA(
-  twoFactorConfig: TwoFactorConfig,
-  code: string,
-): { ok: boolean; error?: string } {
-  if (!twoFactorConfig.enabled || !twoFactorConfig.secret) {
-    return { ok: false, error: '2FA não está habilitado.' };
-  }
-
-  const validTotp = validateTotpCode(twoFactorConfig.secret, code);
-  const backupResult = twoFactorConfig.backupCodes
-    ? validateBackupCode(twoFactorConfig.backupCodes, code)
-    : { valid: false, remainingCodes: [] };
-
-  if (!validTotp && !backupResult.valid) {
-    return { ok: false, error: 'Código inválido.' };
-  }
-
-  return { ok: true };
 }

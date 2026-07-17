@@ -3,32 +3,7 @@
  * Persistido em localStorage separado do save do jogo (`olefoot-admin-platform-v1`).
  */
 
-import type { OlexpPlanId } from '@/wallet/types';
-
 export type AdminPlatformUserStatus = 'active' | 'suspended' | 'banned';
-
-/** Custódia OLEXP ao nível plataforma (visão operacional / backend futuro). */
-export type PlatformOlexpCustodyStatus =
-  | 'pending_activation'
-  | 'active'
-  | 'matured'
-  | 'claimed';
-
-export interface PlatformOlexpPosition {
-  id: string;
-  userId: string;
-  planId: OlexpPlanId;
-  principalCents: number;
-  /** YYYY-MM-DD — após activação, alinhado ao motor de yield */
-  startDate: string;
-  endDate: string;
-  yieldAccruedCents: number;
-  status: PlatformOlexpCustodyStatus;
-  createdAt: string;
-  activatedAt?: string;
-  lastAccrualDate?: string;
-  note?: string;
-}
 
 export interface AdminPlatformUser {
   id: string;
@@ -45,9 +20,6 @@ export interface AdminPlatformUser {
   spotExpBalance: number;
   /** EXP ranking (ole) */
   ole: number;
-  olexpPrincipalLockedCents: number;
-  olexpYieldAccruedCents: number;
-  gatPositionsCount: number;
   ledgerEntriesCount: number;
   createdAtIso: string;
   updatedAtIso: string;
@@ -140,8 +112,6 @@ export interface AdminPlatformState {
   users: AdminPlatformUser[];
   /** Movimentos administrativos ao nível plataforma (MVP) */
   platformLedger: PlatformLedgerLine[];
-  /** Posições OLEXP (detalhe por cliente; agregados em `users` recalculam quando há linhas). */
-  platformOlexpPositions: PlatformOlexpPosition[];
   /** Histórico de compras (loja / transferências) para growth e faturamento próprio da plataforma */
   growthCommerceLines: GrowthCommerceLine[];
   /** Série diária para CTA, impressões e sinais de aquisição */
@@ -162,7 +132,6 @@ export function emptyPlatformState(): AdminPlatformState {
     platformEscrowBroCents: 0,
     users: [],
     platformLedger: [],
-    platformOlexpPositions: [],
     growthCommerceLines: [],
     growthDailyPulse: [],
     growthCashflowExpenses: [],
