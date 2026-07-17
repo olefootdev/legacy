@@ -47,6 +47,8 @@ import {
 import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
 import { portraitFocusStyle } from '@/supabase/legacyPlayers';
 import { PortraitFocusEditor } from '@/admin/components/PortraitFocusEditor';
+import { GACHA_POSITIONS, positionLabelPt } from '@/entities/positionLabels';
+import { calibrateLegendAttrs, weightedOverall, keyAttrsForPosition } from '@/admin/legendAttrCalibration';
 
 const PHASE_LABEL: Record<LegendPhase, string> = {
   revelacao: 'Revelação',
@@ -750,6 +752,42 @@ function PriceField({
   );
 }
 
+const ATTR_PT: Record<string, string> = {
+  passe: 'Passe', marcacao: 'Marcação', velocidade: 'Velocidade', drible: 'Drible',
+  finalizacao: 'Finalização', fisico: 'Físico', tatico: 'Tático', mentalidade: 'Mentalidade',
+  confianca: 'Confiança', fairPlay: 'Fair Play',
+};
+
+/** Barras dos 10 atributos, com ★ nos que definem a posição. Só leitura. */
+function AttrBars({ attrs, pos }: { attrs: Record<string, number>; pos: string }) {
+  const key = new Set<string>(keyAttrsForPosition(pos));
+  const rows = ATTR_KEYS.slice().sort((a, b) => {
+    const ka = key.has(a) ? 1 : 0;
+    const kb = key.has(b) ? 1 : 0;
+    if (ka !== kb) return kb - ka;
+    return (attrs[b] ?? 0) - (attrs[a] ?? 0);
+  });
+  return (
+    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+      {rows.map((k) => {
+        const v = attrs[k] ?? 0;
+        const isKey = key.has(k);
+        return (
+          <div key={k} className="flex items-center gap-2">
+            <span className={`w-24 shrink-0 text-[10px] ${isKey ? 'font-bold text-neon-yellow' : 'text-white/50'}`}>
+              {isKey ? '★ ' : ''}{ATTR_PT[k] ?? k}
+            </span>
+            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-black/50">
+              <div className={`h-full rounded-full ${isKey ? 'bg-neon-yellow' : 'bg-white/30'}`} style={{ width: `${Math.max(0, Math.min(100, v))}%` }} />
+            </div>
+            <span className="w-6 shrink-0 text-right text-[11px] font-bold tabular-nums text-white/80">{v}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PhaseEditor({
   phase, slug, portraitUrl, onPortraitUploaded, portraitFocus, onPortraitFocusChange,
   expanded, onToggle, onChange, onChangeEntity, onChangeAttr,
@@ -807,12 +845,21 @@ function PhaseEditor({
                 onChange={(v) => onChangeEntity({ name: v })}
                 placeholder="Ex: Marcelo Gonçalves Costa Lopes"
               />
-              <LabeledInput
-                label="Posição"
-                value={phase.entity.pos}
-                onChange={(v) => onChangeEntity({ pos: v.toUpperCase() })}
-                placeholder="ZAG"
-              />
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="font-semibold uppercase tracking-wider text-white/60">Posição</span>
+                <select
+                  value={phase.entity.pos}
+                  onChange={(e) => onChangeEntity({ pos: e.target.value })}
+                  className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+                >
+                  {!GACHA_POSITIONS.includes(phase.entity.pos as (typeof GACHA_POSITIONS)[number]) && (
+                    <option value={phase.entity.pos}>{phase.entity.pos || '—'}</option>
+                  )}
+                  {GACHA_POSITIONS.map((p) => (
+                    <option key={p} value={p}>{positionLabelPt(p)} ({p})</option>
+                  ))}
+                </select>
+              </label>
               <LabeledNumber
                 label="Idade na fase"
                 value={phase.entity.age ?? 0}
@@ -859,30 +906,56 @@ function PhaseEditor({
 
           {/* Atributos */}
           <fieldset className="space-y-2">
-            <legend className="text-xs font-semibold uppercase tracking-wider text-white/60">
-              Atributos (0-99) · OVR ≈ {Math.round(
-                ATTR_KEYS.reduce((s, k) => s + (phase.entity.attrs[k] ?? 0), 0) / 10,
-              )}
+            <legend className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/60">
+              Atributos (0-99)
+              {/* OVR PONDERADO — o mesmo que o game mostra (era média simples aqui). */}
+              <span className="rounded bg-neon-yellow/15 px-2 py-0.5 font-display text-sm font-black text-neon-yellow tabular-nums">
+                OVR {weightedOverall(phase.entity.attrs)}
+              </span>
             </legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {ATTR_KEYS.map((k) => (
-                <LabeledNumber
-                  key={k}
-                  label={k}
-                  value={phase.entity.attrs[k] ?? 0}
-                  onChange={(v) => onChangeAttr(k, Math.max(0, Math.min(99, v)))}
-                  min={0}
-                  max={99}
-                />
-              ))}
+
+            {/* Calibrar: OVR alvo → distribui os 10 attrs pela posição + fase. */}
+            <div className="flex flex-wrap items-end gap-2 rounded border border-cyan-400/25 bg-cyan-500/[0.05] p-2">
+              <LabeledNumber
+                label="OVR alvo"
+                value={phase.entity.mintOverall ?? 70}
+                onChange={(v) => onChangeEntity({ mintOverall: Math.max(40, Math.min(99, v)) })}
+                min={40}
+                max={99}
+              />
+              <button
+                type="button"
+                onClick={() => onChangeEntity({
+                  attrs: calibrateLegendAttrs(phase.entity.pos, phase.phase, phase.entity.mintOverall ?? 70),
+                })}
+                className="inline-flex items-center gap-1.5 rounded bg-cyan-500 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-black hover:bg-cyan-400"
+                title="Distribui os atributos pela posição e fase de vida pra bater o OVR alvo"
+              >
+                <RefreshCw size={13} /> Calibrar ({positionLabelPt(phase.entity.pos) || phase.entity.pos} · {PHASE_LABEL[phase.phase]})
+              </button>
+              <span className="text-[10px] text-white/40">
+                Perfil da posição + curva jovem→maduro. Depois dá pra afinar à mão.
+              </span>
             </div>
-            <LabeledNumber
-              label="Mint OVR (cap natural = mint + 15)"
-              value={phase.entity.mintOverall ?? 0}
-              onChange={(v) => onChangeEntity({ mintOverall: v })}
-              min={35}
-              max={99}
-            />
+
+            {/* Barras: * = atributo-chave da posição (o que define o jogador). */}
+            <AttrBars attrs={phase.entity.attrs} pos={phase.entity.pos} />
+
+            <details className="text-xs">
+              <summary className="cursor-pointer text-white/45 hover:text-white/70">Editar números à mão</summary>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {ATTR_KEYS.map((k) => (
+                  <LabeledNumber
+                    key={k}
+                    label={k}
+                    value={phase.entity.attrs[k] ?? 0}
+                    onChange={(v) => onChangeAttr(k, Math.max(0, Math.min(99, v)))}
+                    min={0}
+                    max={99}
+                  />
+                ))}
+              </div>
+            </details>
           </fieldset>
 
           {/* Coleção & preço */}
