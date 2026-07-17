@@ -17,12 +17,9 @@ import { createInitialStaffState } from '@/systems/staff';
 import { migrateTacticalStyle } from '@/tactics/playingStyle';
 import { FORMATION_BASES } from '@/match-engine/formations/catalog';
 import type { FormationSchemeId } from '@/match-engine/types';
-import type { SocialState } from '@/social/types';
 import { pickHomeCaptainPlayerId } from '@/match/impactRules';
 import { clampPlayerToEvolutionCap, ensureMintOverall } from '@/entities/playerEvolution';
 import { filterLegacyPlacarFromInbox, hydrateInboxList } from './inboxItem';
-import { createHomeInboxSeedExamples } from './homeInboxSeedExamples';
-import { inboxHasVisibleHomeFeedItem } from './inboxTypes';
 import { mergeSwapKycIntoWallet } from '@/wallet/swapKycStorage';
 import { defaultUserSettings } from '@/settings/defaultUserSettings';
 import { createDefaultAdminLeagues, hydrateAdminLeagues } from '@/match/adminLeagues';
@@ -557,16 +554,14 @@ function hydrateState(raw: OlefootGameState): OlefootGameState {
     adminPrimaryLeagueId,
     leagueSchedule,
     club: clubHydrated,
-    social: hydrateSocial(raw.social),
     userSettings,
     inbox: (() => {
       if (raw.inbox === undefined) return base.inbox;
-      let next = filterLegacyPlacarFromInbox(hydrateInboxList(raw.inbox));
-      const hasDemoSeeds = next.some((i) => i.id.startsWith('demo-'));
-      if (!inboxHasVisibleHomeFeedItem(next) && !hasDemoSeeds) {
-        next = [...createHomeInboxSeedExamples(), ...next].slice(0, 24);
-      }
-      return next;
+      // Sem seed de demo: o manager começa com inbox vazio e só recebe evento
+      // real. O seed antigo (createHomeInboxSeedExamples) já retornava [] desde o
+      // deploy de testes e carregava 16 demos mortas — incluindo o convite fake
+      // do "WOLVES" e deeplinks pra rotas que nem existem mais (/city, /team/*).
+      return filterLegacyPlacarFromInbox(hydrateInboxList(raw.inbox));
     })(),
     uiBanners: hydrateUiBanners((raw as { uiBanners?: unknown }).uiBanners),
     managerProspectMarket,
@@ -614,17 +609,6 @@ function hydratePlayerHealth(
     }
   }
   return out;
-}
-
-function hydrateSocial(raw: SocialState | undefined): SocialState {
-  if (!raw || typeof raw !== 'object') {
-    return { friends: [], incoming: [], outgoing: [] };
-  }
-  return {
-    friends: Array.isArray(raw.friends) ? raw.friends : [],
-    incoming: Array.isArray(raw.incoming) ? raw.incoming : [],
-    outgoing: Array.isArray(raw.outgoing) ? raw.outgoing : [],
-  };
 }
 
 /** Valida e normaliza um objeto save (import direto no reducer). */

@@ -14,7 +14,6 @@ import { createInitialLeagueSeason } from '@/match/leagueSeason';
 import { createDefaultAdminLeagues } from '@/match/adminLeagues';
 import { buildRoundRobinSchedule, createEmptyLeagueScheduleState } from '@/match/leagueSchedule';
 import { createInitialStaffState } from '@/systems/staff';
-import { createInitialSocialState } from '@/social/types';
 import { pickHomeCaptainPlayerId } from '@/match/impactRules';
 import { grantEarnedExp } from '@/systems/economy';
 import { createInitialExpExchangeState } from '@/economy/expExchange';
@@ -109,7 +108,6 @@ export function createInitialGameState(): OlefootGameState {
     clubLogistics: { lastTripKm: 0 },
     structures: createDefaultStructures(),
     memorableTrophyUnlockedIds: [],
-    social: createInitialSocialState(),
     userSettings: { ...defaultUserSettings },
     uiBanners: {},
     managerProspectMarket: createInitialManagerProspectMarket(),

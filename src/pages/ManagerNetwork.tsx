@@ -37,7 +37,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode, normalizeReferralCode } from '@/wallet/referralCode';
@@ -49,6 +49,8 @@ import {
   type ReferredProfile,
   type NetworkStatus,
 } from '@/supabase/referrals';
+import { useFriendships } from '@/social/useFriendships';
+import { FriendSearchBlock } from './manager/FriendSearchBlock';
 import {
   NETWORK_MILESTONES,
   MILESTONE_LEGS_COUNTED,
@@ -132,10 +134,17 @@ function fmtUsd(cents: number): string {
 }
 
 export function ManagerNetwork() {
-  const dispatch = useGameDispatch();
   const navigate = useNavigate();
   const club = useGameStore((s) => s.club);
-  const social = useGameStore((s) => s.social);
+  const friendships = useFriendships();
+  const linkedManagerIds = useMemo(() => {
+    const d = friendships.data;
+    return new Set<string>([
+      ...d.friends.map((f) => f.managerId),
+      ...d.incoming.map((r) => r.managerId),
+      ...d.outgoing.map((r) => r.managerId),
+    ]);
+  }, [friendships.data]);
   const finance = useGameStore((s) => s.finance);
 
   const wallet = useMemo(
@@ -627,8 +636,14 @@ export function ManagerNetwork() {
 
       {/* ── SEÇÕES PRINCIPAIS ────────────────────────────────────── */}
       <section className="space-y-4">
+        <FriendSearchBlock
+          onInvite={friendships.invite}
+          linkedIds={linkedManagerIds}
+          error={friendships.error}
+        />
+
         {/* Solicitações pendentes */}
-        {social.incoming.length > 0 && (
+        {friendships.data.incoming.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -640,7 +655,7 @@ export function ManagerNetwork() {
                 <span>Solicitações</span>
               </div>
             </div>
-            {social.incoming.map((req, idx) => (
+            {friendships.data.incoming.map((req, idx) => (
               <motion.div
                 key={req.id}
                 initial={{ opacity: 0, y: 8 }}
@@ -655,7 +670,7 @@ export function ManagerNetwork() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-display text-sm font-black uppercase tracking-wider text-white mb-1">
-                        {maskName(req.fromClubName, privacy)}
+                        {maskName(req.clubName, privacy)}
                       </h3>
                       <p className="text-xs text-gray-400">
                         Quer entrar na tua rede
@@ -665,14 +680,14 @@ export function ManagerNetwork() {
                   <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'ACCEPT_FRIEND_REQUEST', requestId: req.id })}
+                      onClick={() => void friendships.accept(req.id)}
                       className="bg-neon-green px-4 py-2 rounded-sm font-display text-[10px] font-black uppercase tracking-wider text-black hover:bg-white transition-all hover:scale-[1.02]"
                     >
                       Aceitar
                     </button>
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'DECLINE_FRIEND_REQUEST', requestId: req.id })}
+                      onClick={() => void friendships.decline(req.id)}
                       className="border border-white/20 px-4 py-2 rounded-sm font-display text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
                     >
                       Recusar

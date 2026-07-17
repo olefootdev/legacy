@@ -252,15 +252,9 @@ import {
 } from '@/match/impactLedger';
 import type { FormationSchemeId } from '@/match-engine/types';
 import { queueMatchEvents, finalizeMatch, persistPlayers } from '@/supabase/matchPersistence';
-import type { SocialState } from '@/social/types';
-import { discoverableById } from '@/social/catalog';
 import { makeInboxItem } from './inboxItem';
 import { buildPostMatchStaffInboxItem } from './postMatchStaffInbox';
 import { defaultShopCatalog, findShopItem, normalizeShopCatalog, shopEffectNeedsPlayer } from './shopCatalog';
-
-function socialOf(state: OlefootGameState): SocialState {
-  return state.social ?? { friends: [], incoming: [], outgoing: [] };
-}
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -4414,134 +4408,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ].slice(0, 14),
       };
     }
-    case 'SEND_FRIEND_REQUEST': {
-      const { managerId, clubName } = action;
-      const social = socialOf(state);
-      if (social.friends.some((f) => f.managerId === managerId)) return state;
-      if (social.incoming.some((r) => r.fromManagerId === managerId)) return state;
-      if (social.outgoing.some((o) => o.toManagerId === managerId)) return state;
-
-      const meta = discoverableById(managerId);
-      const autoAccept = meta?.autoAccept ?? false;
-
-      if (autoAccept) {
-        return {
-          ...state,
-          social: {
-            ...social,
-            friends: [
-              ...social.friends,
-              { managerId, clubName, addedAtIso: new Date().toISOString() },
-            ],
-            incoming: social.incoming.filter((r) => r.fromManagerId !== managerId),
-            outgoing: social.outgoing,
-          },
-          inbox: [
-            makeInboxItem(uid(), 'SOCIAL_FRIEND_ACCEPTED', 'CONTA', `${clubName} entrou na tua rede de managers.`, {
-              kind: 'news',
-              deepLink: '/manager#rede-manager',
-            }),
-            ...state.inbox,
-          ].slice(0, 14),
-        };
-      }
-
-      return {
-        ...state,
-        social: {
-          ...social,
-          outgoing: [
-            ...social.outgoing,
-            {
-              id: uid(),
-              toManagerId: managerId,
-              toClubName: clubName,
-              sentAtIso: new Date().toISOString(),
-            },
-          ],
-        },
-        inbox: [
-          makeInboxItem(uid(), 'SOCIAL_INVITE_SENT', 'CONTA', `Pedido de amizade enviado a ${clubName}.`, {
-            kind: 'news',
-            body: 'Serás notificado quando aceitarem.',
-            deepLink: '/manager#rede-manager',
-          }),
-          ...state.inbox,
-        ].slice(0, 14),
-      };
-    }
-    case 'ACCEPT_FRIEND_REQUEST': {
-      const social = socialOf(state);
-      const req = social.incoming.find((r) => r.id === action.requestId);
-      if (!req) return state;
-      const exists = social.friends.some((f) => f.managerId === req.fromManagerId);
-      const nextFriends = exists
-        ? social.friends
-        : [
-            ...social.friends,
-            {
-              managerId: req.fromManagerId,
-              clubName: req.fromClubName,
-              addedAtIso: new Date().toISOString(),
-            },
-          ];
-      const inboxWithout = state.inbox.filter(
-        (i) => !(i.kind === 'friend_invite' && i.friendRequestId === action.requestId),
-      );
-      return {
-        ...state,
-        social: {
-          ...social,
-          friends: nextFriends,
-          incoming: social.incoming.filter((r) => r.id !== action.requestId),
-          outgoing: social.outgoing.filter((o) => o.toManagerId !== req.fromManagerId),
-        },
-        inbox: [
-          makeInboxItem(
-            uid(),
-            'SOCIAL_INVITE_ACCEPTED_NOTICE',
-            'CONTA',
-            `${req.fromClubName} faz agora parte da tua rede.`,
-            { kind: 'news', deepLink: '/manager#rede-manager' },
-          ),
-          ...inboxWithout,
-        ].slice(0, 14),
-      };
-    }
-    case 'DECLINE_FRIEND_REQUEST': {
-      const social = socialOf(state);
-      if (!social.incoming.some((r) => r.id === action.requestId)) return state;
-      return {
-        ...state,
-        social: {
-          ...social,
-          incoming: social.incoming.filter((r) => r.id !== action.requestId),
-        },
-        inbox: state.inbox.filter(
-          (i) => !(i.kind === 'friend_invite' && i.friendRequestId === action.requestId),
-        ),
-      };
-    }
-    case 'CANCEL_OUTGOING_FRIEND_REQUEST': {
-      const social = socialOf(state);
-      return {
-        ...state,
-        social: {
-          ...social,
-          outgoing: social.outgoing.filter((o) => o.id !== action.requestId),
-        },
-      };
-    }
-    case 'REMOVE_SOCIAL_FRIEND': {
-      const social = socialOf(state);
-      return {
-        ...state,
-        social: {
-          ...social,
-          friends: social.friends.filter((f) => f.managerId !== action.managerId),
-        },
-      };
-    }
     case 'DISMISS_INBOX_ITEM': {
       return {
         ...state,
@@ -4687,56 +4553,6 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         deepLink: action.deepLink,
       });
       return { ...state, inbox: [item, ...state.inbox].slice(0, 50) };
-    }
-    case 'ADMIN_SIMULATE_FRIEND_REQUEST': {
-      const social = socialOf(state);
-      const reqId = uid();
-      const invite = makeInboxItem(uid(), 'SOCIAL_FRIEND_INVITE', 'CONTA', `Pedido: ${action.clubName}`, {
-        kind: 'friend_invite',
-        friendRequestId: reqId,
-        deepLink: '/manager',
-      });
-      return {
-        ...state,
-        social: {
-          ...social,
-          incoming: [
-            {
-              id: reqId,
-              fromManagerId: action.managerId,
-              fromClubName: action.clubName,
-              sentAtIso: new Date().toISOString(),
-            },
-            ...social.incoming,
-          ],
-        },
-        inbox: [invite, ...state.inbox].slice(0, 50),
-      };
-    }
-    case 'ADMIN_ADD_FRIEND': {
-      const social = socialOf(state);
-      if (social.friends.some((f) => f.managerId === action.managerId)) return state;
-      return {
-        ...state,
-        social: {
-          ...social,
-          friends: [
-            {
-              managerId: action.managerId,
-              clubName: action.clubName,
-              addedAtIso: new Date().toISOString(),
-            },
-            ...social.friends,
-          ],
-        },
-        inbox: [
-          makeInboxItem(uid(), 'SOCIAL_INVITE_ACCEPTED_NOTICE', 'CONTA', `${action.clubName} adicionado à rede.`, {
-            kind: 'news',
-            deepLink: '/manager#rede-manager',
-          }),
-          ...state.inbox,
-        ].slice(0, 50),
-      };
     }
     case 'ADMIN_SET_LEAGUE_SEASON': {
       return {

@@ -17,7 +17,6 @@ import type { LeagueSeasonState } from '@/match/leagueSeason';
 import type { LeagueScheduleState } from '@/match/leagueSchedule';
 import type { AdminLeagueConfig } from '@/match/adminLeagues';
 import type { FormationSchemeId } from '@/match-engine/types';
-import type { SocialState } from '@/social/types';
 import type { BannerSlotId, UiBannerEntry, UiBannersState } from '@/ui/banners';
 import type {
   ManagerProspectHeritageBrief,
@@ -328,7 +327,6 @@ export interface OlefootGameState {
    */
   memorableTrophyUnlockedIds: string[];
   /** Rede de amigos do manager (convites, lista) — visível só no perfil privado. */
-  social: SocialState;
   /** Preferências de UI e simulação (persistidas com o save). */
   userSettings: UserSettings;
   /** Banners por zona (Admin). */
@@ -729,11 +727,6 @@ export type GameAction =
       currency: 'BRO' | 'EXP';
       prizeAmount: number;
     }
-  | { type: 'SEND_FRIEND_REQUEST'; managerId: string; clubName: string }
-  | { type: 'ACCEPT_FRIEND_REQUEST'; requestId: string }
-  | { type: 'DECLINE_FRIEND_REQUEST'; requestId: string }
-  | { type: 'CANCEL_OUTGOING_FRIEND_REQUEST'; requestId: string }
-  | { type: 'REMOVE_SOCIAL_FRIEND'; managerId: string }
   | { type: 'DISMISS_INBOX_ITEM'; id: string }
   /** Insere item no topo da caixa; substitui item com o mesmo `id` se já existir. */
   | { type: 'INBOX_PREPEND'; item: InboxItem }
@@ -794,8 +787,6 @@ export type GameAction =
       spotBroCentsDelta?: number;
     }
   | { type: 'ADMIN_POST_INBOX'; title: string; body?: string; deepLink?: string }
-  | { type: 'ADMIN_SIMULATE_FRIEND_REQUEST'; managerId: string; clubName: string }
-  | { type: 'ADMIN_ADD_FRIEND'; managerId: string; clubName: string }
   | { type: 'ADMIN_SET_LEAGUE_SEASON'; partial: Partial<import('@/match/leagueSeason').LeagueSeasonState> }
   | { type: 'APPLY_CASUAL_RESULT_TO_LEAGUE'; result: { scoreHome: number; scoreAway: number; result: 'win' | 'draw' | 'loss' } }
   | { type: 'ADMIN_SET_FORM'; form: import('@/entities/types').FormLetter[] }

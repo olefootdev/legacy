@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useGameDispatch, useGameStore } from '@/game/store';
+import { useGameStore } from '@/game/store';
 import { formatExp, formatBroDisplay, formatCompactNumber } from '@/systems/economy';
 import { useProgressionStore } from '@/progression/progressionStore';
 import { MISSION_CATALOG } from '@/progression/missions/catalog';
@@ -40,6 +40,7 @@ import { CareerTierBadge } from '@/components/CareerTierBadge';
 import { SmartShortcut } from '@/components/cards/SmartShortcut';
 import { normalizeWalletState } from '@/wallet/initial';
 import { inviteLinkForCode } from '@/wallet/referralCode';
+import { useFriendships } from '@/social/useFriendships';
 
 const MISSION_TROPHY_KINDS = new Set(['onboarding', 'achievement', 'special']);
 
@@ -67,7 +68,7 @@ export function Manager() {
   const memorableTrophyUnlockedIds = useGameStore((s) => s.memorableTrophyUnlockedIds);
   const { crowns: dailyCrowns } = useManagerCrowns();
   const userSettings = useGameStore((s) => s.userSettings);
-  const social = useGameStore((s) => s.social);
+  const social = useFriendships().data;
 
   const ensureResets = useProgressionStore((s) => s.ensureResets);
   const missionRuntime = useProgressionStore((s) => s.missions);
@@ -1300,43 +1301,42 @@ function CareerDrawer({
 }
 
 function NetworkDrawer({ onClose }: { onClose: () => void }) {
-  const dispatch = useGameDispatch();
   const club = useGameStore((s) => s.club);
-  const social = useGameStore((s) => s.social);
+  const social = useFriendships();
   return (
     <DrawerShell title="Network" onClose={onClose} accent="bg-fuchsia-500">
       <div className="space-y-5">
         <div>
           <p className="text-[11px] text-white/60">Teu clube: <span className="font-bold text-white">{club.name}</span></p>
-          <p className="text-[10px] text-white/40">Solicitações e amigos. Cresce a rede pelo teu link no Network.</p>
+          <p className="text-[10px] text-white/40">Quem entra pelo seu link de indicação já vira amigo.</p>
         </div>
 
-        {social.incoming.length > 0 ? (
+        {social.data.incoming.length > 0 ? (
           <section>
             <h4 className="mb-2 font-display text-[10px] font-bold uppercase tracking-widest text-fuchsia-300/90">
               Solicitações
             </h4>
             <ul className="space-y-2">
-              {social.incoming.map((req) => (
+              {social.data.incoming.map((req) => (
                 <li
                   key={req.id}
                   className="flex items-center justify-between gap-2 rounded-lg border border-fuchsia-500/25 bg-black/40 px-3 py-2.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-display text-sm font-bold text-white">{req.fromClubName}</p>
+                    <p className="truncate font-display text-sm font-bold text-white">{req.clubName}</p>
                     <p className="text-[10px] text-gray-500">Quer entrar na sua rede</p>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'ACCEPT_FRIEND_REQUEST', requestId: req.id })}
+                      onClick={() => void social.accept(req.id)}
                       className="rounded bg-neon-green px-2 py-1 font-display text-[10px] font-black uppercase tracking-wider text-black hover:bg-white"
                     >
                       Aceitar
                     </button>
                     <button
                       type="button"
-                      onClick={() => dispatch({ type: 'DECLINE_FRIEND_REQUEST', requestId: req.id })}
+                      onClick={() => void social.decline(req.id)}
                       className="rounded border border-white/20 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-wider text-gray-300 hover:bg-white/10"
                     >
                       Recusar
@@ -1351,15 +1351,15 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
         <section>
           <h4 className="mb-2 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-widest text-white/60">
             <Users className="h-3.5 w-3.5" />
-            Amigos ({social.friends.length})
+            Amigos ({social.data.friends.length})
           </h4>
-          {social.friends.length === 0 ? (
+          {social.data.friends.length === 0 ? (
             <p className="rounded border border-dashed border-white/10 bg-black/20 px-3 py-3 text-sm text-gray-500">
-              Nenhum amigo ainda. Compartilha teu link de indicação no <strong className="text-white">Network</strong>.
+              Nenhum amigo ainda. Quem entrar pelo seu link de indicação vira amigo automaticamente.
             </p>
           ) : (
             <ul className="grid gap-1.5 sm:grid-cols-2">
-              {social.friends.map((f) => (
+              {social.data.friends.map((f) => (
                 <li
                   key={f.managerId}
                   className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2"
@@ -1367,7 +1367,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                   <span className="truncate font-display text-sm font-bold text-white">{f.clubName}</span>
                   <button
                     type="button"
-                    onClick={() => dispatch({ type: 'REMOVE_SOCIAL_FRIEND', managerId: f.managerId })}
+                    onClick={() => void social.remove(f.id)}
                     className="shrink-0 text-[10px] font-bold uppercase text-gray-500 hover:text-red-400"
                   >
                     Remover
@@ -1378,18 +1378,18 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
           )}
         </section>
 
-        {social.outgoing.length > 0 ? (
+        {social.data.outgoing.length > 0 ? (
           <section>
             <h4 className="mb-2 font-display text-[10px] font-bold uppercase tracking-widest text-white/40">
               Convites enviados
             </h4>
             <ul className="space-y-1.5">
-              {social.outgoing.map((o) => (
+              {social.data.outgoing.map((o) => (
                 <li key={o.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <span className="truncate font-display text-sm font-bold text-gray-300">{o.toClubName}</span>
+                  <span className="truncate font-display text-sm font-bold text-gray-300">{o.clubName}</span>
                   <button
                     type="button"
-                    onClick={() => dispatch({ type: 'CANCEL_OUTGOING_FRIEND_REQUEST', requestId: o.id })}
+                    onClick={() => void social.remove(o.id)}
                     className="shrink-0 text-[10px] font-bold uppercase text-gray-500 hover:text-white"
                   >
                     Cancelar

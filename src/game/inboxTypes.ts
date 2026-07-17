@@ -181,10 +181,6 @@ export function isHiddenFromHomeInboxFeed(item: InboxItem): boolean {
   return false;
 }
 
-export function inboxHasVisibleHomeFeedItem(items: InboxItem[]): boolean {
-  return items.some((i) => !isHiddenFromHomeInboxFeed(i));
-}
-
 export function inboxCategoryColorClass(c: InboxCategory): string {
   const map: Record<InboxCategory, string> = {
     PLANTEL: 'text-sky-400',
