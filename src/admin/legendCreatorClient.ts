@@ -237,18 +237,18 @@ export async function adminFindUserByEmail(email: string): Promise<FindUserRespo
 export async function adminGenerateAccessLink(
   email: string,
   redirectTo?: string,
-): Promise<{ email: string; link: string }> {
+): Promise<{ email: string; link: string; userId: string | null }> {
   const url = `${olefootApiBase()}/api/admin/legend-access-link`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, redirectTo }),
   });
-  const body = (await res.json()) as { ok?: boolean; email: string; link: string } | { error: string };
+  const body = (await res.json()) as { ok?: boolean; email: string; link: string; userId?: string | null } | { error: string };
   if (!res.ok || 'error' in body) {
     throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
   }
-  return { email: body.email, link: body.link };
+  return { email: body.email, link: body.link, userId: body.userId ?? null };
 }
 
 /** Tier defaults (espelha tabela TIER_DEFAULTS do server). */

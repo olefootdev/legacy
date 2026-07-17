@@ -27,6 +27,7 @@ import {
 import {
   adminExportLegend,
   adminFindUserByEmail,
+  adminGenerateAccessLink,
   adminImportLegend,
   adminSetLegacyPortrait,
   DEFAULT_SPLIT,
@@ -1107,6 +1108,11 @@ function SplitEditor({
   // o que quebrava com 2+ facilitadores (todos os campos linkados ao mesmo texto).
   const [emailQueries, setEmailQueries] = useState<Record<number, string>>({});
   const [emailLookups, setEmailLookups] = useState<Record<number, string>>({});
+  /** Índices onde a busca deu "não cadastrado" → oferece criar conta playervip. */
+  const [notFound, setNotFound] = useState<Record<number, string>>({});
+  /** Magic link gerado por linha (após criar a conta). */
+  const [magicLinks, setMagicLinks] = useState<Record<number, string>>({});
+  const [creating, setCreating] = useState<number | null>(null);
   const total = split.reduce((s, e) => s + (Number.isFinite(e.percent) ? e.percent : 0), 0);
   const facilitatorCount = split.filter((e) => e.kind === 'facilitator').length;
   const beneficiaryCount = split.filter((e) => e.kind === 'player').length;
@@ -1132,7 +1138,8 @@ function SplitEditor({
   }
 
   async function lookupEmail(targetIndex: number) {
-    const email = (emailQueries[targetIndex] ?? '').trim();
+    const email = (emailQueries[targetIndex] ?? '').trim().toLowerCase();
+    setNotFound((p) => ({ ...p, [targetIndex]: '' }));
     if (!email.includes('@')) {
       setLookup(targetIndex, 'Email inválido.');
       return;
@@ -1144,10 +1151,34 @@ function SplitEditor({
         updateEntry(targetIndex, { user_id: res.id, label: email });
         setLookup(targetIndex, `✓ ${res.email} (${res.id.slice(0, 8)}…)`);
       } else {
-        setLookup(targetIndex, `✗ Não cadastrado: ${email}`);
+        // Conta não existe ainda — oferece criar a do playervip aqui mesmo.
+        setLookup(targetIndex, '');
+        setNotFound((p) => ({ ...p, [targetIndex]: email }));
       }
     } catch (e) {
       setLookup(targetIndex, `✗ Erro: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  /** Cria a conta do PLAYERVIP (passwordless), grava o uid no split e mostra o link. */
+  async function createAndLink(targetIndex: number) {
+    const email = (notFound[targetIndex] ?? emailQueries[targetIndex] ?? '').trim().toLowerCase();
+    if (!email.includes('@')) return;
+    setCreating(targetIndex);
+    try {
+      const res = await adminGenerateAccessLink(email);
+      if (res.userId) {
+        updateEntry(targetIndex, { user_id: res.userId, label: email });
+        setLookup(targetIndex, `✓ conta criada (${res.userId.slice(0, 8)}…)`);
+      } else {
+        setLookup(targetIndex, '✓ conta criada — clique buscar pra puxar o uid');
+      }
+      setNotFound((p) => ({ ...p, [targetIndex]: '' }));
+      if (res.link) setMagicLinks((p) => ({ ...p, [targetIndex]: res.link }));
+    } catch (e) {
+      setLookup(targetIndex, `✗ Erro ao criar: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setCreating(null);
     }
   }
 
@@ -1198,6 +1229,38 @@ function SplitEditor({
                 </span>
               )}
               {emailLookups[i] && <span className="text-[10px] text-white/55">{emailLookups[i]}</span>}
+              {notFound[i] && (
+                <div className="flex flex-col gap-1 rounded border border-amber-500/30 bg-amber-500/10 p-1.5">
+                  <span className="text-[10px] text-amber-200">Sem conta ainda. Criar a do playervip?</span>
+                  <button
+                    type="button"
+                    onClick={() => createAndLink(i)}
+                    disabled={creating === i}
+                    className="inline-flex items-center justify-center gap-1.5 rounded bg-neon-yellow px-2 py-1 text-[10px] font-black uppercase tracking-wider text-deep-black hover:bg-neon-yellow/90 disabled:opacity-40"
+                  >
+                    <UserPlus size={11} />
+                    {creating === i ? 'Criando…' : 'Criar conta + vincular'}
+                  </button>
+                </div>
+              )}
+              {magicLinks[i] && (
+                <div className="flex items-center gap-1">
+                  <input
+                    readOnly
+                    value={magicLinks[i]}
+                    onFocus={(ev) => ev.currentTarget.select()}
+                    className="w-40 rounded border border-emerald-500/30 bg-black/40 px-1.5 py-1 text-[9px] text-emerald-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText(magicLinks[i])}
+                    className="rounded border border-white/20 px-1.5 py-1 text-[9px] text-neon-yellow hover:bg-neon-yellow/10"
+                    title="Copiar magic link pra mandar pro atleta"
+                  >
+                    Copiar link
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {(e.kind === 'facilitator' || (e.kind === 'player' && beneficiaryCount > 1)) && (

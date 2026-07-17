@@ -773,5 +773,9 @@ legendImportRoutes.post('/legend-access-link', async (c) => {
   const link = data?.properties?.action_link ?? null;
   if (!link) return c.json({ error: 'link não gerado' }, 500);
 
-  return c.json({ ok: true, email, link, redirectTo });
+  // uid da conta — o admin usa pra gravar no split (kind=player/facilitator).
+  // createUser devolve o novo; se já existia, generateLink traz o user.
+  const userId = created.data?.user?.id ?? data?.user?.id ?? null;
+
+  return c.json({ ok: true, email, link, redirectTo, userId });
 });
