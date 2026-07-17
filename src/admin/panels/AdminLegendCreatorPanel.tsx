@@ -43,6 +43,7 @@ import {
   type PortraitFocus,
 } from '../legendCreatorClient';
 import { uploadImageToPinataViaServer } from '@/media/pinataUploadClient';
+import { portraitFocusStyle } from '@/supabase/legacyPlayers';
 import { PortraitFocusEditor } from '@/admin/components/PortraitFocusEditor';
 
 const PHASE_LABEL: Record<LegendPhase, string> = {
@@ -866,6 +867,11 @@ function PortraitUploader({
             src={workingUrl}
             alt="portrait"
             className="h-full w-full object-cover"
+            // Mesmo enquadramento do card real (PlayerPortrait): aplica o ponto
+            // focal. Sem isto era object-cover CENTRALIZADO e cortava a cabeça
+            // em toda foto vertical. Foco padrão (y=0) = topo. Atualiza ao vivo
+            // conforme você arrasta o PortraitFocusEditor abaixo.
+            style={portraitFocusStyle(currentFocus.x, currentFocus.y, currentFocus.zoom)}
           />
         ) : (
           <span className="text-[10px] uppercase tracking-wider text-white/40">sem foto</span>

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
+import { legacyPortraitFocusStyle } from '@/supabase/legacyPlayers';
 
 /**
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
@@ -167,7 +168,10 @@ export function LegacyMarketCard({
                 src={portrait}
                 alt={row.name}
                 className="ole-player-photo-bw h-full w-full object-cover transition-[filter] duration-500 group-hover:[filter:grayscale(0)_contrast(1.03)]"
-                style={{ objectPosition: 'center 10%' }}
+                // Usa o foco que o admin definiu (portrait_focus_x/y/zoom) em vez
+                // do 'center 10%' fixo, que cortava a cabeça em várias fotos.
+                // Foco padrão (y=0) = topo. Ver AdminLegendCreatorPanel.
+                style={legacyPortraitFocusStyle(row)}
                 referrerPolicy="no-referrer"
                 draggable={false}
               />
