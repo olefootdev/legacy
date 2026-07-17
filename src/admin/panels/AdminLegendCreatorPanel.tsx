@@ -259,12 +259,17 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
     }
     setSubmitting(true);
     try {
+      // O beneficiário (beneficiary_user_id, que o playervip filtra) DEVE ser o
+      // mesmo jogador vinculado no split. Se o campo dedicado estiver vazio, puxa
+      // do slot player — senão o card não aparece pro atleta (bug do Marcelo).
+      const playerUid = sharedSplit.find((e) => e.kind === 'player' && e.user_id)?.user_id ?? null;
+      const beneficiary = sharedBeneficiary.trim() || playerUid || undefined;
       const payloadToSend: LegendImportPayload = {
         ...payload,
         phases: payload.phases.map((ph) => ({
           ...ph,
           paymentSplit: sharedSplit,
-          beneficiaryUserId: sharedBeneficiary.trim() || undefined,
+          beneficiaryUserId: beneficiary,
         })),
       };
       const res = await adminImportLegend(slug, payloadToSend);
@@ -484,9 +489,22 @@ function TokenizePreview({
   onConfirm: () => void;
 }) {
   const splitSum = split.reduce((a, e) => a + (Number(e.percent) || 0), 0);
+  const playerEntry = split.find((e) => e.kind === 'player');
+  // Beneficiário efetivo = o que vale no import: campo dedicado OU o jogador do split.
+  const effectiveBeneficiary = beneficiary || playerEntry?.user_id || '';
+  // Quem está em cada fatia. olefoot/community são preenchidos pela plataforma no
+  // banco (trigger), então mesmo com user_id null aqui, quem recebe é a Olefoot.
+  const splitWho = (e: LegendSplitEntry): { txt: string; ok: boolean } => {
+    if (e.kind === 'olefoot' || e.kind === 'community') return { txt: 'Olefoot (plataforma)', ok: true };
+    if (e.user_id) return { txt: e.label?.includes('@') ? e.label : `${e.user_id.slice(0, 8)}…`, ok: true };
+    return { txt: 'não vinculado', ok: false };
+  };
   const warnings: string[] = [];
   if (splitSum !== 100) warnings.push(`Split soma ${splitSum}% (precisa 100%)`);
-  if (!beneficiary) warnings.push('Sem beneficiário (atleta) definido — vincule depois com admin_link_legend_full');
+  if (!effectiveBeneficiary) warnings.push('Jogador não vinculado — o atleta não recebe nem vê o card no playervip. Vincule o e-mail dele no split.');
+  for (const e of split) {
+    if (e.kind === 'facilitator' && !e.user_id) warnings.push('Facilitador sem conta vinculada — os 10% dele não caem. Vincule o e-mail no split.');
+  }
   for (const ph of phases) {
     if (!ph.collectionCode?.trim()) warnings.push(`${PHASE_LABEL[ph.phase]}: sem collection_code`);
     if (!(ph.priceUnitCents ?? 0)) warnings.push(`${PHASE_LABEL[ph.phase]}: preço zerado`);
@@ -526,11 +544,26 @@ function TokenizePreview({
         </div>
 
         <div className="mt-3 rounded border border-white/10 bg-black/40 p-3 text-[11px] text-white/60">
-          <div className="mb-1 font-semibold uppercase tracking-wider text-white/50">Split (todas as fases)</div>
-          {split.map((e, i) => (
-            <span key={i} className="mr-3 inline-block">{e.kind} {e.percent}%</span>
-          ))}
-          <div className="mt-1.5">Beneficiário: {beneficiary ? <code>{beneficiary.slice(0, 12)}…</code> : <span className="text-amber-300">não definido</span>}</div>
+          <div className="mb-1.5 font-semibold uppercase tracking-wider text-white/50">Split (todas as fases)</div>
+          <div className="space-y-1">
+            {split.map((e, i) => {
+              const who = splitWho(e);
+              return (
+                <div key={i} className="flex items-center justify-between gap-3">
+                  <span className="text-white/70">{e.label || e.kind} · {e.percent}%</span>
+                  <span className={who.ok ? 'text-emerald-300' : 'text-amber-300'}>
+                    {who.ok ? '✓ ' : '⚠ '}{who.txt}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-2 border-t border-white/10 pt-1.5">
+            Beneficiário (quem vê no playervip):{' '}
+            {effectiveBeneficiary
+              ? <span className="text-emerald-300">{playerEntry?.label?.includes('@') ? playerEntry.label : `${effectiveBeneficiary.slice(0, 12)}…`}</span>
+              : <span className="text-amber-300">não definido</span>}
+          </div>
         </div>
 
         {warnings.length > 0 && (
