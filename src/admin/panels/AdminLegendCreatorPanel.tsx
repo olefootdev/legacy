@@ -7,7 +7,7 @@
  *  3. Tokenizar → POST /api/admin/legend-import → cria 3 cards + 3 lotes
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Camera,
   Check,
@@ -441,7 +441,7 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
               {result.inserted.map((row) => (
                 <li key={row.id}>
                   · <b>{row.id}</b> — tier {row.tier} · {row.collection_code} · {row.card_supply} ×{' '}
-                  {row.price_unit_cents}¢ {row.currency}
+                  {fmtPrice(row.price_unit_cents, row.currency)}
                 </li>
               ))}
             </ul>
@@ -523,6 +523,64 @@ function LabeledNumber({
   );
 }
 
+/** Preço legível: USDT em dólar ($X.XX), OLEFOOT em unidades inteiras. */
+function fmtPrice(cents: number | null | undefined, currency?: string | null): string {
+  const n = cents ?? 0;
+  if (currency === 'OLEFOOT') return `${n.toLocaleString('pt-BR')} OLEFOOT`;
+  return `$${(n / 100).toFixed(2)}`;
+}
+
+/**
+ * Campo de preço em DÓLAR (pra USDT) / unidades (pra OLEFOOT).
+ *
+ * Guarda o valor como texto local pra permitir digitação livre (apagar, decimais,
+ * estado intermediário vazio) — o `type="number"` controlado antigo saltava pra 0
+ * ao esvaziar e travava a edição. Só ressincroniza a partir do prop quando NÃO
+ * está focado (ex.: troca de moeda reseta o default), pra não atropelar quem digita.
+ */
+function PriceField({
+  currency, priceUnitCents, onChange,
+}: {
+  currency: LegendCurrency;
+  priceUnitCents: number;
+  onChange: (cents: number) => void;
+}) {
+  const isUsd = currency !== 'OLEFOOT';
+  const canonical = isUsd ? (priceUnitCents ?? 0) / 100 : (priceUnitCents ?? 0);
+  const [txt, setTxt] = useState(String(canonical));
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setTxt(String(canonical));
+  }, [canonical, focused]);
+
+  return (
+    <label className="flex flex-col gap-1 text-xs">
+      <span className="font-semibold uppercase tracking-wider text-white/60">
+        {isUsd ? 'Preço unitário (US$)' : 'Preço unitário (OLEFOOT)'}
+      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={txt}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onChange={(e) => {
+          setTxt(e.target.value);
+          const raw = e.target.value.replace(',', '.').trim();
+          if (raw === '') return;
+          const n = Number(raw);
+          if (!Number.isFinite(n) || n < 0) return;
+          onChange(isUsd ? Math.round(n * 100) : Math.round(n));
+        }}
+        className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
+      />
+      <span className="text-[10px] text-white/35">
+        {isUsd ? `= ${priceUnitCents ?? 0}¢ salvos` : 'unidades inteiras de OLEFOOT'}
+      </span>
+    </label>
+  );
+}
+
 function PhaseEditor({
   phase, slug, portraitUrl, onPortraitUploaded, portraitFocus, onPortraitFocusChange,
   expanded, onToggle, onChange, onChangeEntity, onChangeAttr, onApplyTier,
@@ -560,7 +618,7 @@ function PhaseEditor({
           )}
           {phase.tier && (
             <span className="text-xs text-white/70">
-              · Tier {phase.tier} · {phase.initialSupply}×{phase.priceUnitCents}¢ {phase.currency}
+              · Tier {phase.tier} · {phase.initialSupply}× {fmtPrice(phase.priceUnitCents, phase.currency)}
             </span>
           )}
         </div>
@@ -713,13 +771,13 @@ function PhaseEditor({
                   }}
                   className="rounded border border-white/25 bg-deep-black px-2 py-1.5 text-sm text-white focus:border-neon-yellow focus:outline-none"
                 >
-                  <option value="USDT">USDT (cents)</option>
+                  <option value="USDT">USDT (US$)</option>
                   <option value="OLEFOOT">OLEFOOT (unidades)</option>
                 </select>
               </label>
-              <LabeledNumber
-                label="Preço unitário (cents)"
-                value={phase.priceUnitCents ?? 0}
+              <PriceField
+                currency={(phase.currency ?? 'USDT') as LegendCurrency}
+                priceUnitCents={phase.priceUnitCents ?? 0}
                 onChange={(v) => onChange({ priceUnitCents: v })}
               />
               <LabeledNumber
