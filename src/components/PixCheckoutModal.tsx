@@ -279,7 +279,9 @@ export function PixCheckoutModal({
                 </h3>
                 <p className="text-[11px] text-white/60 mt-0.5">{description}</p>
                 <p className="text-[10px] text-amber-300/80 mt-1 font-bold tabular-nums">
-                  Valor: <span className="text-amber-300 text-base">{fmtBrl(amountCents)}</span>
+                  {/* Depois da cobrança criada, o valor que vale é o do servidor —
+                      é ele que está no QR (card: preço USDT × cotação da hora). */}
+                  Valor: <span className="text-amber-300 text-base">{fmtBrl(charge?.amountCents ?? amountCents)}</span>
                 </p>
               </div>
               <button

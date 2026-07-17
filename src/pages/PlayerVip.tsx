@@ -42,6 +42,10 @@ const PHASE_LABEL: Record<string, string> = {
 function brl(cents: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((cents || 0) / 100);
 }
+/** Comissão de indicação é paga em EXP — nunca formatar como R$. */
+function exp(amount: number): string {
+  return `${new Intl.NumberFormat('pt-BR').format(Math.round(amount || 0))} EXP`;
+}
 function phaseFromId(id: string): string | null {
   const seg = id.split('-').pop() ?? '';
   return PHASE_LABEL[seg] ?? null;
@@ -495,7 +499,7 @@ function PlayerVipDashboard() {
                   <div className="mt-0.5 text-[11px] text-white/45">Entrou pelo seu link</div>
                 </div>
                 <span className="italic" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 16, color: YELLOW }}>
-                  {brl(r.commissionTotal * 100)}
+                  {exp(r.commissionTotal)}
                 </span>
               </div>
             ))

@@ -18,8 +18,15 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { rateLimit } from '../lib/rateLimit.js';
+import { resolveCardCheckout } from '../lib/cardPricing.js';
 
 const MP_API_BASE = 'https://api.mercadopago.com';
+
+/** Pack de ativação — preço fixo de produto (R$125). */
+const ACTIVATION_PACK_CENTS = 12_500;
+
+/** Depósito mínimo (R$1). Recarga é 1:1 (paga R$X → recebe R$X em BRO). */
+const RECHARGE_MIN_CENTS = 100;
 
 interface CreatePixBody {
   product_kind?: 'activation_pack' | 'card' | 'recharge';
@@ -121,15 +128,38 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
     return c.json({ ok: false, error: 'product_kind inválido' }, 400);
   }
 
-  const amountCents = Math.floor(Number(body.amount_cents) || 0);
-  if (amountCents < 100) {
-    return c.json({ ok: false, error: 'amount_cents mínimo de 100 (R$1).' }, 400);
-  }
-
   // Customer obrigatório por decisão de produto (CPF antes do checkout)
   const customer = body.customer;
   if (!customer?.name || !customer?.email || !customer?.tax_id) {
     return c.json({ ok: false, error: 'Dados do pagador obrigatórios (name, email, CPF).' }, 400);
+  }
+
+  // ─── Valor e metadata AUTORITATIVOS por produto ──────────────────────────
+  // confirm_payment_intent credita o split sobre amount_cents e entrega
+  // metadata->'player' no plantel — os dois precisam sair do servidor, não do
+  // body. Só a recarga é legitimamente dirigida pelo cliente (é 1:1).
+  const clientMetadata = body.metadata ?? {};
+  let amountCents: number;
+  let metadata: Record<string, unknown> = { source: 'olefoot_app', ...clientMetadata };
+
+  if (productKind === 'card') {
+    const resolved = await resolveCardCheckout({
+      sb,
+      productRef: body.product_ref,
+      clientPlayer: (clientMetadata as Record<string, unknown>).player,
+    });
+    if (!resolved.ok) {
+      return c.json({ ok: false, step: 'card_checkout', error: resolved.error }, resolved.status);
+    }
+    amountCents = resolved.checkout.amountCents;
+    metadata = { ...metadata, player: resolved.checkout.player };
+  } else if (productKind === 'activation_pack') {
+    amountCents = ACTIVATION_PACK_CENTS;
+  } else {
+    amountCents = Math.floor(Number(body.amount_cents) || 0);
+    if (amountCents < RECHARGE_MIN_CENTS) {
+      return c.json({ ok: false, error: 'amount_cents mínimo de 100 (R$1).' }, 400);
+    }
   }
 
   // 1. Cria payment_intent server-side
@@ -152,7 +182,7 @@ paymentsRoutes.post('/api/payments/pix/create', rateLimit(10), async (c) => {
       p_customer_email: customer.email,
       p_customer_tax_id: customer.tax_id,
       p_customer_cellphone: customer.cellphone ?? null,
-      p_metadata: { source: 'olefoot_app', ...(body.metadata ?? {}) },
+      p_metadata: metadata,
     }),
   });
 

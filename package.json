@@ -13,6 +13,7 @@
     "sync:smartfield": "cp smartfield/match_simulator.py smartfield/xg_model.py smartfield/narrative_weighter.py server/smartfield/",
     "test:field-smoke": "tsx src/field-schema/runSmoke.ts",
     "demo:sim-pipeline": "tsx src/match/events/runScenarioDemo.ts",
+    "test:card-pricing": "tsx server/src/lib/runCardPricingSelfTest.mts",
     "test:causal": "tsx src/match/causal/runCausalSelfTest.ts",
     "test:impact-ledger": "tsx src/match/runImpactLedgerSelfTest.ts",
     "test:spirit-machine": "tsx src/gamespirit/runSpiritStateMachineSelfTest.ts",

@@ -303,12 +303,23 @@ marketRoutes.post('/api/market/buy-legacy', rateLimit(20), async (c) => {
   // 1) Row do legacy — PREÇO autoritativo + disponibilidade
   const { data: row, error: rowErr } = await sb
     .from('legacy_players')
-    .select('id, name, price_bro_cents, listed_on_market, beneficiary_user_id, payment_split')
+    .select('id, name, price_bro_cents, currency, listed_on_market, beneficiary_user_id, payment_split')
     .eq('id', legacyId)
     .maybeSingle();
   if (rowErr || !row) return c.json({ ok: false, error: 'Legacy não encontrado.' }, 404);
   if (!row.listed_on_market) return c.json({ ok: false, error: 'Não está à venda.' }, 409);
-  const price = Math.max(1, Math.round(Number(row.price_bro_cents)));
+
+  // Card em USDT se compra por PIX e nasce com price_bro_cents = 0 (o import só
+  // espelha o preço quando a moeda é OLEFOOT). Sem esta guarda, um card de US$5
+  // caía no piso de 1 unidade e era vendido por 1 OLEFOOT.
+  const currency = (row as { currency?: string | null }).currency ?? 'OLEFOOT';
+  if (currency !== 'OLEFOOT') {
+    return c.json({ ok: false, error: 'Este card é vendido via PIX, não por OLEFOOT.' }, 409);
+  }
+  const price = Math.round(Number(row.price_bro_cents));
+  if (!Number.isFinite(price) || price <= 0) {
+    return c.json({ ok: false, error: 'Preço indisponível para este card.' }, 409);
+  }
 
   // 2) Já possui? (idempotente) — lê o squad
   const { data: sq } = await sb
