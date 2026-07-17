@@ -28,6 +28,7 @@ import {
   adminExportLegend,
   adminFindUserByEmail,
   adminGenerateAccessLink,
+  adminSaveLegendLinks,
   adminImportLegend,
   adminSetLegacyPortrait,
   DEFAULT_SPLIT,
@@ -120,6 +121,8 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
   const [payload, setPayload] = useState<LegendImportPayload>(() => emptyPayload(defaultSlug));
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [savingLinks, setSavingLinks] = useState(false);
+  const [saveLinksMsg, setSaveLinksMsg] = useState<string | null>(null);
   const [result, setResult] = useState<LegendImportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<LegendPhase | null>('revelacao');
@@ -283,6 +286,24 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
     }
   }
 
+  /** Salva SÓ o vínculo (split + beneficiário) nos cards já criados. */
+  async function saveLinks() {
+    setSaveLinksMsg(null);
+    if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+      setSaveLinksMsg('Slug inválido.');
+      return;
+    }
+    setSavingLinks(true);
+    try {
+      const res = await adminSaveLegendLinks(slug, sharedSplit, sharedBeneficiary.trim() || undefined);
+      setSaveLinksMsg(`✓ vínculo salvo em ${res.updated} card(s)${res.beneficiary ? '' : ' — sem beneficiário'}`);
+    } catch (e) {
+      setSaveLinksMsg(`✗ ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSavingLinks(false);
+    }
+  }
+
   const canSubmit = useMemo(
     () => !submitting && slug.length > 0 && payload.phases.every((p) => p.entity.name.trim().length > 0),
     [submitting, slug, payload.phases],
@@ -388,11 +409,28 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         </div>
         <SplitEditor split={sharedSplit} onChange={setSharedSplit} />
         <LabeledInput
-          label="Beneficiary user id (uuid do atleta — opcional)"
+          label="Beneficiary user id (uuid do atleta — opcional; sai do split se vazio)"
           value={sharedBeneficiary}
           onChange={setSharedBeneficiary}
           placeholder="uuid de auth.users (vale pras 3 fases)"
         />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={saveLinks}
+            disabled={savingLinks || !slug}
+            className="inline-flex items-center gap-2 rounded border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40"
+            title="Grava só o vínculo (split + beneficiário) nos cards já criados"
+          >
+            <Save size={13} />
+            {savingLinks ? 'Salvando vínculo…' : 'Salvar vínculo'}
+          </button>
+          {saveLinksMsg && <span className="text-[11px] text-white/60">{saveLinksMsg}</span>}
+        </div>
+        <p className="text-[10px] text-white/35">
+          Salva só o split/beneficiário nos cards já importados — sem re-tokenizar.
+          Ao carregar o slug depois, os e-mails voltam preenchidos.
+        </p>
       </section>
 
       {/* Fases */}
@@ -1251,7 +1289,9 @@ function SplitEditor({
                 <input
                   type="email"
                   placeholder="email@…"
-                  value={emailQueries[i] ?? ''}
+                  // Sem texto digitado, mostra o e-mail salvo (label). Assim, ao
+                  // carregar o slug, o e-mail do jogador/facilitador reaparece.
+                  value={emailQueries[i] !== undefined ? emailQueries[i] : (e.label?.includes('@') ? e.label : '')}
                   onChange={(ev) => setQuery(i, ev.target.value)}
                   className="w-40 rounded border border-white/25 bg-deep-black px-2 py-1 text-xs text-white placeholder-white/40 focus:border-neon-yellow focus:outline-none"
                 />

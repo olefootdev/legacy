@@ -193,6 +193,28 @@ export interface SetPortraitResponse {
  * no row de legacy_players. Substitui o upload Supabase Storage anterior — alinha
  * com fluxo validado em AdminGenesisPortraitsPanel.
  */
+/**
+ * Salva SÓ o vínculo (split + beneficiário) nos cards já existentes da lenda,
+ * sem re-tokenizar. Usado pelo botão "Salvar vínculo".
+ */
+export async function adminSaveLegendLinks(
+  slug: string,
+  split: LegendSplitEntry[],
+  beneficiary?: string | null,
+): Promise<{ ok: boolean; updated: number; beneficiary: string | null }> {
+  const url = `${olefootApiBase()}/api/admin/legend-save-links`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, split, beneficiary: beneficiary ?? null }),
+  });
+  const body = (await res.json()) as { ok?: boolean; updated?: number; beneficiary?: string | null } | { error: string };
+  if (!res.ok || 'error' in body) {
+    throw new Error('error' in body ? body.error : `HTTP ${res.status}`);
+  }
+  return { ok: true, updated: body.updated ?? 0, beneficiary: body.beneficiary ?? null };
+}
+
 export async function adminSetLegacyPortrait(
   legacyPlayerId: string,
   publicUrl: string,

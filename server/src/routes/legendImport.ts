@@ -621,6 +621,59 @@ legendImportRoutes.get('/legend-export', async (c) => {
 });
 
 /**
+ * POST /api/admin/legend-save-links { slug, split, beneficiary? }
+ *
+ * Salva SÓ o vínculo (payment_split + beneficiary_user_id) nos cards que já
+ * existem daquela lenda — sem re-tokenizar o resto. É o "SALVAR" do vínculo:
+ * depois de vincular jogador/facilitador no split, persiste na hora.
+ *
+ * beneficiary sai do slot player do split quando não vier explícito (o playervip
+ * filtra por beneficiary_user_id — tem que casar com o jogador).
+ */
+legendImportRoutes.post('/legend-save-links', async (c) => {
+  const authErr = await requireAdminToken(c);
+  if (authErr) return authErr;
+
+  const sb = getSupabaseAdmin();
+  if (!sb) return c.json({ error: 'Supabase admin not configured' }, 503);
+
+  let body: { slug?: string; split?: SplitEntry[]; beneficiary?: string | null };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid JSON body' }, 400);
+  }
+
+  const slug = body.slug?.trim();
+  if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+    return c.json({ error: 'slug required (kebab-case)' }, 400);
+  }
+  const sv = validateSplit(body.split);
+  if (!sv.ok) return c.json({ error: sv.reason }, 400);
+  const split = sv.entries;
+
+  const playerUid = split.find((e) => e.kind === 'player' && e.user_id)?.user_id ?? null;
+  const beneficiary = (body.beneficiary?.trim() || playerUid) ?? null;
+
+  const { data: rows, error: qErr } = await sb
+    .from('legacy_players')
+    .select('id')
+    .like('id', `legacy-${slug}-%`);
+  if (qErr) return c.json({ error: qErr.message }, 500);
+  if (!rows || rows.length === 0) {
+    return c.json({ error: `nenhum card pra slug=${slug} (importe primeiro)` }, 404);
+  }
+
+  const { error: uErr } = await sb
+    .from('legacy_players')
+    .update({ payment_split: split, beneficiary_user_id: beneficiary, updated_at: new Date().toISOString() })
+    .like('id', `legacy-${slug}-%`);
+  if (uErr) return c.json({ error: uErr.message }, 500);
+
+  return c.json({ ok: true, slug, updated: rows.length, beneficiary });
+});
+
+/**
  * POST /api/admin/legacy-player-set-portrait
  * Persiste a URL pública do portrait (já hospedado em Pinata/IPFS via /api/media/pinata/upload)
  * no row de legacy_players. Substitui o upload via Supabase Storage do endpoint
