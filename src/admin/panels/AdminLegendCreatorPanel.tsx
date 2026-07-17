@@ -276,6 +276,19 @@ export function AdminLegendCreatorPanel({ defaultSlug = '' }: Props) {
         })),
       };
       const res = await adminImportLegend(slug, payloadToSend);
+      // Persiste os retratos (colados/enviados) agora que os cards EXISTEM. O
+      // import cria o card sem foto — salvar retrato é UPDATE por id e falha em
+      // silêncio se o card não existir ainda (era o bug: colar antes de tokenizar
+      // não salvava nada). Best-effort: não derruba o tokenize.
+      for (const ph of payload.phases) {
+        const url = portraits[ph.phase];
+        if (!url) continue;
+        try {
+          await adminSetLegacyPortrait(`legacy-${slug}-${ph.phase}`, url, undefined, portraitFocus[ph.phase]);
+        } catch (err) {
+          console.warn('[legend] retrato não salvo:', ph.phase, err);
+        }
+      }
       setResult(res);
       return true;
     } catch (e) {
@@ -989,7 +1002,9 @@ function PortraitUploader({
   // URL de trabalho: a já salva OU a colada (se válida) — alimenta o preview
   // imediatamente, ANTES de salvar (enquadrar é client-side, não precisa do server).
   const typedUrl = /^https?:\/\//i.test(urlInput.trim()) ? urlInput.trim() : null;
-  const workingUrl = currentUrl ?? typedUrl;
+  // URL colada tem precedência: assim dá pra TROCAR uma imagem já salva colando
+  // outra. Antes era `currentUrl ?? typedUrl`, e a colada era ignorada.
+  const workingUrl = typedUrl ?? currentUrl;
 
   // Salva foto + enquadramento juntos. Usa a workingUrl (salva ou colada).
   async function handleSaveFocus() {
@@ -1129,7 +1144,15 @@ function PortraitUploader({
         <input
           type="url"
           value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setUrlInput(v);
+            // "Sobe" a URL colada pro estado do wizard: assim o Tokenizar salva o
+            // retrato junto (o import cria o card sem foto — salvar é ação à
+            // parte). Sem isso, colar + tokenizar deixava a imagem NULL.
+            const t = v.trim();
+            if (/^https?:\/\//i.test(t)) onUploaded(t);
+          }}
           placeholder="Cola a URL do Pinata/IPFS…"
           className="min-w-0 flex-1 rounded border border-white/15 bg-black/40 px-2.5 py-1.5 font-mono text-xs text-white/90 placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
         />
