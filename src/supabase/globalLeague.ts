@@ -76,6 +76,13 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
   const supabase = getSupabase();
   if (!supabase) return null;
 
+  // A liga deixou de ser legível por anon (migration 20260717170000: o
+  // manager_id guarda e-mail e a tabela tinha leitura pública). getUser()
+  // aguarda o initializePromise, então isto também elimina a corrida de boot em
+  // que a query saía antes da sessão hidratar e voltava 401.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
   try {
     const { data: stateRow, error: stateErr } = await supabase
       .from('global_league_state')

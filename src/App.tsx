@@ -383,9 +383,18 @@ function GlobalLeagueHydrator() {
       void rehydrate();
     });
 
+    // A liga agora exige sessão (migration 20260717170000). Sem isto, quem
+    // abrisse o app deslogado e entrasse depois ficaria com a liga vazia até
+    // dar F5 — o rehydrate só rodava no mount.
+    const sb = getSupabase();
+    const authSub = sb?.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) void rehydrate();
+    });
+
     return () => {
       cancelled = true;
       unsubscribe();
+      authSub?.data.subscription.unsubscribe();
     };
   }, [dispatch]);
   return null;
