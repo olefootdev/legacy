@@ -1,0 +1,440 @@
+{
+  "playerName": "Adauto Evandro da Silva",
+  "shortName": "Adauto",
+  "collectionId": "mem-adauto-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.ogol.com.br/jogador/adauto/4741",
+    "https://www.estadao.com.br/esportes/futebol/adauto-vira-simbolo-anti-racismo/",
+    "https://furacao.com/adauto-o-atletico-e-o-time-que-nunca-desiste/"
+  ],
+  "inconsistencies": [
+    "Estadão bloqueou WebFetch — ângulo anti-racismo confirmado por input do fundador (pesquisa complementar direta).",
+    "Períodos Atlético-PR (2000-02) e Slavia Praha (2001-06) se sobrepõem no ogol — transferência durante a temporada 2001, sem impacto na segmentação por fase.",
+    "Estatística Copa São Paulo de Júnior 2000 (Santo André, 7 jogos, 8 gols, artilheiro) — trazida pelo fundador, não presente nas 3 fontes web. Adotada como fato central da Fase 1.",
+    "Brasileirão 2001 no Atlético-PR: furacao.com aponta 'reserva' do elenco campeão; briefing usa 'peça do elenco campeão' (não conflita — reserva de time campeão continua sendo campeão).",
+    "Overalls 75/85/87 são decisão de produto/mercado do fundador (2026-07-07): representam o valor real com que o Adauto entra no jogo. A escala padrão 70/75/80 da skill Legend Creator é referencial — cada lenda tem sua calibração de lançamento definida pelo fundador. Rarity da Fase 2 promovida de ultra_raro para epico para refletir o OVR do card."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "Santo André 2000 — Artilheiro da Copa SP",
+      "yearStart": 1999,
+      "yearEnd": 2000,
+      "mainClub": "EC Santo André (SP)",
+      "narrativeTitle": "8 gols em 7 jogos — o menino que virou nome",
+      "narrative": "Foi o Santo André quem acreditou nele primeiro. Treinando no Ramalhão desde os 12 anos, Adauto explode na Copa São Paulo de Futebol Júnior de 2000: 7 jogos, 8 gols, artilheiro da competição. É o instante em que o país descobre um centroavante direito, técnico, de faro apurado. Velocidade, instinto de área, finalização já acima da média para a idade e a autoconfiança que vai virar assinatura. Não é auge — é o brilho cru que abre a porta pro Furacão no ano seguinte.",
+      "tier": 1,
+      "collectionCode": "BR-SANDR-00",
+      "collectionTitle": "Santo André — Artilheiro Copa SP 2000",
+      "currency": "USDT",
+      "priceUnitCents": 100,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "Jogador",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "Facilitador",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Adauto STA",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 19,
+        "bio": "Artilheiro da Copa SP Júnior 2000 pelo Ramalhão: 8 gols em 7 jogos. O país descobria o menino que treinava desde os 12 anos em Santo André.",
+        "tagline": "8 gols em 7 jogos. O Santo André acreditou antes do resto do país.",
+        "attrs": {
+          "passe": 70,
+          "marcacao": 58,
+          "velocidade": 85,
+          "drible": 78,
+          "finalizacao": 84,
+          "fisico": 74,
+          "tatico": 70,
+          "mentalidade": 78,
+          "confianca": 78,
+          "fairPlay": 75
+        },
+        "mintOverall": 75,
+        "evolutionRate": 1.4,
+        "rarity": "ultra_raro",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "finalizacao",
+          "velocidade"
+        ],
+        "legacyTeamBooster": {
+          "morale": 2,
+          "attack_pct": 3
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "opp_box",
+              "att_third",
+              "central"
+            ],
+            "spatialAwareness": 68,
+            "scanBeforeReceive": 60,
+            "runTiming": 76,
+            "defensivePositioning": 32
+          },
+          "teamProfile": {
+            "supportCarrier": 60,
+            "tacticalDiscipline": 65,
+            "teamCommunication": 52,
+            "defensiveCover": 28,
+            "collectiveMovement": 66
+          },
+          "individualProfile": {
+            "creativity": 68,
+            "decisionUnderPressure": 68,
+            "ballConfidence": 72,
+            "vision": 62,
+            "technicalExecution": 70
+          },
+          "riskProfile": {
+            "baseRisk": 68,
+            "riskUnderPressure": 8,
+            "riskWhenLosing": 15,
+            "riskWhenWinning": -5,
+            "dribbleVsPass": 60
+          },
+          "criticalProfile": {
+            "criticalComposure": 68,
+            "ego": 62,
+            "crowdPressureReaction": 65,
+            "selfishVsTeam": 68,
+            "finishingConfidence": 74
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-07-05T00:00:00.000Z",
+          "updatedAt": "2026-07-05T00:00:00.000Z",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Atlético Paranaense — o 'eu já sabia'",
+      "yearStart": 2000,
+      "yearEnd": 2002,
+      "mainClub": "Atlético Paranaense",
+      "narrativeTitle": "Três gols no Olímpico",
+      "narrative": "Chega ao Furacão jovem. Peça do elenco campeão do Brasileirão 2001 — o maior título da história do clube. Tri paranaense 2000-01-02. Em 20 de abril de 2002, Estádio Olímpico, Copa Sul-Minas: Atlético 5×1 Grêmio, três gols de Adauto. A cada gol, tira a camisa e revela por baixo a frase 'eu já sabia'. Ali se forma o atacante que se acredita antes de acontecer. Explosão + título + assinatura. A fase que gravou o nome dele na memória atleticana.",
+      "tier": 2,
+      "collectionCode": "BR-ATL-02",
+      "collectionTitle": "Copa Sul-Minas Atlético 2002",
+      "currency": "USDT",
+      "priceUnitCents": 200,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "Jogador",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "Facilitador",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Adauto PR",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 21,
+        "bio": "Três gols no Olímpico e a frase que virou geração: 'eu já sabia'.",
+        "tagline": "Tirou a camisa três vezes na mesma noite pra provar o que já sabia.",
+        "attrs": {
+          "passe": 82,
+          "marcacao": 65,
+          "velocidade": 88,
+          "drible": 84,
+          "finalizacao": 89,
+          "fisico": 84,
+          "tatico": 84,
+          "mentalidade": 92,
+          "confianca": 92,
+          "fairPlay": 90
+        },
+        "mintOverall": 85,
+        "evolutionRate": 0.9,
+        "rarity": "epico",
+        "cardSupply": 5000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "finalizacao",
+          "confianca"
+        ],
+        "legacyTeamBooster": {
+          "morale": 4,
+          "attack_pct": 5
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "opp_box",
+              "att_third",
+              "central"
+            ],
+            "spatialAwareness": 78,
+            "scanBeforeReceive": 70,
+            "runTiming": 84,
+            "defensivePositioning": 38
+          },
+          "teamProfile": {
+            "supportCarrier": 68,
+            "tacticalDiscipline": 76,
+            "teamCommunication": 60,
+            "defensiveCover": 32,
+            "collectiveMovement": 74
+          },
+          "individualProfile": {
+            "creativity": 72,
+            "decisionUnderPressure": 80,
+            "ballConfidence": 82,
+            "vision": 70,
+            "technicalExecution": 80
+          },
+          "riskProfile": {
+            "baseRisk": 66,
+            "riskUnderPressure": 8,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -5,
+            "dribbleVsPass": 50
+          },
+          "criticalProfile": {
+            "criticalComposure": 82,
+            "ego": 68,
+            "crowdPressureReaction": 78,
+            "selfishVsTeam": 65,
+            "finishingConfidence": 86
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-07-05T00:00:00.000Z",
+          "updatedAt": "2026-07-05T00:00:00.000Z",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Slavia Praha 2003 — o símbolo",
+      "yearStart": 2001,
+      "yearEnd": 2006,
+      "mainClub": "Slavia Praha (República Tcheca)",
+      "narrativeTitle": "78 jogos, 19 gols e uma voz",
+      "narrativeSubtitle": "Do Eden ao debate anti-racismo",
+      "narrative": "Cruza o Atlântico e vira peça central do Slavia Praha. 78 jogos, 19 gols — volume expressivo para atacante estrangeiro no leste europeu do começo dos anos 2000. Refina a técnica, ganha tempo de bola, aprende a decidir em uma cidade que não fala português. Em 2003, quando enfrenta o racismo com firmeza, coragem e humanidade, transforma a experiência pessoal em voz pública — vira símbolo anti-racismo e referência para gerações de atletas brasileiros no exterior. É a fase que soma performance + causa: a lenda que ensina dentro e fora do vestiário.",
+      "tier": 3,
+      "collectionCode": "TCH-SLA-06",
+      "collectionTitle": "Slavia Praha — Símbolo e Legado",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "Jogador",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "Facilitador",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Adauto SLV",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 23,
+        "bio": "Fez o gol e escreveu a história. Do Eden ao debate público em 2003: voz que virou símbolo.",
+        "tagline": "Brasileiro no Eden. Voz no debate. Símbolo além do gol.",
+        "attrs": {
+          "passe": 84,
+          "marcacao": 70,
+          "velocidade": 82,
+          "drible": 86,
+          "finalizacao": 89,
+          "fisico": 82,
+          "tatico": 90,
+          "mentalidade": 96,
+          "confianca": 95,
+          "fairPlay": 96
+        },
+        "mintOverall": 87,
+        "evolutionRate": 0.75,
+        "rarity": "epico",
+        "cardSupply": 2500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "mentalidade",
+          "fairPlay",
+          "finalizacao"
+        ],
+        "legacyTeamBooster": {
+          "morale": 7,
+          "attack_pct": 4,
+          "defense_pct": 2
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "opp_box",
+              "att_third",
+              "central"
+            ],
+            "spatialAwareness": 88,
+            "scanBeforeReceive": 82,
+            "runTiming": 82,
+            "defensivePositioning": 55
+          },
+          "teamProfile": {
+            "supportCarrier": 78,
+            "tacticalDiscipline": 88,
+            "teamCommunication": 88,
+            "defensiveCover": 50,
+            "collectiveMovement": 85
+          },
+          "individualProfile": {
+            "creativity": 74,
+            "decisionUnderPressure": 88,
+            "ballConfidence": 86,
+            "vision": 78,
+            "technicalExecution": 84
+          },
+          "riskProfile": {
+            "baseRisk": 55,
+            "riskUnderPressure": 0,
+            "riskWhenLosing": 20,
+            "riskWhenWinning": -8,
+            "dribbleVsPass": 40
+          },
+          "criticalProfile": {
+            "criticalComposure": 92,
+            "ego": 55,
+            "crowdPressureReaction": 90,
+            "selfishVsTeam": 42,
+            "finishingConfidence": 90
+          },
+          "equippedSkills": [],
+          "learningState": {
+            "confidence": 50,
+            "riskTendency": 50,
+            "passVsShootPreference": 50,
+            "criticalComposure": 50,
+            "tacticalDiscipline": 50,
+            "egoControl": 50,
+            "recentEvents": []
+          },
+          "createdAt": "2026-07-05T00:00:00.000Z",
+          "updatedAt": "2026-07-05T00:00:00.000Z",
+          "version": 1
+        }
+      }
+    }
+  ]
+}
