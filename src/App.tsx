@@ -63,7 +63,7 @@ function SessionGuard() {
       path.startsWith('/cadastro/') ||
       path.startsWith('/admin') ||
       path === '/reset-password' ||
-      path === '/playervip'
+      path.startsWith('/playervip')
     )
       return;
 
@@ -152,6 +152,9 @@ const PremiumLeagues = lazy(() => import('./pages/PremiumLeagues').then((m) => (
 const Manager = lazy(() => import('./pages/Manager').then((m) => ({ default: m.Manager })));
 const ManagerPro = lazy(() => import('./pages/ManagerPro').then((m) => ({ default: m.ManagerPro })));
 const PlayerVip = lazy(() => import('./pages/PlayerVip').then((m) => ({ default: m.PlayerVip })));
+const PlayerVipLanding = lazy(() =>
+  import('./pages/PlayerVipLanding').then((m) => ({ default: m.PlayerVipLanding })),
+);
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
 const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
@@ -505,6 +508,15 @@ as a nice MVP. Let's Play Together! ⚽
             element={
               <Suspense fallback={<RouteFallback />}>
                 <PlayerVip />
+              </Suspense>
+            }
+          />
+          {/* PLAYERVIP LANDING — vitrine pública por handle (link de convite viral). */}
+          <Route
+            path="/playervip/:handle"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PlayerVipLanding />
               </Suspense>
             }
           />
