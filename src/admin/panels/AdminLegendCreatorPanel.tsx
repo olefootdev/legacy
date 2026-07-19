@@ -93,7 +93,9 @@ function emptyPhase(phase: LegendPhase, tier: LegendTier): LegendPhasePayload {
       attrs: emptyAttrs(),
       mintOverall: 70,
       evolutionRate: 1.2,
-      rarity: 'ultra_raro',
+      // Lenda nasce PREMIUM (base da escada). Promover a raro/ultra/épico é
+      // decisão consciente por feito — ver src/entities/rarityLabels.ts.
+      rarity: 'premium',
       isLegacy: true,
       agentProfileEnabled: true,
       legacyTaughtAttributes: [],

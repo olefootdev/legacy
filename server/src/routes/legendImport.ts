@@ -256,7 +256,9 @@ function buildLegacyRow(slug: string, payload: LegendImportPayload, ph: LegendPh
     age: Number.isFinite(e.age) ? Math.round(e.age!) : null,
     strong_foot: normalizeStrongFoot(e.strongFoot),
     creator_label: e.creatorType?.trim() || 'lenda',
-    rarity_label: e.rarity?.trim() || 'ultra_raro',
+    // Base da escada (AI+ < Premium < Raro < Ultra-raro < Épico). Épico é
+    // reservado a feito monumental — nunca é default.
+    rarity_label: e.rarity?.trim() || 'premium',
     bio: e.bio?.trim() || null,
     tagline: e.tagline?.trim()?.slice(0, 200) || null,
     card_supply: pricing.initialSupply,
@@ -573,7 +575,7 @@ legendImportRoutes.get('/legend-export', async (c) => {
         },
         mintOverall: typeof row.mint_overall === 'number' ? row.mint_overall : undefined,
         evolutionRate: typeof row.evolution_rate === 'number' ? row.evolution_rate : 1,
-        rarity: typeof row.rarity_label === 'string' ? row.rarity_label : 'ultra_raro',
+        rarity: typeof row.rarity_label === 'string' ? row.rarity_label : 'premium',
         isLegacy: true,
         legacyTaughtAttributes: Array.isArray(row.taught_attributes)
           ? (row.taught_attributes as string[])
