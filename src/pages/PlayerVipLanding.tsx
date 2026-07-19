@@ -255,8 +255,7 @@ function Progression({ cards }: { cards: LandingCard[] }) {
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <span className="h-7 w-3 rounded-sm" style={{ background: YELLOW, boxShadow: '0 0 22px rgba(253,225,0,.45)' }} />
-      <span className="font-display text-[15px] font-black uppercase tracking-wide">OLEFOOT</span>
+      <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 22 }} />
       <span className="font-display text-[15px] font-black uppercase tracking-wide text-white/40">PLAYERVIP</span>
     </div>
   );

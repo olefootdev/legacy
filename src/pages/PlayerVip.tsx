@@ -111,8 +111,7 @@ function PlayerVipLogin() {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <div className="mb-10 flex items-center gap-3">
-        <span className="h-7 w-3 rounded-sm" style={{ background: YELLOW, boxShadow: '0 0 22px rgba(253,225,0,.45)' }} />
-        <span className="font-display text-[15px] font-black uppercase tracking-wide">OLEFOOT</span>
+        <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 22 }} />
         <span className="font-display text-[15px] font-black uppercase tracking-wide text-white/40">PLAYERVIP</span>
       </div>
 
@@ -321,8 +320,7 @@ function PlayerVipDashboard() {
       {/* Top bar */}
       <header className="sticky top-0 z-20 -mx-4 mb-2 flex items-center justify-between bg-gradient-to-b from-[#0a0a0b] via-[#0a0a0b] to-transparent px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="h-6 w-2.5 rounded-sm" style={{ background: YELLOW, boxShadow: '0 0 18px rgba(253,225,0,.4)' }} />
-          <span className="font-display text-[13px] font-black uppercase tracking-wide">OLEFOOT</span>
+          <img src="/brand/olefoot-yellow-01.svg" alt="Olefoot" className="w-auto shrink-0" style={{ height: 19 }} />
           <span className="font-display text-[13px] font-black uppercase tracking-wide text-white/40">PLAYERVIP</span>
         </div>
         <button onClick={() => void logout()} className="flex items-center gap-1.5 text-xs text-white/45 hover:text-white" aria-label="Sair">
