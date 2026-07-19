@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { fetchPlayerVipLanding, type LandingCard, type PlayerVipLandingData } from '@/supabase/playerVipLanding';
 import { setPendingReferrerCode } from '@/wallet/referralCode';
+import { keyAttrsForPosition } from '@/admin/legendAttrCalibration';
 
 const YELLOW = '#FDE100';
 
@@ -142,7 +143,8 @@ export function PlayerVipLanding() {
                     {c.narrativeTitle && (
                       <p className="mt-2 line-clamp-2 text-[11px] leading-snug text-white/40">{c.narrativeTitle}</p>
                     )}
-                    <p className="mt-2 font-display text-base font-black" style={{ color: YELLOW }}>
+                    <AttrBars attrs={c.attributes} pos={c.pos} />
+                    <p className="mt-3 font-display text-base font-black" style={{ color: YELLOW }}>
                       {priceLabel(c)}
                     </p>
                   </div>
@@ -151,6 +153,8 @@ export function PlayerVipLanding() {
             })}
           </section>
         )}
+
+        <Progression cards={data.cards} />
 
         {/* CTA */}
         <section className="mt-12 rounded-2xl border border-white/10 bg-[#131315] p-6 text-center">
@@ -182,6 +186,69 @@ export function PlayerVipLanding() {
         </footer>
       </div>
     </div>
+  );
+}
+
+const ATTR_LABEL: Record<string, string> = {
+  passe: 'Passe', marcacao: 'Marcação', velocidade: 'Velocidade', drible: 'Drible',
+  finalizacao: 'Finalização', fisico: 'Físico', tatico: 'Tático',
+  mentalidade: 'Mentalidade', confianca: 'Confiança', fairPlay: 'Fair play',
+};
+
+/**
+ * Mostra só os atributos que DEFINEM o ofício da posição (ATA=gol, VOL=desarme,
+ * MEI=assistência). Dez barras viram planilha numa página feita pra público
+ * amplo; três contam a história do jogador em um relance.
+ */
+function AttrBars({ attrs, pos }: { attrs: Record<string, number> | null; pos: string | null }) {
+  const keys = useMemo(() => keyAttrsForPosition(pos ?? ''), [pos]);
+  if (!attrs || keys.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-col gap-1.5 border-t border-white/[0.07] pt-3">
+      {keys.slice(0, 3).map((k) => (
+        <div key={k} className="grid grid-cols-[62px_1fr_20px] items-center gap-2">
+          <span className="text-[9.5px] uppercase tracking-wide text-white/40">{ATTR_LABEL[k] ?? k}</span>
+          <span className="h-[5px] overflow-hidden rounded-full bg-white/[0.07]">
+            <span className="block h-full rounded-full" style={{ width: `${attrs[k] ?? 0}%`, background: YELLOW }} />
+          </span>
+          <span className="text-right text-[10px] font-bold tabular-nums" style={{ color: YELLOW }}>{attrs[k] ?? '—'}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Linha do tempo: como o jogador evoluiu de uma fase pra outra. */
+function Progression({ cards }: { cards: LandingCard[] }) {
+  if (cards.length < 2) return null;
+  return (
+    <section className="mt-12">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">A trajetória</p>
+      <ol className="mt-4 flex flex-col gap-0">
+        {cards.map((c, i) => (
+          <li key={c.id} className="relative flex gap-4 pb-6 last:pb-0">
+            {i < cards.length - 1 && <span className="absolute left-[7px] top-4 h-full w-px bg-white/10" />}
+            <span
+              className="relative mt-1 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-[#0a0a0b]"
+              style={{ background: YELLOW }}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-display text-sm font-black">{c.name}</span>
+                {c.mintOverall != null && (
+                  <span className="text-[11px] font-bold tabular-nums" style={{ color: YELLOW }}>OVR {c.mintOverall}</span>
+                )}
+                <span className="text-[11px] text-white/35">
+                  {c.yearStart}{c.yearEnd && c.yearEnd !== c.yearStart ? `–${c.yearEnd}` : ''}
+                </span>
+              </div>
+              {c.club && <p className="mt-0.5 text-[12px] text-white/55">{c.club}</p>}
+              {c.tagline && <p className="mt-1.5 text-[12px] italic leading-snug text-white/40">“{c.tagline}”</p>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

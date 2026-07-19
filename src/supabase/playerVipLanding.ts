@@ -9,6 +9,8 @@ import { getSupabase } from './client';
 export interface LandingCard {
   id: string;
   name: string;
+  pos: string | null;
+  rarity: string | null;
   club: string | null;
   phase: string | null;
   portrait: string | null;
@@ -51,6 +53,8 @@ export async function fetchPlayerVipLanding(handle: string): Promise<PlayerVipLa
     cards: rawCards.map((c) => ({
       id: String(c.id),
       name: String(c.name ?? ''),
+      pos: (c.pos as string) ?? null,
+      rarity: (c.rarity as string) ?? null,
       club: (c.club as string) ?? null,
       phase: (c.phase as string) ?? null,
       portrait: (c.portrait as string) ?? null,

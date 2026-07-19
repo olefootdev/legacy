@@ -1,0 +1,324 @@
+{
+  "playerName": "Thiago Marcelo Silveira Cocito",
+  "shortName": "Cocito",
+  "collectionId": "mem-cocito-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.ogol.com.br/jogador/cocito/5409",
+    "https://www.transfermarkt.com.br/cocito/profil/spieler/39222",
+    "https://terceirotempo.uol.com.br/que-fim-levou/cocito-4471",
+    "https://imortaisdofutebol.com/esquadrao-imortal-atletico-pr-2001/",
+    "https://www.umdoisesportes.com.br/athletico100anos/personalidades/cocito-o-volante-racudo-athletico-100-anos/"
+  ],
+  "inconsistencies": [
+    "TÉCNICA — fontes se contradizem. Imortais do Futebol: 'fama de mal e violento... não tinha técnica alguma, mas sabia marcar as estrelas'. Perfil do centenário do Athletico: 'não merecia a fama de volante-brucutu... ágil e dinâmico, desarmava com precisão, repertório de dribles e passes curtos e médios, jogada-assinatura: o lançamento de letra'. Adotado o meio: marcação elite e inquestionável (as duas concordam), técnica competente mas sem ser armador.",
+    "terceirotempo.uol.com.br bloqueou o fetch automatizado — dados vieram de ogol, Transfermarkt e das duas matérias acima.",
+    "Grêmio 2004: 51 jogos, mas a temporada terminou em rebaixamento. O card celebra o jogador e a ida à Europa, sem celebrar a campanha do time.",
+    "Total de jogos: ogol registra 278 jogos e 3 gols na carreira."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "Botafogo-SP 1995-1998 — O menino de Bebedouro",
+      "yearStart": 1995,
+      "yearEnd": 1998,
+      "mainClub": "Botafogo-SP (Ribeirão Preto)",
+      "narrativeTitle": "Bebedouro descobre um volante de raça",
+      "narrative": "Antes de qualquer título, teve o Botafogo-SP. É em Ribeirão Preto que o menino de Bebedouro vira jogador: 1,79 m, 82 kg, destro, e um jeito de disputar bola que já chamava atenção mais pela entrega do que pelo refino. Vinte jogos no profissional, aprendendo o ofício que seria o dele a carreira inteira — chegar antes, cortar a linha de passe, não deixar o jogo do adversário nascer. Ainda é força bruta e instinto; a leitura de jogo vem depois. Mas as boas atuações aqui é que fazem o Atlético Paranaense ir buscá-lo em 1998.",
+      "tier": 1,
+      "collectionCode": "BR-BSP-97",
+      "collectionTitle": "Botafogo-SP — A formação 1995-1998",
+      "currency": "USDT",
+      "priceUnitCents": 300,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "cocitos@yahoo.com.br", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Cocito BSP",
+        "num": 5,
+        "pos": "VOL",
+        "archetype": "lenda",
+        "zone": "meio",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 19,
+        "bio": "Formado em Bebedouro e lapidado no Botafogo-SP: 20 jogos no profissional entre 1995 e 1998, com a entrega que viraria sua marca.",
+        "tagline": "Ribeirão Preto viu primeiro: um volante que chegava antes.",
+        "attrs": {
+          "passe": 71,
+          "marcacao": 80,
+          "velocidade": 78,
+          "drible": 60,
+          "finalizacao": 48,
+          "fisico": 80,
+          "tatico": 70,
+          "mentalidade": 64,
+          "confianca": 66,
+          "fairPlay": 54
+        },
+        "mintOverall": 72,
+        "evolutionRate": 1.4,
+        "rarity": "premium",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["marcacao", "fisico"],
+        "legacyTeamBooster": { "morale": 2, "defense_pct": 3 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "VOL",
+          "role": "DM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["own_third", "central", "mid_third"],
+            "spatialAwareness": 62,
+            "scanBeforeReceive": 56,
+            "runTiming": 50,
+            "defensivePositioning": 74
+          },
+          "teamProfile": {
+            "supportCarrier": 58,
+            "tacticalDiscipline": 66,
+            "teamCommunication": 58,
+            "defensiveCover": 76,
+            "collectiveMovement": 62
+          },
+          "individualProfile": {
+            "creativity": 46,
+            "decisionUnderPressure": 58,
+            "ballConfidence": 60,
+            "vision": 54,
+            "technicalExecution": 58
+          },
+          "riskProfile": {
+            "baseRisk": 46,
+            "riskUnderPressure": -4,
+            "riskWhenLosing": 12,
+            "riskWhenWinning": -8,
+            "dribbleVsPass": 26
+          },
+          "criticalProfile": {
+            "criticalComposure": 58,
+            "ego": 52,
+            "crowdPressureReaction": 62,
+            "selfishVsTeam": 30,
+            "finishingConfidence": 40
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Athletico-PR 1998-2003 — Campeão Brasileiro de 2001",
+      "yearStart": 1998,
+      "yearEnd": 2003,
+      "mainClub": "Athletico Paranaense",
+      "narrativeTitle": "Titular do primeiro título nacional do clube",
+      "narrative": "Cinco anos, 117 jogos e o momento que define a carreira. Chega em 1998, marca um golaço no Coritiba pela Seletiva da Libertadores de 1999 e a partir dali é titular e referência. Em 2001 é um dos símbolos de raça da campanha que dá ao Athletico Paranaense o PRIMEIRO título nacional da sua história — e ele está no time-base da conquista, no meio de campo, ao lado de Alessandro, Kléberson e Fabiano. Não era o que fazia o gol: era o que impedia o do outro. Sabia marcar as estrelas do adversário e anulava a jogada do jeito que fosse preciso. Xodó da torcida justamente por isso.",
+      "tier": 3,
+      "collectionCode": "BR-CAP-01",
+      "collectionTitle": "Athletico-PR — Campeão Brasileiro 2001",
+      "currency": "USDT",
+      "priceUnitCents": 1000,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "cocitos@yahoo.com.br", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Cocito PR",
+        "num": 5,
+        "pos": "VOL",
+        "archetype": "lenda",
+        "zone": "meio",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 24,
+        "bio": "Titular do Athletico Paranaense campeão brasileiro de 2001 — o primeiro título nacional da história do clube. 117 jogos, cinco temporadas, e a fama de anular quem fosse.",
+        "tagline": "Não fazia o gol. Impedia o do outro. E o clube foi campeão do Brasil.",
+        "attrs": {
+          "passe": 84,
+          "marcacao": 89,
+          "velocidade": 80,
+          "drible": 70,
+          "finalizacao": 55,
+          "fisico": 88,
+          "tatico": 88,
+          "mentalidade": 88,
+          "confianca": 86,
+          "fairPlay": 58
+        },
+        "mintOverall": 85,
+        "evolutionRate": 0.75,
+        "rarity": "epico",
+        "cardSupply": 2500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["marcacao", "tatico", "mentalidade"],
+        "legacyTeamBooster": { "morale": 7, "defense_pct": 6, "attack_pct": 1 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "VOL",
+          "role": "DM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["own_third", "central", "mid_third"],
+            "spatialAwareness": 84,
+            "scanBeforeReceive": 78,
+            "runTiming": 62,
+            "defensivePositioning": 90
+          },
+          "teamProfile": {
+            "supportCarrier": 76,
+            "tacticalDiscipline": 86,
+            "teamCommunication": 82,
+            "defensiveCover": 90,
+            "collectiveMovement": 82
+          },
+          "individualProfile": {
+            "creativity": 58,
+            "decisionUnderPressure": 82,
+            "ballConfidence": 76,
+            "vision": 70,
+            "technicalExecution": 72
+          },
+          "riskProfile": {
+            "baseRisk": 42,
+            "riskUnderPressure": -10,
+            "riskWhenLosing": 14,
+            "riskWhenWinning": -14,
+            "dribbleVsPass": 22
+          },
+          "criticalProfile": {
+            "criticalComposure": 84,
+            "ego": 48,
+            "crowdPressureReaction": 86,
+            "selfishVsTeam": 22,
+            "finishingConfidence": 46
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Grêmio 2004 e a Europa — O ofício atravessa fronteiras",
+      "yearStart": 2004,
+      "yearEnd": 2007,
+      "mainClub": "Grêmio (RS)",
+      "narrativeTitle": "51 jogos no Grêmio, depois Espanha",
+      "narrative": "O volante do título brasileiro vira nome de mercado. Em 2004 veste a camisa do Grêmio e é dos mais utilizados do elenco: 51 jogos numa só temporada, sete Grenais disputados. É o ano mais desgastante da carreira — e o que mais mostra o que ele é: quem joga 51 vezes num ano assim não se esconde. Dali sai para a Europa, onde o ofício aprendido em Ribeirão Preto e lapidado em Curitiba atravessa fronteiras: Tenerife e Real Murcia, na Espanha. Menos explosão, mais leitura; menos correria, mais posição certa.",
+      "tier": 2,
+      "collectionCode": "BR-GRE-04",
+      "collectionTitle": "Grêmio — A travessia 2004",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "cocitos@yahoo.com.br", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Cocito GRE",
+        "num": 5,
+        "pos": "VOL",
+        "archetype": "lenda",
+        "zone": "meio",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 27,
+        "bio": "51 jogos pelo Grêmio em 2004 e sete Grenais, antes da temporada de Tenerife e Real Murcia, na Espanha. O ofício de volante levado para fora.",
+        "tagline": "Cinquenta e um jogos num ano. Quem se esconde não joga tanto.",
+        "attrs": {
+          "passe": 80,
+          "marcacao": 82,
+          "velocidade": 74,
+          "drible": 68,
+          "finalizacao": 54,
+          "fisico": 80,
+          "tatico": 84,
+          "mentalidade": 88,
+          "confianca": 80,
+          "fairPlay": 64
+        },
+        "mintOverall": 80,
+        "evolutionRate": 0.9,
+        "rarity": "raro",
+        "cardSupply": 5000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["tatico", "mentalidade"],
+        "legacyTeamBooster": { "morale": 4, "defense_pct": 4 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "VOL",
+          "role": "DM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["own_third", "central", "mid_third"],
+            "spatialAwareness": 86,
+            "scanBeforeReceive": 82,
+            "runTiming": 58,
+            "defensivePositioning": 86
+          },
+          "teamProfile": {
+            "supportCarrier": 78,
+            "tacticalDiscipline": 88,
+            "teamCommunication": 84,
+            "defensiveCover": 86,
+            "collectiveMovement": 84
+          },
+          "individualProfile": {
+            "creativity": 58,
+            "decisionUnderPressure": 84,
+            "ballConfidence": 76,
+            "vision": 72,
+            "technicalExecution": 72
+          },
+          "riskProfile": {
+            "baseRisk": 38,
+            "riskUnderPressure": -12,
+            "riskWhenLosing": 16,
+            "riskWhenWinning": -16,
+            "dribbleVsPass": 20
+          },
+          "criticalProfile": {
+            "criticalComposure": 86,
+            "ego": 44,
+            "crowdPressureReaction": 84,
+            "selfishVsTeam": 20,
+            "finishingConfidence": 44
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    }
+  ]
+}
