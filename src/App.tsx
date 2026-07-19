@@ -155,6 +155,9 @@ const PlayerVip = lazy(() => import('./pages/PlayerVip').then((m) => ({ default:
 const PlayerVipLanding = lazy(() =>
   import('./pages/PlayerVipLanding').then((m) => ({ default: m.PlayerVipLanding })),
 );
+const PlayerVipVerify = lazy(() =>
+  import('./pages/PlayerVipVerify').then((m) => ({ default: m.PlayerVipVerify })),
+);
 const ManagerMessages = lazy(() => import('./pages/ManagerMessages').then((m) => ({ default: m.ManagerMessages })));
 const ManagerNetwork = lazy(() => import('./pages/ManagerNetwork').then((m) => ({ default: m.ManagerNetwork })));
 const ManagerScouts = lazy(() => import('./pages/ManagerScouts').then((m) => ({ default: m.ManagerScouts })));
@@ -508,6 +511,24 @@ as a nice MVP. Let's Play Together! ⚽
             element={
               <Suspense fallback={<RouteFallback />}>
                 <PlayerVip />
+              </Suspense>
+            }
+          />
+          {/* PLAYERVIP VERIFY — link mágico no NOSSO domínio (antes da vitrine:
+              /playervip/verify não pode ser lido como handle). Pessoal e uso único. */}
+          <Route
+            path="/playervip/verify"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PlayerVipVerify />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/playervip/verify/:handle"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PlayerVipVerify />
               </Suspense>
             }
           />
