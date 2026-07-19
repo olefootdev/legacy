@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { getSupabase } from '@/supabase/client';
 import { getMyLinkedCards, type LinkedCardRow } from '@/admin/playerLinking';
-import { suggestCardCorrection, CORRECTION_FIELDS } from '@/supabase/cardCorrections';
+import { LegendContributionModal } from '@/components/playervip/LegendContributionModal';
+import type { ContributionKind } from '@/supabase/legendContributions';
 import { fetchMyAffiliateCommissions, totalPendingByCurrency } from '@/wallet/affiliateCommissions';
 import { fetchMyReferrals, fetchMyReferralCode, type ReferredProfile } from '@/supabase/referrals';
 import { getMyVerification } from '@/supabase/verification';
@@ -188,7 +189,7 @@ function PlayerVipDashboard() {
 
   // Modais
   const [modal, setModal] = useState<null | 'withdraw' | 'support' | 'collection'>(null);
-  const [correctionCard, setCorrectionCard] = useState<LinkedCardRow | null>(null);
+  const [contribution, setContribution] = useState<{ kind: ContributionKind; card: LinkedCardRow | null } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reloadWithdrawals = useCallback(async () => {
@@ -443,13 +444,16 @@ function PlayerVipDashboard() {
                   </div>
                   {/* Só quem é dono do card chega aqui (get_my_linked_cards filtra por
                       beneficiary) — e o servidor recusa de novo no RPC. */}
-                  <button
-                    type="button"
-                    onClick={() => setCorrectionCard(c)}
-                    className="mt-1.5 self-start text-[11px] font-bold uppercase tracking-wider text-white/35 underline-offset-2 hover:text-white/70 hover:underline"
-                  >
-                    Sugerir correção
-                  </button>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                    <button type="button" onClick={() => setContribution({ kind: 'correcao', card: c })}
+                      className="text-[11px] font-bold uppercase tracking-wider text-white/35 underline-offset-2 hover:text-white/70 hover:underline">
+                      Sugerir correção
+                    </button>
+                    <button type="button" onClick={() => setContribution({ kind: 'historia', card: c })}
+                      className="text-[11px] font-bold uppercase tracking-wider text-white/35 underline-offset-2 hover:text-white/70 hover:underline">
+                      Contar a história
+                    </button>
+                  </div>
                 </div>
                 <div className="hidden w-32 shrink-0 flex-col items-end justify-center gap-0.5 border-l border-white/10 px-5 sm:flex">
                   <div className="italic text-white" style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 22 }}>
@@ -575,7 +579,10 @@ function PlayerVipDashboard() {
       {/* AÇÕES */}
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
         <ActionTile icon={<Plus className="h-5 w-5" />} accent={YELLOW}
-          title="Nova coleção" desc="Peça novos cards seus. Você aprova arte e atributos antes do lançamento."
+          title="Pedir um card meu" desc="Teve uma época marcante que ainda não virou card? Conte o ano e o clube."
+          onClick={() => setContribution({ kind: 'novo_card', card: null })} />
+        <ActionTile icon={<Sparkles className="h-5 w-5" />} accent="#c084fc"
+          title="Indicar um atleta" desc="Conhece alguém que merece uma coleção? Indique para a OLEFOOT."
           onClick={() => setModal('collection')} />
         <ActionTile icon={<MessageCircle className="h-5 w-5" />} accent="#5b8def"
           title="Falar com a OLEFOOT" desc="Dúvida, saque, contrato? Nossa equipe responde por aqui."
@@ -595,105 +602,18 @@ function PlayerVipDashboard() {
         onDone={() => { setModal(null); void reloadWithdrawals(); }}
       />
       <SupportModal open={modal === 'support'} onClose={() => setModal(null)} />
-      <CorrectionModal card={correctionCard} onClose={() => setCorrectionCard(null)} />
+      <LegendContributionModal
+        kind={contribution?.kind ?? null}
+        cardId={contribution?.card?.id ?? null}
+        cardName={contribution?.card?.name}
+        onClose={() => setContribution(null)}
+      />
       <CollectionModal open={modal === 'collection'} onClose={() => setModal(null)} />
     </div>
   );
 }
 
 // ─── sub-componentes de layout ──────────────────────────────────────────────
-/**
- * SUGERIR CORREÇÃO — a lenda corrige a própria ficha.
- *
- * Quem viveu a carreira sabe mais do que qualquer matéria: é a melhor fonte que
- * temos. O servidor confere de novo se quem envia é o dono do card.
- */
-function CorrectionModal({ card, onClose }: { card: LinkedCardRow | null; onClose: () => void }) {
-  const [field, setField] = useState('');
-  const [message, setMessage] = useState('');
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [err, setErr] = useState('');
-
-  useEffect(() => {
-    if (card) { setField(''); setMessage(''); setState('idle'); setErr(''); }
-  }, [card]);
-
-  if (!card) return null;
-
-  async function send() {
-    if (!card) return;
-    const msg = message.trim();
-    if (msg.length < 5) { setErr('Conta um pouco mais pra gente entender.'); setState('error'); return; }
-    setState('sending'); setErr('');
-    const r = await suggestCardCorrection({ legacyPlayerId: card.id, message: msg, field: field || undefined });
-    if (!r.ok) { setErr(r.error ?? 'Não foi possível enviar.'); setState('error'); return; }
-    setState('sent');
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6" onClick={onClose}>
-      <div
-        className="w-full max-w-md rounded-t-3xl border border-white/10 bg-[#131315] p-6 sm:rounded-3xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {state === 'sent' ? (
-          <div className="text-center">
-            <CheckCircle2 className="mx-auto mb-4 h-10 w-10" style={{ color: YELLOW }} />
-            <h2 className="ole-headline-italic text-2xl">Recebemos</h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/60">
-              Sua correção vai ser lida por uma pessoa da OLEFOOT. Se fizer sentido, a gente ajusta o card.
-            </p>
-            <button onClick={onClose} className="mt-5 w-full rounded-xl py-3.5 font-display text-sm font-black uppercase tracking-wider text-black" style={{ background: YELLOW }}>
-              Fechar
-            </button>
-          </div>
-        ) : (
-          <>
-            <h2 className="ole-headline-italic text-2xl">Sugerir correção</h2>
-            <p className="mt-2 text-sm leading-relaxed text-white/55">
-              Este card é sobre <b className="text-white">você</b>. Se tem algo errado — um ano, um clube, a história,
-              um número — nos conte. Ninguém sabe melhor do que quem viveu.
-            </p>
-            <p className="mt-3 text-[11px] uppercase tracking-wider text-white/30">{card.name}</p>
-
-            <div className="mt-5 space-y-3">
-              <select
-                value={field}
-                onChange={(e) => setField(e.target.value)}
-                className="w-full rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none focus:border-white/30"
-              >
-                <option value="">O que está errado? (opcional)</option>
-                {CORRECTION_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-              </select>
-              <textarea
-                value={message}
-                onChange={(e) => { setMessage(e.target.value); if (state === 'error') setState('idle'); }}
-                rows={5}
-                placeholder="Ex.: joguei no Vasco em 2005 e 2006, não só em 2005."
-                className="w-full resize-none rounded-xl border border-white/12 bg-[#0c0c0d] px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30"
-              />
-              {state === 'error' && <p className="text-xs text-red-400">{err}</p>}
-              <div className="flex gap-2">
-                <button onClick={onClose} className="flex-1 rounded-xl border border-white/12 py-3.5 text-sm font-bold uppercase tracking-wider text-white/60 hover:border-white/30">
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => void send()}
-                  disabled={state === 'sending'}
-                  className="flex flex-1 items-center justify-center rounded-xl py-3.5 font-display text-sm font-black uppercase tracking-wider text-black disabled:opacity-60"
-                  style={{ background: YELLOW }}
-                >
-                  {state === 'sending' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function SectionHeader({ title }: { title: string }) {
   return (
     <div className="mb-4 mt-11 flex items-center gap-3.5">
@@ -853,7 +773,7 @@ function CollectionModal({ open, onClose }: { open: boolean; onClose: () => void
   }
   return (
     <ConfirmDialog open={open} onClose={onClose} onConfirm={() => void submit()}
-      eyebrow="Nova coleção" title={ok ? 'Solicitação enviada' : 'Pedir nova coleção'}
+      eyebrow="Indicação" title={ok ? 'Indicação enviada' : 'Indicar um atleta'}
       confirmLabel={busy ? 'Enviando…' : 'Solicitar'} confirmDisabled={busy || ok || athlete.trim().length < 2}>
       {ok ? (
         <p className="mt-3 text-sm leading-relaxed text-white/70">
@@ -862,11 +782,11 @@ function CollectionModal({ open, onClose }: { open: boolean; onClose: () => void
         </p>
       ) : (
         <div className="mt-4 space-y-3">
-          <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder="Atleta (você ou um indicado)"
+          <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder="Nome do atleta que você indica"
             className="w-full rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="O que essa coleção deve ter? (opcional)"
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Por que ele merece uma coleção? (opcional)"
             className="w-full resize-none rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
-          <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Está indicando alguém? Nome (opcional)"
+          <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Como falar com ele? WhatsApp ou e-mail (opcional)"
             className="w-full rounded-lg border border-white/12 bg-[#0c0c0d] px-3.5 py-3 text-base text-white outline-none focus:border-white/30" />
           {err && <p className="text-xs text-red-400">{err}</p>}
         </div>
