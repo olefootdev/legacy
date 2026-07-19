@@ -1,0 +1,416 @@
+{
+  "playerName": "Willian Xavier Barbosa",
+  "shortName": "Willian",
+  "collectionId": "mem-willian-xavier-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.netvasco.com.br/futebol/jogadores/72.shtml",
+    "https://netvasco.com.br/n/202702/ex-vasco-atacante-william-xavier-revela-dramas-e-tenta-esquecer-o-futebol",
+    "https://www.diariodigital.com.br/geral/william-xavier-do-futebol-a-superacao-apos-transplante-e-fe",
+    "https://www.ogol.com.br/jogador/willian-xavier/12594"
+  ],
+  "inconsistencies": [
+    "Grafia: ogol e NETVASCO registram 'Willian Xavier Barbosa' (dois L, final em N); Diário Digital e GE grafam 'William Xavier'. Adotado 'Willian Xavier' (confirmado pelo fundador e pela chave willian-xavier).",
+    "Ano do diagnóstico cardíaco: NETVASCO indica 2014 (teste no Rio Branco); Diário Digital indica 2015 (exames para o Paulistão). Não cravado na narrativa dos cards.",
+    "Jogos pelo Vasco: NETVASCO 11 jogos/2 gols; ogol 10 jogos/1 gol. Adotados os números da NETVASCO.",
+    "ge.globo.com bloqueou o fetch automatizado — nenhum dado exclusivo extraído dessa fonte.",
+    "As fontes não trazem análise técnica de estilo de jogo; os atributos derivam de porte físico, retrospecto de gols e do apelido 'Guerreiro'."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "América-RJ 2005 — Dois gols no Maracanã",
+      "yearStart": 2005,
+      "yearEnd": 2005,
+      "mainClub": "América-RJ",
+      "narrativeTitle": "Dois gols na estreia no Maracanã",
+      "narrative": "O América-RJ foi a porta. Willian chega ao clube e marca dois gols logo na sua primeira partida no Maracanã — dois jogos, dois gols pela camisa rubra. É o instante em que o futebol grande do Rio descobre um centroavante de 1,86 m, destro, com faro de área e explosão física acima da média para a idade. Ainda é jogo cru: pouco repertório tático, decisão no impulso, tudo no instinto. Mas o instinto já está pronto — e é ele que abre a porta de São Januário meses depois.",
+      "tier": 1,
+      "collectionCode": "BR-AME-05",
+      "collectionTitle": "América-RJ — Dois gols no Maracanã 2005",
+      "currency": "USDT",
+      "priceUnitCents": 300,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "willixavier09@gmail.com",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "matheusjsouza16@gmail.com",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Willian AME",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 21,
+        "bio": "Dois gols na primeira partida no Maracanã pelo América-RJ. Um centroavante de 1,86 m que chegou pronto de instinto e cru de repertório.",
+        "tagline": "Dois jogos, dois gols. O Maracanã aprendeu o nome dele na estreia.",
+        "attrs": {
+          "passe": 68,
+          "marcacao": 55,
+          "velocidade": 88,
+          "drible": 76,
+          "finalizacao": 82,
+          "fisico": 88,
+          "tatico": 66,
+          "mentalidade": 68,
+          "confianca": 80,
+          "fairPlay": 76
+        },
+        "mintOverall": 75,
+        "evolutionRate": 1.4,
+        "rarity": "premium",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "finalizacao",
+          "fisico"
+        ],
+        "legacyTeamBooster": {
+          "morale": 2,
+          "attack_pct": 3
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "opp_box",
+              "att_third",
+              "central"
+            ],
+            "spatialAwareness": 60,
+            "scanBeforeReceive": 52,
+            "runTiming": 72,
+            "defensivePositioning": 34
+          },
+          "teamProfile": {
+            "supportCarrier": 58,
+            "tacticalDiscipline": 58,
+            "teamCommunication": 50,
+            "defensiveCover": 30,
+            "collectiveMovement": 60
+          },
+          "individualProfile": {
+            "creativity": 56,
+            "decisionUnderPressure": 60,
+            "ballConfidence": 70,
+            "vision": 54,
+            "technicalExecution": 66
+          },
+          "riskProfile": {
+            "baseRisk": 72,
+            "riskUnderPressure": 12,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -4,
+            "dribbleVsPass": 58
+          },
+          "criticalProfile": {
+            "criticalComposure": 62,
+            "ego": 60,
+            "crowdPressureReaction": 70,
+            "selfishVsTeam": 66,
+            "finishingConfidence": 76
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Vasco 2005-2006 — Indicado por Romário",
+      "yearStart": 2005,
+      "yearEnd": 2006,
+      "mainClub": "Vasco da Gama (RJ)",
+      "narrativeTitle": "Chegou por indicação de Romário",
+      "narrative": "Do Maracanã para São Januário. Willian é contratado pelo Vasco em 2005 por indicação direta de Romário — o maior ídolo dele, que passa a ser companheiro de vestiário. Estreia em 15 de maio de 2005 e marca contra o Internacional em outubro. São 11 jogos e 2 gols pela camisa cruzmaltina. É aqui que o jogo dele ganha leitura: aprende a se mover entre zagueiros de Série A, a segurar a bola de costas para o gol e a esperar o momento certo em vez de atacar todo espaço. O instinto continua; a inteligência alcança.",
+      "tier": 2,
+      "collectionCode": "BR-VAS-05",
+      "collectionTitle": "Vasco — Indicado por Romário 2005",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "willixavier09@gmail.com",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "matheusjsouza16@gmail.com",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Willian VAS",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 22,
+        "bio": "Contratado pelo Vasco em 2005 por indicação de Romário. Estreia em 15/05/2005 e marca contra o Internacional: 11 jogos, 2 gols em São Januário.",
+        "tagline": "Romário apontou o nome. O Vasco foi buscar.",
+        "attrs": {
+          "passe": 76,
+          "marcacao": 58,
+          "velocidade": 88,
+          "drible": 79,
+          "finalizacao": 87,
+          "fisico": 88,
+          "tatico": 79,
+          "mentalidade": 78,
+          "confianca": 86,
+          "fairPlay": 78
+        },
+        "mintOverall": 80,
+        "evolutionRate": 0.9,
+        "rarity": "raro",
+        "cardSupply": 5000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "finalizacao",
+          "confianca"
+        ],
+        "legacyTeamBooster": {
+          "morale": 4,
+          "attack_pct": 5
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "opp_box",
+              "att_third",
+              "central"
+            ],
+            "spatialAwareness": 70,
+            "scanBeforeReceive": 64,
+            "runTiming": 80,
+            "defensivePositioning": 38
+          },
+          "teamProfile": {
+            "supportCarrier": 66,
+            "tacticalDiscipline": 68,
+            "teamCommunication": 60,
+            "defensiveCover": 34,
+            "collectiveMovement": 70
+          },
+          "individualProfile": {
+            "creativity": 62,
+            "decisionUnderPressure": 70,
+            "ballConfidence": 78,
+            "vision": 60,
+            "technicalExecution": 74
+          },
+          "riskProfile": {
+            "baseRisk": 68,
+            "riskUnderPressure": 6,
+            "riskWhenLosing": 16,
+            "riskWhenWinning": -6,
+            "dribbleVsPass": 54
+          },
+          "criticalProfile": {
+            "criticalComposure": 72,
+            "ego": 62,
+            "crowdPressureReaction": 76,
+            "selfishVsTeam": 62,
+            "finishingConfidence": 84
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Botafogo-SP 2008-2014 — O Guerreiro",
+      "yearStart": 2008,
+      "yearEnd": 2014,
+      "mainClub": "Botafogo-SP (Ribeirão Preto)",
+      "narrativeTitle": "Guerreiro — 7 gols no Paulistão 2010",
+      "narrative": "Ribeirão Preto deu a ele o nome que ficou: Guerreiro. Willian volta ao Botafogo-SP três vezes — 2008, 2010 e 2014 — e em nenhuma delas passa despercebido: 8 gols em 14 jogos na primeira, 7 gols no Campeonato Paulista de 2010, mais uma volta em 2014. Vira ídolo de uma torcida que reconhece nele o que ela mais valoriza: entrega. É também o período em que seu jogo atravessa fronteiras — Bélgica, Japão e França —, e ele volta cada vez mais completo. Presença de área, corpo, liderança e a serenidade de quem já jogou em três continentes.",
+      "tier": 3,
+      "collectionCode": "BR-BSP-10",
+      "collectionTitle": "Botafogo-SP — O Guerreiro de Ribeirão 2010",
+      "currency": "USDT",
+      "priceUnitCents": 1000,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "willixavier09@gmail.com",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "matheusjsouza16@gmail.com",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Willian BSP",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 26,
+        "bio": "Ídolo do Botafogo-SP, apelidado 'Guerreiro' pela torcida de Ribeirão Preto. 8 gols em 14 jogos em 2008 e 7 gols no Paulistão 2010, entre passagens por Bélgica, Japão e França.",
+        "tagline": "Ribeirão Preto não deu apelido: deu identidade. Guerreiro.",
+        "attrs": {
+          "passe": 86,
+          "marcacao": 64,
+          "velocidade": 86,
+          "drible": 85,
+          "finalizacao": 89,
+          "fisico": 89,
+          "tatico": 88,
+          "mentalidade": 89,
+          "confianca": 89,
+          "fairPlay": 87
+        },
+        "mintOverall": 85,
+        "evolutionRate": 0.75,
+        "rarity": "ultra_raro",
+        "cardSupply": 2500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "mentalidade",
+          "finalizacao",
+          "fisico"
+        ],
+        "legacyTeamBooster": {
+          "morale": 7,
+          "attack_pct": 4,
+          "defense_pct": 2
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "opp_box",
+              "att_third",
+              "central"
+            ],
+            "spatialAwareness": 82,
+            "scanBeforeReceive": 76,
+            "runTiming": 88,
+            "defensivePositioning": 48
+          },
+          "teamProfile": {
+            "supportCarrier": 76,
+            "tacticalDiscipline": 80,
+            "teamCommunication": 78,
+            "defensiveCover": 44,
+            "collectiveMovement": 82
+          },
+          "individualProfile": {
+            "creativity": 70,
+            "decisionUnderPressure": 84,
+            "ballConfidence": 86,
+            "vision": 70,
+            "technicalExecution": 82
+          },
+          "riskProfile": {
+            "baseRisk": 64,
+            "riskUnderPressure": -2,
+            "riskWhenLosing": 20,
+            "riskWhenWinning": -10,
+            "dribbleVsPass": 48
+          },
+          "criticalProfile": {
+            "criticalComposure": 86,
+            "ego": 58,
+            "crowdPressureReaction": 88,
+            "selfishVsTeam": 52,
+            "finishingConfidence": 90
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    }
+  ]
+}

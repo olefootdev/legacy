@@ -28,6 +28,7 @@ import { getSupabase } from '@/supabase/client';
 import { formatExp } from '@/systems/economy';
 import { overallFromAttributes } from '@/entities/player';
 import { cn } from '@/lib/utils';
+import { rarityLabelPt } from '@/entities/rarityLabels';
 
 export function ManagerPro() {
   const navigate = useNavigate();
@@ -293,7 +294,7 @@ export function ManagerPro() {
                     </p>
                     <p className="text-[10px] text-white/45">
                       {c.pos || '—'}
-                      {c.rarity_label ? ` · ${c.rarity_label}` : ''}
+                      {c.rarity_label ? ` · ${rarityLabelPt(c.rarity_label)}` : ''}
                       {c.listed_on_market ? ' · À venda' : ''}
                       {` · split ${playerPct}%`}
                     </p>

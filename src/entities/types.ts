@@ -35,7 +35,9 @@ export type PlayerRarity =
   | 'ouro'
   | 'raro'
   | 'ultra_raro'
-  | 'epico';
+  | 'epico'
+  /** Card gerado por IA (sem atleta real). Ver src/entities/rarityLabels.ts. */
+  | 'ai_plus';
 
 /**
  * Coleção estilo NFT (off-chain): teto global de unidades somadas em todas as cartas da coleção.

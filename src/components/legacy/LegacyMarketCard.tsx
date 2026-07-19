@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { LegacyPlayerRow, LegacyLotInfo } from '@/supabase/legacyPlayers';
 import { legacyPortraitFocusStyle } from '@/supabase/legacyPlayers';
+import { rarityTierOf, RARITY_LABEL, type RarityTier } from '@/entities/rarityLabels';
 
 /**
  * LegacyMarketCard — carta colecionável do mercado de lendas (Legacy Tech).
@@ -13,7 +14,7 @@ import { legacyPortraitFocusStyle } from '@/supabase/legacyPlayers';
  * lote). A ordenação (mais cara primeiro) vive no TransferLegaciesTab.
  */
 
-type Tier = 'epico' | 'ultra' | 'raro';
+type Tier = RarityTier;
 
 const ATTR_ROWS: Array<{ key: string; label: string }> = [
   { key: 'drible', label: 'DRI' },
@@ -25,14 +26,10 @@ const ATTR_ROWS: Array<{ key: string; label: string }> = [
 ];
 
 function tierOf(row: LegacyPlayerRow, ovr: number): Tier {
-  const r = (row.rarity_label ?? '').toLowerCase();
-  if (r.includes('epico') || r.includes('épico')) return 'epico';
-  if (r.includes('ultra')) return 'ultra';
-  if (r.includes('raro')) return 'raro';
-  return ovr >= 83 ? 'epico' : ovr >= 78 ? 'ultra' : 'raro';
+  return rarityTierOf(row.rarity_label, ovr);
 }
 
-const TIER_LABEL: Record<Tier, string> = { epico: 'Épico', ultra: 'Ultra-raro', raro: 'Raro' };
+const TIER_LABEL: Record<Tier, string> = RARITY_LABEL;
 
 /** Sinal de calor HONESTO — derivado da escassez real do lote, não de contador fake. */
 function scarcitySignal(lot?: LegacyLotInfo): string | null {
@@ -104,6 +101,8 @@ export function LegacyMarketCard({
     tier === 'epico' && 'border-l-[3px] border-l-neon-yellow',
     tier === 'ultra' && 'border-neon-yellow/40',
     tier === 'raro' && 'border-l-[3px] border-l-white/15',
+    tier === 'premium' && 'border-l-[3px] border-l-white/10',
+    tier === 'ai' && 'border-l-[3px] border-l-sky-400/40',
   );
 
   const BuyButton = (
@@ -205,6 +204,9 @@ export function LegacyMarketCard({
                 tier === 'epico' && 'bg-neon-yellow text-black shadow-[0_0_14px_rgba(253,225,0,0.45)]',
                 tier === 'ultra' && 'border border-neon-yellow/60 text-neon-yellow',
                 tier === 'raro' && 'border border-white/20 text-white/60',
+                tier === 'premium' && 'border border-white/12 text-white/40',
+                // AI+ sai da escada de amarelo: card gerado por IA, não é prestígio.
+                tier === 'ai' && 'border border-sky-400/50 text-sky-300/80',
               )}
               style={{ fontSize: 9, letterSpacing: '0.2em', padding: '4px 7px' }}
             >

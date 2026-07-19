@@ -27,10 +27,30 @@
       "priceUnitCents": 100,
       "initialSupply": 10000,
       "paymentSplit": [
-        { "kind": "player", "user_id": null, "label": "Jogador", "percent": 50 },
-        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
-        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
-        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "Jogador",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "Facilitador",
+          "percent": 10
+        }
       ],
       "entity": {
         "name": "José Carlos \"Juca\" de Andrade",
@@ -60,10 +80,13 @@
         },
         "mintOverall": 70,
         "evolutionRate": 1.5,
-        "rarity": "ultra_raro",
+        "rarity": "ai_plus",
         "cardSupply": 50,
         "isLegacy": true,
-        "legacyTaughtAttributes": ["finalizacao", "fisico"],
+        "legacyTaughtAttributes": [
+          "finalizacao",
+          "fisico"
+        ],
         "legacyTeamBooster": {
           "morale": 4,
           "attack_pct": 5,
@@ -76,7 +99,11 @@
           "role": "ST",
           "archetype": "lenda",
           "spatialProfile": {
-            "preferredZones": ["att_third", "opp_box", "right_half"],
+            "preferredZones": [
+              "att_third",
+              "opp_box",
+              "right_half"
+            ],
             "spatialAwareness": 70,
             "scanBeforeReceive": 62,
             "runTiming": 78,
@@ -153,10 +180,30 @@
       "priceUnitCents": 200,
       "initialSupply": 5000,
       "paymentSplit": [
-        { "kind": "player", "user_id": null, "label": "Jogador", "percent": 50 },
-        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
-        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
-        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "Jogador",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "Facilitador",
+          "percent": 10
+        }
       ],
       "entity": {
         "name": "José Carlos \"Juca\" de Andrade",
@@ -186,10 +233,14 @@
         },
         "mintOverall": 75,
         "evolutionRate": 1.5,
-        "rarity": "ultra_raro",
+        "rarity": "ai_plus",
         "cardSupply": 25,
         "isLegacy": true,
-        "legacyTaughtAttributes": ["finalizacao", "mentalidade", "fisico"],
+        "legacyTaughtAttributes": [
+          "finalizacao",
+          "mentalidade",
+          "fisico"
+        ],
         "legacyTeamBooster": {
           "morale": 7,
           "attack_pct": 8,
@@ -202,7 +253,11 @@
           "role": "ST",
           "archetype": "lenda",
           "spatialProfile": {
-            "preferredZones": ["att_third", "opp_box", "central"],
+            "preferredZones": [
+              "att_third",
+              "opp_box",
+              "central"
+            ],
             "spatialAwareness": 82,
             "scanBeforeReceive": 75,
             "runTiming": 88,
@@ -279,10 +334,30 @@
       "priceUnitCents": 500,
       "initialSupply": 2500,
       "paymentSplit": [
-        { "kind": "player", "user_id": null, "label": "Jogador", "percent": 50 },
-        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
-        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
-        { "kind": "facilitator", "user_id": null, "label": "Facilitador", "percent": 10 }
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "Jogador",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "Facilitador",
+          "percent": 10
+        }
       ],
       "entity": {
         "name": "José Carlos \"Juca\" de Andrade",
@@ -312,10 +387,14 @@
         },
         "mintOverall": 80,
         "evolutionRate": 1.2,
-        "rarity": "epico",
+        "rarity": "ai_plus",
         "cardSupply": 10,
         "isLegacy": true,
-        "legacyTaughtAttributes": ["tatico", "mentalidade", "finalizacao"],
+        "legacyTaughtAttributes": [
+          "tatico",
+          "mentalidade",
+          "finalizacao"
+        ],
         "legacyTeamBooster": {
           "morale": 9,
           "attack_pct": 9,
@@ -328,7 +407,12 @@
           "role": "ST",
           "archetype": "lenda",
           "spatialProfile": {
-            "preferredZones": ["att_third", "opp_box", "central", "mid_third"],
+            "preferredZones": [
+              "att_third",
+              "opp_box",
+              "central",
+              "mid_third"
+            ],
             "spatialAwareness": 92,
             "scanBeforeReceive": 88,
             "runTiming": 85,

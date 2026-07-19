@@ -83,7 +83,7 @@
         },
         "mintOverall": 75,
         "evolutionRate": 1.4,
-        "rarity": "ultra_raro",
+        "rarity": "premium",
         "cardSupply": 10000,
         "isLegacy": true,
         "legacyTaughtAttributes": [
@@ -222,7 +222,7 @@
         },
         "mintOverall": 85,
         "evolutionRate": 0.9,
-        "rarity": "epico",
+        "rarity": "ultra_raro",
         "cardSupply": 5000,
         "isLegacy": true,
         "legacyTaughtAttributes": [
