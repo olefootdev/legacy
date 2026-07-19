@@ -179,16 +179,15 @@ export function PlayerVipLanding() {
           </div>
         </section>
 
-        {/* Porta de serviço: discreta de propósito. A página é feita pra quem
-            DESCOBRE a lenda; quem já é dono de card é minoria dos visitantes. */}
-        <footer className="mt-10 flex flex-col items-center gap-2">
+        <footer className="mt-12 flex flex-col items-center gap-3">
           <Link
             to="/playervip"
-            className="rounded-xl border border-white/15 px-8 py-3 font-display text-sm font-black uppercase tracking-wider text-white/70 transition-colors hover:border-white/40 hover:text-white"
+            className="flex w-full max-w-sm items-center justify-center rounded-xl py-5 font-display text-base font-black uppercase tracking-wider text-black transition-transform hover:-translate-y-0.5"
+            style={{ background: YELLOW }}
           >
             Entrar
           </Link>
-          <p className="text-[11px] text-white/30">Apenas para jogadores e facilitadores</p>
+          <p className="text-[12px] text-white/40">Apenas para jogadores e facilitadores</p>
         </footer>
       </div>
     </div>
