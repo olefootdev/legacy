@@ -40,7 +40,7 @@ const EVOLUTION_BONUS_EXP_PER_OVR = 20_000;
  * em cima da soma base + bônus. Arredonda a 1 000 EXP.
  */
 export function calcMarketMakerOffer(player: PlayerEntity): number {
-  const ovr = overallFromAttributes(player.attrs);
+  const ovr = overallFromAttributes(player.attrs, player.pos);
   const mintOvr = player.mintOverall ?? ovr;
   const basePrice = genesisListingPriceExpFromMintOverall(ovr);
   const evolutionBonus = Math.max(0, ovr - mintOvr) * EVOLUTION_BONUS_EXP_PER_OVR;

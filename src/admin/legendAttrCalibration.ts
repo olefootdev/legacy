@@ -8,6 +8,7 @@
  */
 import type { PlayerAttributes } from '@/entities/types';
 import { baseAttrsForPosition } from '@/entities/managerProspect';
+import { ovrWeightsForPos } from '@/entities/ovrWeights';
 
 export type LegendPhaseKey = 'revelacao' | 'consolidacao' | 'expansao';
 
@@ -17,11 +18,12 @@ const KEYS = [
 ] as const;
 type AttrKey = (typeof KEYS)[number];
 
-/** Espelha os pesos de overallFromAttributes (player.ts:53). */
-const W: Record<AttrKey, number> = {
-  passe: 0.12, marcacao: 0.1, velocidade: 0.12, drible: 0.1, finalizacao: 0.12,
-  fisico: 0.1, tatico: 0.12, mentalidade: 0.08, confianca: 0.08, fairPlay: 0.06,
-};
+/**
+ * Os pesos agora vêm de `ovrWeightsForPos` — a MESMA fonte que o jogo usa.
+ * Antes havia uma cópia local do peso único, que ignorava a posição: por isso
+ * um volante calibrado pra "OVR 85" nunca chegava lá em campo.
+ */
+const wOf = (pos?: string) => ovrWeightsForPos(pos);
 
 /**
  * Viés por FASE DE VIDA. Revelação = jovem/físico/cru; consolidação = afirmação;
@@ -48,11 +50,14 @@ const KEY_ATTRS: Record<string, AttrKey[]> = {
 };
 
 const clampAttr = (n: number) => Math.max(1, Math.min(99, Math.round(n)));
-const rawWeighted = (a: PlayerAttributes) => KEYS.reduce((s, k) => s + (a[k] ?? 58) * W[k], 0);
+const rawWeighted = (a: PlayerAttributes, pos?: string) => {
+  const w = wOf(pos);
+  return KEYS.reduce((s, k) => s + (a[k] ?? 58) * w[k], 0);
+};
 
 /** OVR ponderado (mesmo que o game mostra). Use ESTE, não a média simples. */
-export function weightedOverall(a: PlayerAttributes): number {
-  return Math.round(Math.max(40, Math.min(99, rawWeighted(a))));
+export function weightedOverall(a: PlayerAttributes, pos?: string): number {
+  return Math.round(Math.max(40, Math.min(99, rawWeighted(a, pos))));
 }
 
 export function keyAttrsForPosition(pos: string): AttrKey[] {
@@ -64,19 +69,19 @@ export function keyAttrsForPosition(pos: string): AttrKey[] {
  * (multiplicativo + ajuste fino distribuído). Sobe primeiro os de maior peso e
  * rotaciona pra não distorcer nenhum atributo isolado.
  */
-function scaleToOvr(attrs: PlayerAttributes, target: number): PlayerAttributes {
+function scaleToOvr(attrs: PlayerAttributes, target: number, pos?: string): PlayerAttributes {
   const t = Math.max(40, Math.min(99, Math.round(target)));
-  const f = t / (rawWeighted(attrs) || 1);
+  const f = t / (rawWeighted(attrs, pos) || 1);
   const a: PlayerAttributes = { ...attrs };
   for (const k of KEYS) a[k] = clampAttr((attrs[k] ?? 58) * f);
 
   for (let i = 0; i < 600; i++) {
-    const o = weightedOverall(a);
+    const o = weightedOverall(a, pos);
     if (o === t) break;
     const dir = o < t ? 1 : -1;
     const cand = KEYS
       .filter((k) => (dir > 0 ? a[k] < 99 : a[k] > 1))
-      .sort((x, y) => W[y] - W[x]);
+      .sort((x, y) => wOf(pos)[y] - wOf(pos)[x]);
     if (cand.length === 0) break;
     a[cand[i % cand.length]!] += dir;
   }
@@ -93,5 +98,5 @@ export function calibrateLegendAttrs(
   const biased: PlayerAttributes = { ...base };
   const bias = PHASE_BIAS[phase] ?? {};
   for (const k of KEYS) biased[k] = clampAttr((biased[k] ?? 58) + (bias[k] ?? 0));
-  return scaleToOvr(biased, targetOvr);
+  return scaleToOvr(biased, targetOvr, pos);
 }

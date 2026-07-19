@@ -106,7 +106,7 @@ export function Team() {
   const maxOvr = useMemo(() => {
     const vals = Object.values(playersById);
     if (!vals.length) return 88;
-    return Math.max(...vals.map((p) => overallFromAttributes(p.attrs)));
+    return Math.max(...vals.map((p) => overallFromAttributes(p.attrs, p.pos)));
   }, [playersById]);
 
   const rosterCards: CardPlayer[] = useMemo(
@@ -263,7 +263,7 @@ export function Team() {
     const squad = Object.values(playersById).map((p) => ({
       id: p.id,
       pos: p.pos,
-      ovr: overallFromAttributes(p.attrs),
+      ovr: overallFromAttributes(p.attrs, p.pos),
       outForMatches: p.outForMatches,
     }));
     const res = suggestBestLineup(pitchSlots, squad);
@@ -322,7 +322,7 @@ export function Team() {
         player_snapshot: ent as unknown as Record<string, unknown>,
         player_name: ent.name,
         player_pos: ent.pos,
-        player_ovr: overallFromAttributes(ent.attrs),
+        player_ovr: overallFromAttributes(ent.attrs, ent.pos),
         purchase_price_exp: offerExp,
         seller_manager_id: session?.user?.id ?? null,
         seller_club_name: club.name,
@@ -334,7 +334,7 @@ export function Team() {
       managerName: club.name,
       clubName: club.name,
       playerName: name,
-      playerOvr: overallFromAttributes(ent.attrs),
+      playerOvr: overallFromAttributes(ent.attrs, ent.pos),
       playerPos: ent.pos,
       priceExp: offerExp,
     });
@@ -1125,7 +1125,7 @@ export function Team() {
         {announcePlayer && (() => {
           const ent = playersById[announcePlayer.id];
           const offerExp = ent ? calcMarketMakerOffer(ent) : 0;
-          const discountLabel = ent ? marketMakerDiscountLabel(ent.pos, overallFromAttributes(ent.attrs)) : '';
+          const discountLabel = ent ? marketMakerDiscountLabel(ent.pos, overallFromAttributes(ent.attrs, ent.pos)) : '';
           return (
           <motion.div
             initial={{ opacity: 0 }}
@@ -1158,7 +1158,7 @@ export function Team() {
                     {announcePlayer.name}
                   </h3>
                   <p className="mt-0.5 text-xs text-white/50">
-                    {announcePlayer.pos} · OVR {ent ? overallFromAttributes(ent.attrs) : '—'}
+                    {announcePlayer.pos} · OVR {ent ? overallFromAttributes(ent.attrs, ent.pos) : '—'}
                   </p>
                 </div>
                 <button

@@ -912,7 +912,7 @@ function PhaseEditor({
               Atributos (0-99)
               {/* OVR PONDERADO — o mesmo que o game mostra (era média simples aqui). */}
               <span className="rounded bg-neon-yellow/15 px-2 py-0.5 font-display text-sm font-black text-neon-yellow tabular-nums">
-                OVR {weightedOverall(phase.entity.attrs)}
+                OVR {weightedOverall(phase.entity.attrs, phase.entity.pos)}
               </span>
             </legend>
 

@@ -279,7 +279,7 @@ export function selectEffectiveTeamStrength(args: {
   for (const pid of starterIds) {
     const p = players[pid];
     if (!p) continue;
-    const ovr = overallFromAttributes(p.attrs);
+    const ovr = overallFromAttributes(p.attrs, p.pos);
     baseSum += ovr;
 
     const f = fatigueOf(health, p);

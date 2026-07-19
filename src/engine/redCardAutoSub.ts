@@ -26,7 +26,7 @@ export function pickBenchReplacement(
   const candidates = Object.values(players).filter((p) => !onPitch.has(p.id) && isAvailable(p, health));
   if (!candidates.length) return undefined;
   candidates.sort(
-    (a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs),
+    (a, b) => overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos),
   );
   return candidates[0];
 }

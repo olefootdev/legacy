@@ -93,7 +93,7 @@ export function LegacyPlayerDetailModal({
 
   if (!open || !row) return null;
   const entity = legacyRowToPlayerEntity(row);
-  const ovr = overallFromAttributes(entity.attrs);
+  const ovr = overallFromAttributes(entity.attrs, entity.pos);
   const portrait = legacyPortraitImageUrl(row);
   const priceExp = Math.max(1, Math.round(row.price_bro_cents));
   // Compra acima deste valor pede um 2º clique de confirmação.

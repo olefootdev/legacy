@@ -79,8 +79,20 @@ if (attack.ok) {
   check('nome fixado no banco', p.name === 'Adauto Evandro da Silva', `veio ${p.name}`);
   check('pos fixada no banco', p.pos === 'ATA', `veio ${p.pos}`);
   check('attrs fixados no banco', p.attrs.finalizacao === 89 && p.attrs.passe === 84, JSON.stringify(p.attrs));
-  check('mintOverall recalculado dos attrs', p.mintOverall === 86, `veio ${p.mintOverall}`);
+  // 86 → 88: o OVR passou a ser ponderado POR POSIÇÃO. Este card é ATA, e pra
+  // atacante a finalização (89) pesa 0.30 em vez de 0.12. Ver ovrWeights.ts.
+  check('mintOverall recalculado dos attrs', p.mintOverall === 88, `veio ${p.mintOverall}`);
   check('cosmético do cliente preservado', p.portraitUrl === 'https://exemplo/retrato.png' && p.num === 10);
+
+  // TRAVA DA CORREÇÃO POSICIONAL: os MESMOS atributos têm que dar OVR diferente
+  // em posições diferentes. Se estes dois empatarem, o peso por posição voltou
+  // a ser único — que era o bug (volante excelente punido por não fazer gol).
+  const zagCard = { ...CARD, pos: 'ZAG' };
+  const asZag = await resolveCardCheckout({ sb: stubSb(zagCard), productRef: 'x', clientPlayer: {} });
+  if (asZag.ok) {
+    const z = (asZag.checkout.player as Record<string, any>).mintOverall;
+    check('mesma ficha vale diferente por posição (ATA≠ZAG)', z !== p.mintOverall, `ATA=${p.mintOverall} ZAG=${z}`);
+  }
 } else {
   check('card válido deveria resolver', false, JSON.stringify(attack));
 }

@@ -1,3 +1,4 @@
+import { ovrWeightsForPos } from './ovrWeights';
 import type {
   PlayerArchetype,
   PlayerAttributes,
@@ -50,19 +51,27 @@ export function samePersonKey(p: { id: string; name?: string }): string {
   return `id:${id}`;
 }
 
-export function overallFromAttributes(a: PlayerAttributes): number {
-  const w =
-    a.passe * 0.12 +
-    a.marcacao * 0.1 +
-    a.velocidade * 0.12 +
-    a.drible * 0.1 +
-    a.finalizacao * 0.12 +
-    a.fisico * 0.1 +
-    a.tatico * 0.12 +
-    a.mentalidade * 0.08 +
-    a.confianca * 0.08 +
-    a.fairPlay * 0.06;
-  return Math.round(clamp(w, 40, 99));
+/**
+ * OVR ponderado POR POSIÇÃO (ver src/entities/ovrWeights.ts).
+ *
+ * `pos` é opcional só por compatibilidade: sem ela o cálculo cai no perfil
+ * neutro, que é idêntico ao peso único antigo. SEMPRE passe a posição quando
+ * tiver — senão um volante excelente continua penalizado por não fazer gol.
+ */
+export function overallFromAttributes(a: PlayerAttributes, pos?: string | null): number {
+  const w = ovrWeightsForPos(pos);
+  const total =
+    a.passe * w.passe +
+    a.marcacao * w.marcacao +
+    a.velocidade * w.velocidade +
+    a.drible * w.drible +
+    a.finalizacao * w.finalizacao +
+    a.fisico * w.fisico +
+    a.tatico * w.tatico +
+    a.mentalidade * w.mentalidade +
+    a.confianca * w.confianca +
+    a.fairPlay * w.fairPlay;
+  return Math.round(clamp(total, 40, 99));
 }
 
 export function zoneFromPos(pos: string): TacticalZone {
@@ -84,7 +93,7 @@ export function defaultArchetypeForSeed(name: string): PlayerArchetype {
 
 /** Converte entidade → props que a UI de cards já espera (PAC/SHO/PAS + estilo visual) */
 export function playerToCardView(p: PlayerEntity, highlightOvr?: number) {
-  const ovr = overallFromAttributes(p.attrs);
+  const ovr = overallFromAttributes(p.attrs, p.pos);
   const countryRaw = p.country?.trim() ?? '';
   const countryFlagEmoji = countryRaw
     ? countryCodeToFlagEmoji(countryRaw) || '🌍'
@@ -176,7 +185,7 @@ export function createPlayer(partial: {
   };
   const archetype = partial.archetype ?? defaultArchetypeForSeed(partial.name);
   const behavior: PlayerBehavior = partial.behavior ?? 'equilibrado';
-  const mintOvr = overallFromAttributes(base);
+  const mintOvr = overallFromAttributes(base, partial.pos);
   const evolutionRate =
     partial.evolutionRate != null && Number.isFinite(partial.evolutionRate)
       ? Math.min(3, Math.max(0.25, partial.evolutionRate))

@@ -260,7 +260,7 @@ export function TeamStaff() {
                         <div className="grid h-9 w-9 shrink-0 place-items-center rounded bg-neon-yellow/15 font-display text-sm font-black text-neon-yellow">{p.num}</div>
                         <div className="min-w-0 text-left">
                           <div className="truncate text-sm font-bold text-white">{p.name}</div>
-                          <div className="text-[10px] uppercase tracking-wider text-gray-500">{p.pos} · OVR {Math.round(overallFromAttributes(p.attrs))}</div>
+                          <div className="text-[10px] uppercase tracking-wider text-gray-500">{p.pos} · OVR {Math.round(overallFromAttributes(p.attrs, p.pos))}</div>
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">

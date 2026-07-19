@@ -37,7 +37,7 @@ export function YouthProspects() {
         .filter((p) => p.archetype === 'novo_talento')
         .filter((p) => (pos ? p.pos === pos : true))
         .filter((p) => (query ? p.name.toLowerCase().includes(query.toLowerCase()) : true))
-        .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs)),
+        .sort((a, b) => overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos)),
     [players, pos, query],
   );
   const allCrias = useMemo(() => Object.values(players).filter((p) => p.archetype === 'novo_talento'), [players]);
@@ -139,7 +139,7 @@ export function YouthProspects() {
           {/* Grid de crias — view-player-card horizontal */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {crias.map((p) => {
-              const ovr = overallFromAttributes(p.attrs);
+              const ovr = overallFromAttributes(p.attrs, p.pos);
               const cap = getEvolvedOverallCap(p);
               const headroom = Math.max(0, cap - ovr);
               return (
@@ -195,7 +195,7 @@ export function YouthProspects() {
               <div className="flex flex-col p-6">
                 <div className="grid grid-cols-2 gap-3">
                   <Info label="Posição" value={selected.pos} />
-                  <Info label="Overall" value={String(overallFromAttributes(selected.attrs))} />
+                  <Info label="Overall" value={String(overallFromAttributes(selected.attrs, selected.pos))} />
                   <Info label="Teto de OVR" value={String(getEvolvedOverallCap(selected))} />
                   <Info label="Ritmo de evolução" value={`×${(selected.evolutionRate ?? 1).toFixed(2)}`} />
                 </div>

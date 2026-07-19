@@ -69,7 +69,7 @@ export function AdminPlayerEvolutionPanel() {
           <tbody>
             {rows.map((p) => {
               const hydrated = ensureMintOverall(p);
-              const ovr = overallFromAttributes(hydrated.attrs);
+              const ovr = overallFromAttributes(hydrated.attrs, hydrated.pos);
               const cap = getEvolvedOverallCap(hydrated);
               const mint = hydrated.mintOverall ?? ovr;
               return (

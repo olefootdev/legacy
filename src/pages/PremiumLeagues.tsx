@@ -530,7 +530,7 @@ function useClubOverall(): number {
   return useMemo(() => {
     const all = Object.values(players ?? {});
     if (all.length === 0) return 50;
-    return Math.round(all.reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) / all.length);
+    return Math.round(all.reduce((sum, p) => sum + overallFromAttributes(p.attrs, p.pos), 0) / all.length);
   }, [players]);
 }
 

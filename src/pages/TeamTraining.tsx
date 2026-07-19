@@ -403,7 +403,7 @@ export function TeamTraining() {
                 {roster.map((p) => {
                   const active = selectedPlayers.includes(p.id);
                   const disabled = !active && selectedPlayers.length >= slots;
-                  const ovr = overallFromAttributes(p.attrs);
+                  const ovr = overallFromAttributes(p.attrs, p.pos);
                   const fatigue = playerHealth?.[p.id]?.fatigue ?? p.fatigue;
                   const rail = fatigueRail(fatigue);
                   const tag = availabilityTag(p);

@@ -89,7 +89,7 @@ function playerEntityToManagerMockAuction(
   marketKind: 'manager_own' | 'manager_npc' | 'manager_other',
   opts: { managerListingId?: string; managerPlayerId?: string; listedAtIso?: string },
 ): MockAuctionPlayer {
-  const ovr = overallFromAttributes(p.attrs);
+  const ovr = overallFromAttributes(p.attrs, p.pos);
   const style = ovr >= 68 ? 'white' : 'gray-400';
   const category: MockAuctionPlayer['category'] = ovr >= 70 ? 'gold' : ovr >= 65 ? 'silver' : 'bronze';
   const ageLabel = p.age != null ? String(p.age) : '—';
@@ -572,7 +572,7 @@ export function Transfer() {
       const row = legacyRows.find((r) => r.id === lid);
       if (!row) continue;
       const e = legacyRowToPlayerEntity(row);
-      const ovr = overallFromAttributes(e.attrs);
+      const ovr = overallFromAttributes(e.attrs, e.pos);
       pinned.push({
         id: synth, name: e.name, pos: e.pos, nat: row.country ?? '—', ovr,
         style: ovr >= 80 ? 'neon-yellow' : ovr >= 70 ? 'white' : 'gray-400',
@@ -646,7 +646,7 @@ export function Transfer() {
 
       const priceExp = Math.round(selectedPlayer.listingPriceExp ?? selectedPlayer.buyNow);
       const mintOverall = Math.round(
-        selectedPlayer.mintOverall ?? entity.mintOverall ?? overallFromAttributes(entity.attrs),
+        selectedPlayer.mintOverall ?? entity.mintOverall ?? overallFromAttributes(entity.attrs, entity.pos),
       );
 
       // Verifica saldo antes de qualquer chamada
@@ -835,7 +835,7 @@ export function Transfer() {
             managerName: clubName,
             clubName,
             playerName: snap.name,
-            playerOvr: overallFromAttributes(snap.attrs),
+            playerOvr: overallFromAttributes(snap.attrs, snap.pos),
             playerPos: snap.pos,
             priceExp: priceCharged,
           });

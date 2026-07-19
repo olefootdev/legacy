@@ -193,7 +193,7 @@ export async function fetchOpponentSquads(params: {
       if (lineupPlayers.length === 0) continue;
 
       const avgOvr = Math.round(
-        lineupPlayers.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / lineupPlayers.length
+        lineupPlayers.reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / lineupPlayers.length
       );
 
       if (avgOvr < minOvr || avgOvr > maxOvr) continue;

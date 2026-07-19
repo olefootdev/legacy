@@ -628,7 +628,7 @@ export function buildSpiritContext(input: {
       return sum / input.homePlayers.length;
     }
     if (input.homeRoster.length === 0) return 78;
-    return input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / input.homeRoster.length;
+    return input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / input.homeRoster.length;
   })();
   const avgHomeFatigueRaw =
     input.homePlayers.length === 0

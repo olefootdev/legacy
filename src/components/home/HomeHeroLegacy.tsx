@@ -293,7 +293,7 @@ export function HomeHeroLegacy(props: {
       const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
       const snapshot = getGameState().players;
       const myOverall = Math.round(
-        Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+        Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) /
           Math.max(1, Object.keys(snapshot).length),
       ) || 70;
       const match = await quickFindOpponent(club!.id, myOverall, userId);
@@ -306,7 +306,7 @@ export function HomeHeroLegacy(props: {
         const { opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
         const snapshot = getGameState().players;
         const myOverall = Math.round(
-          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) /
             Math.max(1, Object.keys(snapshot).length),
         ) || 70;
         const bot = getMatchingBotTeam(myOverall, 15);

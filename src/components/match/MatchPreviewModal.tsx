@@ -125,14 +125,14 @@ export function MatchPreviewModal({
       if (p.listedOnMarket || !isAvailable(p.id)) continue;
       const key = samePersonKey(p);
       const cur = bestPerPerson.get(key);
-      if (!cur || overallFromAttributes(p.attrs) > overallFromAttributes(cur.attrs)) {
+      if (!cur || overallFromAttributes(p.attrs, p.pos) > overallFromAttributes(cur.attrs, cur.pos)) {
         bestPerPerson.set(key, p);
       }
     }
     const squad = [...bestPerPerson.values()].map((p) => ({
       id: p.id,
       pos: p.pos,
-      ovr: overallFromAttributes(p.attrs),
+      ovr: overallFromAttributes(p.attrs, p.pos),
       outForMatches: playerHealth?.[p.id]?.outForMatches ?? p.outForMatches ?? 0,
     }));
     const res = suggestBestLineup(newSlots, squad);
@@ -152,7 +152,7 @@ export function MatchPreviewModal({
       .filter((p) => !p.listedOnMarket && isAvailable(p.id))
       .filter((p) => !Object.values(working).includes(p.id))
       .filter((p) => !startersPersons.has(samePersonKey(p)))
-      .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs));
+      .sort((a, b) => overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos));
   };
 
   const doSub = (slotId: string, playerId: string) => {
@@ -244,7 +244,7 @@ export function MatchPreviewModal({
             const fb = fatigueOf(b.id);
             // Prioriza o mais descansado; com fadiga parecida, o de maior OVR.
             if (Math.abs(fa - fb) > 8) return fa - fb;
-            return overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs);
+            return overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos);
           })[0];
         if (candidate) {
           if (pid && players[pid]) usedPersons.delete(samePersonKey(players[pid]));
@@ -356,7 +356,7 @@ export function MatchPreviewModal({
                       className="font-serif italic text-lg text-white/85 tabular-nums w-7 text-center"
                       style={{ fontFamily: 'var(--font-serif-hero)' }}
                     >
-                      {overallFromAttributes(b.attrs)}
+                      {overallFromAttributes(b.attrs, b.pos)}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-bold text-white truncate">{b.name}</p>

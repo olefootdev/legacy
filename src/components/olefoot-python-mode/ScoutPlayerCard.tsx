@@ -97,7 +97,7 @@ export function ScoutPlayerCard({ playerId, squadEntry }: Props) {
       }
     | undefined;
 
-  const ovr = useMemo(() => (player ? overallFromAttributes(player.attrs) : null), [player]);
+  const ovr = useMemo(() => (player ? overallFromAttributes(player.attrs, player.pos) : null), [player]);
   const lvlInfo = useMemo(
     () => (player ? getPlayerLevelInfo(player.evolutionXp) : null),
     [player],

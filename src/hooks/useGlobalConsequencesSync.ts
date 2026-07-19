@@ -557,7 +557,7 @@ async function syncTeamStatus(
     // Overall do time = média do elenco (mesma convenção do registro). Mantido em
     // sync pra o seed por divisão refletir investimento real — antes era setado 1×
     // no registro e nunca atualizava (ficava achatado no piso).
-    ovrSum += overallFromAttributes(p.attrs);
+    ovrSum += overallFromAttributes(p.attrs, p.pos);
     ovrCount++;
     // Contrato vencido tira o jogador do elenco útil (squadEligibility → 'contract').
     // É ISTO que faz "contrato vencido" finalmente impactar a Liga Global: derruba

@@ -310,9 +310,9 @@ export function LigaOle() {
     const all = Object.values(players ?? {});
     if (!all.length) return null;
     let best = all[0];
-    let bestOvr = overallFromAttributes(all[0].attrs);
+    let bestOvr = overallFromAttributes(all[0].attrs, all[0].pos);
     for (const p of all) {
-      const o = overallFromAttributes(p.attrs);
+      const o = overallFromAttributes(p.attrs, p.pos);
       if (o > bestOvr) { best = p; bestOvr = o; }
     }
     return { name: best.name, ovr: bestOvr };
@@ -333,7 +333,7 @@ export function LigaOle() {
     const ids = Object.values(lineup).filter((v): v is string => typeof v === 'string' && !!players[v]);
     const xi = ids.map((id) => players[id]!).slice(0, 11);
     if (!xi.length) return 70;
-    const sum = xi.reduce((s, p) => s + (overallFromAttributes(p.attrs) - getEffectiveFatigue(p.id, p, playerHealth) * 0.2), 0);
+    const sum = xi.reduce((s, p) => s + (overallFromAttributes(p.attrs, p.pos) - getEffectiveFatigue(p.id, p, playerHealth) * 0.2), 0);
     return Math.round(sum / xi.length);
   }, [players, lineup, playerHealth]);
 

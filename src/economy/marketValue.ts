@@ -94,7 +94,7 @@ export function recomputeMarketValue(
   player: PlayerEntity,
   input: RecomputeMarketValueInput,
 ): number {
-  const ovr = overallFromAttributes(player.attrs);
+  const ovr = overallFromAttributes(player.attrs, player.pos);
   const base = basePriceByOverall(ovr);
 
   const rarity = (player.rarity ?? 'normal') as PlayerRarity;

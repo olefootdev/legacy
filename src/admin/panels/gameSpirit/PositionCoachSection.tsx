@@ -63,7 +63,7 @@ function PlayerKnowledgeCard({
 }) {
   const [open, setOpen] = useState(false);
   const pk = player.positionKnowledge;
-  const ovr = overallFromAttributes(player.attrs);
+  const ovr = overallFromAttributes(player.attrs, player.pos);
   const posColor = POS_COLOR[player.pos.toUpperCase()] ?? 'bg-white/10 text-white/60 border-white/20';
   const canPromote = pk && pk.sessionsCompleted >= 3 && ovr >= 80;
 
@@ -214,7 +214,7 @@ function TrainingModal({
       topic: topic.trim(),
       playerContext: {
         name: player.name,
-        ovr: overallFromAttributes(player.attrs),
+        ovr: overallFromAttributes(player.attrs, player.pos),
         behavior: player.behavior,
         sessionsCompleted: existing?.sessionsCompleted ?? 0,
         coachNotes: existing?.coachNotes,
@@ -395,7 +395,7 @@ export function PositionCoachSection() {
   const [filter, setFilter] = useState<string>('ALL');
 
   const allPlayers = Object.values(players).sort((a, b) =>
-    overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs),
+    overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos),
   );
 
   const POS_OPTIONS = ['ALL', 'GOL', 'ZAG', 'LD', 'LE', 'VOL', 'MC', 'PE', 'PD', 'ATA'];

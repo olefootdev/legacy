@@ -26,7 +26,7 @@ function portraitForRemoteRow(url: string | undefined): string | null | undefine
 }
 
 export function academyMotorSnapshotFromPlayer(pl: PlayerEntity): Record<string, unknown> {
-  const mintOverall = pl.mintOverall ?? overallFromAttributes(pl.attrs);
+  const mintOverall = pl.mintOverall ?? overallFromAttributes(pl.attrs, pl.pos);
   const portraitUrl = portraitForRemoteRow(pl.portraitUrl);
   const portraitTokenUrl = portraitForRemoteRow(pl.portraitTokenUrl);
   return {
@@ -100,7 +100,7 @@ export async function registerAcademyManagerListing(input: {
     listedOnMarket: true,
   };
   const snapshot = academyMotorSnapshotFromPlayer(merged);
-  const mintOverall = Math.round(Number(snapshot.mintOverall)) || overallFromAttributes(merged.attrs);
+  const mintOverall = Math.round(Number(snapshot.mintOverall)) || overallFromAttributes(merged.attrs, merged.pos);
   const { card, token } = portraitUrlForColumns(merged.portraitUrl);
 
   try {

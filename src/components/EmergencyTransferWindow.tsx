@@ -264,7 +264,7 @@ export function EmergencyTransferWindow() {
     setPurchasing(candidate.card.genesisCatalogId ?? null);
 
     const { entity, card, price } = candidate;
-    const mintOverall = card.mintOverall ?? overallFromAttributes(entity.attrs);
+    const mintOverall = card.mintOverall ?? overallFromAttributes(entity.attrs, entity.pos);
 
     dispatchGame({
       type: 'BUY_GENESIS_MARKET_PLAYER',

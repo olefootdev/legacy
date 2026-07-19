@@ -47,7 +47,7 @@ export function TeamPlayerSeasonSheet({
   const maxOvr = useMemo(() => {
     const vals = Object.values(players);
     if (!vals.length) return 88;
-    return Math.max(...vals.map((p) => overallFromAttributes(p.attrs)));
+    return Math.max(...vals.map((p) => overallFromAttributes(p.attrs, p.pos)));
   }, [players]);
 
   const card = useMemo(
@@ -66,7 +66,7 @@ export function TeamPlayerSeasonSheet({
     return rows;
   }, [shopCatalog, shopInventory]);
 
-  const ovrNow = player ? overallFromAttributes(player.attrs) : 0;
+  const ovrNow = player ? overallFromAttributes(player.attrs, player.pos) : 0;
   const mintOvr = player?.mintOverall ?? ovrNow;
   const ovrDelta = ovrNow - mintOvr;
 

@@ -224,7 +224,7 @@ export function marketBroSnapshotFromPlayers(players: Record<string, PlayerEntit
     } else if (pl.marketValueBroCents != null && Number.isFinite(pl.marketValueBroCents)) {
       o[id] = Math.max(0, Math.round(pl.marketValueBroCents));
     } else {
-      o[id] = estimateMarketBroCentsFromOvr(overallFromAttributes(pl.attrs));
+      o[id] = estimateMarketBroCentsFromOvr(overallFromAttributes(pl.attrs, pl.pos));
     }
   }
   return o;

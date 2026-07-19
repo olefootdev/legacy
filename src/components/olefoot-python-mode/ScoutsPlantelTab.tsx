@@ -121,7 +121,7 @@ export function ScoutsPlantelTab({ overview }: Props) {
       const aa = ea?.alerts ?? 0;
       const ab = eb?.alerts ?? 0;
       if (aa !== ab) return ab - aa;
-      return overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs);
+      return overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos);
     });
 
     return filtered.map((p) => p.id);

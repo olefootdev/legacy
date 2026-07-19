@@ -69,19 +69,19 @@ function clampAttr(n: number): number {
 }
 
 /** Garante OVR ≤ `maxOvr` (mesma fórmula que `overallFromAttributes`). */
-export function scaleAttrsToMaxOvr(attrs: PlayerAttributes, maxOvr: number): PlayerAttributes {
+export function scaleAttrsToMaxOvr(attrs: PlayerAttributes, maxOvr: number, pos?: string): PlayerAttributes {
   let a: PlayerAttributes = { ...attrs };
   for (const k of ATTR_KEYS) {
     a[k] = clampAttr(a[k]);
   }
-  let ovr = overallFromAttributes(a);
+  let ovr = overallFromAttributes(a, pos);
   let guard = 0;
   while (ovr > maxOvr && guard++ < 240) {
     const keysSorted = [...ATTR_KEYS].sort((k1, k2) => a[k2] - a[k1]);
     for (let i = 0; i < 4 && ovr > maxOvr; i++) {
       const key = keysSorted[i]!;
       a[key] = clampAttr(a[key] - 1);
-      ovr = overallFromAttributes(a);
+      ovr = overallFromAttributes(a, pos);
     }
   }
   return a;
@@ -95,12 +95,12 @@ export function scaleAttrsToMaxOvr(attrs: PlayerAttributes, maxOvr: number): Pla
  * Use sempre que receber attrs do fluxo Academia (cliente ou pipeline NPC) antes
  * de gravar no plantel.
  */
-export function clampAttrsToCreationCap(attrs: PlayerAttributes): PlayerAttributes {
+export function clampAttrsToCreationCap(attrs: PlayerAttributes, pos?: string): PlayerAttributes {
   const capped: PlayerAttributes = { ...attrs };
   for (const k of ATTR_KEYS) {
     capped[k] = Math.min(MANAGER_PROSPECT_CREATE_MAX_ATTR, clampAttr(capped[k]));
   }
-  return scaleAttrsToMaxOvr(capped, MANAGER_PROSPECT_CREATE_MAX_OVR);
+  return scaleAttrsToMaxOvr(capped, MANAGER_PROSPECT_CREATE_MAX_OVR, pos);
 }
 
 export function baseAttrsForPosition(pos: string): PlayerAttributes {
@@ -438,7 +438,7 @@ export function buildProspectAdminArtPrompt(args: {
     `Nome no cartão: ${args.name}`,
     `Posição: ${args.pos} | Idade (ficha): ${args.age} | País (código ficha): ${args.country}`,
     `Pé bom: ${strongFootPt(args.strongFoot)} | Perfil de jogo: ${behaviorPt(args.behavior)}`,
-    `OVR (fórmula jogo, referência): ${overallFromAttributes(args.attrs)}`,
+    `OVR (fórmula jogo, referência): ${overallFromAttributes(args.attrs, args.pos)}`,
     '',
     'Atributos numéricos (referência de intensidade corporal/treino, não texto na camisola):',
     ...ATTR_PROMPT_LINES.map(({ key, label }) => `- ${label}: ${Math.round(args.attrs[key])}`),
@@ -487,13 +487,13 @@ export function buildManagerCreatedPlayerEntity(
   const country = payload.country.trim().slice(0, 3).toUpperCase() || '—';
   let attrs: PlayerAttributes;
   if (payload.attrs) {
-    attrs = clampAttrsToCreationCap({ ...payload.attrs });
+    attrs = clampAttrsToCreationCap({ ...payload.attrs }, payload.pos);
   } else {
     attrs = baseAttrsForPosition(payload.pos);
     attrs = applyBehaviorToAttrs(attrs, payload.behavior);
     attrs = applyAgeToAttrs(attrs, age);
     attrs = applyDevelopmentBias(attrs, payload.developmentBias ?? 50);
-    attrs = clampAttrsToCreationCap(attrs);
+    attrs = clampAttrsToCreationCap(attrs, payload.pos);
   }
   // P5 — heritage bias: shift de perfil aplicado DEPOIS do scaling.
   // applyHeritageBias usa contrabalanço (+3 bias, -2 attr mais baixo)
@@ -501,7 +501,7 @@ export function buildManagerCreatedPlayerEntity(
   // pelo scaling top-heavy (que reduz os maiores attrs primeiro).
   attrs = applyHeritageBias(attrs, payload.heritage?.portraitStyleRegion);
 
-  const mintOvr = overallFromAttributes(attrs);
+  const mintOvr = overallFromAttributes(attrs, payload.pos);
   const tier = (payload.contractMatches ?? 10) as ManagerProspectContractGames;
   return createPlayer({
     id,
@@ -572,5 +572,5 @@ export function buildNpcManagerProspectSnapshot(seed: string, index: number, olh
     return t / 0x1_0000_0000;
   };
   const boosted = applyScoutBonusToNpcAttrs(base.attrs, olheiroLevel, rng);
-  return { ...base, attrs: clampAttrsToCreationCap(boosted) };
+  return { ...base, attrs: clampAttrsToCreationCap(boosted, base.pos) };
 }

@@ -37,7 +37,7 @@ export function useAutoRegisterGlobalLeague() {
 
     const allPlayers = Object.values(players ?? {});
     const avgOverall = allPlayers.length > 0
-      ? Math.round(allPlayers.reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) / allPlayers.length)
+      ? Math.round(allPlayers.reduce((sum, p) => sum + overallFromAttributes(p.attrs, p.pos), 0) / allPlayers.length)
       : 70;
 
     const clubName = club?.name ?? 'Olefoot FC';

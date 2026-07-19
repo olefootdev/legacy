@@ -808,7 +808,7 @@ export function ManagerScoutsPlayer() {
     );
   }
 
-  const ovr = overallFromAttributes(player.attrs);
+  const ovr = overallFromAttributes(player.attrs, player.pos);
   const fatigue = Math.round(health?.fatigue ?? 0);
   const injuryRisk = Math.round(health?.injuryRisk ?? 0);
   const outForMatches = Math.round(health?.outForMatches ?? 0);

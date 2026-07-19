@@ -53,7 +53,7 @@ function clampEvolutionRate(n: number): number {
 
 /** Garante `mintOverall` e `evolutionRate` coerentes (save legado / migração). */
 export function ensureMintOverall(player: PlayerEntity): PlayerEntity {
-  const ovr = overallFromAttributes(player.attrs);
+  const ovr = overallFromAttributes(player.attrs, player.pos);
   const mint =
     player.mintOverall != null && Number.isFinite(player.mintOverall)
       ? Math.round(player.mintOverall)
@@ -69,9 +69,9 @@ export function ensureMintOverall(player: PlayerEntity): PlayerEntity {
 export function clampPlayerToEvolutionCap(player: PlayerEntity): PlayerEntity {
   const p = ensureMintOverall(player);
   const cap = getEvolvedOverallCap(p);
-  const ovr = overallFromAttributes(p.attrs);
+  const ovr = overallFromAttributes(p.attrs, p.pos);
   if (ovr <= cap) return p;
-  return { ...p, attrs: scaleAttrsToMaxOvr(p.attrs, cap) };
+  return { ...p, attrs: scaleAttrsToMaxOvr(p.attrs, cap, p.pos) };
 }
 
 function bumpAttrsBySwing(attrs: PlayerAttributes, swing: number): PlayerAttributes {

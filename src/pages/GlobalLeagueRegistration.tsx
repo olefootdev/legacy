@@ -26,7 +26,7 @@ export default function GlobalLeagueRegistration() {
   /** Overall do XI (média dos 11 melhores). Usa `attrs` (campo correto do PlayerEntity). */
   const teamOverall = useMemo(() => {
     const ovrs = Object.values(players)
-      .map((p) => overallFromAttributes(p.attrs))
+      .map((p) => overallFromAttributes(p.attrs, p.pos))
       .sort((a, b) => b - a)
       .slice(0, 11);
     if (!ovrs.length) return 0;

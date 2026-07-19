@@ -719,7 +719,7 @@ function MatchQuickLegacy() {
         // Snapshot do plantel atual — não entra nas deps pra evitar loop
         const snapshot = getGameState().players;
         const myOverall = Math.round(
-          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs), 0) /
+          Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) /
             Math.max(1, Object.keys(snapshot).length),
         );
         const match = await quickFindOpponent(club.id, myOverall || 70, userId);
@@ -1829,7 +1829,7 @@ function MatchQuickLegacy() {
         name: top.player.name,
         num: top.player.num,
         pos: top.player.pos,
-        ovr: entity ? overallFromAttributes(entity.attrs) : undefined,
+        ovr: entity ? overallFromAttributes(entity.attrs, entity.pos) : undefined,
         rating: top.impact,
         goals,
         assists,
@@ -1926,7 +1926,7 @@ function MatchQuickLegacy() {
   const maxOvr = useMemo(() => {
     const vals = Object.values(playersById);
     if (!vals.length) return 88;
-    return Math.max(...vals.map((p) => overallFromAttributes(p.attrs)));
+    return Math.max(...vals.map((p) => overallFromAttributes(p.attrs, p.pos)));
   }, [playersById]);
 
   const onPitchIds = useMemo(() => {
@@ -2045,7 +2045,7 @@ function MatchQuickLegacy() {
       .filter((id) => !sentOff.has(id))
       .map((id) => playersById[id])
       .filter(Boolean)
-      .reduce((sum, ent) => sum + overallFromAttributes(ent!.attrs), 0);
+      .reduce((sum, ent) => sum + overallFromAttributes(ent!.attrs, ent!.pos), 0);
   }, [live?.matchLineupBySlot, live?.homePlayers, live?.sentOffPlayerIds, playersById]);
 
   const awayForce = useMemo(() => {
@@ -3249,7 +3249,7 @@ function MatchQuickLegacy() {
                   <>
                     {homeRanked.map(({ player: p, impact }, idx) => {
                       const entity = playersById[p.playerId];
-                      const ovr = entity ? overallFromAttributes(entity.attrs) : undefined;
+                      const ovr = entity ? overallFromAttributes(entity.attrs, entity.pos) : undefined;
                       return (
                         <QuickPlayerRowCard
                           key={p.playerId}

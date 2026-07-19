@@ -120,7 +120,7 @@ function buildPresetAttrs(pos: string, behavior: PlayerBehavior, age: number): P
   attrs = applyBehaviorToAttrs(attrs, behavior);
   attrs = applyAgeToAttrs(attrs, age);
   attrs = applyDevelopmentBias(attrs, PRESET_DEVELOPMENT_BIAS);
-  return clampAttrsToCreationCap(attrs);
+  return clampAttrsToCreationCap(attrs, pos);
 }
 
 function trimBrief(v: string): string | undefined {
@@ -224,10 +224,10 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
 
   const previewOvrIdentity = useMemo(() => {
     const attrs = buildPresetAttrs(pos, behavior, age);
-    return overallFromAttributes(attrs);
+    return overallFromAttributes(attrs, pos);
   }, [pos, behavior, age]);
 
-  const previewOvrTune = useMemo(() => overallFromAttributes(tunedAttrs), [tunedAttrs]);
+  const previewOvrTune = useMemo(() => overallFromAttributes(tunedAttrs, pos), [tunedAttrs, pos]);
 
   const setAttrSlider = useCallback((key: keyof PlayerAttributes, raw: number) => {
     setTunedAttrs((prev) => {
@@ -235,9 +235,9 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
         ...prev,
         [key]: Math.round(Math.min(MANAGER_PROSPECT_CREATE_MAX_ATTR, Math.max(35, raw))),
       };
-      return clampAttrsToCreationCap(next);
+      return clampAttrsToCreationCap(next, pos);
     });
-  }, []);
+  }, [pos]);
 
   const goTune = () => {
     setTunedAttrs(buildPresetAttrs(pos, behavior, age));
@@ -320,7 +320,7 @@ export function ManagerCreatePlayerModal({ open, onClose }: Props) {
       const base = olefootApiBase();
       const serverUrl = base && base !== 'http://localhost:4000' ? base : null;
       if (serverUrl && token) {
-        const overall = overallFromAttributes(tunedAttrs);
+        const overall = overallFromAttributes(tunedAttrs, pos);
         let res: { ok: boolean; error?: string; cooldown_seconds?: number } | null = null;
         try {
           const r = await fetch(`${serverUrl}/api/academy/create`, {

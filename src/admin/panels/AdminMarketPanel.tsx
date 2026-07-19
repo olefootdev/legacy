@@ -105,7 +105,7 @@ function CollectionBadge({ collectionId }: { collectionId?: string }) {
 
 function PlayerRow({ player }: { player: PlayerEntity }) {
   const dispatch = useGameDispatch();
-  const ovr = overallFromAttributes(player.attrs);
+  const ovr = overallFromAttributes(player.attrs, player.pos);
   const listed = player.listedOnMarket === true;
 
   const toggleListed = () => {
@@ -376,7 +376,7 @@ function ColecoesTab() {
         ) : (
           <div className="divide-y divide-white/5">
             {welcomepackPlayers.map((p) => {
-              const ovr = overallFromAttributes(p.attrs);
+              const ovr = overallFromAttributes(p.attrs, p.pos);
               const listed = p.listedOnMarket === true;
               return (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">

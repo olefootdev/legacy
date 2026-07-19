@@ -487,7 +487,7 @@ O que precisas?`;
     const totalFatigue = availablePlayers.reduce((sum, p) => sum + fatigueOf(p), 0);
     const totalInjuryRisk = availablePlayers.reduce((sum, p) => sum + injuryRiskOf(p), 0);
     const totalOverall = availablePlayers.reduce(
-      (sum, p) => sum + overallFromAttributes(p.attrs),
+      (sum, p) => sum + overallFromAttributes(p.attrs, p.pos),
       0,
     );
 

@@ -79,7 +79,7 @@ export function effectiveOvr(ovr: number, fatigue: number): number {
 
 /** PlayerEntity → view usada em cards/substituição (titulares e reservas). */
 export function playerToHomeView(p: PlayerEntity, fatigue: number): QuickHomePlayerView {
-  const ovr = overallFromAttributes(p.attrs);
+  const ovr = overallFromAttributes(p.attrs, p.pos);
   return {
     id: p.id,
     name: p.name,

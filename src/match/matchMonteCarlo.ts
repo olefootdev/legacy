@@ -147,7 +147,7 @@ function buildScorerWeights(roster: PlayerEntity[] | undefined): ScorerWeight[] 
   if (!roster || roster.length === 0) return [];
   const weights: ScorerWeight[] = [];
   for (const p of roster) {
-    const ovr = overallFromAttributes(p.attrs);
+    const ovr = overallFromAttributes(p.attrs, p.pos);
     // Map zone/pos para classe: ATA=2.0, MC/MEI=1.0, ZAG/LAT=0.2, GOL=0.02
     let posWeight = 0.5;
     const pos = p.pos?.toUpperCase() ?? '';

@@ -60,12 +60,12 @@ function seriesFromAttrs(points: PlayerEvolutionPoint[], key: keyof PlayerAttrib
   return points.map((p) => p.attrs[key]);
 }
 
-function seriesOvr(points: PlayerEvolutionPoint[]): number[] {
-  return points.map((p) => overallFromAttributes(p.attrs));
+function seriesOvr(points: PlayerEvolutionPoint[], pos?: string): number[] {
+  return points.map((p) => overallFromAttributes(p.attrs, pos));
 }
 
-function valuesForAttrSelection(points: PlayerEvolutionPoint[], sel: AttrSelection): number[] {
-  return sel === 'ovr' ? seriesOvr(points) : seriesFromAttrs(points, sel);
+function valuesForAttrSelection(points: PlayerEvolutionPoint[], sel: AttrSelection, pos?: string): number[] {
+  return sel === 'ovr' ? seriesOvr(points, pos) : seriesFromAttrs(points, sel);
 }
 
 type ChartSeries = { label: string; color: string; values: number[] };
@@ -211,7 +211,7 @@ export function TeamEvolutionLine() {
       const primary: ChartSeries = {
         label: players[playerA]?.name ?? 'A',
         color: 'rgb(234, 255, 0)',
-        values: valuesForAttrSelection(pointsA, attrSelection),
+        values: valuesForAttrSelection(pointsA, attrSelection, players[playerA]?.pos),
       };
       if (compareOn && compareKind === 'roster' && playerB && pointsB.length >= 2) {
         return [
@@ -219,14 +219,14 @@ export function TeamEvolutionLine() {
           {
             label: players[playerB]?.name ?? 'B',
             color: 'rgb(96, 220, 255)',
-            values: valuesForAttrSelection(pointsB, attrSelection),
+            values: valuesForAttrSelection(pointsB, attrSelection, players[playerB]?.pos),
           },
         ];
       }
       if (compareOn && compareKind === 'market' && marketSnapshot) {
         const ref =
           attrSelection === 'ovr'
-            ? overallFromAttributes(marketSnapshot.attrs)
+            ? overallFromAttributes(marketSnapshot.attrs, marketSnapshot.pos)
             : marketSnapshot.attrs[attrSelection as keyof PlayerAttributes];
         return [
           primary,
@@ -275,7 +275,7 @@ export function TeamEvolutionLine() {
   const teamSparkRows = useMemo(() => {
     return roster.map((p) => {
       const pts = timeline[p.id] ?? [];
-      const ovrPts = pts.length >= 2 ? seriesOvr(pts) : [];
+      const ovrPts = pts.length >= 2 ? seriesOvr(pts, p.pos) : [];
       return { id: p.id, name: p.name, num: p.num, pts, ovrPts };
     });
   }, [roster, timeline]);
@@ -400,7 +400,7 @@ export function TeamEvolutionLine() {
                     <option value="">— Oferta NPC —</option>
                     {npcOffers.map((o) => (
                       <option key={o.listingId} value={o.listingId}>
-                        {o.snapshot.name} · OVR {overallFromAttributes(o.snapshot.attrs)} · {o.priceExp} EXP
+                        {o.snapshot.name} · OVR {overallFromAttributes(o.snapshot.attrs, o.snapshot.pos)} · {o.priceExp} EXP
                       </option>
                     ))}
                   </select>

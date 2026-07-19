@@ -104,7 +104,7 @@ function buildMarketCard(players: Record<string, PlayerEntity>): FeedCard {
   const squadSize = Object.keys(players).length;
   const ovrXi = (() => {
     const ovrs = Object.values(players)
-      .map((p) => overallFromAttributes(p.attrs))
+      .map((p) => overallFromAttributes(p.attrs, p.pos))
       .sort((a, b) => b - a)
       .slice(0, 11);
     if (!ovrs.length) return 0;

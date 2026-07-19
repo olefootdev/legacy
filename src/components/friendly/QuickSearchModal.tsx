@@ -37,7 +37,7 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
 
   // Calcular OVR médio do time
   const myOverall = Math.round(
-    Object.values(players).reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) /
+    Object.values(players).reduce((sum, p) => sum + overallFromAttributes(p.attrs, p.pos), 0) /
       Math.max(1, Object.keys(players).length),
   );
 

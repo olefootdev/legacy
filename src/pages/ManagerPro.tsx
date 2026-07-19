@@ -321,7 +321,7 @@ export function ManagerPro() {
                     </span>
                   </p>
                   <p className="text-[10px] text-white/45">
-                    {p.pos} · OVR {Math.round(overallFromAttributes(p.attrs))}
+                    {p.pos} · OVR {Math.round(overallFromAttributes(p.attrs, p.pos))}
                     {p.listedOnMarket ? ' · À venda' : ''}
                   </p>
                 </div>

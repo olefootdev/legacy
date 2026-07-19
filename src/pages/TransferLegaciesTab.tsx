@@ -172,7 +172,7 @@ export function TransferLegaciesTab({
     setDetailRow(null);
     setReceipt({
       name: entity.name,
-      ovr: overallFromAttributes(entity.attrs),
+      ovr: overallFromAttributes(entity.attrs, entity.pos),
       pos: entity.pos,
       portrait: legacyPortraitImageUrl(row),
       balance: newBalance,
@@ -188,7 +188,7 @@ export function TransferLegaciesTab({
         managerName: clubName,
         clubName,
         playerName: entity.name,
-        playerOvr: overallFromAttributes(entity.attrs),
+        playerOvr: overallFromAttributes(entity.attrs, entity.pos),
         playerPos: entity.pos,
         priceExp: priceOlefoot,
       });
@@ -238,7 +238,7 @@ export function TransferLegaciesTab({
   // Legacy → MockAuctionPlayer (reusa o card Genesis: PlayerCard / TransferRowCard).
   const toAuction = (row: LegacyPlayerRow, idx: number): MockAuctionPlayer => {
     const entity = legacyRowToPlayerEntity(row);
-    const ovr = overallFromAttributes(entity.attrs);
+    const ovr = overallFromAttributes(entity.attrs, entity.pos);
     return {
       id: idx + 1,
       name: entity.name,
@@ -316,7 +316,7 @@ export function TransferLegaciesTab({
             <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {orderByPriceDesc(g.rows).map((row) => {
                 const entity = legacyRowToPlayerEntity(row);
-                const o = overallFromAttributes(entity.attrs);
+                const o = overallFromAttributes(entity.attrs, entity.pos);
                 const sale = fixedSaleFor(row);
                 return (
                   <div key={row.id} className="w-[158px] flex-none snap-start sm:w-[186px]">
@@ -377,7 +377,7 @@ export function TransferLegaciesTab({
               dispatch({ type: 'CONFIRM_LEGACY_PURCHASE', player: entity, ole: oleBal });
               setReceipt({
                 name: entity.name,
-                ovr: overallFromAttributes(entity.attrs),
+                ovr: overallFromAttributes(entity.attrs, entity.pos),
                 pos: entity.pos,
                 portrait: legacyPortraitImageUrl(r),
                 balance: null,

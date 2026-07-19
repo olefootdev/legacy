@@ -156,12 +156,12 @@ export function computeQuickPlanCredit(
   for (const [pid, stat] of Object.entries(input.homeStats)) {
     const pl = players[pid];
     if (!pl) continue;
-    const ovrBefore = overallFromAttributes(pl.attrs);
+    const ovrBefore = overallFromAttributes(pl.attrs, pl.pos);
     let next = applyMatchPerformanceEvolution(pl, stat, outcome, false);
     if (readingXp > 0) next = { ...next, evolutionXp: (next.evolutionXp ?? 0) + readingXp };
     const evolved = clampPlayerToEvolutionCap(ensureMintOverall(next));
     players[pid] = evolved;
-    const ovrAfter = overallFromAttributes(evolved.attrs);
+    const ovrAfter = overallFromAttributes(evolved.attrs, evolved.pos);
     teamBeforeSum += ovrBefore;
     teamAfterSum += ovrAfter;
     counted += 1;

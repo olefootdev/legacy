@@ -88,7 +88,7 @@ export function buildPrematchSectorAndMatrix(input: PrematchAnalysisInput): {
   const ovr =
     input.homeRoster.length === 0
       ? 78
-      : input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / input.homeRoster.length;
+      : input.homeRoster.reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / input.homeRoster.length;
 
   const best = [...input.homePlayers].sort((a, b) => roughOvrFromPitch(b) - roughOvrFromPitch(a));
 

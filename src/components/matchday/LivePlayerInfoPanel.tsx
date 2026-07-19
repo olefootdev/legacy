@@ -88,7 +88,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
   const [commandFeedback, setCommandFeedback] = useState<string | null>(null);
   const [subFeedback, setSubFeedback] = useState<string | null>(null);
 
-  const ovr = playerEntity ? overallFromAttributes(playerEntity.attrs) : 0;
+  const ovr = playerEntity ? overallFromAttributes(playerEntity.attrs, playerEntity.pos) : 0;
   const portraitUrl = playerEntity ? playerTokenSrc(playerEntity, 120) : undefined;
 
   const sendCommand = useCallback(
@@ -346,7 +346,7 @@ export const LivePlayerInfoPanel = memo(function LivePlayerInfoPanel({
                   <p className="py-3 text-center text-[10px] text-gray-500">Nenhum jogador no banco.</p>
                 ) : (
                   benchPlayers.map((bp) => {
-                    const bpOvr = overallFromAttributes(bp.attrs);
+                    const bpOvr = overallFromAttributes(bp.attrs, bp.pos);
                     const bpPortrait = playerTokenSrc(bp, 48);
                     return (
                       <button

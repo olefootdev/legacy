@@ -168,11 +168,11 @@ async function findRealManagerOpponent(
         .filter((p): p is PlayerEntity => !!p);
       if (starters.length < 11) {
         starters = [...players]
-          .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs))
+          .sort((a, b) => overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos))
           .slice(0, 11);
       }
       const avgOvr = Math.round(
-        starters.reduce((s, p) => s + overallFromAttributes(p.attrs), 0) / starters.length,
+        starters.reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) / starters.length,
       );
 
       candidates.push({
@@ -201,7 +201,7 @@ async function findRealManagerOpponent(
       .slice(0, 11);
     if (realLineupPlayers.length < 11) {
       realLineupPlayers = [...pick.players]
-        .sort((a, b) => overallFromAttributes(b.attrs) - overallFromAttributes(a.attrs))
+        .sort((a, b) => overallFromAttributes(b.attrs, b.pos) - overallFromAttributes(a.attrs, a.pos))
         .slice(0, 11);
     }
 

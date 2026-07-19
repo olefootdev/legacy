@@ -78,7 +78,7 @@
           "confianca": 68,
           "fairPlay": 72
         },
-        "mintOverall": 70,
+        "mintOverall": 75,
         "evolutionRate": 1.5,
         "rarity": "ai_plus",
         "cardSupply": 50,
@@ -231,7 +231,7 @@
           "confianca": 76,
           "fairPlay": 75
         },
-        "mintOverall": 75,
+        "mintOverall": 80,
         "evolutionRate": 1.5,
         "rarity": "ai_plus",
         "cardSupply": 25,
@@ -385,7 +385,7 @@
           "confianca": 85,
           "fairPlay": 83
         },
-        "mintOverall": 80,
+        "mintOverall": 82,
         "evolutionRate": 1.2,
         "rarity": "ai_plus",
         "cardSupply": 10,

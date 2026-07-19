@@ -157,7 +157,7 @@ export function MatchAuto() {
   const starters = Object.entries(lineupIdsResolved)
     .map(([slot, id]) => {
       const p = playersById[id];
-      return p ? { slot, p, ovr: overallFromAttributes(p.attrs) } : null;
+      return p ? { slot, p, ovr: overallFromAttributes(p.attrs, p.pos) } : null;
     })
     .filter((x): x is NonNullable<typeof x> => Boolean(x))
     .sort((a, b) => b.ovr - a.ovr);

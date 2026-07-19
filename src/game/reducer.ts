@@ -326,7 +326,7 @@ function buildNpcOffersForShop(state: OlefootGameState) {
   const ol = state.manager.staff.roles.olheiro ?? 1;
   return [0, 1, 2, 3].map((i) => {
     const snapshot = buildNpcManagerProspectSnapshot(seed, i, ol);
-    const ovr = overallFromAttributes(snapshot.attrs);
+    const ovr = overallFromAttributes(snapshot.attrs, snapshot.pos);
     const base = npcProspectBasePriceExp(ovr);
     const priceExp = npcProspectPriceAfterScoutDiscount(base, state.manager.staff);
     return {
@@ -2656,7 +2656,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const id = `mgr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
       const num = nextKitNumber(state.players);
       const built = buildManagerCreatedPlayerEntity(action.payload, id, num, true);
-      if (overallFromAttributes(built.attrs) > MANAGER_PROSPECT_CREATE_MAX_OVR) return state;
+      if (overallFromAttributes(built.attrs, built.pos) > MANAGER_PROSPECT_CREATE_MAX_OVR) return state;
       const finance = withExpHistory(addOle(state.finance, -totalCost), -totalCost, 'academia_ole_criar');
       const strongFoot = built.strongFoot ?? 'right';
       const heritage = action.payload.heritage;
@@ -2739,7 +2739,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const gPos = gp.pos.toUpperCase();
       const gId = `mgr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
       const gNum = nextKitNumber(state.players);
-      const gMint = gp.overall || overallFromAttributes(gp.attrs);
+      const gMint = gp.overall || overallFromAttributes(gp.attrs, gp.pos);
       const gBuilt: PlayerEntity = {
         ...createPlayer({
           id: gId,
@@ -2969,7 +2969,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const mint = Math.round(action.mintOverall);
       const expected = genesisListingPriceExpFromMintOverall(mint);
       if (action.priceExp !== expected) return state;
-      const ovr = overallFromAttributes(action.player.attrs);
+      const ovr = overallFromAttributes(action.player.attrs, action.player.pos);
       if (Math.abs(ovr - mint) > 1) return state;
       if (state.finance.ole < action.priceExp) return state;
       let financeGenesis = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_genesis');
@@ -3141,10 +3141,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const newId = `mgr_imp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
       const num = nextKitNumber(state.players);
       let attrs = offer.snapshot.attrs;
-      if (overallFromAttributes(attrs) > MANAGER_PROSPECT_EVOLVED_MAX_OVR) {
-        attrs = scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_EVOLVED_MAX_OVR);
+      if (overallFromAttributes(attrs, offer.snapshot.pos) > MANAGER_PROSPECT_EVOLVED_MAX_OVR) {
+        attrs = scaleAttrsToMaxOvr(attrs, MANAGER_PROSPECT_EVOLVED_MAX_OVR, offer.snapshot.pos);
       }
-      const importMint = overallFromAttributes(attrs);
+      const importMint = overallFromAttributes(attrs, offer.snapshot.pos);
       const added: import('@/entities/types').PlayerEntity = {
         ...offer.snapshot,
         id: newId,
@@ -4448,7 +4448,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       // Auto-registrar na liga global ao receber o plantel
       const allPlayers = Object.values(players);
       const avgOverall = allPlayers.length > 0
-        ? Math.round(allPlayers.reduce((sum, p) => sum + overallFromAttributes(p.attrs), 0) / allPlayers.length)
+        ? Math.round(allPlayers.reduce((sum, p) => sum + overallFromAttributes(p.attrs, p.pos), 0) / allPlayers.length)
         : 70;
       const managerId = state.userSettings.managerProfile?.email ?? state.club.id;
       const clubName = state.club.name ?? 'Olefoot FC';

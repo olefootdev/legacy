@@ -131,9 +131,9 @@ function pickHighlightFromRoster(players: Record<string, PlayerEntity>): PlayerE
   const candidates = outfield.length ? outfield : list;
   if (!candidates.length) return null;
   let best = candidates[0]!;
-  let bestOvr = overallFromAttributes(best.attrs);
+  let bestOvr = overallFromAttributes(best.attrs, best.pos);
   for (const p of candidates) {
-    const o = overallFromAttributes(p.attrs);
+    const o = overallFromAttributes(p.attrs, p.pos);
     if (o > bestOvr) {
       best = p;
       bestOvr = o;
@@ -294,7 +294,7 @@ export function Home() {
         tag: undefined as string | undefined,
       };
     }
-    const currentOvr = overallFromAttributes(homeHighlightBest.attrs);
+    const currentOvr = overallFromAttributes(homeHighlightBest.attrs, homeHighlightBest.pos);
     const mintOvr = homeHighlightBest.mintOverall ?? currentOvr;
     const deltaOvr = currentOvr - mintOvr;
 
@@ -361,7 +361,7 @@ export function Home() {
     const squadSize = Object.keys(players).length;
     const ovrXi = (() => {
       const ovrs = Object.values(players)
-        .map((p) => overallFromAttributes(p.attrs))
+        .map((p) => overallFromAttributes(p.attrs, p.pos))
         .sort((a, b) => b - a)
         .slice(0, 11);
       if (!ovrs.length) return 0;
@@ -1064,7 +1064,7 @@ export function Home() {
           const isValidMvp = mvp && mvp.playerId && mvp.name !== 'Equipe';
           const mvpEntity = isValidMvp ? players[mvp.playerId] : null;
           const mvpOvr = mvpEntity
-            ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs)
+            ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs, mvpEntity.pos)
             : homeHighlight.ovr;
           const mvpName = isValidMvp ? mvp.name : homeHighlight.name;
           const mvpQuote = isValidMvp ? mvp.headline : `OVR ${mvpOvr} · jogador de impacto.`;

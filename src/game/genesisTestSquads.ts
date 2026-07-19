@@ -19,7 +19,7 @@ let portraitSyncInFlight = false;
 
 function squadStrength(players: import('@/entities/types').PlayerEntity[]): number {
   if (!players.length) return 72;
-  const sum = players.reduce((acc, p) => acc + (p.mintOverall ?? overallFromAttributes(p.attrs)), 0);
+  const sum = players.reduce((acc, p) => acc + (p.mintOverall ?? overallFromAttributes(p.attrs, p.pos)), 0);
   return Math.min(99, Math.max(40, Math.round(sum / players.length)));
 }
 
@@ -27,9 +27,9 @@ function pickHighlight(players: import('@/entities/types').PlayerEntity[]): { na
   const atas = players.filter((p) => p.pos?.toUpperCase() === 'ATA');
   const pool = atas.length ? atas : players;
   let best = pool[0]!;
-  let bestOvr = best.mintOverall ?? overallFromAttributes(best.attrs);
+  let bestOvr = best.mintOverall ?? overallFromAttributes(best.attrs, best.pos);
   for (const p of pool) {
-    const o = p.mintOverall ?? overallFromAttributes(p.attrs);
+    const o = p.mintOverall ?? overallFromAttributes(p.attrs, p.pos);
     if (o > bestOvr) {
       best = p;
       bestOvr = o;

@@ -110,7 +110,7 @@ function entityToClassicAt(
   let [xPct, yPct] = slots[slotIdx] ?? [0.5, 0.5];
   if (team === 'away') xPct = 1 - xPct;
 
-  const ovr = overallFromAttributes(p.attrs);
+  const ovr = overallFromAttributes(p.attrs, p.pos);
   const fatigue = Math.max(20, Math.min(85, p.fatigue ?? 35));
   const confidence = Math.max(45, Math.min(95, p.attrs.confianca ?? 70));
 

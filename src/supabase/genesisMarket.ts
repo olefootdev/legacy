@@ -226,7 +226,7 @@ export function genesisRowToPlayerEntity(row: GenesisMarketPlayerRow): PlayerEnt
   const contract = contractFieldsFromGenesisCatalogRow(row);
   const mintOvr =
     row.mint_overall != null && Number.isFinite(row.mint_overall) ? Math.round(row.mint_overall) : undefined;
-  const ovrForPricing = mintOvr ?? overallFromAttributes(attrs);
+  const ovrForPricing = mintOvr ?? overallFromAttributes(attrs, row.pos);
   const marketExp =
     row.market_value_exp != null && Number.isFinite(row.market_value_exp) && row.market_value_exp > 0
       ? Math.round(row.market_value_exp)
@@ -301,7 +301,7 @@ export function genesisRowToAuctionCard(row: GenesisMarketPlayerRow, ordinal: nu
   const ovr =
     row.mint_overall != null && Number.isFinite(row.mint_overall)
       ? Math.round(row.mint_overall)
-      : overallFromAttributes(attrs);
+      : overallFromAttributes(attrs, row.pos);
   const style = ovr >= 68 ? 'white' : ovr >= 60 ? 'neon-yellow' : 'gray-400';
   const category: MockAuctionPlayer['category'] = ovr >= 70 ? 'gold' : ovr >= 65 ? 'silver' : 'bronze';
   const ageLabel = row.age != null ? String(row.age) : '—';
