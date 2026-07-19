@@ -17,16 +17,18 @@ import { setPendingReferrerCode } from '@/wallet/referralCode';
 
 const YELLOW = '#FDE100';
 
-/** Espelha os pesos de overallFromAttributes (player.ts) pra bater com o jogo. */
-const OVR_W: Record<string, number> = {
-  passe: 0.12, marcacao: 0.1, velocidade: 0.12, drible: 0.1, finalizacao: 0.12,
-  fisico: 0.1, tatico: 0.12, mentalidade: 0.08, confianca: 0.08, fairPlay: 0.06,
-};
-function weightedOvr(attrs: Record<string, number> | null, fallback: number | null): number | null {
-  if (!attrs) return fallback;
-  let sum = 0;
-  for (const [k, w] of Object.entries(OVR_W)) sum += (attrs[k] ?? 58) * w;
-  return Math.round(Math.max(40, Math.min(99, sum)));
+/**
+ * O OVR vem do `mint_overall` gravado no banco — mesma conta que o jogo faz,
+ * ponderada POR POSIÇÃO (src/entities/ovrWeights.ts), sincronizada a cada
+ * tokenização.
+ *
+ * Aqui existia uma cópia local dos pesos, com a fórmula única antiga e SEM
+ * posição: a vitrine pública mostrava um OVR e o card no jogo mostrava outro.
+ * Não volte a recalcular — o RPC não devolve a posição, e recalcular sem ela
+ * reintroduz exatamente o bug.
+ */
+function cardOvr(card: LandingCard): number | null {
+  return card.mintOverall;
 }
 
 function priceLabel(card: LandingCard): string {
@@ -105,7 +107,7 @@ export function PlayerVipLanding() {
         {data.cards.length > 0 && (
           <section className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {data.cards.map((c) => {
-              const ovr = weightedOvr(c.attributes, c.mintOverall);
+              const ovr = cardOvr(c);
               return (
                 <article key={c.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#131315]">
                   <div className="relative aspect-[3/4] bg-[#0c0c0d]">
