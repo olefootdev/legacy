@@ -1,0 +1,417 @@
+{
+  "playerName": "Rinaldo Francisco de Lima",
+  "shortName": "Nem",
+  "collectionId": "mem-nem-lima-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.ogol.com.br/jogador/nem/638",
+    "https://www.bemparana.com.br/esportes/atletico-paranaense/nem-o-libero-que-conquistou-titulos-nacionais-pelo-parana-clube-e-pelo-athletico/",
+    "https://www.uol.com.br/esporte/futebol/ultimas-noticias/2017/10/15/ele-conviveu-com-fama-de-bad-boy-e-diz-que-nunca-foi-valorizado-pelo-sp.htm",
+    "https://imortaisdofutebol.com/esquadrao-imortal-atletico-pr-2001/",
+    "https://pt.wikipedia.org/wiki/Rinaldo_Francisco_de_Lima"
+  ],
+  "inconsistencies": [
+    "Nome: ogol, Bem Paraná e Wikipédia registram 'Rinaldo Francisco de Lima'. A matéria do UOL grafa 'Ronaldo' — erro de digitação da própria matéria. Adotado RINALDO.",
+    "Posição: as fontes o descrevem como LÍBERO (varredor do 3-5-2 de Geninho). O schema do jogo não tem líbero; usado ZAG, que é o equivalente mais próximo. A função de cobertura e saída de bola está refletida em tático e passe altos.",
+    "Período no São Paulo: ogol lista passagens em 1994, 1996, 1997 e 1999 (com empréstimos no meio); o UOL resume como '1993 a 2001'. Adotada a janela 1994-1999 do ogol.",
+    "O título de 2000 (Módulo Amarelo da Copa João Havelange) foi pelo PARANÁ CLUBE, que não é uma das 3 fases escolhidas. Aparece só como contexto na narrativa, não como conquista de card.",
+    "Chegada ao São Paulo: Bem Paraná e ogol indicam 1994; a Wikipédia diz 1992. Adotado 1994."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "São Paulo 1994-1999 — Escola no Morumbi",
+      "yearStart": 1994,
+      "yearEnd": 1999,
+      "mainClub": "São Paulo FC",
+      "narrativeTitle": "Aprendeu no vestiário do São Paulo bicampeão do mundo",
+      "narrative": "Chegou ao Morumbi em 1994, aos 21 anos, vindo do Vitória-PE e do Botafogo-SP — e caiu dentro do São Paulo recém-bicampeão do mundo. Foi inscrito na Libertadores daquele ano dividindo elenco com Cafu e um jovem Rogério Ceni, e terminou 1994 campeão da Copa Conmebol. Escola cara: aprendeu marcação por posição vendo gente que já tinha ganhado tudo, num clube onde sair jogando não era enfeite, era obrigação. Rodou emprestado por XV de Piracicaba, São José e Bragantino, sempre voltando. Em 1999 é titular absoluto com Carpegiani — 50 jogos na temporada. Sai do Morumbi pronto: faltava o técnico que enxergasse nele um líbero.",
+      "tier": 1,
+      "collectionCode": "BR-SPFC-99",
+      "collectionTitle": "São Paulo — Campeão da Conmebol 1994",
+      "currency": "USDT",
+      "priceUnitCents": 300,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "rinaldo.lima1973@gmail.com",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "adautogol@gmail.com",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Nem SPFC",
+        "num": 4,
+        "pos": "ZAG",
+        "archetype": "lenda",
+        "zone": "defesa",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 24,
+        "bio": "Chegou ao São Paulo em 1994, aos 21 anos, no elenco da Libertadores ao lado de Cafu e Rogério Ceni. Campeão da Copa Conmebol de 1994. Em 1999, titular absoluto com Carpegiani: 50 jogos.",
+        "tagline": "Dividiu vestiário com Cafu e Rogério Ceni. Campeão da Conmebol em 94.",
+        "attrs": {
+          "passe": 74,
+          "marcacao": 82,
+          "velocidade": 76,
+          "drible": 52,
+          "finalizacao": 40,
+          "fisico": 82,
+          "tatico": 76,
+          "mentalidade": 68,
+          "confianca": 76,
+          "fairPlay": 62
+        },
+        "mintOverall": 76,
+        "evolutionRate": 1.4,
+        "rarity": "premium",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "marcacao",
+          "fisico"
+        ],
+        "legacyTeamBooster": {
+          "morale": 2,
+          "defense_pct": 3
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ZAG",
+          "role": "CB",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "own_box",
+              "own_third",
+              "central"
+            ],
+            "spatialAwareness": 70,
+            "scanBeforeReceive": 64,
+            "runTiming": 40,
+            "defensivePositioning": 80
+          },
+          "teamProfile": {
+            "supportCarrier": 60,
+            "tacticalDiscipline": 66,
+            "teamCommunication": 62,
+            "defensiveCover": 80,
+            "collectiveMovement": 66
+          },
+          "individualProfile": {
+            "creativity": 50,
+            "decisionUnderPressure": 64,
+            "ballConfidence": 70,
+            "vision": 62,
+            "technicalExecution": 64
+          },
+          "riskProfile": {
+            "baseRisk": 48,
+            "riskUnderPressure": 4,
+            "riskWhenLosing": 14,
+            "riskWhenWinning": -8,
+            "dribbleVsPass": 22
+          },
+          "criticalProfile": {
+            "criticalComposure": 66,
+            "ego": 66,
+            "crowdPressureReaction": 64,
+            "selfishVsTeam": 34,
+            "finishingConfidence": 34
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Athletico-PR 2001 — Capitão do título brasileiro",
+      "yearStart": 2001,
+      "yearEnd": 2002,
+      "mainClub": "Athletico Paranaense",
+      "narrativeTitle": "Capitão do primeiro título nacional do Athletico",
+      "narrative": "Reencontra Geninho — o técnico que o tinha transformado em líbero — e o que era promessa vira consagração. Em 2001 é o CAPITÃO do Athletico Paranaense campeão brasileiro, o primeiro título nacional da história do clube, e é dele a imagem levantando a taça. No 3-5-2, forma uma muralha com Gustavo Caiche e Rogério Corrêa e liberta os alas Alessandro e Fabiano: fazia a cobertura perfeita dos zagueiros e saía jogando com qualidade de meio-campista. Naquele ano deixou de ser um dos melhores líberos do Brasil para ser simplesmente o melhor. Anos depois entraria na seleção dos maiores da história recente do clube, formando a zaga com Thiago Heleno.",
+      "tier": 3,
+      "collectionCode": "BR-CAP-01",
+      "collectionTitle": "Athletico-PR — Capitão campeão brasileiro 2001",
+      "currency": "USDT",
+      "priceUnitCents": 1000,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "rinaldo.lima1973@gmail.com",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "adautogol@gmail.com",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Nem PR",
+        "num": 4,
+        "pos": "ZAG",
+        "archetype": "lenda",
+        "zone": "defesa",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 28,
+        "bio": "Capitão do Athletico Paranaense campeão brasileiro de 2001 — o primeiro título nacional da história do clube. Líbero do 3-5-2 de Geninho, muralha ao lado de Gustavo Caiche e Rogério Corrêa.",
+        "tagline": "O líbero campeão do Brasil.",
+        "attrs": {
+          "passe": 86,
+          "marcacao": 89,
+          "velocidade": 78,
+          "drible": 60,
+          "finalizacao": 50,
+          "fisico": 88,
+          "tatico": 89,
+          "mentalidade": 88,
+          "confianca": 89,
+          "fairPlay": 74
+        },
+        "mintOverall": 86,
+        "evolutionRate": 0.75,
+        "rarity": "epico",
+        "cardSupply": 2500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "marcacao",
+          "tatico",
+          "passe"
+        ],
+        "legacyTeamBooster": {
+          "morale": 8,
+          "defense_pct": 6,
+          "attack_pct": 1
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ZAG",
+          "role": "CB",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "own_box",
+              "own_third",
+              "central"
+            ],
+            "spatialAwareness": 90,
+            "scanBeforeReceive": 86,
+            "runTiming": 48,
+            "defensivePositioning": 92
+          },
+          "teamProfile": {
+            "supportCarrier": 82,
+            "tacticalDiscipline": 88,
+            "teamCommunication": 92,
+            "defensiveCover": 94,
+            "collectiveMovement": 86
+          },
+          "individualProfile": {
+            "creativity": 66,
+            "decisionUnderPressure": 88,
+            "ballConfidence": 86,
+            "vision": 82,
+            "technicalExecution": 82
+          },
+          "riskProfile": {
+            "baseRisk": 44,
+            "riskUnderPressure": -10,
+            "riskWhenLosing": 16,
+            "riskWhenWinning": -16,
+            "dribbleVsPass": 18
+          },
+          "criticalProfile": {
+            "criticalComposure": 90,
+            "ego": 74,
+            "crowdPressureReaction": 88,
+            "selfishVsTeam": 26,
+            "finishingConfidence": 40
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Atlético-MG 2002-2003 e a Europa",
+      "yearStart": 2002,
+      "yearEnd": 2007,
+      "mainClub": "Atlético Mineiro",
+      "narrativeTitle": "O técnico que o pediu, o Galo e quatro anos em Portugal",
+      "narrative": "Sai do Furacão em 2002 campeão e capitão — e quem o pede no Atlético Mineiro é Geninho outra vez, o mesmo técnico do Paraná e do Athletico. É a terceira vez que o treinador monta uma defesa em volta dele. Veste o alvinegro em 31 jogos entre 2002 e 2003, e de lá parte para a travessia mais longa da carreira: quatro temporadas no SC Braga, em Portugal, com 127 jogos — mais do que fez em qualquer clube brasileiro. É o Nem sem nada a provar: menos disputa no alto, mais leitura antecipada; menos corrida, mais bola saindo limpa do pé. Voltaria ao Paraná em 2007 e encerraria em 2009.",
+      "tier": 2,
+      "collectionCode": "BR-CAM-02",
+      "collectionTitle": "Atlético-MG — A travessia 2002",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        {
+          "kind": "player",
+          "user_id": null,
+          "label": "rinaldo.lima1973@gmail.com",
+          "percent": 50
+        },
+        {
+          "kind": "olefoot",
+          "user_id": null,
+          "label": "Olefoot",
+          "percent": 25
+        },
+        {
+          "kind": "community",
+          "user_id": null,
+          "label": "Comunidade",
+          "percent": 15
+        },
+        {
+          "kind": "facilitator",
+          "user_id": null,
+          "label": "adautogol@gmail.com",
+          "percent": 10
+        }
+      ],
+      "entity": {
+        "name": "Nem CAM",
+        "num": 4,
+        "pos": "ZAG",
+        "archetype": "lenda",
+        "zone": "defesa",
+        "behavior": "defensivo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 29,
+        "bio": "Pedido por Geninho para reforçar a defesa do Atlético Mineiro em 2002: 31 jogos no Galo. Depois, quatro temporadas e 127 jogos pelo SC Braga, em Portugal — a passagem mais longa da carreira.",
+        "tagline": "De capitão a Minas, do Galo para a Europa.",
+        "attrs": {
+          "passe": 82,
+          "marcacao": 84,
+          "velocidade": 70,
+          "drible": 58,
+          "finalizacao": 48,
+          "fisico": 80,
+          "tatico": 88,
+          "mentalidade": 89,
+          "confianca": 84,
+          "fairPlay": 78
+        },
+        "mintOverall": 82,
+        "evolutionRate": 0.9,
+        "rarity": "raro",
+        "cardSupply": 5000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": [
+          "tatico",
+          "passe"
+        ],
+        "legacyTeamBooster": {
+          "morale": 4,
+          "defense_pct": 4
+        },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ZAG",
+          "role": "CB",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": [
+              "own_box",
+              "own_third",
+              "central"
+            ],
+            "spatialAwareness": 90,
+            "scanBeforeReceive": 88,
+            "runTiming": 42,
+            "defensivePositioning": 88
+          },
+          "teamProfile": {
+            "supportCarrier": 82,
+            "tacticalDiscipline": 90,
+            "teamCommunication": 88,
+            "defensiveCover": 88,
+            "collectiveMovement": 86
+          },
+          "individualProfile": {
+            "creativity": 64,
+            "decisionUnderPressure": 88,
+            "ballConfidence": 84,
+            "vision": 82,
+            "technicalExecution": 80
+          },
+          "riskProfile": {
+            "baseRisk": 40,
+            "riskUnderPressure": -14,
+            "riskWhenLosing": 14,
+            "riskWhenWinning": -18,
+            "dribbleVsPass": 16
+          },
+          "criticalProfile": {
+            "criticalComposure": 90,
+            "ego": 62,
+            "crowdPressureReaction": 84,
+            "selfishVsTeam": 24,
+            "finishingConfidence": 38
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    }
+  ]
+}

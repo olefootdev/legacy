@@ -103,6 +103,7 @@ export function LegacyMarketCard({
     tier === 'raro' && 'border-l-[3px] border-l-white/15',
     tier === 'premium' && 'border-l-[3px] border-l-white/10',
     tier === 'ai' && 'border-l-[3px] border-l-sky-400/40',
+    tier === 'revelacao' && 'border-l-[3px] border-l-emerald-400/50',
   );
 
   const BuyButton = (
@@ -207,6 +208,8 @@ export function LegacyMarketCard({
                 tier === 'premium' && 'border border-white/12 text-white/40',
                 // AI+ sai da escada de amarelo: card gerado por IA, não é prestígio.
                 tier === 'ai' && 'border border-sky-400/50 text-sky-300/80',
+                // Revelação sai da escada de amarelo: é promessa, não prestígio.
+                tier === 'revelacao' && 'border border-emerald-400/50 text-emerald-300/85',
               )}
               style={{ fontSize: 9, letterSpacing: '0.2em', padding: '4px 7px' }}
             >

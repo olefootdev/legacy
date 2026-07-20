@@ -25,6 +25,7 @@ const RARITY_MULTIPLIER: Record<PlayerRarity, number> = {
   epico: 2.2,
   premium: 1.2,
   ai_plus: 1.0,
+  revelacao: 1.0,
   normal: 1.0,
 };
 

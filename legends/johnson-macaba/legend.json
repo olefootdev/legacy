@@ -1,0 +1,323 @@
+{
+  "playerName": "Johnson Monteiro Pinto Macaba",
+  "shortName": "Johnson",
+  "collectionId": "mem-johnson-macaba-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://ludopedio.org.br/arquibancada/johnson-macaba/",
+    "https://www.transfermarkt.com.br/johnson-macaba/profil/spieler/56547",
+    "https://www.ogol.com.br/jogador/jonhson/32378"
+  ],
+  "inconsistencies": [
+    "Grafia: ogol registra 'Jonhson'; Transfermarkt e Ludopédio registram 'Johnson'. Adotado 'Johnson' (Transfermarkt + confirmado pelo fundador).",
+    "Jogos pela seleção de Angola: ogol indica 12, Transfermarkt indica 11. Adotado 'mais de 10' na narrativa, sem cravar número.",
+    "Altura: ogol 1,86 m; Transfermarkt 1,85 m. Diferença irrelevante para a ficha.",
+    "Ludopédio menciona 'artilheiro em 2008' na China sem dizer de qual competição. NÃO cravado como título de artilharia — a narrativa fala em boa temporada, não em artilharia oficial.",
+    "As fontes não trazem análise técnica detalhada de estilo. Ludopédio descreve finalização decisiva ('clinical finishing'); os atributos derivam disso, do porte (1,85 m / 71 kg) e do retrospecto de 29 gols em 172 jogos."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "Portuguesa 2005-2006 — Titular na Série A",
+      "yearStart": 2005,
+      "yearEnd": 2006,
+      "mainClub": "Portuguesa de Desportos (SP)",
+      "narrativeTitle": "34 jogos com a camisa da Lusa",
+      "narrative": "Depois de rodar por Londrina, União Barbarense, Turquia e mais uma dúzia de escudos, é no Canindé que Johnson finalmente para de ser o atacante que chega e vira o atacante que fica. São 34 jogos e 7 gols pela Portuguesa entre 2005 e 2006 — a sequência mais longa da carreira dele em um só clube. Um centroavante de 1,85 m, magro e destro, que não vivia de força: vivia de chegar na hora certa. Não é o menino promissor; é o rodado que enfim encontrou lugar. E é vestindo essa camisa que ele entra no radar da seleção do país onde nasceu.",
+      "tier": 1,
+      "collectionCode": "BR-LUS-05",
+      "collectionTitle": "Portuguesa — O ano no Canindé 2005",
+      "currency": "USDT",
+      "priceUnitCents": 300,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "jomp_mb@yahoo.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Johnson LUS",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Angola",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 27,
+        "bio": "34 jogos e 7 gols pela Portuguesa entre 2005 e 2006 — a sequência mais longa da carreira dele num só clube.",
+        "tagline": "Rodou treze escudos até o Canindé dizer: fica.",
+        "attrs": {
+          "passe": 62,
+          "marcacao": 40,
+          "velocidade": 82,
+          "drible": 74,
+          "finalizacao": 78,
+          "fisico": 74,
+          "tatico": 66,
+          "mentalidade": 80,
+          "confianca": 78,
+          "fairPlay": 74
+        },
+        "mintOverall": 76,
+        "evolutionRate": 1.4,
+        "rarity": "premium",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["finalizacao", "mentalidade"],
+        "legacyTeamBooster": { "morale": 2, "attack_pct": 3 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["opp_box", "att_third", "central"],
+            "spatialAwareness": 66,
+            "scanBeforeReceive": 58,
+            "runTiming": 76,
+            "defensivePositioning": 26
+          },
+          "teamProfile": {
+            "supportCarrier": 58,
+            "tacticalDiscipline": 62,
+            "teamCommunication": 56,
+            "defensiveCover": 24,
+            "collectiveMovement": 64
+          },
+          "individualProfile": {
+            "creativity": 58,
+            "decisionUnderPressure": 68,
+            "ballConfidence": 68,
+            "vision": 56,
+            "technicalExecution": 66
+          },
+          "riskProfile": {
+            "baseRisk": 64,
+            "riskUnderPressure": 6,
+            "riskWhenLosing": 16,
+            "riskWhenWinning": -6,
+            "dribbleVsPass": 54
+          },
+          "criticalProfile": {
+            "criticalComposure": 70,
+            "ego": 52,
+            "crowdPressureReaction": 74,
+            "selfishVsTeam": 56,
+            "finishingConfidence": 76
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "Angola 2006-2010 — Palanca Negra",
+      "yearStart": 2006,
+      "yearEnd": 2010,
+      "mainClub": "Seleção de Angola",
+      "narrativeTitle": "A bandeira debaixo da camisa",
+      "narrative": "A porta ele mesmo abriu, e na frente de todo mundo. Campeonato Paulista de 2001, União Barbarense levando 5 a 1 do Palmeiras: Johnson marca, corre e levanta a camisa do clube — embaixo, a bandeira de Angola. A imagem roda o mundo e chega em Luanda. É esse gesto que leva o menino que saiu de lá aos 8 anos, no meio de uma guerra civil, de volta ao país como Palanca Negra. Veste a camisa de Angola em mais de dez jogos e disputa duas Copas Africanas de Nações, em 2006 e 2010. Chegou a ser pré-convocado para a única Copa do Mundo da história do país, em 2006, e ficou de fora do corte final — mas a essa altura já tinha feito a parte mais difícil: escolher de onde era.",
+      "tier": 3,
+      "collectionCode": "ANG-SEL-06",
+      "collectionTitle": "Angola — Palanca Negra 2006",
+      "currency": "USDT",
+      "priceUnitCents": 1000,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "jomp_mb@yahoo.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Johnson ANG",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Angola",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 28,
+        "bio": "Palanca Negra em duas Copas Africanas de Nações (2006 e 2010). A convocação nasceu de um gesto: marcar contra o Palmeiras e levantar a camisa mostrando a bandeira de Angola.",
+        "tagline": "Marcou, levantou a camisa e mostrou de onde era. Angola viu.",
+        "attrs": {
+          "passe": 72,
+          "marcacao": 44,
+          "velocidade": 87,
+          "drible": 83,
+          "finalizacao": 89,
+          "fisico": 82,
+          "tatico": 76,
+          "mentalidade": 89,
+          "confianca": 89,
+          "fairPlay": 82
+        },
+        "mintOverall": 85,
+        "evolutionRate": 0.75,
+        "rarity": "ultra_raro",
+        "cardSupply": 2500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["finalizacao", "mentalidade", "confianca"],
+        "legacyTeamBooster": { "morale": 7, "attack_pct": 5 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["opp_box", "att_third", "central"],
+            "spatialAwareness": 76,
+            "scanBeforeReceive": 70,
+            "runTiming": 86,
+            "defensivePositioning": 30
+          },
+          "teamProfile": {
+            "supportCarrier": 68,
+            "tacticalDiscipline": 72,
+            "teamCommunication": 74,
+            "defensiveCover": 28,
+            "collectiveMovement": 76
+          },
+          "individualProfile": {
+            "creativity": 68,
+            "decisionUnderPressure": 82,
+            "ballConfidence": 80,
+            "vision": 66,
+            "technicalExecution": 78
+          },
+          "riskProfile": {
+            "baseRisk": 66,
+            "riskUnderPressure": 2,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -8,
+            "dribbleVsPass": 52
+          },
+          "criticalProfile": {
+            "criticalComposure": 86,
+            "ego": 50,
+            "crowdPressureReaction": 90,
+            "selfishVsTeam": 48,
+            "finishingConfidence": 88
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Shenzhen 2008-2012 — O ofício na China",
+      "yearStart": 2008,
+      "yearEnd": 2012,
+      "mainClub": "Shenzhen FC (China)",
+      "narrativeTitle": "Angola, Brasil e a China no currículo",
+      "narrative": "Do Canindé para o outro lado do mundo. Johnson chega ao Shenzhen em 2008 e a China vira a última grande etapa da carreira: Shenzhen, Chengdu, Chongqing — quatro anos rodando um futebol que quase nenhum brasileiro da geração dele conheceu por dentro. No meio do caminho ainda volta a Angola para vestir a camisa do Recreativo do Libolo. Menos explosão, mais leitura: o atacante que antes vivia do arranque agora vive do lugar certo. Hoje dá palestras para jovens no Brasil e toca negócios em Angola — a prova, nas palavras dele, de que sonho de refugiado de guerra também acontece.",
+      "tier": 2,
+      "collectionCode": "CHN-SHZ-08",
+      "collectionTitle": "Shenzhen — A travessia 2008",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "jomp_mb@yahoo.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Johnson SHZ",
+        "num": 9,
+        "pos": "ATA",
+        "archetype": "lenda",
+        "zone": "att",
+        "behavior": "ofensivo",
+        "country": "Angola",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 30,
+        "bio": "Quatro anos de China entre Shenzhen, Chengdu e Chongqing, com passagem pelo Recreativo do Libolo em Angola. Encerrou a carreira aos 34.",
+        "tagline": "Angola, Brasil e China num currículo só.",
+        "attrs": {
+          "passe": 74,
+          "marcacao": 46,
+          "velocidade": 78,
+          "drible": 78,
+          "finalizacao": 85,
+          "fisico": 78,
+          "tatico": 82,
+          "mentalidade": 89,
+          "confianca": 84,
+          "fairPlay": 84
+        },
+        "mintOverall": 81,
+        "evolutionRate": 0.9,
+        "rarity": "raro",
+        "cardSupply": 5000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["tatico", "mentalidade"],
+        "legacyTeamBooster": { "morale": 4, "attack_pct": 3 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "ATA",
+          "role": "ST",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["opp_box", "att_third", "central"],
+            "spatialAwareness": 82,
+            "scanBeforeReceive": 78,
+            "runTiming": 82,
+            "defensivePositioning": 34
+          },
+          "teamProfile": {
+            "supportCarrier": 74,
+            "tacticalDiscipline": 82,
+            "teamCommunication": 80,
+            "defensiveCover": 34,
+            "collectiveMovement": 80
+          },
+          "individualProfile": {
+            "creativity": 68,
+            "decisionUnderPressure": 84,
+            "ballConfidence": 80,
+            "vision": 72,
+            "technicalExecution": 78
+          },
+          "riskProfile": {
+            "baseRisk": 58,
+            "riskUnderPressure": -4,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -12,
+            "dribbleVsPass": 46
+          },
+          "criticalProfile": {
+            "criticalComposure": 86,
+            "ego": 44,
+            "crowdPressureReaction": 84,
+            "selfishVsTeam": 42,
+            "finishingConfidence": 84
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    }
+  ]
+}

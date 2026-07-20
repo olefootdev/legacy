@@ -1,0 +1,122 @@
+{
+  "playerName": "Breno Eduardo Liborge",
+  "shortName": "Breno",
+  "collectionId": "mem-breno-liborge-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.transfermarkt.com/breno-liborge/profil/spieler/1222305",
+    "https://esporte.ig.com.br/futebol/2024-09-19/conheca-menino-vila-colocou-agua-santa-2-fase-paulista-cup.html",
+    "https://www.vavel.com/br/futebol/2024/09/21/1197121-conheca-o-menino-da-vila-que-joga-pelo-agua-santa-egarantiu-classificacao-do-netuno-para-a-segunda-faseda-paulista-cup.html",
+    "https://meupeixao.com.br/2023/10/ex-menino-da-vila-breno-liborge-relembra-passagem-no-santos/"
+  ],
+  "inconsistencies": [
+    "CARD ÚNICO por decisão do fundador — e é o certo aqui: as outras lendas têm 3 fases porque a carreira já aconteceu. O Breno está no começo; não existe 'Consolidação' nem 'Expansão' pra contar sem inventar.",
+    "Clube atual: o dossiê do fundador indica Independente-SP no perfil mais recente; as matérias de 2024 o situam no Água Santa. O card é o do ÁGUA SANTA, conforme definido pelo fundador.",
+    "As fontes fornecidas (Transfermarkt e iG) bloquearam leitura automatizada; os dados vieram do dossiê do fundador e de matérias equivalentes (VAVEL, Meu Peixão) que cobrem o mesmo episódio.",
+    "Sobrenome: o mapa interno de facilitadores tinha 'breno-borges'; o correto é LIBORGE, conforme e-mail e fontes.",
+    "Nenhuma fonte atribui rating ou nota ao atleta. Os atributos abaixo traduzem função de posição, evidências objetivas (gol decisivo, formação no Santos) e perfil comportamental descrito nas entrevistas — não são avaliação de desempenho."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "Água Santa 2024 — O Menino da Vila que classificou o Netuno",
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "mainClub": "EC Água Santa (SP)",
+      "narrativeTitle": "O gol que colocou o Água Santa na segunda fase",
+      "narrative": "Aos 10 anos passou numa peneira do São Caetano e nunca mais parou. Passou pelo EC São Bernardo e, em 2022, foi aprovado no Santos — virou Menino da Vila e integrou o elenco campeão paulista sub-20. Em setembro de 2024, defendendo o Água Santa, marcou um dos gols da vitória por 3 a 0 sobre o São Caetano, justamente o clube onde tudo começou, e classificou o Netuno para a segunda fase da Paulista Cup. Lateral-direito de corredor: cobre, recompõe, dá amplitude e aparece na área quando o espaço abre. Perguntado sobre o gol, tirou o foco de si e falou do time e do que ainda dava pra melhorar. Esta é a única fase dele até aqui — o resto ainda não aconteceu.",
+      "tier": 1,
+      "collectionCode": "BR-AGS-24",
+      "collectionTitle": "Água Santa — Paulista Cup 2024",
+      "currency": "USDT",
+      "priceUnitCents": 300,
+      "initialSupply": 10000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "rbrenoeliborge@gmail.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "adautogol@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Breno AGS",
+        "num": 2,
+        "pos": "LD",
+        "archetype": "novo_talento",
+        "zone": "lateral_dir",
+        "behavior": "equilibrado",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "novo_talento",
+        "age": 20,
+        "bio": "Lateral-direito nascido em Presidente Prudente, formado no São Caetano e no EC São Bernardo, Menino da Vila no Santos em 2022. Marcou o gol que classificou o Água Santa na Paulista Cup de 2024.",
+        "tagline": "Marcou contra o clube onde tudo começou e classificou o Netuno.",
+        "attrs": {
+          "passe": 75,
+          "marcacao": 80,
+          "velocidade": 84,
+          "drible": 70,
+          "finalizacao": 58,
+          "fisico": 82,
+          "tatico": 74,
+          "mentalidade": 84,
+          "confianca": 76,
+          "fairPlay": 84
+        },
+        "mintOverall": 79,
+        "evolutionRate": 2,
+        "rarity": "revelacao",
+        "cardSupply": 10000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["velocidade", "fisico"],
+        "legacyTeamBooster": { "morale": 3, "defense_pct": 2 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "LD",
+          "role": "RB",
+          "archetype": "novo_talento",
+          "spatialProfile": {
+            "preferredZones": ["right_flank", "own_third", "mid_third"],
+            "spatialAwareness": 70,
+            "scanBeforeReceive": 66,
+            "runTiming": 76,
+            "defensivePositioning": 76
+          },
+          "teamProfile": {
+            "supportCarrier": 76,
+            "tacticalDiscipline": 80,
+            "teamCommunication": 70,
+            "defensiveCover": 78,
+            "collectiveMovement": 82
+          },
+          "individualProfile": {
+            "creativity": 60,
+            "decisionUnderPressure": 68,
+            "ballConfidence": 72,
+            "vision": 64,
+            "technicalExecution": 72
+          },
+          "riskProfile": {
+            "baseRisk": 54,
+            "riskUnderPressure": 0,
+            "riskWhenLosing": 16,
+            "riskWhenWinning": -8,
+            "dribbleVsPass": 40
+          },
+          "criticalProfile": {
+            "criticalComposure": 70,
+            "ego": 32,
+            "crowdPressureReaction": 72,
+            "selfishVsTeam": 20,
+            "finishingConfidence": 58
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    }
+  ]
+}

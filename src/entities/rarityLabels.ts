@@ -1,24 +1,31 @@
 /**
  * Escada de raridade das lendas OLEFOOT — fonte única.
  *
- *   AI+  <  Premium  <  Raro  <  Ultra-raro  <  Épico
+ *   AI+  <  Revelação  <  Premium  <  Raro  <  Ultra-raro  <  Épico
  *
  * Regra de produto do fundador: a tag tem que VALER alguma coisa. `Épico` é
  * reservado a feito monumental (vice de Copa do Mundo, símbolo anti-racismo),
- * não é o default de toda lenda. `AI+` marca card gerado por IA (sem atleta
- * real por trás) — é outro eixo, não é "raridade alta".
+ * não é o default de toda lenda.
+ *
+ * DOIS TIERS FORA DO EIXO DE PRESTÍGIO:
+ *   `AI+`       — card gerado por IA, sem atleta real por trás.
+ *   `Revelação` — atleta em INÍCIO de carreira, cuja história ainda não
+ *                 aconteceu. Não é "raridade baixa": é outra promessa. Enquanto
+ *                 a lenda tem 3 fases porque o passado está fechado, a revelação
+ *                 tem 1 card e evolutionRate alto — o valor está no que vem.
  *
  * Visual: prestígio = GRAU DE AMARELO (épico sólido → premium sem amarelo).
  * AI+ sai da escada de amarelo de propósito, pra não se confundir com raro.
  */
 
-export type RarityTier = 'ai' | 'premium' | 'raro' | 'ultra' | 'epico';
+export type RarityTier = 'ai' | 'revelacao' | 'premium' | 'raro' | 'ultra' | 'epico';
 
 /** Ordem crescente de prestígio — use pra ordenar/comparar. */
-export const RARITY_ORDER: RarityTier[] = ['ai', 'premium', 'raro', 'ultra', 'epico'];
+export const RARITY_ORDER: RarityTier[] = ['ai', 'revelacao', 'premium', 'raro', 'ultra', 'epico'];
 
 export const RARITY_LABEL: Record<RarityTier, string> = {
   ai: 'AI+',
+  revelacao: 'Revelação',
   premium: 'Premium',
   raro: 'Raro',
   ultra: 'Ultra-raro',
@@ -36,6 +43,9 @@ export function rarityTierOf(rarityLabel: string | null | undefined, ovr?: numbe
   if (r.includes('epico') || r.includes('épico')) return 'epico';
   if (r.includes('ultra')) return 'ultra';
   if (r.includes('premium')) return 'premium';
+  // Antes de 'raro': "revelacao" não contém "raro", mas deixar junto evita que
+  // alguém adicione um teste solto depois e crie colisão.
+  if (r.includes('revelacao') || r.includes('revelação')) return 'revelacao';
   if (r.startsWith('ai') || r.includes('ai+') || r.includes('ai_plus')) return 'ai';
   if (r.includes('raro')) return 'raro';
   const n = ovr ?? 0;
