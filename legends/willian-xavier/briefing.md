@@ -1,4 +1,4 @@
-# Willian Xavier — Briefing de Tokenização
+# William Xavier — Briefing de Tokenização
 
 > Coleção memorável OLEFOOT · slug `willian-xavier` · 3 fases
 
@@ -6,7 +6,7 @@
 
 | Campo | Valor | Fonte |
 |---|---|---|
-| Nome completo | **Willian Xavier Barbosa** | ogol, NETVASCO |
+| Nome completo | **William Xavier Barbosa** | ogol, NETVASCO |
 | Nascimento | 22/09/1983 — Campo Grande (MS) | ogol, NETVASCO |
 | Altura / Peso | 1,86 m · 77 kg | ogol, NETVASCO |
 | Posição | **Centroavante (ATA)** | ogol ("Centroavante"), NETVASCO ("Atacante") |
@@ -66,7 +66,7 @@ Frase dele que sintetiza a fase atual: *"O futebol passa, mas o propósito perma
 
 ## Inconsistências entre fontes (sinalizadas)
 
-1. **Grafia do nome.** ogol e NETVASCO registram **"Willian Xavier Barbosa"** (com dois L e final em N). Diário Digital e GE grafam "William Xavier". Adotado: **Willian Xavier** — confirmado pelo fundador ("com N") e pela chave já registrada `willian-xavier`.
+1. **Grafia do nome.** As fontes divergem: ogol e NETVASCO registram **"Willian"** (final em N); Diário Digital e GE grafam **"William"** (final em M). Adotado **WILLIAM, com M**, por decisão do fundador em 2026-07-20 — que corrigiu a escolha anterior. Os identificadores internos (`legacy-willian-xavier-*`, `mem-willian-xavier-2026`, pasta do repo) seguem com N de propósito: são chaves referenciadas por lotes e handles, e renomeá-las não traria ganho visível ao usuário.
 2. **Ano do diagnóstico cardíaco.** NETVASCO diz **2014** (teste no Rio Branco, aos 31); Diário Digital diz **2015** (exames para o Paulistão). Adotado 2014–2015 como janela, sem cravar ano na narrativa do card.
 3. **Números pelo Vasco.** NETVASCO: 11 jogos / 2 gols. ogol: 9 jogos / 1 gol em 2005 + 1 jogo em 2006 (= 10 jogos). Adotados os números da NETVASCO (fonte especializada no clube).
 4. **Ordem América-RJ × Vasco em 2005.** ogol lista os dois em 2005 sem ordem clara. A estreia pelo Vasco em **15/05/2005** *(NETVASCO)* confirma América-RJ primeiro (Carioca, início de 2005) → Vasco a partir de maio. Cronologia das fases validada.
@@ -88,7 +88,7 @@ Frase dele que sintetiza a fase atual: *"O futebol passa, mas o propósito perma
 
 | Papel | Pessoa | Conta |
 |---|---|---|
-| Jogador (50%) | Willian Xavier | `willixavier09@gmail.com` — **conta a criar no PLAYERVIP** |
+| Jogador (50%) | William Xavier | `willixavier09@gmail.com` — **conta a criar no PLAYERVIP** |
 | Olefoot (25%) | OLEFOOT | `trader4.tfxpro@gmail.com` |
 | Comunidade (15%) | OLEFOOT | `trader4.tfxpro@gmail.com` |
 | Facilitador (10%) | **Matheus Souza** | `matheusjsouza16@gmail.com` — uid `671856a9-7409-44b8-9dfb-21032748ce31` ✅ conta já existe |

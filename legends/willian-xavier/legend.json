@@ -1,6 +1,6 @@
 {
-  "playerName": "Willian Xavier Barbosa",
-  "shortName": "Willian",
+  "playerName": "William Xavier Barbosa",
+  "shortName": "William",
   "collectionId": "mem-willian-xavier-2026",
   "collectionKind": "memorable",
   "sources": [
@@ -10,7 +10,7 @@
     "https://www.ogol.com.br/jogador/willian-xavier/12594"
   ],
   "inconsistencies": [
-    "Grafia: ogol e NETVASCO registram 'Willian Xavier Barbosa' (dois L, final em N); Diário Digital e GE grafam 'William Xavier'. Adotado 'Willian Xavier' (confirmado pelo fundador e pela chave willian-xavier).",
+    "Grafia: ogol e NETVASCO registram 'William Xavier Barbosa' (dois L, final em N); Diário Digital e GE grafam 'William Xavier'. Adotado 'William Xavier' (confirmado pelo fundador e pela chave willian-xavier).",
     "Ano do diagnóstico cardíaco: NETVASCO indica 2014 (teste no Rio Branco); Diário Digital indica 2015 (exames para o Paulistão). Não cravado na narrativa dos cards.",
     "Jogos pelo Vasco: NETVASCO 11 jogos/2 gols; ogol 10 jogos/1 gol. Adotados os números da NETVASCO.",
     "ge.globo.com bloqueou o fetch automatizado — nenhum dado exclusivo extraído dessa fonte.",
@@ -24,7 +24,7 @@
       "yearEnd": 2005,
       "mainClub": "América-RJ",
       "narrativeTitle": "Dois gols na estreia no Maracanã",
-      "narrative": "O América-RJ foi a porta. Willian chega ao clube e marca dois gols logo na sua primeira partida no Maracanã — dois jogos, dois gols pela camisa rubra. É o instante em que o futebol grande do Rio descobre um centroavante de 1,86 m, destro, com faro de área e explosão física acima da média para a idade. Ainda é jogo cru: pouco repertório tático, decisão no impulso, tudo no instinto. Mas o instinto já está pronto — e é ele que abre a porta de São Januário meses depois.",
+      "narrative": "O América-RJ foi a porta. William chega ao clube e marca dois gols logo na sua primeira partida no Maracanã — dois jogos, dois gols pela camisa rubra. É o instante em que o futebol grande do Rio descobre um centroavante de 1,86 m, destro, com faro de área e explosão física acima da média para a idade. Ainda é jogo cru: pouco repertório tático, decisão no impulso, tudo no instinto. Mas o instinto já está pronto — e é ele que abre a porta de São Januário meses depois.",
       "tier": 1,
       "collectionCode": "BR-AME-05",
       "collectionTitle": "América-RJ — Dois gols no Maracanã 2005",
@@ -58,7 +58,7 @@
         }
       ],
       "entity": {
-        "name": "Willian AMR",
+        "name": "William AMR",
         "num": 9,
         "pos": "ATA",
         "archetype": "lenda",
@@ -155,7 +155,7 @@
       "yearEnd": 2006,
       "mainClub": "Vasco da Gama (RJ)",
       "narrativeTitle": "Chegou por indicação de Romário",
-      "narrative": "Do Maracanã para São Januário. Willian é contratado pelo Vasco em 2005 por indicação direta de Romário — o maior ídolo dele, que passa a ser companheiro de vestiário. Estreia em 15 de maio de 2005 e marca contra o Internacional em outubro. São 11 jogos e 2 gols pela camisa cruzmaltina. É aqui que o jogo dele ganha leitura: aprende a se mover entre zagueiros de Série A, a segurar a bola de costas para o gol e a esperar o momento certo em vez de atacar todo espaço. O instinto continua; a inteligência alcança.",
+      "narrative": "Do Maracanã para São Januário. William é contratado pelo Vasco em 2005 por indicação direta de Romário — o maior ídolo dele, que passa a ser companheiro de vestiário. Estreia em 15 de maio de 2005 e marca contra o Internacional em outubro. São 11 jogos e 2 gols pela camisa cruzmaltina. É aqui que o jogo dele ganha leitura: aprende a se mover entre zagueiros de Série A, a segurar a bola de costas para o gol e a esperar o momento certo em vez de atacar todo espaço. O instinto continua; a inteligência alcança.",
       "tier": 2,
       "collectionCode": "BR-VAS-05",
       "collectionTitle": "Vasco — Indicado por Romário 2005",
@@ -189,7 +189,7 @@
         }
       ],
       "entity": {
-        "name": "Willian VAS",
+        "name": "William VAS",
         "num": 9,
         "pos": "ATA",
         "archetype": "lenda",
@@ -286,7 +286,7 @@
       "yearEnd": 2014,
       "mainClub": "Botafogo-SP (Ribeirão Preto)",
       "narrativeTitle": "Guerreiro — 7 gols no Paulistão 2010",
-      "narrative": "Ribeirão Preto deu a ele o nome que ficou: Guerreiro. Willian volta ao Botafogo-SP três vezes — 2008, 2010 e 2014 — e em nenhuma delas passa despercebido: 8 gols em 14 jogos na primeira, 7 gols no Campeonato Paulista de 2010, mais uma volta em 2014. Vira ídolo de uma torcida que reconhece nele o que ela mais valoriza: entrega. É também o período em que seu jogo atravessa fronteiras — Bélgica, Japão e França —, e ele volta cada vez mais completo. Presença de área, corpo, liderança e a serenidade de quem já jogou em três continentes.",
+      "narrative": "Ribeirão Preto deu a ele o nome que ficou: Guerreiro. William volta ao Botafogo-SP três vezes — 2008, 2010 e 2014 — e em nenhuma delas passa despercebido: 8 gols em 14 jogos na primeira, 7 gols no Campeonato Paulista de 2010, mais uma volta em 2014. Vira ídolo de uma torcida que reconhece nele o que ela mais valoriza: entrega. É também o período em que seu jogo atravessa fronteiras — Bélgica, Japão e França —, e ele volta cada vez mais completo. Presença de área, corpo, liderança e a serenidade de quem já jogou em três continentes.",
       "tier": 3,
       "collectionCode": "BR-BSP-10",
       "collectionTitle": "Botafogo-SP — O Guerreiro de Ribeirão 2010",
@@ -320,7 +320,7 @@
         }
       ],
       "entity": {
-        "name": "Willian BSP",
+        "name": "William BSP",
         "num": 9,
         "pos": "ATA",
         "archetype": "lenda",

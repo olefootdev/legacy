@@ -1,26 +1,26 @@
-# Willian Xavier — Briefing visual dos 3 cards
+# William Xavier — Briefing visual dos 3 cards
 
 Retratos já no repo: `legends/willian-xavier/`. Formato do card = **retrato 2:3 vertical** (regra da coleção Legacy).
 
 | Fase | Arquivo | Card |
 |---|---|---|
-| Revelação | `will-xavier America RJ.png` | Willian AME |
-| Consolidação | `will-xavier vasco.png` | Willian VAS |
-| Expansão | `will-xavier botafogo.png` | Willian BSP |
+| Revelação | `will-xavier America RJ.png` | William AMR |
+| Consolidação | `will-xavier vasco.png` | William VAS |
+| Expansão | `will-xavier botafogo.png` | William BSP |
 
 Fio condutor das três artes: **um centroavante de porte, de frente pro gol**. A progressão visual vai de *cru e explosivo* → *afirmado no palco grande* → *veterano com identidade*. O amarelo OLEFOOT é o único elemento constante nas três.
 
 ---
 
-## 1. Revelação — Willian AME (América-RJ, 2005)
+## 1. Revelação — William AMR (América-RJ, 2005)
 
 - **Paleta:** verde-escuro e vermelho do América-RJ, com preto profundo de fundo. Amarelo OLEFOOT só no selo de OVR.
 - **Mood:** juventude e impulso. Luz dura, contraste alto, sombra marcada — energia crua, nada polido.
 - **Elementos:** escudo do América-RJ discreto no canto inferior; ano **2005**; posição **ATA**; OVR **75**.
 - **Detalhe narrativo:** silhueta do Maracanã ao fundo, quase imperceptível, como marca d'água. É o palco da estreia de dois gols — sugerido, nunca literal.
-- **Tipografia:** peso alto, itálico. O nome curto ("Willian AME") em destaque.
+- **Tipografia:** peso alto, itálico. O nome curto ("William AMR") em destaque.
 
-## 2. Consolidação — Willian VAS (Vasco, 2005–2006)
+## 2. Consolidação — William VAS (Vasco, 2005–2006)
 
 - **Paleta:** preto e branco do Vasco, com a faixa diagonal como elemento gráfico estruturante. Fundo grafite.
 - **Mood:** afirmação. Luz mais limpa e frontal que a fase anterior — ele agora pertence ao lugar.
@@ -28,7 +28,7 @@ Fio condutor das três artes: **um centroavante de porte, de frente pro gol**. A
 - **Detalhe narrativo:** a faixa diagonal do Vasco pode cortar o card inteiro, dividindo passado e presente — é a fase-ponte da coleção.
 - **Cuidado:** a chegada veio por indicação de Romário. Isso é **história de briefing e legenda**, não elemento gráfico — não usar imagem nem nome de terceiro na arte.
 
-## 3. Expansão — Willian BSP (Botafogo-SP, 2008–2014)
+## 3. Expansão — William BSP (Botafogo-SP, 2008–2014)
 
 - **Paleta:** preto e branco do Botafogo-SP com dourado/âmbar de acento. É o card mais "nobre" dos três.
 - **Mood:** serenidade de veterano. Luz lateral suave, textura, respiro. Menos contraste, mais densidade.
