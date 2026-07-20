@@ -43,6 +43,7 @@ import { AdminShopPanel } from './panels/AdminShopPanel';
 import { AdminMarketPanel } from './panels/AdminMarketPanel';
 import { AdminLegacyPanel } from './panels/AdminLegacyPanel';
 import { AdminLegendCreatorPanel } from './panels/AdminLegendCreatorPanel';
+import { AdminContributionsPanel } from './panels/AdminContributionsPanel';
 import { AdminProfanityPanel } from './panels/AdminProfanityPanel';
 import { AdminLearnedPhrasesPanel } from './panels/AdminLearnedPhrasesPanel';
 import { AdminFootballVocabularyPanel } from './panels/AdminFootballVocabularyPanel';
@@ -72,6 +73,7 @@ type TabId =
   | 'sistema';
 
 type SubTabId =
+  | 'contribuicoes'
   | 'financeiro'
   | 'shop'
   | 'market'
@@ -122,6 +124,7 @@ const TABS: { id: TabId; label: string; icon: typeof LayoutDashboard; subTabs?: 
       { id: 'genesisPortraits', label: 'Fotos Genesis' },
       { id: 'legacy', label: 'Legacy DNA' },
       { id: 'legendCreator', label: 'Legend Creator' },
+      { id: 'contribuicoes', label: 'Contribuições' },
       { id: 'skills', label: 'Skills' },
     ],
   },
@@ -368,6 +371,7 @@ export function AdminDashboard() {
               {tab === 'jogadores' && subTab === 'genesisPortraits' ? <AdminGenesisPortraitsPanel /> : null}
               {tab === 'jogadores' && subTab === 'legacy' ? <AdminLegacyPanel /> : null}
               {tab === 'jogadores' && subTab === 'legendCreator' ? <AdminLegendCreatorPanel /> : null}
+              {tab === 'jogadores' && subTab === 'contribuicoes' ? <AdminContributionsPanel /> : null}
               {tab === 'jogadores' && subTab === 'skills' ? <AdminSkillsPanel /> : null}
               {tab === 'jogadores' && !subTab ? <AdminProspectArtPanel /> : null}
 

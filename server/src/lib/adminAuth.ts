@@ -71,8 +71,11 @@ export async function requireAdminToken(c: Context): Promise<Response | null> {
   const info = await adminSessionInfo(c);
   if (info.email && ADMIN_EMAILS.has(info.email)) return null;
 
-  // 3) Dev local sem token configurado e sem sessão admin → libera (como antes).
-  if (!expected && process.env.NODE_ENV !== 'production') return null;
+  // 3) Dev local sem token e sem sessão → libera. Exige NODE_ENV === 'development'
+  //    EXPLÍCITO: a versão anterior era `!== 'production'`, que com a variável
+  //    indefinida (o caso quando ninguém a configura) liberava tudo. Gate de
+  //    admin tem que FALHAR FECHADO — sem NODE_ENV definido, nega.
+  if (!expected && process.env.NODE_ENV === 'development') return null;
 
   // Diagnóstico preciso no 403 (só expõe o próprio e-mail do usuário + a razão).
   const detail = info.email
