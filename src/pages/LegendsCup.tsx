@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGameDispatch } from '@/game/store';
 import { Loader2, Play, Trophy, RotateCcw, ArrowLeft } from 'lucide-react';
 import { overallFromAttributes } from '@/entities/player';
 import {
@@ -24,6 +25,7 @@ const BASE_PHASE_EXP = 2_500_000;
 
 export function LegendsCup() {
   const navigate = useNavigate();
+  const dispatch = useGameDispatch();
   const [save, setSave] = useState<LegendsCupSave>(() => loadCup());
   const [opp, setOpp] = useState<LegendsCupOpponent | null>(null);
   const [loading, setLoading] = useState(false);
@@ -103,7 +105,13 @@ export function LegendsCup() {
             opp={opp}
             loading={loading}
             phaseExp={phaseExp}
-            onPlay={() => navigate('/match/quick')}
+            onPlay={() => {
+              if (!opp) return;
+              // Mesmo caminho da Liga Ole: o adversário do próximo jogo passa a
+              // ser o time das lendas, e a Partida Rápida lê genesisAwayPlayers.
+              dispatch({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: opp.stub } });
+              navigate('/match/quick');
+            }}
           />
         </>
       )}
