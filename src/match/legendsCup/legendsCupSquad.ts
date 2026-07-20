@@ -24,6 +24,7 @@ import {
 import {
   LEGENDS_CUP_SQUADS,
   LEGENDS_CUP_OPPONENT_NAME,
+  LEGENDS_CUP_KEEPER,
   SQUAD_SIZE,
   roundOf,
 } from './legendsCupModel';
@@ -102,11 +103,13 @@ export async function buildLegendsCupOpponent(
     fetchGenesisMarketPlayerRowsOrdered(),
   ]);
 
-  // 1. Lendas da fase (melhor card de cada coleção pedida).
+  // 1. Lendas da fase (melhor card de cada coleção pedida) + o goleiro fixo.
+  //    O Jiva vem PRIMEIRO pra ocupar a vaga de GOL antes do preenchimento
+  //    Genesis; sem ele, o gol das lendas ficava com um Genesis 57.
   const legends: PlayerEntity[] = [];
   if (collections) {
     const best = bestCardPerCollection(legacyRows);
-    for (const col of collections) {
+    for (const col of [LEGENDS_CUP_KEEPER, ...collections]) {
       const card = best.get(col);
       if (card) legends.push(card);
     }

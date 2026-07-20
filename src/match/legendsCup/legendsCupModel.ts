@@ -29,11 +29,21 @@ export const GROUP_MATCHES = 3;
 export const GROUP_WINS_TO_ADVANCE = 2;
 
 /**
+ * GOLEIRO FIXO das lendas: Jiva (AI+, OVR 80, especialista em pênalti).
+ *
+ * Entra do Playoff em diante — NÃO na Classificatória, que segue sendo a
+ * seletiva só de Genesis, o aquecimento antes das lendas. Sem ele, o gol dos
+ * times de lenda ficava com um Genesis 57 atrás do Palhinha 95.
+ */
+export const LEGENDS_CUP_KEEPER = 'ai-jiva-2026';
+
+/**
  * Elenco de lenda por fase, por `collection_id` — não por id de card. O modelo
  * resolve o MELHOR card de cada coleção em runtime, então quando o fundador
  * lançar uma fase nova de alguém, o time do Cup acompanha sozinho.
  *
- * `null` na Classificatória = só Genesis, sem lenda.
+ * `null` na Classificatória = só Genesis, sem lenda. O goleiro Jiva é somado a
+ * todas as fases de mata-mata pelo `legendsCupSquad`.
  */
 export const LEGENDS_CUP_SQUADS: Record<LegendsCupRound, string[] | null> = {
   'Classificatória': null,
