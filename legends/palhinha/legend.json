@@ -1,0 +1,323 @@
+{
+  "playerName": "Jorge Ferreira da Silva",
+  "shortName": "Palhinha",
+  "collectionId": "mem-palhinha-2026",
+  "collectionKind": "memorable",
+  "sources": [
+    "https://www.ogol.com.br/jogador/palhinha/87160",
+    "https://pt.wikipedia.org/wiki/Jorge_Ferreira_da_Silva",
+    "https://terceirotempo.uol.com.br/que-fim-levou/palhinha-3073"
+  ],
+  "inconsistencies": [
+    "Posição: ogol classifica como meia ofensivo / ponta-direita; a Wikipédia como meio-campista/atacante; o Terceiro Tempo o descreve como 'camisa 9 que não era centroavante autêntico'. Usado MEI — é o que o schema tem de mais próximo de um falso 9 que arma e finaliza.",
+    "Jogos pelo São Paulo: ogol registra 232 jogos e 71 gols; o Terceiro Tempo cita 229 jogos e 71 gols, citando o 'Almanaque do São Paulo' de Alexandre da Costa. Diferença de 3 jogos, sem impacto na ficha.",
+    "TETO DE ATRIBUTO: esta é a única coleção que passa de 89, por decisão explícita do fundador (bicampeão mundial). Os cards criados entre Willian e Breno seguem limitados a 89 — a diferença é deliberada, não descuido.",
+    "As fases seguem os RETRATOS enviados (1992, 1993, 1997), que correspondem às três Libertadores dele. Duas fases são no mesmo clube (São Paulo), por isso os cards são nomeados por ANO e não por sigla de clube — mesmo padrão do Marcelo Gonçalves.",
+    "Título extra: o Terceiro Tempo cita a Supercopa de 1993, que não aparece na lista da Wikipédia. Incluída na narrativa por vir de fonte específica sobre o período."
+  ],
+  "phases": [
+    {
+      "phase": "revelacao",
+      "title": "São Paulo 1992 — Campeão do mundo no primeiro ano",
+      "yearStart": 1992,
+      "yearEnd": 1992,
+      "mainClub": "São Paulo FC",
+      "narrativeTitle": "Do América-MG ao topo do mundo em um ano",
+      "narrative": "Foi Telê Santana quem o indicou. Palhinha sai do América Mineiro, onde tinha feito 9 gols em 16 jogos, e cai no São Paulo que estava prestes a dominar o planeta. Em um único ano: Campeonato Paulista, Copa Libertadores e o Mundial Interclubes. Usava a 9, mas nunca foi centroavante de área — pequeno, leve, rápido, aparecia em todo lugar menos onde o zagueiro esperava. O país descobre um jogador que ninguém sabia classificar, e é justamente isso que o torna impossível de marcar.",
+      "tier": 1,
+      "collectionCode": "BR-SPFC-92",
+      "collectionTitle": "São Paulo — Campeão do Mundo 1992",
+      "currency": "USDT",
+      "priceUnitCents": 500,
+      "initialSupply": 5000,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "palhinha9@hotmail.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "wellingtonbastias@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Palhinha 92",
+        "num": 9,
+        "pos": "MEI",
+        "archetype": "lenda",
+        "zone": "ataque",
+        "behavior": "criativo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 24,
+        "bio": "Indicado ao São Paulo por Telê Santana, conquistou no primeiro ano o Paulista, a Libertadores e o Mundial Interclubes de 1992.",
+        "tagline": "Chegou do América-MG e terminou o ano campeão do mundo.",
+        "attrs": {
+          "passe": 92,
+          "marcacao": 50,
+          "velocidade": 92,
+          "drible": 92,
+          "finalizacao": 86,
+          "fisico": 70,
+          "tatico": 87,
+          "mentalidade": 86,
+          "confianca": 88,
+          "fairPlay": 88
+        },
+        "mintOverall": 88,
+        "evolutionRate": 1.2,
+        "rarity": "epico",
+        "cardSupply": 5000,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["drible", "passe"],
+        "legacyTeamBooster": { "morale": 6, "attack_pct": 5 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "MEI",
+          "role": "AM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "central", "opp_box"],
+            "spatialAwareness": 88,
+            "scanBeforeReceive": 84,
+            "runTiming": 88,
+            "defensivePositioning": 30
+          },
+          "teamProfile": {
+            "supportCarrier": 86,
+            "tacticalDiscipline": 62,
+            "teamCommunication": 74,
+            "defensiveCover": 26,
+            "collectiveMovement": 88
+          },
+          "individualProfile": {
+            "creativity": 90,
+            "decisionUnderPressure": 84,
+            "ballConfidence": 90,
+            "vision": 88,
+            "technicalExecution": 90
+          },
+          "riskProfile": {
+            "baseRisk": 74,
+            "riskUnderPressure": 8,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -4,
+            "dribbleVsPass": 58
+          },
+          "criticalProfile": {
+            "criticalComposure": 84,
+            "ego": 58,
+            "crowdPressureReaction": 86,
+            "selfishVsTeam": 46,
+            "finishingConfidence": 84
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "consolidacao",
+      "title": "São Paulo 1993 — Bicampeão do mundo e a Seleção",
+      "yearStart": 1993,
+      "yearEnd": 1993,
+      "mainClub": "São Paulo FC",
+      "narrativeTitle": "Bi mundial, Supercopa e dois golaços em Chilavert",
+      "narrative": "O ano em que tudo se repete e cresce. O São Paulo é BICAMPEÃO da Libertadores e BICAMPEÃO do Mundo, e ainda leva a Supercopa. Palhinha é chamado por Carlos Alberto Parreira e, em 25 de junho, no Paraguai 0 x 3 Brasil, faz os dois gols que ninguém esquece: recebe de Müller e encobre Chilavert por cobertura, depois tabela com Zinho e mata no ângulo. Não guardava posição, tinha movimentação constante e armava tão bem quanto finalizava — o que hoje se chamaria de falso 9, em 1993 simplesmente não tinha nome. São 16 jogos pela Seleção e 5 gols, com a Copa América no currículo.",
+      "tier": 3,
+      "collectionCode": "BR-SPFC-93",
+      "collectionTitle": "São Paulo — Bicampeão do Mundo 1993",
+      "currency": "USDT",
+      "priceUnitCents": 1500,
+      "initialSupply": 1500,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "palhinha9@hotmail.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "wellingtonbastias@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Palhinha 93",
+        "num": 9,
+        "pos": "MEI",
+        "archetype": "lenda",
+        "zone": "ataque",
+        "behavior": "criativo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 25,
+        "bio": "Bicampeão da Libertadores e do Mundial Interclubes pelo São Paulo, campeão da Supercopa e convocado por Parreira. Marcou dois gols sobre Chilavert em Paraguai 0x3 Brasil, em 25/06/1993.",
+        "tagline": "Bicampeão do mundo. E dois golaços em Chilavert no mesmo jogo.",
+        "attrs": {
+          "passe": 99,
+          "marcacao": 55,
+          "velocidade": 92,
+          "drible": 97,
+          "finalizacao": 95,
+          "fisico": 72,
+          "tatico": 98,
+          "mentalidade": 97,
+          "confianca": 97,
+          "fairPlay": 92
+        },
+        "mintOverall": 95,
+        "evolutionRate": 0.7,
+        "rarity": "epico",
+        "cardSupply": 1500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["passe", "drible", "finalizacao"],
+        "legacyTeamBooster": { "morale": 10, "attack_pct": 8 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "MEI",
+          "role": "AM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "central", "opp_box"],
+            "spatialAwareness": 96,
+            "scanBeforeReceive": 94,
+            "runTiming": 96,
+            "defensivePositioning": 34
+          },
+          "teamProfile": {
+            "supportCarrier": 94,
+            "tacticalDiscipline": 70,
+            "teamCommunication": 86,
+            "defensiveCover": 30,
+            "collectiveMovement": 96
+          },
+          "individualProfile": {
+            "creativity": 97,
+            "decisionUnderPressure": 95,
+            "ballConfidence": 97,
+            "vision": 96,
+            "technicalExecution": 96
+          },
+          "riskProfile": {
+            "baseRisk": 76,
+            "riskUnderPressure": 4,
+            "riskWhenLosing": 20,
+            "riskWhenWinning": -6,
+            "dribbleVsPass": 56
+          },
+          "criticalProfile": {
+            "criticalComposure": 95,
+            "ego": 60,
+            "crowdPressureReaction": 96,
+            "selfishVsTeam": 42,
+            "finishingConfidence": 94
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    },
+    {
+      "phase": "expansao",
+      "title": "Cruzeiro 1997 — A terceira Libertadores",
+      "yearStart": 1996,
+      "yearEnd": 1997,
+      "mainClub": "Cruzeiro (MG)",
+      "narrativeTitle": "Tricampeão da Libertadores, agora de azul",
+      "narrative": "Sai do São Paulo numa troca de cinco jogadores por dois e volta a Minas — mas não como o menino do América. No Cruzeiro é campeão da Copa do Brasil de 1996 e, em 1997, levanta a TERCEIRA Libertadores da carreira, feito que pouquíssimos brasileiros têm. Aqui já não usa a 9: com Marcelo Ramos como homem-gol, Palhinha recua e joga de meia — e é onde a leitura de jogo dele fica mais evidente. Menos arranque, mais passe; menos área, mais construção. Depois viriam Espanha, Flamengo, Grêmio e o Peru, mas a coleção fecha aqui: três Libertadores, dois Mundiais.",
+      "tier": 2,
+      "collectionCode": "BR-CRU-97",
+      "collectionTitle": "Cruzeiro — Tricampeão da Libertadores 1997",
+      "currency": "USDT",
+      "priceUnitCents": 1000,
+      "initialSupply": 2500,
+      "paymentSplit": [
+        { "kind": "player", "user_id": null, "label": "palhinha9@hotmail.com", "percent": 50 },
+        { "kind": "olefoot", "user_id": null, "label": "Olefoot", "percent": 25 },
+        { "kind": "community", "user_id": null, "label": "Comunidade", "percent": 15 },
+        { "kind": "facilitator", "user_id": null, "label": "wellingtonbastias@gmail.com", "percent": 10 }
+      ],
+      "entity": {
+        "name": "Palhinha 97",
+        "num": 10,
+        "pos": "MEI",
+        "archetype": "lenda",
+        "zone": "ataque",
+        "behavior": "criativo",
+        "country": "Brasil",
+        "strongFoot": "direito",
+        "creatorType": "lenda",
+        "age": 29,
+        "bio": "Campeão da Copa do Brasil de 1996 e da Copa Libertadores de 1997 pelo Cruzeiro — a terceira Libertadores da carreira. Recuado para meia, com Marcelo Ramos de referência ofensiva.",
+        "tagline": "Três Libertadores. Poucos brasileiros podem dizer isso.",
+        "attrs": {
+          "passe": 96,
+          "marcacao": 58,
+          "velocidade": 86,
+          "drible": 92,
+          "finalizacao": 86,
+          "fisico": 72,
+          "tatico": 96,
+          "mentalidade": 96,
+          "confianca": 93,
+          "fairPlay": 92
+        },
+        "mintOverall": 91,
+        "evolutionRate": 0.8,
+        "rarity": "ultra_raro",
+        "cardSupply": 2500,
+        "isLegacy": true,
+        "legacyTaughtAttributes": ["passe", "tatico"],
+        "legacyTeamBooster": { "morale": 7, "attack_pct": 6 },
+        "agentProfileEnabled": true,
+        "agentProfile": {
+          "playerId": "",
+          "position": "MEI",
+          "role": "AM",
+          "archetype": "lenda",
+          "spatialProfile": {
+            "preferredZones": ["att_third", "central", "mid_third"],
+            "spatialAwareness": 96,
+            "scanBeforeReceive": 94,
+            "runTiming": 86,
+            "defensivePositioning": 40
+          },
+          "teamProfile": {
+            "supportCarrier": 94,
+            "tacticalDiscipline": 80,
+            "teamCommunication": 90,
+            "defensiveCover": 38,
+            "collectiveMovement": 94
+          },
+          "individualProfile": {
+            "creativity": 95,
+            "decisionUnderPressure": 94,
+            "ballConfidence": 94,
+            "vision": 96,
+            "technicalExecution": 94
+          },
+          "riskProfile": {
+            "baseRisk": 70,
+            "riskUnderPressure": -2,
+            "riskWhenLosing": 18,
+            "riskWhenWinning": -10,
+            "dribbleVsPass": 48
+          },
+          "criticalProfile": {
+            "criticalComposure": 94,
+            "ego": 54,
+            "crowdPressureReaction": 92,
+            "selfishVsTeam": 36,
+            "finishingConfidence": 86
+          },
+          "equippedSkills": [],
+          "learningState": {},
+          "createdAt": "",
+          "updatedAt": "",
+          "version": 1
+        }
+      }
+    }
+  ]
+}
