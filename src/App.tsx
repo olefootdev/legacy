@@ -133,6 +133,7 @@ const LiveMatch = lazy(() => import('./pages/LiveMatch').then((m) => ({ default:
 const MatchClassic = lazy(() => import('./pages/MatchClassic').then((m) => ({ default: m.MatchClassic })));
 const MatchAuto = lazy(() => import('./pages/MatchAuto').then((m) => ({ default: m.MatchAuto })));
 const MatchQuick = lazy(() => import('./pages/MatchQuick').then((m) => ({ default: m.MatchQuick })));
+const LegendsCup = lazy(() => import('./pages/LegendsCup').then((m) => ({ default: m.LegendsCup })));
 const QuickPlanPreview = lazy(() => import('./pages/QuickPlanPreview').then((m) => ({ default: m.default })));
 const MatchPenaltyV2 = lazy(() => import('./pages/MatchPenaltyV2').then((m) => ({ default: m.MatchPenaltyV2 })));
 const LigaOle = lazy(() => import('./pages/LigaOle').then((m) => ({ default: m.LigaOle })));
@@ -571,6 +572,7 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/competicao/standings" element={<PvpStandings />} />
 
             {/* Mercado subpages */}
+            <Route path="/legends-cup" element={<LegendsCup />} />
             <Route path="/mercado/transfer" element={<Transfer />} />
             <Route path="/mercado/exchange" element={<TransferExchange />} />
             <Route path="/mercado/leiloes" element={<LiveAuctionsPage />} />
