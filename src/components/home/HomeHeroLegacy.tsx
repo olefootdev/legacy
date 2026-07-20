@@ -487,23 +487,33 @@ export function HomeHeroLegacy(props: {
                 </div>
               </div>
 
-              {/* CTA */}
+              {/* CTA PRINCIPAL — a chamada da home é o Legends Cup. */}
+              <button
+                onClick={() => navigate('/legends-cup')}
+                className="bg-neon-yellow text-deep-black border-2 border-neon-yellow font-display font-bold uppercase px-10 sm:px-14 py-4 -skew-x-6 hover:bg-neon-yellow/90 hover:-translate-y-0.5 transition-all"
+                style={{ fontSize: 'clamp(14px, 2.2vw, 18px)', letterSpacing: '0.2em' }}
+              >
+                <span className="inline-block skew-x-6">Desafie as lendas</span>
+              </button>
+
+              {/*
+                Amistoso continua existindo, mas em segundo plano: o fundador quis
+                a home apontando pro Cup, não pro matchmaking.
+              */}
               <button
                 onClick={handleSearchMatch}
                 disabled={searching}
-                className="bg-neon-yellow text-deep-black border-2 border-neon-yellow font-display font-bold uppercase tracking-wider px-8 py-3 -skew-x-6 hover:bg-neon-yellow/90 transition-all disabled:opacity-70"
-                style={{ fontSize: 13, letterSpacing: '0.22em' }}
+                className="flex items-center gap-2 font-display uppercase text-white/45 hover:text-white/80 transition-colors disabled:opacity-60"
+                style={{ fontSize: 10, letterSpacing: '0.28em' }}
               >
-                <span className="inline-block skew-x-6 flex items-center gap-2">
-                  {searching ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Buscando adversário...
-                    </>
-                  ) : (
-                    'Buscar Partida'
-                  )}
-                </span>
+                {searching ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Buscando adversário...
+                  </>
+                ) : (
+                  'ou buscar partida amistosa'
+                )}
               </button>
 
               {/* Scroll cue */}
