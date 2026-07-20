@@ -119,12 +119,26 @@ export async function buildLegendsCupOpponent(
     if (need.has(p)) need.set(p, Math.max(0, (need.get(p) ?? 0) - 1));
   }
 
-  const pool = [...genesisRows].sort(() => rnd() - 0.5).map(genesisRowToPlayerEntity);
+  /**
+   * SEMPRE os melhores Genesis disponíveis, nunca sorteio.
+   *
+   * A versão anterior embaralhava o pool, e o time das lendas entrava em campo
+   * com laterais de OVR 35 ao lado do Palhinha 95 — os buracos anulavam as
+   * estrelas. O catálogo Genesis vai de 24 a 67, então escolher bem muda o time
+   * inteiro. `rnd` fica só como desempate estável entre iguais.
+   */
+  const pool = genesisRows
+    .map(genesisRowToPlayerEntity)
+    .map((p) => ({ p, ovr: overallFromAttributes(p.attrs, p.pos), tie: rnd() }))
+    .sort((a, b) => b.ovr - a.ovr || a.tie - b.tie)
+    .map((x) => x.p);
+
   const used = new Set<string>();
   const fill: PlayerEntity[] = [];
 
   for (const [pos, count] of need) {
     for (let i = 0; i < count; i += 1) {
+      // Pool já ordenado por OVR: o primeiro que serve é o melhor que serve.
       const pick =
         pool.find((g) => !used.has(g.id) && (g.pos ?? '').toUpperCase() === pos) ??
         pool.find((g) => !used.has(g.id));
