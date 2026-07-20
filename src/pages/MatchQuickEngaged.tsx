@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { overallFromAttributes } from '@/entities/player';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore, useGameDispatch } from '@/game/store';
 import { getEffectiveFatigue } from '@/systems/fatigue';
@@ -94,6 +95,11 @@ export default function MatchQuickEngaged() {
   // mount (o pendingOpponentId é limpo pelo FINALIZE, então guardamos aqui).
   const ligaOpponentIdRef = useRef<string | null>(null);
   if (ligaOpponentIdRef.current === null) ligaOpponentIdRef.current = ligaOle?.pendingOpponentId ?? '';
+  // LEGENDS CUP: mesma captura no MOUNT — o FINALIZE limpa o pendingOpponentId,
+  // e é ele que diz se esta partida foi do Cup (pro CTA de compra no pós-jogo).
+  const legendsCup = useGameStore((s) => s.legendsCup);
+  const isLegendsCupMatchRef = useRef<boolean | null>(null);
+  if (isLegendsCupMatchRef.current === null) isLegendsCupMatchRef.current = !!legendsCup?.pendingOpponentId;
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [plan, setPlan] = useState<MatchPlan | null>(null);
@@ -125,6 +131,22 @@ export default function MatchQuickEngaged() {
 
   const opponent = nextFixture?.opponent;
   const hasOpponent = !!opponent && opponent.id !== 'placeholder-opponent' && opponent.id !== 'no-opponent-available';
+
+  // As LENDAS que estavam do outro lado — capturadas no mount, porque o
+  // FINALIZE mexe no nextFixture. É o que alimenta o CTA "leve ele pro seu
+  // time": o manager acabou de sentir o card em campo, é a hora de oferecer.
+  const facedLegendsRef = useRef<Array<{ id: string; name: string; portraitUrl?: string; ovr: number }> | null>(null);
+  if (facedLegendsRef.current === null) {
+    facedLegendsRef.current = (opponent?.genesisAwayPlayers ?? [])
+      .filter((p) => String(p.id).startsWith('legacy-'))
+      .map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        portraitUrl: (p as { portraitUrl?: string }).portraitUrl,
+        ovr: overallFromAttributes(p.attrs, p.pos),
+      }))
+      .sort((a, b) => b.ovr - a.ovr);
+  }
 
   // FABLE — DERBY/CLÁSSICO: revanche contra o nêmesis vira clássico MECÂNICO
   // (o Python amplia finalização/xG/pênalti/cartão dos 2 lados) e visual.
@@ -853,6 +875,66 @@ export default function MatchQuickEngaged() {
                 );
               }
               return null;
+            })()}
+
+            {/*
+              LEGENDS CUP — o CTA promocional. Aparece tenha o manager ganhado
+              ou perdido: quem venceu quer o card que o derrotou junto do seu,
+              quem perdeu quer a arma que o venceu. É o motivo do Cup existir —
+              a lenda ganha em VENDA, não em EXP.
+              `?from=legendscup` fica na URL pra dar pra medir a conversão.
+            */}
+            {isLegendsCupMatchRef.current && (facedLegendsRef.current?.length ?? 0) > 0 && (() => {
+              const legends = facedLegendsRef.current!;
+              const star = legends[0]!;
+              const won = result.homeScore > result.awayScore;
+              return (
+                <div
+                  className="mb-1 border p-4"
+                  style={{ borderColor: 'var(--color-neon-yellow)', borderRadius: 'var(--radius-md)', background: 'rgba(253,225,0,0.06)' }}
+                >
+                  <div className="font-display uppercase tracking-[0.28em] text-[10px] text-neon-yellow">
+                    Legends Cup
+                  </div>
+                  <p className="mt-2 text-[15px] font-bold leading-snug text-white">
+                    {won
+                      ? `Você venceu ${star.name}. Agora imagine ele do seu lado.`
+                      : `${star.name} decidiu contra você. Ele pode ser seu.`}
+                  </p>
+
+                  <div className="mt-3 flex gap-2 overflow-x-auto">
+                    {legends.slice(0, 5).map((l) => (
+                      <Link
+                        key={l.id}
+                        to={`/mercado/transfer?legacy=${encodeURIComponent(l.id)}&from=legendscup`}
+                        className="w-[74px] shrink-0 overflow-hidden border border-white/10 bg-black transition-transform hover:-translate-y-0.5"
+                        style={{ borderRadius: 'var(--radius-sm)' }}
+                      >
+                        <div className="relative aspect-[3/4] bg-black">
+                          {l.portraitUrl ? (
+                            <img src={l.portraitUrl} alt={l.name} loading="lazy" referrerPolicy="no-referrer"
+                              className="h-full w-full object-cover object-[50%_18%]" />
+                          ) : (
+                            <div className="grid h-full place-items-center text-[10px] text-white/20">sem foto</div>
+                          )}
+                          <span className="absolute left-1 top-1 rounded bg-neon-yellow px-1 font-display text-[10px] font-black text-black">
+                            {l.ovr}
+                          </span>
+                        </div>
+                        <p className="truncate px-1.5 py-1 font-display text-[9px] font-black">{l.name}</p>
+                      </Link>
+                    ))}
+                  </div>
+
+                  <Link
+                    to="/mercado/transfer?from=legendscup"
+                    className="mt-3 block w-full bg-neon-yellow py-3 text-center font-display text-[12px] font-black uppercase tracking-[0.18em] text-black transition-colors hover:bg-white"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  >
+                    Contratar uma lenda
+                  </Link>
+                </div>
+              );
             })()}
 
             {!isLigaOleMatchRef.current && (

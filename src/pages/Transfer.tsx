@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { AuctionCurrency } from '@/economy/model';
 import { formatExp } from '@/systems/economy';
@@ -370,7 +370,13 @@ export function Transfer() {
   // Legacies em destaque no carrossel global (curadoria: pinados na frente).
   const legacyQuote = useOlefootUsdBrlQuote(true);
   const [legacyRows, setLegacyRows] = useState<LegacyPlayerRow[]>([]);
-  const [pendingLegacyDetailId, setPendingLegacyDetailId] = useState<string | null>(null);
+  // `?legacy=<id>` abre o card direto — é como o CTA do pós-jogo do Legends Cup
+  // manda o manager pra lenda que ele acabou de enfrentar. `?from=` fica na URL
+  // só como atribuição (de onde veio a visita), não muda comportamento.
+  const [searchParams] = useSearchParams();
+  const [pendingLegacyDetailId, setPendingLegacyDetailId] = useState<string | null>(
+    () => searchParams.get('legacy'),
+  );
   useEffect(() => {
     if (!legacyMarketEnabled) return;
     let cancelled = false;
