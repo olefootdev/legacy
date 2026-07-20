@@ -366,6 +366,17 @@ export interface OlefootGameState {
   /** Resultado TRANSITÓRIO da última campanha (campeão/eliminado) — mostrado UMA
    *  vez quando termina, nunca como landing. Limpo ao criar nova ou dispensar. */
   ligaOleResultFlash?: { outcome: 'champion' | 'eliminated'; reachedRound: string; clubName: string; weekKey?: string };
+  /** LEGENDS CUP — campanha do manager contra os times das lendas.
+   *  Mora aqui (e não em localStorage) porque o prêmio é EXP e card: estado no
+   *  navegador é editável à mão. `pendingOpponentId` marca que a próxima
+   *  Partida Rápida é do Cup — mesmo mecanismo da Liga Ole. */
+  legendsCup?: import('@/match/legendsCup/legendsCupModel').LegendsCupState & {
+    pendingOpponentId?: string;
+  };
+  /** Legends Cup — resultado transitório da campanha encerrada. */
+  legendsCupResultFlash?: { outcome: 'champion' | 'eliminated'; reachedRound: string };
+  /** Legends Cup — total de títulos (multiplica o EXP das próximas campanhas). */
+  legendsCupTitles?: number;
   /** NÊMESIS: o time que eliminou o manager na última Liga Ole — entra na próxima
    *  como REVANCHE. Persistido até a revanche ser cumprida. */
   ligaOleNemesis?: { id: string; name: string; short: string; overall: number; managerId?: string; round: string };
@@ -647,6 +658,14 @@ export type GameAction =
   | { type: 'RESET_LIGA_OLE' }
   /** Liga Ole — dispensa o flash de resultado (campeão/eliminado visto). */
   | { type: 'DISMISS_LIGA_OLE_RESULT' }
+  /** Legends Cup — inicia a campanha (grupo já sorteado pela página). */
+  | { type: 'CREATE_LEGENDS_CUP'; cup: import('@/match/legendsCup/legendsCupModel').LegendsCupState }
+  /** Legends Cup — marca que a próxima Partida Rápida é do Cup. */
+  | { type: 'START_LEGENDS_CUP_MATCH'; opponentId: string }
+  /** Legends Cup — encerra/limpa a campanha atual. */
+  | { type: 'RESET_LEGENDS_CUP' }
+  /** Legends Cup — dispensa o flash de resultado (campeão/eliminado visto). */
+  | { type: 'DISMISS_LEGENDS_CUP_RESULT' }
   /** Quando `insertMatch` resolve — actualiza o snapshot em curso (evita mutar objecto já descartado). */
   | { type: 'SET_LIVE_MATCH_SUPABASE_ID'; matchId: string; matchClientNonce: number }
   /** Sprint 1: Trigger momento interativo na partida rápida */

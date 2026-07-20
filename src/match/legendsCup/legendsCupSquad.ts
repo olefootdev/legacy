@@ -27,6 +27,7 @@ import {
   LEGENDS_CUP_KEEPER,
   SQUAD_SIZE,
   roundOf,
+  rngFor,
 } from './legendsCupModel';
 
 /** Formação-alvo: quantos de cada posição um time precisa ter. */
@@ -40,22 +41,6 @@ const TARGET_SHAPE: Array<{ pos: string; count: number }> = [
   { pos: 'PD', count: 1 },
   { pos: 'ATA', count: 2 },
 ];
-
-function rngFor(seed: string): () => number {
-  let h = 1779033703 ^ seed.length;
-  for (let i = 0; i < seed.length; i += 1) {
-    h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  let a = h >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /**
  * O melhor card (maior OVR) de cada coleção presente no mercado.

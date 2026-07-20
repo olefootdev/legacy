@@ -156,6 +156,11 @@ import { evaluatePerformanceBonuses, calculateTotalBonusRewards } from '@/match/
 import { computeQuickPlanCredit } from '@/match/quickEngaged/creditQuickPlan';
 import { advanceLigaOle, ligaOleRoundReward, dinastiaMultiplier, managerOpponent } from '@/match/ligaOle/ligaOleModel';
 import {
+  applyMatchResult as applyLegendsCupResult,
+  legendsCupPhaseExp,
+  roundOf as legendsCupRoundOf,
+} from '@/match/legendsCup/legendsCupModel';
+import {
   CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_MEDICAL_FATIGUE_DELTA,
   CITY_QUICK_MEDICAL_INJURY_RISK_DELTA,
@@ -2496,6 +2501,50 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           ligaOle = undefined;
         }
       }
+
+      // LEGENDS CUP: mesmo mecanismo da Liga Ole. Se esta Quick era do Cup,
+      // aplica o resultado na campanha, credita o EXP da fase e avança.
+      // A fase de grupos NÃO elimina por derrota — quem decide é a tabela ao
+      // fim das 3 rodadas, então o crédito só sai quando a fase é vencida.
+      let legendsCup = state.legendsCup;
+      let legendsCupResultFlash = state.legendsCupResultFlash;
+      let legendsCupTitles = state.legendsCupTitles ?? 0;
+      if (legendsCup?.pendingOpponentId && legendsCup.status === 'active') {
+        const roundBefore = legendsCup.roundIndex;
+        const advanced = applyLegendsCupResult(
+          legendsCup,
+          homeWin,
+          action.homeScore,
+          action.awayScore,
+        );
+        const passedPhase = advanced.roundIndex > roundBefore || advanced.status === 'champion';
+        if (passedPhase) {
+          const amount = legendsCupPhaseExp(roundBefore, legendsCup.runNumber);
+          if (amount > 0) {
+            const label = advanced.status === 'champion'
+              ? 'Legends Cup · CAMPEÃO'
+              : `Legends Cup · ${legendsCupRoundOf(roundBefore)}`;
+            finance = withExpHistory(grantEarnedExp(finance, amount), amount, label);
+            ligaNotes.push(makeInboxItem(
+              `lc-prize-${Date.now()}`,
+              'FINANCE_EXP_GAIN',
+              'COMPETIÇÃO',
+              advanced.status === 'champion'
+                ? `🏆 Você venceu OS IMORTAIS! +${amount.toLocaleString('pt-BR')} EXP.`
+                : `Passou da ${legendsCupRoundOf(roundBefore)}: +${amount.toLocaleString('pt-BR')} EXP.`,
+              { tag: 'Legends Cup', deepLink: '/legends-cup', hideFromHomeFeed: false },
+            ));
+          }
+        }
+        if (advanced.status === 'champion') legendsCupTitles += 1;
+        if (advanced.status === 'active') {
+          legendsCup = { ...advanced, pendingOpponentId: undefined };
+        } else {
+          legendsCupResultFlash = { outcome: advanced.status, reachedRound: advanced.reachedRound };
+          legendsCup = undefined;
+        }
+      }
+
       return {
         ...state,
         finance,
@@ -2515,6 +2564,9 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ligaOleNemesis,
         ligaOleTitles,
         ligaOleLastDefeated,
+        legendsCup,
+        legendsCupResultFlash,
+        legendsCupTitles,
         clubDna,
         clubRenown,
         playerScars,
@@ -2581,6 +2633,22 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     }
     case 'DISMISS_LIGA_OLE_RESULT': {
       return { ...state, ligaOleResultFlash: undefined };
+    }
+    case 'CREATE_LEGENDS_CUP': {
+      return { ...state, legendsCup: action.cup, legendsCupResultFlash: undefined };
+    }
+    case 'START_LEGENDS_CUP_MATCH': {
+      if (!state.legendsCup) return state;
+      return {
+        ...state,
+        legendsCup: { ...state.legendsCup, pendingOpponentId: action.opponentId },
+      };
+    }
+    case 'RESET_LEGENDS_CUP': {
+      return { ...state, legendsCup: undefined, legendsCupResultFlash: undefined };
+    }
+    case 'DISMISS_LEGENDS_CUP_RESULT': {
+      return { ...state, legendsCupResultFlash: undefined };
     }
     case 'MERGE_PLAYERS': {
       const players = { ...state.players, ...action.players };
