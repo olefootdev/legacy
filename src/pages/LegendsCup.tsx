@@ -212,7 +212,7 @@ function NextMatch({
       {loading ? (
         <div className="grid place-items-center py-10 text-white/40"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : opp && opp.legends.length > 0 ? (
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-5">
           {opp.legends.map((l) => (
             <div key={l.id} className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0d]">
               <div className="relative aspect-[3/4] bg-black">
