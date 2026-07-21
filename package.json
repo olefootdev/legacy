@@ -73,7 +73,8 @@
     "test:ovr-weights": "tsx scripts/test-ovr-weights.ts",
     "test:legends-cup": "tsx scripts/test-legends-cup.ts",
     "test:legends-cup-reducer": "tsx scripts/test-legends-cup-reducer.ts",
-    "test:competition-consequences": "tsx scripts/test-competition-consequences.ts"
+    "test:competition-consequences": "tsx scripts/test-competition-consequences.ts",
+    "test:style-evolution": "tsx scripts/test-style-evolution.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

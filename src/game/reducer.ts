@@ -66,6 +66,7 @@ import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
 import { quickPlanToConsequenceEvents } from '@/systems/playerHealth/fromQuickPlan';
 import { financeWithLedger } from '@/wallet/gameLedger';
 import { addManagerScore } from '@/systems/managerScore/managerScore';
+import { styleAttrWeights, applyStyleTrainingBias } from '@/tactics/styleAttrWeights';
 // OLEFOOT PYTHON MODE — wire-up dos sistemas A + E
 import {
   EMPTY_CONSEQUENCE_STORE,
@@ -2019,10 +2020,11 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
 
       const outcome: 'win' | 'draw' | 'loss' = homeWin ? 'win' : draw ? 'draw' : 'loss';
       const legacyModeWasActive = !!(lm as unknown as Record<string, unknown>)['legacyModeWasActive'];
+      const classicStyleWeights = styleAttrWeights(state.manager?.tacticalStyle);
       for (const [pid, stat] of Object.entries(lm.homeStats ?? {})) {
         const pl = players[pid];
         if (!pl) continue;
-        let next = applyMatchPerformanceEvolution(pl, stat, outcome, legacyModeWasActive);
+        let next = applyMatchPerformanceEvolution(pl, stat, outcome, legacyModeWasActive, classicStyleWeights);
         next = clampPlayerToEvolutionCap(ensureMintOverall(next));
         players[pid] = next;
       }
@@ -2292,6 +2294,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
           homeOnPitch: action.homeOnPitch,
           agg: action.agg,
           shootoutWin: action.shootoutWin,
+          styleWeights: styleAttrWeights(state.manager?.tacticalStyle),
         },
       );
       // Empate no tempo normal é decidido nos pênaltis (nenhum jogo empata).
@@ -3768,7 +3771,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
             trainingGainMultiplier(state.manager.staff, roleIds) * prospectMult * ctMult * absenceMult * durMult * rateMult,
           );
           const recovered = applyNutritionRecovery(boosted, state.manager.staff);
-          players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(recovered));
+          // Viés de ESTILO: a sessão reforça a identidade tática do time
+          // (posse→passe/tático, pressão→físico/marcação...). Descanso não treina.
+          const styled = plan.trainingType === 'descanso'
+            ? recovered
+            : { ...recovered, attrs: applyStyleTrainingBias(recovered.attrs, styleAttrWeights(state.manager?.tacticalStyle)) };
+          players[pid] = clampPlayerToEvolutionCap(ensureMintOverall(styled));
         }
         playerSeasonLedger = mergeLedgerAfterTrainingPlan(
           playerSeasonLedger,

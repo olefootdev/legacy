@@ -51,6 +51,9 @@ export interface QuickPlanCreditInput {
   /** Vencedor da disputa de pênaltis quando o tempo normal empatou (nenhum
    *  jogo termina empatado) — vira V/D real pra streak/forma/economia. */
   shootoutWin?: 'home' | 'away';
+  /** Pesos estilo→atributo do manager: enviesa QUAIS atributos evoluem
+   *  conforme a identidade tática do time (posse→passe, pressão→físico...). */
+  styleWeights?: Partial<Record<keyof PlayerEntity['attrs'], number>>;
 }
 
 export interface QuickPlanCreditState {
@@ -157,7 +160,7 @@ export function computeQuickPlanCredit(
     const pl = players[pid];
     if (!pl) continue;
     const ovrBefore = overallFromAttributes(pl.attrs, pl.pos);
-    let next = applyMatchPerformanceEvolution(pl, stat, outcome, false);
+    let next = applyMatchPerformanceEvolution(pl, stat, outcome, false, input.styleWeights);
     if (readingXp > 0) next = { ...next, evolutionXp: (next.evolutionXp ?? 0) + readingXp };
     const evolved = clampPlayerToEvolutionCap(ensureMintOverall(next));
     players[pid] = evolved;

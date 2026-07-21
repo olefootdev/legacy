@@ -74,16 +74,41 @@ export function clampPlayerToEvolutionCap(player: PlayerEntity): PlayerEntity {
   return { ...p, attrs: scaleAttrsToMaxOvr(p.attrs, cap, p.pos) };
 }
 
-function bumpAttrsBySwing(attrs: PlayerAttributes, swing: number): PlayerAttributes {
+/**
+ * Sobe/desce atributos conforme o swing da partida.
+ *
+ * SEM estilo: nivela — sobe os atributos mais baixos (comportamento histórico).
+ * COM `styleWeights`: o ganho respeita a IDENTIDADE do time — prioriza atributos
+ * alinhados ao estilo que ainda têm margem (score = peso do estilo − nível atual),
+ * então um time de pressão evolui físico/marcação, um de posse evolui passe/tático.
+ * A queda (swing negativo) segue tirando do atributo mais alto (perder é perder
+ * forma no que tu tem de melhor), independente do estilo.
+ */
+function bumpAttrsBySwing(
+  attrs: PlayerAttributes,
+  swing: number,
+  styleWeights?: Partial<Record<keyof PlayerAttributes, number>>,
+): PlayerAttributes {
   if (swing === 0) return { ...attrs };
   const out = { ...attrs };
   const keys = [...ATTR_KEYS];
   const steps = Math.abs(swing);
   const up = swing > 0;
+  const hasStyle = !!styleWeights && ATTR_KEYS.some((k) => (styleWeights[k] ?? 0) > 0);
   for (let i = 0; i < steps; i++) {
     if (up) {
-      keys.sort((a, b) => out[a] - out[b]);
-      const k = keys[0]!;
+      let k: keyof PlayerAttributes;
+      if (hasStyle) {
+        // Maior (peso de estilo − nível normalizado): on-style e com margem primeiro.
+        k = keys.reduce((best, cur) => {
+          const sc = (attrs2score(styleWeights![cur] ?? 0)) - out[cur] / 99;
+          const bestSc = (attrs2score(styleWeights![best] ?? 0)) - out[best] / 99;
+          return sc > bestSc ? cur : best;
+        }, keys[0]!);
+      } else {
+        keys.sort((a, b) => out[a] - out[b]);
+        k = keys[0]!;
+      }
       out[k] = clampEvolutionAttr(out[k] + 1);
     } else {
       keys.sort((a, b) => out[b] - out[a]);
@@ -92,6 +117,11 @@ function bumpAttrsBySwing(attrs: PlayerAttributes, swing: number): PlayerAttribu
     }
   }
   return out;
+}
+
+/** Realça a diferença entre pesos de estilo (peso alto puxa bem mais que a média). */
+function attrs2score(weight: number): number {
+  return weight * 3;
 }
 
 /**
@@ -105,6 +135,7 @@ export function applyMatchPerformanceEvolution(
   stat: HomePlayerStatRow | undefined,
   outcome: MatchOutcomeLetter,
   legacyModeWasActive = false,
+  styleWeights?: Partial<Record<keyof PlayerAttributes, number>>,
 ): PlayerEntity {
   const rate =
     player.evolutionRate != null && Number.isFinite(player.evolutionRate)
@@ -143,7 +174,7 @@ export function applyMatchPerformanceEvolution(
     }
   }
 
-  const nextAttrs = bumpAttrsBySwing(player.attrs, swing);
+  const nextAttrs = bumpAttrsBySwing(player.attrs, swing, styleWeights);
   const playerAfterAttrs: PlayerEntity = {
     ...player,
     attrs: nextAttrs,
