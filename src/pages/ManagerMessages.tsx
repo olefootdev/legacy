@@ -7,13 +7,13 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Bell, AlertCircle, Trophy, TrendingUp, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { generateMockMessages, type ManagerMessage } from '@/market/socialTrade';
+import type { ManagerMessage } from '@/market/socialTrade';
 import { BackButton } from '@/components/BackButton';
 
 type MessageFilter = 'all' | 'unread' | 'high' | 'medium' | 'low';
 
 export function ManagerMessages() {
-  const [messages, setMessages] = useState<ManagerMessage[]>(() => generateMockMessages(15));
+  const [messages, setMessages] = useState<ManagerMessage[]>([]);
   const [filter, setFilter] = useState<MessageFilter>('all');
 
   const filtered = useMemo(() => {
@@ -121,7 +121,9 @@ export function ManagerMessages() {
               className="text-center py-12"
             >
               <Bell className="mx-auto h-12 w-12 text-white/20 mb-4" />
-              <p className="text-sm text-white/40">Nenhuma mensagem neste filtro</p>
+              <p className="text-sm text-white/40">
+                {messages.length === 0 ? 'Caixa vazia' : 'Nenhuma mensagem neste filtro'}
+              </p>
             </motion.div>
           ) : (
             filtered.map((msg) => (

@@ -31,7 +31,6 @@ import {
   type ScheduledLeagueFixture,
 } from '@/match/leagueSchedule';
 import type { ExpExchangeOrder, ExpExchangeState } from '@/economy/expExchange';
-import { seedNpcExpExchangeOrders } from '@/economy/expExchange';
 import { sanitizePlayerSeasonLedger } from '@/team/playerSeasonLedger';
 import { sanitizePlayerEvolutionTimeline } from '@/team/playerEvolutionTimeline';
 import { healthFromLegacyPlayer, recomputeAtRisk, emptyHealth } from '@/systems/playerHealth/reducer';
@@ -75,7 +74,7 @@ function hydrateExpExchange(raw: unknown, base: ExpExchangeState): ExpExchangeSt
   };
   const npcRaw = Array.isArray(r.npcOrders) ? r.npcOrders.filter(isOrder) : [];
   const playerRaw = Array.isArray(r.playerOrders) ? r.playerOrders.filter(isOrder) : [];
-  const npcOrders = npcRaw.length ? npcRaw : seedNpcExpExchangeOrders(8);
+  const npcOrders = npcRaw;
   return { npcOrders, playerOrders: playerRaw };
 }
 

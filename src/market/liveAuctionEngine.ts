@@ -1,18 +1,16 @@
 /**
- * LiveAuctionEngine — Motor de leilões ao vivo com IA
- * ATUALIZADO: Usa jogadores reais do sistema (Genesis + Manager)
+ * LiveAuctionEngine — Motor de leilões ao vivo
+ * Apenas lances reais (placeBid) — sem lances simulados por IA.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { LiveAuction, AuctionBid, AIBidder, ManagerMessage } from './socialTrade';
-import { AI_BIDDERS, simulateAIBid } from './socialTrade';
+import { useState, useEffect } from 'react';
+import type { LiveAuction, AuctionBid, ManagerMessage } from './socialTrade';
 import type { MockAuctionPlayer } from '@/transfer/mockAuctionPlayer';
 
 // Configurações de leilão
 export const AUCTION_DURATION_MS = 5 * 60 * 1000; // 5 minutos
 export const AUCTION_EXTENSION_MS = 30 * 1000; // +30s se lance nos últimos 10s
 export const AUCTION_EXTENSION_THRESHOLD_MS = 10 * 1000; // Últimos 10s
-export const AI_BID_INTERVAL_MS = 3000; // IA tenta dar lance a cada 3s
 export const MIN_BID_INCREMENT = 0.05; // +5% mínimo
 
 // Estado global de leilões (simplificado, sem Zustand por enquanto)
@@ -54,9 +52,6 @@ export function createAuctionFromPlayer(player: MockAuctionPlayer): LiveAuction 
   activeAuctions.set(auction.id, auction);
   notifyAuctionListeners();
 
-  // Iniciar motor de IA
-  startAIEngine(auction.id);
-
   return auction;
 }
 
@@ -89,9 +84,6 @@ export function createAuction(
 
   activeAuctions.set(auction.id, auction);
   notifyAuctionListeners();
-
-  // Iniciar motor de IA
-  startAIEngine(auction.id);
 
   return auction;
 }
@@ -138,84 +130,10 @@ export function placeBid(
   return { success: true };
 }
 
-// Motor de IA (simula lances)
-const aiEngines = new Map<string, NodeJS.Timeout>();
-
-function startAIEngine(auctionId: string) {
-  // Limpar engine anterior se existir
-  const existing = aiEngines.get(auctionId);
-  if (existing) clearInterval(existing);
-
-  const interval = setInterval(() => {
-    const auction = activeAuctions.get(auctionId);
-    if (!auction || auction.status !== 'active') {
-      clearInterval(interval);
-      aiEngines.delete(auctionId);
-      return;
-    }
-
-    // Verificar se leilão terminou
-    if (Date.now() >= auction.endTime.getTime()) {
-      endAuction(auctionId);
-      clearInterval(interval);
-      aiEngines.delete(auctionId);
-      return;
-    }
-
-    // Cada IA tenta dar lance
-    AI_BIDDERS.forEach((aiBidder) => {
-      const { shouldBid, bidAmount } = simulateAIBid(auction, aiBidder);
-      if (shouldBid && bidAmount > auction.currentBid) {
-        const bid: AuctionBid = {
-          bidderId: aiBidder.id,
-          bidderName: aiBidder.name,
-          amount: bidAmount,
-          timestamp: new Date(),
-          isAI: true,
-        };
-
-        auction.bids.unshift(bid);
-
-        // Notificar jogador se foi superado
-        if (auction.currentBidder && !auction.currentBidder.startsWith('ai_')) {
-          const message: ManagerMessage = {
-            id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            type: 'auction_outbid',
-            title: 'Você foi superado!',
-            message: `${aiBidder.name} ofereceu ${formatPrice(bidAmount)} por ${auction.playerName}. Seu lance: ${formatPrice(auction.currentBid)}`,
-            playerName: auction.playerName,
-            price: bidAmount,
-            urgency: 'high',
-            read: false,
-            timestamp: new Date(),
-            actionUrl: `/mercado/leiloes`,
-          };
-          notifyMessageListeners(message);
-        }
-
-        auction.currentBid = bidAmount;
-        auction.currentBidder = aiBidder.id;
-        auction.currentBidderName = aiBidder.name;
-
-        // Extensão automática
-        const timeLeft = auction.endTime.getTime() - Date.now();
-        if (timeLeft < AUCTION_EXTENSION_THRESHOLD_MS && timeLeft > 0) {
-          auction.endTime = new Date(Date.now() + AUCTION_EXTENSION_MS);
-        }
-      }
-    });
-
-    activeAuctions.set(auctionId, auction);
-    notifyAuctionListeners();
-  }, AI_BID_INTERVAL_MS);
-
-  aiEngines.set(auctionId, interval);
-}
-
 // Encerrar leilão
 function endAuction(auctionId: string) {
   const auction = activeAuctions.get(auctionId);
-  if (!auction) return;
+  if (!auction || auction.status !== 'active') return;
 
   auction.status = 'ended';
   activeAuctions.set(auctionId, auction);
@@ -236,13 +154,6 @@ function endAuction(auctionId: string) {
       actionUrl: `/mercado/leiloes`,
     };
     notifyMessageListeners(message);
-  }
-
-  // Limpar engine
-  const engine = aiEngines.get(auctionId);
-  if (engine) {
-    clearInterval(engine);
-    aiEngines.delete(auctionId);
   }
 }
 
@@ -297,6 +208,13 @@ export function useAuctionCountdown(auctionId: string) {
       }
 
       const left = auction.endTime.getTime() - Date.now();
+      // Sem motor de IA, o encerramento acontece aqui quando o tempo expira.
+      if (left <= 0) {
+        endAuction(auctionId);
+        setTimeLeft(0);
+        setIsEnding(false);
+        return;
+      }
       setTimeLeft(Math.max(0, left));
       setIsEnding(left < AUCTION_EXTENSION_THRESHOLD_MS && left > 0);
     }, 100); // Atualiza a cada 100ms para countdown suave
@@ -334,8 +252,6 @@ export function seedAuctionsFromPlayers(players: MockAuctionPlayer[], count: num
 
 // Limpar todos os leilões (útil para reset)
 export function clearAllAuctions() {
-  aiEngines.forEach((engine) => clearInterval(engine));
-  aiEngines.clear();
   activeAuctions.clear();
   notifyAuctionListeners();
 }
