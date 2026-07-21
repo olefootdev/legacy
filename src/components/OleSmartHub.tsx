@@ -38,7 +38,8 @@ import { useGameStore } from '@/game/store';
 import { useGameDispatch } from '@/game/store';
 import { formatOle } from '@/systems/economy';
 import { computeUsername, findProfileByUsername } from '@/supabase/managerUsername';
-import { chatWithCoach } from '@/coach/coachApi';
+import { chatWithCoach, suggestTraining, suggestStaff } from '@/coach/coachApi';
+import { createTrainingAction, createUpgradeStaffAction } from '@/coach/coachActions';
 import type { TeamContext } from '@/coach/types';
 import { useClubConsequences } from '@/hooks/useConsequences';
 
@@ -740,6 +741,32 @@ const ONBOARDING_QUESTIONS = [
   },
 ];
 
+// Boas-vindas consultiva pós-onboarding — referencia o estado real do plantel.
+// Texto limpo, sem emoji, 2ª pessoa do singular.
+function buildCoachWelcome(coachName: string, ctx: TeamContext): string {
+  const fatigueNote =
+    ctx.averageFatigue > 60
+      ? `Fadiga média alta (${ctx.averageFatigue}%) — recomendo priorizar recuperação.`
+      : ctx.averageFatigue < 30
+        ? `Plantel descansado (${ctx.averageFatigue}%) — bom momento para desenvolvimento.`
+        : `Fadiga média em ${ctx.averageFatigue}% — situação sob controle.`;
+
+  const lines: string[] = [
+    `Olá, manager. Sou o ${coachName}, teu assistente técnico.`,
+    '',
+    `Teu plantel tem ${ctx.totalPlayers} jogadores${ctx.injuredPlayers > 0 ? `, ${ctx.injuredPlayers} lesionado(s)` : ''}. ${fatigueNote}`,
+  ];
+
+  if (ctx.nextMatch) {
+    lines.push(
+      `Próximo jogo contra ${ctx.nextMatch.opponent} (${ctx.nextMatch.isHome ? 'em casa' : 'fora'}) — dá pra ajustar treino e escalação até lá.`,
+    );
+  }
+
+  lines.push('', 'Usa os atalhos abaixo ou fala comigo direto.');
+  return lines.join('\n');
+}
+
 function CoachInlineChat() {
   const dispatch = useGameDispatch();
   const coach = useGameStore((s) => s.manager.coach);
@@ -774,10 +801,12 @@ function CoachInlineChat() {
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [suggestingAction, setSuggestingAction] = useState(false);
   const [localMessages, setLocalMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
   const [heartTeamAsked, setHeartTeamAsked] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const welcomedRef = useRef(false);
 
   const onboardingStep = coach?.memory.onboardingStep ?? -1;
   const isOnboarding = onboardingStep < 3;
@@ -792,6 +821,18 @@ function CoachInlineChat() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [localMessages, loading]);
+
+  // Boas-vindas rica: chat abre pós-onboarding e sem histórico → 1ª mensagem
+  // consultiva referenciando o estado real do plantel (display-only, não persiste).
+  useEffect(() => {
+    if (welcomedRef.current) return;
+    if (!coach || isOnboarding) return;
+    if (localMessages.length > 0) return;
+    if ((coach.conversationContext?.length ?? 0) > 0) return;
+    welcomedRef.current = true;
+    setLocalMessages([{ role: 'assistant', content: buildCoachWelcome(coach.name, buildTeamContext()) }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnboarding, coach]);
 
   // Monta TeamContext a partir do estado do jogo
   function buildTeamContext(): TeamContext {
@@ -1097,6 +1138,94 @@ function CoachInlineChat() {
     }
   }
 
+  // Adiciona mensagem local + persiste no histórico do coach
+  function pushMessage(role: 'user' | 'assistant', content: string) {
+    setLocalMessages((prev) => [...prev, { role, content }]);
+    dispatch({ type: 'COACH_ADD_MESSAGE', message: { role, content, timestamp: Date.now() } });
+  }
+
+  // Atalho acionável: sugere treino → cria ação pendente (aprovada no card global)
+  async function handleSuggestTraining() {
+    if (!coach || loading || suggestingAction) return;
+    setSuggestingAction(true);
+    pushMessage('user', 'Sugere um plano de treino e executa se eu aprovar');
+    try {
+      const ctx = buildTeamContext();
+      const result = await suggestTraining(coach, ctx);
+      if (!result.ok || !result.suggestion) {
+        throw new Error(result.error || 'Erro ao gerar sugestão');
+      }
+      const s = result.suggestion;
+      const action = createTrainingAction(coach, ctx, s, []);
+      dispatch({ type: 'COACH_ADD_PENDING_ACTION', action });
+      pushMessage(
+        'assistant',
+        [
+          'Sugestão de treino criada.',
+          `Tipo: ${s.mode === 'individual' ? 'Individual' : 'Coletivo'} — ${s.trainingType}`,
+          `Grupo: ${s.group}`,
+          `Duração: ${s.durationHours}h`,
+          `Prioridade: ${s.priority}`,
+          '',
+          s.reasoning,
+          '',
+          'Criei uma ação pendente. Aprova ou rejeita no card que aparece na tela.',
+        ].join('\n'),
+      );
+    } catch (error: any) {
+      pushMessage('assistant', `Erro ao gerar sugestão de treino: ${error?.message ?? 'tenta de novo.'}`);
+    } finally {
+      setSuggestingAction(false);
+    }
+  }
+
+  // Atalho acionável: prioridades de staff → cria até 3 ações de upgrade pendentes
+  async function handleSuggestStaff() {
+    if (!coach || loading || suggestingAction) return;
+    setSuggestingAction(true);
+    pushMessage('user', 'Quais as prioridades de upgrade de staff?');
+    try {
+      const ctx = buildTeamContext();
+      const result = await suggestStaff(coach, ctx);
+      if (!result.ok || !result.suggestions || result.suggestions.length === 0) {
+        throw new Error(result.error || 'Nenhuma sugestão disponível');
+      }
+      const suggestions = result.suggestions.slice(0, 3);
+      let created = 0;
+      for (const s of suggestions) {
+        if (s.type === 'upgrade' && s.cost) {
+          const action = createUpgradeStaffAction(coach, ctx, {
+            role: s.role as any,
+            action: s.action,
+            reasoning: s.reasoning,
+            priority: s.priority,
+            cost: s.cost,
+          });
+          dispatch({ type: 'COACH_ADD_PENDING_ACTION', action });
+          created++;
+        }
+      }
+      const list = suggestions
+        .map((s, i) => `${i + 1}. ${s.action} (${s.priority}) — ${s.reasoning}`)
+        .join('\n');
+      pushMessage(
+        'assistant',
+        [
+          'Prioridades de staff:',
+          list,
+          '',
+          created > 0
+            ? `Criei ${created} ação(ões) pendente(s). Aprova no card que aparece na tela.`
+            : 'Sem upgrades acionáveis por agora — foco na atribuição do staff atual.',
+        ].join('\n'),
+      );
+    } catch (error: any) {
+      pushMessage('assistant', `Erro ao gerar sugestões de staff: ${error?.message ?? 'tenta de novo.'}`);
+    } finally {
+      setSuggestingAction(false);
+    }
+  }
+
   async function handleOnboardingAnswer(text: string, stepIndex: number) {
     if (!coach) return;
 
@@ -1254,6 +1383,42 @@ function CoachInlineChat() {
               Pergunte qualquer coisa ao seu treinador
             </p>
           )}
+        </div>
+      )}
+
+      {/* Atalhos acionáveis (pós-onboarding) — treino/staff viram ação pendente no card global */}
+      {!isOnboarding && (
+        <div className="flex flex-wrap gap-1">
+          {[
+            { label: 'Analisa o time', run: () => sendMessage('Analisa a situação atual do plantel'), action: false },
+            { label: 'Sugere treino', run: handleSuggestTraining, action: true },
+            { label: 'Prioridades staff', run: handleSuggestStaff, action: true },
+            { label: 'Próximo jogo', run: () => sendMessage('Como preparar para o próximo jogo?'), action: false },
+          ].map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              disabled={loading || suggestingAction}
+              onClick={chip.run}
+              className={cn(
+                'flex items-center gap-1 px-2 py-1 border transition-all disabled:opacity-40 disabled:cursor-not-allowed',
+                chip.action
+                  ? 'border-neon-yellow/25 bg-neon-yellow/[0.05] text-neon-yellow/85 hover:border-neon-yellow/50 hover:bg-neon-yellow/[0.09]'
+                  : 'border-white/15 bg-white/[0.04] text-white/65 hover:border-white/30 hover:text-white/85',
+              )}
+              style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-sans)', fontSize: '10px' }}
+            >
+              {chip.action && <Zap className="w-2.5 h-2.5 shrink-0" strokeWidth={2} />}
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {suggestingAction && (
+        <div className="flex items-center gap-1.5 text-white/40">
+          <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2} />
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>Preparando sugestão…</span>
         </div>
       )}
 
