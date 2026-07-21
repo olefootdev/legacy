@@ -21,6 +21,8 @@
   /* Tipografia — alinhada ao site */
   --font-sans: "Inter", "Montserrat", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Agency FB", "AgencyFB", Impact, "Oswald", ui-sans-serif, sans-serif;
+  /* Impacto de pôster — Anton (embutida, OFL). Nomes, números de placar, manchetes. */
+  --font-impact: "Anton", "Arial Narrow Bold", Impact, "Oswald", sans-serif;
   --font-serif-hero: "Moret", Georgia, "Times New Roman", serif;
   --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", ui-sans-serif, sans-serif;
 

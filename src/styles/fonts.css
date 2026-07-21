@@ -47,6 +47,16 @@
   src: url('/fonts/Inter-Bold.woff2') format('woff2');
 }
 
+/* Anton — Fonte de IMPACTO (nomes, números de placar, manchetes de pôster).
+   A dupla street × legado: Anton grita, Moret sussurra. Arquivo local real. */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/anton-latin.woff2') format('woff2');
+}
+
 /* Oswald — Fonte display para títulos e números */
 @font-face {
   font-family: 'Oswald';
