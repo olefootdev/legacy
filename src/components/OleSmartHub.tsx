@@ -26,11 +26,16 @@ import {
   Clock,
   ShieldAlert,
   Timer,
+  Dumbbell,
+  ArrowRightLeft,
+  Crown,
+  User,
+  Wallet,
+  GraduationCap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { useGameDispatch } from '@/game/store';
-import { useNextGlobalFixture } from '@/hooks/useNextGlobalFixture';
 import { formatOle } from '@/systems/economy';
 import { computeUsername, findProfileByUsername } from '@/supabase/managerUsername';
 import { chatWithCoach } from '@/coach/coachApi';
@@ -170,8 +175,6 @@ function NewsWidget() {
   const clubName = useGameStore((s) => s.club?.name ?? 'Clube');
   const form = useGameStore((s) => s.form);
   const results = useGameStore((s) => s.results);
-  const ranking = useGameStore((s) => s.competitiveRanking);
-  const nextGlobal = useNextGlobalFixture();
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
   const club = useGameStore((s) => s.club);
@@ -224,15 +227,6 @@ function NewsWidget() {
           });
         }
 
-        // Próximo adversário é líder ou muito forte
-        if (nextGlobal && nextGlobal.opponentOverall >= myTeam.overall + 5) {
-          items.push({
-            text: `Próximo adversário ${nextGlobal.opponentName} é favorito (OVR ${nextGlobal.opponentOverall}) — joga pelo contra-ataque`,
-            icon: AlertTriangle,
-            color: 'text-yellow-400',
-          });
-        }
-
         // Sequência de vitórias na liga
         const streak = myTeam.recentForm.slice(-3).filter((r) => r === 'W').length;
         if (streak === 3) {
@@ -247,7 +241,7 @@ function NewsWidget() {
 
     // Headlines locais como complemento
     const last = results[results.length - 1];
-    if (last && items.length < 3) {
+    if (last && items.length < 2) {
       if (last.result === 'win') {
         items.push({
           text: `${last.home} vence ${last.scoreHome}–${last.scoreAway} e mantém pressão na tabela`,
@@ -270,18 +264,10 @@ function NewsWidget() {
     }
 
     const recentWins = (form.slice(-5)).filter((r) => r === 'W').length;
-    if (recentWins >= 3 && items.length < 3) {
+    if (recentWins >= 3 && items.length < 2) {
       items.push({
         text: `${recentWins} vitórias nos últimos jogos — sequência em chamas`,
         icon: Flame,
-        color: 'text-neon-yellow',
-      });
-    }
-
-    if (ranking && ranking.currentWinStreak >= 2 && items.length < 3) {
-      items.push({
-        text: `Sequência de ${ranking.currentWinStreak} vitórias consecutivas no modo competitivo`,
-        icon: Trophy,
         color: 'text-neon-yellow',
       });
     }
@@ -294,8 +280,8 @@ function NewsWidget() {
       });
     }
 
-    return items.slice(0, 3);
-  }, [results, form, ranking, clubName, globalLeagueMVP, managerProfile, club, nextGlobal]);
+    return items.slice(0, 2);
+  }, [results, form, clubName, globalLeagueMVP, managerProfile, club]);
 
   return (
     <div>
@@ -425,221 +411,6 @@ function FormWidget() {
   );
 }
 
-// ─── Widget: Posição na Liga Global ──────────────────────────────────────────
-
-function LeaguePositionWidget() {
-  const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
-  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
-  const club = useGameStore((s) => s.club);
-  const navigate = useNavigate();
-
-  const data = useMemo(() => {
-    if (!globalLeagueMVP || globalLeagueMVP.status === 'waiting_teams') return null;
-    const managerId = managerProfile?.email ?? club?.id;
-    if (!managerId) return null;
-    const myTeam = globalLeagueMVP.teams.find((t) => t.managerId === managerId);
-    if (!myTeam || myTeam.position == null) return null;
-    const diff = myTeam.previousPosition != null ? myTeam.previousPosition - myTeam.position : 0;
-    return { position: myTeam.position, points: myTeam.points, diff, division: myTeam.division };
-  }, [globalLeagueMVP, managerProfile, club]);
-
-  if (!data) return null;
-
-  const TrendIcon = data.diff > 0 ? TrendingUp : data.diff < 0 ? TrendingDown : Minus;
-  const trendColor = data.diff > 0 ? 'text-green-400' : data.diff < 0 ? 'text-red-400' : 'text-white/35';
-
-  return (
-    <div>
-      <SectionHeader label="LIGA GLOBAL" icon={Trophy} />
-      <button
-        type="button"
-        onClick={() => navigate('/match/global')}
-        className="w-full flex items-center gap-3 border border-white/10 bg-white/[0.02] px-3 py-2 hover:border-neon-yellow/30 transition-all"
-        style={{ borderRadius: 'var(--radius-sm)' }}
-      >
-        <div className="flex flex-col items-center shrink-0">
-          <div
-            className="tabular-nums italic text-neon-yellow leading-none"
-            style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '28px' }}
-          >
-            {data.position}º
-          </div>
-          <div
-            className="text-white/35 tracking-[0.14em] mt-0.5"
-            style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
-          >
-            POSIÇÃO
-          </div>
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <div className="flex items-center gap-1.5">
-            <span
-              className="tabular-nums text-white/75"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 600 }}
-            >
-              {data.points} pts
-            </span>
-            <TrendIcon className={cn('w-3 h-3', trendColor)} strokeWidth={2.5} />
-            {data.diff !== 0 && (
-              <span className={cn('tabular-nums', trendColor)} style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}>
-                {data.diff > 0 ? '+' : ''}{data.diff}
-              </span>
-            )}
-          </div>
-          {data.division != null && (
-            <div
-              className="text-white/35 tracking-[0.14em] mt-0.5"
-              style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
-            >
-              DIVISÃO {data.division}
-            </div>
-          )}
-        </div>
-        <ChevronRight className="w-3.5 h-3.5 text-white/25 shrink-0" strokeWidth={2} />
-      </button>
-    </div>
-  );
-}
-
-// ─── Widget: Penalidades ativas ──────────────────────────────────────────────
-
-function PenaltiesWidget() {
-  const nextGlobal = useNextGlobalFixture();
-
-  if (!nextGlobal) return null;
-  const { injuryRoundsRemaining, injuryModifier, yellowCardCount, suspensionRoundsRemaining } = nextGlobal;
-  const hasAny = injuryRoundsRemaining > 0 || suspensionRoundsRemaining > 0 || yellowCardCount >= 2;
-  if (!hasAny) return null;
-
-  return (
-    <div>
-      <SectionHeader label="ALERTAS" icon={ShieldAlert} />
-      <div className="space-y-1.5">
-        {suspensionRoundsRemaining > 0 && (
-          <div
-            className="flex items-center gap-2 px-2.5 py-1.5 border border-l-[3px] border-white/8 border-l-[var(--color-danger)] bg-[var(--color-danger)]/8"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <ShieldAlert className="w-3.5 h-3.5 text-[var(--color-danger)] shrink-0" strokeWidth={2} />
-            <span
-              className="text-[var(--color-danger)]"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: '11px',
-                letterSpacing: '0.04em',
-              }}
-            >
-              Suspenso — perde {suspensionRoundsRemaining} rodada{suspensionRoundsRemaining > 1 ? 's' : ''}
-            </span>
-          </div>
-        )}
-        {injuryRoundsRemaining > 0 && (
-          <div
-            className="flex items-center gap-2 px-2.5 py-1.5 border border-l-[3px] border-white/8 border-l-[var(--color-warning)] bg-[var(--color-warning)]/8"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-[var(--color-warning)] shrink-0" strokeWidth={2} />
-            <span
-              className="text-[var(--color-warning)]"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: '11px',
-                letterSpacing: '0.04em',
-              }}
-            >
-              Lesão: {injuryModifier < 0 ? injuryModifier : -injuryModifier} OVR por {injuryRoundsRemaining} rodada{injuryRoundsRemaining > 1 ? 's' : ''}
-            </span>
-          </div>
-        )}
-        {yellowCardCount >= 2 && (
-          <div
-            className="flex items-center gap-2 px-2.5 py-1.5 border border-l-[3px] border-white/8 border-l-neon-yellow bg-neon-yellow/8"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-neon-yellow shrink-0" strokeWidth={2} />
-            <span
-              className="text-neon-yellow tabular-nums"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: '11px',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {yellowCardCount} amarelos — risco de suspensão
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Widget: Countdown próximo jogo ──────────────────────────────────────────
-
-function CountdownWidget() {
-  const nextGlobal = useNextGlobalFixture();
-  const navigate = useNavigate();
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    if (!nextGlobal) return;
-    const interval = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, [nextGlobal]);
-
-  if (!nextGlobal) return null;
-
-  const diff = nextGlobal.scheduledKickoffMs - now;
-  if (diff <= 0) return null;
-
-  const hours = Math.floor(diff / 3_600_000);
-  const minutes = Math.floor((diff % 3_600_000) / 60_000);
-  const label = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
-
-  return (
-    <button
-      type="button"
-      onClick={() => navigate('/match/global')}
-      className="w-full flex items-center gap-2.5 border border-neon-yellow/20 bg-neon-yellow/[0.04] px-3 py-2 hover:border-neon-yellow/40 transition-all"
-      style={{ borderRadius: 'var(--radius-sm)' }}
-    >
-      <Timer className="w-4 h-4 text-neon-yellow shrink-0" strokeWidth={2} />
-      <div className="flex-1 min-w-0 text-left">
-        <div
-          className="text-white/75 leading-none"
-          style={{ fontFamily: 'var(--font-sans)', fontSize: '11px' }}
-        >
-          Próximo jogo em
-        </div>
-        <div
-          className="tabular-nums italic text-neon-yellow leading-none mt-0.5"
-          style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '18px' }}
-        >
-          {label}
-        </div>
-      </div>
-      <div className="text-right shrink-0">
-        <div
-          className="text-white/55 tracking-wide uppercase truncate max-w-[60px]"
-          style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
-        >
-          vs {nextGlobal.opponentShort}
-        </div>
-        <div
-          className="text-white/35"
-          style={{ fontFamily: 'var(--font-sans)', fontSize: '9px' }}
-        >
-          Rd {nextGlobal.roundNumber}
-        </div>
-      </div>
-      <ChevronRight className="w-3.5 h-3.5 text-white/25 shrink-0" strokeWidth={2} />
-    </button>
-  );
-}
-
 // ─── Widget 3: Radar (Performance) ───────────────────────────────────────────
 
 function RadarWidget() {
@@ -734,263 +505,6 @@ function RadarWidget() {
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Widget 4: Próximo jogo ───────────────────────────────────────────────────
-
-function MatchAnalysisWidget() {
-  const nextFixture = useGameStore((s) => s.nextFixture);
-  const players = useGameStore((s) => s.players);
-  const lineup = useGameStore((s) => s.lineup);
-  const ranking = useGameStore((s) => s.competitiveRanking);
-  const clubName = useGameStore((s) => s.club?.name ?? 'Nós');
-  // SCOUTS layer — moral real dos titulares pra cálculo de CONFIANÇA
-  const playerMoral = useGameStore(
-    (s) =>
-      (s as { playerMoral?: Record<string, { moral?: number; formStreak?: number }> })
-        .playerMoral,
-  );
-
-  // Dados reais da Global League têm prioridade sobre o fixture estático (TITANS mock)
-  const nextGlobal = useNextGlobalFixture();
-  const opponentShort = nextGlobal?.opponentShort ?? nextFixture?.opponent?.shortName ?? 'ADV';
-  const opponentStrength = nextGlobal?.opponentOverall ?? nextFixture?.opponent?.strength ?? 70;
-  const kickoffLabel = nextGlobal
-    ? (() => {
-        const d = new Date(nextGlobal.scheduledKickoffMs);
-        const today = new Date();
-        const isToday = d.toDateString() === today.toDateString();
-        const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        return isToday ? `Hoje, ${timeStr}` : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
-      })()
-    : (nextFixture?.kickoffLabel ?? '');
-  const competitionLabel = nextGlobal
-    ? (nextGlobal.roundType === 'playoff'
-        ? `Liga Global · Playoffs Rd ${nextGlobal.roundNumber}`
-        : `Liga Global · Rodada ${nextGlobal.roundNumber}`)
-    : (nextFixture?.competition ?? 'Liga');
-
-  // Sem nenhuma fonte de dados: não renderiza
-  const hasData = !!nextGlobal || !!nextFixture;
-
-  const { ourOvr, comparisons, verdict } = useMemo(() => {
-    if (!hasData) return { ourOvr: 0, comparisons: [], verdict: '' };
-
-    const lineupIds = Object.values(lineup);
-    const starters = lineupIds.map((id) => players[id]).filter(Boolean);
-    const strength = opponentStrength;
-
-    function avg(keys: Array<keyof import('@/entities/types').PlayerAttributes>) {
-      if (starters.length === 0) return 50;
-      const vals = starters.map((p) =>
-        keys.reduce((sum, k) => sum + (p.attrs[k] ?? 0), 0) / keys.length
-      );
-      return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-    }
-
-    const totalOvr = starters.length > 0
-      ? Math.round(starters.map((p) => ovr(p.attrs)).reduce((a, b) => a + b, 0) / starters.length)
-      : (nextFixture?.opponent?.highlightPlayer?.ovr ?? strength);
-
-    const winStreak = ranking?.currentWinStreak ?? 0;
-
-    // CONFIANÇA real: média de moral dos titulares + bônus por formStreak
-    // agregado, com winStreak histórico só como tiebreaker.
-    // Antes era `winStreak * 8 + 50` (fórmula pura, ignorava SCOUTS layer).
-    let confianca: number;
-    if (starters.length > 0 && playerMoral) {
-      let moralSum = 0;
-      let moralCount = 0;
-      let formBonus = 0;
-      for (const p of starters) {
-        const m = playerMoral[p.id];
-        if (m && typeof m.moral === 'number') {
-          moralSum += m.moral;
-          moralCount++;
-        }
-        const fs = m?.formStreak ?? 0;
-        if (fs >= 3) formBonus += 3; // em boa fase puxa pra cima
-        else if (fs <= -3) formBonus -= 4; // má fase puxa mais
-      }
-      const moralAvg = moralCount > 0 ? moralSum / moralCount : 50;
-      // Win streak como tempero (até +8)
-      confianca = Math.max(20, Math.min(99, Math.round(moralAvg + formBonus + Math.min(winStreak, 4) * 2)));
-    } else {
-      // Sem moral data ainda → fallback honesto na confiança técnica + winStreak
-      confianca = Math.min(99, avg(['confianca', 'mentalidade']) + winStreak * 3);
-    }
-
-    const rows = [
-      {
-        label: 'ATAQUE',
-        ours: avg(['finalizacao', 'velocidade', 'drible']),
-        theirs: Math.round(strength * 0.95 + (Math.random() * 4 - 2)),
-      },
-      {
-        label: 'DEFESA',
-        ours: avg(['marcacao', 'fisico']),
-        theirs: Math.round(strength * 0.85),
-      },
-      {
-        label: 'CRIATIVIDADE',
-        ours: avg(['passe', 'tatico']),
-        theirs: Math.round(strength * 0.90),
-      },
-      {
-        label: 'ACERTOS',
-        ours: avg(['confianca', 'mentalidade']),
-        theirs: Math.round(strength * 0.88),
-      },
-      {
-        label: 'CONFIANÇA',
-        ours: confianca,
-        theirs: Math.round(strength * 0.82),
-      },
-    ];
-
-    const v = totalOvr > strength
-      ? 'Favoritos. Mantém a pressão.'
-      : totalOvr < strength - 5
-        ? 'Desafio difícil. Joga pelo contra-ataque.'
-        : 'Equilíbrio total. Detalhe decide.';
-
-    return { ourOvr: totalOvr, comparisons: rows, verdict: v };
-  }, [hasData, opponentStrength, players, lineup, ranking, nextFixture, playerMoral]);
-
-  const verdictColor = useMemo(() => {
-    if (!hasData) return 'text-white/35';
-    return ourOvr > opponentStrength
-      ? 'text-green-400'
-      : ourOvr < opponentStrength - 5
-        ? 'text-red-400'
-        : 'text-yellow-400';
-  }, [ourOvr, opponentStrength, hasData]);
-
-  if (!hasData) return null;
-
-  return (
-    <div>
-      <SectionHeader label="PRÓXIMO JOGO · ANÁLISE" icon={Trophy} />
-      <div
-        className="text-white/45 mb-2 tracking-[0.1em]"
-        style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
-      >
-        {kickoffLabel} · {competitionLabel}
-      </div>
-
-      {/* Confronto visual */}
-      <div className="flex items-end justify-between mb-3">
-        <div className="text-left">
-          <div
-            className="text-white/85 leading-none tracking-wide uppercase truncate max-w-[80px]"
-            style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
-          >
-            {clubName}
-          </div>
-          <div
-            className="tabular-nums italic text-neon-yellow leading-none mt-0.5"
-            style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '22px' }}
-          >
-            {ourOvr}
-          </div>
-        </div>
-        <div
-          className="text-white/35 tracking-widest"
-          style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
-        >
-          VS
-        </div>
-        <div className="text-right">
-          <div
-            className="text-white/85 leading-none tracking-wide uppercase truncate max-w-[80px]"
-            style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
-          >
-            {opponentShort}
-          </div>
-          <div
-            className="tabular-nums italic text-white/65 leading-none mt-0.5"
-            style={{ fontFamily: 'var(--font-serif-hero)', fontSize: '22px' }}
-          >
-            {opponentStrength}
-          </div>
-        </div>
-      </div>
-
-      {/* Barras de comparação estilo FIFA */}
-      <div className="space-y-1.5 mb-2">
-        {comparisons.map((row) => {
-          const total = row.ours + row.theirs;
-          const ourPct = total > 0 ? (row.ours / total) * 100 : 50;
-          const theirPct = 100 - ourPct;
-          return (
-            <div key={row.label}>
-              <div
-                className="text-center text-white/45 tracking-[0.22em] mb-0.5"
-                style={{ fontFamily: 'var(--font-display)', fontSize: '8px' }}
-              >
-                {row.label}
-              </div>
-              <div className="flex items-center gap-1">
-                <span
-                  className="tabular-nums text-white/65 w-5 text-right shrink-0"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
-                >
-                  {row.ours}
-                </span>
-                <div className="flex flex-1 h-1.5 overflow-hidden rounded-full">
-                  <div
-                    className="h-full bg-neon-yellow"
-                    style={{ width: `${ourPct.toFixed(1)}%` }}
-                  />
-                  <div
-                    className="h-full bg-white/30"
-                    style={{ width: `${theirPct.toFixed(1)}%` }}
-                  />
-                </div>
-                <span
-                  className="tabular-nums text-white/45 w-5 text-left shrink-0"
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: '10px' }}
-                >
-                  {row.theirs}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Veredito */}
-      <div
-        className={cn('text-center', verdictColor)}
-        style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600 }}
-      >
-        {verdict}
-      </div>
-
-      {/* Chip tático — sugere conversa com o coach */}
-      {nextGlobal && Math.abs(ourOvr - opponentStrength) >= 3 && (
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.querySelector<HTMLTextAreaElement>('[placeholder*="treinador"]');
-            if (el) {
-              const suggestion = ourOvr < opponentStrength
-                ? `Meu próximo adversário (${nextGlobal.opponentName}) tem OVR ${opponentStrength}. Que tática usar?`
-                : `Vou enfrentar ${nextGlobal.opponentName} (OVR ${opponentStrength}). Como explorar a vantagem?`;
-              el.value = suggestion;
-              el.dispatchEvent(new Event('input', { bubbles: true }));
-              el.focus();
-            }
-          }}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 border border-neon-yellow/25 bg-neon-yellow/[0.05] text-neon-yellow/80 hover:border-neon-yellow/50 hover:text-neon-yellow transition-all py-1.5"
-          style={{ borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-display)', fontSize: '9px', letterSpacing: '0.15em' }}
-        >
-          <Brain className="w-3 h-3" strokeWidth={2} />
-          PEDIR SUGESTÃO TÁTICA
-        </button>
       )}
     </div>
   );
@@ -1989,7 +1503,7 @@ function ChatPanel() {
   function handleSend() {
     if (!message.trim()) return;
     if (mode === 'manager' && selectedFriend) {
-      navigate(`/manager/dm/${selectedFriend}`, { state: { draft: message } });
+      navigate('/manager/mensagens', { state: { draft: message, to: selectedFriend } });
     } else if (mode === 'support') {
       navigate('/ajuda', { state: { draft: message } });
     }
@@ -2260,6 +1774,7 @@ const UNAVAILABILITY_KINDS_HUB = new Set([
 function ScoutsStatusWidget() {
   const navigate = useNavigate();
   const consequences = useClubConsequences();
+  const players = useGameStore((s) => s.players);
 
   const { total, unavailable, alerts, celebrations, mostUrgent } = useMemo(() => {
     let alerts = 0;
@@ -2275,7 +1790,7 @@ function ScoutsStatusWidget() {
         alerts++;
         if (!mostUrgent || e.msUntilExpiry < mostUrgent.msUntilExpiry) {
           mostUrgent = {
-            name: c.playerId ? c.playerId.slice(0, 6) : 'Clube',
+            name: c.playerId ? (players[c.playerId]?.name ?? 'Jogador') : 'Clube',
             kind: c.kind,
             msUntilExpiry: e.msUntilExpiry,
           };
@@ -2291,7 +1806,7 @@ function ScoutsStatusWidget() {
       celebrations,
       mostUrgent,
     };
-  }, [consequences]);
+  }, [consequences, players]);
 
   // Não mostra widget se nada está acontecendo
   if (total === 0) return null;
@@ -2447,7 +1962,7 @@ function ScoutsStatusWidget() {
         >
           <Timer size={9} className="opacity-50" />
           <span className="truncate">
-            Mais urgente expira em{' '}
+            <span className="text-white/85">{mostUrgent.name}</span> · expira em{' '}
             <span
               className="text-white/85 tabular-nums"
               style={{
@@ -2471,26 +1986,84 @@ function ScoutsStatusWidget() {
   );
 }
 
+// ─── Menu rápido (atalhos pras outras partes do jogo) ────────────────────────
+
+const QUICK_TILES: Array<{ label: string; to: string; Icon: React.ElementType }> = [
+  { label: 'Elenco', to: '/clube/elenco', Icon: Users },
+  { label: 'Treino', to: '/clube/treino', Icon: Dumbbell },
+  { label: 'Mercado', to: '/mercado', Icon: ArrowRightLeft },
+  { label: 'Competição', to: '/competicao', Icon: Trophy },
+  { label: 'Legends Cup', to: '/legends-cup', Icon: Crown },
+  { label: 'Manager', to: '/manager', Icon: User },
+  { label: 'Wallet', to: '/wallet', Icon: Wallet },
+  { label: 'Academia', to: '/clube/academia', Icon: GraduationCap },
+];
+
+function HubQuickMenu() {
+  const navigate = useNavigate();
+  return (
+    <div>
+      <SectionHeader label="MENU RÁPIDO" icon={Zap} />
+      <div className="grid grid-cols-2 gap-2">
+        {QUICK_TILES.map(({ label, to, Icon }) => (
+          <motion.button
+            key={to}
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate(to)}
+            className="group flex items-center gap-2.5 border border-white/10 bg-white/[0.03] px-3 transition-all hover:border-neon-yellow/40 hover:-translate-y-0.5 hover:bg-white/[0.05] active:scale-[0.98]"
+            style={{ minHeight: 56, borderRadius: 'var(--radius-md)' }}
+          >
+            <Icon
+              className="w-[18px] h-[18px] text-neon-yellow shrink-0 transition-transform group-hover:scale-110"
+              strokeWidth={2}
+            />
+            <span
+              className="text-white/70 group-hover:text-white text-left leading-tight tracking-[0.14em] uppercase transition-colors"
+              style={{ fontFamily: 'var(--font-display)', fontSize: '9px' }}
+            >
+              {label}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Card shell (widgets viram cards maiores, respirando) ────────────────────
+
+function HubCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="border border-white/10 bg-[var(--color-card)] p-4"
+      style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function HubBody({ onClose }: { onClose?: () => void }) {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#0D0D0D] border-l border-white/10">
       <HubHeader onClose={onClose} />
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <HubQuickMenu />
         <ScoutsStatusWidget />
-        <NewsWidget />
-        <div className="h-px bg-white/[0.06]" />
-        <CountdownWidget />
-        <LeaguePositionWidget />
-        <PenaltiesWidget />
-        <div className="h-px bg-white/[0.06]" />
-        <FormWidget />
-        <div className="h-px bg-white/[0.06]" />
-        <RadarWidget />
-        <div className="h-px bg-white/[0.06]" />
-        <MatchAnalysisWidget />
-        <div className="h-px bg-white/[0.06]" />
-        <MarketWidget />
+        <HubCard>
+          <RadarWidget />
+        </HubCard>
+        <HubCard>
+          <FormWidget />
+        </HubCard>
+        <HubCard>
+          <NewsWidget />
+        </HubCard>
+        <HubCard>
+          <MarketWidget />
+        </HubCard>
       </div>
 
       <div className="px-4 pb-4 shrink-0">
@@ -2511,7 +2084,7 @@ export function OleSmartHubPanel() {
   );
 }
 
-/** Gaveta mobile, 50vw da direita, z-[81], spring animation */
+/** Gaveta mobile, min(88vw, 380px) da direita, z-[81], spring animation */
 export function OleSmartHubDrawer({
   open,
   onClose,
@@ -2537,7 +2110,7 @@ export function OleSmartHubDrawer({
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 34 }}
             className="xl:hidden fixed top-0 right-0 bottom-0 z-[81]"
-            style={{ width: '50vw', minWidth: 240, maxWidth: 320 }}
+            style={{ width: 'min(88vw, 380px)' }}
           >
             <HubBody onClose={onClose} />
           </motion.div>
