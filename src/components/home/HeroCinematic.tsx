@@ -1,16 +1,13 @@
 /**
- * HeroCinematic — dobra 1 da Home nova (layout MATCHDAY v3 aprovado).
+ * HeroCinematic — dobra 1 da Home nova (layout MATCHDAY v3 APROVADO).
  *
- * Trailer do manager: foto grande de fundo (hero-legacy-full.png com fallback
- * gradiente), eyebrow "Teu clube · {club}", nome em bloco Anton, pontuação
- * neon com delta de hoje, posição real no mundo e o CTA único DESAFIE AS
- * LENDAS (→ /legends-cup). Todos os dados vêm por props (Home computa do estado
- * real). Presentational puro — nada de fetch aqui.
+ * Fiel ao design: é um CARD DE FOTO CONTIDO (não full-bleed espalhado) — a foto
+ * preenche o card, escurece pra baixo, e o bloco de texto fica ANCORADO NA BASE
+ * (eyebrow + nome empilhado em Anton + pontuação inline + CTA). Compacto.
+ * Dados reais por props; presentational puro.
  */
 
 import { Link } from 'react-router-dom';
-
-const MORET = 'var(--font-serif-hero)';
 
 export function HeroCinematic({
   clubName,
@@ -33,14 +30,21 @@ export function HeroCinematic({
   onHeroError: () => void;
   cupSublabel: string;
 }) {
+  // Nome empilhado (poster): cada palavra numa linha, igual ao aprovado.
+  const nameLines = managerName.trim().split(/\s+/).slice(0, 2);
+
   return (
     <section
       aria-label="Cockpit do manager"
-      className="relative overflow-hidden border border-[var(--color-border)]"
-      style={{ borderRadius: 'var(--radius-md)' }}
+      className="relative flex flex-col justify-end overflow-hidden"
+      style={{
+        borderRadius: 'var(--radius-md)',
+        minHeight: 'min(78vw, 420px)',
+        padding: '18px 16px',
+      }}
     >
-      {/* Fundo: fallback token-only + imagem + glow + shade de contraste */}
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-dark-gray to-deep-black" />
+      {/* Fundo: fallback token-only + foto (escurecida) */}
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-[#241f06] via-[#14120a] to-deep-black" />
       {heroImgOk && (
         <img
           src={heroImage}
@@ -48,103 +52,105 @@ export function HeroCinematic({
           aria-hidden
           draggable={false}
           onError={onHeroError}
-          className="absolute inset-0 h-full w-full object-cover object-top opacity-70"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: '70% 20%', opacity: 0.6 }}
         />
       )}
+      {/* Glow neon + número fantasma + shade forte na base (texto legível) */}
       <div
         aria-hidden
         className="absolute inset-0"
-        style={{ background: 'radial-gradient(78% 58% at 72% 18%, rgba(253,225,0,0.16), transparent 60%)' }}
+        style={{ background: 'radial-gradient(72% 55% at 74% 20%, rgba(253,225,0,0.18), transparent 60%)' }}
       />
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/70 to-transparent" />
-      {/* Número fantasma cinematográfico */}
       <span
         aria-hidden
-        className="pointer-events-none absolute -top-6 right-1 select-none font-impact leading-[0.7] text-white/[0.05]"
-        style={{ fontSize: 'clamp(120px, 34vw, 240px)' }}
+        className="pointer-events-none absolute select-none font-impact leading-[0.7] text-white/[0.05]"
+        style={{ top: '-2%', right: '2%', fontSize: 'min(42vw, 210px)' }}
       >
         10
       </span>
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(180deg, transparent 30%, rgba(12,12,12,0.62) 64%, var(--color-deep-black) 100%)' }}
+      />
 
-      <div className="relative flex flex-col items-start gap-1 px-5 py-8 sm:px-8 sm:py-11">
-        {/* Eyebrow */}
-        <span aria-hidden className="mb-1.5 block h-px w-8 bg-neon-yellow/60" />
+      {/* Bloco de texto ancorado na base */}
+      <div className="relative">
         <span
-          className="font-display font-black uppercase text-neon-yellow"
-          style={{ fontSize: '10px', letterSpacing: '0.32em' }}
+          className="inline-flex items-center gap-2 font-display font-black uppercase text-neon-yellow"
+          style={{ fontSize: '10px', letterSpacing: '0.26em' }}
         >
+          <span aria-hidden className="h-0.5 w-4 bg-neon-yellow" />
           Teu clube · {clubName}
         </span>
 
-        {/* Saudação + nome em bloco */}
-        <p
-          className="mt-3 font-display font-bold uppercase text-white/65"
-          style={{ fontSize: '12px', letterSpacing: '0.24em' }}
-        >
-          Olá, manager
-        </p>
         <h1
-          className="font-impact uppercase text-white"
-          style={{ fontSize: 'clamp(40px, 9vw, 76px)', lineHeight: 0.86, letterSpacing: '-0.01em' }}
+          className="mt-2 font-impact uppercase text-white"
+          style={{ fontSize: 'clamp(44px, 13vw, 92px)', lineHeight: 0.82, letterSpacing: '0.004em' }}
         >
-          {managerName}
+          {nameLines.map((w, i) => (
+            <span key={i} className="block">
+              {w}
+            </span>
+          ))}
         </h1>
 
-        {/* Pontuação do manager + delta de hoje */}
-        <div className="mt-3 flex items-end gap-3 flex-wrap">
-          <p
-            className="font-impact leading-none tabular-nums text-neon-yellow"
-            style={{ fontSize: 'clamp(46px, 9vw, 68px)' }}
+        {/* Pontuação inline: score + delta + rank, tudo na mesma linha de base */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span
+            className="font-impact leading-[0.8] tabular-nums text-neon-yellow"
+            style={{ fontSize: 'clamp(40px, 11vw, 64px)' }}
           >
             {scoreTotal.toLocaleString('pt-BR')}
-          </p>
+          </span>
           {scoreToday > 0 ? (
             <span
-              className="mb-2 inline-flex items-center px-2 py-0.5 font-display font-black uppercase tabular-nums"
+              className="inline-flex items-center font-display font-black uppercase tabular-nums"
               style={{
                 fontSize: '10px',
-                letterSpacing: '0.2em',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--color-success)',
-                background: 'rgba(0,200,81,0.12)',
-                border: '1px solid rgba(0,200,81,0.35)',
+                letterSpacing: '0.12em',
+                padding: '3px 7px',
+                borderRadius: '3px',
+                color: 'var(--color-deep-black)',
+                background: 'var(--color-neon-green)',
               }}
             >
               +{scoreToday.toLocaleString('pt-BR')} hoje
             </span>
           ) : (
-            <span className="mb-2 text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
+            <span className="text-white/50" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
               Toda ação pontua.
             </span>
           )}
+          {rank ? (
+            <span
+              className="uppercase tabular-nums text-white/45"
+              style={{ fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '0.18em', fontWeight: 700 }}
+            >
+              #{rank} <span className="text-white">no mundo</span>
+            </span>
+          ) : null}
         </div>
-        {rank ? (
-          <p
-            className="uppercase tabular-nums text-white/65"
-            style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', letterSpacing: '0.22em', fontWeight: 600 }}
-          >
-            #{rank} <span className="text-white">no mundo</span>
-          </p>
-        ) : null}
 
-        {/* CTA dominante — única ação amarela da surface */}
+        {/* CTA dominante — única ação amarela */}
         <Link
           to="/legends-cup"
-          className="mt-5 flex w-full max-w-sm items-center justify-between bg-neon-yellow px-5 py-3.5 text-black transition-all hover:bg-white active:scale-[0.98]"
-          style={{ borderRadius: 'var(--radius-md)', boxShadow: '0 10px 28px rgba(253,225,0,0.2)' }}
+          className="mt-3.5 flex items-center justify-between bg-neon-yellow px-4 text-black transition-all hover:bg-white active:scale-[0.99]"
+          style={{ borderRadius: '10px', padding: '12px 15px', boxShadow: '0 10px 26px rgba(253,225,0,0.2)' }}
         >
-          <span>
-            <span className="block font-impact uppercase" style={{ fontSize: '17px', letterSpacing: '0.01em' }}>
+          <span className="min-w-0">
+            <span className="block font-impact uppercase leading-none" style={{ fontSize: '17px' }}>
               Desafie as lendas
             </span>
             <span
-              className="block font-display font-black uppercase"
-              style={{ fontSize: '9px', letterSpacing: '0.14em', color: 'rgba(13,13,13,0.62)' }}
+              className="mt-0.5 block truncate font-display font-black uppercase"
+              style={{ fontSize: '9px', letterSpacing: '0.14em', color: 'rgba(13,13,13,0.6)' }}
             >
               {cupSublabel}
             </span>
           </span>
-          <span aria-hidden className="font-impact" style={{ fontSize: '18px', fontFamily: MORET }}>
+          <span aria-hidden className="ml-3 flex-none font-impact" style={{ fontSize: '15px' }}>
             ▶
           </span>
         </Link>

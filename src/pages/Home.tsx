@@ -1,13 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  ArrowRightLeft,
-  ChevronRight,
-  Crown,
-  Dumbbell,
-  Search,
-  X,
-  Zap,
-} from 'lucide-react';
+import { ChevronRight, Search, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -36,16 +28,10 @@ import { makeInboxItem } from '@/game/inboxItem';
 import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { fetchMarketActivities } from '@/supabase/marketActivities';
 import type { MarketActivity } from '@/market/socialTrade';
-import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
-import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
-import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
-import { LigaOleBanner } from '@/components/home/LigaOleBanner';
-import { CoroaDoDiaBanner } from '@/components/home/CoroaDoDiaBanner';
-import { DesafioDiarioBanner } from '@/components/home/DesafioDiarioBanner';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
 import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMatches';
-import { MANAGER_SCORE_TABLE, managerScoreToday } from '@/systems/managerScore/managerScore';
+import { managerScoreToday } from '@/systems/managerScore/managerScore';
 import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { HeroCinematic } from '@/components/home/HeroCinematic';
@@ -64,19 +50,6 @@ import type { PlayerAttributes, PlayerEntity } from '@/entities/types';
 const HERO_IMAGE = '/hero-legacy-full.png';
 
 /** Header compacto de seção — rail + label Agency (copy mínima). */
-function SectionLabel({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-2.5 mb-3">
-      <span aria-hidden className="w-1 h-4 bg-neon-yellow" />
-      <h2
-        className="font-display font-black uppercase text-white"
-        style={{ fontSize: '11px', letterSpacing: '0.26em' }}
-      >
-        {text}
-      </h2>
-    </div>
-  );
-}
 
 export function Home() {
   useTrackScreen('screen_home');
@@ -629,54 +602,6 @@ export function Home() {
   const cupActive = legendsCup?.status === 'active';
   const cupPhaseLabel = cupActive ? roundOf(legendsCup!.roundIndex) : null;
 
-  /** Treino PRONTO pra concluir (plano rodando com endAt vencido). */
-  const trainingReadyCount = useMemo(
-    () =>
-      (trainingPlans ?? []).filter(
-        (p) => p.status === 'running' && new Date(p.endAt).getTime() <= nowMs,
-      ).length,
-    [trainingPlans, nowMs],
-  );
-
-  /** Ações que pontuam — pontos direto da tabela oficial, nunca hardcode. */
-  const scoreActions = useMemo(
-    () => [
-      {
-        key: 'treino',
-        label: 'Treino',
-        points: MANAGER_SCORE_TABLE.treino_concluido,
-        icon: Dumbbell,
-        to: '/clube/treino' as const,
-        badge: trainingReadyCount > 0 ? 'Concluir' : null,
-      },
-      {
-        key: 'mercado',
-        label: 'Mercado',
-        points: MANAGER_SCORE_TABLE.compra_jogador,
-        icon: ArrowRightLeft,
-        to: '/mercado/transfer' as const,
-        badge: null,
-      },
-      {
-        key: 'amistoso',
-        label: 'Amistoso',
-        points: MANAGER_SCORE_TABLE.vitoria_amistosa,
-        icon: Zap,
-        to: null,
-        badge: null,
-      },
-      {
-        key: 'legends',
-        label: 'Legends',
-        points: MANAGER_SCORE_TABLE.compra_legend,
-        icon: Crown,
-        to: '/legends-cup' as const,
-        badge: null,
-      },
-    ],
-    [trainingReadyCount],
-  );
-
   const myEntry = myRankIdx >= 0 ? rankedEntries[myRankIdx] : null;
 
   // ── Ranking Top 10 (aba Geral real) + Manager do Dia (líder #1) ──────────
@@ -760,67 +685,8 @@ export function Home() {
           countdownLabel={nextRoundLabel}
           isLive={nextRoundLabel === 'Agora'}
           isNemesis={isNemesisNext}
+          onFriendly={() => setAmistosoOpen(true)}
         />
-
-        {/* Atalhos que pontuam — preserva o gatilho do amistoso */}
-        <section aria-label="Ações que pontuam">
-          <SectionLabel text="Ações que pontuam" />
-          <div className="flex gap-2.5 overflow-x-auto pb-1">
-            {scoreActions.map((a) => {
-              const Icon = a.icon;
-              const inner = (
-                <>
-                  <div className="flex items-center justify-between w-full">
-                    <Icon className="w-4 h-4 text-white/65" aria-hidden />
-                    {a.badge ? (
-                      <span
-                        className="inline-flex items-center px-1.5 py-0.5 font-display font-black uppercase"
-                        style={{
-                          fontSize: '9px',
-                          letterSpacing: '0.18em',
-                          borderRadius: 'var(--radius-sm)',
-                          color: '#0D0D0D',
-                          background: 'var(--color-warning)',
-                        }}
-                      >
-                        {a.badge}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 flex items-baseline justify-between w-full gap-2">
-                    <span className="font-display font-black uppercase text-white" style={{ fontSize: '11px', letterSpacing: '0.18em' }}>
-                      {a.label}
-                    </span>
-                    <span className="font-impact tabular-nums text-neon-yellow" style={{ fontSize: '18px' }}>
-                      +{a.points}
-                    </span>
-                  </div>
-                </>
-              );
-              const chipClass = cn(
-                'flex min-h-[64px] min-w-[150px] flex-1 flex-col items-start justify-between p-3 text-left',
-                'border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all',
-                a.badge ? 'border-l-[var(--color-warning)]' : 'border-l-neon-yellow',
-                'hover:border-neon-yellow/40 hover:-translate-y-0.5 active:scale-[0.98]',
-              );
-              return a.to ? (
-                <Link key={a.key} to={a.to} className={chipClass} style={{ borderRadius: 'var(--radius-md)' }}>
-                  {inner}
-                </Link>
-              ) : (
-                <button
-                  key={a.key}
-                  type="button"
-                  onClick={() => setAmistosoOpen(true)}
-                  className={chipClass}
-                  style={{ borderRadius: 'var(--radius-md)' }}
-                >
-                  {inner}
-                </button>
-              );
-            })}
-          </div>
-        </section>
 
         {/* Lendas em Destaque — drops reais (legacy_players) */}
         <LegendsRail legends={legends} />
@@ -874,17 +740,6 @@ export function Home() {
 
         {/* Ranking Top 10 — aba Geral real, períodos em breve */}
         <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
-
-        {/* Radar — banners condicionais com ação/claim */}
-        <section aria-label="Radar" className="flex flex-col gap-2.5">
-          <SectionLabel text="Radar" />
-          <AbsenceBanner />
-          <LoginBonusWidget />
-          <PassiveIncomeWidget />
-          <CoroaDoDiaBanner />
-          <DesafioDiarioBanner />
-          <LigaOleBanner />
-        </section>
       </div>
 
       {/* Modal de amistoso — fluxo preservado (busca online/offline + aposta) */}

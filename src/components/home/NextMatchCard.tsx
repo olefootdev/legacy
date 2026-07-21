@@ -16,13 +16,26 @@ export function NextMatchCard({
   countdownLabel,
   isLive,
   isNemesis,
+  onFriendly,
 }: {
   clubName: string;
   opponentName: string | null;
   countdownLabel: string | null;
   isLive: boolean;
   isNemesis: boolean;
+  /** Gatilho do amistoso — preserva a busca de adversário real. */
+  onFriendly?: () => void;
 }) {
+  const friendlyBtn = onFriendly ? (
+    <button
+      type="button"
+      onClick={onFriendly}
+      className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/45 transition-colors hover:text-neon-yellow"
+      style={{ fontSize: '9px', letterSpacing: '0.16em' }}
+    >
+      Amistoso
+    </button>
+  ) : null;
   return (
     <section
       aria-label="Próxima partida"
@@ -94,14 +107,17 @@ export function NextMatchCard({
             ) : (
               <span />
             )}
-            <Link
-              to="/competicao/standings"
-              className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
-              style={{ fontSize: '9px', letterSpacing: '0.16em' }}
-            >
-              Ver liga
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
+            <div className="flex items-center gap-3">
+              {friendlyBtn}
+              <Link
+                to="/competicao/standings"
+                className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
+                style={{ fontSize: '9px', letterSpacing: '0.16em' }}
+              >
+                Ver liga
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
           </div>
         </>
       ) : (
