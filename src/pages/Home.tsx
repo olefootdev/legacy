@@ -663,7 +663,7 @@ export function Home() {
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-4">
+      <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-4 px-3 sm:px-4">
 
         {/* Dobra 1 — trailer cinematográfico do manager */}
         <HeroCinematic
@@ -678,18 +678,16 @@ export function Home() {
           cupSublabel={cupSublabel}
         />
 
-        {/* Próxima Partida — Liga Global + selo Nemesis */}
-        <NextMatchCard
-          clubName={club.name}
-          opponentName={nextGlobal ? nextGlobal.opponentName : null}
-          countdownLabel={nextRoundLabel}
-          isLive={nextRoundLabel === 'Agora'}
-          isNemesis={isNemesisNext}
-          onFriendly={() => setAmistosoOpen(true)}
-        />
+        {/* No topo agora — líder real do ranking (#1) */}
+        {leader ? (
+          <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
+        ) : null}
 
         {/* Lendas em Destaque — drops reais (legacy_players) */}
         <LegendsRail legends={legends} />
+
+        {/* Ranking de Clubes — Top 10, aba Geral real */}
+        <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
 
         {/* Mesa do Manager — pendências reais */}
         <ManagerDesk
@@ -733,13 +731,16 @@ export function Home() {
           </div>
         </section>
 
-        {/* Manager do Dia — líder real do ranking (#1) */}
-        {leader ? (
-          <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
-        ) : null}
-
-        {/* Ranking Top 10 — aba Geral real, períodos em breve */}
-        <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
+        {/* Próxima Partida — Liga Global + amistoso. Mantida (countdown da rodada
+            + gatilho do amistoso); me diga se quer fora ou noutro ponto. */}
+        <NextMatchCard
+          clubName={club.name}
+          opponentName={nextGlobal ? nextGlobal.opponentName : null}
+          countdownLabel={nextRoundLabel}
+          isLive={nextRoundLabel === 'Agora'}
+          isNemesis={isNemesisNext}
+          onFriendly={() => setAmistosoOpen(true)}
+        />
       </div>
 
       {/* Modal de amistoso — fluxo preservado (busca online/offline + aposta) */}

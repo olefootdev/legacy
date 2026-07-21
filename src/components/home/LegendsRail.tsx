@@ -45,7 +45,7 @@ export function LegendsRail({ legends }: { legends: LegendMini[] }) {
           </p>
         </div>
       ) : (
-        <div className="flex gap-2.5 overflow-x-auto pb-1">
+        <div className="-mx-3 flex gap-2.5 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
           {legends.map((l) => (
             <Link
               key={l.id}
