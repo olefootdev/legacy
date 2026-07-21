@@ -125,14 +125,17 @@ export function NextMatchCard({
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
             Sem rodada agendada.
           </p>
-          <Link
-            to="/competicao/standings"
-            className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
-            style={{ fontSize: '9px', letterSpacing: '0.16em' }}
-          >
-            Ver liga
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
+          <div className="flex items-center gap-3">
+            {friendlyBtn}
+            <Link
+              to="/competicao/standings"
+              className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
+              style={{ fontSize: '9px', letterSpacing: '0.16em' }}
+            >
+              Ver liga
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
         </div>
       )}
     </section>

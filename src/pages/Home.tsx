@@ -686,6 +686,16 @@ export function Home() {
         {/* Lendas em Destaque — drops reais (legacy_players) */}
         <LegendsRail legends={legends} />
 
+        {/* Próxima Partida — Liga Global + selo Nemesis + gatilho do amistoso */}
+        <NextMatchCard
+          clubName={club.name}
+          opponentName={nextGlobal ? nextGlobal.opponentName : null}
+          countdownLabel={nextRoundLabel}
+          isLive={nextRoundLabel === 'Agora'}
+          isNemesis={isNemesisNext}
+          onFriendly={() => setAmistosoOpen(true)}
+        />
+
         {/* Ranking de Clubes — Top 10, aba Geral real */}
         <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
 
@@ -730,17 +740,6 @@ export function Home() {
             </div>
           </div>
         </section>
-
-        {/* Próxima Partida — Liga Global + amistoso. Mantida (countdown da rodada
-            + gatilho do amistoso); me diga se quer fora ou noutro ponto. */}
-        <NextMatchCard
-          clubName={club.name}
-          opponentName={nextGlobal ? nextGlobal.opponentName : null}
-          countdownLabel={nextRoundLabel}
-          isLive={nextRoundLabel === 'Agora'}
-          isNemesis={isNemesisNext}
-          onFriendly={() => setAmistosoOpen(true)}
-        />
       </div>
 
       {/* Modal de amistoso — fluxo preservado (busca online/offline + aposta) */}
