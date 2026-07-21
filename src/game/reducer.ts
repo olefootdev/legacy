@@ -56,13 +56,15 @@ import {
   shouldResetDailyChallenges,
   updateChallengeProgress,
 } from './dailyChallenges';
-import { tickRecoveryMatches } from '@/systems/injury';
+import { INJURY_LABEL_PT, tickRecoveryMatches } from '@/systems/injury';
 import {
   applyMatchConsequences as applyHealthConsequences,
   healthFromLegacyPlayer,
   tickHealthRecovery,
 } from '@/systems/playerHealth/reducer';
 import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
+import { quickPlanToConsequenceEvents } from '@/systems/playerHealth/fromQuickPlan';
+import { financeWithLedger } from '@/wallet/gameLedger';
 // OLEFOOT PYTHON MODE — wire-up dos sistemas A + E
 import {
   EMPTY_CONSEQUENCE_STORE,
@@ -2326,6 +2328,13 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         }
       }
       let finance = withExpHistory(credit.finance, credit.oleGain, 'Partida Rápida');
+      finance = financeWithLedger(finance, {
+        type: 'MATCH_REWARD',
+        currency: 'EXP',
+        amount: credit.oleGain,
+        source: 'quick_match',
+        refId: `qp-reward-${Date.now()}`,
+      });
       const nextResult: import('@/entities/types').FormLetter = homeWin ? 'W' : draw ? 'D' : 'L';
       const form = [...state.form.slice(1), nextResult];
       const results = [{
@@ -2545,11 +2554,77 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         }
       }
 
+      // CONSEQUÊNCIAS DE COMPETIÇÃO — contratos, cartões/suspensões e lesões
+      // contam nas partidas OFICIAIS jogadas pelo motor Quick (Liga Ole e
+      // Legends Cup; a Liga Global tem o próprio produtor no
+      // useGlobalConsequencesSync). Amistoso Quick segue sem consequências.
+      let players = credit.players;
+      let playerHealth = credit.playerHealth;
+      const wasLigaOleMatch = !!(state.ligaOle?.pendingOpponentId && state.ligaOle.status === 'active');
+      const wasLegendsCupMatch = !!(state.legendsCup?.pendingOpponentId && state.legendsCup.status === 'active');
+      const competitionLeagueId = wasLigaOleMatch ? 'liga-ole' : wasLegendsCupMatch ? 'legends-cup' : null;
+      if (competitionLeagueId) {
+        // 1) Contrato: partida oficial consome 1 jogo de quem atuou.
+        const playedIds = Object.keys(action.homeStats);
+        players = decrementContractsForIds(players, playedIds);
+        const newlyExpired = playedIds.filter(
+          (pid) => players[pid]?.contractExpired === true && state.players[pid]?.contractExpired !== true,
+        );
+        for (const pid of newlyExpired) {
+          ligaNotes.push(makeInboxItem(
+            `qp-contract-${pid}-${fableNowMs}`,
+            'COMPANY_ANNOUNCEMENT',
+            'PLANTEL',
+            `Contrato de ${players[pid]?.name ?? 'jogador'} EXPIROU — renove para voltar a escalar.`,
+            { tag: 'Contratos', colorClass: 'text-red-400', deepLink: '/clube/elenco' },
+          ));
+        }
+        // 2) Disciplina + lesões, derivadas dos stats reais da partida
+        //    (seed = timestamp da finalização; saúde ANTES do jogo alimenta o risco).
+        const consequenceEvents = quickPlanToConsequenceEvents({
+          matchId: `qp-${competitionLeagueId}-${fableNowMs}`,
+          leagueId: competitionLeagueId,
+          homeStats: action.homeStats,
+          playerHealth: state.playerHealth,
+          seed: fableNowMs,
+          shots: action.agg.shots,
+          now: fableNowMs,
+        });
+        if (consequenceEvents.length > 0) {
+          const applied = applyHealthConsequences(playerHealth, consequenceEvents);
+          playerHealth = applied.next;
+          for (const o of applied.outcomes) {
+            const pl = players[o.playerId];
+            if (!pl) continue;
+            // Espelha no campo legado de PlayerEntity lido por parte da UI.
+            players = { ...players, [o.playerId]: { ...pl, outForMatches: o.after.outForMatches } };
+            if (o.injured) {
+              ligaNotes.push(makeInboxItem(
+                `qp-injury-${o.playerId}-${fableNowMs}`,
+                'COMPANY_ANNOUNCEMENT',
+                'PLANTEL',
+                `${INJURY_LABEL_PT[o.injured]}: ${pl.name} fora por ${o.after.outForMatches} jogo(s).`,
+                { tag: 'Departamento Médico', colorClass: 'text-red-400', deepLink: '/clube/elenco' },
+              ));
+            }
+            if (o.newlySuspended) {
+              ligaNotes.push(makeInboxItem(
+                `qp-susp-${o.playerId}-${fableNowMs}`,
+                'COMPANY_ANNOUNCEMENT',
+                'PLANTEL',
+                `${pl.name} suspenso: cumpre ${o.after.suspendedMatches} jogo(s) de gancho.`,
+                { tag: 'Disciplina', colorClass: 'text-red-400', deepLink: '/clube/elenco' },
+              ));
+            }
+          }
+        }
+      }
+
       return {
         ...state,
         finance,
-        players: credit.players,
-        playerHealth: credit.playerHealth,
+        players,
+        playerHealth,
         quickMatchStreak: credit.quickMatchStreak,
         lastQuickEvolution: credit.evolution,
         lastQuickBonuses: credit.bonuses,
@@ -2984,10 +3059,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const players = { ...state.players };
       delete players[action.playerId];
       // Credita EXP (grantEarnedExp incrementa expLifetimeEarned para o plano de carreira)
-      const finance = withExpHistory(
-        grantEarnedExp(state.finance, offerExp),
-        offerExp,
-        `Market Maker · ${pl.name}`,
+      const finance = financeWithLedger(
+        withExpHistory(
+          grantEarnedExp(state.finance, offerExp),
+          offerExp,
+          `Market Maker · ${pl.name}`,
+        ),
+        {
+          type: 'TRANSFER',
+          currency: 'EXP',
+          amount: offerExp,
+          source: 'market_maker',
+          refId: `mm-${action.playerId}-${Date.now()}`,
+          metadata: { playerId: action.playerId, playerName: pl.name },
+        },
       );
       // Notificação no inbox
       const inboxItem = {
@@ -3041,6 +3126,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (Math.abs(ovr - mint) > 1) return state;
       if (state.finance.ole < action.priceExp) return state;
       let financeGenesis = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_genesis');
+      financeGenesis = financeWithLedger(financeGenesis, {
+        type: 'PURCHASE',
+        currency: 'EXP',
+        amount: -action.priceExp,
+        source: 'mercado_genesis',
+        refId: `buy-${pid}`,
+        metadata: { playerId: pid, playerName: action.player.name },
+      });
 
       // Referral commissions on genesis purchase
       const walletGenesis = financeGenesis.wallet ?? createInitialWalletState();
@@ -3069,10 +3162,20 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const pid = action.player.id;
       if (state.players[pid]) return state; // já no plantel: no-op (idempotente)
       if (state.finance.ole < action.priceExp) return state;
-      const finance = withExpHistory(
-        addOle(state.finance, -action.priceExp),
-        -action.priceExp,
-        'mercado_academia',
+      const finance = financeWithLedger(
+        withExpHistory(
+          addOle(state.finance, -action.priceExp),
+          -action.priceExp,
+          'mercado_academia',
+        ),
+        {
+          type: 'PURCHASE',
+          currency: 'EXP',
+          amount: -action.priceExp,
+          source: 'mercado_academia',
+          refId: `buy-${pid}`,
+          metadata: { playerId: pid, playerName: action.player.name },
+        },
       );
       return {
         ...state,
@@ -3152,6 +3255,14 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       if (state.players[pid]) return state;
       if (state.finance.ole < action.priceExp) return state;
       let financeLegacy = withExpHistory(addOle(state.finance, -action.priceExp), -action.priceExp, 'mercado_legacy');
+      financeLegacy = financeWithLedger(financeLegacy, {
+        type: 'PURCHASE',
+        currency: 'EXP',
+        amount: -action.priceExp,
+        source: 'mercado_legacy',
+        refId: `buy-${pid}`,
+        metadata: { playerId: pid, playerName: action.player.name },
+      });
 
       // Referral commissions on legacy purchase
       const walletLegacy = financeLegacy.wallet ?? createInitialWalletState();
@@ -3301,7 +3412,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       ) {
         return state;
       }
-      const finance = withExpHistory(addOle(state.finance, -expAmount), -expAmount, 'Exchange · anúncio EXP');
+      const finance = financeWithLedger(
+        withExpHistory(addOle(state.finance, -expAmount), -expAmount, 'Exchange · anúncio EXP'),
+        { type: 'SPOT_EXP', currency: 'EXP', amount: -expAmount, source: 'exchange_sell_announce' },
+      );
       const order = {
         id: `ex_pl_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         kind: 'player' as const,
@@ -3323,7 +3437,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
     case 'EXP_EXCHANGE_CANCEL_SELL': {
       const o = state.expExchange.playerOrders.find((x) => x.id === action.orderId);
       if (!o || o.sellerClubId !== state.club.id) return state;
-      const finance = withExpHistory(addOle(state.finance, o.expAmount), o.expAmount, 'Exchange · cancelar venda');
+      const finance = financeWithLedger(
+        withExpHistory(addOle(state.finance, o.expAmount), o.expAmount, 'Exchange · cancelar venda'),
+        { type: 'SPOT_EXP', currency: 'EXP', amount: o.expAmount, source: 'exchange_sell_cancel', refId: `ex-cancel-${o.id}` },
+      );
       return {
         ...state,
         finance,
@@ -3344,6 +3461,12 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let finance = addBroCents(state.finance, -o.broCents);
       finance = grantEarnedExp(finance, o.expAmount);
       finance = withExpHistory(finance, o.expAmount, 'Exchange · compra EXP');
+      finance = financeWithLedger(finance, {
+        type: 'SPOT_BRO', currency: 'BRO', amount: -o.broCents, source: 'exchange_buy', refId: `ex-buy-bro-${o.id}`,
+      });
+      finance = financeWithLedger(finance, {
+        type: 'SPOT_EXP', currency: 'EXP', amount: o.expAmount, source: 'exchange_buy', refId: `ex-buy-exp-${o.id}`,
+      });
       const npcOrders = ex.npcOrders.filter((x) => x.id !== o.id);
       const expExchange = replenishNpcExpOrders({ ...ex, npcOrders });
       return { ...state, finance, expExchange };
@@ -4163,9 +4286,23 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       const newLevel = result.structures![action.structureId];
       const currencyLabel = result.ledgerReason === LEDGER_REASON_BRO ? 'BRO' : 'EXP';
       const expCost = result.ledgerReason === LEDGER_REASON_EXP ? (state.finance.ole - (result.finance?.ole ?? state.finance.ole)) : 0;
-      const nextFinance = expCost > 0
+      const broCost = result.ledgerReason === LEDGER_REASON_BRO
+        ? (state.finance.broCents - (result.finance?.broCents ?? state.finance.broCents))
+        : 0;
+      let nextFinance = expCost > 0
         ? withExpHistory(result.finance!, -expCost, `Upgrade de estrutura: ${label}`)
         : result.finance!;
+      if (expCost > 0) {
+        nextFinance = financeWithLedger(nextFinance, {
+          type: 'STRUCTURE_UPGRADE', currency: 'EXP', amount: -expCost,
+          source: `structure_${action.structureId}`, metadata: { structureId: action.structureId, newLevel },
+        });
+      } else if (broCost > 0) {
+        nextFinance = financeWithLedger(nextFinance, {
+          type: 'STRUCTURE_UPGRADE', currency: 'BRO', amount: -broCost,
+          source: `structure_${action.structureId}`, metadata: { structureId: action.structureId, newLevel },
+        });
+      }
       const nextState: OlefootGameState = {
         ...state,
         structures: result.structures!,
@@ -5079,10 +5216,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       let finance = state.finance;
       if (payExp) {
         finance = withExpHistory(addOle(finance, -item.priceExp!), -item.priceExp!, `Loja · ${item.title}`);
+        finance = financeWithLedger(finance, {
+          type: 'PURCHASE', currency: 'EXP', amount: -item.priceExp!,
+          source: 'loja', metadata: { itemId: item.id, itemTitle: item.title },
+        });
       }
       if (payBro) {
         finance = addBroCents(finance, -item.priceBroCents!);
         finance = syncWalletSpotBro(finance);
+        finance = financeWithLedger(finance, {
+          type: 'PURCHASE', currency: 'BRO', amount: -item.priceBroCents!,
+          source: 'loja', metadata: { itemId: item.id, itemTitle: item.title },
+        });
       }
 
       if (item.consumable) {
