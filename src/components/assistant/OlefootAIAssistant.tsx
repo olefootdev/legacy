@@ -19,6 +19,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Mesmo padrão dos outros clients (coachApi/quickPlanClient): prioriza env
+// VITE_OLEFOOT_API_URL — path relativo não funciona porque o front (Vite/
+// Cloudflare) não serve a API do Hono.
+const API_BASE =
+  import.meta.env.VITE_OLEFOOT_API_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:4000';
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -122,7 +130,7 @@ export function OlefootAIAssistant({ autoOpen = false, initialQuestion }: Olefoo
 
     try {
       // Chama backend que processa a pergunta com contexto do código
-      const response = await fetch('/api/assistant/ask', {
+      const response = await fetch(`${API_BASE}/api/assistant/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

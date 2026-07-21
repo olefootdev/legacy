@@ -10,23 +10,21 @@ import { bodyLimit } from './lib/inputGuards.js';
 import { gameSpiritRoutes } from './routes/gameSpirit.js';
 import { healthRoutes } from './routes/health.js';
 import { paymentsRoutes } from './routes/payments.js';
-import { matchRoutes } from './routes/matches.js';
 import { matchPlanRoutes } from './routes/matchPlan.js';
 import { quickNarrateRoutes } from './routes/quickNarrate.js';
 import { opponentRosterRoutes } from './routes/opponentRoster.js';
 import { pinataMediaRoutes } from './routes/pinataMedia.js';
 import { positionCoachRoutes } from './routes/positionCoach.js';
-import { narrativeMomentRoutes } from './routes/narrativeMoment.js';
 import { marketRoutes } from './routes/market.js';
 import { academyRoutes } from './routes/academy.js';
 import { academyAdminRoutes } from './routes/academyAdmin.js';
 import { academyArtRoutes } from './routes/academyArt.js';
-import { voiceRoutes } from './routes/voice.js';
 import { assistantRoutes } from './routes/assistant.js';
 import { coachRoutes } from './routes/coach.js';
 import { classicCoachRoutes } from './routes/classicCoach.js';
 import { globalLeagueRoutes } from './routes/globalLeague.js';
 import { adminRoutes } from './routes/admin.js';
+import { adminPaymentsRoutes } from './routes/adminPayments.js';
 import { legendImportRoutes } from './routes/legendImport.js';
 import { insightsRoutes } from './routes/insights.js';
 import { getSupabaseAdmin } from './lib/supabaseAdmin.js';
@@ -96,7 +94,6 @@ app.use('*', securityHeaders);
 //  - Rotas JSON normais: sem bodyLimit (validação no handler; payloads
 //    típicos ficam abaixo de 4 KB; Cloudflare/Railway têm limites de
 //    infra acima disso pra DoS)
-app.use('/api/voice/transcribe', bodyLimit(26 * 1024 * 1024));        // áudio
 app.use('/api/media/pinata/upload', bodyLimit(10 * 1024 * 1024));     // imagem genesis
 app.use('/api/academy/upload-selfie', bodyLimit(10 * 1024 * 1024));   // selfie manager (modo concierge)
 app.use('/api/academy/generate-portrait', bodyLimit(10 * 1024 * 1024)); // selfie + camisa + bg (modo auto)
@@ -106,24 +103,22 @@ app.use('*', csrfGuard);
 
 app.route('/', healthRoutes);
 app.route('/', paymentsRoutes);
-app.route('/', matchRoutes);
 app.route('/', matchPlanRoutes);
 app.route('/', quickNarrateRoutes);
 app.route('/', opponentRosterRoutes);
 app.route('/', gameSpiritRoutes);
 app.route('/', pinataMediaRoutes);
 app.route('/', positionCoachRoutes);
-app.route('/', narrativeMomentRoutes);
 app.route('/', marketRoutes);
 app.route('/', academyRoutes);
 app.route('/', academyAdminRoutes);
 app.route('/', academyArtRoutes);
-app.route('/api/voice', voiceRoutes);
 app.route('/api/assistant', assistantRoutes);
 app.route('/api/coach', coachRoutes);
 app.route('/api/classic', classicCoachRoutes);
 app.route('/api/global-league', globalLeagueRoutes);
 app.route('/api/admin', adminRoutes);
+app.route('/api/admin', adminPaymentsRoutes);
 app.route('/api/admin', legendImportRoutes);
 // OLEFOOT PYTHON MODE — proxy pro serviço FastAPI /insights
 app.route('/', insightsRoutes);

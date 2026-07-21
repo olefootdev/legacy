@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Sparkles, PlayCircle } from 'lucide-react';
+import { ChevronRight, Sparkles, PlayCircle, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { OlefootAssistant } from '@/components/assistant/OlefootAssistant';
+import { OlefootAIAssistant } from '@/components/assistant/OlefootAIAssistant';
 import { HubSectionCard } from '@/components/ui/HubSectionCard';
 
 const quickActions: Array<{
@@ -43,6 +44,7 @@ const quickActions: Array<{
 export function HelpHub() {
   useTrackScreen('screen_help_hub');
   const [showAssistant, setShowAssistant] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10 px-3 sm:px-4 lg:px-8 pb-24 sm:pb-32">
@@ -166,6 +168,41 @@ export function HelpHub() {
         </div>
       </motion.section>
 
+      {/* Assistente IA CTA */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="relative overflow-hidden rounded-lg border-2 border-cyan-400/40 bg-gradient-to-br from-cyan-400/10 via-black to-black p-6 sm:p-8"
+      >
+        <div
+          className="absolute -right-12 -top-12 h-48 w-48 bg-cyan-400 opacity-[0.08]"
+          style={{ transform: 'rotate(34deg) skewX(-12deg)' }}
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-cyan-400/20 border-2 border-cyan-400/40 shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+            <MessageCircle className="h-8 w-8 text-cyan-400" strokeWidth={2.5} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-display text-xl sm:text-2xl font-black uppercase tracking-wide text-cyan-400 mb-2">
+              Assistente IA
+            </h2>
+            <p className="text-sm sm:text-base text-white/70 leading-relaxed">
+              Tire dúvidas sobre o jogo.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAIAssistant(true)}
+            className="shrink-0 flex items-center gap-2 rounded-sm bg-cyan-400 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-black transition-all hover:bg-white hover:scale-105 shadow-[0_0_20px_rgba(34,211,238,0.4)]"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Perguntar
+          </button>
+        </div>
+      </motion.section>
+
       {/* Quick Actions — Sprint B Legacy Tech */}
       <section>
         <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
@@ -231,6 +268,9 @@ export function HelpHub() {
           />
         )}
       </AnimatePresence>
+
+      {/* Assistente IA (chat flutuante) */}
+      {showAIAssistant && <OlefootAIAssistant autoOpen />}
     </div>
   );
 }

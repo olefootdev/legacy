@@ -8,6 +8,7 @@ import {
   ClipboardCopy,
   Filter,
   Landmark,
+  RotateCcw,
   Wallet,
   XCircle,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import {
 } from '@/admin/platformStore';
 import type { FiatPipelineStatus, PlatformLedgerLine } from '@/admin/platformTypes';
 import { getSupabase } from '@/supabase/client';
+import { AdminRefundsSection } from '@/admin/panels/AdminRefundsSection';
 
 function broInputToCents(s: string): number | null {
   const t = s.replace(',', '.').trim();
@@ -129,7 +131,7 @@ function canCompleteWithdrawalLine(
   return u != null && u.spotBroCents >= c;
 }
 
-type Sub = 'visao' | 'depositos_saques' | 'extrato' | 'creditar';
+type Sub = 'visao' | 'depositos_saques' | 'extrato' | 'creditar' | 'estornos';
 
 export function AdminFinanceiroPanel() {
   const platformDispatch = useAdminPlatformDispatch();
@@ -376,6 +378,7 @@ export function AdminFinanceiroPanel() {
         {subNav('depositos_saques', 'Depósitos & saques', Landmark)}
         {subNav('extrato', 'Extrato & filtros', Filter)}
         {subNav('creditar', 'Creditar BRO', Wallet)}
+        {subNav('estornos', 'Estornos', RotateCcw)}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -994,6 +997,8 @@ export function AdminFinanceiroPanel() {
           </section>
         </div>
       )}
+
+      {sub === 'estornos' && <AdminRefundsSection />}
     </div>
   );
 }

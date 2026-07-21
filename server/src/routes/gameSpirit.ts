@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { postGameSpiritDecision } from '../controllers/gameSpiritDecisionController.js';
-import { postMatchTick } from '../controllers/matchTickController.js';
 import { rateLimit } from '../lib/rateLimit.js';
 import { sanitizePrompt } from '../lib/inputGuards.js';
 import { hasAnthropicKey, MODELS } from '../lib/anthropic.js';
@@ -24,9 +23,6 @@ export const gameSpiritRoutes = new Hono();
 
 /** Decisão acionável + narração curta (motor GameSpirit; chave só no servidor). */
 gameSpiritRoutes.post('/api/gamespirit', rateLimit(30), postGameSpiritDecision);
-
-/** Tick de partida Quick Match (anti-cheat + replay determinístico). */
-gameSpiritRoutes.post('/api/match/tick', rateLimit(120), postMatchTick);
 
 gameSpiritRoutes.get('/api/game-spirit/status', (c) => {
   const anthropicConfigured = hasAnthropicKey();
