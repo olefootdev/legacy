@@ -5,8 +5,6 @@ import {
   Crown,
   Dumbbell,
   Search,
-  Trophy,
-  Wallet,
   X,
   Zap,
 } from 'lucide-react';
@@ -50,38 +48,20 @@ import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMat
 import { MANAGER_SCORE_TABLE, managerScoreToday } from '@/systems/managerScore/managerScore';
 import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
+import { HeroCinematic } from '@/components/home/HeroCinematic';
+import { NextMatchCard } from '@/components/home/NextMatchCard';
+import { LegendsRail, type LegendMini } from '@/components/home/LegendsRail';
+import { ManagerDesk } from '@/components/home/ManagerDesk';
+import { InheritanceModule } from '@/components/home/InheritanceModule';
+import { ManagerOfDay } from '@/components/home/ManagerOfDay';
+import { RankingTop10 } from '@/components/home/RankingTop10';
+import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/legacyPlayers';
+import { overallFromAttributes } from '@/entities/player';
+import { fetchMyOffers } from '@/supabase/marketOffers';
+import type { PlayerAttributes, PlayerEntity } from '@/entities/types';
 
 /** Hero — asset real do repositório (mesmo do antigo HomeHeroLegacy). */
 const HERO_IMAGE = '/hero-legacy-full.png';
-
-/** Card compacto do rail — rail amarelo 3px à esquerda (Legacy Tech). */
-function RailCard({
-  label,
-  children,
-  accent = true,
-}: {
-  label: string;
-  children: React.ReactNode;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        'border border-l-[3px] border-[var(--color-border)] bg-dark-gray p-4 transition-all',
-        accent ? 'border-l-neon-yellow' : 'border-l-white/15',
-      )}
-      style={{ borderRadius: 'var(--radius-md)' }}
-    >
-      <p
-        className="font-display font-black uppercase text-white/55"
-        style={{ fontSize: '10px', letterSpacing: '0.28em' }}
-      >
-        {label}
-      </p>
-      <div className="mt-2.5">{children}</div>
-    </div>
-  );
-}
 
 /** Header compacto de seção — rail + label Agency (copy mínima). */
 function SectionLabel({ text }: { text: string }) {
@@ -105,6 +85,15 @@ export function Home() {
   const finance = useGameStore((s) => s.finance);
   const inbox = useGameStore((s) => s.inbox);
   const club = useGameStore((s) => s.club);
+  const players = useGameStore((s) => s.players);
+  const playerHealth = useGameStore((s) => s.playerHealth);
+  const ligaOleNemesis = useGameStore((s) => s.ligaOleNemesis);
+  // Propostas de compra recebidas (P2P) — alimenta a Mesa do Manager.
+  // Seletor com referência ESTÁVEL (nada de `?? []` no selector, que quebra o
+  // cache do useSyncExternalStore e derruba a Home em loop). O count sai daqui;
+  // o refetch real do servidor roda 1× no mount logo abaixo.
+  const incomingOffers = useGameStore((s) => s.managerProspectMarket?.incomingOffers);
+  const incomingCount = incomingOffers?.length ?? 0;
 
   // Próxima partida real da Global League
   const nextGlobal = useNextGlobalFixture();
@@ -214,6 +203,40 @@ export function Home() {
   const [marketActivities, setMarketActivities] = useState<MarketActivity[]>([]);
   useEffect(() => {
     void fetchMarketActivities(10).then(setMarketActivities);
+  }, []);
+
+  // Propostas P2P — refetch real 1× no mount (sincroniza a Mesa do Manager
+  // com o servidor). Silencioso: mercado offline não quebra a Home.
+  useEffect(() => {
+    void fetchMyOffers()
+      .then(({ incoming, outgoing }) => {
+        dispatch({ type: 'SET_MARKET_OFFERS', incoming, outgoing });
+      })
+      .catch(() => {});
+  }, [dispatch]);
+
+  // Lendas em destaque — drops reais do Supabase (legacy_players listadas),
+  // ordenadas por created_at desc. Selo "Novo" só nas realmente recentes.
+  const [legends, setLegends] = useState<LegendMini[]>([]);
+  useEffect(() => {
+    void fetchListedLegacyPlayerRows().then((rows) => {
+      const sorted = [...rows].sort((a, b) => {
+        const ta = a.created_at ? Date.parse(a.created_at) : 0;
+        const tb = b.created_at ? Date.parse(b.created_at) : 0;
+        return tb - ta;
+      });
+      const NEW_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+      setLegends(
+        sorted.slice(0, 6).map((r) => ({
+          id: r.id,
+          name: r.name.trim(),
+          pos: r.pos,
+          ovr: overallFromAttributes(r.attributes as unknown as PlayerAttributes, r.pos),
+          portraitUrl: legacyPortraitImageUrl(r),
+          isNew: r.created_at ? Date.now() - Date.parse(r.created_at) < NEW_WINDOW_MS : false,
+        })),
+      );
+    });
   }, []);
 
   // Relógio da Home — alimenta countdown da próxima rodada + delta "hoje".
@@ -654,395 +677,214 @@ export function Home() {
     [trainingReadyCount],
   );
 
-  const top5 = rankedEntries.slice(0, 5);
-  const meInTop5 = top5.some((r) => r.isMe);
   const myEntry = myRankIdx >= 0 ? rankedEntries[myRankIdx] : null;
+
+  // ── Ranking Top 10 (aba Geral real) + Manager do Dia (líder #1) ──────────
+  const top10 = useMemo(
+    () => rankedEntries.slice(0, 10).map((r) => ({ entryId: r.entryId, team: r.team, points: r.points, isMe: r.isMe })),
+    [rankedEntries],
+  );
+  const myRow = myEntry
+    ? { entryId: myEntry.entryId, team: myEntry.team, points: myEntry.points, isMe: true }
+    : null;
+  const leader = rankedEntries[0] ?? null;
+
+  // ── Mesa do Manager — pendências reais do elenco ─────────────────────────
+  const suspendedCount = useMemo(
+    () => Object.values(players).filter((p) => (playerHealth?.[p.id]?.suspendedMatches ?? 0) > 0).length,
+    [players, playerHealth],
+  );
+  const expiredCount = useMemo(
+    () => Object.values(players).filter((p) => p.contractExpired === true).length,
+    [players],
+  );
+
+  // ── Herança (Messi→Yamal) — lenda do plantel aponta a joia da base ───────
+  const inheritance = useMemo(() => {
+    const all = Object.values(players);
+    const isLegacyPlayer = (p: PlayerEntity) => p.isLegacy === true || p.id.startsWith('legacy-');
+    const legacies = all.filter(isLegacyPlayer);
+    if (legacies.length === 0) return null;
+    const legend = legacies.reduce((best, p) =>
+      overallFromAttributes(p.attrs, p.pos) > overallFromAttributes(best.attrs, best.pos) ? p : best,
+    );
+    const youths = all.filter((p) => !isLegacyPlayer(p));
+    let jewel: PlayerEntity | undefined = youths.find((p) => p.archetype === 'novo_talento');
+    if (!jewel && youths.length > 0) {
+      jewel = youths
+        .slice()
+        .sort((a, b) => {
+          const ageA = a.age ?? 99;
+          const ageB = b.age ?? 99;
+          if (ageA !== ageB) return ageA - ageB;
+          return (b.evolutionRate ?? 0) - (a.evolutionRate ?? 0);
+        })[0];
+    }
+    if (!jewel) return null;
+    return {
+      legend: { name: legend.name, num: legend.num },
+      jewel: { name: jewel.name, num: jewel.num },
+    };
+  }, [players]);
+
+  // ── Nemesis — próximo adversário é o algoz da última Liga Ole? ───────────
+  const isNemesisNext = !!(
+    ligaOleNemesis &&
+    nextGlobal &&
+    ligaOleNemesis.name.trim().toLowerCase() === nextGlobal.opponentName.trim().toLowerCase()
+  );
+
+  const cupSublabel = cupActive && cupPhaseLabel ? `Legends Cup · ${cupPhaseLabel}` : 'Legends Cup · comece agora';
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="w-full min-w-0 mx-auto max-w-6xl flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:items-start">
+      <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-4">
 
-        {/* ── A · HERO — cockpit do manager ─────────────────────────────── */}
-        <section
-          aria-label="Cockpit do manager"
-          className="relative overflow-hidden border border-[var(--color-border)] lg:col-start-1 lg:row-start-1"
-          style={{ borderRadius: 'var(--radius-md)' }}
-        >
-          {/* Fundo: fallback token-only + imagem + overlay de contraste */}
-          <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-dark-gray to-deep-black" />
-          {heroImgOk && (
-            <img
-              src={HERO_IMAGE}
-              alt=""
-              aria-hidden
-              draggable={false}
-              onError={() => setHeroImgOk(false)}
-              className="absolute inset-0 h-full w-full object-cover object-top opacity-70"
-            />
-          )}
-          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/70 to-transparent" />
+        {/* Dobra 1 — trailer cinematográfico do manager */}
+        <HeroCinematic
+          clubName={club.name}
+          managerName={managerFirstName}
+          scoreTotal={scoreTotal}
+          scoreToday={scoreToday}
+          rank={myRank}
+          heroImage={HERO_IMAGE}
+          heroImgOk={heroImgOk}
+          onHeroError={() => setHeroImgOk(false)}
+          cupSublabel={cupSublabel}
+        />
 
-          <div className="relative px-5 sm:px-8 py-8 sm:py-10 flex flex-col items-start gap-1">
-            {/* Eyebrow */}
-            <span aria-hidden className="block h-px w-8 bg-neon-yellow/55 mb-1.5" />
-            <span
-              className="font-display font-black uppercase text-neon-yellow"
-              style={{ fontSize: '10px', letterSpacing: '0.32em' }}
-            >
-              Olefoot · {club.name}
-            </span>
+        {/* Próxima Partida — Liga Global + selo Nemesis */}
+        <NextMatchCard
+          clubName={club.name}
+          opponentName={nextGlobal ? nextGlobal.opponentName : null}
+          countdownLabel={nextRoundLabel}
+          isLive={nextRoundLabel === 'Agora'}
+          isNemesis={isNemesisNext}
+        />
 
-            {/* Saudação */}
-            <p className="mt-3 font-display font-bold uppercase text-white/65" style={{ fontSize: '12px', letterSpacing: '0.24em' }}>
-              Olá,
-            </p>
-            <p
-              className="italic text-white leading-[0.95]"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontWeight: 700,
-                fontSize: 'clamp(28px, 5vw, 40px)',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {managerFirstName}
-            </p>
-
-            {/* Pontuação do manager */}
-            <div className="mt-3 flex items-end gap-3 flex-wrap">
-              <p
-                className="italic text-neon-yellow leading-none tabular-nums"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontWeight: 700,
-                  fontSize: 'clamp(48px, 9vw, 72px)',
-                  letterSpacing: '-0.03em',
-                }}
-              >
-                {scoreTotal.toLocaleString('pt-BR')}
-              </p>
-              {scoreToday > 0 ? (
-                <span
-                  className="mb-1.5 inline-flex items-center px-2 py-0.5 font-display font-black uppercase tabular-nums"
-                  style={{
-                    fontSize: '10px',
-                    letterSpacing: '0.22em',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--color-success)',
-                    background: 'rgba(34,197,94,0.12)',
-                    border: '1px solid rgba(34,197,94,0.35)',
-                  }}
-                >
-                  +{scoreToday.toLocaleString('pt-BR')} hoje
-                </span>
+        {/* Atalhos que pontuam — preserva o gatilho do amistoso */}
+        <section aria-label="Ações que pontuam">
+          <SectionLabel text="Ações que pontuam" />
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {scoreActions.map((a) => {
+              const Icon = a.icon;
+              const inner = (
+                <>
+                  <div className="flex items-center justify-between w-full">
+                    <Icon className="w-4 h-4 text-white/65" aria-hidden />
+                    {a.badge ? (
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 font-display font-black uppercase"
+                        style={{
+                          fontSize: '9px',
+                          letterSpacing: '0.18em',
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#0D0D0D',
+                          background: 'var(--color-warning)',
+                        }}
+                      >
+                        {a.badge}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between w-full gap-2">
+                    <span className="font-display font-black uppercase text-white" style={{ fontSize: '11px', letterSpacing: '0.18em' }}>
+                      {a.label}
+                    </span>
+                    <span className="font-impact tabular-nums text-neon-yellow" style={{ fontSize: '18px' }}>
+                      +{a.points}
+                    </span>
+                  </div>
+                </>
+              );
+              const chipClass = cn(
+                'flex min-h-[64px] min-w-[150px] flex-1 flex-col items-start justify-between p-3 text-left',
+                'border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all',
+                a.badge ? 'border-l-[var(--color-warning)]' : 'border-l-neon-yellow',
+                'hover:border-neon-yellow/40 hover:-translate-y-0.5 active:scale-[0.98]',
+              );
+              return a.to ? (
+                <Link key={a.key} to={a.to} className={chipClass} style={{ borderRadius: 'var(--radius-md)' }}>
+                  {inner}
+                </Link>
               ) : (
-                <span className="mb-1.5 text-white/55 text-[12px]" style={{ fontFamily: 'var(--font-sans)' }}>
-                  Toda ação pontua.
-                </span>
-              )}
-            </div>
-            {myRank ? (
-              <p
-                className="text-white/65 uppercase tabular-nums"
-                style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', letterSpacing: '0.22em', fontWeight: 600 }}
-              >
-                Posição #{myRank} no mundo
-              </p>
-            ) : null}
-
-            <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-3" />
-
-            {/* CTA dominante — única ação amarela da surface */}
-            <Link
-              to="/legends-cup"
-              className="mt-4 inline-flex min-h-[44px] items-center bg-neon-yellow text-black px-6 py-3 font-display font-black uppercase hover:bg-white active:scale-[0.98] transition-all"
-              style={{
-                fontSize: '13px',
-                letterSpacing: '0.24em',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: '0 8px 24px rgba(253,225,0,0.18)',
-              }}
-            >
-              Desafie as lendas
-            </Link>
+                <button
+                  key={a.key}
+                  type="button"
+                  onClick={() => setAmistosoOpen(true)}
+                  className={chipClass}
+                  style={{ borderRadius: 'var(--radius-md)' }}
+                >
+                  {inner}
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        {/* ── B · RAIL — loops do clube ─────────────────────────────────── */}
-        <aside
-          aria-label="Painel do clube"
-          className="flex flex-col gap-3 lg:col-start-2 lg:row-start-1 lg:row-span-2"
-        >
-          {/* Próxima rodada — Liga Global */}
-          <RailCard label="Próxima rodada">
-            {nextGlobal ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-display font-bold uppercase text-white" style={{ fontSize: '13px', letterSpacing: '0.08em' }}>
-                    vs {nextGlobal.opponentName}
-                  </p>
-                  <p
-                    className="mt-0.5 italic text-neon-yellow tabular-nums leading-none"
-                    style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '22px', letterSpacing: '-0.02em' }}
-                  >
-                    {nextRoundLabel}
-                  </p>
-                </div>
-                <Link
-                  to="/competicao/standings"
-                  className="inline-flex min-h-[44px] items-center gap-1 shrink-0 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
-                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-                >
-                  Ver liga
-                  <ChevronRight className="w-4 h-4" aria-hidden />
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-white/55 text-[12px]" style={{ fontFamily: 'var(--font-sans)' }}>
-                  Sem rodada agendada.
-                </p>
-                <Link
-                  to="/competicao/standings"
-                  className="inline-flex min-h-[44px] items-center gap-1 shrink-0 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
-                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-                >
-                  Ver liga
-                  <ChevronRight className="w-4 h-4" aria-hidden />
-                </Link>
-              </div>
-            )}
-          </RailCard>
+        {/* Lendas em Destaque — drops reais (legacy_players) */}
+        <LegendsRail legends={legends} />
 
-          {/* Legends Cup — torneio */}
-          <RailCard label="Legends Cup">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <span
-                  className="grid h-10 w-10 shrink-0 place-items-center bg-neon-yellow/10 border border-neon-yellow/35 text-neon-yellow"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
-                >
-                  <Trophy className="w-5 h-5" aria-hidden />
-                </span>
-                <p
-                  className="truncate italic text-white"
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em' }}
-                >
-                  {cupActive ? cupPhaseLabel : 'As lendas esperam'}
-                </p>
-              </div>
-              <Link
-                to="/legends-cup"
-                className="inline-flex min-h-[44px] shrink-0 items-center bg-neon-yellow text-black px-4 font-display font-black uppercase hover:bg-white active:scale-[0.98] transition-all"
-                style={{ fontSize: '11px', letterSpacing: '0.22em', borderRadius: 'var(--radius-sm)' }}
-              >
-                {cupActive ? 'Continuar' : 'Começar'}
-              </Link>
-            </div>
-          </RailCard>
+        {/* Mesa do Manager — pendências reais */}
+        <ManagerDesk
+          suspendedCount={suspendedCount}
+          expiredCount={expiredCount}
+          offersCount={incomingCount}
+        />
 
-          {/* Carteira */}
-          <RailCard label="Carteira">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <span
-                  className="grid h-10 w-10 shrink-0 place-items-center bg-deep-black/60 border border-[var(--color-border)] text-white/65"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
-                >
-                  <Wallet className="w-5 h-5" aria-hidden />
-                </span>
-                <p
-                  className="italic text-white tabular-nums leading-none"
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '22px', letterSpacing: '-0.02em' }}
-                >
-                  {formatExp(finance.ole)}
-                  <span className="ml-1.5 not-italic font-display font-bold uppercase text-white/45" style={{ fontSize: '10px', letterSpacing: '0.2em' }}>
-                    EXP
-                  </span>
-                </p>
-              </div>
+        {/* Herança (Messi→Yamal) — some quando não há lenda + joia */}
+        {inheritance ? (
+          <InheritanceModule legend={inheritance.legend} jewel={inheritance.jewel} />
+        ) : null}
+
+        {/* A Resenha — pulso do mundo via feed real de mercado */}
+        <section aria-label="A Resenha">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: 'var(--color-success)', boxShadow: '0 0 0 3px rgba(0,200,81,0.18)' }}
+            />
+            <h2 className="font-impact uppercase text-white" style={{ fontSize: '13px', letterSpacing: '0.02em' }}>
+              A Resenha
+            </h2>
+          </div>
+          <div
+            className="border border-[var(--color-border)] bg-dark-gray p-3 sm:p-4"
+            style={{ borderRadius: 'var(--radius-md)' }}
+          >
+            <MarketActivityFeed activities={marketActivities} maxVisible={5} />
+            <div className="mt-2 border-t border-white/5 pt-1">
               <Link
-                to="/wallet"
-                className="inline-flex min-h-[44px] items-center gap-1 shrink-0 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+                to="/mercado/transfer"
+                className="inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
                 style={{ fontSize: '10px', letterSpacing: '0.22em' }}
               >
-                Abrir
+                Ir ao mercado
                 <ChevronRight className="w-4 h-4" aria-hidden />
               </Link>
             </div>
-          </RailCard>
-        </aside>
+          </div>
+        </section>
 
-        {/* ── Coluna principal ──────────────────────────────────────────── */}
-        <div className="min-w-0 flex flex-col gap-6 lg:col-start-1 lg:row-start-2">
+        {/* Manager do Dia — líder real do ranking (#1) */}
+        {leader ? (
+          <ManagerOfDay clubName={leader.team} points={leader.points} overall={leader.overall} />
+        ) : null}
 
-          {/* C · Ações que pontuam */}
-          <section aria-label="Ações que pontuam">
-            <SectionLabel text="Ações que pontuam" />
-            <div className="flex gap-2.5 overflow-x-auto pb-1">
-              {scoreActions.map((a) => {
-                const Icon = a.icon;
-                const inner = (
-                  <>
-                    <div className="flex items-center justify-between w-full">
-                      <Icon className="w-4 h-4 text-white/65" aria-hidden />
-                      {a.badge ? (
-                        <span
-                          className="inline-flex items-center px-1.5 py-0.5 font-display font-black uppercase"
-                          style={{
-                            fontSize: '9px',
-                            letterSpacing: '0.18em',
-                            borderRadius: 'var(--radius-sm)',
-                            color: '#0D0D0D',
-                            background: 'var(--color-warning)',
-                          }}
-                        >
-                          {a.badge}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between w-full gap-2">
-                      <span className="font-display font-black uppercase text-white" style={{ fontSize: '11px', letterSpacing: '0.18em' }}>
-                        {a.label}
-                      </span>
-                      <span
-                        className="italic text-neon-yellow tabular-nums"
-                        style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}
-                      >
-                        +{a.points}
-                      </span>
-                    </div>
-                  </>
-                );
-                const chipClass = cn(
-                  'flex min-h-[64px] min-w-[150px] flex-1 flex-col items-start justify-between p-3 text-left',
-                  'border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all',
-                  a.badge ? 'border-l-[var(--color-warning)]' : 'border-l-neon-yellow',
-                  'hover:border-neon-yellow/40 hover:-translate-y-0.5 active:scale-[0.98]',
-                );
-                return a.to ? (
-                  <Link key={a.key} to={a.to} className={chipClass} style={{ borderRadius: 'var(--radius-md)' }}>
-                    {inner}
-                  </Link>
-                ) : (
-                  <button
-                    key={a.key}
-                    type="button"
-                    onClick={() => setAmistosoOpen(true)}
-                    className={chipClass}
-                    style={{ borderRadius: 'var(--radius-md)' }}
-                  >
-                    {inner}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+        {/* Ranking Top 10 — aba Geral real, períodos em breve */}
+        <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
 
-          {/* D · Ranking */}
-          <section aria-label="Ranking">
-            <SectionLabel text="Ranking" />
-            <div
-              className="border border-[var(--color-border)] bg-dark-gray overflow-hidden"
-              style={{ borderRadius: 'var(--radius-md)' }}
-            >
-              {top5.length === 0 ? (
-                <p className="p-4 text-white/55 text-[12px]" style={{ fontFamily: 'var(--font-sans)' }}>
-                  A liga ainda carrega.
-                </p>
-              ) : (
-                <ul className="divide-y divide-white/5">
-                  {top5.map((r, i) => (
-                    <li
-                      key={r.entryId}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-2.5 min-h-[44px]',
-                        r.isMe && 'border-l-[3px] border-l-neon-yellow bg-neon-yellow/[0.05]',
-                      )}
-                    >
-                      <span className="w-6 shrink-0 font-display font-black text-white/45 tabular-nums" style={{ fontSize: '11px' }}>
-                        {i + 1}
-                      </span>
-                      <span
-                        className={cn(
-                          'min-w-0 flex-1 truncate font-display font-bold uppercase',
-                          r.isMe ? 'text-neon-yellow' : 'text-white',
-                        )}
-                        style={{ fontSize: '12px', letterSpacing: '0.08em' }}
-                      >
-                        {r.team}
-                      </span>
-                      <span
-                        className="shrink-0 italic text-white tabular-nums"
-                        style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em' }}
-                      >
-                        {r.points.toLocaleString('pt-BR')}
-                      </span>
-                    </li>
-                  ))}
-                  {!meInTop5 && myEntry && myRank ? (
-                    <li className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] border-l-[3px] border-l-neon-yellow bg-neon-yellow/[0.05]">
-                      <span className="w-6 shrink-0 font-display font-black text-white/45 tabular-nums" style={{ fontSize: '11px' }}>
-                        {myRank}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate font-display font-bold uppercase text-neon-yellow" style={{ fontSize: '12px', letterSpacing: '0.08em' }}>
-                        Você
-                      </span>
-                      <span
-                        className="shrink-0 italic text-white tabular-nums"
-                        style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em' }}
-                      >
-                        {myEntry.points.toLocaleString('pt-BR')}
-                      </span>
-                    </li>
-                  ) : null}
-                </ul>
-              )}
-              <div className="border-t border-white/5 px-4 py-2">
-                <Link
-                  to="/competicao/ranking"
-                  className="inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
-                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-                >
-                  Ranking completo
-                  <ChevronRight className="w-4 h-4" aria-hidden />
-                </Link>
-              </div>
-            </div>
-          </section>
-
-          {/* E · Mercado agora */}
-          <section aria-label="Mercado agora">
-            <SectionLabel text="Mercado agora" />
-            <div
-              className="border border-[var(--color-border)] bg-dark-gray p-3 sm:p-4"
-              style={{ borderRadius: 'var(--radius-md)' }}
-            >
-              <MarketActivityFeed activities={marketActivities} maxVisible={5} />
-              <div className="mt-2 border-t border-white/5 pt-1">
-                <Link
-                  to="/mercado/transfer"
-                  className="inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
-                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
-                >
-                  Ir ao mercado
-                  <ChevronRight className="w-4 h-4" aria-hidden />
-                </Link>
-              </div>
-            </div>
-          </section>
-
-          {/* F · Radar — banners condicionais com ação/claim */}
-          <section aria-label="Radar" className="flex flex-col gap-2.5">
-            <SectionLabel text="Radar" />
-            <AbsenceBanner />
-            <LoginBonusWidget />
-            <PassiveIncomeWidget />
-            <CoroaDoDiaBanner />
-            <DesafioDiarioBanner />
-            <LigaOleBanner />
-          </section>
-        </div>
+        {/* Radar — banners condicionais com ação/claim */}
+        <section aria-label="Radar" className="flex flex-col gap-2.5">
+          <SectionLabel text="Radar" />
+          <AbsenceBanner />
+          <LoginBonusWidget />
+          <PassiveIncomeWidget />
+          <CoroaDoDiaBanner />
+          <DesafioDiarioBanner />
+          <LigaOleBanner />
+        </section>
       </div>
 
       {/* Modal de amistoso — fluxo preservado (busca online/offline + aposta) */}

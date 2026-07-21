@@ -84,7 +84,7 @@ export function MakeOfferModal({
         <div className="font-display text-[10px] uppercase tracking-[0.2em] text-neon-yellow">
           {existingOffer ? 'Atualizar proposta' : 'Fazer proposta'}
         </div>
-        <h4 className="mt-1 font-display text-2xl font-black uppercase tracking-wide text-white">
+        <h4 className="mt-1 font-impact text-3xl uppercase leading-none text-white">
           {playerName}
         </h4>
         <p className="mt-1 text-xs font-bold uppercase tracking-widest text-neon-yellow/80">
@@ -131,7 +131,7 @@ export function MakeOfferModal({
             style={submitting || !valid ? undefined : { background: 'var(--color-neon-yellow)' }}
             className="flex-1 rounded-[var(--radius-md)] py-3 font-display text-sm font-bold uppercase tracking-wide text-black transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
           >
-            {submitting ? 'A enviar…' : existingOffer ? 'Atualizar proposta' : 'Enviar proposta'}
+            {submitting ? 'Enviando…' : existingOffer ? 'Atualizar proposta' : 'Enviar proposta'}
           </button>
           <button
             onClick={onClose}

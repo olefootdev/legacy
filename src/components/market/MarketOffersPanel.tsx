@@ -48,7 +48,7 @@ export function MarketOffersPanel() {
   return (
     <section className="rounded-[var(--radius-lg)] border border-white/10 bg-black/40 p-4 sm:p-5">
       <div className="font-display text-[10px] uppercase tracking-[0.2em] text-neon-yellow">Negociação</div>
-      <h3 className="mt-1 font-display text-xl font-black uppercase tracking-wide text-white">Propostas</h3>
+      <h3 className="mt-1 font-impact text-2xl uppercase tracking-wide text-white">Propostas</h3>
 
       {error && <p className="mt-3 text-xs font-medium text-red-400">{error}</p>}
 
@@ -65,7 +65,7 @@ export function MarketOffersPanel() {
               return (
                 <li key={o.offerId} className="rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-display text-sm font-bold text-white">{o.playerName}</span>
+                    <span className="font-impact text-base uppercase leading-none text-white">{o.playerName}</span>
                     <span className="font-display text-sm font-black text-neon-yellow">{formatExp(value)}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/50">
@@ -151,7 +151,7 @@ export function MarketOffersPanel() {
               return (
                 <li key={o.offerId} className="rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-display text-sm font-bold text-white">{o.playerName}</span>
+                    <span className="font-impact text-base uppercase leading-none text-white">{o.playerName}</span>
                     <span className="font-display text-sm font-black text-neon-yellow">{formatExp(o.offerExp)}</span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-white/50">
