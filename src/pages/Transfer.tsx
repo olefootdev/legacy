@@ -377,6 +377,11 @@ export function Transfer() {
   const [pendingLegacyDetailId, setPendingLegacyDetailId] = useState<string | null>(
     () => searchParams.get('legacy'),
   );
+  // Deep-link `?legacy=` só resolve dentro da aba Legacies — força a aba
+  // enquanto o pedido estiver pendente (senão o param morre em outra aba).
+  useEffect(() => {
+    if (pendingLegacyDetailId && legacyMarketEnabled) setMarketTab('legacies');
+  }, [pendingLegacyDetailId, legacyMarketEnabled]);
   useEffect(() => {
     if (!legacyMarketEnabled) return;
     let cancelled = false;

@@ -73,6 +73,12 @@ export type MatchmakingMode = 'quick' | 'penalty';
 export interface MatchmakingParams {
   myClubId: string;
   myUserId?: string;
+  /**
+   * E-mail do manager logado. NECESSÁRIO pro anti-auto-sorteio da Liga Global:
+   * `global_league_teams.manager_id` é gravado como E-MAIL (ou club.id), nunca
+   * como uuid — comparar só com `myUserId` não exclui o próprio time.
+   */
+  myEmail?: string;
   myOverall: number;
   preferredMode: MatchmakingMode;
   maxOvrDiff?: number;
@@ -260,7 +266,7 @@ export async function findFriendlyOpponent(
   if (relaxedManager) return relaxedManager;
 
   // (c) Time da Liga Global — sintetiza adversário a partir do team registrado
-  const globalTeam = await findGlobalLeagueOpponent(myUserId, myOverall);
+  const globalTeam = await findGlobalLeagueOpponent(params);
   if (globalTeam) return globalTeam;
 
   // (d) Bot — último recurso. Garante que a partida SEMPRE começa.
@@ -276,12 +282,10 @@ export async function findFriendlyOpponent(
  * Promise.race garante <2s.
  */
 async function findGlobalLeagueOpponent(
-  myUserId: string | undefined,
-  myOverall: number,
+  params: MatchmakingParams,
 ): Promise<OpponentMatch | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  void myOverall;
   try {
     const queryPromise = sb
       .from('global_league_teams')
@@ -298,9 +302,29 @@ async function findGlobalLeagueOpponent(
       return null;
     }
 
+    // Anti-auto-sorteio: `manager_id` na tabela é E-MAIL (ou club.id legado),
+    // nunca uuid — então excluímos por TODOS os identificadores conhecidos do
+    // manager (uuid, e-mail e club.id), comparando case-insensitive.
+    const excludeIds = new Set<string>();
+    const addExclude = (v?: string | null) => {
+      const s = v?.trim().toLowerCase();
+      if (s) excludeIds.add(s);
+    };
+    addExclude(params.myUserId);
+    addExclude(params.myEmail);
+    addExclude(params.myClubId);
+    if (!params.myEmail) {
+      // Caller antigo sem e-mail → busca da própria sessão (defesa em profundidade).
+      try {
+        const session = (await sb.auth.getSession()).data.session;
+        addExclude(session?.user?.id);
+        addExclude(session?.user?.email);
+      } catch { /* segue só com o que temos */ }
+    }
+
     type TeamRow = { id: string; manager_id: string; club_name: string; club_short: string; overall: number };
     const candidates = (rows as TeamRow[]).filter(
-      (r) => r.manager_id !== myUserId && Number(r.overall) > 0,
+      (r) => !excludeIds.has(String(r.manager_id ?? '').trim().toLowerCase()) && Number(r.overall) > 0,
     );
     if (candidates.length === 0) return null;
     const pick = candidates[Math.floor(Math.random() * candidates.length)]!;
@@ -371,10 +395,12 @@ export async function quickFindOpponent(
   myClubId: string,
   myOverall: number,
   myUserId?: string,
+  myEmail?: string,
 ): Promise<OpponentMatch> {
   return findFriendlyOpponent({
     myClubId,
     myUserId,
+    myEmail,
     myOverall,
     preferredMode: 'quick',
     maxOvrDiff: 10,

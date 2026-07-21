@@ -63,6 +63,7 @@ export function LegacyPlayerDetailModal({
   buying,
   errorMsg,
   pixState = 'none',
+  notListed = false,
   onBuy,
   onPixBuy,
 }: {
@@ -71,6 +72,8 @@ export function LegacyPlayerDetailModal({
   onClose: () => void;
   brlCents: number | null;
   isOwned: boolean;
+  /** Lenda fora de catálogo (deep-link do Legends Cup): ficha abre, compra não. */
+  notListed?: boolean;
   /** true = tem saldo OLEFOOT; false = não tem; null = ainda carregando o saldo. */
   canAfford: boolean | null;
   /** saldo atual do manager, formatado (ex.: "12.500 OLEFOOT") — só pra exibir. */
@@ -244,6 +247,16 @@ export function LegacyPlayerDetailModal({
                     {isOwned ? (
                       <div className="rounded-lg bg-white/5 py-2.5 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">
                         Você já tem este jogador
+                      </div>
+                    ) : notListed ? (
+                      /* Fora de catálogo: label honesto, sem CTA de compra. */
+                      <div className="space-y-1.5 rounded-lg bg-white/5 py-3 text-center">
+                        <p className="text-[12px] font-bold uppercase tracking-wider text-gray-400">
+                          Fora de catálogo
+                        </p>
+                        <p className="text-[11px] text-white/45">
+                          Esta lenda não está à venda no momento.
+                        </p>
                       </div>
                     ) : canAfford === null ? (
                       <div className="flex items-center justify-center gap-2 rounded-lg bg-white/5 py-3 text-center text-[12px] font-bold uppercase tracking-wider text-gray-400">

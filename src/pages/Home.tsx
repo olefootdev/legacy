@@ -24,12 +24,10 @@ import type { PastResult, PlayerEntity } from '@/entities/types';
 import { overallFromAttributes } from '@/entities/player';
 import { isHiddenFromHomeInboxFeed, type InboxItem } from '@/game/inboxTypes';
 import {
-  buildHomeRankingPreview,
   filterOpponentRankingMatches,
-  getFullRankingEntries,
   type RankingEntry,
 } from '@/ranking/worldRanking';
-import { useRankingFavorites } from '@/ranking/useRankingFavorites';
+import { getGlobalLeagueRankingEntries } from '@/ranking/globalLeagueRanking';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { makeInboxItem } from '@/game/inboxItem';
 import { DashboardGrid, DashboardSection } from '@/components/dashboard';
@@ -195,6 +193,8 @@ export function Home() {
   const formGlobal = useGameStore((s) => s.form);
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
   const localLeagues = useGameStore((s) => s.localLeagues);
+  // Identidade do manager na Liga Global (manager_id = email ?? club.id).
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
   const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
   const awayCrestUrl = useGameStore(
     (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
@@ -279,21 +279,8 @@ export function Home() {
    * tag dinâmica baseada em performance, CTA contextual.
    */
   const homeHighlight = useMemo(() => {
-    if (!homeHighlightBest) {
-      return {
-        id: '',
-        name: '—',
-        ovr: 70,
-        position: undefined as string | undefined,
-        imageSrc: 'https://picsum.photos/seed/home-placeholder/400/520',
-        goalsSeason: undefined as number | undefined,
-        assistsSeason: undefined as number | undefined,
-        mvpsSeason: undefined as number | undefined,
-        recentForm: undefined as Array<'W' | 'D' | 'L'> | undefined,
-        deltaOvr: undefined as number | undefined,
-        tag: undefined as string | undefined,
-      };
-    }
+    // Elenco vazio → sem destaque (nada de card placeholder fake).
+    if (!homeHighlightBest) return null;
     const currentOvr = overallFromAttributes(homeHighlightBest.attrs, homeHighlightBest.pos);
     const mintOvr = homeHighlightBest.mintOverall ?? currentOvr;
     const deltaOvr = currentOvr - mintOvr;
@@ -368,12 +355,17 @@ export function Home() {
       return Math.round(ovrs.reduce((s, o) => s + o, 0) / ovrs.length);
     })();
 
-    // Sprint C Fase D: posição global do manager (1-based) — calcula localmente
-    // pra evitar circular dep com fullSorted que é declarado depois.
-    const allRanked = getFullRankingEntries(club.name, finance.ole, club.id);
+    // Posição global REAL do manager — mesma fonte do /competicao/ranking
+    // (times da Liga Global, índice composto). Fallback gracioso: liga ainda
+    // não carregou → só o próprio clube (#1 de 1, comportamento antigo).
+    const allRanked = getGlobalLeagueRankingEntries(
+      globalLeagueMVP?.teams,
+      managerProfile?.email ?? club.id,
+      club.id,
+    );
     const myRankIdx = allRanked.findIndex((r) => r.isMe);
-    const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
-    const totalManagers = allRanked.length;
+    const myRank = allRanked.length === 0 ? 1 : myRankIdx >= 0 ? myRankIdx + 1 : null;
+    const totalManagers = Math.max(1, allRanked.length);
 
     const last5 = (formGlobal ?? []).slice(0, 5);
     const formStr = last5.length === 0 ? '—' : last5.join('');
@@ -437,7 +429,7 @@ export function Home() {
         tone: 'accent' as const,
       },
     ];
-  }, [players, club.name, club.id, finance.ole, formGlobal, globalLeagueMVP, localLeagues]);
+  }, [players, club.id, formGlobal, globalLeagueMVP, localLeagues, managerProfile]);
 
   /** Sprint C Fase F: sem CTAs no destaque (visual mais limpo). */
   const highlightCtas = useMemo(
@@ -566,8 +558,6 @@ export function Home() {
     minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
     maximumFractionDigits: 1,
   });
-  const [searchTeam, setSearchTeam] = useState('');
-  const { favorites, toggleFavorite } = useRankingFavorites();
   const [amistosoOpen, setAmistosoOpen] = useState(false);
   const [hasOnlineSession, setHasOnlineSession] = useState(false);
   const [opponentQuery, setOpponentQuery] = useState('');
@@ -916,10 +906,21 @@ export function Home() {
     });
   };
 
-  const fullSorted = useMemo(
-    () => getFullRankingEntries(club.name, finance.ole, club.id),
-    [club.name, finance.ole, club.id],
-  );
+  // Ranking local pra busca de amistoso — MESMA fonte real do /competicao/ranking
+  // (times da Liga Global). Fallback gracioso: liga não carregou → só o próprio
+  // clube (comportamento antigo, nunca quebra a Home). `exp` carrega os pontos
+  // da temporada do time (rótulo "pts" na lista de busca).
+  const fullSorted = useMemo<RankingEntry[]>(() => {
+    const real = getGlobalLeagueRankingEntries(
+      globalLeagueMVP?.teams,
+      managerProfile?.email ?? club.id,
+      club.id,
+    );
+    if (real.length > 0) {
+      return real.map((r) => ({ team: r.team, exp: r.points, isMe: r.isMe, entryId: r.entryId }));
+    }
+    return [{ team: club.name, exp: Math.round(finance.ole), isMe: true, entryId: club.id }];
+  }, [globalLeagueMVP, managerProfile, club.name, club.id, finance.ole]);
 
   const lookupAmistosoOpponent = () => {
     const q = opponentQuery.trim();
@@ -962,10 +963,6 @@ export function Home() {
     setAmistosoLookupMessage(null);
   };
 
-  const ranking = useMemo(
-    () => buildHomeRankingPreview(fullSorted, searchTeam, favorites),
-    [fullSorted, searchTeam, favorites],
-  );
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
@@ -995,7 +992,7 @@ export function Home() {
       </section>
 
       {/* HERO LEGADO — temporariamente desabilitado pelo HomeHeroLegacy. */}
-      {false && (
+      {false && homeHighlight && (
         <section
           aria-label="Último jogo (legado)"
           className="hidden"
@@ -1278,9 +1275,9 @@ export function Home() {
       {/* Mini-painel inteligente do manager (Sprint C Fase B) */}
       <HomeManagerFeed
         players={players}
-        highlightId={homeHighlight.id}
-        highlightName={homeHighlight.name}
-        highlightPosition={homeHighlight.position}
+        highlightId={homeHighlight?.id ?? ''}
+        highlightName={homeHighlight?.name ?? '—'}
+        highlightPosition={homeHighlight?.position}
         expLifetimeEarned={finance.expLifetimeEarned ?? finance.ole ?? 0}
       />
 
@@ -1415,7 +1412,7 @@ export function Home() {
                                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-white/5"
                               >
                                 <span className="min-w-0 truncate font-display font-bold text-white">{row.team}</span>
-                                <span className="shrink-0 text-[10px] text-gray-500">{formatExp(row.exp)} EXP</span>
+                                <span className="shrink-0 text-[10px] text-gray-500">{formatExp(row.exp)} pts</span>
                               </button>
                             </li>
                           ))}

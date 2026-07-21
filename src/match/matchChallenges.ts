@@ -5,6 +5,46 @@
 
 import type { LiveMatchSnapshot } from '@/engine/types';
 
+/**
+ * Fonte de verdade dos gols: o log append-only `snap.events`.
+ * `goal_home` traz `minute` sempre e `playerId` quando o motor sabe o autor —
+ * é o que permite Hat-Trick / Virada / Início Fulminante sem tocar no reducer.
+ */
+
+/** Maior nº de gols de um MESMO jogador da casa (0 se o autor não é rastreado). */
+function maxHomeGoalsBySinglePlayer(snap: LiveMatchSnapshot): number {
+  const byPlayer = new Map<string, number>();
+  let max = 0;
+  for (const e of snap.events ?? []) {
+    if (e.kind !== 'goal_home' || !e.playerId) continue;
+    const n = (byPlayer.get(e.playerId) ?? 0) + 1;
+    byPlayer.set(e.playerId, n);
+    if (n > max) max = n;
+  }
+  return max;
+}
+
+/** Reproduz o placar evento a evento: houve momento perdendo por 2+? */
+function wasLosingByTwo(snap: LiveMatchSnapshot): boolean {
+  let home = 0;
+  let away = 0;
+  for (const e of snap.events ?? []) {
+    if (e.kind === 'goal_home') home += 1;
+    else if (e.kind === 'goal_away') away += 1;
+    if (away - home >= 2) return true;
+  }
+  return false;
+}
+
+/** Gols da casa até o minuto dado (inclusive). */
+function homeGoalsUpToMinute(snap: LiveMatchSnapshot, minute: number): number {
+  let n = 0;
+  for (const e of snap.events ?? []) {
+    if (e.kind === 'goal_home' && e.minute <= minute) n += 1;
+  }
+  return n;
+}
+
 export type ChallengeId =
   | 'clean_sheet'
   | 'comeback_king'
@@ -50,9 +90,9 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
     title: 'Virada Épica',
     description: 'Vire o jogo após estar perdendo por 2+',
     condition: (snap) => {
-      // Precisa ter estado perdendo por 2+ e agora estar vencendo
-      // TODO: rastrear histórico de placar
-      return snap.homeScore > snap.awayScore && snap.awayScore >= 2;
+      // Replay do log de gols: precisa ter ESTADO perdendo por 2+ em algum
+      // momento e AGORA estar vencendo.
+      return snap.homeScore > snap.awayScore && wasLosingByTwo(snap);
     },
     reward: { ole: 1000, exp: 200 },
     difficulty: 'hard',
@@ -78,9 +118,11 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
     title: 'Hat-Trick',
     description: 'Um jogador marque 3 gols',
     condition: (snap) => {
-      // TODO: rastrear gols por jogador
-      return false; // implementar quando tiver tracking de gols
+      // Só completa quando o motor rastreia o autor (goal_home com playerId).
+      // Sem autor no evento, nunca dispara — honesto, sem falso positivo.
+      return maxHomeGoalsBySinglePlayer(snap) >= 3;
     },
+    progress: (snap) => Math.min(100, (maxHomeGoalsBySinglePlayer(snap) / 3) * 100),
     reward: { ole: 800, exp: 150 },
     difficulty: 'hard',
     icon: '🎩',
@@ -137,9 +179,11 @@ export const MATCH_CHALLENGES: MatchChallenge[] = [
     title: 'Início Fulminante',
     description: 'Marque 2 gols nos primeiros 15 minutos',
     condition: (snap) => {
-      // TODO: rastrear minuto dos gols
-      return snap.homeScore >= 2 && snap.minute <= 15;
+      // Conta pelos MINUTOS dos eventos de gol — completa mesmo se avaliado
+      // depois do minuto 15 (antes exigia snap.minute<=15, quase nunca batia).
+      return homeGoalsUpToMinute(snap, 15) >= 2;
     },
+    progress: (snap) => Math.min(100, (homeGoalsUpToMinute(snap, 15) / 2) * 100),
     reward: { ole: 700, exp: 140 },
     difficulty: 'hard',
     icon: '⚡',

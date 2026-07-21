@@ -174,6 +174,26 @@ export async function fetchListedLegacyPlayerRows(): Promise<LegacyPlayerRow[]> 
   return (data ?? []) as LegacyPlayerRow[];
 }
 
+/**
+ * Busca UMA lenda por id, listada ou não (deep-link `?legacy=<id>` do Legends
+ * Cup aponta pra lendas que podem estar fora de catálogo). Normaliza o
+ * prefixo `legacy-`: o link carrega o id do PlayerEntity (sempre prefixado),
+ * mas `legacy_players.id` pode vir com ou sem prefixo — testamos as variantes.
+ */
+export async function fetchLegacyPlayerRowById(id: string): Promise<LegacyPlayerRow | null> {
+  const sb = getSupabase();
+  const trimmed = id.trim();
+  if (!sb || !trimmed) return null;
+  const bare = trimmed.replace(/^(legacy-)+/, '');
+  const candidates = [...new Set([trimmed, bare, `legacy-${bare}`])];
+  const { data, error } = await sb.from('legacy_players').select('*').in('id', candidates).limit(1);
+  if (error) {
+    console.warn('[legacyPlayers] fetch by id:', error.message);
+    return null;
+  }
+  return (data?.[0] as LegacyPlayerRow | undefined) ?? null;
+}
+
 export type LegacyLotInfo = { supply: number; sold: number; restam: number };
 
 /**

@@ -210,13 +210,15 @@ export function HomeHeroLegacy(props: {
       const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
       const { getSupabase } = await import('@/supabase/client');
       const sb = getSupabase();
-      const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+      const session = sb ? (await sb.auth.getSession()).data.session : null;
+      const userId = session?.user?.id;
+      const userEmail = session?.user?.email;
       const snapshot = getGameState().players;
       const myOverall = Math.round(
         Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) /
           Math.max(1, Object.keys(snapshot).length),
       ) || 70;
-      const match = await quickFindOpponent(club!.id, myOverall, userId);
+      const match = await quickFindOpponent(club!.id, myOverall, userId, userEmail);
       const stub = opponentMatchToStub(match, myOverall);
       dispatchGame({ type: 'ADMIN_PATCH_NEXT_FIXTURE', partial: { opponent: stub, awayName: stub.name } });
       navigate('/match/quick', { state: { pvpOpponentStub: stub } });

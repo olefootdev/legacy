@@ -48,12 +48,15 @@ export function QuickSearchModal({ isOpen, onClose }: QuickSearchModalProps) {
     // Simular delay de busca (UX)
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // Busca sessão para passar userId ao matchmaking
+    // Busca sessão para passar userId + email ao matchmaking (o email é o
+    // manager_id da Liga Global — sem ele o anti-auto-sorteio não funciona).
     const { getSupabase } = await import('@/supabase/client');
     const sb = getSupabase();
-    const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+    const session = sb ? (await sb.auth.getSession()).data.session : null;
+    const userId = session?.user?.id;
+    const userEmail = session?.user?.email;
 
-    const result = await quickFindOpponent(club.id, myOverall, userId);
+    const result = await quickFindOpponent(club.id, myOverall, userId, userEmail);
     setOpponent(result);
     setSearching(false);
   };

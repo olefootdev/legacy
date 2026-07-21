@@ -715,14 +715,16 @@ function MatchQuickLegacy() {
         const { quickFindOpponent, opponentMatchToStub } = await import('@/match/friendlyMatchmaking');
         const { getSupabase } = await import('@/supabase/client');
         const sb = getSupabase();
-        const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id : undefined;
+        const session = sb ? (await sb.auth.getSession()).data.session : null;
+        const userId = session?.user?.id;
+        const userEmail = session?.user?.email;
         // Snapshot do plantel atual — não entra nas deps pra evitar loop
         const snapshot = getGameState().players;
         const myOverall = Math.round(
           Object.values(snapshot).reduce((s, p) => s + overallFromAttributes(p.attrs, p.pos), 0) /
             Math.max(1, Object.keys(snapshot).length),
         );
-        const match = await quickFindOpponent(club.id, myOverall || 70, userId);
+        const match = await quickFindOpponent(club.id, myOverall || 70, userId, userEmail);
         if (cancelled) return;
         const stub = opponentMatchToStub(match, myOverall || 70);
         setAutoOpponent(stub);

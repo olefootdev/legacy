@@ -4,6 +4,7 @@ import { useGameDispatch, useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import {
   fetchListedLegacyPlayerRows,
+  fetchLegacyPlayerRowById,
   fetchLegacyOpenLots,
   legacyPortraitImageUrl,
   legacyRowToPlayerEntity,
@@ -104,19 +105,39 @@ export function TransferLegaciesTab({
     setBuyError(null);
   }, [detailRow?.id]);
 
-  // Abre o modal de detalhe quando o destaque global pede (clique num legacy lá).
+  // Abre o modal de detalhe quando o destaque global pede (clique num legacy
+  // lá) OU quando o deep-link `?legacy=<id>` chega (CTA pós-jogo do Legends
+  // Cup). Normaliza o prefixo `legacy-` (o link manda o id do PlayerEntity,
+  // sempre prefixado; row.id pode vir sem) e, se a lenda NÃO estiver listada
+  // à venda, busca direto no Supabase e abre a ficha em modo "fora de catálogo".
   useEffect(() => {
-    if (!openDetailId || rows.length === 0) return;
-    const row = rows.find((r) => r.id === openDetailId);
+    if (!openDetailId || loading) return;
+    const norm = (s: string) => s.trim().replace(/^(legacy-)+/, '');
+    const wanted = norm(openDetailId);
+    const row = rows.find((r) => norm(r.id) === wanted);
     if (row) {
       setDetailRow(row);
       onDetailConsumed?.();
+      return;
     }
+    let cancelled = false;
+    void fetchLegacyPlayerRowById(openDetailId).then((fetched) => {
+      if (cancelled) return;
+      if (fetched) setDetailRow(fetched);
+      // Consumido mesmo se não achou — evita loop de refetch do mesmo id.
+      onDetailConsumed?.();
+    });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openDetailId, rows]);
+  }, [openDetailId, rows, loading]);
 
   const buy = async (row: LegacyPlayerRow) => {
     if (buyingId) return; // trava duplo-clique / compra concorrente
+    if (row.listed_on_market === false) {
+      // Ficha aberta via deep-link de lenda fora de catálogo — sem compra.
+      setBuyError('Esta lenda está fora de catálogo no momento.');
+      return;
+    }
     const entity = legacyRowToPlayerEntity(row);
     // price_bro_cents guarda o preço em OLEFOOT (=OLE, a moeda dos legacies).
     const priceOlefoot = Math.max(1, Math.round(row.price_bro_cents));
@@ -199,14 +220,6 @@ export function TransferLegaciesTab({
     return <div className="py-10 text-center text-sm text-gray-500">Carregando legacies…</div>;
   }
 
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-xl border border-white/5 bg-white/[0.02] py-12 text-center text-sm text-gray-500">
-        Nenhum Legacy disponível no momento.
-      </div>
-    );
-  }
-
   // Agrupa por ATLETA (não por coleção): todas as cartas do mesmo jogador
   // (ex: as 3 fases do Gonçalves) aparecem lado a lado sob um cabeçalho, mesmo
   // sendo de coleções/temporadas diferentes. Escala melhor com muitos jogadores.
@@ -284,7 +297,16 @@ export function TransferLegaciesTab({
 
   return (
     <div className="space-y-8 px-4 sm:px-5">
+      {/* Vazio SEM early-return: o modal de detalhe (deep-link do Legends Cup
+          pra lenda fora de catálogo) precisa renderizar mesmo sem listados. */}
+      {rows.length === 0 && (
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] py-12 text-center text-sm text-gray-500">
+          Nenhum Legacy disponível no momento.
+        </div>
+      )}
+
       {/* Toggle de visualização — Grid (card vertical) vs Lista (linha) */}
+      {rows.length > 0 && (
       <div className="flex items-center justify-end gap-1.5">
         {(['grid', 'list'] as const).map((m) => (
           <button
@@ -300,6 +322,7 @@ export function TransferLegaciesTab({
           </button>
         ))}
       </div>
+      )}
 
       {groups.map((g) => (
         <section key={g.code} className="space-y-3">
@@ -392,6 +415,7 @@ export function TransferLegaciesTab({
         row={detailRow}
         open={!!detailRow}
         onClose={() => setDetailRow(null)}
+        notListed={detailRow ? detailRow.listed_on_market === false : false}
         brlCents={detailRow ? brlCentsFor(detailRow) : null}
         isOwned={detailRow ? owned.has(legacyRowToPlayerEntity(detailRow).id) : false}
         canAfford={
