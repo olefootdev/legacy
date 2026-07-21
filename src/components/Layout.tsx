@@ -33,6 +33,7 @@ import { applyPendingCredits } from '@/wallet/applyPendingCredits';
 import { restoreWalletIfEmpty, startWalletAutoBackup } from '@/wallet/walletDurability';
 import { LegacyOlefootWelcomeToast } from '@/components/LegacyOlefootWelcomeToast';
 import { CoachActionApproval } from '@/components/CoachActionApproval';
+import { ManagerScoreToast } from '@/components/ManagerScoreToast';
 import { useTotalManagers } from '@/hooks/useTotalManagers';
 import { MatchModeBottomSheet } from '@/components/MatchModeBottomSheet';
 import { OleSmartHubPanel, OleSmartHubDrawer, OleSmartHubTrigger } from '@/components/OleSmartHub';
@@ -500,6 +501,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <OleSmartHubPanel />
       </main>
       <CoachActionApproval />
+      <ManagerScoreToast />
       <OleSmartHubDrawer open={hubOpen} onClose={() => setHubOpen(false)} />
 
       {/* Mobile / Tablet Drawer — slides in below lg */}

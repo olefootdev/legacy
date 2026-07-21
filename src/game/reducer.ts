@@ -4137,13 +4137,15 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         finance: result.finance,
         manager: { ...state.manager, staff: result.staff },
+        // PONTUAÇÃO DO MANAGER — evoluir profissional é ação de gestão (ponte que faltava).
+        managerScore: addManagerScore(state.managerScore, 'upgrade_staff', `Evoluiu ${STAFF_LABELS[action.roleId]} (nível ${lvl})`, Date.now()),
         inbox: [
           makeInboxItem(
             `staff-up-${Date.now()}`,
             'STAFF_LEVEL_UP',
             'STAFF',
             `${STAFF_LABELS[action.roleId]} subiu para nível ${lvl}.`,
-            { body: 'Efeitos em treinos e relatórios já aplicados ao plantel.', deepLink: '/team/staff' },
+            { body: 'Efeitos em treinos e relatórios já aplicados ao plantel.', deepLink: '/clube/staff' },
           ),
           ...state.inbox,
         ].slice(0, 14),

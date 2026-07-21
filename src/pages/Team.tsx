@@ -407,15 +407,6 @@ export function Team() {
                   >
                     Sugerir
                   </button>
-                  <Link
-                    to="/team/ailabs"
-                    title="Abrir AI Labs"
-                    aria-label="Abrir AI Labs"
-                    className="inline-flex h-9 shrink-0 touch-manipulation items-center justify-center rounded border border-white/20 bg-white/[0.04] px-3 font-display text-[10px] font-black uppercase leading-none tracking-[0.2em] text-white/80 transition-colors [-webkit-tap-highlight-color:transparent] hover:border-neon-yellow/60 hover:text-neon-yellow sm:px-4 sm:text-[11px]"
-                    style={{ borderRadius: 'var(--radius-sm)' }}
-                  >
-                    AI Labs
-                  </Link>
                 </div>
               </div>
 

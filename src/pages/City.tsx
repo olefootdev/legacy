@@ -6,7 +6,6 @@ import {
   Dumbbell,
   GraduationCap,
   Store,
-  Zap,
   ArrowUpCircle,
   Users,
   Coins,
@@ -22,11 +21,8 @@ import { DEFAULT_BRO_PRICES_CENTS } from '@/clubStructures/broDefaults';
 import { MAX_LEVEL, type ClubStructureId } from '@/clubStructures/types';
 import { formatBroFromCents, formatExp } from '@/systems/economy';
 import {
-  CITY_QUICK_MEDICAL_COST_EXP,
   CITY_QUICK_STORE_BRO_GAIN_CENTS,
   CITY_QUICK_STORE_COST_EXP,
-  CITY_QUICK_TRAINING_COST_EXP,
-  CITY_QUICK_TRAINING_DURATION_H,
 } from '@/game/cityQuickConstants';
 import { BackButton } from '@/components/BackButton';
 import { EditorialHero } from '@/components/EditorialHero';
@@ -39,7 +35,6 @@ import {
   stadiumCapacityByLevel,
   stadiumExpPerSpectatorByLevel,
   trainingCenterAttributeGainMultiplier,
-  trainingCenterHasAiLabs,
   trainingCenterMaxConcurrentCollectivePlans,
   youthAcademyProspectTrainingMultiplier,
 } from '@/clubStructures/benefits';
@@ -55,8 +50,8 @@ type CityStructDef = {
   bg: string;
   border: string;
   desc: string;
-  action: string;
-  actionIcon: typeof Users;
+  action?: string;
+  actionIcon?: typeof Users;
   statsForLevel: (level: number) => { label: string; value: string }[];
 };
 
@@ -93,17 +88,11 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     bg: 'bg-neon-green/10',
     border: 'border-neon-green',
     desc: 'Mais campos e ciência do desporto: melhor ganho de atributos e mais planos de treino em simultâneo.',
-    action: 'Treino Intensivo',
-    actionIcon: Zap,
     statsForLevel: (lvl) => [
       { label: 'Slots por tipo de treino', value: String(maxSlotsByTrainingCenter(lvl)) },
       {
         label: 'Colectivos simultâneos',
         value: String(trainingCenterMaxConcurrentCollectivePlans(lvl)),
-      },
-      {
-        label: 'AI Labs',
-        value: trainingCenterHasAiLabs(lvl) ? 'Desbloqueado' : 'Bloqueado',
       },
       {
         label: 'Booster atributos',
@@ -120,16 +109,14 @@ const CITY_STRUCTURE_DEFS: CityStructDef[] = [
     color: 'text-red-500',
     bg: 'bg-red-500/10',
     border: 'border-red-500',
-    desc: 'Recuperação e prevenção: menos fadiga acumulada e risco de lesão após investimento em mutirão.',
-    action: 'Mutirão de Cura',
-    actionIcon: Activity,
+    desc: 'Recuperação e prevenção: menos fadiga acumulada e risco de lesão conforme a evolução da estrutura.',
     statsForLevel: (lvl) => [
       { label: 'Slots de tratamento', value: String(medicalDeptTreatmentSlots(lvl)) },
       {
         label: 'Velocidade recuperação',
         value: `+${medicalDeptRecoverySpeedBonusPercent(lvl)}%`,
       },
-      { label: 'Mutirão (EXP)', value: `${CITY_QUICK_MEDICAL_COST_EXP} EXP` },
+      { label: 'Nível', value: `${lvl} / ${MAX_LEVEL}` },
     ],
   },
   {
@@ -235,9 +222,7 @@ export function City() {
     [stadiumLevel, finance.ole, finance.broCents],
   );
 
-  const canQuickMedical = finance.ole >= CITY_QUICK_MEDICAL_COST_EXP;
   const canQuickStore = finance.ole >= CITY_QUICK_STORE_COST_EXP;
-  const canQuickTraining = finance.ole >= CITY_QUICK_TRAINING_COST_EXP;
 
   const runQuickAction = (id: ClubStructureId) => {
     if (id === 'stadium') {
@@ -246,17 +231,6 @@ export function City() {
       if (!up.hasUpgrade || !up.canAfford) return;
       dispatch({ type: 'UPGRADE_STRUCTURE', structureId: 'stadium' });
       trackMissionEvent('structure_upgraded');
-      return;
-    }
-    if (id === 'training_center') {
-      if (!canQuickTraining) return;
-      dispatch({ type: 'CITY_QUICK_TRAINING_INTENSIVO' });
-      trackMissionEvent('training_session');
-      return;
-    }
-    if (id === 'medical_dept') {
-      if (!canQuickMedical) return;
-      dispatch({ type: 'CITY_QUICK_MEDICAL_MUTIRAO' });
       return;
     }
     if (id === 'youth_academy') {
@@ -296,16 +270,6 @@ export function City() {
           lines.push('O estádio sobe um nível.');
         }
       }
-    } else if (quickPendingId === 'training_center') {
-      costExpLine = `Custo em EXP: ${formatExp(CITY_QUICK_TRAINING_COST_EXP)}`;
-      lines.push(
-        `Plano físico coletivo (~${CITY_QUICK_TRAINING_DURATION_H}h). Respeita os slots do CT (nível atual).`,
-      );
-      if (!canQuickTraining) confirmBlocked = true;
-    } else if (quickPendingId === 'medical_dept') {
-      costExpLine = `Custo em EXP: ${formatExp(CITY_QUICK_MEDICAL_COST_EXP)}`;
-      lines.push('Reduz fadiga e risco de lesão em todo o plantel (mutirão médico).');
-      if (!canQuickMedical) confirmBlocked = true;
     } else if (quickPendingId === 'youth_academy') {
       costExpLine = 'Custo em EXP: nenhum.';
       lines.push('Abre o olheiro da categoria de base para ver promessas.');
@@ -322,8 +286,6 @@ export function City() {
     quickPendingId,
     stadiumUpgrade,
     structuresState,
-    canQuickTraining,
-    canQuickMedical,
     canQuickStore,
     crowd.supportPercent,
   ]);
@@ -475,11 +437,7 @@ export function City() {
         {CITY_STRUCTURE_DEFS.slice(1).map((struct, idx) => {
           const level = levelOf(structuresState, struct.structureId);
           const upgrade = upgradeLine(struct.structureId, level, finance.ole, finance.broCents);
-          const canQuick =
-            struct.structureId === 'training_center' ? canQuickTraining :
-            struct.structureId === 'medical_dept' ? canQuickMedical :
-            struct.structureId === 'megastore' ? canQuickStore :
-            true;
+          const canQuick = struct.structureId === 'megastore' ? canQuickStore : true;
 
           return (
             <motion.div
@@ -570,21 +528,23 @@ export function City() {
                     <TrendingUp className="w-3.5 h-3.5" />
                     {upgrade.hasUpgrade ? `Evoluir · ${upgrade.title}` : 'Nível máximo'}
                   </button>
-                  <button
-                    type="button"
-                    disabled={!canQuick}
-                    onClick={() => setQuickPendingId(struct.structureId)}
-                    className={cn(
-                      'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
-                      canQuick
-                        ? cn('border-transparent hover:brightness-110', struct.bg.replace('/10', '/90'), 'text-black')
-                        : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
-                    )}
-                    style={{ borderRadius: 'var(--radius-sm)' }}
-                  >
-                    <struct.actionIcon className="w-3.5 h-3.5" />
-                    {struct.action.split(' ')[0]}
-                  </button>
+                  {struct.action && struct.actionIcon && (
+                    <button
+                      type="button"
+                      disabled={!canQuick}
+                      onClick={() => setQuickPendingId(struct.structureId)}
+                      className={cn(
+                        'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
+                        canQuick
+                          ? cn('border-transparent hover:brightness-110', struct.bg.replace('/10', '/90'), 'text-black')
+                          : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
+                      )}
+                      style={{ borderRadius: 'var(--radius-sm)' }}
+                    >
+                      <struct.actionIcon className="w-3.5 h-3.5" />
+                      {struct.action.split(' ')[0]}
+                    </button>
+                  )}
                 </div>
 
                 {/* Link para detalhes */}

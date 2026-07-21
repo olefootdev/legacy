@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { TrendingUp } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { HubSectionCard } from '@/components/ui/HubSectionCard';
 import { StatTile } from '@/components/ui/StatTile';
+import { managerScoreToday } from '@/systems/managerScore/managerScore';
 
 /** Sprint B Legacy Tech: rail colorido por categoria, sem ícones soltos. */
 const quickActions: Array<{
@@ -18,7 +20,7 @@ const quickActions: Array<{
     title: 'Elenco',
     description: 'Gerir jogadores, formação tática e escalação titular.',
     cta: 'Abrir elenco',
-    href: '/team',
+    href: '/clube/elenco',
     rail: 'bg-neon-yellow',
   },
   {
@@ -26,7 +28,7 @@ const quickActions: Array<{
     title: 'Treino',
     description: 'Sessões individuais e coletivas. Evoluir físico, técnico e tático.',
     cta: 'Programar treino',
-    href: '/team/treino',
+    href: '/clube/treino',
     rail: 'bg-emerald-400',
   },
   {
@@ -34,7 +36,7 @@ const quickActions: Array<{
     title: 'Staff',
     description: 'Profissionais, coach assistente e atribuições.',
     cta: 'Gerir staff',
-    href: '/team/staff',
+    href: '/clube/staff',
     rail: 'bg-violet-400',
   },
   {
@@ -42,7 +44,7 @@ const quickActions: Array<{
     title: 'Academia',
     description: 'Jovens promessas, scouting e desenvolvimento de longo prazo.',
     cta: 'Ver promessas',
-    href: '/city/youth-prospects',
+    href: '/clube/academia',
     rail: 'bg-cyan-400',
   },
   {
@@ -50,7 +52,7 @@ const quickActions: Array<{
     title: 'Estruturas',
     description: 'Instalações do clube, upgrades e impacto no rendimento.',
     cta: 'Visitar estruturas',
-    href: '/city',
+    href: '/clube/estruturas',
     rail: 'bg-fuchsia-400',
   },
 ];
@@ -59,7 +61,19 @@ export function ClubHub() {
   useTrackScreen('screen_club_hub');
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
+  const staffRoles = useGameStore((s) => s.manager.staff.roles);
+  const structures = useGameStore((s) => s.structures);
+  const managerScore = useGameStore((s) => s.managerScore);
   const playerCount = Object.keys(players).length;
+
+  // Visão geral — dados reais do estado do jogo.
+  const staffLevel = Object.values(staffRoles).reduce((a, b) => a + (b || 0), 0);
+  const academyCount = Object.values(players).filter((p) => p.archetype === 'novo_talento').length;
+  const structuresLevel = Object.values(structures).reduce((a, b) => a + (b || 1), 0);
+
+  // Pontuação do manager — liga o Clube ao core-engagement.
+  const scoreTotal = managerScore?.total ?? 0;
+  const scoreToday = managerScoreToday(managerScore, Date.now());
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 sm:space-y-10">
@@ -147,6 +161,46 @@ export function ClubHub() {
         </motion.div>
       </section>
 
+      {/* Pontuação do Manager — destaque do core-engagement no topo do hub */}
+      <section aria-label="Pontuação do manager">
+        <div
+          className="relative flex items-center justify-between gap-4 overflow-hidden border border-neon-yellow/30 bg-deep-black px-5 py-4 sm:px-6 sm:py-5"
+          style={{ borderRadius: 'var(--radius-card)' }}
+        >
+          <div className="flex items-center gap-4 min-w-0">
+            <span
+              aria-hidden
+              className="grid h-11 w-11 flex-none place-items-center"
+              style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(253,225,0,0.12)' }}
+            >
+              <TrendingUp className="h-5 w-5 text-neon-yellow" strokeWidth={2.4} />
+            </span>
+            <div className="min-w-0">
+              <p className="font-display text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">
+                Pontuação do manager
+              </p>
+              <p className="font-impact leading-none text-neon-yellow tabular-nums" style={{ fontSize: 'clamp(30px, 7vw, 46px)' }}>
+                {scoreTotal.toLocaleString('pt-BR')}
+              </p>
+            </div>
+          </div>
+          <div className="flex-none text-right">
+            {scoreToday > 0 ? (
+              <span
+                className="inline-flex items-center gap-1 border border-neon-yellow/40 bg-neon-yellow/10 px-3 py-1.5 font-display text-xs font-black uppercase tracking-wider text-neon-yellow tabular-nums"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              >
+                +{scoreToday.toLocaleString('pt-BR')} hoje
+              </span>
+            ) : (
+              <span className="block max-w-[9rem] text-[11px] leading-snug text-white/45">
+                Gerir o clube rende pontos hoje.
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Quick Actions — Sprint B Legacy Tech: rail colorido + título grande + CTA texto-claro */}
       <section>
         <h2 className="text-sm font-display font-bold uppercase tracking-[0.22em] text-white/70 mb-4 px-1">
@@ -175,9 +229,9 @@ export function ClubHub() {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatTile value={playerCount} label="Jogadores" tone="accent" />
-          <StatTile value="—" label="Staff" />
-          <StatTile value="—" label="Academia" />
-          <StatTile value="—" label="Estruturas" />
+          <StatTile value={staffLevel} label="Staff" hint="nível somado" />
+          <StatTile value={academyCount} label="Academia" hint="crias reveladas" />
+          <StatTile value={structuresLevel} label="Estruturas" hint="nível somado" />
         </div>
       </section>
     </div>

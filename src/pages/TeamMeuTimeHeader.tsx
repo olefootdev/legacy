@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import { GameBannerBackdrop } from '@/components/GameBannerBackdrop';
 
 /**
- * Header padrão das páginas /clube/elenco · /clube/treino · /clube/staff · /clube/ailabs.
+ * Header padrão das páginas /clube/elenco · /clube/treino · /clube/staff.
  *
  * Sprint B-3 (Apr/2026): tab-bar e Veracity strip removidas — navegação
- * agora vive no /clube hub (HubSectionCards) e atalhos pontuais (ex.: AI Labs)
- * ficam no toolbar local da página. Quando `customHero` é passado, o banner
+ * agora vive no /clube hub (HubSectionCards) e atalhos pontuais ficam no
+ * toolbar local da página. Quando `customHero` é passado, o banner
  * default é substituído integralmente.
  */
 export type TeamMeuTimeHeaderProps = {

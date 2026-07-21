@@ -113,7 +113,6 @@ const OleFieldLabAerea = lazy(() => import('./pages/OleFieldLabAerea').then((m) 
 const Team = lazy(() => import('./pages/Team').then((m) => ({ default: m.Team })));
 const TeamTraining = lazy(() => import('./pages/TeamTraining').then((m) => ({ default: m.TeamTraining })));
 const TeamStaff = lazy(() => import('./pages/TeamStaff').then((m) => ({ default: m.TeamStaff })));
-const TeamAiLabs = lazy(() => import('./pages/TeamAiLabs').then((m) => ({ default: m.TeamAiLabs })));
 const CoachChat = lazy(() => import('./pages/CoachChat').then((m) => ({ default: m.CoachChat })));
 const YouthProspects = lazy(() => import('./pages/YouthProspects').then((m) => ({ default: m.YouthProspects })));
 const City = lazy(() => import('./pages/City').then((m) => ({ default: m.City })));
@@ -560,7 +559,6 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/coach/chat" element={<CoachChat />} />
             <Route path="/clube/academia" element={<YouthProspects />} />
             <Route path="/clube/estruturas" element={<City />} />
-            <Route path="/clube/ailabs" element={<TeamAiLabs />} />
 
             {/* Competição subpages */}
             <Route path="/competicao/ligas" element={<Leagues />} />
@@ -607,7 +605,6 @@ as a nice MVP. Let's Play Together! ⚽
             <Route path="/team/tatica" element={<Navigate to="/clube/elenco" replace />} />
             <Route path="/team/treino" element={<Navigate to="/clube/treino" replace />} />
             <Route path="/team/staff" element={<Navigate to="/clube/staff" replace />} />
-            <Route path="/team/ailabs" element={<Navigate to="/clube/ailabs" replace />} />
             <Route path="/city" element={<Navigate to="/clube/estruturas" replace />} />
             <Route path="/city/youth-prospects" element={<Navigate to="/clube/academia" replace />} />
             <Route path="/transfer" element={<Navigate to="/mercado/transfer" replace />} />
