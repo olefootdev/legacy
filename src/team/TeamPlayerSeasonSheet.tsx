@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, TrendingDown, TrendingUp, Minus, Activity, Zap, Megaphone, Sparkles, Flame } from 'lucide-react';
+import { X, TrendingDown, TrendingUp, Minus, Activity, Zap, Megaphone, Sparkles, Flame, Lock, Eye, CircleDollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -187,25 +187,33 @@ export function TeamPlayerSeasonSheet({
         <div className="relative w-full border-b border-white/10 bg-black overflow-hidden shrink-0">
           {/* Foto do jogador — hero slider generoso */}
           <div className="relative w-full overflow-hidden bg-black" style={{ height: 'clamp(280px, 45vh, 500px)' }}>
-            {/* Background tonal */}
+            {/* Spotlight de estúdio — dá profundidade e faz a moldura da foto parecer uma ficha */}
             <div
-              className={cn(
-                'absolute inset-0',
-                card.style === 'neon-yellow' ? 'bg-neon-yellow/10' : 'bg-white/5',
-              )}
               aria-hidden
+              className="absolute inset-0"
+              style={{
+                background:
+                  card.style === 'neon-yellow'
+                    ? 'radial-gradient(120% 90% at 50% 22%, rgba(253,225,0,0.14) 0%, rgba(20,18,4,0.85) 55%, #050505 100%)'
+                    : 'radial-gradient(120% 90% at 50% 22%, rgba(255,255,255,0.08) 0%, rgba(12,12,12,0.9) 55%, #050505 100%)',
+              }}
             />
-            {/* Foto — object-contain garante que a foto inteira apareça sem cortes */}
+            {/* Foto — object-contain garante que a cabeça nunca seja cortada; o spotlight cobre as laterais */}
             <img
               src={playerPortraitSrc({ id: player.id, name: player.name, portraitUrl: player.portraitUrl }, 800, 1200)}
               alt=""
               className="absolute inset-0 h-full w-full object-contain object-center grayscale"
               referrerPolicy="no-referrer"
             />
+            {/* Vinheta superior — headroom visual: se a foto encostar no topo, lê como moldura, não como corte */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent"
+            />
             {/* Gradient overlay para leitura — mais forte nas bordas */}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/95"
             />
 
             {/* OVR — Moret italic editorial (canto superior esquerdo) */}
@@ -409,7 +417,7 @@ export function TeamPlayerSeasonSheet({
               style={{ borderRadius: 'var(--radius-sm)' }}
             >
               <span
-                className="mr-1.5 uppercase"
+                className="mr-1.5 inline-flex items-center gap-1.5 uppercase align-middle"
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: '9px',
@@ -417,9 +425,24 @@ export function TeamPlayerSeasonSheet({
                   letterSpacing: '0.18em',
                 }}
               >
-                {insight.recommendation.action === 'sell' && '💰 Oportunidade'}
-                {insight.recommendation.action === 'hold' && '🔒 Segurar'}
-                {insight.recommendation.action === 'watch' && '👁 Observar'}
+                {insight.recommendation.action === 'sell' && (
+                  <>
+                    <CircleDollarSign className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
+                    Oportunidade
+                  </>
+                )}
+                {insight.recommendation.action === 'hold' && (
+                  <>
+                    <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
+                    Segurar
+                  </>
+                )}
+                {insight.recommendation.action === 'watch' && (
+                  <>
+                    <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2.2} />
+                    Observar
+                  </>
+                )}
               </span>
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px' }}>
                 {insight.recommendation.text}

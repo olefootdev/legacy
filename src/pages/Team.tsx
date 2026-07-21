@@ -313,7 +313,7 @@ export function Team() {
     const name = announcePlayer.name;
     dispatch({ type: 'MARKET_MAKER_ACCEPT', playerId: announcePlayer.id, offerExp });
     setAnnouncePlayer(null);
-    setSaveBanner({ kind: 'success', text: `Market Maker comprou ${name} por ${formatExp(offerExp)} EXP 💰` });
+    setSaveBanner({ kind: 'success', text: `Market Maker comprou ${name} por ${formatExp(offerExp)} EXP` });
     // Salvar no Supabase (fire-and-forget)
     const sb = getSupabase();
     if (sb) {
