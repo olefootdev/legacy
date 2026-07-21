@@ -3134,6 +3134,81 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         },
       };
     }
+    // ── NEGOCIAÇÃO P2P ENTRE MANAGERS ──
+    case 'SET_MARKET_OFFERS': {
+      // Sincroniza a lista de propostas (recebidas/enviadas) vinda do servidor.
+      return {
+        ...state,
+        managerProspectMarket: {
+          ...state.managerProspectMarket,
+          incomingOffers: action.incoming,
+          outgoingOffers: action.outgoing,
+        },
+      };
+    }
+    case 'APPLY_OFFER_ACCEPTED_AS_BUYER': {
+      // Minha proposta foi ACEITA (servidor já fez a transferência atômica):
+      // entrego o jogador e SETO o OLE autoritativo (não re-deduz). Idempotente.
+      const pid = action.player.id;
+      const expHistory = action.ledgerEntry && !state.players[pid]
+        ? [action.ledgerEntry, ...(state.finance.expHistory ?? [])].slice(0, 120)
+        : state.finance.expHistory;
+      const finance = { ...state.finance, ole: Math.max(0, Math.round(action.ole)), expHistory };
+      if (state.players[pid]) return { ...state, finance };
+      return {
+        ...state,
+        finance,
+        players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
+        managerScore: addManagerScore(state.managerScore, 'compra_jogador', `Contratou ${action.player.name} por proposta`, Date.now()),
+        managerProspectMarket: {
+          ...state.managerProspectMarket,
+          outgoingOffers: (state.managerProspectMarket.outgoingOffers ?? []).filter((o) => o.gamePlayerId !== pid),
+        },
+        inbox: [
+          makeInboxItem(
+            `offer-won-${Date.now()}`,
+            'PLAYER_SOLD',
+            'FINANCEIRO',
+            `Proposta aceita: ${action.player.name} é teu.`,
+            { body: `Pagaste ${action.priceExp.toLocaleString('pt-BR')} EXP. Jogador no plantel.`, deepLink: '/clube/elenco', hideFromHomeFeed: false },
+          ),
+          ...state.inbox,
+        ].slice(0, 60),
+      };
+    }
+    case 'APPLY_OFFER_SETTLED_AS_SELLER': {
+      // Meu jogador foi VENDIDO por proposta aceita: removo do plantel e da
+      // escalação. O EXP é creditado via wallet_credits ao logar (não re-credito
+      // aqui pra não duplicar) — mostro o feito e pontuo a venda.
+      if (!state.players[action.playerId]) return state;
+      const players = { ...state.players };
+      delete players[action.playerId];
+      const lineup = { ...state.lineup };
+      for (const [slot, pid] of Object.entries(lineup)) {
+        if (pid === action.playerId) delete lineup[slot];
+      }
+      return {
+        ...state,
+        players,
+        lineup,
+        managerScore: addManagerScore(state.managerScore, 'venda_jogador', `Vendeu ${action.playerName} para ${action.buyerClubName}`, Date.now()),
+        managerProspectMarket: {
+          ...state.managerProspectMarket,
+          ownListings: state.managerProspectMarket.ownListings.filter((l) => l.playerId !== action.playerId),
+          incomingOffers: (state.managerProspectMarket.incomingOffers ?? []).filter((o) => o.gamePlayerId !== action.playerId),
+        },
+        inbox: [
+          makeInboxItem(
+            `offer-sold-${Date.now()}`,
+            'PLAYER_SOLD',
+            'FINANCEIRO',
+            `Vendeste ${action.playerName} por ${action.creditExp.toLocaleString('pt-BR')} EXP.`,
+            { body: `${action.buyerClubName} fechou a proposta. EXP creditado na carteira.`, deepLink: '/wallet', hideFromHomeFeed: false },
+          ),
+          ...state.inbox,
+        ].slice(0, 60),
+      };
+    }
     case 'BUY_GENESIS_MARKET_PLAYER': {
       const pid = action.player.id;
       if (!pid.startsWith('genesis-')) return state;

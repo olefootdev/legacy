@@ -174,9 +174,30 @@ export interface ManagerNpcMarketOffer {
   priceExp: number;
 }
 
+/** Proposta P2P entre managers (proposta → aceite/negação/contraproposta). */
+export type MarketOfferStatus = 'pending' | 'accepted' | 'rejected' | 'countered' | 'cancelled' | 'expired';
+export interface MarketOffer {
+  offerId: string;
+  listingId: string;
+  gamePlayerId: string;
+  playerName: string;
+  playerOverall: number;
+  buyerUserId: string;
+  buyerClubName: string;
+  sellerUserId: string;
+  offerExp: number;
+  status: MarketOfferStatus;
+  counterExp?: number;
+  createdAtIso: string;
+}
+
 export interface ManagerProspectMarketState {
   ownListings: ManagerOwnListing[];
   npcOffers: ManagerNpcMarketOffer[];
+  /** Propostas RECEBIDAS (sou o vendedor) — pendentes/contrapropostas. */
+  incomingOffers?: MarketOffer[];
+  /** Propostas ENVIADAS (sou o comprador). */
+  outgoingOffers?: MarketOffer[];
 }
 
 /** Custo EXP da Academia OLE (configurável no Admin). */
@@ -917,6 +938,10 @@ export type GameAction =
   | { type: 'LIST_MANAGER_PROSPECT'; playerId: string; priceExp: number }
   | { type: 'DELIST_MANAGER_PROSPECT'; listingId: string }
   | { type: 'MARKET_MAKER_ACCEPT'; playerId: string; offerExp: number }
+  // ── Negociação P2P entre managers (proposta → aceite/negação) ──
+  | { type: 'SET_MARKET_OFFERS'; incoming: MarketOffer[]; outgoing: MarketOffer[] }
+  | { type: 'APPLY_OFFER_ACCEPTED_AS_BUYER'; player: PlayerEntity; priceExp: number; ole: number; ledgerEntry?: { id: string; amount: number; source: string; createdAt: string } }
+  | { type: 'APPLY_OFFER_SETTLED_AS_SELLER'; playerId: string; playerName: string; creditExp: number; buyerClubName: string }
   | {
       type: 'BUY_GENESIS_MARKET_PLAYER';
       player: import('@/entities/types').PlayerEntity;
