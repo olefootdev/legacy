@@ -8,10 +8,11 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import { Ban, CircleCheck, FileText, Handshake, type LucideIcon } from 'lucide-react';
 
 type Row = {
   key: string;
-  icon: string;
+  icon: LucideIcon;
   title: string;
   subtitle: string;
   count: number;
@@ -37,7 +38,7 @@ export function ManagerDesk({
   if (suspendedCount > 0) {
     rows.push({
       key: 'susp',
-      icon: '⛔',
+      icon: Ban,
       title: 'Suspensões',
       subtitle: `${suspendedCount} jogador${suspendedCount > 1 ? 'es' : ''} fora da próxima`,
       count: suspendedCount,
@@ -48,7 +49,7 @@ export function ManagerDesk({
   if (expiredCount > 0) {
     rows.push({
       key: 'contract',
-      icon: '📄',
+      icon: FileText,
       title: 'Contrato vencido',
       subtitle: `${expiredCount} não pode${expiredCount > 1 ? 'm' : ''} ser escalado${expiredCount > 1 ? 's' : ''}`,
       count: expiredCount,
@@ -60,7 +61,7 @@ export function ManagerDesk({
   if (offersCount > 0) {
     rows.push({
       key: 'offers',
-      icon: '💰',
+      icon: Handshake,
       title: 'Propostas de compra',
       subtitle: `${offersCount} proposta${offersCount > 1 ? 's' : ''} pelo teu elenco`,
       count: offersCount,
@@ -89,8 +90,12 @@ export function ManagerDesk({
           className="flex items-center gap-3 border border-[var(--color-border)] bg-dark-gray px-4 py-4"
           style={{ borderRadius: 'var(--radius-md)', borderLeft: '3px solid var(--color-success)' }}
         >
-          <span aria-hidden style={{ fontSize: '16px' }}>
-            ✅
+          <span
+            aria-hidden
+            className="grid h-8 w-8 flex-none place-items-center bg-[var(--color-card)]"
+            style={{ borderRadius: 'var(--radius-sm)' }}
+          >
+            <CircleCheck className="h-4 w-4" strokeWidth={2.2} style={{ color: 'var(--color-success)' }} />
           </span>
           <div>
             <p className="font-impact uppercase text-white" style={{ fontSize: '12px' }}>
@@ -113,9 +118,9 @@ export function ManagerDesk({
             <span
               aria-hidden
               className="grid h-8 w-8 flex-none place-items-center bg-[var(--color-card)]"
-              style={{ borderRadius: 'var(--radius-sm)', fontSize: '14px' }}
+              style={{ borderRadius: 'var(--radius-sm)' }}
             >
-              {r.icon}
+              <r.icon className="h-4 w-4" strokeWidth={2.2} style={{ color: toneColor[r.tone] }} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-impact uppercase text-white" style={{ fontSize: '11px' }}>

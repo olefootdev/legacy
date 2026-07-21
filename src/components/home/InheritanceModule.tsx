@@ -7,6 +7,8 @@
  * joia, o módulo NÃO é renderizado (Home decide) — nunca inventa nome.
  */
 
+import { ArrowRight } from 'lucide-react';
+
 const MORET = 'var(--font-serif-hero)';
 
 export type HeirFigure = { name: string; num: number };
@@ -51,9 +53,7 @@ export function InheritanceModule({ legend, jewel }: { legend: HeirFigure; jewel
         </div>
 
         <div className="flex flex-col items-center justify-center gap-1" style={{ color: '#C7A64E' }}>
-          <span aria-hidden className="font-impact" style={{ fontSize: '16px' }}>
-            →
-          </span>
+          <ArrowRight aria-hidden className="h-4 w-4" strokeWidth={2.5} />
           <span
             className="font-display font-black uppercase text-white/40"
             style={{ fontSize: '6.5px', letterSpacing: '0.08em' }}

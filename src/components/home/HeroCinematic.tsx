@@ -8,6 +8,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { Play } from 'lucide-react';
 
 export function HeroCinematic({
   clubName,
@@ -150,9 +151,7 @@ export function HeroCinematic({
               {cupSublabel}
             </span>
           </span>
-          <span aria-hidden className="ml-3 flex-none font-impact" style={{ fontSize: '15px' }}>
-            ▶
-          </span>
+          <Play aria-hidden className="ml-3 h-4 w-4 flex-none fill-current" strokeWidth={0} />
         </Link>
       </div>
     </section>

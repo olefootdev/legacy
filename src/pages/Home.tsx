@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, Search, X } from 'lucide-react';
+import { ChevronRight, Flame, Search, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
@@ -885,8 +885,9 @@ export function Home() {
                     {((quickStreak?.current ?? 0) >= 2 || quickBestWin) && (
                       <div className="rounded border border-neon-yellow/30 bg-neon-yellow/[0.06] px-3 py-2">
                         {(quickStreak?.current ?? 0) >= 2 && (
-                          <p className="text-[11px] text-white/85 font-semibold">
-                            🔥 Você vem de <span className="text-neon-yellow font-bold">{quickStreak!.current} vitórias seguidas</span> — não quebre o embalo.
+                          <p className="flex items-center gap-1.5 text-[11px] text-white/85 font-semibold">
+                            <Flame className="h-3.5 w-3.5 flex-none text-neon-yellow" aria-hidden />
+                            Você vem de <span className="text-neon-yellow font-bold">{quickStreak!.current} vitórias seguidas</span> — não quebre o embalo.
                           </p>
                         )}
                         {quickBestWin && (
