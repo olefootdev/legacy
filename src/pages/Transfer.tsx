@@ -43,6 +43,9 @@ import { olefootApiBase } from '@/gamespirit/admin/runtimeTruth';
 import { getSupabase } from '@/supabase/client';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { BackButton } from '@/components/BackButton';
+import { useMarketOffers } from '@/hooks/useMarketOffers';
+import { MakeOfferModal } from '@/components/market/MakeOfferModal';
+import { MarketOffersPanel } from '@/components/market/MarketOffersPanel';
 import { recordMarketActivity } from '@/supabase/marketActivities';
 
 const BIO_MAX_LEN = 250;
@@ -361,6 +364,9 @@ export function Transfer() {
   const [genesisAuctionCards, setGenesisAuctionCards] = useState<MockAuctionPlayer[]>([]);
   const [genesisListedEntities, setGenesisListedEntities] = useState<Record<string, PlayerEntity>>({});
   const [otherManagerListings, setOtherManagerListings] = useState<OtherManagerListing[]>([]);
+  // Negociação P2P — proposta de compra por listagem de outro manager.
+  const marketOffers = useMarketOffers();
+  const [offerModalListingId, setOfferModalListingId] = useState<string | null>(null);
   const { flags } = usePlatformConfig();
   const legacyMarketEnabled = flags.LEGACY_MARKET && flags.LEGACY_DNA;
   // Abre direto em LEGACIES (área premium) quando habilitada, pra não ficar escondida.
@@ -880,6 +886,8 @@ export function Transfer() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-20 md:pb-24">
       <BackButton to="/mercado" label="Mercado" />
+      {/* ── PROPOSTAS P2P (negociação entre managers) ── */}
+      <MarketOffersPanel />
       {/* ── HERO EDITORIAL — diagonal split + watermark cinematográfico ── */}
       <section
         aria-label="Mercado de transferências"
@@ -1817,7 +1825,55 @@ export function Transfer() {
                             </div>
                           </div>
                           
-                          {selectedPlayer.marketKind === 'manager_own' ||
+                          {selectedPlayer.marketKind === 'manager_other' &&
+                          selectedPlayer.managerListingId ? (
+                            <div className="space-y-3">
+                              <p className="text-[10px] text-gray-400">
+                                Saldo EXP:{' '}
+                                <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
+                              </p>
+                              {(() => {
+                                const pending = marketOffers.pendingForListing(selectedPlayer.managerListingId!);
+                                return pending ? (
+                                  <p className="text-[11px] text-neon-yellow/80">
+                                    {pending.status === 'countered' && pending.counterExp != null
+                                      ? `Contraproposta do vendedor: ${formatExp(pending.counterExp)}.`
+                                      : `Proposta enviada: ${formatExp(pending.offerExp)} (pendente).`}
+                                  </p>
+                                ) : null;
+                              })()}
+                              {purchaseError && (
+                                <p className="text-xs text-red-400 font-medium">{purchaseError}</p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={handleAcademiaMarketAction}
+                                disabled={isPurchasing || oleBal < selectedPlayer.buyNow}
+                                className={cn(
+                                  'btn-primary min-h-12 w-full bg-neon-green px-3 py-3 text-black hover:bg-white sm:py-4',
+                                  (isPurchasing || oleBal < selectedPlayer.buyNow) && 'pointer-events-none opacity-40',
+                                )}
+                              >
+                                <span className="skew-x-6 block text-center text-sm font-black uppercase sm:text-base">
+                                  {isPurchasing
+                                    ? 'A processar…'
+                                    : `Comprar agora · ${formatAuctionDisplay(
+                                        selectedPlayer.auctionCurrency,
+                                        selectedPlayer.buyNow,
+                                      )}`}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setOfferModalListingId(selectedPlayer.managerListingId!)}
+                                className="min-h-12 w-full rounded-lg border-2 border-neon-yellow/60 bg-neon-yellow/10 px-3 py-3 font-display text-sm font-black uppercase tracking-wide text-neon-yellow transition-colors hover:bg-neon-yellow/20 sm:py-4"
+                              >
+                                {marketOffers.pendingForListing(selectedPlayer.managerListingId)
+                                  ? 'Atualizar proposta'
+                                  : 'Fazer proposta'}
+                              </button>
+                            </div>
+                          ) : selectedPlayer.marketKind === 'manager_own' ||
                           selectedPlayer.marketKind === 'genesis' ? (
                             <div className="space-y-3">
                               {selectedPlayer.marketKind === 'manager_own' ? (
@@ -1935,6 +1991,25 @@ export function Transfer() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal de PROPOSTA (negociação P2P) por listagem de outro manager */}
+      {(() => {
+        if (!offerModalListingId) return null;
+        const listing = otherManagerListings.find((l) => l.listingId === offerModalListingId);
+        if (!listing) return null;
+        return (
+          <MakeOfferModal
+            open
+            onClose={() => setOfferModalListingId(null)}
+            playerName={listing.player.name}
+            playerOverall={overallFromAttributes(listing.player.attrs, listing.player.pos)}
+            listPriceExp={listing.priceExp}
+            balanceExp={oleBal}
+            existingOffer={marketOffers.pendingForListing(offerModalListingId)}
+            onSubmit={(offerExp) => marketOffers.propose(offerModalListingId, offerExp)}
+          />
+        );
+      })()}
       </div>
     </div>
   );
