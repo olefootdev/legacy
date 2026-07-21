@@ -1,14 +1,23 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, ChevronRight, Activity, Search, Star, X, UserPlus, TrendingUp, Heart } from 'lucide-react';
+import {
+  ArrowRightLeft,
+  ChevronRight,
+  Crown,
+  Dumbbell,
+  Search,
+  Trophy,
+  Wallet,
+  X,
+  Zap,
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useGameDispatch, useGameStore } from '@/game/store';
 import { formatExp, FRIENDLY_CHALLENGE_BRO_FEE_RATE, friendlyChallengeBroFeeCents } from '@/systems/economy';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '@/supabase/client';
 import { useNextGlobalFixture } from '@/hooks/useNextGlobalFixture';
-import { useCrowdSupport } from '@/hooks/useCrowdSupport';
 import {
   createFriendlyChallenge,
   FRIENDLY_CHALLENGE_TTL_SEC,
@@ -20,157 +29,73 @@ import {
   type ClubSearchHit,
   type FriendlyChallengeRow,
 } from '@/supabase/friendlyChallenges';
-import type { PastResult, PlayerEntity } from '@/entities/types';
-import { overallFromAttributes } from '@/entities/player';
-import { isHiddenFromHomeInboxFeed, type InboxItem } from '@/game/inboxTypes';
 import {
   filterOpponentRankingMatches,
   type RankingEntry,
 } from '@/ranking/worldRanking';
 import { getGlobalLeagueRankingEntries } from '@/ranking/globalLeagueRanking';
-import { playerPortraitSrc } from '@/lib/playerPortrait';
 import { makeInboxItem } from '@/game/inboxItem';
-import { DashboardGrid, DashboardSection } from '@/components/dashboard';
-import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
-import { computeCareerTier } from '@/systems/careerTiers';
 import { MarketActivityFeed } from '@/market/MarketActivityFeed';
 import { fetchMarketActivities } from '@/supabase/marketActivities';
 import type { MarketActivity } from '@/market/socialTrade';
-import { HomeManagerFeed } from '@/components/home/HomeManagerFeed';
-import { SquadNewsCard } from '@/components/home/SquadNewsCard';
-import { MatchPredictionPanel } from '@/components/match/MatchPredictionPanel';
-import { simulateMatchN } from '@/match/matchMonteCarlo';
-import { computeMatchContextModifiers } from '@/match/contextFactors';
-import { nemesisIsDerby } from '@/match/rivalDerby';
-import { renownTitle } from '@/systems/renown';
-import { dnaLabel } from '@/systems/clubDna';
-import { selectEffectiveTeamStrength } from '@/match/availabilityReport';
-import { LegacyRoundBanner } from '@/components/home/LegacyRoundBanner';
-import { HomeHeroLegacy } from '@/components/home/HomeHeroLegacy';
-import { MatchdayHero } from '@/components/matchday/MatchdayHero';
 import { AbsenceBanner } from '@/components/olefoot-python-mode/AbsenceBanner';
 import { LoginBonusWidget } from '@/components/olefoot-python-mode/LoginBonusWidget';
 import { PassiveIncomeWidget } from '@/components/PassiveIncomeWidget';
 import { LigaOleBanner } from '@/components/home/LigaOleBanner';
 import { CoroaDoDiaBanner } from '@/components/home/CoroaDoDiaBanner';
-import { EngajamentoBanner } from '@/components/home/EngajamentoBanner';
-import { ClubPowerBanner } from '@/components/home/ClubPowerBanner';
 import { DesafioDiarioBanner } from '@/components/home/DesafioDiarioBanner';
 import { shouldResetDailyChallenges } from '@/game/dailyChallenges';
 import { shouldRefreshChallenges } from '@/match/quickStreakChallenges';
 import { fetchMyPendingPvpResults, claimPvpMatchResult } from '@/supabase/pvpMatches';
-
-/**
- * DEV mode: quando faltam dados reais (save fresco, sem fixture com crest,
- * sem histórico), mostra o MOCK editorial pra reconstrução visual ficar
- * "viva". Em produção, o fallback ESTREIA limpo é exibido.
- */
-const HOME_HERO_DEV_MOCK = import.meta.env.DEV;
-/**
- * Brasões usados só em DEV pra preview do hero/banner.
- * Origem: api-sports media (mesmo CDN que o save real consome via
- * src/settings/brazilianClubs.ts — Flamengo id=127, Palmeiras id=121).
- */
-const DEV_HOME_CREST = 'https://media.api-sports.io/football/teams/127.png';
-const DEV_AWAY_CREST = 'https://media.api-sports.io/football/teams/121.png';
+import { MANAGER_SCORE_TABLE, managerScoreToday } from '@/systems/managerScore/managerScore';
+import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
 
-const HOME_NOTIF_VISIBLE_COUNT = 5;
+/** Hero — asset real do repositório (mesmo do antigo HomeHeroLegacy). */
+const HERO_IMAGE = '/hero-legacy-full.png';
 
-/** Abas fixas da HOME — alinhadas ao pedido (não mostrar só categorias que já existem no inbox). */
-type HomeNotifTab = 'ALL' | 'STAFF' | 'TORCIDA' | 'JOGADORES' | 'COMPETIÇÃO';
-
-const HOME_NOTIF_TABS: { key: HomeNotifTab; label: string }[] = [
-  { key: 'ALL', label: 'Todos' },
-  { key: 'STAFF', label: 'Staff' },
-  { key: 'TORCIDA', label: 'Torcida' },
-  { key: 'JOGADORES', label: 'Jogadores' },
-  { key: 'COMPETIÇÃO', label: 'Competição' },
-];
-
-function inboxMatchesHomeNotifTab(item: InboxItem, tab: HomeNotifTab): boolean {
-  if (tab === 'ALL') return true;
-  if (tab === 'STAFF') return item.category === 'STAFF';
-  if (tab === 'TORCIDA') return item.category === 'TORCIDA';
-  if (tab === 'JOGADORES') return item.category === 'PLANTEL' || item.category === 'TREINO';
-  if (tab === 'COMPETIÇÃO') return item.category === 'COMPETIÇÃO';
-  return true;
+/** Card compacto do rail — rail amarelo 3px à esquerda (Legacy Tech). */
+function RailCard({
+  label,
+  children,
+  accent = true,
+}: {
+  label: string;
+  children: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'border border-l-[3px] border-[var(--color-border)] bg-dark-gray p-4 transition-all',
+        accent ? 'border-l-neon-yellow' : 'border-l-white/15',
+      )}
+      style={{ borderRadius: 'var(--radius-md)' }}
+    >
+      <p
+        className="font-display font-black uppercase text-white/55"
+        style={{ fontSize: '10px', letterSpacing: '0.28em' }}
+      >
+        {label}
+      </p>
+      <div className="mt-2.5">{children}</div>
+    </div>
+  );
 }
 
-function InboxBodyText({ text }: { text: string }) {
-  const parts = useMemo(() => {
-    const nodes: ReactNode[] = [];
-    const re = /\*\*(.+?)\*\*/g;
-    let last = 0;
-    let m: RegExpExecArray | null;
-    let k = 0;
-    while ((m = re.exec(text)) !== null) {
-      if (m.index > last) {
-        nodes.push(<span key={`t-${k++}`}>{text.slice(last, m.index)}</span>);
-      }
-      nodes.push(
-        <strong key={`b-${k++}`} className="font-semibold text-white">
-          {m[1]}
-        </strong>,
-      );
-      last = re.lastIndex;
-    }
-    if (last < text.length) {
-      nodes.push(<span key={`t-${k++}`}>{text.slice(last)}</span>);
-    }
-    return nodes.length ? nodes : text;
-  }, [text]);
-  return <p className="text-xs text-gray-400 mt-1 leading-relaxed">{parts}</p>;
-}
-
-function pickHighlightFromRoster(players: Record<string, PlayerEntity>): PlayerEntity | null {
-  const list = Object.values(players);
-  const outfield = list.filter((p) => p.pos.toUpperCase() !== 'GOL');
-  const candidates = outfield.length ? outfield : list;
-  if (!candidates.length) return null;
-  let best = candidates[0]!;
-  let bestOvr = overallFromAttributes(best.attrs, best.pos);
-  for (const p of candidates) {
-    const o = overallFromAttributes(p.attrs, p.pos);
-    if (o > bestOvr) {
-      best = p;
-      bestOvr = o;
-    }
-  }
-  return best;
-}
-
-function starsForOvr(ovr: number): number {
-  return Math.max(1, Math.min(5, Math.round(ovr / 20)));
-}
-
-function resultOutcomeMeta(result: PastResult['result']) {
-  switch (result) {
-    case 'win':
-      return {
-        label: 'V',
-        sub: 'Vitória',
-        bar: 'bg-emerald-400',
-        pill: 'text-emerald-300',
-        side: 'bg-emerald-500/15 border-emerald-400/25',
-      };
-    case 'draw':
-      return {
-        label: 'E',
-        sub: 'Empate',
-        bar: 'bg-amber-400',
-        pill: 'text-amber-200',
-        side: 'bg-amber-500/12 border-amber-400/20',
-      };
-    case 'loss':
-      return {
-        label: 'D',
-        sub: 'Derrota',
-        bar: 'bg-red-500',
-        pill: 'text-red-300',
-        side: 'bg-red-500/12 border-red-500/25',
-      };
-  }
+/** Header compacto de seção — rail + label Agency (copy mínima). */
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <span aria-hidden className="w-1 h-4 bg-neon-yellow" />
+      <h2
+        className="font-display font-black uppercase text-white"
+        style={{ fontSize: '11px', letterSpacing: '0.26em' }}
+      >
+        {text}
+      </h2>
+    </div>
+  );
 }
 
 export function Home() {
@@ -178,36 +103,23 @@ export function Home() {
   const dispatch = useGameDispatch();
   const navigate = useNavigate();
   const finance = useGameStore((s) => s.finance);
-  const crowd = useCrowdSupport();
-  const results = useGameStore((s) => s.results);
   const inbox = useGameStore((s) => s.inbox);
-  const fixture = useGameStore((s) => s.nextFixture);
   const club = useGameStore((s) => s.club);
-  const players = useGameStore((s) => s.players);
-  const playerHealth = useGameStore((s) => s.playerHealth);
 
-  // Próxima partida real da Global League — sobrepõe o fixture estático (TITANS mock)
+  // Próxima partida real da Global League
   const nextGlobal = useNextGlobalFixture();
-  /** Sprint C — Fase A: dados extras pro mini-painel manager. */
-  const playerSeasonLedger = useGameStore((s) => s.playerSeasonLedger);
-  const formGlobal = useGameStore((s) => s.form);
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
-  const localLeagues = useGameStore((s) => s.localLeagues);
   // Identidade do manager na Liga Global (manager_id = email ?? club.id).
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
-  const homeCrestUrl = useGameStore((s) => matchdayHomeCrestUrl(s.userSettings));
-  const awayCrestUrl = useGameStore(
-    (s) => s.nextFixture.opponent.supporterCrestUrl?.trim() ?? null,
-  );
   const dailyChallenges = useGameStore((s) => s.dailyChallenges);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
   // Viral #5 (saga) + #6 (rival fantasma): sequência viva + recorde a bater.
   const quickStreak = useGameStore((s) => s.quickMatchStreak);
   const quickBestWin = useGameStore((s) => s.quickBestWin);
-  // FABLE — nêmesis (derby na predição) + renome (título público no hero).
-  const ligaOleNemesisHome = useGameStore((s) => s.ligaOleNemesis);
-  const clubRenown = useGameStore((s) => s.clubRenown);
-  const clubDnaHome = useGameStore((s) => s.clubDna);
+  // REBRAND — pontuação do manager (eixo da Home nova).
+  const managerScore = useGameStore((s) => s.managerScore);
+  const legendsCup = useGameStore((s) => s.legendsCup);
+  const trainingPlans = useGameStore((s) => s.manager.trainingPlans);
 
   // Inicializa/renova engagement state quando user abre a Home.
   // Daily reseta por UTC day; streak por semana. Garante que o progress tracker
@@ -272,292 +184,6 @@ export function Home() {
     }
   }, [dispatch, inbox]);
 
-  const homeHighlightBest = useMemo(() => pickHighlightFromRoster(players), [players]);
-  /**
-   * Sprint C — Fase A: highlight expandido com inteligência manager.
-   * Gols/assistências do ledger, forma recente do team, delta OVR vs mintOverall,
-   * tag dinâmica baseada em performance, CTA contextual.
-   */
-  const homeHighlight = useMemo(() => {
-    // Elenco vazio → sem destaque (nada de card placeholder fake).
-    if (!homeHighlightBest) return null;
-    const currentOvr = overallFromAttributes(homeHighlightBest.attrs, homeHighlightBest.pos);
-    const mintOvr = homeHighlightBest.mintOverall ?? currentOvr;
-    const deltaOvr = currentOvr - mintOvr;
-
-    const ledger = playerSeasonLedger?.[homeHighlightBest.id];
-    const goalsSeason = ledger?.goals ?? 0;
-    const assistsSeason = ledger?.assists ?? 0;
-    const matchesPlayed = ledger?.matchesPlayed ?? 0;
-    // MVPs da temporada — conta resultados onde o scoutMvp.playerId bate com o destaque
-    const mvpsSeason = (results ?? []).filter(
-      (r) => r.scoutMvp?.playerId === homeHighlightBest.id,
-    ).length;
-
-    // Forma recente do TIME (últimos 5) — proxy para forma do jogador
-    // (até termos forma individual no ledger).
-    const recentForm: Array<'W' | 'D' | 'L'> = (formGlobal ?? [])
-      .slice(0, 5)
-      .map((f) => (f === 'W' || f === 'D' || f === 'L' ? f : 'D'));
-
-    // Tag dinâmica
-    let tag: string | undefined;
-    if (matchesPlayed === 0) {
-      tag = 'Promessa';
-    } else if (goalsSeason >= 5) {
-      tag = 'Artilheiro';
-    } else if (goalsSeason + assistsSeason >= 5) {
-      tag = 'Em forma';
-    } else if (deltaOvr >= 5) {
-      tag = 'Em ascensão';
-    } else if (currentOvr >= 80) {
-      tag = 'Maestro';
-    } else {
-      tag = 'Joia do plantel';
-    }
-
-    return {
-      id: homeHighlightBest.id,
-      name: homeHighlightBest.name,
-      position: homeHighlightBest.pos,
-      ovr: currentOvr,
-      imageSrc: playerPortraitSrc(
-        { name: homeHighlightBest.name, portraitUrl: homeHighlightBest.portraitUrl },
-        400,
-        520,
-      ),
-      goalsSeason,
-      assistsSeason,
-      mvpsSeason,
-      recentForm: recentForm.length > 0 ? recentForm : undefined,
-      deltaOvr,
-      tag,
-    };
-  }, [homeHighlightBest, playerSeasonLedger, formGlobal, results]);
-
-  // awayHighlight removido — destaque agora é único (homeHighlight) no padrão
-  // /matchday/preview com número OVR gigante decorativo. Se voltar a precisar
-  // do duo casa × visitante, recuperar via git history.
-  const roundedSupport = Math.max(0, Math.min(100, Math.round(crowd.supportPercent * 2) / 2));
-
-  /**
-   * Sprint C Fase D: 4 tiles cinemáticos do mini-painel manager.
-   * Tile #2 mostra POSIÇÃO no ranking global em vez de saldo BRO/EXP.
-   */
-  const managerStatTiles = useMemo(() => {
-    const squadSize = Object.keys(players).length;
-    const ovrXi = (() => {
-      const ovrs = Object.values(players)
-        .map((p) => overallFromAttributes(p.attrs, p.pos))
-        .sort((a, b) => b - a)
-        .slice(0, 11);
-      if (!ovrs.length) return 0;
-      return Math.round(ovrs.reduce((s, o) => s + o, 0) / ovrs.length);
-    })();
-
-    // Posição global REAL do manager — mesma fonte do /competicao/ranking
-    // (times da Liga Global, índice composto). Fallback gracioso: liga ainda
-    // não carregou → só o próprio clube (#1 de 1, comportamento antigo).
-    const allRanked = getGlobalLeagueRankingEntries(
-      globalLeagueMVP?.teams,
-      managerProfile?.email ?? club.id,
-      club.id,
-    );
-    const myRankIdx = allRanked.findIndex((r) => r.isMe);
-    const myRank = allRanked.length === 0 ? 1 : myRankIdx >= 0 ? myRankIdx + 1 : null;
-    const totalManagers = Math.max(1, allRanked.length);
-
-    const last5 = (formGlobal ?? []).slice(0, 5);
-    const formStr = last5.length === 0 ? '—' : last5.join('');
-
-    let ligaValue = 'Aguarda';
-    let ligaTone: 'accent' | 'success' | 'warning' | 'muted' = 'muted';
-    if (globalLeagueMVP) {
-      if (globalLeagueMVP.status === 'waiting_teams') {
-        ligaValue = `${globalLeagueMVP.teams.length}/${globalLeagueMVP.minTeamsRequired}`;
-        ligaTone = 'accent';
-      } else if (globalLeagueMVP.status === 'playoffs') {
-        ligaValue = 'Playoffs';
-        ligaTone = 'warning';
-      } else if (globalLeagueMVP.status === 'active') {
-        ligaValue = 'Em curso';
-        ligaTone = 'success';
-      } else {
-        ligaValue = 'Encerrada';
-      }
-    }
-
-    return [
-      {
-        label: `Plantel · OVR ${ovrXi || '—'}`,
-        value: String(squadSize),
-        href: '/clube/elenco',
-        tone: 'accent' as const,
-      },
-      {
-        label: totalManagers > 0 ? `Ranking · de ${totalManagers}` : 'Ranking Global',
-        value: myRank ? `#${myRank}` : '—',
-        href: '/competicao/ranking',
-        tone: 'accent' as const,
-      },
-      {
-        label: 'Forma · 5J',
-        value: formStr,
-        href: '/competicao/calendario',
-        tone: 'accent' as const,
-      },
-      {
-        label: 'Liga Global',
-        value: ligaValue,
-        href: '/competicao/ligas',
-        tone: ligaTone,
-      },
-      {
-        label: 'Liga Classic',
-        value: localLeagues?.classic?.points
-          ? `${localLeagues.classic.points} pts`
-          : '0 pts',
-        href: '/ligas-locais',
-        tone: 'accent' as const,
-      },
-      {
-        label: 'Fast Liga',
-        value: localLeagues?.fast?.points
-          ? `${localLeagues.fast.points} pts`
-          : '0 pts',
-        href: '/ligas-locais',
-        tone: 'accent' as const,
-      },
-    ];
-  }, [players, club.id, formGlobal, globalLeagueMVP, localLeagues, managerProfile]);
-
-  /** Sprint C Fase F: sem CTAs no destaque (visual mais limpo). */
-  const highlightCtas = useMemo(
-    () => ({ primary: undefined, secondary: undefined }),
-    [],
-  );
-
-  // Fase 1 — Predição V/E/D pra próxima partida. Seed estável (a partir do
-  // opponentId ou fixture id) pra manager ver MESMA leitura ao reabrir Home.
-  const nextMatchPrediction = useMemo(() => {
-    const opponentOvr = nextGlobal?.opponentOverall ?? fixture?.opponent?.strength;
-    const opponentId = nextGlobal
-      ? `g_${nextGlobal.fixture?.id ?? `${nextGlobal.opponentName}_${nextGlobal.roundNumber}`}`
-      : fixture?.opponent?.id;
-    if (!opponentOvr || !opponentId || opponentId === 'placeholder-opponent' || opponentId === 'no-opponent-available') {
-      return null;
-    }
-    const effective = selectEffectiveTeamStrength({ players, health: playerHealth });
-    if (effective.startersCounted === 0) return null;
-    const isHome = nextGlobal ? nextGlobal.isHome : true;
-    const mods = computeMatchContextModifiers({
-      isHome,
-      effectiveTeamStrength: effective,
-      // FABLE — revanche contra o nêmesis é CLÁSSICO (derbyIntensity acende).
-      isDerby: nemesisIsDerby({
-        opponentId: fixture?.opponent?.id,
-        ligaOleNemesisId: ligaOleNemesisHome?.id,
-      }),
-    });
-    const seed = Array.from(opponentId).reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 11);
-    return simulateMatchN({
-      homeTeamOvr: effective.effectiveOverall,
-      awayTeamOvr: opponentOvr,
-      contextModifiers: mods,
-      effectiveHomeStrength: effective,
-      homeRoster: Object.values(players),
-      n: 800,
-      seed,
-    });
-  }, [nextGlobal, fixture?.opponent?.id, fixture?.opponent?.strength, players, playerHealth]);
-
-  /**
-   * Sprint C — Fase B: contexto smart do hero (eyebrow + status).
-   * Eyebrow muda dependendo de: tier, próximo jogo, último resultado, streak.
-   * Status compacto reflete o estado atual em 1-2 palavras.
-   */
-  const heroContext = useMemo(() => {
-    const tier = computeCareerTier(finance.expLifetimeEarned ?? finance.ole ?? 0);
-    const expCompact = formatExp(finance.ole);
-    const lastMatch = results[0];
-    const last5 = (formGlobal ?? []).slice(0, 5);
-
-    // Streak detection (consecutivas)
-    const streakWins = (() => {
-      let n = 0;
-      for (const f of last5) {
-        if (f === 'W') n += 1;
-        else break;
-      }
-      return n;
-    })();
-    const streakLosses = (() => {
-      let n = 0;
-      for (const f of last5) {
-        if (f === 'L') n += 1;
-        else break;
-      }
-      return n;
-    })();
-
-    // Próximo jogo iminente?
-    const nowMs = Date.now();
-    const nextKickoffMs = fixture?.opponent?.shortName
-      ? null /* fixture sem timestamp aqui — placeholder */
-      : null;
-
-    let eyebrow: string;
-    let statusPrimary: string;
-    let statusSecondary: string;
-
-    if (!lastMatch && (results.length === 0)) {
-      // Estreia: foco em identidade + saldo
-      eyebrow = `OLE FC · TIER ${tier.id} ${tier.name.toUpperCase()} · ${expCompact} EXP`;
-      statusPrimary = 'Estreia';
-      statusSecondary = 'Aguarda 1º jogo';
-    } else if (streakWins >= 3) {
-      eyebrow = `OLE FC · ${streakWins} VITÓRIAS SEGUIDAS · ${expCompact} EXP`;
-      statusPrimary = 'Invencível';
-      statusSecondary = `${streakWins} jogos`;
-    } else if (streakLosses >= 2) {
-      eyebrow = `OLE FC · RECONSTRUÇÃO · ${expCompact} EXP`;
-      statusPrimary = 'Reconstruir';
-      statusSecondary = 'a partir de hoje';
-    } else if (lastMatch?.result === 'win') {
-      eyebrow = `OLE FC · ÚLTIMO JOGO: VITÓRIA ${lastMatch.scoreHome}-${lastMatch.scoreAway} · ${expCompact} EXP`;
-      statusPrimary = 'Vitória';
-      statusSecondary = 'na última';
-    } else if (lastMatch?.result === 'loss') {
-      eyebrow = `OLE FC · TIER ${tier.id} ${tier.name.toUpperCase()} · PRÓXIMO DESAFIO`;
-      statusPrimary = 'Resposta';
-      statusSecondary = 'no próximo jogo';
-    } else {
-      eyebrow = `OLE FC · TIER ${tier.id} ${tier.name.toUpperCase()} · ${expCompact} EXP`;
-      statusPrimary = lastMatch ? 'Final' : 'Próximo';
-      statusSecondary = lastMatch
-        ? lastMatch.result === 'draw'
-          ? 'Empate'
-          : 'Resultado'
-        : 'em preparação';
-    }
-
-    void nextKickoffMs;
-    void nowMs;
-
-    // FABLE — Renome: o TÍTULO PÚBLICO do clube abre o eyebrow do hero
-    // ("Clube de Bairro" → "Lenda Viva"). Fama nunca decai; muda de faixa.
-    // DNA: quando a identidade é marcada (|eixo| ≥ 25), ela vira sobrenome.
-    const dnaTag = clubDnaHome && Math.abs(clubDnaHome.axis) >= 25
-      ? ` · ${dnaLabel(clubDnaHome.axis).toUpperCase()}`
-      : '';
-    eyebrow = `${renownTitle(clubRenown?.total ?? 0).toUpperCase()}${dnaTag} · ${eyebrow}`;
-
-    return { eyebrow, statusPrimary, statusSecondary };
-  }, [finance.ole, finance.expLifetimeEarned, results, formGlobal, fixture, clubRenown, clubDnaHome]);
-  const supportLabel = roundedSupport.toLocaleString('pt-BR', {
-    minimumFractionDigits: Number.isInteger(roundedSupport) ? 0 : 1,
-    maximumFractionDigits: 1,
-  });
   const [amistosoOpen, setAmistosoOpen] = useState(false);
   const [hasOnlineSession, setHasOnlineSession] = useState(false);
   const [opponentQuery, setOpponentQuery] = useState('');
@@ -582,9 +208,7 @@ export function Home() {
   const [friendlyMode, setFriendlyMode] = useState<'quick' | 'penalty'>('quick');
   const [betCurrency, setBetCurrency] = useState<'BRO' | 'EXP'>('BRO');
   const [betInput, setBetInput] = useState('10');
-  const [notifTab, setNotifTab] = useState<HomeNotifTab>('ALL');
-  const [notifShowAll, setNotifShowAll] = useState(false);
-  const notificacoesRef = useRef<HTMLDivElement>(null);
+  const [heroImgOk, setHeroImgOk] = useState(true);
 
   // Atividades reais do mercado — feed público do Supabase
   const [marketActivities, setMarketActivities] = useState<MarketActivity[]>([]);
@@ -592,9 +216,12 @@ export function Home() {
     void fetchMarketActivities(10).then(setMarketActivities);
   }, []);
 
+  // Relógio da Home — alimenta countdown da próxima rodada + delta "hoje".
+  const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    setNotifShowAll(false);
-  }, [notifTab]);
+    const iv = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
 
   useEffect(() => {
     if (!amistosoOpen) {
@@ -747,25 +374,6 @@ export function Home() {
     })();
   }, [waitingChallenge, waitTick, dispatch]);
 
-  const homeFeedInbox = useMemo(
-    () => inbox.filter((i) => !isHiddenFromHomeInboxFeed(i)),
-    [inbox],
-  );
-
-  const filteredInbox = useMemo(
-    () => homeFeedInbox.filter((i) => inboxMatchesHomeNotifTab(i, notifTab)),
-    [homeFeedInbox, notifTab],
-  );
-
-  const inboxPanelList = useMemo(
-    () => (notifShowAll ? filteredInbox : filteredInbox.slice(0, HOME_NOTIF_VISIBLE_COUNT)),
-    [filteredInbox, notifShowAll],
-  );
-
-  const scrollToMarketFeed = () => {
-    notificacoesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   const betBroCents = useMemo(() => {
     const n = parseFloat(betInput.replace(',', '.'));
     if (Number.isNaN(n) || n <= 0) return 0;
@@ -906,21 +514,28 @@ export function Home() {
     });
   };
 
-  // Ranking local pra busca de amistoso — MESMA fonte real do /competicao/ranking
-  // (times da Liga Global). Fallback gracioso: liga não carregou → só o próprio
-  // clube (comportamento antigo, nunca quebra a Home). `exp` carrega os pontos
-  // da temporada do time (rótulo "pts" na lista de busca).
+  // Ranking real — MESMA fonte do /competicao/ranking (times da Liga Global).
+  // Alimenta o rank do hero, o top 5 da seção Ranking e a busca de amistoso.
+  const rankedEntries = useMemo(
+    () =>
+      getGlobalLeagueRankingEntries(
+        globalLeagueMVP?.teams,
+        managerProfile?.email ?? club.id,
+        club.id,
+      ),
+    [globalLeagueMVP, managerProfile, club.id],
+  );
+  const myRankIdx = useMemo(() => rankedEntries.findIndex((r) => r.isMe), [rankedEntries]);
+  const myRank = myRankIdx >= 0 ? myRankIdx + 1 : null;
+
+  // Ranking local pra busca de amistoso — fallback gracioso: liga não carregou
+  // → só o próprio clube (nunca quebra a Home). `exp` = pontos da temporada.
   const fullSorted = useMemo<RankingEntry[]>(() => {
-    const real = getGlobalLeagueRankingEntries(
-      globalLeagueMVP?.teams,
-      managerProfile?.email ?? club.id,
-      club.id,
-    );
-    if (real.length > 0) {
-      return real.map((r) => ({ team: r.team, exp: r.points, isMe: r.isMe, entryId: r.entryId }));
+    if (rankedEntries.length > 0) {
+      return rankedEntries.map((r) => ({ team: r.team, exp: r.points, isMe: r.isMe, entryId: r.entryId }));
     }
     return [{ team: club.name, exp: Math.round(finance.ole), isMe: true, entryId: club.id }];
-  }, [globalLeagueMVP, managerProfile, club.name, club.id, finance.ole]);
+  }, [rankedEntries, club.name, club.id, finance.ole]);
 
   const lookupAmistosoOpponent = () => {
     const q = opponentQuery.trim();
@@ -963,327 +578,474 @@ export function Home() {
     setAmistosoLookupMessage(null);
   };
 
+  // ── REBRAND: dados do cockpit ────────────────────────────────────────────
+
+  const scoreTotal = managerScore?.total ?? 0;
+  const scoreToday = managerScoreToday(managerScore, nowMs);
+  const managerFirstName = managerProfile?.firstName?.trim() || 'Manager';
+
+  /** Countdown da próxima rodada da Liga Global. */
+  const nextRoundLabel = useMemo(() => {
+    if (!nextGlobal) return null;
+    const diff = nextGlobal.scheduledKickoffMs - nowMs;
+    if (diff <= 0) return 'Agora';
+    if (diff < 3_600_000) {
+      const mm = Math.floor(diff / 60_000);
+      const ss = Math.floor((diff % 60_000) / 1000);
+      return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+    }
+    const d = new Date(nextGlobal.scheduledKickoffMs);
+    const isToday = d.toDateString() === new Date(nowMs).toDateString();
+    const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return isToday
+      ? `Hoje, ${timeStr}`
+      : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
+  }, [nextGlobal, nowMs]);
+
+  /** Legends Cup — campanha ativa mostra a fase atual. */
+  const cupActive = legendsCup?.status === 'active';
+  const cupPhaseLabel = cupActive ? roundOf(legendsCup!.roundIndex) : null;
+
+  /** Treino PRONTO pra concluir (plano rodando com endAt vencido). */
+  const trainingReadyCount = useMemo(
+    () =>
+      (trainingPlans ?? []).filter(
+        (p) => p.status === 'running' && new Date(p.endAt).getTime() <= nowMs,
+      ).length,
+    [trainingPlans, nowMs],
+  );
+
+  /** Ações que pontuam — pontos direto da tabela oficial, nunca hardcode. */
+  const scoreActions = useMemo(
+    () => [
+      {
+        key: 'treino',
+        label: 'Treino',
+        points: MANAGER_SCORE_TABLE.treino_concluido,
+        icon: Dumbbell,
+        to: '/clube/treino' as const,
+        badge: trainingReadyCount > 0 ? 'Concluir' : null,
+      },
+      {
+        key: 'mercado',
+        label: 'Mercado',
+        points: MANAGER_SCORE_TABLE.compra_jogador,
+        icon: ArrowRightLeft,
+        to: '/mercado/transfer' as const,
+        badge: null,
+      },
+      {
+        key: 'amistoso',
+        label: 'Amistoso',
+        points: MANAGER_SCORE_TABLE.vitoria_amistosa,
+        icon: Zap,
+        to: null,
+        badge: null,
+      },
+      {
+        key: 'legends',
+        label: 'Legends',
+        points: MANAGER_SCORE_TABLE.compra_legend,
+        icon: Crown,
+        to: '/legends-cup' as const,
+        badge: null,
+      },
+    ],
+    [trainingReadyCount],
+  );
+
+  const top5 = rankedEntries.slice(0, 5);
+  const meInTop5 = top5.some((r) => r.isMe);
+  const myEntry = myRankIdx >= 0 ? rankedEntries[myRankIdx] : null;
 
   return (
     <div className="w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden">
-      <div className="w-full min-w-0 mx-auto space-y-6 sm:space-y-8 max-w-6xl xl:max-w-none">
-      {/* HERO PRINCIPAL — editorial hero-legacy-full + news ticker + saudação manager */}
-      <section
-        aria-label="Hero do manager"
-        className="-mx-3 -mt-3 sm:-mx-4 sm:-mt-4 lg:-mx-8 lg:-mt-8 mb-6"
-      >
-        <HomeHeroLegacy scrollCueTargetId="home-below-fold" />
-      </section>
+      <div className="w-full min-w-0 mx-auto max-w-6xl flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:items-start">
 
-      {/* LIGA OLE — único hero grande abaixo do hero do manager */}
-      <section aria-label="Liga Ole" className="mb-3">
-        <LigaOleBanner />
-      </section>
-
-      {/* Banners do clube — padrão compacto unificado (StatBanner) */}
-      <section aria-label="Estado do clube" className="space-y-2.5">
-        <AbsenceBanner />
-        <LoginBonusWidget />
-        <PassiveIncomeWidget />
-        <CoroaDoDiaBanner />
-        <EngajamentoBanner />
-        <ClubPowerBanner />
-        <DesafioDiarioBanner />
-      </section>
-
-      {/* HERO LEGADO — temporariamente desabilitado pelo HomeHeroLegacy. */}
-      {false && homeHighlight && (
+        {/* ── A · HERO — cockpit do manager ─────────────────────────────── */}
         <section
-          aria-label="Último jogo (legado)"
-          className="hidden"
+          aria-label="Cockpit do manager"
+          className="relative overflow-hidden border border-[var(--color-border)] lg:col-start-1 lg:row-start-1"
+          style={{ borderRadius: 'var(--radius-md)' }}
         >
-        {(() => {
-          const last5 = results.slice(0, 5);
-          const wins = last5.filter((r) => r.result === 'win').length;
-          const draws = last5.filter((r) => r.result === 'draw').length;
-          const losses = last5.filter((r) => r.result === 'loss').length;
-          const lastMatch = results[0];
-          const homeShort = (club.shortName ?? club.name).slice(0, 3).toUpperCase();
-
-          // Sem histórico → estado "antes da estreia" (coerente com o tema
-          // do hero: ÚLTIMA partida; aqui não houve nenhuma ainda).
-          if (!lastMatch) {
-            return (
-              <MatchdayHero
-                data={{
-                  competition: heroContext.eyebrow,
-                  statusPrimary: heroContext.statusPrimary,
-                  statusSecondary: heroContext.statusSecondary,
-                  statusVariant: 'preview',
-                  solidYellow: true,
-                  home: {
-                    short: homeShort,
-                    name: club.name,
-                    score: 0,
-                    crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
-                  },
-                  away: {
-                    short: '—',
-                    name: 'Adversário',
-                    score: 0,
-                    crestUrl: HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null,
-                  },
-                  stats: managerStatTiles,
-                  highlight: {
-                    name: homeHighlight.name,
-                    number: homeHighlight.ovr,
-                    quote: `OVR ${homeHighlight.ovr} · ${starsForOvr(homeHighlight.ovr)} estrelas. Pronto para a primeira partida.`,
-                    photoUrl: homeHighlight.imageSrc,
-                    position: homeHighlight.position,
-                    tag: homeHighlight.tag,
-                    goalsSeason: homeHighlight.goalsSeason,
-                    assistsSeason: homeHighlight.assistsSeason,
-                    mvpsSeason: homeHighlight.mvpsSeason,
-                    recentForm: homeHighlight.recentForm,
-                    deltaOvr: homeHighlight.deltaOvr,
-                    ctaPrimary: highlightCtas.primary,
-                    ctaSecondary: highlightCtas.secondary,
-                  },
-                  actions: [],
-                  topLeft: { label: 'Olefoot' },
-                  scrollCueTargetId: 'home-below-fold',
-                }}
-              />
-            );
-          }
-
-          // ── Modo RESULTADO (último jogo) ────────────────────────────
-          const awayShort = lastMatch.away.slice(0, 3).toUpperCase();
-
-          // MVP do scout (se persistido) — senão cai no homeHighlight do plantel.
-          const mvp = lastMatch.scoutMvp;
-          // Ignora MVP se for o fallback 'Equipe' (sem playerId válido)
-          const isValidMvp = mvp && mvp.playerId && mvp.name !== 'Equipe';
-          const mvpEntity = isValidMvp ? players[mvp.playerId] : null;
-          const mvpOvr = mvpEntity
-            ? mvpEntity.mintOverall ?? overallFromAttributes(mvpEntity.attrs, mvpEntity.pos)
-            : homeHighlight.ovr;
-          const mvpName = isValidMvp ? mvp.name : homeHighlight.name;
-          const mvpQuote = isValidMvp ? mvp.headline : `OVR ${mvpOvr} · jogador de impacto.`;
-          const mvpPhoto = mvpEntity
-            ? playerPortraitSrc(
-                { name: mvpEntity.name, portraitUrl: mvpEntity.portraitUrl },
-                400,
-                520,
-              )
-            : homeHighlight.imageSrc;
-
-          return (
-            <MatchdayHero
-              data={{
-                competition: heroContext.eyebrow,
-                statusPrimary: heroContext.statusPrimary,
-                statusSecondary: heroContext.statusSecondary,
-                statusVariant: 'preview',
-                solidYellow: true,
-                home: {
-                  short: homeShort,
-                  name: lastMatch.home || club.name,
-                  score: lastMatch.scoreHome,
-                  crestUrl: homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null),
-                },
-                away: {
-                  short: awayShort,
-                  name: lastMatch.away,
-                  score: lastMatch.scoreAway,
-                  crestUrl: awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null),
-                },
-                stats: managerStatTiles,
-                highlight: {
-                  name: mvpName,
-                  number: mvpOvr,
-                  quote: mvpQuote,
-                  photoUrl: mvpPhoto,
-                  position: mvpEntity?.pos ?? homeHighlight.position,
-                  tag: homeHighlight.tag,
-                  goalsSeason: homeHighlight.goalsSeason,
-                  assistsSeason: homeHighlight.assistsSeason,
-                  mvpsSeason: homeHighlight.mvpsSeason,
-                  recentForm: homeHighlight.recentForm,
-                  deltaOvr: homeHighlight.deltaOvr,
-                  ctaPrimary: highlightCtas.primary,
-                  ctaSecondary: highlightCtas.secondary,
-                },
-                actions: [],
-                topLeft: { label: 'Olefoot' },
-                scrollCueTargetId: 'home-below-fold',
-              }}
+          {/* Fundo: fallback token-only + imagem + overlay de contraste */}
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-dark-gray to-deep-black" />
+          {heroImgOk && (
+            <img
+              src={HERO_IMAGE}
+              alt=""
+              aria-hidden
+              draggable={false}
+              onError={() => setHeroImgOk(false)}
+              className="absolute inset-0 h-full w-full object-cover object-top opacity-70"
             />
-          );
-        })()}
-        </section>
-      )}
+          )}
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/70 to-transparent" />
 
-      {/* Liga LEGACY — banner adaptativo (AO VIVO ou countdown) — topo do fold */}
-      <div id="home-below-fold">
-        <LegacyRoundBanner />
-      </div>
+          <div className="relative px-5 sm:px-8 py-8 sm:py-10 flex flex-col items-start gap-1">
+            {/* Eyebrow */}
+            <span aria-hidden className="block h-px w-8 bg-neon-yellow/55 mb-1.5" />
+            <span
+              className="font-display font-black uppercase text-neon-yellow"
+              style={{ fontSize: '10px', letterSpacing: '0.32em' }}
+            >
+              Olefoot · {club.name}
+            </span>
 
-      <DashboardGrid>
-      {/* PRÓXIMA PARTIDA — wide
-          Prioridade: Global League real > fixture estático (TITANS mock) */}
-      {(nextGlobal || fixture?.opponent) ? (() => {
-        // Dados resolvidos: Global League tem prioridade sobre o mock estático
-        const isGlobal = !!nextGlobal;
-        const kickoffLabel = isGlobal
-          ? (() => {
-              const d = new Date(nextGlobal.scheduledKickoffMs);
-              const today = new Date();
-              const isToday = d.toDateString() === today.toDateString();
-              const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-              return isToday ? `Hoje, ${timeStr}` : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, ${timeStr}`;
-            })()
-          : fixture.kickoffLabel;
-        const opponentShort = isGlobal
-          ? nextGlobal.opponentShort
-          : (fixture.opponent.shortName ?? fixture.opponent.name).slice(0, 3).toUpperCase();
-        const opponentName = isGlobal ? nextGlobal.opponentName : fixture.opponent.name;
-        const competitionLabel = isGlobal
-          ? (nextGlobal.roundType === 'playoff'
-              ? `Liga Global · Playoffs Rd ${nextGlobal.roundNumber}`
-              : `Liga Global · Rodada ${nextGlobal.roundNumber}${nextGlobal.division !== 'playoff' ? ` · Div ${nextGlobal.division}` : ''}`)
-          : `${fixture.competition} · ${fixture.venue}`;
-        const homeShort = isGlobal
-          ? (nextGlobal.isHome ? club.shortName ?? club.name.slice(0, 3) : nextGlobal.opponentShort)
-          : (club.shortName ?? club.name).slice(0, 3);
-        const awayShort = isGlobal
-          ? (nextGlobal.isHome ? nextGlobal.opponentShort : club.shortName ?? club.name.slice(0, 3))
-          : opponentShort;
-        const renderHomeCrest = isGlobal
-          ? (nextGlobal.isHome ? (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null)) : null)
-          : (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null));
-        const renderAwayCrest = isGlobal
-          ? (nextGlobal.isHome ? null : (homeCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_HOME_CREST : null)))
-          : (awayCrestUrl ?? (HOME_HERO_DEV_MOCK ? DEV_AWAY_CREST : null));
-        const ctaLink = isGlobal ? '/match/global' : '/match/quick';
-        const ctaLabel = isGlobal ? 'Ver Liga Global' : 'Partida rápida';
+            {/* Saudação */}
+            <p className="mt-3 font-display font-bold uppercase text-white/65" style={{ fontSize: '12px', letterSpacing: '0.24em' }}>
+              Olá,
+            </p>
+            <p
+              className="italic text-white leading-[0.95]"
+              style={{
+                fontFamily: 'var(--font-serif-hero)',
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 5vw, 40px)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {managerFirstName}
+            </p>
 
-        return (
-          <DashboardSection
-            size="wide"
-            ariaLabel="Próxima partida"
-            className="bg-[var(--color-card)] border border-white/8 border-l-4 border-l-neon-yellow rounded-sm overflow-hidden"
-          >
-            <div className="w-full max-w-full min-w-0 px-3 sm:px-6 md:px-8 py-5 sm:py-7 flex flex-col items-center text-center gap-4">
-              {/* Eyebrow */}
-              <div className="ole-eyebrow !text-neon-yellow" style={{ fontFamily: 'var(--font-ui)' }}>
-                <span>Próxima partida · {kickoffLabel}</span>
-              </div>
-
-              {/* Duelo: [crest/sigla] CASA × VISITANTE [crest/sigla] */}
-              <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-full min-w-0">
-                {renderHomeCrest ? (
-                  <img src={renderHomeCrest} alt={club.name}
-                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
-                    referrerPolicy="no-referrer" draggable={false} />
-                ) : (
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-neon-yellow bg-deep-black grid place-items-center shrink-0">
-                    <span className="font-display font-black uppercase text-neon-yellow text-[12px] sm:text-[14px] tracking-[0.06em]">
-                      {homeShort.slice(0, 3).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <span className="text-neon-yellow/85 leading-none select-none"
-                  style={{ fontFamily: 'var(--font-serif-hero)', fontStyle: 'italic',
-                    fontSize: 'clamp(28px, 4.5vw, 44px)', letterSpacing: '-0.04em', transform: 'translateY(-0.04em)' }}>
-                  ×
-                </span>
-                {renderAwayCrest ? (
-                  <img src={renderAwayCrest} alt={opponentName}
-                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0"
-                    referrerPolicy="no-referrer" draggable={false} />
-                ) : (
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[2.5px] border-white/40 bg-deep-black grid place-items-center shrink-0">
-                    <span className="font-display font-black uppercase text-white text-[12px] sm:text-[14px] tracking-[0.06em]">
-                      {awayShort.slice(0, 3).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Liga + contexto */}
-              <p className="text-white/55 uppercase"
-                style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', letterSpacing: '0.22em', fontWeight: 600 }}>
-                {competitionLabel}
+            {/* Pontuação do manager */}
+            <div className="mt-3 flex items-end gap-3 flex-wrap">
+              <p
+                className="italic text-neon-yellow leading-none tabular-nums"
+                style={{
+                  fontFamily: 'var(--font-serif-hero)',
+                  fontWeight: 700,
+                  fontSize: 'clamp(48px, 9vw, 72px)',
+                  letterSpacing: '-0.03em',
+                }}
+              >
+                {scoreTotal.toLocaleString('pt-BR')}
               </p>
-
-              {/* OVR adversário (só Global League) */}
-              {isGlobal && (
-                <p className="text-white/40 text-xs font-mono">
-                  OVR adversário: <span className="text-neon-yellow font-bold">{nextGlobal.opponentOverall}</span>
-                </p>
+              {scoreToday > 0 ? (
+                <span
+                  className="mb-1.5 inline-flex items-center px-2 py-0.5 font-display font-black uppercase tabular-nums"
+                  style={{
+                    fontSize: '10px',
+                    letterSpacing: '0.22em',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--color-success)',
+                    background: 'rgba(34,197,94,0.12)',
+                    border: '1px solid rgba(34,197,94,0.35)',
+                  }}
+                >
+                  +{scoreToday.toLocaleString('pt-BR')} hoje
+                </span>
+              ) : (
+                <span className="mb-1.5 text-white/55 text-[12px]" style={{ fontFamily: 'var(--font-sans)' }}>
+                  Toda ação pontua.
+                </span>
               )}
+            </div>
+            {myRank ? (
+              <p
+                className="text-white/65 uppercase tabular-nums"
+                style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', letterSpacing: '0.22em', fontWeight: 600 }}
+              >
+                Posição #{myRank} no mundo
+              </p>
+            ) : null}
 
-              {/* Penalidades ativas do time do manager */}
-              {isGlobal && (nextGlobal.injuryRoundsRemaining > 0 || nextGlobal.suspensionRoundsRemaining > 0 || nextGlobal.yellowCardCount > 0) && (
-                <div className="flex flex-wrap justify-center gap-2 text-[10px] font-mono">
-                  {nextGlobal.suspensionRoundsRemaining > 0 && (
-                    <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">
-                      🚫 Suspenso {nextGlobal.suspensionRoundsRemaining} rod.
-                    </span>
-                  )}
-                  {nextGlobal.injuryRoundsRemaining > 0 && (
-                    <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full">
-                      🚑 Lesão {nextGlobal.injuryRoundsRemaining} rod. ({nextGlobal.injuryModifier} OVR)
-                    </span>
-                  )}
-                  {nextGlobal.yellowCardCount > 0 && nextGlobal.yellowCardCount < 3 && (
-                    <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full">
-                      🟡 {nextGlobal.yellowCardCount}/3 amarelos
-                    </span>
-                  )}
+            <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-3" />
+
+            {/* CTA dominante — única ação amarela da surface */}
+            <Link
+              to="/legends-cup"
+              className="mt-4 inline-flex min-h-[44px] items-center bg-neon-yellow text-black px-6 py-3 font-display font-black uppercase hover:bg-white active:scale-[0.98] transition-all"
+              style={{
+                fontSize: '13px',
+                letterSpacing: '0.24em',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: '0 8px 24px rgba(253,225,0,0.18)',
+              }}
+            >
+              Desafie as lendas
+            </Link>
+          </div>
+        </section>
+
+        {/* ── B · RAIL — loops do clube ─────────────────────────────────── */}
+        <aside
+          aria-label="Painel do clube"
+          className="flex flex-col gap-3 lg:col-start-2 lg:row-start-1 lg:row-span-2"
+        >
+          {/* Próxima rodada — Liga Global */}
+          <RailCard label="Próxima rodada">
+            {nextGlobal ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-display font-bold uppercase text-white" style={{ fontSize: '13px', letterSpacing: '0.08em' }}>
+                    vs {nextGlobal.opponentName}
+                  </p>
+                  <p
+                    className="mt-0.5 italic text-neon-yellow tabular-nums leading-none"
+                    style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '22px', letterSpacing: '-0.02em' }}
+                  >
+                    {nextRoundLabel}
+                  </p>
                 </div>
-              )}
-
-              {/* Fase 1 — Predição V/E/D compacta (acima das ações) */}
-              {nextMatchPrediction ? (
-                <div className="w-full max-w-[480px]">
-                  <MatchPredictionPanel
-                    result={nextMatchPrediction}
-                    homeName={homeShort}
-                    awayName={awayShort}
-                    compact
-                  />
-                </div>
-              ) : null}
-
-              {/* Ações */}
-              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-1">
-                <Link to={ctaLink}
-                  className="bg-neon-yellow text-black hover:bg-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] transition-colors shadow-[0_4px_12px_rgba(253,225,0,0.25)]"
-                  style={{ borderRadius: 'var(--radius-sm)' }}>
-                  {ctaLabel}
+                <Link
+                  to="/competicao/standings"
+                  className="inline-flex min-h-[44px] items-center gap-1 shrink-0 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                >
+                  Ver liga
+                  <ChevronRight className="w-4 h-4" aria-hidden />
                 </Link>
-                <Link to="/team"
-                  className="bg-deep-black border border-[var(--color-border)] text-white px-5 py-2.5 font-display font-bold uppercase tracking-[0.2em] text-[11px] sm:text-[12px] hover:border-neon-yellow/60 hover:text-neon-yellow transition-colors"
-                  style={{ borderRadius: 'var(--radius-sm)' }}>
-                  Ver táticas
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-white/55 text-[12px]" style={{ fontFamily: 'var(--font-sans)' }}>
+                  Sem rodada agendada.
+                </p>
+                <Link
+                  to="/competicao/standings"
+                  className="inline-flex min-h-[44px] items-center gap-1 shrink-0 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                >
+                  Ver liga
+                  <ChevronRight className="w-4 h-4" aria-hidden />
+                </Link>
+              </div>
+            )}
+          </RailCard>
+
+          {/* Legends Cup — torneio */}
+          <RailCard label="Legends Cup">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="grid h-10 w-10 shrink-0 place-items-center bg-neon-yellow/10 border border-neon-yellow/35 text-neon-yellow"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  <Trophy className="w-5 h-5" aria-hidden />
+                </span>
+                <p
+                  className="truncate italic text-white"
+                  style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em' }}
+                >
+                  {cupActive ? cupPhaseLabel : 'As lendas esperam'}
+                </p>
+              </div>
+              <Link
+                to="/legends-cup"
+                className="inline-flex min-h-[44px] shrink-0 items-center bg-neon-yellow text-black px-4 font-display font-black uppercase hover:bg-white active:scale-[0.98] transition-all"
+                style={{ fontSize: '11px', letterSpacing: '0.22em', borderRadius: 'var(--radius-sm)' }}
+              >
+                {cupActive ? 'Continuar' : 'Começar'}
+              </Link>
+            </div>
+          </RailCard>
+
+          {/* Carteira */}
+          <RailCard label="Carteira">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="grid h-10 w-10 shrink-0 place-items-center bg-deep-black/60 border border-[var(--color-border)] text-white/65"
+                  style={{ borderRadius: 'var(--radius-sm)' }}
+                >
+                  <Wallet className="w-5 h-5" aria-hidden />
+                </span>
+                <p
+                  className="italic text-white tabular-nums leading-none"
+                  style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '22px', letterSpacing: '-0.02em' }}
+                >
+                  {formatExp(finance.ole)}
+                  <span className="ml-1.5 not-italic font-display font-bold uppercase text-white/45" style={{ fontSize: '10px', letterSpacing: '0.2em' }}>
+                    EXP
+                  </span>
+                </p>
+              </div>
+              <Link
+                to="/wallet"
+                className="inline-flex min-h-[44px] items-center gap-1 shrink-0 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+                style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+              >
+                Abrir
+                <ChevronRight className="w-4 h-4" aria-hidden />
+              </Link>
+            </div>
+          </RailCard>
+        </aside>
+
+        {/* ── Coluna principal ──────────────────────────────────────────── */}
+        <div className="min-w-0 flex flex-col gap-6 lg:col-start-1 lg:row-start-2">
+
+          {/* C · Ações que pontuam */}
+          <section aria-label="Ações que pontuam">
+            <SectionLabel text="Ações que pontuam" />
+            <div className="flex gap-2.5 overflow-x-auto pb-1">
+              {scoreActions.map((a) => {
+                const Icon = a.icon;
+                const inner = (
+                  <>
+                    <div className="flex items-center justify-between w-full">
+                      <Icon className="w-4 h-4 text-white/65" aria-hidden />
+                      {a.badge ? (
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 font-display font-black uppercase"
+                          style={{
+                            fontSize: '9px',
+                            letterSpacing: '0.18em',
+                            borderRadius: 'var(--radius-sm)',
+                            color: '#0D0D0D',
+                            background: 'var(--color-warning)',
+                          }}
+                        >
+                          {a.badge}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between w-full gap-2">
+                      <span className="font-display font-black uppercase text-white" style={{ fontSize: '11px', letterSpacing: '0.18em' }}>
+                        {a.label}
+                      </span>
+                      <span
+                        className="italic text-neon-yellow tabular-nums"
+                        style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}
+                      >
+                        +{a.points}
+                      </span>
+                    </div>
+                  </>
+                );
+                const chipClass = cn(
+                  'flex min-h-[64px] min-w-[150px] flex-1 flex-col items-start justify-between p-3 text-left',
+                  'border border-l-[3px] border-[var(--color-border)] bg-dark-gray transition-all',
+                  a.badge ? 'border-l-[var(--color-warning)]' : 'border-l-neon-yellow',
+                  'hover:border-neon-yellow/40 hover:-translate-y-0.5 active:scale-[0.98]',
+                );
+                return a.to ? (
+                  <Link key={a.key} to={a.to} className={chipClass} style={{ borderRadius: 'var(--radius-md)' }}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <button
+                    key={a.key}
+                    type="button"
+                    onClick={() => setAmistosoOpen(true)}
+                    className={chipClass}
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                  >
+                    {inner}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* D · Ranking */}
+          <section aria-label="Ranking">
+            <SectionLabel text="Ranking" />
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray overflow-hidden"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              {top5.length === 0 ? (
+                <p className="p-4 text-white/55 text-[12px]" style={{ fontFamily: 'var(--font-sans)' }}>
+                  A liga ainda carrega.
+                </p>
+              ) : (
+                <ul className="divide-y divide-white/5">
+                  {top5.map((r, i) => (
+                    <li
+                      key={r.entryId}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-2.5 min-h-[44px]',
+                        r.isMe && 'border-l-[3px] border-l-neon-yellow bg-neon-yellow/[0.05]',
+                      )}
+                    >
+                      <span className="w-6 shrink-0 font-display font-black text-white/45 tabular-nums" style={{ fontSize: '11px' }}>
+                        {i + 1}
+                      </span>
+                      <span
+                        className={cn(
+                          'min-w-0 flex-1 truncate font-display font-bold uppercase',
+                          r.isMe ? 'text-neon-yellow' : 'text-white',
+                        )}
+                        style={{ fontSize: '12px', letterSpacing: '0.08em' }}
+                      >
+                        {r.team}
+                      </span>
+                      <span
+                        className="shrink-0 italic text-white tabular-nums"
+                        style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em' }}
+                      >
+                        {r.points.toLocaleString('pt-BR')}
+                      </span>
+                    </li>
+                  ))}
+                  {!meInTop5 && myEntry && myRank ? (
+                    <li className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] border-l-[3px] border-l-neon-yellow bg-neon-yellow/[0.05]">
+                      <span className="w-6 shrink-0 font-display font-black text-white/45 tabular-nums" style={{ fontSize: '11px' }}>
+                        {myRank}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-display font-bold uppercase text-neon-yellow" style={{ fontSize: '12px', letterSpacing: '0.08em' }}>
+                        Você
+                      </span>
+                      <span
+                        className="shrink-0 italic text-white tabular-nums"
+                        style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: '17px', letterSpacing: '-0.02em' }}
+                      >
+                        {myEntry.points.toLocaleString('pt-BR')}
+                      </span>
+                    </li>
+                  ) : null}
+                </ul>
+              )}
+              <div className="border-t border-white/5 px-4 py-2">
+                <Link
+                  to="/competicao/ranking"
+                  className="inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                >
+                  Ranking completo
+                  <ChevronRight className="w-4 h-4" aria-hidden />
                 </Link>
               </div>
             </div>
-          </DashboardSection>
-        );
-      })() : null}
+          </section>
 
-      </DashboardGrid>
+          {/* E · Mercado agora */}
+          <section aria-label="Mercado agora">
+            <SectionLabel text="Mercado agora" />
+            <div
+              className="border border-[var(--color-border)] bg-dark-gray p-3 sm:p-4"
+              style={{ borderRadius: 'var(--radius-md)' }}
+            >
+              <MarketActivityFeed activities={marketActivities} maxVisible={5} />
+              <div className="mt-2 border-t border-white/5 pt-1">
+                <Link
+                  to="/mercado/transfer"
+                  className="inline-flex min-h-[44px] items-center gap-1 text-white/55 hover:text-neon-yellow transition-colors font-display font-bold uppercase"
+                  style={{ fontSize: '10px', letterSpacing: '0.22em' }}
+                >
+                  Ir ao mercado
+                  <ChevronRight className="w-4 h-4" aria-hidden />
+                </Link>
+              </div>
+            </div>
+          </section>
 
-      {/* Mini-painel inteligente do manager (Sprint C Fase B) */}
-      <HomeManagerFeed
-        players={players}
-        highlightId={homeHighlight?.id ?? ''}
-        highlightName={homeHighlight?.name ?? '—'}
-        highlightPosition={homeHighlight?.position}
-        expLifetimeEarned={finance.expLifetimeEarned ?? finance.ole ?? 0}
-      />
+          {/* F · Radar — banners condicionais com ação/claim */}
+          <section aria-label="Radar" className="flex flex-col gap-2.5">
+            <SectionLabel text="Radar" />
+            <AbsenceBanner />
+            <LoginBonusWidget />
+            <PassiveIncomeWidget />
+            <CoroaDoDiaBanner />
+            <DesafioDiarioBanner />
+            <LigaOleBanner />
+          </section>
+        </div>
+      </div>
 
-      {/* Novidades do elenco — Fase 2 acesa (selectStatusFeed) */}
-      <SquadNewsCard />
-
+      {/* Modal de amistoso — fluxo preservado (busca online/offline + aposta) */}
       <AnimatePresence>
         {amistosoOpen && (
           <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto overscroll-y-contain bg-black/88 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4">
@@ -1295,6 +1057,7 @@ export function Home() {
             >
               <button
                 type="button"
+                aria-label="Fechar amistoso"
                 onClick={() => {
                   if (waitingChallenge) void cancelWaitingChallenge();
                   setAmistosoOpen(false);
@@ -1546,144 +1309,6 @@ export function Home() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Atividades do Mercado — Sprint C Fase G: editorial direto no fundo, sem card cinza */}
-      <motion.section
-        ref={notificacoesRef}
-        id="market-feed"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="scroll-mt-24 mt-2 sm:mt-4 px-4 sm:px-6 lg:px-8"
-        aria-label="Atividades do Mercado"
-      >
-        {/* Header editorial — eyebrow + MORET headline + régua + subtitle + CTAs */}
-        <header className="flex flex-col items-start gap-3 mb-5 sm:mb-6">
-          <span
-            className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            OLE Football · Comunidade
-          </span>
-          <h2 className="leading-[0.95]">
-            <span
-              className="block font-bold uppercase text-white"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Atividades
-            </span>
-            <span
-              className="block italic text-neon-yellow mt-0.5"
-              style={{
-                fontFamily: 'var(--font-serif-hero)',
-                fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              do mercado
-            </span>
-          </h2>
-          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-1" />
-          <p
-            className="text-white/55 max-w-md"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '13px',
-              lineHeight: 1.5,
-            }}
-          >
-            Compras, vendas e leilões recentes — movimentações dos outros managers e clubes IA.
-          </p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            <Link
-              to="/manager/mensagens"
-              className="inline-flex items-center rounded-[var(--radius-pill)] border border-neon-yellow/40 bg-neon-yellow/10 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] text-neon-yellow transition-all hover:bg-neon-yellow/20"
-            >
-              Ver mensagens
-            </Link>
-            <Link
-              to="/transfer"
-              className="inline-flex items-center rounded-[var(--radius-pill)] border border-white/15 bg-white/[0.03] px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/75 transition-all hover:border-white/30 hover:text-white"
-            >
-              Ir para Mercado
-            </Link>
-          </div>
-        </header>
-
-        {/* Feed de atividades — cards já têm fundo próprio, ficam soltos no dark */}
-        <MarketActivityFeed activities={marketActivities} maxVisible={5} />
-      </motion.section>
-
-      {/* Apoio da Torcida — rodapé da Home, fundo cinza escuro com acento amarelo */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        aria-label="Apoio da torcida"
-        className="relative isolate overflow-hidden mt-6 sm:mt-8"
-      >
-        <div className="px-5 sm:px-8 py-6 sm:py-7 flex flex-col items-center text-center gap-4">
-          <div
-            className="inline-flex items-center gap-3 text-white"
-            style={{ fontFamily: 'var(--font-ui)' }}
-          >
-            <span aria-hidden className="h-px w-8 bg-white/25" />
-            <span className="uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.22em' }}>
-              Apoio da torcida
-            </span>
-            <span aria-hidden className="h-px w-8 bg-white/25" />
-          </div>
-          <p
-            className="italic text-neon-yellow leading-none tabular-nums"
-            style={{
-              fontFamily: 'var(--font-serif-hero)',
-              fontWeight: 700,
-              fontSize: 'clamp(2.75rem, 7vw, 4.25rem)',
-              letterSpacing: '-0.03em',
-            }}
-          >
-            {supportLabel}
-            <span
-              className="ml-1 text-neon-yellow/55 not-italic"
-              style={{ fontFamily: 'var(--font-display)', fontSize: '0.55em' }}
-            >
-              %
-            </span>
-          </p>
-          <div
-            className="w-full max-w-md h-2 bg-white/10 overflow-hidden relative"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${roundedSupport}%` }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="absolute top-0 left-0 h-full"
-              style={{
-                background:
-                  'linear-gradient(90deg, var(--color-neon-yellow-dark) 0%, var(--color-neon-yellow) 100%)',
-              }}
-            />
-          </div>
-          <p
-            className="text-white uppercase"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: '11px',
-              letterSpacing: '0.22em',
-              fontWeight: 700,
-            }}
-          >
-            {crowd.moodLabel}
-          </p>
-        </div>
-      </motion.section>
-      </div>
     </div>
   );
 }

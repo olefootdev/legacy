@@ -450,6 +450,12 @@ export interface OlefootGameState {
    */
   clubRenown?: import('@/systems/renown').ClubRenownState;
   /**
+   * REBRAND — Pontuação do Manager: toda ação de gestão pontua (vitória,
+   * treino, compra, venda, legend, upgrade). Total de carreira + delta de hoje.
+   * V1 client-side; migração server-authoritative planejada.
+   */
+  managerScore?: import('@/systems/managerScore/managerScore').ManagerScoreState;
+  /**
    * FABLE — Cicatrizes por jogador (pênalti perdido, gol aos 85'+, redenção).
    * Afetam a confiança em shootouts até o arco de redenção fechar.
    */

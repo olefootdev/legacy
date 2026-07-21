@@ -65,6 +65,7 @@ import {
 import { liveMatchToHealthEvents } from '@/systems/playerHealth/fromLiveMatch';
 import { quickPlanToConsequenceEvents } from '@/systems/playerHealth/fromQuickPlan';
 import { financeWithLedger } from '@/wallet/gameLedger';
+import { addManagerScore } from '@/systems/managerScore/managerScore';
 // OLEFOOT PYTHON MODE — wire-up dos sistemas A + E
 import {
   EMPTY_CONSEQUENCE_STORE,
@@ -2620,11 +2621,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         }
       }
 
+      // PONTUAÇÃO DO MANAGER — jogar sempre pontua; oficial vale mais.
+      const scoreOppName = state.nextFixture.opponent?.name ?? 'Adversário';
+      const managerScore = addManagerScore(
+        state.managerScore,
+        homeWin ? (competitionLeagueId ? 'vitoria_oficial' : 'vitoria_amistosa') : 'derrota',
+        homeWin
+          ? `Vitória ${competitionLeagueId ? 'oficial ' : ''}sobre ${scoreOppName}`
+          : draw ? `Empate com ${scoreOppName}` : `Jogou contra ${scoreOppName}`,
+        fableNowMs,
+        draw ? 4 : undefined,
+      );
+
       return {
         ...state,
         finance,
         players,
         playerHealth,
+        managerScore,
         quickMatchStreak: credit.quickMatchStreak,
         lastQuickEvolution: credit.evolution,
         lastQuickBonuses: credit.bonuses,
@@ -3087,7 +3101,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         read: false,
       };
       const inbox = [inboxItem, ...(state.inbox ?? [])];
-      return { ...state, lineup, players, finance, inbox };
+      return {
+        ...state, lineup, players, finance, inbox,
+        managerScore: addManagerScore(state.managerScore, 'venda_jogador', `Vendeu ${pl.name} por ${offerExp.toLocaleString('pt-BR')} EXP`, Date.now()),
+      };
     }
     case 'DELIST_MANAGER_PROSPECT': {
       const li = state.managerProspectMarket.ownListings.find((l) => l.listingId === action.listingId);
@@ -3151,6 +3168,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance: financeGenesis,
+        managerScore: addManagerScore(state.managerScore, 'compra_jogador', `Contratou ${action.player.name}`, Date.now()),
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
@@ -3180,6 +3198,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance,
+        managerScore: addManagerScore(state.managerScore, 'compra_jogador', `Contratou ${action.player.name}`, Date.now()),
         players: {
           ...state.players,
           [pid]: { ...action.player, listedOnMarket: false },
@@ -3280,6 +3299,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance: financeLegacy,
+        managerScore: addManagerScore(state.managerScore, 'compra_legend', `Garantiu a lenda ${action.player.name}`, Date.now()),
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
       };
     }
@@ -3299,6 +3319,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         players: { ...state.players, [pid]: { ...action.player, listedOnMarket: false } },
         // FABLE — Renome: contratar uma lenda é evento SOCIAL (+50).
         clubRenown: addRenown(state.clubRenown, 50, `Contratou a lenda ${action.player.name}`, Date.now()),
+        managerScore: addManagerScore(state.managerScore, 'compra_legend', `Garantiu a lenda ${action.player.name}`, Date.now()),
       };
     }
     case 'RECRUIT_YOUTH_PROSPECT': {
@@ -3428,6 +3449,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       return {
         ...state,
         finance,
+        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', `Anunciou ${expAmount.toLocaleString('pt-BR')} EXP no Exchange`, Date.now()),
         expExchange: {
           ...state.expExchange,
           playerOrders: [order, ...state.expExchange.playerOrders],
@@ -3469,7 +3491,10 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
       });
       const npcOrders = ex.npcOrders.filter((x) => x.id !== o.id);
       const expExchange = replenishNpcExpOrders({ ...ex, npcOrders });
-      return { ...state, finance, expExchange };
+      return {
+        ...state, finance, expExchange,
+        managerScore: addManagerScore(state.managerScore, 'negociacao_exchange', `Comprou ${o.expAmount.toLocaleString('pt-BR')} EXP no Exchange`, Date.now()),
+      };
     }
     case 'UPSERT_CARD_COLLECTION': {
       const c = action.collection;
@@ -3786,12 +3811,24 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         };
       }
 
+      // PONTUAÇÃO DO MANAGER — cada plano de treino concluído pontua.
+      let scoreAfterTraining = state.managerScore;
+      for (const plan of due) {
+        scoreAfterTraining = addManagerScore(
+          scoreAfterTraining,
+          'treino_concluido',
+          `Treino concluído (${plan.playerIds.length} jogador${plan.playerIds.length === 1 ? '' : 'es'})`,
+          Date.now(),
+        );
+      }
+
       return {
         ...state,
         players,
         playerHealth: syncedHealth,
         playerSeasonLedger,
         playerEvolutionTimeline,
+        managerScore: scoreAfterTraining,
         manager: {
           ...state.manager,
           trainingPlans: [...done, ...rest].slice(0, 80),
@@ -4307,6 +4344,7 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         ...state,
         structures: result.structures!,
         finance: nextFinance,
+        managerScore: addManagerScore(state.managerScore, 'upgrade_estrutura', `${label} evoluiu para nível ${newLevel}`, Date.now()),
       };
       const crowdNext =
         action.structureId === 'stadium'
