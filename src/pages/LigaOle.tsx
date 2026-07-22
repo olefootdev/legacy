@@ -33,6 +33,7 @@ import { formatCompactNumber } from '@/systems/economy';
 import { fetchMyReferralCode } from '@/supabase/referrals';
 import { shareImageWithText } from '@/lib/shareImage';
 import { LigaOlePreviewModal } from '@/components/ligaole/LigaOlePreviewModal';
+import { CinematicHero } from '@/components/CinematicHero';
 import {
   currentWeekKey,
   recordLigaOleWeeklyRun,
@@ -119,46 +120,6 @@ function BracketCompact({ liga }: { liga: LigaOleState }) {
   );
 }
 
-/**
- * Hero cinematográfico — banner editorial full-bleed (preto+dourado) com texto
- * sobreposto. Scrim de baixo garante legibilidade; texto claro/dourado ancorado
- * no rodapé esquerdo pra não cobrir o manager no centro da imagem.
- */
-function CinematicHero({ eyebrow, title, caption, image }: {
-  eyebrow: string; title: string; caption: string; image: string;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden"
-      style={{ borderRadius: 'var(--radius-md)', aspectRatio: '3 / 2', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}
-    >
-      <img
-        src={image}
-        alt=""
-        aria-hidden
-        loading="eager"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      <div aria-hidden className="absolute inset-0"
-        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 34%, rgba(0,0,0,0) 62%)' }} />
-
-      <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 px-2.5 py-1"
-        style={{ borderRadius: 'var(--radius-sm)', background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(253,225,0,0.45)' }}>
-        <Trophy className="h-3.5 w-3.5 text-neon-yellow" strokeWidth={2.5} aria-hidden />
-        <span className="font-display uppercase text-neon-yellow" style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.16em' }}>Liga Ole</span>
-      </div>
-
-      <div className="absolute inset-x-4 bottom-4 z-10">
-        <p className="font-display uppercase mb-1.5" style={{ color: 'var(--color-neon-yellow)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.28em' }}>{eyebrow}</p>
-        <p style={{ color: '#f5ead0', fontFamily: MORET, fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(38px, 11vw, 56px)', lineHeight: 0.92, letterSpacing: '-0.03em' }}>{title}</p>
-        <span aria-hidden className="block h-[3px] w-11 bg-neon-yellow mt-2.5 mb-2" />
-        <p className="font-display uppercase" style={{ color: 'rgba(245,234,208,0.8)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.18em' }}>{caption}</p>
-      </div>
-    </motion.div>
-  );
-}
 
 /**
  * Card de campeão VIRAL — pôster `banner-campeao` com texto sobreposto, craque
@@ -493,6 +454,8 @@ export function LigaOle() {
           {/* Convite — sempre presente no landing. Hero cinematográfico (banner real). */}
           {!flash && (
             <CinematicHero
+              badgeLabel="Liga Ole"
+              BadgeIcon={Trophy}
               eyebrow="Mata-mata · 32 clubes"
               title="Seja campeão."
               caption="Só managers reais · 5 confrontos"

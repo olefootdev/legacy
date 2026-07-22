@@ -8,6 +8,7 @@ import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import type { AdminLeagueConfig, KnockoutRound, LeagueScope } from '@/match/adminLeagues';
 import { BackButton } from '@/components/BackButton';
+import { CinematicHero } from '@/components/CinematicHero';
 import { LocalLeagueSection } from '@/components/leagues/LocalLeagueSection';
 import {
   goalDiff,
@@ -185,13 +186,25 @@ const TAB_META: Record<Exclude<LeagueScope, 'world'>, { num: string; eyebrow: st
 // Sprint 7 — As 3 ligas que o usuário quer em destaque no topo de /competicao/ligas.
 type PrimaryLeagueTab = 'global' | 'classic' | 'fast';
 
-const PRIMARY_LEAGUE_TABS: { id: PrimaryLeagueTab; label: string; icon: typeof Globe; subtitle: string; quote: string }[] = [
+const PRIMARY_LEAGUE_TABS: {
+  id: PrimaryLeagueTab;
+  label: string;
+  icon: typeof Globe;
+  subtitle: string;
+  quote: string;
+  heroImage: string;
+  heroPos: string;
+  heroCaption: string;
+}[] = [
   {
     id: 'global',
     label: 'Liga Global',
     icon: Globe,
     subtitle: 'pelo mundo.',
     quote: 'A liga autoritativa — managers reais em divisões com promoção e rebaixamento.',
+    heroImage: '/login-hero.png',
+    heroPos: 'center 18%',
+    heroCaption: 'Managers reais · promoção e rebaixamento',
   },
   {
     id: 'classic',
@@ -199,6 +212,9 @@ const PRIMARY_LEAGUE_TABS: { id: PrimaryLeagueTab; label: string; icon: typeof G
     icon: Layers,
     subtitle: 'no campo 2D.',
     quote: 'Cada partida CLASSIC soma pontos — ranking eterno de managers táticos.',
+    heroImage: '/hero-legacy-high.png',
+    heroPos: 'center 12%',
+    heroCaption: 'Pontos corridos · ranking eterno',
   },
   {
     id: 'fast',
@@ -206,6 +222,9 @@ const PRIMARY_LEAGUE_TABS: { id: PrimaryLeagueTab; label: string; icon: typeof G
     icon: Zap,
     subtitle: 'partida rápida.',
     quote: 'Cada partida RÁPIDA soma pontos — quem joga mais, sobe mais rápido.',
+    heroImage: '/hero-legacy-full.png',
+    heroPos: 'center 22%',
+    heroCaption: 'Partida rápida · sobe quem joga mais',
   },
 ];
 
@@ -249,82 +268,39 @@ export function Leagues() {
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 pb-8 lg:max-w-5xl xl:max-w-6xl">
       <BackButton to="/competicao" label="Competição" />
 
-      {/* ── Header — Sprint B-4 Legacy Tech (padrão Ranking) ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border border-white/10 bg-dark-gray overflow-hidden"
-        style={{ borderRadius: 'var(--radius-md)' }}
-      >
-        <div className="bg-black/40 p-6 md:p-8 border-b border-[var(--color-divider-yellow)]">
-          <div
-            className="font-display font-bold uppercase text-neon-yellow/80 mb-3"
-            style={{ fontSize: '10px', letterSpacing: '0.28em' }}
-          >
-            OLE Football · Competições
-          </div>
-          <h1 className="leading-[0.92]">
-            <span
-              className="block font-bold uppercase text-white"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2rem, 5.5vw, 3.5rem)',
-                letterSpacing: '0.005em',
-              }}
-            >
-              Ligas
-            </span>
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={primaryMeta.subtitle}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.35 }}
-                className="block italic text-neon-yellow mt-1"
-                style={{
-                  fontFamily: 'var(--font-serif-hero)',
-                  fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {primaryMeta.subtitle}
-              </motion.span>
-            </AnimatePresence>
-          </h1>
-          <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow mt-5" />
-          <p
-            className="text-white/55 max-w-md mt-4"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', lineHeight: 1.5 }}
-          >
-            {primaryMeta.quote.replace(/“|”/g, '')}
-          </p>
-        </div>
+      {/* ── Hero cinematográfico — muda com a tab primária selecionada ── */}
+      <CinematicHero
+        image={primaryMeta.heroImage}
+        objectPosition={primaryMeta.heroPos}
+        badgeLabel="Competição"
+        BadgeIcon={Trophy}
+        eyebrow="OLE Football · Competições"
+        title={primaryMeta.label}
+        caption={primaryMeta.heroCaption}
+      />
 
-        {/* Tabs PRIMÁRIAS — LIGA GLOBAL / LIGA CLASSIC / FAST LIGA */}
-        <div className="p-4 border-b border-white/10 flex flex-wrap gap-2">
-          {PRIMARY_LEAGUE_TABS.map((t) => {
-            const TabIcon = t.icon;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setPrimaryTab(t.id)}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-5 py-2 font-display text-[11px] font-black uppercase tracking-[0.22em] transition-all',
-                  primaryTab === t.id
-                    ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
-                    : 'border border-white/15 bg-white/[0.03] text-white/65 hover:border-neon-yellow/40 hover:text-white',
-                )}
-              >
-                <TabIcon className="w-3.5 h-3.5" />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </motion.div>
+      {/* Tabs PRIMÁRIAS — LIGA GLOBAL / LIGA CLASSIC / FAST LIGA */}
+      <div className="flex flex-wrap gap-2">
+        {PRIMARY_LEAGUE_TABS.map((t) => {
+          const TabIcon = t.icon;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setPrimaryTab(t.id)}
+              className={cn(
+                'inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-5 py-2 font-display text-[11px] font-black uppercase tracking-[0.22em] transition-all',
+                primaryTab === t.id
+                  ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
+                  : 'border border-white/15 bg-white/[0.03] text-white/65 hover:border-neon-yellow/40 hover:text-white',
+              )}
+            >
+              <TabIcon className="w-3.5 h-3.5" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* ── Conteúdo da tab primária selecionada ── */}
       {primaryTab === 'global' && (
