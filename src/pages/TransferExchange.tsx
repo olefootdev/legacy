@@ -436,21 +436,6 @@ export function TransferExchange() {
                       Comprar
                     </button>
                   ) : null}
-                  {isOtherPlayer ? (
-                    <span
-                      className="self-center inline-flex items-center gap-1.5 border border-[var(--color-border)] bg-deep-black px-3 py-1.5 text-white/45 uppercase"
-                      style={{
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: '9px',
-                        letterSpacing: '0.22em',
-                        fontWeight: 600,
-                        borderRadius: 'var(--radius-sm)',
-                      }}
-                    >
-                      <span aria-hidden className="w-1 h-1 rounded-full bg-rose-500 live-dot" />
-                      P2P · em breve
-                    </span>
-                  ) : null}
                 </div>
               </li>
             );

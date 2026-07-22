@@ -126,7 +126,7 @@ export default function GlobalLeagueClubProfile() {
         >
           <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
-        <p className="font-serif-hero text-xl text-white/40 italic">Clube nao encontrado.</p>
+        <p className="font-serif-hero text-xl text-white/40 italic">Clube não encontrado.</p>
       </div>
     );
   }
@@ -181,7 +181,7 @@ export default function GlobalLeagueClubProfile() {
               {team.division && (
                 <>
                   <span className="w-px h-4 bg-white/20" />
-                  <span className="text-xs text-white/40">Divisao {team.division}</span>
+                  <span className="text-xs text-white/40">Divisão {team.division}</span>
                 </>
               )}
             </div>
@@ -289,7 +289,7 @@ export default function GlobalLeagueClubProfile() {
         </motion.div>
       )}
 
-      {/* Historico de partidas */}
+      {/* Histórico de partidas */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}

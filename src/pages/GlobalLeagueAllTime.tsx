@@ -70,7 +70,7 @@ export default function GlobalLeagueAllTime() {
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-neon-yellow" />
               <span className="font-display text-xs font-bold uppercase tracking-wider text-white">
-                Classificacao Historica
+                Classificação Histórica
               </span>
             </div>
             <span className="font-mono text-xs text-white/40">{ranked.length} clubes</span>
