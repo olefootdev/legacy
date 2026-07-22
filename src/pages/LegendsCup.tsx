@@ -11,8 +11,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore, useGameDispatch } from '@/game/store';
-import { Loader2, Play, Trophy, RotateCcw, ArrowLeft, Info, Users } from 'lucide-react';
-import type { OpponentStub } from '@/entities/types';
+import { Loader2, Play, Trophy, RotateCcw, ArrowLeft, Info, Users, Check } from 'lucide-react';
+import type { OpponentStub, PlayerEntity } from '@/entities/types';
+import { CinematicHero } from '@/components/CinematicHero';
 import { overallFromAttributes } from '@/entities/player';
 import {
   LEGENDS_CUP_ROUNDS, LEGENDS_CUP_OPPONENT_NAME, LEGENDS_CUP_SQUADS,
@@ -138,30 +139,40 @@ export function LegendsCup() {
 
   return (
     <div className="mx-auto min-w-0 max-w-4xl space-y-5 pb-16">
-      <header className="flex items-center gap-3">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => navigate('/')}
           className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/10 bg-black text-white/70 hover:bg-white/10"
+          style={{ borderRadius: 'var(--radius-sm)' }}
           aria-label="Voltar"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: YELLOW }}>
-            Modo torneio
-          </div>
-          <h1 className="ole-headline-italic mt-1" style={{ fontSize: 'clamp(32px, 6vw, 48px)' }}>
-            Legends Cup
-          </h1>
-        </div>
+        <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
+          Modo torneio
+        </span>
         {titles > 0 && (
-          <div className="flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2">
+          <div className="ml-auto flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-2">
             <Trophy className="h-4 w-4" style={{ color: YELLOW }} />
             <span className="font-display text-sm font-black tabular-nums">{titles}</span>
           </div>
         )}
-      </header>
+      </div>
+
+      <CinematicHero
+        image="/hero-legacy-full.png"
+        objectPosition="center 22%"
+        badgeLabel="Legends Cup"
+        BadgeIcon={Trophy}
+        eyebrow="Respeito máximo às lendas"
+        title="Legends Cup"
+        caption={
+          titles > 0
+            ? `${titles} ${titles === 1 ? 'título' : 'títulos'} · todas as lendas na final`
+            : '5 fases · todas as lendas na final'
+        }
+      />
 
       {flash && (
         <div
@@ -169,8 +180,15 @@ export function LegendsCup() {
             flash.outcome === 'champion' ? 'border-neon-yellow/40 bg-neon-yellow/[0.07]' : 'border-white/12 bg-white/[0.03]'
           }`}
         >
-          <span className="font-display text-sm font-black uppercase tracking-wider">
-            {flash.outcome === 'champion' ? '🏆 Campeão' : 'Eliminado'}
+          <span className="inline-flex items-center gap-1.5 font-display text-sm font-black uppercase tracking-wider">
+            {flash.outcome === 'champion' ? (
+              <>
+                <Trophy className="h-4 w-4" style={{ color: YELLOW }} aria-hidden strokeWidth={2.4} />
+                Campeão
+              </>
+            ) : (
+              'Eliminado'
+            )}
           </span>
           <span className="text-sm text-white/60">chegou até {flash.reachedRound}.</span>
           <button
@@ -219,10 +237,56 @@ export function LegendsCup() {
   );
 }
 
-/** Antes de começar: o regulamento inteiro, porque ninguém entra num torneio sem saber a regra. */
+/** Antes de começar: quem espera na final + o regulamento inteiro. */
 function StartCard({ onStart, drawing }: { onStart: () => void; drawing: boolean }) {
+  // Prévia real das lendas que entram na FINAL — o gancho emocional do torneio.
+  // Determinístico por seed fixa: a vitrine não muda a cada render.
+  const [finalLegends, setFinalLegends] = useState<PlayerEntity[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const finalIdx = LEGENDS_CUP_ROUNDS.length - 1;
+    buildLegendsCupOpponent(finalIdx, 'legendscup-preview')
+      .then((o) => { if (alive) setFinalLegends(o.legends.slice(0, 5)); })
+      .catch(() => { /* sem lendas carregadas → some a vitrine, sem inventar nada */ });
+    return () => { alive = false; };
+  }, []);
+
   return (
     <div className="rounded-2xl border border-white/10 bg-[#121214] p-7">
+      {finalLegends.length > 0 && (
+        <div className="mb-7">
+          <p className="mb-3 text-center font-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+            Quem espera na final
+          </p>
+          <div className="grid grid-cols-5 gap-2">
+            {finalLegends.map((l) => (
+              <div key={l.id} className="overflow-hidden rounded-lg border border-white/10 bg-[#0c0c0d]">
+                <div className="relative aspect-[3/4] bg-black">
+                  {l.portraitUrl ? (
+                    <img
+                      src={l.portraitUrl}
+                      alt={l.name}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-cover object-[50%_34%] grayscale"
+                    />
+                  ) : (
+                    <div className="grid h-full place-items-center text-[9px] text-white/20">sem foto</div>
+                  )}
+                  <span
+                    className="absolute left-1 top-1 rounded px-1 py-0.5 font-display text-[10px] font-black text-black"
+                    style={{ background: YELLOW }}
+                  >
+                    {overallFromAttributes(l.attrs, l.pos)}
+                  </span>
+                </div>
+                <p className="truncate px-1.5 py-1 font-display text-[9px] font-black">{l.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <h2 className="ole-headline-italic text-center text-2xl">Enfrente as lendas</h2>
 
       <ol className="mx-auto mt-6 max-w-xl space-y-3.5">
@@ -450,8 +514,9 @@ function KnockoutStage({
         )}
       </div>
 
-      <p className="mt-2 text-[13px] italic leading-snug text-white/45">
-        {persona.icon} {persona.label}: “{line}”
+      <p className="mt-2 flex items-start gap-1.5 text-[13px] italic leading-snug text-white/45">
+        <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 not-italic text-white/30" aria-hidden />
+        <span><span className="not-italic font-display text-[11px] font-bold uppercase tracking-wider text-white/55">{persona.label}</span>: “{line}”</span>
       </p>
 
       {loading ? (
@@ -463,7 +528,7 @@ function KnockoutStage({
               <div className="relative aspect-[3/4] bg-black">
                 {l.portraitUrl ? (
                   <img src={l.portraitUrl} alt={l.name} loading="lazy" referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover object-[50%_18%]" />
+                    className="h-full w-full object-cover object-[50%_34%]" />
                 ) : (
                   <div className="grid h-full place-items-center text-white/20">sem foto</div>
                 )}
@@ -536,7 +601,7 @@ function Bracket({ roundIndex, runNumber }: { roundIndex: number; runNumber: num
               <span className="ml-auto font-display text-[11px] font-black tabular-nums text-white/50">
                 {legendsCupPhaseExp(i, runNumber).toLocaleString('pt-BR')} EXP
               </span>
-              {done && <span className="text-[11px] text-neon-yellow">✓</span>}
+              {done && <Check className="h-3.5 w-3.5 text-neon-yellow" aria-hidden strokeWidth={3} />}
             </div>
           );
         })}
