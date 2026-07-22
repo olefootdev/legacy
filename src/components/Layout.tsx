@@ -56,7 +56,7 @@ const mainNavItems: NavItem[] = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Users, label: 'CLUBE', path: '/clube' },
   { icon: Trophy, label: 'COMPETIÇÃO', path: '/competicao' },
-  { icon: Crown, label: 'MEMORÁVEIS', path: '/legend' },
+  { icon: Crown, label: 'LEGENDS', path: '/legend' },
   { icon: ArrowRightLeft, label: 'MERCADO', path: '/mercado' },
   { icon: User, label: 'MANAGER', path: '/manager' },
   { icon: Wallet, label: 'WALLET', path: '/wallet' },

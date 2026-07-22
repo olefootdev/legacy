@@ -81,154 +81,127 @@ export interface LegendData {
 }
 
 export const LEGENDS_BY_SLUG: Record<string, LegendData> = {
-  pele: {
-    slug: 'pele',
-    name: 'PELÉ',
-    fullName: 'Edson Arantes do Nascimento',
-    epithet: 'O Rei do Futebol',
-    era: '1956 – 1977',
+  palhinha: {
+    slug: 'palhinha',
+    name: 'PALHINHA',
+    fullName: 'Jorge Ferreira da Silva',
+    epithet: 'O falso 9 que ninguém sabia marcar',
+    era: '1992 – 1997',
     nationality: 'Brasil',
-    signature: 'Tricampeão do Mundo · 1958 · 1962 · 1970',
-    ovr: 99,
-    quote:
-      'Eu nasci para jogar futebol, da mesma forma que Beethoven nasceu para escrever música e Michelangelo nasceu para pintar.',
-    quoteAuthor: 'Edson Arantes do Nascimento',
-    trajectory: [
-      { year: 1958, text: 'Copa do Mundo aos 17 anos — gol de placa contra a Suécia na final' },
-      { year: 1962, text: 'Bicampeonato mundial — lesão na primeira fase, Brasil campeão' },
-      { year: 1970, text: 'Tricampeonato — seleção de todos os tempos' },
-      { year: 1977, text: 'Adeus ao futebol no Cosmos de Nova York' },
-    ],
-    dna: [
-      { label: 'FINALIZAÇÃO', value: 98 },
-      { label: 'DRIBLE', value: 96 },
-      { label: 'VELOCIDADE', value: 94 },
-      { label: 'PASSE', value: 92 },
-      { label: 'FÍSICO', value: 88 },
-      { label: 'MENTALIDADE', value: 99 },
-    ],
-    achievements: [
-      { value: '1283', label: 'Gols na carreira' },
-      { value: '3×', label: 'Mundo' },
-      { value: '21', label: 'Anos de elite' },
-      { value: '92', label: 'Hat-tricks' },
-    ],
-    tributes: [
-      {
-        text: 'O melhor jogador de todos os tempos foi Pelé.',
-        author: 'Diego Maradona',
-        context: '1998',
-      },
-      {
-        text: 'Pelé não tinha defeito, era completo.',
-        author: 'Garrincha',
-      },
-    ],
-    storeHighlightId: 'legacy-pele',
-    og: {
-      title: 'PELÉ · O Rei do Futebol — Olefoot Legends',
-      description:
-        'Treina com Pelé no Olefoot. Aprende com a lenda do futebol mundial — 1.283 gols, 3 mundiais, OVR 99 no museu vivo.',
-    },
-  },
-
-  garrincha: {
-    slug: 'garrincha',
-    name: 'GARRINCHA',
-    fullName: 'Manuel Francisco dos Santos',
-    epithet: 'A Alegria do Povo',
-    era: '1953 – 1973',
-    nationality: 'Brasil',
-    signature: 'Bicampeão do Mundo · Bola de Ouro 1962',
+    signature: 'Bicampeão do Mundo · Tri da Libertadores · 1992 · 1993 · 1997',
     ovr: 95,
-    quote:
-      'Eu jogava futebol pela alegria de jogar. Não pensava em prêmio, em dinheiro, em fama.',
-    quoteAuthor: 'Manuel Francisco dos Santos',
+    quote: 'Três Libertadores. Poucos brasileiros podem dizer isso.',
+    photoUrl: '/legends/palhinha.png',
     trajectory: [
-      { year: 1958, text: 'Copa do Mundo — desequilibrou no flanco direito' },
-      { year: 1962, text: 'Bola de Ouro do Mundial após Pelé se lesionar' },
-      { year: 1966, text: 'Última Copa pela seleção brasileira' },
-    ],
-    dna: [
-      { label: 'DRIBLE', value: 99 },
-      { label: 'VELOCIDADE', value: 92 },
-      { label: 'FINALIZAÇÃO', value: 84 },
-      { label: 'PASSE', value: 80 },
-      { label: 'FÍSICO', value: 78 },
-      { label: 'MENTALIDADE', value: 76 },
-    ],
-    achievements: [
-      { value: '232', label: 'Gols na carreira' },
-      { value: '2×', label: 'Mundo' },
-      { value: '20', label: 'Anos de elite' },
-      { value: '50', label: 'Internacionais' },
-    ],
-    tributes: [
-      {
-        text: 'Era um furacão pela direita. Ninguém defendia o Garrincha.',
-        author: 'Pelé',
-      },
-    ],
-    storeHighlightId: 'legacy-garrincha',
-    og: {
-      title: 'GARRINCHA · A Alegria do Povo — Olefoot Legends',
-      description:
-        'Treina com Garrincha no Olefoot. O drible que enganou o mundo — bicampeão, herói da Copa de 62, OVR 95.',
-    },
-  },
-
-  zico: {
-    slug: 'zico',
-    name: 'ZICO',
-    fullName: 'Arthur Antunes Coimbra',
-    epithet: 'O Galinho de Quintino',
-    era: '1971 – 1994',
-    nationality: 'Brasil',
-    signature: 'Mundial Interclubes 1981 · Geração de Ouro 82',
-    ovr: 94,
-    quote: 'O futebol arte é o futebol que faz a torcida sonhar.',
-    quoteAuthor: 'Arthur Antunes Coimbra',
-    trajectory: [
-      { year: 1976, text: 'Estreia profissional pelo Flamengo' },
-      { year: 1981, text: 'Mundial Interclubes — 3-0 sobre o Liverpool' },
-      { year: 1982, text: 'Copa do Mundo na Espanha — geração de ouro' },
+      { year: 1992, text: 'Chega do América-MG e fatura Paulista, Libertadores e Mundial no São Paulo' },
+      { year: 1993, text: 'Bicampeão do Mundo e Supercopa — dois golaços em Chilavert no mesmo jogo' },
+      { year: 1997, text: 'Tricampeão da Libertadores, agora de azul pelo Cruzeiro' },
     ],
     dna: [
       { label: 'PASSE', value: 96 },
-      { label: 'FINALIZAÇÃO', value: 92 },
-      { label: 'MENTALIDADE', value: 90 },
-      { label: 'DRIBLE', value: 88 },
-      { label: 'VELOCIDADE', value: 80 },
-      { label: 'FÍSICO', value: 78 },
+      { label: 'DRIBLE', value: 92 },
+      { label: 'FINALIZAÇÃO', value: 86 },
+      { label: 'VELOCIDADE', value: 86 },
+      { label: 'TÁTICO', value: 96 },
+      { label: 'MENTALIDADE', value: 96 },
     ],
     achievements: [
-      { value: '826', label: 'Gols na carreira' },
-      { value: '4×', label: 'Brasileirão' },
-      { value: '23', label: 'Anos de elite' },
-      { value: '6×', label: 'Bola de Prata' },
+      { value: '71', label: 'Gols pelo São Paulo' },
+      { value: '2×', label: 'Mundial (92·93)' },
+      { value: '3×', label: 'Libertadores' },
+      { value: '95', label: 'OVR no auge' },
     ],
-    tributes: [
-      {
-        text: 'Zico foi o melhor jogador que vi em campo.',
-        author: 'Sócrates',
-      },
-    ],
-    storeHighlightId: 'legacy-zico',
+    storeHighlightId: 'legacy-palhinha',
     og: {
-      title: 'ZICO · O Galinho de Quintino — Olefoot Legends',
+      title: 'PALHINHA · Bicampeão do Mundo — Olefoot Legends',
       description:
-        'Treina com Zico no Olefoot. O 10 do Flamengo eterno — Mundial 81, geração 82, OVR 94.',
+        'Treina com Palhinha no Olefoot. Jorge Ferreira da Silva — bicampeão do mundo (92·93), tricampeão da Libertadores, OVR 95 no museu vivo.',
+    },
+  },
+
+  goncalves: {
+    slug: 'goncalves',
+    name: 'GONÇALVES',
+    fullName: 'Marcelo Gonçalves Costa Lopes',
+    epithet: 'A leitura tática que carregou o Brasil',
+    era: '1990 – 1998',
+    nationality: 'Brasil',
+    signature: 'Vice-Campeão do Mundo · Campeão da Copa América · 1995 · 1998',
+    ovr: 84,
+    quote: 'Pilar da linha de três que matou um jejum de 27 anos.',
+    trajectory: [
+      { year: 1993, text: 'Bicampeão mexicano — o zagueiro do passe rasteiro atravessa a fronteira' },
+      { year: 1995, text: 'Campeão Brasileiro — pilar da defesa que matou um jejum de 27 anos' },
+      { year: 1998, text: 'Titular na Copa América campeã e vice-campeão do Mundo com o Brasil' },
+    ],
+    dna: [
+      { label: 'MARCAÇÃO', value: 86 },
+      { label: 'TÁTICO', value: 92 },
+      { label: 'MENTALIDADE', value: 93 },
+      { label: 'PASSE', value: 78 },
+      { label: 'FÍSICO', value: 76 },
+      { label: 'FAIR PLAY', value: 91 },
+    ],
+    achievements: [
+      { value: '1998', label: 'Vice do Mundo' },
+      { value: '1×', label: 'Copa América' },
+      { value: '1995', label: 'Brasileirão' },
+      { value: '84', label: 'OVR no auge' },
+    ],
+    storeHighlightId: 'legacy-goncalves',
+    og: {
+      title: 'GONÇALVES · O Zagueiro do Brasil — Olefoot Legends',
+      description:
+        'Treina com Marcelo Gonçalves no Olefoot. Zagueiro vice-campeão do Mundo em 98 e campeão da Copa América — a leitura tática que carregou o Brasil.',
+    },
+  },
+
+  adauto: {
+    slug: 'adauto',
+    name: 'ADAUTO',
+    fullName: 'Adauto Evandro da Silva',
+    epithet: 'Símbolo além do gol',
+    era: '1999 – 2006',
+    nationality: 'Brasil',
+    signature: 'Artilheiro · Símbolo do Slavia Praha · 2000 · 2002 · 2006',
+    ovr: 88,
+    quote: 'Brasileiro no Eden. Voz no debate. Símbolo além do gol.',
+    photoUrl: '/legends/adauto.png',
+    trajectory: [
+      { year: 2000, text: '8 gols em 7 jogos na Copa SP — o Santo André acreditou antes do país' },
+      { year: 2002, text: 'Três gols no Olímpico e a Copa Sul-Minas pelo Atlético-PR' },
+      { year: 2006, text: '78 jogos, 19 gols e uma voz no Slavia Praha — símbolo além do gol' },
+    ],
+    dna: [
+      { label: 'FINALIZAÇÃO', value: 89 },
+      { label: 'DRIBLE', value: 86 },
+      { label: 'VELOCIDADE', value: 82 },
+      { label: 'TÁTICO', value: 90 },
+      { label: 'MENTALIDADE', value: 96 },
+      { label: 'CONFIANÇA', value: 95 },
+    ],
+    achievements: [
+      { value: '19', label: 'Gols no Slavia' },
+      { value: '8', label: 'Gols em 7 jogos (Copa SP)' },
+      { value: '2002', label: 'Copa Sul-Minas' },
+      { value: '88', label: 'OVR no auge' },
+    ],
+    storeHighlightId: 'legacy-adauto',
+    og: {
+      title: 'ADAUTO · Símbolo do Slavia Praha — Olefoot Legends',
+      description:
+        'Treina com Adauto no Olefoot. Artilheiro brasileiro no Eden, símbolo além do gol — 19 gols pelo Slavia Praha, OVR 88 no museu vivo.',
     },
   },
 };
 
 /** Lookup tolerante: aceita slug com ou sem acento. */
 export function findLegend(slugOrId: string | undefined): LegendData {
-  const normalized = (slugOrId ?? 'pele')
+  const normalized = (slugOrId ?? 'palhinha')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
-  return LEGENDS_BY_SLUG[normalized] ?? (LEGENDS_BY_SLUG.pele as LegendData);
+  return LEGENDS_BY_SLUG[normalized] ?? (LEGENDS_BY_SLUG.palhinha as LegendData);
 }
 
 /** Lista para grid/galeria futura. */
