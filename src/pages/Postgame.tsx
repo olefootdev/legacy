@@ -1,7 +1,7 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, ArrowRight, Star, Megaphone } from 'lucide-react';
+import { Trophy, ArrowRight, Star, Megaphone, Share2, Check } from 'lucide-react';
 import { getGameState, useGameDispatch, useGameStore } from '@/game/store';
 import { trackMissionEvent } from '@/progression/trackEvent';
 import { syncMyExpLifetime } from '@/supabase/referrals';
@@ -161,6 +161,8 @@ export default function Postgame() {
     };
   }, [live?.homeStats, live?.homePlayers, playersById]);
 
+  const [shareState, setShareState] = useState<'idle' | 'done'>('idle');
+
   if (!live) return null;
 
   const homeScore = live.homeScore ?? 0;
@@ -200,6 +202,13 @@ export default function Postgame() {
         {/* Header — eyebrow + resultado emocional em Moret italic */}
         <header className="text-center space-y-4">
           <div className="ole-eyebrow">Pós-jogo</div>
+          {homeWin && (
+            <Trophy
+              className="mx-auto h-10 w-10 text-neon-yellow drop-shadow-[0_0_22px_rgba(253,225,0,0.5)]"
+              strokeWidth={1.6}
+              aria-hidden
+            />
+          )}
           <h1
             className={`ole-headline-italic ${resultColor} leading-[0.9]`}
             style={{ fontSize: 'clamp(64px, 14vw, 128px)' }}
@@ -319,7 +328,23 @@ export default function Postgame() {
         ) : null}
 
         {/* CTA */}
-        <div className="flex justify-center pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={async () => {
+              const origin = typeof window !== 'undefined' ? window.location.origin : 'https://game.olefoot.com';
+              const text = `${resultLabel} ${clubName} ${homeScore}×${awayScore} ${live.awayShort ?? ''} — no Olefoot. Monta teu time e vem: ${origin}`;
+              try {
+                if (navigator.share) await navigator.share({ text });
+                else await navigator.clipboard?.writeText(text);
+                setShareState('done');
+                setTimeout(() => setShareState('idle'), 2200);
+              } catch { /* usuário cancelou o share — sem ação */ }
+            }}
+            className="inline-flex items-center gap-2 rounded-sm border border-neon-yellow/40 bg-neon-yellow/[0.08] px-5 py-3 font-display text-sm font-black uppercase tracking-[0.2em] text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
+          >
+            {shareState === 'done' ? <><Check className="h-4 w-4" /> Copiado</> : <><Share2 className="h-4 w-4" /> Compartilhar</>}
+          </button>
           <button
             type="button"
             onClick={() => navigate('/')}
