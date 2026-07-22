@@ -27,6 +27,7 @@ import {
   Gift,
   Award,
   Coins,
+  Check,
   ShieldCheck,
   AlertTriangle,
   Sprout,
@@ -565,7 +566,7 @@ export function ManagerNetwork() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px] sm:p-6 sm:pl-[18px]"
+          className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-5 pl-[18px] sm:p-6 sm:pl-[18px]"
         >
           <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-400" aria-hidden />
           <div className="flex items-start gap-3 mb-4">
@@ -725,7 +726,7 @@ export function ManagerNetwork() {
               DESCENDENTES dele (o direto não conta a si mesmo); só as 2 maiores
               equipes somam. O marco de 1 é a exceção: olha indicação direta. */}
           {!loadingReferrals && (
-            <div className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-neon-yellow bg-[#1c1c1c] p-4">
+            <div className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-neon-yellow bg-panel p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-[9px] text-neon-yellow/70 uppercase tracking-[0.2em] font-display font-bold">
                   Marcos da rede
@@ -805,9 +806,10 @@ export function ManagerNetwork() {
                 <motion.p
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 text-center font-display text-[10px] uppercase tracking-wider text-emerald-300"
+                  className="mt-3 flex items-center justify-center gap-1.5 font-display text-[10px] uppercase tracking-wider text-emerald-300"
                 >
-                  ✓ +{claimSuccess.toLocaleString('pt-BR')} EXP creditados
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+                  +{claimSuccess.toLocaleString('pt-BR')} EXP creditados
                 </motion.p>
               )}
             </div>
@@ -845,7 +847,7 @@ export function ManagerNetwork() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + idx * 0.05 }}
-                    className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-cyan-400 bg-[#1c1c1c] p-4 hover:border-white/20 transition-colors"
+                    className="rounded-[var(--radius-md)] border border-white/10 border-l-[3px] border-l-cyan-400 bg-panel p-4 hover:border-white/20 transition-colors"
                   >
                     {/* Header: nome + clube + L badge */}
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -949,7 +951,7 @@ export function ManagerNetwork() {
         )}
 
         {/* CAREER PROGRESS — Resumo + bônus pendente */}
-        <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-5 pl-[18px]">
+        <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-5 pl-[18px]">
           <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-400" aria-hidden />
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
@@ -1081,7 +1083,7 @@ export function ManagerNetwork() {
             )}
           </div>
 
-          <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[#1c1c1c] p-4 pl-[18px] sm:p-5 sm:pl-[18px]">
+          <div className="relative overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-panel p-4 pl-[18px] sm:p-5 sm:pl-[18px]">
             <span className="absolute inset-y-0 left-0 w-[3px] bg-cyan-400" aria-hidden />
             <p className="text-xs text-white/60 mb-4">
               5% de comissão sobre cada depósito da tua rede, em 3 níveis.
@@ -1163,7 +1165,7 @@ export function ManagerNetwork() {
               <Medal className="w-3.5 h-3.5" />
               <span>Top da Carreira</span>
             </div>
-            <ul className="bg-[#1c1c1c] border border-white/10 border-l-[3px] border-l-amber-400 rounded-[var(--radius-md)] divide-y divide-white/5">
+            <ul className="bg-panel border border-white/10 border-l-[3px] border-l-amber-400 rounded-[var(--radius-md)] divide-y divide-white/5">
               {leaderboard.slice(0, 20).map((entry) => {
                 const rankDef = RANK_CATALOG.find((r) => r.rank === entry.currentRank);
                 const RankIcon = rankDef ? RANK_ICON_MAP[rankDef.iconName] : Medal;
@@ -1207,7 +1209,7 @@ export function ManagerNetwork() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-[#1c1c1c] border border-white/10 border-l-[3px] border-l-cyan-400 rounded-[var(--radius-md)] p-4 sm:p-5"
+          className="bg-panel border border-white/10 border-l-[3px] border-l-cyan-400 rounded-[var(--radius-md)] p-4 sm:p-5"
         >
           <p className="flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-wider text-white mb-3">
             <Sparkles className="h-3.5 w-3.5 text-cyan-400" /> Como funcionam as comissões?
