@@ -15,9 +15,9 @@ function buildWelcomeMessage(engine: CoachConversationEngine, coachName: string)
 
   const fatigueNote =
     ctx.averageFatigue > 60
-      ? `⚠️ Fadiga média alta (${Math.round(ctx.averageFatigue)}%) — recomendo treino de recuperação.`
+      ? `Fadiga média alta (${Math.round(ctx.averageFatigue)}%) — recomendo treino de recuperação.`
       : ctx.averageFatigue < 30
-        ? `✅ Plantel descansado (${Math.round(ctx.averageFatigue)}%) — bom momento para desenvolvimento.`
+        ? `Plantel descansado (${Math.round(ctx.averageFatigue)}%) — bom momento para desenvolvimento.`
         : `Fadiga média em ${Math.round(ctx.averageFatigue)}% — situação controlada.`;
 
   const injuryNote = ctx.injuredPlayers > 0
@@ -169,7 +169,7 @@ export function CoachChat() {
       // Resposta do coach
       const assistantMsg: ConversationMessage = {
         role: 'assistant',
-        content: `✅ **Sugestão de Treino Criada**
+        content: `**Sugestão de Treino Criada**
 
 **Tipo**: ${suggestion.mode === 'individual' ? 'Individual' : 'Coletivo'} - ${suggestion.trainingType}
 **Grupo**: ${suggestion.group}
@@ -179,7 +179,7 @@ export function CoachChat() {
 **Justificativa:**
 ${suggestion.reasoning}
 
-📋 Criei uma ação pendente para aprovação. Verifica o card no canto inferior direito da tela para aprovar ou rejeitar.`,
+Criei uma ação pendente para aprovação. Verifica o card no canto inferior direito da tela para aprovar ou rejeitar.`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -187,7 +187,7 @@ ${suggestion.reasoning}
       console.error('[handleSuggestTraining] Erro:', error);
       const errorMsg: ConversationMessage = {
         role: 'assistant',
-        content: `❌ Erro ao criar sugestão de treino: ${error.message}`,
+        content: `Erro ao criar sugestão de treino: ${error.message}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -243,11 +243,11 @@ ${suggestion.reasoning}
 
       const assistantMsg: ConversationMessage = {
         role: 'assistant',
-        content: `✅ **Sugestões de Staff Criadas**
+        content: `**Sugestões de Staff Criadas**
 
 ${suggestionsList}
 
-📋 Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os cards no canto inferior direito da tela.`,
+Criei ${actionsCreated} ação(ões) pendente(s) para aprovação. Verifica os cards no canto inferior direito da tela.`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -255,7 +255,7 @@ ${suggestionsList}
       console.error('[handleSuggestStaff] Erro:', error);
       const errorMsg: ConversationMessage = {
         role: 'assistant',
-        content: `❌ Erro ao criar sugestões de staff: ${error.message}`,
+        content: `Erro ao criar sugestões de staff: ${error.message}`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -268,8 +268,8 @@ ${suggestionsList}
     return (
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         <div className="sports-panel p-6 text-center">
-          <Bot className="w-12 h-12 mx-auto text-gray-500 mb-4" />
-          <p className="text-gray-400">Coach não disponível</p>
+          <Bot className="w-12 h-12 mx-auto text-white/45 mb-4" />
+          <p className="text-white/50">Coach não disponível</p>
         </div>
       </div>
     );
@@ -278,7 +278,11 @@ ${suggestionsList}
   return (
     <div className="relative w-full max-w-[100vw] min-w-0 mx-auto overflow-x-hidden pb-32 sm:pb-8">
       <div className="relative z-10 w-full max-w-4xl min-w-0 mx-auto px-3 sm:px-4 lg:px-8 space-y-4">
-        <BackButton to="/team/staff" label="Staff" />
+        <BackButton to="/clube/staff" label="Staff" />
+
+        <div className="ole-eyebrow !text-neon-yellow">
+          <span>Treinador · Assistente de IA</span>
+        </div>
 
         {/* Header do Coach */}
         <motion.div
@@ -294,21 +298,21 @@ ${suggestionsList}
               <h2 className="text-lg font-display font-black uppercase tracking-wider text-white">
                 {coach.name}
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-white/50 mt-0.5">
                 {coach.personality} · Reputação {coach.reputation}/100
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-3 text-xs">
               <div className="text-center">
-                <div className="text-gray-500 uppercase text-[10px]">Tático</div>
+                <div className="text-white/45 uppercase text-[10px]">Tático</div>
                 <div className="text-white font-bold">{coach.tactical}/20</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-500 uppercase text-[10px]">Motivação</div>
+                <div className="text-white/45 uppercase text-[10px]">Motivação</div>
                 <div className="text-white font-bold">{coach.motivation}/20</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-500 uppercase text-[10px]">Autonomia</div>
+                <div className="text-white/45 uppercase text-[10px]">Autonomia</div>
                 <div className="text-neon-yellow font-bold">{coach.autonomyLevel}%</div>
               </div>
             </div>
@@ -322,7 +326,7 @@ ${suggestionsList}
           className="grid grid-cols-2 sm:grid-cols-4 gap-2"
         >
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+            <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <Users className="w-3.5 h-3.5" />
               <span className="uppercase text-[10px] font-medium">Jogadores</span>
             </div>
@@ -331,7 +335,7 @@ ${suggestionsList}
             </div>
           </div>
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+            <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <TrendingUp className="w-3.5 h-3.5" />
               <span className="uppercase text-[10px] font-medium">Fadiga</span>
             </div>
@@ -345,7 +349,7 @@ ${suggestionsList}
             </div>
           </div>
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+            <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <Dumbbell className="w-3.5 h-3.5" />
               <span className="uppercase text-[10px] font-medium">Treinos</span>
             </div>
@@ -354,7 +358,7 @@ ${suggestionsList}
             </div>
           </div>
           <div className="bg-black/40 border border-white/10 rounded p-2.5 text-xs">
-            <div className="flex items-center gap-1.5 text-gray-500 mb-1">
+            <div className="flex items-center gap-1.5 text-white/45 mb-1">
               <Sparkles className="w-3.5 h-3.5" />
               <span className="uppercase text-[10px] font-medium">Staff</span>
             </div>
@@ -374,10 +378,10 @@ ${suggestionsList}
             {messages.length === 0 && (
               <div className="text-center py-8">
                 <Bot className="w-12 h-12 mx-auto text-gray-600 mb-3" />
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-white/50">
                   Olá! Sou o teu assistente técnico. Posso ajudar com treinos, staff e análise do plantel.
                 </p>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-white/45 mt-2">
                   Usa os botões abaixo ou escreve tua pergunta.
                 </p>
               </div>
@@ -486,7 +490,7 @@ ${suggestionsList}
             animate={{ opacity: 1, y: 0 }}
             className="sports-panel p-4"
           >
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">
               Instruções Ativas ({coach.memory.managerInstructions.filter((i) => i.active).length})
             </h3>
             <div className="space-y-1.5">
@@ -501,7 +505,7 @@ ${suggestionsList}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <span className="text-white">{instruction.instruction}</span>
-                        <div className="text-[10px] text-gray-500 mt-0.5">
+                        <div className="text-[10px] text-white/45 mt-0.5">
                           {instruction.category} · {instruction.priority}
                         </div>
                       </div>
@@ -511,7 +515,7 @@ ${suggestionsList}
                             ? 'bg-red-500/20 text-red-400'
                             : instruction.priority === 'medium'
                               ? 'bg-yellow-500/20 text-yellow-400'
-                              : 'bg-gray-500/20 text-gray-400'
+                              : 'bg-gray-500/20 text-white/50'
                         }`}
                       >
                         {instruction.priority}

@@ -774,6 +774,8 @@ export type GameAction =
       prizeAmount: number;
     }
   | { type: 'DISMISS_INBOX_ITEM'; id: string }
+  | { type: 'MARK_INBOX_READ'; id: string }
+  | { type: 'MARK_ALL_INBOX_READ' }
   /** Insere item no topo da caixa; substitui item com o mesmo `id` se já existir. */
   | { type: 'INBOX_PREPEND'; item: InboxItem }
   | { type: 'SET_USER_SETTINGS'; partial: Partial<UserSettings> }

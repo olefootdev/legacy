@@ -1,44 +1,58 @@
 /**
- * ManagerMessages — Página de mensagens do manager
- * Alertas de leilões, oportunidades, notificações do sistema
+ * ManagerMessages — a Caixa de Entrada real do manager.
+ *
+ * Lê o inbox de verdade do estado do jogo (state.inbox) — antes era uma lista
+ * local `useState([])` que nunca populava (feature morta). Marcar como lida e
+ * apagar mexem no estado real via reducer.
  */
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bell, AlertCircle, Trophy, TrendingUp, X } from 'lucide-react';
+import {
+  Bell, X, Users, Dumbbell, Briefcase, Wallet, Shield, Trophy,
+  Target, Megaphone, Building2, UserCog, TrendingUp, Swords,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import type { ManagerMessage } from '@/market/socialTrade';
+import { useGameStore, useGameDispatch } from '@/game/store';
+import type { InboxCategory, InboxItem } from '@/game/inboxTypes';
 import { BackButton } from '@/components/BackButton';
 
-type MessageFilter = 'all' | 'unread' | 'high' | 'medium' | 'low';
+type MessageFilter = 'all' | 'unread';
+
+const CATEGORY_ICON: Record<InboxCategory, LucideIcon> = {
+  PLANTEL: Users,
+  TREINO: Dumbbell,
+  STAFF: Briefcase,
+  FINANCEIRO: Wallet,
+  CLUBE: Shield,
+  'COMPETIÇÃO': Trophy,
+  'MISSÃO': Target,
+  TORCIDA: Megaphone,
+  EMPRESA: Building2,
+  CONTA: UserCog,
+  RANKING: TrendingUp,
+  DESAFIOS: Swords,
+};
 
 export function ManagerMessages() {
-  const [messages, setMessages] = useState<ManagerMessage[]>([]);
+  const inbox = useGameStore((s) => s.inbox);
+  const dispatch = useGameDispatch();
   const [filter, setFilter] = useState<MessageFilter>('all');
 
-  const filtered = useMemo(() => {
-    if (filter === 'all') return messages;
-    if (filter === 'unread') return messages.filter((m) => !m.read);
-    return messages.filter((m) => m.urgency === filter);
-  }, [messages, filter]);
+  const filtered = useMemo(
+    () => (filter === 'unread' ? inbox.filter((m) => !m.read) : inbox),
+    [inbox, filter],
+  );
+  const unreadCount = useMemo(() => inbox.filter((m) => !m.read).length, [inbox]);
 
-  const unreadCount = messages.filter((m) => !m.read).length;
-
-  const markAsRead = (id: string) => {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read: true } : m)));
-  };
-
-  const markAllAsRead = () => {
-    setMessages((prev) => prev.map((m) => ({ ...m, read: true })));
-  };
-
-  const deleteMessage = (id: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id));
-  };
+  const markAsRead = (id: string) => dispatch({ type: 'MARK_INBOX_READ', id });
+  const markAllAsRead = () => dispatch({ type: 'MARK_ALL_INBOX_READ' });
+  const deleteMessage = (id: string) => dispatch({ type: 'DISMISS_INBOX_ITEM', id });
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl space-y-6 pb-10">
-      <BackButton to="/" label="Home" />
+      <BackButton to="/manager" label="Manager" />
 
       {/* Header */}
       <header className="text-center pt-2 pb-2">
@@ -79,9 +93,6 @@ export function ManagerMessages() {
           {[
             { key: 'all' as const, label: 'Todas' },
             { key: 'unread' as const, label: 'Não lidas' },
-            { key: 'high' as const, label: 'Urgente' },
-            { key: 'medium' as const, label: 'Média' },
-            { key: 'low' as const, label: 'Baixa' },
           ].map((f) => (
             <button
               key={f.key}
@@ -122,101 +133,17 @@ export function ManagerMessages() {
             >
               <Bell className="mx-auto h-12 w-12 text-white/20 mb-4" />
               <p className="text-sm text-white/40">
-                {messages.length === 0 ? 'Caixa vazia' : 'Nenhuma mensagem neste filtro'}
+                {inbox.length === 0 ? 'Caixa vazia' : 'Nenhuma mensagem neste filtro'}
               </p>
             </motion.div>
           ) : (
             filtered.map((msg) => (
-              <motion.div
+              <MessageCard
                 key={msg.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className={cn(
-                  'group relative overflow-hidden rounded-lg border transition-all',
-                  !msg.read
-                    ? 'border-neon-yellow/30 bg-neon-yellow/5'
-                    : 'border-white/10 bg-white/5 hover:border-white/20',
-                )}
-              >
-                {/* Barra lateral de urgência */}
-                <div
-                  className={cn(
-                    'absolute left-0 top-0 h-full w-1',
-                    msg.urgency === 'high' && 'bg-red-500',
-                    msg.urgency === 'medium' && 'bg-yellow-500',
-                    msg.urgency === 'low' && 'bg-blue-500',
-                  )}
-                />
-
-                <div className="px-4 py-4 pl-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      {/* Ícone + Título */}
-                      <div className="flex items-center gap-2 mb-2">
-                        {msg.type === 'auction_outbid' && (
-                          <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-                        )}
-                        {msg.type === 'auction_won' && (
-                          <Trophy className="h-4 w-4 text-yellow-400 shrink-0" />
-                        )}
-                        {msg.type === 'opportunity' && (
-                          <TrendingUp className="h-4 w-4 text-emerald-400 shrink-0" />
-                        )}
-                        {msg.type === 'system' && (
-                          <Bell className="h-4 w-4 text-blue-400 shrink-0" />
-                        )}
-
-                        <h3 className="text-sm font-bold text-white">{msg.title}</h3>
-
-                        {!msg.read && (
-                          <span className="ml-auto shrink-0 h-2 w-2 rounded-full bg-neon-yellow" />
-                        )}
-                      </div>
-
-                      {/* Mensagem */}
-                      <p className="text-xs text-white/70 leading-relaxed">{msg.message}</p>
-
-                      {/* Timestamp */}
-                      <p className="mt-2 text-[10px] text-white/40">
-                        {formatMessageTime(msg.timestamp)}
-                      </p>
-
-                      {/* Ações */}
-                      <div className="mt-3 flex items-center gap-2">
-                        {msg.actionUrl && (
-                          <Link
-                            to={msg.actionUrl}
-                            className="rounded-full bg-neon-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:bg-yellow-300"
-                          >
-                            Ver detalhes
-                          </Link>
-                        )}
-                        {!msg.read && (
-                          <button
-                            type="button"
-                            onClick={() => markAsRead(msg.id)}
-                            className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
-                          >
-                            Marcar como lida
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Botão deletar */}
-                    <button
-                      type="button"
-                      onClick={() => deleteMessage(msg.id)}
-                      className="shrink-0 rounded-full p-1 text-white/40 transition-colors hover:bg-red-500/20 hover:text-red-400"
-                      aria-label="Deletar mensagem"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
+                msg={msg}
+                onRead={() => markAsRead(msg.id)}
+                onDelete={() => deleteMessage(msg.id)}
+              />
             ))
           )}
         </AnimatePresence>
@@ -225,16 +152,71 @@ export function ManagerMessages() {
   );
 }
 
-function formatMessageTime(date: Date): string {
-  const now = Date.now();
-  const diff = now - date.getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+function MessageCard({ msg, onRead, onDelete }: { msg: InboxItem; onRead: () => void; onDelete: () => void }) {
+  const Icon = CATEGORY_ICON[msg.category] ?? Bell;
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={cn(
+        'group relative overflow-hidden border transition-all',
+        !msg.read ? 'border-neon-yellow/30 bg-neon-yellow/5' : 'border-white/10 bg-white/5 hover:border-white/20',
+      )}
+      style={{ borderRadius: 'var(--radius-md)' }}
+    >
+      <span aria-hidden className={cn('absolute left-0 top-0 h-full w-1', !msg.read ? 'bg-neon-yellow' : 'bg-white/15')} />
 
-  if (days > 0) return `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
-  if (hours > 0) return `há ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-  if (minutes > 0) return `há ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
-  return 'agora mesmo';
+      <div className="px-4 py-4 pl-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className={cn('h-4 w-4 shrink-0', msg.colorClass || 'text-white/60')} strokeWidth={2.2} />
+              <h3 className="min-w-0 truncate text-sm font-bold text-white">{msg.title}</h3>
+              {!msg.read && <span className="ml-auto shrink-0 h-2 w-2 rounded-full bg-neon-yellow" />}
+            </div>
+
+            {msg.body && <p className="text-xs text-white/70 leading-relaxed">{msg.body}</p>}
+
+            <p className="mt-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-white/40">
+              <span className="font-display font-bold">{msg.tag}</span>
+              <span className="text-white/20">·</span>
+              <span>{msg.timeLabel}</span>
+            </p>
+
+            <div className="mt-3 flex items-center gap-2">
+              {msg.deepLink && (
+                <Link
+                  to={msg.deepLink}
+                  onClick={onRead}
+                  className="rounded-full bg-neon-yellow px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black transition-all hover:bg-yellow-300"
+                >
+                  Ver detalhes
+                </Link>
+              )}
+              {!msg.read && (
+                <button
+                  type="button"
+                  onClick={onRead}
+                  className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30 hover:text-white"
+                >
+                  Marcar como lida
+                </button>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onDelete}
+            className="shrink-0 rounded-full p-1 text-white/40 transition-colors hover:bg-red-500/20 hover:text-red-400"
+            aria-label="Apagar mensagem"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
 }

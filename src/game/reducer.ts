@@ -4742,6 +4742,18 @@ export function gameReducer(state: OlefootGameState, action: GameAction): Olefoo
         inbox: state.inbox.filter((i) => i.id !== action.id),
       };
     }
+    case 'MARK_INBOX_READ': {
+      return {
+        ...state,
+        inbox: state.inbox.map((i) => (i.id === action.id ? { ...i, read: true } : i)),
+      };
+    }
+    case 'MARK_ALL_INBOX_READ': {
+      return {
+        ...state,
+        inbox: state.inbox.map((i) => (i.read ? i : { ...i, read: true })),
+      };
+    }
     case 'INBOX_PREPEND': {
       const id = action.item.id;
       const rest = state.inbox.filter((i) => i.id !== id);
