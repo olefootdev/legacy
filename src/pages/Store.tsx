@@ -7,7 +7,6 @@ import { ManagerOutcomePanel } from '@/components/manager/ManagerOutcomePanel';
 import { cn } from '@/lib/utils';
 import type { ShopCatalogItem, ShopRarity, ShopTabId } from '@/game/shopCatalog';
 import { trackGrowthCommerce } from '@/admin/platformStore';
-import { TransferHeroSlider, type HeroTab } from '@/transfer/TransferHeroSlider';
 import { StoreFeaturedBoxes } from '@/store/StoreFeaturedBoxes';
 import { StoreSectionHeadline } from '@/store/StoreSectionHeadline';
 import { trackMissionEvent } from '@/progression/trackEvent';
@@ -91,44 +90,6 @@ function priceLines(item: ShopCatalogItem): { bro: string | null; exp: string | 
     bro: item.priceBroCents != null && item.priceBroCents > 0 ? `${formatBro(item.priceBroCents)} BRO` : null,
     exp: item.priceExp != null && item.priceExp > 0 ? `${item.priceExp.toLocaleString('pt-BR')} EXP` : null,
   };
-}
-
-// ─── Hero slides por aba ────────────────────────────────────────────────
-// imageUrl aponta pra `/public/store-heroes/{tab}-{n}.webp` — designer popula
-// depois. Fallback com gradiente temático quando ausente.
-
-const TAB_TO_HERO: Record<ShopTab, HeroTab> = {
-  todos: 'store-all',
-  packs: 'store-packs',
-  boosters: 'store-boosters',
-  extra: 'store-extra',
-};
-
-function heroSlidesForStoreTab(
-  tab: ShopTab,
-): { imageUrl?: string; title: string; subtitle: string; tag?: string; ctaLabel?: string }[] {
-  switch (tab) {
-    case 'todos':
-      return [
-        { imageUrl: '/store-heroes/store-all-01.webp', title: 'Loja OLEFOOT', subtitle: 'Packs, boosters e itens raros — tudo num só lugar.', tag: 'Destaques', ctaLabel: 'Explorar' },
-        { imageUrl: '/store-heroes/store-all-02.webp', title: 'Duas moedas, uma loja', subtitle: 'Pague em EXP (conquistado) ou BRO (convertível) conforme a sua estratégia.', tag: 'EXP ↔ BRO' },
-        { imageUrl: '/store-heroes/store-all-03.webp', title: 'Itens consumíveis com impacto real', subtitle: 'Boosters afetam plantel, torcida e mercado — não é apenas cosmético.', tag: 'Gameplay' },
-      ];
-    case 'packs':
-      return [
-        { imageUrl: '/store-heroes/store-packs-01.webp', title: 'Packs da temporada', subtitle: 'Cartas Genesis em blindpack com chance de tier mítico.', tag: 'Chance Mítico', ctaLabel: 'Abrir' },
-        { imageUrl: '/store-heroes/store-packs-02.webp', title: 'Packs especiais limitados', subtitle: 'Drops temáticos com duração curta — compra antes que saia de rotação.', tag: 'Edição limitada' },
-      ];
-    case 'boosters':
-      return [
-        { imageUrl: '/store-heroes/store-boosters-01.webp', title: 'Boosters de plantel', subtitle: 'Moral, forma e recuperação — puxa a equipa pra cima no momento certo.', tag: 'Consumível', ctaLabel: 'Ver boosters' },
-        { imageUrl: '/store-heroes/store-boosters-02.webp', title: 'Combos estratégicos', subtitle: 'Combine boosters antes de partidas decisivas pra maximizar o retorno.', tag: 'Combo' },
-      ];
-    case 'extra':
-      return [
-        { imageUrl: '/store-heroes/store-extra-01.webp', title: 'Extras & curiosidades', subtitle: 'Itens cosméticos, troféus, upgrades de estrutura e mais.', tag: 'Extra', ctaLabel: 'Ver itens' },
-      ];
-  }
 }
 
 function featuredItemsForStoreTab(tab: ShopTab, catalog: ShopCatalogItem[]): ShopCatalogItem[] {
@@ -396,12 +357,6 @@ export function Store() {
         </motion.div>
       </section>
 
-      {/* Hero promocional por aba — arte substituída pelo designer em /public/store-heroes/ */}
-      <TransferHeroSlider
-        tab={TAB_TO_HERO[tab]}
-        slides={heroSlidesForStoreTab(tab)}
-      />
-
       {/* Slider de abas */}
       <div className="flex flex-wrap gap-2">
         {(
@@ -568,43 +523,6 @@ export function Store() {
           })}
         </div>
       )}
-
-      {/* CTA de Depositar Agora */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="relative overflow-hidden rounded-lg border border-neon-yellow/40 bg-gradient-to-br from-neon-yellow via-neon-yellow/95 to-neon-yellow/90 p-8 text-center shadow-[0_0_40px_rgba(253,224,71,0.3)]"
-      >
-        <div className="relative z-10">
-          <div className="ole-eyebrow !text-black mb-4" style={{ fontFamily: 'var(--font-ui)' }}>
-            <span className="!text-black">Precisa de mais saldo?</span>
-          </div>
-          <h3
-            className="font-display text-3xl sm:text-4xl font-black uppercase tracking-wider text-black mb-3"
-          >
-            Deposite Agora
-          </h3>
-          <p className="text-black/80 text-sm sm:text-base mb-6 max-w-2xl mx-auto">
-            Adicione BRO à sua carteira e desbloqueie todos os boosters premium. Compre com segurança e receba instantaneamente.
-          </p>
-          <Link
-            to="/wallet"
-            className="inline-flex items-center gap-3 bg-black text-neon-yellow hover:bg-deep-black px-8 py-4 font-display font-black uppercase tracking-[0.2em] text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
-            style={{ borderRadius: 'var(--radius-sm)' }}
-          >
-            <Wallet className="w-5 h-5" />
-            Ir para Carteira
-          </Link>
-        </div>
-        {/* Efeito de brilho */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 70%)',
-          }}
-        />
-      </motion.div>
 
       <AnimatePresence>
         {confirmItem ? (
