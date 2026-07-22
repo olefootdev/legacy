@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
 
 export type QuickAction = {
   key: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
   onClick: () => void;
   accent?: 'green' | 'red' | 'amber' | 'cyan' | 'yellow';
   disabled?: boolean;

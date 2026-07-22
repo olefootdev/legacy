@@ -16,6 +16,7 @@ import {
   Save,
   User,
   Shield,
+  Check,
 } from 'lucide-react';
 import { BackButton } from '@/components/BackButton';
 import {
@@ -522,8 +523,8 @@ export function Config() {
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <Lock className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
               <div className="min-w-0">
-                <p className={cn('font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-neon-green' : 'text-white/70')}>
-                  {hasPwd ? '✓ Senha local ativa' : 'Senha local não definida'}
+                <p className={cn('inline-flex items-center gap-1 font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-neon-green' : 'text-white/70')}>
+                  {hasPwd ? <><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> Senha local ativa</> : 'Senha local não definida'}
                 </p>
                 <p className="mt-0.5 text-[11px] text-white/50">
                   PIN guardado só neste dispositivo (hash SHA-256). Não substitui login Supabase.
@@ -670,7 +671,14 @@ export function Config() {
                 </div>
               )}
 
-              {pwdMsg ? <p className="text-xs text-white/70">{pwdMsg}</p> : null}
+              {pwdMsg ? (
+                <p className="flex items-center gap-1 text-xs text-white/70">
+                  {pwdMsg.startsWith('✓') ? (
+                    <Check className="h-3.5 w-3.5 shrink-0 text-neon-yellow" strokeWidth={2.4} />
+                  ) : null}
+                  {pwdMsg.replace(/^✓\s*/, '')}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -833,7 +841,7 @@ function VerificationSection() {
   const summary = loading
     ? { label: 'Carregando…', tone: 'neutral' as const, ctaLabel: '' }
     : status === 'approved'
-    ? { label: '✓ Conta verificada', tone: 'ok' as const, ctaLabel: 'Ver dados' }
+    ? { label: (<span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> Conta verificada</span>), tone: 'ok' as const, ctaLabel: 'Ver dados' }
     : status === 'pending'
     ? { label: 'Em análise pelo Admin', tone: 'pending' as const, ctaLabel: 'Editar' }
     : status === 'rejected'

@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Flag, Swords, Clock, ArrowLeft, Trophy, Scale } from 'lucide-react';
+import { Crown, Flag, Swords, Clock, ArrowLeft, Trophy, Scale, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
 import { DailyBracket } from '@/components/matchglobal/DailyBracket';
@@ -202,13 +202,13 @@ export default function GlobalLeagueDaily() {
                 </div>
                 <p className="text-xs text-text-soft mt-1">{opt.effectText}</p>
                 {reigning && (
-                  <p className="text-[10px] font-display uppercase tracking-[0.2em] text-neon-yellow/80 mt-2">
-                    👑 Decreto do reino — em vigor até domingo
+                  <p className="inline-flex items-center gap-1 text-[10px] font-display uppercase tracking-[0.2em] text-neon-yellow/80 mt-2">
+                    <Crown className="h-3 w-3" strokeWidth={2.2} /> Decreto do reino — em vigor até domingo
                   </p>
                 )}
                 {chosen && !reigning && (
-                  <p className="text-[10px] font-display uppercase tracking-[0.2em] text-white/50 mt-2">
-                    ✓ Seu voto
+                  <p className="inline-flex items-center gap-1 text-[10px] font-display uppercase tracking-[0.2em] text-white/50 mt-2">
+                    <Check className="h-3 w-3" strokeWidth={2.2} /> Seu voto
                   </p>
                 )}
               </button>

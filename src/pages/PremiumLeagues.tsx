@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown, Star } from 'lucide-react';
+import { Trophy, Users, Plus, Copy, Check, Share2, Swords, Crown, Star, Medal, X } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { overallFromAttributes } from '@/entities/player';
 import {
@@ -25,8 +25,14 @@ function formatPool(n: number): string {
 }
 
 const SIZE_OPTIONS = [16, 32, 64] as const;
-const RANK_MEDALS = ['🏆', '🥈', '🥉', '4º'];
 const RANK_COLORS = ['text-[#FFD700]', 'text-[#C0C0C0]', 'text-[#CD7F32]', 'text-white/50'];
+
+/** Ícone do posto: 1º troféu, 2º/3º medalha, 4º texto. `rank` é 1-indexado. */
+function RankIcon({ rank, className }: { rank: number; className?: string }) {
+  if (rank === 1) return <Trophy className={className} strokeWidth={2.2} />;
+  if (rank === 2 || rank === 3) return <Medal className={className} strokeWidth={2.2} />;
+  return <span className="text-sm font-bold">4º</span>;
+}
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
@@ -225,9 +231,9 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
             </div>
             <div className="h-px bg-white/[0.06]" />
             <div className="grid grid-cols-3 gap-2 text-[10px]">
-              <div><span className="text-[#FFD700]">🏆 40%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.4)}</span></div>
-              <div><span className="text-[#C0C0C0]">🥈 20%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.2)}</span></div>
-              <div><span className="text-[#CD7F32]">🥉 12%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.12)}</span></div>
+              <div><span className="inline-flex items-center gap-1 text-[#FFD700]"><Trophy className="h-3 w-3" strokeWidth={2.2} /> 40%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.4)}</span></div>
+              <div><span className="inline-flex items-center gap-1 text-[#C0C0C0]"><Medal className="h-3 w-3" strokeWidth={2.2} /> 20%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.2)}</span></div>
+              <div><span className="inline-flex items-center gap-1 text-[#CD7F32]"><Medal className="h-3 w-3" strokeWidth={2.2} /> 12%</span><br/><span className="text-white/40">{formatPool(estimatedPool * 0.12)}</span></div>
             </div>
             <p className="text-[10px] text-neon-yellow/60">
               Você ganha <strong className="text-neon-yellow">10%</strong> do pote como criador ({formatPool(estimatedPool * 0.1)} EXP)
@@ -236,7 +242,7 @@ function CreateLeagueModal({ open, onClose, onCreated, clubOverall }: {
 
           {error && (
             <div className="flex items-start gap-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-[12px] text-rose-200">
-              <span className="text-rose-400">✗</span> {error}
+              <X className="h-3.5 w-3.5 shrink-0 text-rose-400" strokeWidth={2.4} /> {error}
             </div>
           )}
           <button type="submit" disabled={busy || name.trim().length < 3 || !entryFee || Number(entryFee) < 100}
@@ -414,7 +420,7 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
               style={{ borderRadius: 'var(--radius-md)' }}
             >
               <div className="flex items-center gap-3">
-                <span className={`text-lg ${RANK_COLORS[c.rank - 1]}`}>{RANK_MEDALS[c.rank - 1]}</span>
+                <span className={`inline-flex items-center ${RANK_COLORS[c.rank - 1]}`}><RankIcon rank={c.rank} className="h-5 w-5" /></span>
                 <span className="font-display text-[13px] font-bold uppercase tracking-tight text-white">{c.club_name}</span>
               </div>
               <span className="font-display text-[15px] font-black tabular-nums text-neon-yellow">
@@ -507,14 +513,14 @@ function LeagueDetailView({ leagueId, onBack, clubOverall, justCreated }: { leag
         <p className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-white/30">Distribuição do Pote</p>
         <div className="grid grid-cols-6 gap-1 text-center text-[10px]">
           {[
-            { label: '🏆', pct: league.pct_champion },
-            { label: '🥈', pct: league.pct_vice },
-            { label: '🥉', pct: league.pct_third },
+            { label: <Trophy className="mx-auto h-3.5 w-3.5 text-[#FFD700]" strokeWidth={2.2} />, pct: league.pct_champion },
+            { label: <Medal className="mx-auto h-3.5 w-3.5 text-[#C0C0C0]" strokeWidth={2.2} />, pct: league.pct_vice },
+            { label: <Medal className="mx-auto h-3.5 w-3.5 text-[#CD7F32]" strokeWidth={2.2} />, pct: league.pct_third },
             { label: '4º', pct: league.pct_fourth },
             { label: 'Criador', pct: league.pct_creator },
             { label: 'Casa', pct: league.pct_house },
-          ].map((s) => (
-            <div key={s.label}>
+          ].map((s, i) => (
+            <div key={i}>
               <p className="text-[12px]">{s.label}</p>
               <p className="font-bold text-white/50 tabular-nums">{s.pct}%</p>
             </div>

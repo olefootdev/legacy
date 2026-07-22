@@ -5,14 +5,13 @@
  * conta 3 por vitória, 1 por empate. Crítica de desempate: saldo de gols,
  * depois gols pró.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Trophy, Zap, Target } from 'lucide-react';
-import { useGameStore } from '@/game/store';
+import { Trophy, Zap, Target } from 'lucide-react';
 import { fetchPvpStandings, type PvpStandingRow, type PvpMatchMode } from '@/supabase/pvpMatches';
 import { localCrestUrl } from '@/settings/crestUrl';
 import { cn } from '@/lib/utils';
+import { BackButton } from '@/components/BackButton';
 
 const MODE_LABEL: Record<PvpMatchMode, string> = {
   quick: 'Liga Rápida',
@@ -20,8 +19,6 @@ const MODE_LABEL: Record<PvpMatchMode, string> = {
 };
 
 export function PvpStandings() {
-  const navigate = useNavigate();
-  const myUserSettings = useGameStore((s) => s.userSettings);
   const [mode, setMode] = useState<PvpMatchMode>('quick');
   const [rows, setRows] = useState<PvpStandingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,43 +37,29 @@ export function PvpStandings() {
     };
   }, [mode]);
 
-  // Reservado pra próximas iterações (highlight do próprio user)
-  void useMemo(() => myUserSettings?.favoriteRealTeam?.id ?? null, [myUserSettings?.favoriteRealTeam?.id]);
-
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6 space-y-5">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 text-white/65 hover:text-neon-yellow transition-colors"
+      <BackButton to="/competicao" label="Competição" />
+
+      {/* Header editorial — eyebrow + título Moret + régua */}
+      <header className="space-y-2">
+        <div className="ole-eyebrow !text-neon-yellow">
+          <span>OLE Football · Standings</span>
+        </div>
+        <h1
+          className="text-white italic"
           style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '11px',
+            fontFamily: 'var(--font-serif-hero)',
             fontWeight: 700,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
+            fontSize: 'clamp(32px, 6vw, 56px)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
           }}
         >
-          <ArrowLeft className="w-4 h-4" /> Home
-        </button>
-        <div className="ole-eyebrow !text-neon-yellow">
-          <span>Standings</span>
-        </div>
-      </div>
-
-      <h1
-        className="text-white italic"
-        style={{
-          fontFamily: 'var(--font-serif-hero)',
-          fontWeight: 700,
-          fontSize: 'clamp(32px, 6vw, 56px)',
-          letterSpacing: '-0.02em',
-          lineHeight: 1,
-        }}
-      >
-        {MODE_LABEL[mode]}
-      </h1>
+          {MODE_LABEL[mode]}
+        </h1>
+        <span aria-hidden className="block w-12 h-[3px] bg-neon-yellow" />
+      </header>
 
       {/* Mode tabs */}
       <div className="inline-flex border border-white/12" style={{ borderRadius: 'var(--radius-sm)' }}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowDown, Layers, Repeat, Menu } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { createInitialWalletState } from '@/wallet/initial';
 import { WalletShell } from './wallet/WalletShell';
@@ -94,10 +95,10 @@ export function Wallet() {
   const trophies = useUnlockedTrophies();
 
   const quickActions: QuickAction[] = [
-    { key: 'deposit', label: 'Depositar', icon: '↓', accent: 'green', onClick: () => setDepositOpen(true) },
-    { key: 'collection', label: 'Coleção', icon: '◈', accent: 'yellow', onClick: () => navigate('/wallet/colecao') },
-    { key: 'referrals', label: 'Indicações', icon: '⇄', accent: 'amber', onClick: () => navigate('/wallet/referrals') },
-    { key: 'extract', label: 'Extrato', icon: '☰', accent: 'cyan', onClick: () => navigate('/wallet/extract') },
+    { key: 'deposit', label: 'Depositar', icon: <ArrowDown className="h-5 w-5" strokeWidth={2.2} />, accent: 'green', onClick: () => setDepositOpen(true) },
+    { key: 'collection', label: 'Coleção', icon: <Layers className="h-5 w-5" strokeWidth={2.2} />, accent: 'yellow', onClick: () => navigate('/wallet/colecao') },
+    { key: 'referrals', label: 'Indicações', icon: <Repeat className="h-5 w-5" strokeWidth={2.2} />, accent: 'amber', onClick: () => navigate('/wallet/referrals') },
+    { key: 'extract', label: 'Extrato', icon: <Menu className="h-5 w-5" strokeWidth={2.2} />, accent: 'cyan', onClick: () => navigate('/wallet/extract') },
   ];
 
   // Squad Valuation — tudo vem do store real (playerEvolutionTimeline alimenta

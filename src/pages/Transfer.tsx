@@ -50,13 +50,11 @@ import { recordMarketActivity } from '@/supabase/marketActivities';
 
 const BIO_MAX_LEN = 250;
 
-/** Cartões: bandeira a partir do código ISO; sem mapeamento → globo (evita abreviatura). */
+/** Cartões: bandeira a partir do código ISO; sem mapeamento → vazio (call sites caem no '—'). */
 function natFlagDisplay(nat: string): string {
   const f = countryCodeToFlagEmoji(nat);
   if (f) return f;
-  const t = nat.trim();
-  if (!t || t === '—') return '';
-  return '🌍';
+  return '';
 }
 
 function memorableLabels(ids: readonly MemorableTrophyId[] | undefined): string[] {
