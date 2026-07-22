@@ -41,6 +41,7 @@ import { ManagerDesk } from '@/components/home/ManagerDesk';
 import { InheritanceModule } from '@/components/home/InheritanceModule';
 import { ManagerOfDay } from '@/components/home/ManagerOfDay';
 import { RankingTop10 } from '@/components/home/RankingTop10';
+import { LastGlobalChampion } from '@/components/home/LastGlobalChampion';
 import { fetchListedLegacyPlayerRows, legacyPortraitImageUrl } from '@/supabase/legacyPlayers';
 import { overallFromAttributes } from '@/entities/player';
 import { fetchMyOffers } from '@/supabase/marketOffers';
@@ -698,6 +699,9 @@ export function Home() {
 
         {/* Ranking de Clubes — Top 10, aba Geral real */}
         <RankingTop10 top={top10} myRow={myRow} myRank={myRank} />
+
+        {/* Último Campeão da Liga Global — time + manager (dados reais) */}
+        <LastGlobalChampion />
 
         {/* Mesa do Manager — pendências reais */}
         <ManagerDesk
