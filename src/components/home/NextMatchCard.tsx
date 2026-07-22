@@ -23,16 +23,26 @@ function fmtCountdown(ms: number): string {
   return `${p(h)}:${p(m)}:${p(ss)}`;
 }
 
-/** Brasão do clube — usa o time do coração; sem escudo, cai num shield neutro. */
+/** Brasão do clube — usa o time do coração; sem escudo (ou img quebrada), cai num shield neutro. */
 function ClubCrest({ name, crestUrl }: { name: string; crestUrl: string | null }) {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [crestUrl]);
+  const showImg = !!crestUrl && !broken;
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
       <span
         className="grid h-9 w-9 place-items-center overflow-hidden bg-black/40"
         style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}
       >
-        {crestUrl ? (
-          <img src={crestUrl} alt="" aria-hidden className="h-full w-full object-contain" referrerPolicy="no-referrer" />
+        {showImg ? (
+          <img
+            src={crestUrl!}
+            alt=""
+            aria-hidden
+            className="h-full w-full object-contain"
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
+          />
         ) : (
           <Shield className="h-4 w-4 text-white/40" aria-hidden />
         )}
