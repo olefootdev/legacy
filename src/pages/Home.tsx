@@ -36,6 +36,7 @@ import { roundOf } from '@/match/legendsCup/legendsCupModel';
 import { useTrackScreen } from '@/progression/trackEvent';
 import { HeroCinematic } from '@/components/home/HeroCinematic';
 import { NextMatchCard } from '@/components/home/NextMatchCard';
+import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
 import { LegendsRail, type LegendMini } from '@/components/home/LegendsRail';
 import { ManagerDesk } from '@/components/home/ManagerDesk';
 import { InheritanceModule } from '@/components/home/InheritanceModule';
@@ -74,6 +75,7 @@ export function Home() {
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
   // Identidade do manager na Liga Global (manager_id = email ?? club.id).
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const favoriteRealTeam = useGameStore((s) => s.userSettings?.favoriteRealTeam ?? null);
   const dailyChallenges = useGameStore((s) => s.dailyChallenges);
   const streakChallenges = useGameStore((s) => s.streakChallenges);
   // Viral #5 (saga) + #6 (rival fantasma): sequência viva + recorde a bater.
@@ -687,14 +689,14 @@ export function Home() {
         {/* Lendas em Destaque — drops reais (legacy_players) */}
         <LegendsRail legends={legends} />
 
-        {/* Próxima Partida — Liga Global + selo Nemesis + gatilho do amistoso */}
+        {/* Próxima Partida — Liga Global + brasão do coração + countdown ao vivo */}
         <NextMatchCard
           clubName={club.name}
           opponentName={nextGlobal ? nextGlobal.opponentName : null}
-          countdownLabel={nextRoundLabel}
+          kickoffMs={nextGlobal ? nextGlobal.scheduledKickoffMs : null}
           isLive={nextRoundLabel === 'Agora'}
           isNemesis={isNemesisNext}
-          onFriendly={() => setAmistosoOpen(true)}
+          myCrestUrl={matchdayHomeCrestUrl({ favoriteRealTeam })}
         />
 
         {/* Ranking de Clubes — Top 10, aba Geral real */}

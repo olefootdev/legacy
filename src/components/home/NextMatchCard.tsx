@@ -1,41 +1,88 @@
 /**
  * NextMatchCard — módulo "Próxima Partida" do layout v3.
  *
- * Card cinematográfico com o confronto da próxima rodada da Liga Global,
- * countdown ao vivo e o selo Nemesis quando o adversário é o algoz da última
- * Liga Ole (revanche). Dados por props — Home liga em useNextGlobalFixture +
- * state.ligaOleNemesis. Se não houver rodada agendada, mostra empty-state.
+ * Card do confronto da próxima rodada da Liga Global: brasão do time do coração
+ * de cada clube, contagem regressiva ao vivo (só números) sobre "RODADA GLOBAL",
+ * selo Nemesis na revanche e um CTA central "Ver Liga". Dados por props — Home
+ * liga em useNextGlobalFixture + state.ligaOleNemesis.
  */
 
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Shield } from 'lucide-react';
+
+function fmtCountdown(ms: number): string {
+  if (ms <= 0) return '00:00';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const p = (n: number) => String(n).padStart(2, '0');
+  if (d > 0) return `${d}d ${p(h)}:${p(m)}`;
+  return `${p(h)}:${p(m)}:${p(ss)}`;
+}
+
+/** Brasão do clube — usa o time do coração; sem escudo, cai num shield neutro. */
+function ClubCrest({ name, crestUrl }: { name: string; crestUrl: string | null }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+      <span
+        className="grid h-9 w-9 place-items-center overflow-hidden bg-black/40"
+        style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}
+      >
+        {crestUrl ? (
+          <img src={crestUrl} alt="" aria-hidden className="h-full w-full object-contain" referrerPolicy="no-referrer" />
+        ) : (
+          <Shield className="h-4 w-4 text-white/40" aria-hidden />
+        )}
+      </span>
+      <span className="max-w-full truncate font-impact uppercase text-white" style={{ fontSize: '11px' }}>
+        {name}
+      </span>
+    </div>
+  );
+}
 
 export function NextMatchCard({
   clubName,
   opponentName,
-  countdownLabel,
+  kickoffMs,
   isLive,
   isNemesis,
-  onFriendly,
+  myCrestUrl,
 }: {
   clubName: string;
   opponentName: string | null;
-  countdownLabel: string | null;
+  /** Timestamp do kickoff — vira contagem regressiva ao vivo. */
+  kickoffMs: number | null;
   isLive: boolean;
   isNemesis: boolean;
-  /** Gatilho do amistoso — preserva a busca de adversário real. */
-  onFriendly?: () => void;
+  /** Brasão do time do coração do meu clube. */
+  myCrestUrl: string | null;
 }) {
-  const friendlyBtn = onFriendly ? (
-    <button
-      type="button"
-      onClick={onFriendly}
-      className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/45 transition-colors hover:text-neon-yellow"
-      style={{ fontSize: '9px', letterSpacing: '0.16em' }}
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (kickoffMs == null || isLive) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [kickoffMs, isLive]);
+
+  const remaining = kickoffMs != null ? kickoffMs - now : null;
+  const live = isLive || (remaining != null && remaining <= 0);
+  const countdown = live ? 'AO VIVO' : remaining != null ? fmtCountdown(remaining) : '—';
+
+  const verLigaCta = (
+    <Link
+      to="/competicao/standings"
+      className="inline-flex min-h-[44px] items-center gap-1.5 border border-neon-yellow/40 bg-neon-yellow/[0.08] px-6 py-2.5 font-display font-black uppercase text-neon-yellow transition-colors hover:bg-neon-yellow/[0.16]"
+      style={{ fontSize: '10px', letterSpacing: '0.18em', borderRadius: 'var(--radius-sm)' }}
     >
-      Amistoso
-    </button>
-  ) : null;
+      Ver Liga
+      <ChevronRight className="h-4 w-4" aria-hidden />
+    </Link>
+  );
+
   return (
     <section
       aria-label="Próxima partida"
@@ -52,10 +99,10 @@ export function NextMatchCard({
         {opponentName ? (
           <span
             className="inline-flex items-center gap-1.5 font-display font-black uppercase"
-            style={{ fontSize: '8px', letterSpacing: '0.12em', color: isLive ? 'var(--color-danger)' : 'var(--color-text-soft)' }}
+            style={{ fontSize: '8px', letterSpacing: '0.12em', color: live ? 'var(--color-danger)' : 'var(--color-text-soft)' }}
           >
-            {isLive && <i aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: 'var(--color-danger)' }} />}
-            {isLive ? 'Ao vivo' : 'Começa em'}
+            {live && <i aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: 'var(--color-danger)' }} />}
+            {live ? 'Ao vivo' : 'Começa em'}
           </span>
         ) : null}
       </div>
@@ -63,33 +110,27 @@ export function NextMatchCard({
       {opponentName ? (
         <>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <div className="flex flex-1 flex-col items-center gap-1.5">
-              <span aria-hidden className="h-7 w-7 rounded-md bg-neon-yellow" style={{ border: '1px solid var(--color-border)' }} />
-              <span className="font-impact uppercase text-white" style={{ fontSize: '11px' }}>
-                {clubName}
-              </span>
-            </div>
-            <div className="text-center">
-              <span className="block font-impact tabular-nums text-white" style={{ fontSize: '26px', lineHeight: 0.9 }}>
-                {countdownLabel ?? '—'}
+            <ClubCrest name={clubName} crestUrl={myCrestUrl} />
+            <div className="shrink-0 text-center">
+              <span
+                className="block font-impact tabular-nums text-white"
+                style={{ fontSize: live ? '20px' : '26px', lineHeight: 0.9 }}
+              >
+                {countdown}
               </span>
               <span
-                className="mt-0.5 block font-display font-black uppercase text-white/40"
-                style={{ fontSize: '8px', letterSpacing: '0.14em' }}
+                className="mt-1 block font-display font-black uppercase text-neon-yellow/70"
+                style={{ fontSize: '8px', letterSpacing: '0.16em' }}
               >
                 Rodada Global
               </span>
             </div>
-            <div className="flex flex-1 flex-col items-center gap-1.5">
-              <span aria-hidden className="h-7 w-7 rounded-md bg-[#232323]" style={{ border: '1px solid var(--color-border)' }} />
-              <span className="max-w-full truncate font-impact uppercase text-white" style={{ fontSize: '11px' }}>
-                {opponentName}
-              </span>
-            </div>
+            {/* Adversário — sem brasão do coração dele nos dados da liga; shield neutro. */}
+            <ClubCrest name={opponentName} crestUrl={null} />
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
-            {isNemesis ? (
+          {isNemesis ? (
+            <div className="mt-3 flex justify-center">
               <span
                 className="inline-flex items-center font-display font-black uppercase"
                 style={{
@@ -104,38 +145,17 @@ export function NextMatchCard({
               >
                 Nemesis · revanche
               </span>
-            ) : (
-              <span />
-            )}
-            <div className="flex items-center gap-3">
-              {friendlyBtn}
-              <Link
-                to="/competicao/standings"
-                className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
-                style={{ fontSize: '9px', letterSpacing: '0.16em' }}
-              >
-                Ver liga
-                <ChevronRight className="h-4 w-4" aria-hidden />
-              </Link>
             </div>
-          </div>
+          ) : null}
+
+          <div className="mt-4 flex justify-center">{verLigaCta}</div>
         </>
       ) : (
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-3 flex flex-col items-center gap-3 text-center">
           <p className="text-white/55" style={{ fontFamily: 'var(--font-sans)', fontSize: '12px' }}>
             Sem rodada agendada.
           </p>
-          <div className="flex items-center gap-3">
-            {friendlyBtn}
-            <Link
-              to="/competicao/standings"
-              className="inline-flex min-h-[44px] items-center gap-1 font-display font-black uppercase text-white/55 transition-colors hover:text-neon-yellow"
-              style={{ fontSize: '9px', letterSpacing: '0.16em' }}
-            >
-              Ver liga
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
+          {verLigaCta}
         </div>
       )}
     </section>
