@@ -3,13 +3,18 @@
  * Mostra tabela de classificação e próximas rodadas
  */
 
-import { motion } from 'framer-motion';
-import { Trophy, Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Trophy, Calendar } from 'lucide-react';
 import { useGameStore } from '@/game/store';
 import { useMemo } from 'react';
+import { BackButton } from '@/components/BackButton';
 
 export default function GlobalLeaguePlayoffs() {
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const club = useGameStore((s) => s.club);
+  const managerId = managerProfile?.email ?? club?.id;
+  const myTeamId = globalLeagueMVP?.teams.find((t) => t.managerId === managerId)?.id ?? null;
 
   // Ordenar times por pontos dos playoffs
   const standings = useMemo(() => {
@@ -39,6 +44,8 @@ export default function GlobalLeaguePlayoffs() {
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-6xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-6 pb-6 md:pb-8">
+      <BackButton to="/match/global" label="Liga Global" />
+
       {/* Hero */}
       <section className="relative w-full overflow-hidden bg-neon-yellow -mx-3 sm:-mx-4 lg:-mx-6">
         <div className="absolute inset-0 grid place-items-center pointer-events-none select-none overflow-hidden">
@@ -146,21 +153,36 @@ export default function GlobalLeaguePlayoffs() {
               {standings.map((team, index) => {
                 const position = index + 1;
                 const division = position <= 11 ? 1 : position <= 22 ? 2 : 3;
-                const divisionColor = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-blue-400' : 'text-white/60';
+                const divisionColor = division === 1 ? 'text-neon-yellow' : division === 2 ? 'text-slate-300' : 'text-amber-500';
                 const saldoGols = team.playoffGoalsFor - team.playoffGoalsAgainst;
+                const isMe = !!myTeamId && team.id === myTeamId;
+                const isLeader = index === 0;
+                const cutAfter = position === 11 || position === 22;
 
                 return (
                   <tr
                     key={team.id}
-                    className="border-t border-white/5 hover:bg-white/5 transition-colors"
+                    className={`border-t border-white/5 transition-colors ${
+                      isMe
+                        ? 'bg-neon-yellow/[0.10] ring-1 ring-inset ring-neon-yellow/50'
+                        : isLeader
+                          ? 'bg-neon-yellow/[0.05]'
+                          : 'hover:bg-white/5'
+                    }`}
+                    style={cutAfter ? { boxShadow: 'inset 0 -2px 0 0 rgba(253,225,0,0.35)' } : undefined}
                   >
                     <td className="px-4 py-3">
-                      <span className="font-mono text-sm text-white/60">{position}</span>
+                      <span className={`font-mono text-sm ${isMe ? 'text-neon-yellow' : 'text-white/60'}`}>{position}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div>
-                        <p className="font-display text-sm font-bold text-white">{team.clubName}</p>
-                        <p className="text-xs text-white/40">{team.clubShort}</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="min-w-0">
+                          <p className={`font-display text-sm font-bold ${isMe ? 'text-neon-yellow' : 'text-white'}`}>{team.clubName}</p>
+                          <p className="text-xs text-white/40">{team.clubShort}</p>
+                        </div>
+                        {isMe && (
+                          <span className="shrink-0 rounded-sm bg-neon-yellow px-1.5 py-0.5 font-display text-[8px] font-black uppercase tracking-wider text-black">você</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
