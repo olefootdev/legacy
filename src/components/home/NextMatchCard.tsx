@@ -51,6 +51,7 @@ export function NextMatchCard({
   isLive,
   isNemesis,
   myCrestUrl,
+  opponentCrestUrl,
 }: {
   clubName: string;
   opponentName: string | null;
@@ -60,6 +61,8 @@ export function NextMatchCard({
   isNemesis: boolean;
   /** Brasão do time do coração do meu clube. */
   myCrestUrl: string | null;
+  /** Brasão do time do coração do adversário; null = shield neutro. */
+  opponentCrestUrl?: string | null;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -125,8 +128,8 @@ export function NextMatchCard({
                 Rodada Global
               </span>
             </div>
-            {/* Adversário — sem brasão do coração dele nos dados da liga; shield neutro. */}
-            <ClubCrest name={opponentName} crestUrl={null} />
+            {/* Adversário — brasão do coração dele (denormalizado na Liga Global); shield neutro se ausente. */}
+            <ClubCrest name={opponentName} crestUrl={opponentCrestUrl ?? null} />
           </div>
 
           {isNemesis ? (

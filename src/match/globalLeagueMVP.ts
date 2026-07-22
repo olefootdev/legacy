@@ -30,6 +30,8 @@ export interface GlobalTeam {
   overall: number;
   /** Engajamento do manager (0-100) — proxy de investimento/EXP no ranking composto. */
   engagementScore?: number;
+  /** Time do coração (id api-sports) — brasão do clube na Home / Próxima Partida. */
+  favoriteTeamId?: number;
 
   // Estatísticas dos playoffs
   playoffPoints: number;

@@ -37,6 +37,7 @@ import { useTrackScreen } from '@/progression/trackEvent';
 import { HeroCinematic } from '@/components/home/HeroCinematic';
 import { NextMatchCard } from '@/components/home/NextMatchCard';
 import { matchdayHomeCrestUrl } from '@/settings/matchdayCrest';
+import { localCrestUrl } from '@/settings/crestUrl';
 import { LegendsRail, type LegendMini } from '@/components/home/LegendsRail';
 import { ManagerDesk } from '@/components/home/ManagerDesk';
 import { InheritanceModule } from '@/components/home/InheritanceModule';
@@ -697,6 +698,9 @@ export function Home() {
           isLive={nextRoundLabel === 'Agora'}
           isNemesis={isNemesisNext}
           myCrestUrl={matchdayHomeCrestUrl({ favoriteRealTeam })}
+          opponentCrestUrl={
+            nextGlobal?.opponentFavoriteTeamId != null ? localCrestUrl(nextGlobal.opponentFavoriteTeamId) : null
+          }
         />
 
         {/* Ranking de Clubes — Top 10, aba Geral real */}

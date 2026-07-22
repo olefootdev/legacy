@@ -24,6 +24,7 @@ export function useAutoRegisterGlobalLeague() {
   const playersCount = useGameStore((s) => Object.keys(s.players ?? {}).length);
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const favoriteTeamId = useGameStore((s) => s.userSettings?.favoriteRealTeam?.id ?? null);
   const club = useGameStore((s) => s.club);
   const players = useGameStore((s) => s.players);
 
@@ -71,6 +72,7 @@ export function useAutoRegisterGlobalLeague() {
       clubShort,
       overall: avgOverall,
       registeredAt,
+      favoriteTeamId,
     }).then((res) => {
       if (!res.ok) {
         console.warn('[autoRegister] failed to register team in supabase:', res.error);

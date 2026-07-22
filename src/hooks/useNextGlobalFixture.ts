@@ -25,6 +25,8 @@ export interface GlobalNextFixture {
   opponentName: string;
   opponentShort: string;
   opponentOverall: number;
+  /** Time do coração do adversário (id api-sports) — brasão na Home; undefined = shield neutro. */
+  opponentFavoriteTeamId?: number;
   myTeamName: string;
   myTeamId: string;
   division: string;
@@ -85,9 +87,11 @@ export function useNextGlobalFixture(): GlobalNextFixture | null {
       if (!fx) continue;
 
       const isHome = fx.homeTeamId === myTeam.id;
+      const opponentId = isHome ? fx.awayTeamId : fx.homeTeamId;
       const opponentName = isHome ? fx.awayTeamName : fx.homeTeamName;
       const opponentOverall = isHome ? fx.awayOverall : fx.homeOverall;
       const opponentShort = opponentName.slice(0, 3).toUpperCase();
+      const opponentTeam = globalLeagueMVP.teams.find((t) => t.id === opponentId);
 
       return {
         fixture: fx,
@@ -98,6 +102,7 @@ export function useNextGlobalFixture(): GlobalNextFixture | null {
         opponentName,
         opponentShort,
         opponentOverall,
+        opponentFavoriteTeamId: opponentTeam?.favoriteTeamId,
         myTeamName: myTeam.clubName,
         myTeamId: myTeam.id,
         division: fx.division,

@@ -29,6 +29,8 @@ export async function registerGlobalTeamIdentity(opts: {
   clubShort: string;
   overall: number;
   registeredAt?: number;
+  /** Time do coração (id api-sports) — denormalizado pra o brasão do adversário na Home. */
+  favoriteTeamId?: number | null;
 }): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'supabase-not-configured' };
   const supabase = getSupabase();
@@ -37,7 +39,7 @@ export async function registerGlobalTeamIdentity(opts: {
   try {
     const { data: existing, error: selErr } = await supabase
       .from('global_league_teams')
-      .select('id')
+      .select('id, favorite_team_id')
       .eq('manager_id', opts.managerId)
       .maybeSingle();
     if (selErr) {
@@ -45,6 +47,17 @@ export async function registerGlobalTeamIdentity(opts: {
       return { ok: false, error: selErr.message };
     }
     if (existing) {
+      // Backfill do brasão pra quem já está inscrito: só grava se mudou (evita
+      // write inútil). Falha de RLS/coluna ausente é tolerada — o card cai no
+      // shield neutro sem quebrar o registro.
+      const current = (existing as { favorite_team_id?: number | null }).favorite_team_id ?? null;
+      const next = opts.favoriteTeamId ?? null;
+      if (next != null && next !== current) {
+        await supabase
+          .from('global_league_teams')
+          .update({ favorite_team_id: next })
+          .eq('manager_id', opts.managerId);
+      }
       return { ok: true };
     }
     const { data: stateRow } = await supabase
@@ -59,6 +72,7 @@ export async function registerGlobalTeamIdentity(opts: {
         club_short: opts.clubShort,
         overall: opts.overall,
         registered_at: new Date(opts.registeredAt ?? Date.now()).toISOString(),
+        ...(opts.favoriteTeamId != null ? { favorite_team_id: opts.favoriteTeamId } : {}),
         ...(leagueActive ? { division: 3 } : {}),
       });
     if (insErr) {
@@ -153,6 +167,8 @@ export async function loadGlobalLeagueFromSupabase(): Promise<GlobalLeagueMVPSta
       dailyGoalDifference: Number(r.daily_goal_difference ?? 0),
       seasonCrowns: Number(r.season_crowns ?? 0),
       allTimeCrowns: Number(r.all_time_crowns ?? 0),
+      // Brasão do time do coração — fallback undefined antes da migration
+      favoriteTeamId: r.favorite_team_id == null ? undefined : Number(r.favorite_team_id),
     }));
 
     // Indexar fixtures e eventos por round_id
