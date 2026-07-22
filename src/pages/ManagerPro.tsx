@@ -7,8 +7,6 @@ import {
   Trophy,
   Activity,
   ShieldCheck,
-  Search,
-  Filter,
   TrendingUp,
   ArrowLeft,
   Download,
@@ -118,10 +116,10 @@ export function ManagerPro() {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300">
+          <div className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-neon-yellow/80">
             MANAGER · PRO
           </div>
-          <h1 className="ole-headline-italic text-cyan-400 mt-1" style={{ fontSize: 'clamp(32px, 6vw, 48px)' }}>
+          <h1 className="ole-headline-italic text-neon-yellow mt-1" style={{ fontSize: 'clamp(32px, 6vw, 48px)' }}>
             Vendas dos teus cards
           </h1>
         </div>
@@ -166,7 +164,7 @@ export function ManagerPro() {
         <KpiCard
           label="Saldo"
           value={balanceDisplay}
-          tone="cyan"
+          tone="yellow"
           footer={
             verified
               ? proSummary.balance_exp > 0 ? 'Pronto pra sacar' : 'Sem saldo ainda'
@@ -200,12 +198,12 @@ export function ManagerPro() {
           className={cn(
             'group flex items-center gap-3 border p-5 transition-all hover:scale-[1.01]',
             verified
-              ? 'border-cyan-500/40 bg-black hover:border-cyan-500/60'
+              ? 'border-neon-yellow/40 bg-black hover:border-neon-yellow/60'
               : 'border-white/10 bg-black opacity-60 pointer-events-none',
           )}
         >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-cyan-500/20">
-            <Download className="h-6 w-6 text-cyan-200" strokeWidth={2.5} />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center bg-neon-yellow/20">
+            <Download className="h-6 w-6 text-neon-yellow/70" strokeWidth={2.5} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-display text-sm font-black uppercase tracking-wide text-white">
@@ -241,27 +239,9 @@ export function ManagerPro() {
       <section className="border border-white/10 bg-black/40 p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/80">
-            <Trophy className="h-3.5 w-3.5 text-cyan-300" />
+            <Trophy className="h-3.5 w-3.5 text-neon-yellow" />
             Meus cards ({totalCards})
           </h3>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
-              title="Em breve"
-            >
-              <Search className="h-3 w-3" /> Buscar
-            </button>
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/40 opacity-60"
-              title="Em breve"
-            >
-              <Filter className="h-3 w-3" /> Filtrar
-            </button>
-          </div>
         </div>
 
         {totalCards === 0 ? (
@@ -269,7 +249,7 @@ export function ManagerPro() {
             <p className="text-sm text-white/80">Ainda não criaste nenhum card e nada vinculado pelo Admin.</p>
             <Link
               to="/city/youth-prospects"
-              className="mt-2 inline-flex text-xs font-bold text-cyan-300 hover:underline"
+              className="mt-2 inline-flex text-xs font-bold text-neon-yellow/80 hover:underline"
             >
               Criar meu primeiro card →
             </Link>
@@ -283,7 +263,7 @@ export function ManagerPro() {
               return (
                 <li
                   key={`${c.source}:${c.id}`}
-                  className="flex items-center justify-between gap-3 border border-cyan-500/20 bg-cyan-500/[0.04] px-3 py-2.5"
+                  className="flex items-center justify-between gap-3 border border-neon-yellow/20 bg-neon-yellow/[0.04] px-3 py-2.5"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-display text-sm font-bold text-white">
@@ -300,7 +280,7 @@ export function ManagerPro() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                    <span className="bg-neon-yellow/15 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow/70">
                       0 vendas
                     </span>
                     <ChevronRight className="h-4 w-4 text-white/30" />
@@ -326,7 +306,7 @@ export function ManagerPro() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">
+                  <span className="bg-neon-yellow/15 px-2 py-0.5 font-mono text-[10px] font-bold text-neon-yellow/70">
                     0 vendas
                   </span>
                   <ChevronRight className="h-4 w-4 text-white/30" />
@@ -341,7 +321,7 @@ export function ManagerPro() {
       <section className="border border-white/10 bg-black/40 p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-1.5 font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/80">
-            <Activity className="h-3.5 w-3.5 text-cyan-300" />
+            <Activity className="h-3.5 w-3.5 text-neon-yellow/80" />
             Histórico de vendas ({proPayouts.length})
           </h3>
           {proSummary.last_sale_at ? (
@@ -379,7 +359,7 @@ export function ManagerPro() {
                       {new Date(p.created_at).toLocaleString('pt-BR')} · {p.split_kind} · {p.percent}%
                     </p>
                   </div>
-                  <span className="shrink-0 font-mono text-xs font-bold text-cyan-200">
+                  <span className="shrink-0 font-mono text-xs font-bold text-neon-yellow/70">
                     +{formatExp(p.amount_exp)} EXP
                   </span>
                 </li>
@@ -390,25 +370,25 @@ export function ManagerPro() {
       </section>
 
       {/* ── Como funciona ──────────────────────────────────────── */}
-      <section className="border border-cyan-500/20 bg-cyan-950/20 p-4">
-        <h3 className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
+      <section className="border border-neon-yellow/20 bg-neon-yellow/[0.04] p-4">
+        <h3 className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-neon-yellow/70">
           Como o PRO funciona
         </h3>
         <ul className="mt-2 space-y-1.5 text-[12px] text-white/75">
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
             Crias um card na Academia (ou vinculas um card real).
           </li>
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
             Anuncias no mercado com preço em EXP.
           </li>
           <li className="flex items-start gap-2">
-            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-neon-yellow" />
             Cada venda confirmada credita o teu saldo aqui em tempo real.
           </li>
           <li className="flex items-start gap-2">
-            <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-300" />
+            <Wallet className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neon-yellow/80" />
             Saque é feito pela Wallet após verificação da conta.
           </li>
         </ul>
@@ -435,7 +415,7 @@ function KpiCard({
     fuchsia: 'border-fuchsia-500/25 bg-black',
   };
   const valueClass: Record<typeof tone, string> = {
-    cyan: 'text-cyan-200',
+    cyan: 'text-neon-yellow/70',
     emerald: 'text-emerald-300',
     yellow: 'text-neon-yellow',
     fuchsia: 'text-fuchsia-300',
