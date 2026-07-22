@@ -136,6 +136,7 @@ function fmtUsd(cents: number): string {
 
 export function ManagerNetwork() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState<'rede' | 'carreira'>('rede');
   const club = useGameStore((s) => s.club);
   const friendships = useFriendships();
   const linkedManagerIds = useMemo(() => {
@@ -635,7 +636,27 @@ export function ManagerNetwork() {
         </div>
       )}
 
-      {/* ── SEÇÕES PRINCIPAIS ────────────────────────────────────── */}
+      {/* ── ABAS: Rede | Carreira ────────────────────────────────── */}
+      <div className="flex gap-2">
+        {([['rede', 'Rede'], ['carreira', 'Carreira']] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={cn(
+              'flex-1 rounded-[var(--radius-pill)] px-4 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.2em] transition-all',
+              tab === k
+                ? 'bg-neon-yellow text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)]'
+                : 'border border-white/15 bg-white/[0.03] text-white/60 hover:border-neon-yellow/40 hover:text-white',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── REDE: amigos, solicitações, indicações, marcos ───────── */}
+      {tab === 'rede' && (
       <section className="space-y-4">
         <FriendSearchBlock
           onInvite={friendships.invite}
@@ -928,11 +949,12 @@ export function ManagerNetwork() {
             </div>
           )}
         </motion.div>
+      </section>
+      )}
 
-        {/* ═══════════════════════════════════════════════════════════════
-            PLANO DE CARREIRA — Cash Only · Super-Bônus · Cards
-            ═══════════════════════════════════════════════════════════════ */}
-
+      {/* ── CARREIRA: progresso, ranks, super-bônus, cards, leaderboard ── */}
+      {tab === 'carreira' && (
+      <section className="space-y-4">
         {/* Eyebrow do bloco Carreira */}
         <div className="ole-eyebrow !text-amber-300 flex items-center gap-2 pt-2">
           <Award className="w-3.5 h-3.5" />
@@ -1230,6 +1252,7 @@ export function ManagerNetwork() {
           </ul>
         </motion.div>
       </section>
+      )}
 
       {/* ── PIX CHECKOUT MODAL ── */}
       <PixCheckoutModal
