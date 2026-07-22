@@ -6,7 +6,8 @@
 import { useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
+import { BackButton } from '@/components/BackButton';
 import { ArrowLeft, Trophy, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function GlobalLeagueAllTime() {
@@ -33,24 +34,31 @@ export default function GlobalLeagueAllTime() {
   return (
     <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/match/global')}
-          className="p-2 rounded-md bg-white/5 hover:bg-white/10 transition-colors"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="w-5 h-5 text-white/70" />
-        </button>
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase text-white">
-            Hall da Fama
-          </h1>
-          <p className="text-xs text-white/50 mt-0.5 flex items-center gap-1.5">
-            <Trophy className="w-3 h-3 text-neon-yellow" />
-            Ranking All-Time · todas as temporadas
-          </p>
+      {/* Header editorial */}
+      <div>
+        <BackButton to="/match/global" label="Liga Global" />
+        <div className="mt-4 font-display font-bold uppercase text-neon-yellow/80" style={{ fontSize: '10px', letterSpacing: '0.28em' }}>
+          Liga Global · Todas as temporadas
         </div>
+        <h1 className="mt-1 leading-[0.92]">
+          <span
+            className="block font-bold uppercase text-white"
+            style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.6rem, 5vw, 2.5rem)', letterSpacing: '0.005em' }}
+          >
+            Hall da
+          </span>
+          <span
+            className="block italic text-neon-yellow"
+            style={{ fontFamily: 'var(--font-serif-hero)', fontWeight: 700, fontSize: 'clamp(2rem, 6vw, 3.25rem)', letterSpacing: '-0.02em' }}
+          >
+            Fama
+          </span>
+        </h1>
+        <span aria-hidden className="mt-3 block w-12 h-[3px] bg-neon-yellow" />
+        <p className="mt-3 flex items-center gap-1.5 text-sm text-white/55">
+          <Trophy className="w-3.5 h-3.5 text-neon-yellow" />
+          Ranking all-time · todas as temporadas
+        </p>
       </div>
 
       {/* Tabela */}

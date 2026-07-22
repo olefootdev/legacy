@@ -8,7 +8,8 @@
 import { useMemo } from 'react';
 import { useGameStore } from '@/game/store';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
+import { BackButton } from '@/components/BackButton';
 import { ArrowLeft, Trophy, Star } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import type { LeagueRound } from '@/match/globalLeagueMVP';
@@ -156,23 +157,20 @@ export default function GlobalLeagueHistory() {
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/match/global')}
-          className="p-2 rounded-md bg-white/5 hover:bg-white/10 transition-colors"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="w-5 h-5 text-white/70" />
-        </button>
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold uppercase text-white">
-            Rodadas Passadas
-          </h1>
-          <p className="text-xs text-white/50 mt-0.5">
-            Resultados oficiais da Liga Global
-          </p>
+      {/* Header editorial */}
+      <div>
+        <BackButton to="/match/global" label="Liga Global" />
+        <div className="mt-4 font-display font-bold uppercase text-neon-yellow/80" style={{ fontSize: '10px', letterSpacing: '0.28em' }}>
+          Liga Global · Arquivo
         </div>
+        <h1
+          className="mt-1 font-bold uppercase text-white leading-[0.95]"
+          style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 5.5vw, 3rem)', letterSpacing: '0.005em' }}
+        >
+          Rodadas Passadas
+        </h1>
+        <span aria-hidden className="mt-3 block w-12 h-[3px] bg-neon-yellow" />
+        <p className="mt-3 text-sm text-white/55">Resultados oficiais da Liga Global</p>
       </div>
 
       {/* Stats do manager */}

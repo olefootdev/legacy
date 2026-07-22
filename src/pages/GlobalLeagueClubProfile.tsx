@@ -6,7 +6,8 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGameStore } from '@/game/store';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
+import { BackButton } from '@/components/BackButton';
 import { ArrowLeft, Trophy, Shield } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 
@@ -147,16 +148,7 @@ export default function GlobalLeagueClubProfile() {
     <div className="mx-auto min-w-0 w-full max-w-4xl space-y-6 overflow-x-hidden px-3 sm:px-4 lg:px-8 py-6 pb-12">
 
       {/* Back */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/match/global')}
-          className="p-2 rounded-md bg-white/5 hover:bg-white/10 transition-colors"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="w-5 h-5 text-white/70" />
-        </button>
-        <p className="text-xs text-white/40 font-display uppercase tracking-wider">Liga Global</p>
-      </div>
+      <BackButton to="/match/global" label="Liga Global" />
 
       {/* Header do clube */}
       <motion.div
