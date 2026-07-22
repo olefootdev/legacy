@@ -9,7 +9,7 @@ import { useState, useMemo, useEffect, Fragment } from 'react';
 import { useGameStore } from '@/game/store';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Activity, Clock, ArrowUp, ArrowDown, History } from 'lucide-react';
+import { Trophy, Activity, Clock, ArrowUp, ArrowDown, History, ChevronDown } from 'lucide-react';
 import type { GlobalFixture } from '@/match/globalMatch';
 import { GLOBAL_MATCH_CONSTANTS } from '@/match/globalMatch';
 import type { GlobalTeam, PlayoffRound } from '@/match/globalLeagueMVP';
@@ -269,7 +269,8 @@ function FixtureCard({ fixture, index }: { key?: import("react").Key; fixture: G
   );
 }
 
-function DivisionStandings({ division, teams, myTeamId }: { division: number; teams: GlobalTeam[]; myTeamId?: string | null }) {
+function DivisionStandings({ division, teams, myTeamId, defaultOpen = true, isMine = false }: { division: number; teams: GlobalTeam[]; myTeamId?: string | null; defaultOpen?: boolean; isMine?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   // ORDENA pela classificação real antes de renderizar — sem isso, o index do
   // map é a ordem de inserção e os destaques (líder/promo/rele) ficam errados.
   const sortedTeams = useMemo(() => [...teams].sort((a, b) => {
@@ -282,32 +283,70 @@ function DivisionStandings({ division, teams, myTeamId }: { division: number; te
   const promotionCount = Math.ceil(sortedTeams.length * 0.1);
   const relegationCount = Math.ceil(sortedTeams.length * 0.1);
   const theme = divTheme(division);
+  const leader = sortedTeams[0];
+
+  // Janela: numa divisão gigante (1000 times), mostrar todos é impossível.
+  // Mostra o topo + o meu time; o resto fica sob "Ver tabela completa".
+  const [showFull, setShowFull] = useState(false);
+  const CAP = 20;
+  const myIdx = myTeamId ? sortedTeams.findIndex((t) => t.id === myTeamId) : -1;
+  const windowed = open && !showFull && sortedTeams.length > CAP;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="sports-panel rounded-lg overflow-hidden"
+      className={`sports-panel rounded-lg overflow-hidden ${isMine ? 'ring-1 ring-neon-yellow/40' : ''}`}
     >
-      {/* Header — spine + acento da divisão (ouro/aço/bronze) */}
-      <div className="relative bg-deep-black px-6 py-4 border-b border-white/10">
+      {/* Header — clicável: expande/colapsa a divisão (condensa 1000 times) */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="relative w-full bg-deep-black px-6 py-4 border-b border-white/10 text-left transition-colors hover:bg-white/[0.03]"
+      >
         <span className={`absolute left-0 top-0 bottom-0 w-1 ${theme.spineBg}`} aria-hidden />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Trophy className={`w-5 h-5 ${theme.text}`} />
-            <div>
-              <h3 className="font-display text-base font-bold uppercase tracking-wider text-white">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Trophy className={`w-5 h-5 shrink-0 ${theme.text}`} />
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wider text-white">
                 Divisão {division}
+                {isMine && (
+                  <span className="rounded-sm bg-neon-yellow px-1.5 py-0.5 font-display text-[8px] font-black uppercase tracking-wider text-black">
+                    Sua liga
+                  </span>
+                )}
               </h3>
-              <p className="text-xs text-white/60 mt-0.5">{theme.name}</p>
+              {/* Colapsada: mostra o líder num relance (sem abrir a tabela inteira) */}
+              {open ? (
+                <p className="text-xs text-white/60 mt-0.5">{theme.name}</p>
+              ) : (
+                <p className="mt-0.5 truncate text-xs text-white/50">
+                  {leader ? (
+                    <>
+                      Líder <span className={`font-bold ${theme.text}`}>{leader.clubName}</span> · {leader.points} pts
+                    </>
+                  ) : (
+                    theme.name
+                  )}
+                </p>
+              )}
             </div>
           </div>
-          <span className={`font-serif-hero text-2xl font-bold ${theme.text}`}>
-            {teams.length}
-          </span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className={`font-serif-hero text-2xl font-bold ${theme.text}`}>{teams.length}</span>
+            <ChevronDown
+              className={`h-4 w-4 text-white/40 transition-transform ${open ? 'rotate-180' : ''}`}
+              strokeWidth={2.5}
+              aria-hidden
+            />
+          </div>
         </div>
-      </div>
+      </button>
 
+      {open && (
+      <>
       {/* Tabela */}
       <div className="overflow-x-auto -mx-0">
         <table className="w-full min-w-[340px]">
@@ -327,6 +366,9 @@ function DivisionStandings({ division, teams, myTeamId }: { division: number; te
           </thead>
           <tbody>
             {sortedTeams.map((team, index) => {
+              // Janela: esconde o miolo quando a tabela é gigante, mantendo topo + meu time.
+              if (windowed && index >= CAP && index !== myIdx) return null;
+              const gapBefore = windowed && index === myIdx && myIdx >= CAP;
               const isPromotion = division > 1 && index < promotionCount;
               const isRelegation = division < 3 && index >= sortedTeams.length - relegationCount;
               const isLeader = index === 0;
@@ -358,6 +400,15 @@ function DivisionStandings({ division, teams, myTeamId }: { division: number; te
 
               return (
                 <Fragment key={team.id}>
+                  {gapBefore && (
+                    <tr aria-hidden>
+                      <td colSpan={8} className="p-0">
+                        <div className="flex items-center justify-center gap-2 bg-black/30 px-4 py-1.5 text-[10px] font-display uppercase tracking-[0.2em] text-white/30">
+                          ⋯ {myIdx - CAP} times acima de você
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   <tr
                     id={isMe ? 'my-global-team' : undefined}
                     className={`border-t border-white/5 transition-colors ${bgClass} ${borderClass} ${isMe ? 'ring-1 ring-inset ring-neon-yellow/50' : 'hover:bg-white/5'}`}
@@ -451,6 +502,22 @@ function DivisionStandings({ division, teams, myTeamId }: { division: number; te
         </table>
       </div>
 
+      {/* Ver tabela completa — só quando a divisão é grande demais pra rolar inteira */}
+      {sortedTeams.length > CAP && (
+        <button
+          type="button"
+          onClick={() => setShowFull((v) => !v)}
+          className="flex w-full items-center justify-center gap-2 border-t border-white/10 bg-black/20 py-3 font-display text-[11px] font-bold uppercase tracking-wider text-white/55 transition-colors hover:text-neon-yellow"
+        >
+          {showFull ? (
+            <>Recolher tabela</>
+          ) : (
+            <>Ver tabela completa · {sortedTeams.length} times</>
+          )}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showFull ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+        </button>
+      )}
+
       {/* Legenda */}
       <div className="bg-black/20 px-6 py-4 border-t border-white/10">
         <div className="flex flex-wrap gap-4 text-xs">
@@ -474,6 +541,8 @@ function DivisionStandings({ division, teams, myTeamId }: { division: number; te
           )}
         </div>
       </div>
+      </>
+      )}
     </motion.div>
   );
 }
@@ -740,10 +809,14 @@ export default function MatchGlobal() {
   const globalLeagueMVP = useGameStore((s) => s.globalLeagueMVP);
   const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
   const club = useGameStore((s) => s.club);
-  const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  // null = sem escolha explícita → cai no default (minha divisão). Assim o manager
+  // abre direto na SUA liga (condensa 1000 times) e vê as outras só se quiser.
+  const [filterOverride, setFilterOverride] = useState<FilterMode | null>(null);
 
   const managerId = managerProfile?.email ?? club?.id;
   const myTeamId = globalLeagueMVP?.teams.find(t => t.managerId === managerId)?.id ?? null;
+  const myDivision = globalLeagueMVP?.teams.find(t => t.id === myTeamId)?.division;
+  const filterMode: FilterMode = filterOverride ?? (myDivision ? (`division_${myDivision}` as FilterMode) : 'all');
 
   // Listener Realtime: dispara o CoronationModal quando o manager é coroado.
   const coronation = useCoronationListener();
@@ -1157,7 +1230,7 @@ export default function MatchGlobal() {
       {(lastFinishedRound ?? currentRound) && (
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           <button
-            onClick={() => setFilterMode('all')}
+            onClick={() => setFilterOverride('all')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
               filterMode === 'all' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
@@ -1165,7 +1238,7 @@ export default function MatchGlobal() {
             Todas
           </button>
           <button
-            onClick={() => setFilterMode('division_1')}
+            onClick={() => setFilterOverride('division_1')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
               filterMode === 'division_1' ? 'bg-neon-yellow text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
@@ -1173,7 +1246,7 @@ export default function MatchGlobal() {
             Divisão 1
           </button>
           <button
-            onClick={() => setFilterMode('division_2')}
+            onClick={() => setFilterOverride('division_2')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
               filterMode === 'division_2' ? 'bg-slate-300 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
@@ -1181,7 +1254,7 @@ export default function MatchGlobal() {
             Divisão 2
           </button>
           <button
-            onClick={() => setFilterMode('division_3')}
+            onClick={() => setFilterOverride('division_3')}
             className={`px-4 py-2 rounded-sm font-display text-xs font-bold uppercase tracking-wider transition-all ${
               filterMode === 'division_3' ? 'bg-amber-500 text-black' : 'bg-panel text-white/60 hover:text-white'
             }`}
@@ -1250,11 +1323,35 @@ export default function MatchGlobal() {
         </div>
       )}
 
-      {/* Tabelas de Classificação */}
-      <div className="space-y-6">
-        <DivisionStandings division={1} teams={division1Teams} myTeamId={myTeamId} />
-        <DivisionStandings division={2} teams={division2Teams} myTeamId={myTeamId} />
-        <DivisionStandings division={3} teams={division3Teams} myTeamId={myTeamId} />
+      {/* Tabelas de Classificação — condensadas por divisão.
+          Default (sem filtro): só a MINHA divisão aberta; as outras entram
+          colapsadas, um toque abre. Com filtro de divisão: só ela. */}
+      <div className="space-y-4">
+        {[1, 2, 3].map((div) => {
+          const divTeams = div === 1 ? division1Teams : div === 2 ? division2Teams : division3Teams;
+          const isMine = myDivision === div;
+          // 'all' → mostra as três (minha aberta). 'division_N' → só a N.
+          if (filterMode !== 'all' && filterMode !== `division_${div}`) return null;
+          return (
+            <DivisionStandings
+              key={div}
+              division={div}
+              teams={divTeams}
+              myTeamId={myTeamId}
+              isMine={isMine}
+              defaultOpen={filterMode === `division_${div}` || isMine}
+            />
+          );
+        })}
+        {filterMode !== 'all' && (
+          <button
+            type="button"
+            onClick={() => setFilterOverride('all')}
+            className="mx-auto flex items-center gap-2 rounded-sm border border-white/10 bg-panel px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-wider text-white/55 transition-colors hover:text-neon-yellow"
+          >
+            <Trophy className="h-3.5 w-3.5" /> Ver todas as divisões
+          </button>
+        )}
       </div>
 
       <CrownsGallery />
