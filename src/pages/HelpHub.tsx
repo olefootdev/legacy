@@ -24,14 +24,6 @@ const quickActions: Array<{
     rail: 'bg-neon-yellow',
   },
   {
-    eyebrow: 'Suporte',
-    title: 'FAQ',
-    description: 'Perguntas frequentes sobre Wallet, mercado e partidas.',
-    cta: 'Ver perguntas',
-    href: '/wallet',
-    rail: 'bg-cyan-400',
-  },
-  {
     eyebrow: 'Aprendizado',
     title: 'Tutoriais',
     description: 'Sequência de tutoriais visuais para dominar cada sistema.',

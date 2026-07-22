@@ -60,7 +60,7 @@ function KnockoutBracketSection({ rounds }: { rounds: KnockoutRound[] | undefine
     <div className="ole-scroll-x flex w-full max-w-full min-w-0 gap-4 pb-2 md:gap-6">
       {rounds.map((round) => (
         <div key={round.name} className="min-w-[200px] shrink-0 space-y-2 md:min-w-[220px] md:space-y-2.5">
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 md:text-xs">{round.name}</h4>
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/45 md:text-xs">{round.name}</h4>
           {round.pairs.map((p, i) => (
             <div
               key={i}
@@ -126,7 +126,7 @@ function StandingsBlock({
                       />
                     ) : (
                       <Shield
-                        className={cn('h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5', isOle ? 'text-neon-yellow' : 'text-gray-600')}
+                        className={cn('h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5', isOle ? 'text-neon-yellow' : 'text-white/35')}
                       />
                     )}
                     <span
@@ -160,7 +160,7 @@ function StandingsBlock({
                   </span>
                 </td>
                 <td className="text-center px-1 sm:px-2">
-                  <span className="font-serif-hero text-xs tabular-nums text-gray-500 sm:text-sm md:text-base">
+                  <span className="font-serif-hero text-xs tabular-nums text-white/45 sm:text-sm md:text-base">
                     {sgLabel}
                   </span>
                 </td>
@@ -343,7 +343,7 @@ export function Leagues() {
               ))}
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2 leading-snug">
+          <p className="text-xs text-white/50 mt-2 leading-snug">
             {tabMeta.quote.replace(/“|”/g, '')}
           </p>
         </div>
@@ -354,7 +354,7 @@ export function Leagues() {
           className="border border-white/10 bg-panel p-6 text-center"
           style={{ borderRadius: 'var(--radius-md)' }}
         >
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-sm text-white/50 leading-relaxed">
             Sem ligas regionais ou nacionais configuradas no save. A
             <strong className="text-white"> LIGA GLOBAL</strong> acima fica sempre disponível, e novas
             competições podem ser criadas em <code className="text-neon-yellow">/admin</code>.
@@ -365,7 +365,7 @@ export function Leagues() {
       {/* ── Só ligas mundiais (não visíveis aqui) ── */}
       {onlyWorld ? (
         <section className="bg-panel border border-white/10 rounded-sm p-6 text-center">
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-sm text-white/50 leading-relaxed">
             Só existem competições <strong className="text-white/80">mundiais</strong> no save — em{' '}
             <code className="text-neon-yellow">/admin</code> cria também ligas estaduais ou nacionais para as veres aqui.
           </p>
@@ -428,7 +428,7 @@ export function Leagues() {
       <div className="space-y-8 sm:space-y-10 lg:space-y-12">
         {noOnTab ? (
           <section className="bg-panel border border-white/10 rounded-sm p-6 text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-white/50">
               Nenhuma competição <span className="text-white/80">{LEAGUE_SCOPE_LABELS[scopeTab].toLowerCase()}</span> neste
               momento. Troca de separador ou configura no <code className="text-neon-yellow">/admin</code>.
             </p>
@@ -479,36 +479,36 @@ export function Leagues() {
                           Principal
                         </span>
                       ) : null}
-                      <span className="max-w-full min-w-0 rounded border border-white/15 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-gray-400 sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
+                      <span className="max-w-full min-w-0 rounded border border-white/15 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-white/50 sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
                         {LEAGUE_FORMAT_LABELS[lg.format]}
                       </span>
                       <span className="max-w-full min-w-0 rounded border border-neon-green/25 bg-neon-green/10 px-2 py-0.5 text-[8px] font-bold uppercase leading-tight text-neon-green/90 sm:text-[9px] md:px-2.5 md:py-1 md:text-[10px]">
                         {LEAGUE_SCOPE_LABELS[lg.scope]}
                       </span>
                     </div>
-                    <p className="mt-0.5 max-w-full break-words text-[10px] font-bold uppercase tracking-wider text-gray-500 md:text-xs">
+                    <p className="mt-0.5 max-w-full break-words text-[10px] font-bold uppercase tracking-wider text-white/45 md:text-xs">
                       {lg.division}
                     </p>
                     {dateLine ? (
-                      <p className="mt-1 max-w-full break-words text-xs leading-snug text-gray-400 md:text-sm">
-                        <span className="text-gray-500">Período: </span>
+                      <p className="mt-1 max-w-full break-words text-xs leading-snug text-white/50 md:text-sm">
+                        <span className="text-white/45">Período: </span>
                         {dateLine}
                       </p>
                     ) : null}
                     {lg.format === 'hybrid' && lg.hybridQualificationEndDate ? (
-                      <p className="mt-0.5 max-w-full break-words text-xs leading-snug text-gray-500 md:text-sm">
+                      <p className="mt-0.5 max-w-full break-words text-xs leading-snug text-white/45 md:text-sm">
                         Fim qualificação: {formatDatePt(lg.hybridQualificationEndDate)}
                       </p>
                     ) : null}
                     {(lg.format === 'knockout' || lg.format === 'hybrid') && lg.knockoutStartDate ? (
-                      <p className="mt-0.5 max-w-full break-words text-xs leading-snug text-gray-500 md:text-sm">
+                      <p className="mt-0.5 max-w-full break-words text-xs leading-snug text-white/45 md:text-sm">
                         Mata-mata: {formatDatePt(lg.knockoutStartDate)}
                         {lg.knockoutBracketSize ? ` · bracket ${lg.knockoutBracketSize}` : null}
                       </p>
                     ) : null}
                     {lg.prizeSummary ? (
-                      <p className="mt-2 max-w-full break-words text-pretty text-sm leading-snug text-gray-400 md:text-base md:leading-relaxed lg:max-w-2xl">
-                        <span className="font-semibold text-gray-500">Prémios: </span>
+                      <p className="mt-2 max-w-full break-words text-pretty text-sm leading-snug text-white/50 md:text-base md:leading-relaxed lg:max-w-2xl">
+                        <span className="font-semibold text-white/45">Prémios: </span>
                         {lg.prizeSummary}
                       </p>
                     ) : null}
@@ -517,7 +517,7 @@ export function Leagues() {
 
                 <div className="grid w-full min-w-0 grid-cols-3 gap-2 sm:w-auto sm:max-w-md sm:justify-self-stretch sm:gap-2.5 md:max-w-lg md:gap-3 lg:max-w-xl">
                   <div className="min-w-0 border border-white/5 bg-black/40 px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
-                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
+                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-white/45 sm:text-[10px] md:text-xs">
                       Posição
                     </div>
                     <div className="truncate font-serif-hero text-xl font-black tabular-nums text-neon-yellow sm:text-2xl md:text-3xl">
@@ -525,7 +525,7 @@ export function Leagues() {
                     </div>
                   </div>
                   <div className="min-w-0 border border-white/5 bg-black/40 px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
-                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
+                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-white/45 sm:text-[10px] md:text-xs">
                       Pontos
                     </div>
                     <div className="truncate font-serif-hero text-xl font-black tabular-nums text-white sm:text-2xl md:text-3xl">
@@ -533,7 +533,7 @@ export function Leagues() {
                     </div>
                   </div>
                   <div className="min-w-0 border border-white/5 bg-black/40 px-2 py-2.5 text-center sm:p-3 md:px-4 md:py-4">
-                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-gray-500 sm:text-[10px] md:text-xs">
+                    <div className="text-[9px] font-bold uppercase leading-tight tracking-wider text-white/45 sm:text-[10px] md:text-xs">
                       Jogos
                     </div>
                     <div className="truncate font-serif-hero text-xl font-black tabular-nums text-white sm:text-2xl md:text-3xl">
@@ -544,7 +544,7 @@ export function Leagues() {
               </div>
 
               <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
-                <span className="mr-0.5 shrink-0 text-[9px] font-bold uppercase tracking-wider text-gray-500 sm:mr-1">
+                <span className="mr-0.5 shrink-0 text-[9px] font-bold uppercase tracking-wider text-white/45 sm:mr-1">
                   Forma
                 </span>
                 {userForm.map((f, j) => (

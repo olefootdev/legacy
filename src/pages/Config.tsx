@@ -295,25 +295,25 @@ export function Config() {
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Globe className="w-4 h-4 text-gray-500" />
+              <Globe className="w-4 h-4 text-white/45" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Idioma</span>
-                <p className="text-[10px] text-gray-500">Mais línguas em atualizações futuras.</p>
+                <p className="text-[10px] text-white/45">Mais línguas em atualizações futuras.</p>
               </div>
             </div>
-            <span className="text-xs text-gray-600 font-bold uppercase">PT-BR</span>
+            <span className="text-xs text-white/35 font-bold uppercase">PT-BR</span>
           </div>
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
               {userSettings.soundEnabled ? (
-                <Volume2 className="w-4 h-4 text-gray-500" />
+                <Volume2 className="w-4 h-4 text-white/45" />
               ) : (
-                <VolumeX className="w-4 h-4 text-gray-500" />
+                <VolumeX className="w-4 h-4 text-white/45" />
               )}
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Sons</span>
-                <p className="text-[10px] text-gray-500">Feedback sonoro na interface (ex.: confirmações).</p>
+                <p className="text-[10px] text-white/45">Feedback sonoro na interface (ex.: confirmações).</p>
               </div>
             </div>
             <button
@@ -335,10 +335,10 @@ export function Config() {
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Monitor className="w-4 h-4 text-gray-500" />
+              <Monitor className="w-4 h-4 text-white/45" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Qualidade gráfica</span>
-                <p className="text-[10px] text-gray-500">Efeitos do painel e densidade visual.</p>
+                <p className="text-[10px] text-white/45">Efeitos do painel e densidade visual.</p>
               </div>
             </div>
             <select
@@ -354,10 +354,10 @@ export function Config() {
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Monitor className="w-4 h-4 text-gray-500" />
+              <Monitor className="w-4 h-4 text-white/45" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Animações</span>
-                <p className="text-[10px] text-gray-500">Respeitar acessibilidade ou forçar movimento.</p>
+                <p className="text-[10px] text-white/45">Respeitar acessibilidade ou forçar movimento.</p>
               </div>
             </div>
             <select
@@ -373,10 +373,10 @@ export function Config() {
 
           <div className={rowClass}>
             <div className="flex items-center gap-3">
-              <Clock className="w-4 h-4 text-gray-500" />
+              <Clock className="w-4 h-4 text-white/45" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Mundo em segundo plano</span>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-white/45">
                   Com ativado, treinos e tempo do clube avançam ~1× por minuto mesmo com o separador em segundo plano.
                 </p>
               </div>
@@ -415,10 +415,10 @@ export function Config() {
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden">
           <div className={rowClass}>
             <div className="flex items-start gap-3">
-              <Building2 className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+              <Building2 className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-display font-bold text-white tracking-wider">Nome do clube</span>
-                <p className="text-[10px] text-gray-500">Aparece em jogos, ranking e ecrãs principais.</p>
+                <p className="text-[10px] text-white/45">Aparece em jogos, ranking e ecrãs principais.</p>
                 <input
                   value={clubDraft}
                   onChange={(e) => setClubDraft(e.target.value)}
@@ -439,12 +439,12 @@ export function Config() {
           {clubSaved ? <p className="px-5 py-2 text-[10px] text-neon-green font-bold">Nome atualizado.</p> : null}
           <div className={rowClass}>
             <div className="flex items-start gap-3">
-              <User className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+              <User className="mt-0.5 h-4 w-4 shrink-0 text-white/45" />
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-display font-bold tracking-wider text-white">
                   Foto do treinador
                 </span>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-white/45">
                   Círculo ao lado de «Bem-vindo» no topo. Incluída no backup JSON.
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -521,7 +521,7 @@ export function Config() {
             className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-white/[0.02]"
           >
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <Lock className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+              <Lock className="w-4 h-4 text-white/45 mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <p className={cn('inline-flex items-center gap-1 font-display text-sm font-bold uppercase tracking-wider', hasPwd ? 'text-neon-green' : 'text-white/70')}>
                   {hasPwd ? <><Check className="h-3.5 w-3.5" strokeWidth={2.4} /> Senha local ativa</> : 'Senha local não definida'}
@@ -541,7 +541,7 @@ export function Config() {
               {/* Sem senha → form criar */}
               {!hasPwd ? (
                 <div className="max-w-md space-y-2">
-                  <label className="text-[10px] text-gray-400 uppercase font-bold">Definir senha local</label>
+                  <label className="text-[10px] text-white/50 uppercase font-bold">Definir senha local</label>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -591,7 +591,7 @@ export function Config() {
                 </div>
               ) : securityMode === 'change' ? (
                 <div className="max-w-md space-y-2">
-                  <label className="text-[10px] text-gray-400 uppercase font-bold">Trocar senha local</label>
+                  <label className="text-[10px] text-white/50 uppercase font-bold">Trocar senha local</label>
                   <input
                     type="password"
                     autoComplete="current-password"
@@ -702,7 +702,7 @@ export function Config() {
               <Download className="w-4 h-4 text-neon-yellow" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Exportar backup</span>
-                <p className="text-[10px] text-gray-500">JSON com todo o progresso (inclui definições).</p>
+                <p className="text-[10px] text-white/45">JSON com todo o progresso (inclui definições).</p>
               </div>
             </div>
             <button
@@ -718,7 +718,7 @@ export function Config() {
               <Upload className="w-4 h-4 text-neon-yellow" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Restaurar backup</span>
-                <p className="text-[10px] text-gray-500">Substitui o save atual. Recarrega a página a seguir.</p>
+                <p className="text-[10px] text-white/45">Substitui o save atual. Recarrega a página a seguir.</p>
               </div>
             </div>
             <div>
@@ -757,10 +757,10 @@ export function Config() {
         <div className="bg-panel border border-white/10 rounded-sm overflow-hidden divide-y divide-white/5">
           <div className="px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Info className="w-4 h-4 text-gray-500" />
+              <Info className="w-4 h-4 text-white/45" />
               <div>
                 <span className="text-sm font-display font-bold text-white tracking-wider">Versão</span>
-                <p className="text-[10px] text-gray-500">OLEFOOT v0.11</p>
+                <p className="text-[10px] text-white/45">OLEFOOT v0.11</p>
               </div>
             </div>
           </div>
@@ -775,7 +775,7 @@ export function Config() {
                 <Trash2 className="w-4 h-4" />
                 <div>
                   <span className="text-sm font-display font-bold tracking-wider">Resetar progresso</span>
-                  <p className="text-[10px] text-gray-500 group-hover:text-gray-400">Apaga o save do jogo e recomeça do zero.</p>
+                  <p className="text-[10px] text-white/45 group-hover:text-white/50">Apaga o save do jogo e recomeça do zero.</p>
                 </div>
               </button>
             ) : (

@@ -461,7 +461,7 @@ export function City() {
                       <h3 className="font-display text-base font-black uppercase tracking-wider text-white">
                         {struct.name}
                       </h3>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                      <p className="text-[10px] text-white/45 uppercase tracking-wider">
                         Nível {level}/{MAX_LEVEL}
                       </p>
                     </div>
@@ -469,7 +469,7 @@ export function City() {
                 </div>
 
                 {/* Descrição */}
-                <p className="text-xs text-gray-400 leading-relaxed">
+                <p className="text-xs text-white/50 leading-relaxed">
                   {struct.desc}
                 </p>
 
@@ -477,7 +477,7 @@ export function City() {
                 <div className="space-y-2 pt-2 border-t border-white/5">
                   {struct.statsForLevel(level).map((stat, i) => (
                     <div key={i} className="flex justify-between items-center text-xs gap-2">
-                      <span className="text-gray-500 uppercase tracking-wider text-[10px]">{stat.label}</span>
+                      <span className="text-white/45 uppercase tracking-wider text-[10px]">{stat.label}</span>
                       <span className={cn('font-display font-bold', struct.color)}>{stat.value}</span>
                     </div>
                   ))}
@@ -498,10 +498,10 @@ export function City() {
                     className={cn(
                       'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5 disabled:cursor-not-allowed',
                       !upgrade.hasUpgrade
-                        ? 'bg-white/5 text-gray-600 border-white/5'
+                        ? 'bg-white/5 text-white/35 border-white/5'
                         : upgrade.canAfford
                           ? 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-                          : 'bg-white/5 text-gray-500 border-white/5 hover:bg-white/10',
+                          : 'bg-white/5 text-white/45 border-white/5 hover:bg-white/10',
                     )}
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   >
@@ -517,7 +517,7 @@ export function City() {
                         'flex-1 py-2.5 text-xs font-display font-bold uppercase tracking-wider transition-all border flex items-center justify-center gap-1.5',
                         canQuick
                           ? cn('border-transparent hover:brightness-110', struct.bg.replace('/10', '/90'), 'text-black')
-                          : 'bg-white/5 text-gray-600 border-white/5 cursor-not-allowed',
+                          : 'bg-white/5 text-white/35 border-white/5 cursor-not-allowed',
                       )}
                       style={{ borderRadius: 'var(--radius-sm)' }}
                     >
@@ -589,7 +589,7 @@ export function City() {
                           Evoluir {def?.name}
                         </h3>
                       </div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-white/50">
                         Confirme a evolução da estrutura para o próximo nível
                       </p>
                     </div>
@@ -616,14 +616,14 @@ export function City() {
 
                       {/* Benefícios */}
                       <div className="space-y-2">
-                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                        <p className="text-xs font-bold uppercase tracking-wider text-white/45">
                           Benefícios do Nível {level + 1}
                         </p>
-                        <ul className="space-y-2 text-sm text-gray-300">
+                        <ul className="space-y-2 text-sm text-white/60">
                           {def?.statsForLevel(level + 1).slice(0, 3).map((stat, i) => (
                             <li key={i} className="flex items-center gap-2">
                               <span className="h-1 w-1 rounded-full bg-neon-yellow" />
-                              <span className="text-gray-400">{stat.label}:</span>
+                              <span className="text-white/50">{stat.label}:</span>
                               <span className="font-bold text-white">{stat.value}</span>
                             </li>
                           ))}
@@ -647,7 +647,7 @@ export function City() {
                           'flex-1 rounded-lg px-4 py-3 font-display text-sm font-black uppercase tracking-wider transition-all',
                           upgrade.canAfford
                             ? 'bg-neon-yellow text-black shadow-[0_4px_16px_rgba(253,225,0,0.3)] hover:brightness-110'
-                            : 'cursor-not-allowed bg-white/10 text-gray-500',
+                            : 'cursor-not-allowed bg-white/10 text-white/45',
                         )}
                       >
                         Confirmar
@@ -688,7 +688,7 @@ export function City() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 }}
-                        className="text-sm text-gray-400"
+                        className="text-sm text-white/50"
                       >
                         {def?.name} agora está no nível {level + 1}
                       </motion.p>
@@ -738,7 +738,7 @@ export function City() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.4 }}
-                        className="text-sm text-gray-400"
+                        className="text-sm text-white/50"
                       >
                         {cost?.currency === 'exp'
                           ? `Precisas de ${formatExp(cost.amount)} EXP para evoluir ${def?.name}`
@@ -795,7 +795,7 @@ export function City() {
                 <button
                   type="button"
                   onClick={() => setQuickPendingId(null)}
-                  className="shrink-0 p-1 text-gray-400 transition-colors hover:text-white"
+                  className="shrink-0 p-1 text-white/50 transition-colors hover:text-white"
                   aria-label="Fechar"
                 >
                   <X className="w-5 h-5" />
@@ -808,7 +808,7 @@ export function City() {
                     {quickConfirmCopy.costExpLine}
                   </p>
                 )}
-                <ul className="list-disc space-y-2 pl-4 text-sm leading-relaxed text-gray-300">
+                <ul className="list-disc space-y-2 pl-4 text-sm leading-relaxed text-white/60">
                   {quickConfirmCopy.lines.map((line, i) => (
                     <li key={i}>{line}</li>
                   ))}
@@ -833,7 +833,7 @@ export function City() {
                   className={cn(
                     'w-full sm:w-auto px-5 py-2.5 rounded-lg font-display font-black uppercase text-sm tracking-wider transition-colors border',
                     quickConfirmCopy.confirmBlocked
-                      ? 'bg-white/10 text-gray-500 border-white/10 cursor-not-allowed'
+                      ? 'bg-white/10 text-white/45 border-white/10 cursor-not-allowed'
                       : 'bg-neon-yellow text-black border-neon-yellow hover:brightness-110',
                   )}
                 >

@@ -5,8 +5,9 @@
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Gavel, Plus, RefreshCw, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Gavel, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/lib/utils';
 import { useGameStore } from '@/game/store';
 import { BackButton } from '@/components/BackButton';
 import { LiveAuctionCard } from '@/market/LiveAuctionCard';
@@ -14,7 +15,6 @@ import {
   useActiveAuctions,
   useAuctionMessages,
   seedAuctionsFromPlayers,
-  clearAllAuctions,
 } from '@/market/liveAuctionEngine';
 import { fetchGenesisMarketAuctionCards } from '@/supabase/genesisMarket';
 import { isSupabaseConfigured } from '@/supabase/client';
@@ -286,44 +286,8 @@ export function LiveAuctionsPage() {
               ? 'Carregando jogadores...'
               : 'Nenhum leilão ativo no momento'}
           </p>
-          {import.meta.env.DEV && availablePlayers.length > 0 && (
-            <button
-              type="button"
-              onClick={() => seedAuctionsFromPlayers(availablePlayers, 3)}
-              className="rounded-lg bg-neon-yellow px-4 py-2 text-sm font-bold uppercase tracking-wider text-black transition-all hover:bg-yellow-300"
-            >
-              <Plus className="mr-2 inline h-4 w-4" />
-              Criar Leilões (Dev)
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Dev tools */}
-      {import.meta.env.DEV && auctions.length > 0 && availablePlayers.length > 0 && (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => seedAuctionsFromPlayers(availablePlayers, 1)}
-            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/70 transition-all hover:border-white/30"
-          >
-            <Plus className="mr-2 inline h-3 w-3" />
-            Adicionar Leilão
-          </button>
-          <button
-            type="button"
-            onClick={() => clearAllAuctions()}
-            className="rounded-lg border border-red-500/20 bg-red-950/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-400 transition-all hover:border-red-500/40"
-          >
-            <RefreshCw className="mr-2 inline h-3 w-3" />
-            Limpar Todos
-          </button>
         </div>
       )}
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

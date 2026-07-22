@@ -269,7 +269,7 @@ function TransferCarouselVerMaisTile({
       )}
     >
       {topLabel ? (
-        <span className="text-[7px] font-bold uppercase leading-tight tracking-widest text-gray-500 sm:text-[8px]">
+        <span className="text-[7px] font-bold uppercase leading-tight tracking-widest text-white/45 sm:text-[8px]">
           {topLabel}
         </span>
       ) : null}
@@ -277,7 +277,7 @@ function TransferCarouselVerMaisTile({
         Ver mais
       </span>
       {bottomLabel ? (
-        <span className="max-w-[4.5rem] px-0.5 text-[7px] leading-tight text-gray-500 sm:max-w-none sm:text-[8px]">
+        <span className="max-w-[4.5rem] px-0.5 text-[7px] leading-tight text-white/45 sm:max-w-none sm:text-[8px]">
           {bottomLabel}
         </span>
       ) : null}
@@ -1089,7 +1089,7 @@ export function Transfer() {
               </div>
               {nameQueryNorm && gridPlayers.length > 0 && (
                 <div className="border-t border-white/10 pt-3">
-                  <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                  <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/45">
                     Atalho — escolher anúncio
                   </p>
                   <ul
@@ -1116,10 +1116,10 @@ export function Transfer() {
                                 </span>
                               ) : null}
                             </span>
-                            <span className="block min-w-0 max-w-full break-words text-[10px] text-gray-400 [overflow-wrap:anywhere]">
+                            <span className="block min-w-0 max-w-full break-words text-[10px] text-white/50 [overflow-wrap:anywhere]">
                               {playerIdentityLine(p)}
                             </span>
-                            <span className="text-[9px] text-gray-600">Anúncio #{p.id}</span>
+                            <span className="text-[9px] text-white/35">Anúncio #{p.id}</span>
                           </button>
                         </li>
                       );
@@ -1701,7 +1701,7 @@ export function Transfer() {
                 <button
                   type="button"
                   onClick={() => setSelectedPlayer(null)}
-                  className="rounded-full bg-black/50 p-2 text-gray-400 hover:text-white"
+                  className="rounded-full bg-black/50 p-2 text-white/50 hover:text-white"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -1740,21 +1740,21 @@ export function Transfer() {
                       <p className="min-w-0 max-w-full break-words text-sm font-bold uppercase tracking-widest text-neon-yellow [overflow-wrap:anywhere]">
                         {selectedPlayer.pos} • Overall {selectedPlayer.ovr}
                       </p>
-                      <p className="mt-1.5 text-[10px] text-gray-500">
+                      <p className="mt-1.5 text-[10px] text-white/45">
                         Anúncio #{selectedPlayer.id} · {playerIdentityLine(selectedPlayer)}
                       </p>
                     </div>
 
                     {/* Bio (até 250 caracteres) */}
                     <div className="rounded-xl border border-white/10 bg-black/35 p-4">
-                      <h3 className="font-bold text-gray-400 uppercase text-xs mb-2 flex items-center gap-2 tracking-wider">
+                      <h3 className="font-bold text-white/50 uppercase text-xs mb-2 flex items-center gap-2 tracking-wider">
                         <UserCircle className="w-4 h-4" /> Bio
                       </h3>
                       <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
                         {(selectedPlayer.bio ?? '').trim() || 'Sem bio disponível para este anúncio.'}
                       </p>
                       {selectedPlayer.bio && (
-                        <p className="mt-2 text-[10px] text-gray-500">
+                        <p className="mt-2 text-[10px] text-white/45">
                           {Math.min(selectedPlayer.bio.length, BIO_MAX_LEN)} / {BIO_MAX_LEN} caracteres
                         </p>
                       )}
@@ -1764,7 +1764,7 @@ export function Transfer() {
 
                     {/* Attributes Grid */}
                     <div>
-                      <h3 className="font-bold text-gray-400 uppercase text-xs mb-4 flex items-center gap-2 tracking-wider">
+                      <h3 className="font-bold text-white/50 uppercase text-xs mb-4 flex items-center gap-2 tracking-wider">
                         <TrendingUp className="w-4 h-4"/> Atributos Detalhados
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
@@ -1779,7 +1779,7 @@ export function Transfer() {
 
                     {/* History */}
                     <div className="bg-black/40 p-5 rounded-xl border border-white/5">
-                      <h3 className="font-bold text-gray-400 uppercase text-xs mb-3 tracking-wider">Histórico Recente</h3>
+                      <h3 className="font-bold text-white/50 uppercase text-xs mb-3 tracking-wider">Histórico Recente</h3>
                       <div className="space-y-2">
                         {selectedPlayer.history.map((h: any, idx: number) => (
                           <div
@@ -1787,10 +1787,10 @@ export function Transfer() {
                             className="flex flex-col gap-2 border-b border-white/5 pb-3 text-sm last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:pb-2"
                           >
                             <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-                              <span className="font-bold text-gray-500">{h.year}</span>
+                              <span className="font-bold text-white/45">{h.year}</span>
                               <span className="font-medium text-white">{h.club}</span>
                             </div>
-                            <div className="flex shrink-0 gap-4 text-gray-400">
+                            <div className="flex shrink-0 gap-4 text-white/50">
                               <span>{h.apps} Jogos</span>
                               <span className="font-bold text-white">{h.goals} Gols</span>
                             </div>
@@ -1815,7 +1815,7 @@ export function Transfer() {
                               </div>
                             </div>
                             <div className="text-left md:text-right">
-                              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-gray-400">Tempo Restante</div>
+                              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-white/50">Tempo Restante</div>
                               <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 font-display text-lg font-bold tabular-nums text-white sm:text-xl md:text-2xl">
                                 <Clock className="h-5 w-5 shrink-0 text-neon-yellow sm:h-6 sm:w-6" aria-hidden />
                                 <span className="min-w-0 break-all">{selectedPlayer.timeLeft}</span>
@@ -1826,7 +1826,7 @@ export function Transfer() {
                           {selectedPlayer.marketKind === 'manager_other' &&
                           selectedPlayer.managerListingId ? (
                             <div className="space-y-3">
-                              <p className="text-[10px] text-gray-400">
+                              <p className="text-[10px] text-white/50">
                                 Saldo EXP:{' '}
                                 <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
                               </p>
@@ -1875,12 +1875,12 @@ export function Transfer() {
                           selectedPlayer.marketKind === 'genesis' ? (
                             <div className="space-y-3">
                               {selectedPlayer.marketKind === 'manager_own' ? (
-                                <p className="text-[10px] text-gray-400">
+                                <p className="text-[10px] text-white/50">
                                   Anúncio teu — retira o prospect do mercado quando quiseres (sem custo).
                                 </p>
                               ) : (
                                 <>
-                                  <p className="text-[10px] text-gray-400">
+                                  <p className="text-[10px] text-white/50">
                                     Saldo EXP:{' '}
                                     <span className="font-display font-bold text-white">{formatExp(oleBal)}</span>
                                     {selectedPlayer.marketKind === 'genesis' &&
@@ -1891,7 +1891,7 @@ export function Transfer() {
                                     ) : null}
                                   </p>
                                   {selectedPlayer.marketKind === 'genesis' && selectedPlayer.genesisCatalogId ? (
-                                    <p className="text-[10px] text-gray-400">
+                                    <p className="text-[10px] text-white/50">
                                       {genesisListedEntities[selectedPlayer.genesisCatalogId] == null
                                         ? 'A sincronizar catálogo Genesis… recarrega se o botão ficar bloqueado.'
                                         : genesisListedEntities[selectedPlayer.genesisCatalogId]!.contractIsLifetime
@@ -1943,7 +1943,7 @@ export function Transfer() {
                             <>
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                                 <div className="relative min-w-0 flex-1">
-                                  <span className="pointer-events-none absolute left-3 top-1/2 w-12 -translate-y-1/2 text-center font-display text-[10px] font-bold text-gray-400 sm:left-4 sm:text-xs sm:w-14">
+                                  <span className="pointer-events-none absolute left-3 top-1/2 w-12 -translate-y-1/2 text-center font-display text-[10px] font-bold text-white/50 sm:left-4 sm:text-xs sm:w-14">
                                     {selectedPlayer.auctionCurrency === 'EXP' ? 'EXP' : '¢'}
                                   </span>
                                   <input
@@ -1970,7 +1970,7 @@ export function Transfer() {
                                 <button
                                   type="button"
                                   onClick={handleMockBuyNow}
-                                  className="mx-auto block max-w-full break-words px-2 text-left text-xs text-gray-400 underline underline-offset-4 transition-colors [overflow-wrap:anywhere] hover:text-white sm:text-center"
+                                  className="mx-auto block max-w-full break-words px-2 text-left text-xs text-white/50 underline underline-offset-4 transition-colors [overflow-wrap:anywhere] hover:text-white sm:text-center"
                                 >
                                   Ou comprar agora por{' '}
                                   {formatAuctionDisplay(selectedPlayer.auctionCurrency, selectedPlayer.buyNow)}
@@ -2041,7 +2041,7 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
               'inline-flex max-w-full min-w-0 -skew-x-6 self-start px-3 py-1.5 font-display text-xs font-black uppercase tracking-[0.2em] md:px-4 md:text-sm md:tracking-[0.25em]',
               has
                 ? 'bg-neon-yellow text-black shadow-[0_0_20px_rgba(234,255,0,0.45)]'
-                : 'bg-white/10 text-gray-400 border border-white/10',
+                : 'bg-white/10 text-white/50 border border-white/10',
             )}
           >
             <span className="skew-x-6 flex items-center gap-2">
@@ -2052,7 +2052,7 @@ function TransferMemorablesInfoBox({ ids }: { ids?: MemorableTrophyId[] }) {
           <p
             className={cn(
               'min-w-0 max-w-full text-[11px] font-medium leading-relaxed [overflow-wrap:anywhere] break-words md:max-w-md md:text-xs',
-              has ? 'text-amber-200/70' : 'text-gray-500',
+              has ? 'text-amber-200/70' : 'text-white/45',
             )}
           >
             {has
@@ -2087,7 +2087,7 @@ function StatBar({ label, value }: { label: string, value: number }) {
   const color = 'bg-neon-yellow';
   return (
     <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-      <span className="w-7 shrink-0 text-[10px] font-bold uppercase tracking-wider text-gray-400 sm:w-8 sm:text-xs">
+      <span className="w-7 shrink-0 text-[10px] font-bold uppercase tracking-wider text-white/50 sm:w-8 sm:text-xs">
         {label}
       </span>
       <div className="min-w-0 flex-1 overflow-hidden rounded-full border border-white/5 bg-black/50 h-2.5">
@@ -2214,15 +2214,15 @@ function TransferMarketCompactCard({
           />
           <div className="grid grid-cols-3 gap-0.5 text-center">
             <div>
-              <div className="text-[7px] font-bold uppercase text-gray-500">PAC</div>
+              <div className="text-[7px] font-bold uppercase text-white/45">PAC</div>
               <div className="font-display text-[10px] font-bold text-white">{player.pac}</div>
             </div>
             <div className="border-x border-white/10">
-              <div className="text-[7px] font-bold uppercase text-gray-500">SHO</div>
+              <div className="text-[7px] font-bold uppercase text-white/45">SHO</div>
               <div className="font-display text-[10px] font-bold text-white">{player.sho}</div>
             </div>
             <div>
-              <div className="text-[7px] font-bold uppercase text-gray-500">PAS</div>
+              <div className="text-[7px] font-bold uppercase text-white/45">PAS</div>
               <div className="font-display text-[10px] font-bold text-white">{player.pas}</div>
             </div>
           </div>
@@ -2231,7 +2231,7 @@ function TransferMarketCompactCard({
       <div className="relative z-30 border-t border-white/10 bg-black/85 px-2 py-1.5">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-1">
-            <span className="flex shrink-0 items-center justify-center gap-0.5 text-[8px] font-bold uppercase tracking-wide text-gray-400 sm:justify-start">
+            <span className="flex shrink-0 items-center justify-center gap-0.5 text-[8px] font-bold uppercase tracking-wide text-white/50 sm:justify-start">
               <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
               <span className="tabular-nums">{player.timeLeft}</span>
             </span>

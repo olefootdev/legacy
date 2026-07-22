@@ -75,8 +75,8 @@ const KIND_LABELS: Record<MissionKind, string> = {
 function statusColor(s: MissionStub['status']) {
   if (s === 'completed') return 'text-neon-green';
   if (s === 'in_progress') return 'text-neon-yellow';
-  if (s === 'locked') return 'text-gray-600';
-  return 'text-gray-500';
+  if (s === 'locked') return 'text-white/35';
+  return 'text-white/45';
 }
 
 function statusIcon(s: MissionStub['status']) {
@@ -375,7 +375,7 @@ export function Missions() {
                   >
                     Link de Indicação
                   </h3>
-                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-white/45 mt-1 leading-relaxed">
                     Compartilhe e ganhe recompensas quando seus amigos entrarem
                   </p>
                 </div>
@@ -449,13 +449,13 @@ export function Missions() {
             {/* Código exibido */}
             {myReferralCode && (
               <p
-                className="text-gray-600 font-mono"
+                className="text-white/35 font-mono"
                 style={{
                   fontSize: '10px',
                   letterSpacing: '0.05em',
                 }}
               >
-                Código: <span className="text-gray-400">{myReferralCode}</span>
+                Código: <span className="text-white/50">{myReferralCode}</span>
               </p>
             )}
           </div>
@@ -471,7 +471,7 @@ export function Missions() {
                 'shrink-0 border px-4 py-2 font-display text-xs font-bold uppercase tracking-[0.18em] transition',
                 filterKind === k.id
                   ? 'border-neon-yellow bg-neon-yellow text-black'
-                  : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20 hover:bg-white/5 hover:text-white'
+                  : 'border-white/10 bg-black/40 text-white/50 hover:border-white/20 hover:bg-white/5 hover:text-white'
               )}
             >
               {k.label}
@@ -517,7 +517,7 @@ export function Missions() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/45">
                           {KIND_LABELS[m.kind]}
                         </span>
                         {m.status === 'completed' && (
@@ -526,7 +526,7 @@ export function Missions() {
                           </span>
                         )}
                         {m.status === 'locked' && m.minTier && (
-                          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-600">
+                          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/35">
                             Tier {m.minTier}+
                           </span>
                         )}
@@ -538,7 +538,7 @@ export function Missions() {
                   </div>
 
                   {/* Descrição */}
-                  <p className="text-xs text-gray-400 mb-4">{m.desc}</p>
+                  <p className="text-xs text-white/50 mb-4">{m.desc}</p>
 
                   {/* Progress bar */}
                   {m.progress && m.status !== 'completed' && m.status !== 'locked' && (
@@ -552,7 +552,7 @@ export function Missions() {
                           style={{ width: `${Math.min(100, (m.progress.current / m.progress.total) * 100)}%` }}
                         />
                       </div>
-                      <span className="text-xs font-bold text-gray-500 tabular-nums">
+                      <span className="text-xs font-bold text-white/45 tabular-nums">
                         {m.progress.current}/{m.progress.total}
                       </span>
                     </div>
@@ -576,7 +576,7 @@ export function Missions() {
                           'px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.18em] transition',
                           isReady
                             ? 'bg-neon-yellow text-black hover:bg-white'
-                            : 'bg-white/5 text-gray-600 cursor-not-allowed'
+                            : 'bg-white/5 text-white/35 cursor-not-allowed'
                         )}
                       >
                         {isReady ? 'Resgatar' : 'Em progresso'}
@@ -591,8 +591,8 @@ export function Missions() {
 
         {visibleMissions.length === 0 && (
           <div className="border border-white/10 bg-black/30 p-8 text-center">
-            <Trophy className="mx-auto h-12 w-12 text-gray-600 mb-3" strokeWidth={2} />
-            <p className="text-sm text-gray-500">Nenhuma missão nesta categoria</p>
+            <Trophy className="mx-auto h-12 w-12 text-white/35 mb-3" strokeWidth={2} />
+            <p className="text-sm text-white/45">Nenhuma missão nesta categoria</p>
           </div>
         )}
         </div>
