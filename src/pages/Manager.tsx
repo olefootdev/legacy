@@ -404,206 +404,91 @@ export function Manager() {
             </div>
           </div>
 
-          {/* CTAs — centrados, primário preto sobre amarelo */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 px-4">
-            <button
-              type="button"
-              onClick={() => setDrawer('career')}
-              className="inline-flex items-center justify-center gap-2 bg-black px-5 sm:px-7 py-3 text-neon-yellow font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-deep-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
-              style={{
-                fontFamily: 'var(--font-display)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Ver carreira
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/manager/network')}
-              className="inline-flex items-center justify-center gap-2 border border-black/70 bg-transparent px-5 sm:px-7 py-3 text-black font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] text-[11px] sm:text-[12px] hover:bg-black/10 transition-colors"
-              style={{
-                fontFamily: 'var(--font-display)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Network className="w-4 h-4" />
-              Network
-              {social.incoming.length > 0 ? (
-                <span className="ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 font-display text-[10px] font-black text-white">
-                  {social.incoming.length}
-                </span>
-              ) : null}
-            </button>
-          </div>
         </motion.div>
       </section>
 
-      {/* ── SEÇÕES PRINCIPAIS ────────────────────────────────────── */}
-      <section className="space-y-4">
-        {/* Carreira — Sprint B-2 Legacy Tech */}
-        <motion.button
-          type="button"
-          onClick={() => setDrawer('career')}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated)',
-            boxShadow: 'var(--shadow-card)',
-          }}
-        >
-          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-          <div className="relative flex flex-col gap-3 p-6 pl-7">
-            <span
-              className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-              style={{ fontFamily: 'var(--font-ui)' }}
-            >
-              Progressão · Tier
-            </span>
-            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
-              Carreira
-            </h3>
-            <p className="text-[13px] leading-relaxed text-white/55">
-              <span className="font-bold text-white/90">{currentTier.name}</span> · {formatExp(expLifetime)} EXP acumulado
-              {nextTier ? (
-                <> · próximo <span className="text-neon-yellow">{nextTier.name}</span></>
-              ) : null}
-            </p>
-            <span
-              className="mt-2 inline-flex w-fit items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              Ver carreira
-            </span>
-          </div>
-        </motion.button>
-
-        {/* Network — Sprint B-2 Legacy Tech */}
-        <motion.button
-          type="button"
-          onClick={() => navigate('/manager/network')}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated)',
-            boxShadow: 'var(--shadow-card)',
-          }}
-        >
-          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-fuchsia-400" />
-          <div className="relative flex flex-col gap-3 p-6 pl-7">
-            <div className="flex items-center justify-between gap-3">
-              <span
-                className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-                style={{ fontFamily: 'var(--font-ui)' }}
+      {/* ── DESTINOS DO MANAGER — grade compacta, escaneável ─────── */}
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <span aria-hidden className="h-px w-8 bg-neon-yellow/55" />
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80">
+            Sua central
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            {
+              key: 'career',
+              title: 'Carreira',
+              icon: TrendingUp,
+              accent: 'var(--color-neon-yellow)',
+              stat: currentTier.name,
+              onClick: () => setDrawer('career'),
+            },
+            {
+              key: 'network',
+              title: 'Network',
+              icon: Network,
+              accent: '#e879f9',
+              stat: `${social.friends.length} amigo${social.friends.length !== 1 ? 's' : ''}`,
+              badge: social.incoming.length > 0 ? String(social.incoming.length) : null,
+              onClick: () => navigate('/manager/network'),
+            },
+            {
+              key: 'scouts',
+              title: 'Scouts',
+              icon: Brain,
+              accent: 'var(--color-neon-yellow)',
+              stat: 'Relatório da noite',
+              tag: 'Novo',
+              onClick: () => navigate('/manager/scouts'),
+            },
+            {
+              key: 'pro',
+              title: 'PRO',
+              icon: Gem,
+              accent: 'rgba(255,255,255,0.45)',
+              stat: 'Vendas e indicadores',
+              onClick: () => navigate('/manager/pro'),
+            },
+          ].map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <motion.button
+                key={item.key}
+                type="button"
+                onClick={item.onClick}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.08 + i * 0.04 }}
+                className="group relative isolate overflow-hidden border border-white/[0.06] p-4 pl-[18px] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
+                style={{ borderRadius: 'var(--radius-card)', background: 'var(--color-panel-elevated)', boxShadow: 'var(--shadow-card)' }}
               >
-                Comunidade · Amigos
-              </span>
-              {social.incoming.length > 0 && (
-                <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-rose-500 px-2.5 py-1 font-display text-[10px] font-black tracking-[0.18em] text-white">
-                  {social.incoming.length} pedido{social.incoming.length > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
-              Network
-            </h3>
-            <p className="text-[13px] leading-relaxed text-white/55">
-              <span className="font-bold text-white/90">{social.friends.length}</span> amigo{social.friends.length !== 1 ? 's' : ''} ativos · convites e desafios entre managers.
-            </p>
-            <span
-              className="mt-2 inline-flex w-fit items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              Abrir network
-            </span>
-          </div>
-        </motion.button>
-
-        {/* SCOUTS — OLEFOOT PYTHON MODE intelligence hub */}
-        <motion.button
-          type="button"
-          onClick={() => navigate('/manager/scouts')}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated)',
-            boxShadow: 'var(--shadow-card)',
-          }}
-        >
-          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-neon-yellow" />
-          <div className="relative flex flex-col gap-3 p-6 pl-7">
-            <div className="flex items-center justify-between gap-3">
-              <span
-                className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-                style={{ fontFamily: 'var(--font-ui)' }}
-              >
-                Inteligência · Python Mode
-              </span>
-              <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-display text-[10px] font-black tracking-[0.18em] text-emerald-400 uppercase">
-                Novo
-              </span>
-            </div>
-            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
-              Scouts
-            </h3>
-            <p className="text-[13px] leading-relaxed text-white/55">
-              Mapa de consequências, relatório da noite e diagnóstico do clube. Atualizado em tempo real.
-            </p>
-            <span
-              className="mt-2 inline-flex w-fit items-center gap-2 bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              <Brain className="w-4 h-4" />
-              Abrir scouts
-            </span>
-          </div>
-        </motion.button>
-
-        {/* PRO — Sprint B-2 Legacy Tech */}
-        <motion.button
-          type="button"
-          onClick={() => navigate('/manager/pro')}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="group relative isolate w-full overflow-hidden border border-white/[0.05] text-left transition-all duration-300 hover:border-white/15 hover:-translate-y-0.5"
-          style={{
-            borderRadius: 'var(--radius-card)',
-            background: 'var(--color-panel-elevated)',
-            boxShadow: 'var(--shadow-card)',
-          }}
-        >
-          <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-white/45" />
-          <div className="relative flex flex-col gap-3 p-6 pl-7">
-            <span
-              className="font-display text-[10px] font-bold uppercase tracking-[0.28em] text-neon-yellow/80"
-              style={{ fontFamily: 'var(--font-ui)' }}
-            >
-              Carreira PRO
-            </span>
-            <h3 className="font-display text-[24px] font-black uppercase leading-[0.95] tracking-tight text-white transition-colors group-hover:text-neon-yellow">
-              PRO
-            </h3>
-            <p className="text-[13px] leading-relaxed text-white/55">
-              Acompanhamento, vendas e indicadores avançados de performance do clube.
-            </p>
-            <span
-              className="mt-2 inline-flex w-fit items-center bg-neon-yellow px-5 py-2.5 font-display text-[11px] font-black uppercase tracking-[0.22em] text-black shadow-[0_4px_14px_rgba(253,225,0,0.18)] transition-all group-hover:bg-white"
-              style={{ borderRadius: 'var(--radius-sm)' }}
-            >
-              Abrir PRO
-            </span>
-          </div>
-        </motion.button>
+                <span aria-hidden className="absolute left-0 top-0 h-full w-[3px]" style={{ background: item.accent }} />
+                <div className="flex items-start justify-between gap-2">
+                  <Icon className="h-5 w-5 text-neon-yellow" strokeWidth={2.2} aria-hidden />
+                  <div className="flex items-center gap-1.5">
+                    {item.badge && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 font-display text-[10px] font-black text-white">
+                        {item.badge}
+                      </span>
+                    )}
+                    {item.tag && (
+                      <span className="rounded-[var(--radius-pill)] border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 font-display text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                        {item.tag}
+                      </span>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-white/30 transition-colors group-hover:text-neon-yellow" />
+                  </div>
+                </div>
+                <h3 className="mt-3 font-display text-[18px] font-black uppercase leading-none tracking-tight text-white transition-colors group-hover:text-neon-yellow">
+                  {item.title}
+                </h3>
+                <p className="mt-1.5 truncate text-[11px] leading-snug text-white/50">{item.stat}</p>
+              </motion.button>
+            );
+          })}
+        </div>
       </section>
 
       {/* ── TROFÉUS ─────────────────────────────────────────────── */}
@@ -616,16 +501,13 @@ export function Manager() {
         </div>
 
         {/* Memoráveis */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-panel border border-white/10 border-l-4 border-l-neon-yellow rounded-sm p-4 sm:p-5 lg:p-6"
+        <TrophyGroup
+          title="Memoráveis"
+          count={memorableTrophyUnlockedIds.length}
+          total={MEMORABLE_TROPHY_SLOTS.length}
+          defaultOpen
         >
-          <h3 className="font-display text-xs font-black uppercase tracking-wider text-white mb-2">
-            Memoráveis
-          </h3>
-          <p className="text-[11px] text-gray-400 mb-4">
+          <p className="text-[11px] text-white/50 mb-4">
             Somente <span className="text-white/90 font-bold">campeonatos conquistados</span>: liga, copa e supercopa.
           </p>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -649,7 +531,7 @@ export function Manager() {
                       'flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-sm transition-transform hover:scale-110',
                       earned
                         ? 'bg-gradient-to-br from-neon-yellow via-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(250,204,21,0.5)]'
-                        : 'bg-white/5 text-gray-600',
+                        : 'bg-white/5 text-white/30',
                     )}
                   >
                     {earned ? (
@@ -660,7 +542,7 @@ export function Manager() {
                   </div>
                   <p className={cn(
                     'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                    earned ? 'text-neon-yellow' : 'text-gray-500',
+                    earned ? 'text-neon-yellow' : 'text-white/45',
                   )}>
                     {slot.name}
                   </p>
@@ -668,36 +550,25 @@ export function Manager() {
               );
             })}
           </div>
-        </motion.div>
+        </TrophyGroup>
 
         {/* Coroas do Dia (Liga Global · mata-mata diário) */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-panel border border-white/10 border-l-4 border-l-neon-yellow rounded-sm p-4 sm:p-5 lg:p-6"
+        <TrophyGroup
+          title="Coroas do Dia"
+          icon={<Crown className="h-3.5 w-3.5 text-neon-yellow" />}
+          count={dailyCrowns.length}
+          defaultOpen={dailyCrowns.length > 0}
         >
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <h3 className="font-display text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-              <Crown className="h-3.5 w-3.5 text-neon-yellow" />
-              Coroas do Dia
-            </h3>
-            {dailyCrowns.length > 0 && (
-              <span className="font-mono text-[10px] text-neon-yellow">
-                {dailyCrowns.length} {dailyCrowns.length === 1 ? 'coroa' : 'coroas'}
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-gray-400 mb-4">
+          <p className="text-[11px] text-white/50 mb-4">
             Cada vitória no <span className="text-white/90 font-bold">mata-mata diário</span> da Liga Global vira uma Coroa eterna.
           </p>
           {dailyCrowns.length === 0 ? (
             <div className="bg-black/30 border border-white/5 rounded-sm py-6 px-4 text-center">
-              <Lock className="h-5 w-5 text-gray-600 mx-auto mb-2" />
-              <p className="text-[11px] text-gray-500 uppercase tracking-wider font-display">
+              <Lock className="h-5 w-5 text-white/30 mx-auto mb-2" />
+              <p className="text-[11px] text-white/45 uppercase tracking-wider font-display">
                 Nenhuma coroa ainda
               </p>
-              <p className="text-[10px] text-gray-600 mt-1">
+              <p className="text-[10px] text-white/30 mt-1">
                 Vença o mata-mata das 19h pra ganhar a sua primeira.
               </p>
             </div>
@@ -733,18 +604,16 @@ export function Manager() {
               })}
             </div>
           )}
-        </motion.div>
+        </TrophyGroup>
 
         {/* Competição */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="bg-panel border border-white/10 rounded-sm p-4 sm:p-5 lg:p-6"
+        <TrophyGroup
+          title="Competição"
+          accentClass="border-l-cyan-400"
+          countClass="text-cyan-300"
+          count={competitionTrophies.filter((t) => t.earned).length}
+          total={competitionTrophies.length}
         >
-          <h3 className="font-display text-xs font-black uppercase tracking-wider text-white mb-4">
-            Competição
-          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {competitionTrophies.map((t, i) => (
               <motion.div
@@ -764,7 +633,7 @@ export function Manager() {
                     'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
                       ? 'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-black'
-                      : 'bg-white/5 text-gray-600',
+                      : 'bg-white/5 text-white/30',
                   )}
                 >
                   {t.earned ? (
@@ -775,25 +644,23 @@ export function Manager() {
                 </div>
                 <p className={cn(
                   'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                  t.earned ? 'text-cyan-300' : 'text-gray-500',
+                  t.earned ? 'text-cyan-300' : 'text-white/45',
                 )}>
                   {t.name}
                 </p>
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </TrophyGroup>
 
         {/* Missões */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-panel border border-white/10 rounded-sm p-4 sm:p-5 lg:p-6"
+        <TrophyGroup
+          title="Missões"
+          accentClass="border-l-emerald-400"
+          countClass="text-emerald-300"
+          count={missionTrophies.filter((t) => t.earned).length}
+          total={missionTrophies.length}
         >
-          <h3 className="font-display text-xs font-black uppercase tracking-wider text-white mb-4">
-            Missões
-          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
             {missionTrophies.map((t, i) => (
               <motion.div
@@ -813,7 +680,7 @@ export function Manager() {
                     'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm',
                     t.earned
                       ? 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 text-black'
-                      : 'bg-white/5 text-gray-600',
+                      : 'bg-white/5 text-white/30',
                   )}
                 >
                   {t.earned ? (
@@ -824,14 +691,14 @@ export function Manager() {
                 </div>
                 <p className={cn(
                   'text-center text-[8px] sm:text-[9px] font-bold uppercase tracking-wider leading-tight',
-                  t.earned ? 'text-emerald-300' : 'text-gray-500',
+                  t.earned ? 'text-emerald-300' : 'text-white/45',
                 )}>
                   {t.trophy.name}
                 </p>
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </TrophyGroup>
       </section>
 
       {/* ── DRAWERS ─────────────────────────────────────────────── */}
@@ -850,6 +717,51 @@ export function Manager() {
 }
 
 /* ── Sub-components ───────────────────────────────────────────── */
+
+/** Grupo de troféus colapsável — mostra a contagem no relance, abre a galeria sob demanda. */
+function TrophyGroup({
+  title,
+  icon,
+  count,
+  total,
+  accentClass = 'border-l-neon-yellow',
+  countClass = 'text-neon-yellow',
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon?: ReactNode;
+  count: number;
+  total?: number;
+  accentClass?: string;
+  countClass?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={cn('overflow-hidden rounded-sm border border-white/10 border-l-4 bg-panel', accentClass)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-white/[0.02] sm:px-5"
+      >
+        <h3 className="flex items-center gap-2 font-display text-xs font-black uppercase tracking-wider text-white">
+          {icon}
+          {title}
+        </h3>
+        <div className="flex items-center gap-2.5">
+          <span className={cn('font-mono text-[10px]', countClass)}>
+            {total != null ? `${count} de ${total}` : count > 0 ? `${count}` : '—'}
+          </span>
+          <ChevronRight className={cn('h-4 w-4 text-white/40 transition-transform', open && 'rotate-90')} strokeWidth={2.5} aria-hidden />
+        </div>
+      </button>
+      {open && <div className="px-4 pb-4 sm:px-5 sm:pb-5">{children}</div>}
+    </div>
+  );
+}
 
 function DrawerShell({
   title,
@@ -888,7 +800,7 @@ function DrawerShell({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="rounded-full p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -1057,7 +969,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                 >
                   <div className="min-w-0">
                     <p className="truncate font-display text-sm font-bold text-white">{req.clubName}</p>
-                    <p className="text-[10px] text-gray-500">Quer entrar na sua rede</p>
+                    <p className="text-[10px] text-white/45">Quer entrar na sua rede</p>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button
@@ -1087,7 +999,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
             Amigos ({social.data.friends.length})
           </h4>
           {social.data.friends.length === 0 ? (
-            <p className="rounded border border-dashed border-white/10 bg-black/20 px-3 py-3 text-sm text-gray-500">
+            <p className="rounded border border-dashed border-white/10 bg-black/20 px-3 py-3 text-sm text-white/45">
               Nenhum amigo ainda. Quem entrar pelo seu link de indicação vira amigo automaticamente.
             </p>
           ) : (
@@ -1101,7 +1013,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                   <button
                     type="button"
                     onClick={() => void social.remove(f.id)}
-                    className="shrink-0 text-[10px] font-bold uppercase text-gray-500 hover:text-red-400"
+                    className="shrink-0 text-[10px] font-bold uppercase text-white/45 hover:text-red-400"
                   >
                     Remover
                   </button>
@@ -1123,7 +1035,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
                   <button
                     type="button"
                     onClick={() => void social.remove(o.id)}
-                    className="shrink-0 text-[10px] font-bold uppercase text-gray-500 hover:text-white"
+                    className="shrink-0 text-[10px] font-bold uppercase text-white/45 hover:text-white"
                   >
                     Cancelar
                   </button>
@@ -1133,7 +1045,7 @@ function NetworkDrawer({ onClose }: { onClose: () => void }) {
           </section>
         ) : null}
 
-        <p className="text-[10px] text-gray-600">
+        <p className="text-[10px] text-white/30">
           Indicações pelo teu código aparecem aqui em breve (próxima fase).
         </p>
       </div>
