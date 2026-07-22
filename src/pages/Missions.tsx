@@ -161,7 +161,7 @@ export function Missions() {
           amount: m.reward,
           historySource: `Missão: ${m.title}`,
         });
-        setFeedback(`✓ Missão concluída: +${formatExp(m.reward)} EXP`);
+        setFeedback(`Missão concluída: +${formatExp(m.reward)} EXP`);
         setTimeout(() => setFeedback(null), 4000);
       }
       return;
@@ -208,7 +208,7 @@ export function Missions() {
         <BackButton to="/manager" label="Manager" />
       </div>
       {/* ── HERO CINEMATOGRÁFICO ──────────────────────────────────── */}
-      <section className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow min-h-[78vh] sm:min-h-[88vh]">
+      <section className="relative w-full max-w-full min-w-0 overflow-hidden bg-neon-yellow">
         {/* Camada amarela sólida (sem faixa preta) */}
         <div
           className="absolute inset-0 bg-neon-yellow"

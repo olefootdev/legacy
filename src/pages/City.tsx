@@ -213,7 +213,7 @@ export function City() {
   const [quickPendingId, setQuickPendingId] = useState<ClubStructureId | null>(null);
   const [upgradeModalState, setUpgradeModalState] = useState<{
     structureId: ClubStructureId;
-    phase: 'confirm' | 'loading' | 'success' | 'insufficient';
+    phase: 'confirm' | 'success' | 'insufficient';
   } | null>(null);
 
   const stadiumLevel = levelOf(structuresState, 'stadium');
@@ -297,26 +297,6 @@ export function City() {
     <div className="w-full max-w-[100vw] min-w-0 mx-auto space-y-6 pb-8 overflow-x-hidden px-3 sm:px-4 lg:px-6">
       <div className="w-full max-w-6xl min-w-0 mx-auto">
         <BackButton to="/clube" label="Clube" />
-      </div>
-
-      {/* Hero Editorial */}
-      <div className="w-full max-w-6xl min-w-0 mx-auto">
-        <EditorialHero
-          watermark="ESTRUTURAS"
-          eyebrow="Gestão do clube · Infraestrutura"
-          title="Cidade do Clube"
-          subtitle={clubName}
-          quote="estruturas, evolução e ações rápidas para o desenvolvimento do clube"
-          stats={`${formatExp(finance.ole)} EXP · ${formatBroFromCents(finance.broCents)} · Apoio ${crowd.supportPercent.toFixed(1)}% · ${totalStructures} estruturas · Nível total ${totalLevel}`}
-          icon={
-            <div className="group/icon relative h-24 w-24 overflow-hidden border-2 border-black/60 bg-black/60 sm:h-28 sm:w-28 transition-all hover:border-black/80 hover:shadow-[0_0_24px_rgba(0,0,0,0.4)]"
-                 style={{ borderRadius: 'var(--radius-sm)' }}>
-              <div className="flex h-full w-full items-center justify-center">
-                <Building2 className="h-12 w-12 sm:h-14 sm:w-14 text-neon-yellow/90" aria-hidden />
-              </div>
-            </div>
-          }
-        />
       </div>
 
       <div className="w-full max-w-6xl min-w-0 mx-auto space-y-6">
@@ -676,24 +656,7 @@ export function City() {
                   </>
                 )}
 
-                {/* Fase 2: Loading (3 segundos) */}
-                {upgradeModalState.phase === 'loading' && (
-                  <div className="p-12 text-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      className="mx-auto mb-6 h-16 w-16 rounded-full border-4 border-neon-yellow/20 border-t-neon-yellow"
-                    />
-                    <p className="font-display text-lg font-bold uppercase tracking-wider text-white">
-                      Evoluindo...
-                    </p>
-                    <p className="mt-2 text-sm text-gray-400">
-                      Aplicando melhorias na estrutura
-                    </p>
-                  </div>
-                )}
-
-                {/* Fase 3: Sucesso */}
+                {/* Fase 2: Sucesso */}
                 {upgradeModalState.phase === 'success' && (
                   <>
                     <div className="p-12 text-center">
