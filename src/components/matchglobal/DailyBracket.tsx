@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { Crown, Trophy } from 'lucide-react';
 import type { DailyKnockoutRound } from '@/match/globalLeagueMVP';
 import type { GlobalFixture } from '@/match/globalMatch';
 
@@ -43,9 +44,11 @@ function fixtureWinner(fx: GlobalFixture): 'home' | 'away' | null {
 interface DailyBracketProps {
   bracket: DailyKnockoutRound[];
   myTeamId?: string | null;
+  /** Nome do clube campeão — coroa o vencedor da Final. */
+  championName?: string;
 }
 
-export function DailyBracket({ bracket, myTeamId }: DailyBracketProps) {
+export function DailyBracket({ bracket, myTeamId, championName }: DailyBracketProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -68,18 +71,22 @@ export function DailyBracket({ bracket, myTeamId }: DailyBracketProps) {
             (fx) => fx.homeTeamId === myTeamId || fx.awayTeamId === myTeamId,
           );
           const msToKick = round.scheduledKickoffMs - now;
+          const isFinal = round.size === 2;
           return (
-          <div key={round.id} className="flex flex-col gap-3 min-w-[220px]">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">
-                  {roundLabel(round.size)}
-                </h3>
-                {myAlive && round.status !== 'finished' && (
-                  <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-green">
-                    você está aqui
-                  </span>
-                )}
+          <div key={round.id} className="flex flex-col gap-3 min-w-[224px]">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <div className="flex items-center gap-1.5">
+                {isFinal && <Trophy className="h-4 w-4 text-neon-yellow" strokeWidth={2.2} aria-hidden />}
+                <div>
+                  <h3 className="font-display text-sm font-bold uppercase tracking-wider text-neon-yellow">
+                    {roundLabel(round.size)}
+                  </h3>
+                  {myAlive && round.status !== 'finished' && (
+                    <span className="font-display text-[9px] font-bold uppercase tracking-wider text-neon-green">
+                      você está aqui
+                    </span>
+                  )}
+                </div>
               </div>
               {round.status === 'live' && (
                 <span className="text-[10px] font-mono text-neon-green animate-pulse">● ao vivo</span>
@@ -113,21 +120,29 @@ export function DailyBracket({ bracket, myTeamId }: DailyBracketProps) {
                     {rows.map((r) => {
                       const isWinner = winner === r.side;
                       const isMe = !!myTeamId && r.id === myTeamId;
+                      const isChampion = isFinal && isWinner && !!championName && r.name === championName;
                       return (
                         <div
                           key={r.side}
-                          className={`flex items-center justify-between px-3 py-2 ${
-                            isWinner ? 'bg-neon-green/10' : ''
-                          } ${isMe ? 'border-l-4 border-neon-yellow' : 'border-l-4 border-transparent'}`}
+                          className={`flex items-center justify-between gap-2 px-3 py-2 transition-colors ${
+                            isChampion ? 'bg-neon-yellow/20' : isWinner ? 'bg-neon-yellow/[0.07]' : ''
+                          } ${
+                            isMe
+                              ? 'border-l-4 border-neon-yellow'
+                              : isWinner
+                                ? 'border-l-4 border-neon-yellow/50'
+                                : 'border-l-4 border-transparent'
+                          }`}
                         >
-                          <span className={`truncate ${isWinner ? 'font-bold text-white' : 'text-text-soft'}`}>
-                            {r.name}
+                          <span className={`flex items-center gap-1.5 truncate ${isWinner ? 'font-bold text-white' : 'text-text-soft'}`}>
+                            {isChampion && <Crown className="h-3.5 w-3.5 shrink-0 text-neon-yellow" strokeWidth={2.4} aria-hidden />}
+                            <span className="truncate">{r.name}</span>
                           </span>
                           <span className="flex items-center gap-1.5 font-mono shrink-0">
                             {fx.wentToPenalties && r.pen != null && (
                               <span className="text-[10px] text-text-soft">({r.pen})</span>
                             )}
-                            <span className={isWinner ? 'text-neon-green font-bold' : 'text-text-soft'}>
+                            <span className={isWinner ? 'text-neon-yellow font-bold' : 'text-text-soft'}>
                               {fx.status === 'finished' ? r.score : '–'}
                             </span>
                           </span>

@@ -11,9 +11,12 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Flag, Swords, Clock, ChevronRight, Trophy } from 'lucide-react';
+import { Crown, Flag, Swords, Clock } from 'lucide-react';
 import { useDailyCycle } from '@/hooks/useDailyCycle';
+import { useGameStore } from '@/game/store';
 import { DailyBracket } from './DailyBracket';
+import { GlobalChampionHonor } from './GlobalChampionHonor';
+import { resolveManagerName } from '@/lib/championManager';
 
 function fmt(ms: number): string {
   if (ms <= 0) return '00:00';
@@ -56,6 +59,26 @@ export function DailyCycleHero() {
   }, [daily.bracket]);
 
   const myTeamId = daily.myTeam?.id ?? null;
+
+  // Nome público do manager campeão. Se o campeão sou EU, uso meu próprio nome
+  // (confiável); senão resolvo via RPC social (handles públicos, sem PII).
+  const managerProfile = useGameStore((s) => s.userSettings?.managerProfile);
+  const [championManager, setChampionManager] = useState<string | null>(null);
+  const crownClub = daily.todayCrown?.clubName;
+  const crownShort = daily.todayCrown?.clubShort;
+  const crownManagerId = daily.todayCrown?.managerId;
+  useEffect(() => {
+    if (daily.phase !== 'crowned' || !crownClub) { setChampionManager(null); return; }
+    const myEmail = managerProfile?.email;
+    if (myEmail && crownManagerId && crownManagerId === myEmail) {
+      const mine = `${managerProfile?.firstName ?? ''} ${managerProfile?.lastName ?? ''}`.trim();
+      setChampionManager(mine || null);
+      return;
+    }
+    let alive = true;
+    resolveManagerName(crownClub, crownShort).then((n) => { if (alive) setChampionManager(n); });
+    return () => { alive = false; };
+  }, [daily.phase, crownClub, crownShort, crownManagerId, managerProfile]);
 
   // Se ainda não tem nada significativo, esconde (evita "buraco" na página).
   if (daily.standings.length === 0 && daily.recentCrowns.length === 0 && daily.bracket.length === 0) {
@@ -301,32 +324,24 @@ export function DailyCycleHero() {
       {/* ════ CROWNED ════ */}
       {daily.phase === 'crowned' && daily.todayCrown && (
         <div className="space-y-4">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center py-4"
-          >
-            <Trophy className="w-12 h-12 text-neon-yellow mx-auto mb-3 drop-shadow-[0_0_24px_rgba(255,220,0,0.5)]" />
-            <p className="font-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">
-              Campeão de {daily.todayCrown.dailyDate}
-            </p>
-            <h3 className="font-display text-3xl sm:text-5xl font-black uppercase text-neon-yellow">
-              {daily.todayCrown.clubName}
-            </h3>
-            {daily.todayCrown.runnerUpClubName && daily.todayCrown.finalScoreHome != null && daily.todayCrown.finalScoreAway != null && (
-              <p className="font-mono text-sm text-text-soft mt-3">
-                Final {daily.todayCrown.finalScoreHome}–{daily.todayCrown.finalScoreAway} vs {daily.todayCrown.runnerUpClubName}
-                {daily.todayCrown.finalWentToPens ? ' (pênaltis)' : ''}
-              </p>
-            )}
-          </motion.div>
+          <GlobalChampionHonor
+            variant="hero"
+            clubName={daily.todayCrown.clubName}
+            clubShort={daily.todayCrown.clubShort}
+            managerName={championManager}
+            dailyDate={daily.todayCrown.dailyDate}
+            runnerUpClubName={daily.todayCrown.runnerUpClubName}
+            finalScoreHome={daily.todayCrown.finalScoreHome}
+            finalScoreAway={daily.todayCrown.finalScoreAway}
+            finalWentToPens={daily.todayCrown.finalWentToPens}
+          />
 
           {daily.bracket.length > 0 && (
             <div className="sports-panel rounded-lg p-3">
               <p className="text-[10px] font-display uppercase tracking-wider text-white/40 mb-2">
-                Bracket completo
+                O caminho do campeão
               </p>
-              <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} />
+              <DailyBracket bracket={daily.bracket} myTeamId={myTeamId} championName={daily.todayCrown.clubName} />
             </div>
           )}
         </div>
