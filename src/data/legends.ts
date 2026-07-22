@@ -129,6 +129,7 @@ export const LEGENDS_BY_SLUG: Record<string, LegendData> = {
     signature: 'Vice-Campeão do Mundo · Campeão da Copa América · 1995 · 1998',
     ovr: 84,
     quote: 'Pilar da linha de três que matou um jejum de 27 anos.',
+    photoUrl: 'https://maroon-improved-loon-313.mypinata.cloud/ipfs/bafybeihjtvglafhzzwkujdw3pqyr7tstl7f4qtbcmnsty64kidmzkwgcry/gonca-certo-br.png',
     trajectory: [
       { year: 1993, text: 'Bicampeão mexicano — o zagueiro do passe rasteiro atravessa a fronteira' },
       { year: 1995, text: 'Campeão Brasileiro — pilar da defesa que matou um jejum de 27 anos' },
